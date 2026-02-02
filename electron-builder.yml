@@ -1,0 +1,48 @@
+appId: com.newbe36524.hagico
+productName: Hagico Desktop
+directories:
+  output: pkg
+files:
+  - dist/**/*
+  - '!pkg/**/*'
+  - package.json
+asar: true
+asarUnpack:
+  - '**/node_modules/**/{*.node,dll/*.dll,*.dylib}'
+  - '**/vendor/**'
+publish:
+  provider: github
+  owner: newbe36524
+  repo: Hagico
+win:
+  target:
+    - portable
+    - nsis
+    - appx
+  icon: resources/icon.ico
+
+appx:
+  displayName: Hagico Desktop
+  publisherDisplayName: newbe36524
+  publisher: CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F
+  identityName: newbe36524.Hagico
+  backgroundColor: transparent
+  languages:
+    - en-US
+    - zh-CN
+  addAutoLaunchExtension: true
+mac:
+  target:
+    - target: default
+      arch:
+        - x64
+        - arm64
+  icon: resources/icon.icns
+  category: public.app-category.utilities
+linux:
+  target:
+    - AppImage
+    - deb
+    - tar.gz
+  category: Utility
+  maintainer: newbe36524 <newbe36524@gmail.com>

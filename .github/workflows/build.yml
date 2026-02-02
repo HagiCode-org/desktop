@@ -1,0 +1,225 @@
+name: Build Hagico Desktop
+
+on:
+  push:
+    # branches:
+    #   - main
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ################################################################################
+  # Windows Build Job
+  ################################################################################
+  build-windows:
+    name: Build for Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: client
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build for Windows
+        working-directory: client
+        run: node scripts/ci-build.js --platform win
+        shell: bash
+        env:
+          GH_TOKEN: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.GH_PAT || '' }}
+
+      # Upload each artifact separately
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-windows-nsis-${{ github.sha }}
+          path: client/pkg/*Setup*.exe
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload AppX package
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-windows-appx-${{ github.sha }}
+          path: client/pkg/*.appx
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-windows-portable-${{ github.sha }}
+          path: client/pkg/Hagico*.exe
+          retention-days: 30
+          if-no-files-found: warn
+
+  ################################################################################
+  # Linux Build Job
+  ################################################################################
+  build-linux:
+    name: Build for Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: client
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build for Linux
+        working-directory: client
+        run: node scripts/ci-build.js --platform linux
+        env:
+          GH_TOKEN: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.GH_PAT || '' }}
+
+      # Upload each artifact separately
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-linux-appimage-${{ github.sha }}
+          path: client/pkg/*.AppImage
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-linux-deb-${{ github.sha }}
+          path: client/pkg/*.deb
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload tar.gz
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-linux-targz-${{ github.sha }}
+          path: client/pkg/*.tar.gz
+          retention-days: 30
+          if-no-files-found: warn
+
+  ################################################################################
+  # macOS Build Job
+  ################################################################################
+  build-macos:
+    name: Build for macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: client
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build for macOS
+        working-directory: client
+        run: node scripts/ci-build.js --platform mac
+        env:
+          GH_TOKEN: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.GH_PAT || '' }}
+
+      # Upload each artifact separately
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-macos-dmg-${{ github.sha }}
+          path: client/pkg/*.dmg
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagico-macos-zip-${{ github.sha }}
+          path: client/pkg/*.zip
+          retention-days: 30
+          if-no-files-found: warn
+
+  ################################################################################
+  # Build Summary Job
+  ################################################################################
+  build-summary:
+    name: Build Summary
+    needs:
+      - build-windows
+      - build-linux
+      - build-macos
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check build status
+        run: |
+          echo "Windows Build: ${{ needs.build-windows.result }}"
+          echo "Linux Build: ${{ needs.build-linux.result }}"
+          echo "macOS Build: ${{ needs.build-macos.result }}"
+
+      - name: Build failed notification
+        if: needs.build-windows.result == 'failure' || needs.build-linux.result == 'failure' || needs.build-macos.result == 'failure'
+        run: |
+          echo "::error::One or more builds failed. Please check the logs."
+          exit 1
