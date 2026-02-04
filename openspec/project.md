@@ -44,7 +44,6 @@ Hagico Desktop 是一款基于 Electron 的跨平台桌面应用程序，旨在�
 ### 构建和打包
 
 - **electron-builder 26.0.12**：应用打包工具
-- **javascript-obfuscator 5.1.0**：代码混淆工具
 
 ### 其他依赖
 

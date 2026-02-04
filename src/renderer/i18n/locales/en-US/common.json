@@ -88,5 +88,50 @@
   "footer": {
     "copyright": "© 2025 Hagico Desktop. Built with ❤️ using Electron + React + TypeScript.",
     "testBuild": "Test application - Development build"
+  },
+  "menu": {
+    "systemManagement": "System Management",
+    "hagicoWeb": "Hagico Web",
+    "dependencies": "Dependencies",
+    "webService": "Web Service",
+    "packages": "Packages",
+    "settings": "Settings",
+    "openWebUI": "Open Web UI",
+    "navigate": "Navigation",
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "devTools": "Developer Tools",
+    "help": "Help",
+    "about": "About",
+    "quit": "Quit"
+  },
+  "webView": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "openInBrowser": "Open in Browser",
+    "serviceNotRunning": "Web Service Not Running",
+    "serviceNotRunningDesc": "Please start the web service before accessing the web interface.",
+    "backToSystem": "Back to System Management",
+    "error": "Load Failed",
+    "loadFailed": "Load failed: {{reason}}",
+    "crashed": "Renderer Process Crashed",
+    "retry": "Retry"
+  },
+  "mirror": {
+    "title": "NPM Mirror Configuration",
+    "region": "Detected Region",
+    "currentMirror": "Current Mirror",
+    "mirrorUrl": "Mirror URL",
+    "detectedAt": "Detected At",
+    "official": "Official npm",
+    "taobao": "Taobao NPM Mirror",
+    "redetect": "Redetect",
+    "info": "NPM tools will automatically use this mirror for faster downloads",
+    "regions": {
+      "CN": "China",
+      "INTERNATIONAL": "International"
+    }
   }
 }

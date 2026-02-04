@@ -1,12 +1,15 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Store from 'electron-store';
 import { createTray, destroyTray, setServerStatus, updateTrayMenu } from './tray.js';
 import { HagicoServerClient, type ServerStatus } from './server.js';
 import { ConfigManager } from './config.js';
 import { PCodeWebServiceManager, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
 import { PCodePackageManager, type PackageInfo, type InstallProgress } from './package-manager.js';
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
+import { MenuManager } from './menu-manager.js';
+import { NpmMirrorHelper } from './npm-mirror-helper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +21,8 @@ let webServiceManager: PCodeWebServiceManager | null = null;
 let packageManager: PCodePackageManager | null = null;
 let dependencyManager: DependencyManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
+let menuManager: MenuManager | null = null;
+let npmMirrorHelper: NpmMirrorHelper | null = null;
 
 function createWindow(): void {
   console.log('[Hagico] Creating window...');
@@ -27,7 +32,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     icon: path.join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload/index.mjs'),
@@ -409,6 +414,124 @@ ipcMain.handle('install-dependency', async (_, dependencyType: DependencyType) =
   }
 });
 
+// View Management IPC Handlers
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web') => {
+  console.log('[Main] Switch view requested:', view);
+
+  if (view === 'web') {
+    // Check if web service is running
+    if (!webServiceManager) {
+      return {
+        success: false,
+        reason: 'web-service-not-initialized',
+      };
+    }
+
+    try {
+      const status = await webServiceManager.getStatus();
+      if (status.status !== 'running') {
+        return {
+          success: false,
+          reason: 'web-service-not-running',
+          canStart: true,
+        };
+      }
+
+      // Web service is running, allow the switch
+      return {
+        success: true,
+        url: status.url,
+      };
+    } catch (error) {
+      console.error('[Main] Failed to check web service status:', error);
+      return {
+        success: false,
+        reason: 'web-service-check-failed',
+      };
+    }
+  }
+
+  // Switching to system view is always allowed
+  return {
+    success: true,
+  };
+});
+
+ipcMain.handle('get-current-view', async () => {
+  // This could be persisted in electron-store in the future
+  // For now, return the default
+  return 'system';
+});
+
+// Language change handler
+ipcMain.handle('language-changed', async (_, language: string) => {
+  if (menuManager) {
+    menuManager.updateMenuLanguage(language);
+  }
+});
+
+// NPM Mirror Status IPC Handlers
+ipcMain.handle('mirror:get-status', async () => {
+  if (!npmMirrorHelper) {
+    return {
+      region: null,
+      mirrorUrl: '',
+      mirrorName: '',
+      detectedAt: null,
+    };
+  }
+  try {
+    const status = npmMirrorHelper.getMirrorStatus();
+    return {
+      ...status,
+      detectedAt: status.detectedAt?.toISOString() || null,
+    };
+  } catch (error) {
+    console.error('[Main] Failed to get mirror status:', error);
+    return {
+      region: null,
+      mirrorUrl: '',
+      mirrorName: '',
+      detectedAt: null,
+    };
+  }
+});
+
+ipcMain.handle('mirror:redetect', async () => {
+  if (!npmMirrorHelper) {
+    return {
+      region: null,
+      mirrorUrl: '',
+      mirrorName: '',
+      detectedAt: null,
+    };
+  }
+  try {
+    const detection = npmMirrorHelper.redetect();
+    const status = npmMirrorHelper.getMirrorStatus();
+    console.log(`[Main] Region re-detected: ${detection.region}`);
+    return {
+      ...status,
+      detectedAt: status.detectedAt?.toISOString() || null,
+    };
+  } catch (error) {
+    console.error('[Main] Failed to re-detect region:', error);
+    return {
+      region: null,
+      mirrorUrl: '',
+      mirrorName: '',
+      detectedAt: null,
+    };
+  }
+});
+
+// Web service status change handler for menu updates
+ipcMain.on('web-service-status-for-menu', async (_event, status: ProcessInfo) => {
+  if (menuManager) {
+    menuManager.updateWebServiceStatus(status.status === 'running');
+  }
+});
+
 function startStatusPolling(): void {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
@@ -438,6 +561,11 @@ function startWebServiceStatusPolling(): void {
     try {
       const status = await webServiceManager.getStatus();
       mainWindow?.webContents.send('web-service-status-changed', status);
+
+      // Update menu based on web service status
+      if (menuManager) {
+        menuManager.updateWebServiceStatus(status.status === 'running');
+      }
     } catch (error) {
       console.error('Failed to poll web service status:', error);
     }
@@ -449,6 +577,11 @@ app.whenReady().then(async () => {
   const serverConfig = configManager.getServerConfig();
   serverClient = new HagicoServerClient(serverConfig);
 
+  // Initialize NPM Mirror Helper
+  npmMirrorHelper = new NpmMirrorHelper(configManager.getStore() as unknown as Store<Record<string, unknown>>);
+  const detection = npmMirrorHelper.detectWithCache();
+  console.log(`[App] Region detected: ${detection.region} (method: ${detection.method})`);
+
   // Initialize Web Service Manager
   const webServiceConfig: WebServiceConfig = {
     host: 'localhost',
@@ -459,14 +592,23 @@ app.whenReady().then(async () => {
   // Initialize Package Manager
   packageManager = new PCodePackageManager();
 
-  // Initialize Dependency Manager
-  dependencyManager = new DependencyManager();
+  // Initialize Dependency Manager with store for NpmMirrorHelper
+  dependencyManager = new DependencyManager(configManager.getStore() as unknown as Store<Record<string, unknown>>);
 
   createWindow();
   createTray();
   setServerStatus('stopped');
   startStatusPolling();
   startWebServiceStatusPolling();
+
+  // Initialize Menu Manager
+  if (mainWindow) {
+    menuManager = new MenuManager(mainWindow);
+    // Get initial language from config or default to zh-CN
+    const initialLanguage = configManager.getAll()?.settings?.language || 'zh-CN';
+    const initialWebServiceStatus = await webServiceManager.getStatus();
+    menuManager.createMenu(initialLanguage, initialWebServiceStatus.status === 'running');
+  }
 
   // Check port availability and send to renderer
   try {

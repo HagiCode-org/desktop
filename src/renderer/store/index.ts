@@ -3,9 +3,11 @@ import createSagaMiddleware from 'redux-saga';
 import webServiceReducer from './slices/webServiceSlice';
 import i18nReducer from './slices/i18nSlice';
 import dependencyReducer from './slices/dependencySlice';
+import viewReducer from './slices/viewSlice';
 import { webServiceSaga, initializeWebServiceSaga } from './sagas/webServiceSaga';
 import { i18nSaga, initializeI18nSaga } from './sagas/i18nSaga';
 import { dependencySaga, initializeDependencySaga } from './sagas/dependencySaga';
+import { viewSaga, initializeViewSaga } from './sagas/viewSaga';
 
 // Create saga middleware
 const sagaMiddleware = createSagaMiddleware();
@@ -16,6 +18,7 @@ export const store = configureStore({
     webService: webServiceReducer,
     i18n: i18nReducer,
     dependency: dependencyReducer,
+    view: viewReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -41,6 +44,10 @@ store.dispatch(initializeI18nSaga());
 // Initialize dependencies
 sagaMiddleware.run(dependencySaga);
 store.dispatch({ type: 'dependency/fetchDependencies' });
+
+// Initialize view
+sagaMiddleware.run(viewSaga);
+store.dispatch({ type: 'view/initialize' });
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;

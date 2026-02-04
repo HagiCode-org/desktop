@@ -88,5 +88,50 @@
   "footer": {
     "copyright": "© 2025 Hagico Desktop。使用 Electron + React + TypeScript 构建 ❤️",
     "testBuild": "测试应用程序 - 开发版本"
+  },
+  "menu": {
+    "systemManagement": "系统管理",
+    "hagicoWeb": "Hagico Web",
+    "dependencies": "依赖项",
+    "webService": "Web 服务",
+    "packages": "包管理",
+    "settings": "设置",
+    "openWebUI": "打开 Web 界面",
+    "navigate": "导航",
+    "back": "后退",
+    "forward": "前进",
+    "refresh": "刷新",
+    "devTools": "开发者工具",
+    "help": "帮助",
+    "about": "关于",
+    "quit": "退出"
+  },
+  "webView": {
+    "back": "后退",
+    "forward": "前进",
+    "refresh": "刷新",
+    "openInBrowser": "在浏览器中打开",
+    "serviceNotRunning": "Web 服务未运行",
+    "serviceNotRunningDesc": "请先启动 Web 服务，然后再访问 Web 界面。",
+    "backToSystem": "返回系统管理",
+    "error": "加载失败",
+    "loadFailed": "加载失败: {{reason}}",
+    "crashed": "渲染进程崩溃",
+    "retry": "重试"
+  },
+  "mirror": {
+    "title": "NPM 镜像配置",
+    "region": "检测地区",
+    "currentMirror": "当前镜像源",
+    "mirrorUrl": "镜像地址",
+    "detectedAt": "检测时间",
+    "official": "官方 npm 源",
+    "taobao": "淘宝 npm 镜像",
+    "redetect": "重新检测",
+    "info": "NPM 工具将自动使用此镜像以加快下载速度",
+    "regions": {
+      "CN": "中国",
+      "INTERNATIONAL": "国际"
+    }
   }
 }

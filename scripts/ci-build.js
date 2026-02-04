@@ -11,8 +11,7 @@
  *
  * Options:
  *   --platform <win|mac|linux>   Target platform
- *   --prod                        Production build with obfuscation
- *   --skip-obfuscate              Skip obfuscation step
+ *   --prod                        Production build
  *   --help                        Show help message
  */
 
@@ -49,7 +48,6 @@ const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
 const config = {
   platform: '',
   prod: false,
-  skipObfuscate: false,
 };
 
 /**
@@ -120,8 +118,7 @@ Usage: node client/scripts/ci-build.js [options]
 
 Options:
   --platform <win|mac|linux>   Target platform
-  --prod                        Production build with obfuscation
-  --skip-obfuscate              Skip obfuscation step
+  --prod                        Production build
   --help                        Show this help message
 
 This script provides CI-specific build helpers and detailed logging
@@ -140,9 +137,6 @@ function parseArgs() {
         break;
       case '--prod':
         config.prod = true;
-        break;
-      case '--skip-obfuscate':
-        config.skipObfuscate = true;
         break;
       case '--help':
         showHelp();
@@ -278,7 +272,6 @@ function printBuildSummary() {
   log('Configuration:', colors.cyan);
   log(`  Platform:     ${config.platform}`, colors.green);
   log(`  Production:   ${config.prod}`, colors.green);
-  log(`  Obfuscation: ${config.skipObfuscate ? 'Skipped' : 'Enabled'}`, colors.green);
 
   log('', colors.cyan);
   log('Artifacts:', colors.cyan);
@@ -350,9 +343,6 @@ async function main() {
     }
     if (config.prod) {
       buildArgs.push('--prod');
-    }
-    if (config.skipObfuscate) {
-      buildArgs.push('--skip-obfuscate');
     }
 
     logCI(`Executing: ${buildArgs.join(' ')}`, 'info');

@@ -54,6 +54,21 @@ const electronAPI = {
     ipcRenderer.on('dependency-status-changed', listener);
     return () => ipcRenderer.removeListener('dependency-status-changed', listener);
   },
+
+  // View Management APIs
+  switchView: (view: 'system' | 'web') => ipcRenderer.invoke('switch-view', view),
+  getCurrentView: () => ipcRenderer.invoke('get-current-view'),
+  onViewChange: (callback) => {
+    const listener = (_event, view) => {
+      callback(view);
+    };
+    ipcRenderer.on('view-changed', listener);
+    return () => ipcRenderer.removeListener('view-changed', listener);
+  },
+
+  // NPM Mirror Status APIs
+  getMirrorStatus: () => ipcRenderer.invoke('mirror:get-status'),
+  redetectMirror: () => ipcRenderer.invoke('mirror:redetect'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

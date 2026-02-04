@@ -163,40 +163,6 @@ test('package.json is valid', () => {
 });
 
 /**
- * Test: Check for common obfuscation indicators (production builds only)
- */
-test('code shows obfuscation indicators', () => {
-  const mainJs = path.join(process.cwd(), 'dist', 'main', 'main.js');
-
-  if (!fs.existsSync(mainJs)) {
-    log('  ⊘ Skipping: main.js does not exist', colors.yellow);
-    results.skipped++;
-    return;
-  }
-
-  const content = fs.readFileSync(mainJs, 'utf8');
-
-  // Check for common obfuscation patterns
-  const hasHexNames = /0x[0-9a-f]+/i.test(content);
-  const hasStringArray = /stringArray|_0x[a-f0-9]+/i.test(content);
-  const isCompacted = !content.includes('\n\n') && content.split('\n').length < content.length / 100;
-
-  logVerbose(`has hex identifier names: ${hasHexNames}`);
-  logVerbose(`has string array patterns: ${hasStringArray}`);
-  logVerbose(`is compacted: ${isCompacted}`);
-
-  // At least one obfuscation indicator should be present in production
-  const isObfuscated = hasHexNames || hasStringArray || isCompacted;
-
-  if (!isObfuscated) {
-    log('  ℹ Code is not obfuscated (development build)', colors.gray);
-    results.skipped++;
-  } else {
-    assert(true, 'code shows obfuscation indicators');
-  }
-});
-
-/**
  * Test: Check syntax validity of main.js
  */
 test('main.js has valid syntax', () => {
