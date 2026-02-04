@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "label": "Language",
+      "description": "Select application interface language"
+    },
+    "remoteServerHost": "Remote Server Host",
+    "remoteServerPort": "Remote Server Port",
+    "embeddedWebServicePort": "Embedded Web Service Port",
+    "moreSettingsComing": "More settings coming soon..."
+  },
+  "footer": {
+    "copyright": "© 2025 Hagico Desktop. Built with ❤️ using Electron + React + TypeScript.",
+    "testBuild": "Test application - Development build"
+  },
+  "quickStart": {
+    "title": "Quick Start",
+    "description": "Install the embedded web service package and start managing your local PCode instance."
+  },
+  "secure": {
+    "title": "Secure",
+    "description": "Built with security in mind. Your data stays on your machine."
+  },
+  "header": {
+    "runningSuccessfully": "Running Successfully"
+  }
+}

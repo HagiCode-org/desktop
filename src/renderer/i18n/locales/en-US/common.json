@@ -1,0 +1,137 @@
+{
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "refresh": "Refresh",
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "open": "Open",
+    "download": "Download"
+  },
+  "status": {
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "running": "Running",
+    "stopped": "Stopped",
+    "installed": "Installed",
+    "notInstalled": "Not Installed",
+    "pending": "Pending",
+    "failed": "Failed"
+  },
+  "form": {
+    "required": "Required",
+    "optional": "Optional",
+    "selectPlaceholder": "Please select...",
+    "inputPlaceholder": "Please enter...",
+    "validation": {
+      "required": "This field is required",
+      "invalidFormat": "Invalid format",
+      "minLength": "Must be at least {{min}} characters",
+      "maxLength": "Must not exceed {{max}} characters"
+    }
+  },
+  "common": {
+    "version": "Version",
+    "platform": "Platform",
+    "language": "Language",
+    "settings": "Settings",
+    "noData": "No data available",
+    "operationSuccess": "Operation successful",
+    "operationFailed": "Operation failed",
+    "confirmDelete": "Are you sure you want to delete?",
+    "confirmAction": "Are you sure you want to proceed?"
+  },
+  "header": {
+    "runningSuccessfully": "Running Successfully"
+  },
+  "remoteServer": {
+    "title": "Remote Server Status",
+    "status": {
+      "operational": "Remote server is operational",
+      "notRunning": "Remote server is not running",
+      "connectionFailed": "Failed to connect to remote server"
+    },
+    "actions": {
+      "start": "Start Remote Server",
+      "stop": "Stop Remote Server"
+    }
+  },
+  "quickStart": {
+    "title": "Quick Start",
+    "description": "Install the embedded web service package and start managing your local PCode instance."
+  },
+  "secure": {
+    "title": "Secure",
+    "description": "Built with security in mind. Your data stays on your machine."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "label": "Language",
+      "description": "Select application interface language"
+    },
+    "remoteServerHost": "Remote Server Host",
+    "remoteServerPort": "Remote Server Port",
+    "embeddedWebServicePort": "Embedded Web Service Port",
+    "moreSettingsComing": "More settings coming soon..."
+  },
+  "footer": {
+    "copyright": "© 2025 Hagico Desktop. Built with ❤️ using Electron + React + TypeScript.",
+    "testBuild": "Test application - Development build"
+  },
+  "menu": {
+    "systemManagement": "System Management",
+    "hagicoWeb": "Hagico Web",
+    "dependencies": "Dependencies",
+    "webService": "Web Service",
+    "packages": "Packages",
+    "settings": "Settings",
+    "openWebUI": "Open Web UI",
+    "navigate": "Navigation",
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "devTools": "Developer Tools",
+    "help": "Help",
+    "about": "About",
+    "quit": "Quit"
+  },
+  "webView": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "openInBrowser": "Open in Browser",
+    "serviceNotRunning": "Web Service Not Running",
+    "serviceNotRunningDesc": "Please start the web service before accessing the web interface.",
+    "backToSystem": "Back to System Management",
+    "error": "Load Failed",
+    "loadFailed": "Load failed: {{reason}}",
+    "crashed": "Renderer Process Crashed",
+    "retry": "Retry"
+  },
+  "mirror": {
+    "title": "NPM Mirror Configuration",
+    "region": "Detected Region",
+    "currentMirror": "Current Mirror",
+    "mirrorUrl": "Mirror URL",
+    "detectedAt": "Detected At",
+    "official": "Official npm",
+    "taobao": "Taobao NPM Mirror",
+    "redetect": "Redetect",
+    "info": "NPM tools will automatically use this mirror for faster downloads",
+    "regions": {
+      "CN": "China",
+      "INTERNATIONAL": "International"
+    }
+  }
+}

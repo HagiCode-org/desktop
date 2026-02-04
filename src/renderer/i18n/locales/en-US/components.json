@@ -1,0 +1,98 @@
+{
+  "status": {
+    "installed": "Installed",
+    "notInstalled": "Not Installed",
+    "installing": "Installing",
+    "failed": "Failed"
+  },
+  "packageManagement": {
+    "cardTitle": "Package Management",
+    "cardDescription": "Manage the installation of web service packages",
+    "platformLabel": "Platform",
+    "detecting": "Detecting...",
+    "installationStatusLabel": "Installation Status",
+    "installedVersionLabel": "Installed Version",
+    "selectVersionLabel": "Select Version to Install",
+    "versionPlaceholder": "-- Select a version --",
+    "installingProgress": "Installing...",
+    "noPackagesMessage": "No packages available. Make sure the package source directory exists at:",
+    "availableVersionsCount": "Available versions: {{count}} found",
+    "filteredByPlatform": " (filtered by platform: {{platform}})",
+    "downloadButton": "Install Package",
+    "refreshButton": "Refresh versions",
+    "progress": {
+      "downloading": "Downloading...",
+      "extracting": "Extracting...",
+      "verifying": "Verifying...",
+      "completed": "Completed",
+      "error": "Error"
+    }
+  },
+  "webServiceStatus": {
+    "cardTitle": "Embedded Web Service",
+    "cardDescription": "View and manage web service running status",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error",
+      "starting": "Starting...",
+      "stopping": "Stopping...",
+      "unknown": "Unknown"
+    },
+    "statusDescription": {
+      "running": "Web service is operational",
+      "stopped": "Web service is not running",
+      "error": "Failed to operate web service",
+      "starting": "Web service is starting up",
+      "stopping": "Web service is shutting down",
+      "unknown": "Unknown status"
+    },
+    "startButton": "Start Service",
+    "stoppingButton": "Stopping...",
+    "restartButton": "Restart",
+    "restartingButton": "Restarting...",
+    "stopButton": "Stop Service",
+    "openInBrowser": "Open in Browser",
+    "details": {
+      "serviceUrl": "Service URL",
+      "processId": "Process ID",
+      "uptime": "Uptime",
+      "restartCount": "Restart Count",
+      "port": "Port"
+    },
+    "notInstalledAlert": {
+      "title": "Package not installed",
+      "message": "The web service package is not installed yet. Please install the package first from the Package Management section, then return here to start the service."
+    },
+    "portError": {
+      "invalid": "Invalid port number",
+      "range": "Port must be between 1024 and 65535"
+    }
+  },
+  "languageSelector": {
+    "currentLanguage": "Current Language",
+    "selectLanguage": "Select Language"
+  },
+  "dependencyManagement": {
+    "title": "System Dependencies",
+    "description": "Check and manage system runtime dependencies required by the web service",
+    "status": {
+      "installed": "Installed",
+      "notInstalled": "Not Installed",
+      "versionMismatch": "Version Mismatch",
+      "checking": "Checking...",
+      "ready": "Ready to use"
+    },
+    "actions": {
+      "install": "Install",
+      "installing": "Installing...",
+      "refresh": "Refresh",
+      "visitWebsite": "Visit Official Website"
+    },
+    "details": {
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version"
+    },
+    "noDependencies": "No dependencies detected"
+  }
+}

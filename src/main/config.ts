@@ -1,11 +1,16 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server.js';
 
+export interface AppSettings {
+  language: string;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
+  settings: AppSettings;
 }
 
 const defaultConfig: AppConfig = {
@@ -16,6 +21,9 @@ const defaultConfig: AppConfig = {
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
+  settings: {
+    language: 'zh-CN',
+  },
 };
 
 export class ConfigManager {
@@ -51,5 +59,13 @@ export class ConfigManager {
   setServerConfig(config: Partial<ServerConfig>): void {
     const current = this.getServerConfig();
     this.set('server', { ...current, ...config });
+  }
+
+  /**
+   * Get the underlying electron-store instance
+   * This is needed for components that need direct access to the store
+   */
+  getStore(): Store<AppConfig> {
+    return this.store;
   }
 }

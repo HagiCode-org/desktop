@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "title": "设置",
+    "language": {
+      "label": "语言",
+      "description": "选择应用程序界面语言"
+    },
+    "remoteServerHost": "远程服务器主机",
+    "remoteServerPort": "远程服务器端口",
+    "embeddedWebServicePort": "嵌入式 Web 服务端口",
+    "moreSettingsComing": "更多设置即将推出..."
+  },
+  "footer": {
+    "copyright": "© 2025 Hagico Desktop。使用 Electron + React + TypeScript 构建 ❤️",
+    "testBuild": "测试应用程序 - 开发版本"
+  },
+  "quickStart": {
+    "title": "快速开始",
+    "description": "安装嵌入式 Web 服务包并开始管理您的本地 PCode 实例。"
+  },
+  "secure": {
+    "title": "安全",
+    "description": "注重安全构建。您的数据保留在您的机器上。"
+  },
+  "header": {
+    "runningSuccessfully": "运行成功"
+  }
+}

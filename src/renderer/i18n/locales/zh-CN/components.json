@@ -1,0 +1,98 @@
+{
+  "status": {
+    "installed": "已安装",
+    "notInstalled": "未安装",
+    "installing": "安装中",
+    "failed": "安装失败"
+  },
+  "packageManagement": {
+    "cardTitle": "包管理",
+    "cardDescription": "管理 Web 服务包的安装",
+    "platformLabel": "平台",
+    "detecting": "检测中...",
+    "installationStatusLabel": "安装状态",
+    "installedVersionLabel": "已安装版本",
+    "selectVersionLabel": "选择要安装的版本",
+    "versionPlaceholder": "-- 选择版本 --",
+    "installingProgress": "安装中...",
+    "noPackagesMessage": "没有可用的包。请确保包源目录存在于：",
+    "availableVersionsCount": "可用版本：找到 {{count}} 个",
+    "filteredByPlatform": "（按平台筛选：{{platform}}）",
+    "downloadButton": "安装包",
+    "refreshButton": "刷新版本",
+    "progress": {
+      "downloading": "下载中...",
+      "extracting": "解压中...",
+      "verifying": "验证中...",
+      "completed": "已完成",
+      "error": "错误"
+    }
+  },
+  "webServiceStatus": {
+    "cardTitle": "嵌入式 Web 服务",
+    "cardDescription": "查看和管理 Web 服务运行状态",
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止",
+      "error": "错误",
+      "starting": "启动中...",
+      "stopping": "停止中...",
+      "unknown": "未知"
+    },
+    "statusDescription": {
+      "running": "Web 服务正在运行",
+      "stopped": "Web 服务未运行",
+      "error": "Web 服务运行失败",
+      "starting": "Web 服务正在启动",
+      "stopping": "Web 服务正在关闭",
+      "unknown": "未知状态"
+    },
+    "startButton": "启动服务",
+    "stoppingButton": "停止中...",
+    "restartButton": "重启",
+    "restartingButton": "重启中...",
+    "stopButton": "停止服务",
+    "openInBrowser": "在浏览器中打开",
+    "details": {
+      "serviceUrl": "服务 URL",
+      "processId": "进程 ID",
+      "uptime": "运行时间",
+      "restartCount": "重启次数",
+      "port": "端口"
+    },
+    "notInstalledAlert": {
+      "title": "未安装包",
+      "message": "Web 服务包尚未安装。请先从包管理部分安装包，然后返回此处启动服务。"
+    },
+    "portError": {
+      "invalid": "无效的端口号",
+      "range": "端口必须在 1024 到 65535 之间"
+    }
+  },
+  "languageSelector": {
+    "currentLanguage": "当前语言",
+    "selectLanguage": "选择语言"
+  },
+  "dependencyManagement": {
+    "title": "系统依赖管理",
+    "description": "检查和管理 Web 服务所需的系统运行时依赖",
+    "status": {
+      "installed": "已安装",
+      "notInstalled": "未安装",
+      "versionMismatch": "版本不匹配",
+      "checking": "检测中...",
+      "ready": "可以使用"
+    },
+    "actions": {
+      "install": "安装",
+      "installing": "安装中...",
+      "refresh": "刷新",
+      "visitWebsite": "访问官网"
+    },
+    "details": {
+      "currentVersion": "当前版本",
+      "requiredVersion": "要求版本"
+    },
+    "noDependencies": "未检测到依赖"
+  }
+}
