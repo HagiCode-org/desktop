@@ -51,11 +51,11 @@ The application MUST provide clear visibility of the port number used by the emb
 
 ### Requirement: Server Status Monitoring
 
-The application MUST connect to a local or remote Hagico Server, query its running status in real-time, and display it in the main window and system tray. The status information MUST include the port number the service is listening on.
+The application MUST connect to a local or remote Hagicode Server, query its running status in real-time, and display it in the main window and system tray. The status information MUST include the port number the service is listening on.
 
 #### Scenario: 查询服务器运行状态（含端口信息）
 
-**Given** Hagico Server 已安装并运行
+**Given** Hagicode Server 已安装并运行
 **When** 应用启动或用户手动刷新
 **Then** 应用通过 HTTP API 查询服务器状态
 **And** 状态结果在 3 秒内返回

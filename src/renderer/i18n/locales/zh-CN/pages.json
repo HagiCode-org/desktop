@@ -5,18 +5,16 @@
       "label": "语言",
       "description": "选择应用程序界面语言"
     },
-    "remoteServerHost": "远程服务器主机",
-    "remoteServerPort": "远程服务器端口",
-    "embeddedWebServicePort": "嵌入式 Web 服务端口",
+    "embeddedWebServicePort": "Hagicode 服务端口",
     "moreSettingsComing": "更多设置即将推出..."
   },
   "footer": {
-    "copyright": "© 2025 Hagico Desktop。使用 Electron + React + TypeScript 构建 ❤️",
+    "copyright": "© 2025 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️",
     "testBuild": "测试应用程序 - 开发版本"
   },
   "quickStart": {
     "title": "快速开始",
-    "description": "安装嵌入式 Web 服务包并开始管理您的本地 PCode 实例。"
+    "description": "安装 Hagicode 服务包并开始管理您的本地 PCode 实例。"
   },
   "secure": {
     "title": "安全",
@@ -24,5 +22,80 @@
   },
   "header": {
     "runningSuccessfully": "运行成功"
+  },
+  "dependencyManagement": {
+    "title": "依赖项管理",
+    "backToDashboard": "返回仪表盘",
+    "description": "管理 Hagicode 服务包和系统依赖项",
+    "tips": {
+      "title": "提示",
+      "description": "保持依赖项更新以获得最佳性能和安全性。"
+    },
+    "noPackageInstalled": "未安装任何软件包",
+    "installedVersion": "已安装版本",
+    "requiredVersion": "所需版本",
+    "status": {
+      "installed": "已安装",
+      "notInstalled": "未找到",
+      "versionMismatch": "版本不匹配"
+    },
+    "actions": {
+      "refresh": "刷新依赖项",
+      "install": "安装",
+      "installing": "安装中...",
+      "download": "下载"
+    }
+  },
+  "versionManagement": {
+    "title": "版本管理",
+    "description": "安装、切换和管理 Hagicode Server 版本",
+    "availableVersions": "可用版本",
+    "installedVersions": "已安装版本",
+    "installed": "已安装",
+    "installing": "安装中...",
+    "switching": "切换中...",
+    "reinstalling": "重新安装中...",
+    "installedAt": "安装于",
+    "notInstalled": "未安装",
+    "dependencies": "依赖项",
+    "confirmUninstall": "确定要卸载此版本吗？",
+    "confirmReinstall": "确认重新安装此软件包？这将删除缓存和已安装版本，然后重新下载安装。",
+    "reinstall": "重新安装",
+    "noVersionsAvailable": "暂无可用版本",
+    "status": {
+      "active": "当前激活",
+      "ready": "就绪",
+      "incomplete": "缺少依赖项"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "install": "安装版本",
+      "switch": "切换",
+      "uninstall": "卸载",
+      "viewDependencies": "查看依赖项",
+      "reinstall": "重新安装",
+      "openLogs": "打开日志"
+    },
+    "info": {
+      "title": "关于版本管理",
+      "description": "版本管理允许您安装多个 Hagicode Server 版本并在它们之间切换。仅依赖项全部满足的版本可以被激活。"
+    },
+    "toast": {
+      "reinstallSuccess": "重新安装成功",
+      "reinstallFailed": "重新安装失败",
+      "uninstallSuccess": "卸载成功",
+      "uninstallFailed": "卸载失败",
+      "openLogsSuccess": "日志文件夹已打开",
+      "logsNotFound": "日志文件夹不存在",
+      "openLogsError": "无法打开日志文件夹"
+    },
+    "dialog": {
+      "reinstallTitle": "确认重新安装",
+      "reinstallDescription": "这将删除缓存和已安装版本，然后重新下载安装。是否继续？",
+      "uninstallTitle": "确认卸载",
+      "uninstallDescription": "确定要卸载此版本吗？此操作无法撤销。",
+      "cancel": "取消",
+      "confirm": "确认"
+    }
   }
 }

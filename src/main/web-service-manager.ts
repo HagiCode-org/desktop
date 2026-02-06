@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { app } from 'electron';
 import log from 'electron-log';
+import { PathManager, Platform } from './path-manager.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -45,17 +46,35 @@ export class PCodeWebServiceManager {
   private maxRestartAttempts: number = 3;
   private startTimeout: number = 30000; // 30 seconds
   private stopTimeout: number = 10000; // 10 seconds
-  private userDataPath: string;
+  private pathManager: PathManager;
   private currentPhase: StartupPhase = StartupPhase.Idle;
+  private activeVersionPath: string | null = null; // Path to the active version installation
 
   constructor(config: WebServiceConfig) {
     this.config = config;
-    this.userDataPath = app.getPath('userData');
+    this.pathManager = PathManager.getInstance();
 
     // Initialize saved port asynchronously
     this.initializeSavedPort().catch(error => {
       log.error('[WebService] Failed to initialize saved port:', error);
     });
+  }
+
+  /**
+   * Set the active version installation path
+   * @param versionId - Version ID (e.g., "hagicode-0.1.0-alpha.9-linux-x64-nort")
+   */
+  setActiveVersion(versionId: string): void {
+    this.activeVersionPath = this.pathManager.getInstalledVersionPath(versionId);
+    log.info('[WebService] Active version path set to:', this.activeVersionPath);
+  }
+
+  /**
+   * Clear the active version (when no version is installed)
+   */
+  clearActiveVersion(): void {
+    this.activeVersionPath = null;
+    log.info('[WebService] Active version cleared');
   }
 
   /**
@@ -66,16 +85,34 @@ export class PCodeWebServiceManager {
       return this.config.executablePath;
     }
 
+    // Use active version path if available
+    if (this.activeVersionPath) {
+      const platform = process.platform;
+
+      switch (platform) {
+        case 'win32':
+          return path.join(this.activeVersionPath, 'PCode.Web.exe');
+        case 'darwin':
+          return path.join(this.activeVersionPath, 'PCode.Web');
+        case 'linux':
+          return path.join(this.activeVersionPath, 'start.sh');
+        default:
+          throw new Error(`Unsupported platform: ${platform}`);
+      }
+    }
+
+    // Fallback to old path (for backward compatibility)
     const platform = process.platform;
-    const installedPath = path.join(this.userDataPath, 'pcode-web', 'installed');
+    const currentPlatform = this.pathManager.getCurrentPlatform();
+    const installedPath = this.pathManager.getInstalledPath(currentPlatform);
 
     switch (platform) {
       case 'win32':
-        return path.join(installedPath, 'win-x64', 'PCode.Web.exe');
+        return path.join(installedPath, 'PCode.Web.exe');
       case 'darwin':
-        return path.join(installedPath, 'osx-x64', 'PCode.Web');
+        return path.join(installedPath, 'PCode.Web');
       case 'linux':
-        return path.join(installedPath, 'linux-x64', 'start.sh');
+        return path.join(installedPath, 'start.sh');
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }
@@ -576,52 +613,24 @@ export class PCodeWebServiceManager {
    */
   async getVersion(): Promise<string> {
     try {
-      const installedPath = path.join(this.userDataPath, 'pcode-web', 'installed');
-      const metaPath = path.join(this.userDataPath, 'pcode-web', 'meta.json');
-
-      // Try reading from meta.json first
-      try {
-        const metaContent = await fs.readFile(metaPath, 'utf-8');
-        const meta = JSON.parse(metaContent);
-        if (meta.version) {
-          return meta.version;
+      // Use active version path if available
+      if (this.activeVersionPath) {
+        // Try reading manifest.json from active version
+        const manifestPath = path.join(this.activeVersionPath, 'manifest.json');
+        try {
+          const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+          const manifest = JSON.parse(manifestContent);
+          if (manifest.package && manifest.package.version) {
+            return manifest.package.version;
+          }
+        } catch {
+          log.warn('[WebService] Failed to read manifest from:', this.activeVersionPath);
         }
-      } catch {
-        // meta.json doesn't exist, try other methods
       }
 
-      // Try reading from appsettings.yml
-      const platform = process.platform;
-      let configPath: string;
-
-      switch (platform) {
-        case 'win32':
-          configPath = path.join(installedPath, 'win-x64', 'config', 'appsettings.yml');
-          break;
-        case 'darwin':
-          configPath = path.join(installedPath, 'osx-x64', 'config', 'appsettings.yml');
-          break;
-        case 'linux':
-          configPath = path.join(installedPath, 'linux-x64', 'config', 'appsettings.yml');
-          break;
-        default:
-          return 'unknown';
-      }
-
-      const yaml = await import('js-yaml');
-      const configContent = await fs.readFile(configPath, 'utf-8');
-      const config = yaml.load(configContent) as any;
-
-      if (config?.ApplicationVersion) {
-        return config.ApplicationVersion;
-      }
-
-      // Try version.txt as fallback
-      const versionPath = path.join(path.dirname(configPath), 'version.txt');
-      const versionContent = await fs.readFile(versionPath, 'utf-8');
-      return versionContent.trim();
+      return 'unknown';
     } catch (error) {
-      log.error('[WebService] Failed to read version:', error);
+      log.error('[WebService] Failed to get version:', error);
       return 'unknown';
     }
   }
@@ -656,33 +665,29 @@ export class PCodeWebServiceManager {
 
   /**
    * Get the config file path for the current platform
+   * Uses active version path if available, otherwise falls back to old path
    */
   private getConfigFilePath(): string {
-    const installedPath = path.join(this.userDataPath, 'pcode-web', 'installed');
-    const platform = process.platform;
-
-    switch (platform) {
-      case 'win32':
-        return path.join(installedPath, 'win-x64', 'config', 'appsettings.yml');
-      case 'darwin':
-        return path.join(installedPath, 'osx-x64', 'config', 'appsettings.yml');
-      case 'linux':
-        return path.join(installedPath, 'linux-x64', 'config', 'appsettings.yml');
-      default:
-        throw new Error(`Unsupported platform: ${platform}`);
+    // Use active version path if available
+    if (this.activeVersionPath) {
+      return path.join(this.activeVersionPath, 'config', 'appsettings.yml');
     }
+
+    // Fallback to old path (for backward compatibility)
+    const currentPlatform = this.pathManager.getCurrentPlatform();
+    return this.pathManager.getAppSettingsPath(currentPlatform);
   }
 
   /**
    * Load saved port from config file
    */
   private async loadSavedPort(): Promise<number | null> {
-    const configDir = path.join(this.userDataPath, 'config');
-    const configPath = path.join(configDir, 'web-service.json');
+    const paths = this.pathManager.getPaths();
+    const configPath = paths.webServiceConfig;
 
     try {
       // Ensure config directory exists
-      await fs.mkdir(configDir, { recursive: true });
+      await fs.mkdir(paths.config, { recursive: true });
 
       const content = await fs.readFile(configPath, 'utf-8');
       const config = JSON.parse(content);
@@ -701,12 +706,12 @@ export class PCodeWebServiceManager {
    * Save last successful port to config file
    */
   private async saveLastSuccessfulPort(port: number): Promise<void> {
-    const configDir = path.join(this.userDataPath, 'config');
-    const configPath = path.join(configDir, 'web-service.json');
+    const paths = this.pathManager.getPaths();
+    const configPath = paths.webServiceConfig;
 
     try {
       // Ensure config directory exists
-      await fs.mkdir(configDir, { recursive: true });
+      await fs.mkdir(paths.config, { recursive: true });
 
       const config = {
         lastSuccessfulPort: port,
@@ -724,9 +729,9 @@ export class PCodeWebServiceManager {
    * Migrate config from legacy location
    */
   private async migrateLegacyConfig(): Promise<void> {
-    const legacyPath = path.join(this.userDataPath, 'web-service-config.json');
-    const newDir = path.join(this.userDataPath, 'config');
-    const newPath = path.join(newDir, 'web-service.json');
+    const paths = this.pathManager.getPaths();
+    const legacyPath = path.join(paths.userData, 'web-service-config.json');
+    const newPath = paths.webServiceConfig;
 
     try {
       // Check if legacy config exists
@@ -736,7 +741,7 @@ export class PCodeWebServiceManager {
       const content = await fs.readFile(legacyPath, 'utf-8');
 
       // Ensure new config directory exists
-      await fs.mkdir(newDir, { recursive: true });
+      await fs.mkdir(paths.config, { recursive: true });
 
       // Copy to new location
       await fs.writeFile(newPath, content, 'utf-8');
@@ -783,6 +788,7 @@ export class PCodeWebServiceManager {
 
   /**
    * Sync configuration to file
+   * Creates the config file if it doesn't exist
    */
   private async syncConfigToFile(): Promise<void> {
     try {
@@ -792,14 +798,36 @@ export class PCodeWebServiceManager {
       log.info('[WebService] Syncing config to file:', configPath);
       log.info('[WebService] New config will be:', `http://${this.config.host}:${this.config.port}`);
 
-      // Read existing config
-      const content = await fs.readFile(configPath, 'utf-8');
-      const config = yaml.load(content) as any;
+      let config: any;
 
-      log.info('[WebService] Current config URLs:', config.Urls);
+      try {
+        // Try to read existing config
+        const content = await fs.readFile(configPath, 'utf-8');
+        config = yaml.load(content) as any;
+        log.info('[WebService] Current config URLs:', config.Urls);
+      } catch (readError) {
+        if ((readError as NodeJS.ErrnoException).code === 'ENOENT') {
+          // Config file doesn't exist, create a new one
+          log.info('[WebService] Config file does not exist, creating new one');
+          config = {
+            Urls: `http://${this.config.host}:${this.config.port}`,
+            Logging: {
+              LogLevel: {
+                Default: 'Information'
+              }
+            }
+          };
+        } else {
+          throw readError; // Re-throw other errors
+        }
+      }
 
       // Update URLs
       config.Urls = `http://${this.config.host}:${this.config.port}`;
+
+      // Ensure directory exists
+      const configDir = path.dirname(configPath);
+      await fs.mkdir(configDir, { recursive: true });
 
       // Write back
       const newContent = yaml.dump(config, {

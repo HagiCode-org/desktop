@@ -10,14 +10,14 @@
 
 ### Requirement: Cross-platform Desktop Client
 
-Hagico Desktop MUST provide native desktop clients on Windows, macOS, and Linux platforms as a local management and monitoring tool for Hagico Server.
+Hagicode Desktop MUST provide native desktop clients on Windows, macOS, and Linux platforms as a local management and monitoring tool for Hagicode Server.
 
 #### Scenario: 用户在 Windows 平台安装应用
 
 **Given** 用户使用 Windows 10 或更高版本
-**When** 用户下载并运行 Hagico Desktop 安装包（NSIS 或 AppX）
+**When** 用户下载并运行 Hagicode Desktop 安装包（NSIS 或 AppX）
 **Then** 应用成功安装到系统
-**And** 开始菜单出现 Hagico Desktop 快捷方式
+**And** 开始菜单出现 Hagicode Desktop 快捷方式
 **And** 系统托盘出现应用图标
 
 #### Scenario: 用户在 macOS 平台安装应用
@@ -25,7 +25,7 @@ Hagico Desktop MUST provide native desktop clients on Windows, macOS, and Linux 
 **Given** 用户使用 macOS 11 或更高版本
 **When** 用户下载并打开 DMG 安装包
 **Then** 应用拖拽到 Applications 文件夹后成功安装
-**And** Launchpad 中出现 Hagico Desktop 应用图标
+**And** Launchpad 中出现 Hagicode Desktop 应用图标
 **And** 菜单栏出现应用图标（macOS 菜单栏集成）
 
 #### Scenario: 用户在 Linux 平台安装应用
@@ -33,7 +33,7 @@ Hagico Desktop MUST provide native desktop clients on Windows, macOS, and Linux 
 **Given** 用户使用 Linux 发行版（Ubuntu、Fedora 等）
 **When** 用户下载并运行 AppImage 或 deb 包
 **Then** 应用成功安装或直接运行
-**And** 应用菜单中出现 Hagico Desktop 条目
+**And** 应用菜单中出现 Hagicode Desktop 条目
 **And** 系统托盘（如果支持）出现应用图标
 
 ---
@@ -46,7 +46,7 @@ The application MUST provide a persistent icon in the OS notification area (Wind
 
 **Given** 应用正在运行
 **When** 查看任务栏右下角通知区域
-**Then** 显示 Hagico Desktop 托盘图标
+**Then** 显示 Hagicode Desktop 托盘图标
 **And** 右键点击图标显示上下文菜单
 **And** 菜单包含 "显示窗口" 和 "退出" 选项
 **And** 托盘图标根据服务器状态变化（运行中/已停止）
@@ -70,11 +70,11 @@ The application MUST provide a persistent icon in the OS notification area (Wind
 
 ### Requirement: Server Status Monitoring
 
-The application MUST connect to a local or remote Hagico Server, query its running status in real-time, and display it in the main window and system tray.
+The application MUST connect to a local or remote Hagicode Server, query its running status in real-time, and display it in the main window and system tray.
 
 #### Scenario: 查询服务器运行状态
 
-**Given** Hagico Server 已安装并运行
+**Given** Hagicode Server 已安装并运行
 **When** 应用启动或用户手动刷新
 **Then** 应用通过 HTTP API 查询服务器状态
 **And** 状态结果在 3 秒内返回
@@ -91,7 +91,7 @@ The application MUST connect to a local or remote Hagico Server, query its runni
 #### Scenario: 服务器状态更新轮询
 
 **Given** 应用正在运行
-**When** 应用已连接到 Hagico Server
+**When** 应用已连接到 Hagicode Server
 **Then** 应用每隔 30 秒自动查询服务器状态
 **And** 状态变化时通知渲染进程更新 UI
 **And** 轮询在应用退出或用户禁用时停止
@@ -100,11 +100,11 @@ The application MUST connect to a local or remote Hagico Server, query its runni
 
 ### Requirement: Server Control
 
-The application MUST allow users to control Hagico Server start, stop, and restart operations through the main window.
+The application MUST allow users to control Hagicode Server start, stop, and restart operations through the main window.
 
-#### Scenario: 启动 Hagico Server
+#### Scenario: 启动 Hagicode Server
 
-**Given** Hagico Server 已安装但当前未运行
+**Given** Hagicode Server 已安装但当前未运行
 **When** 用户在主窗口点击 "启动服务器" 按钮
 **Then** 应用向服务器发送启动请求
 **And** 显示加载状态指示器
@@ -112,18 +112,18 @@ The application MUST allow users to control Hagico Server start, stop, and resta
 **And** 应用显示 "服务器正在启动" 通知
 **And** 状态更新为 "启动中" 然后变为 "运行中"
 
-#### Scenario: 停止 Hagico Server
+#### Scenario: 停止 Hagicode Server
 
-**Given** Hagico Server 正在运行
+**Given** Hagicode Server 正在运行
 **When** 用户在主窗口点击 "停止服务器" 按钮
 **Then** 应用显示确认对话框
 **And** 用户确认后向服务器发送停止请求
 **And** 应用显示 "服务器正在停止" 通知
 **And** 状态更新为 "已停止"
 
-#### Scenario: 重启 Hagico Server
+#### Scenario: 重启 Hagicode Server
 
-**Given** Hagico Server 正在运行
+**Given** Hagicode Server 正在运行
 **When** 用户在主窗口点击 "重启服务器" 按钮
 **Then** 应用显示确认对话框
 **And** 用户确认后先停止再启动服务器
@@ -143,7 +143,7 @@ The application MUST allow users to control Hagico Server start, stop, and resta
 
 ### Requirement: Server Connection Configuration
 
-The application MUST allow users to configure the connection address, port, and other communication parameters for Hagico Server.
+The application MUST allow users to configure the connection address, port, and other communication parameters for Hagicode Server.
 
 #### Scenario: 配置服务器连接地址
 

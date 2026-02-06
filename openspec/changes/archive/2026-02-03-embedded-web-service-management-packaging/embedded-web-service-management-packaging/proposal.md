@@ -2,11 +2,11 @@
 
 ## Overview
 
-为 Hagico Desktop 添加内嵌 .NET Web 服务（PCode.Web）的完整生命周期管理能力，实现单一发布包分发，采用 self-contained 部署模式，消除外部运行时依赖。
+为 Hagicode Desktop 添加内嵌 .NET Web 服务（PCode.Web）的完整生命周期管理能力，实现单一发布包分发，采用 self-contained 部署模式，消除外部运行时依赖。
 
 ## Problem Statement
 
-当前 Hagico Desktop 应用存在以下核心问题：
+当前 Hagicode Desktop 应用存在以下核心问题：
 
 1. **缺少进程管理能力**：应用无法启动、停止或监控内嵌的 .NET Web 程序
 2. **状态可见性不足**：用户无法查看 Web 服务的运行状态或访问地址

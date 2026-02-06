@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   selectWebServiceInfo,
   selectWebServiceError,
   selectPackageManagementInfo,
+  selectActiveVersion,
+  selectCanLaunchService,
+  selectLaunchBlockingReason,
   setProcessInfo,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
@@ -13,6 +18,7 @@ import {
   stopWebServiceAction,
   restartWebServiceAction,
   fetchWebServiceVersionAction,
+  fetchActiveVersionAction,
   updateWebServicePortAction,
 } from '../store/sagas/webServiceSaga';
 import { RootState, AppDispatch } from '../store';
@@ -24,16 +30,17 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import {
   Server,
-  Play,
   Square,
   RotateCw,
-  ExternalLink,
   Loader2,
   AlertCircle,
-  Info,
   Settings,
   Check,
+  Package,
+  FolderOpen,
 } from 'lucide-react';
+import HagicodeActionButton from './HagicodeActionButton';
+import DependencyWarningBanner from './DependencyWarningBanner';
 
 // Types
 declare global {
@@ -41,6 +48,7 @@ declare global {
     electronAPI: {
       getWebServiceVersion: () => Promise<string>;
       onWebServiceStatusChange: (callback: (status: any) => void) => (() => void) | void;
+      versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
@@ -51,6 +59,9 @@ const WebServiceStatusCard: React.FC = () => {
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
   const error = useSelector(selectWebServiceError);
   const { packageInfo } = useSelector((state: RootState) => selectPackageManagementInfo(state));
+  const activeVersion = useSelector(selectActiveVersion);
+  const canLaunchService = useSelector(selectCanLaunchService);
+  const launchBlockingReason = useSelector(selectLaunchBlockingReason);
 
   const [isEditingPort, setIsEditingPort] = useState(false);
   const [portInputValue, setPortInputValue] = useState((webServiceInfo.port || 36556).toString());
@@ -59,15 +70,32 @@ const WebServiceStatusCard: React.FC = () => {
   useEffect(() => {
     // Fetch version on mount
     dispatch(fetchWebServiceVersionAction());
+    // Fetch active version on mount
+    dispatch(fetchActiveVersionAction());
 
     // Listen for web service status changes from main process
     const unsubscribe = window.electronAPI.onWebServiceStatusChange((status: any) => {
       dispatch(setProcessInfo(status));
     });
 
+    // Listen for tray start/stop service commands
+    const unsubscribeTrayStart = window.electronAPI.onTrayStartService(() => {
+      dispatch(startWebServiceAction());
+    });
+
+    const unsubscribeTrayStop = window.electronAPI.onTrayStopService(() => {
+      dispatch(stopWebServiceAction());
+    });
+
     return () => {
       if (typeof unsubscribe === 'function') {
         unsubscribe();
+      }
+      if (typeof unsubscribeTrayStart === 'function') {
+        unsubscribeTrayStart();
+      }
+      if (typeof unsubscribeTrayStop === 'function') {
+        unsubscribeTrayStop();
       }
     };
   }, [dispatch]);
@@ -89,9 +117,19 @@ const WebServiceStatusCard: React.FC = () => {
     dispatch(restartWebServiceAction());
   };
 
-  const handleOpenInBrowser = () => {
+  const handleOpenHagicode = () => {
     if (webServiceInfo.url) {
       window.open(webServiceInfo.url, '_blank');
+    }
+  };
+
+  const handleOpenInBrowser = async () => {
+    if (webServiceInfo.url) {
+      try {
+        await window.electronAPI.openExternal(webServiceInfo.url);
+      } catch (error) {
+        console.error('Failed to open URL in browser:', error);
+      }
     }
   };
 
@@ -119,6 +157,30 @@ const WebServiceStatusCard: React.FC = () => {
     setPortInputValue((webServiceInfo.port || 36556).toString());
     setPortError(null);
     setIsEditingPort(false);
+  };
+
+  const handleOpenLogs = async () => {
+    if (!activeVersion) {
+      toast.error(t('webServiceStatus.toast.noActiveVersion'));
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.versionOpenLogs(activeVersion.id);
+
+      if (result.success) {
+        toast.success(t('webServiceStatus.toast.openLogsSuccess'));
+      } else {
+        if (result.error === 'logs_not_found') {
+          toast.error(t('webServiceStatus.toast.logsNotFound'));
+        } else {
+          toast.error(t('webServiceStatus.toast.openLogsError'));
+        }
+      }
+    } catch (error) {
+      console.error('Error opening logs folder:', error);
+      toast.error(t('webServiceStatus.toast.openLogsError'));
+    }
   };
 
   const getStatusVariant = (status: ProcessStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -169,110 +231,227 @@ const WebServiceStatusCard: React.FC = () => {
   const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
   const isDisabled = webServiceInfo.isOperating || isTransitioning;
 
+  // Render blocking reason alert
+  const renderBlockingReason = () => {
+    if (launchBlockingReason === 'no-version') {
+      return (
+        <Alert>
+          <Package className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">{t('webServiceStatus.noVersionAlert.title') || 'No Active Version'}</p>
+              <p className="text-sm">
+                {t('webServiceStatus.noVersionAlert.message') || 'Please install and activate a version first.'}
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (launchBlockingReason === 'version-not-ready') {
+      return (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">{t('webServiceStatus.versionNotReadyAlert.title') || 'Version Not Ready'}</p>
+              <p className="text-sm">
+                {t('webServiceStatus.versionNotReadyAlert.message') || 'Active version has missing dependencies.'}
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return null;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Server className="w-5 h-5" />
-          {t('webServiceStatus.cardTitle')}
-        </CardTitle>
-        <CardDescription>{getStatusDescription(webServiceInfo.status)}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Status Badge */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Badge variant={getStatusVariant(webServiceInfo.status)} className="text-sm px-3 py-1">
-              {getStatusText(webServiceInfo.status)}
-            </Badge>
-          </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Card className="relative overflow-hidden border-border/50 shadow-lg shadow-primary/5">
+        {/* Animated status indicator line */}
+        <motion.div
+          className="absolute top-0 left-0 h-1 bg-linear-to-r from-primary to-primary/50"
+          initial={{ width: 0 }}
+          animate={{ width: isRunning ? '100%' : isStopped ? '0%' : '50%' }}
+          transition={{ duration: 0.5 }}
+        />
 
-          <div className="flex gap-2">
-            {isStopped && (
-              packageInfo?.isInstalled ? (
-                <Button
-                  onClick={handleStart}
-                  disabled={isDisabled}
-                  variant="default"
+        <CardHeader>
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <CardTitle className="flex items-center gap-2">
+              <motion.div
+                animate={isRunning ? {
+                  rotate: [0, 5, -5, 0],
+                  scale: [1, 1.1, 1],
+                } : {}}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Server className={`w-5 h-5 ${isRunning ? 'text-primary' : ''}`} />
+              </motion.div>
+              {t('webServiceStatus.cardTitle')}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2">
+              <motion.span
+                key={webServiceInfo.status}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {getStatusDescription(webServiceInfo.status)}
+              </motion.span>
+              {isRunning && (
+                <motion.span
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-2 h-2 bg-primary rounded-full"
+                />
+              )}
+            </CardDescription>
+          </motion.div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Status Badge */}
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="flex items-center gap-4"
+          >
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={webServiceInfo.status}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Badge
+                  variant={getStatusVariant(webServiceInfo.status)}
+                  className="text-sm px-3 py-1"
                 >
-                  {isDisabled && webServiceInfo.status === 'starting' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('webServiceStatus.status.starting')}
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      {t('webServiceStatus.startButton')}
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="space-y-2">
-                      <p className="font-medium">{t('webServiceStatus.notInstalledAlert.title')}</p>
-                      <p className="text-sm">
-                        {t('webServiceStatus.notInstalledAlert.message')}
-                      </p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )
-            )}
+                  {getStatusText(webServiceInfo.status)}
+                </Badge>
+              </motion.span>
+            </AnimatePresence>
+          </motion.div>
 
+          {/* Dependency Warning Banner */}
+          <DependencyWarningBanner />
+
+          {/* Primary Action Button - Full Width */}
+          <AnimatePresence mode="wait">
+            {isStopped && !canLaunchService ? (
+              <motion.div
+                key="blocking-reason"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {renderBlockingReason()}
+              </motion.div>
+            ) : (
+              <HagicodeActionButton
+                isRunning={isRunning}
+                isDisabled={isDisabled}
+                status={webServiceInfo.status}
+                canLaunchService={canLaunchService}
+                onStart={handleStart}
+                onOpenApp={handleOpenHagicode}
+                onOpenBrowser={handleOpenInBrowser}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Secondary Controls - Restart/Stop (only when running) */}
+          <AnimatePresence mode="wait">
             {isRunning && (
-              <>
-                <Button
-                  onClick={handleRestart}
-                  disabled={isDisabled}
-                  variant="secondary"
+              <motion.div
+                key="secondary-controls"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="flex gap-2 justify-center"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {isDisabled && webServiceInfo.status === 'stopping' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('webServiceStatus.restartingButton')}
-                    </>
-                  ) : (
-                    <>
-                      <RotateCw className="w-4 h-4 mr-2" />
-                      {t('webServiceStatus.restartButton')}
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={handleStop}
-                  disabled={isDisabled}
-                  variant="destructive"
-                >
-                  {isDisabled && webServiceInfo.status === 'stopping' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('webServiceStatus.stoppingButton')}
-                    </>
-                  ) : (
-                    <>
-                      <Square className="w-4 h-4 mr-2" />
-                      {t('webServiceStatus.stopButton')}
-                    </>
-                  )}
-                </Button>
-
-                {webServiceInfo.url && (
                   <Button
-                    onClick={handleOpenInBrowser}
-                    variant="outline"
+                    onClick={handleRestart}
+                    disabled={isDisabled}
+                    variant="secondary"
+                    size="sm"
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    {t('webServiceStatus.openInBrowser')}
+                    {isDisabled && webServiceInfo.status === 'stopping' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('webServiceStatus.restartingButton')}
+                      </>
+                    ) : (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2" />
+                        {t('webServiceStatus.restartButton')}
+                      </>
+                    )}
                   </Button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    onClick={handleStop}
+                    disabled={isDisabled}
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    {isDisabled && webServiceInfo.status === 'stopping' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('webServiceStatus.stoppingButton')}
+                      </>
+                    ) : (
+                      <>
+                        <Square className="w-4 h-4 mr-2" />
+                        {t('webServiceStatus.stopButton')}
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+
+                {/* Open Logs Button - only when active version exists */}
+                {activeVersion && (
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      onClick={handleOpenLogs}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      {t('webServiceStatus.openLogsButton')}
+                    </Button>
+                  </motion.div>
                 )}
-              </>
+              </motion.div>
             )}
-          </div>
-        </div>
+          </AnimatePresence>
 
         <Separator />
 
@@ -288,7 +467,7 @@ const WebServiceStatusCard: React.FC = () => {
                 onClick={() => setIsEditingPort(!isEditingPort)}
               >
                 <Settings className="w-3 h-3 mr-1" />
-                {isEditingPort ? t('common.cancel') : t('common.edit')}
+                {isEditingPort ? t('common:button.cancel') : t('common:button.edit')}
               </Button>
             </div>
             {isEditingPort ? (
@@ -315,14 +494,14 @@ const WebServiceStatusCard: React.FC = () => {
                   onClick={handleUpdatePort}
                 >
                   <Check className="w-3 h-3 mr-1" />
-                  {t('common.save')}
+                  {t('common:button.save')}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCancelEditPort}
                 >
-                  {t('common.cancel')}
+                  {t('common:button.cancel')}
                 </Button>
               </div>
             ) : (
@@ -337,51 +516,62 @@ const WebServiceStatusCard: React.FC = () => {
           </div>
         )}
 
-        {/* Service Details */}
-        {isRunning && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">{t('webServiceStatus.details.serviceUrl')}</div>
-              <div className="text-sm font-mono text-primary break-all">
-                {webServiceInfo.url || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">{t('webServiceStatus.details.processId')}</div>
-              <div className="text-sm font-mono">
-                {webServiceInfo.pid || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">{t('webServiceStatus.details.uptime')}</div>
-              <div className="text-sm font-mono">
-                {formatUptime(webServiceInfo.uptime)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">{t('webServiceStatus.details.restartCount')}</div>
-              <div className="text-sm font-mono">
-                {webServiceInfo.restartCount}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">{t('webServiceStatus.details.port')}</div>
-              <div className="text-sm font-mono">
-                {webServiceInfo.port || 'N/A'}
-              </div>
-            </div>
-          </div>
-        )}
+          {/* Service Details */}
+          <AnimatePresence mode="wait">
+            {isRunning && (
+              <motion.div
+                key="service-details"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50"
+              >
+                {[
+                  { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || 'N/A', mono: true, primary: true },
+                  { label: t('webServiceStatus.details.processId'), value: webServiceInfo.pid || 'N/A', mono: true },
+                  { label: t('webServiceStatus.details.uptime'), value: formatUptime(webServiceInfo.uptime), mono: true },
+                  { label: t('webServiceStatus.details.restartCount'), value: webServiceInfo.restartCount.toString(), mono: true },
+                  { label: t('webServiceStatus.details.port'), value: (webServiceInfo.port || 'N/A').toString(), mono: true },
+                  { label: t('webServiceStatus.details.version') || 'Version', value: activeVersion?.version || 'N/A', mono: true },
+                ].map((item, index) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ y: -2 }}
+                    className="p-2 rounded transition-all cursor-default"
+                  >
+                    <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
+                    <div className={`text-sm font-mono ${item.primary ? 'text-primary' : ''} break-all`}>
+                      {item.value}
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Error Display */}
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+          {/* Error Display */}
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                key="error-alert"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

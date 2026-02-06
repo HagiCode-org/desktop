@@ -1,7 +1,7 @@
 # build-system Specification
 
 ## Purpose
-定义 Hagico Desktop 项目的构建系统规范,确保构建过程符合开源项目的透明性要求并支持多平台发布。
+定义 Hagicode Desktop 项目的构建系统规范,确保构建过程符合开源项目的透明性要求并支持多平台发布。
 
 ## ADDED Requirements
 
@@ -35,7 +35,7 @@
 
 #### Scenario: 源代码可用性
 
-**Given** 用户使用 Hagico Desktop 应用
+**Given** 用户使用 Hagicode Desktop 应用
 **When** 用户请求查看源代码
 **Then** 用户能够通过 GitHub 仓库获取完整源代码
 **And** 发布的安装包中包含可读的源代码

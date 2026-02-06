@@ -5,13 +5,11 @@
       "label": "Language",
       "description": "Select application interface language"
     },
-    "remoteServerHost": "Remote Server Host",
-    "remoteServerPort": "Remote Server Port",
     "embeddedWebServicePort": "Embedded Web Service Port",
     "moreSettingsComing": "More settings coming soon..."
   },
   "footer": {
-    "copyright": "© 2025 Hagico Desktop. Built with ❤️ using Electron + React + TypeScript.",
+    "copyright": "© 2025 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.",
     "testBuild": "Test application - Development build"
   },
   "quickStart": {
@@ -24,5 +22,80 @@
   },
   "header": {
     "runningSuccessfully": "Running Successfully"
+  },
+  "dependencyManagement": {
+    "title": "Dependency Management",
+    "backToDashboard": "Back to Dashboard",
+    "description": "Manage embedded web service packages and system dependencies",
+    "tips": {
+      "title": "Tips",
+      "description": "Keep your dependencies up to date for the best performance and security."
+    },
+    "noPackageInstalled": "No package installed",
+    "installedVersion": "Installed Version",
+    "requiredVersion": "Required Version",
+    "status": {
+      "installed": "Installed",
+      "notInstalled": "Not Found",
+      "versionMismatch": "Version Mismatch"
+    },
+    "actions": {
+      "refresh": "Refresh Dependencies",
+      "install": "Install",
+      "installing": "Installing...",
+      "download": "Download"
+    }
+  },
+  "versionManagement": {
+    "title": "Version Management",
+    "description": "Install, switch, and manage Hagicode Server versions",
+    "availableVersions": "Available Versions",
+    "installedVersions": "Installed Versions",
+    "installed": "Installed",
+    "installing": "Installing...",
+    "switching": "Switching...",
+    "reinstalling": "Reinstalling...",
+    "installedAt": "Installed at",
+    "notInstalled": "Not Installed",
+    "dependencies": "Dependencies",
+    "confirmUninstall": "Are you sure you want to uninstall this version?",
+    "confirmReinstall": "Are you sure you want to reinstall this package? This will delete the cache and installed version, then download and install again.",
+    "reinstall": "Reinstall",
+    "noVersionsAvailable": "No versions available",
+    "status": {
+      "active": "Active",
+      "ready": "Ready",
+      "incomplete": "Missing Dependencies"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "install": "Install Version",
+      "switch": "Switch",
+      "uninstall": "Uninstall",
+      "viewDependencies": "View Dependencies",
+      "reinstall": "Reinstall",
+      "openLogs": "Open Logs"
+    },
+    "info": {
+      "title": "About Version Management",
+      "description": "Version management allows you to install multiple Hagicode Server versions and switch between them. Only versions with all dependencies satisfied can be activated."
+    },
+    "toast": {
+      "reinstallSuccess": "Reinstalled successfully",
+      "reinstallFailed": "Reinstallation failed",
+      "uninstallSuccess": "Uninstalled successfully",
+      "uninstallFailed": "Uninstallation failed",
+      "openLogsSuccess": "Logs folder opened",
+      "logsNotFound": "Logs folder not found",
+      "openLogsError": "Failed to open logs folder"
+    },
+    "dialog": {
+      "reinstallTitle": "Confirm Reinstallation",
+      "reinstallDescription": "This will delete the cache and installed version, then download and install again. Do you want to continue?",
+      "uninstallTitle": "Confirm Uninstallation",
+      "uninstallDescription": "Are you sure you want to uninstall this version? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
   }
 }

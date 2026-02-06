@@ -1,4 +1,4 @@
-name: Build Hagico Desktop
+name: Build Hagicode Desktop
 
 on:
   push:
@@ -55,28 +55,52 @@ jobs:
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-windows-nsis-${{ github.sha }}
+          name: hagicode-windows-nsis-${{ github.sha }}
           path: pkg/*Setup*.exe
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload NSIS installer to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*Setup*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload AppX package
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-windows-appx-${{ github.sha }}
+          name: hagicode-windows-appx-${{ github.sha }}
           path: pkg/*.appx
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload AppX package to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.appx
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload portable
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-windows-portable-${{ github.sha }}
-          path: pkg/Hagico*.exe
+          name: hagicode-windows-portable-${{ github.sha }}
+          path: pkg/Hagicode*.exe
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload portable to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/Hagicode*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ################################################################################
   # Linux Build Job
@@ -120,28 +144,52 @@ jobs:
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-linux-appimage-${{ github.sha }}
+          name: hagicode-linux-appimage-${{ github.sha }}
           path: pkg/*.AppImage
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload AppImage to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload deb
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-linux-deb-${{ github.sha }}
+          name: hagicode-linux-deb-${{ github.sha }}
           path: pkg/*.deb
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload deb to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload tar.gz
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
-          name: hagico-linux-targz-${{ github.sha }}
+          name: hagicode-linux-targz-${{ github.sha }}
           path: pkg/*.tar.gz
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload tar.gz to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ################################################################################
   # macOS Build Job
@@ -190,6 +238,14 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+      - name: Upload DMG to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         if: success() && !startsWith(github.ref, 'refs/tags/v')
@@ -198,6 +254,14 @@ jobs:
           path: pkg/*.zip
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Upload ZIP to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ################################################################################
   # Build Summary Job

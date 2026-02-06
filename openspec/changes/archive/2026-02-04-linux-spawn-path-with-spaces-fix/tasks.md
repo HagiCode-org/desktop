@@ -10,11 +10,11 @@
 
 ## 2. Testing
 
-- [x] 2.1 在 Linux 环境中测试路径包含空格时的 Web 服务启动（如 `/home/user/.config/Hagico Desktop`）
+- [x] 2.1 在 Linux 环境中测试路径包含空格时的 Web 服务启动（如 `/home/user/.config/Hagicode Desktop`）
 - [x] 2.2 在 Linux 环境中测试路径不包含空格时的 Web 服务启动，确保向后兼容性
-- [x] 2.3 在 Windows 环境中测试路径包含空格时的 Web 服务启动（如 `C:\Users\user\AppData\Roaming\Hagico Desktop`）
+- [x] 2.3 在 Windows 环境中测试路径包含空格时的 Web 服务启动（如 `C:\Users\user\AppData\Roaming\Hagicode Desktop`）
 - [x] 2.4 在 Windows 环境中测试路径不包含空格时的 Web 服务启动
-- [x] 2.5 在 macOS 环境中测试路径包含空格时的 Web 服务启动（如 `/Users/user/Library/Application Support/Hagico Desktop`）
+- [x] 2.5 在 macOS 环境中测试路径包含空格时的 Web 服务启动（如 `/Users/user/Library/Application Support/Hagicode Desktop`）
 - [x] 2.6 在 macOS 环境中测试路径不包含空格时的 Web 服务启动
 - [x] 2.7 验证进程启动后的健康检查功能正常工作
 - [x] 2.8 验证进程停止和重启功能正常工作

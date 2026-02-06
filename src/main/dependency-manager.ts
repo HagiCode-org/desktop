@@ -1,7 +1,9 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { NpmMirrorHelper } from './npm-mirror-helper.js';
+import { ParsedDependency, DependencyTypeName, type Manifest, type Region, type ParsedInstallCommand } from './manifest-reader.js';
 import Store from 'electron-store';
+import log from 'electron-log';
 
 const execAsync = promisify(exec);
 
@@ -26,7 +28,7 @@ export interface DependencyCheckResult {
   version?: string;
   requiredVersion?: string;
   versionMismatch?: boolean;
-  installCommand?: string;
+  installCommand?: string | Record<string, unknown>; // Support both string and object formats
   downloadUrl?: string;
   description?: string;
 }
@@ -118,6 +120,204 @@ export class DependencyManager {
     results.push(openSpecResult);
 
     return results;
+  }
+
+  /**
+   * Check dependencies from parsed manifest
+   * @param dependencies - Parsed dependencies from manifest
+   * @returns Array of dependency check results
+   */
+  async checkFromManifest(dependencies: ParsedDependency[]): Promise<DependencyCheckResult[]> {
+    const results: DependencyCheckResult[] = [];
+
+    for (const dep of dependencies) {
+      try {
+        const result = await this.checkSingleDependency(dep);
+        results.push(result);
+      } catch (error) {
+        console.error(`[DependencyManager] Failed to check dependency ${dep.name}:`, error);
+        // Add failed check result
+        results.push({
+          name: dep.name,
+          type: this.mapDependencyType(dep.key, dep.type),
+          installed: false,
+          description: dep.description,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Check a single dependency from manifest
+   * @param dep - Parsed dependency
+   * @returns Dependency check result
+   */
+  private async checkSingleDependency(dep: ParsedDependency): Promise<DependencyCheckResult> {
+    const result: DependencyCheckResult = {
+      name: dep.name,
+      type: this.mapDependencyType(dep.key, dep.type),
+      installed: false,
+      requiredVersion: this.formatRequiredVersion(dep.versionConstraints),
+      description: dep.description,
+      installCommand: dep.installCommand as any,
+      downloadUrl: dep.installHint,
+    };
+
+    try {
+      // Execute check command
+      const { stdout } = await execAsync(dep.checkCommand, { timeout: 10000 });
+
+      // Parse version from output
+      const versionMatch = stdout.match(/(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)/);
+      const installedVersion = versionMatch ? versionMatch[1] : 'installed';
+
+      result.installed = true;
+      result.version = installedVersion;
+
+      // Check version constraints
+      result.versionMismatch = !this.checkVersionConstraints(
+        installedVersion,
+        dep.versionConstraints
+      );
+
+      console.log(`[DependencyManager] ${dep.name}: installed=${result.installed}, version=${installedVersion}, mismatch=${result.versionMismatch}`);
+    } catch (error) {
+      // Command not found or failed
+      console.log(`[DependencyManager] ${dep.name}: not installed (check failed)`);
+      result.installed = false;
+    }
+
+    return result;
+  }
+
+  /**
+   * Check if installed version satisfies version constraints
+   * @param installedVersion - The installed version string
+   * @param constraints - Version constraints from manifest
+   * @returns true if version satisfies constraints
+   */
+  private checkVersionConstraints(installedVersion: string, constraints: ParsedDependency['versionConstraints']): boolean {
+    // If exact version is required, check exact match
+    if (constraints.exact) {
+      return this.isExactVersionMatch(installedVersion, constraints.exact);
+    }
+
+    // Check min version
+    if (constraints.min && !this.isVersionSatisfied(installedVersion, constraints.min)) {
+      return false;
+    }
+
+    // Check max version
+    if (constraints.max && !this.isMaxVersionSatisfied(installedVersion, constraints.max)) {
+      return false;
+    }
+
+    // For dotnet runtime-specific check
+    if (constraints.runtime?.min) {
+      // Handle special case like "10.0.0+" - check if at least this version
+      if (!this.isVersionSatisfied(installedVersion, constraints.runtime.min)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check exact version match (including pre-release tags)
+   * @param installed - Installed version
+   * @param required - Required exact version
+   * @returns true if exact match
+   */
+  private isExactVersionMatch(installed: string, required: string): boolean {
+    // Remove 'v' prefix if present
+    const cleanInstalled = installed.replace(/^v/, '');
+    const cleanRequired = required.replace(/^v/, '');
+
+    // Direct string comparison for exact match
+    return cleanInstalled === cleanRequired;
+  }
+
+  /**
+   * Check if installed version is less than or equal to max version
+   * @param installedVersion - Installed version
+   * @param maxVersion - Maximum allowed version
+   * @returns true if installed <= max
+   */
+  private isMaxVersionSatisfied(installedVersion: string, maxVersion: string): boolean {
+    const parseVersion = (v: string) => {
+      // Handle pre-release versions (e.g., "0.1.0-alpha.9")
+      const parts = v.split('-')[0].split('.').map(Number);
+      return parts;
+    };
+
+    const installed = parseVersion(installedVersion);
+    const max = parseVersion(maxVersion);
+
+    for (let i = 0; i < Math.max(installed.length, max.length); i++) {
+      const ins = installed[i] || 0;
+      const mx = max[i] || 0;
+
+      if (ins < mx) return true;
+      if (ins > mx) return false;
+    }
+
+    return true; // Equal versions
+  }
+
+  /**
+   * Format version constraints for display
+   * @param constraints - Version constraints
+   * @returns Formatted version requirement string
+   */
+  private formatRequiredVersion(constraints: ParsedDependency['versionConstraints']): string {
+    if (constraints.exact) {
+      return `exactly ${constraints.exact}`;
+    }
+
+    const parts: string[] = [];
+    if (constraints.min) parts.push(`${constraints.min}+`);
+    if (constraints.max) parts.push(`<= ${constraints.max}`);
+    if (constraints.recommended) parts.push(`recommended: ${constraints.recommended}`);
+
+    if (parts.length === 0) return 'any';
+    return parts.join(', ');
+  }
+
+  /**
+   * Map manifest dependency key and type to DependencyType enum
+   * @param key - Dependency key from manifest
+   * @param type - Dependency type from manifest
+   * @returns Mapped DependencyType enum value
+   */
+  private mapDependencyType(key: string, type: DependencyTypeName): DependencyType {
+    // Map based on key for known dependencies
+    const keyMapping: Record<string, DependencyType> = {
+      'claudeCode': DependencyType.ClaudeCode,
+      'openspec': DependencyType.OpenSpec,
+      'dotnet': DependencyType.DotNetRuntime,
+      'node': DependencyType.NodeJs,
+      'npm': DependencyType.NodeJs, // Treat npm as Node.js dependency
+    };
+
+    if (keyMapping[key]) {
+      return keyMapping[key];
+    }
+
+    // Fallback based on type
+    switch (type) {
+      case 'npm':
+        return DependencyType.ClaudeCode; // Default npm package type
+      case 'system-runtime':
+        if (key.includes('dotnet') || key.includes('.net')) {
+          return DependencyType.DotNetRuntime;
+        }
+        return DependencyType.NodeJs;
+      default:
+        return DependencyType.ClaudeCode; // Default fallback
+    }
   }
 
   /**
@@ -390,6 +590,138 @@ export class DependencyManager {
     } catch (error) {
       console.error(`[DependencyManager] Failed to install NPM package ${pkg.name}:`, error);
       return false;
+    }
+  }
+
+  /**
+   * Install dependencies from manifest
+   * @param manifest - Parsed manifest object
+   * @param dependencies - List of dependencies to install (optional, will check all if not provided)
+   * @param onProgress - Progress callback
+   * @returns Installation result
+   */
+  async installFromManifest(
+    manifest: Manifest,
+    dependencies?: ParsedDependency[],
+    onProgress?: (progress: {
+      current: number;
+      total: number;
+      dependency: string;
+      status: 'installing' | 'success' | 'error';
+    }) => void,
+  ): Promise<{
+    success: string[];
+    failed: Array<{ dependency: string; error: string }>;
+  }> {
+    const results = {
+      success: [] as string[],
+      failed: [] as Array<{ dependency: string; error: string }>,
+    };
+
+    // If dependencies not provided, parse from manifest
+    const depsToCheck = dependencies || [];
+    const missingDeps: Array<ParsedDependency & { parsedInstallCommand: ParsedInstallCommand }> = [];
+
+    // Get parsed install commands for all dependencies
+    const { manifestReader } = await import('./manifest-reader.js');
+    const region = manifestReader.detectRegion();
+
+    for (const dep of depsToCheck) {
+      const parsed = manifestReader.parseInstallCommand(dep.installCommand, region);
+      // Check if dependency needs installation (assume all passed deps need to be installed)
+      // since ParsedDependency doesn't have installed status
+      missingDeps.push({ ...dep, parsedInstallCommand: parsed } as any);
+    }
+
+    log.info('[DependencyManager] Installing', missingDeps.length, 'missing dependencies from manifest');
+
+    for (let i = 0; i < missingDeps.length; i++) {
+      const dep = missingDeps[i];
+
+      onProgress?.({
+        current: i + 1,
+        total: missingDeps.length,
+        dependency: dep.name,
+        status: 'installing',
+      });
+
+      try {
+        await this.installSingleDependency(dep, dep.parsedInstallCommand);
+        results.success.push(dep.name);
+
+        onProgress?.({
+          current: i + 1,
+          total: missingDeps.length,
+          dependency: dep.name,
+          status: 'success',
+        });
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        results.failed.push({
+          dependency: dep.name,
+          error: errorMsg,
+        });
+
+        log.error(`[DependencyManager] Failed to install ${dep.name}:`, error);
+
+        onProgress?.({
+          current: i + 1,
+          total: missingDeps.length,
+          dependency: dep.name,
+          status: 'error',
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Install a single dependency using parsed install command
+   * @param dep - Parsed dependency
+   * @param parsedCommand - Parsed install command
+   * @returns Installation success
+   */
+  async installSingleDependency(
+    dep: ParsedDependency,
+    parsedCommand?: ParsedInstallCommand
+  ): Promise<boolean> {
+    const { manifestReader } = await import('./manifest-reader.js');
+    const region = manifestReader.detectRegion();
+    const command = parsedCommand || manifestReader.parseInstallCommand(dep.installCommand, region);
+
+    if (!dep.installCommand) {
+      throw new Error(`No install command for ${dep.name}`);
+    }
+
+    // Check if command is available
+    if (command.type === 'not-available' || !command.command) {
+      throw new Error(`No auto-install command available for ${dep.name}. Please install manually.`);
+    }
+
+    // Execute the install command directly from manifest
+    // The manifest command already contains the correct mirror/source configuration
+    return await this.executeSystemCommand(command.command);
+  }
+
+  /**
+   * Execute system command for dependency installation
+   * @param command - Command to execute
+   * @returns Execution success
+   */
+  private async executeSystemCommand(command: string): Promise<boolean> {
+    try {
+      log.info(`[DependencyManager] Executing system command: ${command}`);
+
+      await execAsync(command, {
+        timeout: 300000, // 5 minute timeout
+      });
+
+      log.info(`[DependencyManager] System command completed successfully`);
+      return true;
+    } catch (error) {
+      log.error(`[DependencyManager] System command failed:`, error);
+      throw error;
     }
   }
 }

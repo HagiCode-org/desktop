@@ -12,10 +12,12 @@ import { i18nConfig } from './config';
 import zhCNCommon from './locales/zh-CN/common.json';
 import zhCNComponents from './locales/zh-CN/components.json';
 import zhCNPages from './locales/zh-CN/pages.json';
+import zhCNUi from './locales/zh-CN/ui.json';
 
 import enUSCommon from './locales/en-US/common.json';
 import enUSComponents from './locales/en-US/components.json';
 import enUSPages from './locales/en-US/pages.json';
+import enUSUi from './locales/en-US/ui.json';
 
 // Initialize i18next
 i18n
@@ -29,11 +31,13 @@ i18n
         common: zhCNCommon,
         components: zhCNComponents,
         pages: zhCNPages,
+        ui: zhCNUi,
       },
       'en-US': {
         common: enUSCommon,
         components: enUSComponents,
         pages: enUSPages,
+        ui: enUSUi,
       },
     },
   });

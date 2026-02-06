@@ -25,6 +25,18 @@ export interface DependencyItem {
 }
 
 /**
+ * Install progress information
+ */
+export interface InstallProgress {
+  installing: boolean;
+  current: number;
+  total: number;
+  currentDependency: string;
+  status: 'pending' | 'installing' | 'success' | 'error';
+  errors: Array<{ dependency: string; error: string }>;
+}
+
+/**
  * Dependency state
  */
 export interface DependencyState {
@@ -33,6 +45,16 @@ export interface DependencyState {
   installing: boolean;
   installingType: DependencyType | null;
   error: string | null;
+
+  // New: Install confirmation dialog state
+  installConfirm: {
+    show: boolean;
+    dependencies: DependencyItem[];
+    versionId: string;
+  };
+
+  // New: Install progress
+  installProgress: InstallProgress;
 }
 
 const initialState: DependencyState = {
@@ -41,6 +63,19 @@ const initialState: DependencyState = {
   installing: false,
   installingType: null,
   error: null,
+  installConfirm: {
+    show: false,
+    dependencies: [],
+    versionId: '',
+  },
+  installProgress: {
+    installing: false,
+    current: 0,
+    total: 0,
+    currentDependency: '',
+    status: 'pending',
+    errors: [],
+  },
 };
 
 const dependencySlice = createSlice({
@@ -75,6 +110,36 @@ const dependencySlice = createSlice({
       state.installingType = null;
       state.error = action.payload;
     },
+    // New: Install confirmation dialog actions
+    showInstallConfirm: (state, action: PayloadAction<{ dependencies: DependencyItem[]; versionId: string }>) => {
+      state.installConfirm.show = true;
+      state.installConfirm.dependencies = action.payload.dependencies;
+      state.installConfirm.versionId = action.payload.versionId;
+    },
+    hideInstallConfirm: (state) => {
+      state.installConfirm.show = false;
+      state.installConfirm.dependencies = [];
+      state.installConfirm.versionId = '';
+    },
+    // New: Install progress actions
+    startInstall: (state, action: PayloadAction<number>) => {
+      state.installProgress.installing = true;
+      state.installProgress.total = action.payload;
+      state.installProgress.current = 0;
+      state.installProgress.status = 'installing';
+      state.installProgress.errors = [];
+    },
+    updateInstallProgress: (state, action: PayloadAction<{ current: number; dependency: string }>) => {
+      state.installProgress.current = action.payload.current;
+      state.installProgress.currentDependency = action.payload.dependency;
+    },
+    completeInstall: (state, action: PayloadAction<{ status: 'success' | 'error'; errors?: Array<{ dependency: string; error: string }> }>) => {
+      state.installProgress.installing = false;
+      state.installProgress.status = action.payload.status;
+      if (action.payload.errors) {
+        state.installProgress.errors = action.payload.errors;
+      }
+    },
   },
 });
 
@@ -85,6 +150,11 @@ export const {
   installDependencyStart,
   installDependencySuccess,
   installDependencyFailure,
+  showInstallConfirm,
+  hideInstallConfirm,
+  startInstall,
+  updateInstallProgress,
+  completeInstall,
 } = dependencySlice.actions;
 
 // Selectors
@@ -99,5 +169,19 @@ export const selectDependencyInstalling = (state: { dependency: DependencyState 
 
 export const selectDependencyError = (state: { dependency: DependencyState }) =>
   state.dependency.error;
+
+// New selectors for install confirmation dialog
+export const selectShowInstallConfirm = (state: { dependency: DependencyState }) =>
+  state.dependency.installConfirm.show;
+
+export const selectPendingDependencies = (state: { dependency: DependencyState }) =>
+  state.dependency.installConfirm.dependencies;
+
+export const selectInstallConfirmVersionId = (state: { dependency: DependencyState }) =>
+  state.dependency.installConfirm.versionId;
+
+// New selectors for install progress
+export const selectInstallProgress = (state: { dependency: DependencyState }) =>
+  state.dependency.installProgress;
 
 export default dependencySlice.reducer;

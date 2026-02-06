@@ -1,9 +1,9 @@
 {
   "name": "hagico-desktop",
-  "productName": "Hagico Desktop",
+  "productName": "Hagicode Desktop",
   "version": "0.1.0",
   "type": "module",
-  "description": "Desktop client for Hagico Server management and monitoring",
+  "description": "Desktop client for Hagicode Server management and monitoring",
   "main": "dist/main.js",
   "scripts": {
     "build:tsc": "npx tsc",
@@ -33,7 +33,7 @@
     "build:local:publish": "npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js --publish always"
   },
   "keywords": [
-    "hagico",
+    "hagicode",
     "desktop",
     "server",
     "management",
@@ -41,9 +41,9 @@
   ],
   "author": {
     "name": "newbe36524",
-    "email": "newbe36524@hotmail.com"
+    "email": "support@hagicode.com"
   },
-  "homepage": "https://github.com/newbe36524/Hagico",
+  "homepage": "https://github.com/HagiCode-org/desktop",
   "license": "AGPL-3.0",
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -115,6 +115,7 @@
     "input-otp": "^1.4.2",
     "js-yaml": "^4.1.1",
     "lucide-react": "^0.562.0",
+    "motion": "^12.33.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",

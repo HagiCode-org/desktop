@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type ViewType = 'system' | 'web';
+export type ViewType = 'system' | 'web' | 'version';
 
 export interface ViewState {
   currentView: ViewType;

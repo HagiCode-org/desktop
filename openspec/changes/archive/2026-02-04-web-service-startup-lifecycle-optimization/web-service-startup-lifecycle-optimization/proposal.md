@@ -2,7 +2,7 @@
 
 ## Overview
 
-Optimize the Web service startup and lifecycle management in the Hagico Desktop application to improve reliability, user experience, and resource management. This change addresses critical issues with process lifecycle binding, port conflict detection, configuration synchronization, and user feedback during service startup.
+Optimize the Web service startup and lifecycle management in the Hagicode Desktop application to improve reliability, user experience, and resource management. This change addresses critical issues with process lifecycle binding, port conflict detection, configuration synchronization, and user feedback during service startup.
 
 ## Background
 

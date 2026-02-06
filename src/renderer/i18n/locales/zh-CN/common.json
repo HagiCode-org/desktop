@@ -52,27 +52,13 @@
     "confirmAction": "确定要继续吗？"
   },
   "header": {
-    "runningSuccessfully": "运行成功"
-  },
-  "remoteServer": {
-    "title": "远程服务器状态",
-    "status": {
-      "operational": "远程服务器正在运行",
-      "notRunning": "远程服务器未运行",
-      "connectionFailed": "无法连接到远程服务器"
+    "title": "设置",
+    "runningSuccessfully": "运行成功",
+    "language": {
+      "label": "语言",
+      "description": "选择应用程序界面语言"
     },
-    "actions": {
-      "start": "启动远程服务器",
-      "stop": "停止远程服务器"
-    }
-  },
-  "quickStart": {
-    "title": "快速开始",
-    "description": "安装嵌入式 Web 服务包并开始管理您的本地 PCode 实例。"
-  },
-  "secure": {
-    "title": "安全",
-    "description": "注重安全构建。您的数据保留在您的机器上。"
+    "embeddedWebServicePort": "Hagicode 服务端口"
   },
   "settings": {
     "title": "设置",
@@ -80,20 +66,17 @@
       "label": "语言",
       "description": "选择应用程序界面语言"
     },
-    "remoteServerHost": "远程服务器主机",
-    "remoteServerPort": "远程服务器端口",
-    "embeddedWebServicePort": "嵌入式 Web 服务端口",
-    "moreSettingsComing": "更多设置即将推出..."
+    "embeddedWebServicePort": "Hagicode 服务端口"
   },
   "footer": {
-    "copyright": "© 2025 Hagico Desktop。使用 Electron + React + TypeScript 构建 ❤️",
+    "copyright": "© 2025 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️",
     "testBuild": "测试应用程序 - 开发版本"
   },
   "menu": {
     "systemManagement": "系统管理",
-    "hagicoWeb": "Hagico Web",
+    "hagicoWeb": "Hagicode Web",
     "dependencies": "依赖项",
-    "webService": "Web 服务",
+    "webService": "Hagicode 服务",
     "packages": "包管理",
     "settings": "设置",
     "openWebUI": "打开 Web 界面",
@@ -111,8 +94,8 @@
     "forward": "前进",
     "refresh": "刷新",
     "openInBrowser": "在浏览器中打开",
-    "serviceNotRunning": "Web 服务未运行",
-    "serviceNotRunningDesc": "请先启动 Web 服务，然后再访问 Web 界面。",
+    "serviceNotRunning": "Hagicode 服务未运行",
+    "serviceNotRunningDesc": "请先启动 Hagicode 服务，然后再访问 Web 界面。",
     "backToSystem": "返回系统管理",
     "error": "加载失败",
     "loadFailed": "加载失败: {{reason}}",
@@ -133,5 +116,25 @@
       "CN": "中国",
       "INTERNATIONAL": "国际"
     }
+  },
+  "navigation": {
+    "dashboard": "仪表盘",
+    "webService": "Hagicode 服务",
+    "versionManagement": "版本管理",
+    "webServiceNotRunning": "Hagicode 服务未运行，无法访问",
+    "officialWebsite": "官方网站",
+    "officialWebsiteDesc": "访问 Hagicode 官方网站获取最新资讯和文档",
+    "techSupport": "加入技术支持群",
+    "techSupportDesc": "加入 QQ 技术交流群获取帮助（群号：610394020）",
+    "githubProject": "为项目点赞👍",
+    "githubProjectDesc": "在 GitHub 上查看源码并给我们 Star"
+  },
+  "sidebar": {
+    "dashboard": "仪表盘",
+    "webService": "Hagicode 服务",
+    "versionManagement": "版本管理",
+    "toggle": "切换侧边栏",
+    "collapse": "收起",
+    "expand": "展开"
   }
 }

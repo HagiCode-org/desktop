@@ -5,6 +5,65 @@
     "installing": "Installing",
     "failed": "Failed"
   },
+  "installConfirm": {
+    "title": "Stop Service Confirmation",
+    "description": "Hagicode service is currently running. Installation or reinstallation requires stopping the service.",
+    "continueWill": "Continuing will:",
+    "warnings": {
+      "stopService": "Stop the currently running Hagicode service",
+      "interruptRequests": "Interrupt all ongoing requests",
+      "installOperation": "Perform installation/reinstallation operation"
+    },
+    "manualRestart": "After installation completes, you will need to manually restart the service.",
+    "shouldContinue": "Do you want to continue?",
+    "cancel": "Cancel",
+    "confirm": "Stop and Continue",
+    "stopping": "Stopping service..."
+  },
+  "dependencyStartConfirm": {
+    "title": "Start Service Confirmation",
+    "description": "The current version is missing the following required dependencies:",
+    "missingDependencies": "Missing Dependencies",
+    "currentVersion": "Current version",
+    "required": "Required",
+    "risksTitle": "Starting the service without these dependencies may result in:",
+    "risks": {
+      "startupFailure": "Service fails to start properly",
+      "featureUnavailable": "Some features are unavailable",
+      "runtimeErrors": "Runtime errors"
+    },
+    "confirmation": "Do you still want to start the service?",
+    "cancel": "Cancel",
+    "confirm": "Start Anyway",
+    "starting": "Starting..."
+  },
+  "dependencyWarningBanner": {
+    "title": "Warning: Service dependencies not fully satisfied",
+    "description": "Currently missing {{count}} required dependencies. Some features may not work properly.",
+    "viewDetails": "View Details",
+    "fixLater": "Fix Later"
+  },
+  "depInstallConfirm": {
+    "title": "Install Missing Dependencies",
+    "installingTitle": "Installing Dependencies",
+    "description": "Detected {{count}} missing dependencies",
+    "requiredVersion": "Required version",
+    "permissionWarning": "Installing these dependencies may require administrator privileges.",
+    "preparing": "Preparing...",
+    "cancel": "Cancel",
+    "confirm": "Install Dependencies",
+    "installing": "Installing...",
+    "errorsOccurred": "dependencies failed to install",
+    "success": "All dependencies installed successfully",
+    "partialSuccess": "{{success}} dependencies installed successfully, {{failed}} failed",
+    "error": "Dependency installation failed"
+  },
+  "depInstallWarningBanner": {
+    "title": "Install Missing Dependencies",
+    "message": "Detected {{count}} missing dependencies. Installation is recommended for proper service operation.",
+    "installNow": "Install Now",
+    "dismiss": "Dismiss"
+  },
   "packageManagement": {
     "cardTitle": "Package Management",
     "cardDescription": "Manage the installation of web service packages",
@@ -15,6 +74,23 @@
     "selectVersionLabel": "Select Version to Install",
     "versionPlaceholder": "-- Select a version --",
     "installingProgress": "Installing...",
+    "reinstallingProgress": "Reinstalling...",
+    "reinstallButton": "Reinstall",
+    "reinstallConfirmTitle": "Confirm Reinstallation",
+    "reinstallConfirmMessage": "You are about to reinstall version {{version}}. This operation will:",
+    "reinstallConfirmClearCache": "Clear cached package files",
+    "reinstallConfirmRemoveInstalled": "Remove the currently installed version",
+    "reinstallConfirmDownloadInstall": "Download and install the package again",
+    "reinstallCancel": "Cancel",
+    "reinstallConfirmButton": "Reinstall",
+    "reinstallProgress": {
+      "clearingCache": "Clearing cache...",
+      "removingOld": "Removing old version...",
+      "downloading": "Downloading...",
+      "installing": "Installing..."
+    },
+    "reinstallSuccess": "Reinstalled successfully",
+    "reinstallFailed": "Reinstallation failed",
     "noPackagesMessage": "No packages available. Make sure the package source directory exists at:",
     "availableVersionsCount": "Available versions: {{count}} found",
     "filteredByPlatform": " (filtered by platform: {{platform}})",
@@ -24,8 +100,18 @@
       "downloading": "Downloading...",
       "extracting": "Extracting...",
       "verifying": "Verifying...",
+      "configuring": "Configuring data directory...",
       "completed": "Completed",
       "error": "Error"
+    },
+    "dataDirectory": {
+      "configuring": "Configuring data directory...",
+      "configured": "Data directory configured: {{path}}",
+      "error": {
+        "creationFailed": "Failed to create data directory: {{path}}",
+        "permissionDenied": "Permission denied accessing data directory",
+        "configWriteFailed": "Failed to write configuration file"
+      }
     }
   },
   "webServiceStatus": {
@@ -58,15 +144,31 @@
       "processId": "Process ID",
       "uptime": "Uptime",
       "restartCount": "Restart Count",
-      "port": "Port"
+      "port": "Port",
+      "version": "Version"
     },
     "notInstalledAlert": {
       "title": "Package not installed",
       "message": "The web service package is not installed yet. Please install the package first from the Package Management section, then return here to start the service."
     },
+    "noVersionAlert": {
+      "title": "No Active Version",
+      "message": "No active version found. Please install and activate a version first from the Version Management page."
+    },
+    "versionNotReadyAlert": {
+      "title": "Version Not Ready",
+      "message": "The active version is missing required dependencies. Please check the Dependency Management page for details."
+    },
     "portError": {
       "invalid": "Invalid port number",
       "range": "Port must be between 1024 and 65535"
+    },
+    "openLogsButton": "Open Logs",
+    "toast": {
+      "noActiveVersion": "No active version",
+      "openLogsSuccess": "Logs folder opened",
+      "logsNotFound": "Logs folder not found",
+      "openLogsError": "Failed to open logs folder"
     }
   },
   "languageSelector": {
@@ -94,5 +196,60 @@
       "requiredVersion": "Required Version"
     },
     "noDependencies": "No dependencies detected"
+  },
+  "packageSource": {
+    "cardTitle": "Package Source Configuration",
+    "cardDescription": "Configure and manage package sources for installation",
+    "sourceType": {
+      "label": "Package Source Type",
+      "folder": "Local Folder",
+      "github": "GitHub Release",
+      "http": "HTTP URL"
+    },
+    "folder": {
+      "path": {
+        "label": "Folder Path",
+        "placeholder": "Enter path to package directory"
+      }
+    },
+    "github": {
+      "owner": {
+        "label": "Repository Owner",
+        "placeholder": "e.g., newbe36524"
+      },
+      "repository": {
+        "label": "Repository Name",
+        "placeholder": "e.g., hagicode"
+      },
+      "token": {
+        "label": "GitHub Token (Optional)",
+        "placeholder": "For private repositories",
+        "hint": "Optional: Only needed for private repositories"
+      }
+    },
+    "http": {
+      "url": {
+        "label": "Package URL",
+        "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "validateButton": "Validate Configuration",
+    "applyButton": "Apply Configuration",
+    "fetchVersionsButton": "Fetch Available Versions",
+    "validating": "Validating configuration...",
+    "valid": "Configuration is valid",
+    "fetchingVersions": "Fetching versions...",
+    "nortOnlyNotice": "Only nort packages (hagicode-*) are supported"
+  },
+  "tray": {
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error"
+    },
+    "openInApp": "Open Hagicode",
+    "openInBrowser": "Open in Browser",
+    "startService": "Start Service",
+    "stopService": "Stop Service"
   }
 }

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-定义 Hagico Desktop 应用的顶部菜单栏功能，为用户提供统一的导航入口，支持在系统管理和 Web 界面视图之间切换。
+定义 Hagicode Desktop 应用的顶部菜单栏功能，为用户提供统一的导航入口，支持在系统管理和 Web 界面视图之间切换。
 
 ## ADDED Requirements
 
 ### Requirement: Application Menu Bar
 
-Hagico Desktop MUST provide a native menu bar at the top of the application window (Windows/Linux) or system menu bar (macOS) that allows users to navigate between different application views and access common functions.
+Hagicode Desktop MUST provide a native menu bar at the top of the application window (Windows/Linux) or system menu bar (macOS) that allows users to navigate between different application views and access common functions.
 
 #### Scenario: 应用启动时显示菜单栏
 
@@ -21,7 +21,7 @@ Hagico Desktop MUST provide a native menu bar at the top of the application wind
 #### Scenario: 通过菜单栏切换视图
 
 **Given** 用户当前在系统管理视图
-**When** 用户点击菜单栏中的"Hagico Web"菜单项
+**When** 用户点击菜单栏中的"Hagicode Web"菜单项
 **Then** 主窗口内容切换到 Web 视图
 **And** 菜单项的选中状态更新
 **And** 视图切换在 500ms 内完成
@@ -30,7 +30,7 @@ Hagico Desktop MUST provide a native menu bar at the top of the application wind
 
 **Given** 应用运行在 macOS 平台
 **When** 应用菜单栏创建
-**Then** 第一个菜单为应用菜单（Hagico Desktop）
+**Then** 第一个菜单为应用菜单（Hagicode Desktop）
 **And** 应用菜单包含"关于"、"设置"、"退出"等标准选项
 **And** 其他菜单显示在系统菜单栏中
 
@@ -68,7 +68,7 @@ The application MUST provide keyboard shortcuts for common menu actions to allow
 **Then** 应用切换到系统管理视图
 **And** 焦点保持在主窗口
 
-#### Scenario: 使用快捷键切换到 Hagico Web
+#### Scenario: 使用快捷键切换到 Hagicode Web
 
 **Given** 用户当前在任意视图
 **When** 用户按下 `CmdOrCtrl+2`
@@ -177,7 +177,7 @@ The menu bar MUST integrate seamlessly with existing application features such a
 #### Scenario: 通过菜单启动 Web 服务
 
 **Given** Web 服务当前未运行
-**When** 用户点击"Hagico Web"菜单中的"启动服务"项
+**When** 用户点击"Hagicode Web"菜单中的"启动服务"项
 **Then** 应用启动 Web 服务
 **And** 显示启动进度通知
 **And** 启动成功后自动切换到 Web 视图
@@ -185,7 +185,7 @@ The menu bar MUST integrate seamlessly with existing application features such a
 #### Scenario: 菜单项动态启用/禁用状态
 
 **Given** Web 服务当前未运行
-**When** 用户查看"Hagico Web"菜单
+**When** 用户查看"Hagicode Web"菜单
 **Then** "打开 Web 界面"菜单项显示为禁用状态
 **And** "启动服务"菜单项显示为启用状态
 **And** 服务状态变化时菜单项状态自动更新

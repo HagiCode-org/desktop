@@ -1,13 +1,7 @@
 import { BrowserWindow, Menu, MenuItemConstructorOptions, app } from 'electron';
 
 interface MenuTranslations {
-  systemManagement: string;
   hagicoWeb: string;
-  dependencies: string;
-  webService: string;
-  packages: string;
-  settings: string;
-  openWebUI: string;
   navigate: string;
   back: string;
   forward: string;
@@ -57,51 +51,15 @@ export class MenuManager {
           submenu: [
             { label: i18n.about, role: 'about' as const },
             { type: 'separator' as const },
-            { label: i18n.settings, click: () => this.switchView('system') },
-            { type: 'separator' as const },
             { label: i18n.quit, role: 'quit' as const },
           ],
         }
       : { label: i18n.help, role: 'help' as const };
 
-    // System Management menu
-    const systemManagementMenu: MenuItemConstructorOptions = {
-      label: i18n.systemManagement,
-      submenu: [
-        {
-          label: i18n.dependencies,
-          accelerator: 'CmdOrCtrl+1',
-          click: () => this.switchView('system'),
-        },
-        {
-          label: i18n.webService,
-          accelerator: 'CmdOrCtrl+2',
-          click: () => this.switchView('system'),
-        },
-        { type: 'separator' as const },
-        {
-          label: i18n.packages,
-          click: () => this.switchView('system'),
-        },
-        { type: 'separator' as const },
-        {
-          label: i18n.settings,
-          click: () => this.switchView('system'),
-        },
-      ],
-    };
-
-    // Hagico Web menu
+    // Hagicode Web menu (web view navigation only)
     const hagicoWebMenu: MenuItemConstructorOptions = {
       label: i18n.hagicoWeb,
       submenu: [
-        {
-          label: i18n.openWebUI,
-          accelerator: 'CmdOrCtrl+3',
-          enabled: this.webServiceRunning,
-          click: () => this.switchView('web'),
-        },
-        { type: 'separator' as const },
         {
           label: i18n.navigate,
           submenu: [
@@ -145,15 +103,9 @@ export class MenuManager {
 
     // Build menu based on platform
     if (isMac) {
-      return [appMenu, systemManagementMenu, hagicoWebMenu, helpMenu];
+      return [appMenu, hagicoWebMenu, helpMenu];
     } else {
-      return [systemManagementMenu, hagicoWebMenu, helpMenu];
-    }
-  }
-
-  private switchView(view: 'system' | 'web'): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('view-changed', view);
+      return [hagicoWebMenu, helpMenu];
     }
   }
 
@@ -172,13 +124,7 @@ export class MenuManager {
   private getTranslations(): MenuTranslations {
     const translations: Record<string, MenuTranslations> = {
       'zh-CN': {
-        systemManagement: '系统管理',
-        hagicoWeb: 'Hagico Web',
-        dependencies: '依赖项',
-        webService: 'Web 服务',
-        packages: '包管理',
-        settings: '设置',
-        openWebUI: '打开 Web 界面',
+        hagicoWeb: 'Hagicode Web',
         navigate: '导航',
         back: '后退',
         forward: '前进',
@@ -189,13 +135,7 @@ export class MenuManager {
         quit: '退出',
       },
       'en-US': {
-        systemManagement: 'System Management',
-        hagicoWeb: 'Hagico Web',
-        dependencies: 'Dependencies',
-        webService: 'Web Service',
-        packages: 'Packages',
-        settings: 'Settings',
-        openWebUI: 'Open Web UI',
+        hagicoWeb: 'Hagicode Web',
         navigate: 'Navigation',
         back: 'Back',
         forward: 'Forward',

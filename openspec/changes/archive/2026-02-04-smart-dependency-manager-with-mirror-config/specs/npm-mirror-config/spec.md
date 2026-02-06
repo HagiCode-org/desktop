@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义 Hagico Desktop 的 npm 镜像自动配置功能，为不同地区的用户提供最优的 NPM 工具安装体验。
+定义 Hagicode Desktop 的 npm 镜像自动配置功能，为不同地区的用户提供最优的 NPM 工具安装体验。
 
 ## ADDED Requirements
 

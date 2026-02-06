@@ -10,7 +10,7 @@
 
 ## Why
 
-Hagico Desktop 采用 AGPL-3.0 开源许可证,要求代码公开透明。然而当前项目配置了 JavaScript 代码混淆,这直接违反了开源许可证的核心原则。代码混淆增加了构建复杂度,降低了可维护性,阻碍了社区贡献,并且与 AGPL-3.0 要求的"代码必须以可理解和可修改的形式提供"相冲突。
+Hagicode Desktop 采用 AGPL-3.0 开源许可证,要求代码公开透明。然而当前项目配置了 JavaScript 代码混淆,这直接违反了开源许可证的核心原则。代码混淆增加了构建复杂度,降低了可维护性,阻碍了社区贡献,并且与 AGPL-3.0 要求的"代码必须以可理解和可修改的形式提供"相冲突。
 
 移除代码混淆配置将:
 1. 确保项目符合 AGPL-3.0 许可证的透明性要求
@@ -21,17 +21,17 @@ Hagico Desktop 采用 AGPL-3.0 开源许可证,要求代码公开透明。然而
 
 ## What
 
-从 Hagico Desktop 项目中完全移除 JavaScript 代码混淆相关的配置、依赖和脚本,使项目符合 AGPL-3.0 开源许可证的透明性要求。
+从 Hagicode Desktop 项目中完全移除 JavaScript 代码混淆相关的配置、依赖和脚本,使项目符合 AGPL-3.0 开源许可证的透明性要求。
 
 ## 概述
 
-从 Hagico Desktop 项目中完全移除 JavaScript 代码混淆相关的配置、依赖和脚本,使项目符合 AGPL-3.0 开源许可证的透明性要求。
+从 Hagicode Desktop 项目中完全移除 JavaScript 代码混淆相关的配置、依赖和脚本,使项目符合 AGPL-3.0 开源许可证的透明性要求。
 
 ## 背景
 
 ### 当前状态
 
-Hagico Desktop 是一个开源的 Electron 桌面应用程序,使用 **AGPL-3.0** 许可证。当前项目的构建配置中包含了 `javascript-obfuscator 5.1.0` 依赖,用于在打包时对 JavaScript 代码进行混淆处理。
+Hagicode Desktop 是一个开源的 Electron 桌面应用程序,使用 **AGPL-3.0** 许可证。当前项目的构建配置中包含了 `javascript-obfuscator 5.1.0` 依赖,用于在打包时对 JavaScript 代码进行混淆处理。
 
 **相关配置**:
 - **构建工具**: electron-builder 26.0.12

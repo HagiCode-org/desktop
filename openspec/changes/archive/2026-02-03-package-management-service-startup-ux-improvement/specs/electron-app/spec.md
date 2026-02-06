@@ -102,11 +102,11 @@ The system SHALL prevent users from attempting to start the web service when the
 
 ### Requirement: Server Control
 
-The application MUST allow users to control Hagico Server start, stop, and restart operations through the main window, provided the required service package is installed.
+The application MUST allow users to control Hagicode Server start, stop, and restart operations through the main window, provided the required service package is installed.
 
-#### Scenario: 启动 Hagico Server (with package check)
+#### Scenario: 启动 Hagicode Server (with package check)
 
-**Given** Hagico Server package is installed and the service is currently not running
+**Given** Hagicode Server package is installed and the service is currently not running
 **When** 用户在主窗口点击 "启动服务器" 按钮
 **Then** 应用向服务器发送启动请求
 **And** 显示加载状态指示器
@@ -116,7 +116,7 @@ The application MUST allow users to control Hagico Server start, stop, and resta
 
 #### Scenario: Attempt to start without package installed (NEW)
 
-**Given** Hagico Server package is NOT installed
+**Given** Hagicode Server package is NOT installed
 **And** the service is currently stopped
 **When** 用户查看 WebServiceStatusCard
 **Then** "启动服务器" 按钮不可见
@@ -124,18 +124,18 @@ The application MUST allow users to control Hagico Server start, stop, and resta
 **And** 提示信息引导用户前往 "Package Management" 部分
 **And** 用户可以在安装包后返回启动服务
 
-#### Scenario: 停止 Hagico Server
+#### Scenario: 停止 Hagicode Server
 
-**Given** Hagico Server 正在运行
+**Given** Hagicode Server 正在运行
 **When** 用户在主窗口点击 "停止服务器" 按钮
 **Then** 应用显示确认对话框
 **And** 用户确认后向服务器发送停止请求
 **And** 应用显示 "服务器正在停止" 通知
 **And** 状态更新为 "已停止"
 
-#### Scenario: 重启 Hagico Server
+#### Scenario: 重启 Hagicode Server
 
-**Given** Hagico Server 正在运行
+**Given** Hagicode Server 正在运行
 **When** 用户在主窗口点击 "重启服务器" 按钮
 **Then** 应用显示确认对话框
 **And** 用户确认后先停止再启动服务器

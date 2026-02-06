@@ -2,11 +2,11 @@
 
 ## 概述
 
-为 Hagico Desktop 添加基于地理位置的 npm 镜像自动配置功能。当检测到用户位于中国大陆时，在安装 Claude Code、OpenSpec 等 NPM 工具集时自动使用淘宝镜像源，显著提升依赖安装速度和开发体验。
+为 Hagicode Desktop 添加基于地理位置的 npm 镜像自动配置功能。当检测到用户位于中国大陆时，在安装 Claude Code、OpenSpec 等 NPM 工具集时自动使用淘宝镜像源，显著提升依赖安装速度和开发体验。
 
 ## 背景
 
-Hagico Desktop 在开发和运行过程中需要安装特定的 NPM 工具集（如 Claude Code、OpenSpec），当前存在以下挑战：
+Hagicode Desktop 在开发和运行过程中需要安装特定的 NPM 工具集（如 Claude Code、OpenSpec），当前存在以下挑战：
 
 1. **网络环境差异**：中国大陆用户访问默认 npm 源时速度缓慢或连接失败
 2. **缺乏智能镜像选择**：无自动检测地理位置并配置镜像的机制

@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+import { AnimatePresence, motion } from 'motion/react';
+import SidebarNavigation from './components/SidebarNavigation';
 import SystemManagementView from './components/SystemManagementView';
 import WebView from './components/WebView';
+import VersionManagementPage from './components/VersionManagementPage';
+import InstallConfirmDialog from './components/InstallConfirmDialog';
+import DependencyStartConfirmDialog from './components/DependencyStartConfirmDialog';
+import { DependencyInstallConfirmDialog } from './components/DependencyInstallConfirmDialog';
 import { switchView } from './store/slices/viewSlice';
 import type { RootState } from './store';
+import { ThemeProvider } from './components/providers/theme-provider';
 
 declare global {
   interface Window {
@@ -16,9 +23,10 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version') => void) => () => void;
+      openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
@@ -30,12 +38,18 @@ function App() {
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
 
   useEffect(() => {
-    // Listen for view change events from menu
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web') => {
+    console.log('[App] Setting up view change listener');
+
+    // Listen for view change events from menu (kept for backward compatibility)
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version') => {
+      console.log('[App] View change event received:', view);
       dispatch(switchView(view));
     });
 
+    console.log('[App] View change listener set up successfully');
+
     return () => {
+      console.log('[App] Cleaning up view change listener');
       if (typeof unsubscribeViewChange === 'function') {
         unsubscribeViewChange();
       }
@@ -43,10 +57,44 @@ function App() {
   }, [dispatch]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      {currentView === 'system' && <SystemManagementView />}
-      {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
-    </div>
+    <ThemeProvider defaultTheme="dark" storageKey="hagico-desktop-theme" attribute="class" enableSystem>
+      <div className="min-h-screen bg-background text-foreground overflow-hidden">
+        {/* Animated background gradient */}
+        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
+        </div>
+
+        {/* Sidebar Navigation */}
+        <SidebarNavigation />
+
+        {/* Main Content Area with Page Transitions */}
+        <div className="ml-64 transition-all duration-500 ease-out">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.98 }}
+              transition={{
+                duration: 0.4,
+                ease: [0.25, 0.1, 0.25, 1]
+              }}
+              className="container mx-auto px-4 py-8 min-h-screen"
+            >
+              {currentView === 'system' && <SystemManagementView />}
+              {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
+              {currentView === 'version' && <VersionManagementPage />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Global Dialogs */}
+        <InstallConfirmDialog />
+        <DependencyStartConfirmDialog />
+        <DependencyInstallConfirmDialog />
+      </div>
+    </ThemeProvider>
   );
 }
 

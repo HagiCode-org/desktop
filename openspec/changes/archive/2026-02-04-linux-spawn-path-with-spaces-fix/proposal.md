@@ -2,7 +2,7 @@
 
 ## Why
 
-当用户数据目录路径包含空格时（例如 `/home/user/.config/Hagico Desktop/pcode-web/installed/linux-x64/start.sh` 或 `C:\Users\user\AppData\Roaming\Hagico Desktop\pcode-web\installed\win-x64\PCode.Web.exe`），在所有平台上启动 PCode Web 服务可能失败。根本原因是 `web-service-manager.ts` 中进程启动时未正确处理包含空格的可执行文件路径，导致路径被错误解析，进程启动失败（退出码 127）。
+当用户数据目录路径包含空格时（例如 `/home/user/.config/Hagicode Desktop/pcode-web/installed/linux-x64/start.sh` 或 `C:\Users\user\AppData\Roaming\Hagicode Desktop\pcode-web\installed\win-x64\PCode.Web.exe`），在所有平台上启动 PCode Web 服务可能失败。根本原因是 `web-service-manager.ts` 中进程启动时未正确处理包含空格的可执行文件路径，导致路径被错误解析，进程启动失败（退出码 127）。
 
 ## What Changes
 

@@ -479,9 +479,9 @@ The application MUST provide dedicated UI components in the main window for disp
 
 ### Requirement: Server Status Monitoring
 
-The original specification required connecting to a local or remote Hagico Server. This change MUST add monitoring for the embedded Web service while maintaining the existing remote server functionality.
+The original specification required connecting to a local or remote Hagicode Server. This change MUST add monitoring for the embedded Web service while maintaining the existing remote server functionality.
 
-原规范要求连接到本地或远程 Hagico Server。现在增加对内嵌 Web 服务的监控。
+原规范要求连接到本地或远程 Hagicode Server。现在增加对内嵌 Web 服务的监控。
 
 #### Scenario: 区分内嵌服务和远程服务器
 

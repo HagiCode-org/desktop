@@ -2,7 +2,7 @@
 
 ## Context
 
-Hagico Desktop 是一款基于 Electron 的跨平台桌面应用，作为 Hagico Server 的本地管理和监控工具。当前应用通过嵌入式 Web 服务管理器（`web-service-manager.ts`）启动和管理本地 Web 服务。
+Hagicode Desktop 是一款基于 Electron 的跨平台桌面应用，作为 Hagicode Server 的本地管理和监控工具。当前应用通过嵌入式 Web 服务管理器（`web-service-manager.ts`）启动和管理本地 Web 服务。
 
 **默认端口配置**: 系统使用端口 **36556** 作为嵌入式 Web 服务的默认端口。
 

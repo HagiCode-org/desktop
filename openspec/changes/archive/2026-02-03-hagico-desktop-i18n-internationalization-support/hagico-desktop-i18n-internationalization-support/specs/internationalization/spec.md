@@ -1,6 +1,6 @@
 # 国际化能力规范增量
 
-本规范定义了 Hagico Desktop 应用程序的国际化（i18n）能力要求。
+本规范定义了 Hagicode Desktop 应用程序的国际化（i18n）能力要求。
 
 ## ADDED Requirements
 

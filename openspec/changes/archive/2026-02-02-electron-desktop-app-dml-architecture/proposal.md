@@ -1,4 +1,4 @@
-# Proposal: 基于 DML 架构建立 Hagico 桌面应用
+# Proposal: 基于 DML 架构建立 Hagicode 桌面应用
 
 **Change ID:** `electron-desktop-app-dml-architecture`
 **Status:** Proposed
@@ -8,7 +8,7 @@
 
 ## 概述 (Overview)
 
-本提案旨在基于已验证的 DML (SuperDucky) Electron 架构，为 Hagico Server 建立一个完整的跨平台桌面客户端应用。该应用将作为 Hagico Server 的本地管理和监控工具，提供系统托盘集成、状态通知和服务器控制功能。
+本提案旨在基于已验证的 DML (SuperDucky) Electron 架构，为 Hagicode Server 建立一个完整的跨平台桌面客户端应用。该应用将作为 Hagicode Server 的本地管理和监控工具，提供系统托盘集成、状态通知和服务器控制功能。
 
 ### 目标 (Objectives)
 
@@ -21,7 +21,7 @@
 
 ### 当前状况
 
-- Hagico Server 缺少官方桌面客户端工具
+- Hagicode Server 缺少官方桌面客户端工具
 - 用户需要在本地管理和监控服务器运行状态
 - 新项目需要从零开始搭建 Electron 架构，时间和成本较高
 
@@ -46,7 +46,7 @@
 **最小可行产品** - 首个版本聚焦核心功能：
 - Windows 系统托盘集成
 - 基础主窗口架构
-- Hagico Server 状态监控
+- Hagicode Server 状态监控
 - 本地安装和更新支持
 
 ### 技术栈
@@ -70,7 +70,7 @@ hagico-desktop/
 │   │   ├── main/             # Electron 主进程
 │   │   │   ├── index.ts      # 主入口
 │   │   │   ├── tray.ts       # 系统托盘（新增）
-│   │   │   └── server.ts     # Hagico Server 通信（新增）
+│   │   │   └── server.ts     # Hagicode Server 通信（新增）
 │   │   ├── renderer/         # React 渲染进程
 │   │   │   └── App.tsx       # 主应用组件
 │   │   └── preload/          # 预加载脚本
@@ -104,7 +104,7 @@ hagico-desktop/
 - [x] 通知和提醒功能
 
 #### Phase 3: 服务器管理
-- [x] Hagico Server 连接和状态查询
+- [x] Hagicode Server 连接和状态查询
 - [x] 启动/停止服务器控制
 - [x] 基本配置界面
 
@@ -120,7 +120,7 @@ hagico-desktop/
 
 ### 不包含功能 (Out of Scope)
 
-- Hagico Server 本体功能（不在本次范围）
+- Hagicode Server 本体功能（不在本次范围）
 - 高级服务器管理功能（日志查看、性能监控等）
 - 多语言支持（后续版本考虑）
 - 云同步功能（后续版本考虑）
@@ -149,9 +149,9 @@ hagico-desktop/
 
 | 风险 | 级别 | 缓解措施 |
 |------|------|----------|
-| DML 架构不适配 | 低 | DML 和 Hagico 同为桌面工具，需求相似 |
+| DML 架构不适配 | 低 | DML 和 Hagicode 同为桌面工具，需求相似 |
 | 跨平台兼容性问题 | 低 | DML 已验证三平台支持 |
-| Hagico Server API 变化 | 中 | 设计灵活的通信层，支持 API 演进 |
+| Hagicode Server API 变化 | 中 | 设计灵活的通信层，支持 API 演进 |
 
 ## 实施计划 (Implementation)
 
@@ -159,12 +159,12 @@ hagico-desktop/
 
 1. **Week 1: 架构迁移** - 完成 DML 架构迁移，基础开发环境就绪
 2. **Week 2: 系统托盘** - 实现 Windows 托盘和基本交互
-3. **Week 3: 服务器集成** - 集成 Hagico Server 管理功能
+3. **Week 3: 服务器集成** - 集成 Hagicode Server 管理功能
 4. **Week 4: 测试和发布** - 跨平台测试和首个稳定版本发布
 
 ### 依赖关系
 
-- **前置依赖**: Hagico Server 需提供本地管理 API
+- **前置依赖**: Hagicode Server 需提供本地管理 API
 - **并行工作**: UI 开发和后端通信层可并行进行
 - **后续工作**: 高级管理功能依赖基础架构完成
 
@@ -174,7 +174,7 @@ hagico-desktop/
 
 - [ ] 在 Windows、macOS、Linux 三平台成功构建
 - [ ] 系统托盘在 Windows 上正常运行
-- [ ] 能够连接和控制 Hagico Server
+- [ ] 能够连接和控制 Hagicode Server
 - [ ] CI/CD 流程完整，自动化测试通过
 - [ ] 应用体积 < 100MB（打包后）
 
@@ -207,7 +207,7 @@ hagico-desktop/
 - **参考项目**: `/home/newbe36524/repos/newbe36524/DML`
 - **Electron 文档**: https://www.electronjs.org/docs
 - **electron-builder**: https://www.electron.build/
-- **Hagico Server API**: (待补充)
+- **Hagicode Server API**: (待补充)
 
 ## 变更历史 (Changelog)
 

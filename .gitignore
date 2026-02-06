@@ -36,3 +36,5 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+.claude/skills/ui-ux-pro-max/scripts/__pycache__/

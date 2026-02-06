@@ -52,27 +52,13 @@
     "confirmAction": "Are you sure you want to proceed?"
   },
   "header": {
-    "runningSuccessfully": "Running Successfully"
-  },
-  "remoteServer": {
-    "title": "Remote Server Status",
-    "status": {
-      "operational": "Remote server is operational",
-      "notRunning": "Remote server is not running",
-      "connectionFailed": "Failed to connect to remote server"
+    "title": "Settings",
+    "runningSuccessfully": "Running Successfully",
+    "language": {
+      "label": "Language",
+      "description": "Select application interface language"
     },
-    "actions": {
-      "start": "Start Remote Server",
-      "stop": "Stop Remote Server"
-    }
-  },
-  "quickStart": {
-    "title": "Quick Start",
-    "description": "Install the embedded web service package and start managing your local PCode instance."
-  },
-  "secure": {
-    "title": "Secure",
-    "description": "Built with security in mind. Your data stays on your machine."
+    "embeddedWebServicePort": "Embedded Web Service Port"
   },
   "settings": {
     "title": "Settings",
@@ -80,18 +66,15 @@
       "label": "Language",
       "description": "Select application interface language"
     },
-    "remoteServerHost": "Remote Server Host",
-    "remoteServerPort": "Remote Server Port",
-    "embeddedWebServicePort": "Embedded Web Service Port",
-    "moreSettingsComing": "More settings coming soon..."
+    "embeddedWebServicePort": "Embedded Web Service Port"
   },
   "footer": {
-    "copyright": "© 2025 Hagico Desktop. Built with ❤️ using Electron + React + TypeScript.",
+    "copyright": "© 2025 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.",
     "testBuild": "Test application - Development build"
   },
   "menu": {
     "systemManagement": "System Management",
-    "hagicoWeb": "Hagico Web",
+    "hagicoWeb": "Hagicode Web",
     "dependencies": "Dependencies",
     "webService": "Web Service",
     "packages": "Packages",
@@ -133,5 +116,25 @@
       "CN": "China",
       "INTERNATIONAL": "International"
     }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "webService": "Web Service",
+    "versionManagement": "Version Management",
+    "webServiceNotRunning": "Web service is not running",
+    "officialWebsite": "Official Website",
+    "officialWebsiteDesc": "Visit Hagicode official website for latest news and documentation",
+    "techSupport": "Technical Support",
+    "techSupportDesc": "Join our QQ group for technical support (Group: 610394020)",
+    "githubProject": "GitHub Project",
+    "githubProjectDesc": "View source code and star us on GitHub"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "webService": "Web Service",
+    "versionManagement": "Version Management",
+    "toggle": "Toggle Sidebar",
+    "collapse": "Collapse",
+    "expand": "Expand"
   }
 }

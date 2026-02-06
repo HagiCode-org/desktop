@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-This document details the architectural decisions and design considerations for optimizing the Web service startup lifecycle management in Hagico Desktop.
+This document details the architectural decisions and design considerations for optimizing the Web service startup lifecycle management in Hagicode Desktop.
 
 ## Current Architecture Analysis
 

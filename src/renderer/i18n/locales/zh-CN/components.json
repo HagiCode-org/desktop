@@ -5,6 +5,65 @@
     "installing": "安装中",
     "failed": "安装失败"
   },
+  "installConfirm": {
+    "title": "停止服务确认",
+    "description": "Hagicode 服务正在运行中。安装或重装操作需要停止服务。",
+    "continueWill": "继续操作将：",
+    "warnings": {
+      "stopService": "停止当前正在运行的 Hagicode 服务",
+      "interruptRequests": "中断所有正在进行的请求",
+      "installOperation": "执行安装/重装操作"
+    },
+    "manualRestart": "安装完成后，您需要手动重新启动服务。",
+    "shouldContinue": "是否继续？",
+    "cancel": "取消",
+    "confirm": "停止并继续",
+    "stopping": "正在停止服务..."
+  },
+  "dependencyStartConfirm": {
+    "title": "启动服务确认",
+    "description": "当前版本缺少以下必需的依赖项：",
+    "missingDependencies": "缺失依赖",
+    "currentVersion": "当前版本",
+    "required": "要求",
+    "risksTitle": "在缺少这些依赖项的情况下启动服务可能导致：",
+    "risks": {
+      "startupFailure": "服务无法正常启动",
+      "featureUnavailable": "某些功能不可用",
+      "runtimeErrors": "运行时错误"
+    },
+    "confirmation": "是否仍然启动服务？",
+    "cancel": "取消",
+    "confirm": "仍然启动",
+    "starting": "正在启动..."
+  },
+  "dependencyWarningBanner": {
+    "title": "警告：服务依赖项未完全满足",
+    "description": "当前缺少 {{count}} 个必需的依赖项。部分功能可能无法正常工作。",
+    "viewDetails": "查看详情",
+    "fixLater": "稍后修复"
+  },
+  "depInstallConfirm": {
+    "title": "安装缺失依赖",
+    "installingTitle": "正在安装依赖",
+    "description": "检测到 {{count}} 个缺失的依赖项",
+    "requiredVersion": "要求版本",
+    "permissionWarning": "安装这些依赖可能需要管理员权限。",
+    "preparing": "准备安装...",
+    "cancel": "取消",
+    "confirm": "安装依赖",
+    "installing": "正在安装...",
+    "errorsOccurred": "个依赖安装失败",
+    "success": "所有依赖安装成功",
+    "partialSuccess": "{{success}} 个依赖安装成功，{{failed}} 个失败",
+    "error": "依赖安装失败"
+  },
+  "depInstallWarningBanner": {
+    "title": "安装缺失依赖",
+    "message": "检测到 {{count}} 个缺失的依赖项，建议安装以确保服务正常运行。",
+    "installNow": "立即安装",
+    "dismiss": "关闭"
+  },
   "packageManagement": {
     "cardTitle": "包管理",
     "cardDescription": "管理 Web 服务包的安装",
@@ -15,6 +74,23 @@
     "selectVersionLabel": "选择要安装的版本",
     "versionPlaceholder": "-- 选择版本 --",
     "installingProgress": "安装中...",
+    "reinstallingProgress": "重新安装中...",
+    "reinstallButton": "重新安装",
+    "reinstallConfirmTitle": "确认重新安装",
+    "reinstallConfirmMessage": "您即将重新安装版本 {{version}}。此操作将：",
+    "reinstallConfirmClearCache": "删除缓存中的旧软件包",
+    "reinstallConfirmRemoveInstalled": "删除当前已安装的版本",
+    "reinstallConfirmDownloadInstall": "重新下载并安装软件包",
+    "reinstallCancel": "取消",
+    "reinstallConfirmButton": "重新安装",
+    "reinstallProgress": {
+      "clearingCache": "清理缓存中...",
+      "removingOld": "删除旧版本...",
+      "downloading": "下载中...",
+      "installing": "安装中..."
+    },
+    "reinstallSuccess": "重新安装成功",
+    "reinstallFailed": "重新安装失败",
     "noPackagesMessage": "没有可用的包。请确保包源目录存在于：",
     "availableVersionsCount": "可用版本：找到 {{count}} 个",
     "filteredByPlatform": "（按平台筛选：{{platform}}）",
@@ -24,13 +100,23 @@
       "downloading": "下载中...",
       "extracting": "解压中...",
       "verifying": "验证中...",
+      "configuring": "配置数据目录...",
       "completed": "已完成",
       "error": "错误"
+    },
+    "dataDirectory": {
+      "configuring": "正在配置数据目录...",
+      "configured": "数据目录已配置：{{path}}",
+      "error": {
+        "creationFailed": "无法创建数据目录：{{path}}",
+        "permissionDenied": "无权限访问数据目录",
+        "configWriteFailed": "无法写入配置文件"
+      }
     }
   },
   "webServiceStatus": {
-    "cardTitle": "嵌入式 Web 服务",
-    "cardDescription": "查看和管理 Web 服务运行状态",
+    "cardTitle": "Hagicode 服务",
+    "cardDescription": "查看和管理 Hagicode 服务运行状态",
     "status": {
       "running": "运行中",
       "stopped": "已停止",
@@ -40,11 +126,11 @@
       "unknown": "未知"
     },
     "statusDescription": {
-      "running": "Web 服务正在运行",
-      "stopped": "Web 服务未运行",
-      "error": "Web 服务运行失败",
-      "starting": "Web 服务正在启动",
-      "stopping": "Web 服务正在关闭",
+      "running": "Hagicode 服务正在运行",
+      "stopped": "Hagicode 服务未运行",
+      "error": "Hagicode 服务运行失败",
+      "starting": "Hagicode 服务正在启动",
+      "stopping": "Hagicode 服务正在关闭",
       "unknown": "未知状态"
     },
     "startButton": "启动服务",
@@ -58,15 +144,31 @@
       "processId": "进程 ID",
       "uptime": "运行时间",
       "restartCount": "重启次数",
-      "port": "端口"
+      "port": "端口",
+      "version": "版本"
     },
     "notInstalledAlert": {
       "title": "未安装包",
-      "message": "Web 服务包尚未安装。请先从包管理部分安装包，然后返回此处启动服务。"
+      "message": "Hagicode 服务包尚未安装。请先从包管理部分安装包，然后返回此处启动服务。"
+    },
+    "noVersionAlert": {
+      "title": "无活动版本",
+      "message": "未找到活动版本。请先从版本管理页面安装并激活一个版本。"
+    },
+    "versionNotReadyAlert": {
+      "title": "版本未就绪",
+      "message": "活动版本缺少必需的依赖项。请查看依赖管理页面了解详情。"
     },
     "portError": {
       "invalid": "无效的端口号",
       "range": "端口必须在 1024 到 65535 之间"
+    },
+    "openLogsButton": "打开日志",
+    "toast": {
+      "noActiveVersion": "没有激活的版本",
+      "openLogsSuccess": "日志文件夹已打开",
+      "logsNotFound": "日志文件夹不存在",
+      "openLogsError": "无法打开日志文件夹"
     }
   },
   "languageSelector": {
@@ -75,7 +177,7 @@
   },
   "dependencyManagement": {
     "title": "系统依赖管理",
-    "description": "检查和管理 Web 服务所需的系统运行时依赖",
+    "description": "检查和管理 Hagicode 服务所需的系统运行时依赖",
     "status": {
       "installed": "已安装",
       "notInstalled": "未安装",
@@ -94,5 +196,60 @@
       "requiredVersion": "要求版本"
     },
     "noDependencies": "未检测到依赖"
+  },
+  "packageSource": {
+    "cardTitle": "包源配置",
+    "cardDescription": "配置和管理用于安装的包源",
+    "sourceType": {
+      "label": "包源类型",
+      "folder": "本地文件夹",
+      "github": "GitHub Release",
+      "http": "HTTP URL"
+    },
+    "folder": {
+      "path": {
+        "label": "文件夹路径",
+        "placeholder": "输入包目录路径"
+      }
+    },
+    "github": {
+      "owner": {
+        "label": "仓库所有者",
+        "placeholder": "例如：newbe36524"
+      },
+      "repository": {
+        "label": "仓库名称",
+        "placeholder": "例如：hagicode"
+      },
+      "token": {
+        "label": "GitHub 令牌（可选）",
+        "placeholder": "用于私有仓库",
+        "hint": "可选：仅私有仓库需要"
+      }
+    },
+    "http": {
+      "url": {
+        "label": "包 URL",
+        "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "validateButton": "验证配置",
+    "applyButton": "应用配置",
+    "fetchVersionsButton": "获取可用版本",
+    "validating": "验证配置中...",
+    "valid": "配置有效",
+    "fetchingVersions": "获取版本中...",
+    "nortOnlyNotice": "仅支持 nort 包（hagicode-*）"
+  },
+  "tray": {
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止",
+      "error": "错误"
+    },
+    "openInApp": "打开 Hagicode",
+    "openInBrowser": "浏览器打开",
+    "startService": "启动服务",
+    "stopService": "停止服务"
   }
 }

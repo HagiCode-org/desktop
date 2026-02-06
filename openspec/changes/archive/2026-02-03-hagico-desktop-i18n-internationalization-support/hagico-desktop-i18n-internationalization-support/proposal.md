@@ -1,8 +1,8 @@
-# Change: Hagico Desktop 国际化支持实施
+# Change: Hagicode Desktop 国际化支持实施
 
 ## Why
 
-当前 Hagico Desktop 应用程序仅支持英文界面，限制了中文用户的使用体验。应用程序已集成 i18next 依赖但未启用，缺少系统性的国际化架构和多语言支持，无法满足全球用户的本地化需求。
+当前 Hagicode Desktop 应用程序仅支持英文界面，限制了中文用户的使用体验。应用程序已集成 i18next 依赖但未启用，缺少系统性的国际化架构和多语言支持，无法满足全球用户的本地化需求。
 
 ## What Changes
 

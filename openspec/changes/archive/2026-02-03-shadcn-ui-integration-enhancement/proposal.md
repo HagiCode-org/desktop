@@ -2,7 +2,7 @@
 
 ## Why
 
-当前 Hagico Desktop 应用使用了 React 19 + TypeScript 5.7 + Tailwind CSS 4.0，并已安装 shadcn/ui 相关依赖（`class-variance-authority`、`tailwind-merge`、`cmdk`、`lucide-react`、`sonner` 等），但缺少标准的 shadcn/ui 组件实现。现有的组件（如 `PackageManagementCard.tsx`）使用原生 Tailwind 类名编写，导致代码冗长、难以维护，且缺少统一的组件库标准。
+当前 Hagicode Desktop 应用使用了 React 19 + TypeScript 5.7 + Tailwind CSS 4.0，并已安装 shadcn/ui 相关依赖（`class-variance-authority`、`tailwind-merge`、`cmdk`、`lucide-react`、`sonner` 等），但缺少标准的 shadcn/ui 组件实现。现有的组件（如 `PackageManagementCard.tsx`）使用原生 Tailwind 类名编写，导致代码冗长、难以维护，且缺少统一的组件库标准。
 
 引入完整的 shadcn/ui 组件库可以：
 - 提供高质量的、可定制的 UI 组件

@@ -8,13 +8,13 @@
 
 ## Overview
 
-在 Hagico Desktop 应用中实现顶部菜单栏（Menu Bar），提供统一的导航入口，让用户能够在**本地系统管理**和**Hagico Web**两个主要视图之间快速切换，无需打开外部浏览器。
+在 Hagicode Desktop 应用中实现顶部菜单栏（Menu Bar），提供统一的导航入口，让用户能够在**本地系统管理**和**Hagicode Web**两个主要视图之间快速切换，无需打开外部浏览器。
 
 ## Background
 
-Hagico Desktop 当前架构提供两个核心功能：
+Hagicode Desktop 当前架构提供两个核心功能：
 1. **本地系统管理**：依赖项管理、Web 服务状态监控、包管理、应用设置
-2. **Hagico Web 访问**：通过嵌入式 Web 服务提供 Web 界面
+2. **Hagicode Web 访问**：通过嵌入式 Web 服务提供 Web 界面
 
 当前用户体验存在以下问题：
 - 需要在 Desktop 应用和外部浏览器之间切换完成任务
@@ -24,7 +24,7 @@ Hagico Desktop 当前架构提供两个核心功能：
 
 ## Problem Statement
 
-用户期望在统一的 Desktop 应用界面中完成所有操作，既包括本地系统管理，也包括 Hagico Web 的功能访问。当前应用设置了 `autoHideMenuBar: true`，完全隐藏了菜单栏，缺乏原生应用应有的导航体验。
+用户期望在统一的 Desktop 应用界面中完成所有操作，既包括本地系统管理，也包括 Hagicode Web 的功能访问。当前应用设置了 `autoHideMenuBar: true`，完全隐藏了菜单栏，缺乏原生应用应有的导航体验。
 
 ## Proposed Solution
 
@@ -37,8 +37,8 @@ Hagico Desktop 当前架构提供两个核心功能：
    - 内容：依赖项管理、Web 服务状态监控、包管理、应用设置
    - 交互：点击菜单后切换主窗口内容至系统管理视图
 
-2. **Hagico Web 菜单**
-   - 功能：在 Electron 应用内直接加载和显示 Hagico Web 界面
+2. **Hagicode Web 菜单**
+   - 功能：在 Electron 应用内直接加载和显示 Hagicode Web 界面
    - 实现方式：使用 `<webview>` 标签或 `BrowserView` API 加载 Web 服务 URL
    - 交互：
      - 点击菜单后，主窗口切换至 Web 界面视图
@@ -51,7 +51,7 @@ Hagico Desktop 当前架构提供两个核心功能：
 ┌─────────────────────────────────────────────────────────────┐
 │                    Electron Menu Bar                         │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────┐ │
-│  │ System Mgmt      │  │ Hagico Web       │  │  Help    │ │
+│  │ System Mgmt      │  │ Hagicode Web       │  │  Help    │ │
 │  │  - Dependencies  │  │  - Open Web UI   │  │          │ │
 │  │  - Web Service   │  │  - Navigation    │  │          │ │
 │  │  - Packages      │  │  - Dev Tools     │  │          │ │
@@ -69,7 +69,7 @@ Hagico Desktop 当前架构提供两个核心功能：
 │              ┌───────────────┴───────────────┐              │
 │              ▼                               ▼              │
 │  ┌─────────────────────┐       ┌─────────────────────┐    │
-│  │  System Management  │       │    Hagico Web       │    │
+│  │  System Management  │       │    Hagicode Web       │    │
 │  │  - React Components │       │  - <webview> or     │    │
 │  │  - Existing UI      │       │    BrowserView      │    │
 │  └─────────────────────┘       └─────────────────────┘    │
@@ -101,7 +101,7 @@ Hagico Desktop 当前架构提供两个核心功能：
 
 5. **键盘快捷键**
    - `Cmd/Ctrl+1` 切换到系统管理
-   - `Cmd/Ctrl+2` 切换到 Hagico Web
+   - `Cmd/Ctrl+2` 切换到 Hagicode Web
 
 ### Out of Scope
 
@@ -165,7 +165,7 @@ Hagico Desktop 当前架构提供两个核心功能：
 1. **功能完整性**
    - 菜单栏在所有平台上正确显示
    - 视图切换功能正常工作
-   - Web 视图成功加载 Hagico Web 界面
+   - Web 视图成功加载 Hagicode Web 界面
 
 2. **用户体验**
    - 菜单项文本在中英文切换时正确更新

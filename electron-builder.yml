@@ -1,5 +1,5 @@
-appId: com.newbe36524.hagico
-productName: Hagico Desktop
+appId: com.newbe36524.hagicode
+productName: Hagicode Desktop
 directories:
   output: pkg
 files:
@@ -12,8 +12,8 @@ asarUnpack:
   - '**/vendor/**'
 publish:
   provider: github
-  owner: newbe36524
-  repo: Hagico
+  owner: HagiCode-org
+  repo: desktop
 win:
   target:
     - portable
@@ -22,10 +22,10 @@ win:
   icon: resources/icon.ico
 
 appx:
-  displayName: Hagico Desktop
+  displayName: Hagicode Desktop
   publisherDisplayName: newbe36524
   publisher: CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F
-  identityName: newbe36524.Hagico
+  identityName: newbe36524.HagicodeDesktop
   backgroundColor: transparent
   languages:
     - en-US
@@ -45,4 +45,4 @@ linux:
     - deb
     - tar.gz
   category: Utility
-  maintainer: newbe36524 <newbe36524@gmail.com>
+  maintainer: newbe36524 <support@hagicode.com>

@@ -28,8 +28,8 @@ function* handleSwitchView(action: PayloadAction<ViewType>) {
       }
     }
 
-    // The actual view switch is handled by the reducer in switchView action
-    yield put(switchView(targetView));
+    // The actual view switch is already handled by the reducer
+    // No need to dispatch switchView again here
 
     yield put(setViewSwitching(false));
   } catch (error) {

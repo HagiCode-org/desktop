@@ -1,4 +1,5 @@
-import { call, put, takeEvery, fork } from 'redux-saga/effects';
+import { call, put, takeEvery, fork, select, take } from 'redux-saga/effects';
+import { toast } from 'sonner';
 import {
   setStatus,
   setOperating,
@@ -10,10 +11,20 @@ import {
   setAvailableVersions,
   setPlatform,
   setPort,
+  setActiveVersion,
+  setUrl,
+  setPid,
+  showInstallConfirm,
+  hideInstallConfirm,
+  showStartConfirmDialog,
+  hideStartConfirmDialog,
+  setShowDependencyWarning,
   type ProcessInfo,
   type PackageInfo,
   type InstallProgress,
+  type DependencyItem,
 } from '../slices/webServiceSlice';
+import type { ProcessStatus } from '../slices/webServiceSlice';
 
 // Types for window electronAPI
 declare global {
@@ -21,7 +32,7 @@ declare global {
     electronAPI: {
       // Web Service Management APIs
       getWebServiceStatus: () => Promise<ProcessInfo>;
-      startWebService: () => Promise<boolean>;
+      startWebService: (force?: boolean) => Promise<{ success: boolean; error?: { type: string; details: string }; warning?: { type: string; missing: any[] } }>;
       stopWebService: () => Promise<boolean>;
       restartWebService: () => Promise<boolean>;
       getWebServiceVersion: () => Promise<string>;
@@ -36,6 +47,11 @@ declare global {
       getAvailableVersions: () => Promise<string[]>;
       getPlatform: () => Promise<string>;
       onPackageInstallProgress: (callback: (progress: InstallProgress) => void) => (() => void) | void;
+
+      // Version Management APIs
+      versionGetActive: () => Promise<any>;
+      onActiveVersionChanged: (callback: (version: any) => void) => (() => void) | void;
+      onVersionDependencyWarning: (callback: (warning: { missing: any[] }) => void) => (() => void) | void;
     };
   }
 }
@@ -48,9 +64,13 @@ export const FETCH_WEB_SERVICE_STATUS = 'webService/fetchStatusSaga';
 export const FETCH_WEB_SERVICE_VERSION = 'webService/fetchVersionSaga';
 export const CHECK_PACKAGE_INSTALLATION = 'webService/checkPackageInstallation';
 export const INSTALL_WEB_SERVICE_PACKAGE = 'webService/installPackage';
+export const CONFIRM_INSTALL_AND_STOP = 'webService/confirmInstallAndStop';
 export const FETCH_AVAILABLE_VERSIONS = 'webService/fetchAvailableVersions';
 export const FETCH_PLATFORM = 'webService/fetchPlatform';
 export const UPDATE_WEB_SERVICE_PORT = 'webService/updatePortSaga';
+export const FETCH_ACTIVE_VERSION = 'webService/fetchActiveVersion';
+export const CONFIRM_START_WITH_WARNING = 'webService/confirmStartWithWarning';
+export const HIDE_START_CONFIRM = 'webService/hideStartConfirm';
 
 // Action creators
 export const startWebServiceAction = () => ({ type: START_WEB_SERVICE });
@@ -69,6 +89,11 @@ export const updateWebServicePortAction = (port: number) => ({
   type: UPDATE_WEB_SERVICE_PORT,
   payload: port,
 });
+export const fetchActiveVersionAction = () => ({ type: FETCH_ACTIVE_VERSION });
+
+export const confirmInstallAndStopAction = () => ({ type: CONFIRM_INSTALL_AND_STOP });
+export const confirmStartWithWarningAction = () => ({ type: CONFIRM_START_WITH_WARNING });
+export const hideStartConfirmAction = () => ({ type: HIDE_START_CONFIRM });
 
 // Helper: Call electron API with error handling
 function safeElectronCall<T>(fn: () => Promise<T>, errorMessage: string): Generator<any, T, any> {
@@ -86,16 +111,44 @@ function safeElectronCall<T>(fn: () => Promise<T>, errorMessage: string): Genera
 function* startWebServiceSaga() {
   try {
     yield put(setOperating(true));
+    yield put(setStatus('starting'));
     yield put(setError(null));
 
-    const success: boolean = yield call(window.electronAPI.startWebService);
+    const result: { success: boolean; error?: { type: string; details: string }; warning?: { type: string; missing: any[] } } = yield call(window.electronAPI.startWebService);
 
-    if (success) {
+    if (result.success) {
       yield put(setStatus('running'));
       // Fetch updated status
       yield put(fetchWebServiceStatusAction());
+    } else if (result.warning) {
+      // Show confirmation dialog for missing dependencies
+      if (result.warning.type === 'missing-dependencies') {
+        const missingDeps: DependencyItem[] = result.warning.missing.map((dep: any) => ({
+          name: dep.name,
+          type: dep.type,
+          installed: dep.installed,
+          version: dep.version,
+          requiredVersion: dep.requiredVersion,
+          versionMismatch: dep.versionMismatch,
+        }));
+        yield put(showStartConfirmDialog(missingDeps));
+      }
     } else {
-      yield put(setError('Failed to start web service'));
+      // Set error based on error type
+      if (result.error) {
+        switch (result.error.type) {
+          case 'no-active-version':
+            yield put(setError('No active version found. Please install and activate a version first.'));
+            break;
+          case 'version-not-ready':
+            yield put(setError('Active version is not ready. Dependencies may be missing.'));
+            break;
+          default:
+            yield put(setError(result.error.details || 'Failed to start web service'));
+        }
+      } else {
+        yield put(setError('Failed to start web service'));
+      }
       yield put(setStatus('error'));
     }
   } catch (error) {
@@ -107,10 +160,49 @@ function* startWebServiceSaga() {
   }
 }
 
+// Saga: Confirm start with warning (user chose to start despite missing dependencies)
+function* confirmStartWithWarningSaga() {
+  try {
+    yield put(setOperating(true));
+    yield put(setError(null));
+    yield put(hideStartConfirmDialog());
+
+    // Call startWebService with force=true
+    const result: { success: boolean; error?: { type: string; details: string } } = yield call(window.electronAPI.startWebService, true);
+
+    if (result.success) {
+      yield put(setStatus('running'));
+      yield put(setShowDependencyWarning(true));
+      // Fetch updated status
+      yield put(fetchWebServiceStatusAction());
+    } else {
+      // Set error based on error type
+      if (result.error) {
+        yield put(setError(result.error.details || 'Failed to start web service'));
+      } else {
+        yield put(setError('Failed to start web service'));
+      }
+      yield put(setStatus('error'));
+    }
+  } catch (error) {
+    console.error('Confirm start with warning saga error:', error);
+    yield put(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
+    yield put(setStatus('error'));
+  } finally {
+    yield put(setOperating(false));
+  }
+}
+
+// Saga: Hide start confirm dialog
+function* hideStartConfirmSaga() {
+  yield put(hideStartConfirmDialog());
+}
+
 // Saga: Stop web service
 function* stopWebServiceSaga() {
   try {
     yield put(setOperating(true));
+    yield put(setStatus('stopping'));
     yield put(setError(null));
 
     const success: boolean = yield call(window.electronAPI.stopWebService);
@@ -136,6 +228,7 @@ function* stopWebServiceSaga() {
 function* restartWebServiceSaga() {
   try {
     yield put(setOperating(true));
+    yield put(setStatus('stopping'));
     yield put(setError(null));
 
     const success: boolean = yield call(window.electronAPI.restartWebService);
@@ -195,25 +288,96 @@ function* installWebServicePackageSaga(action: { type: string; payload: string }
   const version = action.payload;
 
   try {
-    yield put(setInstallProgress({ stage: 'verifying', progress: 0, message: 'Starting installation...' }));
-    yield put(setError(null));
+    // Check service status before installing
+    const currentStatus: ProcessStatus = yield select((state: any) => state.webService.status);
 
-    const success: boolean = yield call(window.electronAPI.installWebServicePackage, version);
-
-    if (success) {
-      yield put(setInstallProgress({ stage: 'completed', progress: 100, message: 'Installation completed successfully' }));
-      // Refresh package info
-      yield put(checkPackageInstallationAction());
-      // Refresh version
-      yield put(fetchWebServiceVersionAction());
-    } else {
-      yield put(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
-      yield put(setError('Failed to install package'));
+    // If service is running, show confirmation dialog
+    if (currentStatus === 'running') {
+      yield put(showInstallConfirm(version));
+      return; // Wait for user confirmation
     }
+
+    // Service is not running, proceed with installation
+    yield call(doInstallPackage, version);
   } catch (error) {
     console.error('Install package saga error:', error);
     yield put(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
     yield put(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
+  }
+}
+
+// Saga: Confirm install and stop service
+function* confirmInstallAndStopSaga() {
+  try {
+    const pendingVersion: string | null = yield select((state: any) => state.webService.pendingInstallVersion);
+
+    if (!pendingVersion) {
+      yield put(hideInstallConfirm());
+      return;
+    }
+
+    // Stop the service
+    yield put(stopWebServiceAction());
+
+    // Wait for service to stop completely
+    yield take((action: any) =>
+      action.type === 'webService/setStatus' &&
+      (action.payload === 'stopped' || action.payload === 'error')
+    );
+
+    // Check if service stopped successfully
+    const statusAfterStop: ProcessStatus = yield select((state: any) => state.webService.status);
+
+    if (statusAfterStop === 'error') {
+      // Failed to stop service
+      yield put(setError('Failed to stop service. Installation cancelled.'));
+      yield put(hideInstallConfirm());
+      return;
+    }
+
+    // Service stopped successfully, proceed with installation
+    yield call(doInstallPackage, pendingVersion);
+
+    // Hide confirmation dialog after installation completes
+    yield put(hideInstallConfirm());
+  } catch (error) {
+    console.error('Confirm install and stop saga error:', error);
+    yield put(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
+    yield put(hideInstallConfirm());
+  }
+}
+
+// Helper function: Execute installation
+function* doInstallPackage(version: string) {
+  yield put(setInstallProgress({ stage: 'verifying', progress: 0, message: 'Starting installation...' }));
+  yield put(setError(null));
+
+  const success: boolean = yield call(window.electronAPI.installWebServicePackage, version);
+
+  if (success) {
+    yield put(setInstallProgress({ stage: 'completed', progress: 100, message: 'Installation completed successfully' }));
+    // Refresh package info
+    yield put(checkPackageInstallationAction());
+    // Refresh version
+    yield put(fetchWebServiceVersionAction());
+    // Refresh active version
+    yield put(fetchActiveVersionAction());
+
+    // Show success toast
+    toast.success('安装成功', {
+      description: '版本已成功安装，请手动启动服务。'
+    });
+
+    // Check dependencies after installation and show confirmation dialog if needed
+    yield put({ type: 'dependency/checkAfterInstall', payload: version });
+  } else {
+    yield put(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
+    yield put(setError('Failed to install package'));
+
+    // Show error toast
+    toast.error('安装失败', {
+      description: '安装过程中出现错误，请重试。'
+    });
   }
 }
 
@@ -267,10 +431,27 @@ function* updateWebServicePortSaga(action: { type: string; payload: number }) {
   }
 }
 
+// Saga: Fetch active version
+function* fetchActiveVersionSaga() {
+  try {
+    const activeVersion: any = yield call(window.electronAPI.versionGetActive);
+    yield put(setActiveVersion(activeVersion));
+  } catch (error) {
+    console.error('Fetch active version saga error:', error);
+    // Don't set error on active version fetch failure
+  }
+}
+
 // Saga: Watch for web service status changes from main process
 function* watchWebServiceStatusChanges() {
   // Set up polling using regular setInterval
   if (typeof window !== 'undefined') {
+    // Listen for active version changes
+    window.electronAPI.onActiveVersionChanged((version: any) => {
+      // Store this in the Redux store
+      console.log('Active version changed:', version);
+    });
+
     setInterval(async () => {
       try {
         const status = await window.electronAPI.getWebServiceStatus();
@@ -294,6 +475,16 @@ function* watchPackageInstallProgress() {
   }
 }
 
+// Saga: Watch for version dependency warnings
+function* watchVersionDependencyWarnings() {
+  if (typeof window !== 'undefined') {
+    window.electronAPI.onVersionDependencyWarning((warning: { missing: any[] }) => {
+      // Handle version dependency warning
+      console.log('Version dependency warning:', warning);
+    });
+  }
+}
+
 // Root saga for web service
 export function* webServiceSaga() {
   // Watch for actions
@@ -304,13 +495,18 @@ export function* webServiceSaga() {
   yield takeEvery(FETCH_WEB_SERVICE_VERSION, fetchWebServiceVersionSaga);
   yield takeEvery(CHECK_PACKAGE_INSTALLATION, checkPackageInstallationSaga);
   yield takeEvery(INSTALL_WEB_SERVICE_PACKAGE, installWebServicePackageSaga);
+  yield takeEvery(CONFIRM_INSTALL_AND_STOP, confirmInstallAndStopSaga);
   yield takeEvery(FETCH_AVAILABLE_VERSIONS, fetchAvailableVersionsSaga);
   yield takeEvery(FETCH_PLATFORM, fetchPlatformSaga);
   yield takeEvery(UPDATE_WEB_SERVICE_PORT, updateWebServicePortSaga);
+  yield takeEvery(FETCH_ACTIVE_VERSION, fetchActiveVersionSaga);
+  yield takeEvery(CONFIRM_START_WITH_WARNING, confirmStartWithWarningSaga);
+  yield takeEvery(HIDE_START_CONFIRM, hideStartConfirmSaga);
 
   // Fork watcher sagas (non-blocking)
   yield fork(watchWebServiceStatusChanges);
   yield fork(watchPackageInstallProgress);
+  yield fork(watchVersionDependencyWarnings);
 }
 
 // Initial data fetching saga
@@ -339,5 +535,13 @@ export function* initializeWebServiceSaga() {
     yield put(setPlatform(platform));
   } catch (e) {
     console.log('Platform not available yet');
+  }
+
+  // Fetch active version on initialization
+  try {
+    const activeVersion: any = yield call(window.electronAPI.versionGetActive);
+    yield put(setActiveVersion(activeVersion));
+  } catch (e) {
+    console.log('Active version not available yet');
   }
 }

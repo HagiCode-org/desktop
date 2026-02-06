@@ -1,4 +1,4 @@
-# Tasks: 基于 DML 架构建立 Hagico 桌面应用
+# Tasks: 基于 DML 架构建立 Hagicode 桌面应用
 
 **Change ID:** `electron-desktop-app-dml-architecture`
 **Status:** Pending
@@ -37,7 +37,7 @@
 - [ ] **Task 1.2.1**: 迁移并定制 `package.json`
   - 复制 DML 的 `package.json` 模板
   - 修改项目名称为 `hagico-desktop`
-  - 修改产品名称为 `Hagico Desktop`
+  - 修改产品名称为 `Hagicode Desktop`
   - 移除不需要的依赖（如 Steam 相关）
   - 验证: `npm install` 成功执行
   - 依赖: Task 1.1.2
@@ -147,7 +147,7 @@
 
 ---
 
-## Phase 3: Hagico Server 集成
+## Phase 3: Hagicode Server 集成
 
 ### 3.1 服务器通信层
 - [ ] **Task 3.1.1**: 创建服务器通信模块
@@ -378,7 +378,7 @@ Task 1.2.1 → Task 2.1.1 → Task 2.1.2 → Task 2.2.1 → Task 3.1.1 → Task 
 | 任务 | 风险 | 缓解措施 |
 |------|------|----------|
 | Task 2.2.1 | Windows 托盘 API 可能有问题 | 优先验证，预留调试时间 |
-| Task 3.1.1 | Hagico Server API 未定义 | 先定义 API 契约或 mock |
+| Task 3.1.1 | Hagicode Server API 未定义 | 先定义 API 契约或 mock |
 | Task 4.2.2 | macOS 构建环境不可用 | 使用 GitHub Actions 验证 |
 | Task 5.2.1 | 自动更新配置复杂 | 参考 DML 实现，充分测试 |
 

@@ -51,7 +51,7 @@
 ```
 菜单结构（Windows/Linux）:
 ┌─────────────────────────────────────────────────────┐
-│ System Management          │  │ Hagico Web           │
+│ System Management          │  │ Hagicode Web           │
 │  ├─ Dependencies           │  │  ├─ Open Web UI      │
 │  ├─ Web Service Status     │  │  ├─ Navigate         │
 │  ├─ Packages               │  │  │   ├─ Back         │
@@ -66,7 +66,7 @@
 菜单结构（macOS）:
 ┌─────────────────────────────────────────────────────┐
 │ [App Menu]           │ System Management │ Web │ Help│
-│  ├─ About Hagico     │                   │      │     │
+│  ├─ About Hagicode     │                   │      │     │
 │  ├─ Settings...      │                   │      │     │
 │  └─ Quit             │                   │      │     │
 └─────────────────────────────────────────────────────┘
@@ -85,7 +85,7 @@ sequenceDiagram
     participant Redux
     participant UI
 
-    User->>MenuBar: Click "Hagico Web" menu
+    User->>MenuBar: Click "Hagicode Web" menu
     MenuBar->>MainProcess: menu-item-click event
     MainProcess->>Renderer: IPC: switch-view('web')
     Renderer->>Redux: dispatch(switchView('web'))
@@ -100,7 +100,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[User clicks Hagico Web menu] --> B{Is Web Service running?}
+    A[User clicks Hagicode Web menu] --> B{Is Web Service running?}
     B -->|Yes| C[Switch to Web View]
     B -->|No| D[Show confirmation dialog]
     D --> E{User confirms?}
@@ -319,7 +319,7 @@ function App() {
 {
   "menu": {
     "systemManagement": "系统管理",
-    "hagicoWeb": "Hagico Web",
+    "hagicoWeb": "Hagicode Web",
     "dependencies": "依赖项",
     "webService": "Web 服务",
     "packages": "包管理",
@@ -339,7 +339,7 @@ function App() {
 {
   "menu": {
     "systemManagement": "System Management",
-    "hagicoWeb": "Hagico Web",
+    "hagicoWeb": "Hagicode Web",
     "dependencies": "Dependencies",
     "webService": "Web Service",
     "packages": "Packages",
@@ -360,7 +360,7 @@ function App() {
 
 ```mermaid
 flowchart TD
-    A[点击 Hagico Web 菜单] --> B{检查服务状态}
+    A[点击 Hagicode Web 菜单] --> B{检查服务状态}
     B -->|已启动| C[切换到 Web 视图]
     B -->|未启动| D[显示确认对话框]
     D --> E{用户选择}
@@ -419,7 +419,7 @@ flowchart TD
 
 ### E2E 测试场景
 1. 启动应用，默认显示系统管理视图
-2. 点击 "Hagico Web" 菜单，切换到 Web 视图
+2. 点击 "Hagicode Web" 菜单，切换到 Web 视图
 3. 使用快捷键 `Cmd/Ctrl+1` 切换回系统管理
 4. 在 Web 服务未启动时点击菜单，显示确认对话框
 5. 切换语言后菜单文本正确更新

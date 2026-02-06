@@ -1,6 +1,6 @@
 ## Context
 
-Hagico Desktop 是一个基于 Electron 的跨平台桌面应用，用于管理和监控 Hagico Server。当前应用已实现嵌入式 Web 服务管理、包管理等功能，但在部署 Web 服务时，用户主机环境可能缺少必要的运行时依赖项（如 .NET Runtime）。
+Hagicode Desktop 是一个基于 Electron 的跨平台桌面应用，用于管理和监控 Hagicode Server。当前应用已实现嵌入式 Web 服务管理、包管理等功能，但在部署 Web 服务时，用户主机环境可能缺少必要的运行时依赖项（如 .NET Runtime）。
 
 当缺少这些依赖时，Web 服务无法正常启动或运行。用户需要手动检查和安装依赖，这增加了使用门槛，并导致故障排查困难。
 
