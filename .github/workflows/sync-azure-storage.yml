@@ -9,6 +9,11 @@ on:
         required: true
         type: string
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to sync (empty for latest release)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -33,10 +38,17 @@ jobs:
       - name: Determine release tag
         id: release_info
         run: |
-          # From workflow_call input
-          RELEASE_TAG="${{ inputs.release_tag }}"
+          # From workflow_call input, or fetch latest for manual dispatch
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            RELEASE_TAG="${{ inputs.release_tag }}"
+          else
+            RELEASE_TAG=$(gh release view --json tagName -q .tagName)
+            echo "No tag specified, using latest release: ${RELEASE_TAG}"
+          fi
           echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
           echo "Release tag: ${RELEASE_TAG}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create download directory
         run: |
