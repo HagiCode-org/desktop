@@ -1,0 +1,222 @@
+name: Sync Release to Azure Storage
+
+# This workflow runs after the build.yml workflow completes.
+# When a version tag (e.g., v1.0.0) is pushed:
+# 1. build.yml is triggered and builds all platforms
+# 2. build.yml uploads artifacts to the GitHub Release
+# 3. The release is marked as "published"
+# 4. This workflow triggers and syncs files to Azure Storage
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync-to-azure:
+    name: Sync Release Assets to Azure Storage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate SAS URL secret
+        run: |
+          if [ -z "${{ secrets.AZURE_BLOB_SAS_URL }}" ]; then
+            echo "::error::AZURE_BLOB_SAS_URL secret not found. Please configure it in GitHub Secrets."
+            exit 1
+          fi
+          echo "SAS URL secret found"
+
+      - name: Determine release tag
+        id: release_info
+        run: |
+          # Get the release tag from the event
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+          else
+            # For manual trigger, get the latest release
+            RELEASE_TAG=$(gh release view --json tagName -q .tagName)
+          fi
+          echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "Release tag: ${RELEASE_TAG}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create download directory
+        run: |
+          mkdir -p ./release-assets
+          echo "Created download directory: ./release-assets"
+
+      - name: Download release assets
+        run: |
+          gh release download "${{ steps.release_info.outputs.tag }}" --dir ./release-assets --pattern "*"
+          echo "Downloaded release assets:"
+          ls -lah ./release-assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Azure CLI
+        run: |
+          echo "Installing Azure CLI..."
+          # Ubuntu runner already has Azure CLI, but ensure it's available
+          az version || curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Parse SAS URL and extract storage info
+        id: sas_info
+        run: |
+          SAS_URL="${{ secrets.AZURE_BLOB_SAS_URL }}"
+
+          # Parse the SAS URL to extract storage account name and container
+          # Format: https://<account>.blob.core.windows.net/<container>?<sas_token>
+
+          # Extract account name (remove protocol and parse domain)
+          ACCOUNT=$(echo "$SAS_URL" | sed -n 's|https://\([^.]*\)\.blob\.core\.windows\.net.*|\1|p')
+          echo "account=${ACCOUNT}" >> $GITHUB_OUTPUT
+
+          # Extract container name (between domain and query string)
+          CONTAINER=$(echo "$SAS_URL" | sed -n 's|https://[^.]*\.blob\.core\.windows\.net/\([^?]*\).*|\1|p')
+          echo "container=${CONTAINER}" >> $GITHUB_OUTPUT
+
+          # Get the SAS token (everything after ?)
+          SAS_TOKEN=$(echo "$SAS_URL" | sed -n 's|[^?]*\(?\.*\)|\1|p')
+          # Store token as file to avoid issues with special characters
+          echo "$SAS_TOKEN" > /tmp/sas_token.txt
+
+          echo "Storage Account: ${ACCOUNT}"
+          echo "Container: ${CONTAINER}"
+          echo "SAS Token: [hidden]"
+
+      - name: Upload to Azure Storage
+        run: |
+          # Set up Azure CLI authentication using SAS token
+          ACCOUNT="${{ steps.sas_info.outputs.account }}"
+          CONTAINER="${{ steps.sas_info.outputs.container }}"
+          SAS_TOKEN=$(cat /tmp/sas_token.txt)
+
+          # Upload files to versioned directory
+          VERSION="${{ steps.release_info.outputs.tag }}"
+          BLOB_PATH="${VERSION}/"
+
+          echo "Uploading files to Azure Storage..."
+          echo "Account: ${ACCOUNT}"
+          echo "Container: ${CONTAINER}"
+          echo "Path: ${BLOB_PATH}"
+
+          # Upload each file using SAS URL authentication
+          FILE_COUNT=0
+          for file in ./release-assets/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading: ${filename}"
+
+              # Build the blob URL with SAS token
+              BLOB_URL="https://${ACCOUNT}.blob.core.windows.net/${CONTAINER}/${BLOB_PATH}${filename}${SAS_TOKEN}"
+
+              # Upload using az storage blob upload with SAS authentication
+              az storage blob upload \
+                --account-name "${ACCOUNT}" \
+                --container-name "${CONTAINER}" \
+                --name "${BLOB_PATH}${filename}" \
+                --file "$file" \
+                --sas-token "${SAS_TOKEN}" \
+                --overwrite || {
+                  echo "::error::Failed to upload ${filename}"
+                  exit 1
+                }
+              FILE_COUNT=$((FILE_COUNT + 1))
+            fi
+          done
+
+          echo "Successfully uploaded ${FILE_COUNT} file(s) to Azure Storage"
+
+      - name: Generate and upload index file
+        run: |
+          ACCOUNT="${{ steps.sas_info.outputs.account }}"
+          CONTAINER="${{ steps.sas_info.outputs.container }}"
+          SAS_TOKEN=$(cat /tmp/sas_token.txt)
+
+          echo "Generating index.json..."
+
+          # Get all blobs and organize by version
+          BLOBS=$(az storage blob list \
+            --account-name "${ACCOUNT}" \
+            --container-name "${CONTAINER}" \
+            --sas-token "${SAS_TOKEN}" \
+            --query "[].{name:name, lastModified:lastModified, size:properties.contentLength}" \
+            --output json)
+
+          # Create JSON index with files organized by version
+          INDEX_JSON=$(echo "$BLOBS" | jq '{
+            updatedAt: now,
+            versions: [
+              .[]
+              | select(.name | contains("index.json") | not)
+              | {
+                version: (.name | split("/")[0]),
+                name: (.name | split("/")[1:][-1]),
+                path: .name,
+                size: .size,
+                lastModified: .lastModified
+              }
+            ]
+            | group_by(.version)
+            | map({
+              version: .[0].version,
+              files: [.[].name],
+              assets: [.[] | {name: .name, path: .path, size: .size, lastModified: .lastModified}]
+            })
+            | sort_by(.version) | reverse
+          }')
+
+          echo "$INDEX_JSON" | jq . > index.json
+
+          # Upload index.json
+          echo "Uploading index.json..."
+          az storage blob upload \
+            --account-name "${ACCOUNT}" \
+            --container-name "${CONTAINER}" \
+            --name "index.json" \
+            --file "index.json" \
+            --sas-token "${SAS_TOKEN}" \
+            --overwrite \
+            --content-type "application/json"
+
+          echo "Index file generated and uploaded successfully"
+          echo "Summary:"
+          echo "$INDEX_JSON" | jq -r '.versions | length' | xargs -I {} echo "  - {} version(s)"
+          echo "$INDEX_JSON" | jq -r '.versions[].files | length' | paste -sd+ | bc | xargs -I {} echo "  - {} file(s) total"
+
+      - name: Verify upload
+        if: success()
+        run: |
+          ACCOUNT="${{ steps.sas_info.outputs.account }}"
+          CONTAINER="${{ steps.sas_info.outputs.container }}"
+          SAS_TOKEN=$(cat /tmp/sas_token.txt)
+          VERSION="${{ steps.release_info.outputs.tag }}"
+          BLOB_PATH="${VERSION}/"
+
+          echo "Verifying uploaded files..."
+          az storage blob list \
+            --account-name "${ACCOUNT}" \
+            --container-name "${CONTAINER}" \
+            --prefix "${BLOB_PATH}" \
+            --sas-token "${SAS_TOKEN}" \
+            --query "[].name" \
+            --output tsv
+
+          echo "Verification complete!"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "::error::Failed to sync release assets to Azure Storage"
+          echo "Please check:"
+          echo "  1. AZURE_BLOB_SAS_URL secret is correctly configured"
+          echo "  2. SAS token has 'Write' permissions"
+          echo "  3. SAS token has not expired"
+          echo "  4. Container exists in Azure Storage"
+          exit 1
