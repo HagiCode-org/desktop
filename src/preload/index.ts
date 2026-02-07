@@ -4,6 +4,7 @@ const electronAPI = {
   getAppVersion: () => ipcRenderer.invoke('app-version'),
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
+  openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
   onServerStatusChange: (callback) => {
     const listener = (_event, status) => {
       callback(status);

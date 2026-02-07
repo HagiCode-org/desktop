@@ -117,9 +117,13 @@ const WebServiceStatusCard: React.FC = () => {
     dispatch(restartWebServiceAction());
   };
 
-  const handleOpenHagicode = () => {
+  const handleOpenHagicode = async () => {
     if (webServiceInfo.url) {
-      window.open(webServiceInfo.url, '_blank');
+      try {
+        await window.electronAPI.openHagicodeInApp(webServiceInfo.url);
+      } catch (error) {
+        console.error('Failed to open Hagicode in app:', error);
+      }
     }
   };
 

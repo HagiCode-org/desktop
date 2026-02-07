@@ -18,3 +18,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </Provider>
   </React.StrictMode>
 );
+
+// Remove loading container after React app mounts
+const loadingContainer = document.getElementById('loading-container');
+if (loadingContainer) {
+  loadingContainer.remove();
+}

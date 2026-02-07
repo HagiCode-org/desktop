@@ -27,10 +27,8 @@ let menuManager: MenuManager | null = null;
 let npmMirrorHelper: NpmMirrorHelper | null = null;
 
 function createWindow(): void {
-  console.log('[Hagico] Creating window...');
+  console.log('[Hagicode] Creating window...');
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
     minWidth: 800,
     minHeight: 600,
     show: false,
@@ -48,31 +46,33 @@ function createWindow(): void {
   (global as any).mainWindow = mainWindow;
 
   // Log for debugging
-  console.log('[Hagico] Window created');
+  console.log('[Hagicode] Window created');
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Hagico] Loading dev server at http://localhost:36598');
+    console.log('[Hagicode] Loading dev server at http://localhost:36598');
     mainWindow.loadURL('http://localhost:36598');
     mainWindow.webContents.openDevTools();
   } else {
-    const htmlPath = path.join(__dirname, '../renderer/index.html');
-    console.log('[Hagico] Loading production build from:', htmlPath);
+    // In production, __dirname is 'dist' inside the asar, so we need to go to 'dist/renderer'
+    const htmlPath = path.join(__dirname, 'renderer', 'index.html');
+    console.log('[Hagicode] Loading production build from:', htmlPath);
+    console.log('[Hagicode] __dirname:', __dirname);
+    console.log('[Hagicode] Resolved absolute path:', path.resolve(htmlPath));
     mainWindow.loadFile(htmlPath);
-    // Also open DevTools in production for debugging
-    mainWindow.webContents.openDevTools();
   }
 
   mainWindow.once('ready-to-show', () => {
-    console.log('[Hagico] Window ready to show');
+    console.log('[Hagicode] Window ready to show');
+    mainWindow?.maximize();
     mainWindow?.show();
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
-    console.log('[Hagico] Page loaded successfully');
+    console.log('[Hagicode] Page loaded successfully');
   });
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('[Hagico] Failed to load:', errorCode, errorDescription);
+    console.error('[Hagicode] Failed to load:', errorCode, errorDescription);
   });
 
   mainWindow.on('close', (event) => {
@@ -84,7 +84,7 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', () => {
-    console.log('[Hagico] Window closed');
+    console.log('[Hagicode] Window closed');
     mainWindow = null;
   });
 }
@@ -101,6 +101,55 @@ ipcMain.handle('show-window', () => {
     }
     mainWindow.show();
     mainWindow.focus();
+  }
+});
+
+ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
+  if (!url) {
+    console.error('[Main] No URL provided for open-hagicode-in-app');
+    return false;
+  }
+  try {
+    console.log('[Main] Opening Hagicode in app window:', url);
+
+    // Create a new window for Hagicode
+    const hagicodeWindow = new BrowserWindow({
+      minWidth: 800,
+      minHeight: 600,
+      show: false,
+      autoHideMenuBar: true,
+      icon: path.join(__dirname, '../../resources/icon.png'),
+      webPreferences: {
+        preload: path.join(__dirname, 'preload/index.mjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+
+    console.log('[Main] Hagicode window created');
+
+    // Set up ready-to-show handler before loading URL
+    hagicodeWindow.once('ready-to-show', () => {
+      console.log('[Main] Hagicode window ready to show, maximizing...');
+      hagicodeWindow.maximize();
+      hagicodeWindow.show();
+      hagicodeWindow.focus();
+    });
+
+    // Also set up error handling
+    hagicodeWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('[Main] Hagicode window failed to load:', errorCode, errorDescription);
+    });
+
+    // Load the Hagicode URL
+    await hagicodeWindow.loadURL(url);
+    console.log('[Main] Hagicode URL loaded successfully');
+
+    return true;
+  } catch (error) {
+    console.error('[Main] Failed to open Hagicode in app:', error);
+    return false;
   }
 });
 

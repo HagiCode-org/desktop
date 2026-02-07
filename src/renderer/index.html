@@ -4,8 +4,63 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hagicode Desktop</title>
+    <style>
+      /* Loading container styles */
+      #loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      /* Brand logo styles */
+      .brand-logo {
+        color: #f8fafc;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin-bottom: 24px;
+      }
+
+      /* Loading spinner styles */
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Loading text styles */
+      .loading-text {
+        color: #94a3b8;
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 16px;
+      }
+    </style>
   </head>
   <body>
+    <div id="loading-container">
+      <div class="brand-logo">Hagicode Desktop</div>
+      <div class="loading-spinner"></div>
+      <div class="loading-text">正在加载...</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>
