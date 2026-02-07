@@ -1,15 +1,19 @@
 name: Sync Release to Azure Storage
 
-# This workflow runs after the build.yml workflow completes.
-# When a version tag (e.g., v1.0.0) is pushed:
-# 1. build.yml is triggered and builds all platforms
-# 2. build.yml uploads artifacts to the GitHub Release
-# 3. The release is marked as "published"
-# 4. This workflow triggers and syncs files to Azure Storage
+# This workflow is called by build.yml after a release is created.
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      release_tag:
+        description: 'Release tag to sync'
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to sync (empty for latest release)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -34,12 +38,12 @@ jobs:
       - name: Determine release tag
         id: release_info
         run: |
-          # Get the release tag from the event
-          if [ "${{ github.event_name }}" = "release" ]; then
-            RELEASE_TAG="${{ github.event.release.tag_name }}"
+          # From workflow_call input, or fetch latest for manual dispatch
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            RELEASE_TAG="${{ inputs.release_tag }}"
           else
-            # For manual trigger, get the latest release
             RELEASE_TAG=$(gh release view --json tagName -q .tagName)
+            echo "No tag specified, using latest release: ${RELEASE_TAG}"
           fi
           echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
           echo "Release tag: ${RELEASE_TAG}"
