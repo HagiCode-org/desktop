@@ -73,8 +73,19 @@ desktop/
 │   └── renderer/       # React frontend code
 ├── resources/          # Static resources (icons, etc.)
 ├── openspec/           # OpenSpec proposals and specifications
-└── scripts/            # Build and utility scripts
+├── scripts/            # Build and utility scripts
+└── docs/               # Project documentation
 ```
+
+## CI/CD
+
+The project uses GitHub Actions for automated building and publishing:
+
+- **Automatic builds**: Triggered on push to main branch or when version tags are created
+- **Multi-platform support**: Automatically builds installers for Windows, macOS, and Linux
+- **Release sync**: Automatically syncs release files to Azure Storage for CDN acceleration
+
+For detailed Azure configuration instructions, see the [Azure Storage Sync Configuration](./docs/azure-storage-sync.md) document.
 
 ## Contributing
 

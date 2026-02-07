@@ -73,8 +73,19 @@ desktop/
 │   └── renderer/       # React 前端代码
 ├── resources/          # 静态资源（图标等）
 ├── openspec/           # OpenSpec 提案和规范
-└── scripts/            # 构建和实用脚本
+├── scripts/            # 构建和实用脚本
+└── docs/               # 项目文档
 ```
+
+## CI/CD
+
+项目使用 GitHub Actions 进行自动化构建和发布：
+
+- **自动构建**: 推送到 main 分支或创建版本标签时自动触发构建
+- **多平台支持**: 自动构建 Windows、macOS 和 Linux 平台的安装包
+- **发布同步**: 自动将发布文件同步到 Azure Storage 以提供 CDN 加速
+
+详细的 Azure 配置说明请参阅 [Azure Storage 同步配置文档](./docs/azure-storage-sync.md)。
 
 ## 贡献
 
