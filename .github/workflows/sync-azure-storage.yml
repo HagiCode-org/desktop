@@ -176,7 +176,15 @@ jobs:
             | sort_by(.version) | reverse
           }')
 
-          echo "$INDEX_JSON" | jq . > index.json
+          echo "$INDEX_JSON" | jq -c . > index.json
+
+          # 验证生成的 JSON 格式有效
+          echo "Validating index.json..."
+          if ! jq empty index.json; then
+            echo "::error::Generated index.json is not valid JSON"
+            exit 1
+          fi
+          echo "index.json validation passed"
 
           # Upload index.json
           echo "Uploading index.json..."
