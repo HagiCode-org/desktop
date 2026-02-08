@@ -133,6 +133,7 @@
     "dashboard": "仪表盘",
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
+    "licenseManagement": "许可证管理",
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"

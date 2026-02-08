@@ -9,7 +9,7 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 
 // Lucide 图标
-import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info } from 'lucide-react';
+import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info, Key } from 'lucide-react';
 
 interface NavigationItem {
   id: ViewType | 'official-website' | 'tech-support' | 'github-project';
@@ -22,6 +22,7 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings },
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
+  { id: 'license', labelKey: 'sidebar.licenseManagement', icon: Key },
 ];
 
 const externalLinkItems: NavigationItem[] = [

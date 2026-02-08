@@ -204,13 +204,18 @@
       "label": "包源类型",
       "folder": "本地文件夹",
       "github": "GitHub Release",
+      "httpIndex": "HTTP 索引源",
       "http": "HTTP URL"
     },
     "folder": {
       "path": {
         "label": "文件夹路径",
         "placeholder": "输入包目录路径"
-      }
+      },
+      "browseButton": "浏览...",
+      "scanButton": "扫描可用版本",
+      "scanning": "扫描中...",
+      "notFound": "文件夹不存在或无法访问"
     },
     "github": {
       "owner": {
@@ -224,13 +229,31 @@
       "token": {
         "label": "GitHub 令牌（可选）",
         "placeholder": "用于私有仓库",
-        "hint": "可选：仅私有仓库需要"
-      }
+        "hint": "可选：仅私有仓库需要",
+        "showButton": "显示",
+        "hideButton": "隐藏",
+        "clearButton": "清除",
+        "rateLimitHint": "提高 API 限制至 5000 次/小时"
+      },
+      "fetchButton": "从 GitHub 获取",
+      "fetching": "获取中...",
+      "repoPath": "仓库路径",
+      "rateLimitError": "GitHub API 速率限制已超出（60 次/小时）。请提供认证令牌以提高限制至 5000 次/小时，或等待 15 分钟后重试。",
+      "repoNotFoundError": "仓库未找到。请检查仓库所有者和名称。",
+      "networkError": "网络连接失败。请检查您的网络连接。",
+      "invalidTokenError": "无效的 GitHub 令牌。请检查您的认证令牌。"
     },
     "http": {
       "url": {
         "label": "包 URL",
         "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "httpIndex": {
+      "indexUrl": {
+        "label": "索引 URL",
+        "placeholder": "https://server.dl.hagicode.com/index.json",
+        "hint": "索引文件必须包含 versions 数组和每个版本的 assets"
       }
     },
     "validateButton": "验证配置",
@@ -239,7 +262,31 @@
     "validating": "验证配置中...",
     "valid": "配置有效",
     "fetchingVersions": "获取版本中...",
-    "nortOnlyNotice": "仅支持 nort 包（hagicode-*）"
+    "nortOnlyNotice": "仅支持 nort 包（hagicode-*）",
+    "switchSource": "切换包源",
+    "addSource": "添加包源",
+    "removeSource": "删除包源",
+    "editSource": "编辑包源",
+    "currentSource": "当前包源",
+    "availableSources": "可用包源",
+    "noSources": "未配置包源",
+    "sourceName": "包源名称",
+    "actions": "操作",
+    "scanSuccess": "扫描完成，找到 {{count}} 个版本",
+    "fetchSuccess": "获取完成，找到 {{count}} 个版本",
+    "saveSuccess": "包源配置已保存",
+    "switchSuccess": "已切换包源",
+    "removeSuccess": "包源已删除",
+    "confirmRemove": "确认删除此包源？",
+    "error": {
+      "loadFailed": "加载包源配置失败",
+      "saveFailed": "保存包源配置失败",
+      "switchFailed": "切换包源失败",
+      "removeFailed": "删除包源失败",
+      "scanFailed": "扫描文件夹失败",
+      "fetchFailed": "获取 GitHub 版本失败",
+      "validateFailed": "验证配置失败"
+    }
   },
   "tray": {
     "status": {
@@ -251,5 +298,52 @@
     "openInBrowser": "浏览器打开",
     "startService": "启动服务",
     "stopService": "停止服务"
+  },
+  "licenseManagement": {
+    "title": "许可证管理",
+    "description": "管理全局许可证配置",
+    "syncStatus": {
+      "title": "许可证同步状态",
+      "synced": "已同步",
+      "notSynced": "未同步",
+      "source": {
+        "default": "默认许可证",
+        "existing": "已有配置",
+        "manual": "手动设置"
+      },
+      "isDefault": " (公测版)",
+      "syncTime": "同步时间",
+      "syncedVersions": "同步版本数",
+      "syncedVersionsCount": "已同步到 {{count}} 个版本",
+      "syncSuccess": "许可证已同步",
+      "syncSuccessDesc": "时间: {{time}}"
+    },
+    "currentStatus": {
+      "title": "当前许可证状态",
+      "description": "查看当前许可证配置状态",
+      "status": "状态",
+      "configured": "已配置",
+      "notConfigured": "未配置",
+      "licenseKey": "许可证",
+      "updatedAt": "更新时间",
+      "note": "该许可证适用于所有已安装的软件版本。"
+    },
+    "updateLicense": {
+      "title": "更新许可证",
+      "description": "输入新的许可证密钥以更新全局许可证配置",
+      "licenseKeyLabel": "许可证密钥",
+      "placeholder": "请输入许可证密钥",
+      "hint": "许可证密钥格式：XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
+    },
+    "actions": {
+      "refresh": "刷新",
+      "cancel": "取消",
+      "save": "更新许可证",
+      "saving": "保存中..."
+    },
+    "info": {
+      "title": "关于许可证",
+      "description": "全局许可证配置将应用于所有版本的 Hagicode 服务。默认使用公测许可证。"
+    }
   }
 }

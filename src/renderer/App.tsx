@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { AnimatePresence, motion } from 'motion/react';
 import SidebarNavigation from './components/SidebarNavigation';
 import SystemManagementView from './components/SystemManagementView';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
+import LicenseManagementPage from './components/LicenseManagementPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import DependencyStartConfirmDialog from './components/DependencyStartConfirmDialog';
 import { DependencyInstallConfirmDialog } from './components/DependencyInstallConfirmDialog';
@@ -23,9 +23,9 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'license') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'license') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
@@ -41,7 +41,7 @@ function App() {
     console.log('[App] Setting up view change listener');
 
     // Listen for view change events from menu (kept for backward compatibility)
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'license') => {
       console.log('[App] View change event received:', view);
       dispatch(switchView(view));
     });
@@ -68,25 +68,14 @@ function App() {
         {/* Sidebar Navigation */}
         <SidebarNavigation />
 
-        {/* Main Content Area with Page Transitions */}
+        {/* Main Content Area */}
         <div className="ml-64 transition-all duration-500 ease-out">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 20, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.98 }}
-              transition={{
-                duration: 0.4,
-                ease: [0.25, 0.1, 0.25, 1]
-              }}
-              className="container mx-auto px-4 py-8 min-h-screen"
-            >
-              {currentView === 'system' && <SystemManagementView />}
-              {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
-              {currentView === 'version' && <VersionManagementPage />}
-            </motion.div>
-          </AnimatePresence>
+          <div className="container mx-auto px-4 py-8 min-h-screen">
+            {currentView === 'system' && <SystemManagementView />}
+            {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
+            {currentView === 'version' && <VersionManagementPage />}
+            {currentView === 'license' && <LicenseManagementPage />}
+          </div>
         </div>
 
         {/* Global Dialogs */}

@@ -51,6 +51,25 @@ const electronAPI = {
   installPackageFromSource: (versionIdentifier) => ipcRenderer.invoke('package:install-from-source', versionIdentifier),
   validateSourceConfig: (config) => ipcRenderer.invoke('package:validate-source-config', config),
 
+  // Package Source Configuration APIs (new)
+  packageSource: {
+    getConfig: () => ipcRenderer.invoke('package-source:get-config'),
+    getAllConfigs: () => ipcRenderer.invoke('package-source:get-all-configs'),
+    setConfig: (config) => ipcRenderer.invoke('package-source:set-config', config),
+    switchSource: (sourceId) => ipcRenderer.invoke('package-source:switch-source', sourceId),
+    validateConfig: (config) => ipcRenderer.invoke('package-source:validate-config', config),
+    scanFolder: (folderPath) => ipcRenderer.invoke('package-source:scan-folder', folderPath),
+    fetchGithub: (config) => ipcRenderer.invoke('package-source:fetch-github', config),
+    fetchHttpIndex: (config) => ipcRenderer.invoke('package-source:fetch-http-index', config),
+    onConfigChange: (callback) => {
+      const listener = (_event, config) => {
+        callback(config);
+      };
+      ipcRenderer.on('package-source:configChanged', listener);
+      return () => ipcRenderer.removeListener('package-source:configChanged', listener);
+    },
+  },
+
   // Dependency Management APIs
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   installDependency: (dependencyType) => ipcRenderer.invoke('install-dependency', dependencyType),
@@ -110,6 +129,13 @@ const electronAPI = {
     ipcRenderer.on('version:activeVersionChanged', listener);
     return () => ipcRenderer.removeListener('version:activeVersionChanged', listener);
   },
+  onVersionListChanged: (callback) => {
+    const listener = (_event) => {
+      callback();
+    };
+    ipcRenderer.on('version:list:changed', listener);
+    return () => ipcRenderer.removeListener('version:list:changed', listener);
+  },
   onVersionDependencyWarning: (callback) => {
     const listener = (_event, warning) => {
       callback(warning);
@@ -119,7 +145,7 @@ const electronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'dependency' | 'version') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'license') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -147,6 +173,19 @@ const electronAPI = {
 
   // Open external link API
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+  // License Management APIs
+  license: {
+    get: () => ipcRenderer.invoke('license:get'),
+    save: (licenseKey: string) => ipcRenderer.invoke('license:save', licenseKey),
+    onSyncStatus: (callback) => {
+      const listener = (_event, status) => {
+        callback(status);
+      };
+      ipcRenderer.on('license:syncStatus', listener);
+      return () => ipcRenderer.removeListener('license:syncStatus', listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

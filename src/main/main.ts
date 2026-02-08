@@ -12,6 +12,8 @@ import { DependencyManager, type DependencyCheckResult, DependencyType } from '.
 import { MenuManager } from './menu-manager.js';
 import { NpmMirrorHelper } from './npm-mirror-helper.js';
 import { VersionManager } from './version-manager.js';
+import { PackageSourceConfigManager } from './package-source-config-manager.js';
+import { LicenseManager } from './license-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,20 +24,33 @@ let statusPollingInterval: NodeJS.Timeout | null = null;
 let webServiceManager: PCodeWebServiceManager | null = null;
 let dependencyManager: DependencyManager | null = null;
 let versionManager: VersionManager | null = null;
+let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
 let npmMirrorHelper: NpmMirrorHelper | null = null;
+let licenseManager: LicenseManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
+
+  // Determine the correct preload path
+  // In development: __dirname is 'dist/main', need to go to '../../dist/preload/index.mjs'
+  // In production: __dirname is 'dist', need to go to 'preload/index.mjs'
+  const isDev = process.env.NODE_ENV === 'development';
+  const preloadPath = isDev
+    ? path.join(__dirname, '../../dist/preload/index.mjs')
+    : path.join(__dirname, 'preload/index.mjs');
+
+  console.log('[Hagicode] Using preload path:', preloadPath);
+
   mainWindow = new BrowserWindow({
     minWidth: 800,
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '../../resources/icon.png'),
+    icon: path.join(__dirname, isDev ? '../../resources/icon.png' : '../resources/icon.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload/index.mjs'),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -112,15 +127,21 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   try {
     console.log('[Main] Opening Hagicode in app window:', url);
 
+    // Determine the correct preload path
+    const isDev = process.env.NODE_ENV === 'development';
+    const preloadPath = isDev
+      ? path.join(__dirname, '../../dist/preload/index.mjs')
+      : path.join(__dirname, 'preload/index.mjs');
+
     // Create a new window for Hagicode
     const hagicodeWindow = new BrowserWindow({
       minWidth: 800,
       minHeight: 600,
       show: false,
       autoHideMenuBar: true,
-      icon: path.join(__dirname, '../../resources/icon.png'),
+      icon: path.join(__dirname, isDev ? '../../resources/icon.png' : '../resources/icon.png'),
       webPreferences: {
-        preload: path.join(__dirname, 'preload/index.mjs'),
+        preload: preloadPath,
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
@@ -937,7 +958,7 @@ ipcMain.handle('dependency:get-missing', async (_, versionId: string) => {
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'license') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'web') {
@@ -973,7 +994,7 @@ ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 
     }
   }
 
-  // Switching to system, dependency, or version views is always allowed
+  // Switching to system, dependency, version, or license views is always allowed
   return {
     success: true,
   };
@@ -1114,6 +1135,244 @@ ipcMain.handle('open-external', async (_event, url: string) => {
   }
 });
 
+// Package Source Management IPC Handlers
+ipcMain.handle('package-source:get-config', async () => {
+  if (!versionManager) {
+    return null;
+  }
+  try {
+    return versionManager.getCurrentSourceConfig();
+  } catch (error) {
+    console.error('Failed to get package source config:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('package-source:get-all-configs', async () => {
+  if (!versionManager) {
+    return [];
+  }
+  try {
+    return versionManager.getAllSourceConfigs();
+  } catch (error) {
+    console.error('Failed to get all package source configs:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('package-source:set-config', async (_, config) => {
+  if (!versionManager) {
+    return { success: false, error: 'Version manager not initialized' };
+  }
+  try {
+    const success = await versionManager.setSourceConfig(config);
+    if (success) {
+      // Notify renderer of config change
+      const newConfig = versionManager.getCurrentSourceConfig();
+      mainWindow?.webContents.send('package-source:configChanged', newConfig);
+
+      // Notify renderer to refresh version list
+      mainWindow?.webContents.send('version:list:changed');
+    }
+    return { success };
+  } catch (error) {
+    console.error('Failed to set package source config:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('package-source:switch-source', async (_, sourceId: string) => {
+  if (!versionManager) {
+    return { success: false, error: 'Version manager not initialized' };
+  }
+  try {
+    const success = await versionManager.switchSource(sourceId);
+    if (success) {
+      // Notify renderer of source change
+      const newConfig = versionManager.getCurrentSourceConfig();
+      mainWindow?.webContents.send('package-source:configChanged', newConfig);
+
+      // Notify renderer to refresh version list
+      mainWindow?.webContents.send('version:list:changed');
+    }
+    return { success };
+  } catch (error) {
+    console.error('Failed to switch package source:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('package-source:validate-config', async (_, config) => {
+  if (!versionManager) {
+    return { valid: false, error: 'Version manager not initialized' };
+  }
+  try {
+    return await versionManager.validateSourceConfig(config);
+  } catch (error) {
+    console.error('Failed to validate package source config:', error);
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('package-source:scan-folder', async (_, folderPath: string) => {
+  if (!versionManager) {
+    return { success: false, error: 'Version manager not initialized', versions: [] };
+  }
+  try {
+    // Temporarily switch to folder source for scanning
+    const tempConfig = {
+      type: 'local-folder' as const,
+      path: folderPath,
+      name: 'Temporary scan',
+    };
+
+    const validationResult = await versionManager.validateSourceConfig(tempConfig);
+    if (!validationResult.valid) {
+      return {
+        success: false,
+        error: validationResult.error || 'Invalid folder path',
+        versions: []
+      };
+    }
+
+    // Create a temporary source to scan
+    const { LocalFolderPackageSource } = await import('./package-sources/local-folder-source.js');
+    const tempSource = new LocalFolderPackageSource(tempConfig);
+    const versions = await tempSource.listAvailableVersions();
+
+    return {
+      success: true,
+      versions,
+      count: versions.length
+    };
+  } catch (error) {
+    console.error('Failed to scan folder:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      versions: []
+    };
+  }
+});
+
+ipcMain.handle('package-source:fetch-github', async (_, config: { owner: string; repo: string; token?: string }) => {
+  if (!versionManager) {
+    return { success: false, error: 'Version manager not initialized', versions: [] };
+  }
+  try {
+    const githubConfig = {
+      type: 'github-release' as const,
+      ...config,
+    };
+
+    const validationResult = await versionManager.validateSourceConfig(githubConfig);
+    if (!validationResult.valid) {
+      return {
+        success: false,
+        error: validationResult.error || 'Invalid GitHub configuration',
+        versions: []
+      };
+    }
+
+    // Create a temporary source to fetch releases
+    const { GitHubReleasePackageSource } = await import('./package-sources/github-release-source.js');
+    const tempSource = new GitHubReleasePackageSource(githubConfig);
+    const versions = await tempSource.listAvailableVersions();
+
+    return {
+      success: true,
+      versions,
+      count: versions.length
+    };
+  } catch (error) {
+    console.error('Failed to fetch GitHub releases:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      versions: []
+    };
+  }
+});
+
+ipcMain.handle('package-source:fetch-http-index', async (_, config: { indexUrl: string; baseUrl?: string; authToken?: string }) => {
+  if (!versionManager) {
+    return { success: false, error: 'Version manager not initialized', versions: [] };
+  }
+  try {
+    const httpIndexConfig = {
+      type: 'http-index' as const,
+      ...config,
+    };
+
+    const validationResult = await versionManager.validateSourceConfig(httpIndexConfig);
+    if (!validationResult.valid) {
+      return {
+        success: false,
+        error: validationResult.error || 'Invalid HTTP index configuration',
+        versions: []
+      };
+    }
+
+    // Create a temporary source to fetch index
+    const { HttpIndexPackageSource } = await import('./package-sources/http-index-source.js');
+    const tempSource = new HttpIndexPackageSource(httpIndexConfig);
+    const versions = await tempSource.listAvailableVersions();
+
+    return {
+      success: true,
+      versions,
+      count: versions.length
+    };
+  } catch (error) {
+    console.error('Failed to fetch HTTP index:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      versions: []
+    };
+  }
+});
+
+// License Management IPC Handlers
+ipcMain.handle('license:get', async () => {
+  if (!licenseManager) {
+    return null;
+  }
+  try {
+    return licenseManager.getLicense();
+  } catch (error) {
+    console.error('Failed to get license:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('license:save', async (_, licenseKey: string) => {
+  if (!licenseManager) {
+    return {
+      success: false,
+      error: 'License manager not initialized'
+    };
+  }
+  try {
+    return licenseManager.saveLicense(licenseKey);
+  } catch (error) {
+    console.error('Failed to save license:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
 function startStatusPolling(): void {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
@@ -1182,8 +1441,26 @@ app.whenReady().then(async () => {
   // Initialize Dependency Manager with store for NpmMirrorHelper
   dependencyManager = new DependencyManager(configManager.getStore() as unknown as Store<Record<string, unknown>>);
 
-  // Initialize Version Manager (no longer needs PackageManager)
-  versionManager = new VersionManager(dependencyManager);
+  // Initialize Package Source Configuration Manager
+  packageSourceConfigManager = new PackageSourceConfigManager(configManager.getStore() as unknown as Store);
+
+  // Initialize Version Manager with package source config manager
+  versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
+
+  // Initialize License Manager
+  licenseManager = LicenseManager.getInstance(configManager);
+
+  // Register license sync status callback to forward to renderer
+  licenseManager.onSyncStatus((status) => {
+    log.info('[App] License sync status:', status);
+    mainWindow?.webContents.send('license:syncStatus', status);
+  });
+
+  // Initialize license (async operation)
+  licenseManager.initializeDefaultLicense().catch(error => {
+    log.error('[App] Failed to initialize license:', error);
+  });
+  log.info('[App] License Manager initialized');
 
   // Set active version in web service manager
   (async () => {

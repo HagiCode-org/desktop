@@ -133,6 +133,7 @@
     "dashboard": "Dashboard",
     "webService": "Web Service",
     "versionManagement": "Version Management",
+    "licenseManagement": "License Management",
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"

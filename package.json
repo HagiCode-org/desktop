@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Desktop client for Hagicode Server management and monitoring",
-  "main": "dist/main.js",
+  "main": "dist/main/main.js",
   "scripts": {
     "build:tsc": "npx tsc",
     "build:preload": "vite build --config vite.preload.config.ts",
@@ -18,7 +18,7 @@
     "dev:renderer": "vite",
     "dev:main": "tsc --watch",
     "dev:preload": "vite build --config vite.preload.config.ts --watch",
-    "dev": "rm -rf dist && concurrently -k \"npm run dev:renderer\" \"npm run dev:main\" \"npm run dev:preload\" \"wait-on dist/preload/index.mjs && wait-on dist/main.js && cross-env NODE_ENV=development HAGICO_CONFIG_PATH=local_data_root electron .\"",
+    "dev": "rm -rf dist && concurrently -k \"npm run dev:renderer\" \"npm run dev:main\" \"npm run dev:preload\" \"wait-on dist/preload/index.mjs && wait-on dist/main/main.js && cross-env NODE_ENV=development HAGICO_CONFIG_PATH=local_data_root electron .\"",
     "start": "npm run build:all && electron .",
     "prebuild": "npm run build:all",
     "build": "electron-builder",

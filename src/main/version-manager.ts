@@ -7,6 +7,8 @@ import { DependencyManager, type DependencyCheckResult } from './dependency-mana
 import { StateManager, type InstalledVersionInfo } from './state-manager.js';
 import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
+import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
+import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback } from './package-sources/index.js';
 
 /**
  * Version information
@@ -18,6 +20,8 @@ export interface Version {
   packageFilename: string;
   releasedAt?: string;
   size?: number;
+  downloadUrl?: string;
+  releaseNotes?: string;
 }
 
 /**
@@ -54,18 +58,193 @@ export class VersionManager {
   private stateManager: StateManager;
   private pathManager: PathManager;
   private configManager: ConfigManager;
+  private packageSourceConfigManager: PackageSourceConfigManager;
   private userDataPath: string;
-  private packageSourcePath: string;
+  private currentPackageSource: PackageSource | null;
 
-  constructor(dependencyManager: DependencyManager) {
+  constructor(dependencyManager: DependencyManager, packageSourceConfigManager?: PackageSourceConfigManager) {
     this.dependencyManager = dependencyManager;
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
     this.configManager = new ConfigManager();
     // Use Electron's app.getPath('userData') to get the correct user data path
     this.userDataPath = app.getPath('userData');
-    // Local development path for package source
-    this.packageSourcePath = '/home/newbe36524/repos/newbe36524/pcode/Release/release-packages/';
+
+    // Initialize package source configuration manager
+    this.packageSourceConfigManager = packageSourceConfigManager || new PackageSourceConfigManager();
+
+    // Initialize current package source
+    this.currentPackageSource = null;
+    this.initializePackageSource();
+  }
+
+  /**
+   * Initialize the current package source from stored configuration
+   */
+  private async initializePackageSource(): Promise<void> {
+    try {
+      const activeSource = this.packageSourceConfigManager.getActiveSource();
+      if (activeSource) {
+        this.currentPackageSource = createPackageSource(this.storedToConfig(activeSource));
+        log.info('[VersionManager] Package source initialized:', activeSource.type, 'ID:', activeSource.id);
+      } else {
+        log.warn('[VersionManager] No active package source found');
+      }
+    } catch (error) {
+      log.error('[VersionManager] Failed to initialize package source:', error);
+    }
+  }
+
+  /**
+   * Convert StoredPackageSourceConfig to PackageSourceConfig
+   */
+  private storedToConfig(stored: StoredPackageSourceConfig): PackageSourceConfig {
+    if (stored.type === 'local-folder') {
+      return {
+        type: 'local-folder',
+        path: stored.path || '',
+      } as LocalFolderConfig;
+    } else if (stored.type === 'github-release') {
+      return {
+        type: 'github-release',
+        owner: stored.owner || '',
+        repo: stored.repo || '',
+        token: stored.token,
+      } as GitHubReleaseConfig;
+    } else if (stored.type === 'http-index') {
+      return {
+        type: 'http-index',
+        indexUrl: stored.indexUrl || '',
+      } as HttpIndexConfig;
+    }
+    throw new Error(`Unknown package source type: ${stored.type}`);
+  }
+
+  /**
+   * Ensure package source is initialized
+   */
+  private async ensurePackageSource(): Promise<PackageSource> {
+    if (!this.currentPackageSource) {
+      await this.initializePackageSource();
+    }
+
+    if (!this.currentPackageSource) {
+      throw new Error('No package source configured');
+    }
+
+    return this.currentPackageSource;
+  }
+
+  /**
+   * Get the current package source configuration
+   */
+  getCurrentSourceConfig(): StoredPackageSourceConfig | null {
+    return this.packageSourceConfigManager.getActiveSource();
+  }
+
+  /**
+   * Set a new package source configuration
+   */
+  async setSourceConfig(config: PackageSourceConfig & { name?: string }): Promise<boolean> {
+    try {
+      // Check if a source of this type already exists
+      const sources = this.packageSourceConfigManager.getAllSources();
+      const existingSource = sources.find(s => s.type === config.type);
+
+      let newSource: StoredPackageSourceConfig;
+
+      if (existingSource) {
+        // Update existing source
+        const updates: Partial<Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>> = {
+          type: config.type,
+          name: config.name,
+        };
+
+        if (config.type === 'local-folder') {
+          updates.path = (config as any).path;
+        } else if (config.type === 'github-release') {
+          updates.owner = (config as any).owner;
+          updates.repo = (config as any).repo;
+          updates.token = (config as any).token;
+        } else if (config.type === 'http-index') {
+          updates.indexUrl = (config as any).indexUrl;
+        }
+
+        this.packageSourceConfigManager.updateSource(existingSource.id, updates);
+        newSource = { ...existingSource, ...updates } as StoredPackageSourceConfig;
+        log.info('[VersionManager] Package source updated:', newSource.type, 'ID:', newSource.id);
+      } else {
+        // Create new source
+        const storedConfig: Omit<StoredPackageSourceConfig, 'id' | 'createdAt'> = {
+          type: config.type,
+          name: config.name,
+          ...(config.type === 'local-folder' ? { path: (config as any).path } : {}),
+          ...(config.type === 'github-release' ? {
+            owner: (config as any).owner,
+            repo: (config as any).repo,
+            token: (config as any).token
+          } : {}),
+          ...(config.type === 'http-index' ? {
+            indexUrl: (config as any).indexUrl
+          } : {}),
+        };
+        newSource = this.packageSourceConfigManager.addSource(storedConfig);
+        log.info('[VersionManager] Package source created:', newSource.type, 'ID:', newSource.id);
+      }
+
+      this.currentPackageSource = createPackageSource(this.storedToConfig(newSource));
+      this.packageSourceConfigManager.setActiveSource(newSource.id);
+      return true;
+    } catch (error) {
+      log.error('[VersionManager] Failed to set package source:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Switch to an existing package source by ID
+   */
+  async switchSource(sourceId: string): Promise<boolean> {
+    try {
+      const source = this.packageSourceConfigManager.getSourceById(sourceId);
+      if (!source) {
+        log.warn('[VersionManager] Source not found:', sourceId);
+        return false;
+      }
+
+      this.currentPackageSource = createPackageSource(this.storedToConfig(source));
+      this.packageSourceConfigManager.setActiveSource(sourceId);
+      log.info('[VersionManager] Switched to package source:', sourceId);
+      return true;
+    } catch (error) {
+      log.error('[VersionManager] Failed to switch package source:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all available package source configurations
+   */
+  getAllSourceConfigs(): StoredPackageSourceConfig[] {
+    return this.packageSourceConfigManager.getAllSources();
+  }
+
+  /**
+   * Validate a package source configuration
+   */
+  async validateSourceConfig(config: PackageSourceConfig): Promise<{ valid: boolean; error?: string }> {
+    try {
+      const source = createPackageSource(config);
+      if (source.validateConfig) {
+        return await source.validateConfig();
+      }
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
@@ -76,35 +255,10 @@ export class VersionManager {
     try {
       log.info('[VersionManager] Listing available versions...');
 
-      const packageFiles = await this.getAvailableVersions();
+      const packageSource = await this.ensurePackageSource();
+      const versions = await packageSource.listAvailableVersions();
 
-      // Get current platform for filtering
-      const currentPlatform = this.getCurrentPlatform();
-      log.info('[VersionManager] Current platform:', currentPlatform);
-
-      const versions: Version[] = packageFiles
-        .map((filename) => {
-          const version = this.extractVersionFromFilename(filename);
-          const platform = this.extractPlatformFromFilename(filename);
-          // Remove .zip extension to create a clean ID
-          const id = filename.replace(/\.zip$/, '');
-
-          return {
-            id,
-            version,
-            platform,
-            packageFilename: filename,
-          };
-        })
-        .filter((v) => {
-          // Only show versions compatible with current platform
-          return v.platform === currentPlatform;
-        });
-
-      // Sort by version (newest first)
-      versions.sort((a, b) => this.compareVersions(b.version, a.version));
-
-      log.info('[VersionManager] Found', versions.length, 'available versions for platform:', currentPlatform);
+      log.info('[VersionManager] Found', versions.length, 'available versions');
       return versions;
     } catch (error) {
       log.error('[VersionManager] Failed to list versions:', error);
@@ -113,17 +267,11 @@ export class VersionManager {
   }
 
   /**
-   * Get available package files from source directory
+   * @deprecated Use listVersions() instead. This method is kept for backward compatibility.
    */
   private async getAvailableVersions(): Promise<string[]> {
-    try {
-      await fs.access(this.packageSourcePath);
-      const files = await fs.readdir(this.packageSourcePath);
-      return files.filter(file => file.endsWith('.zip'));
-    } catch (error) {
-      log.error('[VersionManager] Failed to access package source:', error);
-      return [];
-    }
+    const versions = await this.listVersions();
+    return versions.map(v => v.packageFilename);
   }
 
   /**
@@ -211,24 +359,12 @@ export class VersionManager {
       // Create installation directory
       await fs.mkdir(installPath, { recursive: true });
 
-      // Get package source path
-      const sourcePath = path.join(
-        this.packageSourcePath,
-        targetVersion.packageFilename
-      );
-
-      // Verify source exists
-      try {
-        await fs.access(sourcePath);
-      } catch {
-        throw new Error(`Package file not found: ${sourcePath}`);
-      }
-
-      // Copy package to cache using PathManager
+      // Get package from current source
+      const packageSource = await this.ensurePackageSource();
       const cachePath = this.pathManager.getCachePath(targetVersion.packageFilename);
 
-      log.info('[VersionManager] Copying package to cache...');
-      await fs.copyFile(sourcePath, cachePath);
+      log.info('[VersionManager] Downloading package to cache...');
+      await packageSource.downloadPackage(targetVersion, cachePath);
 
       // Extract package
       log.info('[VersionManager] Extracting package...');

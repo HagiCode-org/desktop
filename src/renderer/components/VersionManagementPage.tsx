@@ -30,6 +30,7 @@ import {
   installWebServicePackageAction,
 } from '../store/sagas/webServiceSaga';
 import type { RootState } from '../store';
+import { PackageSourceSelector } from './PackageSourceSelector';
 
 interface Version {
   id: string;
@@ -125,12 +126,20 @@ export default function VersionManagementPage() {
       }
     });
 
+    const unsubscribeVersionListChanged = window.electronAPI.onVersionListChanged(() => {
+      // Refresh available versions when package source changes
+      fetchAllData();
+    });
+
     return () => {
       if (typeof unsubscribeInstalled === 'function') {
         unsubscribeInstalled();
       }
       if (typeof unsubscribeActive === 'function') {
         unsubscribeActive();
+      }
+      if (typeof unsubscribeVersionListChanged === 'function') {
+        unsubscribeVersionListChanged();
       }
     };
   }, []);
@@ -421,6 +430,11 @@ export default function VersionManagementPage() {
             <p className="text-muted-foreground text-sm mt-1">{t('versionManagement.description')}</p>
           </div>
         </div>
+      </div>
+
+      {/* Package Source Selector */}
+      <div className="mb-8">
+        <PackageSourceSelector />
       </div>
 
       {/* Available Versions */}

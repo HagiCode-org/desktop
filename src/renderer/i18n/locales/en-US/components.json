@@ -204,13 +204,18 @@
       "label": "Package Source Type",
       "folder": "Local Folder",
       "github": "GitHub Release",
+      "httpIndex": "HTTP Index",
       "http": "HTTP URL"
     },
     "folder": {
       "path": {
         "label": "Folder Path",
         "placeholder": "Enter path to package directory"
-      }
+      },
+      "browseButton": "Browse...",
+      "scanButton": "Scan Available Versions",
+      "scanning": "Scanning...",
+      "notFound": "Folder does not exist or is not accessible"
     },
     "github": {
       "owner": {
@@ -224,13 +229,31 @@
       "token": {
         "label": "GitHub Token (Optional)",
         "placeholder": "For private repositories",
-        "hint": "Optional: Only needed for private repositories"
-      }
+        "hint": "Optional: Only needed for private repositories",
+        "showButton": "Show",
+        "hideButton": "Hide",
+        "clearButton": "Clear",
+        "rateLimitHint": "Increases API rate limit to 5000 requests/hour"
+      },
+      "fetchButton": "Fetch from GitHub",
+      "fetching": "Fetching...",
+      "repoPath": "Repository Path",
+      "rateLimitError": "GitHub API rate limit exceeded (60/hour). Please provide an auth token to increase the limit to 5000 requests/hour, or wait 15 minutes before retrying.",
+      "repoNotFoundError": "Repository not found. Please check the repository owner and name.",
+      "networkError": "Network connection failed. Please check your internet connection.",
+      "invalidTokenError": "Invalid GitHub token. Please check your authentication token."
     },
     "http": {
       "url": {
         "label": "Package URL",
         "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "httpIndex": {
+      "indexUrl": {
+        "label": "Index URL",
+        "placeholder": "https://server.dl.hagicode.com/index.json",
+        "hint": "The index file must contain a versions array and assets for each version"
       }
     },
     "validateButton": "Validate Configuration",
@@ -239,7 +262,31 @@
     "validating": "Validating configuration...",
     "valid": "Configuration is valid",
     "fetchingVersions": "Fetching versions...",
-    "nortOnlyNotice": "Only nort packages (hagicode-*) are supported"
+    "nortOnlyNotice": "Only nort packages (hagicode-*) are supported",
+    "switchSource": "Switch Package Source",
+    "addSource": "Add Package Source",
+    "removeSource": "Remove Package Source",
+    "editSource": "Edit Package Source",
+    "currentSource": "Current Package Source",
+    "availableSources": "Available Package Sources",
+    "noSources": "No package sources configured",
+    "sourceName": "Source Name",
+    "actions": "Actions",
+    "scanSuccess": "Scan completed, found {{count}} versions",
+    "fetchSuccess": "Fetch completed, found {{count}} versions",
+    "saveSuccess": "Package source configuration saved",
+    "switchSuccess": "Package source switched",
+    "removeSuccess": "Package source removed",
+    "confirmRemove": "Confirm removal of this package source?",
+    "error": {
+      "loadFailed": "Failed to load package source configuration",
+      "saveFailed": "Failed to save package source configuration",
+      "switchFailed": "Failed to switch package source",
+      "removeFailed": "Failed to remove package source",
+      "scanFailed": "Failed to scan folder",
+      "fetchFailed": "Failed to fetch GitHub releases",
+      "validateFailed": "Failed to validate configuration"
+    }
   },
   "tray": {
     "status": {
@@ -251,5 +298,52 @@
     "openInBrowser": "Open in Browser",
     "startService": "Start Service",
     "stopService": "Stop Service"
+  },
+  "licenseManagement": {
+    "title": "License Management",
+    "description": "Manage global license configuration",
+    "syncStatus": {
+      "title": "License Sync Status",
+      "synced": "Synced",
+      "notSynced": "Not Synced",
+      "source": {
+        "default": "Default License",
+        "existing": "Existing Config",
+        "manual": "Manual Set"
+      },
+      "isDefault": " (Public Beta)",
+      "syncTime": "Sync Time",
+      "syncedVersions": "Synced Versions",
+      "syncedVersionsCount": "Synced to {{count}} version(s)",
+      "syncSuccess": "License synced",
+      "syncSuccessDesc": "Time: {{time}}"
+    },
+    "currentStatus": {
+      "title": "Current License Status",
+      "description": "View current license configuration status",
+      "status": "Status",
+      "configured": "Configured",
+      "notConfigured": "Not Configured",
+      "licenseKey": "License",
+      "updatedAt": "Updated At",
+      "note": "This license applies to all installed software versions."
+    },
+    "updateLicense": {
+      "title": "Update License",
+      "description": "Enter a new license key to update the global license configuration",
+      "licenseKeyLabel": "License Key",
+      "placeholder": "Enter license key",
+      "hint": "License key format: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "cancel": "Cancel",
+      "save": "Update License",
+      "saving": "Saving..."
+    },
+    "info": {
+      "title": "About License",
+      "description": "Global license configuration applies to all versions of Hagicode service. Default public beta license is used."
+    }
   }
 }
