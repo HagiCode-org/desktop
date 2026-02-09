@@ -372,22 +372,61 @@ export class HttpIndexPackageSource implements PackageSource {
   /**
    * Compare two version strings
    * Returns positive if v1 > v2, negative if v1 < v2, 0 if equal
+   * Handles semantic versioning with pre-release tags (e.g., 0.1.0-beta.1)
    */
   private compareVersions(v1: string, v2: string): number {
     const parseVersion = (v: string) => {
-      const parts = v.split('-')[0].split('.').map(Number);
-      return parts;
+      const [versionPart, prereleasePart] = v.split('-');
+      const parts = versionPart.split('.').map(Number);
+      let prerelease: string[] = [];
+      if (prereleasePart) {
+        // Parse prerelease identifiers (e.g., "beta.1" -> ["beta", "1"])
+        prerelease = prereleasePart.split('.');
+      }
+      return { parts, prerelease };
     };
 
     const p1 = parseVersion(v1);
     const p2 = parseVersion(v2);
 
-    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-      const n1 = p1[i] || 0;
-      const n2 = p2[i] || 0;
+    // Compare main version parts
+    for (let i = 0; i < Math.max(p1.parts.length, p2.parts.length); i++) {
+      const n1 = p1.parts[i] || 0;
+      const n2 = p2.parts[i] || 0;
 
       if (n1 > n2) return 1;
       if (n1 < n2) return -1;
+    }
+
+    // Main versions are equal, compare prerelease identifiers
+    // Versions without prerelease are greater than those with prerelease
+    if (p1.prerelease.length === 0 && p2.prerelease.length > 0) return 1;
+    if (p1.prerelease.length > 0 && p2.prerelease.length === 0) return -1;
+    if (p1.prerelease.length === 0 && p2.prerelease.length === 0) return 0;
+
+    // Both have prerelease identifiers, compare them
+    const maxLength = Math.max(p1.prerelease.length, p2.prerelease.length);
+    for (let i = 0; i < maxLength; i++) {
+      const id1 = p1.prerelease[i] || '';
+      const id2 = p2.prerelease[i] || '';
+
+      // Empty identifier is less than any non-empty identifier
+      if (id1 === '' && id2 !== '') return -1;
+      if (id1 !== '' && id2 === '') return 1;
+      if (id1 === '' && id2 === '') return 0;
+
+      // Try to compare as numbers
+      const num1 = parseInt(id1, 10);
+      const num2 = parseInt(id2, 10);
+
+      if (!isNaN(num1) && !isNaN(num2)) {
+        if (num1 > num2) return 1;
+        if (num1 < num2) return -1;
+      } else {
+        // At least one is not a number, compare as strings
+        if (id1 > id2) return 1;
+        if (id1 < id2) return -1;
+      }
     }
 
     return 0;

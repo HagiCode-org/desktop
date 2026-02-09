@@ -137,5 +137,12 @@
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"
+  },
+  "system": {
+    "noVersionInstalled": {
+      "title": "No Versions Installed Yet",
+      "description": "The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.",
+      "startWizard": "Launch Wizard"
+    }
   }
 }

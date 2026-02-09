@@ -13,6 +13,7 @@ import {
   HardDrive,
   FolderOpen,
   Loader2,
+  Rocket,
 } from 'lucide-react';
 import {
   Dialog,
@@ -302,6 +303,23 @@ export default function VersionManagementPage() {
     }
   };
 
+  const handleStartOnboarding = async () => {
+    try {
+      // Reset onboarding state to allow it to show again
+      await window.electronAPI.resetOnboarding();
+      // Check trigger condition to activate onboarding
+      const result = await window.electronAPI.checkTriggerCondition();
+      if (result.shouldShow) {
+        toast.success(t('versionManagement.toast.onboardingStarted'));
+      } else {
+        toast.error(t('versionManagement.toast.onboardingFailed') + `: ${result.reason || 'Unknown reason'}`);
+      }
+    } catch (error) {
+      console.error('Failed to start onboarding:', error);
+      toast.error(t('versionManagement.toast.onboardingFailed'));
+    }
+  };
+
   const handleInstallDependency = async (depName: string) => {
     try {
       setInstallingDep(depName);
@@ -557,7 +575,34 @@ export default function VersionManagementPage() {
       </div>
 
       {/* Installed Versions */}
-      {installedVersions.length > 0 && (
+      {installedVersions.length === 0 ? (
+        /* No versions installed - show onboarding CTA */
+        <div className="bg-card rounded-xl border border-border p-12">
+          <div className="text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Rocket className="w-12 h-12 text-primary" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                {t('versionManagement.noVersionsInstalled.title')}
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {t('versionManagement.noVersionsInstalled.description')}
+              </p>
+            </div>
+            <button
+              onClick={handleStartOnboarding}
+              className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+            >
+              <Rocket className="w-5 h-5" />
+              {t('versionManagement.noVersionsInstalled.startButton')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Has installed versions - show list */
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground mb-4">
             <HardDrive className="w-5 h-5 text-primary" />

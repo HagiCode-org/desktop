@@ -14,6 +14,7 @@ import { NpmMirrorHelper } from './npm-mirror-helper.js';
 import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { LicenseManager } from './license-manager.js';
+import { OnboardingManager } from './onboarding-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,6 +59,7 @@ let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
 let npmMirrorHelper: NpmMirrorHelper | null = null;
 let licenseManager: LicenseManager | null = null;
+let onboardingManager: OnboardingManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -1414,6 +1416,151 @@ ipcMain.handle('license:save', async (_, licenseKey: string) => {
   }
 });
 
+// Onboarding IPC Handlers
+ipcMain.handle('onboarding:check-trigger', async () => {
+  if (!onboardingManager) {
+    return { shouldShow: false, reason: 'not-initialized' };
+  }
+  try {
+    return await onboardingManager.checkTriggerCondition();
+  } catch (error) {
+    console.error('Failed to check onboarding trigger:', error);
+    return { shouldShow: false, reason: 'error' };
+  }
+});
+
+ipcMain.handle('onboarding:get-state', async () => {
+  if (!onboardingManager) {
+    return null;
+  }
+  try {
+    return onboardingManager.getStoredState();
+  } catch (error) {
+    console.error('Failed to get onboarding state:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('onboarding:skip', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    await onboardingManager.skipOnboarding();
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to skip onboarding:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:download-package', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    const result = await onboardingManager.downloadLatestPackage((progress) => {
+      mainWindow?.webContents.send('onboarding:download-progress', progress);
+    });
+    return result;
+  } catch (error) {
+    console.error('Failed to download package:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:install-dependencies', async (_, versionId: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    const result = await onboardingManager.installDependencies(versionId, (status) => {
+      mainWindow?.webContents.send('onboarding:dependency-progress', status);
+    });
+    return result;
+  } catch (error) {
+    console.error('Failed to install dependencies:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:check-dependencies', async (_, versionId: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    const result = await onboardingManager.checkDependenciesStatus(versionId, (status) => {
+      mainWindow?.webContents.send('onboarding:dependency-progress', status);
+    });
+    return result;
+  } catch (error) {
+    console.error('Failed to check dependencies:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:start-service', async (_, versionId: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    const result = await onboardingManager.startWebService(versionId, (progress) => {
+      mainWindow?.webContents.send('onboarding:service-progress', progress);
+    });
+    return result;
+  } catch (error) {
+    console.error('Failed to start service:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:complete', async (_, versionId: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    await onboardingManager.completeOnboarding(versionId);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to complete onboarding:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:reset', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    await onboardingManager.resetOnboarding();
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to reset onboarding:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
 function startStatusPolling(): void {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
@@ -1490,6 +1637,17 @@ app.whenReady().then(async () => {
 
   // Initialize License Manager
   licenseManager = LicenseManager.getInstance(configManager);
+
+  // Initialize Onboarding Manager
+  if (dependencyManager && versionManager && webServiceManager) {
+    onboardingManager = new OnboardingManager(
+      versionManager,
+      dependencyManager,
+      webServiceManager,
+      configManager.getStore() as unknown as Store<Record<string, unknown>>
+    );
+    log.info('[App] Onboarding Manager initialized');
+  }
 
   // Register license sync status callback to forward to renderer
   licenseManager.onSyncStatus((status) => {

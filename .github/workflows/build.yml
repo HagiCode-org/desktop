@@ -282,6 +282,71 @@ jobs:
           echo "::error::One or more builds failed. Please check the logs."
           exit 1
 
+      - name: Determine workflow status
+        id: status
+        if: always()
+        run: |
+          # Check all dependent jobs
+          windows_status="${{ needs.build-windows.result }}"
+          linux_status="${{ needs.build-linux.result }}"
+          macos_status="${{ needs.build-macos.result }}"
+
+          echo "Windows: ${windows_status}"
+          echo "Linux: ${linux_status}"
+          echo "macOS: ${macos_status}"
+
+          # Determine overall status
+          if [ "${windows_status}" == "failure" ] || [ "${linux_status}" == "failure" ] || [ "${macos_status}" == "failure" ]; then
+            echo "overall=failed" >> $GITHUB_OUTPUT
+            echo "status_icon=❌" >> $GITHUB_OUTPUT
+            echo "status_text=失败" >> $GITHUB_OUTPUT
+          else
+            echo "overall=success" >> $GITHUB_OUTPUT
+            echo "status_icon=✅" >> $GITHUB_OUTPUT
+            echo "status_text=成功" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build platforms summary
+        id: platforms
+        if: always()
+        run: |
+          windows_status="${{ needs.build-windows.result }}"
+          linux_status="${{ needs.build-linux.result }}"
+          macos_status="${{ needs.build-macos.result }}"
+
+          platforms=()
+          [ "${windows_status}" == "success" ] && platforms+=("Windows")
+          [ "${linux_status}" == "success" ] && platforms+=("Linux")
+          [ "${macos_status}" == "success" ] && platforms+=("macOS")
+
+          if [ ${#platforms[@]} -eq 0 ]; then
+            platforms_str="无"
+          else
+            platforms_str=$(IFS=", "; echo "${platforms[*]}")
+          fi
+
+          echo "platforms=${platforms_str}" >> $GITHUB_OUTPUT
+
+      - name: Notify Feishu
+        if: always()
+        uses: HagiCode-org/haginotifier@v1.0.0
+        with:
+          message: |
+            **Flow 执行完成**
+
+            状态: ${{ steps.status.outputs.status_icon }} ${{ steps.status.outputs.status_text }}
+            分支: ${{ github.ref_name }}
+            提交: `${{ github.sha }}`
+            触发者: ${{ github.actor }}
+            事件: ${{ github.event_name }}
+            构建平台: ${{ steps.platforms.outputs.platforms }}
+
+            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          msg_type: 'post'
+          title: 'Hagicode Desktop 构建通知 ${{ steps.status.outputs.status_icon }}'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+
   ################################################################################
   # Sync to Azure Storage Job
   ################################################################################

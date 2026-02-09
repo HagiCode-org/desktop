@@ -318,7 +318,14 @@ export class VersionManager {
   /**
    * Install a version
    */
-  async installVersion(versionId: string): Promise<InstallResult> {
+  async installVersion(
+    versionId: string,
+    onProgress?: (progress: {
+      current: number;
+      total: number;
+      percentage: number;
+    }) => void
+  ): Promise<InstallResult> {
     try {
       log.info('[VersionManager] Installing version:', versionId);
 
@@ -364,7 +371,7 @@ export class VersionManager {
       const cachePath = this.pathManager.getCachePath(targetVersion.packageFilename);
 
       log.info('[VersionManager] Downloading package to cache...');
-      await packageSource.downloadPackage(targetVersion, cachePath);
+      await packageSource.downloadPackage(targetVersion, cachePath, onProgress);
 
       // Extract package
       log.info('[VersionManager] Extracting package...');
@@ -526,6 +533,13 @@ export class VersionManager {
       await this.stateManager.setActiveVersion(versionId);
 
       log.info('[VersionManager] Switched to version:', versionId, 'status:', targetVersion.status);
+
+      // Notify renderer of active version change
+      const activeVersion = await this.getActiveVersion();
+      if ((global as any).mainWindow && !(global as any).mainWindow.isDestroyed()) {
+        (global as any).mainWindow.webContents.send('version:activeVersionChanged', activeVersion);
+        log.info('[VersionManager] Sent activeVersionChanged event');
+      }
 
       // Return success with warning if dependencies are missing
       if (targetVersion.status !== 'installed-ready') {

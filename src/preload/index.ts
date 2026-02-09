@@ -143,6 +143,20 @@ const electronAPI = {
     ipcRenderer.on('version:dependencyWarning', listener);
     return () => ipcRenderer.removeListener('version:dependencyWarning', listener);
   },
+  onOnboardingSwitchToWeb: (callback) => {
+    const listener = (_event, data) => {
+      callback(data);
+    };
+    ipcRenderer.on('onboarding:switch-to-web', listener);
+    return () => ipcRenderer.removeListener('onboarding:switch-to-web', listener);
+  },
+  onOnboardingOpenHagicode: (callback) => {
+    const listener = (_event, data) => {
+      callback(data);
+    };
+    ipcRenderer.on('onboarding:open-hagicode', listener);
+    return () => ipcRenderer.removeListener('onboarding:open-hagicode', listener);
+  },
 
   // View Management APIs
   switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'license') => ipcRenderer.invoke('switch-view', view),
@@ -185,6 +199,38 @@ const electronAPI = {
       ipcRenderer.on('license:syncStatus', listener);
       return () => ipcRenderer.removeListener('license:syncStatus', listener);
     },
+  },
+
+  // Onboarding APIs
+  checkTriggerCondition: () => ipcRenderer.invoke('onboarding:check-trigger'),
+  getOnboardingState: () => ipcRenderer.invoke('onboarding:get-state'),
+  skipOnboarding: () => ipcRenderer.invoke('onboarding:skip'),
+  downloadPackage: () => ipcRenderer.invoke('onboarding:download-package'),
+  checkOnboardingDependencies: (version: string) => ipcRenderer.invoke('onboarding:check-dependencies', version),
+  installDependencies: (version: string) => ipcRenderer.invoke('onboarding:install-dependencies', version),
+  startService: (version: string) => ipcRenderer.invoke('onboarding:start-service', version),
+  completeOnboarding: (version: string) => ipcRenderer.invoke('onboarding:complete', version),
+  resetOnboarding: () => ipcRenderer.invoke('onboarding:reset'),
+  onDownloadProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('onboarding:download-progress', listener);
+    return () => ipcRenderer.removeListener('onboarding:download-progress', listener);
+  },
+  onDependencyProgress: (callback) => {
+    const listener = (_event, status) => {
+      callback(status);
+    };
+    ipcRenderer.on('onboarding:dependency-progress', listener);
+    return () => ipcRenderer.removeListener('onboarding:dependency-progress', listener);
+  },
+  onServiceProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('onboarding:service-progress', listener);
+    return () => ipcRenderer.removeListener('onboarding:service-progress', listener);
   },
 };
 

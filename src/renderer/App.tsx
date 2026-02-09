@@ -9,7 +9,9 @@ import LicenseManagementPage from './components/LicenseManagementPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import DependencyStartConfirmDialog from './components/DependencyStartConfirmDialog';
 import { DependencyInstallConfirmDialog } from './components/DependencyInstallConfirmDialog';
+import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { switchView } from './store/slices/viewSlice';
+import { selectIsActive } from './store/slices/onboardingSlice';
 import type { RootState } from './store';
 import { ThemeProvider } from './components/providers/theme-provider';
 
@@ -27,6 +29,9 @@ declare global {
       getCurrentView: () => Promise<string>;
       onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'license') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+      openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
+      onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
+      onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
     };
   }
 }
@@ -36,22 +41,30 @@ function App() {
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
+  const isOnboardingActive = useSelector((state: RootState) => selectIsActive(state));
 
   useEffect(() => {
-    console.log('[App] Setting up view change listener');
-
     // Listen for view change events from menu (kept for backward compatibility)
     const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'license') => {
-      console.log('[App] View change event received:', view);
       dispatch(switchView(view));
     });
 
-    console.log('[App] View change listener set up successfully');
+    // Listen for onboarding completion - open Hagicode
+    const unsubscribeOnboardingOpenHagicode = window.electronAPI.onOnboardingOpenHagicode(async (data) => {
+      // Open Hagicode in app window
+      try {
+        await window.electronAPI.openHagicodeInApp(data.url);
+      } catch (error) {
+        console.error('[App] Failed to open Hagicode:', error);
+      }
+    });
 
     return () => {
-      console.log('[App] Cleaning up view change listener');
       if (typeof unsubscribeViewChange === 'function') {
         unsubscribeViewChange();
+      }
+      if (typeof unsubscribeOnboardingOpenHagicode === 'function') {
+        unsubscribeOnboardingOpenHagicode();
       }
     };
   }, [dispatch]);
@@ -83,6 +96,9 @@ function App() {
         <DependencyStartConfirmDialog />
         <DependencyInstallConfirmDialog />
       </div>
+
+      {/* Onboarding Wizard - shown when active */}
+      <OnboardingWizard />
     </ThemeProvider>
   );
 }

@@ -187,10 +187,68 @@ export class PCodeWebServiceManager {
   }
 
   /**
+   * Check if the port is available using system commands (faster and more reliable)
+   * @returns Promise resolving to true if port is available, false if in use, null if check failed
+   */
+  private async checkPortWithSystemCommand(): Promise<boolean | null> {
+    const { exec } = await import('node:child_process');
+    const platform = process.platform;
+
+    return new Promise((resolve) => {
+      let command = '';
+
+      if (platform === 'linux') {
+        // Use ss command (modern replacement for netstat)
+        // We use || true to ensure the command succeeds even if grep finds nothing
+        command = `ss -tuln | grep ":${this.config.port} " || true`;
+      } else if (platform === 'darwin') {
+        // Use lsof on macOS
+        // We use || true to ensure the command succeeds even if lsof finds nothing
+        command = `lsof -i :${this.config.port} || true`;
+      } else if (platform === 'win32') {
+        // Use netstat on Windows
+        // findstr returns exit code 1 if not found, but that's expected
+        command = `netstat -an | findstr ":${this.config.port} "`;
+      }
+
+      if (!command) {
+        // Fallback to node check if no system command available
+        resolve(null);
+        return;
+      }
+
+      exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout) => {
+        // For Linux/macOS, we used || true so error shouldn't occur
+        // For Windows, findstr returns exit code 1 when no matches found, which is expected
+        // Only treat it as a failure if it's a different type of error
+
+        // Check if this is an expected "not found" result
+        const hasOutput = stdout && stdout.trim().length > 0;
+
+        if (hasOutput) {
+          // Port is in use (output found)
+          resolve(false);
+        } else {
+          // No output means port is available (not in use)
+          resolve(true);
+        }
+      });
+    });
+  }
+
+  /**
    * Check if the port is available
+   * First tries system command for quick check, then falls back to node's net module
    * @returns Promise resolving to true if port is available, false if in use
    */
   public async checkPortAvailable(): Promise<boolean> {
+    // Try system command first (faster)
+    const systemCheck = await this.checkPortWithSystemCommand();
+    if (systemCheck !== null) {
+      return systemCheck;
+    }
+
+    // Fallback to node's net module
     const net = await import('node:net');
     return new Promise((resolve) => {
       const server = net.createServer();
@@ -329,13 +387,34 @@ export class PCodeWebServiceManager {
         return false;
       }
 
-      // Check port availability
-      const portAvailable = await this.checkPortAvailable();
+      // Check port availability and auto-increment if needed
+      let portAvailable = await this.checkPortAvailable();
+      let portCheckAttempts = 0;
+      const maxPortCheckAttempts = 100; // Prevent infinite loop
+
+      while (!portAvailable && portCheckAttempts < maxPortCheckAttempts) {
+        log.warn('[WebService] Port already in use:', `${this.config.host}:${this.config.port}`);
+
+        // Increment port and try again
+        this.config.port++;
+        portCheckAttempts++;
+
+        log.info('[WebService] Trying port:', this.config.port);
+        portAvailable = await this.checkPortAvailable();
+
+        if (portAvailable) {
+          log.info('[WebService] Found available port:', this.config.port);
+          // Save the new port to configuration
+          await this.savePort(this.config.port);
+          this.emitPhase(StartupPhase.CheckingPort, `Port ${this.config.port} available`);
+        }
+      }
+
       log.info('[WebService] Port availability check:', portAvailable ? 'available' : 'in use');
       if (!portAvailable) {
-        log.error('[WebService] Port already in use:', `${this.config.host}:${this.config.port}`);
+        log.error('[WebService] Could not find available port after', maxPortCheckAttempts, 'attempts');
         this.status = 'error';
-        this.emitPhase(StartupPhase.Error, 'Port already in use');
+        this.emitPhase(StartupPhase.Error, 'Unable to find available port');
         return false;
       }
 
@@ -699,6 +778,33 @@ export class PCodeWebServiceManager {
         log.info('[WebService] No saved port configuration found');
       }
       return null;
+    }
+  }
+
+  /**
+   * Save port to config file
+   */
+  private async savePort(port: number): Promise<void> {
+    const paths = this.pathManager.getPaths();
+    const configPath = paths.webServiceConfig;
+
+    try {
+      // Ensure config directory exists
+      await fs.mkdir(paths.config, { recursive: true });
+
+      let config: Record<string, any> = {};
+      try {
+        const content = await fs.readFile(configPath, 'utf-8');
+        config = JSON.parse(content);
+      } catch {
+        // File doesn't exist or is invalid, start with empty config
+      }
+
+      config.lastSuccessfulPort = port;
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      log.info('[WebService] Saved port to config:', port);
+    } catch (error) {
+      log.error('[WebService] Error saving port:', error);
     }
   }
 

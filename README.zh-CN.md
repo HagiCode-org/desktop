@@ -51,6 +51,17 @@ npm install
 npm run dev
 ```
 
+### 更新源配置
+
+默认情况下，HagiCode Desktop 在开发和生产构建中都使用官方 HTTP 索引源。在本地开发时，您可以使用 `UPDATE_SOURCE_OVERRIDE` 环境变量覆盖更新源：
+
+```bash
+# 使用本地文件夹进行开发
+UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"本地","path":"/path/to/packages"}' npm run dev
+```
+
+有关详细的配置选项和开发指南，请参阅[开发指南](./docs/development.md)。
+
 ## 构建
 
 ```bash

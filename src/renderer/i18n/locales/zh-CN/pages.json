@@ -66,6 +66,11 @@
     "confirmReinstall": "确认重新安装此软件包？这将删除缓存和已安装版本，然后重新下载安装。",
     "reinstall": "重新安装",
     "noVersionsAvailable": "暂无可用版本",
+    "noVersionsInstalled": {
+      "title": "还没有安装任何版本",
+      "description": "开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。",
+      "startButton": "启动引导向导"
+    },
     "status": {
       "active": "当前激活",
       "ready": "就绪",
@@ -93,7 +98,9 @@
       "uninstallFailed": "卸载失败",
       "openLogsSuccess": "日志文件夹已打开",
       "logsNotFound": "日志文件夹不存在",
-      "openLogsError": "无法打开日志文件夹"
+      "openLogsError": "无法打开日志文件夹",
+      "onboardingStarted": "引导向导已启动",
+      "onboardingFailed": "启动引导向导失败"
     },
     "dialog": {
       "reinstallTitle": "确认重新安装",

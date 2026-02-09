@@ -1,0 +1,117 @@
+{
+  "title": "首次使用引导",
+  "welcome": {
+    "title": "欢迎使用 Hagicode Desktop",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，可以在本地快速使用 Hagicode。接下来，我们将帮助您完成首次安装和配置，大约需要 3-5 分钟。",
+    "features": {
+      "manage": {
+        "title": "版本管理",
+        "description": "管理 Hagicode Server 的安装和更新"
+      },
+      "monitor": {
+        "title": "服务监控",
+        "description": "启动、停止和监控服务状态"
+      },
+      "dependencies": {
+        "title": "依赖管理",
+        "description": "查看和管理系统依赖项"
+      }
+    },
+    "processTitle": "首次安装流程包括：",
+    "steps": {
+      "download": "下载最新的 Hagicode Server 包",
+      "dependencies": "安装所需的系统依赖项",
+      "launch": "启动服务并验证运行状态"
+    },
+    "skip": "跳过引导",
+    "start": "开始安装"
+  },
+  "download": {
+    "title": "下载 Hagicode Server",
+    "version": "版本",
+    "progress": "下载进度",
+    "fileSize": "文件大小",
+    "downloading": {
+      "title": "正在下载 Hagicode Server..."
+    },
+    "complete": {
+      "title": "下载完成！",
+      "message": "包文件已验证完整。现在可以继续安装依赖项。",
+      "fileSize": "文件大小"
+    },
+    "downloaded": "已下载",
+    "speed": "速度",
+    "remaining": "剩余时间",
+    "pleaseWait": "请稍候，正在下载..."
+  },
+  "dependencies": {
+    "title": "安装系统依赖项",
+    "description": "检查以下系统依赖项的安装状态",
+    "installButton": "安装依赖项",
+    "status": {
+      "installed": "已安装",
+      "installing": "安装中...",
+      "pending": "待安装",
+      "error": "安装失败"
+    },
+    "overallProgress": "总体进度",
+    "installing": {
+      "title": "正在安装依赖项..."
+    },
+    "complete": {
+      "title": "依赖安装完成",
+      "message": "所有依赖项已成功安装。"
+    },
+    "checking": "正在检查依赖项...",
+    "error": {
+      "message": "部分依赖项安装失败，请手动安装后继续。"
+    }
+  },
+  "launch": {
+    "title": "启动服务",
+    "starting": {
+      "title": "正在启动 Hagicode Server...",
+      "subtitle": "正在初始化服务组件..."
+    },
+    "complete": {
+      "title": "安装完成！",
+      "subtitle": "Hagicode Desktop 已成功安装并启动。",
+      "success": "恭喜！Hagicode Desktop 已成功安装并启动。",
+      "ready": "您现在可以开始使用所有功能。",
+      "button": "打开 Hagicode"
+    },
+    "progress": "启动进度",
+    "installInfo": {
+      "title": "安装信息",
+      "version": "安装版本",
+      "port": "服务端口",
+      "url": "服务地址"
+    },
+    "whatsNext": {
+      "title": "您现在可以：",
+      "manage": "通过主界面管理 Hagicode Server",
+      "webUI": "访问 Web 管理界面",
+      "logs": "查看服务日志和状态",
+      "config": "配置服务器参数和设置"
+    },
+    "support": {
+      "title": "技术支持",
+      "docs": "用户文档",
+      "issues": "问题反馈"
+    }
+  },
+  "actions": {
+    "next": "下一步",
+    "previous": "上一步",
+    "skip": "跳过引导"
+  },
+  "skip": {
+    "checkbox": "不再显示此引导",
+    "title": "确认跳过引导",
+    "description": "您确定要跳过首次使用引导吗？",
+    "manualInstallNote": "跳过后，您可以：\n• 通过主界面的\"包管理\"功能手动安装 Hagicode Server\n• 在设置中重新启用引导流程",
+    "reenableNote": "如果您是第一次使用 Hagicode Desktop，建议完成引导流程。",
+    "cancel": "取消",
+    "confirm": "跳过引导"
+  }
+}

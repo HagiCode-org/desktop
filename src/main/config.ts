@@ -1,5 +1,5 @@
 import Store from 'electron-store';
-import type { ServerConfig } from './server.js';
+import type { ServerConfig } from './server';
 
 export interface AppSettings {
   language: string;
@@ -23,7 +23,7 @@ export interface AppConfig {
 const defaultConfig: AppConfig = {
   server: {
     host: 'localhost',
-    port: 3000,
+    port: 36546,
   },
   license: {
     licenseKey: '',

@@ -1,5 +1,6 @@
 import { call, put, takeEvery, fork, select, take, delay } from 'redux-saga/effects';
 import { toast } from 'sonner';
+import { store } from '../index'; // Import store instance
 import {
   setStatus,
   setOperating,
@@ -469,15 +470,24 @@ function* watchWebServiceStatusChanges() {
   if (typeof window !== 'undefined') {
     // Listen for active version changes
     window.electronAPI.onActiveVersionChanged((version: any) => {
-      // Store this in the Redux store
+      // Dispatch to store
+      store.dispatch(setActiveVersion(version));
       console.log('Active version changed:', version);
     });
 
+    // Listen for web service status changes
+    window.electronAPI.onWebServiceStatusChange((status: any) => {
+      // Dispatch to store
+      store.dispatch(setProcessInfo(status));
+      console.log('Web service status changed:', status);
+    });
+
+    // Set up polling as backup
     setInterval(async () => {
       try {
         const status = await window.electronAPI.getWebServiceStatus();
-        // We need to dispatch this through the store, but we can't use 'put' here
-        // So we'll rely on the polling from the main process instead
+        // Dispatch directly to store
+        store.dispatch(setProcessInfo(status));
       } catch (error) {
         console.error('Watch web service status error:', error);
       }

@@ -66,6 +66,11 @@
     "confirmReinstall": "Are you sure you want to reinstall this package? This will delete the cache and installed version, then download and install again.",
     "reinstall": "Reinstall",
     "noVersionsAvailable": "No versions available",
+    "noVersionsInstalled": {
+      "title": "No Versions Installed Yet",
+      "description": "The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.",
+      "startButton": "Start Setup Wizard"
+    },
     "status": {
       "active": "Active",
       "ready": "Ready",
@@ -93,7 +98,9 @@
       "uninstallFailed": "Uninstallation failed",
       "openLogsSuccess": "Logs folder opened",
       "logsNotFound": "Logs folder not found",
-      "openLogsError": "Failed to open logs folder"
+      "openLogsError": "Failed to open logs folder",
+      "onboardingStarted": "Setup wizard started",
+      "onboardingFailed": "Failed to start setup wizard"
     },
     "dialog": {
       "reinstallTitle": "Confirm Reinstallation",

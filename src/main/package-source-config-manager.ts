@@ -273,24 +273,73 @@ export class PackageSourceConfigManager {
     try {
       const sources = this.getAllSources();
       if (sources.length === 0) {
-        // In production, use HTTP index as default source
-        // In development, use local folder source
-        const defaultSource = process.env.NODE_ENV === 'development'
-          ? this.addSource({
-              type: 'local-folder',
-              name: '本地文件夹',
-              path: '/home/newbe36524/repos/newbe36524/pcode/Release/release-packages/',
-            })
-          : this.addSource({
-              type: 'http-index',
-              name: 'HagiCode 官方源',
-              indexUrl: 'https://server.dl.hagicode.com/index.json',
-            });
+        // Check for environment variable override first
+        const overrideConfig = this.loadEnvironmentOverride();
+        if (overrideConfig) {
+          const defaultSource = this.addSource(overrideConfig);
+          log.info('[PackageSourceConfigManager] Default source initialized from environment override:', defaultSource.id);
+          return;
+        }
+
+        // Unified default: use HTTP index source for both development and production
+        const defaultSource = this.addSource({
+          type: 'http-index',
+          name: 'HagiCode 官方源',
+          indexUrl: 'https://server.dl.hagicode.com/index.json',
+        });
 
         log.info('[PackageSourceConfigManager] Default source initialized:', defaultSource.id);
       }
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to initialize default source:', error);
+    }
+  }
+
+  /**
+   * Load package source configuration from environment variable
+   * Supports UPDATE_SOURCE_OVERRIDE environment variable with JSON configuration
+   */
+  private loadEnvironmentOverride(): Omit<StoredPackageSourceConfig, 'id' | 'createdAt'> | null {
+    const overrideEnv = process.env.UPDATE_SOURCE_OVERRIDE;
+    if (!overrideEnv) {
+      return null;
+    }
+
+    try {
+      const overrideConfig = JSON.parse(overrideEnv);
+
+      // Validate required fields
+      if (!overrideConfig.type) {
+        log.warn('[PackageSourceConfigManager] Invalid override configuration: missing type field');
+        return null;
+      }
+
+      // Validate type is supported
+      const validTypes = ['local-folder', 'github-release', 'http-index'];
+      if (!validTypes.includes(overrideConfig.type)) {
+        log.warn('[PackageSourceConfigManager] Invalid override configuration: unsupported type:', overrideConfig.type);
+        return null;
+      }
+
+      // Validate type-specific required fields
+      if (overrideConfig.type === 'local-folder' && !overrideConfig.path) {
+        log.warn('[PackageSourceConfigManager] Invalid override configuration: local-folder requires path');
+        return null;
+      }
+      if (overrideConfig.type === 'github-release' && (!overrideConfig.owner || !overrideConfig.repo)) {
+        log.warn('[PackageSourceConfigManager] Invalid override configuration: github-release requires owner and repo');
+        return null;
+      }
+      if (overrideConfig.type === 'http-index' && !overrideConfig.indexUrl) {
+        log.warn('[PackageSourceConfigManager] Invalid override configuration: http-index requires indexUrl');
+        return null;
+      }
+
+      log.info('[PackageSourceConfigManager] Using environment override for package source:', overrideConfig.type);
+      return overrideConfig as Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>;
+    } catch (error) {
+      log.error('[PackageSourceConfigManager] Failed to parse UPDATE_SOURCE_OVERRIDE environment variable:', error);
+      return null;
     }
   }
 

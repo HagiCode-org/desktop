@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from '../hooks/useNavigate';
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, CheckCircle, AlertCircle, Activity } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
+import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import type { RootState } from '../store';
 import hagicodeIcon from '../assets/hagicode-icon.png';
 
@@ -35,6 +37,7 @@ type ServerStatus = 'running' | 'stopped' | 'error';
 export default function SystemManagementView() {
   const { t } = useTranslation('common');
   const { navigateTo } = useNavigate();
+  const dispatch = useDispatch();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
@@ -102,6 +105,23 @@ export default function SystemManagementView() {
         return 'shadow-muted-foreground/30';
       case 'error':
         return 'shadow-destructive/50';
+    }
+  };
+
+  const handleStartWizard = async () => {
+    try {
+      // Reset onboarding state to allow it to show again
+      await dispatch(resetOnboarding()).unwrap();
+      // Check trigger condition to activate onboarding
+      const result = await dispatch(checkOnboardingTrigger()).unwrap();
+      if (result.shouldShow) {
+        toast.success(t('versionManagement.toast.onboardingStarted'));
+      } else {
+        toast.error(t('versionManagement.toast.onboardingFailed') + `: ${result.reason || 'Unknown reason'}`);
+      }
+    } catch (error) {
+      console.error('Failed to start onboarding:', error);
+      toast.error(t('versionManagement.toast.onboardingFailed'));
     }
   };
 
@@ -370,7 +390,7 @@ export default function SystemManagementView() {
                 transition={{ delay: 0.55 }}
                 className="text-lg font-semibold text-foreground mb-2"
               >
-                未安装任何版本
+                {t('system.noVersionInstalled.title')}
               </motion.h3>
 
               <motion.p
@@ -379,7 +399,7 @@ export default function SystemManagementView() {
                 transition={{ delay: 0.6 }}
                 className="text-muted-foreground mb-6"
               >
-                请前往版本管理页面安装版本
+                {t('system.noVersionInstalled.description')}
               </motion.p>
 
               <motion.button
@@ -388,10 +408,10 @@ export default function SystemManagementView() {
                 transition={{ delay: 0.65 }}
                 whileHover={{ scale: 1.05, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.3)' }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigateTo('version')}
+                onClick={handleStartWizard}
                 className="px-6 py-2.5 bg-linear-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-lg transition-all shadow-lg shadow-primary/20"
               >
-                前往版本管理
+                {t('system.noVersionInstalled.startWizard')}
               </motion.button>
             </div>
           </motion.div>

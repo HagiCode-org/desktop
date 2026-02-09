@@ -137,5 +137,12 @@
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"
+  },
+  "system": {
+    "noVersionInstalled": {
+      "title": "未安装任何版本",
+      "description": "开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。",
+      "startWizard": "启动向导"
+    }
   }
 }

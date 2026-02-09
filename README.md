@@ -51,6 +51,17 @@ npm install
 npm run dev
 ```
 
+### Update Source Configuration
+
+By default, HagiCode Desktop uses the official HTTP index source for both development and production builds. For local development, you can override the update source using the `UPDATE_SOURCE_OVERRIDE` environment variable:
+
+```bash
+# Use local folder for development
+UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local","path":"/path/to/packages"}' npm run dev
+```
+
+For detailed configuration options and development guidelines, see the [Development Guide](./docs/development.md).
+
 ## Building
 
 ```bash

@@ -1,0 +1,117 @@
+{
+  "title": "First-Time Setup",
+  "welcome": {
+    "title": "Welcome to Hagicode Desktop",
+    "description": "Hagicode Desktop is the local launcher for Hagicode, allowing you to quickly use Hagicode locally. We'll help you complete the first-time installation and configuration in about 3-5 minutes.",
+    "features": {
+      "manage": {
+        "title": "Version Management",
+        "description": "Manage Hagicode Server installation and updates"
+      },
+      "monitor": {
+        "title": "Service Monitoring",
+        "description": "Start, stop, and monitor service status"
+      },
+      "dependencies": {
+        "title": "Dependency Management",
+        "description": "View and manage system dependencies"
+      }
+    },
+    "processTitle": "The first-time setup includes:",
+    "steps": {
+      "download": "Download the latest Hagicode Server package",
+      "dependencies": "Install required system dependencies",
+      "launch": "Start the service and verify it's running"
+    },
+    "skip": "Skip Setup",
+    "start": "Get Started"
+  },
+  "download": {
+    "title": "Download Hagicode Server",
+    "version": "Version",
+    "progress": "Download Progress",
+    "fileSize": "File Size",
+    "downloading": {
+      "title": "Downloading Hagicode Server..."
+    },
+    "complete": {
+      "title": "Download Complete!",
+      "message": "Package file verified. You can now continue with dependency installation.",
+      "fileSize": "File Size"
+    },
+    "downloaded": "Downloaded",
+    "speed": "Speed",
+    "remaining": "Remaining",
+    "pleaseWait": "Please wait while we download..."
+  },
+  "dependencies": {
+    "title": "Install System Dependencies",
+    "description": "Check the installation status of system dependencies",
+    "installButton": "Install Dependencies",
+    "status": {
+      "installed": "Installed",
+      "installing": "Installing...",
+      "pending": "Pending",
+      "error": "Failed"
+    },
+    "overallProgress": "Overall Progress",
+    "installing": {
+      "title": "Installing dependencies..."
+    },
+    "complete": {
+      "title": "Dependencies Installed",
+      "message": "All dependencies have been successfully installed."
+    },
+    "checking": "Checking dependencies...",
+    "error": {
+      "message": "Some dependencies failed to install. Please install them manually and continue."
+    }
+  },
+  "launch": {
+    "title": "Start Service",
+    "starting": {
+      "title": "Starting Hagicode Server...",
+      "subtitle": "Initializing service components..."
+    },
+    "complete": {
+      "title": "Setup Complete!",
+      "subtitle": "Hagicode Desktop has been successfully installed and started.",
+      "success": "Congratulations! Hagicode Desktop has been successfully installed and started.",
+      "ready": "You can now start using all features.",
+      "button": "Enter Main Interface"
+    },
+    "progress": "Startup Progress",
+    "installInfo": {
+      "title": "Installation Information",
+      "version": "Installed Version",
+      "port": "Service Port",
+      "url": "Service URL"
+    },
+    "whatsNext": {
+      "title": "You can now:",
+      "manage": "Manage Hagicode Server from the main interface",
+      "webUI": "Access the Web management interface",
+      "logs": "View service logs and status",
+      "config": "Configure server parameters and settings"
+    },
+    "support": {
+      "title": "Support",
+      "docs": "Documentation",
+      "issues": "Report Issues"
+    }
+  },
+  "actions": {
+    "next": "Next",
+    "previous": "Previous",
+    "skip": "Skip Setup"
+  },
+  "skip": {
+    "checkbox": "Don't show this guide again",
+    "title": "Confirm Skip Setup",
+    "description": "Are you sure you want to skip the first-time setup?",
+    "manualInstallNote": "After skipping, you can:\n• Manually install Hagicode Server through \"Package Management\" in the main interface\n• Re-enable the setup process in settings",
+    "reenableNote": "If this is your first time using Hagicode Desktop, we recommend completing the setup process.",
+    "cancel": "Cancel",
+    "confirm": "Skip Setup"
+  }
+}
