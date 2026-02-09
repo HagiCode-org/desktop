@@ -12,6 +12,7 @@ import {
   Clock,
   HardDrive,
   FolderOpen,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -25,6 +26,9 @@ import { Button } from './ui/button';
 import {
   selectWebServiceOperating,
   selectWebServiceStatus,
+  selectInstallState,
+  selectIsInstallingFromState,
+  selectInstallProgress,
 } from '../store/slices/webServiceSlice';
 import {
   installWebServicePackageAction,
@@ -87,14 +91,15 @@ export default function VersionManagementPage() {
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
   const webServiceStatus = useSelector((state: RootState) => selectWebServiceStatus(state));
+  const installState = useSelector((state: RootState) => selectInstallState(state));
+  const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
+  const installProgress = useSelector((state: RootState) => selectInstallProgress(state));
   const [availableVersions, setAvailableVersions] = useState<Version[]>([]);
   const [installedVersions, setInstalledVersions] = useState<InstalledVersion[]>([]);
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [loading, setLoading] = useState(true);
-  const [installing, setInstalling] = useState<string | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
   const [uninstalling, setUninstalling] = useState<string | null>(null);
-  const [reinstalling, setReinstalling] = useState<string | null>(null);
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [dependencies, setDependencies] = useState<Record<string, DependencyCheckResult[]>>({});
   const [installingDep, setInstallingDep] = useState<string | null>(null);
@@ -177,7 +182,7 @@ export default function VersionManagementPage() {
   };
 
   const handleInstall = async (versionId: string) => {
-    if (installing || webServiceOperating) return;
+    if (isInstallingFromState || webServiceOperating) return;
 
     // Use Redux action which will check service status and show confirmation dialog if needed
     dispatch(installWebServicePackageAction(versionId));
@@ -237,14 +242,14 @@ export default function VersionManagementPage() {
   };
 
   const handleReinstall = async (versionId: string) => {
-    if (reinstalling || webServiceOperating) return;
+    if (isInstallingFromState || webServiceOperating) return;
 
     // Use Redux action which will check service status and show confirmation dialog if needed
     dispatch(installWebServicePackageAction(versionId));
   };
 
   const confirmReinstall = async () => {
-    if (!pendingVersionId || reinstalling) {
+    if (!pendingVersionId || isInstallingFromState) {
       setReinstallDialogOpen(false);
       setPendingVersionId(null);
       return;
@@ -334,6 +339,20 @@ export default function VersionManagementPage() {
       'OpenSpec': 'openspec',
     };
     return nameMap[depName] || null;
+  };
+
+  const getInstallProgressText = () => {
+    if (!installProgress) return t('versionManagement.installing');
+
+    const stageTexts: Record<string, string> = {
+      'downloading': t('versionManagement.downloading'),
+      'extracting': t('versionManagement.extracting'),
+      'verifying': t('versionManagement.verifying'),
+      'completed': t('versionManagement.completed'),
+      'error': '安装失败',
+    };
+
+    return stageTexts[installProgress.stage] || installProgress.message || t('versionManagement.installing');
   };
 
   const getVersionStatus = (version: InstalledVersion) => {
@@ -479,23 +498,44 @@ export default function VersionManagementPage() {
                   </div>
 
                   {!installed ? (
-                    <button
-                      onClick={() => handleInstall(version.id)}
-                      disabled={installing === version.id}
-                      className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {installing === version.id ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
-                          {t('versionManagement.installing')}
-                        </>
+                    <div className="flex items-center gap-2">
+                      {isInstallingFromState && installProgress ? (
+                        <div className="flex items-center gap-2">
+                          {/* 进度条 */}
+                          <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all duration-300 ease-out"
+                              style={{ width: `${installProgress.progress}%` }}
+                            />
+                          </div>
+                          {/* 进度文本 */}
+                          <span className="text-xs text-muted-foreground min-w-[60px]">
+                            {installProgress.stage === 'downloading' && `${installProgress.progress}%`}
+                            {installProgress.stage === 'extracting' && `${installProgress.progress}%`}
+                            {installProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {installProgress.stage === 'completed' && t('versionManagement.completed')}
+                          </span>
+                        </div>
                       ) : (
-                        <>
-                          <Download className="w-4 h-4" />
-                          {t('versionManagement.actions.install')}
-                        </>
+                        <button
+                          onClick={() => handleInstall(version.id)}
+                          disabled={isInstallingFromState || webServiceOperating}
+                          className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {isInstallingFromState ? (
+                            <>
+                              <Loader2 className="animate-spin h-4 w-4" />
+                              {getInstallProgressText()}
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4" />
+                              {t('versionManagement.actions.install')}
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                    </div>
                   ) : (
                     <span className="text-sm text-primary flex items-center gap-1">
                       <CheckCircle className="w-4 h-4" />
@@ -567,24 +607,43 @@ export default function VersionManagementPage() {
                       </button>
 
                       {/* Reinstall button for all installed versions */}
-                      <button
-                        onClick={() => handleReinstall(version.id)}
-                        disabled={reinstalling === version.id || switching === version.id}
-                        className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                        title="重新安装此软件包"
-                      >
-                        {reinstalling === version.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-secondary-foreground"></div>
-                            重新安装中...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-4 h-4" />
-                            重新安装
-                          </>
-                        )}
-                      </button>
+                      {isInstallingFromState && installProgress ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg">
+                          {/* 进度条 */}
+                          <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all duration-300 ease-out"
+                              style={{ width: `${installProgress.progress}%` }}
+                            />
+                          </div>
+                          {/* 进度文本 */}
+                          <span className="text-xs text-muted-foreground min-w-[50px]">
+                            {installProgress.stage === 'downloading' && `${installProgress.progress}%`}
+                            {installProgress.stage === 'extracting' && `${installProgress.progress}%`}
+                            {installProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {installProgress.stage === 'completed' && t('versionManagement.completed')}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleReinstall(version.id)}
+                          disabled={isInstallingFromState || switching === version.id}
+                          className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                          title="重新安装此软件包"
+                        >
+                          {isInstallingFromState ? (
+                            <>
+                              <Loader2 className="animate-spin h-3 w-3" />
+                              {getInstallProgressText()}
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4" />
+                              重新安装
+                            </>
+                          )}
+                        </button>
+                      )}
 
                       {/* Open Logs button for all installed versions */}
                       <button
@@ -599,7 +658,7 @@ export default function VersionManagementPage() {
                       {!version.isActive && version.status === 'installed-ready' && (
                         <button
                           onClick={() => handleSwitch(version.id)}
-                          disabled={switching === version.id || reinstalling === version.id}
+                          disabled={switching === version.id || isInstallingFromState}
                           className="px-3 py-1.5 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
                           {switching === version.id ? (
@@ -619,7 +678,7 @@ export default function VersionManagementPage() {
                       {!version.isActive && (
                         <button
                           onClick={() => handleUninstall(version.id)}
-                          disabled={uninstalling === version.id || reinstalling === version.id}
+                          disabled={uninstalling === version.id || isInstallingFromState}
                           className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={t('versionManagement.actions.uninstall')}
                         >
@@ -747,15 +806,15 @@ export default function VersionManagementPage() {
                 setReinstallDialogOpen(false);
                 setPendingVersionId(null);
               }}
-              disabled={reinstalling !== null}
+              disabled={isInstallingFromState}
             >
               {t('versionManagement.dialog.cancel')}
             </Button>
             <Button
               onClick={confirmReinstall}
-              disabled={reinstalling !== null}
+              disabled={isInstallingFromState}
             >
-              {reinstalling ? t('versionManagement.reinstalling') : t('versionManagement.dialog.confirm')}
+              {isInstallingFromState ? t('versionManagement.reinstalling') : t('versionManagement.dialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -43,7 +43,7 @@ mac:
 linux:
   target:
     - AppImage
-    # - deb
-    #- tar.gz
+    - deb
+    - tar.gz
   category: Utility
   maintainer: newbe36524 <support@hagicode.com>

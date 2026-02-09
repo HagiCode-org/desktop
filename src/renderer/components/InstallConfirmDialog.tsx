@@ -13,6 +13,8 @@ import {
   selectShowInstallConfirm,
   hideInstallConfirm,
   selectWebServiceOperating,
+  setInstallState,
+  InstallState,
 } from '../store/slices/webServiceSlice';
 import {
   confirmInstallAndStopAction,
@@ -26,6 +28,8 @@ export default function InstallConfirmDialog() {
 
   const handleCancel = () => {
     dispatch(hideInstallConfirm());
+    // Reset install state to idle when user cancels
+    dispatch(setInstallState(InstallState.Idle));
   };
 
   const handleConfirm = () => {

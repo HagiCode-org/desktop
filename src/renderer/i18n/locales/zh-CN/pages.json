@@ -53,6 +53,10 @@
     "installedVersions": "已安装版本",
     "installed": "已安装",
     "installing": "安装中...",
+    "downloading": "下载中",
+    "extracting": "解压中",
+    "verifying": "验证中",
+    "completed": "完成",
     "switching": "切换中...",
     "reinstalling": "重新安装中...",
     "installedAt": "安装于",
@@ -81,6 +85,8 @@
       "description": "版本管理允许您安装多个 Hagicode Server 版本并在它们之间切换。仅依赖项全部满足的版本可以被激活。"
     },
     "toast": {
+      "installSuccess": "安装成功",
+      "installFailed": "安装失败",
       "reinstallSuccess": "重新安装成功",
       "reinstallFailed": "重新安装失败",
       "uninstallSuccess": "卸载成功",

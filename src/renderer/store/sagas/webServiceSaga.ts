@@ -1,4 +1,4 @@
-import { call, put, takeEvery, fork, select, take } from 'redux-saga/effects';
+import { call, put, takeEvery, fork, select, take, delay } from 'redux-saga/effects';
 import { toast } from 'sonner';
 import {
   setStatus,
@@ -19,6 +19,8 @@ import {
   showStartConfirmDialog,
   hideStartConfirmDialog,
   setShowDependencyWarning,
+  setInstallState,
+  InstallState,
   type ProcessInfo,
   type PackageInfo,
   type InstallProgress,
@@ -293,16 +295,19 @@ function* installWebServicePackageSaga(action: { type: string; payload: string }
 
     // If service is running, show confirmation dialog
     if (currentStatus === 'running') {
+      yield put(setInstallState(InstallState.Confirming));
       yield put(showInstallConfirm(version));
       return; // Wait for user confirmation
     }
 
     // Service is not running, proceed with installation
+    yield put(setInstallState(InstallState.Installing));
     yield call(doInstallPackage, version);
   } catch (error) {
     console.error('Install package saga error:', error);
     yield put(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
     yield put(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
+    yield put(setInstallState(InstallState.Error));
   }
 }
 
@@ -313,8 +318,12 @@ function* confirmInstallAndStopSaga() {
 
     if (!pendingVersion) {
       yield put(hideInstallConfirm());
+      yield put(setInstallState(InstallState.Idle));
       return;
     }
+
+    // Transition to StoppingService state
+    yield put(setInstallState(InstallState.StoppingService));
 
     // Stop the service
     yield put(stopWebServiceAction());
@@ -332,10 +341,12 @@ function* confirmInstallAndStopSaga() {
       // Failed to stop service
       yield put(setError('Failed to stop service. Installation cancelled.'));
       yield put(hideInstallConfirm());
+      yield put(setInstallState(InstallState.Error));
       return;
     }
 
     // Service stopped successfully, proceed with installation
+    yield put(setInstallState(InstallState.Installing));
     yield call(doInstallPackage, pendingVersion);
 
     // Hide confirmation dialog after installation completes
@@ -344,6 +355,7 @@ function* confirmInstallAndStopSaga() {
     console.error('Confirm install and stop saga error:', error);
     yield put(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
     yield put(hideInstallConfirm());
+    yield put(setInstallState(InstallState.Error));
   }
 }
 
@@ -355,6 +367,7 @@ function* doInstallPackage(version: string) {
   const success: boolean = yield call(window.electronAPI.installWebServicePackage, version);
 
   if (success) {
+    yield put(setInstallState(InstallState.Completed));
     yield put(setInstallProgress({ stage: 'completed', progress: 100, message: 'Installation completed successfully' }));
     // Refresh package info
     yield put(checkPackageInstallationAction());
@@ -370,7 +383,12 @@ function* doInstallPackage(version: string) {
 
     // Check dependencies after installation and show confirmation dialog if needed
     yield put({ type: 'dependency/checkAfterInstall', payload: version });
+
+    // Reset to idle state after 3 seconds
+    yield delay(3000);
+    yield put(setInstallState(InstallState.Idle));
   } else {
+    yield put(setInstallState(InstallState.Error));
     yield put(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
     yield put(setError('Failed to install package'));
 
@@ -378,6 +396,9 @@ function* doInstallPackage(version: string) {
     toast.error('安装失败', {
       description: '安装过程中出现错误，请重试。'
     });
+
+    // Reset to idle state immediately after error
+    yield put(setInstallState(InstallState.Idle));
   }
 }
 

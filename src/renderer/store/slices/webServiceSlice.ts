@@ -1,5 +1,23 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+/**
+ * Enum representing the different states of the version installation process
+ */
+export enum InstallState {
+  /** Initial state, no installation in progress */
+  Idle = 'idle',
+  /** Waiting for user confirmation (service is running) */
+  Confirming = 'confirming',
+  /** Stopping the service before installation */
+  StoppingService = 'stopping_service',
+  /** Installation in progress */
+  Installing = 'installing',
+  /** Installation completed successfully */
+  Completed = 'completed',
+  /** Installation failed */
+  Error = 'error'
+}
+
 // Import InstalledVersion type from main process
 export interface InstalledVersion {
   id: string;
@@ -96,6 +114,9 @@ export interface WebServiceState {
   showInstallConfirm: boolean;      // Whether to show the install confirmation dialog
   pendingInstallVersion: string | null;  // The version ID waiting to be installed
 
+  // Install state for loading feedback
+  installState: InstallState;  // Current installation state for UI feedback
+
   // Dependency warning state (relaxed mode)
   showStartConfirm: boolean;         // Whether to show the start confirmation dialog
   missingDependenciesList: DependencyItem[];  // List of missing dependencies for the dialog
@@ -133,6 +154,8 @@ const initialState: WebServiceState = {
 
   showInstallConfirm: false,
   pendingInstallVersion: null,
+
+  installState: InstallState.Idle,
 
   // Dependency warning state
   showStartConfirm: false,
@@ -299,6 +322,11 @@ export const webServiceSlice = createSlice({
       state.missingDependenciesList = action.payload;
     },
 
+    // Install state actions for loading feedback
+    setInstallState: (state, action: PayloadAction<InstallState>) => {
+      state.installState = action.payload;
+    },
+
     // Reset state
     reset: () => initialState,
   },
@@ -336,6 +364,7 @@ export const {
   setShowDependencyWarning,
   setDependencyWarningDismissed,
   setMissingDependenciesList,
+  setInstallState,
   reset,
 } = webServiceSlice.actions;
 
@@ -374,6 +403,16 @@ export const selectShowStartConfirm = (state: { webService: WebServiceState }) =
 export const selectMissingDependenciesList = (state: { webService: WebServiceState }) => state.webService.missingDependenciesList;
 export const selectShowDependencyWarning = (state: { webService: WebServiceState }) => state.webService.showDependencyWarning;
 export const selectDependencyWarningDismissed = (state: { webService: WebServiceState }) => state.webService.dependencyWarningDismissed;
+
+// Install state selectors for loading feedback
+export const selectInstallState = (state: { webService: WebServiceState }) => state.webService.installState;
+export const selectIsInstallingFromState = (state: { webService: WebServiceState }) =>
+  state.webService.installState === InstallState.Installing ||
+  state.webService.installState === InstallState.StoppingService;
+export const selectCanInstall = (state: { webService: WebServiceState }) =>
+  state.webService.installState === InstallState.Idle ||
+  state.webService.installState === InstallState.Completed ||
+  state.webService.installState === InstallState.Error;
 
 // Composite selectors
 export const selectWebServiceInfo = (state: { webService: WebServiceState }) => ({

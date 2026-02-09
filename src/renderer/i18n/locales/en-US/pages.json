@@ -53,6 +53,10 @@
     "installedVersions": "Installed Versions",
     "installed": "Installed",
     "installing": "Installing...",
+    "downloading": "Downloading",
+    "extracting": "Extracting",
+    "verifying": "Verifying",
+    "completed": "Completed",
     "switching": "Switching...",
     "reinstalling": "Reinstalling...",
     "installedAt": "Installed at",
@@ -81,6 +85,8 @@
       "description": "Version management allows you to install multiple Hagicode Server versions and switch between them. Only versions with all dependencies satisfied can be activated."
     },
     "toast": {
+      "installSuccess": "Installation successful",
+      "installFailed": "Installation failed",
       "reinstallSuccess": "Reinstalled successfully",
       "reinstallFailed": "Reinstallation failed",
       "uninstallSuccess": "Uninstalled successfully",
