@@ -17,6 +17,35 @@ import { LicenseManager } from './license-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Path helper for production builds with asar packaging.
+ *
+ * In development: __dirname = 'dist/main'
+ * In production (asar): __dirname = 'app.asar/dist/main'
+ *
+ * This helper correctly resolves paths to the dist directory root
+ * regardless of whether the app is running in development or production.
+ */
+function getDistRootPath(): string {
+  // In production, we need to go up from 'dist/main' to 'dist'
+  // __dirname will be 'app.asar/dist/main' in asar or 'dist/main' in dev
+  // Going up two levels gets us to 'dist' or 'app.asar/dist'
+  return path.resolve(__dirname, '..');
+}
+
+/**
+ * Get the application root path (where resources folder is located).
+ *
+ * In development: returns project root
+ * In production (asar): returns app.asar root
+ */
+function getAppRootPath(): string {
+  // __dirname is either 'dist/main' (dev) or 'app.asar/dist/main' (prod)
+  // Going up three levels from 'dist/main' gets us to project root
+  // Going up three levels from 'app.asar/dist/main' gets us to app.asar root
+  return path.resolve(__dirname, '..', '..');
+}
+
 let mainWindow: BrowserWindow | null = null;
 let serverClient: HagicoServerClient | null = null;
 let configManager: ConfigManager;
@@ -33,22 +62,24 @@ let licenseManager: LicenseManager | null = null;
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
 
-  // Determine the correct preload path
-  // In development: __dirname is 'dist/main', need to go to '../../dist/preload/index.mjs'
-  // In production: __dirname is 'dist', need to go to 'preload/index.mjs'
-  const isDev = process.env.NODE_ENV === 'development';
-  const preloadPath = isDev
-    ? path.join(__dirname, '../../dist/preload/index.mjs')
-    : path.join(__dirname, 'preload/index.mjs');
+  // Determine the correct preload path using getDistRootPath helper
+  const distRoot = getDistRootPath();
+  const appRoot = getAppRootPath();
+  const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+  const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
   console.log('[Hagicode] Using preload path:', preloadPath);
+  console.log('[Hagicode] Dist root path:', distRoot);
+  console.log('[Hagicode] App root path:', appRoot);
+  console.log('[Hagicode] Icon path:', iconPath);
+  console.log('[Hagicode] __dirname:', __dirname);
 
   mainWindow = new BrowserWindow({
     minWidth: 800,
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, isDev ? '../../resources/icon.png' : '../resources/icon.png'),
+    icon: iconPath,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -68,11 +99,21 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:36598');
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, __dirname is 'dist' inside the asar, so we need to go to 'dist/renderer'
-    const htmlPath = path.join(__dirname, 'renderer', 'index.html');
+    // In production, load from the correct renderer path
+    // The renderer is at dist/renderer/index.html
+    const htmlPath = path.join(distRoot, 'renderer', 'index.html');
     console.log('[Hagicode] Loading production build from:', htmlPath);
-    console.log('[Hagicode] __dirname:', __dirname);
     console.log('[Hagicode] Resolved absolute path:', path.resolve(htmlPath));
+
+    // Verify file exists for debugging
+    fs.access(htmlPath)
+      .then(() => console.log('[Hagicode] HTML file verified to exist'))
+      .catch((err) => console.error('[Hagicode] HTML file not found:', err));
+
+    // Enable DevTools for production to diagnose white screen issue
+    // TODO: Remove this after white screen issue is resolved
+    mainWindow.webContents.openDevTools();
+
     mainWindow.loadFile(htmlPath);
   }
 
@@ -127,11 +168,11 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   try {
     console.log('[Main] Opening Hagicode in app window:', url);
 
-    // Determine the correct preload path
-    const isDev = process.env.NODE_ENV === 'development';
-    const preloadPath = isDev
-      ? path.join(__dirname, '../../dist/preload/index.mjs')
-      : path.join(__dirname, 'preload/index.mjs');
+    // Use the same path helper for consistency
+    const distRoot = getDistRootPath();
+    const appRoot = getAppRootPath();
+    const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+    const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
     // Create a new window for Hagicode
     const hagicodeWindow = new BrowserWindow({
@@ -139,7 +180,7 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
       minHeight: 600,
       show: false,
       autoHideMenuBar: true,
-      icon: path.join(__dirname, isDev ? '../../resources/icon.png' : '../resources/icon.png'),
+      icon: iconPath,
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,
