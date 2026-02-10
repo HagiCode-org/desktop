@@ -345,5 +345,13 @@
       "title": "About License",
       "description": "Global license configuration applies to all versions of Hagicode service. Default public beta license is used."
     }
+  },
+  "blogFeed": {
+    "title": "Hagicode Blog",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "error": "Failed to load, please try again later",
+    "noArticles": "No articles available",
+    "lastUpdate": "Last updated: {{date}}"
   }
 }

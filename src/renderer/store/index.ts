@@ -7,12 +7,14 @@ import viewReducer from './slices/viewSlice';
 import packageSourceReducer from './slices/packageSourceSlice';
 import licenseReducer from './slices/licenseSlice';
 import onboardingReducer from './slices/onboardingSlice';
+import rssFeedReducer from './slices/rssFeedSlice';
 import { webServiceSaga, initializeWebServiceSaga } from './sagas/webServiceSaga';
 import { i18nSaga, initializeI18nSaga } from './sagas/i18nSaga';
 import { dependencySaga, initializeDependencySaga } from './sagas/dependencySaga';
 import { viewSaga, initializeViewSaga } from './sagas/viewSaga';
 import { packageSourceSaga, initializePackageSourceSaga } from './sagas/packageSourceSaga';
 import { licenseSaga, initializeLicenseSaga } from './sagas/licenseSaga';
+import { rssFeedSaga, initializeRSSFeedSaga } from './sagas/rssFeedSaga';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 
 // Redux logger to track all actions
@@ -36,6 +38,7 @@ export const store = configureStore({
     packageSource: packageSourceReducer,
     license: licenseReducer,
     onboarding: onboardingReducer,
+    rssFeed: rssFeedReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -76,6 +79,10 @@ store.dispatch({ type: 'license/fetch' });
 
 // Initialize onboarding (using thunk instead of saga)
 store.dispatch(checkOnboardingTrigger());
+
+// Initialize RSS feed
+sagaMiddleware.run(rssFeedSaga);
+sagaMiddleware.run(initializeRSSFeedSaga);
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;

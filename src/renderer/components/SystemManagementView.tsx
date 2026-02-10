@@ -6,6 +6,7 @@ import { Package, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
+import BlogFeedCard from './BlogFeedCard';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import type { RootState } from '../store';
@@ -217,6 +218,16 @@ export default function SystemManagementView() {
         transition={{ delay: 0.3, duration: 0.5 }}
       >
         <WebServiceStatusCard />
+      </motion.div>
+
+      {/* Blog Feed Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.5 }}
+        className="mt-6"
+      >
+        <BlogFeedCard />
       </motion.div>
 
       {/* Active Version Card */}

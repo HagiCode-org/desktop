@@ -15,6 +15,8 @@ import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { LicenseManager } from './license-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
+import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
+import type { RSSFeedItem } from './types/rss-types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -60,6 +62,7 @@ let menuManager: MenuManager | null = null;
 let npmMirrorHelper: NpmMirrorHelper | null = null;
 let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
+let rssFeedManager: RSSFeedManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -1169,6 +1172,7 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       '127.0.0.1',
       '0.0.0.0',
       'hagicode.com',
+      'docs.hagicode.com',
       'qq.com',
       'github.com',
       'qm.qq.com'
@@ -1186,8 +1190,8 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       };
     }
 
-    // Open external link
-    await shell.openExternal(url);
+    // Open external link with activate option to ensure browser window is focused
+    await shell.openExternal(url, { activate: true });
 
     return {
       success: true
@@ -1584,6 +1588,45 @@ ipcMain.handle('onboarding:reset', async () => {
   }
 });
 
+// RSS Feed IPC Handlers
+ipcMain.handle('rss-get-feed-items', async () => {
+  if (!rssFeedManager) {
+    return [];
+  }
+  try {
+    const items = await rssFeedManager.getFeedItems();
+    return items;
+  } catch (error) {
+    console.error('Failed to get RSS feed items:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('rss-refresh-feed', async () => {
+  if (!rssFeedManager) {
+    return [];
+  }
+  try {
+    const items = await rssFeedManager.refreshFeed();
+    return items;
+  } catch (error) {
+    console.error('Failed to refresh RSS feed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('rss-get-last-update', async () => {
+  if (!rssFeedManager) {
+    return null;
+  }
+  try {
+    return rssFeedManager.getLastUpdateTime();
+  } catch (error) {
+    console.error('Failed to get last RSS update time:', error);
+    return null;
+  }
+});
+
 function startStatusPolling(): void {
   if (statusPollingInterval) {
     clearInterval(statusPollingInterval);
@@ -1672,6 +1715,21 @@ app.whenReady().then(async () => {
     log.info('[App] Onboarding Manager initialized');
   }
 
+  // Initialize RSS Feed Manager
+  rssFeedManager = RSSFeedManager.getInstance(
+    {
+      feedUrl: DEFAULT_RSS_FEED_URL,
+      refreshInterval: 24 * 60 * 60 * 1000, // 24 hours
+      maxItems: 20,
+      storeKey: 'rssFeed',
+    },
+    configManager.getStore() as unknown as Store
+  );
+  log.info('[App] RSS Feed Manager initialized');
+
+  // Start auto-refresh for RSS feed
+  rssFeedManager.startAutoRefresh();
+
   // Register license sync status callback to forward to renderer
   licenseManager.onSyncStatus((status) => {
     log.info('[App] License sync status:', status);
@@ -1755,6 +1813,9 @@ app.on('before-quit', async (event) => {
     console.log('[App] Cleaning up before quit...');
     if (webServiceManager) {
       await webServiceManager.cleanup();
+    }
+    if (rssFeedManager) {
+      rssFeedManager.destroy();
     }
     destroyTray();
   } catch (error) {

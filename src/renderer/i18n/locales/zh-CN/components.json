@@ -345,5 +345,13 @@
       "title": "关于许可证",
       "description": "全局许可证配置将应用于所有版本的 Hagicode 服务。默认使用公测许可证。"
     }
+  },
+  "blogFeed": {
+    "title": "Hagicode 博客",
+    "refresh": "刷新",
+    "loading": "加载中...",
+    "error": "加载失败，请稍后重试",
+    "noArticles": "暂无文章",
+    "lastUpdate": "最后更新：{{date}}"
   }
 }

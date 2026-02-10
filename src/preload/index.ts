@@ -232,6 +232,13 @@ const electronAPI = {
     ipcRenderer.on('onboarding:service-progress', listener);
     return () => ipcRenderer.removeListener('onboarding:service-progress', listener);
   },
+
+  // RSS Feed APIs
+  rss: {
+    getFeedItems: () => ipcRenderer.invoke('rss-get-feed-items'),
+    refreshFeed: () => ipcRenderer.invoke('rss-refresh-feed'),
+    getLastUpdate: () => ipcRenderer.invoke('rss-get-last-update'),
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
