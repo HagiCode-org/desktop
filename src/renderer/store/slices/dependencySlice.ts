@@ -13,6 +13,7 @@ export enum DependencyType {
  * Single dependency item
  */
 export interface DependencyItem {
+  key: string;  // Manifest dependency key (e.g., "dotnet", "claudeCode")
   name: string;
   type: DependencyType;
   installed: boolean;
@@ -51,6 +52,7 @@ export interface DependencyState {
     show: boolean;
     dependencies: DependencyItem[];
     versionId: string;
+    context?: 'version-management' | 'onboarding';  // Context identifier
   };
 
   // New: Install progress
@@ -111,15 +113,17 @@ const dependencySlice = createSlice({
       state.error = action.payload;
     },
     // New: Install confirmation dialog actions
-    showInstallConfirm: (state, action: PayloadAction<{ dependencies: DependencyItem[]; versionId: string }>) => {
+    showInstallConfirm: (state, action: PayloadAction<{ dependencies: DependencyItem[]; versionId: string; context?: 'version-management' | 'onboarding' }>) => {
       state.installConfirm.show = true;
       state.installConfirm.dependencies = action.payload.dependencies;
       state.installConfirm.versionId = action.payload.versionId;
+      state.installConfirm.context = action.payload.context || 'version-management';
     },
     hideInstallConfirm: (state) => {
       state.installConfirm.show = false;
       state.installConfirm.dependencies = [];
       state.installConfirm.versionId = '';
+      state.installConfirm.context = 'version-management';
     },
     // New: Install progress actions
     startInstall: (state, action: PayloadAction<number>) => {
@@ -179,6 +183,9 @@ export const selectPendingDependencies = (state: { dependency: DependencyState }
 
 export const selectInstallConfirmVersionId = (state: { dependency: DependencyState }) =>
   state.dependency.installConfirm.versionId;
+
+export const selectInstallConfirmContext = (state: { dependency: DependencyState }) =>
+  state.dependency.installConfirm.context || 'version-management';
 
 // New selectors for install progress
 export const selectInstallProgress = (state: { dependency: DependencyState }) =>

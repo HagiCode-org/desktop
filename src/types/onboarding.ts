@@ -57,13 +57,11 @@ export interface OnboardingState {
   isSkipped: boolean;
   isCompleted: boolean;
   downloadProgress: DownloadProgress | null;
-  dependenciesStatus: DependencyItem[];
   serviceProgress: ServiceLaunchProgress | null;
   showSkipConfirm: boolean;
   error: string | null;
   // Idempotency flags to prevent duplicate operations
   isDownloading: boolean;
-  isInstallingDependencies: boolean;
   isStartingService: boolean;
 }
 

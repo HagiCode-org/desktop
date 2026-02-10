@@ -4,18 +4,16 @@ import {
   checkOnboardingTrigger,
   skipOnboarding,
   downloadPackage,
-  checkDependencies,
-  installDependencies,
   startService,
   completeOnboarding,
   resetOnboarding,
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
 } from '../thunks/onboardingThunks';
+import { TRIGGER_ONBOARDING_NEXT } from '../sagas/dependencySaga';
 import type {
   OnboardingState,
   DownloadProgress,
-  DependencyItem,
   ServiceLaunchProgress,
 } from '../../../types/onboarding';
 
@@ -25,13 +23,11 @@ const initialState: OnboardingState = {
   isSkipped: false,
   isCompleted: false,
   downloadProgress: null,
-  dependenciesStatus: [],
   serviceProgress: null,
   showSkipConfirm: false,
   error: null,
   // Idempotency flags
   isDownloading: false,
-  isInstallingDependencies: false,
   isStartingService: false,
 };
 
@@ -56,9 +52,6 @@ export const onboardingSlice = createSlice({
     },
     setDownloadProgress: (state, action: PayloadAction<DownloadProgress | null>) => {
       state.downloadProgress = action.payload;
-    },
-    setDependenciesStatus: (state, action: PayloadAction<DependencyItem[]>) => {
-      state.dependenciesStatus = action.payload;
     },
     setServiceProgress: (state, action: PayloadAction<ServiceLaunchProgress | null>) => {
       state.serviceProgress = action.payload;
@@ -148,41 +141,6 @@ export const onboardingSlice = createSlice({
         state.error = action.payload as string || 'Failed to download package';
       });
 
-    // checkDependencies
-    builder
-      .addCase(checkDependencies.pending, (state) => {
-        console.log('[onboardingSlice] checkDependencies pending');
-        state.error = null;
-      })
-      .addCase(checkDependencies.fulfilled, (state) => {
-        console.log('[onboardingSlice] checkDependencies fulfilled');
-      })
-      .addCase(checkDependencies.rejected, (state, action) => {
-        console.error('[onboardingSlice] checkDependencies rejected:', action.error);
-        state.error = action.payload as string || 'Failed to check dependencies';
-      });
-
-    // installDependencies
-    builder
-      .addCase(installDependencies.pending, (state) => {
-        console.log('[onboardingSlice] installDependencies pending');
-        state.error = null;
-        state.currentStep = OnboardingStep.Dependencies;
-        // Only set isInstallingDependencies if not already installing (allow React Strict Mode double-calls)
-        if (!state.isInstallingDependencies) {
-          state.isInstallingDependencies = true;
-        }
-      })
-      .addCase(installDependencies.fulfilled, (state) => {
-        console.log('[onboardingSlice] installDependencies fulfilled');
-        state.isInstallingDependencies = false;
-      })
-      .addCase(installDependencies.rejected, (state, action) => {
-        console.error('[onboardingSlice] installDependencies rejected:', action.error);
-        state.isInstallingDependencies = false;
-        state.error = action.payload as string || 'Failed to install dependencies';
-      });
-
     // startService
     builder
       .addCase(startService.pending, (state) => {
@@ -236,7 +194,6 @@ export const onboardingSlice = createSlice({
           ...initialState,
           // Reset idempotency flags
           isDownloading: false,
-          isInstallingDependencies: false,
           isStartingService: false,
         };
       });
@@ -277,6 +234,14 @@ export const onboardingSlice = createSlice({
         if (state.currentStep > OnboardingStep.Welcome) {
           state.currentStep = (state.currentStep - 1) as OnboardingStep;
         }
+      })
+      // Handle dependency installation completion in onboarding context
+      .addCase(TRIGGER_ONBOARDING_NEXT, (state) => {
+        console.log('[onboardingSlice] Triggering next step after dependency installation');
+        // Only proceed if we're in the Dependencies step
+        if (state.currentStep === OnboardingStep.Dependencies) {
+          state.currentStep = OnboardingStep.Launch;
+        }
       });
   },
 });
@@ -289,7 +254,6 @@ export const {
   setError,
   clearError,
   setDownloadProgress,
-  setDependenciesStatus,
   setServiceProgress,
   nextStep,
   previousStep,
@@ -302,14 +266,13 @@ export const selectCurrentStep = (state: { onboarding: OnboardingState }) => sta
 export const selectIsSkipped = (state: { onboarding: OnboardingState }) => state.onboarding.isSkipped;
 export const selectIsCompleted = (state: { onboarding: OnboardingState }) => state.onboarding.isCompleted;
 export const selectDownloadProgress = (state: { onboarding: OnboardingState }) => state.onboarding.downloadProgress;
-export const selectDependenciesStatus = (state: { onboarding: OnboardingState }) => state.onboarding.dependenciesStatus;
 export const selectServiceProgress = (state: { onboarding: OnboardingState }) => state.onboarding.serviceProgress;
 export const selectShowSkipConfirm = (state: { onboarding: OnboardingState }) => state.onboarding.showSkipConfirm;
 export const selectOnboardingError = (state: { onboarding: OnboardingState }) => state.onboarding.error;
 
 // Computed selectors
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, dependenciesStatus, serviceProgress } = state.onboarding;
+  const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
@@ -317,9 +280,8 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
     case OnboardingStep.Dependencies:
-      // Allow proceeding once dependencies have been checked (not necessarily installed)
-      // This lets users see the dependency list and choose to install or skip
-      return dependenciesStatus.length > 0;
+      // Allow proceeding - dependencies are managed through dependencySlice
+      return downloadProgress?.version !== undefined;
     case OnboardingStep.Launch:
       return serviceProgress?.phase === 'running';
     default:

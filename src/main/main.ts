@@ -879,13 +879,36 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
       };
     }
 
-    // Parse dependencies
-    const dependencies = manifestReader.parseDependencies(manifest);
+    // Parse all dependencies from manifest
+    const allDependencies = manifestReader.parseDependencies(manifest);
 
-    // Install using dependency manager
+    // Check which dependencies are actually missing
+    const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies);
+
+    // Filter to only install dependencies that are not installed or have version mismatch
+    const missingDependencies = allDependencies.filter((dep) => {
+      const checkedDep = checkedDependencies.find(cd => cd.name === dep.name);
+      // Include dependency if it's not installed, has version mismatch, or we couldn't check it
+      return !checkedDep || !checkedDep.installed || checkedDep.versionMismatch;
+    });
+
+    log.info('[Main] Total dependencies:', allDependencies.length, 'Missing:', missingDependencies.length);
+
+    if (missingDependencies.length === 0) {
+      log.info('[Main] All dependencies are already installed');
+      return {
+        success: true,
+        result: {
+          success: [],
+          failed: []
+        }
+      };
+    }
+
+    // Install only missing dependencies using dependency manager
     const result = await dependencyManager.installFromManifest(
       manifest,
-      dependencies,
+      missingDependencies,
       (progress) => {
         // Send progress update to renderer
         mainWindow?.webContents.send('dependency:install-progress', progress);

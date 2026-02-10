@@ -46,13 +46,28 @@
   },
   "dependencies": {
     "title": "Install System Dependencies",
+    "subtitle": "Hagicode requires certain system dependencies to function properly.",
     "description": "Check the installation status of system dependencies",
     "installButton": "Install Dependencies",
     "status": {
       "installed": "Installed",
       "installing": "Installing...",
       "pending": "Pending",
-      "error": "Failed"
+      "error": "Failed",
+      "notInstalled": "Not Installed",
+      "versionMismatch": "Version Mismatch",
+      "checking": "Checking...",
+      "ready": "Ready"
+    },
+    "actions": {
+      "install": "Install",
+      "installing": "Installing...",
+      "refresh": "Refresh",
+      "visitWebsite": "Visit Official Website"
+    },
+    "details": {
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version"
     },
     "overallProgress": "Overall Progress",
     "installing": {
@@ -66,6 +81,22 @@
     "error": {
       "message": "Some dependencies failed to install. Please install them manually and continue."
     }
+  },
+  "depInstallConfirm": {
+    "title": "Install Missing Dependencies",
+    "installingTitle": "Installing Dependencies",
+    "description": "Detected {{count}} missing dependency",
+    "description_other": "Detected {{count}} missing dependencies",
+    "requiredVersion": "Required Version",
+    "permissionWarning": "Installing these dependencies may require administrator privileges.",
+    "preparing": "Preparing installation...",
+    "cancel": "Cancel",
+    "confirm": "Install Dependencies",
+    "installing": "Installing...",
+    "errorsOccurred": "dependencies failed to install",
+    "success": "All dependencies installed successfully",
+    "partialSuccess": "{{success}} dependencies installed successfully, {{failed}} failed",
+    "error": "Dependency installation failed"
   },
   "launch": {
     "title": "Start Service",
@@ -113,5 +144,26 @@
     "reenableNote": "If this is your first time using Hagicode Desktop, we recommend completing the setup process.",
     "cancel": "Cancel",
     "confirm": "Skip Setup"
+  },
+  "dependencyManagement": {
+    "title": "Dependency Management",
+    "description": "View and manage system dependencies",
+    "status": {
+      "installed": "Installed",
+      "notInstalled": "Not Installed",
+      "versionMismatch": "Version Mismatch",
+      "checking": "Checking..."
+    },
+    "actions": {
+      "install": "Install",
+      "installing": "Installing...",
+      "refresh": "Refresh",
+      "visitWebsite": "Visit Official Website"
+    },
+    "details": {
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version"
+    },
+    "noDependencies": "No dependencies detected"
   }
 }

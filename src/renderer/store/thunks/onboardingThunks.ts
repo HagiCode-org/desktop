@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import type { DownloadProgress, DependencyItem, ServiceLaunchProgress } from '../../../types/onboarding';
+import type { DownloadProgress, ServiceLaunchProgress } from '../../../types/onboarding';
 
 // Action types
 export const CHECK_ONBOARDING_TRIGGER = 'onboarding/checkTrigger';
@@ -47,44 +47,6 @@ export const downloadPackage = createAsyncThunk(
 
       if (!result.success) {
         return rejectWithValue(result.error || 'Download failed');
-      }
-
-      return result;
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const checkDependencies = createAsyncThunk(
-  'onboarding/checkDependencies',
-  async (versionId: string, { rejectWithValue }) => {
-    try {
-      console.log('[OnboardingThunks] Checking dependencies for version:', versionId);
-
-      const result = await window.electronAPI.checkOnboardingDependencies(versionId);
-
-      if (!result.success) {
-        return rejectWithValue(result.error || 'Check dependencies failed');
-      }
-
-      return result;
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const installDependencies = createAsyncThunk(
-  'onboarding/installDependencies',
-  async (versionId: string, { rejectWithValue }) => {
-    try {
-      console.log('[OnboardingThunks] Installing dependencies for version:', versionId);
-
-      const result = await window.electronAPI.installDependencies(versionId);
-
-      if (!result.success) {
-        return rejectWithValue(result.error || 'Install dependencies failed');
       }
 
       return result;

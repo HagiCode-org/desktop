@@ -1,0 +1,103 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ################################################################################
+  # PR Quality Checks Job
+  ################################################################################
+  pr-checks:
+    name: PR Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npm run build:tsc:check
+
+      - name: Production build
+        run: npm run build:prod
+
+      - name: Smoke test
+        run: npm run smoke-test
+
+      - name: Check status summary
+        if: always()
+        run: |
+          echo "::notice::All PR checks passed successfully!"
+
+  ################################################################################
+  # Check Summary Job
+  ################################################################################
+  check-summary:
+    name: Check Summary
+    needs: pr-checks
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check status
+        run: |
+          echo "PR Checks: ${{ needs.pr-checks.result }}"
+
+      - name: Checks failed notification
+        if: needs.pr-checks.result == 'failure'
+        run: |
+          echo "::error::PR checks failed. Please fix the issues before merging."
+
+      - name: Determine overall status
+        id: status
+        if: always()
+        run: |
+          check_status="${{ needs.pr-checks.result }}"
+
+          echo "PR Checks: ${check_status}"
+
+          if [ "${check_status}" == "failure" ]; then
+            echo "overall=failed" >> $GITHUB_OUTPUT
+            echo "status_icon=❌" >> $GITHUB_OUTPUT
+            echo "status_text=失败" >> $GITHUB_OUTPUT
+          else
+            echo "overall=success" >> $GITHUB_OUTPUT
+            echo "status_icon=✅" >> $GITHUB_OUTPUT
+            echo "status_text=通过" >> $GITHUB_OUTPUT
+          fi
+
+      - name: PR check summary
+        if: always()
+        run: |
+          echo "### PR Checks ${{ steps.status.outputs.status_icon }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**状态:** ${{ steps.status.outputs.status_text }}" >> $GITHUB_STEP_SUMMARY
+          echo "**分支:** ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**提交:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**触发者:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Checks passed notification
+        if: needs.pr-checks.result == 'success'
+        run: |
+          echo "::notice::PR checks passed! This PR is ready for merge."

@@ -22,6 +22,7 @@ export enum DependencyType {
  * Result of a dependency check
  */
 export interface DependencyCheckResult {
+  key: string;  // Manifest dependency key (e.g., "dotnet", "claudeCode")
   name: string;
   type: DependencyType;
   installed: boolean;
@@ -138,6 +139,7 @@ export class DependencyManager {
         console.error(`[DependencyManager] Failed to check dependency ${dep.name}:`, error);
         // Add failed check result
         results.push({
+          key: dep.key,
           name: dep.name,
           type: this.mapDependencyType(dep.key, dep.type),
           installed: false,
@@ -156,6 +158,7 @@ export class DependencyManager {
    */
   private async checkSingleDependency(dep: ParsedDependency): Promise<DependencyCheckResult> {
     const result: DependencyCheckResult = {
+      key: dep.key,
       name: dep.name,
       type: this.mapDependencyType(dep.key, dep.type),
       installed: false,
@@ -326,6 +329,7 @@ export class DependencyManager {
   async checkDotNetRuntime(): Promise<DependencyCheckResult> {
     const requiredVersion = '8.0.0';
     const result: DependencyCheckResult = {
+      key: 'dotnet',
       name: '.NET Runtime (ASP.NET Core)',
       type: DependencyType.DotNetRuntime,
       installed: false,
@@ -499,6 +503,7 @@ export class DependencyManager {
     }
 
     const result: DependencyCheckResult = {
+      key: packageKey,
       name: pkg.name,
       type: packageKey === 'claude_code' ? DependencyType.ClaudeCode : DependencyType.OpenSpec,
       installed: false,

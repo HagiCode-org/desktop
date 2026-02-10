@@ -46,13 +46,28 @@
   },
   "dependencies": {
     "title": "安装系统依赖项",
+    "subtitle": "Hagicode 需要某些系统依赖项才能正常运行。",
     "description": "检查以下系统依赖项的安装状态",
     "installButton": "安装依赖项",
     "status": {
       "installed": "已安装",
       "installing": "安装中...",
       "pending": "待安装",
-      "error": "安装失败"
+      "error": "安装失败",
+      "notInstalled": "未安装",
+      "versionMismatch": "版本不匹配",
+      "checking": "检测中...",
+      "ready": "可以使用"
+    },
+    "actions": {
+      "install": "安装",
+      "installing": "安装中...",
+      "refresh": "刷新",
+      "visitWebsite": "访问官网"
+    },
+    "details": {
+      "currentVersion": "当前版本",
+      "requiredVersion": "要求版本"
     },
     "overallProgress": "总体进度",
     "installing": {
@@ -66,6 +81,22 @@
     "error": {
       "message": "部分依赖项安装失败，请手动安装后继续。"
     }
+  },
+  "depInstallConfirm": {
+    "title": "安装缺失依赖",
+    "installingTitle": "正在安装依赖",
+    "description": "检测到 {{count}} 个缺失的依赖项",
+    "description_other": "检测到 {{count}} 个缺失的依赖项",
+    "requiredVersion": "要求版本",
+    "permissionWarning": "安装这些依赖可能需要管理员权限。",
+    "preparing": "准备安装...",
+    "cancel": "取消",
+    "confirm": "安装依赖",
+    "installing": "正在安装...",
+    "errorsOccurred": "个依赖安装失败",
+    "success": "所有依赖安装成功",
+    "partialSuccess": "{{success}} 个依赖安装成功，{{failed}} 个失败",
+    "error": "依赖安装失败"
   },
   "launch": {
     "title": "启动服务",
@@ -113,5 +144,26 @@
     "reenableNote": "如果您是第一次使用 Hagicode Desktop，建议完成引导流程。",
     "cancel": "取消",
     "confirm": "跳过引导"
+  },
+  "dependencyManagement": {
+    "title": "依赖项管理",
+    "description": "查看和管理系统依赖项",
+    "status": {
+      "installed": "已安装",
+      "notInstalled": "未安装",
+      "versionMismatch": "版本不匹配",
+      "checking": "检测中..."
+    },
+    "actions": {
+      "install": "安装",
+      "installing": "安装中...",
+      "refresh": "刷新",
+      "visitWebsite": "访问官网"
+    },
+    "details": {
+      "currentVersion": "当前版本",
+      "requiredVersion": "要求版本"
+    },
+    "noDependencies": "未检测到依赖"
   }
 }

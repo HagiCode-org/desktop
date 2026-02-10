@@ -142,37 +142,51 @@ jobs:
           ACCOUNT="${{ steps.sas_info.outputs.account }}"
           CONTAINER="${{ steps.sas_info.outputs.container }}"
           SAS_TOKEN=$(cat /tmp/sas_token.txt)
+          RELEASE_TAG="${{ steps.release_info.outputs.tag }}"
 
           echo "Generating index.json..."
 
+          # Get GitHub Release published_at for fallback
+          echo "Fetching GitHub Release publish time..."
+          PUBLISHED_AT=$(gh release view "${RELEASE_TAG}" --json publishedAt -q .publishedAt)
+
           # Get all blobs and organize by version
+          # Fixed: Correctly extract lastModified from properties.lastModified
           BLOBS=$(az storage blob list \
             --account-name "${ACCOUNT}" \
             --container-name "${CONTAINER}" \
             --sas-token "${SAS_TOKEN}" \
-            --query "[].{name:name, lastModified:lastModified, size:properties.contentLength}" \
+            --query "[].{name:name, lastModified:properties.lastModified, size:properties.contentLength}" \
             --output json)
 
           # Create JSON index with files organized by version
-          INDEX_JSON=$(echo "$BLOBS" | jq '{
+          # Use GitHub Release published_at as fallback if lastModified is null/empty
+          INDEX_JSON=$(echo "$BLOBS" | jq --arg fallback_time "$PUBLISHED_AT" '{
             updatedAt: now,
             versions: [
               .[]
               | select(.name | contains("index.json") | not)
               | {
-                version: (.name | split("/")[0]),
-                name: (.name | split("/")[1:][-1]),
-                path: .name,
-                size: .size,
-                lastModified: .lastModified
-              }
+                  version: (.name | split("/")[0]),
+                  name: (.name | split("/")[1:][-1]),
+                  path: .name,
+                  size: .size,
+                  lastModified: (.lastModified // $fallback_time)
+                }
             ]
             | group_by(.version)
             | map({
-              version: .[0].version,
-              files: [.[].name],
-              assets: [.[] | {name: .name, path: .path, size: .size, lastModified: .lastModified}]
-            })
+                version: .[0].version,
+                files: [.[].name],
+                assets: [
+                  .[] | {
+                    name: .name,
+                    path: .path,
+                    size: .size,
+                    lastModified: (.lastModified // $fallback_time)
+                  }
+                ]
+              })
             | sort_by(.version) | reverse
           }')
 
@@ -232,3 +246,71 @@ jobs:
           echo "  3. SAS token has not expired"
           echo "  4. Container exists in Azure Storage"
           exit 1
+
+      - name: Export outputs
+        if: always()
+        run: |
+          # Export outputs for notification job
+          ACCOUNT="${{ steps.sas_info.outputs.account }}"
+          VERSION="${{ steps.release_info.outputs.tag }}"
+
+          # Count uploaded files
+          FILE_COUNT=$(ls -1 ./release-assets/* 2>/dev/null | wc -l)
+
+          # Build Azure Storage path
+          BLOB_PATH="https://${ACCOUNT}.blob.core.windows.net/${{ steps.sas_info.outputs.container }}/${VERSION}/"
+
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+          echo "file_count=${FILE_COUNT}" >> $GITHUB_OUTPUT
+          echo "blob_path=${BLOB_PATH}" >> $GITHUB_OUTPUT
+          echo "storage_account=${ACCOUNT}" >> $GITHUB_OUTPUT
+
+          echo "Exported outputs:"
+          echo "  tag: ${VERSION}"
+          echo "  file_count: ${FILE_COUNT}"
+          echo "  blob_path: ${BLOB_PATH}"
+          echo "  storage_account: ${ACCOUNT}"
+
+  azure-sync-notification:
+    name: Azure Sync Notification
+    needs: sync-to-azure
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Determine sync status
+        id: status
+        run: |
+          sync_result="${{ needs.sync-to-azure.result }}"
+
+          if [ "${sync_result}" == "success" ]; then
+            echo "status_icon=✅" >> $GITHUB_OUTPUT
+            echo "status_text=成功" >> $GITHUB_OUTPUT
+            echo "status_verb=已成功同步到" >> $GITHUB_OUTPUT
+          else
+            echo "status_icon=❌" >> $GITHUB_OUTPUT
+            echo "status_text=失败" >> $GITHUB_OUTPUT
+            echo "status_verb=同步到" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Feishu
+        uses: HagiCode-org/haginotifier@v1.0.0
+        with:
+          message: |
+            **Azure 同步${{ steps.status.outputs.status_text }}**
+
+            发布资源${{ steps.status.outputs.status_verb }} Azure Storage
+
+            版本: ${{ needs.sync-to-azure.outputs.tag }}
+            上传文件: ${{ needs.sync-to-azure.outputs.file_count }} 个
+            存储路径: ${{ needs.sync-to-azure.outputs.blob_path }}
+
+            提交: `${{ github.sha }}`
+            触发者: ${{ github.actor }}
+
+            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          msg_type: 'post'
+          title: 'Azure 同步${{ steps.status.outputs.status_text }} ${{ steps.status.outputs.status_icon }}'
+        secrets: inherit

@@ -22,6 +22,7 @@ export const INSTALL_DEPENDENCY = 'dependency/installDependency';
 export const INSTALL_FROM_MANIFEST = 'dependency/installFromManifest';
 export const INSTALL_SINGLE_DEPENDENCY = 'dependency/installSingleDependency';
 export const CHECK_DEPENDENCIES_AFTER_INSTALL = 'dependency/checkAfterInstall';
+export const TRIGGER_ONBOARDING_NEXT = 'dependency/triggerOnboardingNext';
 
 /**
  * Worker saga: Fetch dependencies status
@@ -76,22 +77,21 @@ function* installDependency(action: { type: string; payload: DependencyType }) {
 /**
  * Worker saga: Check dependencies after package installation
  */
-function* checkDependenciesAfterInstall(action: { type: string; payload: string }) {
+function* checkDependenciesAfterInstall(action: { type: string; payload: { versionId: string; context?: 'version-management' | 'onboarding' } }) {
   try {
-    const versionId = action.payload;
+    const { versionId, context = 'version-management' } = action.payload;
 
-    // Get missing dependencies
+    // Get missing dependencies to populate the dependency list
     const missingDeps: DependencyItem[] = yield call(
       window.electronAPI.getMissingDependencies,
       versionId
     );
 
-    if (missingDeps.length > 0) {
-      // Show install confirmation dialog
-      yield put(showInstallConfirm({
-        dependencies: missingDeps,
-        versionId,
-      }));
+    // Don't show confirmation dialog - the UI now has direct install buttons
+    // Just store the dependencies in state for the UI to display
+    if (missingDeps.length > 0 && context === 'onboarding') {
+      // For onboarding, we already display dependencies with install buttons
+      // No need to show a separate confirmation dialog
     }
   } catch (error) {
     console.error('Failed to check dependencies after install:', error);
@@ -105,8 +105,9 @@ function* installFromManifest(action: { type: string; payload: string }) {
   try {
     const versionId = action.payload;
 
-    // Get pending dependencies
-    const { dependencies } = yield select((state: any) => state.dependency.installConfirm);
+    // Get pending dependencies and context
+    const installConfirmState = yield select((state: any) => state.dependency.installConfirm);
+    const { dependencies, context } = installConfirmState;
 
     // Start installation
     yield put(startInstall(dependencies.length));
@@ -148,6 +149,11 @@ function* installFromManifest(action: { type: string; payload: string }) {
         toast.success('依赖安装成功', {
           description: '所有依赖已成功安装',
         });
+      }
+
+      // Trigger onboarding next step if in onboarding context and all dependencies installed successfully
+      if (context === 'onboarding' && (!result.result?.failed || result.result.failed.length === 0)) {
+        yield put({ type: TRIGGER_ONBOARDING_NEXT });
       }
     } else {
       yield put(completeInstall({

@@ -9,11 +9,10 @@ import {
   selectCanGoPrevious,
   selectDownloadProgress,
   setDownloadProgress,
-  setDependenciesStatus,
   setServiceProgress,
 } from '../../store/slices/onboardingSlice';
 import { OnboardingStep } from '../../../types/onboarding';
-import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage, checkDependencies, installDependencies } from '../../store/thunks/onboardingThunks';
+import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import PackageDownload from './steps/PackageDownload';
 import DependencyInstaller from './steps/DependencyInstaller';
@@ -23,7 +22,7 @@ import OnboardingActions from './OnboardingActions';
 import SkipConfirmDialog from './SkipConfirmDialog';
 import type { RootState } from '../../store';
 import type { AppDispatch } from '../../store';
-import type { DownloadProgress, DependencyItem, ServiceLaunchProgress } from '../../../types/onboarding';
+import type { DownloadProgress, ServiceLaunchProgress } from '../../../types/onboarding';
 
 interface OnboardingWizardProps {
   onComplete?: () => void;
@@ -41,11 +40,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [downloadedVersion, setDownloadedVersion] = useState<string | null>(null);
-  const [dependenciesInstalling, setDependenciesInstalling] = useState(false);
   const [downloadCompleted, setDownloadCompleted] = useState(false);
-
-  // Ref to track if we've already checked dependencies for the current version
-  const hasCheckedDependenciesRef = useRef(false);
 
   // Set up IPC listeners for progress updates
   useEffect(() => {
@@ -66,12 +61,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       }
     });
 
-    // Dependency progress listener
-    const unsubscribeDependencyProgress = window.electronAPI.onDependencyProgress((status: DependencyItem[]) => {
-      console.log('[OnboardingWizard] Dependency progress:', status);
-      dispatch(setDependenciesStatus(status));
-    });
-
     // Service progress listener
     const unsubscribeServiceProgress = window.electronAPI.onServiceProgress((progress: ServiceLaunchProgress) => {
       console.log('[OnboardingWizard] Service progress:', progress);
@@ -81,34 +70,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     return () => {
       console.log('[OnboardingWizard] Cleaning up IPC listeners');
       unsubscribeDownloadProgress();
-      unsubscribeDependencyProgress();
       unsubscribeServiceProgress();
     };
   }, [isActive, dispatch]);
-
-  // Check dependencies status when entering Dependencies step (without installing)
-  useEffect(() => {
-    if (currentStep === OnboardingStep.Dependencies && downloadedVersion && !dependenciesInstalling && downloadCompleted) {
-      // Only check once per version change (reset when version changes)
-      if (!hasCheckedDependenciesRef.current) {
-        console.log('[OnboardingWizard] Entered Dependencies step, checking dependencies for:', downloadedVersion);
-        // Add a delay to ensure the version is fully installed and registered in VersionManager
-        const timer = setTimeout(() => {
-          setDependenciesInstalling(true);
-          dispatch(checkDependencies(downloadedVersion));
-        }, 1000); // Increased from 500ms to 1000ms for better reliability
-
-        hasCheckedDependenciesRef.current = true;
-
-        return () => clearTimeout(timer);
-      }
-    }
-
-    // Reset the ref when we leave the Dependencies step
-    if (currentStep !== OnboardingStep.Dependencies) {
-      hasCheckedDependenciesRef.current = false;
-    }
-  }, [currentStep, downloadedVersion, dependenciesInstalling, downloadCompleted, dispatch]);
 
   // Debug logging for step changes
   useEffect(() => {
