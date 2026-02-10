@@ -81,7 +81,25 @@ export function DependencyManagementCard({
     ? dependencies.filter(dep => !dep.installed || dep.versionMismatch)
     : dependencies;
 
+  // Count missing and version mismatched dependencies
+  const missingCount = filteredDependencies.filter(dep => !dep.installed).length;
+  const mismatchCount = filteredDependencies.filter(dep => dep.installed && dep.versionMismatch).length;
+
   const hasMissingDependencies = filteredDependencies.some(dep => !dep.installed || dep.versionMismatch);
+
+  // Get appropriate install message based on dependency status
+  const getInstallMessage = () => {
+    if (missingCount > 0 && mismatchCount > 0) {
+      return t('depInstallConfirm.mixedMissingMessage', {
+        missing: missingCount,
+        mismatch: mismatchCount
+      });
+    } else if (mismatchCount > 0) {
+      return t('depInstallConfirm.versionMismatchOnlyMessage', { count: mismatchCount });
+    } else {
+      return t('depInstallConfirm.description', { count: missingCount });
+    }
+  };
 
   // Handle installing a single dependency
   const handleInstallSingle = (depKey: string) => {
@@ -208,7 +226,10 @@ export function DependencyManagementCard({
                           ) : (
                             <>
                               <Download className="w-4 h-4" />
-                              {t('dependencyManagement.actions.install')}
+                              {dep.installed && dep.versionMismatch
+                                ? t('dependencyManagement.actions.upgrade')
+                                : t('dependencyManagement.actions.install')
+                              }
                             </>
                           )}
                         </button>
@@ -227,9 +248,14 @@ export function DependencyManagementCard({
           {/* One-click install button for all missing dependencies */}
           {hasMissingDependencies && installingDeps.size === 0 && (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <p className="text-sm text-foreground mb-3">
-                {t('depInstallConfirm.description', { count: filteredDependencies.length })}
+              <p className="text-sm text-foreground mb-2">
+                {getInstallMessage()}
               </p>
+              {mismatchCount > 0 && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('depInstallConfirm.upgradeNote')}
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={handleInstallAll}

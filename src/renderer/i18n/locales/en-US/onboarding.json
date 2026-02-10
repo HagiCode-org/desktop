@@ -61,6 +61,7 @@
     },
     "actions": {
       "install": "Install",
+      "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
       "visitWebsite": "Visit Official Website"
@@ -87,6 +88,12 @@
     "installingTitle": "Installing Dependencies",
     "description": "Detected {{count}} missing dependency",
     "description_other": "Detected {{count}} missing dependencies",
+    "versionMismatchNote": "Some dependencies have incorrect versions and need to be upgraded.",
+    "mixedMissingMessage": "Detected {{missing}} missing and {{mismatch}} version mismatched dependency",
+    "mixedMissingMessage_other": "Detected {{missing}} missing and {{mismatch}} version mismatched dependencies",
+    "versionMismatchOnlyMessage": "Detected {{count}} version mismatched dependency",
+    "versionMismatchOnlyMessage_other": "Detected {{count}} version mismatched dependencies",
+    "upgradeNote": "Version mismatched dependencies will be upgraded to the required version.",
     "requiredVersion": "Required Version",
     "permissionWarning": "Installing these dependencies may require administrator privileges.",
     "preparing": "Preparing installation...",
@@ -156,6 +163,7 @@
     },
     "actions": {
       "install": "Install",
+      "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
       "visitWebsite": "Visit Official Website"
