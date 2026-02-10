@@ -8,6 +8,9 @@ on:
         description: 'Release tag to sync'
         required: true
         type: string
+    secrets:
+      FEISHU_WEBHOOK_URL:
+        required: true
   workflow_dispatch:
     inputs:
       release_tag:
@@ -313,4 +316,5 @@ jobs:
             [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           msg_type: 'post'
           title: 'Azure 同步${{ steps.status.outputs.status_text }} ${{ steps.status.outputs.status_icon }}'
-        secrets: inherit
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
