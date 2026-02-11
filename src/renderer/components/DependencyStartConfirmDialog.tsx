@@ -17,8 +17,8 @@ import {
   selectWebServiceOperating,
 } from '../store/slices/webServiceSlice';
 import {
-  confirmStartWithWarningAction,
-} from '../store/sagas/webServiceSaga';
+  confirmStartWithWarning,
+} from '../store/thunks/webServiceThunks';
 import type { DependencyItem } from '../store/slices/webServiceSlice';
 
 export default function DependencyStartConfirmDialog() {
@@ -33,7 +33,7 @@ export default function DependencyStartConfirmDialog() {
   };
 
   const handleConfirm = () => {
-    dispatch(confirmStartWithWarningAction());
+    dispatch(confirmStartWithWarning());
   };
 
   const getDependencyIcon = (dep: DependencyItem) => {

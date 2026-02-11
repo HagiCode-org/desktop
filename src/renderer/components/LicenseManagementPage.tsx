@@ -8,7 +8,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { SAVE_LICENSE } from '../store/sagas/licenseSaga';
+import { saveLicense } from '../store/thunks/licenseThunks';
 import {
   selectLicense,
   selectLicenseLoading,
@@ -85,7 +85,7 @@ export default function LicenseManagementPage() {
       return;
     }
 
-    dispatch({ type: SAVE_LICENSE, payload: licenseKey.trim() });
+    dispatch(saveLicense(licenseKey.trim()));
     setIsDirty(false);
   };
 

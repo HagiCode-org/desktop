@@ -1,5 +1,4 @@
 import { configureStore } from '@reduxjs/toolkit';
-import createSagaMiddleware from 'redux-saga';
 import webServiceReducer from './slices/webServiceSlice';
 import i18nReducer from './slices/i18nSlice';
 import dependencyReducer from './slices/dependencySlice';
@@ -8,13 +7,18 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import licenseReducer from './slices/licenseSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
-import { webServiceSaga, initializeWebServiceSaga } from './sagas/webServiceSaga';
-import { i18nSaga, initializeI18nSaga } from './sagas/i18nSaga';
-import { dependencySaga, initializeDependencySaga } from './sagas/dependencySaga';
-import { viewSaga, initializeViewSaga } from './sagas/viewSaga';
-import { packageSourceSaga, initializePackageSourceSaga } from './sagas/packageSourceSaga';
-import { licenseSaga, initializeLicenseSaga } from './sagas/licenseSaga';
-import { rssFeedSaga, initializeRSSFeedSaga } from './sagas/rssFeedSaga';
+import listenerMiddleware from './listenerMiddleware';
+import { setProcessInfo } from './slices/webServiceSlice';
+import { updateWebServiceUrl } from './slices/viewSlice';
+
+// Import thunks for initialization
+import { initializeI18n } from './thunks/i18nThunks';
+import { initializeView } from './thunks/viewThunks';
+import { initializeLicense } from './thunks/licenseThunks';
+import { initializePackageSource } from './thunks/packageSourceThunks';
+import { initializeWebService } from './thunks/webServiceThunks';
+import { initializeDependency } from './thunks/dependencyThunks';
+import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 
 // Redux logger to track all actions
@@ -24,9 +28,6 @@ const reduxLogger = (store) => (next) => (action) => {
   }
   return next(action);
 };
-
-// Create saga middleware
-const sagaMiddleware = createSagaMiddleware();
 
 // Configure store
 export const store = configureStore({
@@ -43,46 +44,110 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore these action types
-        ignoredActions: ['redux-saga/SAGA_TASK', 'webService/startSaga', 'webService/stopSaga'],
+        // Ignore these action types (for listener middleware callbacks)
+        ignoredActions: [],
       },
-    }).concat(reduxLogger).concat(sagaMiddleware),
+    }).concat(reduxLogger).concat(listenerMiddleware.middleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 
-// Run the root saga
-sagaMiddleware.run(webServiceSaga);
+// Set up listener middleware for state change monitoring
+// This replaces the saga event watching capabilities
 
-// Initialize data on startup
-sagaMiddleware.run(initializeWebServiceSaga);
+// Listen for web service status changes and update URL automatically
+listenerMiddleware.startListening({
+  predicate: (action) => action.type === 'webService/setProcessInfo',
+  effect: (action, listenerApi) => {
+    const state = listenerApi.getState();
+    const currentView = state.view.currentView;
+    const payload = action.payload as any;
+
+    // If currently on web view, update the URL when service status changes
+    if (currentView === 'web' && payload.url) {
+      listenerApi.dispatch(updateWebServiceUrl(payload.url));
+    }
+  },
+});
+
+// Listen for dependency check after install trigger
+listenerMiddleware.startListening({
+  predicate: (action) => action.type === 'webService/checkDependenciesAfterInstall',
+  effect: async (action, listenerApi) => {
+    const payload = action.payload as { versionId: string };
+    // Check for missing dependencies
+    const missingDeps = await window.electronAPI.getMissingDependencies(payload.versionId);
+    if (missingDeps.length > 0) {
+      listenerApi.dispatch({
+        type: 'dependency/fetchDependenciesSuccess',
+        payload: missingDeps,
+      });
+    }
+  },
+});
+
+// Initialize data on startup using thunks instead of sagas
 
 // Initialize i18n
-sagaMiddleware.run(i18nSaga);
-store.dispatch({ type: 'i18n/initialize' });
+store.dispatch(initializeI18n());
 
 // Initialize dependencies
-sagaMiddleware.run(dependencySaga);
-store.dispatch({ type: 'dependency/fetchDependencies' });
+store.dispatch(initializeDependency());
 
 // Initialize view
-sagaMiddleware.run(viewSaga);
-store.dispatch({ type: 'view/initialize' });
+store.dispatch(initializeView());
 
 // Initialize package source
-sagaMiddleware.run(packageSourceSaga);
-store.dispatch({ type: 'packageSource/loadConfig' });
-store.dispatch({ type: 'packageSource/loadAllConfigs' });
+store.dispatch(initializePackageSource());
 
 // Initialize license
-sagaMiddleware.run(licenseSaga);
-store.dispatch({ type: 'license/fetch' });
+store.dispatch(initializeLicense());
 
 // Initialize onboarding (using thunk instead of saga)
 store.dispatch(checkOnboardingTrigger());
 
 // Initialize RSS feed
-sagaMiddleware.run(rssFeedSaga);
-sagaMiddleware.run(initializeRSSFeedSaga);
+store.dispatch(initializeRSSFeed());
+
+// Initialize web service (must be last as it may depend on other modules)
+store.dispatch(initializeWebService());
+
+// Set up main process event listeners for real-time updates
+// These replace the saga fork watchers
+
+// Listen for web service status changes from main process
+if (typeof window !== 'undefined') {
+  window.electronAPI.onActiveVersionChanged?.((version: any) => {
+    store.dispatch({ type: 'webService/setActiveVersion', payload: version });
+    console.log('Active version changed:', version);
+  });
+
+  window.electronAPI.onWebServiceStatusChange?.((status: any) => {
+    store.dispatch(setProcessInfo(status));
+    console.log('Web service status changed:', status);
+  });
+
+  // Set up polling as backup for web service status
+  setInterval(async () => {
+    try {
+      const status = await window.electronAPI.getWebServiceStatus();
+      store.dispatch(setProcessInfo(status));
+    } catch (error) {
+      console.error('Watch web service status error:', error);
+    }
+  }, 5000); // Poll every 5 seconds
+
+  // Listen for package install progress
+  window.electronAPI.onPackageInstallProgress?.((progress: any) => {
+    console.log('Package install progress:', progress);
+    store.dispatch({ type: 'webService/setInstallProgress', payload: progress });
+  });
+
+  // Listen for version dependency warnings
+  window.electronAPI.onVersionDependencyWarning?.((warning: { missing: any[] }) => {
+    console.log('Version dependency warning:', warning);
+    store.dispatch({ type: 'webService/showStartConfirmDialog', payload: warning.missing });
+  });
+}
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;

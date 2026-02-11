@@ -10,7 +10,7 @@ import { ConfigManager } from './config.js';
 import { PCodeWebServiceManager, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
 import { MenuManager } from './menu-manager.js';
-import { NpmMirrorHelper } from './npm-mirror-helper.js';
+import { RegionDetector } from './region-detector.js';
 import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { LicenseManager } from './license-manager.js';
@@ -59,7 +59,7 @@ let versionManager: VersionManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
-let npmMirrorHelper: NpmMirrorHelper | null = null;
+let regionDetector: RegionDetector | null = null;
 let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
@@ -90,6 +90,7 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      devTools: !app.isPackaged,
     },
   });
 
@@ -114,10 +115,6 @@ function createWindow(): void {
     fs.access(htmlPath)
       .then(() => console.log('[Hagicode] HTML file verified to exist'))
       .catch((err) => console.error('[Hagicode] HTML file not found:', err));
-
-    // Enable DevTools for production to diagnose white screen issue
-    // TODO: Remove this after white screen issue is resolved
-    mainWindow.webContents.openDevTools();
 
     mainWindow.loadFile(htmlPath);
   }
@@ -191,6 +188,7 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
+        devTools: !app.isPackaged,
       },
     });
 
@@ -517,37 +515,26 @@ ipcMain.handle('check-dependencies', async () => {
     return [];
   }
   try {
-    return await dependencyManager.checkAllDependencies();
+    const dependencies = await dependencyManager.checkAllDependencies();
+
+    // Check if debug mode is enabled (ignore dependency check)
+    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
+    if (debugMode?.ignoreDependencyCheck) {
+      // Force all dependencies to appear as not installed
+      return dependencies.map(dep => ({
+        ...dep,
+        installed: false,
+      }));
+    }
+
+    return dependencies;
   } catch (error) {
     console.error('Failed to check dependencies:', error);
     return [];
   }
 });
 
-ipcMain.handle('install-dependency', async (_, dependencyType: DependencyType) => {
-  if (!dependencyManager) {
-    return false;
-  }
-  try {
-    const result = await dependencyManager.installDependency(dependencyType);
-    // Notify renderer of dependency status change
-    const dependencies = await dependencyManager.checkAllDependencies();
-    mainWindow?.webContents.send('dependency-status-changed', dependencies);
-
-    // Also notify version updates since dependencies affect version status
-    if (versionManager) {
-      const installedVersions = await versionManager.getInstalledVersions();
-      mainWindow?.webContents.send('version:installedVersionsChanged', installedVersions);
-    }
-
-    return result;
-  } catch (error) {
-    console.error('Failed to install dependency:', error);
-    return false;
-  }
-});
-
-// Version Management IPC Handlers
+// Manifest-based Dependency Installation IPC Handlers
 ipcMain.handle('version:list', async () => {
   if (!versionManager) {
     return [];
@@ -695,7 +682,19 @@ ipcMain.handle('version:checkDependencies', async (_, versionId: string) => {
     return [];
   }
   try {
-    return await versionManager.checkVersionDependencies(versionId);
+    const dependencies = await versionManager.checkVersionDependencies(versionId);
+
+    // Check if debug mode is enabled (ignore dependency check)
+    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
+    if (debugMode?.ignoreDependencyCheck) {
+      // Force all dependencies to appear as not installed
+      return dependencies.map(dep => ({
+        ...dep,
+        installed: false,
+      }));
+    }
+
+    return dependencies;
   } catch (error) {
     console.error('Failed to check version dependencies:', error);
     return [];
@@ -986,8 +985,48 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
       };
     }
 
-    // Install single dependency
-    await dependencyManager.installSingleDependency(targetDep);
+    // Get install command
+    let installCommand: string | undefined;
+    if (typeof targetDep.installCommand === 'string') {
+      installCommand = targetDep.installCommand;
+    } else if (targetDep.installCommand && typeof targetDep.installCommand === 'object') {
+      const cmdObj = targetDep.installCommand as Record<string, unknown>;
+      // Try to get command for current platform/region
+      const region = manifestReader.detectRegion();
+      const parsed = manifestReader.parseInstallCommand(targetDep.installCommand, region);
+      if (parsed.type !== 'not-available' && parsed.command) {
+        installCommand = parsed.command;
+      }
+    }
+
+    if (!installCommand) {
+      throw new Error(`No install command available for ${dependencyKey}`);
+    }
+
+    // Send initial progress with check command info
+    mainWindow?.webContents.send('dependency:command-progress', {
+      type: 'command-info',
+      checkCommand: targetDep.checkCommand,
+      installCommand: installCommand,
+    });
+
+    // Execute install command with progress reporting
+    const result = await dependencyManager.executeCommandsWithProgress(
+      [installCommand],
+      targetVersion.installedPath,
+      (progress) => {
+        // Send progress to renderer for the progress dialog
+        log.info('[Main] Sending progress to renderer:', JSON.stringify(progress));
+        mainWindow?.webContents.send('dependency:command-progress', progress);
+      }
+    );
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Installation failed'
+      };
+    }
 
     // Refresh version dependency status after installation
     await versionManager.checkVersionDependencies(versionId);
@@ -1001,7 +1040,8 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
     mainWindow?.webContents.send('version:installedVersionsChanged', allInstalledVersions);
 
     return {
-      success: true
+      success: true,
+      checkCommand: targetDep.checkCommand, // Include check command in response
     };
   } catch (error) {
     log.error('[Main] Failed to install single dependency:', error);
@@ -1018,11 +1058,98 @@ ipcMain.handle('dependency:get-missing', async (_, versionId: string) => {
   }
 
   try {
-    const dependencies = await versionManager.checkVersionDependencies(versionId);
+    let dependencies = await versionManager.checkVersionDependencies(versionId);
+
+    // Check if debug mode is enabled (ignore dependency check)
+    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
+    if (debugMode?.ignoreDependencyCheck) {
+      // Force all dependencies to appear as not installed (missing)
+      // This ensures all dependencies are shown as installable
+      return dependencies.map(dep => ({
+        ...dep,
+        installed: false,
+        versionMismatch: true, // Also set versionMismatch to ensure they appear as missing
+      }));
+    }
+
     return dependencies.filter(dep => !dep.installed || dep.versionMismatch);
   } catch (error) {
     log.error('[Main] Failed to get missing dependencies:', error);
     return [];
+  }
+});
+
+// Get all dependencies (including installed ones) for onboarding display
+ipcMain.handle('dependency:get-all', async (_, versionId: string) => {
+  if (!versionManager) {
+    return [];
+  }
+
+  try {
+    let dependencies = await versionManager.checkVersionDependencies(versionId);
+
+    // Check if debug mode is enabled (ignore dependency check)
+    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
+    if (debugMode?.ignoreDependencyCheck) {
+      // Force all dependencies to appear as not installed (missing)
+      // This ensures all dependencies are shown as installable
+      return dependencies.map(dep => ({
+        ...dep,
+        installed: false,
+        versionMismatch: true, // Also set versionMismatch to ensure they appear as missing
+      }));
+    }
+
+    // Return ALL dependencies, not just missing ones
+    return dependencies;
+  } catch (error) {
+    log.error('[Main] Failed to get all dependencies:', error);
+    return [];
+  }
+});
+
+// Execute install commands with progress
+ipcMain.handle('dependency:execute-commands', async (_, commands: string[], workingDirectory?: string) => {
+  if (!dependencyManager) {
+    return {
+      success: false,
+      error: 'Dependency manager not initialized'
+    };
+  }
+
+  try {
+    log.info('[Main] Executing install commands:', commands.length, 'commands');
+
+    // Determine working directory
+    let workDir = workingDirectory;
+    if (!workDir) {
+      // Use version manager's data directory if no working directory specified
+      const activeVersion = await versionManager?.getActiveVersion();
+      if (activeVersion) {
+        workDir = activeVersion.installedPath;
+      } else {
+        // Fallback to app data directory
+        workDir = app.getPath('userData');
+      }
+    }
+
+    // Execute commands with progress reporting
+    const result = await dependencyManager.executeCommandsWithProgress(
+      commands,
+      workDir,
+      (progress) => {
+        // Send progress to renderer
+        mainWindow?.webContents.send('dependency:command-progress', progress);
+      }
+    );
+
+    return result;
+  } catch (error) {
+    log.error('[Main] Failed to execute install commands:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
   }
 });
 
@@ -1082,56 +1209,47 @@ ipcMain.handle('language-changed', async (_, language: string) => {
   }
 });
 
-// NPM Mirror Status IPC Handlers
-ipcMain.handle('mirror:get-status', async () => {
-  if (!npmMirrorHelper) {
+// Region Detection IPC Handlers
+ipcMain.handle('region:get-status', async () => {
+  if (!regionDetector) {
     return {
       region: null,
-      mirrorUrl: '',
-      mirrorName: '',
       detectedAt: null,
     };
   }
   try {
-    const status = npmMirrorHelper.getMirrorStatus();
+    const status = regionDetector.getStatus();
     return {
       ...status,
       detectedAt: status.detectedAt?.toISOString() || null,
     };
   } catch (error) {
-    console.error('[Main] Failed to get mirror status:', error);
+    console.error('[Main] Failed to get region status:', error);
     return {
       region: null,
-      mirrorUrl: '',
-      mirrorName: '',
       detectedAt: null,
     };
   }
 });
 
-ipcMain.handle('mirror:redetect', async () => {
-  if (!npmMirrorHelper) {
+ipcMain.handle('region:redetect', async () => {
+  if (!regionDetector) {
     return {
       region: null,
-      mirrorUrl: '',
-      mirrorName: '',
       detectedAt: null,
     };
   }
   try {
-    const detection = npmMirrorHelper.redetect();
-    const status = npmMirrorHelper.getMirrorStatus();
+    const detection = regionDetector.redetect();
     console.log(`[Main] Region re-detected: ${detection.region}`);
     return {
-      ...status,
-      detectedAt: status.detectedAt?.toISOString() || null,
+      region: detection.region,
+      detectedAt: detection.detectedAt.toISOString(),
     };
   } catch (error) {
     console.error('[Main] Failed to re-detect region:', error);
     return {
       region: null,
-      mirrorUrl: '',
-      mirrorName: '',
       detectedAt: null,
     };
   }
@@ -1578,6 +1696,8 @@ ipcMain.handle('onboarding:reset', async () => {
   }
   try {
     await onboardingManager.resetOnboarding();
+    // Notify renderer to show onboarding wizard
+    mainWindow?.webContents.send('onboarding:show');
     return { success: true };
   } catch (error) {
     console.error('Failed to reset onboarding:', error);
@@ -1585,6 +1705,35 @@ ipcMain.handle('onboarding:reset', async () => {
       success: false,
       error: error instanceof Error ? error.message : String(error)
     };
+  }
+});
+
+// Debug Mode IPC Handlers
+ipcMain.handle('set-debug-mode', async (_, mode: { ignoreDependencyCheck: boolean }) => {
+  try {
+    // Store debug mode in electron-store
+    const storeKey = 'debugMode';
+    configManager.getStore().set(storeKey, mode);
+    // Notify renderer of debug mode change
+    mainWindow?.webContents.send('debug-mode-changed', mode);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to set debug mode:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('get-debug-mode', async () => {
+  try {
+    const storeKey = 'debugMode';
+    const mode = configManager.getStore().get(storeKey, { ignoreDependencyCheck: false }) as { ignoreDependencyCheck: boolean };
+    return mode;
+  } catch (error) {
+    console.error('Failed to get debug mode:', error);
+    return { ignoreDependencyCheck: false };
   }
 });
 
@@ -1677,9 +1826,9 @@ app.whenReady().then(async () => {
   const serverConfig = configManager.getServerConfig();
   serverClient = new HagicoServerClient(serverConfig);
 
-  // Initialize NPM Mirror Helper
-  npmMirrorHelper = new NpmMirrorHelper(configManager.getStore() as unknown as Store<Record<string, unknown>>);
-  const detection = npmMirrorHelper.detectWithCache();
+  // Initialize Region Detector
+  regionDetector = new RegionDetector(configManager.getStore() as unknown as Store<Record<string, unknown>>);
+  const detection = regionDetector.detectWithCache();
   console.log(`[App] Region detected: ${detection.region} (method: ${detection.method})`);
 
   // Initialize Web Service Manager
@@ -1692,7 +1841,7 @@ app.whenReady().then(async () => {
   // Set webServiceManager reference for tray
   setWebServiceManagerRef(webServiceManager);
 
-  // Initialize Dependency Manager with store for NpmMirrorHelper
+  // Initialize Dependency Manager with store
   dependencyManager = new DependencyManager(configManager.getStore() as unknown as Store<Record<string, unknown>>);
 
   // Initialize Package Source Configuration Manager

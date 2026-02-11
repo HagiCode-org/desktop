@@ -8,6 +8,7 @@ export const RESET_ONBOARDING = 'onboarding/reset';
 export const GO_TO_NEXT_STEP = 'onboarding/nextStep';
 export const GO_TO_PREVIOUS_STEP = 'onboarding/previousStep';
 export const SKIP_ONBOARDING = 'onboarding/skip';
+export const TRIGGER_ONBOARDING_NEXT = 'dependency/triggerOnboardingNext';
 
 // Async thunks
 export const checkOnboardingTrigger = createAsyncThunk(

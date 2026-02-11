@@ -5,7 +5,7 @@ import { CheckCircle2, Loader2, Rocket, ExternalLink, Github, FileText } from 'l
 import { Button } from '../../ui/button';
 import { selectServiceProgress, selectDownloadProgress } from '../../../store/slices/onboardingSlice';
 import { completeOnboarding, startService } from '../../../store/thunks/onboardingThunks';
-import { fetchActiveVersionAction } from '../../../store/sagas/webServiceSaga';
+import { fetchActiveVersion } from '../../../store/thunks/webServiceThunks';
 import type { RootState } from '../../../store';
 import type { AppDispatch } from '../../../store';
 
@@ -32,7 +32,7 @@ function ServiceLauncher({ onComplete }: ServiceLauncherProps) {
     if (version) {
       dispatch(completeOnboarding(version));
       // Refresh the web service state to sync with the onboarding state
-      dispatch(fetchActiveVersionAction());
+      dispatch(fetchActiveVersion());
     }
     onComplete?.();
   };

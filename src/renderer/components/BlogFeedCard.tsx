@@ -12,9 +12,9 @@ import {
   type RSSFeedItem,
 } from '../store/slices/rssFeedSlice';
 import {
-  fetchFeedItemsAction,
-  refreshFeedAction,
-} from '../store/sagas/rssFeedSaga';
+  fetchFeedItems,
+  refreshFeed,
+} from '../store/thunks/rssFeedThunks';
 import { RootState, AppDispatch } from '../store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,13 +33,13 @@ const BlogFeedCard: React.FC = () => {
   // Load feed items on mount
   useEffect(() => {
     if (items.length === 0) {
-      dispatch(fetchFeedItemsAction());
+      dispatch(fetchFeedItems());
     }
   }, [dispatch, items.length]);
 
   // Handle refresh button click
   const handleRefresh = () => {
-    dispatch(refreshFeedAction());
+    dispatch(refreshFeed());
   };
 
   // Handle article click - open in browser

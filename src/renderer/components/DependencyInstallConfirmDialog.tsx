@@ -19,7 +19,7 @@ import {
   selectInstallProgress,
   hideInstallConfirm,
 } from '../store/slices/dependencySlice';
-import { INSTALL_FROM_MANIFEST } from '../store/sagas/dependencySaga';
+import { installFromManifest } from '../store/thunks/dependencyThunks';
 
 export function DependencyInstallConfirmDialog() {
   const { t } = useTranslation('components');
@@ -32,7 +32,7 @@ export function DependencyInstallConfirmDialog() {
 
   const handleConfirm = () => {
     if (versionId) {
-      dispatch({ type: INSTALL_FROM_MANIFEST, payload: versionId });
+      dispatch(installFromManifest(versionId));
     }
   };
 

@@ -23,6 +23,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings },
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
   { id: 'license', labelKey: 'sidebar.licenseManagement', icon: Key },
+  { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];
 
 const externalLinkItems: NavigationItem[] = [

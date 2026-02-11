@@ -653,6 +653,9 @@ export class VersionManager {
         return [];
       }
 
+      // Set manifest in dependency manager for NPM mirror configuration
+      this.dependencyManager.setManifest(manifest);
+
       const parsedDeps = manifestReader.parseDependencies(manifest);
       const dependencies = await this.dependencyManager.checkFromManifest(parsedDeps);
 

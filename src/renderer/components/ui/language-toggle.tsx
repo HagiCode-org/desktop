@@ -2,7 +2,7 @@ import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentLanguage, selectAvailableLanguages } from '@/store/slices/i18nSlice';
-import { changeLanguageRequest } from '@/store/sagas/i18nSaga';
+import { changeLanguage } from '@/store/thunks/i18nThunks';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -45,7 +45,7 @@ export function LanguageToggle() {
         {availableLanguages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
-            onClick={() => dispatch(changeLanguageRequest(lang.code))}
+            onClick={() => dispatch(changeLanguage(lang.code))}
             className={currentLanguage === lang.code ? 'bg-accent' : ''}
           >
             <span className="mr-2">{lang.flag}</span>

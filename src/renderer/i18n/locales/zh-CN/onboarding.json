@@ -61,6 +61,7 @@
     },
     "actions": {
       "install": "安装",
+      "upgrade": "升级",
       "installing": "安装中...",
       "refresh": "刷新",
       "visitWebsite": "访问官网"
@@ -87,6 +88,12 @@
     "installingTitle": "正在安装依赖",
     "description": "检测到 {{count}} 个缺失的依赖项",
     "description_other": "检测到 {{count}} 个缺失的依赖项",
+    "versionMismatchNote": "部分依赖版本不正确，需要升级。",
+    "mixedMissingMessage": "检测到 {{missing}} 个缺失和 {{mismatch}} 个版本不匹配的依赖",
+    "mixedMissingMessage_other": "检测到 {{missing}} 个缺失和 {{mismatch}} 个版本不匹配的依赖",
+    "versionMismatchOnlyMessage": "检测到 {{count}} 个版本不匹配的依赖",
+    "versionMismatchOnlyMessage_other": "检测到 {{count}} 个版本不匹配的依赖",
+    "upgradeNote": "版本不匹配的依赖将自动升级到要求的版本。",
     "requiredVersion": "要求版本",
     "permissionWarning": "安装这些依赖可能需要管理员权限。",
     "preparing": "准备安装...",
@@ -156,6 +163,7 @@
     },
     "actions": {
       "install": "安装",
+      "upgrade": "升级",
       "installing": "安装中...",
       "refresh": "刷新",
       "visitWebsite": "访问官网"
@@ -165,5 +173,20 @@
       "requiredVersion": "要求版本"
     },
     "noDependencies": "未检测到依赖"
+  },
+  "dependencyCheck": {
+    "title": "依赖检查结果",
+    "summary": "检查了 {{total}} 个依赖项，{{passed}} 个通过，{{failed}} 个需要处理",
+    "checking": "正在检查依赖项...",
+    "status": {
+      "allPassed": "所有依赖项已安装",
+      "hasIssues": "部分依赖项需要处理"
+    },
+    "details": {
+      "expand": "显示详情",
+      "collapse": "隐藏详情",
+      "currentVersion": "当前版本",
+      "requiredVersion": "要求版本"
+    }
   }
 }

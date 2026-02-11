@@ -61,6 +61,7 @@
     },
     "actions": {
       "install": "Install",
+      "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
       "visitWebsite": "Visit Official Website"
@@ -87,6 +88,12 @@
     "installingTitle": "Installing Dependencies",
     "description": "Detected {{count}} missing dependency",
     "description_other": "Detected {{count}} missing dependencies",
+    "versionMismatchNote": "Some dependencies have incorrect versions and need to be upgraded.",
+    "mixedMissingMessage": "Detected {{missing}} missing and {{mismatch}} version mismatched dependency",
+    "mixedMissingMessage_other": "Detected {{missing}} missing and {{mismatch}} version mismatched dependencies",
+    "versionMismatchOnlyMessage": "Detected {{count}} version mismatched dependency",
+    "versionMismatchOnlyMessage_other": "Detected {{count}} version mismatched dependencies",
+    "upgradeNote": "Version mismatched dependencies will be upgraded to the required version.",
     "requiredVersion": "Required Version",
     "permissionWarning": "Installing these dependencies may require administrator privileges.",
     "preparing": "Preparing installation...",
@@ -156,6 +163,7 @@
     },
     "actions": {
       "install": "Install",
+      "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
       "visitWebsite": "Visit Official Website"
@@ -165,5 +173,20 @@
       "requiredVersion": "Required Version"
     },
     "noDependencies": "No dependencies detected"
+  },
+  "dependencyCheck": {
+    "title": "Dependency Check Results",
+    "summary": "Checked {{total}} {{total, plural, =1 {dependency} other {dependencies}}}, {{passed}} {{passed, plural, =1 {passed} other {passed}}}, {{failed}} {{failed, plural, =1 {needs attention} other {need attention}}}",
+    "checking": "Checking dependencies...",
+    "status": {
+      "allPassed": "All dependencies are installed",
+      "hasIssues": "Some dependencies need attention"
+    },
+    "details": {
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version"
+    }
   }
 }

@@ -1,12 +1,29 @@
 {
   "settings": {
     "title": "Settings",
-    "language": {
-      "label": "Language",
-      "description": "Select application interface language"
+    "tabs": {
+      "onboarding": "Onboarding",
+      "debug": "Debug"
     },
-    "embeddedWebServicePort": "Embedded Web Service Port",
-    "moreSettingsComing": "More settings coming soon..."
+    "onboarding": {
+      "title": "Onboarding",
+      "description": "Re-run the first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start the service.",
+      "restartWizard": "Restart Wizard",
+      "restartWizardDescription": "Re-run the first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start the service.",
+      "restartButton": "Restart Wizard",
+      "resetting": "Resetting...",
+      "resetSuccess": "Wizard has been reset",
+      "resetError": "Reset failed: {{error}}"
+    },
+    "debug": {
+      "title": "Debug",
+      "description": "Debug options and developer tools.",
+      "ignoreDependencyCheck": "Ignore dependency check",
+      "ignoreDependencyCheckDescription": "When enabled, all dependencies will be treated as not installed for testing purposes.",
+      "ignoreDependencyCheckEnabled": "Ignore dependency check enabled",
+      "ignoreDependencyCheckDisabled": "Ignore dependency check disabled",
+      "toggleError": "Toggle failed: {{error}}"
+    }
   },
   "footer": {
     "copyright": "© 2025 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.",
@@ -109,6 +126,22 @@
       "uninstallDescription": "Are you sure you want to uninstall this version? This action cannot be undone.",
       "cancel": "Cancel",
       "confirm": "Confirm"
+    }
+  },
+  "installProgressDialog": {
+    "title": "Installing Dependencies",
+    "executing": "Installing...",
+    "executingCommand": "Executing command {{current}} of {{total}}",
+    "currentCommand": "Current Command",
+    "logs": "Installation Logs",
+    "status": {
+      "executing": "Installing...",
+      "success": "Installation Complete",
+      "error": "Installation Failed"
+    },
+    "buttons": {
+      "close": "Close",
+      "retry": "Retry"
     }
   }
 }

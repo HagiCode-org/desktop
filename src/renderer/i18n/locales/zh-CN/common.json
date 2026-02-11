@@ -134,6 +134,7 @@
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
     "licenseManagement": "许可证管理",
+    "settings": "设置",
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"

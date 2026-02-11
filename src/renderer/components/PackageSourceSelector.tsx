@@ -30,7 +30,7 @@ import {
   setHttpIndexUrl,
   selectHttpIndexUrl,
 } from '../store/slices/packageSourceSlice';
-import { SET_SOURCE_CONFIG, SWITCH_SOURCE } from '../store/sagas/packageSourceSaga';
+import { setSourceConfig, switchSource } from '../store/thunks/packageSourceThunks';
 
 export function PackageSourceSelector() {
   const { t } = useTranslation('components');
@@ -92,7 +92,7 @@ export function PackageSourceSelector() {
 
     if (existingSource) {
       // Switch to existing source using its ID
-      dispatch({ type: SWITCH_SOURCE, payload: existingSource.id });
+      dispatch(switchSource(existingSource.id));
     } else {
       // Create a new source with default values
       const config =
@@ -119,7 +119,7 @@ export function PackageSourceSelector() {
             };
 
       // Save and switch to the new source
-      dispatch({ type: SET_SOURCE_CONFIG, payload: config });
+      dispatch(setSourceConfig(config));
     }
   };
 
@@ -145,8 +145,8 @@ export function PackageSourceSelector() {
             indexUrl: httpIndexUrl || 'https://server.dl.hagicode.com/index.json',
           };
 
-    // Save the configuration via Redux saga
-    dispatch({ type: SET_SOURCE_CONFIG, payload: config });
+    // Save the configuration via Redux thunk
+    dispatch(setSourceConfig(config));
   };
 
   return (

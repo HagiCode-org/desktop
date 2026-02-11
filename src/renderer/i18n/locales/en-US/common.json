@@ -134,6 +134,7 @@
     "webService": "Web Service",
     "versionManagement": "Version Management",
     "licenseManagement": "License Management",
+    "settings": "Settings",
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"
