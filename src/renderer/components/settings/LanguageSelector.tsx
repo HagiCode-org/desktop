@@ -11,7 +11,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { RootState, AppDispatch } from '@/store';
 import { selectCurrentLanguage, selectAvailableLanguages } from '@/store/slices/i18nSlice';
-import { changeLanguageRequest } from '@/store/sagas/i18nSaga';
+import { changeLanguage } from '@/store/thunks/i18nThunks';
 
 export const LanguageSelector: React.FC = () => {
   const { t, i18n } = useTranslation('common');
@@ -20,7 +20,7 @@ export const LanguageSelector: React.FC = () => {
   const availableLanguages = useSelector(selectAvailableLanguages);
 
   const handleLanguageChange = (languageCode: string) => {
-    dispatch(changeLanguageRequest(languageCode));
+    dispatch(changeLanguage(languageCode));
   };
 
   return (

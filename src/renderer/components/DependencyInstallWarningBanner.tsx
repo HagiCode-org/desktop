@@ -8,7 +8,7 @@ import {
   selectInstallConfirmVersionId,
   selectShowInstallConfirm,
 } from '../store/slices/dependencySlice';
-import { INSTALL_FROM_MANIFEST } from '../store/sagas/dependencySaga';
+import { installFromManifest } from '../store/thunks/dependencyThunks';
 
 interface DependencyInstallWarningBannerProps {
   onDismiss?: () => void;
@@ -28,7 +28,7 @@ export function DependencyInstallWarningBanner({ onDismiss }: DependencyInstallW
 
   const handleInstallNow = () => {
     if (versionId) {
-      dispatch({ type: INSTALL_FROM_MANIFEST, payload: versionId });
+      dispatch(installFromManifest(versionId));
     }
   };
 

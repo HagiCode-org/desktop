@@ -32,8 +32,8 @@ import {
   selectInstallProgress,
 } from '../store/slices/webServiceSlice';
 import {
-  installWebServicePackageAction,
-} from '../store/sagas/webServiceSaga';
+  installWebServicePackage,
+} from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
 
@@ -185,8 +185,8 @@ export default function VersionManagementPage() {
   const handleInstall = async (versionId: string) => {
     if (isInstallingFromState || webServiceOperating) return;
 
-    // Use Redux action which will check service status and show confirmation dialog if needed
-    dispatch(installWebServicePackageAction(versionId));
+    // Use Redux thunk which will check service status and show confirmation dialog if needed
+    dispatch(installWebServicePackage(versionId));
   };
 
   const handleUninstall = async (versionId: string) => {
@@ -245,8 +245,8 @@ export default function VersionManagementPage() {
   const handleReinstall = async (versionId: string) => {
     if (isInstallingFromState || webServiceOperating) return;
 
-    // Use Redux action which will check service status and show confirmation dialog if needed
-    dispatch(installWebServicePackageAction(versionId));
+    // Use Redux thunk which will check service status and show confirmation dialog if needed
+    dispatch(installWebServicePackage(versionId));
   };
 
   const confirmReinstall = async () => {
@@ -256,8 +256,8 @@ export default function VersionManagementPage() {
       return;
     }
 
-    // Use Redux action which will check service status and show confirmation dialog
-    dispatch(installWebServicePackageAction(pendingVersionId));
+    // Use Redux thunk which will check service status and show confirmation dialog
+    dispatch(installWebServicePackage(pendingVersionId));
     setReinstallDialogOpen(false);
     setPendingVersionId(null);
   };

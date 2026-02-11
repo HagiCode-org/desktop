@@ -14,13 +14,13 @@ import {
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import {
-  startWebServiceAction,
-  stopWebServiceAction,
-  restartWebServiceAction,
-  fetchWebServiceVersionAction,
-  fetchActiveVersionAction,
-  updateWebServicePortAction,
-} from '../store/sagas/webServiceSaga';
+  startWebService,
+  stopWebService,
+  restartWebService,
+  fetchWebServiceVersion,
+  fetchActiveVersion,
+  updateWebServicePort,
+} from '../store/thunks/webServiceThunks';
 import { RootState, AppDispatch } from '../store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,9 +69,9 @@ const WebServiceStatusCard: React.FC = () => {
 
   useEffect(() => {
     // Fetch version on mount
-    dispatch(fetchWebServiceVersionAction());
+    dispatch(fetchWebServiceVersion());
     // Fetch active version on mount
-    dispatch(fetchActiveVersionAction());
+    dispatch(fetchActiveVersion());
 
     // Listen for web service status changes from main process
     const unsubscribe = window.electronAPI.onWebServiceStatusChange((status: any) => {
@@ -80,11 +80,11 @@ const WebServiceStatusCard: React.FC = () => {
 
     // Listen for tray start/stop service commands
     const unsubscribeTrayStart = window.electronAPI.onTrayStartService(() => {
-      dispatch(startWebServiceAction());
+      dispatch(startWebService());
     });
 
     const unsubscribeTrayStop = window.electronAPI.onTrayStopService(() => {
-      dispatch(stopWebServiceAction());
+      dispatch(stopWebService());
     });
 
     return () => {
@@ -106,15 +106,15 @@ const WebServiceStatusCard: React.FC = () => {
   }, [webServiceInfo.port]);
 
   const handleStart = async () => {
-    dispatch(startWebServiceAction());
+    dispatch(startWebService());
   };
 
   const handleStop = async () => {
-    dispatch(stopWebServiceAction());
+    dispatch(stopWebService());
   };
 
   const handleRestart = async () => {
-    dispatch(restartWebServiceAction());
+    dispatch(restartWebService());
   };
 
   const handleOpenHagicode = async () => {
@@ -152,7 +152,7 @@ const WebServiceStatusCard: React.FC = () => {
     }
 
     // Dispatch action to update port
-    dispatch(updateWebServicePortAction(port));
+    dispatch(updateWebServicePort(port));
     setPortError(null);
     setIsEditingPort(false);
   };

@@ -18,7 +18,7 @@ import {
 } from '../store/slices/packageSourceSlice';
 import { FolderConfigForm } from './FolderConfigForm';
 import { GitHubConfigForm } from './GitHubConfigForm';
-import { SCAN_FOLDER, FETCH_GITHUB, VALIDATE_CONFIG } from '../store/sagas/packageSourceSaga';
+import { scanFolder, fetchGithub, validateConfig } from '../store/thunks/packageSourceThunks';
 
 export function SourceConfigForm() {
   const { t } = useTranslation('components');
@@ -39,18 +39,15 @@ export function SourceConfigForm() {
   };
 
   const handleScanFolder = () => {
-    dispatch({ type: SCAN_FOLDER, payload: folderPath });
+    dispatch(scanFolder(folderPath));
   };
 
   const handleFetchGithub = () => {
-    dispatch({
-      type: FETCH_GITHUB,
-      payload: {
-        owner: githubOwner,
-        repo: githubRepo,
-        token: githubToken || undefined,
-      },
-    });
+    dispatch(fetchGithub({
+      owner: githubOwner,
+      repo: githubRepo,
+      token: githubToken || undefined,
+    }));
   };
 
   const handleValidate = () => {
@@ -64,7 +61,7 @@ export function SourceConfigForm() {
             token: githubToken || undefined,
           };
 
-    dispatch({ type: VALIDATE_CONFIG, payload: config });
+    dispatch(validateConfig(config));
   };
 
   return (

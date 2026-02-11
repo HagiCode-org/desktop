@@ -173,5 +173,20 @@
       "requiredVersion": "要求版本"
     },
     "noDependencies": "未检测到依赖"
+  },
+  "dependencyCheck": {
+    "title": "依赖检查结果",
+    "summary": "检查了 {{total}} 个依赖项，{{passed}} 个通过，{{failed}} 个需要处理",
+    "checking": "正在检查依赖项...",
+    "status": {
+      "allPassed": "所有依赖项已安装",
+      "hasIssues": "部分依赖项需要处理"
+    },
+    "details": {
+      "expand": "显示详情",
+      "collapse": "隐藏详情",
+      "currentVersion": "当前版本",
+      "requiredVersion": "要求版本"
+    }
   }
 }

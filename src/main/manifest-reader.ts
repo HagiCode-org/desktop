@@ -29,6 +29,46 @@ export interface Manifest {
     documentation: string;
     repository: string;
   };
+  npmConfig?: NpmConfig;
+  donationInfo?: DonationInfo;
+  packageMetadata?: PackageMetadata;
+}
+
+/**
+ * NPM mirror configuration
+ */
+export interface NpmConfig {
+  mirrors: {
+    china: string;
+    global: string;
+  };
+  region?: 'china' | 'global';
+}
+
+/**
+ * Donation information
+ */
+export interface DonationInfo {
+  url?: string;
+  qrCode?: string;
+  description?: string;
+}
+
+/**
+ * Package metadata for external dependencies
+ */
+export interface PackageMetadata {
+  npm?: Record<string, NpmPackageInfo>;
+}
+
+/**
+ * NPM package metadata
+ */
+export interface NpmPackageInfo {
+  packageName: string;
+  version?: string;
+  commandName: string;
+  description: string;
 }
 
 /**
@@ -372,6 +412,100 @@ export class ManifestReader {
       ...dep,
       parsedInstallCommand: this.parseInstallCommand(dep.installCommand, detectedRegion),
     }));
+  }
+
+  /**
+   * Read package metadata from manifest
+   * @param manifest - The manifest object
+   * @returns Package metadata or null if not available
+   */
+  readPackageMetadata(manifest: Manifest | null): PackageMetadata | null {
+    if (!manifest?.packageMetadata) {
+      log.warn('[ManifestReader] No package metadata found in manifest, using fallback');
+      return null;
+    }
+
+    return manifest.packageMetadata;
+  }
+
+  /**
+   * Read NPM config from manifest
+   * @param manifest - The manifest object
+   * @returns NPM config or default fallback values
+   */
+  readNpmConfig(manifest: Manifest | null): NpmConfig {
+    const defaultConfig: NpmConfig = {
+      mirrors: {
+        china: 'https://registry.npmmirror.com',
+        global: 'https://registry.npmjs.org',
+      },
+      region: 'global',
+    };
+
+    if (!manifest?.npmConfig) {
+      log.warn('[ManifestReader] No NPM config found in manifest, using defaults');
+      return defaultConfig;
+    }
+
+    // Ensure all required fields exist
+    return {
+      mirrors: {
+        china: manifest.npmConfig.mirrors?.china || defaultConfig.mirrors.china,
+        global: manifest.npmConfig.mirrors?.global || defaultConfig.mirrors.global,
+      },
+      region: manifest.npmConfig.region || defaultConfig.region,
+    };
+  }
+
+  /**
+   * Read donation info from manifest
+   * @param manifest - The manifest object
+   * @returns Donation info or null if not available
+   */
+  readDonationInfo(manifest: Manifest | null): DonationInfo | null {
+    if (!manifest?.donationInfo) {
+      return null;
+    }
+
+    return manifest.donationInfo;
+  }
+
+  /**
+   * Get NPM package metadata by key from manifest
+   * @param manifest - The manifest object
+   * @param key - Package key (e.g., "claudeCode", "openspec")
+   * @returns NPM package info or null if not found
+   */
+  getNpmPackageInfo(manifest: Manifest | null, key: string): NpmPackageInfo | null {
+    const packageMetadata = this.readPackageMetadata(manifest);
+
+    if (!packageMetadata?.npm) {
+      log.warn('[ManifestReader] No NPM package metadata found in manifest');
+      return null;
+    }
+
+    const npmInfo = packageMetadata.npm[key];
+    if (!npmInfo) {
+      log.warn('[ManifestReader] No NPM package info found for key:', key);
+      return null;
+    }
+
+    return npmInfo;
+  }
+
+  /**
+   * Get all NPM package metadata from manifest
+   * @param manifest - The manifest object
+   * @returns Record of NPM package info or empty object
+   */
+  getAllNpmPackageInfo(manifest: Manifest | null): Record<string, NpmPackageInfo> {
+    const packageMetadata = this.readPackageMetadata(manifest);
+
+    if (!packageMetadata?.npm) {
+      return {};
+    }
+
+    return packageMetadata.npm;
   }
 }
 

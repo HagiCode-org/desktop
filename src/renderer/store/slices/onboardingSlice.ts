@@ -9,12 +9,13 @@ import {
   resetOnboarding,
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
+  TRIGGER_ONBOARDING_NEXT,
 } from '../thunks/onboardingThunks';
-import { TRIGGER_ONBOARDING_NEXT } from '../sagas/dependencySaga';
 import type {
   OnboardingState,
   DownloadProgress,
   ServiceLaunchProgress,
+  DependencyCheckResult,
 } from '../../../types/onboarding';
 
 const initialState: OnboardingState = {
@@ -29,6 +30,8 @@ const initialState: OnboardingState = {
   // Idempotency flags
   isDownloading: false,
   isStartingService: false,
+  // Dependency check results
+  dependencyCheckResults: [],
 };
 
 export const onboardingSlice = createSlice({
@@ -55,6 +58,9 @@ export const onboardingSlice = createSlice({
     },
     setServiceProgress: (state, action: PayloadAction<ServiceLaunchProgress | null>) => {
       state.serviceProgress = action.payload;
+    },
+    setDependencyCheckResults: (state, action: PayloadAction<DependencyCheckResult[]>) => {
+      state.dependencyCheckResults = action.payload;
     },
     nextStep: (state) => {
       if (state.currentStep < OnboardingStep.Launch) {
@@ -255,6 +261,7 @@ export const {
   clearError,
   setDownloadProgress,
   setServiceProgress,
+  setDependencyCheckResults,
   nextStep,
   previousStep,
 } = onboardingSlice.actions;
@@ -269,6 +276,7 @@ export const selectDownloadProgress = (state: { onboarding: OnboardingState }) =
 export const selectServiceProgress = (state: { onboarding: OnboardingState }) => state.onboarding.serviceProgress;
 export const selectShowSkipConfirm = (state: { onboarding: OnboardingState }) => state.onboarding.showSkipConfirm;
 export const selectOnboardingError = (state: { onboarding: OnboardingState }) => state.onboarding.error;
+export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 
 // Computed selectors
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {

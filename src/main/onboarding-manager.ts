@@ -404,7 +404,18 @@ export class OnboardingManager {
       const dependencies = manifestReader.parseDependencies(manifest);
 
       // Get status of all dependencies
-      const status = await this.dependencyManager.checkFromManifest(dependencies);
+      let status = await this.dependencyManager.checkFromManifest(dependencies);
+
+      // Check if debug mode is enabled (ignore dependency check)
+      const debugMode = this.store.get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
+      if (debugMode?.ignoreDependencyCheck) {
+        // Force all dependencies to appear as not installed
+        status = status.map(dep => ({
+          ...dep,
+          installed: false,
+        }));
+        log.info('[OnboardingManager] Debug mode enabled, forcing all dependencies to appear as not installed');
+      }
 
       // Create dependency items with status
       const dependencyItems: DependencyItem[] = status.map(dep => ({

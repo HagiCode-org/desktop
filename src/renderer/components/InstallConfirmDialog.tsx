@@ -17,8 +17,8 @@ import {
   InstallState,
 } from '../store/slices/webServiceSlice';
 import {
-  confirmInstallAndStopAction,
-} from '../store/sagas/webServiceSaga';
+  confirmInstallAndStop,
+} from '../store/thunks/webServiceThunks';
 
 export default function InstallConfirmDialog() {
   const { t } = useTranslation('components');
@@ -33,7 +33,7 @@ export default function InstallConfirmDialog() {
   };
 
   const handleConfirm = () => {
-    dispatch(confirmInstallAndStopAction());
+    dispatch(confirmInstallAndStop());
   };
 
   return (

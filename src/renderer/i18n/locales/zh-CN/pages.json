@@ -1,12 +1,29 @@
 {
   "settings": {
     "title": "设置",
-    "language": {
-      "label": "语言",
-      "description": "选择应用程序界面语言"
+    "tabs": {
+      "onboarding": "启动向导",
+      "debug": "调试"
     },
-    "embeddedWebServicePort": "Hagicode 服务端口",
-    "moreSettingsComing": "更多设置即将推出..."
+    "onboarding": {
+      "title": "启动向导",
+      "description": "重新运行首次使用引导流程，重新配置数据目录、下载包、安装依赖并启动服务。",
+      "restartWizard": "重新启动向导",
+      "restartWizardDescription": "重新运行首次使用引导流程，重新配置数据目录、下载包、安装依赖并启动服务。",
+      "restartButton": "重新启动向导",
+      "resetting": "重置中...",
+      "resetSuccess": "启动向导已重置",
+      "resetError": "重置失败: {{error}}"
+    },
+    "debug": {
+      "title": "调试",
+      "description": "调试选项和开发工具。",
+      "ignoreDependencyCheck": "忽略依赖检查",
+      "ignoreDependencyCheckDescription": "开启后所有依赖项将被视为未安装，用于测试未安装状态下的页面行为。",
+      "ignoreDependencyCheckEnabled": "已启用忽略依赖检查",
+      "ignoreDependencyCheckDisabled": "已禁用忽略依赖检查",
+      "toggleError": "切换失败: {{error}}"
+    }
   },
   "footer": {
     "copyright": "© 2025 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️",
@@ -109,6 +126,22 @@
       "uninstallDescription": "确定要卸载此版本吗？此操作无法撤销。",
       "cancel": "取消",
       "confirm": "确认"
+    }
+  },
+  "installProgressDialog": {
+    "title": "正在安装依赖",
+    "executing": "安装中...",
+    "executingCommand": "正在执行第 {{current}} 个命令，共 {{total}} 个",
+    "currentCommand": "当前命令",
+    "logs": "安装日志",
+    "status": {
+      "executing": "安装中...",
+      "success": "安装完成",
+      "error": "安装失败"
+    },
+    "buttons": {
+      "close": "关闭",
+      "retry": "重试"
     }
   }
 }

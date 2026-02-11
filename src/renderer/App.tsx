@@ -6,12 +6,13 @@ import SystemManagementView from './components/SystemManagementView';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
 import LicenseManagementPage from './components/LicenseManagementPage';
+import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import DependencyStartConfirmDialog from './components/DependencyStartConfirmDialog';
 import { DependencyInstallConfirmDialog } from './components/DependencyInstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { switchView } from './store/slices/viewSlice';
-import { selectIsActive } from './store/slices/onboardingSlice';
+import { selectIsActive, setActive } from './store/slices/onboardingSlice';
 import type { RootState } from './store';
 import { ThemeProvider } from './components/providers/theme-provider';
 
@@ -25,13 +26,18 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'license') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'license' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'license') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'license' | 'settings') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
+      resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
+      onOnboardingShow: (callback: () => void) => () => void;
+      setDebugMode: (mode: { ignoreDependencyCheck: boolean }) => Promise<{ success: boolean; error?: string }>;
+      getDebugMode: () => Promise<{ ignoreDependencyCheck: boolean }>;
+      onDebugModeChanged: (callback: (mode: { ignoreDependencyCheck: boolean }) => void) => void;
     };
   }
 }
@@ -45,8 +51,13 @@ function App() {
 
   useEffect(() => {
     // Listen for view change events from menu (kept for backward compatibility)
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'license') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'license' | 'settings') => {
       dispatch(switchView(view));
+    });
+
+    // Listen for onboarding show event
+    const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow(() => {
+      dispatch(setActive(true));
     });
 
     // Listen for onboarding completion - open Hagicode
@@ -62,6 +73,9 @@ function App() {
     return () => {
       if (typeof unsubscribeViewChange === 'function') {
         unsubscribeViewChange();
+      }
+      if (typeof unsubscribeOnboardingShow === 'function') {
+        unsubscribeOnboardingShow();
       }
       if (typeof unsubscribeOnboardingOpenHagicode === 'function') {
         unsubscribeOnboardingOpenHagicode();
@@ -88,6 +102,7 @@ function App() {
             {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
             {currentView === 'version' && <VersionManagementPage />}
             {currentView === 'license' && <LicenseManagementPage />}
+            {currentView === 'settings' && <SettingsPage />}
           </div>
         </div>
 

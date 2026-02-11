@@ -63,6 +63,22 @@ export interface OnboardingState {
   // Idempotency flags to prevent duplicate operations
   isDownloading: boolean;
   isStartingService: boolean;
+  // Dependency check results for onboarding
+  dependencyCheckResults: DependencyCheckResult[];
+}
+
+/**
+ * Dependency check result for onboarding display
+ */
+export interface DependencyCheckResult {
+  key: string;  // Manifest dependency key (e.g., "dotnet", "claudeCode")
+  name: string;
+  type: string;
+  installed: boolean;
+  version?: string;
+  requiredVersion?: string;
+  versionMismatch?: boolean;
+  description?: string;
 }
 
 /**

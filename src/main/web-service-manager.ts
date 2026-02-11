@@ -78,81 +78,55 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Get the executable path for the current platform
+   * Get the startup script path for the current platform
+   * Returns the platform-specific startup script path (start.bat for Windows, start.sh for Unix)
+   * @returns The path to the startup script
    */
-  private getExecutablePath(): string {
-    if (this.config.executablePath) {
-      return this.config.executablePath;
-    }
-
+  private getStartupScriptPath(): string {
     // Use active version path if available
-    if (this.activeVersionPath) {
-      const platform = process.platform;
+    const basePath = this.activeVersionPath || (() => {
+      const currentPlatform = this.pathManager.getCurrentPlatform();
+      return this.pathManager.getInstalledPath(currentPlatform);
+    })();
 
-      switch (platform) {
-        case 'win32':
-          return path.join(this.activeVersionPath, 'PCode.Web.exe');
-        case 'darwin':
-          return path.join(this.activeVersionPath, 'PCode.Web');
-        case 'linux':
-          return path.join(this.activeVersionPath, 'start.sh');
-        default:
-          throw new Error(`Unsupported platform: ${platform}`);
-      }
-    }
-
-    // Fallback to old path (for backward compatibility)
-    const platform = process.platform;
-    const currentPlatform = this.pathManager.getCurrentPlatform();
-    const installedPath = this.pathManager.getInstalledPath(currentPlatform);
-
-    switch (platform) {
-      case 'win32':
-        return path.join(installedPath, 'PCode.Web.exe');
-      case 'darwin':
-        return path.join(installedPath, 'PCode.Web');
-      case 'linux':
-        return path.join(installedPath, 'start.sh');
-      default:
-        throw new Error(`Unsupported platform: ${platform}`);
-    }
+    // Return platform-specific script path
+    const scriptName = process.platform === 'win32' ? 'start.bat' : 'start.sh';
+    return path.join(basePath, scriptName);
   }
 
   /**
    * Get platform-specific startup arguments
+   * Note: We don't add --urls parameter - let the service use appsettings.yml configuration
+   * The configuration file is the single source of truth for URLs
    */
   private getPlatformSpecificArgs(): string[] {
-    const platform = process.platform;
-    const args: string[] = this.config.args || [];
-
-    // Don't add --urls parameter - let the service use appsettings.yml configuration
-    // The configuration file is the single source of truth for URLs
-
-    // Linux-specific: ensure shell script is executable
-    if (platform === 'linux') {
-      // The start.sh script should handle the execution
-    }
-
-    return args;
+    return this.config.args || [];
   }
 
   /**
    * Get platform-specific spawn options
+   * When using startup script, the working directory is the script's directory
    */
   private getSpawnOptions() {
-    const platform = process.platform;
-    const executablePath = this.getExecutablePath();
+    const scriptPath = this.getStartupScriptPath();
     const options: any = {
       env: { ...process.env, ...this.config.env },
-      cwd: path.dirname(executablePath),
+      cwd: path.dirname(scriptPath),
     };
 
-    if (platform === 'win32') {
-      // Windows: detach to run independently
+    // On Unix, ensure script has execute permissions
+    if (process.platform !== 'win32') {
+      fs.chmod(scriptPath, 0o755).catch(error => {
+        log.warn('[WebService] Failed to set execute permissions on script:', error);
+      });
+    }
+
+    // Windows: detach to run independently
+    // Unix: keep attached for lifecycle management
+    if (process.platform === 'win32') {
       options.detached = true;
       options.windowsHide = true;
     } else {
-      // Linux/macOS: keep attached for lifecycle management
       options.detached = false;
       options.stdio = 'ignore';
     }
@@ -162,28 +136,12 @@ export class PCodeWebServiceManager {
 
   /**
    * Get the command and arguments for spawning
-   * Handles paths with spaces correctly on all platforms
+   * Uses the platform-specific startup script (start.bat for Windows, start.sh for Unix)
    */
   private getSpawnCommand(): { command: string; args: string[] } {
-    const platform = process.platform;
-    const executablePath = this.getExecutablePath();
+    const scriptPath = this.getStartupScriptPath();
     const args = this.getPlatformSpecificArgs();
-
-    switch (platform) {
-      case 'linux': {
-        // On Linux with shell scripts, execute sh directly with script path and args
-        // This ensures paths with spaces are handled correctly
-        return { command: 'sh', args: [executablePath, ...args] };
-      }
-      case 'win32':
-      case 'darwin': {
-        // On Windows and macOS, pass the executable path and args directly
-        // Node.js spawn handles quoting correctly on these platforms
-        return { command: executablePath, args };
-      }
-      default:
-        return { command: executablePath, args };
-    }
+    return { command: scriptPath, args };
   }
 
   /**
@@ -376,14 +334,15 @@ export class PCodeWebServiceManager {
       log.info('[WebService] Starting with configured port:', this.config.port);
       this.emitPhase(StartupPhase.CheckingPort, 'Checking port availability...');
 
-      // Check if executable exists
-      const executablePath = this.getExecutablePath();
+      // Check if startup script exists
+      const scriptPath = this.getStartupScriptPath();
       try {
-        await fs.access(executablePath);
+        await fs.access(scriptPath);
+        log.info('[WebService] Startup script found:', scriptPath);
       } catch {
-        log.error('[WebService] Executable not found:', executablePath);
+        log.error('[WebService] Startup script not found:', scriptPath);
         this.status = 'error';
-        this.emitPhase(StartupPhase.Error, 'Executable not found');
+        this.emitPhase(StartupPhase.Error, 'Startup script not found');
         return false;
       }
 
@@ -429,9 +388,9 @@ export class PCodeWebServiceManager {
       }
 
       // Spawn the process
-      this.emitPhase(StartupPhase.Spawning, 'Starting service process...');
-      const options = this.getSpawnOptions();
+      this.emitPhase(StartupPhase.Spawning, 'Starting service with startup script...');
       const { command, args } = this.getSpawnCommand();
+      const options = this.getSpawnOptions();
 
       log.info('[WebService] Spawning process:', command, args.join(' '));
       this.process = spawn(command, args, options);
@@ -530,7 +489,13 @@ export class PCodeWebServiceManager {
     });
 
     this.process.on('error', (error) => {
-      log.error('[WebService] Process error:', error.message);
+      // Provide more context for dotnet-related errors
+      if (error.message.includes('dotnet') || error.message.includes('ENOENT')) {
+        log.error('[WebService] dotnet command not found or DLL not accessible:', error.message);
+        log.error('[WebService] Please ensure .NET Runtime 8.0 is installed and in PATH');
+      } else {
+        log.error('[WebService] Process error:', error.message);
+      }
       this.status = 'error';
       this.process = null;
     });

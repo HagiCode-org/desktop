@@ -5,10 +5,12 @@ import {
   selectDependencies,
   selectDependenciesLoading,
   selectInstallProgress,
+  selectInstallCommandProgress,
 } from '../store/slices/dependencySlice';
-import { CHECK_DEPENDENCIES_AFTER_INSTALL, INSTALL_SINGLE_DEPENDENCY } from '../store/sagas/dependencySaga';
+import { checkDependenciesAfterInstall, installSingleDependency } from '../store/thunks/dependencyThunks';
 import { selectDownloadProgress } from '../store/slices/onboardingSlice';
 import { Download } from 'lucide-react';
+import { DependencyInstallProgressDialog } from './DependencyInstallProgressDialog';
 
 export interface DependencyManagementCardProps {
   versionId: string;
@@ -29,6 +31,7 @@ export function DependencyManagementCard({
   const dependencies = useSelector(selectDependencies);
   const loading = useSelector(selectDependenciesLoading);
   const installProgress = useSelector(selectInstallProgress);
+  const installCommandProgress = useSelector(selectInstallCommandProgress);
 
   // Track which dependencies are currently being installed
   const [installingDeps, setInstallingDeps] = useState<Set<string>>(new Set());
@@ -37,10 +40,7 @@ export function DependencyManagementCard({
   // For onboarding context, check missing dependencies on mount
   useEffect(() => {
     if (context === 'onboarding' && versionId) {
-      dispatch({
-        type: CHECK_DEPENDENCIES_AFTER_INSTALL,
-        payload: { versionId, context },
-      });
+      dispatch(checkDependenciesAfterInstall({ versionId, context }));
     } else {
       // For version management, fetch all dependencies
       dispatch({ type: 'dependency/fetchDependencies' });
@@ -105,11 +105,16 @@ export function DependencyManagementCard({
   const handleInstallSingle = (depKey: string) => {
     if (installingDeps.size > 0) return; // Check if any installation is in progress
 
+    // Find the dependency to get its check command
+    const dep = filteredDependencies.find(d => d.key === depKey);
+    if (!dep) return;
+
     setInstallingDeps(new Set([depKey]));
-    dispatch({
-      type: INSTALL_SINGLE_DEPENDENCY,
-      payload: { dependencyKey: depKey, versionId: effectiveVersionId },
-    });
+    dispatch(installSingleDependency({
+      dependencyKey: depKey,
+      versionId: effectiveVersionId,
+      checkCommand: dep.checkCommand
+    }));
   };
 
   // Handle one-click install for all missing dependencies
@@ -155,7 +160,7 @@ export function DependencyManagementCard({
         <>
           {/* Dependencies list */}
           {filteredDependencies.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[340px] overflow-y-auto pr-2 scrollbar-thin">
               {filteredDependencies.map((dep, index) => {
                 const needsInstall = !dep.installed || dep.versionMismatch;
                 const installing = isDepInstalling(dep.key);
@@ -284,6 +289,19 @@ export function DependencyManagementCard({
           )}
         </>
       )}
+
+      {/* Install Progress Dialog */}
+      <DependencyInstallProgressDialog
+        onClose={() => {
+          // Refresh dependencies after dialog closes
+          dispatch({ type: 'dependency/fetchDependencies' });
+        }}
+        onSuccess={() => {
+          // Refresh dependencies after successful installation
+          dispatch({ type: 'dependency/fetchDependencies' });
+          onInstallComplete?.();
+        }}
+      />
     </div>
   );
 }

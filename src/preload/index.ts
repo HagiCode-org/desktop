@@ -85,12 +85,23 @@ const electronAPI = {
   installFromManifest: (versionId) => ipcRenderer.invoke('dependency:install-from-manifest', versionId),
   installSingleDependency: (dependencyKey, versionId) => ipcRenderer.invoke('dependency:install-single', dependencyKey, versionId),
   getMissingDependencies: (versionId) => ipcRenderer.invoke('dependency:get-missing', versionId),
+  getAllDependencies: (versionId) => ipcRenderer.invoke('dependency:get-all', versionId),
   onDependencyInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
     };
     ipcRenderer.on('dependency:install-progress', listener);
     return () => ipcRenderer.removeListener('dependency:install-progress', listener);
+  },
+
+  // Install commands execution with real-time progress
+  executeInstallCommands: (commands: string[], workingDirectory?: string) => ipcRenderer.invoke('dependency:execute-commands', commands, workingDirectory),
+  onInstallCommandProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('dependency:command-progress', listener);
+    return () => ipcRenderer.removeListener('dependency:command-progress', listener);
   },
 
   // Package Dependencies APIs
@@ -169,9 +180,9 @@ const electronAPI = {
     return () => ipcRenderer.removeListener('view-changed', listener);
   },
 
-  // NPM Mirror Status APIs
-  getMirrorStatus: () => ipcRenderer.invoke('mirror:get-status'),
-  redetectMirror: () => ipcRenderer.invoke('mirror:redetect'),
+  // Region Detection APIs
+  getRegionStatus: () => ipcRenderer.invoke('region:get-status'),
+  redetectRegion: () => ipcRenderer.invoke('region:redetect'),
 
   // Tray service control
   onTrayStartService: (callback) => {
@@ -231,6 +242,24 @@ const electronAPI = {
     };
     ipcRenderer.on('onboarding:service-progress', listener);
     return () => ipcRenderer.removeListener('onboarding:service-progress', listener);
+  },
+  onOnboardingShow: (callback) => {
+    const listener = (_event) => {
+      callback();
+    };
+    ipcRenderer.on('onboarding:show', listener);
+    return () => ipcRenderer.removeListener('onboarding:show', listener);
+  },
+
+  // Debug Mode APIs
+  setDebugMode: (mode: { ignoreDependencyCheck: boolean }) => ipcRenderer.invoke('set-debug-mode', mode),
+  getDebugMode: () => ipcRenderer.invoke('get-debug-mode'),
+  onDebugModeChanged: (callback) => {
+    const listener = (_event, mode: { ignoreDependencyCheck: boolean }) => {
+      callback(mode);
+    };
+    ipcRenderer.on('debug-mode-changed', listener);
+    return () => ipcRenderer.removeListener('debug-mode-changed', listener);
   },
 
   // RSS Feed APIs

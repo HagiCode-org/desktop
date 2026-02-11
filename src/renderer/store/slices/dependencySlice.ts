@@ -21,6 +21,7 @@ export interface DependencyItem {
   requiredVersion?: string;
   versionMismatch?: boolean;
   installCommand?: string;
+  checkCommand?: string; // New: command to verify installation
   downloadUrl?: string;
   description?: string;
 }
@@ -35,6 +36,30 @@ export interface InstallProgress {
   currentDependency: string;
   status: 'pending' | 'installing' | 'success' | 'error';
   errors: Array<{ dependency: string; error: string }>;
+}
+
+/**
+ * Install command log entry
+ */
+export interface InstallCommandLog {
+  timestamp: number;
+  type: 'info' | 'error' | 'warning' | 'success';
+  message: string;
+}
+
+/**
+ * Install command progress state
+ */
+export interface InstallCommandProgress {
+  isOpen: boolean;
+  commands: string[];
+  checkCommand?: string; // New: verification command to run after installation
+  currentCommandIndex: number;
+  isExecuting: boolean;
+  logs: InstallCommandLog[];
+  status: 'idle' | 'executing' | 'verifying' | 'success' | 'error';
+  error?: string;
+  verificationPassed?: boolean; // New: whether verification passed
 }
 
 /**
@@ -57,6 +82,9 @@ export interface DependencyState {
 
   // New: Install progress
   installProgress: InstallProgress;
+
+  // New: Install command progress dialog state
+  installCommandProgress: InstallCommandProgress;
 }
 
 const initialState: DependencyState = {
@@ -77,6 +105,14 @@ const initialState: DependencyState = {
     currentDependency: '',
     status: 'pending',
     errors: [],
+  },
+  installCommandProgress: {
+    isOpen: false,
+    commands: [],
+    currentCommandIndex: 0,
+    isExecuting: false,
+    logs: [],
+    status: 'idle',
   },
 };
 
@@ -144,6 +180,41 @@ const dependencySlice = createSlice({
         state.installProgress.errors = action.payload.errors;
       }
     },
+    // New: Install command progress dialog actions
+    openInstallCommandDialog: (state, action: PayloadAction<{ commands: string[]; checkCommand?: string }>) => {
+      state.installCommandProgress.isOpen = true;
+      state.installCommandProgress.commands = action.payload.commands;
+      state.installCommandProgress.checkCommand = action.payload.checkCommand;
+      state.installCommandProgress.currentCommandIndex = 0;
+      state.installCommandProgress.isExecuting = true;
+      state.installCommandProgress.logs = [];
+      state.installCommandProgress.status = 'executing';
+      state.installCommandProgress.error = undefined;
+      state.installCommandProgress.verificationPassed = undefined;
+    },
+    closeInstallCommandDialog: (state) => {
+      state.installCommandProgress.isOpen = false;
+      state.installCommandProgress.commands = [];
+      state.installCommandProgress.checkCommand = undefined;
+      state.installCommandProgress.currentCommandIndex = 0;
+      state.installCommandProgress.isExecuting = false;
+    },
+    addInstallCommandLog: (state, action: PayloadAction<InstallCommandLog>) => {
+      state.installCommandProgress.logs.push(action.payload);
+    },
+    updateInstallCommandProgress: (state, action: PayloadAction<number>) => {
+      state.installCommandProgress.currentCommandIndex = action.payload;
+    },
+    setInstallCommandStatus: (state, action: PayloadAction<{ status: 'success' | 'error' | 'verifying'; error?: string }>) => {
+      state.installCommandProgress.status = action.payload.status;
+      if (action.payload.status !== 'verifying') {
+        state.installCommandProgress.isExecuting = false;
+      }
+      state.installCommandProgress.error = action.payload.error;
+    },
+    setInstallCommandVerification: (state, action: PayloadAction<boolean>) => {
+      state.installCommandProgress.verificationPassed = action.payload;
+    },
   },
 });
 
@@ -159,6 +230,12 @@ export const {
   startInstall,
   updateInstallProgress,
   completeInstall,
+  openInstallCommandDialog,
+  closeInstallCommandDialog,
+  addInstallCommandLog,
+  updateInstallCommandProgress,
+  setInstallCommandStatus,
+  setInstallCommandVerification,
 } = dependencySlice.actions;
 
 // Selectors
@@ -190,5 +267,9 @@ export const selectInstallConfirmContext = (state: { dependency: DependencyState
 // New selectors for install progress
 export const selectInstallProgress = (state: { dependency: DependencyState }) =>
   state.dependency.installProgress;
+
+// New selectors for install command progress dialog
+export const selectInstallCommandProgress = (state: { dependency: DependencyState }) =>
+  state.dependency.installCommandProgress;
 
 export default dependencySlice.reducer;
