@@ -22,6 +22,22 @@ import type { RSSFeedItem } from './types/rss-types.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Single Instance Lock
+ *
+ * Prevent multiple instances of the application from running simultaneously.
+ * When a second instance is launched, it exits immediately and focuses the
+ * existing instance's main window.
+ */
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  log.info('[App] Single instance lock failed - another instance is already running');
+  app.quit();
+} else {
+  log.info('[App] Single instance lock acquired successfully');
+}
+
+/**
  * Path helper for production builds with asar packaging.
  *
  * In development: __dirname = 'dist/main'
@@ -1836,6 +1852,29 @@ function startWebServiceStatusPolling(): void {
     }
   }, 5000); // Poll every 5 seconds
 }
+
+/**
+ * Handle second-instance event
+ *
+ * When a user tries to launch a second instance, this event is fired in the
+ * primary instance. We focus the existing main window instead of creating a new one.
+ */
+app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+  log.info('[App] Second instance launch detected, focusing existing window');
+
+  // Restore and focus the main window
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+      log.info('[App] Window was minimized, restored');
+    }
+    mainWindow.show();
+    mainWindow.focus();
+    log.info('[App] Main window focused');
+  } else {
+    log.warn('[App] No main window found to focus');
+  }
+});
 
 app.whenReady().then(async () => {
   configManager = new ConfigManager();

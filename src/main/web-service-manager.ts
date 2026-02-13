@@ -237,20 +237,43 @@ export class PCodeWebServiceManager {
         shell: true,
         stdio: 'ignore',
         detached: process.platform === 'win32',
+        // Hide console window on Windows to prevent visual disruption
+        ...(process.platform === 'win32' && { windowsHide: true }),
       });
 
       let timeout: NodeJS.Timeout | null = null;
+      let isResolved = false;
 
-      // Set timeout (30 seconds for start)
+      // Enhanced process termination helper for Windows detached processes
+      const terminateProcess = (reason: string) => {
+        if (isResolved) return;
+
+        log.warn(`[WebService] Terminating start script (${reason}):`, scriptPath);
+
+        if (process.platform === 'win32') {
+          try {
+            child.kill('SIGKILL');
+          } catch (e) {
+            log.error('[WebService] Failed to kill Windows process:', e);
+          }
+        } else {
+          child.kill('SIGKILL');
+        }
+      };
+
+      // Set timeout (30 seconds for start) with enhanced logging
       timeout = setTimeout(() => {
-        child.kill();
-        reject(new Error('Start script execution timeout'));
+        terminateProcess('timeout');
+        isResolved = true;
+        reject(new Error(`Start script execution timeout after ${this.startTimeout}ms`));
       }, this.startTimeout);
 
       child.on('exit', async (code) => {
         if (timeout) clearTimeout(timeout);
+        if (isResolved) return; // Already resolved via timeout
+        isResolved = true;
 
-        log.info('[WebService] Start script exited with code:', code);
+        log.info('[WebService] Start script exited normally with code:', code, 'platform:', process.platform);
 
         // Wait a bit for result.json to be written
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -276,8 +299,10 @@ export class PCodeWebServiceManager {
 
       child.on('error', async (error) => {
         if (timeout) clearTimeout(timeout);
+        if (isResolved) return; // Already resolved via timeout
+        isResolved = true;
 
-        log.error('[WebService] Start script execution error:', error);
+        log.error('[WebService] Start script execution error:', error.message);
 
         // Try to read result.json even on error
         const result = await this.readResultFile(workingDirectory);
@@ -927,6 +952,8 @@ export class PCodeWebServiceManager {
         const { spawn } = await import('child_process');
         spawn('taskkill', ['/F', '/T', '/PID', pid.toString()], {
           stdio: 'ignore',
+          // Hide console window on Windows to prevent visual disruption
+          windowsHide: true,
         });
       } else {
         // Unix: kill process group using negative PID

@@ -399,6 +399,48 @@ hagicode-desktop/
 - **Node.js 生态系统**：npm 包管理
 - **GitHub Actions**：CI/CD 自动化构建
 - **Azure Storage**：发布包存储
+- **Azure Artifact Signing**：代码签名服务（可选）
+
+### 代码签名配置
+
+项目支持通过 Azure Artifact Signing 服务自动对发布包进行代码签名。代码签名可以：
+
+- 消除 Windows SmartScreen 警告
+- 提升用户信任度和安装体验
+- 满足企业安全合规要求
+- 防止软件在传输过程中被篡改
+
+#### 启用代码签名
+
+要启用代码签名，需要在 GitHub 仓库设置中配置以下 Secrets：
+
+**必需 Secrets：**
+- `AZURE_CLIENT_ID` - Azure 服务主体客户端 ID
+- `AZURE_CLIENT_SECRET` - Azure 服务主体密钥
+- `AZURE_TENANT_ID` - Azure 租户 ID
+
+**可选 Secrets：**
+- `AZURE_SIGNING_ENDPOINT` - Azure Trusted Signing 端点 URL
+- `AZURE_SIGNING_KEY_URI` - Azure Key Vault 密钥 URI
+
+配置完成后，在 `.github/workflows/build.yml` 中将 `ENABLE_CODE_SIGNING` 环境变量设置为 `"true"` 即可启用。
+
+#### 签名脚本
+
+项目提供了两个辅助脚本用于代码签名：
+
+- `scripts/sign-artifact.js` - 对单个文件进行签名
+- `scripts/verify-signature.js` - 验证文件签名状态
+
+这两个脚本支持以下环境变量：
+- `ENABLE_CODE_SIGNING` - 启用/禁用签名（默认：false）
+- `VERIFY_STRICT` - 严格验证模式（默认：false）
+
+#### 支持的平台
+
+- **Windows**：完全支持（.exe, .appx）
+- **macOS**：计划支持（.dmg, .app）
+- **Linux**：可选支持（.AppImage with GPG）
 
 ## OpenSpec 开发指南
 
@@ -558,6 +600,11 @@ npm run build:prod
 
 ### 当前活跃提案
 
+- **code-signing-integration**：为 Hagicode Desktop 添加代码签名功能
+  - 集成 Azure Artifact Signing 服务
+  - 在 CI/CD 工作流中自动签名 Windows 安装包
+  - 支持 macOS 和 Linux 签名（可选）
+  - 签名失败时自动发送飞书通知
 - **unified-update-source-config**：统一应用更新源配置，将 HTTP 源设置为开发版本和正式版本的主要更新源
 
 完整的变更历史请查看 `openspec/changes/archive/` 目录。

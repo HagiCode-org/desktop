@@ -13,6 +13,9 @@ permissions:
 
 env:
   NODE_VERSION: "22"
+  # Code signing configuration
+  # Set ENABLE_CODE_SIGNING to "true" to enable artifact signing
+  ENABLE_CODE_SIGNING: "false"
 
 jobs:
   ################################################################################
@@ -49,6 +52,75 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Code signing step for Windows artifacts
+      - name: Sign Windows artifacts
+        if: success() && env.ENABLE_CODE_SIGNING == 'true'
+        shell: bash
+        run: |
+          echo "Starting Windows code signing..."
+
+          # Check if Azure credentials are available
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ] || [ -z "${{ secrets.AZURE_CLIENT_SECRET }}" ] || [ -z "${{ secrets.AZURE_TENANT_ID }}" ]; then
+            echo "::warning::Azure credentials not configured. Skipping code signing."
+            echo "To enable code signing, set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID secrets."
+            exit 0
+          fi
+
+          # Find all Windows executables and packages
+          echo "Searching for artifacts to sign..."
+          ARTIFACTS=$(find pkg -type f \( -name "*.exe" -o -name "*.appx" \) 2>/dev/null || true)
+
+          if [ -z "$ARTIFACTS" ]; then
+            echo "::warning::No artifacts found in pkg directory"
+            exit 0
+          fi
+
+          # Sign each artifact
+          for artifact in $ARTIFACTS; do
+            echo "Signing: $artifact"
+            node scripts/sign-artifact.js "$artifact" || {
+              echo "::error::Failed to sign $artifact"
+              exit 1
+            }
+          done
+
+          echo "Windows code signing completed successfully"
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_KEY_URI: ${{ secrets.AZURE_SIGNING_KEY_URI }}
+
+      # Verify signatures
+      - name: Verify Windows signatures
+        if: success() && env.ENABLE_CODE_SIGNING == 'true'
+        shell: pwsh
+        run: |
+          echo "Verifying code signatures..."
+
+          $artifacts = Get-ChildItem -Path pkg -Include *.exe,*.appx -Recurse -ErrorAction SilentlyContinue
+          $failed = $false
+
+          foreach ($artifact in $artifacts) {
+            Write-Host "Verifying: $($artifact.FullName)"
+            $result = & "$env:ProgramFiles\Windows Kits\10\bin\10.0.22000.0\x64\signtool.exe" verify /pa "$($artifact.FullName)" 2>&1
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error::Signature verification failed for: $($artifact.FullName)"
+              Write-Host $result
+              $failed = $true
+            } else {
+              Write-Host "Signature verified: $($artifact.Name)"
+            }
+          }
+
+          if ($failed) {
+            Write-Host "::error::One or more signature verifications failed"
+            exit 1
+          }
+
+          echo "All signatures verified successfully"
 
       # Upload each artifact separately
       - name: Upload NSIS installer
@@ -101,6 +173,30 @@ jobs:
           files: pkg/Hagicode*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Code signing failure notification
+      - name: Code signing failure notification
+        if: failure() && env.ENABLE_CODE_SIGNING == 'true'
+        uses: HagiCode-org/haginotifier@v1.0.0
+        with:
+          message: |
+            **代码签名失败**
+
+            平台: Windows
+            版本: ${{ github.ref_name }}
+            提交: `${{ github.sha }}`
+
+            请检查签名配置和证书状态。
+            可能的原因：
+            - Azure 凭据已过期或无效
+            - 签名端点无法访问
+            - 证书权限不足
+
+            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          msg_type: 'post'
+          title: '代码签名失败 (Windows) ❌'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
   ################################################################################
   # Linux Build Job

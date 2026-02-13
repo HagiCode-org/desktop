@@ -259,16 +259,40 @@ export class DependencyManager {
         shell: shell,
         stdio: ['pipe', 'pipe', 'pipe'], // Capture stdin, stdout, stderr
         detached: this.platform === 'win32',
+        // Hide console window on Windows to prevent visual disruption
+        ...(this.platform === 'win32' && { windowsHide: true }),
       });
 
       let timeout: NodeJS.Timeout | null = null;
       let stdoutBuffer = '';
       let stderrBuffer = '';
+      let isResolved = false;
 
-      // Set timeout (5 minutes)
+      // Enhanced process termination helper for Windows detached processes
+      const terminateProcess = (reason: string) => {
+        if (isResolved) return;
+
+        log.warn(`[DependencyManager] Terminating script (${reason}):`, scriptPath);
+
+        if (this.platform === 'win32') {
+          // Windows: Try to kill the entire process group for detached processes
+          try {
+            // Negative PID kills the entire process group on Unix-like systems
+            // On Windows with detached mode, we need to handle this differently
+            child.kill('SIGKILL');
+          } catch (e) {
+            log.error('[DependencyManager] Failed to kill Windows process:', e);
+          }
+        } else {
+          child.kill('SIGKILL');
+        }
+      };
+
+      // Set timeout (5 minutes) with enhanced logging
       timeout = setTimeout(() => {
-        child.kill();
-        reject(new Error('Script execution timeout'));
+        terminateProcess('timeout (300s)');
+        isResolved = true;
+        reject(new Error('Script execution timeout after 300 seconds'));
       }, 300000);
 
       // Capture stdout in real-time
@@ -301,8 +325,10 @@ export class DependencyManager {
 
       child.on('exit', async (code) => {
         if (timeout) clearTimeout(timeout);
+        if (isResolved) return; // Already resolved via timeout
+        isResolved = true;
 
-        log.info('[DependencyManager] Script exited with code:', code);
+        log.info('[DependencyManager] Script exited normally with code:', code, 'platform:', this.platform);
 
         // Wait a bit for result.json to be written
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -331,8 +357,10 @@ export class DependencyManager {
 
       child.on('error', async (error) => {
         if (timeout) clearTimeout(timeout);
+        if (isResolved) return; // Already resolved via timeout
+        isResolved = true;
 
-        log.error('[DependencyManager] Script execution error:', error);
+        log.error('[DependencyManager] Script execution error:', error.message);
 
         // Send error to callback if provided
         if (onOutput) {
@@ -993,6 +1021,8 @@ export class DependencyManager {
         shell: true, // Use shell to support command chaining
         stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, FORCE_COLOR: '0' }, // Disable ANSI colors
+        // Hide console window on Windows to prevent visual disruption
+        ...(this.platform === 'win32' && { windowsHide: true }),
       });
 
       let stdoutBuffer = '';

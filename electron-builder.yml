@@ -21,6 +21,11 @@ win:
     - nsis
     - appx
   icon: resources/icon.ico
+  # Code signing configuration
+  # When ENABLE_CODE_SIGNING is true, signing will be handled by CI/CD workflow
+  # These settings configure the signing hash algorithms
+  signingHashAlgorithms:
+    - sha256
 
 appx:
   displayName: Hagicode Desktop
