@@ -7,17 +7,9 @@ import {
   installDependencyStart,
   installDependencySuccess,
   installDependencyFailure,
-  showInstallConfirm,
-  hideInstallConfirm,
   startInstall,
   updateInstallProgress,
   completeInstall,
-  openInstallCommandDialog,
-  closeInstallCommandDialog,
-  addInstallCommandLog,
-  updateInstallCommandProgress,
-  setInstallCommandStatus,
-  setInstallCommandVerification,
   DependencyType,
   type DependencyItem,
 } from '../slices/dependencySlice';
@@ -29,6 +21,7 @@ declare global {
       checkDependencies: () => Promise<DependencyItem[]>;
       getMissingDependencies: (versionId: string) => Promise<DependencyItem[]>;
       getAllDependencies: (versionId: string) => Promise<DependencyItem[]>;
+      getDependencyList: (versionId: string) => Promise<DependencyItem[]>;
     };
   }
 }
@@ -93,9 +86,33 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
   async (params: { versionId: string; context?: 'version-management' | 'onboarding' }, { dispatch }) => {
     try {
       const { versionId, context = 'version-management' } = params;
+      console.log('[checkDependenciesAfterInstall] Starting with versionId:', versionId, 'context:', context);
 
+      // Step 1: Quickly get dependency list from manifest (shows "checking" state)
+      if (context === 'onboarding') {
+        console.log('[checkDependenciesAfterInstall] Getting dependency list...');
+        const depList = await window.electronAPI.getDependencyList(versionId);
+        console.log('[checkDependenciesAfterInstall] Got dependency list:', depList.length, 'items');
+
+        // Store initial list with "checking" state
+        dispatch(setDependencyCheckResults(depList.map(dep => ({
+          key: dep.key,
+          name: dep.name,
+          type: dep.type,
+          installed: false, // Unknown at this point
+          isChecking: true, // Show checking state
+          version: undefined,
+          requiredVersion: dep.requiredVersion,
+          versionMismatch: false,
+          description: dep.description,
+        }))));
+      }
+
+      // Step 2: Execute actual dependency check (this takes time)
       // Get missing dependencies to populate the dependency list
+      console.log('[checkDependenciesAfterInstall] Getting missing dependencies...');
       const missingDeps: DependencyItem[] = await window.electronAPI.getMissingDependencies(versionId);
+      console.log('[checkDependenciesAfterInstall] Got missing deps:', missingDeps.length, 'items');
 
       // Store dependencies in state for the UI to display
       dispatch(fetchDependenciesSuccess(missingDeps));
@@ -103,7 +120,9 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
       // For onboarding context, also get ALL dependencies and store in onboardingSlice
       if (context === 'onboarding') {
         // Get ALL dependencies (including installed ones) for detailed display
+        console.log('[checkDependenciesAfterInstall] Getting all dependencies...');
         const allDeps: DependencyItem[] = await window.electronAPI.getAllDependencies(versionId);
+        console.log('[checkDependenciesAfterInstall] Got all deps:', allDeps.length, 'items');
 
         // Store the results in onboarding state for detailed display
         dispatch(setDependencyCheckResults(allDeps.map(dep => ({
@@ -115,6 +134,7 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
           requiredVersion: dep.requiredVersion,
           versionMismatch: dep.versionMismatch,
           description: dep.description,
+          isChecking: false, // Check complete
         }))));
       }
 
@@ -136,17 +156,23 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
 /**
  * Install dependencies from manifest
  * Replaces dependencySaga/installFromManifest
+ * Now accepts dependencies as parameter instead of reading from state
  */
 export const installFromManifest = createAsyncThunk(
   'dependency/installFromManifest',
-  async (versionId: string, { dispatch, getState }) => {
+  async (params: { versionId: string; dependencies?: DependencyItem[]; context?: 'version-management' | 'onboarding' }, { dispatch }) => {
+    const { versionId, dependencies, context = 'version-management' } = params;
+
     try {
-      // Get pending dependencies and context from state
-      const state = getState() as any;
-      const { dependencies, context } = state.dependency.installConfirm;
+      // Get dependencies from parameter or fetch from API
+      let depsToInstall = dependencies;
+      if (!depsToInstall) {
+        // Fallback: fetch missing dependencies if not provided
+        depsToInstall = await window.electronAPI.getMissingDependencies(versionId);
+      }
 
       // Start installation
-      dispatch(startInstall(dependencies.length));
+      dispatch(startInstall(depsToInstall.length));
 
       // Execute installation
       const result: { success: boolean; result?: { success: string[]; failed: Array<{ dependency: string; error: string }> } } =
@@ -157,9 +183,6 @@ export const installFromManifest = createAsyncThunk(
           status: result.result?.failed && result.result.failed.length > 0 ? 'error' : 'success',
           errors: result.result?.failed,
         }));
-
-        // Hide confirm dialog
-        dispatch(hideInstallConfirm());
 
         // Refresh dependencies
         await dispatch(fetchDependencies());
@@ -218,295 +241,38 @@ export const installFromManifest = createAsyncThunk(
 
 /**
  * Install single dependency
- * Replaces dependencySaga/installSingleDependency
+ * Simplified version - directly calls IPC without progress dialog
  */
 export const installSingleDependency = createAsyncThunk(
   'dependency/installSingleDependency',
-  async (params: { dependencyKey: string; versionId: string; checkCommand?: string }, { dispatch }) => {
-    let actualCheckCommand = params.checkCommand;
-
+  async (params: { dependencyKey: string; versionId: string }, { dispatch }) => {
     try {
-      // Start installation - open progress dialog
-      dispatch(openInstallCommandDialog({
-        commands: [`Installing ${params.dependencyKey}...`],
-        checkCommand: actualCheckCommand,
-      }));
-
-      // Set up progress listener first, before any IPC calls
-      const progressListeners: Array<(progress: any) => void> = [];
-      const unsubscribe = window.electronAPI.onInstallCommandProgress((progress) => {
-        console.log('[Thunk] Received progress event:', progress);
-        progressListeners.forEach(listener => listener(progress));
-      });
-
-      // Process progress events
-      const processProgress = (progress: any) => {
-        const { type, commandIndex, output, error, checkCommand: cmdCheckCommand } = progress as {
-          type: string;
-          commandIndex: number;
-          totalCommands: number;
-          output?: string;
-          error?: string;
-          checkCommand?: string;
-        };
-
-        if (type === 'command-start') {
-          dispatch(updateInstallCommandProgress(commandIndex));
-        } else if (type === 'command-output' && output) {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'info',
-            message: output,
-          }));
-        } else if (type === 'command-error' && error) {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'error',
-            message: error,
-          }));
-        } else if (type === 'command-info') {
-          if (cmdCheckCommand && !actualCheckCommand) {
-            actualCheckCommand = cmdCheckCommand;
-          }
-        }
-      };
-
-      // Add listener
-      progressListeners.push(processProgress);
-
-      // Now call the IPC - progress events will be captured by the listener
-      const result: { success: boolean; error?: string; checkCommand?: string } = await window.electronAPI.installSingleDependency(
+      // Directly call IPC without progress dialog
+      const result: { success: boolean; error?: string } = await window.electronAPI.installSingleDependency(
         params.dependencyKey,
         params.versionId
       );
 
-      // Update check command from response if not already set
-      if (result.checkCommand && !actualCheckCommand) {
-        actualCheckCommand = result.checkCommand;
-      }
-
-      // Wait a bit for all progress events to be processed
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Clean up listener
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-
       if (!result.success) {
-        dispatch(setInstallCommandStatus({
-          status: 'error',
-          error: result.error || '安装失败',
-        }));
-        dispatch(completeInstall({
-          status: 'error',
-          errors: [{ dependency: params.dependencyKey, error: result.error || 'Installation failed' }],
-        }));
-
         toast.error('依赖安装失败', {
           description: result.error || `${params.dependencyKey} 安装失败`,
         });
         return { success: false };
       }
 
-      // Installation succeeded - run verification if check command provided
-      if (actualCheckCommand) {
-        dispatch(setInstallCommandStatus({ status: 'verifying' }));
-        dispatch(addInstallCommandLog({
-          timestamp: Date.now(),
-          type: 'info',
-          message: '\n正在验证安装结果...',
-        }));
-
-        // Set up verification listener
-        const verifyListeners: Array<(progress: any) => void> = [];
-        const verifyUnsubscribe = window.electronAPI.onInstallCommandProgress((progress) => {
-          verifyListeners.forEach(listener => listener(progress));
-        });
-
-        let checkOutput = '';
-        const processVerifyProgress = (progress: any) => {
-          const { type, output, error } = progress as {
-            type: string;
-            output?: string;
-            error?: string;
-          };
-
-          if (type === 'command-output' && output) {
-            checkOutput += output;
-            dispatch(addInstallCommandLog({
-              timestamp: Date.now(),
-              type: 'info',
-              message: output,
-            }));
-          } else if (type === 'command-error' && error) {
-            checkOutput += error;
-            dispatch(addInstallCommandLog({
-              timestamp: Date.now(),
-              type: 'error',
-              message: error,
-            }));
-          }
-        };
-
-        verifyListeners.push(processVerifyProgress);
-
-        // Execute check command
-        await window.electronAPI.executeInstallCommands([actualCheckCommand], undefined);
-
-        // Wait for verification to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Clean up listener
-        if (typeof verifyUnsubscribe === 'function') {
-          verifyUnsubscribe();
-        }
-
-        // Parse verification result from collected output
-        const versionMatch = checkOutput.match(/(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)/);
-        const installedVersion = versionMatch ? versionMatch[1] : null;
-
-        if (installedVersion) {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'success',
-            message: `\n✓ 验证成功！已安装版本: ${installedVersion}`,
-          }));
-          dispatch(setInstallCommandVerification(true));
-        } else {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'warning',
-            message: '\n⚠ 无法验证安装版本，请手动确认',
-          }));
-          dispatch(setInstallCommandVerification(false));
-        }
-
-        dispatch(setInstallCommandStatus({ status: 'success' }));
-      } else {
-        dispatch(setInstallCommandStatus({ status: 'success' }));
-      }
-
-      dispatch(completeInstall({
-        status: 'success',
-        errors: [],
-      }));
-
       toast.success('依赖安装成功', {
-        description: `${params.dependencyKey} 已成功安装，关闭对话框后将刷新依赖列表`,
+        description: `${params.dependencyKey} 已成功安装`,
       });
 
       return { success: true };
 
     } catch (error) {
-      dispatch(setInstallCommandStatus({
-        status: 'error',
-        error: error instanceof Error ? error.message : String(error),
-      }));
-      dispatch(completeInstall({
-        status: 'error',
-        errors: [{ dependency: params.dependencyKey, error: error instanceof Error ? error.message : '未知错误' }],
-      }));
-
       console.error('Failed to install single dependency:', error);
 
       toast.error('依赖安装失败', {
         description: error instanceof Error ? error.message : '未知错误',
       });
 
-      throw error;
-    }
-  }
-);
-
-/**
- * Execute install commands with progress
- * Replaces dependencySaga/executeInstallCommands
- */
-export const executeInstallCommands = createAsyncThunk(
-  'dependency/executeInstallCommands',
-  async (params: { commands: string[]; workingDirectory?: string }, { dispatch }) => {
-    const { commands, workingDirectory } = params;
-
-    try {
-      // Open dialog
-      dispatch(openInstallCommandDialog({ commands }));
-
-      // Set up progress listener
-      const progressListeners: Array<(progress: any) => void> = [];
-      const unsubscribe = window.electronAPI.onInstallCommandProgress((progress) => {
-        progressListeners.forEach(listener => listener(progress));
-      });
-
-      const processProgress = (progress: any) => {
-        const { type, commandIndex, output, error } = progress as {
-          type: string;
-          commandIndex: number;
-          totalCommands: number;
-          output?: string;
-          error?: string;
-        };
-
-        if (type === 'command-start') {
-          dispatch(updateInstallCommandProgress(commandIndex));
-        } else if (type === 'command-output' && output) {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'info',
-            message: output,
-          }));
-        } else if (type === 'command-error' && error) {
-          dispatch(addInstallCommandLog({
-            timestamp: Date.now(),
-            type: 'error',
-            message: error,
-          }));
-        }
-      };
-
-      progressListeners.push(processProgress);
-
-      // Execute commands
-      const result: { success: boolean; error?: string } = await window.electronAPI.executeInstallCommands(
-        commands,
-        workingDirectory
-      );
-
-      // Wait for all progress events to be processed
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Clean up listener
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-
-      if (result.success) {
-        dispatch(setInstallCommandStatus({ status: 'success' }));
-        toast.success('命令执行成功', {
-          description: '所有命令已成功执行',
-        });
-      } else {
-        dispatch(setInstallCommandStatus({
-          status: 'error',
-          error: result.error || '命令执行失败',
-        }));
-        toast.error('命令执行失败', {
-          description: result.error || '执行过程中出现错误',
-        });
-      }
-
-      return result.success;
-    } catch (error) {
-      dispatch(setInstallCommandStatus({
-        status: 'error',
-        error: error instanceof Error ? error.message : String(error),
-      }));
-
-      toast.error('命令执行失败', {
-        description: error instanceof Error ? error.message : '未知错误',
-      });
-
-      console.error('Failed to execute install commands:', error);
       throw error;
     }
   }

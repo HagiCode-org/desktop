@@ -9,7 +9,6 @@ import LicenseManagementPage from './components/LicenseManagementPage';
 import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import DependencyStartConfirmDialog from './components/DependencyStartConfirmDialog';
-import { DependencyInstallConfirmDialog } from './components/DependencyInstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { switchView } from './store/slices/viewSlice';
 import { selectIsActive, setActive } from './store/slices/onboardingSlice';
@@ -109,7 +108,6 @@ function App() {
         {/* Global Dialogs */}
         <InstallConfirmDialog />
         <DependencyStartConfirmDialog />
-        <DependencyInstallConfirmDialog />
       </div>
 
       {/* Onboarding Wizard - shown when active */}

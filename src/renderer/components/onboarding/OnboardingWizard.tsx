@@ -147,10 +147,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
-        <div className="relative w-full max-w-4xl mx-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4">
+        <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <h1 className="text-2xl font-semibold">{getStepTitle()}</h1>
             <div className="flex items-center gap-4">
               <OnboardingProgress currentStep={currentStep} totalSteps={totalSteps} />
@@ -164,26 +164,28 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
 
           {/* Content */}
-          <div className="bg-card rounded-lg border shadow-lg">
-            <div className="p-8 min-h-[500px]">
+          <div className="bg-card rounded-lg border shadow-lg flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="p-8 flex-1 overflow-y-auto">
               {renderStep()}
             </div>
 
             {/* Actions */}
             {currentStep !== OnboardingStep.Welcome && currentStep !== OnboardingStep.Launch && (
-              <OnboardingActions
-                canGoNext={canGoNext}
-                canGoPrevious={canGoPrevious}
-                onNext={handleNext}
-                onPrevious={handlePrevious}
-                onSkip={handleSkip}
-              />
+              <div className="flex-shrink-0">
+                <OnboardingActions
+                  canGoNext={canGoNext}
+                  canGoPrevious={canGoPrevious}
+                  onNext={handleNext}
+                  onPrevious={handlePrevious}
+                  onSkip={handleSkip}
+                />
+              </div>
             )}
           </div>
 
           {/* Skip checkbox */}
           {currentStep !== OnboardingStep.Launch && (
-            <div className="flex items-center mt-4">
+            <div className="flex items-center mt-4 flex-shrink-0">
               <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                 <input
                   type="checkbox"

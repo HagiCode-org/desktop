@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
@@ -34,6 +34,13 @@ import {
 import {
   installWebServicePackage,
 } from '../store/thunks/webServiceThunks';
+import {
+  selectInstallProgress as selectDependencyInstallProgress,
+} from '../store/slices/dependencySlice';
+import {
+  installFromManifest,
+  installSingleDependency,
+} from '../store/thunks/dependencyThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
 
@@ -94,7 +101,8 @@ export default function VersionManagementPage() {
   const webServiceStatus = useSelector((state: RootState) => selectWebServiceStatus(state));
   const installState = useSelector((state: RootState) => selectInstallState(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
-  const installProgress = useSelector((state: RootState) => selectInstallProgress(state));
+  const webServiceInstallProgress = useSelector((state: RootState) => selectInstallProgress(state));
+  const dependencyInstallProgress = useSelector((state: RootState) => selectDependencyInstallProgress(state));
   const [availableVersions, setAvailableVersions] = useState<Version[]>([]);
   const [installedVersions, setInstalledVersions] = useState<InstalledVersion[]>([]);
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
@@ -103,12 +111,47 @@ export default function VersionManagementPage() {
   const [uninstalling, setUninstalling] = useState<string | null>(null);
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [dependencies, setDependencies] = useState<Record<string, DependencyCheckResult[]>>({});
-  const [installingDep, setInstallingDep] = useState<string | null>(null);
 
   // Dialog states
   const [reinstallDialogOpen, setReinstallDialogOpen] = useState(false);
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   const [pendingVersionId, setPendingVersionId] = useState<string | null>(null);
+
+  // Track dependency installation completion for refreshing dependencies
+  const prevDependencyInstallingRef = useRef(false);
+  const expandedVersionRef = useRef<string | null>(null);
+
+  // Update expandedVersionRef when expandedVersion changes
+  useEffect(() => {
+    expandedVersionRef.current = expandedVersion;
+  }, [expandedVersion]);
+
+  useEffect(() => {
+    const wasInstalling = prevDependencyInstallingRef.current;
+    const isNowInstalling = dependencyInstallProgress.installing;
+
+    // If installation just completed
+    if (wasInstalling && !isNowInstalling) {
+      // Find the version that was being installed
+      (async () => {
+        try {
+          // Refresh all expanded versions' dependencies
+          const versionsToRefresh = Object.keys(dependencies);
+          for (const versionId of versionsToRefresh) {
+            const refreshedDeps = await window.electronAPI.versionCheckDependencies(versionId);
+            setDependencies((prev) => ({ ...prev, [versionId]: refreshedDeps }));
+          }
+          // Also refresh installed versions to update status
+          const installed = await window.electronAPI.versionGetInstalled();
+          setInstalledVersions(installed);
+        } catch (error) {
+          console.error('Failed to refresh dependencies after installation:', error);
+        }
+      })();
+    }
+
+    prevDependencyInstallingRef.current = isNowInstalling;
+  }, [dependencyInstallProgress.installing]);
 
   useEffect(() => {
     fetchAllData();
@@ -320,32 +363,6 @@ export default function VersionManagementPage() {
     }
   };
 
-  const handleInstallDependency = async (depName: string) => {
-    try {
-      setInstallingDep(depName);
-      const depType = getDepTypeFromName(depName);
-      if (depType) {
-        const success = await window.electronAPI.installDependency(depType);
-        if (success) {
-          // Refresh dependencies for all expanded versions
-          await Promise.all(
-            Object.keys(dependencies).map(async (versionId) => {
-              const deps = await window.electronAPI.versionCheckDependencies(versionId);
-              setDependencies((prev) => ({ ...prev, [versionId]: deps }));
-            })
-          );
-          // Refresh installed versions to update status
-          const installed = await window.electronAPI.versionGetInstalled();
-          setInstalledVersions(installed);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to install dependency:', error);
-    } finally {
-      setInstallingDep(null);
-    }
-  };
-
   const getDepTypeFromName = (depName: string): string | null => {
     const nameMap: Record<string, string> = {
       'Claude Code': 'claudeCode',
@@ -359,6 +376,24 @@ export default function VersionManagementPage() {
     return nameMap[depName] || null;
   };
 
+  const handleInstallAllDependencies = async (versionId: string) => {
+    if (isInstallingFromState || webServiceOperating) return;
+
+    const deps = dependencies[versionId];
+    if (!deps) return;
+
+    // Filter dependencies that need installation
+    const depsToInstall = deps.filter(dep => !dep.installed || dep.versionMismatch);
+    if (depsToInstall.length === 0) return;
+
+    // Use refactored installFromManifest with parameters
+    dispatch(installFromManifest({
+      versionId: versionId,
+      dependencies: depsToInstall,
+      context: 'version-management',
+    }));
+  };
+
   const getInstallProgressText = () => {
     if (!installProgress) return t('versionManagement.installing');
 
@@ -367,7 +402,7 @@ export default function VersionManagementPage() {
       'extracting': t('versionManagement.extracting'),
       'verifying': t('versionManagement.verifying'),
       'completed': t('versionManagement.completed'),
-      'error': '安装失败',
+      'error': t('versionManagement.toast.installFailed'),
     };
 
     return stageTexts[installProgress.stage] || installProgress.message || t('versionManagement.installing');
@@ -648,7 +683,7 @@ export default function VersionManagementPage() {
                         }`}
                       >
                         <AlertCircle className="w-4 h-4" />
-                        {expandedVersion === version.id ? '收起依赖项' : t('versionManagement.actions.viewDependencies')}
+                        {expandedVersion === version.id ? t('versionManagement.actions.collapseDependencies') : t('versionManagement.actions.viewDependencies')}
                       </button>
 
                       {/* Reinstall button for all installed versions */}
@@ -674,7 +709,7 @@ export default function VersionManagementPage() {
                           onClick={() => handleReinstall(version.id)}
                           disabled={isInstallingFromState || switching === version.id}
                           className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                          title="重新安装此软件包"
+                          title={t('versionManagement.actions.reinstallPackage')}
                         >
                           {isInstallingFromState ? (
                             <>
@@ -684,7 +719,7 @@ export default function VersionManagementPage() {
                           ) : (
                             <>
                               <RefreshCw className="w-4 h-4" />
-                              重新安装
+                              {t('versionManagement.actions.reinstall')}
                             </>
                           )}
                         </button>
@@ -753,6 +788,36 @@ export default function VersionManagementPage() {
                         </button>
                       </div>
 
+                      {/* One-click install button - show when there are dependencies that need installation */}
+                      {(() => {
+                        const needsInstall = dependencies[version.id].filter(dep => !dep.installed || dep.versionMismatch);
+                        const isDependencyInstalling = dependencyInstallProgress.installing;
+                        return needsInstall.length > 0 ? (
+                          <div className="mb-3 bg-primary/10 border border-primary/20 rounded-lg p-3">
+                            <p className="text-sm text-foreground mb-2">
+                              {t('versionManagement.installButton', { count: needsInstall.length })}
+                            </p>
+                            <button
+                              onClick={() => handleInstallAllDependencies(version.id)}
+                              disabled={isDependencyInstalling || webServiceOperating}
+                              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                            >
+                              {isDependencyInstalling ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  {t('versionManagement.installing')}
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  {t('versionManagement.installButton', { count: needsInstall.length })}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : null;
+                      })()}
+
                       <div className="space-y-2">
                         {dependencies[version.id].map((dep, index) => (
                           <div
@@ -772,38 +837,6 @@ export default function VersionManagementPage() {
                               </div>
                               {dep.description && (
                                 <p className="text-xs text-muted-foreground mt-1">{dep.description}</p>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {/* Always show install/reinstall button for dependencies with install command */}
-                              {dep.installCommand && (
-                                <button
-                                  onClick={() => handleInstallDependency(dep.name)}
-                                  disabled={installingDep === dep.name}
-                                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 ${
-                                    !dep.installed || dep.versionMismatch
-                                      ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                                      : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
-                                  }`}
-                                >
-                                  {installingDep === dep.name ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary-foreground"></div>
-                                      安装中...
-                                    </>
-                                  ) : !dep.installed || dep.versionMismatch ? (
-                                    <>
-                                      <Download className="w-3 h-3" />
-                                      安装
-                                    </>
-                                  ) : (
-                                    <>
-                                      <RefreshCw className="w-3 h-3" />
-                                      重新安装
-                                    </>
-                                  )}
-                                </button>
                               )}
                             </div>
                           </div>

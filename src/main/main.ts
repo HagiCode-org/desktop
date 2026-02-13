@@ -15,6 +15,7 @@ import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { LicenseManager } from './license-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
+import { manifestReader } from './manifest-reader.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import type { RSSFeedItem } from './types/rss-types.js';
 
@@ -371,6 +372,17 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
 
     // Set the active version path in web service manager
     webServiceManager.setActiveVersion(activeVersion.id);
+
+    // Read manifest and set entryPoint
+    const manifest = await manifestReader.readManifest(activeVersion.installedPath);
+    if (manifest) {
+      const entryPoint = manifestReader.parseEntryPoint(manifest);
+      webServiceManager.setEntryPoint(entryPoint);
+    } else {
+      log.warn('[Main] No manifest found, entryPoint may not be available');
+      webServiceManager.setEntryPoint(null);
+    }
+
     log.info('[Main] Starting web service with version:', activeVersion.id, 'at path:', activeVersion.installedPath);
 
     const result = await webServiceManager.start();
@@ -883,9 +895,14 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
 
     // Parse all dependencies from manifest
     const allDependencies = manifestReader.parseDependencies(manifest);
+    const entryPoint = manifestReader.parseEntryPoint(manifest);
+
+    // Set working directory and manifest for dependency manager
+    dependencyManager.setWorkingDirectory(targetVersion.installedPath);
+    dependencyManager.setManifest(manifest);
 
     // Check which dependencies are actually missing
-    const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies);
+    const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies, entryPoint);
 
     // Filter to only install dependencies that are not installed or have version mismatch
     const missingDependencies = allDependencies.filter((dep) => {
@@ -985,46 +1002,30 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
       };
     }
 
-    // Get install command
-    let installCommand: string | undefined;
-    if (typeof targetDep.installCommand === 'string') {
-      installCommand = targetDep.installCommand;
-    } else if (targetDep.installCommand && typeof targetDep.installCommand === 'object') {
-      const cmdObj = targetDep.installCommand as Record<string, unknown>;
-      // Try to get command for current platform/region
-      const region = manifestReader.detectRegion();
-      const parsed = manifestReader.parseInstallCommand(targetDep.installCommand, region);
-      if (parsed.type !== 'not-available' && parsed.command) {
-        installCommand = parsed.command;
-      }
+    // Use entryPoint script for installation
+    dependencyManager.setWorkingDirectory(targetVersion.installedPath);
+    dependencyManager.setManifest(manifest);
+
+    const entryPoint = manifestReader.parseEntryPoint(manifest);
+    if (!entryPoint) {
+      throw new Error('No entryPoint found in manifest');
     }
 
-    if (!installCommand) {
-      throw new Error(`No install command available for ${dependencyKey}`);
-    }
-
-    // Send initial progress with check command info
+    // Send initial progress
     mainWindow?.webContents.send('dependency:command-progress', {
       type: 'command-info',
       checkCommand: targetDep.checkCommand,
-      installCommand: installCommand,
+      installCommand: entryPoint.install,
     });
 
-    // Execute install command with progress reporting
-    const result = await dependencyManager.executeCommandsWithProgress(
-      [installCommand],
-      targetVersion.installedPath,
-      (progress) => {
-        // Send progress to renderer for the progress dialog
-        log.info('[Main] Sending progress to renderer:', JSON.stringify(progress));
-        mainWindow?.webContents.send('dependency:command-progress', progress);
-      }
-    );
+    // Install using entryPoint script
+    const installResult = await dependencyManager.installSingleDependency(targetDep, entryPoint);
 
-    if (!result.success) {
+    if (!installResult.success) {
+      const errorMsg = installResult.parsedResult.errorMessage || 'Installation failed';
       return {
         success: false,
-        error: result.error || 'Installation failed'
+        error: errorMsg,
       };
     }
 
@@ -1104,6 +1105,21 @@ ipcMain.handle('dependency:get-all', async (_, versionId: string) => {
     return dependencies;
   } catch (error) {
     log.error('[Main] Failed to get all dependencies:', error);
+    return [];
+  }
+});
+
+// Get dependency list from manifest without checking installation status (fast)
+ipcMain.handle('dependency:get-list', async (_, versionId: string) => {
+  if (!versionManager) {
+    return [];
+  }
+
+  try {
+    const dependencies = await versionManager.getDependencyListFromManifest(versionId);
+    return dependencies;
+  } catch (error) {
+    log.error('[Main] Failed to get dependency list:', error);
     return [];
   }
 });
