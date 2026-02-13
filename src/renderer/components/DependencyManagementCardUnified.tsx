@@ -5,12 +5,11 @@ import {
   selectDependencies,
   selectDependenciesLoading,
   selectInstallProgress,
-  selectInstallCommandProgress,
 } from '../store/slices/dependencySlice';
-import { checkDependenciesAfterInstall, installSingleDependency } from '../store/thunks/dependencyThunks';
+import { checkDependenciesAfterInstall, installFromManifest } from '../store/thunks/dependencyThunks';
 import { selectDownloadProgress } from '../store/slices/onboardingSlice';
-import { Download } from 'lucide-react';
-import { DependencyInstallProgressDialog } from './DependencyInstallProgressDialog';
+import { Download, Loader2 } from 'lucide-react';
+import type { AppDispatch } from '../store';
 
 export interface DependencyManagementCardProps {
   versionId: string;
@@ -26,16 +25,14 @@ export function DependencyManagementCard({
   showAdvancedOptions = true,
 }: DependencyManagementCardProps) {
   const { t } = useTranslation(context === 'onboarding' ? 'onboarding' : 'components');
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const dependencies = useSelector(selectDependencies);
   const loading = useSelector(selectDependenciesLoading);
   const installProgress = useSelector(selectInstallProgress);
-  const installCommandProgress = useSelector(selectInstallCommandProgress);
 
-  // Track which dependencies are currently being installed
-  const [installingDeps, setInstallingDeps] = useState<Set<string>>(new Set());
-  const [isInstallingAll, setIsInstallingAll] = useState(false);
+  // Track if installation is in progress
+  const [isInstalling, setIsInstalling] = useState(false);
 
   // For onboarding context, check missing dependencies on mount
   useEffect(() => {
@@ -60,14 +57,12 @@ export function DependencyManagementCard({
     }
   }, [dependencies, context, onInstallComplete]);
 
-  // Update installing deps based on progress
+  // Update installing state based on progress
   useEffect(() => {
     if (installProgress.installing) {
-      setInstallingDeps(new Set([installProgress.currentDependency]));
+      setIsInstalling(true);
     } else {
-      // Clear all installing states when installation completes
-      setInstallingDeps(new Set());
-      setIsInstallingAll(false);
+      setIsInstalling(false);
     }
   }, [installProgress]);
 
@@ -101,41 +96,17 @@ export function DependencyManagementCard({
     }
   };
 
-  // Handle installing a single dependency
-  const handleInstallSingle = (depKey: string) => {
-    if (installingDeps.size > 0) return; // Check if any installation is in progress
-
-    // Find the dependency to get its check command
-    const dep = filteredDependencies.find(d => d.key === depKey);
-    if (!dep) return;
-
-    setInstallingDeps(new Set([depKey]));
-    dispatch(installSingleDependency({
-      dependencyKey: depKey,
-      versionId: effectiveVersionId,
-      checkCommand: dep.checkCommand
-    }));
-  };
-
   // Handle one-click install for all missing dependencies
   const handleInstallAll = () => {
-    if (installingDeps.size > 0) return; // Check if any installation is in progress
+    if (isInstalling) return;
 
-    // Mark all missing dependencies as installing
-    const missingKeys = filteredDependencies
-      .filter(dep => !dep.installed || dep.versionMismatch)
-      .map(dep => dep.key);
-    setInstallingDeps(new Set(missingKeys));
-    setIsInstallingAll(true);
+    setIsInstalling(true);
 
-    dispatch({
-      type: 'dependency/installFromManifest',
-      payload: effectiveVersionId,
-    });
-  };
-
-  const isDepInstalling = (depKey: string) => {
-    return installingDeps.has(depKey) || installProgress.installing;
+    // Use the refactored thunk with parameters
+    dispatch(installFromManifest({
+      versionId: effectiveVersionId,
+      context: context,
+    }));
   };
 
   return (
@@ -162,83 +133,54 @@ export function DependencyManagementCard({
           {filteredDependencies.length > 0 ? (
             <div className="space-y-3 max-h-[340px] overflow-y-auto pr-2 scrollbar-thin">
               {filteredDependencies.map((dep, index) => {
-                const needsInstall = !dep.installed || dep.versionMismatch;
-                const installing = isDepInstalling(dep.key);
-
                 return (
                   <div
                     key={index}
                     className="bg-muted/20 rounded-lg p-4 border border-border"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
-                        {dep.installed && !dep.versionMismatch ? (
-                          <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ) : dep.installed && dep.versionMismatch ? (
-                          <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">{dep.name}</p>
-                          <p className={`text-sm ${
-                            dep.installed && !dep.versionMismatch
-                              ? 'text-green-500'
-                              : dep.installed && dep.versionMismatch
-                              ? 'text-yellow-500'
-                              : 'text-red-500'
-                          }`}>
-                            {dep.installed && !dep.versionMismatch
-                              ? t('dependencyManagement.status.installed')
-                              : dep.installed && dep.versionMismatch
-                              ? t('dependencyManagement.status.versionMismatch')
-                              : t('dependencyManagement.status.notInstalled')}
-                          </p>
-                          {dep.version && (
-                            <span className="text-sm text-muted-foreground">
-                              {t('dependencyManagement.details.currentVersion')}: {dep.version}
-                            </span>
-                          )}
-                          {dep.description && (
-                            <p className="text-sm text-muted-foreground mt-2">{dep.description}</p>
-                          )}
-                          {dep.requiredVersion && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {t('depInstallConfirm.requiredVersion')}: {dep.requiredVersion}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Install button for each missing dependency */}
-                      {needsInstall && (
-                        <button
-                          onClick={() => handleInstallSingle(dep.key)}
-                          disabled={installing}
-                          className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                        >
-                          {installing ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
-                              {t('dependencyManagement.actions.installing')}
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-4 h-4" />
-                              {dep.installed && dep.versionMismatch
-                                ? t('dependencyManagement.actions.upgrade')
-                                : t('dependencyManagement.actions.install')
-                              }
-                            </>
-                          )}
-                        </button>
+                    <div className="flex items-start gap-3">
+                      {dep.installed && !dep.versionMismatch ? (
+                        <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      ) : dep.installed && dep.versionMismatch ? (
+                        <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       )}
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{dep.name}</p>
+                        <p className={`text-sm ${
+                          dep.installed && !dep.versionMismatch
+                            ? 'text-green-500'
+                            : dep.installed && dep.versionMismatch
+                            ? 'text-yellow-500'
+                            : 'text-red-500'
+                        }`}>
+                          {dep.installed && !dep.versionMismatch
+                            ? t('dependencyManagement.status.installed')
+                            : dep.installed && dep.versionMismatch
+                            ? t('dependencyManagement.status.versionMismatch')
+                            : t('dependencyManagement.status.notInstalled')}
+                        </p>
+                        {dep.version && (
+                          <span className="text-sm text-muted-foreground">
+                            {t('dependencyManagement.details.currentVersion')}: {dep.version}
+                          </span>
+                        )}
+                        {dep.description && (
+                          <p className="text-sm text-muted-foreground mt-2">{dep.description}</p>
+                        )}
+                        {dep.requiredVersion && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t('depInstallConfirm.requiredVersion')}: {dep.requiredVersion}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -251,7 +193,7 @@ export function DependencyManagementCard({
           )}
 
           {/* One-click install button for all missing dependencies */}
-          {hasMissingDependencies && installingDeps.size === 0 && (
+          {hasMissingDependencies && !isInstalling && (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <p className="text-sm text-foreground mb-2">
                 {getInstallMessage()}
@@ -273,35 +215,26 @@ export function DependencyManagementCard({
             </div>
           )}
 
-          {/* Show installation progress when installing all dependencies */}
-          {isInstallingAll && installingDeps.size > 0 && (
+          {/* Show installation progress */}
+          {isInstalling && (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <p className="text-sm text-foreground mb-2">
-                {t('depInstallConfirm.installing')}
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span className="text-sm text-muted-foreground">
-                  {installProgress.current} / {installProgress.total}
-                </span>
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t('depInstallConfirm.installing')}
+                  </p>
+                  {installProgress.current > 0 && installProgress.total > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      {installProgress.current} / {installProgress.total}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </>
       )}
-
-      {/* Install Progress Dialog */}
-      <DependencyInstallProgressDialog
-        onClose={() => {
-          // Refresh dependencies after dialog closes
-          dispatch({ type: 'dependency/fetchDependencies' });
-        }}
-        onSuccess={() => {
-          // Refresh dependencies after successful installation
-          dispatch({ type: 'dependency/fetchDependencies' });
-          onInstallComplete?.();
-        }}
-      />
     </div>
   );
 }

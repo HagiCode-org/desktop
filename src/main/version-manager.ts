@@ -2,8 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { app } from 'electron';
 import log from 'electron-log';
-import { manifestReader, type ParsedDependency } from './manifest-reader.js';
-import { DependencyManager, type DependencyCheckResult } from './dependency-manager.js';
+import { manifestReader, type ParsedDependency, type DependencyTypeName } from './manifest-reader.js';
+import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
 import { StateManager, type InstalledVersionInfo } from './state-manager.js';
 import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
@@ -391,7 +391,13 @@ export class VersionManager {
 
       if (manifest) {
         const parsedDeps = manifestReader.parseDependencies(manifest);
-        dependencies = await this.dependencyManager.checkFromManifest(parsedDeps);
+        const entryPoint = manifestReader.parseEntryPoint(manifest);
+
+        // Set working directory and manifest for dependency manager
+        this.dependencyManager.setWorkingDirectory(installPath);
+        this.dependencyManager.setManifest(manifest);
+
+        dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, entryPoint);
 
         // Check if all dependencies are satisfied
         const allDepsSatisfied = dependencies.every(
@@ -631,6 +637,68 @@ export class VersionManager {
   }
 
   /**
+   * Get dependency list from manifest without checking installation status
+   * Returns quickly with isChecking: true for each dependency
+   */
+  async getDependencyListFromManifest(versionId: string): Promise<DependencyCheckResult[]> {
+    try {
+      log.info('[VersionManager] Getting dependency list from manifest for version:', versionId);
+
+      // Try to find the version in installed versions first
+      const installedVersions = await this.getInstalledVersions();
+      log.info('[VersionManager] Installed versions:', installedVersions.map(v => v.id));
+
+      let targetVersion = installedVersions.find((v) => v.id === versionId);
+      let installPath: string;
+
+      if (!targetVersion) {
+        // Version not yet registered, try to find it directly in the install directory
+        log.info('[VersionManager] Version not in registry, checking install directory directly');
+        installPath = this.pathManager.getInstalledVersionPath(versionId);
+
+        // Check if the directory exists
+        try {
+          await fs.access(installPath);
+          log.info('[VersionManager] Found install directory:', installPath);
+        } catch {
+          log.warn('[VersionManager] Version not installed and directory not found:', versionId);
+          return [];
+        }
+      } else {
+        installPath = targetVersion.installedPath;
+      }
+
+      log.info('[VersionManager] Reading manifest from:', installPath);
+
+      const manifest = await manifestReader.readManifest(installPath);
+
+      if (!manifest) {
+        log.warn('[VersionManager] No manifest found for version:', versionId);
+        return [];
+      }
+
+      const parsedDeps = manifestReader.parseDependencies(manifest);
+      log.info('[VersionManager] Parsed dependencies:', parsedDeps.length);
+
+      // Return dependencies with isChecking: true (status unknown)
+      return parsedDeps.map(dep => ({
+        key: dep.key,
+        name: dep.name,
+        type: this.mapDependencyType(dep.key, dep.type),
+        installed: false, // Unknown at this point
+        requiredVersion: dep.versionConstraints?.exact ||
+          (dep.versionConstraints?.min ? `${dep.versionConstraints.min}+` : undefined),
+        versionMismatch: false,
+        description: dep.description,
+        isChecking: true, // Indicates check is in progress
+      }));
+    } catch (error) {
+      log.error('[VersionManager] Failed to get dependency list:', error);
+      return [];
+    }
+  }
+
+  /**
    * Check dependencies for a specific version
    */
   async checkVersionDependencies(versionId: string): Promise<DependencyCheckResult[]> {
@@ -638,14 +706,26 @@ export class VersionManager {
       log.info('[VersionManager] Checking dependencies for version:', versionId);
 
       const installedVersions = await this.getInstalledVersions();
-      const targetVersion = installedVersions.find((v) => v.id === versionId);
+      let targetVersion = installedVersions.find((v) => v.id === versionId);
+      let installPath: string;
 
       if (!targetVersion) {
-        log.warn('[VersionManager] Version not installed:', versionId);
-        return [];
+        // Version not yet registered, try to find it directly in the install directory
+        log.info('[VersionManager] Version not in registry for check, checking install directory directly');
+        installPath = this.pathManager.getInstalledVersionPath(versionId);
+
+        // Check if the directory exists
+        try {
+          await fs.access(installPath);
+          log.info('[VersionManager] Found install directory for check:', installPath);
+        } catch {
+          log.warn('[VersionManager] Version not installed and directory not found:', versionId);
+          return [];
+        }
+      } else {
+        installPath = targetVersion.installedPath;
       }
 
-      const installPath = targetVersion.installedPath;
       const manifest = await manifestReader.readManifest(installPath);
 
       if (!manifest) {
@@ -655,9 +735,11 @@ export class VersionManager {
 
       // Set manifest in dependency manager for NPM mirror configuration
       this.dependencyManager.setManifest(manifest);
+      this.dependencyManager.setWorkingDirectory(installPath);
 
       const parsedDeps = manifestReader.parseDependencies(manifest);
-      const dependencies = await this.dependencyManager.checkFromManifest(parsedDeps);
+      const entryPoint = manifestReader.parseEntryPoint(manifest);
+      const dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, entryPoint);
 
       // Update version info in state
       const versionInfo = await this.stateManager.getInstalledVersion(versionId);
@@ -828,6 +910,40 @@ export class VersionManager {
       }
     } catch (error) {
       log.warn('[VersionManager] Failed to set executable permissions:', error);
+    }
+  }
+
+  /**
+   * Map manifest dependency key and type to DependencyType enum
+   * @param key - Dependency key from manifest
+   * @param type - Dependency type from manifest
+   * @returns Mapped DependencyType enum value
+   */
+  private mapDependencyType(key: string, type: DependencyTypeName): DependencyType {
+    // Map based on key for known dependencies
+    const keyMapping: Record<string, DependencyType> = {
+      'claudeCode': DependencyType.ClaudeCode,
+      'openspec': DependencyType.OpenSpec,
+      'dotnet': DependencyType.DotNetRuntime,
+      'node': DependencyType.NodeJs,
+      'npm': DependencyType.NodeJs, // Treat npm as Node.js dependency
+    };
+
+    if (keyMapping[key]) {
+      return keyMapping[key];
+    }
+
+    // Fallback based on type
+    switch (type) {
+      case 'npm':
+        return DependencyType.ClaudeCode; // Default npm package type
+      case 'system-runtime':
+        if (key.includes('dotnet') || key.includes('.net')) {
+          return DependencyType.DotNetRuntime;
+        }
+        return DependencyType.NodeJs;
+      default:
+        return DependencyType.ClaudeCode; // Default fallback
     }
   }
 }

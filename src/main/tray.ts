@@ -113,17 +113,9 @@ export function updateTrayMenu(): void {
         // Update status to starting immediately
         setServerStatus('starting');
         try {
-          if (webServiceManagerRef) {
-            const result = await webServiceManagerRef.start();
-            const status = await webServiceManagerRef.getStatus();
-            setServerStatus(status.status, status.url);
-            setServiceUrl(status.url);
-            // Notify renderer of status change
-            mainWindow?.webContents.send('web-service-status-changed', status);
-          } else {
-            // Fallback: send IPC message to renderer
-            mainWindow?.webContents.send('tray-start-service');
-          }
+          // Use IPC to start service - this ensures entryPoint is properly set
+          // The main process handles the full startup flow including entryPoint
+          mainWindow?.webContents.send('tray-start-service');
         } catch (error) {
           console.error('Failed to start service from tray:', error);
           setServerStatus('error');

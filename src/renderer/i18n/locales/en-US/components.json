@@ -43,27 +43,6 @@
     "viewDetails": "View Details",
     "fixLater": "Fix Later"
   },
-  "depInstallConfirm": {
-    "title": "Install Missing Dependencies",
-    "installingTitle": "Installing Dependencies",
-    "description": "Detected {{count}} missing dependencies",
-    "requiredVersion": "Required version",
-    "permissionWarning": "Installing these dependencies may require administrator privileges.",
-    "preparing": "Preparing...",
-    "cancel": "Cancel",
-    "confirm": "Install Dependencies",
-    "installing": "Installing...",
-    "errorsOccurred": "dependencies failed to install",
-    "success": "All dependencies installed successfully",
-    "partialSuccess": "{{success}} dependencies installed successfully, {{failed}} failed",
-    "error": "Dependency installation failed"
-  },
-  "depInstallWarningBanner": {
-    "title": "Install Missing Dependencies",
-    "message": "Detected {{count}} missing dependencies. Installation is recommended for proper service operation.",
-    "installNow": "Install Now",
-    "dismiss": "Dismiss"
-  },
   "packageManagement": {
     "cardTitle": "Package Management",
     "cardDescription": "Manage the installation of web service packages",

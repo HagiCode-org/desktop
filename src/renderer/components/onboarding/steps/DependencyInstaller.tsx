@@ -1,37 +1,105 @@
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
-import { CheckCircle2, Package, ChevronDown, ChevronRight, AlertCircle, XCircle } from 'lucide-react';
-import { DependencyManagementCard } from '../../DependencyManagementCardUnified';
-import { selectDownloadProgress, selectDependencyCheckResults } from '../../../store/slices/onboardingSlice';
-import { goToNextStep } from '../../../store/thunks/onboardingThunks';
+import { useSelector, useDispatch } from 'react-redux';
+import { CheckCircle2, Package, ChevronDown, ChevronRight, AlertCircle, XCircle, Loader2, Download } from 'lucide-react';
+import {
+  selectDownloadProgress,
+  selectDependencyCheckResults,
+  addScriptOutput,
+  clearScriptOutput,
+} from '../../../store/slices/onboardingSlice';
+import { checkDependenciesAfterInstall, installFromManifest } from '../../../store/thunks/dependencyThunks';
+import { selectInstallProgress } from '../../../store/slices/dependencySlice';
 import type { RootState } from '../../../store';
-import { useDispatch } from 'react-redux';
-import { useState, useMemo } from 'react';
-import type { DependencyCheckResult } from '../../../../types/onboarding';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import type { DependencyCheckResult, ScriptOutput } from '../../../../types/onboarding';
+import { ScriptOutputConsole } from './ScriptOutputConsole';
+
+interface DependencyCheckResultWithKey extends DependencyCheckResult {
+  key: string;
+}
 
 function DependencyInstaller() {
   const { t } = useTranslation('onboarding');
   const dispatch = useDispatch();
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
   const dependencyCheckResults = useSelector((state: RootState) => selectDependencyCheckResults(state));
+  const installProgress = useSelector((state: RootState) => selectInstallProgress(state));
 
   // State for collapse/expand
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const handleInstallComplete = () => {
-    // Automatically proceed to the next step after successful installation
-    dispatch(goToNextStep());
-  };
+  // Ref to track if we've set up script output listener
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Track previous installation state to detect completion
+  const prevInstallingRef = useRef(false);
+
+  // Set up script output listener on mount
+  useEffect(() => {
+    // Clear previous logs when component mounts
+    dispatch(clearScriptOutput());
+
+    // Set up listener for script output events
+    const unsubscribe = window.electronAPI.onScriptOutput((output: ScriptOutput) => {
+      dispatch(addScriptOutput(output));
+    });
+
+    unsubscribeRef.current = unsubscribe;
+
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [dispatch]);
+
+  // Trigger dependency check when component mounts and download is complete
+  useEffect(() => {
+    if (downloadProgress?.version && dependencyCheckResults.length === 0) {
+      console.log('[DependencyInstaller] Download complete, triggering initial dependency check for version:', downloadProgress.version);
+      dispatch(checkDependenciesAfterInstall({ versionId: downloadProgress.version, context: 'onboarding' }));
+    }
+  }, [downloadProgress?.version, dispatch]);
+
+  // Re-check dependencies after installation completes
+  useEffect(() => {
+    const wasInstalling = prevInstallingRef.current;
+    const isNowInstalling = installProgress.installing;
+
+    // If installation was in progress and now it's complete, re-check dependencies
+    if (wasInstalling && !isNowInstalling && downloadProgress?.version) {
+      console.log('[DependencyInstaller] Installation completed, re-checking dependencies for version:', downloadProgress.version);
+      dispatch(checkDependenciesAfterInstall({ versionId: downloadProgress.version, context: 'onboarding' }));
+    }
+
+    // Update ref for next time
+    prevInstallingRef.current = isNowInstalling;
+  }, [installProgress.installing, downloadProgress?.version, dispatch]);
 
   // Calculate summary statistics
   const summary = useMemo(() => {
     const total = dependencyCheckResults.length;
-    const passed = dependencyCheckResults.filter(dep => dep.installed && !dep.versionMismatch).length;
-    const failed = total - passed;
-    return { total, passed, failed };
+    const checking = dependencyCheckResults.filter(dep => dep.isChecking).length;
+    const passed = dependencyCheckResults.filter(dep => dep.installed && !dep.versionMismatch && !dep.isChecking).length;
+    const failed = total - passed - checking;
+    return { total, passed, failed, checking };
   }, [dependencyCheckResults]);
 
-  // Get all dependencies (not just missing ones) for the detailed display
+  // Count dependencies that need installation
+  const needsInstall = useMemo(() => {
+    return dependencyCheckResults.filter(dep => !dep.installed || dep.versionMismatch || dep.isChecking).length;
+  }, [dependencyCheckResults]);
+
+  // Handle one-click install for all missing dependencies
+  const handleInstallAll = () => {
+    if (installProgress.installing || !downloadProgress?.version) return;
+    console.log('[DependencyInstaller] Installing all dependencies for version:', downloadProgress.version);
+    dispatch(installFromManifest(downloadProgress.version));
+  };
+
+  // Get all dependencies (not just missing ones) for detailed display
   const allDependencies = dependencyCheckResults;
 
   return (
@@ -80,28 +148,58 @@ function DependencyInstaller() {
 
           {/* Summary message */}
           {summary.total > 0 && (
-            <div className={`flex items-center gap-2 ${summary.failed > 0 ? 'text-yellow-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500'}`}>
-              {summary.failed === 0 ? (
+            <div className={`flex items-center gap-2 ${
+              summary.checking > 0
+                ? 'text-blue-600 dark:text-blue-500'
+                : summary.failed > 0
+                ? 'text-yellow-600 dark:text-yellow-500'
+                : 'text-green-600 dark:text-green-500'
+            }`}>
+              {summary.checking > 0 ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : summary.failed === 0 ? (
                 <CheckCircle2 className="w-5 h-5" />
-              ) : summary.failed > 0 ? (
-                <AlertCircle className="w-5 h-5" />
               ) : (
                 <AlertCircle className="w-5 h-5" />
               )}
               <span className="text-sm">
-                {t('dependencyCheck.summary', {
-                  total: summary.total,
-                  passed: summary.passed,
-                  failed: summary.failed,
-                })}
+                {summary.checking > 0
+                  ? t('dependencyCheck.checking', { total: summary.total })
+                  : t('dependencyCheck.summary', {
+                      total: summary.total,
+                      passed: summary.passed,
+                      failed: summary.failed,
+                    })}
               </span>
             </div>
+          )}
+
+          {/* One-click install button - show when there are dependencies to install and not currently installing */}
+          {needsInstall > 0 && summary.checking === 0 && (
+            <button
+              onClick={handleInstallAll}
+              disabled={installProgress.installing}
+              className="mt-3 w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
+            >
+              {installProgress.installing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t('depInstallConfirm.installing')}
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  {t('depInstallConfirm.installButton', { count: needsInstall })}
+                </>
+              )}
+            </button>
           )}
 
           {/* Detailed dependency list */}
           {isExpanded && (
             <div className="mt-4 max-h-80 overflow-y-auto space-y-2 pr-2">
               {allDependencies.map((dep, index) => {
+                const isChecking = dep.isChecking;
                 const isInstalled = dep.installed && !dep.versionMismatch;
                 const hasMismatch = dep.installed && dep.versionMismatch;
 
@@ -113,7 +211,9 @@ function DependencyInstaller() {
                     <div className="flex items-start gap-3">
                       {/* Status icon */}
                       <div className="flex-shrink-0 mt-0.5">
-                        {isInstalled ? (
+                        {isChecking ? (
+                          <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                        ) : isInstalled ? (
                           <CheckCircle2 className="w-5 h-5 text-green-500" />
                         ) : hasMismatch ? (
                           <AlertCircle className="w-5 h-5 text-yellow-500" />
@@ -127,13 +227,17 @@ function DependencyInstaller() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-foreground">{dep.name}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            isInstalled
+                            isChecking
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                              : isInstalled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                               : hasMismatch
                               ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                               : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                           }`}>
-                            {isInstalled
+                            {isChecking
+                              ? t('dependencyManagement.status.checking')
+                              : isInstalled
                               ? t('dependencyManagement.status.installed')
                               : hasMismatch
                               ? t('dependencyManagement.status.versionMismatch')
@@ -170,14 +274,6 @@ function DependencyInstaller() {
           )}
         </div>
       )}
-
-      {/* Unified Dependency Management Card */}
-      <DependencyManagementCard
-        versionId={downloadProgress?.version || ''}
-        context="onboarding"
-        onInstallComplete={handleInstallComplete}
-        showAdvancedOptions={false}
-      />
     </div>
   );
 }

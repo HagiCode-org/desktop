@@ -99,9 +99,15 @@
       "switch": "切换",
       "uninstall": "卸载",
       "viewDependencies": "查看依赖项",
+      "collapseDependencies": "收起依赖项",
       "reinstall": "重新安装",
+      "reinstallPackage": "重新安装此软件包",
       "openLogs": "打开日志"
     },
+    "progressBar": "进度条",
+    "progressText": "进度文本",
+    "installButton": "安装 {{count}} 个依赖",
+    "installing": "正在安装...",
     "info": {
       "title": "关于版本管理",
       "description": "版本管理允许您安装多个 Hagicode Server 版本并在它们之间切换。仅依赖项全部满足的版本可以被激活。"

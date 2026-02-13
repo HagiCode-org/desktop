@@ -16,6 +16,7 @@ import type {
   DownloadProgress,
   ServiceLaunchProgress,
   DependencyCheckResult,
+  ScriptOutput,
 } from '../../../types/onboarding';
 
 const initialState: OnboardingState = {
@@ -32,6 +33,8 @@ const initialState: OnboardingState = {
   isStartingService: false,
   // Dependency check results
   dependencyCheckResults: [],
+  // Real-time script output logs
+  scriptOutputLogs: [],
 };
 
 export const onboardingSlice = createSlice({
@@ -61,6 +64,16 @@ export const onboardingSlice = createSlice({
     },
     setDependencyCheckResults: (state, action: PayloadAction<DependencyCheckResult[]>) => {
       state.dependencyCheckResults = action.payload;
+    },
+    addScriptOutput: (state, action: PayloadAction<ScriptOutput>) => {
+      // Limit log entries to prevent memory issues (keep last 500 entries)
+      if (state.scriptOutputLogs.length >= 500) {
+        state.scriptOutputLogs = state.scriptOutputLogs.slice(-400);
+      }
+      state.scriptOutputLogs.push(action.payload);
+    },
+    clearScriptOutput: (state) => {
+      state.scriptOutputLogs = [];
     },
     nextStep: (state) => {
       if (state.currentStep < OnboardingStep.Launch) {
@@ -223,10 +236,10 @@ export const onboardingSlice = createSlice({
             break;
 
           case OnboardingStep.Dependencies:
-            if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from Dependencies to Launch');
-              state.currentStep = OnboardingStep.Launch;
-            }
+            // Don't auto-advance - user will manually click "Next" button
+            // if (state.downloadProgress?.version) {
+            //   state.currentStep = OnboardingStep.Launch;
+            // }
             break;
 
           case OnboardingStep.Launch:
@@ -242,13 +255,14 @@ export const onboardingSlice = createSlice({
         }
       })
       // Handle dependency installation completion in onboarding context
-      .addCase(TRIGGER_ONBOARDING_NEXT, (state) => {
-        console.log('[onboardingSlice] Triggering next step after dependency installation');
-        // Only proceed if we're in the Dependencies step
-        if (state.currentStep === OnboardingStep.Dependencies) {
-          state.currentStep = OnboardingStep.Launch;
-        }
-      });
+      // Removed auto-advance to next step - users will manually click "Next" button
+      // .addCase(TRIGGER_ONBOARDING_NEXT, (state) => {
+      //   console.log('[onboardingSlice] Triggering next step after dependency installation');
+      //   // Only proceed if we're in the Dependencies step
+      //   if (state.currentStep === OnboardingStep.Dependencies) {
+      //     state.currentStep = OnboardingStep.Launch;
+      //   }
+      // });
   },
 });
 
@@ -262,6 +276,8 @@ export const {
   setDownloadProgress,
   setServiceProgress,
   setDependencyCheckResults,
+  addScriptOutput,
+  clearScriptOutput,
   nextStep,
   previousStep,
 } = onboardingSlice.actions;
@@ -277,6 +293,7 @@ export const selectServiceProgress = (state: { onboarding: OnboardingState }) =>
 export const selectShowSkipConfirm = (state: { onboarding: OnboardingState }) => state.onboarding.showSkipConfirm;
 export const selectOnboardingError = (state: { onboarding: OnboardingState }) => state.onboarding.error;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
+export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
 
 // Computed selectors
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {

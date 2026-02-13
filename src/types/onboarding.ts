@@ -30,11 +30,12 @@ export interface DownloadProgress {
 export interface DependencyItem {
   name: string;
   type: string;
-  status: 'pending' | 'installing' | 'installed' | 'error';
+  status: 'checking' | 'pending' | 'installing' | 'installed' | 'error';
   progress: number; // 0-100
   version?: string;
   requiredVersion?: string;
   error?: string;
+  installHint?: string;
 }
 
 /**
@@ -46,6 +47,16 @@ export interface ServiceLaunchProgress {
   message: string;
   port?: number;
   url?: string;
+}
+
+/**
+ * Script output log entry
+ */
+export interface ScriptOutput {
+  type: 'stdout' | 'stderr';
+  data: string;
+  dependencyName?: string;
+  timestamp: string;
 }
 
 /**
@@ -65,6 +76,8 @@ export interface OnboardingState {
   isStartingService: boolean;
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
+  // Real-time script output logs
+  scriptOutputLogs: ScriptOutput[];
 }
 
 /**
@@ -79,6 +92,7 @@ export interface DependencyCheckResult {
   requiredVersion?: string;
   versionMismatch?: boolean;
   description?: string;
+  isChecking?: boolean;  // True while check is in progress
 }
 
 /**

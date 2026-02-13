@@ -281,9 +281,13 @@ export class OnboardingManager {
       }
 
       const dependencies = manifestReader.parseDependencies(manifest);
+      const entryPoint = manifestReader.parseEntryPoint(manifest);
+
+      // Set working directory for dependency manager
+      this.dependencyManager.setWorkingDirectory(version.installedPath);
 
       // Get initial status
-      const initialStatus = await this.dependencyManager.checkFromManifest(dependencies);
+      const initialStatus = await this.dependencyManager.checkFromManifest(dependencies, entryPoint);
 
       // Create dependency items with status
       const dependencyItems: DependencyItem[] = initialStatus.map(dep => ({
@@ -323,19 +327,35 @@ export class OnboardingManager {
         }
 
         try {
-          // Install the dependency
-          await this.dependencyManager.installSingleDependency(dep);
+          // Install the dependency using new interface
+          const installResult = await this.dependencyManager.installSingleDependency(dep, entryPoint);
 
-          // Update status to installed
-          if (itemIndex >= 0) {
-            dependencyItems[itemIndex].status = 'installed';
-            dependencyItems[itemIndex].progress = 100;
-            if (onProgress) {
-              onProgress([...dependencyItems]);
+          if (installResult.success) {
+            // Update status to installed
+            if (itemIndex >= 0) {
+              dependencyItems[itemIndex].status = 'installed';
+              dependencyItems[itemIndex].progress = 100;
+              if (onProgress) {
+                onProgress([...dependencyItems]);
+              }
             }
-          }
 
-          log.info('[OnboardingManager] Dependency installed:', dep.name);
+            log.info('[OnboardingManager] Dependency installed:', dep.name);
+          } else {
+            // Installation failed - show error and installHint
+            if (itemIndex >= 0) {
+              dependencyItems[itemIndex].status = 'error';
+              dependencyItems[itemIndex].error = installResult.parsedResult.errorMessage || 'Installation failed';
+              if (installResult.installHint) {
+                dependencyItems[itemIndex].installHint = installResult.installHint;
+              }
+              if (onProgress) {
+                onProgress([...dependencyItems]);
+              }
+            }
+
+            log.error('[OnboardingManager] Failed to install dependency:', dep.name, installResult.parsedResult.errorMessage);
+          }
         } catch (error) {
           // Update status to error
           if (itemIndex >= 0) {
@@ -402,9 +422,26 @@ export class OnboardingManager {
       }
 
       const dependencies = manifestReader.parseDependencies(manifest);
+      const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-      // Get status of all dependencies
-      let status = await this.dependencyManager.checkFromManifest(dependencies);
+      // Set working directory for dependency manager
+      this.dependencyManager.setWorkingDirectory(version.installedPath);
+
+      // Create callback for real-time output
+      const onOutput = (type: 'stdout' | 'stderr', data: string, dependencyName?: string) => {
+        // Send real-time output to renderer
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('onboarding:script-output', {
+            type,
+            data,
+            dependencyName,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      };
+
+      // Get status of all dependencies with real-time output
+      let status = await this.dependencyManager.checkFromManifest(dependencies, entryPoint, onOutput);
 
       // Check if debug mode is enabled (ignore dependency check)
       const debugMode = this.store.get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
@@ -480,10 +517,20 @@ export class OnboardingManager {
       // Set the active version path in web service manager
       this.webServiceManager.setActiveVersion(versionId);
 
-      // Start the service
-      const result = await this.webServiceManager.start();
+      // Read manifest and set entryPoint
+      const manifest = await manifestReader.readManifest(version.installedPath);
+      if (manifest) {
+        const entryPoint = manifestReader.parseEntryPoint(manifest);
+        this.webServiceManager.setEntryPoint(entryPoint);
+      } else {
+        log.warn('[OnboardingManager] No manifest found, entryPoint may not be available');
+        this.webServiceManager.setEntryPoint(null);
+      }
 
-      if (result) {
+      // Start the service
+      const startResult = await this.webServiceManager.start();
+
+      if (startResult.success) {
         // Get status
         const status = await this.webServiceManager.getStatus();
 
@@ -493,8 +540,8 @@ export class OnboardingManager {
             phase: 'running',
             progress: 100,
             message: 'Service started successfully',
-            port: status.port ?? undefined,
-            url: status.url ?? undefined,
+            port: startResult.port ?? status.port ?? undefined,
+            url: startResult.url ?? status.url ?? undefined,
           });
         }
 
@@ -502,8 +549,11 @@ export class OnboardingManager {
         this.isStartingService = false;
         return { success: true };
       } else {
+        // Start failed
+        const error = startResult.parsedResult.errorMessage || 'Failed to start service';
+        log.error('[OnboardingManager] Failed to start web service:', error);
         this.isStartingService = false;
-        return { success: false, error: 'Failed to start service' };
+        return { success: false, error };
       }
     } catch (error) {
       log.error('[OnboardingManager] Error starting web service:', error);

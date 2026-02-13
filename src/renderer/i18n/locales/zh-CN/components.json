@@ -43,27 +43,6 @@
     "viewDetails": "查看详情",
     "fixLater": "稍后修复"
   },
-  "depInstallConfirm": {
-    "title": "安装缺失依赖",
-    "installingTitle": "正在安装依赖",
-    "description": "检测到 {{count}} 个缺失的依赖项",
-    "requiredVersion": "要求版本",
-    "permissionWarning": "安装这些依赖可能需要管理员权限。",
-    "preparing": "准备安装...",
-    "cancel": "取消",
-    "confirm": "安装依赖",
-    "installing": "正在安装...",
-    "errorsOccurred": "个依赖安装失败",
-    "success": "所有依赖安装成功",
-    "partialSuccess": "{{success}} 个依赖安装成功，{{failed}} 个失败",
-    "error": "依赖安装失败"
-  },
-  "depInstallWarningBanner": {
-    "title": "安装缺失依赖",
-    "message": "检测到 {{count}} 个缺失的依赖项，建议安装以确保服务正常运行。",
-    "installNow": "立即安装",
-    "dismiss": "关闭"
-  },
   "packageManagement": {
     "cardTitle": "包管理",
     "cardDescription": "管理 Web 服务包的安装",

@@ -86,6 +86,7 @@ const electronAPI = {
   installSingleDependency: (dependencyKey, versionId) => ipcRenderer.invoke('dependency:install-single', dependencyKey, versionId),
   getMissingDependencies: (versionId) => ipcRenderer.invoke('dependency:get-missing', versionId),
   getAllDependencies: (versionId) => ipcRenderer.invoke('dependency:get-all', versionId),
+  getDependencyList: (versionId) => ipcRenderer.invoke('dependency:get-list', versionId),
   onDependencyInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
@@ -242,6 +243,14 @@ const electronAPI = {
     };
     ipcRenderer.on('onboarding:service-progress', listener);
     return () => ipcRenderer.removeListener('onboarding:service-progress', listener);
+  },
+  // Real-time script output during dependency check/install
+  onScriptOutput: (callback) => {
+    const listener = (_event, output) => {
+      callback(output);
+    };
+    ipcRenderer.on('onboarding:script-output', listener);
+    return () => ipcRenderer.removeListener('onboarding:script-output', listener);
   },
   onOnboardingShow: (callback) => {
     const listener = (_event) => {

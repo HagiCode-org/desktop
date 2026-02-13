@@ -100,6 +100,7 @@
     "cancel": "Cancel",
     "confirm": "Install Dependencies",
     "installing": "Installing...",
+    "installButton": "Install {{count}} {{count, plural, =1 {dependency} other {dependencies}}}",
     "errorsOccurred": "dependencies failed to install",
     "success": "All dependencies installed successfully",
     "partialSuccess": "{{success}} dependencies installed successfully, {{failed}} failed",

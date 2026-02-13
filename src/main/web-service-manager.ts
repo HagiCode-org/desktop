@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import { app } from 'electron';
 import log from 'electron-log';
 import { PathManager, Platform } from './path-manager.js';
+import type { EntryPoint, ResultSessionFile, ParsedResult, StartResult } from './manifest-reader.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -49,6 +50,7 @@ export class PCodeWebServiceManager {
   private pathManager: PathManager;
   private currentPhase: StartupPhase = StartupPhase.Idle;
   private activeVersionPath: string | null = null; // Path to the active version installation
+  private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
 
   constructor(config: WebServiceConfig) {
     this.config = config;
@@ -58,6 +60,15 @@ export class PCodeWebServiceManager {
     this.initializeSavedPort().catch(error => {
       log.error('[WebService] Failed to initialize saved port:', error);
     });
+  }
+
+  /**
+   * Set entry point for service operations
+   * @param entryPoint - EntryPoint object from manifest
+   */
+  setEntryPoint(entryPoint: EntryPoint | null): void {
+    this.entryPoint = entryPoint;
+    log.info('[WebService] EntryPoint set:', entryPoint);
   }
 
   /**
@@ -75,6 +86,208 @@ export class PCodeWebServiceManager {
   clearActiveVersion(): void {
     this.activeVersionPath = null;
     log.info('[WebService] Active version cleared');
+  }
+
+  /**
+   * Read result.json file from working directory
+   * Supports multiple result file names and formats for backward compatibility
+   * @param workingDirectory - Directory containing result file
+   * @returns Parsed ResultSessionFile or null if not found
+   */
+  private async readResultFile(workingDirectory: string): Promise<ResultSessionFile | null> {
+    // List of possible result file names (in order of preference)
+    const resultFileNames = ['result.json', 'start-result.json'];
+
+    for (const fileName of resultFileNames) {
+      const resultPath = path.join(workingDirectory, fileName);
+
+      try {
+        log.info('[WebService] Reading result file:', resultPath);
+        const content = await fs.readFile(resultPath, 'utf-8');
+        const rawData = JSON.parse(content);
+
+        // Convert to ResultSessionFile format
+        const result = this.normalizeResultFile(rawData, fileName);
+        log.info('[WebService] Result file read successfully from:', fileName, 'success:', result.success);
+        return result;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          // File doesn't exist, try next file name
+          continue;
+        } else {
+          log.error('[WebService] Failed to read', fileName, ':', error);
+        }
+      }
+    }
+
+    // No result file found
+    log.warn('[WebService] No result file found in:', workingDirectory);
+    return null;
+  }
+
+  /**
+   * Normalize result file data to ResultSessionFile format
+   * Handles different result file formats
+   * @param rawData - Raw JSON data from result file
+   * @param fileName - Source file name
+   * @returns Normalized ResultSessionFile
+   */
+  private normalizeResultFile(rawData: any, fileName: string): ResultSessionFile {
+    // Check if already in ResultSessionFile format
+    if ('exitCode' in rawData && 'success' in rawData && typeof rawData.success === 'boolean') {
+      return rawData as ResultSessionFile;
+    }
+
+    // Handle start-result.json format
+    if (fileName === 'start-result.json') {
+      const success = rawData.success === true || rawData.ready === true;
+      return {
+        exitCode: success ? 0 : 1,
+        stdout: rawData.stdout || JSON.stringify(rawData),
+        stderr: rawData.stderr || '',
+        duration: rawData.duration || 0,
+        timestamp: rawData.timestamp || new Date().toISOString(),
+        success,
+        version: rawData.version,
+        errorMessage: rawData.errorMessage || rawData.error,
+      };
+    }
+
+    // Fallback: treat as unknown format
+    return {
+      exitCode: -1,
+      stdout: JSON.stringify(rawData),
+      stderr: 'Unknown result file format',
+      duration: 0,
+      timestamp: new Date().toISOString(),
+      success: false,
+      errorMessage: 'Unknown result file format',
+    };
+  }
+
+  /**
+   * Parse Result Session file to extract key information
+   * @param result - ResultSessionFile from result.json
+   * @returns ParsedResult with extracted information
+   */
+  private parseResultSession(result: ResultSessionFile | null): ParsedResult {
+    // Fallback if result.json doesn't exist
+    if (!result) {
+      return {
+        success: false,
+        errorMessage: 'result.json file not found',
+        rawOutput: '',
+      };
+    }
+
+    return {
+      success: result.success,
+      version: result.version,
+      errorMessage: result.errorMessage,
+      rawOutput: this.formatRawOutput(result.stdout, result.stderr),
+    };
+  }
+
+  /**
+   * Format raw output for UI display
+   * @param stdout - Standard output
+   * @param stderr - Standard error output
+   * @returns Formatted output string
+   */
+  private formatRawOutput(stdout: string, stderr: string): string {
+    const parts: string[] = [];
+
+    if (stdout && stdout.trim()) {
+      parts.push(stdout.trim());
+    }
+
+    if (stderr && stderr.trim()) {
+      parts.push('Errors: ' + stderr.trim());
+    }
+
+    return parts.length > 0 ? parts.join('\n') : 'No output';
+  }
+
+  /**
+   * Execute entryPoint.start script and wait for result.json generation
+   * @param scriptPath - Full path to the start script
+   * @param workingDirectory - Directory where script should be executed
+   * @returns ResultSessionFile from generated result.json
+   */
+  private async executeStartScript(
+    scriptPath: string,
+    workingDirectory: string
+  ): Promise<ResultSessionFile> {
+    log.info('[WebService] Executing start script:', scriptPath);
+    log.info('[WebService] Working directory:', workingDirectory);
+
+    // Ensure script has execute permissions on Unix
+    if (process.platform !== 'win32') {
+      try {
+        await fs.chmod(scriptPath, 0o755);
+      } catch (error) {
+        log.warn('[WebService] Failed to set execute permissions:', error);
+      }
+    }
+
+    // Execute script
+    return new Promise((resolve, reject) => {
+      const child = spawn(scriptPath, [], {
+        cwd: workingDirectory,
+        shell: true,
+        stdio: 'ignore',
+        detached: process.platform === 'win32',
+      });
+
+      let timeout: NodeJS.Timeout | null = null;
+
+      // Set timeout (30 seconds for start)
+      timeout = setTimeout(() => {
+        child.kill();
+        reject(new Error('Start script execution timeout'));
+      }, this.startTimeout);
+
+      child.on('exit', async (code) => {
+        if (timeout) clearTimeout(timeout);
+
+        log.info('[WebService] Start script exited with code:', code);
+
+        // Wait a bit for result.json to be written
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Read result.json
+        const result = await this.readResultFile(workingDirectory);
+
+        if (result) {
+          resolve(result);
+        } else {
+          // Fallback: create a result from exit code
+          resolve({
+            exitCode: code ?? -1,
+            stdout: '',
+            stderr: 'result.json not found',
+            duration: 0,
+            timestamp: new Date().toISOString(),
+            success: false,
+            errorMessage: 'result.json file was not generated',
+          });
+        }
+      });
+
+      child.on('error', async (error) => {
+        if (timeout) clearTimeout(timeout);
+
+        log.error('[WebService] Start script execution error:', error);
+
+        // Try to read result.json even on error
+        const result = await this.readResultFile(workingDirectory);
+        if (result) {
+          resolve(result);
+        } else {
+          reject(error);
+        }
+      });
+    });
   }
 
   /**
@@ -314,37 +527,84 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Start the web service process
+   * Start the web service process using entryPoint.start script
+   * @returns StartResult with service URL and port information
    */
-  async start(): Promise<boolean> {
+  async start(): Promise<StartResult> {
+    // Default result for failures
+    const failureResult: StartResult = {
+      success: false,
+      resultSession: {
+        exitCode: -1,
+        stdout: '',
+        stderr: 'Start failed',
+        duration: 0,
+        timestamp: new Date().toISOString(),
+        success: false,
+        errorMessage: 'Unknown error',
+      },
+      parsedResult: {
+        success: false,
+        errorMessage: 'Unknown error',
+        rawOutput: '',
+      },
+    };
+
     if (this.process) {
       log.warn('[WebService] Process already running');
-      return false;
+      return {
+        ...failureResult,
+        parsedResult: {
+          ...failureResult.parsedResult,
+          errorMessage: 'Process already running',
+        },
+      };
     }
 
     if (this.restartCount >= this.maxRestartAttempts) {
       log.error('[WebService] Max restart attempts reached');
       this.status = 'error';
       this.emitPhase(StartupPhase.Error, 'Max restart attempts reached');
-      return false;
+      return {
+        ...failureResult,
+        parsedResult: {
+          ...failureResult.parsedResult,
+          errorMessage: 'Max restart attempts reached',
+        },
+      };
+    }
+
+    // Check if entryPoint is available
+    if (!this.entryPoint) {
+      log.error('[WebService] No entryPoint available for start');
+      this.status = 'error';
+      this.emitPhase(StartupPhase.Error, 'No entryPoint configured');
+      return {
+        ...failureResult,
+        parsedResult: {
+          ...failureResult.parsedResult,
+          errorMessage: 'No entryPoint configured',
+        },
+      };
+    }
+
+    if (!this.activeVersionPath) {
+      log.error('[WebService] No active version path set');
+      this.status = 'error';
+      this.emitPhase(StartupPhase.Error, 'No active version');
+      return {
+        ...failureResult,
+        parsedResult: {
+          ...failureResult.parsedResult,
+          errorMessage: 'No active version set',
+        },
+      };
     }
 
     try {
       this.status = 'starting';
       log.info('[WebService] Starting with configured port:', this.config.port);
       this.emitPhase(StartupPhase.CheckingPort, 'Checking port availability...');
-
-      // Check if startup script exists
-      const scriptPath = this.getStartupScriptPath();
-      try {
-        await fs.access(scriptPath);
-        log.info('[WebService] Startup script found:', scriptPath);
-      } catch {
-        log.error('[WebService] Startup script not found:', scriptPath);
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, 'Startup script not found');
-        return false;
-      }
 
       // Check port availability and auto-increment if needed
       let portAvailable = await this.checkPortAvailable();
@@ -363,7 +623,7 @@ export class PCodeWebServiceManager {
 
         if (portAvailable) {
           log.info('[WebService] Found available port:', this.config.port);
-          // Save the new port to configuration
+          // Save new port to configuration
           await this.savePort(this.config.port);
           this.emitPhase(StartupPhase.CheckingPort, `Port ${this.config.port} available`);
         }
@@ -374,8 +634,36 @@ export class PCodeWebServiceManager {
         log.error('[WebService] Could not find available port after', maxPortCheckAttempts, 'attempts');
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, 'Unable to find available port');
-        return false;
+        return {
+          ...failureResult,
+          parsedResult: {
+            ...failureResult.parsedResult,
+            errorMessage: 'Unable to find available port',
+          },
+        };
       }
+
+      // Resolve start script path from entryPoint
+      const startScriptPath = path.resolve(
+        this.activeVersionPath!,
+        this.entryPoint.start
+      );
+      try {
+        await fs.access(startScriptPath);
+        log.info('[WebService] Startup script found:', startScriptPath);
+      } catch {
+        log.error('[WebService] Startup script not found:', startScriptPath);
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, 'Startup script not found');
+        return {
+          ...failureResult,
+          parsedResult: {
+            ...failureResult.parsedResult,
+            errorMessage: 'Startup script not found',
+          },
+        };
+      }
+
 
       // Sync configuration to file before starting the service
       try {
@@ -406,7 +694,13 @@ export class PCodeWebServiceManager {
         this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
         await this.stop();
         this.status = 'error';
-        return false;
+        return {
+          ...failureResult,
+          parsedResult: {
+            ...failureResult.parsedResult,
+            errorMessage: 'Service failed to start listening',
+          },
+        };
       }
 
       // Health check
@@ -423,20 +717,59 @@ export class PCodeWebServiceManager {
         log.info('[WebService] Service started successfully on port:', this.config.port);
         this.emitPhase(StartupPhase.Running, 'Service is running');
         log.info('[WebService] Started successfully, PID:', this.process.pid);
-        return true;
+
+        // Return success result with URL and port
+        return {
+          success: true,
+          resultSession: {
+            exitCode: 0,
+            stdout: '',
+            stderr: '',
+            duration: 0,
+            timestamp: new Date().toISOString(),
+            success: true,
+          },
+          parsedResult: {
+            success: true,
+            rawOutput: '',
+          },
+          url: `http://${this.config.host}:${this.config.port}`,
+          port: this.config.port,
+        };
       } else {
         log.error('[WebService] Health check failed');
         this.emitPhase(StartupPhase.Error, 'Health check failed');
         await this.stop();
         this.status = 'error';
-        return false;
+        return {
+          ...failureResult,
+          parsedResult: {
+            ...failureResult.parsedResult,
+            errorMessage: 'Health check failed',
+          },
+        };
       }
     } catch (error) {
       log.error('[WebService] Failed to start:', error);
       this.status = 'error';
       this.process = null;
       this.emitPhase(StartupPhase.Error, `Start failed: ${(error as Error).message}`);
-      return false;
+      return {
+        ...failureResult,
+        resultSession: {
+          exitCode: -1,
+          stdout: '',
+          stderr: (error as Error).message,
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          success: false,
+          errorMessage: (error as Error).message,
+        },
+        parsedResult: {
+          ...failureResult.parsedResult,
+          errorMessage: (error as Error).message,
+        },
+      };
     }
   }
 
@@ -619,13 +952,29 @@ export class PCodeWebServiceManager {
   /**
    * Restart the web service
    */
-  async restart(): Promise<boolean> {
+  async restart(): Promise<StartResult> {
     log.info('[WebService] Restarting web service...');
 
     const stopped = await this.stop();
     if (!stopped) {
       log.error('[WebService] Failed to stop for restart');
-      return false;
+      return {
+        success: false,
+        resultSession: {
+          exitCode: -1,
+          stdout: '',
+          stderr: 'Failed to stop for restart',
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          success: false,
+          errorMessage: 'Failed to stop for restart',
+        },
+        parsedResult: {
+          success: false,
+          errorMessage: 'Failed to stop for restart',
+          rawOutput: 'Failed to stop for restart',
+        },
+      };
     }
 
     // Wait a bit before starting again

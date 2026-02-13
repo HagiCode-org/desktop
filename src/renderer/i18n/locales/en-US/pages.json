@@ -99,9 +99,15 @@
       "switch": "Switch",
       "uninstall": "Uninstall",
       "viewDependencies": "View Dependencies",
+      "collapseDependencies": "Collapse Dependencies",
       "reinstall": "Reinstall",
+      "reinstallPackage": "Reinstall this package",
       "openLogs": "Open Logs"
     },
+    "progressBar": "Progress bar",
+    "progressText": "Progress text",
+    "installButton": "Install {{count}} dependencies",
+    "installing": "Installing...",
     "info": {
       "title": "About Version Management",
       "description": "Version management allows you to install multiple Hagicode Server versions and switch between them. Only versions with all dependencies satisfied can be activated."
