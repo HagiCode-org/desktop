@@ -85,17 +85,17 @@ export class DependencyManager {
   }
 
   /**
-   * Read result.json file from working directory
+   * Read result.json file from script directory
    * Supports multiple result file names and formats for backward compatibility
-   * @param workingDirectory - Directory containing result file
+   * @param scriptDirectory - Directory where the script is located (result file is written here)
    * @returns Parsed ResultSessionFile or null if not found
    */
-  private async readResultFile(workingDirectory: string): Promise<ResultSessionFile | null> {
+  private async readResultFile(scriptDirectory: string): Promise<ResultSessionFile | null> {
     // List of possible result file names (in order of preference)
     const resultFileNames = ['result.json', 'check-result.json', 'install-result.json'];
 
     for (const fileName of resultFileNames) {
-      const resultPath = path.join(workingDirectory, fileName);
+      const resultPath = path.join(scriptDirectory, fileName);
 
       try {
         log.info('[DependencyManager] Reading result file:', resultPath);
@@ -104,20 +104,20 @@ export class DependencyManager {
 
         // Convert to ResultSessionFile format
         const result = this.normalizeResultFile(rawData, fileName);
-        log.info('[DependencyManager] Result file read successfully from:', fileName, 'success:', result.success);
+        log.info('[DependencyManager] Result file read successfully from:', resultPath, 'success:', result.success);
         return result;
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           // File doesn't exist, try next file name
           continue;
         } else {
-          log.error('[DependencyManager] Failed to read', fileName, ':', error);
+          log.error('[DependencyManager] Failed to read', resultPath, ':', error);
         }
       }
     }
 
     // No result file found
-    log.warn('[DependencyManager] No result file found in:', workingDirectory);
+    log.warn('[DependencyManager] No result file found in:', scriptDirectory);
     return null;
   }
 
@@ -222,6 +222,37 @@ export class DependencyManager {
   }
 
   /**
+   * Get platform-specific spawn options for child processes
+   * On Windows: uses windowsHide to prevent console windows, detached for independent execution
+   * On Unix: uses pipe for stdio to capture output
+   * @returns Spawn options object
+   */
+  private getSpawnOptions(): {
+    shell: boolean | string;
+    stdio: Array<'pipe' | 'ignore' | 'inherit'>;
+    detached?: boolean;
+    windowsHide?: boolean;
+  } {
+    const options: {
+      shell: boolean | string;
+      stdio: Array<'pipe' | 'ignore' | 'inherit'>;
+      detached?: boolean;
+      windowsHide?: boolean;
+    } = {
+      shell: this.platform === 'win32' ? true : '/bin/bash',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    };
+
+    // Windows-specific options to hide console window
+    if (this.platform === 'win32') {
+      options.detached = true;
+      options.windowsHide = true;
+    }
+
+    return options;
+  }
+
+  /**
    * Execute entryPoint script and wait for result.json generation
    * @param scriptPath - Full path to the script to execute
    * @param workingDirectory - Directory where script should be executed
@@ -233,8 +264,10 @@ export class DependencyManager {
     workingDirectory: string,
     onOutput?: (type: 'stdout' | 'stderr', data: string) => void
   ): Promise<ResultSessionFile> {
+    const scriptDirectory = path.dirname(scriptPath);
     log.info('[DependencyManager] Executing entryPoint script:', scriptPath);
     log.info('[DependencyManager] Working directory:', workingDirectory);
+    log.info('[DependencyManager] Script directory:', scriptDirectory);
 
     // Ensure script has execute permissions on Unix
     if (this.platform !== 'win32') {
@@ -245,22 +278,17 @@ export class DependencyManager {
       }
     }
 
-    // Execute script using bash explicitly to handle path with spaces
-    // Use '/bin/bash' on Unix and 'cmd.exe' on Windows
-    const shell = this.platform === 'win32' ? true : '/bin/bash';
-    const command = this.platform === 'win32'
-      ? `"${scriptPath}"`
-      : `"${scriptPath}"`;
+    // Get platform-specific spawn options
+    const spawnOptions = this.getSpawnOptions();
+
+    // Build command based on platform
+    const command = this.platform === 'win32' ? `"${scriptPath}"` : `"${scriptPath}"`;
 
     // Execute script with output capture
     return new Promise((resolve, reject) => {
       const child = spawn(command, [], {
         cwd: workingDirectory,
-        shell: shell,
-        stdio: ['pipe', 'pipe', 'pipe'], // Capture stdin, stdout, stderr
-        detached: this.platform === 'win32',
-        // Hide console window on Windows to prevent visual disruption
-        ...(this.platform === 'win32' && { windowsHide: true }),
+        ...spawnOptions,
       });
 
       let timeout: NodeJS.Timeout | null = null;
@@ -333,8 +361,8 @@ export class DependencyManager {
         // Wait a bit for result.json to be written
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Read result.json
-        const result = await this.readResultFile(workingDirectory);
+        // Read result.json from script directory
+        const result = await this.readResultFile(scriptDirectory);
 
         if (result) {
           // Merge captured output with result
@@ -368,7 +396,7 @@ export class DependencyManager {
         }
 
         // Try to read result.json even on error
-        const result = await this.readResultFile(workingDirectory);
+        const result = await this.readResultFile(scriptDirectory);
         if (result) {
           resolve(result);
         } else {
@@ -731,6 +759,7 @@ export class DependencyManager {
 
   /**
    * Install dependencies from manifest
+   * Executes install script ONCE to install all dependencies in a single batch operation
    * @param manifest - Parsed manifest object
    * @param dependencies - List of dependencies to install (optional, will check all if not provided)
    * @param onProgress - Progress callback
@@ -760,62 +789,135 @@ export class DependencyManager {
     // If dependencies not provided, parse from manifest
     const depsToCheck = dependencies || [];
 
+    if (depsToCheck.length === 0) {
+      log.info('[DependencyManager] No dependencies to install');
+      return results;
+    }
+
     // Get entryPoint for script execution
     const { manifestReader } = await import('./manifest-reader.js');
     const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-    log.info('[DependencyManager] Installing', depsToCheck.length, 'dependencies from manifest');
+    log.info('[DependencyManager] Installing', depsToCheck.length, 'dependencies from manifest in single batch operation');
 
-    for (let i = 0; i < depsToCheck.length; i++) {
-      const dep = depsToCheck[i];
+    // If no entryPoint available, cannot install
+    if (!entryPoint || !this.workingDirectory) {
+      log.error('[DependencyManager] No entryPoint or working directory available for batch installation');
+      // Mark all as failed
+      for (const dep of depsToCheck) {
+        results.failed.push({
+          dependency: dep.name,
+          error: 'No entryPoint or working directory available',
+        });
+      }
+      return results;
+    }
 
-      onProgress?.({
-        current: i + 1,
-        total: depsToCheck.length,
-        dependency: dep.name,
-        status: 'installing',
-      });
+    try {
+      // Resolve install script path
+      const scriptPath = manifestReader.resolveScriptPath(entryPoint.install, this.workingDirectory);
+
+      log.info('[DependencyManager] Executing batch install script:', scriptPath);
+
+      // Mark all dependencies as installing
+      for (const dep of depsToCheck) {
+        onProgress?.({
+          current: 0,
+          total: depsToCheck.length,
+          dependency: dep.name,
+          status: 'installing',
+        });
+      }
+
+      // Execute install script ONCE for all dependencies
+      const resultSession = await this.executeEntryPointScript(scriptPath, this.workingDirectory);
+      const parsedResult = this.parseResultSession(resultSession);
+
+      // Read install-result.json to get individual dependency installation results
+      const installResultPath = path.join(this.workingDirectory, 'install-result.json');
+      let installResultData: any = null;
 
       try {
-        const installResult = await this.installSingleDependency(dep, entryPoint);
+        const content = await fs.readFile(installResultPath, 'utf-8');
+        installResultData = JSON.parse(content);
+        log.info('[DependencyManager] Read install-result.json with results:', Object.keys(installResultData.dependencies || {}));
+      } catch (error) {
+        log.warn('[DependencyManager] Could not read install-result.json, using fallback from result.json');
+      }
 
-        if (installResult.success) {
+      // Map results for each dependency
+      for (const dep of depsToCheck) {
+        let depSuccess = false;
+        let depError = 'Installation result not found';
+
+        // Look up this dependency in install-result.json
+        if (installResultData?.dependencies) {
+          // Try different key formats (dotnet, dotnet-runtime, claudeCode, claude-code, etc.)
+          const possibleKeys = [
+            dep.key,
+            dep.key.replace(/([A-Z])/g, '-$1').toLowerCase(), // camelCase to kebab-case
+            dep.key.replace(/-/g, ''), // kebab-case to camelCase
+          ];
+
+          let depData = null;
+          for (const key of possibleKeys) {
+            if (installResultData.dependencies[key]) {
+              depData = installResultData.dependencies[key];
+              log.info(`[DependencyManager] Found dependency ${dep.name} with key ${key}:`, depData);
+              break;
+            }
+          }
+
+          if (depData) {
+            depSuccess = depData.success === true;
+            depError = depData.error || (depSuccess ? '' : 'Installation failed');
+
+            log.info(`[DependencyManager] ${dep.name}: success=${depSuccess}, error=${depError}`);
+          } else {
+            log.warn(`[DependencyManager] Dependency ${dep.name} not found in install-result.json`);
+          }
+        } else {
+          // Fallback: use overall result from result.json
+          depSuccess = parsedResult.success;
+          depError = parsedResult.errorMessage || (depSuccess ? '' : 'Installation failed');
+          log.info(`[DependencyManager] ${dep.name}: using overall result, success=${depSuccess}, error=${depError}`);
+        }
+
+        if (depSuccess) {
           results.success.push(dep.name);
-
           onProgress?.({
-            current: i + 1,
+            current: 1,
             total: depsToCheck.length,
             dependency: dep.name,
             status: 'success',
           });
         } else {
-          // Installation failed
-          const errorMsg = installResult.parsedResult.errorMessage || 'Installation failed';
           results.failed.push({
             dependency: dep.name,
-            error: errorMsg,
+            error: depError,
           });
-
-          log.error(`[DependencyManager] Failed to install ${dep.name}:`, errorMsg);
-
           onProgress?.({
-            current: i + 1,
+            current: 1,
             total: depsToCheck.length,
             dependency: dep.name,
             status: 'error',
           });
         }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
+      }
+
+      log.info('[DependencyManager] Batch installation completed:', results.success.length, 'success,', results.failed.length, 'failed');
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      log.error('[DependencyManager] Batch installation failed:', error);
+
+      // Mark all as failed
+      for (const dep of depsToCheck) {
         results.failed.push({
           dependency: dep.name,
           error: errorMsg,
         });
-
-        log.error(`[DependencyManager] Failed to install ${dep.name}:`, error);
-
         onProgress?.({
-          current: i + 1,
+          current: 1,
           total: depsToCheck.length,
           dependency: dep.name,
           status: 'error',
@@ -1016,6 +1118,10 @@ export class DependencyManager {
     return new Promise((resolve, reject) => {
       log.info(`[DependencyManager] Spawning command: ${command}`);
 
+      // Get platform-specific spawn options
+      const baseOptions = this.getSpawnOptions();
+
+      // Override for shell execution (needs shell: true for command chaining)
       const childProcess = spawn(command, {
         cwd: workingDirectory,
         shell: true, // Use shell to support command chaining

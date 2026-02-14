@@ -395,7 +395,7 @@ export default function VersionManagementPage() {
   };
 
   const getInstallProgressText = () => {
-    if (!installProgress) return t('versionManagement.installing');
+    if (!webServiceInstallProgress) return t('versionManagement.installing');
 
     const stageTexts: Record<string, string> = {
       'downloading': t('versionManagement.downloading'),
@@ -405,7 +405,7 @@ export default function VersionManagementPage() {
       'error': t('versionManagement.toast.installFailed'),
     };
 
-    return stageTexts[installProgress.stage] || installProgress.message || t('versionManagement.installing');
+    return stageTexts[webServiceInstallProgress.stage] || webServiceInstallProgress.message || t('versionManagement.installing');
   };
 
   const getVersionStatus = (version: InstalledVersion) => {
@@ -552,21 +552,21 @@ export default function VersionManagementPage() {
 
                   {!installed ? (
                     <div className="flex items-center gap-2">
-                      {isInstallingFromState && installProgress ? (
+                      {isInstallingFromState && webServiceInstallProgress ? (
                         <div className="flex items-center gap-2">
                           {/* 进度条 */}
                           <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
                             <div
                               className="h-full bg-primary transition-all duration-300 ease-out"
-                              style={{ width: `${installProgress.progress}%` }}
+                              style={{ width: `${webServiceInstallProgress.progress}%` }}
                             />
                           </div>
                           {/* 进度文本 */}
                           <span className="text-xs text-muted-foreground min-w-[60px]">
-                            {installProgress.stage === 'downloading' && `${installProgress.progress}%`}
-                            {installProgress.stage === 'extracting' && `${installProgress.progress}%`}
-                            {installProgress.stage === 'verifying' && t('versionManagement.verifying')}
-                            {installProgress.stage === 'completed' && t('versionManagement.completed')}
+                            {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
                           </span>
                         </div>
                       ) : (
@@ -687,21 +687,21 @@ export default function VersionManagementPage() {
                       </button>
 
                       {/* Reinstall button for all installed versions */}
-                      {isInstallingFromState && installProgress ? (
+                      {isInstallingFromState && webServiceInstallProgress ? (
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg">
                           {/* 进度条 */}
                           <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-primary transition-all duration-300 ease-out"
-                              style={{ width: `${installProgress.progress}%` }}
+                              style={{ width: `${webServiceInstallProgress.progress}%` }}
                             />
                           </div>
                           {/* 进度文本 */}
                           <span className="text-xs text-muted-foreground min-w-[50px]">
-                            {installProgress.stage === 'downloading' && `${installProgress.progress}%`}
-                            {installProgress.stage === 'extracting' && `${installProgress.progress}%`}
-                            {installProgress.stage === 'verifying' && t('versionManagement.verifying')}
-                            {installProgress.stage === 'completed' && t('versionManagement.completed')}
+                            {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
                           </span>
                         </div>
                       ) : (

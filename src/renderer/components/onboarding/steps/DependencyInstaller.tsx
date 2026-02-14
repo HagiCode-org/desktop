@@ -4,11 +4,13 @@ import { CheckCircle2, Package, ChevronDown, ChevronRight, AlertCircle, XCircle,
 import {
   selectDownloadProgress,
   selectDependencyCheckResults,
+  selectCurrentStep,
   addScriptOutput,
   clearScriptOutput,
 } from '../../../store/slices/onboardingSlice';
 import { checkDependenciesAfterInstall, installFromManifest } from '../../../store/thunks/dependencyThunks';
 import { selectInstallProgress } from '../../../store/slices/dependencySlice';
+import { OnboardingStep } from '../../../../types/onboarding';
 import type { RootState } from '../../../store';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { DependencyCheckResult, ScriptOutput } from '../../../../types/onboarding';
@@ -55,14 +57,26 @@ function DependencyInstaller() {
     };
   }, [dispatch]);
 
-  // Trigger dependency check when component mounts and download is complete
+  // Note: Dependency check is no longer triggered on component mount to avoid duplicate checks.
+  // The check should be triggered when user explicitly enters the Dependencies step or via other user interactions.
+  // This prevents the issue where the same dependency check was running twice:
+  // 1. When download completes (component was already mounted)
+  // 2. When user clicks "Next" to enter the Dependencies step (component mounts again)
+  const currentStep = useSelector((state: RootState) => selectCurrentStep(state));
+
+  // Trigger dependency check only when user enters the Dependencies step
   useEffect(() => {
-    if (downloadProgress?.version && dependencyCheckResults.length === 0) {
-      console.log('[DependencyInstaller] Download complete, triggering initial dependency check for version:', downloadProgress.version);
+    // Only trigger if:
+    // 1. We're currently on the Dependencies step
+    // 2. Download is complete (version exists)
+    // 3. No dependency check results yet
+    if (currentStep === OnboardingStep.Dependencies &&
+        downloadProgress?.version &&
+        dependencyCheckResults.length === 0) {
+      console.log('[DependencyInstaller] Dependencies step active, triggering dependency check for version:', downloadProgress.version);
       dispatch(checkDependenciesAfterInstall({ versionId: downloadProgress.version, context: 'onboarding' }));
     }
-  }, [downloadProgress?.version, dispatch]);
-
+  }, [currentStep, downloadProgress?.version, dispatch]);
   // Re-check dependencies after installation completes
   useEffect(() => {
     const wasInstalling = prevInstallingRef.current;
