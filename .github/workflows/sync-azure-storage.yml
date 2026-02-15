@@ -67,7 +67,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Run Nuke Sync to Azure
-      run: ./build.sh --target SyncToAzure
+      run: ./build.sh --target Default
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}

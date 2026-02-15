@@ -92,7 +92,7 @@ partial class Build : NukeBuild
 
     Target Default => _ => _
         .Description("Run complete build process")
-        .DependsOn(Setup);
+        .DependsOn(PublishToAzureBlob);
 
     #endregion
 }
