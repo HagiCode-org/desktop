@@ -1,5 +1,4 @@
 using Adapters;
-using System.Text.RegularExpressions;
 
 public partial class Build
 {
@@ -82,14 +81,12 @@ public partial class Build
     }
 
     /// <summary>
-    /// 步骤 2: 上传 index.json 到 Azure Blob Storage
-    /// 从本地读取预先生成的 index.json 并上传
-    /// 用于 CI/CD 场景中独立管理 index.json
-    /// 可选地同时上传 zip 构建产物
+    /// 步骤 2: 同步 GitHub Release 到 Azure Blob Storage
+    /// 完整的同步流程：下载 release 资产 -> 上传到 Azure -> 生成 index.json
     /// </summary>
     private async Task ExecutePublishToAzureBlob()
     {
-        Log.Information("=== 上传到 Azure Blob ===");
+        Log.Information("=== 同步 GitHub Release 到 Azure Blob ===");
         Log.Information("上传配置: Artifacts={Artifacts}, Index={Index}",
             UploadArtifacts, UploadIndex);
 
@@ -99,61 +96,18 @@ public partial class Build
         if (string.IsNullOrWhiteSpace(versionTag))
         {
             Log.Information("未指定 ReleaseTag，尝试从 GitHub 获取最新 tag...");
-
-            // Try to get GitHub repository from local git remote
-            string? repoOwnerAndName = null;
             
-            try
+            // 使用 gh CLI 获取 latest tag
+            var latestTag = await GetLatestReleaseTagUsingGhAsync();
+            
+            if (!string.IsNullOrWhiteSpace(latestTag))
             {
-                var gitDir = RootDirectory / ".git";
-                if (Directory.Exists(gitDir))
-                {
-                    var configPath = gitDir / "config";
-                    if (File.Exists(configPath))
-                    {
-                        var configContent = await File.ReadAllTextAsync(configPath);
-                        // Look for GitHub remote URL
-                        var match = Regex.Match(configContent, @"github\.com[/:]([^/]+)/([^/.]+)");
-                        if (match.Success)
-                        {
-                            repoOwnerAndName = $"{match.Groups[1].Value}/{match.Groups[2].Value}";
-                            Log.Information("检测到 GitHub 仓库: {Repo}", repoOwnerAndName);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "无法读取 git 配置");
-            }
-
-            if (!string.IsNullOrWhiteSpace(GitHubToken) && !string.IsNullOrWhiteSpace(repoOwnerAndName))
-            {
-                var githubAdapter = new GitHubAdapter(GitHubToken, repoOwnerAndName);
-                var latestTag = await githubAdapter.GetLatestReleaseTagAsync();
-
-                if (!string.IsNullOrWhiteSpace(latestTag))
-                {
-                    versionTag = latestTag;
-                    Log.Information("使用 GitHub 最新 tag: {Tag}", versionTag);
-                }
-                else
-                {
-                    Log.Warning("无法从 GitHub 获取最新 tag，将使用默认版本");
-                    versionTag = BuildConfig.Version;
-                }
+                versionTag = latestTag;
+                Log.Information("使用 GitHub 最新 tag: {Tag}", versionTag);
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(GitHubToken))
-                {
-                    Log.Warning("未配置 GitHub Token (通过 --github-token 或 GITHUB_TOKEN 环境变量)");
-                }
-                if (string.IsNullOrWhiteSpace(repoOwnerAndName))
-                {
-                    Log.Warning("无法确定 GitHub 仓库信息");
-                }
-                Log.Information("使用默认版本: {Version}", BuildConfig.Version);
+                Log.Warning("无法从 GitHub 获取最新 tag，将使用默认版本");
                 versionTag = BuildConfig.Version;
             }
         }
@@ -181,119 +135,108 @@ public partial class Build
             throw new Exception("必须配置 Azure Blob SAS URL");
         }
 
-        // 创建适配器
-        var adapter = new AzureBlobAdapter(RootDirectory);
+        // 步骤 1: 下载 GitHub Release 资产
+        var downloadDirectory = RootDirectory / "artifacts" / "release-assets";
+        var downloadedFiles = new List<string>();
 
-        // 验证 SAS URL
-        Log.Information("验证 SAS URL...");
-        if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
+        Log.Information("=== 步骤 1: 下载 GitHub Release 资产 ===");
+        Log.Information("Release Tag: {Tag}", versionTag);
+        Log.Information("下载目录: {Path}", downloadDirectory);
+
+        // 使用 gh CLI 下载 release 资产
+        Log.Information("使用 gh CLI 下载 release 资产...");
+        var downloadSuccess = await DownloadReleaseAssetsUsingGhAsync(versionTag, downloadDirectory);
+
+        if (downloadSuccess > 0)
         {
-            Log.Error("Azure Blob SAS URL 验证失败");
-            Log.Error("请检查:");
-            Log.Error("  1. SAS URL 格式是否正确");
-            Log.Error("  2. SAS Token 是否包含 Write 权限");
-            Log.Error("  3. SAS Token 是否已过期");
-            throw new Exception("Azure Blob SAS URL 验证失败");
+            Log.Information("成功下载 {Count} 个资源", downloadSuccess);
         }
-
-        // 步骤 1: 可选的产物上传
-        if (UploadArtifacts)
+        else if (downloadSuccess == 0)
         {
-            Log.Information("=== 步骤 1: 上传构建产物 ===");
-
-            // 收集构建产物
-            var artifactPaths = new List<string>();
-            var packagesDirectory = BuildConfig.ReleasePackagedDirectory;
-
-            if (!Directory.Exists(packagesDirectory))
-            {
-                Log.Warning("打包目录不存在: {Path}", packagesDirectory);
-                Log.Warning("跳过产物上传");
-            }
-            else
-            {
-                var packageFiles = packagesDirectory.GlobFiles("*.zip");
-                if (!packageFiles.Any())
-                {
-                    Log.Warning("在打包目录中未找到 .zip 文件: {Path}", packagesDirectory);
-                    Log.Warning("跳过产物上传");
-                }
-                else
-                {
-                    foreach (var packageFile in packageFiles)
-                    {
-                        artifactPaths.Add(packageFile);
-                        Log.Information("添加构建产物: {File}", packageFile.Name);
-                    }
-
-                    Log.Information("共 {Count} 个构建产物待上传", artifactPaths.Count);
-
-                    // 配置发布选项
-                    var artifactOptions = new AzureBlobPublishOptions
-                    {
-                        SasUrl = AzureBlobSasUrl,
-                        UploadRetries = AzureUploadRetries,
-                        VersionPrefix = BuildConfig.Version
-                    };
-
-                    // 上传构建产物
-                    var result = await adapter.UploadArtifactsAsync(artifactPaths, artifactOptions);
-
-                    if (!result.Success)
-                    {
-                        Log.Error("Azure Blob 产物上传失败: {Error}", result.ErrorMessage);
-                        throw new Exception($"Azure Blob 产物上传失败: {result.ErrorMessage}");
-                    }
-
-                    Log.Information("✅ 构建产物已上传");
-                    Log.Information("  上传文件数: {Count}", result.UploadedBlobs.Count);
-
-                    if (result.Warnings.Any())
-                    {
-                        Log.Warning("警告:");
-                        foreach (var warning in result.Warnings)
-                        {
-                            Log.Warning("  - {Warning}", warning);
-                        }
-                    }
-                }
-            }
+            Log.Warning("未找到 release 资产");
+            Log.Warning("Tag: {Tag}", versionTag);
         }
         else
         {
-            Log.Information("跳过产物上传（--upload-artifacts 未启用）");
+            Log.Error("下载失败");
         }
 
-        // 步骤 2: 可选的 index.json 上传
-        if (UploadIndex)
+        // 步骤 2: 上传到 Azure Blob Storage
+        if (UploadArtifacts && downloadedFiles.Count > 0)
         {
-            Log.Information("=== 步骤 2: 上传 index.json ===");
+            Log.Information("=== 步骤 2: 上传到 Azure Blob ===");
 
-            // 确定要上传的 index 文件路径
-            var localIndexPath = !string.IsNullOrWhiteSpace(AzureIndexOutputPath)
-                ? AzureIndexOutputPath
-                : (RootDirectory / "artifacts" / "azure-index.json").ToString();
+            var adapter = new AzureBlobAdapter(RootDirectory);
 
-            Log.Information("本地 index 路径: {Path}", localIndexPath);
-
-            // 检查文件是否存在
-            if (!File.Exists(localIndexPath))
+            // 验证 SAS URL
+            Log.Information("验证 SAS URL...");
+            if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
             {
-                Log.Error("本地 index 文件不存在: {Path}", localIndexPath);
-                Log.Error("请先运行 GenerateAzureIndex 目标生成 index.json");
-                throw new Exception($"本地 index 文件不存在: {localIndexPath}");
+                Log.Error("Azure Blob SAS URL 验证失败");
+                throw new Exception("Azure Blob SAS URL 验证失败");
             }
 
             // 配置发布选项
-            var options = new AzureBlobPublishOptions
+            var uploadOptions = new AzureBlobPublishOptions
+            {
+                SasUrl = AzureBlobSasUrl,
+                UploadRetries = AzureUploadRetries,
+                VersionPrefix = versionTag
+            };
+
+            // 上传文件
+            var result = await adapter.UploadArtifactsAsync(downloadedFiles, uploadOptions);
+
+            if (!result.Success)
+            {
+                Log.Error("Azure Blob 产物上传失败: {Error}", result.ErrorMessage);
+                throw new Exception($"Azure Blob 产物上传失败: {result.ErrorMessage}");
+            }
+
+            Log.Information("✅ 构建产物已上传");
+            Log.Information("  上传文件数: {Count}", result.UploadedBlobs.Count);
+        }
+        else
+        {
+            Log.Information("跳过产物上传");
+        }
+
+        // 步骤 3: 生成并上传 index.json
+        if (UploadIndex)
+        {
+            Log.Information("=== 步骤 3: 生成并上传 index.json ===");
+
+            var adapter = new AzureBlobAdapter(RootDirectory);
+
+            // 验证 SAS URL
+            if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
+            {
+                Log.Error("Azure Blob SAS URL 验证失败");
+                throw new Exception("Azure Blob SAS URL 验证失败");
+            }
+
+            // 配置发布选项
+            var indexOptions = new AzureBlobPublishOptions
             {
                 SasUrl = AzureBlobSasUrl,
                 UploadRetries = AzureUploadRetries
             };
 
+            var localIndexPath = (RootDirectory / "artifacts" / "azure-index.json").ToString();
+
+            // 从 Azure blobs 生成 index.json
+            Log.Information("从 Azure blobs 生成 index.json...");
+            var indexJson = await adapter.GenerateIndexFromBlobsAsync(indexOptions, localIndexPath, MinifyIndexJson);
+
+            if (string.IsNullOrWhiteSpace(indexJson))
+            {
+                Log.Error("生成 index.json 失败");
+                throw new Exception("生成 index.json 失败");
+            }
+
             // 上传 index.json
             Log.Information("上传 index.json 到 Azure Blob Storage...");
-            var success = await adapter.UploadIndexOnlyAsync(options, localIndexPath);
+            var success = await adapter.UploadIndexJsonAsync(indexOptions, indexJson);
 
             if (!success)
             {
@@ -309,8 +252,107 @@ public partial class Build
         }
 
         // 完成日志
-        Log.Information("=== 上传完成 ===");
+        Log.Information("=== 同步完成 ===");
+        Log.Information("  Release Tag: {Tag}", versionTag);
+        Log.Information("  下载资源: {DownloadCount}", downloadedFiles.Count);
         Log.Information("  产物上传: {ArtifactsStatus}", UploadArtifacts ? "已执行" : "已跳过");
         Log.Information("  Index 上传: {IndexStatus}", UploadIndex ? "已执行" : "已跳过");
+    }
+
+    private async Task<string?> GetLatestReleaseTagUsingGhAsync()
+    {
+        try
+        {
+            Log.Information("使用 gh CLI 获取最新 release tag...");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "gh",
+                Arguments = "release view --json tagName -q .tagName",
+                RedirectStandardOutput = true,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+            await process.WaitForExitAsync();
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Log.Error("gh CLI 失败，退出码: {Code}", process.ExitCode);
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    Log.Error("错误输出: {Error}", error);
+                }
+                return null;
+            }
+
+            var tag = output.Trim();
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                Log.Warning("gh CLI 未返回 tag 信息");
+                return null;
+            }
+
+            Log.Information("GitHub 最新 release tag: {Tag}", tag);
+            return tag;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "使用 gh CLI 获取 tag 失败");
+            return null;
+        }
+    }
+
+    private async Task DownloadReleaseAssetsUsingGhAsync(string tag, AbsolutePath downloadDirectory)
+    {
+        try
+        {
+            // 确保下载目录存在
+            if (!Directory.Exists(downloadDirectory))
+            {
+                Directory.CreateDirectory(downloadDirectory);
+            }
+
+            Log.Information("使用 gh CLI 下载 release 资产: {Tag}", tag);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "gh",
+                Arguments = $"release download {tag} --dir {downloadDirectory} --pattern \"*\"",
+                RedirectStandardOutput = true,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+
+            // 等待进程完成
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Log.Error("gh CLI 下载失败，退出码: {Code}", process.ExitCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "gh CLI 下载失败");
+        }
     }
 }

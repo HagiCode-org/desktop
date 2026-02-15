@@ -1,8 +1,6 @@
-using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using AzureStorage;
-using System.Text;
 using System.Text.Json;
 
 namespace Adapters;
@@ -111,14 +109,12 @@ public class AzureBlobAdapter : IAzureBlobAdapter
     {
         try
         {
-            // Ensure output directory exists
             var outputDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
             }
 
-            // Create basic index structure
             var indexData = new
             {
                 version = "1.0.0",
@@ -134,7 +130,6 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
             var jsonContent = JsonSerializer.Serialize(indexData, jsonOptions);
 
-            // Write to file
             await File.WriteAllTextAsync(outputPath, jsonContent);
 
             Log.Information("Index.json generated at: {Path}", outputPath);
@@ -179,11 +174,9 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
             var content = await File.ReadAllTextAsync(localIndexPath);
             
-            // Try to parse as JSON
             using var document = JsonDocument.Parse(content);
             var root = document.RootElement;
 
-            // Check for basic structure
             if (!root.TryGetProperty("version", out _) && 
                 !root.TryGetProperty("files", out _))
             {
@@ -220,7 +213,7 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
             Log.Information("Uploading index.json to Azure Blob Storage...");
 
-            await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(indexJson));
+            await using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(indexJson));
             await blobClient.UploadAsync(stream, overwrite: true);
 
             Log.Information("index.json uploaded successfully: {Url}", blobClient.Uri);
@@ -232,4 +225,148 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             return false;
         }
     }
+
+    /// <summary>
+    /// List all blobs in the container
+    /// </summary>
+    public async Task<List<AzureBlobInfo>> ListBlobsAsync(AzureBlobPublishOptions options)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(options.SasUrl))
+            {
+                Log.Error("SAS URL is required to list blobs");
+                return new List<AzureBlobInfo>();
+            }
+
+            var containerClient = new BlobContainerClient(new Uri(options.SasUrl));
+            var blobs = new List<AzureBlobInfo>();
+
+            Log.Information("Listing blobs in container: {Container}", options.ContainerName);
+
+            await foreach (var blobItem in containerClient.GetBlobsAsync())
+            {
+                if (blobItem.Name == "index.json")
+                {
+                    continue;
+                }
+
+                blobs.Add(new AzureBlobInfo
+                {
+                    Name = blobItem.Name,
+                    Size = blobItem.Properties.ContentLength ?? 0,
+                    LastModified = blobItem.Properties.LastModified.HasValue
+                        ? blobItem.Properties.LastModified.Value.DateTime
+                        : DateTime.MinValue
+                });
+            }
+
+            Log.Information("Found {Count} blobs (excluding index.json)", blobs.Count);
+            return blobs;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to list blobs");
+            return new List<AzureBlobInfo>();
+        }
+    }
+
+    /// <summary>
+    /// Generate index.json from all blobs in Azure Storage
+    /// Groups files by version prefix and creates structured index
+    /// </summary>
+    public async Task<string> GenerateIndexFromBlobsAsync(AzureBlobPublishOptions options, string outputPath, bool minify = false)
+    {
+        try
+        {
+            Log.Information("=== Generating index.json from Azure blobs ===");
+
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            var blobs = await ListBlobsAsync(options);
+
+            var versionGroups = new Dictionary<string, List<AzureBlobInfo>>();
+            foreach (var blob in blobs)
+            {
+                var version = "latest";
+                var slashIndex = blob.Name.IndexOf('/');
+                
+                if (slashIndex > 0)
+                {
+                    version = blob.Name.Substring(0, slashIndex);
+                }
+
+                if (!versionGroups.ContainsKey(version))
+                {
+                    versionGroups[version] = new List<AzureBlobInfo>();
+                }
+                versionGroups[version].Add(blob);
+            }
+
+            var versionList = versionGroups
+                .OrderByDescending(kv => kv.Key)
+                .Select(kv =>
+                {
+                    var versionFiles = kv.Value.Select(blob =>
+                        new
+                        {
+                            name = Path.GetFileName(blob.Name),
+                            path = blob.Name,
+                            size = blob.Size,
+                            lastModified = blob.LastModified.ToString("o")
+                        })
+                    .ToList();
+
+                    return new
+                    {
+                        version = kv.Key,
+                        files = versionFiles
+                    };
+                })
+                .ToList();
+
+            var indexData = new
+            {
+                updatedAt = DateTime.UtcNow.ToString("o"),
+                versions = versionList
+            };
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                WriteIndented = !minify
+            };
+
+            var jsonContent = JsonSerializer.Serialize(indexData, jsonOptions);
+
+            await File.WriteAllTextAsync(outputPath, jsonContent);
+
+            var versionCount = versionList.Count;
+            var totalFiles = versionList.Sum(v => v.files.Count);
+
+            Log.Information("✅ Index.json generated at: {Path}", outputPath);
+            Log.Information("   Versions: {Count}", versionCount);
+            Log.Information("   Total files: {Count}", totalFiles);
+
+            return jsonContent;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to generate index from blobs");
+            return string.Empty;
+        }
+    }
+}
+
+/// <summary>
+/// Azure blob information
+/// </summary>
+public class AzureBlobInfo
+{
+    public required string Name { get; init; }
+    public long Size { get; init; }
+    public DateTime LastModified { get; init; }
 }

@@ -1,86 +1,157 @@
-using System.Net.Http;
-using System.Text.Json;
-using AzureStorage;
+using System.Diagnostics;
 
 namespace Adapters;
 
-/// <summary>
-/// GitHub adapter for fetching release information
-/// </summary>
 public class GitHubAdapter
 {
-    private readonly string _token;
-    private readonly string _repository;
+    private readonly AbsolutePath _rootDirectory;
 
-    public GitHubAdapter(string token, string repository)
+    public GitHubAdapter(AbsolutePath rootDirectory)
     {
-        _token = token;
-        _repository = repository;
+        _rootDirectory = rootDirectory;
     }
 
-    /// <summary>
-    /// Fetch the latest release tag from GitHub
-    /// </summary>
-    public async Task<string?> GetLatestReleaseTagAsync()
+    public async Task<string?> GetLatestReleaseTagUsingGhAsync()
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(_token))
+            Log.Information("使用 gh CLI 获取最新 release tag...");
+
+            var psi = new ProcessStartInfo
             {
-                Log.Warning("GitHub Token is empty, cannot fetch releases");
+                FileName = "gh",
+                Arguments = "release view --json tagName -q .tagName",
+                RedirectStandardOutput = true,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+            await process.WaitForExitAsync();
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Log.Error("gh CLI 失败，退出码: {Code}", process.ExitCode);
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    Log.Error("错误输出: {Error}", error);
+                }
                 return null;
             }
 
-            if (string.IsNullOrWhiteSpace(_repository))
+            var tag = output.Trim();
+            if (string.IsNullOrWhiteSpace(tag))
             {
-                Log.Warning("GitHub repository is not specified");
+                Log.Warning("gh CLI 未返回 tag 信息");
                 return null;
             }
 
-            var parts = _repository.Split('/');
-            if (parts.Length != 2)
-            {
-                Log.Error("Invalid repository format. Expected: owner/repo, got: {Repo}", _repository);
-                return null;
-            }
-
-            var owner = parts[0];
-            var repo = parts[1];
-
-            Log.Information("Fetching latest release from {Owner}/{Repo}...", owner, repo);
-
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "NukeBuild");
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_token}");
-
-            var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
-            Log.Debug("Request URL: {Url}", url);
-
-            var response = await httpClient.GetAsync(url);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                Log.Warning("Failed to fetch latest release: {StatusCode}", response.StatusCode);
-                return null;
-            }
-
-            var content = await response.Content.ReadAsStringAsync();
-            var json = JsonDocument.Parse(content);
-
-            if (json.RootElement.TryGetProperty("tag_name", out var tagElement))
-            {
-                var tag = tagElement.GetString();
-                Log.Information("Latest release tag: {Tag}", tag);
-                return tag;
-            }
-
-            Log.Warning("No tag_name found in latest release response");
-            return null;
+            Log.Information("GitHub 最新 release tag: {Tag}", tag);
+            return tag;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to fetch latest release from GitHub");
+            Log.Error(ex, "使用 gh CLI 获取 tag 失败");
             return null;
         }
     }
+
+    public async Task<List<GitHubReleaseAsset>?> GetReleaseAssetsAsync(string tag)
+    {
+        try
+        {
+            Log.Information("使用 gh CLI 获取 release 资产: {Tag}...", tag);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "gh",
+                Arguments = $"release view {tag} --json assets -q",
+                RedirectStandardOutput = true,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+            
+            var output = new List<GitHubReleaseAsset>();
+            var outputReader = new System.IO.StreamReader(process.StandardOutput.BaseStream);
+            string? line;
+
+            while ((line = await outputReader.ReadLineAsync()) != null)
+            {
+                if (line.TrimStart().StartsWith("{"))
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonDocument.Parse(line);
+                        var root = json.RootElement;
+
+                        if (root.TryGetProperty("assets", out var assetsElement))
+                        {
+                            foreach (var asset in assetsElement.EnumerateArray())
+                            {
+                                if (asset.TryGetProperty("name", out var nameElement) &&
+                                    asset.TryGetProperty("size", out var sizeElement) &&
+                                    asset.TryGetProperty("browser_download_url", out var urlElement))
+                                {
+                                    var name = nameElement.GetString();
+                                    var size = sizeElement.GetInt64();
+                                    var downloadUrl = urlElement.GetString();
+
+                                    output.Add(new GitHubReleaseAsset
+                                    {
+                                        Name = name,
+                                        Size = size,
+                                        DownloadUrl = downloadUrl
+                                    });
+                                }
+                            }
+                        }
+                    }
+                catch (System.Text.Json.JsonException)
+                    {
+                    // Skip non-JSON lines
+                    }
+                }
+            }
+
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Log.Error("gh CLI 失败，退出码: {Code}", process.ExitCode);
+                return null;
+            }
+
+            Log.Information("找到 {Count} 个 release 资产", output.Count);
+            return output;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "使用 gh CLI 获取 release 资产失败");
+            return null;
+        }
+    }
+}
+
+public class GitHubReleaseAsset
+{
+    public required string Name { get; init; }
+    public required string DownloadUrl { get; init; }
+    public long Size { get; init; }
 }

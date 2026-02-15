@@ -42,3 +42,5 @@ coverage/
 bin/
 obj/
 .nuke/parameters.json
+
+artifacts/azure-index.json
