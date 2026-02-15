@@ -179,7 +179,8 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
             var jsonOptions = new JsonSerializerOptions
             {
-                WriteIndented = !minify
+                WriteIndented = !minify,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
             var jsonContent = JsonSerializer.Serialize(indexData, jsonOptions);
@@ -395,7 +396,8 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
             var jsonOptions = new JsonSerializerOptions
             {
-                WriteIndented = !minify
+                WriteIndented = !minify,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
             var jsonContent = JsonSerializer.Serialize(indexData, jsonOptions);
