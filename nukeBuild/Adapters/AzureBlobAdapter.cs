@@ -422,10 +422,11 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
     /// <summary>
     /// Extracts channel name from version string
-    /// Supports common channel naming conventions: beta, stable, canary, alpha, dev
+    /// - No dash (-) = stable (正式版), e.g., "1.0.0", "2.3.1"
+    /// - With dash (-) = check prerelease identifier for channel
     /// </summary>
-    /// <param name="version">Version string (e.g., "0.1.0-beta.11", "1.0.0")</param>
-    /// <returns>Channel name as string (defaults to "beta" if not recognized)</returns>
+    /// <param name="version">Version string (e.g., "1.0.0", "0.1.0-beta.11")</param>
+    /// <returns>Channel name as string</returns>
     private string ExtractChannelFromVersion(string version)
     {
         if (string.IsNullOrWhiteSpace(version))
@@ -441,26 +442,32 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 return channel;
         }
 
-        // Check for common channel patterns in prerelease identifiers
+        // Check for dash (-) to determine if it's a stable release
         var dashIndex = version.IndexOf('-');
-        if (dashIndex > 0)
+        if (dashIndex <= 0)
         {
-            var prerelease = version.Substring(dashIndex + 1).ToLowerInvariant();
-
-            if (prerelease.StartsWith("stable.") || prerelease.StartsWith("stable"))
-                return "stable";
-            if (prerelease.StartsWith("beta.") || prerelease.StartsWith("beta"))
-                return "beta";
-            if (prerelease.StartsWith("canary.") || prerelease.StartsWith("canary"))
-                return "canary";
-            if (prerelease.StartsWith("alpha.") || prerelease.StartsWith("alpha"))
-                return "alpha";
-            if (prerelease.StartsWith("dev.") || prerelease.StartsWith("dev"))
-                return "dev";
+            // No prerelease identifier = stable (正式版)
+            return "stable";
         }
 
-        // Default to beta for versions without explicit channel
-        return "beta";
+        // Has prerelease identifier - determine channel
+        var prerelease = version.Substring(dashIndex + 1).ToLowerInvariant();
+
+        if (prerelease.StartsWith("beta.") || prerelease.StartsWith("beta"))
+            return "beta";
+        if (prerelease.StartsWith("canary.") || prerelease.StartsWith("canary"))
+            return "canary";
+        if (prerelease.StartsWith("alpha.") || prerelease.StartsWith("alpha"))
+            return "alpha";
+        if (prerelease.StartsWith("dev.") || prerelease.StartsWith("dev"))
+            return "dev";
+        if (prerelease.StartsWith("preview.") || prerelease.StartsWith("preview"))
+            return "preview";
+        if (prerelease.StartsWith("rc.") || prerelease.StartsWith("rc"))
+            return "preview";
+
+        // Other prerelease types default to preview
+        return "preview";
     }
 
     /// <summary>
