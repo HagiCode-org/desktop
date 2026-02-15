@@ -250,6 +250,9 @@ export class OnboardingManager {
 
   /**
    * Install dependencies for a version
+   *
+   * Uses batch installation via installFromManifest to install all missing dependencies
+   * in a single script call, significantly reducing installation time overhead.
    */
   async installDependencies(
     versionId: string,
@@ -312,60 +315,75 @@ export class OnboardingManager {
 
       log.info('[OnboardingManager] Missing dependencies:', missingDeps.length);
 
-      // Install each missing dependency
-      for (let i = 0; i < missingDeps.length; i++) {
-        const dep = missingDeps[i];
-
-        // Update status to installing
-        const itemIndex = dependencyItems.findIndex(item => item.name === dep.name);
-        if (itemIndex >= 0) {
-          dependencyItems[itemIndex].status = 'installing';
-          dependencyItems[itemIndex].progress = 0;
-          if (onProgress) {
-            onProgress([...dependencyItems]);
+      // Install all missing dependencies in a single batch operation
+      if (missingDeps.length > 0) {
+        // Mark all missing dependencies as installing
+        for (const dep of missingDeps) {
+          const itemIndex = dependencyItems.findIndex(item => item.name === dep.name);
+          if (itemIndex >= 0) {
+            dependencyItems[itemIndex].status = 'installing';
+            dependencyItems[itemIndex].progress = 0;
           }
+        }
+        if (onProgress) {
+          onProgress([...dependencyItems]);
         }
 
         try {
-          // Install the dependency using new interface
-          const installResult = await this.dependencyManager.installSingleDependency(dep, entryPoint);
-
-          if (installResult.success) {
-            // Update status to installed
-            if (itemIndex >= 0) {
-              dependencyItems[itemIndex].status = 'installed';
-              dependencyItems[itemIndex].progress = 100;
-              if (onProgress) {
-                onProgress([...dependencyItems]);
+          // Use batch installation to install all dependencies in one script call
+          const installResult = await this.dependencyManager.installFromManifest(
+            manifest,
+            missingDeps,
+            (progress) => {
+              // Update status based on progress callback
+              const itemIndex = dependencyItems.findIndex(item => item.name === progress.dependency);
+              if (itemIndex >= 0) {
+                if (progress.status === 'installing') {
+                  dependencyItems[itemIndex].status = 'installing';
+                  dependencyItems[itemIndex].progress = 50;
+                } else if (progress.status === 'success') {
+                  dependencyItems[itemIndex].status = 'installed';
+                  dependencyItems[itemIndex].progress = 100;
+                } else if (progress.status === 'error') {
+                  dependencyItems[itemIndex].status = 'error';
+                  dependencyItems[itemIndex].progress = 0;
+                }
+                if (onProgress) {
+                  onProgress([...dependencyItems]);
+                }
               }
             }
+          );
 
-            log.info('[OnboardingManager] Dependency installed:', dep.name);
-          } else {
-            // Installation failed - show error and installHint
-            if (itemIndex >= 0) {
-              dependencyItems[itemIndex].status = 'error';
-              dependencyItems[itemIndex].error = installResult.parsedResult.errorMessage || 'Installation failed';
-              if (installResult.installHint) {
-                dependencyItems[itemIndex].installHint = installResult.installHint;
+          // Handle any failed installations
+          if (installResult.failed.length > 0) {
+            for (const failed of installResult.failed) {
+              const itemIndex = dependencyItems.findIndex(item => item.name === failed.dependency);
+              if (itemIndex >= 0) {
+                dependencyItems[itemIndex].status = 'error';
+                dependencyItems[itemIndex].error = failed.error;
               }
-              if (onProgress) {
-                onProgress([...dependencyItems]);
-              }
+              log.error('[OnboardingManager] Failed to install dependency:', failed.dependency, failed.error);
             }
-
-            log.error('[OnboardingManager] Failed to install dependency:', dep.name, installResult.parsedResult.errorMessage);
-          }
-        } catch (error) {
-          // Update status to error
-          if (itemIndex >= 0) {
-            dependencyItems[itemIndex].status = 'error';
-            dependencyItems[itemIndex].error = error instanceof Error ? error.message : String(error);
             if (onProgress) {
               onProgress([...dependencyItems]);
             }
           }
-          log.error('[OnboardingManager] Failed to install dependency:', dep.name, error);
+
+          log.info('[OnboardingManager] Batch installation completed:', installResult.success.length, 'success,', installResult.failed.length, 'failed');
+        } catch (error) {
+          // Mark all missing dependencies as error on failure
+          for (const dep of missingDeps) {
+            const itemIndex = dependencyItems.findIndex(item => item.name === dep.name);
+            if (itemIndex >= 0) {
+              dependencyItems[itemIndex].status = 'error';
+              dependencyItems[itemIndex].error = error instanceof Error ? error.message : String(error);
+            }
+          }
+          if (onProgress) {
+            onProgress([...dependencyItems]);
+          }
+          log.error('[OnboardingManager] Batch installation failed:', error);
         }
       }
 
