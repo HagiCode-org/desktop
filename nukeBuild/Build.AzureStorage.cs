@@ -139,7 +139,7 @@ public partial class Build
         {
             Log.Information("=== 步骤 2: 上传到 Azure Blob ===");
 
-            var adapter = new AzureBlobAdapter(RootDirectory);
+            var adapter = new AzureBlobAdapter(RootDirectory, ChannelMapping);
 
             if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
             {
@@ -174,7 +174,7 @@ public partial class Build
         {
             Log.Information("=== 步骤 3: 生成并上传 index.json ===");
 
-            var adapter = new AzureBlobAdapter(RootDirectory);
+            var adapter = new AzureBlobAdapter(RootDirectory, ChannelMapping);
 
             if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
             {

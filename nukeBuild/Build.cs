@@ -58,6 +58,9 @@ partial class Build : NukeBuild
     [Parameter("Release channel (stable, beta, dev)")]
     readonly string ReleaseChannel = "beta";
 
+    [Parameter("Custom channel mapping (JSON format)")]
+    readonly string ChannelMapping = "";
+
     [Parameter("Feishu webhook URL for notifications")]
     [Secret] readonly string FeishuWebhookUrl = "";
 

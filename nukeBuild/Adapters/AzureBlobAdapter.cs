@@ -2,6 +2,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using AzureStorage;
 using System.Text.Json;
+using Utils;
 
 namespace Adapters;
 
@@ -12,10 +13,34 @@ namespace Adapters;
 public class AzureBlobAdapter : IAzureBlobAdapter
 {
     private readonly AbsolutePath _rootDirectory;
+    private Dictionary<string, string> _customChannelMapping;
 
-    public AzureBlobAdapter(AbsolutePath rootDirectory)
+    public AzureBlobAdapter(AbsolutePath rootDirectory, string channelMappingJson = "")
     {
         _rootDirectory = rootDirectory;
+        _customChannelMapping = ParseChannelMapping(channelMappingJson);
+    }
+
+    /// <summary>
+    /// Parses custom channel mapping from JSON string
+    /// </summary>
+    /// <param name="channelMappingJson">JSON string mapping version patterns to channels</param>
+    /// <returns>Dictionary of version patterns to channel names</returns>
+    private static Dictionary<string, string> ParseChannelMapping(string channelMappingJson)
+    {
+        if (string.IsNullOrWhiteSpace(channelMappingJson))
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var mapping = JsonSerializer.Deserialize<Dictionary<string, string>>(channelMappingJson);
+            return mapping ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            Log.Warning("Invalid channel mapping JSON, using default rules");
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     public async Task<bool> ValidateSasUrlAsync(string sasUrl)
@@ -321,18 +346,22 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                         })
                     .ToList();
 
-                    return new
+                    return new VersionGroup
                     {
-                        version = kv.Key,
-                        files = versionFiles
+                        Version = kv.Key,
+                        Files = versionFiles.Cast<object>().ToList()
                     };
                 })
                 .ToList();
 
+            // Build channels object
+            var channelsData = BuildChannelsObject(versionList);
+
             var indexData = new
             {
                 updatedAt = DateTime.UtcNow.ToString("o"),
-                versions = versionList
+                versions = versionList,
+                channels = channelsData
             };
 
             var jsonOptions = new JsonSerializerOptions
@@ -345,7 +374,7 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             await File.WriteAllTextAsync(outputPath, jsonContent);
 
             var versionCount = versionList.Count;
-            var totalFiles = versionList.Sum(v => v.files.Count);
+            var totalFiles = versionList.Sum(v => v.Files.Count);
 
             Log.Information("✅ Index.json generated at: {Path}", outputPath);
             Log.Information("   Versions: {Count}", versionCount);
@@ -359,6 +388,108 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             return string.Empty;
         }
     }
+
+    /// <summary>
+    /// Extracts channel name from version string
+    /// Supports common channel naming conventions: beta, stable, canary, alpha, dev
+    /// </summary>
+    /// <param name="version">Version string (e.g., "0.1.0-beta.11", "1.0.0")</param>
+    /// <returns>Channel name as string (defaults to "beta" if not recognized)</returns>
+    private string ExtractChannelFromVersion(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+            return "beta";
+
+        // Remove 'v' prefix if present
+        version = version.TrimStart('v', 'V');
+
+        // Check custom channel mapping first
+        foreach (var (pattern, channel) in _customChannelMapping)
+        {
+            if (version.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                return channel;
+        }
+
+        // Check for common channel patterns in prerelease identifiers
+        var dashIndex = version.IndexOf('-');
+        if (dashIndex > 0)
+        {
+            var prerelease = version.Substring(dashIndex + 1).ToLowerInvariant();
+
+            if (prerelease.StartsWith("stable.") || prerelease.StartsWith("stable"))
+                return "stable";
+            if (prerelease.StartsWith("beta.") || prerelease.StartsWith("beta"))
+                return "beta";
+            if (prerelease.StartsWith("canary.") || prerelease.StartsWith("canary"))
+                return "canary";
+            if (prerelease.StartsWith("alpha.") || prerelease.StartsWith("alpha"))
+                return "alpha";
+            if (prerelease.StartsWith("dev.") || prerelease.StartsWith("dev"))
+                return "dev";
+        }
+
+        // Default to beta for versions without explicit channel
+        return "beta";
+    }
+
+    /// <summary>
+    /// Groups versions by their channel
+    /// </summary>
+    /// <param name="versions">List of version groups</param>
+    /// <returns>Dictionary mapping channel names to list of version strings</returns>
+    private Dictionary<string, List<string>> GroupVersionsByChannel(List<VersionGroup> versions)
+    {
+        var channelGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var version in versions)
+        {
+            var channel = ExtractChannelFromVersion(version.Version);
+
+            if (!channelGroups.ContainsKey(channel))
+            {
+                channelGroups[channel] = new List<string>();
+            }
+
+            channelGroups[channel].Add(version.Version);
+        }
+
+        return channelGroups;
+    }
+
+    /// <summary>
+    /// Builds the channels object for index.json
+    /// Contains latest version and versions array for each channel
+    /// </summary>
+    /// <param name="versions">List of version groups</param>
+    /// <returns>Dictionary mapping channel names to channel information</returns>
+    private Dictionary<string, object> BuildChannelsObject(List<VersionGroup> versions)
+    {
+        var channelGroups = GroupVersionsByChannel(versions);
+        var channelsData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (channelName, versionStrings) in channelGroups)
+        {
+            // Sort versions using Semver to find the latest
+            var sortedVersions = versionStrings
+                .Where(v => SemverExtensions.TryParseVersion(v, out _))
+                .OrderByDescending(v =>
+                {
+                    SemverExtensions.TryParseVersion(v, out var semver);
+                    return semver;
+                })
+                .ToList();
+
+            var latest = sortedVersions.FirstOrDefault() ?? versionStrings.FirstOrDefault();
+
+            channelsData[channelName] = new ChannelInfo
+            {
+                Latest = latest ?? "",
+                Versions = versionStrings
+            };
+        }
+
+        return channelsData;
+    }
 }
 
 /// <summary>
@@ -369,4 +500,22 @@ public class AzureBlobInfo
     public required string Name { get; init; }
     public long Size { get; init; }
     public DateTime LastModified { get; init; }
+}
+
+/// <summary>
+/// Version group for index.json generation
+/// </summary>
+public class VersionGroup
+{
+    public required string Version { get; init; }
+    public List<object> Files { get; init; } = new();
+}
+
+/// <summary>
+/// Channel information for index.json
+/// </summary>
+public class ChannelInfo
+{
+    public required string Latest { get; init; }
+    public List<string> Versions { get; init; } = new();
 }

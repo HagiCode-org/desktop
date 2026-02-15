@@ -2,6 +2,9 @@ name: Sync Release to Azure Storage
 
 # This workflow is called by build.yml after a release is created.
 on:
+  push:
+    branches:
+    - syncToAzure
   workflow_call:
     inputs:
       release_tag:

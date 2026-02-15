@@ -119,6 +119,10 @@
           "description": "Azure upload retries",
           "format": "int32"
         },
+        "ChannelMapping": {
+          "type": "string",
+          "description": "Custom channel mapping (JSON format)"
+        },
         "FeishuWebhookUrl": {
           "type": "string",
           "description": "Feishu webhook URL for notifications",
