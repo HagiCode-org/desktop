@@ -410,6 +410,9 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             Log.Information("✅ Index.json generated at: {Path}", outputPath);
             Log.Information("   Versions: {Count}", versionCount);
             Log.Information("   Total files: {Count}", totalFiles);
+            Log.Information("=== index.json Content ===");
+            Log.Information(jsonContent);
+            Log.Information("=== End of index.json ===");
 
             return jsonContent;
         }
