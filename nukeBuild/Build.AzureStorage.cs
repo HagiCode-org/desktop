@@ -236,7 +236,7 @@ public partial class Build
                 FileName = "gh",
                 Arguments = "release view --json tagName -q .tagName",
                 RedirectStandardOutput = true,
-                UseShellExecute = true,
+                UseShellExecute = false,
                 CreateNoWindow = true,
                 Environment =
                 {
@@ -302,7 +302,7 @@ public partial class Build
                 FileName = "gh",
                 Arguments = $"release download {tag} --dir {downloadDirectory} --pattern \"*\"",
                 RedirectStandardOutput = true,
-                UseShellExecute = true,
+                UseShellExecute = false,
                 CreateNoWindow = true,
                 Environment =
                 {
