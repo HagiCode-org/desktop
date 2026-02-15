@@ -37,6 +37,9 @@ export interface PackageSourceState {
     versions: Version[];
     count: number;
   } | null;
+
+  // Channel selection
+  selectedChannel: string | null;
 }
 
 const initialState: PackageSourceState = {
@@ -57,6 +60,7 @@ const initialState: PackageSourceState = {
   githubToken: '',
   httpIndexUrl: 'https://server.dl.hagicode.com/index.json',
   scanResult: null,
+  selectedChannel: null,
 };
 
 const packageSourceSlice = createSlice({
@@ -138,6 +142,11 @@ const packageSourceSlice = createSlice({
       state.scanResult = action.payload;
     },
 
+    // Channel selection
+    setSelectedChannel: (state, action: PayloadAction<string | null>) => {
+      state.selectedChannel = action.payload;
+    },
+
     // Reset form
     resetForm: (state) => {
       state.folderPath = '';
@@ -171,6 +180,7 @@ export const {
   setGithubToken,
   setHttpIndexUrl,
   setScanResult,
+  setSelectedChannel,
   resetForm,
 } = packageSourceSlice.actions;
 
@@ -219,5 +229,8 @@ export const selectScanResult = (state: { packageSource: PackageSourceState }) =
 
 export const selectHttpIndexUrl = (state: { packageSource: PackageSourceState }) =>
   state.packageSource.httpIndexUrl;
+
+export const selectSelectedChannel = (state: { packageSource: PackageSourceState }) =>
+  state.packageSource.selectedChannel;
 
 export default packageSourceSlice.reducer;

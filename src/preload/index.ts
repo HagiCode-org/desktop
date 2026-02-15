@@ -127,6 +127,7 @@ const electronAPI = {
   versionReinstall: (versionId) => ipcRenderer.invoke('version:reinstall', versionId),
   versionCheckDependencies: (versionId) => ipcRenderer.invoke('version:checkDependencies', versionId),
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
+  versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   onInstalledVersionsChanged: (callback) => {
     const listener = (_event, versions) => {
       callback(versions);

@@ -10,6 +10,9 @@ export interface StoredPackageSourceConfig {
   name?: string;
   createdAt: string;
   lastUsedAt?: string;
+  /** Default release channel for this source (e.g., "stable", "beta", "alpha").
+   * Used when filtering or displaying versions from this source. */
+  defaultChannel?: string;
   // Local folder source properties
   path?: string;
   // GitHub release source properties

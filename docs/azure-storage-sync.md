@@ -105,12 +105,13 @@ The workflow automatically generates an `index.json` file in the container root 
   "updatedAt": "2024-01-15T10:30:00Z",
   "versions": [
     {
-      "version": "v1.1.0",
+      "version": "1.1.0",
+      "channel": "stable",
       "files": ["Hagicode-Setup-1.1.0.exe", "Hagicode-1.1.0.dmg", ...],
       "assets": [
         {
           "name": "Hagicode-Setup-1.1.0.exe",
-          "path": "v1.1.0/Hagicode-Setup-1.1.0.exe",
+          "path": "1.1.0/Hagicode-Setup-1.1.0.exe",
           "size": 123456789,
           "lastModified": "2024-01-15T10:25:00Z"
         },
@@ -118,18 +119,64 @@ The workflow automatically generates an `index.json` file in the container root 
       ]
     },
     {
-      "version": "v1.0.0",
-      "files": ["Hagicode-Setup-1.0.0.exe", ...],
+      "version": "1.0.0-beta.1",
+      "channel": "beta",
+      "files": ["Hagicode-Setup-1.0.0-beta.1.exe", ...],
       "assets": [...]
     }
-  ]
+  ],
+  "channels": {
+    "stable": {
+      "latest": "1.1.0",
+      "versions": ["1.1.0", "1.0.0"]
+    },
+    "beta": {
+      "latest": "1.0.0-beta.1",
+      "versions": ["1.0.0-beta.1", "1.0.0-alpha.1"]
+    },
+    "dev": {
+      "latest": "0.9.0-dev.1",
+      "versions": ["0.9.0-dev.1"]
+    }
+  }
 }
 ```
 
 This JSON index provides:
 - **Version list**: All available versions sorted newest first
 - **File metadata**: Name, path, size, and last modified date for each file
+- **Channel information**: Each version is categorized by release channel (stable, beta, dev)
+- **Channel aggregation**: The `channels` object provides quick access to latest versions per channel
 - **Programmatic access**: Easy to consume by applications and update checkers
+
+### Channel Support
+
+The workflow automatically categorizes versions into release channels based on version naming:
+
+#### Channel Detection Rules
+
+- **stable**: Versions without pre-release identifiers (e.g., `1.0.0`, `2.1.3`)
+- **beta**: Versions with `-beta` or `-rc` identifiers (e.g., `1.0.0-beta.1`, `2.0.0-rc.1`)
+- **dev**: Versions with `-alpha` or `-dev` identifiers (e.g., `1.0.0-alpha.1`, `1.0.0-dev.1`)
+
+#### Manual Channel Override
+
+You can manually specify the channel when triggering the build workflow:
+
+1. Go to "Actions" tab in your repository
+2. Select "Build Hagicode Desktop"
+3. Click "Run workflow"
+4. Select the desired channel from the "Release channel" dropdown
+5. Click "Run workflow"
+
+This is useful for testing or special release scenarios.
+
+#### Backward Compatibility
+
+The generated index.json is backward compatible:
+- Desktop clients that don't support channels will ignore the `channels` object
+- If the `channels` object is missing, the Desktop client defaults all versions to `beta` channel
+- Existing index.json files without channels continue to work as before
 
 ## Workflow Usage
 

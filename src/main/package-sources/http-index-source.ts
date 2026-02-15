@@ -13,7 +13,7 @@ import type {
 /**
  * HTTP Index file asset interface (official format)
  */
-interface HttpIndexAsset {
+export interface HttpIndexAsset {
   name: string;
   path?: string;
   size?: number;
@@ -23,17 +23,51 @@ interface HttpIndexAsset {
 /**
  * HTTP Index file version interface (official format)
  */
-interface HttpIndexVersion {
+export interface HttpIndexVersion {
   version: string;
   files?: string[];
   assets: HttpIndexAsset[];
 }
 
 /**
- * HTTP Index file structure
+ * Channel information interface
+ * Represents a release channel (e.g., stable, beta, alpha)
+ *
+ * @example
+ * ```json
+ * {
+ *   "latest": "1.0.0",
+ *   "versions": ["1.0.0", "0.9.0"]
+ * }
+ * ```
  */
-interface HttpIndexFile {
+export interface ChannelInfo {
+  /** The latest version string in this channel */
+  latest: string;
+  /** Array of version strings belonging to this channel */
+  versions: string[];
+}
+
+/**
+ * HTTP Index file structure
+ * Represents the response from the HTTP index server
+ *
+ * @example
+ * ```json
+ * {
+ *   "versions": [...],
+ *   "channels": {
+ *     "beta": { "latest": "0.1.0-beta.11", "versions": ["0.1.0-beta.11"] },
+ *     "stable": { "latest": "1.0.0", "versions": ["1.0.0"] }
+ *   }
+ * }
+ * ```
+ */
+export interface HttpIndexFile {
   versions: HttpIndexVersion[];
+  /** Optional channels object mapping channel names to their version information.
+   * When absent, all versions default to 'beta' channel for backward compatibility. */
+  channels?: Record<string, ChannelInfo>;
 }
 
 /**
@@ -130,6 +164,23 @@ export class HttpIndexPackageSource implements PackageSource {
             });
           }
         }
+      }
+
+      // Map versions to channels if channels object exists
+      if (indexData.channels) {
+        log.info('[HttpIndexSource] Mapping versions to channels');
+        for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
+          for (const versionStr of channelInfo.versions) {
+            const version = versions.find(v => v.version === versionStr);
+            if (version) {
+              version.channel = channelName;
+            }
+          }
+        }
+      } else {
+        // Backward compatibility: default all versions to 'beta' when no channels specified
+        log.info('[HttpIndexSource] No channels object found, defaulting all versions to beta');
+        versions.forEach(v => v.channel = 'beta');
       }
 
       // Sort by version (newest first)
@@ -273,6 +324,18 @@ export class HttpIndexPackageSource implements PackageSource {
             valid: false,
             error: 'Invalid index file format',
           };
+        }
+
+        // Validate channels structure if present
+        if (indexData.channels) {
+          for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
+            if (!channelInfo.latest || !Array.isArray(channelInfo.versions)) {
+              return {
+                valid: false,
+                error: `Invalid channel structure for '${channelName}'`,
+              };
+            }
+          }
         }
 
         return { valid: true };

@@ -38,3 +38,7 @@ coverage/
 *.tsbuildinfo
 
 .claude/skills/ui-ux-pro-max/scripts/__pycache__/
+
+bin/
+obj/
+.nuke/parameters.json

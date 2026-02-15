@@ -12,6 +12,18 @@ import { createPackageSource, type PackageSource, type PackageSourceConfig, type
 
 /**
  * Version information
+ *
+ * @property id - Unique version identifier (typically derived from package filename)
+ * @property version - Semantic version string (e.g., "1.0.0" or "0.1.0-beta.11")
+ * @property platform - Target platform ("linux", "windows", "osx")
+ * @property packageFilename - Name of the package file
+ * @property releasedAt - ISO timestamp of when this version was released
+ * @property size - Package size in bytes (if available)
+ * @property downloadUrl - URL to download the package (if available)
+ * @property releaseNotes - Release notes or changelog (if available)
+ * @property channel - Release channel name ("stable", "beta", "alpha", etc.)
+ *                       Derived from the channels object in the HTTP index.
+ *                       Defaults to "beta" when not specified by the server.
  */
 export interface Version {
   id: string;
@@ -22,6 +34,8 @@ export interface Version {
   size?: number;
   downloadUrl?: string;
   releaseNotes?: string;
+  /** Release channel (e.g., "stable", "beta", "alpha"). Default: "beta" */
+  channel?: string;
 }
 
 /**

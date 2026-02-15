@@ -7,6 +7,15 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Release channel (stable, beta, dev)'
+        required: false
+        type: choice
+        options:
+          - stable
+          - beta
+          - dev
 
 permissions:
   contents: write
@@ -16,6 +25,8 @@ env:
   # Code signing configuration
   # Set ENABLE_CODE_SIGNING to "true" to enable artifact signing
   ENABLE_CODE_SIGNING: "false"
+  # Release channel (auto-detected from tag/branch, can be overridden manually)
+  RELEASE_CHANNEL: "${{ github.event.inputs.channel || '' }}"
 
 jobs:
   ################################################################################
@@ -28,6 +39,46 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Determine release channel
+        id: channel
+        shell: bash
+        run: |
+          # If channel is manually specified, use it
+          if [ -n "${{ github.event.inputs.channel }}" ]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+            echo "Using manually specified channel: ${CHANNEL}"
+          else
+            # Auto-detect channel based on tag or branch
+            if [ "${{ github.ref_type }}" == "tag" ]; then
+              TAG="${GITHUB_REF_NAME#v}"
+              # Check if version contains pre-release identifiers
+              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
+                if [[ "$TAG" =~ -beta ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -alpha ]]; then
+                  CHANNEL="dev"
+                elif [[ "$TAG" =~ -rc ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -dev ]]; then
+                  CHANNEL="dev"
+                fi
+              else
+                # Stable version (no pre-release identifier)
+                CHANNEL="stable"
+              fi
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Main branch without tag - use beta for testing
+              CHANNEL="beta"
+            else
+              # Other branches
+              CHANNEL="dev"
+            fi
+            echo "Auto-detected channel: ${CHANNEL}"
+          fi
+
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> $GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -209,6 +260,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine release channel
+        id: channel
+        run: |
+          # If channel is manually specified, use it
+          if [ -n "${{ github.event.inputs.channel }}" ]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+            echo "Using manually specified channel: ${CHANNEL}"
+          else
+            # Auto-detect channel based on tag or branch
+            if [ "${{ github.ref_type }}" == "tag" ]; then
+              TAG="${GITHUB_REF_NAME#v}"
+              # Check if version contains pre-release identifiers
+              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
+                if [[ "$TAG" =~ -beta ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -alpha ]]; then
+                  CHANNEL="dev"
+                elif [[ "$TAG" =~ -rc ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -dev ]]; then
+                  CHANNEL="dev"
+                fi
+              else
+                # Stable version (no pre-release identifier)
+                CHANNEL="stable"
+              fi
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Main branch without tag - use beta for testing
+              CHANNEL="beta"
+            else
+              # Other branches
+              CHANNEL="dev"
+            fi
+            echo "Auto-detected channel: ${CHANNEL}"
+          fi
+
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> $GITHUB_ENV
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -295,6 +385,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine release channel
+        id: channel
+        run: |
+          # If channel is manually specified, use it
+          if [ -n "${{ github.event.inputs.channel }}" ]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+            echo "Using manually specified channel: ${CHANNEL}"
+          else
+            # Auto-detect channel based on tag or branch
+            if [ "${{ github.ref_type }}" == "tag" ]; then
+              TAG="${GITHUB_REF_NAME#v}"
+              # Check if version contains pre-release identifiers
+              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
+                if [[ "$TAG" =~ -beta ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -alpha ]]; then
+                  CHANNEL="dev"
+                elif [[ "$TAG" =~ -rc ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -dev ]]; then
+                  CHANNEL="dev"
+                fi
+              else
+                # Stable version (no pre-release identifier)
+                CHANNEL="stable"
+              fi
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Main branch without tag - use beta for testing
+              CHANNEL="beta"
+            else
+              # Other branches
+              CHANNEL="dev"
+            fi
+            echo "Auto-detected channel: ${CHANNEL}"
+          fi
+
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> $GITHUB_ENV
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -371,6 +500,45 @@ jobs:
           echo "Windows Build: ${{ needs.build-windows.result }}"
           echo "Linux Build: ${{ needs.build-linux.result }}"
           echo "macOS Build: ${{ needs.build-macos.result }}"
+
+      - name: Determine release channel
+        id: channel
+        if: always()
+        run: |
+          # If channel is manually specified, use it
+          if [ -n "${{ github.event.inputs.channel }}" ]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+            echo "Using manually specified channel: ${CHANNEL}"
+          else
+            # Auto-detect channel based on tag or branch
+            if [ "${{ github.ref_type }}" == "tag" ]; then
+              TAG="${GITHUB_REF_NAME#v}"
+              # Check if version contains pre-release identifiers
+              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
+                if [[ "$TAG" =~ -beta ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -alpha ]]; then
+                  CHANNEL="dev"
+                elif [[ "$TAG" =~ -rc ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -dev ]]; then
+                  CHANNEL="dev"
+                fi
+              else
+                # Stable version (no pre-release identifier)
+                CHANNEL="stable"
+              fi
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Main branch without tag - use beta for testing
+              CHANNEL="beta"
+            else
+              # Other branches
+              CHANNEL="dev"
+            fi
+            echo "Auto-detected channel: ${CHANNEL}"
+          fi
+
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
 
       - name: Build failed notification
         if: needs.build-windows.result == 'failure' || needs.build-linux.result == 'failure' || needs.build-macos.result == 'failure'
@@ -453,4 +621,5 @@ jobs:
     uses: ./.github/workflows/sync-azure-storage.yml
     with:
       release_tag: ${{ github.ref_name }}
+      release_channel: ${{ needs.build-summary.outputs.channel }}
     secrets: inherit

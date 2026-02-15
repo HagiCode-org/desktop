@@ -766,6 +766,41 @@ ipcMain.handle('version:openLogs', async (_, versionId: string) => {
   }
 });
 
+// Channel Selection IPC Handler
+ipcMain.handle('version:setChannel', async (_, channel: string) => {
+  if (!versionManager) {
+    return {
+      success: false,
+      error: 'Version manager not initialized'
+    };
+  }
+  try {
+    // Get current package source config
+    const currentConfig = versionManager.getCurrentSourceConfig();
+    if (!currentConfig) {
+      return {
+        success: false,
+        error: 'No active package source'
+      };
+    }
+
+    // Update defaultChannel in the source config
+    const packageSourceConfigManager = (versionManager as any).packageSourceConfigManager;
+    packageSourceConfigManager.updateSource(currentConfig.id, {
+      defaultChannel: channel
+    });
+
+    log.info('[Main] Channel preference saved:', channel);
+    return { success: true };
+  } catch (error) {
+    log.error('[Main] Failed to set channel preference:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
 // Package Management IPC Handlers (for web service packages)
 ipcMain.handle('install-web-service-package', async (_, version: string) => {
   if (!versionManager || !mainWindow || !webServiceManager) {

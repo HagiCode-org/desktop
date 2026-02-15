@@ -11,9 +11,21 @@ import {
   setValidationError,
   clearErrors,
   setScanResult,
+  setSelectedChannel,
 } from '../slices/packageSourceSlice';
 import type { Version } from '../../../main/version-manager';
 import type { StoredPackageSourceConfig } from '../../../main/package-source-config-manager';
+
+// Types for window electronAPI
+declare global {
+  interface Window {
+    electronAPI: {
+      version: {
+        setChannel: (channel: string) => Promise<{ success: boolean; error?: string }>;
+      };
+    };
+  }
+}
 
 /**
  * Load current package source configuration
@@ -355,5 +367,37 @@ export const initializePackageSource = createAsyncThunk(
       dispatch(loadSourceConfig()),
       dispatch(loadAllSourceConfigs()),
     ]);
+  }
+);
+
+/**
+ * Set channel preference
+ */
+export const setChannelPreference = createAsyncThunk(
+  'packageSource/setChannel',
+  async (channel: string, { dispatch }) => {
+    try {
+      const result: { success: boolean; error?: string } =
+        await window.electronAPI.version.setChannel(channel);
+
+      if (result.success) {
+        dispatch(setSelectedChannel(channel));
+        toast.success('渠道已设置', {
+          description: `Channel preference set to: ${channel}`,
+        });
+        return true;
+      } else {
+        toast.error('设置失败', {
+          description: result.error || 'Failed to set channel preference',
+        });
+        return false;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to set channel';
+      toast.error('设置失败', {
+        description: errorMessage,
+      });
+      return false;
+    }
   }
 );
