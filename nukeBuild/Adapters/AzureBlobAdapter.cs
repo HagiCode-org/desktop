@@ -498,21 +498,32 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 
         foreach (var (channelName, versionStrings) in channelGroups)
         {
-            // Sort versions using Semver to find the latest
-            var sortedVersions = versionStrings
-                .Where(v => SemverExtensions.TryParseVersion(v, out _))
-                .OrderByDescending(v =>
-                {
-                    SemverExtensions.TryParseVersion(v, out var semver);
-                    return semver;
-                })
-                .ToList();
+            // Parse versions and find the latest using Semver precedence comparison
+            Semver.SemVersion latestVersion = null;
+            string latestVersionString = null;
 
-            var latest = sortedVersions.FirstOrDefault() ?? versionStrings.FirstOrDefault();
+            foreach (var versionStr in versionStrings)
+            {
+                if (SemverExtensions.TryParseVersion(versionStr, out var semver))
+                {
+                    if (latestVersion == null ||
+                        Semver.SemVersion.ComparePrecedence(semver, latestVersion) > 0)
+                    {
+                        latestVersion = semver;
+                        latestVersionString = versionStr;
+                    }
+                }
+            }
+
+            // Fallback to first version string if no valid Semver found
+            if (latestVersionString == null && versionStrings.Count > 0)
+            {
+                latestVersionString = versionStrings[0];
+            }
 
             channelsData[channelName] = new ChannelInfo
             {
-                Latest = latest ?? "",
+                Latest = latestVersionString ?? "",
                 Versions = versionStrings
             };
         }
