@@ -3,7 +3,6 @@ using Nuke.Common.CI.GitHubActions;
 [GitHubActions(
     "sync-azure-storage",
     GitHubActionsImage.UbuntuLatest,
-    OnPushBranches = new[] { "fff" },
     InvokedTargets = new[] { nameof(Default) },
     ImportSecrets = new[]
     {
