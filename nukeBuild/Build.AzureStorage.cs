@@ -101,9 +101,14 @@ public partial class Build
             throw new Exception("必须配置 Azure Blob SAS URL");
         }
 
-        if (string.IsNullOrWhiteSpace(GitHubToken))
+        if (string.IsNullOrWhiteSpace(EffectiveGitHubToken))
         {
             Log.Error("GitHub Token 未配置");
+            Log.Error("配置方式:");
+            Log.Error("  CI/CD: 工作流中设置 GITHUB_TOKEN 环境变量 (通过 EnableGitHubToken=true 自动注入)");
+            Log.Error("  本地: 使用 --github-token 参数");
+            Log.Error("所需权限: contents: read (访问 Releases)");
+            Log.Error("参考: hagicode-release 项目");
             throw new Exception("必须配置 GitHub Token");
         }
 
@@ -232,7 +237,11 @@ public partial class Build
                 Arguments = "release view --json tagName -q .tagName",
                 RedirectStandardOutput = true,
                 UseShellExecute = true,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                Environment =
+                {
+                    ["GH_TOKEN"] = EffectiveGitHubToken
+                }
             };
 
             using var process = new System.Diagnostics.Process
@@ -294,7 +303,11 @@ public partial class Build
                 Arguments = $"release download {tag} --dir {downloadDirectory} --pattern \"*\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = true,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                Environment =
+                {
+                    ["GH_TOKEN"] = EffectiveGitHubToken
+                }
             };
 
             using var process = new System.Diagnostics.Process

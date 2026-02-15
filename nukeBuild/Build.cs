@@ -1,5 +1,17 @@
 using Nuke.Common.CI.GitHubActions;
 
+[GitHubActions(
+    "sync-azure-storage",
+    GitHubActionsImage.UbuntuLatest,
+    OnPushBranches = new[] { "fff" },
+    InvokedTargets = new[] { nameof(Default) },
+    ImportSecrets = new[]
+    {
+        nameof(AzureBlobSasUrl),
+        nameof(GitHubToken)
+    },
+    EnableGitHubToken = true,
+    AutoGenerate = false)]
 [ShutdownDotNetAfterServerBuild]
 partial class Build : NukeBuild
 {

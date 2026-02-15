@@ -34,6 +34,9 @@ on:
         - beta
         - dev
 
+# GITHUB_TOKEN Permissions
+# - contents: read - Required for accessing Release assets via gh CLI
+# Reference: hagicode-release project for implementation pattern
 permissions:
   contents: read
 
@@ -68,7 +71,12 @@ jobs:
 
     - name: Run Nuke Sync to Azure
       run: ./build.sh --target Default
+      # GitHub Token Configuration:
+      # - GITHUB_TOKEN: Used by Nuke GitHubActions integration (EnableGitHubToken=true)
+      # - GH_TOKEN: Used by gh CLI commands for GitHub API access
+      # Both tokens sourced from secrets.GITHUB_TOKEN
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
         RELEASE_TAG: ${{ steps.release_info.outputs.tag }}
