@@ -2,6 +2,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using AzureStorage;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Utils;
 
 namespace Adapters;
@@ -100,13 +101,41 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                     : $"{versionPrefix}{fileName}";
 
                 var blobClient = containerClient.GetBlobClient(blobName);
-                Log.Information("Uploading: {File} -> {Container}/{Blob}", fileName, options.ContainerName, blobName);
 
-                await using var stream = File.OpenRead(filePath);
-                await blobClient.UploadAsync(stream, overwrite: true);
-                var blobUrl = blobClient.Uri.ToString();
-                result.UploadedBlobs.Add(blobUrl);
-                Log.Information("Upload successful: {Url}", blobUrl);
+                // Check if blob exists and compare hashes to skip unnecessary uploads
+                bool shouldUpload = true;
+                if (await blobClient.ExistsAsync())
+                {
+                    var properties = await blobClient.GetPropertiesAsync();
+                    var remoteHash = properties.Value.ContentHash;
+
+                    // Calculate local file hash
+                    byte[] localHash;
+                    await using (var stream = File.OpenRead(filePath))
+                    using (var md5 = MD5.Create())
+                    {
+                        localHash = await md5.ComputeHashAsync(stream);
+                    }
+
+                    // Compare hashes
+                    if (remoteHash != null && localHash.SequenceEqual(remoteHash))
+                    {
+                        Log.Information("Skipping {File} (unchanged, hash: {Hash})", fileName, Convert.ToHexString(localHash)[..8]);
+                        shouldUpload = false;
+                        result.SkippedBlobs.Add(blobClient.Uri.ToString());
+                    }
+                }
+
+                if (shouldUpload)
+                {
+                    Log.Information("Uploading: {File} -> {Container}/{Blob}", fileName, options.ContainerName, blobName);
+
+                    await using var stream = File.OpenRead(filePath);
+                    await blobClient.UploadAsync(stream, overwrite: true);
+                    var blobUrl = blobClient.Uri.ToString();
+                    result.UploadedBlobs.Add(blobUrl);
+                    Log.Information("Upload successful: {Url}", blobUrl);
+                }
             }
 
             result.Success = true;

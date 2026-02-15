@@ -164,6 +164,10 @@ public partial class Build
 
             Log.Information("✅ 构建产物已上传");
             Log.Information("  上传文件数: {Count}", result.UploadedBlobs.Count);
+            if (result.SkippedBlobs.Count > 0)
+            {
+                Log.Information("  跳过文件数: {Count} (已存在且哈希一致)", result.SkippedBlobs.Count);
+            }
         }
         else
         {
