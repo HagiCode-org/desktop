@@ -53,8 +53,11 @@ export class ConfigManager {
       const dir = path.dirname(configPath);
       await fs.mkdir(dir, { recursive: true });
 
+      // Sanitize config to handle Windows paths properly
+      const sanitizedConfig = this.sanitizeConfigForYaml(config);
+
       // Convert to YAML with proper formatting
-      const content = yaml.dump(config, {
+      const content = yaml.dump(sanitizedConfig, {
         indent: 2,
         lineWidth: -1,
         sortKeys: false,
@@ -68,6 +71,37 @@ export class ConfigManager {
       log.error('[ConfigManager] Failed to write config:', error);
       throw new Error(`Failed to write configuration file: ${error}`);
     }
+  }
+
+  /**
+   * Escape Windows path backslashes for YAML double-quoted strings
+   * Converts C:\Users\... to C:\\Users\...
+   */
+  private escapePathForYaml(filePath: string): string {
+    return filePath.replace(/\\/g, '\\\\');
+  }
+
+  /**
+   * Sanitize config object to handle Windows paths properly
+   * Recursively processes strings that look like file paths
+   */
+  private sanitizeConfigForYaml(config: any): any {
+    if (typeof config === 'string') {
+      // Check if this looks like a Windows path (contains drive letter and backslashes)
+      if (/^[A-Za-z]:\\/.test(config) || config.includes('\\')) {
+        return this.escapePathForYaml(config);
+      }
+      return config;
+    } else if (Array.isArray(config)) {
+      return config.map(item => this.sanitizeConfigForYaml(item));
+    } else if (config !== null && typeof config === 'object') {
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(config)) {
+        sanitized[key] = this.sanitizeConfigForYaml(value);
+      }
+      return sanitized;
+    }
+    return config;
   }
 
   /**
@@ -91,8 +125,11 @@ export class ConfigManager {
         config = {};
       }
 
-      // Update DataDir with absolute path
+      // Update DataDir with absolute path (escape backslashes for YAML)
       config.DataDir = dataDir;
+
+      // Escape backslashes for YAML compatibility
+      const escapedDataDir = this.escapePathForYaml(dataDir);
 
       // Check if file exists and has content
       let existingContent = '';
@@ -108,18 +145,18 @@ export class ConfigManager {
         if (existingContent.includes('DataDir:')) {
           // Replace existing DataDir
           const updatedContent = existingContent.replace(
-            /DataDir:\s*\S+/,
-            `DataDir: "${dataDir}"`
+            /DataDir:\s*"[^"]*"/,
+            `DataDir: "${escapedDataDir}"`
           );
           await fs.writeFile(configPath, updatedContent, 'utf-8');
         } else {
           // Append DataDir to the end of the file
-          const updatedContent = existingContent.trimEnd() + `\n\n# Data directory configuration\nDataDir: "${dataDir}"\n`;
+          const updatedContent = existingContent.trimEnd() + `\n\n# Data directory configuration\nDataDir: "${escapedDataDir}"\n`;
           await fs.writeFile(configPath, updatedContent, 'utf-8');
         }
       } else {
         // File is empty or doesn't exist, create new config file with just DataDir
-        const content = `# Data directory configuration\nDataDir: "${dataDir}"\n`;
+        const content = `# Data directory configuration\nDataDir: "${escapedDataDir}"\n`;
         await fs.writeFile(configPath, content, 'utf-8');
       }
 

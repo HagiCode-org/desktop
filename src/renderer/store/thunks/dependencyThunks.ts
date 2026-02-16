@@ -109,21 +109,20 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
       }
 
       // Step 2: Execute actual dependency check (this takes time)
-      // Get missing dependencies to populate the dependency list
-      console.log('[checkDependenciesAfterInstall] Getting missing dependencies...');
-      const missingDeps: DependencyItem[] = await window.electronAPI.getMissingDependencies(versionId);
-      console.log('[checkDependenciesAfterInstall] Got missing deps:', missingDeps.length, 'items');
+      // Get ALL dependencies (including installed ones) in a single check
+      console.log('[checkDependenciesAfterInstall] Getting all dependencies...');
+      const allDeps: DependencyItem[] = await window.electronAPI.getAllDependencies(versionId);
+      console.log('[checkDependenciesAfterInstall] Got all deps:', allDeps.length, 'items');
 
-      // Store dependencies in state for the UI to display
+      // Filter missing dependencies from all dependencies
+      const missingDeps = allDeps.filter(dep => !dep.installed || dep.versionMismatch);
+      console.log('[checkDependenciesAfterInstall] Missing deps:', missingDeps.length, 'items');
+
+      // Store missing dependencies in state for the UI to display
       dispatch(fetchDependenciesSuccess(missingDeps));
 
-      // For onboarding context, also get ALL dependencies and store in onboardingSlice
+      // For onboarding context, store ALL dependencies in onboardingSlice
       if (context === 'onboarding') {
-        // Get ALL dependencies (including installed ones) for detailed display
-        console.log('[checkDependenciesAfterInstall] Getting all dependencies...');
-        const allDeps: DependencyItem[] = await window.electronAPI.getAllDependencies(versionId);
-        console.log('[checkDependenciesAfterInstall] Got all deps:', allDeps.length, 'items');
-
         // Store the results in onboarding state for detailed display
         dispatch(setDependencyCheckResults(allDeps.map(dep => ({
           key: dep.key,

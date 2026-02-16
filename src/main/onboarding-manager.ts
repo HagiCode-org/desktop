@@ -500,6 +500,8 @@ export class OnboardingManager {
 
   /**
    * Start the web service
+   * Note: This method now includes dependency status check to ensure consistency
+   * with the homepage startup behavior
    */
   async startWebService(
     versionId: string,
@@ -521,6 +523,17 @@ export class OnboardingManager {
 
       if (!version) {
         return { success: false, error: 'Version not found' };
+      }
+
+      // Check version status - ensure dependencies are satisfied (same as homepage)
+      if (version.status !== 'installed-ready') {
+        const missingDeps = version.dependencies?.filter(dep => !dep.installed || dep.versionMismatch) || [];
+        log.warn('[OnboardingManager] Version not ready:', version.status, 'missing deps:', missingDeps.length);
+
+        return {
+          success: false,
+          error: `Dependencies not satisfied. ${missingDeps.length} dependencies are missing or have version mismatches. Please install dependencies first.`
+        };
       }
 
       // Send initial progress
@@ -545,7 +558,7 @@ export class OnboardingManager {
         this.webServiceManager.setEntryPoint(null);
       }
 
-      // Start the service
+      // Start the service using the standard startup logic (same as homepage)
       const startResult = await this.webServiceManager.start();
 
       if (startResult.success) {

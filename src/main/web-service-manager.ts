@@ -232,7 +232,12 @@ export class PCodeWebServiceManager {
 
     // Execute script
     return new Promise((resolve, reject) => {
-      const child = spawn(scriptPath, [], {
+      // On Windows with shell: true, paths with spaces need to be quoted
+      const command = (process.platform === 'win32' && scriptPath.includes(' '))
+        ? `"${scriptPath}"`
+        : scriptPath;
+
+      const child = spawn(command, [], {
         cwd: workingDirectory,
         shell: true,
         stdio: 'ignore',
@@ -359,9 +364,10 @@ export class PCodeWebServiceManager {
       });
     }
 
-    // Windows: detach to run independently
+    // Windows: use shell for .bat files, detach to run independently
     // Unix: keep attached for lifecycle management
     if (process.platform === 'win32') {
+      options.shell = true; // Required for executing .bat files
       options.detached = true;
       options.windowsHide = true;
     } else {
@@ -379,6 +385,12 @@ export class PCodeWebServiceManager {
   private getSpawnCommand(): { command: string; args: string[] } {
     const scriptPath = this.getStartupScriptPath();
     const args = this.getPlatformSpecificArgs();
+
+    // On Windows with shell: true, paths with spaces need to be quoted
+    if (process.platform === 'win32' && scriptPath.includes(' ')) {
+      return { command: `"${scriptPath}"`, args };
+    }
+
     return { command: scriptPath, args };
   }
 

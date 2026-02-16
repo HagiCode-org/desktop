@@ -110,7 +110,10 @@ function DependencyInstaller() {
   const handleInstallAll = () => {
     if (installProgress.installing || !downloadProgress?.version) return;
     console.log('[DependencyInstaller] Installing all dependencies for version:', downloadProgress.version);
-    dispatch(installFromManifest(downloadProgress.version));
+    dispatch(installFromManifest({
+      versionId: downloadProgress.version,
+      context: 'onboarding',
+    }));
   };
 
   // Get all dependencies (not just missing ones) for detailed display

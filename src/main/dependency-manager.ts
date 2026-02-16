@@ -46,6 +46,10 @@ export class DependencyManager {
   private regionDetector: RegionDetector;
   private currentManifest: Manifest | null = null;
   private workingDirectory: string | null = null;
+  private checkPromise: Promise<DependencyCheckResult[]> | null = null; // Cache ongoing check
+  private lastCheckTime: number = 0;
+  private readonly CHECK_CACHE_TTL = 2000; // Cache results for 2 seconds
+  private cachedResults: DependencyCheckResult[] | null = null;
 
   constructor(store?: Store<Record<string, unknown>>) {
     this.platform = process.platform;
@@ -82,6 +86,16 @@ export class DependencyManager {
    */
   getManifest(): Manifest | null {
     return this.currentManifest;
+  }
+
+  /**
+   * Clear cached check results
+   * Call this after installing dependencies or when forcing a refresh
+   */
+  clearCheckCache(): void {
+    this.cachedResults = null;
+    this.lastCheckTime = 0;
+    log.info('[DependencyManager] Check cache cleared');
   }
 
   /**
@@ -408,8 +422,40 @@ export class DependencyManager {
 
   /**
    * Check all dependencies from manifest
+   * Uses caching to avoid duplicate checks within a short time window
    */
   async checkAllDependencies(): Promise<DependencyCheckResult[]> {
+    const now = Date.now();
+
+    // Return cached results if still valid
+    if (this.cachedResults && (now - this.lastCheckTime) < this.CHECK_CACHE_TTL) {
+      log.info('[DependencyManager] Returning cached dependency check results');
+      return this.cachedResults;
+    }
+
+    // If a check is already in progress, wait for it
+    if (this.checkPromise) {
+      log.info('[DependencyManager] Waiting for ongoing dependency check');
+      return this.checkPromise;
+    }
+
+    // Start a new check
+    this.checkPromise = this.performCheck();
+
+    try {
+      const results = await this.checkPromise;
+      this.cachedResults = results;
+      this.lastCheckTime = now;
+      return results;
+    } finally {
+      this.checkPromise = null;
+    }
+  }
+
+  /**
+   * Perform the actual dependency check
+   */
+  private async performCheck(): Promise<DependencyCheckResult[]> {
     // If manifest is available, use it
     if (this.currentManifest) {
       const { manifestReader } = await import('./manifest-reader.js');
@@ -456,6 +502,7 @@ export class DependencyManager {
       // Resolve check script path
       const { manifestReader } = await import('./manifest-reader.js');
       const scriptPath = manifestReader.resolveScriptPath(entryPoint.check, this.workingDirectory);
+      const scriptDirectory = path.dirname(scriptPath);
 
       log.info('[DependencyManager] Executing check script:', scriptPath);
 
@@ -465,7 +512,7 @@ export class DependencyManager {
       });
 
       // Read check-result.json to get individual dependency status
-      const checkResultPath = path.join(this.workingDirectory, 'check-result.json');
+      const checkResultPath = path.join(scriptDirectory, 'check-result.json');
       let checkResultData: any = null;
 
       try {
@@ -473,7 +520,7 @@ export class DependencyManager {
         checkResultData = JSON.parse(content);
         log.info('[DependencyManager] Read check-result.json with dependencies:', Object.keys(checkResultData.dependencies || {}));
       } catch (error) {
-        log.warn('[DependencyManager] Could not read check-result.json, using fallback');
+        log.warn('[DependencyManager] Could not read check-result.json, using fallback', error);
       }
 
       // Map results for each dependency
@@ -816,6 +863,7 @@ export class DependencyManager {
     try {
       // Resolve install script path
       const scriptPath = manifestReader.resolveScriptPath(entryPoint.install, this.workingDirectory);
+      const scriptDirectory = path.dirname(scriptPath);
 
       log.info('[DependencyManager] Executing batch install script:', scriptPath);
 
@@ -834,7 +882,7 @@ export class DependencyManager {
       const parsedResult = this.parseResultSession(resultSession);
 
       // Read install-result.json to get individual dependency installation results
-      const installResultPath = path.join(this.workingDirectory, 'install-result.json');
+      const installResultPath = path.join(scriptDirectory, 'install-result.json');
       let installResultData: any = null;
 
       try {
@@ -925,6 +973,9 @@ export class DependencyManager {
       }
     }
 
+    // Clear cache after installation completes so next check gets fresh results
+    this.clearCheckCache();
+
     return results;
   }
 
@@ -968,9 +1019,15 @@ export class DependencyManager {
         installResult.installHint = dep.installHint;
       }
 
+      // Clear cache after installation completes so next check gets fresh results
+      this.clearCheckCache();
+
       return installResult;
     } catch (error) {
       log.error(`[DependencyManager] Failed to install ${dep.name}:`, error);
+
+      // Clear cache even on failure
+      this.clearCheckCache();
 
       // Return failed result with install hint
       return {
