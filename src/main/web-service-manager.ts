@@ -5,6 +5,7 @@ import { app } from 'electron';
 import log from 'electron-log';
 import { PathManager, Platform } from './path-manager.js';
 import type { EntryPoint, ResultSessionFile, ParsedResult, StartResult } from './manifest-reader.js';
+import { PowerShellExecutor } from './utils/powershell-executor.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -210,6 +211,11 @@ export class PCodeWebServiceManager {
 
   /**
    * Execute entryPoint.start script and wait for result.json generation
+   *
+   * On Windows with .ps1 scripts: Uses direct PowerShell invocation via PowerShellExecutor
+   * On Windows with .bat/.cmd: Uses legacy spawn with shell (deprecated)
+   * On Unix/Linux: Uses bash to execute .sh scripts
+   *
    * @param scriptPath - Full path to the start script
    * @param workingDirectory - Directory where script should be executed
    * @returns ResultSessionFile from generated result.json
@@ -221,6 +227,24 @@ export class PCodeWebServiceManager {
     log.info('[WebService] Executing start script:', scriptPath);
     log.info('[WebService] Working directory:', workingDirectory);
 
+    // Use PowerShellExecutor for .ps1 scripts on Windows
+    if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
+      log.info('[WebService] Using PowerShellExecutor for direct invocation');
+      const executor = new PowerShellExecutor();
+
+      try {
+        const result = await executor.executeAndReadResult(scriptPath, workingDirectory, {
+          cwd: workingDirectory,
+          timeout: this.startTimeout,
+        });
+        return result;
+      } catch (error) {
+        log.error('[WebService] PowerShell execution failed:', error);
+        throw error;
+      }
+    }
+
+    // Legacy execution path for .bat/.cmd on Windows and .sh on Unix
     // Ensure script has execute permissions on Unix
     if (process.platform !== 'win32') {
       try {
@@ -230,16 +254,33 @@ export class PCodeWebServiceManager {
       }
     }
 
+    // Build command and arguments based on platform
+    // For PowerShell scripts: use 'powershell.exe' with script path as argument
+    // For other scripts: use script path directly
+    let command: string;
+    let args: string[];
+
+    if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
+      // PowerShell script: explicit PowerShell invocation
+      command = 'powershell.exe';
+      args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath];
+      log.info('[WebService] Using explicit PowerShell invocation');
+    } else {
+      // Other scripts: direct invocation
+      command = scriptPath;
+      args = [];
+    }
+
     // Execute script
     return new Promise((resolve, reject) => {
       // On Windows with shell: true, paths with spaces need to be quoted
-      const command = (process.platform === 'win32' && scriptPath.includes(' '))
-        ? `"${scriptPath}"`
-        : scriptPath;
+      const spawnCommand = (process.platform === 'win32' && !scriptPath.endsWith('.ps1') && command.includes(' '))
+        ? `"${command}"`
+        : command;
 
-      const child = spawn(command, [], {
+      const child = spawn(spawnCommand, args, {
         cwd: workingDirectory,
-        shell: true,
+        shell: !scriptPath.endsWith('.ps1') && process.platform === 'win32', // Only use shell for .bat files
         stdio: 'ignore',
         detached: process.platform === 'win32',
         // Hide console window on Windows to prevent visual disruption
@@ -322,18 +363,30 @@ export class PCodeWebServiceManager {
 
   /**
    * Get the startup script path for the current platform
-   * Returns the platform-specific startup script path (start.bat for Windows, start.sh for Unix)
+   *
+   * Uses entryPoint.start if available, otherwise falls back to platform-specific defaults.
+   *
    * @returns The path to the startup script
    */
   private getStartupScriptPath(): string {
-    // Use active version path if available
+    // Use entryPoint.start if available
+    if (this.entryPoint?.start) {
+      const scriptPath = path.resolve(
+        this.activeVersionPath || '',
+        this.entryPoint.start
+      );
+      log.info('[WebService] Using entryPoint.start script:', scriptPath);
+      return scriptPath;
+    }
+
+    // Fallback to platform-specific default
     const basePath = this.activeVersionPath || (() => {
       const currentPlatform = this.pathManager.getCurrentPlatform();
       return this.pathManager.getInstalledPath(currentPlatform);
     })();
 
     // Return platform-specific script path
-    const scriptName = process.platform === 'win32' ? 'start.bat' : 'start.sh';
+    const scriptName = process.platform === 'win32' ? 'start.ps1' : 'start.sh';
     return path.join(basePath, scriptName);
   }
 
@@ -347,7 +400,15 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Get platform-specific spawn options
+   * Get platform-specific spawn options for the web service process
+   *
+   * For Windows with .ps1 scripts: Uses shell=false, windowsHide=true (PowerShell direct)
+   * For Windows with .bat/.cmd: Uses shell=true, windowsHide=true (legacy)
+   * For Unix: Uses shell=false, stdio=ignore for .sh scripts
+   *
+   * Note: This method is used for spawning the actual web service process,
+   * not for executing the start script. Use executeStartScript() for start scripts.
+   *
    * When using startup script, the working directory is the script's directory
    */
   private getSpawnOptions() {
@@ -364,9 +425,11 @@ export class PCodeWebServiceManager {
       });
     }
 
-    // Windows: use shell for .bat files, detach to run independently
+    // Windows: PowerShell (.ps1) doesn't need shell, .bat needs shell
     // Unix: keep attached for lifecycle management
     if (process.platform === 'win32') {
+      // For .ps1 scripts, we use shell=false (handled by PowerShellExecutor)
+      // This method is mainly for legacy .bat support
       options.shell = true; // Required for executing .bat files
       options.detached = true;
       options.windowsHide = true;
@@ -685,6 +748,7 @@ export class PCodeWebServiceManager {
         this.activeVersionPath!,
         this.entryPoint.start
       );
+
       try {
         await fs.access(startScriptPath);
         log.info('[WebService] Startup script found:', startScriptPath);

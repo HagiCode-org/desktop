@@ -1,3 +1,4 @@
+#Requires -Version 5.1
 # PCode Windows Dependency Installation Script (PowerShell)
 # Automatically installs missing dependencies based on version requirements
 # Compatible with PowerShell 5.1+ (Windows 10+) and PowerShell 7+ (Windows 11)

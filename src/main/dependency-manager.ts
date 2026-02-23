@@ -6,6 +6,7 @@ import { RegionDetector } from './region-detector.js';
 import { ParsedDependency, DependencyTypeName, type Manifest, type NpmPackageInfo, type EntryPoint, type ResultSessionFile, type ParsedResult, type InstallResult, type StartResult } from './manifest-reader.js';
 import Store from 'electron-store';
 import log from 'electron-log';
+import { PowerShellExecutor } from './utils/powershell-executor.js';
 
 const execAsync = promisify(exec);
 
@@ -237,11 +238,15 @@ export class DependencyManager {
 
   /**
    * Get platform-specific spawn options for child processes
-   * On Windows: uses windowsHide to prevent console windows, detached for independent execution
-   * On Unix: uses pipe for stdio to capture output
+   *
+   * For Windows with .ps1 scripts: uses shell=false, windowsHide=true for direct PowerShell invocation
+   * For Windows with .bat/.cmd: uses shell=true, windowsHide=true (legacy behavior)
+   * For Unix: uses shell=/bin/bash with pipe for stdio to capture output
+   *
+   * @param scriptPath - The script path being executed (used to determine script type)
    * @returns Spawn options object
    */
-  private getSpawnOptions(): {
+  private getSpawnOptions(scriptPath: string): {
     shell: boolean | string;
     stdio: Array<'pipe' | 'ignore' | 'inherit'>;
     detached?: boolean;
@@ -253,14 +258,25 @@ export class DependencyManager {
       detached?: boolean;
       windowsHide?: boolean;
     } = {
-      shell: this.platform === 'win32' ? true : '/bin/bash',
+      shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
     };
 
-    // Windows-specific options to hide console window
+    // Windows-specific options
     if (this.platform === 'win32') {
-      options.detached = true;
-      options.windowsHide = true;
+      // Direct PowerShell invocation for .ps1 scripts
+      if (scriptPath.endsWith('.ps1')) {
+        options.shell = false; // PowerShell.exe is executable, no shell needed
+        options.windowsHide = true; // Hide console window to prevent flicker
+      } else {
+        // Legacy behavior for .bat/.cmd files
+        options.shell = true;
+        options.detached = true;
+        options.windowsHide = true;
+      }
+    } else {
+      // Unix/Linux: use bash
+      options.shell = '/bin/bash';
     }
 
     return options;
@@ -268,6 +284,11 @@ export class DependencyManager {
 
   /**
    * Execute entryPoint script and wait for result.json generation
+   *
+   * On Windows with .ps1 scripts: Uses direct PowerShell invocation via PowerShellExecutor
+   * On Windows with .bat/.cmd: Uses legacy spawn with shell (deprecated)
+   * On Unix/Linux: Uses bash to execute .sh scripts
+   *
    * @param scriptPath - Full path to the script to execute
    * @param workingDirectory - Directory where script should be executed
    * @param onOutput - Optional callback for real-time output (stdout/stderr)
@@ -283,6 +304,26 @@ export class DependencyManager {
     log.info('[DependencyManager] Working directory:', workingDirectory);
     log.info('[DependencyManager] Script directory:', scriptDirectory);
 
+    // Use PowerShellExecutor for .ps1 scripts on Windows
+    if (this.platform === 'win32' && scriptPath.endsWith('.ps1')) {
+      log.info('[DependencyManager] Using PowerShellExecutor for direct invocation');
+      const executor = new PowerShellExecutor();
+
+      try {
+        const result = await executor.executeAndReadResult(scriptPath, scriptDirectory, {
+          cwd: workingDirectory,
+          onOutput,
+        });
+        return result;
+      } catch (error) {
+        log.error('[DependencyManager] PowerShell execution failed:', error);
+        throw error;
+      }
+    }
+
+    // Legacy execution path for .bat/.cmd on Windows and .sh on Unix
+    // Note: .ps1 scripts on Windows should use PowerShellExecutor above, not this path
+
     // Ensure script has execute permissions on Unix
     if (this.platform !== 'win32') {
       try {
@@ -292,15 +333,29 @@ export class DependencyManager {
       }
     }
 
-    // Get platform-specific spawn options
-    const spawnOptions = this.getSpawnOptions();
+    // Build command and arguments based on platform
+    // For PowerShell scripts: use 'powershell.exe' with script path as argument
+    // For other scripts: use script path directly
+    let command: string;
+    let args: string[];
 
-    // Build command based on platform
-    const command = this.platform === 'win32' ? `"${scriptPath}"` : `"${scriptPath}"`;
+    if (this.platform === 'win32' && scriptPath.endsWith('.ps1')) {
+      // PowerShell script: explicit PowerShell invocation
+      command = 'powershell.exe';
+      args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath];
+      log.info('[DependencyManager] Using explicit PowerShell invocation');
+    } else {
+      // Other scripts: direct invocation
+      command = scriptPath;
+      args = [];
+    }
+
+    // Get platform-specific spawn options
+    const spawnOptions = this.getSpawnOptions(scriptPath);
 
     // Execute script with output capture
     return new Promise((resolve, reject) => {
-      const child = spawn(command, [], {
+      const child = spawn(command, args, {
         cwd: workingDirectory,
         ...spawnOptions,
       });
@@ -1175,8 +1230,9 @@ export class DependencyManager {
     return new Promise((resolve, reject) => {
       log.info(`[DependencyManager] Spawning command: ${command}`);
 
-      // Get platform-specific spawn options
-      const baseOptions = this.getSpawnOptions();
+      // Get platform-specific spawn options (for command execution, not script)
+      // For command execution, we always use shell=true
+      const baseOptions = this.getSpawnOptions('');
 
       // Override for shell execution (needs shell: true for command chaining)
       const childProcess = spawn(command, {

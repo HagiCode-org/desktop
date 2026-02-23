@@ -1,3 +1,4 @@
+#Requires -Version 5.1
 # PCode Windows Dependency Verification Script (PowerShell)
 # Checks all dependencies and generates JSON result file
 # Compatible with PowerShell 5.1+ (Windows 10+) and PowerShell 7+ (Windows 11)
