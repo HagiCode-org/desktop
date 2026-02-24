@@ -1,0 +1,60 @@
+{
+  "title": "Configure Claude API",
+  "description": "To use AI features, you need to configure a Claude API provider and key.",
+  "provider": {
+    "label": "Select Provider",
+    "anthropic": "Anthropic (Official)",
+    "zhipu": "Zhipu AI (GLM)",
+    "aliyun": "Aliyun (Qianwen)",
+    "custom": "Custom Endpoint"
+  },
+  "apiKey": {
+    "label": "API Key",
+    "placeholder": "Enter your API key"
+  },
+  "endpoint": {
+    "label": "Endpoint Address",
+    "placeholder": "https://api.example.com",
+    "autoFilled": "Endpoint is auto-filled based on selected provider",
+    "customHint": "Enter your custom Anthropic-compatible endpoint URL"
+  },
+  "validation": {
+    "validate": "Validate Configuration",
+    "valid": "Configuration Valid",
+    "success": "✓ Configuration is valid",
+    "failed": "API Key is invalid, please check and try again",
+    "timeout": "Validation timeout, please try again later",
+    "networkError": "Network connection failed, please check network and try again",
+    "rateLimit": "API requests are too frequent, please try again later",
+    "invalidUrl": "Invalid endpoint address",
+    "invalidFormat": "Invalid API Key format, should start with sk-ant-"
+  },
+  "cli": {
+    "label": "CLI Status",
+    "installed": "✓ Claude Code CLI installed ({{version}})",
+    "notInstalled": "⚠ Claude Code CLI not installed",
+    "versionTooOld": "⚠ Claude Code CLI version too old, update recommended",
+    "installing": "Installing Claude Code CLI..."
+  },
+  "existingConfig": {
+    "title": "Existing Configuration Detected",
+    "description": "We found an existing Claude configuration on your system.",
+    "summary": "Configuration Summary",
+    "useExisting": "Use Existing Configuration",
+    "reconfigure": "Reconfigure",
+    "using": "Using Existing Config"
+  },
+  "summary": {
+    "title": "Configuration Summary"
+  },
+  "promoLink": {
+    "context_anthropic": "No key? <Get promo offer →>",
+    "context_zhipu": "No key? <Get promo offer →>",
+    "context_aliyun": "No key? <Get promo offer →>",
+    "context_custom": "No key? <Get API key →>"
+  },
+  "validating": "Validating...",
+  "skip": "Skip",
+  "next": "Next",
+  "skipped": "AI features will be unavailable. You can configure later in settings."
+}

@@ -18,6 +18,8 @@ import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import type { RSSFeedItem } from './types/rss-types.js';
+import { ClaudeConfigManager } from './claude-config-manager.js';
+import type { ClaudeProvider } from '../types/claude-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -80,6 +82,7 @@ let regionDetector: RegionDetector | null = null;
 let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
+let claudeConfigManager: ClaudeConfigManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -1351,30 +1354,6 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       };
     }
 
-    // URL whitelist validation
-    const allowedDomains = [
-      'localhost',
-      '127.0.0.1',
-      '0.0.0.0',
-      'hagicode.com',
-      'docs.hagicode.com',
-      'qq.com',
-      'github.com',
-      'qm.qq.com'
-    ];
-
-    const isAllowed = allowedDomains.some(domain =>
-      parsedUrl.hostname === domain ||
-      parsedUrl.hostname.endsWith('.' + domain)
-    );
-
-    if (!isAllowed) {
-      return {
-        success: false,
-        error: 'Domain not allowed'
-      };
-    }
-
     // Open external link with activate option to ensure browser window is focused
     await shell.openExternal(url, { activate: true });
 
@@ -1775,6 +1754,156 @@ ipcMain.handle('onboarding:reset', async () => {
   }
 });
 
+// Claude Config IPC Handlers
+ipcMain.handle('claude:detect', async () => {
+  if (!claudeConfigManager) {
+    return {
+      exists: false,
+      source: 'none',
+      error: 'Claude Config Manager not initialized'
+    };
+  }
+  try {
+    return await claudeConfigManager.detectExistingConfig();
+  } catch (error) {
+    console.error('Failed to detect Claude config:', error);
+    return {
+      exists: false,
+      source: 'none',
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:validate', async (_, provider: string, apiKey: string, endpoint?: string) => {
+  if (!claudeConfigManager) {
+    return {
+      success: false,
+      error: 'Claude Config Manager not initialized'
+    };
+  }
+  try {
+    return await claudeConfigManager.validateApiKey(provider as ClaudeProvider, apiKey, endpoint);
+  } catch (error) {
+    console.error('Failed to validate Claude API key:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:verify-cli', async () => {
+  if (!claudeConfigManager) {
+    return {
+      installed: false,
+      error: 'Claude Config Manager not initialized'
+    };
+  }
+  try {
+    return await claudeConfigManager.verifyCliInstallation();
+  } catch (error) {
+    console.error('Failed to verify Claude CLI:', error);
+    return {
+      installed: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:save', async (_, config: any) => {
+  if (!claudeConfigManager) {
+    return {
+      success: false,
+      error: 'Claude Config Manager not initialized'
+    };
+  }
+  try {
+    return await claudeConfigManager.saveConfig(config);
+  } catch (error) {
+    console.error('Failed to save Claude config:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:get-stored', async () => {
+  if (!claudeConfigManager) {
+    return null;
+  }
+  try {
+    return claudeConfigManager.getStoredConfig();
+  } catch (error) {
+    console.error('Failed to get stored Claude config:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('claude:delete', async () => {
+  if (!claudeConfigManager) {
+    return { success: false, error: 'Claude Config Manager not initialized' };
+  }
+  try {
+    claudeConfigManager.deleteStoredConfig();
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete Claude config:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:test', async () => {
+  if (!claudeConfigManager) {
+    return { success: false, error: 'Claude Config Manager not initialized' };
+  }
+  try {
+    return await claudeConfigManager.testConfiguration();
+  } catch (error) {
+    console.error('Failed to test Claude config:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('claude:list-backups', async () => {
+  if (!claudeConfigManager) {
+    return { success: false, error: 'Claude Config Manager not initialized', backups: [] };
+  }
+  try {
+    const backups = await claudeConfigManager.listBackups();
+    return { success: true, backups };
+  } catch (error) {
+    console.error('Failed to list Claude config backups:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      backups: []
+    };
+  }
+});
+
+ipcMain.handle('claude:restore-backup', async (_, backupPath: string) => {
+  if (!claudeConfigManager) {
+    return { success: false, error: 'Claude Config Manager not initialized' };
+  }
+  try {
+    return await claudeConfigManager.restoreFromBackup(backupPath);
+  } catch (error) {
+    console.error('Failed to restore Claude config from backup:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
 // Debug Mode IPC Handlers
 ipcMain.handle('set-debug-mode', async (_, mode: { ignoreDependencyCheck: boolean }) => {
   try {
@@ -1953,6 +2082,12 @@ app.whenReady().then(async () => {
     );
     log.info('[App] Onboarding Manager initialized');
   }
+
+  // Initialize Claude Config Manager
+  claudeConfigManager = new ClaudeConfigManager(
+    configManager.getStore() as unknown as Store<Record<string, unknown>>
+  );
+  log.info('[App] Claude Config Manager initialized');
 
   // Initialize RSS Feed Manager
   rssFeedManager = RSSFeedManager.getInstance(

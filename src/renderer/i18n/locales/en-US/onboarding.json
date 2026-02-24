@@ -19,6 +19,7 @@
     },
     "processTitle": "The first-time setup includes:",
     "steps": {
+      "claude": "Configure Claude API",
       "download": "Download the latest Hagicode Server package",
       "dependencies": "Install required system dependencies",
       "launch": "Start the service and verify it's running"

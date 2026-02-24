@@ -224,22 +224,20 @@ export const onboardingSlice = createSlice({
 
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to Download');
+            console.log('[onboardingSlice] Moving from Welcome to ClaudeConfig');
+            state.currentStep = OnboardingStep.ClaudeConfig;
+            break;
+
+          case OnboardingStep.ClaudeConfig:
+            console.log('[onboardingSlice] Moving from ClaudeConfig to Download');
             state.currentStep = OnboardingStep.Download;
             break;
 
           case OnboardingStep.Download:
             if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from Download to Dependencies');
-              state.currentStep = OnboardingStep.Dependencies;
+              console.log('[onboardingSlice] Moving from Download to Launch');
+              state.currentStep = OnboardingStep.Launch;
             }
-            break;
-
-          case OnboardingStep.Dependencies:
-            // Don't auto-advance - user will manually click "Next" button
-            // if (state.downloadProgress?.version) {
-            //   state.currentStep = OnboardingStep.Launch;
-            // }
             break;
 
           case OnboardingStep.Launch:
@@ -296,17 +294,17 @@ export const selectDependencyCheckResults = (state: { onboarding: OnboardingStat
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
 
 // Computed selectors
-export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
+export const selectCanGoNext = (state: { onboarding: OnboardingState; claudeConfig: { isValid: boolean; useExistingConfig: boolean } }) => {
   const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
       return true; // Can always proceed from welcome
+    case OnboardingStep.ClaudeConfig:
+      // Can proceed if config is valid or using existing config
+      return state.claudeConfig.isValid || state.claudeConfig.useExistingConfig;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
-    case OnboardingStep.Dependencies:
-      // Allow proceeding - dependencies are managed through dependencySlice
-      return downloadProgress?.version !== undefined;
     case OnboardingStep.Launch:
       return serviceProgress?.phase === 'running';
     default:

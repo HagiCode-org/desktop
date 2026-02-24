@@ -7,6 +7,7 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import licenseReducer from './slices/licenseSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
+import claudeConfigReducer from './slices/claudeConfigSlice';
 import listenerMiddleware from './listenerMiddleware';
 import { setProcessInfo } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
@@ -40,6 +41,7 @@ export const store = configureStore({
     license: licenseReducer,
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
+    claudeConfig: claudeConfigReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

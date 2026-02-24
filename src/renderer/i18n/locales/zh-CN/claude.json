@@ -1,0 +1,60 @@
+{
+  "title": "配置 Claude API",
+  "description": "为了使用 AI 功能，需要配置 Claude API 提供商和密钥。",
+  "provider": {
+    "label": "选择提供商",
+    "anthropic": "Anthropic (官方)",
+    "zhipu": "Zhipu AI (智谱 GLM)",
+    "aliyun": "Aliyun (阿里云千问)",
+    "custom": "自定义端点"
+  },
+  "apiKey": {
+    "label": "API Key",
+    "placeholder": "输入您的 API 密钥"
+  },
+  "endpoint": {
+    "label": "端点地址",
+    "placeholder": "https://api.example.com",
+    "autoFilled": "端点已根据所选提供商自动填充",
+    "customHint": "输入您的自定义 Anthropic 兼容端点 URL"
+  },
+  "validation": {
+    "validate": "验证配置",
+    "valid": "配置有效",
+    "success": "✓ 配置有效",
+    "failed": "API Key 无效，请检查后重试",
+    "timeout": "验证超时，请稍后重试",
+    "networkError": "网络连接失败，请检查网络后重试",
+    "rateLimit": "API 请求过于频繁，请稍后重试",
+    "invalidUrl": "端点地址格式无效",
+    "invalidFormat": "API Key 格式无效，应以 sk-ant- 开头"
+  },
+  "cli": {
+    "label": "CLI 状态",
+    "installed": "✓ Claude Code CLI 已安装 ({{version}})",
+    "notInstalled": "⚠ Claude Code CLI 未安装",
+    "versionTooOld": "⚠ Claude Code CLI 版本过低，建议更新",
+    "installing": "正在安装 Claude Code CLI..."
+  },
+  "existingConfig": {
+    "title": "检测到现有配置",
+    "description": "我们在您的系统上发现了现有的 Claude 配置。",
+    "summary": "配置摘要",
+    "useExisting": "使用现有配置",
+    "reconfigure": "重新配置",
+    "using": "使用现有配置"
+  },
+  "summary": {
+    "title": "配置摘要"
+  },
+  "promoLink": {
+    "context_anthropic": "没有密钥？<获取推广优惠 →>",
+    "context_zhipu": "没有密钥？<获取推广优惠 →>",
+    "context_aliyun": "没有密钥？<获取推广优惠 →>",
+    "context_custom": "没有密钥？<获取 API 密钥 →>"
+  },
+  "validating": "正在验证...",
+  "skip": "跳过",
+  "next": "下一步",
+  "skipped": "AI 功能将不可用。您可以稍后在设置中配置。"
+}

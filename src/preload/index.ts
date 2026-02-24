@@ -278,6 +278,17 @@ const electronAPI = {
     refreshFeed: () => ipcRenderer.invoke('rss-refresh-feed'),
     getLastUpdate: () => ipcRenderer.invoke('rss-get-last-update'),
   },
+
+  // Claude Config APIs
+  claudeDetect: () => ipcRenderer.invoke('claude:detect'),
+  claudeValidate: (provider: string, apiKey: string, endpoint?: string) => ipcRenderer.invoke('claude:validate', provider, apiKey, endpoint),
+  claudeVerifyCli: () => ipcRenderer.invoke('claude:verify-cli'),
+  claudeSave: (config: any) => ipcRenderer.invoke('claude:save', config),
+  claudeGetStored: () => ipcRenderer.invoke('claude:get-stored'),
+  claudeDelete: () => ipcRenderer.invoke('claude:delete'),
+  claudeTest: () => ipcRenderer.invoke('claude:test'),
+  claudeListBackups: () => ipcRenderer.invoke('claude:list-backups'),
+  claudeRestoreFromBackup: (backupPath: string) => ipcRenderer.invoke('claude:restore-backup', backupPath),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

@@ -19,6 +19,7 @@
     },
     "processTitle": "首次安装流程包括：",
     "steps": {
+      "claude": "配置 Claude API",
       "download": "下载最新的 Hagicode Server 包",
       "dependencies": "安装所需的系统依赖项",
       "launch": "启动服务并验证运行状态"

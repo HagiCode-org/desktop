@@ -14,8 +14,8 @@ import {
 import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
+import ClaudeConfigStep from './steps/ClaudeConfig';
 import PackageDownload from './steps/PackageDownload';
-import DependencyInstaller from './steps/DependencyInstaller';
 import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
@@ -117,10 +117,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
+      case OnboardingStep.ClaudeConfig:
+        return <ClaudeConfigStep onNext={handleNext} onSkip={handleSkip} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
-      case OnboardingStep.Dependencies:
-        return <DependencyInstaller />;
       case OnboardingStep.Launch:
         return <ServiceLauncher onComplete={onComplete} />;
       default:
@@ -132,10 +132,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
+      case OnboardingStep.ClaudeConfig:
+        return t('claude.title');
       case OnboardingStep.Download:
         return t('download.title');
-      case OnboardingStep.Dependencies:
-        return t('dependencies.title');
       case OnboardingStep.Launch:
         return t('launch.title');
       default:
@@ -170,7 +170,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             </div>
 
             {/* Actions */}
-            {currentStep !== OnboardingStep.Welcome && currentStep !== OnboardingStep.Launch && (
+            {currentStep !== OnboardingStep.Welcome && currentStep !== OnboardingStep.ClaudeConfig && currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions
                   canGoNext={canGoNext}

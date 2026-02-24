@@ -29,8 +29,8 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
   ];
 
   const steps = [
-    { number: 1, text: t('welcome.steps.download') },
-    { number: 2, text: t('welcome.steps.dependencies') },
+    { number: 1, text: t('welcome.steps.claude') },
+    { number: 2, text: t('welcome.steps.download') },
     { number: 3, text: t('welcome.steps.launch') },
   ];
 
