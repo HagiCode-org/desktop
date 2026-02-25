@@ -47,29 +47,38 @@ export class LocalFolderPackageSource implements PackageSource {
       log.info('[LocalFolderSource] Current platform:', currentPlatform);
 
       // Parse version information from filenames
-      const versions: Version[] = packageFiles
-        .map((filename) => {
-          const version = this.extractVersionFromFilename(filename);
-          const platform = this.extractPlatformFromFilename(filename);
-          const id = filename.replace(/\.zip$/, '');
+      const versions: Version[] = [];
+      for (const filename of packageFiles) {
+        const version = this.extractVersionFromFilename(filename);
+        const platform = this.extractPlatformFromFilename(filename);
+        const id = filename.replace(/\.zip$/, '');
 
-          return {
-            id,
-            version,
-            platform,
-            packageFilename: filename,
-          };
-        })
-        .filter((v) => {
-          // Only show versions compatible with current platform
-          return v.platform === currentPlatform;
+        // Get file size
+        const filePath = path.join(this.config.path, filename);
+        let size: number | undefined;
+        try {
+          const stats = await fs.stat(filePath);
+          size = stats.size;
+        } catch {
+          // If we can't get file size, leave it undefined
+        }
+
+        versions.push({
+          id,
+          version,
+          platform,
+          packageFilename: filename,
+          size,
         });
+      }
 
-      // Sort by version (newest first)
-      versions.sort((a, b) => this.compareVersions(b.version, a.version));
+      // Filter by platform and sort by version (newest first)
+      const filteredVersions = versions
+        .filter((v) => v.platform === currentPlatform)
+        .sort((a, b) => this.compareVersions(b.version, a.version));
 
-      log.info('[LocalFolderSource] Found', versions.length, 'versions for platform:', currentPlatform);
-      return versions;
+      log.info('[LocalFolderSource] Found', filteredVersions.length, 'versions for platform:', currentPlatform);
+      return filteredVersions;
     } catch (error) {
       log.error('[LocalFolderSource] Failed to list versions:', error);
       return [];
@@ -186,13 +195,18 @@ export class LocalFolderPackageSource implements PackageSource {
    * Extract platform from package filename
    */
   private extractPlatformFromFilename(filename: string): string {
-    // Try to match simplified format: hagicode-{version}-{platform}.zip
+    // New format: hagicode-{version}-{platform}-nort.zip
+    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    if (newFormatMatch) {
+      return newFormatMatch[2];
+    }
+
+    // Fallback: try to match old format for backwards compatibility
     let match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
     if (match) {
       return match[2];
     }
 
-    // Fallback: try to match old format for backwards compatibility
     match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64\.zip$/);
     if (match) {
       const oldPlatform = match[2].toLowerCase();
@@ -250,17 +264,18 @@ export class LocalFolderPackageSource implements PackageSource {
    * Get the current platform name for filtering
    */
   private getCurrentPlatform(): string {
-    const currentPlatform = process.platform;
-    switch (currentPlatform) {
-      case 'win32':
-        return 'windows';
-      case 'darwin':
-        return 'osx';
-      case 'linux':
-        return 'linux';
-      default:
-        return 'unknown';
+    const platform = process.platform;
+    const arch = process.arch;
+
+    if (platform === 'linux') {
+      return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
     }
+    if (platform === 'win32') return 'win-x64';
+    if (platform === 'darwin') {
+      return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+    }
+
+    return 'unknown';
   }
 
   /**

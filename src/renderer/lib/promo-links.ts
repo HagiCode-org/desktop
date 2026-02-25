@@ -25,7 +25,7 @@ export const PROMO_LINKS: Record<string, PromoLinkConfig> = {
     title: 'Anthropic Official API',
     description: 'Anthropic Official API',
   },
-  zhipu: {
+  zai: {
     url: 'https://www.bigmodel.cn/claude-code?ic=14BY54APZA',
     label: 'Get API Token',
     title: 'Zhipu AI Claude Code',
@@ -36,6 +36,12 @@ export const PROMO_LINKS: Record<string, PromoLinkConfig> = {
     label: 'Get API Token',
     title: 'Aliyun Qianwen Coding Plan',
     description: '阿里云千问 Coding Plan 已上线',
+  },
+  minimax: {
+    url: 'https://platform.minimaxi.com/subscribe/coding-plan?code=8wNck4etDM&source=link',
+    label: 'Get API Token',
+    title: 'MiniMax',
+    description: 'MiniMax 提供的 Claude API 兼容服务',
   },
   custom: {
     url: '#',
@@ -53,7 +59,7 @@ export function getPromoLinkConfig(provider: string): PromoLinkConfig {
 }
 
 /**
- * Get the promo link URL for a provider
+ * Get promo link URL for a provider
  */
 export function getPromoLinkUrl(provider: string): string {
   const config = getPromoLinkConfig(provider);
@@ -61,7 +67,7 @@ export function getPromoLinkUrl(provider: string): string {
 }
 
 /**
- * Get the promo link button label for a provider
+ * Get promo link button label for a provider
  */
 export function getPromoLinkLabel(provider: string): string {
   const config = getPromoLinkConfig(provider);
@@ -69,7 +75,7 @@ export function getPromoLinkLabel(provider: string): string {
 }
 
 /**
- * Get the promo link title for a provider
+ * Get promo link title for a provider
  */
 export function getPromoLinkTitle(provider: string): string {
   const config = getPromoLinkConfig(provider);

@@ -132,6 +132,27 @@
       "uninstallDescription": "Are you sure you want to uninstall this version? This action cannot be undone.",
       "cancel": "Cancel",
       "confirm": "Confirm"
+    },
+    "claude": {
+      "installationButton": "Claude Installation",
+      "title": "Claude Installation",
+      "description": "Use Claude AI to help install dependencies for this version.",
+      "callButton": "Call Claude for Installation Help",
+      "calling": "Calling Claude API...",
+      "completed": "Claude API call completed successfully",
+      "completedHint": "Please check the terminal output for installation instructions.",
+      "failed": "Claude API call failed",
+      "retry": "Retry",
+      "region": {
+        "cn": "🇨🇳 CN (中国)",
+        "international": "🌍 International"
+      }
+    },
+    "dependencyInfo": {
+      "title": "Dependency Requirements",
+      "description": "These are the dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
+      "required": "Required",
+      "requiredVersion": "Required version:"
     }
   },
   "installProgressDialog": {

@@ -17,6 +17,7 @@ import WelcomeIntro from './steps/WelcomeIntro';
 import ClaudeConfigStep from './steps/ClaudeConfig';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
+import LlmInstallationStep from './steps/LlmInstallation';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
 import SkipConfirmDialog from './SkipConfirmDialog';
@@ -121,6 +122,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <ClaudeConfigStep onNext={handleNext} onSkip={handleSkip} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
+      case OnboardingStep.LlmInstallation:
+        return <LlmInstallationStep
+          onNext={handleNext}
+          onSkip={handleSkip}
+          versionId={downloadedVersion}
+        />;
       case OnboardingStep.Launch:
         return <ServiceLauncher onComplete={onComplete} />;
       default:
@@ -136,6 +143,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return t('claude.title');
       case OnboardingStep.Download:
         return t('download.title');
+      case OnboardingStep.LlmInstallation:
+        return t('llmInstallation.title');
       case OnboardingStep.Launch:
         return t('launch.title');
       default:
@@ -143,7 +152,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   return (
     <>

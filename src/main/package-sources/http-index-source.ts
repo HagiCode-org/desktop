@@ -402,16 +402,26 @@ export class HttpIndexPackageSource implements PackageSource {
    * Supports formats: hagicode-{version}-{platform}-nort.zip or hagicode-{version}-{platform}.zip
    */
   private extractPlatformFromFilename(filename: string): string | null {
-    // Match both formats: with and without -nort suffix
+    // New format: hagicode-{version}-{platform}-nort.zip
     // Examples:
     // - hagicode-0.1.0-beta.1-linux-x64-nort.zip
-    // - hagicode-0.1.0-linux-x64.zip
-    const match = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux|osx|windows|win)-x64(-nort)?\.zip$/);
-    if (match) {
-      const platform = match[2];
-      // Normalize 'win' to 'windows'
+    // - hagicode-0.1.0-linux-arm64-nort.zip
+    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    if (newFormatMatch) {
+      return newFormatMatch[2];
+    }
+
+    // Fallback: old format with -x64 hardcoded
+    const oldFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux|osx|windows|win)-x64(-nort)?\.zip$/);
+    if (oldFormatMatch) {
+      const platform = oldFormatMatch[2];
+      // Normalize 'win' to 'windows' and map to full platform identifier
+      if (platform === 'win') return 'win-x64';
+      if (platform === 'linux') return 'linux-x64';
+      if (platform === 'osx') return 'osx-x64';
       return platform === 'win' ? 'windows' : platform;
     }
+
     return null;
   }
 
@@ -419,17 +429,18 @@ export class HttpIndexPackageSource implements PackageSource {
    * Get the current platform name for filtering
    */
   private getCurrentPlatform(): string {
-    const currentPlatform = process.platform;
-    switch (currentPlatform) {
-      case 'win32':
-        return 'windows';
-      case 'darwin':
-        return 'osx';
-      case 'linux':
-        return 'linux';
-      default:
-        return 'unknown';
+    const platform = process.platform;
+    const arch = process.arch;
+
+    if (platform === 'linux') {
+      return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
     }
+    if (platform === 'win32') return 'win-x64';
+    if (platform === 'darwin') {
+      return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+    }
+
+    return 'unknown';
   }
 
   /**

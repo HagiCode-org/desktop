@@ -19,13 +19,16 @@
     },
     "processTitle": "The first-time setup includes:",
     "steps": {
-      "claude": "Configure Claude API",
+      "claude": "Configure Claude Code",
       "download": "Download the latest Hagicode Server package",
       "dependencies": "Install required system dependencies",
       "launch": "Start the service and verify it's running"
     },
     "skip": "Skip Setup",
     "start": "Get Started"
+  },
+  "claude": {
+    "title": "Configure Claude Code"
   },
   "download": {
     "title": "Download Hagicode Server",
@@ -190,5 +193,60 @@
       "currentVersion": "Current Version",
       "requiredVersion": "Required Version"
     }
+  },
+  "llmInstallation": {
+    "title": "AI-Powered Installation",
+    "description": "Use Claude AI assistant to automatically install dependencies",
+    "region": {
+      "detecting": "Detecting region...",
+      "detected": "Detected region",
+      "recommended": "Recommended",
+      "cn": "China",
+      "international": "International"
+    },
+    "claudeReady": "Claude is ready",
+    "invalidKey": "Invalid API key, please check and try again",
+    "change": "Change",
+    "continue": "Continue",
+    "startInstallation": "Start AI Installation",
+    "completed": "AI Installation Complete",
+    "error": "Installation Failed",
+    "retry": "Retry",
+    "skip": "Skip"
+  },
+  "installationConfirmation": {
+    "title": "Confirm Installation Status",
+    "description": "Has dependency installation completed?",
+    "checkTitle": "Please verify the following",
+    "checkDescription": "Please check that the installation process in the terminal window has completed successfully without errors.",
+    "confirm": "Confirm success, continue to next step",
+    "needHelp": "Need help",
+    "retry": "Retry"
+  },
+  "installationHelp": {
+    "title": "Installation Help",
+    "description": "If you encountered issues during installation, please refer to the following troubleshooting steps.",
+    "troubleshootingTitle": "Troubleshooting Steps",
+    "steps": {
+      "network": {
+        "title": "Check Network Connection",
+        "description": "Ensure your network connection is working and can access the Claude API service."
+      },
+      "permissions": {
+        "title": "Check Permissions",
+        "description": "Some installation operations may require administrator privileges."
+      },
+      "cliPath": {
+        "title": "Check CLI Path",
+        "description": "Ensure Claude Code CLI is properly installed and added to your system PATH."
+      },
+      "apiKey": {
+        "title": "Check API Key",
+        "description": "Verify your API key is valid and has sufficient quota."
+      }
+    },
+    "viewDocs": "View Documentation",
+    "retry": "Retry Installation",
+    "skip": "Skip"
   }
 }

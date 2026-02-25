@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-02-24T00:00:00Z",
+  "_version": "1.0",
+  "types": {
+    "claude-code": {
+      "path": "claude-code",
+      "description": "Claude Code AI 配置预设，包含 Anthropic 兼容的 API 提供商配置",
+      "providers": {}
+    }
+  }
+}

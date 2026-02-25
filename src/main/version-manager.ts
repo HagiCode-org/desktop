@@ -800,6 +800,12 @@ export class VersionManager {
    * Extract platform from package filename
    */
   private extractPlatformFromFilename(filename: string): string {
+    // New format: hagicode-{version}-{platform}-nort.zip
+    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    if (newFormatMatch) {
+      return newFormatMatch[2];
+    }
+
     // Try to match simplified format: hagicode-{version}-{platform}.zip
     let match = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux|windows|osx)\.zip$/);
     if (match) {
@@ -864,17 +870,18 @@ export class VersionManager {
    * Get the current platform name for filtering
    */
   private getCurrentPlatform(): string {
-    const currentPlatform = process.platform;
-    switch (currentPlatform) {
-      case 'win32':
-        return 'windows';
-      case 'darwin':
-        return 'osx';
-      case 'linux':
-        return 'linux';
-      default:
-        return 'unknown';
+    const platform = process.platform;
+    const arch = process.arch;
+
+    if (platform === 'linux') {
+      return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
     }
+    if (platform === 'win32') return 'win-x64';
+    if (platform === 'darwin') {
+      return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+    }
+
+    return 'unknown';
   }
 
   /**

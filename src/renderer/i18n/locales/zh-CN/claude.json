@@ -1,12 +1,22 @@
 {
-  "title": "配置 Claude API",
-  "description": "为了使用 AI 功能，需要配置 Claude API 提供商和密钥。",
+  "title": "配置 Claude Code",
+  "description": "为了使用 AI 功能，需要配置 Claude Code 提供商和密钥。",
   "provider": {
     "label": "选择提供商",
     "anthropic": "Anthropic (官方)",
     "zhipu": "Zhipu AI (智谱 GLM)",
     "aliyun": "Aliyun (阿里云千问)",
-    "custom": "自定义端点"
+    "minimax": "MiniMax",
+    "custom": "自定义端点",
+    "anthropicDescription": "官方 Anthropic API，提供 Claude 模型",
+    "zhipuDescription": "智谱 AI 提供的 Claude API 兼容服务",
+    "aliyunDescription": "阿里云灵积平台提供的 Claude API 兼容服务",
+    "customDescription": "使用自定义的 Anthropic 兼容端点",
+    "defaultDescription": "Anthropic 兼容的 API 提供商",
+    "recommended": "推荐",
+    "loading": "加载中...",
+    "viewDocs": "查看文档",
+    "getFreeToken": "获取免费密钥"
   },
   "apiKey": {
     "label": "API Key",
@@ -17,6 +27,14 @@
     "placeholder": "https://api.example.com",
     "autoFilled": "端点已根据所选提供商自动填充",
     "customHint": "输入您的自定义 Anthropic 兼容端点 URL"
+  },
+  "modelMapping": {
+    "label": "模型映射",
+    "haiku": "Haiku 模型",
+    "sonnet": "Sonnet 模型",
+    "opus": "Opus 模型",
+    "placeholder": "留空使用默认",
+    "description": "配置每个 Claude 级别使用的模型。留空则使用默认值。"
   },
   "validation": {
     "validate": "验证配置",
@@ -56,5 +74,19 @@
   "validating": "正在验证...",
   "skip": "跳过",
   "next": "下一步",
-  "skipped": "AI 功能将不可用。您可以稍后在设置中配置。"
+  "skipped": "AI 功能将不可用。您可以稍后在设置中配置。",
+  "testClaude": "测试配置",
+  "testClaude.subtext": "打开终端执行 claude hi",
+  "presets": {
+    "loading": "加载预设中...",
+    "loadFailed": "加载预设失败",
+    "refresh": "刷新预设",
+    "autoFilled": "已从预设自动填充",
+    "source": {
+      "remote": "远程",
+      "cache": "缓存",
+      "bundle": "内置",
+      "fallback": "离线"
+    }
+  }
 }

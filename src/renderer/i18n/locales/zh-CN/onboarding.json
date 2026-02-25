@@ -19,13 +19,16 @@
     },
     "processTitle": "首次安装流程包括：",
     "steps": {
-      "claude": "配置 Claude API",
+      "claude": "配置 Claude Code",
       "download": "下载最新的 Hagicode Server 包",
       "dependencies": "安装所需的系统依赖项",
       "launch": "启动服务并验证运行状态"
     },
     "skip": "跳过引导",
     "start": "开始安装"
+  },
+  "claude": {
+    "title": "配置 Claude Code"
   },
   "download": {
     "title": "下载 Hagicode Server",
@@ -190,5 +193,60 @@
       "currentVersion": "当前版本",
       "requiredVersion": "要求版本"
     }
+  },
+  "llmInstallation": {
+    "title": "AI 驱动安装",
+    "description": "使用 Claude AI 助手自动安装依赖项",
+    "region": {
+      "detecting": "正在检测区域...",
+      "detected": "检测到区域",
+      "recommended": "推荐",
+      "cn": "中国大陆",
+      "international": "国际"
+    },
+    "claudeReady": "Claude 已准备就绪",
+    "invalidKey": "API 密钥无效，请检查后重试",
+    "change": "更改",
+    "continue": "继续",
+    "startInstallation": "开始 AI 安装",
+    "completed": "AI 安装完成",
+    "error": "安装失败",
+    "retry": "重试",
+    "skip": "跳过"
+  },
+  "installationConfirmation": {
+    "title": "确认安装状态",
+    "description": "依赖项是否已经安装完成？",
+    "checkTitle": "请确认以下事项",
+    "checkDescription": "请检查终端窗口中的安装过程是否已成功完成，没有错误提示。",
+    "confirm": "确认安装成功，继续下一步",
+    "needHelp": "需要帮助",
+    "retry": "重试"
+  },
+  "installationHelp": {
+    "title": "安装帮助",
+    "description": "如果安装过程中遇到问题，请参考以下故障排除步骤。",
+    "troubleshootingTitle": "故障排除步骤",
+    "steps": {
+      "network": {
+        "title": "检查网络连接",
+        "description": "确保您的网络连接正常，可以访问 Claude API 服务。"
+      },
+      "permissions": {
+        "title": "检查权限",
+        "description": "某些安装操作可能需要管理员权限。"
+      },
+      "cliPath": {
+        "title": "检查 CLI 路径",
+        "description": "确保 Claude Code CLI 已正确安装并添加到系统 PATH。"
+      },
+      "apiKey": {
+        "title": "检查 API 密钥",
+        "description": "确认您的 API 密钥有效且有足够的配额。"
+      }
+    },
+    "viewDocs": "查看详细文档",
+    "retry": "重试安装",
+    "skip": "跳过"
   }
 }

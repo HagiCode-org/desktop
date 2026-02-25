@@ -9,6 +9,8 @@ export interface EntryPoint {
   check: string;  // Script path for checking dependency status
   install: string; // Script path for installing dependency
   start: string;   // Script path for starting web service
+  llmPrompt?: string;       // LLM prompt path for CN region
+  llmPromptIntl?: string;  // LLM prompt path for international region
 }
 
 /**

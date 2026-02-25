@@ -1,0 +1,53 @@
+{
+  "title": "Dependency Installation Wizard",
+  "steps": {
+    "preparing": "Preparing",
+    "callingApi": "Calling Claude API",
+    "confirmation": "Confirm Status",
+    "completed": "Completed"
+  },
+  "apiKey": {
+    "title": "Enter Claude API Key",
+    "description": "To use the AI-powered installation feature, you need to provide a Claude API key. You can get one from Anthropic Console.",
+    "placeholder": "sk-ant-...",
+    "show": "Show",
+    "hide": "Hide",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "validating": "Validating...",
+    "invalid": "Invalid API key. Please check and try again.",
+    "change": "Change"
+  },
+  "status": {
+    "region": "Region",
+    "cn": "China",
+    "international": "International"
+  },
+  "callingApi": {
+    "message": "Calling Claude API...",
+    "hint": "Claude is analyzing your system and executing installation commands."
+  },
+  "confirmation": {
+    "title": "Confirmation",
+    "message": "Claude has completed the installation check. Please confirm the results.",
+    "retry": "Re-check",
+    "complete": "Complete",
+    "cancel": "Cancel"
+  },
+  "completed": {
+    "title": "Installation Complete",
+    "message": "All dependencies have been checked and installed.",
+    "return": "Return to Home"
+  },
+  "error": {
+    "title": "Error",
+    "dismiss": "Dismiss",
+    "loadPromptFailed": "Failed to load installation prompt",
+    "apiCallFailed": "API call failed",
+    "apiKeyRequired": "API key is required"
+  },
+  "actions": {
+    "startCheck": "Start Installation Check",
+    "calling": "Calling..."
+  }
+}

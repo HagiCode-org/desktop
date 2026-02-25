@@ -1,0 +1,53 @@
+{
+  "title": "依赖项安装向导",
+  "steps": {
+    "preparing": "准备中",
+    "callingApi": "正在调用 Claude API",
+    "confirmation": "确认状态",
+    "completed": "已完成"
+  },
+  "apiKey": {
+    "title": "输入 Claude API 密钥",
+    "description": "要使用 AI 驱动的安装功能，您需要提供 Claude API 密钥。您可以从 Anthropic Console 获取。",
+    "placeholder": "sk-ant-...",
+    "show": "显示",
+    "hide": "隐藏",
+    "continue": "继续",
+    "cancel": "取消",
+    "validating": "验证中...",
+    "invalid": "API 密钥无效，请检查后重试。",
+    "change": "更改"
+  },
+  "status": {
+    "region": "区域",
+    "cn": "中国",
+    "international": "国际"
+  },
+  "callingApi": {
+    "message": "正在调用 Claude API...",
+    "hint": "Claude 正在分析您的系统并执行安装命令。"
+  },
+  "confirmation": {
+    "title": "确认",
+    "message": "Claude 已完成安装检查，请确认结果。",
+    "retry": "重新检查",
+    "complete": "完成",
+    "cancel": "取消"
+  },
+  "completed": {
+    "title": "安装完成",
+    "message": "所有依赖项已检查并安装完成。",
+    "return": "返回主页"
+  },
+  "error": {
+    "title": "错误",
+    "dismiss": "关闭",
+    "loadPromptFailed": "加载安装提示词失败",
+    "apiCallFailed": "API 调用失败",
+    "apiKeyRequired": "需要 API 密钥"
+  },
+  "actions": {
+    "startCheck": "开始安装检查",
+    "calling": "调用中..."
+  }
+}

@@ -71,26 +71,13 @@ export const startWebService = createAsyncThunk(
       dispatch(setStatus('starting'));
       dispatch(setError(null));
 
-      const result: { success: boolean; error?: { type: string; details: string }; warning?: { type: string; missing: any[] } } =
+      const result: { success: boolean; error?: { type: string; details: string } } =
         await window.electronAPI.startWebService();
 
       if (result.success) {
         dispatch(setStatus('running'));
         // Fetch updated status
         await dispatch(fetchWebServiceStatus());
-      } else if (result.warning) {
-        // Show confirmation dialog for missing dependencies
-        if (result.warning.type === 'missing-dependencies') {
-          const missingDeps: DependencyItem[] = result.warning.missing.map((dep: any) => ({
-            name: dep.name,
-            type: dep.type,
-            installed: dep.installed,
-            version: dep.version,
-            requiredVersion: dep.requiredVersion,
-            versionMismatch: dep.versionMismatch,
-          }));
-          dispatch(showStartConfirmDialog(missingDeps));
-        }
       } else {
         // Set error based on error type
         if (result.error) {

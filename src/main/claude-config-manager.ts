@@ -15,8 +15,9 @@ import type {
   BackupInfo,
   ConfigDetectionResult,
 } from '../types/claude-config.js';
-import { ConfigSource, DEFAULT_MODEL_MAPPINGS } from '../types/claude-config.js';
+import { ConfigSource } from '../types/claude-config.js';
 import { getApiEndpointConfig, getApiUrl } from './lib/api-endpoints.js';
+import type { PresetLoader, ProviderPreset } from '../types/preset.js';
 
 const execAsync = promisify(exec);
 
@@ -32,7 +33,7 @@ export class ClaudeConfigManager {
   private static readonly API_TIMEOUT_MS = '3000000';
   private static readonly DISABLE_NONESSENTIAL_TRAFFIC = 1;
 
-  constructor(private store: any) {}
+  constructor(private store: any, private presetLoader?: PresetLoader) {}
 
   /**
    * Detect existing Claude configuration from environment variables, settings.json, or store
@@ -101,13 +102,13 @@ export class ClaudeConfigManager {
 
     if (zaiKey) {
       // ZAI API key present - check ANTHROPIC_URL to confirm
-      provider = 'zhipu';
-      endpoint = process.env.ANTHROPIC_URL || getApiUrl('zhipu');
+      provider = 'zai';
+      endpoint = process.env.ANTHROPIC_URL || getApiUrl('zai');
     } else if (baseUrl) {
       // Custom URL set - try to detect provider
       const url = baseUrl;
       if (url.includes('bigmodel.cn')) {
-        provider = 'zhipu';
+        provider = 'zai';
       } else if (url.includes('aliyuncs.com') || url.includes('dashscope.aliyuncs.com')) {
         provider = 'aliyun';
       } else if (url.includes('192.168') || url.includes('localhost') || url.includes('127.0.0.1')) {
@@ -127,7 +128,69 @@ export class ClaudeConfigManager {
       provider,
       apiKey: authToken || zaiKey || '',
       endpoint,
+      modelHaiku: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+      modelSonnet: process.env.ANTHROPIC_DEFAULT_SONNET_MODEL,
+      modelOpus: process.env.ANTHROPIC_DEFAULT_OPUS_MODEL,
     };
+  }
+
+  /**
+   * Get provider preset data
+   * @param providerId Provider identifier
+   * @returns Provider preset or null if not found
+   */
+  private async getProviderPreset(providerId: string): Promise<ProviderPreset | null> {
+    if (!this.presetLoader) {
+      return null;
+    }
+
+    try {
+      const preset = await this.presetLoader.getProviderPreset(providerId);
+      if (preset) {
+        return preset;
+      }
+      return null;
+    } catch (error) {
+      log.error('[ClaudeConfigManager] Failed to get provider preset:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get API URL from preset or fallback
+   * @param provider Provider identifier
+   * @returns API URL or empty string
+   */
+  private async getApiUrlFromPreset(provider: string): Promise<string> {
+    try {
+      const preset = await this.getProviderPreset(provider);
+      if (preset && preset.apiUrl?.codingPlanForAnthropic) {
+        return preset.apiUrl.codingPlanForAnthropic;
+      }
+      return getApiUrl(provider);
+    } catch (error) {
+      log.error('[ClaudeConfigManager] Failed to get API URL from preset:', error);
+      return getApiUrl(provider);
+    }
+  }
+
+  /**
+   * Get model mapping from preset or fallback
+   * @param provider Provider identifier
+   * @returns Model mapping
+   */
+  private async getModelMappingFromPreset(provider: string): Promise<ModelMapping> {
+    try {
+      const preset = await this.getProviderPreset(provider);
+      if (preset && preset.defaultModels) {
+        return preset.defaultModels;
+      }
+      // No default fallback - model mapping must come from preset
+      return {};
+    } catch (error) {
+      log.error('[ClaudeConfigManager] Failed to get model mapping from preset:', error);
+      return {};
+    }
   }
 
   /**
@@ -164,7 +227,7 @@ export class ClaudeConfigManager {
       if (baseUrl) {
         // Detect provider based on URL
         if (baseUrl.includes('bigmodel.cn')) {
-          provider = 'zhipu';
+          provider = 'zai';
           endpoint = baseUrl;
         } else if (baseUrl.includes('aliyuncs.com') || baseUrl.includes('dashscope')) {
           provider = 'aliyun';
@@ -187,6 +250,9 @@ export class ClaudeConfigManager {
         provider,
         apiKey,
         endpoint,
+        modelHaiku: settings.env?.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+        modelSonnet: settings.env?.ANTHROPIC_DEFAULT_SONNET_MODEL,
+        modelOpus: settings.env?.ANTHROPIC_DEFAULT_OPUS_MODEL,
       };
     } catch (error) {
       // File doesn't exist or can't be read
@@ -211,6 +277,9 @@ export class ClaudeConfigManager {
       provider: stored.provider,
       apiKey: stored.apiKey,
       endpoint: stored.endpoint,
+      modelHaiku: stored.modelHaiku,
+      modelSonnet: stored.modelSonnet,
+      modelOpus: stored.modelOpus,
     };
   }
 
@@ -249,13 +318,13 @@ export class ClaudeConfigManager {
         ANTHROPIC_AUTH_TOKEN: apiKey,
       };
 
-      // Add endpoint URL if provided (for non-anthropic providers)
+      // Add endpoint URL if specified (for non-anthropic providers)
       if (endpoint && provider !== 'anthropic') {
         env.ANTHROPIC_URL = endpoint;
-      } else if (provider !== 'anthropic') {
-        const defaultUrl = getApiUrl(provider);
-        if (defaultUrl) {
-          env.ANTHROPIC_URL = defaultUrl;
+      } else {
+        const apiUrl = await this.getApiUrlFromPreset(provider);
+        if (apiUrl && provider !== 'anthropic') {
+          env.ANTHROPIC_URL = apiUrl;
         }
       }
 
@@ -342,7 +411,7 @@ export class ClaudeConfigManager {
         }
         break;
 
-      case 'zhipu':
+      case 'zai':
         // Zhipu AI keys typically start with sk- or have specific format
         // Basic validation - not empty and reasonable length
         if (apiKey.length < 20) {
@@ -516,7 +585,7 @@ export class ClaudeConfigManager {
       await fs.mkdir(claudeDir, { recursive: true });
 
       // Build env format configuration
-      const envConfig = this.buildEnvConfig(config);
+      const envConfig = await this.buildEnvConfig(config);
 
       // Validate configuration before writing
       const validation = this.validateConfig(envConfig);
@@ -551,25 +620,30 @@ export class ClaudeConfigManager {
   }
 
   /**
-   * Test Claude configuration by opening terminal and running 'claude hi'
+   * Test Claude configuration by opening terminal and running a complex test
    * This opens a new terminal window to visually test the configuration
+   * The test asks Claude to use CURL to access hagicode.com and explain what Hagicode is
    */
   async testConfiguration(): Promise<{ success: boolean; error?: string }> {
     try {
       log.info('[ClaudeConfigManager] Testing configuration with terminal...');
+
+      // Complex test prompt - ask Claude to use CURL to access hagicode.com and explain Hagicode
+      const testPrompt = '请使用 CURL 或其他外部工具访问 https://hagicode.com 网站，然后告诉我什么是 Hagicode？';
 
       // Determine the platform and appropriate command
       const platform = process.platform;
       let command: string | undefined;
 
       if (platform === 'win32') {
-        // Windows: Open new CMD window and run claude hi
-        command = 'start cmd /k "claude hi && pause && exit"';
+        // Windows: Open new CMD window and run claude with test prompt
+        command = `start cmd /k "claude \\"${testPrompt}\\" && pause && exit"`;
       } else if (platform === 'darwin') {
-        // macOS: Open new Terminal window and run claude hi
-        command = 'osascript -e \'tell application "Terminal" to do script "claude hi; read -p \\"Press enter to exit...\\"; exit"\'';
+        // macOS: Open new Terminal window and run claude with test prompt
+        const escapedPrompt = testPrompt.replace(/"/g, '\\\\"').replace(/\$/g, '\\\\$');
+        command = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
       } else {
-        // Linux: Open new terminal window and run claude hi
+        // Linux: Open new terminal window and run claude with test prompt
         // Try common terminal emulators
         const terminals = [
           'gnome-terminal', // GNOME
@@ -583,7 +657,8 @@ export class ClaudeConfigManager {
           try {
             // Test if terminal is available
             await execAsync(`which ${term}`);
-            command = `${term} -- bash -c "claude hi; read -p 'Press enter to exit...'; exit"`;
+            const escapedPrompt = testPrompt.replace(/'/g, "'\\''");
+            command = `${term} -- bash -c 'claude "${escapedPrompt}"; read -p "Press enter to exit..."; exit'`;
             break;
           } catch {
             continue;
@@ -847,9 +922,9 @@ export class ClaudeConfigManager {
   /**
    * Build env format configuration from ClaudeConfig
    */
-  private buildEnvConfig(config: ClaudeConfig): ClaudeConfigEnvSettings {
-    // Get model mapping for provider
-    const modelMapping: ModelMapping = DEFAULT_MODEL_MAPPINGS[config.provider] || {};
+  private async buildEnvConfig(config: ClaudeConfig): Promise<ClaudeConfigEnvSettings> {
+    // Get model mapping from preset or fallback
+    const modelMapping = await this.getModelMappingFromPreset(config.provider);
 
     const envConfig: ClaudeConfigEnvSettings = {
       env: {
@@ -868,15 +943,20 @@ export class ClaudeConfigManager {
       envConfig.env.ANTHROPIC_BASE_URL = config.endpoint;
     }
 
-    // Add model mappings if available
-    if (modelMapping.haiku) {
-      envConfig.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = modelMapping.haiku;
+    // Add model mappings - use config values first, then fallback to preset values
+    // This allows users to customize model mappings
+    const haikuModel = config.modelHaiku || modelMapping.haiku;
+    const sonnetModel = config.modelSonnet || modelMapping.sonnet;
+    const opusModel = config.modelOpus || modelMapping.opus;
+
+    if (haikuModel) {
+      envConfig.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = haikuModel;
     }
-    if (modelMapping.sonnet) {
-      envConfig.env.ANTHROPIC_DEFAULT_SONNET_MODEL = modelMapping.sonnet;
+    if (sonnetModel) {
+      envConfig.env.ANTHROPIC_DEFAULT_SONNET_MODEL = sonnetModel;
     }
-    if (modelMapping.opus) {
-      envConfig.env.ANTHROPIC_DEFAULT_OPUS_MODEL = modelMapping.opus;
+    if (opusModel) {
+      envConfig.env.ANTHROPIC_DEFAULT_OPUS_MODEL = opusModel;
     }
 
     return envConfig;

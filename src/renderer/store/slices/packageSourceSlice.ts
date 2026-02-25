@@ -53,7 +53,7 @@ const initialState: PackageSourceState = {
   validationError: null,
   selectedSourceType: 'http-index',
   folderPath: process.env.NODE_ENV === 'development'
-    ? '/home/newbe36524/repos/newbe36524/pcode/Release/release-packages/'
+    ? '/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagibuild/Release/release-packages'
     : '',
   githubOwner: 'HagiCode-org',
   githubRepo: 'releases',

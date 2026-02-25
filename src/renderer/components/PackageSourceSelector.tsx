@@ -101,7 +101,7 @@ export function PackageSourceSelector() {
               type: 'local-folder' as const,
               name: '本地文件夹',
               path: folderPath || process.env.NODE_ENV === 'development'
-                ? '/home/newbe36524/repos/newbe36524/pcode/Release/release-packages/'
+                ? '/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagibuild/Release/release-packages'
                 : '',
             }
           : value === 'github-release'

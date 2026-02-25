@@ -132,6 +132,27 @@
       "uninstallDescription": "确定要卸载此版本吗？此操作无法撤销。",
       "cancel": "取消",
       "confirm": "确认"
+    },
+    "claude": {
+      "installationButton": "Claude 安装",
+      "title": "Claude 安装",
+      "description": "使用 Claude AI 帮助安装此版本的依赖项。",
+      "callButton": "调用 Claude 获取安装帮助",
+      "calling": "正在调用 Claude API...",
+      "completed": "Claude API 调用成功",
+      "completedHint": "请检查终端输出获取安装说明。",
+      "failed": "Claude API 调用失败",
+      "retry": "重试",
+      "region": {
+        "cn": "🇨🇳 CN (中国)",
+        "international": "🌍 国际版"
+      }
+    },
+    "dependencyInfo": {
+      "title": "依赖项要求",
+      "description": "这是此版本的依赖项要求。请确保在使用此版本之前安装所有依赖项。",
+      "required": "必需",
+      "requiredVersion": "所需版本："
     }
   },
   "installProgressDialog": {

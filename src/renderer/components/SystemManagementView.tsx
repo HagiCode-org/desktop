@@ -310,50 +310,17 @@ export default function SystemManagementView() {
                 >
                   <span className="text-muted-foreground">状态</span>
                   <div className="flex items-center gap-2">
-                    {activeVersion.status === 'installed-ready' ? (
-                      <>
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                        >
-                          <CheckCircle className="w-5 h-5 text-primary" />
-                        </motion.div>
-                        <span className="text-primary">✅ 就绪</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-5 h-5 text-accent-foreground" />
-                        <span className="text-accent-foreground">缺少依赖项</span>
-                      </>
-                    )}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                    >
+                      <CheckCircle className="w-5 h-5 text-primary" />
+                    </motion.div>
+                    <span className="text-primary">✅ 就绪</span>
                   </div>
                 </motion.div>
               </div>
-
-              <AnimatePresence mode="wait">
-                {activeVersion.status === 'installed-incomplete' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-4 p-3 bg-accent/10 border border-accent/20 rounded-lg"
-                  >
-                    <p className="text-sm text-accent-foreground">
-                      当前版本缺少依赖项。请前往版本管理页面查看并安装缺失的依赖项。
-                    </p>
-                    <motion.button
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => navigateTo('version')}
-                      className="mt-2 text-sm text-accent-foreground hover:text-accent-foreground/80 underline"
-                    >
-                      前往版本管理 →
-                    </motion.button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </motion.div>
         )}

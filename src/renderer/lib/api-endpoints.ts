@@ -9,6 +9,9 @@ export const ZAI_API_URL = 'https://open.bigmodel.cn/api/anthropic';
 // Aliyun DashScope API URL constant
 export const ALIYUN_API_URL = 'https://coding.dashscope.aliyuncs.com/apps/anthropic';
 
+// MiniMax API URL constant
+export const MINIMAX_API_URL = 'https://api.minimaxi.com/anthropic';
+
 /**
  * API Endpoint Configuration for each provider
  * Based on Anthropic API Provider Types from Compose Web
@@ -31,7 +34,7 @@ export const API_ENDPOINTS: Record<string, ApiEndpointConfig> = {
     description: 'Anthropic Official API - uses default endpoint',
     requiresEndpoint: false,
   },
-  zhipu: {
+  zai: {
     url: ZAI_API_URL,
     envVar: 'ANTHROPIC_URL',
     description: 'Zhipu AI (ZAI) Anthropic-compatible API',
@@ -41,6 +44,12 @@ export const API_ENDPOINTS: Record<string, ApiEndpointConfig> = {
     url: ALIYUN_API_URL,
     envVar: 'ANTHROPIC_URL',
     description: 'Aliyun DashScope Anthropic-compatible API',
+    requiresEndpoint: true,
+  },
+  minimax: {
+    url: MINIMAX_API_URL,
+    envVar: 'ANTHROPIC_URL',
+    description: 'MiniMax Anthropic-compatible API',
     requiresEndpoint: true,
   },
   custom: {
@@ -59,7 +68,7 @@ export function getApiEndpointConfig(provider: string): ApiEndpointConfig {
 }
 
 /**
- * Get the API URL for a provider
+ * Get API URL for a provider
  */
 export function getApiUrl(provider: string): string {
   const config = getApiEndpointConfig(provider);

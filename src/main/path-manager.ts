@@ -6,7 +6,7 @@ import log from 'electron-log';
 /**
  * Path types for different platforms
  */
-export type Platform = 'linux-x64' | 'win-x64' | 'osx-x64' | 'darwin-arm64';
+export type Platform = 'linux-x64' | 'linux-arm64' | 'win-x64' | 'osx-x64' | 'osx-arm64';
 
 /**
  * Path structure interface
@@ -134,10 +134,12 @@ export class PathManager {
     const platform = process.platform;
     const arch = process.arch;
 
-    if (platform === 'linux') return 'linux-x64';
+    if (platform === 'linux') {
+      return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+    }
     if (platform === 'win32') return 'win-x64';
     if (platform === 'darwin') {
-      return arch === 'arm64' ? 'darwin-arm64' : 'osx-x64';
+      return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
     }
 
     throw new Error(`Unsupported platform: ${platform} ${arch}`);
@@ -175,16 +177,32 @@ export class PathManager {
 
   /**
    * Get platform from package filename
-   * @param filename - Package filename (e.g., "hagicode-0.1.0-linux-x64.zip")
+   * @param filename - Package filename (e.g., "hagicode-0.1.0-linux-x64-nort.zip")
    * @returns Platform identifier
    */
   extractPlatformFromFilename(filename: string): Platform {
-    // Match patterns like: hagicode-0.1.0-linux-x64.zip or hagicode-0.1.0-alpha.8-win-x64.zip
-    const platformMatch = filename.match(/(linux-x64|win-x64|osx-x64|darwin-arm64)/);
-    if (!platformMatch) {
-      throw new Error(`Cannot extract platform from filename: ${filename}`);
+    // New format: hagicode-{version}-{platform}-nort.zip
+    const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
+    if (newFormatMatch) {
+      return newFormatMatch[2] as Platform;
     }
-    return platformMatch[1] as Platform;
+
+    // Fallback: match old format for backwards compatibility
+    const oldFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9]\.[0-9](?:-[a-zA-Z0-9\.]+)?)-([a-zA-Z]+)-x64(-nort)?\.zip$/);
+    if (oldFormatMatch) {
+      const oldPlatform = oldFormatMatch[2].toLowerCase();
+      if (oldPlatform.includes('linux') || oldPlatform.includes('ubuntu')) {
+        return 'linux-x64';
+      }
+      if (oldPlatform.includes('win')) {
+        return 'win-x64';
+      }
+      if (oldPlatform.includes('darwin') || oldPlatform.includes('mac') || oldPlatform.includes('osx')) {
+        return 'osx-x64';
+      }
+    }
+
+    throw new Error(`Cannot extract platform from filename: ${filename}`);
   }
 
   /**

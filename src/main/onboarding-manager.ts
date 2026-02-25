@@ -500,8 +500,8 @@ export class OnboardingManager {
 
   /**
    * Start the web service
-   * Note: This method now includes dependency status check to ensure consistency
-   * with the homepage startup behavior
+   * Note: This method always allows service launch without pre-flight status checks.
+   * Runtime dependency validation is handled by WebServiceManager.start().
    */
   async startWebService(
     versionId: string,
@@ -523,17 +523,6 @@ export class OnboardingManager {
 
       if (!version) {
         return { success: false, error: 'Version not found' };
-      }
-
-      // Check version status - ensure dependencies are satisfied (same as homepage)
-      if (version.status !== 'installed-ready') {
-        const missingDeps = version.dependencies?.filter(dep => !dep.installed || dep.versionMismatch) || [];
-        log.warn('[OnboardingManager] Version not ready:', version.status, 'missing deps:', missingDeps.length);
-
-        return {
-          success: false,
-          error: `Dependencies not satisfied. ${missingDeps.length} dependencies are missing or have version mismatches. Please install dependencies first.`
-        };
       }
 
       // Send initial progress

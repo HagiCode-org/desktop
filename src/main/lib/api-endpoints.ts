@@ -33,7 +33,7 @@ export const API_ENDPOINTS: Record<string, ApiEndpointConfig> = {
     description: 'Anthropic Official API - uses default endpoint',
     requiresEndpoint: false,
   },
-  zhipu: {
+  zai: {
     url: ZAI_API_URL, // Zhipu AI (ZAI) endpoint
     envVar: 'ANTHROPIC_URL', // Set ANTHROPIC_URL for ZAI
     description: 'Zhipu AI (ZAI) Anthropic-compatible API',

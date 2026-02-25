@@ -186,6 +186,13 @@ const electronAPI = {
   getRegionStatus: () => ipcRenderer.invoke('region:get-status'),
   redetectRegion: () => ipcRenderer.invoke('region:redetect'),
 
+  // LLM Installation APIs
+  llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => ipcRenderer.invoke('llm:load-prompt', manifestPath, region),
+  llmCallApi: (manifestPath: string, region?: 'cn' | 'international') => ipcRenderer.invoke('llm:call-api', manifestPath, region),
+  llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
+  llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
+  llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
+
   // Tray service control
   onTrayStartService: (callback) => {
     const listener = () => callback();
@@ -289,6 +296,14 @@ const electronAPI = {
   claudeTest: () => ipcRenderer.invoke('claude:test'),
   claudeListBackups: () => ipcRenderer.invoke('claude:list-backups'),
   claudeRestoreFromBackup: (backupPath: string) => ipcRenderer.invoke('claude:restore-backup', backupPath),
+
+  // Preset Management APIs
+  presetFetch: () => ipcRenderer.invoke('preset:fetch'),
+  presetRefresh: () => ipcRenderer.invoke('preset:refresh'),
+  presetClearCache: () => ipcRenderer.invoke('preset:clear-cache'),
+  presetGetProvider: (providerId: string) => ipcRenderer.invoke('preset:get-provider', providerId),
+  presetGetAllProviders: () => ipcRenderer.invoke('preset:get-all-providers'),
+  presetGetCacheStats: () => ipcRenderer.invoke('preset:get-cache-stats'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

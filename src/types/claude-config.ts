@@ -6,7 +6,7 @@
 /**
  * Claude API Provider Type
  */
-export type ClaudeProvider = 'anthropic' | 'zhipu' | 'aliyun' | 'custom';
+export type ClaudeProvider = 'anthropic' | 'zai' | 'aliyun' | 'minimax' | 'custom';
 
 /**
  * Claude Configuration Interface
@@ -20,6 +20,9 @@ export interface ClaudeConfig {
   lastValidationStatus: 'success' | 'failed';
   cliVersion?: string;
   cliAvailable?: boolean;
+  modelHaiku?: string;
+  modelSonnet?: string;
+  modelOpus?: string;
 }
 
 /**
@@ -33,6 +36,9 @@ export interface DetectedConfig {
   apiKey?: string;
   endpoint?: string;
   cliVersion?: string;
+  modelHaiku?: string;
+  modelSonnet?: string;
+  modelOpus?: string;
 }
 
 /**
@@ -71,6 +77,10 @@ export interface ClaudeConfigFormState {
   cliStatus: CliVerificationResult | null;
   showExistingConfig: boolean;
   useExistingConfig: boolean;
+  hasChanges: boolean;
+  modelHaiku: string;
+  modelSonnet: string;
+  modelOpus: string;
 }
 
 /**
@@ -133,28 +143,3 @@ export interface ConfigDetectionResult {
   parsedConfig?: ClaudeConfigEnvSettings | Record<string, unknown>;
   modifiedAt?: Date;
 }
-
-/**
- * Default Model Mappings for Providers
- * Maps Claude model tiers to provider-specific model names
- */
-export const DEFAULT_MODEL_MAPPINGS: Record<ClaudeProvider, ModelMapping> = {
-  anthropic: {
-    haiku: 'claude-3-5-haiku',
-    sonnet: 'claude-3-5-sonnet',
-    opus: 'claude-3-5-opus',
-  },
-  zhipu: {
-    haiku: 'glm-4.5-air',
-    sonnet: 'glm-4.7',
-    opus: 'glm-4.7',
-  },
-  aliyun: {
-    haiku: 'qwen-plus',
-    sonnet: 'qwen-max',
-    opus: 'qwen-max',
-  },
-  custom: {
-    // User-defined, no defaults
-  },
-} as const;

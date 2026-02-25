@@ -305,6 +305,10 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState; claudeConf
       return state.claudeConfig.isValid || state.claudeConfig.useExistingConfig;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
+    case OnboardingStep.LlmInstallation:
+      // Always allow proceeding (no blocking principle)
+      // Users confirm via dialog, not via status check
+      return true;
     case OnboardingStep.Launch:
       return serviceProgress?.phase === 'running';
     default:

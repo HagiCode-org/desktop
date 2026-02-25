@@ -14,6 +14,34 @@ HagiCode Desktop is an Electron desktop client for Hagicode Server management an
 - License management
 - RSS feed monitoring for updates
 
+## Platform Support
+
+HagiCode Desktop supports multiple platform and architecture combinations:
+
+| Platform | Architecture | Platform Identifier |
+|----------|-------------|---------------------|
+| Linux | x64 | `linux-x64` |
+| Linux | ARM64 | `linux-arm64` |
+| Windows | x64 | `win-x64` |
+| macOS | x64 | `osx-x64` |
+| macOS | ARM64 (Apple Silicon) | `osx-arm64` |
+
+### Platform Detection
+
+The application automatically detects the current platform using `process.platform` and `process.arch`. Platform-specific packages are filtered and installed based on this detection.
+
+### Package Naming Convention
+
+HagiCode packages follow the naming convention: `hagicode-{version}-{platform}-nort.zip`
+
+Example: `hagicode-0.1.0-linux-arm64-nort.zip`
+
+### Breaking Change Notice
+
+**Previous identifier `darwin-arm64` has been renamed to `osx-arm64`** for consistency with the package naming convention used by hagibuild.
+
+Any code directly referencing `darwin-arm64` should be updated to use `osx-arm64`.
+
 ## Tech Stack
 
 ### Core Framework
