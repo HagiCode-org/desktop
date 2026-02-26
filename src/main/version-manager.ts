@@ -405,13 +405,12 @@ export class VersionManager {
 
       if (manifest) {
         const parsedDeps = manifestReader.parseDependencies(manifest);
-        const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-        // Set working directory and manifest for dependency manager
-        this.dependencyManager.setWorkingDirectory(installPath);
+        // Set manifest for dependency manager (working directory no longer needed)
         this.dependencyManager.setManifest(manifest);
 
-        dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, entryPoint);
+        // Get dependencies (now all return as not installed)
+        dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, null);
 
         // Check if all dependencies are satisfied
         const allDepsSatisfied = dependencies.every(
@@ -747,13 +746,11 @@ export class VersionManager {
         return [];
       }
 
-      // Set manifest in dependency manager for NPM mirror configuration
+      // Set manifest in dependency manager for NPM mirror configuration (working directory no longer needed)
       this.dependencyManager.setManifest(manifest);
-      this.dependencyManager.setWorkingDirectory(installPath);
 
       const parsedDeps = manifestReader.parseDependencies(manifest);
-      const entryPoint = manifestReader.parseEntryPoint(manifest);
-      const dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, entryPoint);
+      const dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, null);
 
       // Update version info in state
       const versionInfo = await this.stateManager.getInstalledVersion(versionId);

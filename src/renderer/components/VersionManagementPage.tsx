@@ -102,6 +102,7 @@ export default function VersionManagementPage() {
   const [uninstalling, setUninstalling] = useState<string | null>(null);
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [dependencies, setDependencies] = useState<Record<string, DependencyCheckResult[]>>({});
+  const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
 
   // LLM Installation states
   const [llmCallStatus, setLlmCallStatus] = useState<'idle' | 'calling' | 'completed' | 'error'>('idle');
@@ -482,6 +483,13 @@ export default function VersionManagementPage() {
     return platform;
   };
 
+  // Computed properties for version list display
+  const displayVersions = isVersionsExpanded
+    ? availableVersions
+    : availableVersions.slice(0, 3);
+  const remainingCount = availableVersions.length - 3;
+  const showExpandButton = availableVersions.length > 3;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -540,7 +548,7 @@ export default function VersionManagementPage() {
         </div>
 
         <div className="space-y-3">
-          {availableVersions.map((version) => {
+          {displayVersions.map((version) => {
             const installed = installedVersions.find((v) => v.id === version.id);
 
             return (
@@ -613,6 +621,17 @@ export default function VersionManagementPage() {
               </div>
             );
           })}
+
+          {showExpandButton && (
+            <button
+              onClick={() => setIsVersionsExpanded(!isVersionsExpanded)}
+              className="mt-4 w-full py-2 text-sm text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-2"
+            >
+              {isVersionsExpanded
+                ? t('versionManagement.actions.showLessVersions')
+                : t('versionManagement.actions.showMoreVersions', { count: remainingCount })}
+            </button>
+          )}
 
           {availableVersions.length === 0 && (
             <div className="bg-card rounded-xl p-8 text-center text-muted-foreground">

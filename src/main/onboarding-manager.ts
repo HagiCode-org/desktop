@@ -284,13 +284,12 @@ export class OnboardingManager {
       }
 
       const dependencies = manifestReader.parseDependencies(manifest);
-      const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-      // Set working directory for dependency manager
-      this.dependencyManager.setWorkingDirectory(version.installedPath);
+      // Set manifest for dependency manager (working directory no longer needed)
+      this.dependencyManager.setManifest(manifest);
 
-      // Get initial status
-      const initialStatus = await this.dependencyManager.checkFromManifest(dependencies, entryPoint);
+      // Get initial status (now all return as not installed)
+      const initialStatus = await this.dependencyManager.checkFromManifest(dependencies, null);
 
       // Create dependency items with status
       const dependencyItems: DependencyItem[] = initialStatus.map(dep => ({
@@ -440,26 +439,12 @@ export class OnboardingManager {
       }
 
       const dependencies = manifestReader.parseDependencies(manifest);
-      const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-      // Set working directory for dependency manager
-      this.dependencyManager.setWorkingDirectory(version.installedPath);
+      // Set manifest for dependency manager (working directory no longer needed)
+      this.dependencyManager.setManifest(manifest);
 
-      // Create callback for real-time output
-      const onOutput = (type: 'stdout' | 'stderr', data: string, dependencyName?: string) => {
-        // Send real-time output to renderer
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          this.mainWindow.webContents.send('onboarding:script-output', {
-            type,
-            data,
-            dependencyName,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      };
-
-      // Get status of all dependencies with real-time output
-      let status = await this.dependencyManager.checkFromManifest(dependencies, entryPoint, onOutput);
+      // Get status of all dependencies (now all return as not installed, onOutput not used)
+      let status = await this.dependencyManager.checkFromManifest(dependencies, null);
 
       // Check if debug mode is enabled (ignore dependency check)
       const debugMode = this.store.get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;

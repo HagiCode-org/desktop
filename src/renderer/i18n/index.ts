@@ -14,14 +14,14 @@ import zhCNComponents from './locales/zh-CN/components.json';
 import zhCNPages from './locales/zh-CN/pages.json';
 import zhCNUi from './locales/zh-CN/ui.json';
 import zhCNOnboarding from './locales/zh-CN/onboarding.json';
-import zhCNClaude from './locales/zh-CN/claude.json';
+import zhCNAgentCli from './locales/zh-CN/agent-cli.json';
 
 import enUSCommon from './locales/en-US/common.json';
 import enUSComponents from './locales/en-US/components.json';
 import enUSPages from './locales/en-US/pages.json';
 import enUSUi from './locales/en-US/ui.json';
 import enUSOnboarding from './locales/en-US/onboarding.json';
-import enUSClaude from './locales/en-US/claude.json';
+import enUSAgentCli from './locales/en-US/agent-cli.json';
 
 // Initialize i18next
 i18n
@@ -37,7 +37,7 @@ i18n
         pages: zhCNPages,
         ui: zhCNUi,
         onboarding: zhCNOnboarding,
-        claude: zhCNClaude,
+        'agent-cli': zhCNAgentCli,
       },
       'en-US': {
         common: enUSCommon,
@@ -45,7 +45,7 @@ i18n
         pages: enUSPages,
         ui: enUSUi,
         onboarding: enUSOnboarding,
-        claude: enUSClaude,
+        'agent-cli': enUSAgentCli,
       },
     },
   });

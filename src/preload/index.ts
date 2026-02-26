@@ -297,6 +297,14 @@ const electronAPI = {
   claudeListBackups: () => ipcRenderer.invoke('claude:list-backups'),
   claudeRestoreFromBackup: (backupPath: string) => ipcRenderer.invoke('claude:restore-backup', backupPath),
 
+  // Agent CLI Selection APIs
+  agentCliSave: (data: { cliType: string }) => ipcRenderer.invoke('agentCli:save', data),
+  agentCliLoad: () => ipcRenderer.invoke('agentCli:load'),
+  agentCliSkip: () => ipcRenderer.invoke('agentCli:skip'),
+  agentCliDetect: (cliType: string) => ipcRenderer.invoke('agentCli:detect', cliType),
+  agentCliGetCommand: (cliType: string) => ipcRenderer.invoke('agentCli:getCommand', cliType),
+  agentCliGetSelected: () => ipcRenderer.invoke('agentCli:getSelected'),
+
   // Preset Management APIs
   presetFetch: () => ipcRenderer.invoke('preset:fetch'),
   presetRefresh: () => ipcRenderer.invoke('preset:refresh'),

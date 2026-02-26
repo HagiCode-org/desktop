@@ -463,25 +463,6 @@ export class ManifestReader {
 
     return manifest.entryPoint;
   }
-
-  /**
-   * Resolve script path relative to working directory
-   * @param scriptPath - Script path from EntryPoint (can be relative or absolute)
-   * @param workingDirectory - Base directory for relative paths
-   * @returns Resolved absolute path to script
-   */
-  resolveScriptPath(scriptPath: string, workingDirectory: string): string {
-    // If path is already absolute, use it directly
-    if (path.isAbsolute(scriptPath)) {
-      return scriptPath;
-    }
-
-    // Resolve relative to working directory
-    const resolvedPath = path.resolve(workingDirectory, scriptPath);
-    log.info('[ManifestReader] Resolved script path:', scriptPath, '->', resolvedPath);
-
-    return resolvedPath;
-  }
 }
 
 /**

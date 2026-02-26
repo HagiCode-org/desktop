@@ -1,0 +1,37 @@
+{
+  "title": "选择 Agent CLI",
+  "description": "选择您已配置好的 AI 编程工具。系统将使用该工具进行后续的安装辅助操作。",
+  "selectLabel": "选择 Agent CLI",
+  "selectPlaceholder": "选择一个 Agent CLI...",
+  "detecting": "检测中...",
+  "detected": "已检测到",
+  "notDetected": "未检测到 - 请确保已安装并配置",
+  "viewDocs": "查看文档",
+  "skip": "跳过",
+  "skipConfirm": {
+    "title": "确认跳过？",
+    "message": "跳过此步骤后，AI 辅助安装功能将不可用。您确定要继续吗？",
+    "confirm": "确认跳过"
+  },
+  "cancel": "取消",
+  "next": "下一步",
+  "previous": "上一步",
+  "required": "必填",
+  "optional": "可选",
+  "help": {
+    "title": "帮助",
+    "ensureConfigured": "确保您选择的 CLI 已在系统环境变量中正确配置 API Key。",
+    "configLocation": "配置位置: ~/.claude/settings.json",
+    "configInstructions": "如需配置帮助，请查看 CLI 文档。",
+    "whyRequired": "AI 辅助安装功能需要正确配置的 CLI 才能工作。"
+  },
+  "future": {
+    "label": "即将推出",
+    "description": "此功能暂不可用"
+  },
+  "claudeCode": {
+    "name": "Claude Code",
+    "description": "官方的 Anthropic Claude 命令行工具",
+    "package": "@anthropic-ai/claude-code"
+  }
+}

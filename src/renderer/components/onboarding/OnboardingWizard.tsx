@@ -14,7 +14,7 @@ import {
 import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
-import ClaudeConfigStep from './steps/ClaudeConfig';
+import AgentCliSelectionStep from './steps/AgentCliSelection';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
 import LlmInstallationStep from './steps/LlmInstallation';
@@ -118,8 +118,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
-      case OnboardingStep.ClaudeConfig:
-        return <ClaudeConfigStep onNext={handleNext} onSkip={handleSkip} />;
+      case OnboardingStep.AgentCliSelection:
+        return <AgentCliSelectionStep onNext={handleNext} onSkip={handleSkip} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       case OnboardingStep.LlmInstallation:
@@ -139,8 +139,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
-      case OnboardingStep.ClaudeConfig:
-        return t('claude.title');
+      case OnboardingStep.AgentCliSelection:
+        return t('agent-cli.title');
       case OnboardingStep.Download:
         return t('download.title');
       case OnboardingStep.LlmInstallation:
@@ -179,7 +179,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             </div>
 
             {/* Actions */}
-            {currentStep !== OnboardingStep.Welcome && currentStep !== OnboardingStep.ClaudeConfig && currentStep !== OnboardingStep.Launch && (
+            {/* Steps that provide their own action buttons or custom navigation are excluded from OnboardingActions */}
+            {/* Welcome, AgentCliSelection, LlmInstallation, and Launch have custom navigation flows */}
+            {currentStep !== OnboardingStep.Welcome &&
+             currentStep !== OnboardingStep.AgentCliSelection &&
+             currentStep !== OnboardingStep.LlmInstallation &&
+             currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions
                   canGoNext={canGoNext}

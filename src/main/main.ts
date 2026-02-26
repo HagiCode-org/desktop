@@ -18,9 +18,8 @@ import { LicenseManager } from './license-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
-import type { RSSFeedItem } from './types/rss-types.js';
-import { ClaudeConfigManager } from './claude-config-manager.js';
-import type { ClaudeProvider } from '../types/claude-config.js';
+import { AgentCliManager } from './agent-cli-manager.js';
+import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -85,7 +84,7 @@ let llmInstallationManager: LlmInstallationManager | null = null;
 let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
-let claudeConfigManager: ClaudeConfigManager | null = null;
+let agentCliManager: AgentCliManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -924,14 +923,12 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
 
     // Parse all dependencies from manifest
     const allDependencies = manifestReader.parseDependencies(manifest);
-    const entryPoint = manifestReader.parseEntryPoint(manifest);
 
-    // Set working directory and manifest for dependency manager
-    dependencyManager.setWorkingDirectory(targetVersion.installedPath);
+    // Set manifest for dependency manager (working directory no longer needed)
     dependencyManager.setManifest(manifest);
 
-    // Check which dependencies are actually missing
-    const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies, entryPoint);
+    // Check which dependencies are actually missing (now returns all as not installed)
+    const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies, null);
 
     // Filter to only install dependencies that are not installed or have version mismatch
     const missingDependencies = allDependencies.filter((dep) => {
@@ -1031,24 +1028,19 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
       };
     }
 
-    // Use entryPoint script for installation
-    dependencyManager.setWorkingDirectory(targetVersion.installedPath);
+    // Set manifest for dependency manager (working directory no longer needed)
     dependencyManager.setManifest(manifest);
 
-    const entryPoint = manifestReader.parseEntryPoint(manifest);
-    if (!entryPoint) {
-      throw new Error('No entryPoint found in manifest');
-    }
-
+    // Note: Installation is now handled by AI, installSingleDependency returns false
     // Send initial progress
     mainWindow?.webContents.send('dependency:command-progress', {
       type: 'command-info',
       checkCommand: targetDep.checkCommand,
-      installCommand: entryPoint.install,
+      installCommand: targetDep.installCommand,
     });
 
-    // Install using entryPoint script
-    const installResult = await dependencyManager.installSingleDependency(targetDep, entryPoint);
+    // Install using dependency manager (now returns failed - AI handles installation)
+    const installResult = await dependencyManager.installSingleDependency(targetDep, null);
 
     if (!installResult.success) {
       const errorMsg = installResult.parsedResult.errorMessage || 'Installation failed';
@@ -1178,17 +1170,13 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
       }
     }
 
-    // Execute commands with progress reporting
-    const result = await dependencyManager.executeCommandsWithProgress(
-      commands,
-      workDir,
-      (progress) => {
-        // Send progress to renderer
-        mainWindow?.webContents.send('dependency:command-progress', progress);
-      }
-    );
-
-    return result;
+    // Note: Command execution has been removed from DependencyManager
+    // Installation is now handled by AI
+    log.info('[Main] Skipping command execution (now handled by AI)');
+    return {
+      success: false,
+      error: 'Command execution now handled by AI'
+    };
   } catch (error) {
     log.error('[Main] Failed to execute install commands:', error);
     return {
@@ -1349,28 +1337,6 @@ ipcMain.handle('llm:call-api', async (event, manifestPath: string, region?: 'cn'
     console.error('[Main] Failed to call LLM API:', errorMessage);
     return {
       success: false,
-      error: errorMessage,
-    };
-  }
-});
-
-ipcMain.handle('llm:detect-config', async () => {
-  if (!llmInstallationManager) {
-    return {
-      exists: false,
-      source: 'none',
-      error: 'LLM Installation Manager not initialized',
-    };
-  }
-  try {
-    const config = await llmInstallationManager.detectClaudeConfig();
-    return config;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Main] Failed to detect Claude config:', errorMessage);
-    return {
-      exists: false,
-      source: 'none',
       error: errorMessage,
     };
   }
@@ -1834,156 +1800,6 @@ ipcMain.handle('onboarding:reset', async () => {
   }
 });
 
-// Claude Config IPC Handlers
-ipcMain.handle('claude:detect', async () => {
-  if (!claudeConfigManager) {
-    return {
-      exists: false,
-      source: 'none',
-      error: 'Claude Config Manager not initialized'
-    };
-  }
-  try {
-    return await claudeConfigManager.detectExistingConfig();
-  } catch (error) {
-    console.error('Failed to detect Claude config:', error);
-    return {
-      exists: false,
-      source: 'none',
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:validate', async (_, provider: string, apiKey: string, endpoint?: string) => {
-  if (!claudeConfigManager) {
-    return {
-      success: false,
-      error: 'Claude Config Manager not initialized'
-    };
-  }
-  try {
-    return await claudeConfigManager.validateApiKey(provider as ClaudeProvider, apiKey, endpoint);
-  } catch (error) {
-    console.error('Failed to validate Claude API key:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:verify-cli', async () => {
-  if (!claudeConfigManager) {
-    return {
-      installed: false,
-      error: 'Claude Config Manager not initialized'
-    };
-  }
-  try {
-    return await claudeConfigManager.verifyCliInstallation();
-  } catch (error) {
-    console.error('Failed to verify Claude CLI:', error);
-    return {
-      installed: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:save', async (_, config: any) => {
-  if (!claudeConfigManager) {
-    return {
-      success: false,
-      error: 'Claude Config Manager not initialized'
-    };
-  }
-  try {
-    return await claudeConfigManager.saveConfig(config);
-  } catch (error) {
-    console.error('Failed to save Claude config:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:get-stored', async () => {
-  if (!claudeConfigManager) {
-    return null;
-  }
-  try {
-    return claudeConfigManager.getStoredConfig();
-  } catch (error) {
-    console.error('Failed to get stored Claude config:', error);
-    return null;
-  }
-});
-
-ipcMain.handle('claude:delete', async () => {
-  if (!claudeConfigManager) {
-    return { success: false, error: 'Claude Config Manager not initialized' };
-  }
-  try {
-    claudeConfigManager.deleteStoredConfig();
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to delete Claude config:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:test', async () => {
-  if (!claudeConfigManager) {
-    return { success: false, error: 'Claude Config Manager not initialized' };
-  }
-  try {
-    return await claudeConfigManager.testConfiguration();
-  } catch (error) {
-    console.error('Failed to test Claude config:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('claude:list-backups', async () => {
-  if (!claudeConfigManager) {
-    return { success: false, error: 'Claude Config Manager not initialized', backups: [] };
-  }
-  try {
-    const backups = await claudeConfigManager.listBackups();
-    return { success: true, backups };
-  } catch (error) {
-    console.error('Failed to list Claude config backups:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-      backups: []
-    };
-  }
-});
-
-ipcMain.handle('claude:restore-backup', async (_, backupPath: string) => {
-  if (!claudeConfigManager) {
-    return { success: false, error: 'Claude Config Manager not initialized' };
-  }
-  try {
-    return await claudeConfigManager.restoreFromBackup(backupPath);
-  } catch (error) {
-    console.error('Failed to restore Claude config from backup:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
 // Preset Management IPC Handlers
 ipcMain.handle('preset:fetch', presetFetchHandler);
 ipcMain.handle('preset:refresh', presetRefreshHandler);
@@ -2180,16 +1996,23 @@ app.whenReady().then(async () => {
 
   // Initialize Claude Config Manager with PresetLoader
   const presetLoader = getPresetLoader();
-  claudeConfigManager = new ClaudeConfigManager(
-    configManager.getStore() as unknown as Store<Record<string, unknown>>,
-    presetLoader || undefined
-  );
   log.info('[App] Claude Config Manager initialized');
+
+  // Initialize Agent CLI Manager
+  agentCliManager = new AgentCliManager(
+    configManager.getStore() as unknown as Store<Record<string, unknown>>
+  );
+  log.info('[App] Agent CLI Manager initialized');
+
+  // Register Agent CLI IPC handlers
+  if (agentCliManager) {
+    registerAgentCliHandlers(agentCliManager);
+    log.info('[App] Agent CLI IPC handlers registered');
+  }
 
   // Initialize LLM Installation Manager (after ClaudeConfigManager)
   llmInstallationManager = new LlmInstallationManager(
     regionDetector,
-    claudeConfigManager
   );
   log.info('[App] LLM Installation Manager initialized');
 

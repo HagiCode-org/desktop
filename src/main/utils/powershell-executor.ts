@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, ChildProcess } from 'node:child_process';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import type { ResultSessionFile } from '../manifest-reader.js';
@@ -70,6 +70,40 @@ export interface PowerShellExecutionResult {
    * Error message if execution failed
    */
   errorMessage?: string;
+}
+
+/**
+ * Options for spawning a long-running PowerShell service process
+ */
+export interface PowerShellSpawnServiceOptions {
+  /**
+   * Working directory for script execution
+   */
+  cwd?: string;
+  /**
+   * Additional arguments to pass to the script
+   */
+  scriptArgs?: string[];
+  /**
+   * Environment variables to pass to the script
+   */
+  env?: NodeJS.ProcessEnv;
+  /**
+   * Callback for stdout data
+   */
+  onStdout?: (data: string) => void;
+  /**
+   * Callback for stderr data
+   */
+  onStderr?: (data: string) => void;
+  /**
+   * Callback for process exit
+   */
+  onExit?: (code: number | null, signal: NodeJS.Signals | null) => void;
+  /**
+   * Callback for process errors
+   */
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -281,6 +315,106 @@ export class PowerShellExecutor {
         errorMessage: result.errorMessage,
       };
     }
+  }
+
+  /**
+   * Spawn a long-running PowerShell service process
+   *
+   * This method spawns PowerShell.exe with the standard arguments but does NOT wait
+   * for the script to complete. Instead, it returns the ChildProcess for
+   * lifecycle management. This is used for starting web services that
+   * run indefinitely.
+   *
+   * Key differences from execute():
+   * - Does not wait for completion (no timeout)
+   * - Returns ChildProcess directly for caller to manage
+   * - Uses detached: false to keep process attached
+   * - Captures stdout/stderr via callbacks
+   *
+   * @param scriptPath - Full path to the .ps1 script file
+   * @param options - Spawn options with callbacks for output/events
+   * @returns ChildProcess for lifecycle management
+   */
+  spawnService(scriptPath: string, options: PowerShellSpawnServiceOptions = {}): ChildProcess {
+    const {
+      cwd,
+      scriptArgs = [],
+      env,
+      onStdout,
+      onStderr,
+      onExit,
+      onError,
+    } = options;
+
+    log.info('[PowerShellExecutor] Spawning service script:', scriptPath);
+    log.info('[PowerShellExecutor] Working directory:', cwd);
+
+    // Build PowerShell command arguments
+    // Standard args: -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <script-path>
+    const args = [...POWERSHELL_ARGS, scriptPath, ...scriptArgs];
+
+    // Spawn options for PowerShell service
+    // shell: false - PowerShell.exe is executable, no shell needed
+    // windowsHide: true - Hide console window to prevent flicker
+    // detached: false - Keep process attached for proper lifecycle management
+    // stdio: ['ignore', 'pipe', 'pipe'] - Ignore stdin, capture stdout/stderr
+    const spawnOptions: {
+      cwd?: string;
+      env?: NodeJS.ProcessEnv;
+      shell: boolean;
+      windowsHide?: boolean;
+      detached: boolean;
+      stdio: Array<'pipe' | 'ignore' | 'inherit'>;
+    } = {
+      cwd,
+      env: env ? { ...process.env, ...env } : undefined,
+      shell: false,
+      detached: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    };
+
+    // Windows-specific option to hide console window
+    if (process.platform === 'win32') {
+      spawnOptions.windowsHide = true;
+    }
+
+    const child = spawn('powershell.exe', args, spawnOptions);
+
+    log.info('[PowerShellExecutor] Service process spawned, PID:', child.pid);
+
+    // Capture stdout if callback provided
+    if (onStdout) {
+      child.stdout?.on('data', (data: Buffer) => {
+        const chunk = data.toString();
+        onStdout(chunk);
+      });
+    }
+
+    // Capture stderr if callback provided
+    if (onStderr) {
+      child.stderr?.on('data', (data: Buffer) => {
+        const chunk = data.toString();
+        onStderr(chunk);
+      });
+    }
+
+    // Handle process exit if callback provided
+    if (onExit) {
+      child.on('exit', (code, signal) => {
+        log.info('[PowerShellExecutor] Service process exited, code:', code, 'signal:', signal);
+        onExit(code, signal);
+      });
+    }
+
+    // Handle process errors if callback provided
+    if (onError) {
+      child.on('error', (error: Error) => {
+        log.error('[PowerShellExecutor] Service process error:', error.message);
+        onError(error);
+      });
+    }
+
+    return child;
   }
 
   /**

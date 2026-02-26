@@ -17,9 +17,11 @@ export default defineConfig(({ mode }) => {
     publicDir: path.resolve(__dirname, './src/renderer/public'),
     resolve: {
       alias: {
+        '@types': path.resolve(__dirname, './src/types'),
+        '@types/*': path.resolve(__dirname, './src/types/*'),
+        '@types/agent-cli': path.resolve(__dirname, './src/types/agent-cli.ts'),
         '@': path.resolve(__dirname, './src/renderer'),
         '@/*': path.resolve(__dirname, './src/renderer/*'),
-        '@types': path.resolve(__dirname, './src/types/index.d.ts'),
         '@assets': path.resolve(__dirname, './src/renderer/assets'),
         '@assets/*': path.resolve(__dirname, './src/renderer/assets/*'),
       },

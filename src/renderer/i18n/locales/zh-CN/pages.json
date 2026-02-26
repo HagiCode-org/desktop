@@ -102,7 +102,9 @@
       "collapseDependencies": "收起依赖项",
       "reinstall": "重新安装",
       "reinstallPackage": "重新安装此软件包",
-      "openLogs": "打开日志"
+      "openLogs": "打开日志",
+      "showMoreVersions": "显示更多版本 (共 {{count}} 个)",
+      "showLessVersions": "收起"
     },
     "progressBar": "进度条",
     "progressText": "进度文本",

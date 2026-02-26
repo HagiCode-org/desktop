@@ -15,19 +15,16 @@
     "types": ["node"],
     "declaration": true,
     "sourceMap": true,
-    "noEmit": false,
-    "paths": {
-      "@/*": ["./src/renderer/*"]
-    }
+    "noEmit": false
   },
   "include": [
-    "src/main/**/*.ts"
+    "src/main/**/*.ts",
+    "src/renderer/**/*.{ts,tsx}",
+    "src/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "src/types",
     "src/**/*.d.ts"
   ]
-
 }

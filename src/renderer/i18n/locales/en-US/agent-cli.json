@@ -1,0 +1,37 @@
+{
+  "title": "Select Agent CLI",
+  "description": "Select your configured AI programming tool. The system will use this tool for subsequent installation assistance.",
+  "selectLabel": "Select Agent CLI",
+  "selectPlaceholder": "Choose an Agent CLI...",
+  "detecting": "Detecting...",
+  "detected": "Detected",
+  "notDetected": "Not detected - please ensure installed and configured",
+  "viewDocs": "View Documentation",
+  "skip": "Skip",
+  "skipConfirm": {
+    "title": "Confirm Skip?",
+    "message": "Skipping this step will make AI-assisted installation unavailable. Are you sure you want to continue?",
+    "confirm": "Confirm Skip"
+  },
+  "cancel": "Cancel",
+  "next": "Next",
+  "previous": "Previous",
+  "required": "Required",
+  "optional": "Optional",
+  "help": {
+    "title": "Help",
+    "ensureConfigured": "Ensure your selected CLI has API key properly configured in environment variables.",
+    "configLocation": "Configuration location: ~/.claude/settings.json",
+    "configInstructions": "For help with configuration, see the CLI documentation.",
+    "whyRequired": "AI-assisted installation requires a properly configured CLI to work."
+  },
+  "future": {
+    "label": "Coming Soon",
+    "description": "This feature is not yet available"
+  },
+  "claudeCode": {
+    "name": "Claude Code",
+    "description": "Official Anthropic Claude command-line tool",
+    "package": "@anthropic-ai/claude-code"
+  }
+}

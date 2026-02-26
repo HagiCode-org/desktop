@@ -1,11 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import log from 'electron-log';
 import { Region, RegionDetector } from './region-detector.js';
-import type { ClaudeConfigManager } from './claude-config-manager.js';
-import type { DetectedConfig } from '../types/claude-config.js';
 
 const execAsync = promisify(exec);
 
@@ -36,11 +35,12 @@ export interface ApiCallResult {
  */
 export class LlmInstallationManager {
   private regionDetector: RegionDetector;
-  private claudeConfigManager: ClaudeConfigManager;
+  // Debug mode flag - can be extended to read from electron-store in future
+  private debugMode: boolean = false;
 
-  constructor(regionDetector: RegionDetector, claudeConfigManager: ClaudeConfigManager) {
+  constructor(regionDetector: RegionDetector, debugMode: boolean = false) {
     this.regionDetector = regionDetector;
-    this.claudeConfigManager = claudeConfigManager;
+    this.debugMode = debugMode;
   }
 
   /**
@@ -75,7 +75,7 @@ export class LlmInstallationManager {
         throw new Error('LLM prompt path not found in manifest');
       }
 
-      // Resolve the prompt file path relative to manifest directory
+      // Resolve the prompt file path relative to the manifest directory
       const manifestDir = path.dirname(manifestPath);
       const resolvedPromptPath = path.resolve(manifestDir, promptPath);
 
@@ -83,6 +83,9 @@ export class LlmInstallationManager {
 
       const promptContent = await fs.readFile(resolvedPromptPath, 'utf-8');
       const version = manifest.package?.version || 'unknown';
+
+      // Log prompt details for debugging
+      this.logPromptDetails(resolvedPromptPath, promptContent);
 
       return {
         version,
@@ -97,57 +100,41 @@ export class LlmInstallationManager {
   }
 
   /**
-   * Detect existing Claude CLI configuration
-   * Delegates to ClaudeConfigManager
-   */
-  async detectClaudeConfig(): Promise<DetectedConfig> {
-    try {
-      log.info('[LlmInstallationManager] Detecting Claude configuration...');
-      return await this.claudeConfigManager.detectExistingConfig();
-    } catch (error) {
-      log.error('[LlmInstallationManager] Failed to detect Claude config:', error);
-      return {
-        exists: false,
-        source: 'none',
-      };
-    }
-  }
-
-  /**
    * Call Claude API with the given prompt file path using Claude CLI
    * Opens a visible terminal window to execute the prompt (similar to testConfiguration)
    * Instead of passing the entire prompt content, we pass a short command that tells Claude to read the file
    */
   async callClaudeAPI(promptFilePath: string, mainWindow: any): Promise<ApiCallResult> {
     try {
-      // First, verify that Claude configuration exists
-      const config = await this.detectClaudeConfig();
-      if (!config.exists) {
-        throw new Error('Claude CLI is not configured. Please configure Claude first.');
-      }
-
       log.info('[LlmInstallationManager] Opening terminal with Claude CLI...');
       log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
-
-      // Construct a simple prompt that tells Claude to read and execute the prompt file
-      // This avoids command line length limits and escaping issues
-      const prompt = `Read the file at ${promptFilePath} and follow the instructions in it to help with installation.`;
+      log.info('[LlmInstallationManager] Debug mode:', this.debugMode);
 
       // Determine the platform and appropriate command
       const platform = process.platform;
       log.info('[LlmInstallationManager] Platform:', platform);
 
       let terminalFound = false;
+      let constructedCommand = '';
+      // Get just the filename, not the full path
+      const fileName = path.basename(promptFilePath);
+      // Set working directory to the directory containing the prompt file
+      const promptDir = path.dirname(promptFilePath);
+      // Construct command with file name and instruction
+      const prompt = `"Follow ${fileName} to install hagicode desktop and follow the instructions in it."`;
 
       if (platform === 'win32') {
-        // Windows: Open new CMD window and run claude with prompt
+        // Windows: Directly spawn claude process
         try {
-          spawn('cmd', ['/c', 'start', 'cmd', '/k', `claude "${prompt}" && pause && exit`], {
+          log.info('[LlmInstallationManager] Windows command:', `claude "${prompt}"`);
+          spawn('claude', [prompt], {
             detached: true,
             stdio: 'ignore',
+            cwd: promptDir,
+            shell: true,
           }).unref();
           terminalFound = true;
-          log.info('[LlmInstallationManager] Spawned Windows terminal');
+          log.info('[LlmInstallationManager] Spawned Windows terminal successfully');
         } catch (err) {
           log.error('[LlmInstallationManager] Failed to spawn Windows terminal:', err);
         }
@@ -155,10 +142,11 @@ export class LlmInstallationManager {
         // macOS: Open new Terminal window and run claude with prompt
         try {
           const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          const cmd = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
-          await execAsync(cmd);
+          constructedCommand = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
+          log.info('[LlmInstallationManager] macOS command:', constructedCommand);
+          await execAsync(constructedCommand);
           terminalFound = true;
-          log.info('[LlmInstallationManager] Opened macOS terminal');
+          log.info('[LlmInstallationManager] Opened macOS terminal successfully');
         } catch (err) {
           log.error('[LlmInstallationManager] Failed to open macOS terminal:', err);
         }
@@ -175,16 +163,16 @@ export class LlmInstallationManager {
         // Use the first available terminal
         for (const term of terminals) {
           try {
-            // Test if terminal is available
+            // Test if the terminal is available
             await execAsync(`which ${term}`);
             log.info(`[LlmInstallationManager] Using terminal: ${term}`);
 
             // Escape the prompt for bash
             const escapedPrompt = prompt.replace(/'/g, "'\\''");
-            const cmd = `${term} -- bash -c "claude '${escapedPrompt}'; read -p 'Press enter to exit...'; exit"`;
+            constructedCommand = `${term} -- bash -c "claude '${escapedPrompt}'; read -p 'Press enter to exit...'; exit"`;
 
-            log.info('[LlmInstallationManager] Executing:', cmd);
-            await execAsync(cmd);
+            log.info('[LlmInstallationManager] Executing:', constructedCommand);
+            await execAsync(constructedCommand);
             terminalFound = true;
             log.info('[LlmInstallationManager] Opened Linux terminal successfully');
             break;
@@ -195,14 +183,25 @@ export class LlmInstallationManager {
         }
       }
 
+      // Save debug state if debug mode is enabled
+      if (this.debugMode && constructedCommand) {
+        try {
+          const debugFile = await this.saveDebugState(promptFilePath, constructedCommand);
+          log.info('[LlmInstallationManager] Debug file created at:', debugFile);
+        } catch (err) {
+          log.error('[LlmInstallationManager] Failed to save debug state:', err);
+        }
+      }
+
       if (!terminalFound) {
+        log.error('[LlmInstallationManager] Command execution result: Failed - No terminal emulator found');
         return {
           success: false,
           error: '无法找到可用的终端模拟器',
         };
       }
 
-      log.info('[LlmInstallationManager] Terminal opened successfully for LLM installation');
+      log.info('[LlmInstallationManager] Command execution result: Success - Terminal opened successfully for LLM installation');
 
       // Return success immediately after opening terminal
       // User will see the installation progress in the terminal window
@@ -212,12 +211,43 @@ export class LlmInstallationManager {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      log.error('[LlmInstallationManager] Command execution result: Failed -', errorMessage);
       log.error('[LlmInstallationManager] Failed to open terminal for Claude API:', errorMessage);
       return {
         success: false,
         error: `Failed to execute Claude CLI: ${errorMessage}. Make sure Claude Code CLI is installed.`,
       };
     }
+  }
+
+  /**
+   * Log prompt details for debugging
+   * @param promptFilePath Path to the prompt file
+   * @param content Prompt content
+   */
+  private logPromptDetails(promptFilePath: string, content: string): void {
+    log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
+    log.info('[LlmInstallationManager] Prompt content length:', content.length);
+    log.info('[LlmInstallationManager] Prompt content preview:', content.substring(0, 100) + (content.length > 100 ? '...' : ''));
+  }
+
+  /**
+   * Save debug state to a temporary file
+   * @param promptFilePath Path to the prompt file
+   * @param command Command that was constructed
+   * @returns Path to the debug file
+   */
+  private async saveDebugState(promptFilePath: string, command: string): Promise<string> {
+    const debugDir = path.join(os.tmpdir(), 'hagicode-debug');
+    await fs.mkdir(debugDir, { recursive: true });
+    const debugFile = path.join(debugDir, `prompt-debug-${Date.now()}.json`);
+    await fs.writeFile(debugFile, JSON.stringify({
+      timestamp: new Date().toISOString(),
+      promptFilePath,
+      command,
+      platform: process.platform,
+    }, null, 2));
+    return debugFile;
   }
 
   /**

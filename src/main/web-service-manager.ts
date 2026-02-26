@@ -400,14 +400,13 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Get platform-specific spawn options for the web service process
+   * Get platform-specific spawn options for non-PowerShell scripts
    *
-   * For Windows with .ps1 scripts: Uses shell=false, windowsHide=true (PowerShell direct)
-   * For Windows with .bat/.cmd: Uses shell=true, windowsHide=true (legacy)
-   * For Unix: Uses shell=false, stdio=ignore for .sh scripts
+   * For Windows with .bat/.cmd: shell=true, detached=true, windowsHide=true (legacy)
+   * For Unix: shell=false, detached=false, stdio=['ignore', 'pipe', 'pipe']
    *
-   * Note: This method is used for spawning the actual web service process,
-   * not for executing the start script. Use executeStartScript() for start scripts.
+   * Note: PowerShell (.ps1) scripts are handled by PowerShellExecutor.spawnService()
+   * This method is only used for .bat/.cmd files on Windows and .sh on Unix.
    *
    * When using startup script, the working directory is the script's directory
    */
@@ -425,25 +424,30 @@ export class PCodeWebServiceManager {
       });
     }
 
-    // Windows: PowerShell (.ps1) doesn't need shell, .bat needs shell
-    // Unix: keep attached for lifecycle management
+    // On Windows .bat/.cmd: legacy shell mode for compatibility
+    // On Unix: direct script execution with output capture
     if (process.platform === 'win32') {
-      // For .ps1 scripts, we use shell=false (handled by PowerShellExecutor)
-      // This method is mainly for legacy .bat support
-      options.shell = true; // Required for executing .bat files
+      // BAT/CMD files: legacy shell mode
+      options.shell = true;
       options.detached = true;
       options.windowsHide = true;
     } else {
+      // Unix: direct script execution with output capture
+      options.shell = false;
       options.detached = false;
-      options.stdio = 'ignore';
+      options.stdio = ['ignore', 'pipe', 'pipe'];
     }
 
     return options;
   }
 
   /**
-   * Get the command and arguments for spawning
-   * Uses the platform-specific startup script (start.bat for Windows, start.sh for Unix)
+   * Get the command and arguments for non-PowerShell scripts
+   *
+   * For Windows .bat/.cmd: Returns script path directly (legacy)
+   * For Unix: Returns script path directly
+   *
+   * Note: PowerShell (.ps1) scripts are handled by PowerShellExecutor.spawnService()
    */
   private getSpawnCommand(): { command: string; args: string[] } {
     const scriptPath = this.getStartupScriptPath();
@@ -778,14 +782,83 @@ export class PCodeWebServiceManager {
 
       // Spawn the process
       this.emitPhase(StartupPhase.Spawning, 'Starting service with startup script...');
-      const { command, args } = this.getSpawnCommand();
-      const options = this.getSpawnOptions();
+      const scriptPath = this.getStartupScriptPath();
 
-      log.info('[WebService] Spawning process:', command, args.join(' '));
-      this.process = spawn(command, args, options);
+      // Use PowerShellExecutor for .ps1 scripts on Windows
+      if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
+        log.info('[WebService] Using PowerShellExecutor for service spawn');
+        const executor = new PowerShellExecutor();
+        this.process = executor.spawnService(scriptPath, {
+          cwd: path.dirname(scriptPath),
+          env: this.config.env,
+          scriptArgs: this.getPlatformSpecificArgs(),
+          onStdout: (data) => {
+            const output = data.toString().trim();
+            if (output) {
+              output.split('\n').forEach((line: string) => {
+                if (line.trim()) {
+                  log.info('[WebService]', line.trim());
+                }
+              });
+            }
+          },
+          onStderr: (data) => {
+            const output = data.toString().trim();
+            if (output) {
+              output.split('\n').forEach((line: string) => {
+                if (line.trim()) {
+                  log.error('[WebService]', line.trim());
+                }
+              });
+            }
+          },
+          onExit: (code, signal) => {
+            log.info('[WebService] Process exited, code:', code, 'signal:', signal);
 
-      // Setup process event handlers
-      this.setupProcessHandlers();
+            // Enhanced logging for debugging startup failures
+            if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
+              log.error('[WebService] Process exited during startup phase');
+              log.error('[WebService] Startup phase:', this.currentPhase);
+              log.error('[WebService] Script path:', scriptPath);
+              log.error('[WebService] Exit code:', code, 'Signal:', signal);
+
+              if (code === 0 && this.currentPhase === StartupPhase.Spawning) {
+                log.error('[WebService] Early exit with code 0 - script may have opened but not executed');
+                log.error('[WebService] This typically happens when PowerShell script is opened in editor instead of being executed');
+                log.error('[WebService] Check PowerShell execution policy and ensure script is invoked via powershell.exe');
+              }
+            }
+
+            if (this.status === 'running') {
+              log.warn('[WebService] Process exited unexpectedly');
+              this.restartCount++;
+              this.status = 'error';
+            }
+
+            this.process = null;
+          },
+          onError: (error) => {
+            if (error.message.includes('dotnet') || error.message.includes('ENOENT')) {
+              log.error('[WebService] dotnet command not found or DLL not accessible:', error.message);
+              log.error('[WebService] Please ensure .NET Runtime 8.0 is installed and in PATH');
+            } else {
+              log.error('[WebService] Process error:', error.message);
+            }
+            this.status = 'error';
+            this.process = null;
+          },
+        });
+      } else {
+        // Legacy path for .bat/.cmd on Windows and .sh on Unix
+        const { command, args } = this.getSpawnCommand();
+        const options = this.getSpawnOptions();
+
+        log.info('[WebService] Spawning process:', command, args.join(' '));
+        this.process = spawn(command, args, options);
+
+        // Setup process event handlers
+        this.setupProcessHandlers();
+      }
 
       // Wait for listening
       this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
@@ -936,6 +1009,20 @@ export class PCodeWebServiceManager {
 
     this.process.on('exit', (code, signal) => {
       log.info('[WebService] Process exited, code:', code, 'signal:', signal);
+
+      // Enhanced logging for debugging startup failures
+      if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
+        log.error('[WebService] Process exited during startup phase');
+        log.error('[WebService] Startup phase:', this.currentPhase);
+        log.error('[WebService] Script path:', this.getStartupScriptPath());
+        log.error('[WebService] Exit code:', code, 'Signal:', signal);
+
+        if (code === 0 && this.currentPhase === StartupPhase.Spawning) {
+          log.error('[WebService] Early exit with code 0 - script may have opened but not executed');
+          log.error('[WebService] This typically happens when PowerShell script is opened in editor instead of being executed');
+          log.error('[WebService] Check PowerShell execution policy and ensure script is invoked via powershell.exe');
+        }
+      }
 
       if (this.status === 'running') {
         // Unexpected exit

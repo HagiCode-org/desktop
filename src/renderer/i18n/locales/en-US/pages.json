@@ -102,7 +102,9 @@
       "collapseDependencies": "Collapse Dependencies",
       "reinstall": "Reinstall",
       "reinstallPackage": "Reinstall this package",
-      "openLogs": "Open Logs"
+      "openLogs": "Open Logs",
+      "showMoreVersions": "Show More Versions ({{count}} remaining)",
+      "showLessVersions": "Show Less"
     },
     "progressBar": "Progress bar",
     "progressText": "Progress text",

@@ -30,6 +30,9 @@
   "claude": {
     "title": "配置 Claude Code"
   },
+  "agent-cli": {
+    "title": "选择 Agent CLI"
+  },
   "download": {
     "title": "下载 Hagicode Server",
     "version": "版本",
@@ -248,5 +251,10 @@
     "viewDocs": "查看详细文档",
     "retry": "重试安装",
     "skip": "跳过"
+  },
+  "preconditionError": {
+    "title": "前置步骤未完成",
+    "message": "此步骤需要先完成\"步骤 2: 选择 Agent CLI\"。请返回并完成选择或跳过该步骤。",
+    "action": "返回步骤 2"
   }
 }

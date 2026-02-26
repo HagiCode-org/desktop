@@ -30,6 +30,9 @@
   "claude": {
     "title": "Configure Claude Code"
   },
+  "agent-cli": {
+    "title": "Select Agent CLI"
+  },
   "download": {
     "title": "Download Hagicode Server",
     "version": "Version",
@@ -248,5 +251,10 @@
     "viewDocs": "View Documentation",
     "retry": "Retry Installation",
     "skip": "Skip"
+  },
+  "preconditionError": {
+    "title": "Prerequisite Not Completed",
+    "message": "This step requires completing \"Step 2: Select Agent CLI\" first. Please return and complete the selection or skip it.",
+    "action": "Return to Step 2"
   }
 }
