@@ -1,12 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import log from 'electron-log';
 import { Region, RegionDetector } from './region-detector.js';
-
-const execAsync = promisify(exec);
 
 /**
  * LLM prompt configuration
@@ -123,64 +120,19 @@ export class LlmInstallationManager {
       // Construct command with file name and instruction
       const prompt = `"Follow ${fileName} to install hagicode desktop and follow the instructions in it."`;
 
-      if (platform === 'win32') {
-        // Windows: Directly spawn claude process
-        try {
-          log.info('[LlmInstallationManager] Windows command:', `claude "${prompt}"`);
-          spawn('claude', [prompt], {
-            detached: true,
-            stdio: 'ignore',
-            cwd: promptDir,
-            shell: true,
-          }).unref();
-          terminalFound = true;
-          log.info('[LlmInstallationManager] Spawned Windows terminal successfully');
-        } catch (err) {
-          log.error('[LlmInstallationManager] Failed to spawn Windows terminal:', err);
-        }
-      } else if (platform === 'darwin') {
-        // macOS: Open new Terminal window and run claude with prompt
-        try {
-          const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          constructedCommand = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
-          log.info('[LlmInstallationManager] macOS command:', constructedCommand);
-          await execAsync(constructedCommand);
-          terminalFound = true;
-          log.info('[LlmInstallationManager] Opened macOS terminal successfully');
-        } catch (err) {
-          log.error('[LlmInstallationManager] Failed to open macOS terminal:', err);
-        }
-      } else {
-        // Linux: Open new terminal window and run claude with prompt
-        // Try common terminal emulators
-        const terminals = [
-          'gnome-terminal', // GNOME
-          'konsole',        // KDE
-          'xfce4-terminal', // XFCE
-          'xterm',          // Fallback
-        ];
-
-        // Use the first available terminal
-        for (const term of terminals) {
-          try {
-            // Test if the terminal is available
-            await execAsync(`which ${term}`);
-            log.info(`[LlmInstallationManager] Using terminal: ${term}`);
-
-            // Escape the prompt for bash
-            const escapedPrompt = prompt.replace(/'/g, "'\\''");
-            constructedCommand = `${term} -- bash -c "claude '${escapedPrompt}'; read -p 'Press enter to exit...'; exit"`;
-
-            log.info('[LlmInstallationManager] Executing:', constructedCommand);
-            await execAsync(constructedCommand);
-            terminalFound = true;
-            log.info('[LlmInstallationManager] Opened Linux terminal successfully');
-            break;
-          } catch (err) {
-            log.warn(`[LlmInstallationManager] Failed to open ${term}:`, err);
-            continue;
-          }
-        }
+      // Spawn claude process across all platforms
+      try {
+        log.info('[LlmInstallationManager] Command:', `claude "${prompt}"`);
+        spawn('claude', [prompt], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: promptDir,
+          shell: true,
+        }).unref();
+        terminalFound = true;
+        log.info('[LlmInstallationManager] Spawned claude successfully');
+      } catch (err) {
+        log.error('[LlmInstallationManager] Failed to spawn claude:', err);
       }
 
       // Save debug state if debug mode is enabled
