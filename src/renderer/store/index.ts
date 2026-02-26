@@ -10,9 +10,27 @@ import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
 import agentCliReducer from './slices/agentCliSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
+import dataDirectoryReducer from './slices/dataDirectorySlice';
 import listenerMiddleware from './listenerMiddleware';
 import { setProcessInfo } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
+import type { Dispatch } from '@reduxjs/toolkit';
+
+// App dispatch type combining all slice dispatches
+export type AppDispatch = Dispatch<
+  | typeof import('./slices/webServiceSlice').actions
+  | typeof import('./slices/i18nSlice').actions
+  | typeof import('./slices/dependencySlice').actions
+  | typeof import('./slices/viewSlice').actions
+  | typeof import('./slices/packageSourceSlice').actions
+  | typeof import('./slices/licenseSlice').actions
+  | typeof import('./slices/onboardingSlice').actions
+  | typeof import('./slices/rssFeedSlice').actions
+  | typeof import('./slices/claudeConfigSlice').actions
+  | typeof import('./slices/agentCliSlice').actions
+  | typeof import('./slices/llmInstallationSlice').actions
+  | typeof import('./slices/dataDirectorySlice').actions
+>;
 
 // Import thunks for initialization
 import { initializeI18n } from './thunks/i18nThunks';
@@ -46,6 +64,7 @@ export const store = configureStore({
     claudeConfig: claudeConfigReducer,
     agentCli: agentCliReducer,
     llmInstallation: llmInstallationReducer,
+    dataDirectory: dataDirectoryReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

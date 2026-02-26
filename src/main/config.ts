@@ -18,6 +18,10 @@ export interface AppConfig {
   minimizeToTray: boolean;
   checkForUpdates: boolean;
   settings: AppSettings;
+  dataDirectoryPath?: string;
+  shutdownDirectory?: string;
+  recordingDirectory?: string;
+  logsDirectory?: string;
 }
 
 const defaultConfig: AppConfig = {
@@ -98,5 +102,82 @@ export class ConfigManager {
       isConfigured: !!licenseKey,
       updatedAt: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Get data directory path
+   */
+  getDataDirectoryPath(): string | undefined {
+    return this.get('dataDirectoryPath');
+  }
+
+  /**
+   * Set data directory path
+   */
+  setDataDirectoryPath(path: string): void {
+    this.set('dataDirectoryPath', path);
+  }
+
+  /**
+   * Clear data directory path (reset to default)
+   */
+  clearDataDirectoryPath(): void {
+    this.store.delete('dataDirectoryPath');
+  }
+
+  /**
+   * Get shutdown directory
+   */
+  getShutdownDirectory(): string | undefined {
+    return this.store.get('shutdownDirectory') as string | undefined;
+  }
+
+  /**
+   * Set shutdown directory
+   */
+  setShutdownDirectory(path: string): void {
+    this.set('shutdownDirectory', path);
+  }
+
+  /**
+   * Get recording directory
+   */
+  getRecordingDirectory(): string | undefined {
+    return this.store.get('recordingDirectory') as string | undefined;
+  }
+
+  /**
+   * Set recording directory
+   */
+  setRecordingDirectory(path: string): void {
+    this.set('recordingDirectory', path);
+  }
+
+  /**
+   * Get logs directory
+   */
+  getLogsDirectory(): string | undefined {
+    return this.store.get('logsDirectory') as string | undefined;
+  }
+
+  /**
+   * Set logs directory
+   */
+  setLogsDirectory(path: string): void {
+    this.set('logsDirectory', path);
+  }
+
+  /**
+   * Get current language
+   */
+  getCurrentLanguage(): string | undefined {
+    return this.store.get('language') as string | undefined;
+  }
+
+  /**
+   * Set current language
+   */
+  setCurrentLanguage(language: string): void {
+    this.store.set('language', language);
   }
 }

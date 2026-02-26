@@ -1,9 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { spawn } from 'child_process';
+import { exec, spawn } from 'child_process';
+import { promisify } from 'util';
 import log from 'electron-log';
 import { Region, RegionDetector } from './region-detector.js';
+
+const execAsync = promisify(exec);
 
 /**
  * LLM prompt configuration
@@ -26,7 +29,7 @@ export interface ApiCallResult {
 
 /**
  * LlmInstallationManager handles LLM prompt loading and Claude API calls
- * for the progressive installation wizard.
+ * for progressive installation wizard.
  *
  * Delegates to Claude CLI instead of managing API keys directly.
  */
@@ -42,7 +45,7 @@ export class LlmInstallationManager {
 
   /**
    * Load LLM prompt based on region from manifest
-   * @param manifestPath Path to the manifest file
+   * @param manifestPath Path to manifest file
    * @param overrideRegion Optional region override ('cn' or 'international'). If not provided, uses auto-detected region.
    */
   async loadPrompt(manifestPath: string, overrideRegion?: 'cn' | 'international'): Promise<LlmPromptConfig> {
@@ -120,19 +123,82 @@ export class LlmInstallationManager {
       // Construct command with file name and instruction
       const prompt = `"Follow ${fileName} to install hagicode desktop and follow the instructions in it."`;
 
-      // Spawn claude process across all platforms
-      try {
-        log.info('[LlmInstallationManager] Command:', `claude "${prompt}"`);
-        spawn('claude', [prompt], {
-          detached: true,
-          stdio: 'ignore',
-          cwd: promptDir,
-          shell: true,
-        }).unref();
-        terminalFound = true;
-        log.info('[LlmInstallationManager] Spawned claude successfully');
-      } catch (err) {
-        log.error('[LlmInstallationManager] Failed to spawn claude:', err);
+      if (platform === 'win32') {
+        // Windows: Directly spawn claude process
+        try {
+          log.info('[LlmInstallationManager] Windows command:', `claude "${prompt}"`);
+          spawn('claude', [prompt], {
+            detached: true,
+            stdio: 'ignore',
+            cwd: promptDir,
+            shell: true,
+          }).unref();
+          terminalFound = true;
+          log.info('[LlmInstallationManager] Spawned Windows terminal successfully');
+        } catch (err) {
+          log.error('[LlmInstallationManager] Failed to spawn Windows terminal:', err);
+        }
+      } else if (platform === 'darwin') {
+        // macOS: Open new Terminal window and run claude with prompt
+        try {
+          const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+          constructedCommand = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
+          log.info('[LlmInstallationManager] macOS command:', constructedCommand);
+          await execAsync(constructedCommand);
+          terminalFound = true;
+          log.info('[LlmInstallationManager] Opened macOS terminal successfully');
+        } catch (err) {
+          log.error('[LlmInstallationManager] Failed to open macOS terminal:', err);
+        }
+      } else {
+        // Linux: Execute claude via terminal emulator
+        // Detect desktop environment and prioritize appropriate terminal
+        const desktopSession = process.env.DESKTOP_SESSION || process.env.XDG_CURRENT_DESKTOP || '';
+
+        // Common terminal emulators ordered by priority
+        const terminals = [
+          'gnome-terminal', // GNOME
+          'konsole',        // KDE
+          'xfce4-terminal', // XFCE
+          'xterm',          // Fallback
+        ];
+
+        // Reorder terminals based on desktop environment
+        let prioritizedTerminals = [...terminals];
+        if (desktopSession.toLowerCase().includes('kde') || desktopSession.toLowerCase().includes('plasma')) {
+          prioritizedTerminals = ['konsole', 'gnome-terminal', 'xfce4-terminal', 'xterm'];
+        } else if (desktopSession.toLowerCase().includes('gnome')) {
+          prioritizedTerminals = ['gnome-terminal', 'konsole', 'xfce4-terminal', 'xterm'];
+        } else if (desktopSession.toLowerCase().includes('xfce')) {
+          prioritizedTerminals = ['xfce4-terminal', 'gnome-terminal', 'konsole', 'xterm'];
+        }
+
+        log.info(`[LlmInstallationManager] Terminal priority order: ${prioritizedTerminals.join(', ')}`);
+
+        // Use first available terminal
+        for (const term of prioritizedTerminals) {
+          try {
+            // Test if the terminal is available
+            await execAsync(`which ${term}`);
+            log.info(`[LlmInstallationManager] Using terminal: ${term}`);
+
+            const command = `claude ${prompt}`;
+            log.info('[LlmInstallationManager] Executing:', command);
+
+            spawn(term, ['-e', command], {
+              detached: true,
+              stdio: 'ignore',
+              cwd: promptDir,
+              env: { ...process.env, PATH: process.env.PATH },
+            }).unref();
+            terminalFound = true;
+            log.info('[LlmInstallationManager] Opened Linux terminal successfully');
+            break;
+          } catch (err) {
+            log.warn(`[LlmInstallationManager] Failed to open ${term}:`, err);
+            continue;
+          }
+        }
       }
 
       // Save debug state if debug mode is enabled

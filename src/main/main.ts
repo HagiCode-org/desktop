@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
@@ -21,6 +21,24 @@ import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
+import {
+  registerWindowHandlers,
+  registerServerHandlers,
+  registerWebServiceHandlers,
+  registerVersionHandlers,
+  registerDependencyHandlers,
+  registerPackageSourceHandlers,
+  registerLicenseHandlers,
+  registerOnboardingHandlers,
+  registerDataDirectoryHandlers,
+  registerRegionHandlers,
+  registerLlmHandlers,
+  registerRssHandlers,
+  registerDebugHandlers,
+  registerViewHandlers,
+} from './ipc/handlers/index.js';
+import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
+import { ConfigManager as YamlConfigManager } from './config-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -85,6 +103,8 @@ let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
 let agentCliManager: AgentCliManager | null = null;
+let pathManager: PathManager | null = null;
+let yamlConfigManager: YamlConfigManager | null = null;
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -1949,6 +1969,39 @@ app.whenReady().then(async () => {
   const serverConfig = configManager.getServerConfig();
   serverClient = new HagicoServerClient(serverConfig);
 
+  // Initialize PathManager
+  pathManager = PathManager.getInstance();
+
+  // Load data directory with fallback: YAML → electron-store → default
+  let dataDirectoryPath = configManager.getDataDirectoryPath();
+  if (!dataDirectoryPath) {
+    // Try to read from YAML config first
+    try {
+      const yamlDataDir = await pathManager.readDataDirFromYamlConfig();
+      if (yamlDataDir) {
+        dataDirectoryPath = yamlDataDir;
+        log.info('[Config] Loaded data directory from YAML config:', dataDirectoryPath);
+      } else {
+        // Use default path
+        dataDirectoryPath = pathManager.getDefaultDataDirectory();
+        log.info('[Config] No data directory config found, using default:', dataDirectoryPath);
+      }
+    } catch (error) {
+      log.warn('[Config] Failed to read YAML config, using default:', error);
+      dataDirectoryPath = pathManager.getDefaultDataDirectory();
+    }
+  } else {
+    log.info('[Config] Loaded data directory from electron-store:', dataDirectoryPath);
+  }
+
+  // Set the data directory in PathManager
+  if (dataDirectoryPath) {
+    pathManager.setDataDirectory(dataDirectoryPath);
+  }
+
+  // Initialize YamlConfigManager
+  yamlConfigManager = new YamlConfigManager();
+
   // Initialize Region Detector
   regionDetector = new RegionDetector(configManager.getStore() as unknown as Store<Record<string, unknown>>);
   const detection = regionDetector.detectWithCache();
@@ -1963,6 +2016,22 @@ app.whenReady().then(async () => {
     port: 36556, // Default port for embedded web service
   };
   webServiceManager = new PCodeWebServiceManager(webServiceConfig);
+
+  // Set webServiceManager reference for tray
+  setWebServiceManagerRef(webServiceManager);
+
+  // Log startup configuration
+  log.info('=== Application Starting ===');
+  log.info(`[Config] Server host: ${serverConfig.host}`);
+  log.info(`[Config] Server port: ${serverConfig.port}`);
+  log.info(`[Config] Web service host: localhost`);
+  log.info(`[Config] Web service port: 36556`);
+  log.info(`[Config] Data directory path: ${dataDirectoryPath || 'Not set (will use default)'}`);
+  log.info(`[Config] Shutdown directory: ${configManager.getShutdownDirectory() || 'Not set'}`);
+  log.info(`[Config] Recording directory: ${configManager.getRecordingDirectory() || 'Not set'}`);
+  log.info(`[Config] Logs directory: ${configManager.getLogsDirectory() || 'Not set'}`);
+  log.info(`[Config] Current language: ${configManager.getCurrentLanguage() || 'Not set'}`);
+  log.info('======================================');
 
   // Set webServiceManager reference for tray
   setWebServiceManagerRef(webServiceManager);
@@ -2016,14 +2085,183 @@ app.whenReady().then(async () => {
   );
   log.info('[App] LLM Installation Manager initialized');
 
+// Data Directory IPC Handlers
+ipcMain.handle('data-directory:open-picker', async () => {
+  try {
+    if (!mainWindow) {
+      return {
+        canceled: true,
+        error: 'Main window not available'
+      };
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Data Directory',
+      properties: ['openDirectory', 'createDirectory'],
+      buttonLabel: 'Select Folder',
+    });
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    return {
+      canceled: false,
+      filePath: result.filePaths[0]
+    };
+  } catch (error) {
+    console.error('[Data Directory] Failed to open directory picker:', error);
+    return {
+      canceled: true,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('data-directory:get', async () => {
+  try {
+    const currentPath = pathManager?.getDataDirectory() || '';
+    return currentPath;
+  } catch (error) {
+    console.error('[Data Directory] Failed to get data directory:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('data-directory:set', async (_, dataDirPath: string) => {
+  try {
+    if (!pathManager || !yamlConfigManager) {
+      throw new Error('PathManager or YamlConfigManager not initialized');
+    }
+
+    // Validate the path first
+    const validation = await pathManager.validatePath(dataDirPath);
+    if (!validation.isValid) {
+      log.warn('[Data Directory] Validation failed:', validation.message);
+      return {
+        success: false,
+        error: validation.message
+      };
+    }
+    log.info('[Data Directory] Path validation passed');
+
+    // Save to electron-store
+    configManager.setDataDirectoryPath(dataDirPath);
+    log.info('[Data Directory] Saved to electron-store:', dataDirPath);
+
+    // Update path manager
+    pathManager.setDataDirectory(dataDirPath);
+    log.info('[Data Directory] Updated PathManager memory state');
+
+    // Sync to appsettings.yml for all installed versions
+    try {
+      const updatedVersions = await yamlConfigManager.updateAllDataDirs(dataDirPath);
+      log.info('[Data Directory] Configuration sync completed:');
+      log.info('[Data Directory]   - Source: electron-store');
+      log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
+      log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
+    } catch (error) {
+      log.error('[Data Directory] Failed to update appsettings.yml:', error);
+      // Don't fail the operation, just log warning
+      log.warn('[Data Directory] Operation completed with partial sync (electron-store updated, YAML sync failed)');
+    }
+
+    log.info('[Data Directory] Data directory configuration completed successfully');
+
+    return { success: true };
+  } catch (error) {
+    console.error('[Data Directory] Failed to set data directory:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('data-directory:validate', async (_, dataDirPath: string) => {
+  try {
+    if (!pathManager) {
+      throw new Error('PathManager not initialized');
+    }
+
+    const validation = await pathManager.validatePath(dataDirPath);
+    return {
+      isValid: validation.isValid,
+      message: validation.message,
+      warnings: validation.warnings || []
+    };
+  } catch (error) {
+    console.error('[Data Directory] Failed to validate path:', error);
+    return {
+      isValid: false,
+      message: error instanceof Error ? error.message : String(error),
+      warnings: []
+    };
+  }
+});
+
+ipcMain.handle('data-directory:get-storage-info', async (_, dataDirPath?: string) => {
+  try {
+    if (!pathManager) {
+      throw new Error('PathManager not initialized');
+    }
+
+    const targetPath = dataDirPath || pathManager.getDataDirectory();
+    const storageInfo = await pathManager.getStorageInfo(targetPath);
+    return storageInfo;
+  } catch (error) {
+    console.error('[Data Directory] Failed to get storage info:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('data-directory:restore-default', async () => {
+  try {
+    if (!pathManager || !yamlConfigManager) {
+      throw new Error('PathManager or YamlConfigManager not initialized');
+    }
+
+    // Clear custom path from electron-store
+    configManager.clearDataDirectoryPath();
+    log.info('[Data Directory] Cleared custom path from electron-store');
+
+    // Reset to default
+    const defaultPath = pathManager.getDefaultDataDirectory();
+    pathManager.setDataDirectory(defaultPath);
+    log.info('[Data Directory] Reset to default path:', defaultPath);
+
+    // Sync to appsettings.yml for all installed versions
+    try {
+      const updatedVersions = await yamlConfigManager.updateAllDataDirs(defaultPath);
+      log.info('[Data Directory] Configuration sync completed:');
+      log.info('[Data Directory]   - Action: Restore to default');
+      log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
+      log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
+    } catch (error) {
+      log.error('[Data Directory] Failed to update appsettings.yml:', error);
+      // Don't fail the operation, just log warning
+      log.warn('[Data Directory] Operation completed with partial sync (default path set in memory, YAML sync failed)');
+    }
+
+    log.info('[Data Directory] Default data directory restored successfully');
+
+    return { success: true, path: defaultPath };
+  } catch (error) {
+    console.error('[Data Directory] Failed to restore default:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
   // Initialize RSS Feed Manager
-  rssFeedManager = RSSFeedManager.getInstance(
-    {
-      feedUrl: DEFAULT_RSS_FEED_URL,
-      refreshInterval: 24 * 60 * 60 * 1000, // 24 hours
-      maxItems: 20,
-      storeKey: 'rssFeed',
-    },
+  rssFeedManager = RSSFeedManager.getInstance({
+    feedUrl: DEFAULT_RSS_FEED_URL,
+    refreshInterval: 24 * 60 * 60 * 1000, // 24 hours
+    maxItems: 20,
+    storeKey: 'rssFeed',
+  },
     configManager.getStore() as unknown as Store
   );
   log.info('[App] RSS Feed Manager initialized');

@@ -3,13 +3,14 @@
     "title": "Settings",
     "tabs": {
       "onboarding": "Onboarding",
-      "debug": "Debug"
+      "debug": "Debug",
+      "dataDirectory": "Data Directory"
     },
     "onboarding": {
       "title": "Onboarding",
-      "description": "Re-run the first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start the service.",
+      "description": "Re-run first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start service.",
       "restartWizard": "Restart Wizard",
-      "restartWizardDescription": "Re-run the first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start the service.",
+      "restartWizardDescription": "Re-run first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start service.",
       "restartButton": "Restart Wizard",
       "resetting": "Resetting...",
       "resetSuccess": "Wizard has been reset",
@@ -23,6 +24,46 @@
       "ignoreDependencyCheckEnabled": "Ignore dependency check enabled",
       "ignoreDependencyCheckDisabled": "Ignore dependency check disabled",
       "toggleError": "Toggle failed: {{error}}"
+    },
+    "dataDirectory": {
+      "title": "Data Directory",
+      "description": "Configure and manage the data storage location for Hagicode Server.",
+      "path": {
+        "label": "Data Directory Location",
+        "placeholder": "Enter the full path to the data directory"
+      },
+      "errors": {
+        "invalidPath": "Please select a valid data directory path before saving."
+      },
+      "messages": {
+        "saveSuccess": "Data directory saved successfully",
+        "saveFailed": "Failed to save data directory",
+        "restoreSuccess": "Default data directory restored",
+        "restoreFailed": "Failed to restore default data directory"
+      },
+      "actions": {
+        "browse": "Browse...",
+        "scanning": "Scanning...",
+        "refreshing": "Refreshing...",
+        "refresh": "Refresh",
+        "save": "Save Changes",
+        "saving": "Saving...",
+        "restoreDefault": "Restore Default"
+      },
+      "storage": {
+        "title": "Storage Usage",
+        "used": "Used",
+        "usedPercent": "{{percent}}% used",
+        "available": "{{available}} available",
+        "noData": "No data yet"
+      },
+      "validation": {
+        "valid": "Path is valid and writable",
+        "invalid": "Path is invalid. Please check the error message below."
+      },
+      "notes": {
+        "absolutePathOnly": "Note: Only absolute paths are supported. Relative paths are not allowed."
+      }
     }
   },
   "footer": {
@@ -31,7 +72,7 @@
   },
   "quickStart": {
     "title": "Quick Start",
-    "description": "Install the embedded web service package and start managing your local PCode instance."
+    "description": "Install embedded web service package and start managing your local PCode instance."
   },
   "secure": {
     "title": "Secure",
@@ -46,7 +87,7 @@
     "description": "Manage embedded web service packages and system dependencies",
     "tips": {
       "title": "Tips",
-      "description": "Keep your dependencies up to date for the best performance and security."
+      "description": "Keep your dependencies up to date for best performance and security."
     },
     "noPackageInstalled": "No package installed",
     "installedVersion": "Installed Version",
@@ -80,7 +121,7 @@
     "notInstalled": "Not Installed",
     "dependencies": "Dependencies",
     "confirmUninstall": "Are you sure you want to uninstall this version?",
-    "confirmReinstall": "Are you sure you want to reinstall this package? This will delete the cache and installed version, then download and install again.",
+    "confirmReinstall": "Are you sure you want to reinstall this package? This will delete cache and installed version, then download and install again.",
     "reinstall": "Reinstall",
     "noVersionsAvailable": "No versions available",
     "noVersionsInstalled": {
@@ -129,7 +170,7 @@
     },
     "dialog": {
       "reinstallTitle": "Confirm Reinstallation",
-      "reinstallDescription": "This will delete the cache and installed version, then download and install again. Do you want to continue?",
+      "reinstallDescription": "This will delete cache and installed version, then download and install again. Do you want to continue?",
       "uninstallTitle": "Confirm Uninstallation",
       "uninstallDescription": "Are you sure you want to uninstall this version? This action cannot be undone.",
       "cancel": "Cancel",
@@ -142,7 +183,7 @@
       "callButton": "Call Claude for Installation Help",
       "calling": "Calling Claude API...",
       "completed": "Claude API call completed successfully",
-      "completedHint": "Please check the terminal output for installation instructions.",
+      "completedHint": "Please check terminal output for installation instructions.",
       "failed": "Claude API call failed",
       "retry": "Retry",
       "region": {
@@ -152,7 +193,7 @@
     },
     "dependencyInfo": {
       "title": "Dependency Requirements",
-      "description": "These are the dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
+      "description": "These are dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
       "required": "Required",
       "requiredVersion": "Required version:"
     }

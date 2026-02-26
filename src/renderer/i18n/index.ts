@@ -48,6 +48,15 @@ i18n
         'agent-cli': enUSAgentCli,
       },
     },
+  })
+  .then(() => {
+    // Log successful initialization for debugging
+    console.log('[i18n] Initialized successfully');
+    console.log('[i18n] Current language:', i18n.language);
+    console.log('[i18n] Available namespaces:', Object.keys(i18n.store.data));
+  })
+  .catch((error) => {
+    console.error('[i18n] Initialization failed:', error);
   });
 
 export default i18n;

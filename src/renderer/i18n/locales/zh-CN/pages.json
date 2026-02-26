@@ -3,7 +3,8 @@
     "title": "设置",
     "tabs": {
       "onboarding": "启动向导",
-      "debug": "调试"
+      "debug": "调试",
+      "dataDirectory": "数据目录"
     },
     "onboarding": {
       "title": "启动向导",
@@ -23,6 +24,46 @@
       "ignoreDependencyCheckEnabled": "已启用忽略依赖检查",
       "ignoreDependencyCheckDisabled": "已禁用忽略依赖检查",
       "toggleError": "切换失败: {{error}}"
+    },
+    "dataDirectory": {
+      "title": "数据目录",
+      "description": "配置和管理 Hagicode Server 的数据存储位置。",
+      "path": {
+        "label": "数据目录位置",
+        "placeholder": "输入数据目录的完整路径"
+      },
+      "errors": {
+        "invalidPath": "请选择有效的数据目录路径后再保存。"
+      },
+      "messages": {
+        "saveSuccess": "数据目录保存成功",
+        "saveFailed": "保存数据目录失败",
+        "restoreSuccess": "默认数据目录已恢复",
+        "restoreFailed": "恢复默认数据目录失败"
+      },
+      "actions": {
+        "browse": "浏览...",
+        "scanning": "扫描中...",
+        "refreshing": "刷新中...",
+        "refresh": "刷新",
+        "save": "保存更改",
+        "saving": "保存中...",
+        "restoreDefault": "恢复默认"
+      },
+      "storage": {
+        "title": "存储使用情况",
+        "used": "已使用",
+        "usedPercent": "已使用 {{percent}}%",
+        "available": "可用 {{available}}",
+        "noData": "暂无数据"
+      },
+      "validation": {
+        "valid": "路径有效且可写",
+        "invalid": "路径无效。请检查下方的错误信息。"
+      },
+      "notes": {
+        "absolutePathOnly": "注意：仅支持绝对路径。不支持相对路径。"
+      }
     }
   },
   "footer": {

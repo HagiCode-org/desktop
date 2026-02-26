@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnboardingSettings } from './settings/OnboardingSettings';
 import { DebugSettings } from './settings/DebugSettings';
+import { DataDirectorySettings } from './settings/DataDirectorySettings';
 
 export default function SettingsPage() {
   const { t } = useTranslation('pages');
@@ -29,6 +30,12 @@ export default function SettingsPage() {
             >
               {t('settings.tabs.debug')}
             </TabsTrigger>
+            <TabsTrigger
+              value="dataDirectory"
+              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.dataDirectory')}
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 min-w-0">
@@ -38,6 +45,10 @@ export default function SettingsPage() {
 
             <TabsContent value="debug" className="mt-0">
               <DebugSettings />
+            </TabsContent>
+
+            <TabsContent value="dataDirectory" className="mt-0">
+              <DataDirectorySettings />
             </TabsContent>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { app } from 'electron';
-import path from 'node:path';
-import fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
+import yaml from 'js-yaml';
 import log from 'electron-log';
 
 /**
@@ -26,13 +28,34 @@ export interface AppPaths {
 }
 
 /**
- * PathManager provides centralized path management for the application.
+ * Validation result interface for path validation
+ */
+export interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  warnings?: string[];
+}
+
+/**
+ * Storage information interface
+ */
+export interface StorageInfo {
+  used: number; // bytes
+  total: number; // bytes
+  available: number; // bytes
+  usedPercentage: number; // 0-100
+}
+
+/**
+ * PathManager provides centralized path management for application.
  * All paths should be retrieved from this manager to ensure consistency.
  */
 export class PathManager {
   private static instance: PathManager | null = null;
   private paths: AppPaths;
   private userDataPath: string;
+  private customDataDirectory: string | null = null;
+  private static readonly MIN_DISK_SPACE = 1024 * 1024 * 1024; // 1GB in bytes
 
   private constructor() {
     this.userDataPath = app.getPath('userData');
@@ -82,7 +105,7 @@ export class PathManager {
   /**
    * Get installed package path for a specific platform
    * @param platform - Platform identifier (e.g., 'linux-x64', 'win-x64')
-   * @returns Path to the installed package directory
+   * @returns Path to installed package directory
    * @deprecated Use getInstalledVersionPath instead with version ID
    */
   getInstalledPath(platform: Platform): string {
@@ -92,9 +115,9 @@ export class PathManager {
 
   /**
    * Get appsettings.yml path for an installed version
-   * Config is stored in the installed version's config directory
+   * Config is stored in installed version's config directory
    * @param versionId - Version ID (e.g., "hagicode-0.1.0-alpha.9-linux-x64-nort")
-   * @returns Path to appsettings.yml in the version's config directory
+   * @returns Path to appsettings.yml in version's config directory
    */
   getAppSettingsPath(versionId: string): string {
     return path.join(this.paths.appsInstalled, versionId, 'config', 'appsettings.yml');
@@ -119,11 +142,320 @@ export class PathManager {
   }
 
   /**
-   * Get data directory path
-   * @returns Path to the data directory
+   * Get data directory path (legacy method)
+   * @returns Path to data directory
    */
   getDataDirPath(): string {
     return this.paths.appsData;
+  }
+
+  /**
+   * Read data directory path from YAML config (appsettings.yml)
+   * @param versionId - Version ID to read config from (optional, reads from any available if not specified)
+   * @returns Data directory path from YAML config, or null if not found/invalid
+   */
+  async readDataDirFromYamlConfig(versionId?: string): Promise<string | null> {
+    try {
+      let configPath: string | null = null;
+
+      if (versionId) {
+        // Read from specific version's config
+        configPath = this.getAppSettingsPath(versionId);
+      } else {
+        // Try to find any installed version's config
+        const installedDir = this.paths.appsInstalled;
+        try {
+          const versionDirs = await fs.readdir(installedDir);
+          // Sort to get most recent version first
+          versionDirs.sort((a, b) => b.localeCompare(a));
+
+          for (const versionDir of versionDirs) {
+            const versionPath = path.join(installedDir, versionDir);
+            const stats = await fs.stat(versionPath);
+            if (stats.isDirectory()) {
+              configPath = this.getAppSettingsPath(versionDir);
+              break;
+            }
+          }
+        } catch {
+          // No installed versions or can't read directory
+          log.warn('[PathManager] No installed versions found for YAML config read');
+        }
+      }
+
+      if (!configPath) {
+        log.info('[PathManager] No YAML config path found');
+        return null;
+      }
+
+      // Read and parse YAML file
+      const content = await fs.readFile(configPath, 'utf-8');
+      const config = yaml.load(content) as { DataDir?: string } | null;
+
+      if (!config || typeof config !== 'object') {
+        log.warn('[PathManager] Invalid YAML config format:', configPath);
+        return null;
+      }
+
+      const dataDir = config.DataDir;
+      if (!dataDir || typeof dataDir !== 'string') {
+        log.info('[PathManager] No DataDir found in YAML config:', configPath);
+        return null;
+      }
+
+      log.info('[PathManager] Read DataDir from YAML config:', configPath, '->', dataDir);
+      return dataDir;
+    } catch (error) {
+      log.warn('[PathManager] Failed to read DataDir from YAML config:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the actual data directory path (supports custom configuration)
+   * @returns The absolute path to the data directory
+   */
+  getDataDirectory(): string {
+    return this.customDataDirectory || this.paths.appsData;
+  }
+
+  /**
+   * Get the default data directory path
+   * @returns The default absolute path to the data directory
+   */
+  getDefaultDataDirectory(): string {
+    return path.join(this.userDataPath, 'apps', 'data');
+  }
+
+  /**
+   * Set a custom data directory path
+   * @param customPath - The absolute path to the data directory
+   * @throws Error if the path is invalid
+   */
+  setDataDirectory(customPath: string): void {
+    const validation = this.validatePathSync(customPath);
+    if (!validation.isValid) {
+      throw new Error(`Invalid data directory: ${validation.message}`);
+    }
+    this.customDataDirectory = customPath;
+    this.paths.appsData = customPath;
+    log.info('[PathManager] Data directory updated to:', customPath);
+  }
+
+  /**
+   * Validate a path for use as data directory (synchronous version)
+   * @param dirPath - The path to validate
+   * @returns Validation result with status and messages
+   */
+  validatePathSync(dirPath: string): ValidationResult {
+    const warnings: string[] = [];
+
+    // 1. Validate absolute path (requirement: only absolute paths allowed)
+    if (!path.isAbsolute(dirPath)) {
+      return {
+        isValid: false,
+        message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
+      };
+    }
+
+    // 2. Validate path format (invalid characters)
+    const invalidChars = /[<>:"|?*]/;
+    if (invalidChars.test(dirPath)) {
+      return {
+        isValid: false,
+        message: 'Path contains invalid characters: < > : " | ? *',
+      };
+    }
+
+    // Normalize path for cross-platform compatibility
+    const normalizedPath = path.normalize(dirPath);
+
+    // 3. Check if path exists, try to create if not
+    let pathExists = false;
+    try {
+      fsSync.accessSync(normalizedPath);
+      pathExists = true;
+    } catch {
+      // Path doesn't exist, try to create it
+      try {
+        fsSync.mkdirSync(normalizedPath, { recursive: true });
+        log.info('[PathManager] Created data directory:', normalizedPath);
+        pathExists = true;
+      } catch (error) {
+        return {
+          isValid: false,
+          message: `Cannot create directory at ${normalizedPath}: ${error}`,
+        };
+      }
+    }
+
+    // 4. Check writability if path exists
+    if (pathExists) {
+      const testFile = path.join(normalizedPath, '.write-test');
+      try {
+        fsSync.writeFileSync(testFile, 'test', { flag: 'wx' });
+        fsSync.unlinkSync(testFile);
+      } catch (error) {
+        return {
+          isValid: false,
+          message: `No write permission for directory ${normalizedPath}: ${error}`,
+        };
+      }
+
+      // 5. Check disk space (minimum 1GB) - sync version with limited info
+      try {
+        const stats = fsSync.statSync(normalizedPath);
+        warnings.push('Note: Full disk space check requires async validation');
+      } catch (error) {
+        // Continue without disk space check
+        log.warn('[PathManager] Could not check disk space:', error);
+      }
+    }
+
+    return {
+      isValid: true,
+      message: 'Path is valid and writable',
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+
+  /**
+   * Validate a path for use as data directory (asynchronous version)
+   * @param dirPath - The path to validate
+   * @returns Validation result with status and messages
+   */
+  async validatePath(dirPath: string): Promise<ValidationResult> {
+    const warnings: string[] = [];
+
+    // 1. Validate absolute path (requirement: only absolute paths allowed)
+    if (!path.isAbsolute(dirPath)) {
+      return {
+        isValid: false,
+        message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
+      };
+    }
+
+    // 2. Validate path format (invalid characters)
+    const invalidChars = /[<>:"|?*]/;
+    if (invalidChars.test(dirPath)) {
+      return {
+        isValid: false,
+        message: 'Path contains invalid characters: < > : " | ? *',
+      };
+    }
+
+    // Normalize path for cross-platform compatibility
+    const normalizedPath = path.normalize(dirPath);
+
+    // 3. Check if path exists, try to create if not
+    let pathExists = false;
+    try {
+      await fs.access(normalizedPath);
+      pathExists = true;
+    } catch {
+      // Path doesn't exist, try to create it
+      try {
+        await fs.mkdir(normalizedPath, { recursive: true });
+        log.info('[PathManager] Created data directory:', normalizedPath);
+        pathExists = true;
+      } catch (error) {
+        return {
+          isValid: false,
+          message: `Cannot create directory at ${normalizedPath}: ${error}`,
+        };
+      }
+    }
+
+    // 4. Check writability if path exists
+    if (pathExists) {
+      const testFile = path.join(normalizedPath, '.write-test');
+      try {
+        await fs.writeFile(testFile, 'test', { flag: 'wx' });
+        await fs.unlink(testFile);
+      } catch (error) {
+        return {
+          isValid: false,
+          message: `No write permission for directory ${normalizedPath}: ${error}`,
+        };
+      }
+
+      // 5. Check disk space (minimum 1GB)
+      try {
+        const stats = await fs.stat(normalizedPath);
+        warnings.push('Note: Full disk space check may not be available on all platforms');
+      } catch (error) {
+        // Disk space check is not critical, just log warning
+        log.warn('[PathManager] Could not check disk space:', error);
+        warnings.push('Could not verify available disk space.');
+      }
+    }
+
+    return {
+      isValid: true,
+      message: 'Path is valid and writable',
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+
+  /**
+   * Get storage information for the data directory
+   * @param dirPath - The directory path to check
+   * @returns Storage information
+   */
+  async getStorageInfo(dirPath: string): Promise<StorageInfo> {
+    let used = 0;
+    let total = 0;
+    let available = 0;
+
+    try {
+      // Calculate directory size
+      used = await this.calculateDirectorySize(dirPath);
+
+      // Get disk space information (using statfs for available space)
+      const stats = await fs.stat(dirPath);
+      // Use size as approximate total
+      total = stats.size || used * 2; // Approximate
+      available = Math.max(0, total - used);
+    } catch (error) {
+      log.error('[PathManager] Failed to get storage info:', error);
+    }
+
+    const usedPercentage = total > 0 ? (used / total) * 100 : 0;
+
+    return {
+      used,
+      total,
+      available,
+      usedPercentage,
+    };
+  }
+
+  /**
+   * Calculate the size of a directory recursively
+   * @param dirPath - The directory path
+   * @returns Total size in bytes
+   */
+  private async calculateDirectorySize(dirPath: string): Promise<number> {
+    let totalSize = 0;
+
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+
+        if (entry.isDirectory()) {
+          totalSize += await this.calculateDirectorySize(fullPath);
+        } else if (entry.isFile()) {
+          const stats = await fs.stat(fullPath);
+          totalSize += stats.size;
+        }
+      }
+    } catch (error) {
+      log.warn('[PathManager] Failed to calculate directory size for', dirPath, error);
+    }
+
+    return totalSize;
   }
 
   /**
@@ -217,7 +549,7 @@ export class PathManager {
   /**
    * Get executable path for a platform
    * @param platform - Platform identifier
-   * @returns Path to the executable directory
+   * @returns Path to executable directory
    * @deprecated Use getInstalledVersionPath instead with version ID
    */
   getExecutablePath(platform: Platform): string {

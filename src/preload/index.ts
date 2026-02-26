@@ -1,5 +1,96 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Validation result interface
+export interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  warnings?: string[];
+}
+
+// Storage information interface
+export interface StorageInfo {
+  used: number;
+  total: number;
+  available: number;
+  usedPercentage: number;
+}
+
+// ElectronAPI interface combines all individual interfaces defined above
+// The electronAPI constant below implements this interface
+interface ElectronAPI {
+  getAppVersion: () => Promise<string>;
+  showWindow: () => Promise<void>;
+  hideWindow: () => Promise<void>;
+  openHagicodeInApp: (url: string) => Promise<void>;
+  onServerStatusChange: (callback: (status: any) => void) => () => void;
+
+  // Server Control APIs
+  startServer: () => Promise<void>;
+  stopServer: () => Promise<void>;
+  getServerStatus: () => Promise<any>;
+
+  // Web Service Management APIs
+  getWebServiceStatus: () => Promise<any>;
+  startWebService: (force?: boolean) => Promise<void>;
+  stopWebService: () => Promise<void>;
+  restartWebService: () => Promise<void>;
+  getWebServiceVersion: () => Promise<string>;
+  getWebServiceUrl: () => Promise<string>;
+  setWebServiceConfig: (config: any) => Promise<void>;
+  onWebServiceStatusChange: (callback: (status: any) => void) => () => void;
+
+  // Package Management APIs
+  checkPackageInstallation: () => Promise<void>;
+  installWebServicePackage: (version: string) => Promise<void>;
+  getAvailableVersions: () => Promise<string[]>;
+  getPlatform: () => Promise<string>;
+  onPackageInstallProgress: (callback: (progress: any) => void) => () => void;
+
+  // Package Source Management APIs
+  createPackageSource: (config: any) => Promise<void>;
+  getAvailableVersionsFromSource: () => Promise<string[]>;
+  installPackageFromSource: (versionIdentifier: string) => Promise<void>;
+  validateSourceConfig: (config: any) => Promise<ValidationResult>;
+  onConfigChange: (callback: (config: any) => void) => () => void;
+
+  // Package Source Configuration APIs
+  packageSource: {
+    getConfig: () => Promise<any>;
+    getAllConfigs: () => Promise<any[]>;
+    saveConfig: (config: any) => Promise<boolean>;
+    switchSource: (sourceId: string) => Promise<void>;
+    removeSource: (sourceId: string) => Promise<boolean>;
+    validateConfig: (config: any) => Promise<ValidationResult>;
+    scanFolder: (folderPath: string) => Promise<any>;
+    fetchGithub: (config: any) => Promise<any>;
+    fetchHttpIndex: (config: any) => Promise<any>;
+    getCurrentConfig: () => Promise<string | null>;
+  };
+
+  // Preset Management APIs
+  presetFetch: () => Promise<void>;
+  presetRefresh: () => Promise<void>;
+  presetClearCache: () => Promise<void>;
+  presetGetProvider: (providerId: string) => Promise<any>;
+  presetGetAllProviders: () => Promise<any[]>;
+  presetGetCacheStats: () => Promise<any>;
+
+  // Data Directory Configuration APIs
+  dataDirectory: {
+    get: () => Promise<string>;
+    set: (path: string) => Promise<{ success: boolean; error?: string }>;
+    validate: (path: string) => Promise<ValidationResult>;
+    getStorageInfo: (path?: string) => Promise<StorageInfo>;
+    restoreDefault: () => Promise<{ success: boolean; path: string }>;
+    openPicker: () => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
+  };
+
+  // Dependency Management APIs
+  checkDependencies: () => Promise<any>;
+  installDependency: (dependencyType: string) => Promise<void>;
+  onDependencyStatusChange: (callback: (dependencies: any) => void) => () => void;
+}
+
 const electronAPI = {
   getAppVersion: () => ipcRenderer.invoke('app-version'),
   showWindow: () => ipcRenderer.invoke('show-window'),
@@ -312,6 +403,16 @@ const electronAPI = {
   presetGetProvider: (providerId: string) => ipcRenderer.invoke('preset:get-provider', providerId),
   presetGetAllProviders: () => ipcRenderer.invoke('preset:get-all-providers'),
   presetGetCacheStats: () => ipcRenderer.invoke('preset:get-cache-stats'),
+
+  // Data Directory Configuration APIs
+  dataDirectory: {
+    get: () => ipcRenderer.invoke('data-directory:get'),
+    set: (path: string) => ipcRenderer.invoke('data-directory:set', path),
+    validate: (path: string) => ipcRenderer.invoke('data-directory:validate', path),
+    getStorageInfo: (path?: string) => ipcRenderer.invoke('data-directory:get-storage-info', path),
+    restoreDefault: () => ipcRenderer.invoke('data-directory:restore-default'),
+    openPicker: () => ipcRenderer.invoke('data-directory:open-picker'),
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

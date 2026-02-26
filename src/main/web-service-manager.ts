@@ -1435,6 +1435,14 @@ export class PCodeWebServiceManager {
       // Update URLs
       config.Urls = `http://${this.config.host}:${this.config.port}`;
 
+      // Sync data directory path to appsettings.yml
+      // This ensures PCode service uses the configured data directory
+      const dataDir = this.pathManager.getDataDirectory();
+      if (dataDir) {
+        config.DataDir = dataDir;
+        log.info('[WebService] Syncing data directory to config:', dataDir);
+      }
+
       // Ensure directory exists
       const configDir = path.dirname(configPath);
       await fs.mkdir(configDir, { recursive: true });

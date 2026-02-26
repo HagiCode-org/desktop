@@ -166,4 +166,54 @@ export class ConfigManager {
       throw error;
     }
   }
+
+  /**
+   * Update data directory path for all installed versions (sync to appsettings.yml)
+   * @param dataDir - Absolute path to data directory
+   * @returns Array of version IDs that were updated
+   * @throws Error if configuration cannot be updated
+   */
+  async updateAllDataDirs(dataDir: string): Promise<string[]> {
+    const updatedVersions: string[] = [];
+
+    try {
+      // Get list of all installed versions
+      const installedDir = this.pathManager.getPaths().appsInstalled;
+      let versionDirs: string[] = [];
+
+      try {
+        versionDirs = await fs.readdir(installedDir);
+      } catch {
+        // No installed versions
+        return updatedVersions;
+      }
+
+      // Update DataDir in each version's appsettings.yml
+      for (const versionDir of versionDirs) {
+        // Skip if it's not a directory
+        const versionPath = path.join(installedDir, versionDir);
+        try {
+          const stats = await fs.stat(versionPath);
+          if (!stats.isDirectory()) continue;
+        } catch {
+          continue;
+        }
+
+        try {
+          await this.updateDataDir(versionDir, dataDir);
+          updatedVersions.push(versionDir);
+        } catch (error) {
+          log.warn(`[ConfigManager] Failed to update DataDir for version ${versionDir}:`, error);
+          // Continue with other versions
+        }
+      }
+
+      log.info('[ConfigManager] Updated DataDir for versions:', updatedVersions);
+    } catch (error) {
+      log.error('[ConfigManager] Failed to update all DataDirs:', error);
+      throw error;
+    }
+
+    return updatedVersions;
+  }
 }
