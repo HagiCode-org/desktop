@@ -37,7 +37,7 @@ import {
 } from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
-import { InstallationWizard } from './installation-wizard';
+
 
 interface Version {
   id: string;
@@ -115,7 +115,7 @@ export default function VersionManagementPage() {
   const [reinstallDialogOpen, setReinstallDialogOpen] = useState(false);
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   const [pendingVersionId, setPendingVersionId] = useState<string | null>(null);
-  const [llmWizardOpen, setLlmWizardOpen] = useState(false);
+
 
   useEffect(() => {
     fetchAllData();
@@ -514,16 +514,6 @@ export default function VersionManagementPage() {
           </div>
         </div>
 
-        {/* Claude Installation Button */}
-        <div className="mt-4">
-          <button
-            onClick={() => setLlmWizardOpen(true)}
-            className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Bot className="w-4 h-4" />
-            {t('versionManagement.claude.installationButton')}
-          </button>
-        </div>
       </div>
 
       {/* Package Source Selector */}
@@ -1024,14 +1014,6 @@ export default function VersionManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* LLM Installation Wizard Dialog */}
-      {llmWizardOpen && (
-        <InstallationWizard
-          manifestPath="/path/to/manifest.json"
-          onClose={() => setLlmWizardOpen(false)}
-          onComplete={() => setLlmWizardOpen(false)}
-        />
-      )}
     </div>
   );
 }
