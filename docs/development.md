@@ -5,6 +5,8 @@ This document provides detailed information about developing and debugging HagiC
 ## Table of Contents
 
 - [Update Source Configuration](#update-source-configuration)
+- [macOS ARM64 Native Library Requirements](#macos-arm64-native-library-requirements)
+- [Native Library Verification](#native-library-verification)
 - [Development Workflow](#development-workflow)
 - [Environment Variables](#environment-variables)
 - [Debugging](#debugging)
@@ -203,5 +205,7 @@ If the HTTP index source fails:
 ## Additional Resources
 
 - [Azure Storage Sync Configuration](./azure-storage-sync.md)
+- [macOS Native Library Troubleshooting](./macos-native-library-troubleshooting.md)
+- [Channel Testing Guide](./channel-testing-guide.md)
 - [OpenSpec Proposals](../openspec/README.md)
 - [Project README](../README.md)
