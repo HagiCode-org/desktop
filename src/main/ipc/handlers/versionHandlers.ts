@@ -182,10 +182,6 @@ export function registerVersionHandlers(deps: {
 
         const activeVersion = await state.versionManager.getActiveVersion();
         state.mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
-
-        if (result.warning) {
-          state.mainWindow?.webContents.send('version:dependencyWarning', result.warning);
-        }
       }
 
       return result.success;
