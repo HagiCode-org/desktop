@@ -1,19 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AgentCliType, CliDetectionResult } from '../../../types/agent-cli';
+import { AgentCliType } from '../../../types/agent-cli';
 
 interface AgentCliState {
   selectedCliType: AgentCliType | null;
   isSkipped: boolean;
-  cliDetected: boolean;
-  isDetecting: boolean;
   error: string | null;
 }
 
 const initialState: AgentCliState = {
   selectedCliType: null,
   isSkipped: false,
-  cliDetected: false,
-  isDetecting: false,
   error: null,
 };
 
@@ -30,16 +26,8 @@ const agentCliSlice = createSlice({
       state.selectedCliType = null;
       state.isSkipped = true;
     },
-    setDetectionResult: (state, action: PayloadAction<CliDetectionResult>) => {
-      state.cliDetected = action.payload.detected;
-      state.isDetecting = false;
-    },
-    startDetection: (state) => {
-      state.isDetecting = true;
-    },
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
-      state.isDetecting = false;
     },
     resetAgentCliState: () => initialState,
   },
@@ -48,8 +36,6 @@ const agentCliSlice = createSlice({
 export const {
   selectAgentCli,
   skipAgentCli,
-  setDetectionResult,
-  startDetection,
   setError,
   resetAgentCliState,
 } = agentCliSlice.actions;
@@ -60,8 +46,6 @@ export default agentCliSlice.reducer;
 export const selectAgentCliState = (state: { agentCli: AgentCliState }) => state.agentCli;
 export const selectSelectedCliType = (state: { agentCli: AgentCliState }) => state.agentCli.selectedCliType;
 export const selectIsSkipped = (state: { agentCli: AgentCliState }) => state.agentCli.isSkipped;
-export const selectCliDetected = (state: { agentCli: AgentCliState }) => state.agentCli.cliDetected;
-export const selectIsDetecting = (state: { agentCli: AgentCliState }) => state.agentCli.isDetecting;
 export const selectAgentCliError = (state: { agentCli: AgentCliState }) => state.agentCli.error;
 
 // Computed selector: can proceed to next step

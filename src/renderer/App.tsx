@@ -39,8 +39,6 @@ declare global {
       agentCliSave: (data: { cliType: string }) => Promise<{ success: boolean }>;
       agentCliLoad: () => Promise<{ cliType: string | null; isSkipped: boolean; selectedAt: string | null }>;
       agentCliSkip: () => Promise<{ success: boolean }>;
-      agentCliDetect: (cliType: string) => Promise<{ detected: boolean; version?: string; path?: string }>;
-      agentCliGetCommand: (cliType: string) => Promise<string>;
       agentCliGetSelected: () => Promise<string | null>;
     };
   }

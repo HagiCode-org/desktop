@@ -21,6 +21,13 @@ export function LanguageToggle() {
   // Get current language info
   const currentLangInfo = availableLanguages.find(lang => lang.code === currentLanguage);
 
+  // Simplified language label mapping
+  const getSimplifiedLabel = (code: string) => {
+    return code === 'zh-CN' ? '中' : 'EN';
+  };
+
+  const currentLabel = getSimplifiedLabel(currentLanguage);
+
   useState(() => {
     setMounted(true);
   });
@@ -38,7 +45,7 @@ export function LanguageToggle() {
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
           title="切换语言"
         >
-          <span className="text-sm">{currentLangInfo.flag}</span>
+          <span className="text-sm font-medium">{currentLabel}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -48,7 +55,6 @@ export function LanguageToggle() {
             onClick={() => dispatch(changeLanguage(lang.code))}
             className={currentLanguage === lang.code ? 'bg-accent' : ''}
           >
-            <span className="mr-2">{lang.flag}</span>
             <span>{lang.nativeName}</span>
           </DropdownMenuItem>
         ))}

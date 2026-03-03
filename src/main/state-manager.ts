@@ -13,7 +13,7 @@ export interface InstalledVersionInfo {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'installed-incomplete';
+  status: 'installed-ready';
   dependencies: any[];
   isActive: boolean;
 }

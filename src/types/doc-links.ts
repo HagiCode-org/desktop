@@ -31,7 +31,7 @@ export const DOC_LINKS: Record<string, DocLink> = {
   // Agent CLI Documentation
   claudeCodeSetup: {
     id: 'claude-code-setup',
-    url: 'https://docs.hagicode.com/related-software-installation/claude-code/setup-claude-code-with-zai/',
+    url: 'https://docs.hagicode.com/related-software-installation/claude-code/setup-claude-code-with-domestic-providers/',
     label: 'Claude Code Setup Guide',
     category: LinkCategory.AgentCli,
   },

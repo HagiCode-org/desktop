@@ -1,7 +1,6 @@
 import https from 'https';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import log from 'electron-log';
 import type {
   PresetIndex,
@@ -19,7 +18,6 @@ import { PresetCacheManager } from './preset-cache-manager.js';
  */
 export class PresetLoader {
   private cacheManager: PresetCacheManager;
-  private bundleData: PresetIndex | null = null;
   private fetchPromise: Promise<PresetFetchResult> | null = null;
   private presetBaseUrl: string;
 
@@ -28,9 +26,6 @@ export class PresetLoader {
     this.presetBaseUrl = this.getPresetSourceUrl();
 
     log.info('[PresetLoader] Initialized with base URL:', this.presetBaseUrl);
-
-    // Load bundle data asynchronously
-    this.loadBundleData();
   }
 
   /**
@@ -47,26 +42,6 @@ export class PresetLoader {
 
     // Use default URL
     return 'https://docs.hagicode.com/presets/index.json';
-  }
-
-  /**
-   * Load internal preset bundle as fallback
-   */
-  private async loadBundleData(): Promise<void> {
-    try {
-      const __filename = fileURLToPath(import.meta.url);
-      const bundlePath = path.join(path.dirname(__filename), '../assets/presets/bundle.json');
-
-      log.info('[PresetLoader] Loading bundle from:', bundlePath);
-
-      const content = await fs.readFile(bundlePath, 'utf-8');
-      this.bundleData = JSON.parse(content) as PresetIndex;
-
-      log.info('[PresetLoader] Bundle loaded successfully');
-    } catch (error) {
-      log.error('[PresetLoader] Failed to load bundle:', error);
-      this.bundleData = null;
-    }
   }
 
   /**

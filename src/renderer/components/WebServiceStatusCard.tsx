@@ -14,6 +14,10 @@ import {
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import {
+  selectRemoteModeEnabled,
+  selectRemoteModeUrl,
+} from '../store/slices/remoteModeSlice';
+import {
   startWebService,
   stopWebService,
   restartWebService,
@@ -38,9 +42,9 @@ import {
   Check,
   Package,
   FolderOpen,
+  Globe,
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
-import DependencyWarningBanner from './DependencyWarningBanner';
 
 // Types
 declare global {
@@ -54,7 +58,7 @@ declare global {
 }
 
 const WebServiceStatusCard: React.FC = () => {
-  const { t } = useTranslation(['components', 'common']);
+  const { t } = useTranslation(['components', 'common', 'pages']);
   const dispatch = useDispatch<AppDispatch>();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
   const error = useSelector(selectWebServiceError);
@@ -62,6 +66,8 @@ const WebServiceStatusCard: React.FC = () => {
   const activeVersion = useSelector(selectActiveVersion);
   const canLaunchService = useSelector(selectCanLaunchService);
   const launchBlockingReason = useSelector(selectLaunchBlockingReason);
+  const remoteModeEnabled = useSelector(selectRemoteModeEnabled);
+  const remoteModeUrl = useSelector(selectRemoteModeUrl);
 
   const [isEditingPort, setIsEditingPort] = useState(false);
   const [portInputValue, setPortInputValue] = useState((webServiceInfo.port || 36556).toString());
@@ -118,9 +124,11 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleOpenHagicode = async () => {
-    if (webServiceInfo.url) {
+    // In remote mode, use the configured remote URL
+    const url = remoteModeEnabled ? remoteModeUrl : webServiceInfo.url;
+    if (url) {
       try {
-        await window.electronAPI.openHagicodeInApp(webServiceInfo.url);
+        await window.electronAPI.openHagicodeInApp(url);
       } catch (error) {
         console.error('Failed to open Hagicode in app:', error);
       }
@@ -128,9 +136,11 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleOpenInBrowser = async () => {
-    if (webServiceInfo.url) {
+    // In remote mode, use the configured remote URL
+    const url = remoteModeEnabled ? remoteModeUrl : webServiceInfo.url;
+    if (url) {
       try {
-        await window.electronAPI.openExternal(webServiceInfo.url);
+        await window.electronAPI.openExternal(url);
       } catch (error) {
         console.error('Failed to open URL in browser:', error);
       }
@@ -283,7 +293,7 @@ const WebServiceStatusCard: React.FC = () => {
         <motion.div
           className="absolute top-0 left-0 h-1 bg-linear-to-r from-primary to-primary/50"
           initial={{ width: 0 }}
-          animate={{ width: isRunning ? '100%' : isStopped ? '0%' : '50%' }}
+          animate={{ width: (isRunning || remoteModeEnabled) ? '100%' : isStopped ? '0%' : '50%' }}
           transition={{ duration: 0.5 }}
         />
 
@@ -295,15 +305,17 @@ const WebServiceStatusCard: React.FC = () => {
           >
             <CardTitle className="flex items-center gap-2">
               <motion.div
-                animate={isRunning ? {
+                animate={(isRunning || remoteModeEnabled) ? {
                   rotate: [0, 5, -5, 0],
                   scale: [1, 1.1, 1],
                 } : {}}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Server className={`w-5 h-5 ${isRunning ? 'text-primary' : ''}`} />
+                <Server className={`w-5 h-5 ${(isRunning || remoteModeEnabled) ? 'text-primary' : ''}`} />
               </motion.div>
-              {t('webServiceStatus.cardTitle')}
+              {remoteModeEnabled
+                ? t('settings.remoteMode.title') || 'Remote Mode'
+                : t('webServiceStatus.cardTitle')}
             </CardTitle>
             <CardDescription className="flex items-center gap-2">
               <motion.span
@@ -311,9 +323,11 @@ const WebServiceStatusCard: React.FC = () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                {getStatusDescription(webServiceInfo.status)}
+                {remoteModeEnabled
+                  ? t('webServiceStatus.status.running') || 'Connected to Remote'
+                  : getStatusDescription(webServiceInfo.status)}
               </motion.span>
-              {isRunning && (
+              {(isRunning || remoteModeEnabled) && (
                 <motion.span
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -333,28 +347,54 @@ const WebServiceStatusCard: React.FC = () => {
           >
             <AnimatePresence mode="wait">
               <motion.span
-                key={webServiceInfo.status}
+                key={remoteModeEnabled ? 'remote' : webServiceInfo.status}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
                 <Badge
-                  variant={getStatusVariant(webServiceInfo.status)}
+                  variant={remoteModeEnabled ? 'default' : getStatusVariant(webServiceInfo.status)}
                   className="text-sm px-3 py-1"
                 >
-                  {getStatusText(webServiceInfo.status)}
+                  {remoteModeEnabled
+                    ? t('webServiceStatus.status.connected') || 'Connected to Remote'
+                    : getStatusText(webServiceInfo.status)}
                 </Badge>
               </motion.span>
             </AnimatePresence>
           </motion.div>
 
-          {/* Dependency Warning Banner */}
-          <DependencyWarningBanner />
-
-          {/* Primary Action Button - Full Width */}
+          {/* Primary Action Button */}
           <AnimatePresence mode="wait">
-            {isStopped && !canLaunchService ? (
+            {remoteModeEnabled ? (
+              <motion.div
+                key="remote-mode-buttons"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleOpenHagicode}
+                    className="flex-1"
+                    disabled={!remoteModeUrl}
+                  >
+                    <Globe className="mr-2 h-4 w-4" />
+                    {t('webServiceStatus.openAppButton') || 'Open Application'}
+                  </Button>
+                  <Button
+                    onClick={handleOpenInBrowser}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={!remoteModeUrl}
+                  >
+                    <Globe className="mr-2 h-4 w-4" />
+                    {t('webServiceStatus.openBrowserButton') || 'Open in Browser'}
+                  </Button>
+                </div>
+              </motion.div>
+            ) : isStopped && !canLaunchService ? (
               <motion.div
                 key="blocking-reason"
                 initial={{ opacity: 0 }}
@@ -369,6 +409,8 @@ const WebServiceStatusCard: React.FC = () => {
                 isDisabled={isDisabled}
                 status={webServiceInfo.status}
                 canLaunchService={canLaunchService}
+                remoteModeEnabled={remoteModeEnabled}
+                remoteModeUrl={remoteModeUrl}
                 onStart={handleStart}
                 onOpenApp={handleOpenHagicode}
                 onOpenBrowser={handleOpenInBrowser}
@@ -376,9 +418,9 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Secondary Controls - Restart/Stop (only when running) */}
+          {/* Secondary Controls - Restart/Stop/Logs - Only show in local mode */}
           <AnimatePresence mode="wait">
-            {isRunning && (
+            {!remoteModeEnabled && isRunning && (
               <motion.div
                 key="secondary-controls"
                 initial={{ opacity: 0, y: 10 }}
@@ -459,70 +501,82 @@ const WebServiceStatusCard: React.FC = () => {
 
         <Separator />
 
-        {/* Port Configuration - Always visible when service is stopped */}
-        {!isRunning && (
+        {/* Remote Mode Details or Port Configuration */}
+        {remoteModeEnabled ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">{t('webServiceStatus.details.port')}</div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2"
-                onClick={() => setIsEditingPort(!isEditingPort)}
-              >
-                <Settings className="w-3 h-3 mr-1" />
-                {isEditingPort ? t('common:button.cancel') : t('common:button.edit')}
-              </Button>
+            <div className="text-sm text-muted-foreground">
+              {t('webServiceStatus.details.remoteUrl') || 'Remote URL'}
             </div>
-            {isEditingPort ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  value={portInputValue}
-                  onChange={(e) => setPortInputValue(e.target.value)}
-                  className="flex-1 text-sm"
-                  min={1024}
-                  max={65535}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleUpdatePort();
-                    } else if (e.key === 'Escape') {
-                      handleCancelEditPort();
-                    }
-                  }}
-                  autoFocus
-                />
+            <div className="text-2xl font-mono font-semibold text-primary break-all">
+              {remoteModeUrl}
+            </div>
+          </div>
+        ) : (
+          /* Port Configuration - Always visible when service is stopped in local mode */
+          !isRunning && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">{t('webServiceStatus.details.port')}</div>
                 <Button
-                  variant="default"
+                  variant="ghost"
                   size="sm"
-                  onClick={handleUpdatePort}
+                  className="h-6 px-2"
+                  onClick={() => setIsEditingPort(!isEditingPort)}
                 >
-                  <Check className="w-3 h-3 mr-1" />
-                  {t('common:button.save')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancelEditPort}
-                >
-                  {t('common:button.cancel')}
+                  <Settings className="w-3 h-3 mr-1" />
+                  {isEditingPort ? t('common:button.cancel') : t('common:button.edit')}
                 </Button>
               </div>
-            ) : (
-              <div className="text-2xl font-mono font-semibold">{webServiceInfo.port || 36556}</div>
-            )}
-            {portError && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{portError}</AlertDescription>
-              </Alert>
-            )}
-          </div>
+              {isEditingPort ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={portInputValue}
+                    onChange={(e) => setPortInputValue(e.target.value)}
+                    className="flex-1 text-sm"
+                    min={1024}
+                    max={65535}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleUpdatePort();
+                      } else if (e.key === 'Escape') {
+                        handleCancelEditPort();
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleUpdatePort}
+                  >
+                    <Check className="w-3 h-3 mr-1" />
+                    {t('common:button.save')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEditPort}
+                  >
+                    {t('common:button.cancel')}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-2xl font-mono font-semibold">{webServiceInfo.port || 36556}</div>
+              )}
+              {portError && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">{portError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )
         )}
 
-          {/* Service Details */}
+          {/* Service Details - Only show in local mode */}
           <AnimatePresence mode="wait">
-            {isRunning && (
+            {!remoteModeEnabled && isRunning && (
               <motion.div
                 key="service-details"
                 initial={{ opacity: 0, y: 20 }}
@@ -557,9 +611,9 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Error Display */}
+          {/* Error Display - Only show in local mode */}
           <AnimatePresence mode="wait">
-            {error && (
+            {!remoteModeEnabled && error && (
               <motion.div
                 key="error-alert"
                 initial={{ opacity: 0, x: -20 }}

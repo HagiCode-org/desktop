@@ -76,12 +76,3 @@ export interface StoredAgentCliSelection {
   isSkipped: boolean;
   selectedAt: string | null;
 }
-
-/**
- * CLI detection result
- */
-export interface CliDetectionResult {
-  detected: boolean;
-  version?: string;
-  path?: string;
-}

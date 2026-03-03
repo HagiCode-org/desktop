@@ -3,9 +3,6 @@
   "description": "选择您已配置好的 AI 编程工具。系统将使用该工具进行后续的安装辅助操作。",
   "selectLabel": "选择 Agent CLI",
   "selectPlaceholder": "选择一个 Agent CLI...",
-  "detecting": "检测中...",
-  "detected": "已检测到",
-  "notDetected": "未检测到 - 请确保已安装并配置",
   "viewDocs": "查看文档",
   "skip": "跳过",
   "skipConfirm": {

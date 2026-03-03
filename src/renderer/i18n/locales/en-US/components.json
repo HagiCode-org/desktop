@@ -102,7 +102,8 @@
       "error": "Error",
       "starting": "Starting...",
       "stopping": "Stopping...",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "connected": "Connected to Remote"
     },
     "statusDescription": {
       "running": "Web service is operational",
@@ -118,13 +119,16 @@
     "restartingButton": "Restarting...",
     "stopButton": "Stop Service",
     "openInBrowser": "Open in Browser",
+    "openAppButton": "Open Application",
+    "openBrowserButton": "Open in Browser",
     "details": {
       "serviceUrl": "Service URL",
       "processId": "Process ID",
       "uptime": "Uptime",
       "restartCount": "Restart Count",
       "port": "Port",
-      "version": "Version"
+      "version": "Version",
+      "remoteUrl": "Remote URL"
     },
     "notInstalledAlert": {
       "title": "Package not installed",

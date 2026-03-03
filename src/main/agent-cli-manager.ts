@@ -1,13 +1,8 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import log from 'electron-log';
 import {
   AgentCliType,
   StoredAgentCliSelection,
-  CliDetectionResult,
 } from '../types/agent-cli.js';
-
-const execAsync = promisify(exec);
 
 /**
  * AgentCliManager manages Agent CLI selection and detection
@@ -55,51 +50,6 @@ export class AgentCliManager {
       isSkipped: false,
       selectedAt: null,
     });
-  }
-
-  /**
-   * Detect if a CLI is available on the system
-   * Non-blocking - just checks if command exists
-   */
-  async detectAvailability(cliType: AgentCliType): Promise<CliDetectionResult> {
-    try {
-      let command: string;
-
-      switch (cliType) {
-        case AgentCliType.ClaudeCode:
-          command = 'claude --version';
-          break;
-        default:
-          return { detected: false };
-      }
-
-      const { stdout } = await execAsync(command, {
-        timeout: 5000,
-      });
-
-      // Parse version if available
-      const versionMatch = stdout.match(/(\d+\.\d+\.\d+)/);
-
-      if (versionMatch) {
-        log.info('[AgentCliManager] CLI detected, version:', versionMatch[1]);
-        return {
-          detected: true,
-          version: versionMatch[1],
-        };
-      }
-
-      return { detected: true };
-    } catch (error: any) {
-      // Command not found is acceptable - user will configure later
-      if (error.message?.includes('not found') || error.code === 'ENOENT') {
-        log.info('[AgentCliManager] CLI not found:', cliType);
-        return { detected: false };
-      }
-
-      // Other errors - still return not detected but log
-      log.error('[AgentCliManager] Detection error for', cliType, ':', error);
-      return { detected: false };
-    }
   }
 
   /**

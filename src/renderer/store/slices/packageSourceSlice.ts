@@ -113,11 +113,14 @@ const packageSourceSlice = createSlice({
     },
 
     // Source type selection
-    setSelectedSourceType: (state, action: PayloadAction<'local-folder' | 'github-release' | 'http-index'>) => {
+    setSelectedSourceType: (state, action: PayloadAction<'local-folder' | 'github-release' | 'http-index' | 'dockerhub'>) => {
       state.selectedSourceType = action.payload;
       // Clear errors when switching source type
       state.validationError = null;
       state.scanResult = null;
+      state.dockerHubTags = [];
+      state.dockerHubError = null;
+      state.dockerPullProgress = null;
     },
 
     // Form states

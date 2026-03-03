@@ -3,8 +3,63 @@
     "title": "设置",
     "tabs": {
       "onboarding": "启动向导",
+      "remoteMode": "远程模式",
       "debug": "调试",
-      "dataDirectory": "数据目录"
+      "dataDirectory": "数据目录",
+      "smartConfig": "智能配置"
+    },
+    "smartConfig": {
+      "title": "智能配置",
+      "description": "点击下方按钮启动 AI CLI 并自动载入配置提示词",
+      "startButton": "启动智能配置",
+      "started": "已启动",
+      "loading": "正在启动...",
+      "success": "AI CLI 已启动",
+      "successHint": "请查看终端窗口获取配置说明",
+      "error": "启动失败",
+      "retry": "重试",
+      "errors": {
+        "unknown": "发生未知错误",
+        "promptNotFound": "提示词文件不存在",
+        "cliNotFound": "AI CLI 未找到"
+      }
+    },
+    "remoteMode": {
+      "title": "远程模式",
+      "description": "配置 HagiCode Desktop 连接到远程 HagiCode 实例，而不是运行本地服务。",
+      "enabled": {
+        "label": "启用远程模式",
+        "description": "启用后，应用程序将连接到配置的远程 HagiCode 实例，而不是运行本地服务。"
+      },
+      "url": {
+        "label": "远程服务器 URL",
+        "placeholder": "https://hagicode.example.com"
+      },
+      "errors": {
+        "invalidUrl": "请输入有效的 HTTP/HTTPS URL",
+        "urlRequired": "请输入远程服务器 URL"
+      },
+      "messages": {
+        "modeSwitchedRemote": "已切换到远程模式",
+        "modeSwitchedLocal": "已切换到本地模式",
+        "saveFailed": "保存远程模式配置失败",
+        "connectionSuccess": "连接测试成功",
+        "connectionFailed": "连接测试失败。请检查 URL 和网络连接。"
+      },
+      "actions": {
+        "testConnection": "测试连接",
+        "testing": "测试中...",
+        "save": "保存配置",
+        "saving": "保存中...",
+        "cancel": "取消"
+      },
+      "validation": {
+        "valid": "URL 格式有效",
+        "invalid": "URL 格式无效"
+      },
+      "notes": {
+        "modeExplanation": "远程模式允许您连接到云端部署的 HagiCode 实例。远程模式激活时，本地服务将被禁用。"
+      }
     },
     "onboarding": {
       "title": "启动向导",
@@ -132,7 +187,8 @@
     "status": {
       "active": "当前激活",
       "ready": "就绪",
-      "incomplete": "缺少依赖项"
+      "incomplete": "缺少依赖项",
+      "installed": "已安装"
     },
     "actions": {
       "refresh": "刷新",

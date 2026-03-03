@@ -1,22 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { Check, AlertCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { AgentCliType, getAllCliConfigs } from '../../../../types/agent-cli';
 import {
   selectAgentCli,
   skipAgentCli,
-  setDetectionResult,
-  startDetection,
   selectSelectedCliType,
   selectIsSkipped,
-  selectCliDetected,
-  selectIsDetecting,
   selectCanProceed,
 } from '../../../store/slices/agentCliSlice';
 import type { AppDispatch } from '../../../store';
-import type { StoredAgentCliSelection, CliDetectionResult } from '../../../../types/agent-cli';
+import type { StoredAgentCliSelection } from '../../../../types/agent-cli';
 
 interface AgentCliSelectionProps {
   onNext: () => void;
@@ -29,8 +25,6 @@ function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
 
   const selectedCliType = useSelector(selectSelectedCliType);
   const isSkipped = useSelector(selectIsSkipped);
-  const cliDetected = useSelector(selectCliDetected);
-  const isDetecting = useSelector(selectIsDetecting);
   const canProceed = useSelector(selectCanProceed);
 
   const [showHelp, setShowHelp] = useState(false);
@@ -57,24 +51,6 @@ function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
     }
     loadSelection();
   }, [dispatch]);
-
-  // Detect CLI availability when selection changes
-  useEffect(() => {
-    if (selectedCliType) {
-      detectCli(selectedCliType);
-    }
-  }, [selectedCliType]);
-
-  async function detectCli(cliType: AgentCliType) {
-    dispatch(startDetection());
-    try {
-      const result: CliDetectionResult = await window.electronAPI.agentCliDetect(cliType);
-      dispatch(setDetectionResult(result));
-    } catch (error) {
-      console.error('CLI detection failed:', error);
-      dispatch(setDetectionResult({ detected: false }));
-    }
-  }
 
   async function handleSelect(cliType: AgentCliType) {
     dispatch(selectAgentCli(cliType));
@@ -133,19 +109,16 @@ function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
       <div className="space-y-3">
         {cliConfigs.map((config) => {
           const isSelected = selectedCliType === config.cliType;
-          const isDetected = isSelected && cliDetected;
-          const isNotDetected = isSelected && !cliDetected && !isDetecting;
 
           return (
             <button
               key={config.cliType}
               onClick={() => handleSelect(config.cliType)}
-              disabled={isDetecting}
               className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                 isSelected
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
-              } ${isDetecting ? 'opacity-50 cursor-wait' : ''}`}
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -156,24 +129,6 @@ function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
                       {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
                     </div>
                     <h3 className="font-semibold">{config.displayName}</h3>
-                    {isSelected && isDetecting && (
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        {t('detecting')}
-                      </span>
-                    )}
-                    {isSelected && isDetected && (
-                      <span className="flex items-center gap-1 text-sm text-green-500">
-                        <Check className="w-4 h-4" />
-                        {t('detected')}
-                      </span>
-                    )}
-                    {isSelected && isNotDetected && (
-                      <span className="flex items-center gap-1 text-sm text-yellow-500">
-                        <AlertCircle className="w-4 h-4" />
-                        {t('notDetected')}
-                      </span>
-                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {config.description}

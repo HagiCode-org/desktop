@@ -3,9 +3,6 @@
   "description": "Select your configured AI programming tool. The system will use this tool for subsequent installation assistance.",
   "selectLabel": "Select Agent CLI",
   "selectPlaceholder": "Choose an Agent CLI...",
-  "detecting": "Detecting...",
-  "detected": "Detected",
-  "notDetected": "Not detected - please ensure installed and configured",
   "viewDocs": "View Documentation",
   "skip": "Skip",
   "skipConfirm": {

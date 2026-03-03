@@ -48,7 +48,7 @@ export interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'installed-incomplete';
+  status: 'installed-ready';
   dependencies: DependencyCheckResult[];
   isActive: boolean;
 }
@@ -61,7 +61,6 @@ export interface InstallResult {
   version: Version;
   installedPath?: string;
   error?: string;
-  missingDependencies?: DependencyCheckResult[];  // Missing dependencies after installation
 }
 
 /**
@@ -398,27 +397,8 @@ export class VersionManager {
       // Set executable permissions
       await this.setExecutablePermissions(installPath);
 
-      // Check dependencies from manifest
-      const manifest = await manifestReader.readManifest(installPath);
-      let dependencies: DependencyCheckResult[] = [];
-      let status: 'installed-ready' | 'installed-incomplete' = 'installed-incomplete';
-
-      if (manifest) {
-        const parsedDeps = manifestReader.parseDependencies(manifest);
-
-        // Set manifest for dependency manager (working directory no longer needed)
-        this.dependencyManager.setManifest(manifest);
-
-        // Get dependencies (now all return as not installed)
-        dependencies = await this.dependencyManager.checkFromManifest(parsedDeps, null);
-
-        // Check if all dependencies are satisfied
-        const allDepsSatisfied = dependencies.every(
-          (dep) => dep.installed && !dep.versionMismatch
-        );
-
-        status = allDepsSatisfied ? 'installed-ready' : 'installed-incomplete';
-      }
+      // Dependencies are now only for display purposes, no checking needed
+      const status = 'installed-ready';
 
       // Configure data directory
       log.info('[VersionManager] Configuring data directory...');
@@ -450,7 +430,7 @@ export class VersionManager {
         installedPath: installPath,
         installedAt: new Date().toISOString(),
         status,
-        dependencies,
+        dependencies: [],
         isActive: false, // Will be set below if first installation
       };
 
@@ -464,16 +444,10 @@ export class VersionManager {
 
       log.info('[VersionManager] Version installed successfully:', versionId, 'status:', status);
 
-      // Calculate missing dependencies for the result
-      const missingDependencies = dependencies.filter(
-        (dep) => !dep.installed || dep.versionMismatch
-      );
-
       return {
         success: true,
         version: targetVersion,
         installedPath: installPath,
-        missingDependencies: status === 'installed-incomplete' ? missingDependencies : undefined,
       };
     } catch (error) {
       log.error('[VersionManager] Failed to install version:', error);
@@ -524,7 +498,7 @@ export class VersionManager {
    * Switch active version
    * Allows switching to any installed version regardless of dependency status
    */
-  async switchVersion(versionId: string): Promise<{ success: boolean; warning?: { missing: DependencyCheckResult[] } }> {
+  async switchVersion(versionId: string): Promise<{ success: boolean }> {
     try {
       log.info('[VersionManager] Switching to version:', versionId);
 
@@ -534,18 +508,6 @@ export class VersionManager {
       if (!targetVersion) {
         log.warn('[VersionManager] Version not installed:', versionId);
         return { success: false };
-      }
-
-      // Log dependency status for audit
-      if (targetVersion.status !== 'installed-ready') {
-        const missingDependencies = targetVersion.dependencies.filter(
-          (dep) => !dep.installed || dep.versionMismatch
-        );
-        log.info('[VersionManager] Switching to version with missing dependencies:', {
-          version: versionId,
-          missingCount: missingDependencies.length,
-          dependencies: missingDependencies.map(d => ({ name: d.name, type: d.type, installed: d.installed }))
-        });
       }
 
       // Update active version (allow switching to any installed version)
@@ -558,19 +520,6 @@ export class VersionManager {
       if ((global as any).mainWindow && !(global as any).mainWindow.isDestroyed()) {
         (global as any).mainWindow.webContents.send('version:activeVersionChanged', activeVersion);
         log.info('[VersionManager] Sent activeVersionChanged event');
-      }
-
-      // Return success with warning if dependencies are missing
-      if (targetVersion.status !== 'installed-ready') {
-        const missingDependencies = targetVersion.dependencies.filter(
-          (dep) => !dep.installed || dep.versionMismatch
-        );
-        return {
-          success: true,
-          warning: {
-            missing: missingDependencies
-          }
-        };
       }
 
       return { success: true };
@@ -756,14 +705,9 @@ export class VersionManager {
       const versionInfo = await this.stateManager.getInstalledVersion(versionId);
 
       if (versionInfo) {
-        const allDepsSatisfied = dependencies.every(
-          (dep) => dep.installed && !dep.versionMismatch
-        );
-
+        // Dependencies are now only for display purposes, no status checking
         versionInfo.dependencies = dependencies;
-        versionInfo.status = allDepsSatisfied
-          ? 'installed-ready'
-          : 'installed-incomplete';
+        versionInfo.status = 'installed-ready';
 
         await this.stateManager.setInstalledVersion(versionInfo);
       }

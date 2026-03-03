@@ -38,26 +38,6 @@ export function registerAgentCliHandlers(agentCliManager: AgentCliManager): void
     }
   });
 
-  // Detect CLI availability
-  ipcMain.handle('agentCli:detect', async (_event, cliType: AgentCliType) => {
-    try {
-      return await agentCliManager.detectAvailability(cliType);
-    } catch (error: any) {
-      console.error('[IPC] Failed to detect CLI availability:', error);
-      return { detected: false };
-    }
-  });
-
-  // Get command name for CLI type
-  ipcMain.handle('agentCli:getCommand', (_event, cliType: AgentCliType) => {
-    try {
-      return agentCliManager.getCommandName(cliType);
-    } catch (error: any) {
-      console.error('[IPC] Failed to get command name:', error);
-      return '';
-    }
-  });
-
   // Get selected CLI type
   ipcMain.handle('agentCli:getSelected', () => {
     try {

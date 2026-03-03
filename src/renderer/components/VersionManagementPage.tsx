@@ -53,7 +53,7 @@ interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'installed-incomplete';
+  status: 'installed-ready';
   dependencies: any[];
   isActive: boolean;
 }
@@ -422,19 +422,10 @@ export default function VersionManagementPage() {
       );
     }
 
-    if (version.status === 'installed-ready') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-          <CheckCircle className="w-3 h-3" />
-          {t('versionManagement.status.ready')}
-        </span>
-      );
-    }
-
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent-foreground border border-accent/20">
-        <AlertCircle className="w-3 h-3" />
-        {t('versionManagement.status.incomplete')}
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+        <CheckCircle className="w-3 h-3" />
+        {t('versionManagement.status.installed')}
       </span>
     );
   };
@@ -700,8 +691,6 @@ export default function VersionManagementPage() {
                         className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
                           expandedVersion === version.id
                             ? 'bg-primary/10 hover:bg-primary/20 text-primary'
-                            : version.status === 'installed-incomplete'
-                            ? 'bg-accent/10 hover:bg-accent/20 text-accent-foreground'
                             : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
                         }`}
                       >
@@ -758,7 +747,7 @@ export default function VersionManagementPage() {
                         {t('versionManagement.actions.openLogs')}
                       </button>
 
-                      {!version.isActive && version.status === 'installed-ready' && (
+                      {!version.isActive && (
                         <button
                           onClick={() => handleSwitch(version.id)}
                           disabled={switching === version.id || isInstallingFromState}

@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
+import DiagnosisButton from './DiagnosisButton';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import type { RootState } from '../store';
@@ -19,7 +20,7 @@ interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'installed-incomplete';
+  status: 'installed-ready';
   dependencies: any[];
   isActive: boolean;
 }
@@ -209,6 +210,16 @@ export default function SystemManagementView() {
             </motion.div>
           </motion.div>
         </AnimatePresence>
+      </motion.div>
+
+      {/* Diagnosis Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.5 }}
+        className="mb-6"
+      >
+        <DiagnosisButton />
       </motion.div>
 
       {/* Embedded Web Service Card */}

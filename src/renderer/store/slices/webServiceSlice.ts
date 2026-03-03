@@ -26,7 +26,7 @@ export interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'installed-incomplete';
+  status: 'installed-ready';
   dependencies: any[];
   isActive: boolean;
 }
@@ -107,8 +107,6 @@ export interface WebServiceState {
 
   // Version management state
   activeVersion: InstalledVersion | null;
-  versionReady: boolean;  // Whether the version can be launched
-  missingDependencies: any[];  // Missing dependencies
 
   // Install confirmation dialog state
   showInstallConfirm: boolean;      // Whether to show the install confirmation dialog
@@ -116,12 +114,6 @@ export interface WebServiceState {
 
   // Install state for loading feedback
   installState: InstallState;  // Current installation state for UI feedback
-
-  // Dependency warning state (relaxed mode)
-  showStartConfirm: boolean;         // Whether to show the start confirmation dialog
-  missingDependenciesList: DependencyItem[];  // List of missing dependencies for the dialog
-  showDependencyWarning: boolean;    // Whether to show the warning banner after service starts
-  dependencyWarningDismissed: boolean; // Whether the user has dismissed the warning banner
 }
 
 const initialState: WebServiceState = {
@@ -149,19 +141,11 @@ const initialState: WebServiceState = {
   platform: null,
 
   activeVersion: null,
-  versionReady: false,
-  missingDependencies: [],
 
   showInstallConfirm: false,
   pendingInstallVersion: null,
 
   installState: InstallState.Idle,
-
-  // Dependency warning state
-  showStartConfirm: false,
-  missingDependenciesList: [],
-  showDependencyWarning: false,
-  dependencyWarningDismissed: false,
 };
 
 export const webServiceSlice = createSlice({
@@ -270,18 +254,6 @@ export const webServiceSlice = createSlice({
     // Version management actions
     setActiveVersion: (state, action: PayloadAction<InstalledVersion | null>) => {
       state.activeVersion = action.payload;
-      state.versionReady = action.payload?.status === 'installed-ready';
-      state.missingDependencies = action.payload?.status === 'installed-incomplete'
-        ? (action.payload.dependencies || [])
-        : [];
-    },
-
-    setVersionReady: (state, action: PayloadAction<boolean>) => {
-      state.versionReady = action.payload;
-    },
-
-    setMissingDependencies: (state, action: PayloadAction<any[]>) => {
-      state.missingDependencies = action.payload;
     },
 
     // Install confirmation dialog actions
@@ -293,33 +265,6 @@ export const webServiceSlice = createSlice({
     hideInstallConfirm: (state) => {
       state.showInstallConfirm = false;
       state.pendingInstallVersion = null;
-    },
-
-    // Dependency warning actions (relaxed mode)
-    showStartConfirmDialog: (state, action: PayloadAction<DependencyItem[]>) => {
-      state.showStartConfirm = true;
-      state.missingDependenciesList = action.payload;
-    },
-
-    hideStartConfirmDialog: (state) => {
-      state.showStartConfirm = false;
-      state.missingDependenciesList = [];
-    },
-
-    setShowDependencyWarning: (state, action: PayloadAction<boolean>) => {
-      state.showDependencyWarning = action.payload;
-      // Reset dismissed state when showing warning
-      if (action.payload) {
-        state.dependencyWarningDismissed = false;
-      }
-    },
-
-    setDependencyWarningDismissed: (state, action: PayloadAction<boolean>) => {
-      state.dependencyWarningDismissed = action.payload;
-    },
-
-    setMissingDependenciesList: (state, action: PayloadAction<DependencyItem[]>) => {
-      state.missingDependenciesList = action.payload;
     },
 
     // Install state actions for loading feedback
@@ -355,15 +300,8 @@ export const {
   setAvailableVersions,
   setPlatform,
   setActiveVersion,
-  setVersionReady,
-  setMissingDependencies,
   showInstallConfirm,
   hideInstallConfirm,
-  showStartConfirmDialog,
-  hideStartConfirmDialog,
-  setShowDependencyWarning,
-  setDependencyWarningDismissed,
-  setMissingDependenciesList,
   setInstallState,
   reset,
 } = webServiceSlice.actions;
@@ -391,18 +329,10 @@ export const selectPlatform = (state: { webService: WebServiceState }) => state.
 
 // Version management selectors
 export const selectActiveVersion = (state: { webService: WebServiceState }) => state.webService.activeVersion;
-export const selectVersionReady = (state: { webService: WebServiceState }) => state.webService.versionReady;
-export const selectMissingDependencies = (state: { webService: WebServiceState }) => state.webService.missingDependencies;
 
 // Install confirmation dialog selectors
 export const selectShowInstallConfirm = (state: { webService: WebServiceState }) => state.webService.showInstallConfirm;
 export const selectPendingInstallVersion = (state: { webService: WebServiceState }) => state.webService.pendingInstallVersion;
-
-// Dependency warning selectors
-export const selectShowStartConfirm = (state: { webService: WebServiceState }) => state.webService.showStartConfirm;
-export const selectMissingDependenciesList = (state: { webService: WebServiceState }) => state.webService.missingDependenciesList;
-export const selectShowDependencyWarning = (state: { webService: WebServiceState }) => state.webService.showDependencyWarning;
-export const selectDependencyWarningDismissed = (state: { webService: WebServiceState }) => state.webService.dependencyWarningDismissed;
 
 // Install state selectors for loading feedback
 export const selectInstallState = (state: { webService: WebServiceState }) => state.webService.installState;
@@ -437,11 +367,9 @@ export const selectPackageManagementInfo = (state: { webService: WebServiceState
 });
 
 // Version management composite selectors
-// In relaxed mode, allow launching service as long as there's an active version
-// The confirmation dialog will handle missing dependencies
 export const selectCanLaunchService = (state: { webService: WebServiceState }) => {
   const version = state.webService.activeVersion;
-  // Allow launch if there's any active version (installed-ready or installed-incomplete)
+  // Allow launch if there's any active version
   return !!version;
 };
 
