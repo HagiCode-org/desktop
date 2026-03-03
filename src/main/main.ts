@@ -12,6 +12,7 @@ import { DependencyManager, type DependencyCheckResult, DependencyType } from '.
 import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
+import { DiagnosisManager } from './diagnosis-manager.js';
 import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { LicenseManager } from './license-manager.js';
@@ -33,6 +34,7 @@ import {
   registerDataDirectoryHandlers,
   registerRegionHandlers,
   registerLlmHandlers,
+  registerDiagnosisHandlers,
   registerRssHandlers,
   registerDebugHandlers,
   registerViewHandlers,
@@ -99,6 +101,7 @@ let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
+let diagnosisManager: DiagnosisManager | null = null;
 let licenseManager: LicenseManager | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
@@ -688,11 +691,6 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
       // Notify renderer of active version change
       const activeVersion = await versionManager.getActiveVersion();
       mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
-
-      // If there's a warning (missing dependencies), send it to renderer
-      if (result.warning) {
-        mainWindow?.webContents.send('version:dependencyWarning', result.warning);
-      }
     }
 
     return result.success;
@@ -1304,89 +1302,6 @@ ipcMain.handle('region:redetect', async () => {
     return {
       region: null,
       detectedAt: null,
-    };
-  }
-});
-
-// LLM Installation Manager IPC Handlers
-
-ipcMain.handle('llm:load-prompt', async (_event, manifestPath: string, region?: 'cn' | 'international') => {
-  if (!llmInstallationManager) {
-    return {
-      success: false,
-      error: 'LLM Installation Manager not initialized',
-    };
-  }
-  try {
-    const prompt = await llmInstallationManager.loadPrompt(manifestPath, region);
-    return {
-      success: true,
-      prompt: {
-        version: prompt.version,
-        content: prompt.content,
-        region: prompt.region,
-        filePath: prompt.filePath, // Include file path in response
-      },
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Main] Failed to load LLM prompt:', errorMessage);
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-});
-
-ipcMain.handle('llm:call-api', async (event, manifestPath: string, region?: 'cn' | 'international') => {
-  if (!llmInstallationManager) {
-    return {
-      success: false,
-      error: 'LLM Installation Manager not initialized',
-    };
-  }
-  try {
-    // Load the prompt with the specified region (or auto-detect if not provided)
-    const prompt = await llmInstallationManager.loadPrompt(manifestPath, region);
-
-    // Call Claude API with the loaded prompt file path
-    const result = await llmInstallationManager.callClaudeAPI(prompt.filePath, event.sender);
-    return result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Main] Failed to call LLM API:', errorMessage);
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-});
-
-ipcMain.handle('llm:get-region', async () => {
-  if (!llmInstallationManager) {
-    return { region: null };
-  }
-  return {
-    region: llmInstallationManager.getRegion(),
-  };
-});
-
-ipcMain.handle('llm:get-manifest-path', async (_event, versionId: string) => {
-  try {
-    const pathManager = (await import('./path-manager.js')).PathManager.getInstance();
-    const versionPath = pathManager.getInstalledVersionPath(versionId);
-    const manifestPath = `${versionPath}/manifest.json`;
-    console.log('[Main] Getting manifest path for version:', versionId, '->', manifestPath);
-    return {
-      success: true,
-      manifestPath,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Main] Failed to get manifest path:', errorMessage);
-    return {
-      success: false,
-      error: errorMessage,
     };
   }
 });
@@ -2085,6 +2000,25 @@ app.whenReady().then(async () => {
   );
   log.info('[App] LLM Installation Manager initialized');
 
+  // Register LLM IPC Handlers
+  if (llmInstallationManager) {
+    registerLlmHandlers({ llmInstallationManager, mainWindow });
+    log.info('[App] LLM IPC handlers registered');
+  }
+
+  // Initialize Diagnosis Manager
+  diagnosisManager = new DiagnosisManager();
+  log.info('[App] Diagnosis Manager initialized');
+
+  // Register Diagnosis IPC Handlers
+  if (diagnosisManager && llmInstallationManager) {
+    registerDiagnosisHandlers({
+      diagnosisManager,
+      llmInstallationManager,
+    });
+    log.info('[App] Diagnosis IPC handlers registered');
+  }
+
 // Data Directory IPC Handlers
 ipcMain.handle('data-directory:open-picker', async () => {
   try {
@@ -2254,6 +2188,83 @@ ipcMain.handle('data-directory:restore-default', async () => {
     };
   }
 });
+
+// Remote mode handlers
+ipcMain.handle('remote-mode:set', async (_, enabled: boolean, url: string) => {
+  try {
+    // Validate URL if enabled
+    if (enabled && url) {
+      const validationResult = validateRemoteUrl(url);
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          error: validationResult.error
+        };
+      }
+    }
+
+    // Save configuration
+    configManager.getStore().set('remoteMode', {
+      enabled,
+      url: enabled ? url : ''
+    });
+
+    log.info('[Remote Mode] Configuration updated:', { enabled, url: enabled ? url : '' });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[Remote Mode] Failed to set remote mode:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('remote-mode:get', async () => {
+  try {
+    const config = configManager.getAll();
+    const remoteMode = config.remoteMode || { enabled: false, url: '' };
+
+    return remoteMode;
+  } catch (error) {
+    console.error('[Remote Mode] Failed to get remote mode:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('remote-mode:validate-url', async (_, url: string) => {
+  try {
+    const result = validateRemoteUrl(url);
+    return result;
+  } catch (error) {
+    console.error('[Remote Mode] Failed to validate URL:', error);
+    return {
+      isValid: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
+  if (!url || url.trim() === '') {
+    return { isValid: false, error: 'URL cannot be empty' };
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow http and https protocols
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return { isValid: false, error: 'Only HTTP and HTTPS URLs are supported' };
+    }
+    return { isValid: true };
+  } catch (error) {
+    return {
+      isValid: false,
+      error: 'Invalid URL format. Please enter a valid URL (e.g., https://hagicode.example.com)'
+    };
+  }
+}
 
   // Initialize RSS Feed Manager
   rssFeedManager = RSSFeedManager.getInstance({

@@ -116,5 +116,38 @@ export function registerLlmHandlers(deps: {
     }
   });
 
+  // LLM open AI CLI with prompt handler
+  ipcMain.handle('llm:open-ai-cli-with-prompt', async (_event, promptPath: string) => {
+    if (!state.llmInstallationManager) {
+      return {
+        success: false,
+        error: 'LLM Installation Manager not initialized',
+      };
+    }
+
+    // Validate prompt path
+    if (!promptPath || typeof promptPath !== 'string') {
+      return {
+        success: false,
+        error: 'Invalid prompt path provided',
+      };
+    }
+
+    try {
+      await state.llmInstallationManager.openAICliWithPrompt(promptPath);
+      return {
+        success: true,
+        message: 'AI CLI started successfully',
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[LlmHandlers] Failed to open AI CLI with prompt:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  });
+
   console.log('[IPC] LLM handlers registered');
 }

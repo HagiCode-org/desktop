@@ -274,4 +274,32 @@ export class LlmInstallationManager {
   getRegion(): Region {
     return this.regionDetector.detectRegion();
   }
+
+  /**
+   * Open AI CLI and load the specified prompt file
+   * @param promptPath - Absolute path to the prompt file
+   * @returns Promise<void>
+   */
+  async openAICliWithPrompt(promptPath: string): Promise<void> {
+    log.info('[LlmInstallationManager] openAICliWithPrompt called with path:', promptPath);
+
+    // Validate prompt file exists
+    try {
+      await fs.access(promptPath);
+    } catch {
+      log.error('[LlmInstallationManager] Prompt file does not exist:', promptPath);
+      throw new Error(`Prompt file not found: ${promptPath}`);
+    }
+
+    log.info('[LlmInstallationManager] Prompt file validated, launching CLI...');
+
+    // Use the existing callClaudeAPI logic but simplified
+    const result = await this.callClaudeAPI(promptPath, null);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to open AI CLI');
+    }
+
+    log.info('[LlmInstallationManager] AI CLI launched successfully');
+  }
 }
