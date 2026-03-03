@@ -85,10 +85,28 @@ interface ElectronAPI {
     openPicker: () => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   };
 
+  // Remote Mode APIs
+  remoteMode: {
+    set: (enabled: boolean, url: string) => Promise<{ success: boolean; error?: string }>;
+    get: () => Promise<{ enabled: boolean; url: string }>;
+    validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
+  };
+
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
   installDependency: (dependencyType: string) => Promise<void>;
   onDependencyStatusChange: (callback: (dependencies: any) => void) => () => void;
+
+  // LLM Installation APIs
+  llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
+  llmCallApi: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
+  llmDetectConfig: () => Promise<any>;
+  llmGetRegion: () => Promise<any>;
+  llmGetManifestPath: (versionId: string) => Promise<any>;
+  llmOpenAICliWithPrompt: (promptPath: string) => Promise<any>;
+
+  // Diagnosis APIs
+  diagnosisOpenPrompt: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const electronAPI = {
@@ -240,13 +258,6 @@ const electronAPI = {
     ipcRenderer.on('version:list:changed', listener);
     return () => ipcRenderer.removeListener('version:list:changed', listener);
   },
-  onVersionDependencyWarning: (callback) => {
-    const listener = (_event, warning) => {
-      callback(warning);
-    };
-    ipcRenderer.on('version:dependencyWarning', listener);
-    return () => ipcRenderer.removeListener('version:dependencyWarning', listener);
-  },
   onOnboardingSwitchToWeb: (callback) => {
     const listener = (_event, data) => {
       callback(data);
@@ -283,6 +294,10 @@ const electronAPI = {
   llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
   llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
   llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
+  llmOpenAICliWithPrompt: (promptPath: string) => ipcRenderer.invoke('llm:open-ai-cli-with-prompt', promptPath),
+
+  // Diagnosis APIs
+  diagnosisOpenPrompt: () => ipcRenderer.invoke('diagnosis:open-prompt'),
 
   // Tray service control
   onTrayStartService: (callback) => {
@@ -392,8 +407,6 @@ const electronAPI = {
   agentCliSave: (data: { cliType: string }) => ipcRenderer.invoke('agentCli:save', data),
   agentCliLoad: () => ipcRenderer.invoke('agentCli:load'),
   agentCliSkip: () => ipcRenderer.invoke('agentCli:skip'),
-  agentCliDetect: (cliType: string) => ipcRenderer.invoke('agentCli:detect', cliType),
-  agentCliGetCommand: (cliType: string) => ipcRenderer.invoke('agentCli:getCommand', cliType),
   agentCliGetSelected: () => ipcRenderer.invoke('agentCli:getSelected'),
 
   // Preset Management APIs
@@ -412,6 +425,13 @@ const electronAPI = {
     getStorageInfo: (path?: string) => ipcRenderer.invoke('data-directory:get-storage-info', path),
     restoreDefault: () => ipcRenderer.invoke('data-directory:restore-default'),
     openPicker: () => ipcRenderer.invoke('data-directory:open-picker'),
+  },
+
+  // Remote Mode APIs
+  remoteMode: {
+    set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
+    get: () => ipcRenderer.invoke('remote-mode:get'),
+    validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
   },
 };
 

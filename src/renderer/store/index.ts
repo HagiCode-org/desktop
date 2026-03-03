@@ -11,6 +11,7 @@ import claudeConfigReducer from './slices/claudeConfigSlice';
 import agentCliReducer from './slices/agentCliSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
 import dataDirectoryReducer from './slices/dataDirectorySlice';
+import remoteModeReducer from './slices/remoteModeSlice';
 import listenerMiddleware from './listenerMiddleware';
 import { setProcessInfo } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
@@ -30,6 +31,7 @@ export type AppDispatch = Dispatch<
   | typeof import('./slices/agentCliSlice').actions
   | typeof import('./slices/llmInstallationSlice').actions
   | typeof import('./slices/dataDirectorySlice').actions
+  | typeof import('./slices/remoteModeSlice').actions
 >;
 
 // Import thunks for initialization
@@ -41,6 +43,7 @@ import { initializeWebService } from './thunks/webServiceThunks';
 import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
+import { initializeRemoteMode } from './thunks/remoteModeThunks';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -65,6 +68,7 @@ export const store = configureStore({
     agentCli: agentCliReducer,
     llmInstallation: llmInstallationReducer,
     dataDirectory: dataDirectoryReducer,
+    remoteMode: remoteModeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -133,6 +137,9 @@ store.dispatch(checkOnboardingTrigger());
 // Initialize RSS feed
 store.dispatch(initializeRSSFeed());
 
+// Initialize remote mode
+store.dispatch(initializeRemoteMode());
+
 // Initialize web service (must be last as it may depend on other modules)
 store.dispatch(initializeWebService());
 
@@ -167,11 +174,6 @@ if (typeof window !== 'undefined') {
     store.dispatch({ type: 'webService/setInstallProgress', payload: progress });
   });
 
-  // Listen for version dependency warnings
-  window.electronAPI.onVersionDependencyWarning?.((warning: { missing: any[] }) => {
-    console.log('Version dependency warning:', warning);
-    store.dispatch({ type: 'webService/showStartConfirmDialog', payload: warning.missing });
-  });
 }
 
 // Infer the `RootState` and `AppDispatch` types from the store itself

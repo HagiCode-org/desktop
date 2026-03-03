@@ -37,6 +37,9 @@ export { registerRegionHandlers, initRegionHandlers } from './regionHandlers.js'
 // LLM handlers
 export { registerLlmHandlers, initLlmHandlers } from './llmHandlers.js';
 
+// Diagnosis handlers
+export { registerDiagnosisHandlers, initDiagnosisHandlers } from './diagnosisHandlers.js';
+
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 
@@ -45,6 +48,9 @@ export { registerDebugHandlers, initDebugHandlers } from './debugHandlers.js';
 
 // View handlers
 export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
+
+// Remote mode handlers
+export { registerRemoteModeHandlers, initRemoteModeHandlers } from './remoteModeHandlers.js';
 
 // Types
 export type { HandlerSuccess, HandlerError, HandlerResponse, IpcHandler } from './types.js';

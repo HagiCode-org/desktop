@@ -11,9 +11,15 @@ export interface LicenseConfig {
   updatedAt: string;
 }
 
+export interface RemoteModeConfig {
+  enabled: boolean;
+  url: string;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   license: LicenseConfig;
+  remoteMode: RemoteModeConfig;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -34,12 +40,21 @@ const defaultConfig: AppConfig = {
     isConfigured: false,
     updatedAt: '',
   },
+  remoteMode: {
+    enabled: false,
+    url: '',
+  },
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
   settings: {
     language: 'zh-CN',
   },
+};
+
+export const defaultRemoteModeConfig: RemoteModeConfig = {
+  enabled: false,
+  url: '',
 };
 
 export class ConfigManager {
