@@ -259,8 +259,11 @@ export class PathManager {
     }
 
     // 2. Validate path format (invalid characters)
+    // Note: Allow ':' for Windows drive letters (e.g., C:\)
     const invalidChars = /[<>:"|?*]/;
-    if (invalidChars.test(dirPath)) {
+    const windowsDrivePattern = /^[A-Za-z]:/;
+    const hasInvalidChars = invalidChars.test(dirPath.replace(windowsDrivePattern, ''));
+    if (hasInvalidChars) {
       return {
         isValid: false,
         message: 'Path contains invalid characters: < > : " | ? *',
@@ -336,8 +339,11 @@ export class PathManager {
     }
 
     // 2. Validate path format (invalid characters)
+    // Note: Allow ':' for Windows drive letters (e.g., C:\)
     const invalidChars = /[<>:"|?*]/;
-    if (invalidChars.test(dirPath)) {
+    const windowsDrivePattern = /^[A-Za-z]:/;
+    const hasInvalidChars = invalidChars.test(dirPath.replace(windowsDrivePattern, ''));
+    if (hasInvalidChars) {
       return {
         isValid: false,
         message: 'Path contains invalid characters: < > : " | ? *',
