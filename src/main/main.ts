@@ -1856,31 +1856,24 @@ app.whenReady().then(async () => {
   // Initialize PathManager
   pathManager = PathManager.getInstance();
 
-  // Load data directory with fallback: YAML → electron-store → default
+  // Load data directory with fallback: electron-store -> default
   let dataDirectoryPath = configManager.getDataDirectoryPath();
-  if (!dataDirectoryPath) {
-    // Try to read from YAML config first
-    try {
-      const yamlDataDir = await pathManager.readDataDirFromYamlConfig();
-      if (yamlDataDir) {
-        dataDirectoryPath = yamlDataDir;
-        log.info('[Config] Loaded data directory from YAML config:', dataDirectoryPath);
-      } else {
-        // Use default path
-        dataDirectoryPath = pathManager.getDefaultDataDirectory();
-        log.info('[Config] No data directory config found, using default:', dataDirectoryPath);
-      }
-    } catch (error) {
-      log.warn('[Config] Failed to read YAML config, using default:', error);
-      dataDirectoryPath = pathManager.getDefaultDataDirectory();
-    }
-  } else {
+  if (dataDirectoryPath) {
     log.info('[Config] Loaded data directory from electron-store:', dataDirectoryPath);
+  } else {
+    dataDirectoryPath = pathManager.getDefaultDataDirectory();
+    log.info('[Config] No data directory config found, using default:', dataDirectoryPath);
   }
 
   // Set the data directory in PathManager
-  if (dataDirectoryPath) {
+  try {
     pathManager.setDataDirectory(dataDirectoryPath);
+  } catch (error) {
+    const fallbackDataDirectory = pathManager.getDefaultDataDirectory();
+    log.warn('[Config] Invalid configured data directory, falling back to default:', dataDirectoryPath, error);
+    pathManager.setDataDirectory(fallbackDataDirectory);
+    configManager.setDataDirectoryPath(fallbackDataDirectory);
+    dataDirectoryPath = fallbackDataDirectory;
   }
 
   // Initialize YamlConfigManager
@@ -2388,3 +2381,5 @@ app.on('activate', () => {
 });
 
 export { mainWindow };
+
+
