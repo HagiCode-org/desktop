@@ -9,6 +9,7 @@ import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback } from './package-sources/index.js';
+import { resolveWebServiceConfigMode } from './web-service-env.js';
 
 /**
  * Version information
@@ -412,13 +413,17 @@ export class VersionManager {
         log.info('[VersionManager] Created data directory:', dataDir);
       }
 
-      // Update configuration file with data directory path
-      try {
-        await this.configManager.updateDataDir(versionId, dataDir);
-        log.info('[VersionManager] DataDir configured:', dataDir);
-      } catch (error) {
-        log.warn('[VersionManager] Failed to configure DataDir:', error);
-        // Configuration failure doesn't block installation
+      // Keep DataDir YAML sync behind a compatibility switch.
+      if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
+        try {
+          await this.configManager.updateDataDir(versionId, dataDir);
+          log.info('[VersionManager] DataDir configured via legacy YAML sync:', dataDir);
+        } catch (error) {
+          log.warn('[VersionManager] Failed to configure DataDir via YAML sync:', error);
+          // Configuration failure doesn't block installation
+        }
+      } else {
+        log.info('[VersionManager] Skipped DataDir YAML sync (env mode).');
       }
 
       // Store installation info

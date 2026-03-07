@@ -133,11 +133,28 @@
     "dashboard": "Dashboard",
     "webService": "Web Service",
     "versionManagement": "Version Management",
-    "licenseManagement": "License Management",
     "settings": "Settings",
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"
+  },
+  "diagnosis": {
+    "button": {
+      "text": "Having startup issues? Let AI diagnose it",
+      "loading": "Starting...",
+      "success": "Started",
+      "retry": "Retry",
+      "ariaLabel": "Start AI diagnosis"
+    },
+    "toast": {
+      "success": "AI diagnosis started",
+      "error": "Failed to start AI diagnosis"
+    },
+    "errors": {
+      "promptNotFound": "Prompt file not found",
+      "cliNotFound": "AI CLI not found or failed to start",
+      "diagnosticInfo": "Diagnostic: activeVersion={{activeVersion}}; attemptedPaths={{paths}}"
+    }
   },
   "system": {
     "noVersionInstalled": {

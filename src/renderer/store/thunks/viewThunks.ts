@@ -28,7 +28,7 @@ export const initializeView = createAsyncThunk(
  */
 export const switchViewWithSideEffects = createAsyncThunk(
   'view/switchWithSideEffects',
-  async (targetView: 'system' | 'web' | 'version' | 'license' | 'settings', { dispatch, getState }) => {
+  async (targetView: 'system' | 'web' | 'version' | 'settings', { dispatch, getState }) => {
     try {
       const state = getState() as RootState;
 

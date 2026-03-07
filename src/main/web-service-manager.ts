@@ -1,11 +1,20 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, exec, ChildProcess } from 'child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { app } from 'electron';
 import log from 'electron-log';
-import { PathManager, Platform } from './path-manager.js';
+import { PathManager } from './path-manager.js';
 import type { EntryPoint, ResultSessionFile, ParsedResult, StartResult } from './manifest-reader.js';
 import { PowerShellExecutor } from './utils/powershell-executor.js';
+import {
+  buildSnapshotLogLines,
+  buildManagedServiceEnv,
+  MANAGED_ENV_VAR_DEFINITIONS,
+  resolveEnvSnapshotLogLevel,
+  resolveWebServiceConfigMode,
+  type ManagedEnvSnapshotEntry,
+  type WebServiceConfigMode,
+} from './web-service-env.js';
+import { loadConsoleEnvironment } from './shell-env-loader.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -37,6 +46,33 @@ export interface ProcessInfo {
   phase: StartupPhase;
   phaseMessage?: string;
   port: number;
+  recoverySource?: RecoverySource;
+  recoveryMessage?: string;
+}
+
+export type RecoverySource = 'none' | 'pid_file' | 'signature_fallback';
+
+interface RuntimeIdentity {
+  pid: number;
+  port: number;
+  startedAt: string;
+  versionId?: string;
+  recoverySource?: RecoverySource;
+  recoveryMessage?: string;
+  updatedAt: string;
+}
+
+interface WebServiceStateFile {
+  schemaVersion?: number;
+  lastSuccessfulPort?: number;
+  savedAt?: string;
+  runtime?: RuntimeIdentity | null;
+}
+
+interface PreparedServiceEnvironment {
+  mode: WebServiceConfigMode;
+  mergedEnv: NodeJS.ProcessEnv;
+  managedSnapshot: ManagedEnvSnapshotEntry[];
 }
 
 export class PCodeWebServiceManager {
@@ -52,6 +88,13 @@ export class PCodeWebServiceManager {
   private currentPhase: StartupPhase = StartupPhase.Idle;
   private activeVersionPath: string | null = null; // Path to the active version installation
   private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
+  private activeVersionId: string | null = null;
+  private recoveredRuntime: RuntimeIdentity | null = null;
+  private recoverySource: RecoverySource = 'none';
+  private recoveryMessage: string | null = null;
+  private startupRecoveryAttempted: boolean = false;
+  private startupRecoveryPromise: Promise<void> | null = null;
+  private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
 
   constructor(config: WebServiceConfig) {
     this.config = config;
@@ -77,6 +120,7 @@ export class PCodeWebServiceManager {
    * @param versionId - Version ID (e.g., "hagicode-0.1.0-alpha.9-linux-x64-nort")
    */
   setActiveVersion(versionId: string): void {
+    this.activeVersionId = versionId;
     this.activeVersionPath = this.pathManager.getInstalledVersionPath(versionId);
     log.info('[WebService] Active version path set to:', this.activeVersionPath);
   }
@@ -85,8 +129,81 @@ export class PCodeWebServiceManager {
    * Clear the active version (when no version is installed)
    */
   clearActiveVersion(): void {
+    this.activeVersionId = null;
     this.activeVersionPath = null;
     log.info('[WebService] Active version cleared');
+  }
+
+  private getStateFilePath(): string {
+    return this.pathManager.getPaths().webServiceConfig;
+  }
+
+  private async readStateFile(): Promise<WebServiceStateFile> {
+    const paths = this.pathManager.getPaths();
+    const statePath = this.getStateFilePath();
+
+    try {
+      await fs.mkdir(paths.config, { recursive: true });
+      const content = await fs.readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(content) as WebServiceStateFile;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      const errno = (error as NodeJS.ErrnoException).code;
+      if (errno !== 'ENOENT') {
+        log.warn('[WebService] Failed to read state file, fallback to empty state:', error);
+      }
+      return {};
+    }
+  }
+
+  private async writeStateFile(nextState: WebServiceStateFile): Promise<void> {
+    const paths = this.pathManager.getPaths();
+    const statePath = this.getStateFilePath();
+
+    await fs.mkdir(paths.config, { recursive: true });
+    await fs.writeFile(statePath, JSON.stringify(nextState, null, 2), 'utf-8');
+  }
+
+  private async updateStateFile(mutator: (state: WebServiceStateFile) => WebServiceStateFile): Promise<void> {
+    const current = await this.readStateFile();
+    const next = mutator(current);
+    await this.writeStateFile(next);
+  }
+
+  private async persistRuntimeIdentity(identity: RuntimeIdentity): Promise<void> {
+    try {
+      await this.updateStateFile((state) => ({
+        ...state,
+        schemaVersion: 2,
+        lastSuccessfulPort: identity.port,
+        savedAt: new Date().toISOString(),
+        runtime: identity,
+      }));
+      log.info('[WebService] Persisted runtime identity:', {
+        pid: identity.pid,
+        port: identity.port,
+        versionId: identity.versionId,
+      });
+    } catch (error) {
+      log.error('[WebService] Failed to persist runtime identity:', error);
+    }
+  }
+
+  private async invalidateRuntimeIdentity(reason: string): Promise<void> {
+    this.recoveredRuntime = null;
+    this.recoverySource = 'none';
+    this.recoveryMessage = null;
+
+    try {
+      await this.updateStateFile((state) => ({
+        ...state,
+        runtime: null,
+        savedAt: new Date().toISOString(),
+      }));
+      log.info('[WebService] Invalidated runtime identity:', reason);
+    } catch (error) {
+      log.warn('[WebService] Failed to invalidate runtime identity:', error);
+    }
   }
 
   /**
@@ -392,8 +509,8 @@ export class PCodeWebServiceManager {
 
   /**
    * Get platform-specific startup arguments
-   * Note: We don't add --urls parameter - let the service use appsettings.yml configuration
-   * The configuration file is the single source of truth for URLs
+   * Note: We don't add --urls parameter.
+   * URL configuration is injected via ASPNETCORE_URLS environment variable at spawn time.
    */
   private getPlatformSpecificArgs(): string[] {
     return this.config.args || [];
@@ -410,10 +527,10 @@ export class PCodeWebServiceManager {
    *
    * When using startup script, the working directory is the script's directory
    */
-  private getSpawnOptions() {
+  private getSpawnOptions(mergedEnv: NodeJS.ProcessEnv) {
     const scriptPath = this.getStartupScriptPath();
     const options: any = {
-      env: { ...process.env, ...this.config.env },
+      env: mergedEnv,
       cwd: path.dirname(scriptPath),
     };
 
@@ -465,8 +582,7 @@ export class PCodeWebServiceManager {
    * Check if the port is available using system commands (faster and more reliable)
    * @returns Promise resolving to true if port is available, false if in use, null if check failed
    */
-  private async checkPortWithSystemCommand(): Promise<boolean | null> {
-    const { exec } = await import('node:child_process');
+  private async checkPortWithSystemCommand(port: number): Promise<boolean | null> {
     const platform = process.platform;
 
     return new Promise((resolve) => {
@@ -475,15 +591,15 @@ export class PCodeWebServiceManager {
       if (platform === 'linux') {
         // Use ss command (modern replacement for netstat)
         // We use || true to ensure the command succeeds even if grep finds nothing
-        command = `ss -tuln | grep ":${this.config.port} " || true`;
+        command = `ss -tuln | grep ":${port} " || true`;
       } else if (platform === 'darwin') {
         // Use lsof on macOS
         // We use || true to ensure the command succeeds even if lsof finds nothing
-        command = `lsof -i :${this.config.port} || true`;
+        command = `lsof -i :${port} || true`;
       } else if (platform === 'win32') {
         // Use netstat on Windows
         // findstr returns exit code 1 if not found, but that's expected
-        command = `netstat -an | findstr ":${this.config.port} "`;
+        command = `netstat -an | findstr ":${port} "`;
       }
 
       if (!command) {
@@ -516,9 +632,9 @@ export class PCodeWebServiceManager {
    * First tries system command for quick check, then falls back to node's net module
    * @returns Promise resolving to true if port is available, false if in use
    */
-  public async checkPortAvailable(): Promise<boolean> {
+  public async checkPortAvailable(port: number = this.config.port): Promise<boolean> {
     // Try system command first (faster)
-    const systemCheck = await this.checkPortWithSystemCommand();
+    const systemCheck = await this.checkPortWithSystemCommand(port);
     if (systemCheck !== null) {
       return systemCheck;
     }
@@ -537,7 +653,36 @@ export class PCodeWebServiceManager {
         resolve(true); // Port is available
       });
 
-      server.listen(this.config.port, this.config.host);
+      server.listen(port, this.config.host);
+    });
+  }
+
+  /**
+   * Check if a specific host/port accepts TCP connections.
+   */
+  private async checkPortReachable(host: string, port: number, timeoutMs: number = 2000): Promise<boolean> {
+    const net = await import('node:net');
+
+    return await new Promise((resolve) => {
+      const socket = new net.Socket();
+      socket.setTimeout(timeoutMs);
+
+      socket.once('connect', () => {
+        socket.destroy();
+        resolve(true);
+      });
+
+      socket.once('timeout', () => {
+        socket.destroy();
+        resolve(false);
+      });
+
+      socket.once('error', () => {
+        socket.destroy();
+        resolve(false);
+      });
+
+      socket.connect(port, host);
     });
   }
 
@@ -612,9 +757,9 @@ export class PCodeWebServiceManager {
   /**
    * Perform HTTP health check on the web service
    */
-  private async performHealthCheck(): Promise<boolean> {
+  private async performHealthCheck(port: number = this.config.port): Promise<boolean> {
     const axios = await import('axios');
-    const url = `http://${this.config.host}:${this.config.port}/api/health`;
+    const url = `http://${this.config.host}:${port}/api/health`;
 
     try {
       const response = await axios.default.get(url, { timeout: 5000 });
@@ -630,11 +775,263 @@ export class PCodeWebServiceManager {
     }
   }
 
+  private async isProcessAlive(pid: number): Promise<boolean> {
+    if (!Number.isInteger(pid) || pid <= 0) {
+      return false;
+    }
+
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      // EPERM means process exists but we don't have signal permission.
+      return code === 'EPERM';
+    }
+  }
+
+  private runCommand(command: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(`${stdout || ''}\n${stderr || ''}`);
+      });
+    });
+  }
+
+  private async getProcessCommandLine(pid: number): Promise<string | null> {
+    try {
+      if (process.platform === 'win32') {
+        const escaped = `Get-CimInstance Win32_Process -Filter \"ProcessId = ${pid}\" | Select-Object -ExpandProperty CommandLine`;
+        const output = await this.runCommand(`powershell -NoProfile -Command "${escaped}"`);
+        const line = output.trim();
+        return line || null;
+      }
+
+      const output = await this.runCommand(`ps -p ${pid} -o args=`);
+      const line = output.trim();
+      return line || null;
+    } catch (error) {
+      log.warn('[WebService] Failed to read process command line:', { pid, error });
+      return null;
+    }
+  }
+
+  private isTargetDotnetSignature(commandLine: string): boolean {
+    const normalized = commandLine.toLowerCase();
+    const hasDotnet = normalized.includes('dotnet');
+    const hasTargetDll = normalized.includes('pcode.web.dll');
+
+    if (!hasDotnet || !hasTargetDll) {
+      return false;
+    }
+
+    if (!this.activeVersionId) {
+      return true;
+    }
+
+    // Active version may not always be present in command line when script cd's first.
+    return true;
+  }
+
+  private applyRecoveredRunningState(identity: RuntimeIdentity, source: RecoverySource, message: string): void {
+    this.status = 'running';
+    this.currentPhase = StartupPhase.Running;
+    this.config.port = identity.port;
+    this.startTime = Number.isFinite(Date.parse(identity.startedAt)) ? Date.parse(identity.startedAt) : null;
+    this.recoveredRuntime = {
+      ...identity,
+      recoverySource: source,
+      recoveryMessage: message,
+      updatedAt: new Date().toISOString(),
+    };
+    this.recoverySource = source;
+    this.recoveryMessage = message;
+  }
+
+  private async validatePrimaryRecovery(identity: RuntimeIdentity): Promise<boolean> {
+    const pidAlive = await this.isProcessAlive(identity.pid);
+    if (!pidAlive) {
+      return false;
+    }
+
+    const portReachable = await this.checkPortReachable(this.config.host, identity.port);
+    if (!portReachable) {
+      return false;
+    }
+
+    return await this.performHealthCheck(identity.port);
+  }
+
+  private async validateSignatureFallback(identity: RuntimeIdentity): Promise<boolean> {
+    const pidAlive = await this.isProcessAlive(identity.pid);
+    if (!pidAlive) {
+      return false;
+    }
+
+    const commandLine = await this.getProcessCommandLine(identity.pid);
+    if (!commandLine) {
+      return false;
+    }
+
+    return this.isTargetDotnetSignature(commandLine);
+  }
+
+  private async attemptStartupRecovery(): Promise<void> {
+    const state = await this.readStateFile();
+    if (!state.runtime) {
+      return;
+    }
+
+    const runtime = state.runtime;
+    if (!runtime.pid || !runtime.port) {
+      await this.invalidateRuntimeIdentity('invalid-runtime-shape');
+      return;
+    }
+
+    if (await this.validatePrimaryRecovery(runtime)) {
+      this.applyRecoveredRunningState(runtime, 'pid_file', 'Recovered via persisted pid+port+health');
+      log.info('[WebService] Startup recovery succeeded via PID file:', {
+        pid: runtime.pid,
+        port: runtime.port,
+      });
+      return;
+    }
+
+    if (await this.validateSignatureFallback(runtime)) {
+      this.applyRecoveredRunningState(runtime, 'signature_fallback', 'Recovered via process signature fallback');
+      log.warn('[WebService] Startup recovery used signature fallback:', {
+        pid: runtime.pid,
+        port: runtime.port,
+      });
+      return;
+    }
+
+    await this.invalidateRuntimeIdentity('recovery-failed');
+  }
+
+  private async ensureStartupRecovery(): Promise<void> {
+    if (this.startupRecoveryAttempted) {
+      if (this.startupRecoveryPromise) {
+        await this.startupRecoveryPromise;
+      }
+      return;
+    }
+
+    this.startupRecoveryAttempted = true;
+    this.startupRecoveryPromise = this.attemptStartupRecovery()
+      .catch(error => {
+        log.error('[WebService] Startup recovery failed:', error);
+      })
+      .finally(() => {
+        this.startupRecoveryPromise = null;
+      });
+
+    await this.startupRecoveryPromise;
+  }
+
+  private getConfigMode(): WebServiceConfigMode {
+    return resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE);
+  }
+
+  private getEnvSnapshotLogLevel(mergedEnv: NodeJS.ProcessEnv): 'off' | 'summary' | 'detailed' {
+    return resolveEnvSnapshotLogLevel(mergedEnv.HAGICODE_WEB_SERVICE_ENV_LOG_LEVEL);
+  }
+
+  private async readExistingServiceConfig(): Promise<Record<string, unknown> | null> {
+    const configPath = this.getConfigFilePath();
+    try {
+      const yaml = await import('js-yaml');
+      const content = await fs.readFile(configPath, 'utf-8');
+      const parsed = yaml.load(content);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed as Record<string, unknown>;
+      }
+      return null;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        log.warn('[WebService] Failed to read existing config for env mapping:', error);
+      }
+      return null;
+    }
+  }
+
+  private logManagedEnvSnapshot(mode: WebServiceConfigMode, mergedEnv: NodeJS.ProcessEnv, entries: ManagedEnvSnapshotEntry[]): void {
+    const level = this.getEnvSnapshotLogLevel(mergedEnv);
+    if (level === 'off') {
+      return;
+    }
+
+    log.info('[WebService] Injected environment snapshot:', {
+      mode,
+      total: entries.length,
+      required: MANAGED_ENV_VAR_DEFINITIONS.filter(item => item.required).length,
+    });
+
+    const lines = buildSnapshotLogLines(entries, level);
+    for (const line of lines) {
+      log.info(line);
+    }
+  }
+
+  private async prepareServiceEnvironment(): Promise<PreparedServiceEnvironment> {
+    const mode = this.getConfigMode();
+    if (mode === 'legacy-yaml') {
+      log.warn('[WebService] Running in legacy-yaml mode (HAGICODE_WEB_SERVICE_CONFIG_MODE).');
+      await this.syncConfigToFile();
+    }
+
+    const existingConfig = await this.readExistingServiceConfig();
+    const consoleEnv = await loadConsoleEnvironment();
+    const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
+    const dataDir = this.pathManager.getDataDirectory();
+
+    const buildResult = buildManagedServiceEnv({
+      host: this.config.host,
+      port: this.config.port,
+      dataDir,
+      yamlConfig: existingConfig,
+      existingEnv,
+    });
+
+    if (buildResult.errors.length > 0) {
+      throw new Error(`Environment mapping validation failed: ${buildResult.errors.join('; ')}`);
+    }
+
+    const mergedEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...consoleEnv,
+      ...this.config.env,
+      ...buildResult.injectedEnv,
+    };
+
+    if (Object.keys(consoleEnv).length > 0) {
+      log.info('[WebService] Console environment merged for startup:', {
+        envCount: Object.keys(consoleEnv).length,
+        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-rc',
+      });
+    }
+
+    this.lastManagedEnvSnapshot = buildResult.snapshot;
+    this.logManagedEnvSnapshot(mode, mergedEnv, buildResult.snapshot);
+
+    return {
+      mode,
+      mergedEnv,
+      managedSnapshot: buildResult.snapshot,
+    };
+  }
+
   /**
    * Start the web service process using entryPoint.start script
    * @returns StartResult with service URL and port information
    */
   async start(): Promise<StartResult> {
+    await this.ensureStartupRecovery();
+
     // Default result for failures
     const failureResult: StartResult = {
       success: false,
@@ -654,7 +1051,7 @@ export class PCodeWebServiceManager {
       },
     };
 
-    if (this.process) {
+    if (this.process || this.status === 'running') {
       log.warn('[WebService] Process already running');
       return {
         ...failureResult,
@@ -738,6 +1135,7 @@ export class PCodeWebServiceManager {
         log.error('[WebService] Could not find available port after', maxPortCheckAttempts, 'attempts');
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, 'Unable to find available port');
+        await this.invalidateRuntimeIdentity('no-port-available');
         return {
           ...failureResult,
           parsedResult: {
@@ -769,15 +1167,24 @@ export class PCodeWebServiceManager {
         };
       }
 
-
-      // Sync configuration to file before starting the service
+      let preparedEnv: NodeJS.ProcessEnv;
+      let envMode: WebServiceConfigMode = 'env';
       try {
-        log.info('[WebService] Syncing configuration to file before starting service...');
-        await this.syncConfigToFile();
-        log.info('[WebService] Configuration synced successfully');
+        const prepared = await this.prepareServiceEnvironment();
+        preparedEnv = prepared.mergedEnv;
+        envMode = prepared.mode;
       } catch (error) {
-        log.error('[WebService] Failed to sync configuration to file:', error);
-        // Continue anyway - the service might start with the old config
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log.error('[WebService] Failed to prepare environment injection:', errorMessage);
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, `Environment injection failed: ${errorMessage}`);
+        return {
+          ...failureResult,
+          parsedResult: {
+            ...failureResult.parsedResult,
+            errorMessage: `Environment injection failed: ${errorMessage}`,
+          },
+        };
       }
 
       // Spawn the process
@@ -790,7 +1197,7 @@ export class PCodeWebServiceManager {
         const executor = new PowerShellExecutor();
         this.process = executor.spawnService(scriptPath, {
           cwd: path.dirname(scriptPath),
-          env: this.config.env,
+          env: preparedEnv,
           scriptArgs: this.getPlatformSpecificArgs(),
           onStdout: (data) => {
             const output = data.toString().trim();
@@ -851,7 +1258,7 @@ export class PCodeWebServiceManager {
       } else {
         // Legacy path for .bat/.cmd on Windows and .sh on Unix
         const { command, args } = this.getSpawnCommand();
-        const options = this.getSpawnOptions();
+        const options = this.getSpawnOptions(preparedEnv);
 
         log.info('[WebService] Spawning process:', command, args.join(' '));
         this.process = spawn(command, args, options);
@@ -868,6 +1275,7 @@ export class PCodeWebServiceManager {
         this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
         await this.stop();
         this.status = 'error';
+        await this.invalidateRuntimeIdentity('listening-timeout');
         return {
           ...failureResult,
           parsedResult: {
@@ -884,11 +1292,30 @@ export class PCodeWebServiceManager {
       if (healthCheckPassed) {
         this.status = 'running';
         this.startTime = Date.now();
+        this.recoveredRuntime = null;
+        this.recoverySource = 'none';
+        this.recoveryMessage = null;
 
         // Persist successful port
         await this.saveLastSuccessfulPort(this.config.port);
+        if (this.process?.pid) {
+          await this.persistRuntimeIdentity({
+            pid: this.process.pid,
+            port: this.config.port,
+            startedAt: new Date(this.startTime).toISOString(),
+            versionId: this.activeVersionId || undefined,
+            recoverySource: 'none',
+            recoveryMessage: 'started-by-desktop',
+            updatedAt: new Date().toISOString(),
+          });
+        }
 
         log.info('[WebService] Service started successfully on port:', this.config.port);
+        log.info('[WebService] Environment injection confirmed:', {
+          mode: envMode,
+          managedVariableCount: this.lastManagedEnvSnapshot.length,
+          pid: this.process?.pid ?? null,
+        });
         this.emitPhase(StartupPhase.Running, 'Service is running');
         log.info('[WebService] Started successfully, PID:', this.process.pid);
 
@@ -915,6 +1342,7 @@ export class PCodeWebServiceManager {
         this.emitPhase(StartupPhase.Error, 'Health check failed');
         await this.stop();
         this.status = 'error';
+        await this.invalidateRuntimeIdentity('health-check-failed');
         return {
           ...failureResult,
           parsedResult: {
@@ -928,6 +1356,7 @@ export class PCodeWebServiceManager {
       this.status = 'error';
       this.process = null;
       this.emitPhase(StartupPhase.Error, `Start failed: ${(error as Error).message}`);
+      await this.invalidateRuntimeIdentity('start-exception');
       return {
         ...failureResult,
         resultSession: {
@@ -1005,6 +1434,7 @@ export class PCodeWebServiceManager {
       }
       this.status = 'error';
       this.process = null;
+      void this.invalidateRuntimeIdentity('process-error');
     });
 
     this.process.on('exit', (code, signal) => {
@@ -1029,6 +1459,7 @@ export class PCodeWebServiceManager {
         log.warn('[WebService] Process exited unexpectedly');
         this.restartCount++;
         this.status = 'error';
+        void this.invalidateRuntimeIdentity('process-exit');
       }
 
       this.process = null;
@@ -1039,6 +1470,7 @@ export class PCodeWebServiceManager {
       this.process = null;
       if (this.status === 'running') {
         this.status = 'stopped';
+        void this.invalidateRuntimeIdentity('process-close');
       }
     });
   }
@@ -1047,6 +1479,8 @@ export class PCodeWebServiceManager {
    * Stop the web service process
    */
   async stop(): Promise<boolean> {
+    await this.ensureStartupRecovery();
+
     if (!this.process && this.status !== 'running') {
       log.warn('[WebService] Process not running');
       return false;
@@ -1081,17 +1515,54 @@ export class PCodeWebServiceManager {
           log.warn('[WebService] Force killing process:', pid);
           await this.forceKill();
         }
+      } else if (this.recoveredRuntime?.pid) {
+        await this.terminateRecoveredProcess(this.recoveredRuntime.pid);
       }
 
       this.status = 'stopped';
       this.process = null;
       this.startTime = null;
+      this.recoveredRuntime = null;
+      this.recoverySource = 'none';
+      this.recoveryMessage = null;
+      await this.invalidateRuntimeIdentity('stop-confirmed');
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
       log.error('[WebService] Failed to stop:', error);
       this.status = 'error';
       return false;
+    }
+  }
+
+  private async terminateRecoveredProcess(pid: number): Promise<void> {
+    if (process.platform === 'win32') {
+      try {
+        await this.runCommand(`taskkill /F /T /PID ${pid}`);
+      } catch (error) {
+        log.warn('[WebService] taskkill failed for recovered pid, continuing:', { pid, error });
+      }
+      return;
+    }
+
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // Keep going and verify process liveness below.
+    }
+
+    const waitUntil = Date.now() + this.stopTimeout;
+    while (Date.now() < waitUntil) {
+      if (!(await this.isProcessAlive(pid))) {
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // Best effort
     }
   }
 
@@ -1177,17 +1648,23 @@ export class PCodeWebServiceManager {
    * Get current process status
    */
   async getStatus(): Promise<ProcessInfo> {
+    await this.ensureStartupRecovery();
+
     const uptime = this.startTime ? Date.now() - this.startTime : 0;
+    const activePid = this.process?.pid || this.recoveredRuntime?.pid || null;
+    const runningUrl = this.status === 'running' ? `http://${this.config.host}:${this.config.port}` : null;
 
     return {
       status: this.status,
-      pid: this.process?.pid || null,
+      pid: activePid,
       uptime,
       startTime: this.startTime,
-      url: this.status === 'running' ? `http://${this.config.host}:${this.config.port}` : null,
+      url: runningUrl,
       restartCount: this.restartCount,
       phase: this.currentPhase,
       port: this.config.port,
+      recoverySource: this.recoverySource,
+      recoveryMessage: this.recoveryMessage || undefined,
     };
   }
 
@@ -1225,17 +1702,27 @@ export class PCodeWebServiceManager {
     const oldPort = this.config.port;
     const oldHost = this.config.host;
 
-    this.config = { ...this.config, ...config };
+    this.config = {
+      ...this.config,
+      ...config,
+      env: config.env
+        ? { ...(this.config.env || {}), ...config.env }
+        : this.config.env,
+    };
 
-    // Sync to file if host or port changed
-    if ((config.port && config.port !== oldPort) ||
-        (config.host && config.host !== oldHost)) {
+    // Keep legacy YAML sync path behind a compatibility switch.
+    const shouldSyncLegacyYaml = this.getConfigMode() === 'legacy-yaml';
+    if (shouldSyncLegacyYaml && ((config.port && config.port !== oldPort) ||
+        (config.host && config.host !== oldHost))) {
       try {
         await this.syncConfigToFile();
       } catch (error) {
         log.error('[WebService] Config sync failed, continuing with in-memory config');
         // Don't throw - allow in-memory config to work
       }
+    } else if (!shouldSyncLegacyYaml && ((config.port && config.port !== oldPort) ||
+        (config.host && config.host !== oldHost))) {
+      log.info('[WebService] Host/port updated in memory, YAML sync skipped (env mode).');
     }
   }
 
@@ -1265,47 +1752,21 @@ export class PCodeWebServiceManager {
    * Load saved port from config file
    */
   private async loadSavedPort(): Promise<number | null> {
-    const paths = this.pathManager.getPaths();
-    const configPath = paths.webServiceConfig;
-
-    try {
-      // Ensure config directory exists
-      await fs.mkdir(paths.config, { recursive: true });
-
-      const content = await fs.readFile(configPath, 'utf-8');
-      const config = JSON.parse(content);
-      return config.lastSuccessfulPort || null;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        log.error('[WebService] Error loading saved port:', error);
-      } else {
-        log.info('[WebService] No saved port configuration found');
-      }
-      return null;
-    }
+    const state = await this.readStateFile();
+    return state.lastSuccessfulPort || null;
   }
 
   /**
    * Save port to config file
    */
   private async savePort(port: number): Promise<void> {
-    const paths = this.pathManager.getPaths();
-    const configPath = paths.webServiceConfig;
-
     try {
-      // Ensure config directory exists
-      await fs.mkdir(paths.config, { recursive: true });
-
-      let config: Record<string, any> = {};
-      try {
-        const content = await fs.readFile(configPath, 'utf-8');
-        config = JSON.parse(content);
-      } catch {
-        // File doesn't exist or is invalid, start with empty config
-      }
-
-      config.lastSuccessfulPort = port;
-      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      await this.updateStateFile((state) => ({
+        ...state,
+        schemaVersion: Math.max(2, state.schemaVersion || 0),
+        lastSuccessfulPort: port,
+        savedAt: new Date().toISOString(),
+      }));
       log.info('[WebService] Saved port to config:', port);
     } catch (error) {
       log.error('[WebService] Error saving port:', error);
@@ -1316,18 +1777,13 @@ export class PCodeWebServiceManager {
    * Save last successful port to config file
    */
   private async saveLastSuccessfulPort(port: number): Promise<void> {
-    const paths = this.pathManager.getPaths();
-    const configPath = paths.webServiceConfig;
-
     try {
-      // Ensure config directory exists
-      await fs.mkdir(paths.config, { recursive: true });
-
-      const config = {
+      await this.updateStateFile((state) => ({
+        ...state,
+        schemaVersion: Math.max(2, state.schemaVersion || 0),
         lastSuccessfulPort: port,
-        savedAt: new Date().toISOString()
-      };
-      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+        savedAt: new Date().toISOString(),
+      }));
       log.info('[WebService] Saved successful port:', port);
     } catch (error) {
       log.error('[WebService] Failed to save port configuration:', error);
@@ -1382,14 +1838,8 @@ export class PCodeWebServiceManager {
       // Load saved port
       const savedPort = await this.loadSavedPort();
       if (savedPort && savedPort !== this.config.port) {
-        // Check if saved port is available
-        const available = await this.checkPortAvailable();
-        if (available) {
-          log.info('[WebService] Using saved port:', savedPort);
-          this.config.port = savedPort;
-        } else {
-          log.warn('[WebService] Saved port unavailable, using default:', this.config.port);
-        }
+        log.info('[WebService] Using saved port:', savedPort);
+        this.config.port = savedPort;
       }
     } catch (error) {
       log.error('[WebService] Failed to load saved port:', error);
@@ -1397,8 +1847,8 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Sync configuration to file
-   * Creates the config file if it doesn't exist
+   * Sync configuration to file (legacy compatibility path)
+   * Creates the config file if it doesn't exist.
    */
   private async syncConfigToFile(): Promise<void> {
     try {

@@ -21,7 +21,8 @@
       "errors": {
         "unknown": "An unknown error occurred",
         "promptNotFound": "Prompt file not found",
-        "cliNotFound": "AI CLI not found"
+        "cliNotFound": "AI CLI not found",
+        "diagnosticInfo": "Diagnostic: activeVersion={{activeVersion}}; attemptedPaths={{paths}}"
       }
     },
     "remoteMode": {
@@ -74,6 +75,7 @@
     "debug": {
       "title": "Debug",
       "description": "Debug options and developer tools.",
+      "deprecatedNotice": "Dependency-check debug options were removed. Use the homepage AI diagnosis entry for troubleshooting.",
       "ignoreDependencyCheck": "Ignore dependency check",
       "ignoreDependencyCheckDescription": "When enabled, all dependencies will be treated as not installed for testing purposes.",
       "ignoreDependencyCheckEnabled": "Ignore dependency check enabled",

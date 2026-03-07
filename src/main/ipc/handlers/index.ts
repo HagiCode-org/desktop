@@ -22,9 +22,6 @@ export { registerDependencyHandlers, initDependencyHandlers } from './dependency
 // Package source handlers
 export { registerPackageSourceHandlers, initPackageSourceHandlers } from './packageSourceHandlers.js';
 
-// License handlers
-export { registerLicenseHandlers, initLicenseHandlers } from './licenseHandlers.js';
-
 // Onboarding handlers
 export { registerOnboardingHandlers, initOnboardingHandlers } from './onboardingHandlers.js';
 

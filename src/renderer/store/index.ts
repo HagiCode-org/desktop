@@ -4,7 +4,6 @@ import i18nReducer from './slices/i18nSlice';
 import dependencyReducer from './slices/dependencySlice';
 import viewReducer from './slices/viewSlice';
 import packageSourceReducer from './slices/packageSourceSlice';
-import licenseReducer from './slices/licenseSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
@@ -24,7 +23,6 @@ export type AppDispatch = Dispatch<
   | typeof import('./slices/dependencySlice').actions
   | typeof import('./slices/viewSlice').actions
   | typeof import('./slices/packageSourceSlice').actions
-  | typeof import('./slices/licenseSlice').actions
   | typeof import('./slices/onboardingSlice').actions
   | typeof import('./slices/rssFeedSlice').actions
   | typeof import('./slices/claudeConfigSlice').actions
@@ -37,7 +35,6 @@ export type AppDispatch = Dispatch<
 // Import thunks for initialization
 import { initializeI18n } from './thunks/i18nThunks';
 import { initializeView } from './thunks/viewThunks';
-import { initializeLicense } from './thunks/licenseThunks';
 import { initializePackageSource } from './thunks/packageSourceThunks';
 import { initializeWebService } from './thunks/webServiceThunks';
 import { initializeDependency } from './thunks/dependencyThunks';
@@ -61,7 +58,6 @@ export const store = configureStore({
     dependency: dependencyReducer,
     view: viewReducer,
     packageSource: packageSourceReducer,
-    license: licenseReducer,
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
@@ -127,9 +123,6 @@ store.dispatch(initializeView());
 
 // Initialize package source
 store.dispatch(initializePackageSource());
-
-// Initialize license
-store.dispatch(initializeLicense());
 
 // Initialize onboarding (using thunk instead of saga)
 store.dispatch(checkOnboardingTrigger());

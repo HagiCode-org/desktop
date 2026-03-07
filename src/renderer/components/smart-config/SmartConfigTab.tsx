@@ -7,26 +7,69 @@ interface SmartConfigTabProps {
   defaultPromptPath?: string;
 }
 
+interface PromptLaunchResponse {
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+  resourceKey?: 'smartConfig' | 'diagnosis';
+  attemptedPaths?: string[];
+  activeVersion?: string;
+}
+
+declare global {
+  interface Window {
+    electronAPI: {
+      llmOpenAICliWithResource: (
+        resourceKey: 'smartConfig' | 'diagnosis',
+        customPromptPath?: string,
+      ) => Promise<PromptLaunchResponse>;
+    };
+  }
+}
+
 export function SmartConfigTab({ defaultPromptPath }: SmartConfigTabProps) {
   const { t } = useTranslation('pages');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const getLocalizedErrorMessage = (result: PromptLaunchResponse): string => {
+    const fallback = result.error || t('settings.smartConfig.errors.unknown');
+
+    const mappedError = (() => {
+      switch (result.errorCode) {
+        case 'PROMPT_NOT_FOUND':
+        case 'INVALID_PROMPT_PATH':
+          return t('settings.smartConfig.errors.promptNotFound');
+        case 'CLI_LAUNCH_FAILED':
+          return t('settings.smartConfig.errors.cliNotFound');
+        default:
+          return fallback;
+      }
+    })();
+
+    if (!result.attemptedPaths?.length) {
+      return mappedError;
+    }
+
+    return `${mappedError}\n${t('settings.smartConfig.errors.diagnosticInfo', {
+      activeVersion: result.activeVersion || '-',
+      paths: result.attemptedPaths.join(' | '),
+    })}`;
+  };
 
   const handleStartSmartConfig = async () => {
     setStatus('loading');
     setErrorMessage(null);
 
     try {
-      // Use default prompt path if not provided
-      const promptPath = defaultPromptPath || '';
-
-      const result = await window.electronAPI.llmOpenAICliWithPrompt(promptPath);
+      const customPromptPath = defaultPromptPath?.trim() ? defaultPromptPath.trim() : undefined;
+      const result = await window.electronAPI.llmOpenAICliWithResource('smartConfig', customPromptPath) as PromptLaunchResponse;
 
       if (result.success) {
         setStatus('success');
       } else {
         setStatus('error');
-        setErrorMessage(result.error || t('settings.smartConfig.errors.unknown'));
+        setErrorMessage(getLocalizedErrorMessage(result));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('settings.smartConfig.errors.unknown');

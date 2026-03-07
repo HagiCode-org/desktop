@@ -103,6 +103,7 @@ interface ElectronAPI {
   llmDetectConfig: () => Promise<any>;
   llmGetRegion: () => Promise<any>;
   llmGetManifestPath: (versionId: string) => Promise<any>;
+  llmOpenAICliWithResource: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) => Promise<any>;
   llmOpenAICliWithPrompt: (promptPath: string) => Promise<any>;
 
   // Diagnosis APIs
@@ -274,7 +275,7 @@ const electronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'license') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -294,6 +295,8 @@ const electronAPI = {
   llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
   llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
   llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
+  llmOpenAICliWithResource: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) =>
+    ipcRenderer.invoke('llm:open-ai-cli-with-resource', resourceKey, customPromptPath),
   llmOpenAICliWithPrompt: (promptPath: string) => ipcRenderer.invoke('llm:open-ai-cli-with-prompt', promptPath),
 
   // Diagnosis APIs
@@ -313,19 +316,6 @@ const electronAPI = {
 
   // Open external link API
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
-
-  // License Management APIs
-  license: {
-    get: () => ipcRenderer.invoke('license:get'),
-    save: (licenseKey: string) => ipcRenderer.invoke('license:save', licenseKey),
-    onSyncStatus: (callback) => {
-      const listener = (_event, status) => {
-        callback(status);
-      };
-      ipcRenderer.on('license:syncStatus', listener);
-      return () => ipcRenderer.removeListener('license:syncStatus', listener);
-    },
-  },
 
   // Onboarding APIs
   checkTriggerCondition: () => ipcRenderer.invoke('onboarding:check-trigger'),

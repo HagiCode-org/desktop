@@ -282,53 +282,6 @@
     "startService": "Start Service",
     "stopService": "Stop Service"
   },
-  "licenseManagement": {
-    "title": "License Management",
-    "description": "Manage global license configuration",
-    "syncStatus": {
-      "title": "License Sync Status",
-      "synced": "Synced",
-      "notSynced": "Not Synced",
-      "source": {
-        "default": "Default License",
-        "existing": "Existing Config",
-        "manual": "Manual Set"
-      },
-      "isDefault": " (Public Beta)",
-      "syncTime": "Sync Time",
-      "syncedVersions": "Synced Versions",
-      "syncedVersionsCount": "Synced to {{count}} version(s)",
-      "syncSuccess": "License synced",
-      "syncSuccessDesc": "Time: {{time}}"
-    },
-    "currentStatus": {
-      "title": "Current License Status",
-      "description": "View current license configuration status",
-      "status": "Status",
-      "configured": "Configured",
-      "notConfigured": "Not Configured",
-      "licenseKey": "License",
-      "updatedAt": "Updated At",
-      "note": "This license applies to all installed software versions."
-    },
-    "updateLicense": {
-      "title": "Update License",
-      "description": "Enter a new license key to update the global license configuration",
-      "licenseKeyLabel": "License Key",
-      "placeholder": "Enter license key",
-      "hint": "License key format: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
-    },
-    "actions": {
-      "refresh": "Refresh",
-      "cancel": "Cancel",
-      "save": "Update License",
-      "saving": "Saving..."
-    },
-    "info": {
-      "title": "About License",
-      "description": "Global license configuration applies to all versions of Hagicode service. Default public beta license is used."
-    }
-  },
   "blogFeed": {
     "title": "Hagicode Blog",
     "refresh": "Refresh",

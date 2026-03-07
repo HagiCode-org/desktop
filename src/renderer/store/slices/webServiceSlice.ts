@@ -53,6 +53,8 @@ export interface ProcessInfo {
   phase: StartupPhase;
   phaseMessage?: string;
   port: number;
+  recoverySource?: 'none' | 'pid_file' | 'signature_fallback';
+  recoveryMessage?: string;
 }
 
 export interface PackageInfo {
@@ -89,6 +91,8 @@ export interface WebServiceState {
   startTime: number | null;
   uptime: number;
   port: number;
+  recoverySource: 'none' | 'pid_file' | 'signature_fallback';
+  recoveryMessage: string | null;
 
   // Startup phase state
   phase: StartupPhase;
@@ -127,6 +131,8 @@ const initialState: WebServiceState = {
   startTime: null,
   uptime: 0,
   port: 36556,
+  recoverySource: 'none',
+  recoveryMessage: null,
 
   phase: StartupPhase.Idle,
   phaseMessage: null,
@@ -215,6 +221,8 @@ export const webServiceSlice = createSlice({
       state.phase = action.payload.phase;
       state.phaseMessage = action.payload.phaseMessage || null;
       state.port = action.payload.port;
+      state.recoverySource = action.payload.recoverySource || 'none';
+      state.recoveryMessage = action.payload.recoveryMessage || null;
     },
 
     // Port status actions
@@ -356,6 +364,8 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   isOperating: state.webService.isOperating,
   lastError: state.webService.lastError,
   port: state.webService.port,
+  recoverySource: state.webService.recoverySource,
+  recoveryMessage: state.webService.recoveryMessage,
 });
 
 export const selectPackageManagementInfo = (state: { webService: WebServiceState }) => ({

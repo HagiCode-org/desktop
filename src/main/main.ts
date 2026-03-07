@@ -13,9 +13,9 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
 import { DiagnosisManager } from './diagnosis-manager.js';
+import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
-import { LicenseManager } from './license-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
@@ -29,7 +29,6 @@ import {
   registerVersionHandlers,
   registerDependencyHandlers,
   registerPackageSourceHandlers,
-  registerLicenseHandlers,
   registerOnboardingHandlers,
   registerDataDirectoryHandlers,
   registerRegionHandlers,
@@ -41,6 +40,7 @@ import {
 } from './ipc/handlers/index.js';
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
+import { resolveWebServiceConfigMode } from './web-service-env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,7 +102,7 @@ let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
 let diagnosisManager: DiagnosisManager | null = null;
-let licenseManager: LicenseManager | null = null;
+let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
 let agentCliManager: AgentCliManager | null = null;
@@ -1205,7 +1205,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'license') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'web') {
@@ -1241,7 +1241,7 @@ ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 
     }
   }
 
-  // Switching to system, dependency, version, or license views is always allowed
+  // Switching to non-web views is always allowed
   return {
     success: true,
   };
@@ -1553,37 +1553,6 @@ ipcMain.handle('package-source:fetch-http-index', async (_, config: { indexUrl: 
       success: false,
       error: error instanceof Error ? error.message : String(error),
       versions: []
-    };
-  }
-});
-
-// License Management IPC Handlers
-ipcMain.handle('license:get', async () => {
-  if (!licenseManager) {
-    return null;
-  }
-  try {
-    return licenseManager.getLicense();
-  } catch (error) {
-    console.error('Failed to get license:', error);
-    return null;
-  }
-});
-
-ipcMain.handle('license:save', async (_, licenseKey: string) => {
-  if (!licenseManager) {
-    return {
-      success: false,
-      error: 'License manager not initialized'
-    };
-  }
-  try {
-    return licenseManager.saveLicense(licenseKey);
-  } catch (error) {
-    console.error('Failed to save license:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
     };
   }
 });
@@ -1960,9 +1929,6 @@ app.whenReady().then(async () => {
   // Initialize Version Manager with package source config manager
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
 
-  // Initialize License Manager
-  licenseManager = LicenseManager.getInstance(configManager);
-
   // Initialize Onboarding Manager
   if (dependencyManager && versionManager && webServiceManager) {
     onboardingManager = new OnboardingManager(
@@ -1988,9 +1954,41 @@ app.whenReady().then(async () => {
   );
   log.info('[App] Agent CLI Manager initialized');
 
+  // Sync executor env from persisted Agent CLI selection before service start.
+  if (webServiceManager && agentCliManager) {
+    const executorType = agentCliManager.getSelectedExecutorType();
+    await webServiceManager.updateConfig({
+      env: {
+        AI__Providers__DefaultProvider: executorType,
+      },
+    });
+    log.info('[App] Synced executor env from Agent CLI selection:', executorType);
+  }
+
   // Register Agent CLI IPC handlers
   if (agentCliManager) {
-    registerAgentCliHandlers(agentCliManager);
+    const currentAgentCliManager = agentCliManager;
+    registerAgentCliHandlers(currentAgentCliManager, {
+      onSelectionSaved: async (cliType) => {
+        if (!webServiceManager) return;
+        const executorType = currentAgentCliManager.getExecutorType(cliType);
+        await webServiceManager.updateConfig({
+          env: {
+            AI__Providers__DefaultProvider: executorType,
+          },
+        });
+        log.info('[App] Synced executor env from Agent CLI save:', executorType);
+      },
+      onSkipped: async () => {
+        if (!webServiceManager) return;
+        await webServiceManager.updateConfig({
+          env: {
+            AI__Providers__DefaultProvider: 'ClaudeCodeCli',
+          },
+        });
+        log.info('[App] Agent CLI skipped, executor env reset to default: ClaudeCodeCli');
+      },
+    });
     log.info('[App] Agent CLI IPC handlers registered');
   }
 
@@ -2000,9 +1998,19 @@ app.whenReady().then(async () => {
   );
   log.info('[App] LLM Installation Manager initialized');
 
+  // Shared prompt resolver for smart-config and diagnosis entry points
+  promptResourceResolver = new PromptResourceResolver();
+  log.info('[App] Prompt Resource Resolver initialized');
+
   // Register LLM IPC Handlers
   if (llmInstallationManager) {
-    registerLlmHandlers({ llmInstallationManager, mainWindow });
+    registerLlmHandlers({
+      llmInstallationManager,
+      mainWindow,
+      agentCliManager,
+      versionManager,
+      promptResourceResolver,
+    });
     log.info('[App] LLM IPC handlers registered');
   }
 
@@ -2015,6 +2023,9 @@ app.whenReady().then(async () => {
     registerDiagnosisHandlers({
       diagnosisManager,
       llmInstallationManager,
+      versionManager,
+      promptResourceResolver,
+      agentCliManager,
     });
     log.info('[App] Diagnosis IPC handlers registered');
   }
@@ -2087,17 +2098,21 @@ ipcMain.handle('data-directory:set', async (_, dataDirPath: string) => {
     pathManager.setDataDirectory(dataDirPath);
     log.info('[Data Directory] Updated PathManager memory state');
 
-    // Sync to appsettings.yml for all installed versions
-    try {
-      const updatedVersions = await yamlConfigManager.updateAllDataDirs(dataDirPath);
-      log.info('[Data Directory] Configuration sync completed:');
-      log.info('[Data Directory]   - Source: electron-store');
-      log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
-      log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
-    } catch (error) {
-      log.error('[Data Directory] Failed to update appsettings.yml:', error);
-      // Don't fail the operation, just log warning
-      log.warn('[Data Directory] Operation completed with partial sync (electron-store updated, YAML sync failed)');
+    // Keep YAML sync as an explicit rollback path only.
+    if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
+      try {
+        const updatedVersions = await yamlConfigManager.updateAllDataDirs(dataDirPath);
+        log.info('[Data Directory] Configuration sync completed:');
+        log.info('[Data Directory]   - Source: electron-store');
+        log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
+        log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
+      } catch (error) {
+        log.error('[Data Directory] Failed to update appsettings.yml:', error);
+        // Don't fail the operation, just log warning
+        log.warn('[Data Directory] Operation completed with partial sync (electron-store updated, YAML sync failed)');
+      }
+    } else {
+      log.info('[Data Directory] Skipped YAML sync (env mode).');
     }
 
     log.info('[Data Directory] Data directory configuration completed successfully');
@@ -2164,17 +2179,21 @@ ipcMain.handle('data-directory:restore-default', async () => {
     pathManager.setDataDirectory(defaultPath);
     log.info('[Data Directory] Reset to default path:', defaultPath);
 
-    // Sync to appsettings.yml for all installed versions
-    try {
-      const updatedVersions = await yamlConfigManager.updateAllDataDirs(defaultPath);
-      log.info('[Data Directory] Configuration sync completed:');
-      log.info('[Data Directory]   - Action: Restore to default');
-      log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
-      log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
-    } catch (error) {
-      log.error('[Data Directory] Failed to update appsettings.yml:', error);
-      // Don't fail the operation, just log warning
-      log.warn('[Data Directory] Operation completed with partial sync (default path set in memory, YAML sync failed)');
+    // Keep YAML sync as an explicit rollback path only.
+    if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
+      try {
+        const updatedVersions = await yamlConfigManager.updateAllDataDirs(defaultPath);
+        log.info('[Data Directory] Configuration sync completed:');
+        log.info('[Data Directory]   - Action: Restore to default');
+        log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
+        log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
+      } catch (error) {
+        log.error('[Data Directory] Failed to update appsettings.yml:', error);
+        // Don't fail the operation, just log warning
+        log.warn('[Data Directory] Operation completed with partial sync (default path set in memory, YAML sync failed)');
+      }
+    } else {
+      log.info('[Data Directory] Skipped YAML sync while restoring default path (env mode).');
     }
 
     log.info('[Data Directory] Default data directory restored successfully');
@@ -2280,33 +2299,19 @@ function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
   // Start auto-refresh for RSS feed
   rssFeedManager.startAutoRefresh();
 
-  // Register license sync status callback to forward to renderer
-  licenseManager.onSyncStatus((status) => {
-    log.info('[App] License sync status:', status);
-    mainWindow?.webContents.send('license:syncStatus', status);
-  });
-
-  // Initialize license (async operation)
-  licenseManager.initializeDefaultLicense().catch(error => {
-    log.error('[App] Failed to initialize license:', error);
-  });
-  log.info('[App] License Manager initialized');
-
-  // Set active version in web service manager
-  (async () => {
-    try {
-      const activeVersion = await versionManager.getActiveVersion();
-      if (activeVersion) {
-        webServiceManager.setActiveVersion(activeVersion.id);
-        log.info('Active version set in web service manager:', activeVersion.id);
-      } else {
-        webServiceManager.clearActiveVersion();
-        log.info('No active version found, web service manager cleared');
-      }
-    } catch (error) {
-      log.error('Failed to set active version in web service manager:', error);
+  // Set active version before initial status hydration so recovery can use it.
+  try {
+    const activeVersion = await versionManager.getActiveVersion();
+    if (activeVersion) {
+      webServiceManager.setActiveVersion(activeVersion.id);
+      log.info('Active version set in web service manager:', activeVersion.id);
+    } else {
+      webServiceManager.clearActiveVersion();
+      log.info('No active version found, web service manager cleared');
     }
-  })();
+  } catch (error) {
+    log.error('Failed to set active version in web service manager:', error);
+  }
 
   createWindow();
   createTray();

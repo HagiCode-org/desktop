@@ -5,6 +5,7 @@ import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import log from 'electron-log';
 import { Region, RegionDetector } from './region-detector.js';
+import { loadConsoleEnvironment } from './shell-env-loader.js';
 
 const execAsync = promisify(exec);
 
@@ -100,13 +101,16 @@ export class LlmInstallationManager {
   }
 
   /**
-   * Call Claude API with the given prompt file path using Claude CLI
+   * Call AI CLI with the given prompt file path using the specified CLI command
    * Opens a visible terminal window to execute the prompt (similar to testConfiguration)
-   * Instead of passing the entire prompt content, we pass a short command that tells Claude to read the file
+   * Instead of passing the entire prompt content, we pass a short command that tells the AI to read the file
+   * @param promptFilePath Path to the prompt file
+   * @param mainWindow The main window instance
+   * @param commandName The CLI command to use ('claude' or 'codex')
    */
-  async callClaudeAPI(promptFilePath: string, mainWindow: any): Promise<ApiCallResult> {
+  async callApi(promptFilePath: string, mainWindow: any, commandName: string = 'claude'): Promise<ApiCallResult> {
     try {
-      log.info('[LlmInstallationManager] Opening terminal with Claude CLI...');
+      log.info(`[LlmInstallationManager] Opening terminal with ${commandName} CLI...`);
       log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
       log.info('[LlmInstallationManager] Debug mode:', this.debugMode);
 
@@ -116,6 +120,7 @@ export class LlmInstallationManager {
 
       let terminalFound = false;
       let constructedCommand = '';
+      const runtimeEnv = await this.buildCliRuntimeEnv();
       // Get just the filename, not the full path
       const fileName = path.basename(promptFilePath);
       // Set working directory to the directory containing the prompt file
@@ -124,13 +129,14 @@ export class LlmInstallationManager {
       const prompt = `"Follow ${fileName} to install hagicode desktop and follow the instructions in it."`;
 
       if (platform === 'win32') {
-        // Windows: Directly spawn claude process
+        // Windows: Directly spawn CLI process
         try {
-          log.info('[LlmInstallationManager] Windows command:', `claude "${prompt}"`);
-          spawn('claude', [prompt], {
+          log.info(`[LlmInstallationManager] Windows command:`, `${commandName} "${prompt}"`);
+          spawn(commandName, [prompt], {
             detached: true,
             stdio: 'ignore',
             cwd: promptDir,
+            env: runtimeEnv,
             shell: true,
           }).unref();
           terminalFound = true;
@@ -139,19 +145,22 @@ export class LlmInstallationManager {
           log.error('[LlmInstallationManager] Failed to spawn Windows terminal:', err);
         }
       } else if (platform === 'darwin') {
-        // macOS: Open new Terminal window and run claude with prompt
+        // macOS: Open new Terminal window and run CLI with prompt
         try {
           const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          constructedCommand = `osascript -e 'tell application "Terminal" to do script "claude \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
+          constructedCommand = `osascript -e 'tell application "Terminal" to do script "${commandName} \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
           log.info('[LlmInstallationManager] macOS command:', constructedCommand);
-          await execAsync(constructedCommand);
+          await execAsync(constructedCommand, {
+            cwd: promptDir,
+            env: runtimeEnv,
+          });
           terminalFound = true;
           log.info('[LlmInstallationManager] Opened macOS terminal successfully');
         } catch (err) {
           log.error('[LlmInstallationManager] Failed to open macOS terminal:', err);
         }
       } else {
-        // Linux: Execute claude via terminal emulator
+        // Linux: Execute CLI via terminal emulator
         // Detect desktop environment and prioritize appropriate terminal
         const desktopSession = process.env.DESKTOP_SESSION || process.env.XDG_CURRENT_DESKTOP || '';
 
@@ -179,17 +188,17 @@ export class LlmInstallationManager {
         for (const term of prioritizedTerminals) {
           try {
             // Test if the terminal is available
-            await execAsync(`which ${term}`);
+            await execAsync(`which ${term}`, { env: runtimeEnv });
             log.info(`[LlmInstallationManager] Using terminal: ${term}`);
 
-            const command = `claude ${prompt}`;
+            const command = `${commandName} ${prompt}`;
             log.info('[LlmInstallationManager] Executing:', command);
 
             spawn(term, ['-e', command], {
               detached: true,
               stdio: 'ignore',
               cwd: promptDir,
-              env: { ...process.env, PATH: process.env.PATH },
+              env: runtimeEnv,
             }).unref();
             terminalFound = true;
             log.info('[LlmInstallationManager] Opened Linux terminal successfully');
@@ -230,12 +239,20 @@ export class LlmInstallationManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       log.error('[LlmInstallationManager] Command execution result: Failed -', errorMessage);
-      log.error('[LlmInstallationManager] Failed to open terminal for Claude API:', errorMessage);
+      log.error(`[LlmInstallationManager] Failed to open terminal for ${commandName} CLI:`, errorMessage);
       return {
         success: false,
-        error: `Failed to execute Claude CLI: ${errorMessage}. Make sure Claude Code CLI is installed.`,
+        error: `Failed to execute ${commandName} CLI: ${errorMessage}. Make sure ${commandName} CLI is installed.`,
       };
     }
+  }
+
+  /**
+   * Deprecated: Use callApi instead for better clarity
+   * @deprecated Use callApi with explicit commandName parameter
+   */
+  async callClaudeAPI(promptFilePath: string, mainWindow: any): Promise<ApiCallResult> {
+    return this.callApi(promptFilePath, mainWindow, 'claude');
   }
 
   /**
@@ -278,10 +295,11 @@ export class LlmInstallationManager {
   /**
    * Open AI CLI and load the specified prompt file
    * @param promptPath - Absolute path to the prompt file
+   * @param commandName - The CLI command to use ('claude' or 'codex'). Defaults to 'claude'.
    * @returns Promise<void>
    */
-  async openAICliWithPrompt(promptPath: string): Promise<void> {
-    log.info('[LlmInstallationManager] openAICliWithPrompt called with path:', promptPath);
+  async openAICliWithPrompt(promptPath: string, commandName: string = 'claude'): Promise<void> {
+    log.info('[LlmInstallationManager] openAICliWithPrompt called with path:', promptPath, 'command:', commandName);
 
     // Validate prompt file exists
     try {
@@ -293,13 +311,30 @@ export class LlmInstallationManager {
 
     log.info('[LlmInstallationManager] Prompt file validated, launching CLI...');
 
-    // Use the existing callClaudeAPI logic but simplified
-    const result = await this.callClaudeAPI(promptPath, null);
+    // Use the existing callApi logic but simplified
+    const result = await this.callApi(promptPath, null, commandName);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to open AI CLI');
     }
 
     log.info('[LlmInstallationManager] AI CLI launched successfully');
+  }
+
+  private async buildCliRuntimeEnv(): Promise<NodeJS.ProcessEnv> {
+    const consoleEnv = await loadConsoleEnvironment();
+    const runtimeEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...consoleEnv,
+    };
+
+    if (Object.keys(consoleEnv).length > 0) {
+      log.info('[LlmInstallationManager] Console environment merged for AI CLI:', {
+        envCount: Object.keys(consoleEnv).length,
+        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-rc',
+      });
+    }
+
+    return runtimeEnv;
   }
 }

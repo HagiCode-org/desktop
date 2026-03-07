@@ -531,17 +531,8 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
 export const initializeWebService = createAsyncThunk(
   'webService/initialize',
   async (_, { dispatch }) => {
-    // Set initial state
-    dispatch(setProcessInfo({
-      status: 'stopped',
-      pid: null,
-      uptime: 0,
-      startTime: null,
-      url: null,
-      restartCount: 0,
-      phase: 'idle' as any,
-      port: 36556,
-    }));
+    // Set a minimal bootstrap state; real status is fetched immediately after.
+    dispatch(setStatus('stopped'));
     dispatch(setPlatform('linux-x64'));
     dispatch(setAvailableVersions([]));
     dispatch(setPackageInfo({
@@ -566,6 +557,25 @@ export const initializeWebService = createAsyncThunk(
       dispatch(setActiveVersion(activeVersion));
     } catch (e) {
       console.log('Active version not available yet');
+    }
+
+    // Hydrate from main-process recovered status to avoid startup false negatives.
+    try {
+      const status: ProcessInfo = await window.electronAPI.getWebServiceStatus();
+      dispatch(setProcessInfo(status));
+    } catch (error) {
+      console.error('Initialize web service status error:', error);
+      dispatch(setProcessInfo({
+        status: 'stopped',
+        pid: null,
+        uptime: 0,
+        startTime: null,
+        url: null,
+        restartCount: 0,
+        phase: 'idle' as any,
+        port: 36556,
+        recoverySource: 'none',
+      }));
     }
   }
 );

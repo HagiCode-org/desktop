@@ -35,7 +35,7 @@ export function registerViewHandlers(deps: {
   state.menuManager = deps.menuManager;
 
   // Switch view handler
-  ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'license') => {
+  ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => {
     console.log('[ViewHandlers] Switch view requested:', view);
 
     if (view === 'web') {

@@ -282,53 +282,6 @@
     "startService": "启动服务",
     "stopService": "停止服务"
   },
-  "licenseManagement": {
-    "title": "许可证管理",
-    "description": "管理全局许可证配置",
-    "syncStatus": {
-      "title": "许可证同步状态",
-      "synced": "已同步",
-      "notSynced": "未同步",
-      "source": {
-        "default": "默认许可证",
-        "existing": "已有配置",
-        "manual": "手动设置"
-      },
-      "isDefault": " (公测版)",
-      "syncTime": "同步时间",
-      "syncedVersions": "同步版本数",
-      "syncedVersionsCount": "已同步到 {{count}} 个版本",
-      "syncSuccess": "许可证已同步",
-      "syncSuccessDesc": "时间: {{time}}"
-    },
-    "currentStatus": {
-      "title": "当前许可证状态",
-      "description": "查看当前许可证配置状态",
-      "status": "状态",
-      "configured": "已配置",
-      "notConfigured": "未配置",
-      "licenseKey": "许可证",
-      "updatedAt": "更新时间",
-      "note": "该许可证适用于所有已安装的软件版本。"
-    },
-    "updateLicense": {
-      "title": "更新许可证",
-      "description": "输入新的许可证密钥以更新全局许可证配置",
-      "licenseKeyLabel": "许可证密钥",
-      "placeholder": "请输入许可证密钥",
-      "hint": "许可证密钥格式：XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
-    },
-    "actions": {
-      "refresh": "刷新",
-      "cancel": "取消",
-      "save": "更新许可证",
-      "saving": "保存中..."
-    },
-    "info": {
-      "title": "关于许可证",
-      "description": "全局许可证配置将应用于所有版本的 Hagicode 服务。默认使用公测许可证。"
-    }
-  },
   "blogFeed": {
     "title": "Hagicode 博客",
     "refresh": "刷新",

@@ -13,7 +13,14 @@ interface DiagnosisButtonProps {
 declare global {
   interface Window {
     electronAPI: {
-      diagnosisOpenPrompt: () => Promise<{ success: boolean; error?: string }>;
+      diagnosisOpenPrompt: () => Promise<{
+        success: boolean;
+        error?: string;
+        errorCode?: string;
+        resourceKey?: 'smartConfig' | 'diagnosis';
+        attemptedPaths?: string[];
+        activeVersion?: string;
+      }>;
     };
   }
 }
@@ -21,6 +28,35 @@ declare global {
 const DiagnosisButton: React.FC<DiagnosisButtonProps> = ({ className = '' }) => {
   const { t } = useTranslation('common');
   const [buttonState, setButtonState] = useState<ButtonState>('idle');
+
+  const getLocalizedErrorMessage = (result: {
+    error?: string;
+    errorCode?: string;
+    attemptedPaths?: string[];
+    activeVersion?: string;
+  }) => {
+    const fallback = result.error || t('diagnosis.toast.error');
+    const mappedError = (() => {
+      switch (result.errorCode) {
+        case 'PROMPT_NOT_FOUND':
+        case 'INVALID_PROMPT_PATH':
+          return t('diagnosis.errors.promptNotFound');
+        case 'CLI_LAUNCH_FAILED':
+          return t('diagnosis.errors.cliNotFound');
+        default:
+          return fallback;
+      }
+    })();
+
+    if (!result.attemptedPaths?.length) {
+      return mappedError;
+    }
+
+    return `${mappedError}\n${t('diagnosis.errors.diagnosticInfo', {
+      activeVersion: result.activeVersion || '-',
+      paths: result.attemptedPaths.join(' | '),
+    })}`;
+  };
 
   const handleClick = async () => {
     setButtonState('loading');
@@ -30,16 +66,16 @@ const DiagnosisButton: React.FC<DiagnosisButtonProps> = ({ className = '' }) => 
 
       if (result.success) {
         setButtonState('success');
-        toast.success(t('diagnosis.toast.success') || 'AI 诊断已启动');
+        toast.success(t('diagnosis.toast.success'));
         setTimeout(() => setButtonState('idle'), 2000);
       } else {
         setButtonState('error');
-        toast.error(result.error || t('diagnosis.toast.error') || '启动 AI 诊断失败');
+        toast.error(getLocalizedErrorMessage(result));
         setTimeout(() => setButtonState('idle'), 3000);
       }
     } catch (error) {
       setButtonState('error');
-      toast.error(t('diagnosis.toast.error') || '启动 AI 诊断失败');
+      toast.error(t('diagnosis.toast.error'));
       setTimeout(() => setButtonState('idle'), 3000);
     }
   };
@@ -50,28 +86,28 @@ const DiagnosisButton: React.FC<DiagnosisButtonProps> = ({ className = '' }) => 
         return (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {t('diagnosis.button.loading') || '正在启动...'}
+            {t('diagnosis.button.loading')}
           </>
         );
       case 'success':
         return (
           <>
             <CheckCircle className="w-4 h-4 mr-2" />
-            {t('diagnosis.button.success') || '已启动'}
+            {t('diagnosis.button.success')}
           </>
         );
       case 'error':
         return (
           <>
             <AlertCircle className="w-4 h-4 mr-2" />
-            {t('diagnosis.button.retry') || '重试'}
+            {t('diagnosis.button.retry')}
           </>
         );
       default:
         return (
           <>
             <Search className="w-4 h-4 mr-2" />
-            {t('diagnosis.button.text') || '启动遇到问题？点这里让AI看看'}
+            {t('diagnosis.button.text')}
           </>
         );
     }
@@ -109,7 +145,7 @@ const DiagnosisButton: React.FC<DiagnosisButtonProps> = ({ className = '' }) => 
         shadow-sm hover:shadow-md
         ${className}
       `}
-      aria-label={t('diagnosis.button.ariaLabel') || '启动 AI 问题诊断'}
+      aria-label={t('diagnosis.button.ariaLabel')}
     >
       <AnimatePresence mode="wait">
         <motion.div

@@ -5,12 +5,6 @@ export interface AppSettings {
   language: string;
 }
 
-export interface LicenseConfig {
-  licenseKey: string;
-  isConfigured: boolean;
-  updatedAt: string;
-}
-
 export interface RemoteModeConfig {
   enabled: boolean;
   url: string;
@@ -18,7 +12,6 @@ export interface RemoteModeConfig {
 
 export interface AppConfig {
   server: ServerConfig;
-  license: LicenseConfig;
   remoteMode: RemoteModeConfig;
   startOnStartup: boolean;
   minimizeToTray: boolean;
@@ -34,11 +27,6 @@ const defaultConfig: AppConfig = {
   server: {
     host: 'localhost',
     port: 36546,
-  },
-  license: {
-    licenseKey: '',
-    isConfigured: false,
-    updatedAt: '',
   },
   remoteMode: {
     enabled: false,
@@ -98,25 +86,6 @@ export class ConfigManager {
    */
   getStore(): Store<AppConfig> {
     return this.store;
-  }
-
-  /**
-   * Get license configuration
-   */
-  getLicense(): LicenseConfig {
-    return this.get('license');
-  }
-
-  /**
-   * Set license configuration
-   */
-  setLicense(licenseKey: string): void {
-    const current = this.getLicense();
-    this.set('license', {
-      licenseKey,
-      isConfigured: !!licenseKey,
-      updatedAt: new Date().toISOString(),
-    });
   }
 
   /**

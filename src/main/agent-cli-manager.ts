@@ -10,6 +10,10 @@ import {
  */
 export class AgentCliManager {
   private static readonly STORE_KEY = 'agentCliSelection';
+  private static readonly EXECUTOR_TYPE_MAP: Record<AgentCliType, string> = {
+    [AgentCliType.ClaudeCode]: 'ClaudeCodeCli',
+    [AgentCliType.Codex]: 'CodexCli',
+  };
 
   constructor(private store: any) {}
 
@@ -59,8 +63,10 @@ export class AgentCliManager {
     switch (cliType) {
       case AgentCliType.ClaudeCode:
         return 'claude';
+      case AgentCliType.Codex:
+        return 'codex';
       default:
-        return '';
+        return 'claude';
     }
   }
 
@@ -70,6 +76,23 @@ export class AgentCliManager {
   getSelectedCliType(): AgentCliType | null {
     const selection = this.loadSelection();
     return selection.cliType;
+  }
+
+  /**
+   * Map Agent CLI selection to backend default executor type.
+   */
+  getExecutorType(cliType: AgentCliType | null): string {
+    if (!cliType) {
+      return 'ClaudeCodeCli';
+    }
+    return AgentCliManager.EXECUTOR_TYPE_MAP[cliType] || 'ClaudeCodeCli';
+  }
+
+  /**
+   * Resolve executor type from current persisted selection.
+   */
+  getSelectedExecutorType(): string {
+    return this.getExecutorType(this.getSelectedCliType());
   }
 
   /**

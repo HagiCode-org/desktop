@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnboardingSettings } from './settings/OnboardingSettings';
-import { DebugSettings } from './settings/DebugSettings';
+import { AgentCliSettings } from './settings/AgentCliSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
 import { SmartConfigTab } from './smart-config/SmartConfigTab';
@@ -33,10 +33,10 @@ export default function SettingsPage() {
               {t('settings.tabs.remoteMode')}
             </TabsTrigger>
             <TabsTrigger
-              value="debug"
+              value="agentCli"
               className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
-              {t('settings.tabs.debug')}
+              {t('settings.tabs.agentCli')}
             </TabsTrigger>
             <TabsTrigger
               value="dataDirectory"
@@ -61,8 +61,8 @@ export default function SettingsPage() {
               <RemoteModeSettings />
             </TabsContent>
 
-            <TabsContent value="debug" className="mt-0">
-              <DebugSettings />
+            <TabsContent value="agentCli" className="mt-0">
+              <AgentCliSettings />
             </TabsContent>
 
             <TabsContent value="dataDirectory" className="mt-0">

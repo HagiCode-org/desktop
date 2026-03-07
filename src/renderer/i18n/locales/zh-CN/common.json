@@ -133,11 +133,28 @@
     "dashboard": "仪表盘",
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
-    "licenseManagement": "许可证管理",
     "settings": "设置",
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"
+  },
+  "diagnosis": {
+    "button": {
+      "text": "启动遇到问题？点这里让 AI 看看",
+      "loading": "正在启动...",
+      "success": "已启动",
+      "retry": "重试",
+      "ariaLabel": "启动 AI 问题诊断"
+    },
+    "toast": {
+      "success": "AI 诊断已启动",
+      "error": "启动 AI 诊断失败"
+    },
+    "errors": {
+      "promptNotFound": "提示词文件不存在",
+      "cliNotFound": "AI CLI 未找到或启动失败",
+      "diagnosticInfo": "诊断信息：activeVersion={{activeVersion}}；attemptedPaths={{paths}}"
+    }
   },
   "system": {
     "noVersionInstalled": {

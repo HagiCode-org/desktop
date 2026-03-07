@@ -592,6 +592,13 @@ const WebServiceStatusCard: React.FC = () => {
                   { label: t('webServiceStatus.details.restartCount'), value: webServiceInfo.restartCount.toString(), mono: true },
                   { label: t('webServiceStatus.details.port'), value: (webServiceInfo.port || 'N/A').toString(), mono: true },
                   { label: t('webServiceStatus.details.version') || 'Version', value: activeVersion?.version || 'N/A', mono: true },
+                  ...(webServiceInfo.recoverySource && webServiceInfo.recoverySource !== 'none'
+                    ? [{
+                        label: t('webServiceStatus.details.recoverySource', { defaultValue: 'Recovery Source' }),
+                        value: webServiceInfo.recoverySource,
+                        mono: true,
+                      }]
+                    : []),
                 ].map((item, index) => (
                   <motion.div
                     key={item.label}

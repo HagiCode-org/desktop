@@ -4,9 +4,33 @@
     "tabs": {
       "onboarding": "启动向导",
       "remoteMode": "远程模式",
+      "agentCli": "Agent CLI",
       "debug": "调试",
       "dataDirectory": "数据目录",
       "smartConfig": "智能配置"
+    },
+    "agentCli": {
+      "title": "Agent CLI",
+      "description": "展示并切换当前用于 AI 相关流程的命令行工具。",
+      "current": {
+        "label": "当前选择",
+        "none": "未选择",
+        "skipped": "已跳过（将使用默认值）",
+        "updatedAt": "最近更新：{{value}}"
+      },
+      "actions": {
+        "select": "切换到此项",
+        "selected": "当前使用中",
+        "switching": "切换中..."
+      },
+      "messages": {
+        "saved": "已切换到 {{name}}",
+        "saveFailed": "切换失败：{{error}}",
+        "loadFailed": "读取当前配置失败：{{error}}"
+      },
+      "notes": {
+        "fallback": "未显式选择时，系统默认使用 Claude Code。"
+      }
     },
     "smartConfig": {
       "title": "智能配置",
@@ -21,7 +45,8 @@
       "errors": {
         "unknown": "发生未知错误",
         "promptNotFound": "提示词文件不存在",
-        "cliNotFound": "AI CLI 未找到"
+        "cliNotFound": "AI CLI 未找到",
+        "diagnosticInfo": "诊断信息：activeVersion={{activeVersion}}；attemptedPaths={{paths}}"
       }
     },
     "remoteMode": {
@@ -74,6 +99,7 @@
     "debug": {
       "title": "调试",
       "description": "调试选项和开发工具。",
+      "deprecatedNotice": "依赖检查调试项已移除。若需问题排查，请使用首页 AI 诊断入口。",
       "ignoreDependencyCheck": "忽略依赖检查",
       "ignoreDependencyCheckDescription": "开启后所有依赖项将被视为未安装，用于测试未安装状态下的页面行为。",
       "ignoreDependencyCheckEnabled": "已启用忽略依赖检查",
