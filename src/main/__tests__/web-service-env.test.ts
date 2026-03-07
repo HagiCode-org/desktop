@@ -21,6 +21,7 @@ describe('web-service-env', () => {
 
     assert.equal(result.errors.length, 0);
     assert.equal(result.injectedEnv.ASPNETCORE_URLS, 'http://127.0.0.1:36556');
+    assert.equal(result.injectedEnv.Urls, 'http://127.0.0.1:36556');
     assert.equal(result.injectedEnv.DATADIR, '/tmp/hagicode-data');
     assert.equal(result.injectedEnv.Database__Provider, 'sqlite');
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
@@ -141,11 +142,11 @@ describe('web-service-env', () => {
     const env = { ...process.env, ...buildResult.injectedEnv };
     const child = spawnSync(process.execPath, [
       '-e',
-      "process.stdout.write([process.env.ASPNETCORE_URLS, process.env.DATADIR, process.env.AI__Providers__DefaultProvider].join('|'))",
+      "process.stdout.write([process.env.ASPNETCORE_URLS, process.env.Urls, process.env.DATADIR, process.env.AI__Providers__DefaultProvider].join('|'))",
     ], { env, encoding: 'utf-8' });
 
     assert.equal(child.status, 0);
-    assert.equal(child.stdout, 'http://localhost:36556|/tmp/hagicode-integration|CodexCli');
+    assert.equal(child.stdout, 'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|CodexCli');
   });
 
   it('covers migration and rollback scenarios', () => {

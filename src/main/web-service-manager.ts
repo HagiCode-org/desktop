@@ -95,6 +95,7 @@ export class PCodeWebServiceManager {
   private startupRecoveryAttempted: boolean = false;
   private startupRecoveryPromise: Promise<void> | null = null;
   private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
+  private readonly healthCheckPaths: readonly string[] = ['/api/health', '/api/health/dual-monitoring', '/api/status'];
 
   constructor(config: WebServiceConfig) {
     this.config = config;
@@ -686,6 +687,93 @@ export class PCodeWebServiceManager {
     });
   }
 
+  private async isManagedServiceReachable(port: number): Promise<boolean> {
+    const probeHosts = this.resolveProbeHosts(this.config.host);
+    for (const host of probeHosts) {
+      if (await this.checkPortReachable(host, port, 1000)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private parsePidsFromOutput(output: string): number[] {
+    const matches = output.match(/\b\d+\b/g) || [];
+    const parsed = matches
+      .map(value => Number.parseInt(value, 10))
+      .filter(value => Number.isInteger(value) && value > 0);
+    return [...new Set(parsed)];
+  }
+
+  private async getListeningProcessIdsByPort(port: number): Promise<number[]> {
+    try {
+      if (process.platform === 'win32') {
+        const psCmd = `Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`;
+        const output = await this.runCommand(`powershell -NoProfile -Command "${psCmd}"`);
+        const pids = this.parsePidsFromOutput(output);
+        if (pids.length > 0) {
+          return pids;
+        }
+
+        // Fallback for environments where Get-NetTCPConnection is unavailable.
+        const netstatOutput = await this.runCommand(`netstat -ano | findstr ":${port}"`);
+        return netstatOutput
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && /LISTENING/i.test(line))
+          .map(line => {
+            const parts = line.split(/\s+/);
+            return Number.parseInt(parts[parts.length - 1] || '', 10);
+          })
+          .filter(pid => Number.isInteger(pid) && pid > 0)
+          .filter((pid, index, arr) => arr.indexOf(pid) === index);
+      }
+
+      const output = await this.runCommand(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`);
+      return this.parsePidsFromOutput(output);
+    } catch (error) {
+      log.debug('[WebService] Failed to resolve listening PID by port:', { port, error });
+      return [];
+    }
+  }
+
+  private async resolveManagedServicePidByPort(port: number): Promise<number | null> {
+    const pids = await this.getListeningProcessIdsByPort(port);
+    if (pids.length === 0) {
+      return null;
+    }
+
+    for (const pid of pids) {
+      const commandLine = await this.getProcessCommandLine(pid);
+      if (commandLine && this.isTargetDotnetSignature(commandLine)) {
+        return pid;
+      }
+    }
+
+    return null;
+  }
+
+  private async terminateLingeringServiceByPort(port: number): Promise<void> {
+    const targetPid = await this.resolveManagedServicePidByPort(port);
+    if (!targetPid) {
+      log.warn('[WebService] Port remains reachable but no managed service PID could be resolved:', { port });
+      return;
+    }
+
+    if (process.platform === 'win32') {
+      try {
+        await this.runCommand(`taskkill /F /T /PID ${targetPid}`);
+        log.warn('[WebService] Terminated lingering managed service by PID/port:', { port, pid: targetPid });
+      } catch (error) {
+        log.error('[WebService] Failed to terminate lingering service by PID/port:', { port, pid: targetPid, error });
+      }
+      return;
+    }
+
+    await this.terminateRecoveredProcess(targetPid);
+    log.warn('[WebService] Terminated lingering managed service by PID/port:', { port, pid: targetPid });
+  }
+
   /**
    * Emit phase update to renderer
    */
@@ -707,6 +795,30 @@ export class PCodeWebServiceManager {
     log.info('[WebService] Phase:', phase, message || '');
   }
 
+  private resolveProbeHosts(host: string): string[] {
+    const normalized = host.trim().toLowerCase();
+    if (!normalized) {
+      return ['localhost', '127.0.0.1'];
+    }
+
+    if (normalized === '0.0.0.0' || normalized === '::' || normalized === '[::]') {
+      // Binding hosts are not routable for client probes.
+      return ['127.0.0.1', 'localhost'];
+    }
+
+    if (normalized === 'localhost') {
+      // Include IPv4 fallback to avoid DNS/IPv6 resolution edge cases.
+      return ['localhost', '127.0.0.1'];
+    }
+
+    return [host];
+  }
+
+  private buildHealthCheckUrls(port: number): string[] {
+    const hosts = this.resolveProbeHosts(this.config.host);
+    return hosts.flatMap((host) => this.healthCheckPaths.map((path) => `http://${host}:${port}${path}`));
+  }
+
   /**
    * Wait for port to be listening
    */
@@ -714,40 +826,43 @@ export class PCodeWebServiceManager {
     const startTime = Date.now();
     const net = await import('node:net');
     let attempt = 0;
+    const probeHosts = this.resolveProbeHosts(this.config.host);
 
-    log.info('[WebService] Waiting for port listening:', `${this.config.host}:${this.config.port}`, 'timeout:', timeout);
+    log.info('[WebService] Waiting for port listening:', `${this.config.host}:${this.config.port}`, 'probeHosts:', probeHosts, 'timeout:', timeout);
 
     while (Date.now() - startTime < timeout) {
       attempt++;
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const socket = new net.Socket();
-          socket.setTimeout(5000);
+      for (const probeHost of probeHosts) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const socket = new net.Socket();
+            socket.setTimeout(5000);
 
-          socket.on('connect', () => {
-            socket.destroy();
-            log.info('[WebService] Port is listening on attempt:', attempt);
-            resolve();
+            socket.on('connect', () => {
+              socket.destroy();
+              log.info('[WebService] Port is listening on attempt:', attempt, 'host:', probeHost);
+              resolve();
+            });
+
+            socket.on('timeout', () => {
+              socket.destroy();
+              reject(new Error('Timeout'));
+            });
+
+            socket.on('error', (err) => {
+              socket.destroy();
+              reject(new Error(`Connection error: ${err.message}`));
+            });
+
+            socket.connect(this.config.port, probeHost);
           });
-
-          socket.on('timeout', () => {
-            socket.destroy();
-            reject(new Error('Timeout'));
-          });
-
-          socket.on('error', (err) => {
-            socket.destroy();
-            reject(new Error(`Connection error: ${err.message}`));
-          });
-
-          socket.connect(this.config.port, this.config.host);
-        });
-        return true; // Port is listening
-      } catch (error) {
-        // Port not ready yet, wait and retry
-        log.debug('[WebService] Port not ready on attempt:', attempt, 'error:', (error as Error).message);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between attempts
+          return true; // Port is listening
+        } catch (error) {
+          log.debug('[WebService] Port not ready on attempt:', attempt, 'host:', probeHost, 'error:', (error as Error).message);
+        }
       }
+
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between attempts
     }
 
     log.error('[WebService] Port listening timeout after', attempt, 'attempts');
@@ -759,20 +874,39 @@ export class PCodeWebServiceManager {
    */
   private async performHealthCheck(port: number = this.config.port): Promise<boolean> {
     const axios = await import('axios');
-    const url = `http://${this.config.host}:${port}/api/health`;
+    const urls = this.buildHealthCheckUrls(port);
+    let lastErrorMessage = 'No health check endpoint responded';
 
-    try {
-      const response = await axios.default.get(url, { timeout: 5000 });
-      log.info('[WebService] Health check passed:', url, 'status:', response.status);
-      return response.status === 200;
-    } catch (error) {
-      if (axios.default.isAxiosError(error)) {
-        log.warn('[WebService] Health check failed:', url, 'error:', error.message);
-      } else {
-        log.warn('[WebService] Health check failed with unknown error:', url);
+    for (const url of urls) {
+      try {
+        const response = await axios.default.get(url, {
+          timeout: 5000,
+          validateStatus: () => true,
+        });
+        if (response.status >= 200 && response.status < 300) {
+          log.info('[WebService] Health check passed:', url, 'status:', response.status);
+          return true;
+        }
+        lastErrorMessage = `HTTP ${response.status}`;
+        log.debug('[WebService] Health endpoint not ready:', url, 'status:', response.status);
+      } catch (error) {
+        if (axios.default.isAxiosError(error)) {
+          lastErrorMessage = error.message;
+          log.debug('[WebService] Health endpoint request failed:', url, 'error:', error.message);
+        } else {
+          lastErrorMessage = 'Unknown error';
+          log.debug('[WebService] Health endpoint request failed with unknown error:', url);
+        }
       }
-      return false;
     }
+
+    log.warn('[WebService] Health check failed after trying all endpoints:', {
+      port,
+      host: this.config.host,
+      urlsTried: urls,
+      reason: lastErrorMessage,
+    });
+    return false;
   }
 
   private async isProcessAlive(pid: number): Promise<boolean> {
@@ -805,7 +939,7 @@ export class PCodeWebServiceManager {
   private async getProcessCommandLine(pid: number): Promise<string | null> {
     try {
       if (process.platform === 'win32') {
-        const escaped = `Get-CimInstance Win32_Process -Filter \"ProcessId = ${pid}\" | Select-Object -ExpandProperty CommandLine`;
+        const escaped = `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' | Select-Object -ExpandProperty CommandLine)`;
         const output = await this.runCommand(`powershell -NoProfile -Command "${escaped}"`);
         const line = output.trim();
         return line || null;
@@ -1299,8 +1433,19 @@ export class PCodeWebServiceManager {
         // Persist successful port
         await this.saveLastSuccessfulPort(this.config.port);
         if (this.process?.pid) {
+          let runtimePid = this.process.pid;
+          const managedPid = await this.resolveManagedServicePidByPort(this.config.port);
+          if (managedPid && managedPid !== runtimePid) {
+            log.info('[WebService] Resolved managed runtime PID from listening port:', {
+              powershellPid: runtimePid,
+              managedPid,
+              port: this.config.port,
+            });
+            runtimePid = managedPid;
+          }
+
           await this.persistRuntimeIdentity({
-            pid: this.process.pid,
+            pid: runtimePid,
             port: this.config.port,
             startedAt: new Date(this.startTime).toISOString(),
             versionId: this.activeVersionId || undefined,
@@ -1489,6 +1634,7 @@ export class PCodeWebServiceManager {
     try {
       this.status = 'stopping';
       log.info('[WebService] Stopping web service...');
+      const stopPort = this.recoveredRuntime?.port || this.config.port;
 
       if (this.process) {
         const pid = this.process.pid;
@@ -1517,6 +1663,12 @@ export class PCodeWebServiceManager {
         }
       } else if (this.recoveredRuntime?.pid) {
         await this.terminateRecoveredProcess(this.recoveredRuntime.pid);
+      }
+
+      // Safety net: if service still listens on target port, kill the managed runtime by port lookup.
+      if (await this.isManagedServiceReachable(stopPort)) {
+        log.warn('[WebService] Service still reachable after stop attempt, applying port-based termination:', { port: stopPort });
+        await this.terminateLingeringServiceByPort(stopPort);
       }
 
       this.status = 'stopped';

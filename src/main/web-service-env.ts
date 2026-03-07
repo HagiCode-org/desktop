@@ -46,6 +46,12 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     sensitive: false,
   },
   {
+    key: 'Urls',
+    sourceConfig: 'webService.host + webService.port',
+    required: true,
+    sensitive: false,
+  },
+  {
     key: 'DATADIR',
     sourceConfig: 'DataDir',
     required: true,
@@ -143,7 +149,7 @@ function resolveValue(
   input: BuildManagedEnvInput,
   existingEnv: Record<string, string | undefined>
 ): { value?: string; source: ManagedEnvSource } {
-  if (definition.key === 'ASPNETCORE_URLS') {
+  if (definition.key === 'ASPNETCORE_URLS' || definition.key === 'Urls') {
     return {
       value: `http://${input.host}:${input.port}`,
       source: 'runtime',
