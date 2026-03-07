@@ -9,6 +9,8 @@ This document provides detailed information about developing and debugging HagiC
 - [Native Library Verification](#native-library-verification)
 - [Development Workflow](#development-workflow)
 - [Environment Variables](#environment-variables)
+- [Web Service Runtime Recovery](#web-service-runtime-recovery)
+- [Prompt Resource Resolution](#prompt-resource-resolution)
 - [Debugging](#debugging)
 
 ## Update Source Configuration
@@ -147,6 +149,81 @@ HAGICO_CONFIG_PATH=./local_data_root \
 UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local","path":"/path/to/packages"}' \
 npm run dev
 ```
+
+## Web Service Runtime Recovery
+
+Desktop persists web service runtime metadata so it can recover truthful service
+status after app restart when the backend process survives.
+
+### Runtime State File
+
+- Location: `<userData>/config/web-service.json`
+- Core fields:
+  - `lastSuccessfulPort`
+  - `savedAt`
+- Runtime recovery fields:
+  - `runtime.pid`
+  - `runtime.port`
+  - `runtime.startedAt`
+  - `runtime.versionId`
+  - `runtime.recoverySource`
+  - `runtime.recoveryMessage`
+  - `runtime.updatedAt`
+
+### Recovery Decision Order
+
+1. Load persisted runtime identity from `web-service.json`
+2. Primary probe:
+   - PID liveness
+   - Port reachability
+   - `GET /api/health` success
+3. If primary probe fails, run process-signature fallback
+4. Mark `stopped/error` only when both primary and fallback checks fail
+5. Invalidate stale runtime identity on confirmed mismatch
+
+### Troubleshooting
+
+#### Service is running but UI shows stopped
+
+1. Verify `runtime.port` matches expected port in `web-service.json`.
+2. Check `http://localhost:<port>/api/health` returns `200`.
+3. Confirm process command line contains `dotnet` and `PCode.Web.dll`.
+4. Restart desktop to rerun full recovery flow.
+
+#### UI shows running but service is unavailable
+
+1. Confirm `runtime.pid` still exists.
+2. Confirm the port is bound by the expected target process.
+3. Stop service from desktop UI to trigger runtime state invalidation.
+4. If needed, remove `<userData>/config/web-service.json` and relaunch.
+
+## Prompt Resource Resolution
+
+The desktop app now resolves Smart Config and Diagnosis prompt files through a shared resolver.
+
+### Resource Keys and Target Files
+
+- `smartConfig` -> `config/config-prompt.llm.txt`
+- `diagnosis` -> `scripts/diagnosis-prompt.llm.txt`
+
+### Resolution Order
+
+For both entry points, path lookup follows this order:
+
+1. Active installed version directory (`apps/installed/<activeVersionId>/...`)
+2. Packaged resource locations (`process.resourcesPath`, `app.asar.unpacked`, `app.getAppPath()`)
+3. Development fallback (`process.cwd()`, development root)
+
+### Structured Diagnostic Fields
+
+When prompt resolution fails, IPC responses include:
+
+- `errorCode`: stable category (`PROMPT_NOT_FOUND`, `INVALID_PROMPT_PATH`, etc.)
+- `resourceKey`: requested resource (`smartConfig` or `diagnosis`)
+- `attemptedPaths`: ordered candidate path list that was checked
+- `activeVersion`: active version id at lookup time (if available)
+
+These fields are intended for troubleshooting and can be surfaced in UI or logs.
 
 ## Debugging
 
