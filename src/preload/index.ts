@@ -15,6 +15,21 @@ export interface StorageInfo {
   usedPercentage: number;
 }
 
+export interface StartupFailurePayload {
+  summary: string;
+  log: string;
+  port: number;
+  timestamp: string;
+  truncated: boolean;
+}
+
+export interface StartWebServiceResult {
+  success: boolean;
+  error?: { type: string; details: string };
+  warning?: { type: string; missing: any[] };
+  startupFailure?: StartupFailurePayload;
+}
+
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
@@ -31,7 +46,7 @@ interface ElectronAPI {
 
   // Web Service Management APIs
   getWebServiceStatus: () => Promise<any>;
-  startWebService: (force?: boolean) => Promise<void>;
+  startWebService: (force?: boolean) => Promise<StartWebServiceResult>;
   stopWebService: () => Promise<void>;
   restartWebService: () => Promise<void>;
   getWebServiceVersion: () => Promise<string>;

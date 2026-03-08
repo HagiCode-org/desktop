@@ -18,6 +18,7 @@ import { VersionManager } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
+import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
@@ -411,7 +412,19 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
     setServerStatus(status.status, status.url);
     setServiceUrl(status.url);
 
-    return { success: result };
+    if (!result.success) {
+      const startupFailure = buildStartupFailurePayload(result, status.port);
+      return {
+        success: false,
+        error: {
+          type: 'startup-failed',
+          details: startupFailure.summary,
+        },
+        startupFailure,
+      };
+    }
+
+    return { success: true };
   } catch (error) {
     log.error('Failed to start web service:', error);
     return {
@@ -2381,5 +2394,3 @@ app.on('activate', () => {
 });
 
 export { mainWindow };
-
-

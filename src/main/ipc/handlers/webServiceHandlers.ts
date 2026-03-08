@@ -4,7 +4,19 @@ import { PCodeWebServiceManager, type ProcessInfo, type WebServiceConfig } from 
 import { VersionManager } from '../../version-manager.js';
 import { ConfigManager } from '../../config.js';
 import { manifestReader } from '../../manifest-reader.js';
+import { buildStartupFailurePayload, type StartupFailurePayload } from '../../startup-failure-payload.js';
 import { setServerStatus, setServiceUrl } from '../../tray.js';
+
+interface StartServiceError {
+  type: string;
+  details: string;
+}
+
+export interface StartWebServiceResponse {
+  success: boolean;
+  error?: StartServiceError;
+  startupFailure?: StartupFailurePayload;
+}
 
 // Module state
 interface WebServiceHandlerState {
@@ -93,14 +105,14 @@ export function registerWebServiceHandlers(deps: {
       return {
         success: false,
         error: { type: 'manager-not-initialized', details: 'Web service manager not initialized' }
-      };
+      } as StartWebServiceResponse;
     }
 
     if (!state.versionManager) {
       return {
         success: false,
         error: { type: 'version-manager-not-initialized', details: 'Version manager not initialized' }
-      };
+      } as StartWebServiceResponse;
     }
 
     try {
@@ -111,7 +123,7 @@ export function registerWebServiceHandlers(deps: {
         return {
           success: false,
           error: { type: 'no-active-version', details: 'No active version found. Please install and activate a version first.' }
-        };
+        } as StartWebServiceResponse;
       }
 
       state.webServiceManager.setActiveVersion(activeVersion.id);
@@ -143,7 +155,16 @@ export function registerWebServiceHandlers(deps: {
         setServiceUrl(status.url);
       }
 
-      return { success: result };
+      if (!result.success) {
+        const startupFailure = buildStartupFailurePayload(result, status.port);
+        return {
+          success: false,
+          error: { type: 'startup-failed', details: startupFailure.summary },
+          startupFailure,
+        } as StartWebServiceResponse;
+      }
+
+      return { success: true } as StartWebServiceResponse;
     } catch (error) {
       log.error('Failed to start web service:', error);
       return {
@@ -152,7 +173,7 @@ export function registerWebServiceHandlers(deps: {
           type: 'unknown',
           details: error instanceof Error ? error.message : String(error)
         }
-      };
+      } as StartWebServiceResponse;
     }
   });
 
