@@ -5,6 +5,7 @@ import {
   setOperating,
   setError,
   setProcessInfo,
+  setStartupFailure,
   setVersion,
   setPackageInfo,
   setInstallProgress,
@@ -16,12 +17,15 @@ import {
   setPid,
   showInstallConfirm,
   hideInstallConfirm,
+  hideStartConfirmDialog,
+  setShowDependencyWarning,
   setInstallState,
   InstallState,
   type ProcessInfo,
   type PackageInfo,
   type InstallProgress,
   type InstalledVersion,
+  type StartupFailurePayload,
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
 
@@ -31,7 +35,12 @@ declare global {
     electronAPI: {
       // Web Service Management APIs
       getWebServiceStatus: () => Promise<ProcessInfo>;
-      startWebService: (force?: boolean) => Promise<{ success: boolean; error?: { type: string; details: string }; warning?: { type: string; missing: any[] } }>;
+      startWebService: (force?: boolean) => Promise<{
+        success: boolean;
+        error?: { type: string; details: string };
+        warning?: { type: string; missing: any[] };
+        startupFailure?: StartupFailurePayload;
+      }>;
       stopWebService: () => Promise<boolean>;
       restartWebService: () => Promise<boolean>;
       getWebServiceVersion: () => Promise<string>;
@@ -66,15 +75,25 @@ export const startWebService = createAsyncThunk(
       dispatch(setOperating(true));
       dispatch(setStatus('starting'));
       dispatch(setError(null));
+      dispatch(setStartupFailure(null));
 
-      const result: { success: boolean; error?: { type: string; details: string } } =
+      const result: {
+        success: boolean;
+        error?: { type: string; details: string };
+        startupFailure?: StartupFailurePayload;
+      } =
         await window.electronAPI.startWebService();
 
       if (result.success) {
         dispatch(setStatus('running'));
+        dispatch(setStartupFailure(null));
         // Fetch updated status
         await dispatch(fetchWebServiceStatus());
       } else {
+        if (result.startupFailure) {
+          dispatch(setStartupFailure(result.startupFailure));
+        }
+
         // Set error based on error type
         if (result.error) {
           switch (result.error.type) {
@@ -116,18 +135,27 @@ export const confirmStartWithWarning = createAsyncThunk(
     try {
       dispatch(setOperating(true));
       dispatch(setError(null));
+      dispatch(setStartupFailure(null));
       dispatch(hideStartConfirmDialog());
 
       // Call startWebService with force=true
-      const result: { success: boolean; error?: { type: string; details: string } } =
+      const result: {
+        success: boolean;
+        error?: { type: string; details: string };
+        startupFailure?: StartupFailurePayload;
+      } =
         await window.electronAPI.startWebService(true);
 
       if (result.success) {
         dispatch(setStatus('running'));
+        dispatch(setStartupFailure(null));
         dispatch(setShowDependencyWarning(true));
         // Fetch updated status
         await dispatch(fetchWebServiceStatus());
       } else {
+        if (result.startupFailure) {
+          dispatch(setStartupFailure(result.startupFailure));
+        }
         // Set error based on error type
         if (result.error) {
           dispatch(setError(result.error.details || 'Failed to start web service'));

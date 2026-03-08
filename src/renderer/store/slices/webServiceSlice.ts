@@ -70,6 +70,14 @@ export interface InstallProgress {
   message: string;
 }
 
+export interface StartupFailurePayload {
+  summary: string;
+  log: string;
+  port: number;
+  timestamp: string;
+  truncated: boolean;
+}
+
 export interface DependencyItem {
   name: string;
   type: string;
@@ -93,6 +101,11 @@ export interface WebServiceState {
   port: number;
   recoverySource: 'none' | 'pid_file' | 'signature_fallback';
   recoveryMessage: string | null;
+  startupFailure: StartupFailurePayload | null;
+  showStartupFailureDialog: boolean;
+  showStartConfirm: boolean;
+  missingDependenciesList: DependencyItem[];
+  showDependencyWarning: boolean;
 
   // Startup phase state
   phase: StartupPhase;
@@ -133,6 +146,11 @@ const initialState: WebServiceState = {
   port: 36556,
   recoverySource: 'none',
   recoveryMessage: null,
+  startupFailure: null,
+  showStartupFailureDialog: false,
+  showStartConfirm: false,
+  missingDependenciesList: [],
+  showDependencyWarning: false,
 
   phase: StartupPhase.Idle,
   phaseMessage: null,
@@ -225,6 +243,38 @@ export const webServiceSlice = createSlice({
       state.recoveryMessage = action.payload.recoveryMessage || null;
     },
 
+    setStartupFailure: (state, action: PayloadAction<StartupFailurePayload | null>) => {
+      state.startupFailure = action.payload;
+      state.showStartupFailureDialog = !!action.payload;
+    },
+
+    showStartupFailureDialog: (state) => {
+      if (state.startupFailure) {
+        state.showStartupFailureDialog = true;
+      }
+    },
+
+    hideStartupFailureDialog: (state) => {
+      state.showStartupFailureDialog = false;
+    },
+
+    showStartConfirmDialog: (state, action: PayloadAction<DependencyItem[]>) => {
+      state.showStartConfirm = true;
+      state.missingDependenciesList = action.payload;
+    },
+
+    hideStartConfirmDialog: (state) => {
+      state.showStartConfirm = false;
+    },
+
+    setMissingDependenciesList: (state, action: PayloadAction<DependencyItem[]>) => {
+      state.missingDependenciesList = action.payload;
+    },
+
+    setShowDependencyWarning: (state, action: PayloadAction<boolean>) => {
+      state.showDependencyWarning = action.payload;
+    },
+
     // Port status actions
     setPortAvailable: (state, action: PayloadAction<boolean>) => {
       state.portAvailable = action.payload;
@@ -302,6 +352,13 @@ export const {
   setProcessInfo,
   setPortAvailable,
   setStartupPhase,
+  setStartupFailure,
+  showStartupFailureDialog,
+  hideStartupFailureDialog,
+  showStartConfirmDialog,
+  hideStartConfirmDialog,
+  setMissingDependenciesList,
+  setShowDependencyWarning,
   setPackageInfo,
   setInstallProgress,
   setIsInstalling,
@@ -329,6 +386,11 @@ export const selectPhaseMessage = (state: { webService: WebServiceState }) => st
 export const selectPortAvailable = (state: { webService: WebServiceState }) => state.webService.portAvailable;
 export const selectPortStatusChecked = (state: { webService: WebServiceState }) => state.webService.portStatusChecked;
 export const selectWebServicePort = (state: { webService: WebServiceState }) => state.webService.port;
+export const selectStartupFailure = (state: { webService: WebServiceState }) => state.webService.startupFailure;
+export const selectShowStartupFailureDialog = (state: { webService: WebServiceState }) => state.webService.showStartupFailureDialog;
+export const selectShowStartConfirm = (state: { webService: WebServiceState }) => state.webService.showStartConfirm;
+export const selectMissingDependenciesList = (state: { webService: WebServiceState }) => state.webService.missingDependenciesList;
+export const selectShowDependencyWarning = (state: { webService: WebServiceState }) => state.webService.showDependencyWarning;
 export const selectPackageInfo = (state: { webService: WebServiceState }) => state.webService.packageInfo;
 export const selectInstallProgress = (state: { webService: WebServiceState }) => state.webService.installProgress;
 export const selectIsInstalling = (state: { webService: WebServiceState }) => state.webService.isInstalling;
