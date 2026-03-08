@@ -147,6 +147,19 @@
       "range": "端口必须在 1024 到 65535 之间"
     },
     "openLogsButton": "打开日志",
+    "startupFailureDialog": {
+      "title": "启动失败日志",
+      "viewButton": "查看失败日志",
+      "copyButton": "复制日志",
+      "closeButton": "关闭",
+      "emptySummary": "未获取到启动失败摘要",
+      "emptyLog": "暂无可用启动日志",
+      "meta": "端口: {{port}} | 时间: {{timestamp}}",
+      "truncatedHint": "日志过长，已显示最近输出片段",
+      "copySuccess": "启动日志已复制",
+      "copyError": "复制日志失败",
+      "copyEmpty": "没有可复制的日志内容"
+    },
     "toast": {
       "noActiveVersion": "没有激活的版本",
       "openLogsSuccess": "日志文件夹已打开",

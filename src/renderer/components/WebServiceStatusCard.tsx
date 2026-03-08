@@ -6,10 +6,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   selectWebServiceInfo,
   selectWebServiceError,
+  selectStartupFailure,
+  selectShowStartupFailureDialog,
   selectPackageManagementInfo,
   selectActiveVersion,
   selectCanLaunchService,
   selectLaunchBlockingReason,
+  hideStartupFailureDialog,
+  showStartupFailureDialog,
   setProcessInfo,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
@@ -32,6 +36,14 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Server,
   Square,
@@ -62,6 +74,8 @@ const WebServiceStatusCard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
   const error = useSelector(selectWebServiceError);
+  const startupFailure = useSelector((state: RootState) => selectStartupFailure(state));
+  const showStartupFailure = useSelector((state: RootState) => selectShowStartupFailureDialog(state));
   const { packageInfo } = useSelector((state: RootState) => selectPackageManagementInfo(state));
   const activeVersion = useSelector(selectActiveVersion);
   const canLaunchService = useSelector(selectCanLaunchService);
@@ -194,6 +208,29 @@ const WebServiceStatusCard: React.FC = () => {
     } catch (error) {
       console.error('Error opening logs folder:', error);
       toast.error(t('webServiceStatus.toast.openLogsError'));
+    }
+  };
+
+  const handleOpenStartupFailure = () => {
+    dispatch(showStartupFailureDialog());
+  };
+
+  const handleCloseStartupFailure = () => {
+    dispatch(hideStartupFailureDialog());
+  };
+
+  const handleCopyStartupFailureLog = async () => {
+    if (!startupFailure?.log) {
+      toast.error(t('webServiceStatus.startupFailureDialog.copyEmpty'));
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(startupFailure.log);
+      toast.success(t('webServiceStatus.startupFailureDialog.copySuccess'));
+    } catch (copyError) {
+      console.error('Failed to copy startup failure log:', copyError);
+      toast.error(t('webServiceStatus.startupFailureDialog.copyError'));
     }
   };
 
@@ -418,6 +455,18 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
+          {!remoteModeEnabled && startupFailure && (
+            <Button
+              onClick={handleOpenStartupFailure}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <AlertCircle className="w-4 h-4 mr-2" />
+              {t('webServiceStatus.startupFailureDialog.viewButton')}
+            </Button>
+          )}
+
           {/* Secondary Controls - Restart/Stop/Logs - Only show in local mode */}
           <AnimatePresence mode="wait">
             {!remoteModeEnabled && isRunning && (
@@ -634,6 +683,49 @@ const WebServiceStatusCard: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <Dialog open={showStartupFailure} onOpenChange={(open) => {
+            if (!open) {
+              handleCloseStartupFailure();
+            }
+          }}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>{t('webServiceStatus.startupFailureDialog.title')}</DialogTitle>
+                <DialogDescription>
+                  {startupFailure?.summary || t('webServiceStatus.startupFailureDialog.emptySummary')}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground font-mono">
+                  {startupFailure
+                    ? t('webServiceStatus.startupFailureDialog.meta', {
+                        port: startupFailure.port,
+                        timestamp: startupFailure.timestamp,
+                      })
+                    : t('webServiceStatus.startupFailureDialog.emptyLog')}
+                </div>
+                <pre className="max-h-80 overflow-auto rounded-md border bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap break-all">
+                  {startupFailure?.log || t('webServiceStatus.startupFailureDialog.emptyLog')}
+                </pre>
+                {startupFailure?.truncated && (
+                  <div className="text-xs text-muted-foreground">
+                    {t('webServiceStatus.startupFailureDialog.truncatedHint')}
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCopyStartupFailureLog}>
+                  {t('webServiceStatus.startupFailureDialog.copyButton')}
+                </Button>
+                <Button onClick={handleCloseStartupFailure}>
+                  {t('webServiceStatus.startupFailureDialog.closeButton')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </motion.div>

@@ -147,6 +147,19 @@
       "range": "Port must be between 1024 and 65535"
     },
     "openLogsButton": "Open Logs",
+    "startupFailureDialog": {
+      "title": "Startup Failure Log",
+      "viewButton": "View Failure Log",
+      "copyButton": "Copy Log",
+      "closeButton": "Close",
+      "emptySummary": "Startup failure summary is unavailable",
+      "emptyLog": "No startup log output is available",
+      "meta": "Port: {{port}} | Time: {{timestamp}}",
+      "truncatedHint": "Output is truncated to the most recent log content.",
+      "copySuccess": "Startup log copied",
+      "copyError": "Failed to copy startup log",
+      "copyEmpty": "No log content to copy"
+    },
     "toast": {
       "noActiveVersion": "No active version",
       "openLogsSuccess": "Logs folder opened",
