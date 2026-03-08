@@ -15,6 +15,7 @@ import {
   type WebServiceConfigMode,
 } from './web-service-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
+import { evaluateFixedPortStartup } from './web-service-startup-policy.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -75,6 +76,14 @@ interface PreparedServiceEnvironment {
   managedSnapshot: ManagedEnvSnapshotEntry[];
 }
 
+export interface StartupFailureInfo {
+  summary: string;
+  log: string;
+  port: number;
+  timestamp: string;
+  truncated: boolean;
+}
+
 export class PCodeWebServiceManager {
   private process: ChildProcess | null = null;
   private config: WebServiceConfig;
@@ -96,6 +105,10 @@ export class PCodeWebServiceManager {
   private startupRecoveryPromise: Promise<void> | null = null;
   private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
   private readonly healthCheckPaths: readonly string[] = ['/api/health', '/api/health/dual-monitoring', '/api/status'];
+  private readonly startupLogMaxLines: number = 200;
+  private readonly startupLogMaxChars: number = 16 * 1024;
+  private startupLogLines: string[] = [];
+  private startupLogTruncated: boolean = false;
 
   constructor(config: WebServiceConfig) {
     this.config = config;
@@ -325,6 +338,89 @@ export class PCodeWebServiceManager {
     }
 
     return parts.length > 0 ? parts.join('\n') : 'No output';
+  }
+
+  private resetStartupLogBuffer(): void {
+    this.startupLogLines = [];
+    this.startupLogTruncated = false;
+  }
+
+  private appendStartupLogLine(line: string): void {
+    const normalized = line.trim();
+    if (!normalized) {
+      return;
+    }
+
+    this.startupLogLines.push(normalized);
+
+    if (this.startupLogLines.length > this.startupLogMaxLines) {
+      this.startupLogLines = this.startupLogLines.slice(-this.startupLogMaxLines);
+      this.startupLogTruncated = true;
+    }
+  }
+
+  private captureStartupProcessOutput(output: string, level: 'info' | 'error'): void {
+    output.split('\n').forEach((line) => {
+      const normalized = line.trim();
+      if (!normalized) {
+        return;
+      }
+
+      this.appendStartupLogLine(normalized);
+      if (level === 'error') {
+        log.error('[WebService]', normalized);
+      } else {
+        log.info('[WebService]', normalized);
+      }
+    });
+  }
+
+  private buildStartupFailureInfo(summary: string): StartupFailureInfo {
+    const timestamp = new Date().toISOString();
+    const fallbackLog = summary || 'Service startup failed without additional output.';
+    const lines = this.startupLogLines.length > 0 ? [...this.startupLogLines] : [fallbackLog];
+    let logContent = lines.join('\n');
+
+    if (logContent.length > this.startupLogMaxChars) {
+      logContent = logContent.slice(logContent.length - this.startupLogMaxChars);
+      this.startupLogTruncated = true;
+    }
+
+    if (this.startupLogTruncated) {
+      logContent = `${logContent}\n[Startup log truncated - showing most recent output]`;
+    }
+
+    return {
+      summary,
+      log: logContent.trim() || fallbackLog,
+      port: this.config.port,
+      timestamp,
+      truncated: this.startupLogTruncated,
+    };
+  }
+
+  private buildStartupFailureResult(summary: string): StartResult {
+    const failure = this.buildStartupFailureInfo(summary);
+    return {
+      success: false,
+      resultSession: {
+        exitCode: -1,
+        stdout: '',
+        stderr: failure.summary,
+        duration: 0,
+        timestamp: failure.timestamp,
+        success: false,
+        errorMessage: failure.summary,
+        port: failure.port,
+      },
+      parsedResult: {
+        success: false,
+        errorMessage: failure.summary,
+        rawOutput: failure.log,
+        port: failure.port,
+      },
+      port: failure.port,
+    };
   }
 
   /**
@@ -1165,48 +1261,21 @@ export class PCodeWebServiceManager {
    */
   async start(): Promise<StartResult> {
     await this.ensureStartupRecovery();
-
-    // Default result for failures
-    const failureResult: StartResult = {
-      success: false,
-      resultSession: {
-        exitCode: -1,
-        stdout: '',
-        stderr: 'Start failed',
-        duration: 0,
-        timestamp: new Date().toISOString(),
-        success: false,
-        errorMessage: 'Unknown error',
-      },
-      parsedResult: {
-        success: false,
-        errorMessage: 'Unknown error',
-        rawOutput: '',
-      },
-    };
+    this.resetStartupLogBuffer();
+    this.appendStartupLogLine(`Starting service with configured port ${this.config.port}`);
 
     if (this.process || this.status === 'running') {
       log.warn('[WebService] Process already running');
-      return {
-        ...failureResult,
-        parsedResult: {
-          ...failureResult.parsedResult,
-          errorMessage: 'Process already running',
-        },
-      };
+      this.appendStartupLogLine('Start aborted: process already running');
+      return this.buildStartupFailureResult('Process already running');
     }
 
     if (this.restartCount >= this.maxRestartAttempts) {
       log.error('[WebService] Max restart attempts reached');
       this.status = 'error';
       this.emitPhase(StartupPhase.Error, 'Max restart attempts reached');
-      return {
-        ...failureResult,
-        parsedResult: {
-          ...failureResult.parsedResult,
-          errorMessage: 'Max restart attempts reached',
-        },
-      };
+      this.appendStartupLogLine(`Start aborted: max restart attempts reached (${this.maxRestartAttempts})`);
+      return this.buildStartupFailureResult('Max restart attempts reached');
     }
 
     // Check if entryPoint is available
@@ -1214,69 +1283,36 @@ export class PCodeWebServiceManager {
       log.error('[WebService] No entryPoint available for start');
       this.status = 'error';
       this.emitPhase(StartupPhase.Error, 'No entryPoint configured');
-      return {
-        ...failureResult,
-        parsedResult: {
-          ...failureResult.parsedResult,
-          errorMessage: 'No entryPoint configured',
-        },
-      };
+      this.appendStartupLogLine('Start failed: no entryPoint configured');
+      return this.buildStartupFailureResult('No entryPoint configured');
     }
 
     if (!this.activeVersionPath) {
       log.error('[WebService] No active version path set');
       this.status = 'error';
       this.emitPhase(StartupPhase.Error, 'No active version');
-      return {
-        ...failureResult,
-        parsedResult: {
-          ...failureResult.parsedResult,
-          errorMessage: 'No active version set',
-        },
-      };
+      this.appendStartupLogLine('Start failed: no active version set');
+      return this.buildStartupFailureResult('No active version set');
     }
 
     try {
       this.status = 'starting';
       log.info('[WebService] Starting with configured port:', this.config.port);
       this.emitPhase(StartupPhase.CheckingPort, 'Checking port availability...');
+      this.appendStartupLogLine(`Checking port availability: ${this.config.host}:${this.config.port}`);
 
-      // Check port availability and auto-increment if needed
-      let portAvailable = await this.checkPortAvailable();
-      let portCheckAttempts = 0;
-      const maxPortCheckAttempts = 100; // Prevent infinite loop
-
-      while (!portAvailable && portCheckAttempts < maxPortCheckAttempts) {
-        log.warn('[WebService] Port already in use:', `${this.config.host}:${this.config.port}`);
-
-        // Increment port and try again
-        this.config.port++;
-        portCheckAttempts++;
-
-        log.info('[WebService] Trying port:', this.config.port);
-        portAvailable = await this.checkPortAvailable();
-
-        if (portAvailable) {
-          log.info('[WebService] Found available port:', this.config.port);
-          // Save new port to configuration
-          await this.savePort(this.config.port);
-          this.emitPhase(StartupPhase.CheckingPort, `Port ${this.config.port} available`);
-        }
-      }
+      const portAvailable = await this.checkPortAvailable();
+      const startupDecision = evaluateFixedPortStartup(this.config.port, portAvailable);
 
       log.info('[WebService] Port availability check:', portAvailable ? 'available' : 'in use');
-      if (!portAvailable) {
-        log.error('[WebService] Could not find available port after', maxPortCheckAttempts, 'attempts');
+      if (!startupDecision.canStart) {
+        log.error('[WebService] Configured port already in use:', `${this.config.host}:${this.config.port}`);
         this.status = 'error';
-        this.emitPhase(StartupPhase.Error, 'Unable to find available port');
-        await this.invalidateRuntimeIdentity('no-port-available');
-        return {
-          ...failureResult,
-          parsedResult: {
-            ...failureResult.parsedResult,
-            errorMessage: 'Unable to find available port',
-          },
-        };
+        const message = startupDecision.errorMessage || 'Configured port is already in use';
+        this.emitPhase(StartupPhase.Error, message);
+        this.appendStartupLogLine(`Start failed: ${message}`);
+        await this.invalidateRuntimeIdentity('port-conflict');
+        return this.buildStartupFailureResult(message);
       }
 
       // Resolve start script path from entryPoint
@@ -1288,17 +1324,13 @@ export class PCodeWebServiceManager {
       try {
         await fs.access(startScriptPath);
         log.info('[WebService] Startup script found:', startScriptPath);
+        this.appendStartupLogLine(`Startup script resolved: ${startScriptPath}`);
       } catch {
         log.error('[WebService] Startup script not found:', startScriptPath);
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, 'Startup script not found');
-        return {
-          ...failureResult,
-          parsedResult: {
-            ...failureResult.parsedResult,
-            errorMessage: 'Startup script not found',
-          },
-        };
+        this.appendStartupLogLine(`Start failed: startup script not found at ${startScriptPath}`);
+        return this.buildStartupFailureResult('Startup script not found');
       }
 
       let preparedEnv: NodeJS.ProcessEnv;
@@ -1312,18 +1344,14 @@ export class PCodeWebServiceManager {
         log.error('[WebService] Failed to prepare environment injection:', errorMessage);
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, `Environment injection failed: ${errorMessage}`);
-        return {
-          ...failureResult,
-          parsedResult: {
-            ...failureResult.parsedResult,
-            errorMessage: `Environment injection failed: ${errorMessage}`,
-          },
-        };
+        this.appendStartupLogLine(`Start failed: environment injection failed - ${errorMessage}`);
+        return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
       }
 
       // Spawn the process
       this.emitPhase(StartupPhase.Spawning, 'Starting service with startup script...');
       const scriptPath = this.getStartupScriptPath();
+      this.appendStartupLogLine(`Spawning startup script: ${scriptPath}`);
 
       // Use PowerShellExecutor for .ps1 scripts on Windows
       if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
@@ -1336,25 +1364,18 @@ export class PCodeWebServiceManager {
           onStdout: (data) => {
             const output = data.toString().trim();
             if (output) {
-              output.split('\n').forEach((line: string) => {
-                if (line.trim()) {
-                  log.info('[WebService]', line.trim());
-                }
-              });
+              this.captureStartupProcessOutput(output, 'info');
             }
           },
           onStderr: (data) => {
             const output = data.toString().trim();
             if (output) {
-              output.split('\n').forEach((line: string) => {
-                if (line.trim()) {
-                  log.error('[WebService]', line.trim());
-                }
-              });
+              this.captureStartupProcessOutput(output, 'error');
             }
           },
           onExit: (code, signal) => {
             log.info('[WebService] Process exited, code:', code, 'signal:', signal);
+            this.appendStartupLogLine(`Process exited during startup flow: code=${String(code)} signal=${String(signal)}`);
 
             // Enhanced logging for debugging startup failures
             if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
@@ -1385,6 +1406,7 @@ export class PCodeWebServiceManager {
             } else {
               log.error('[WebService] Process error:', error.message);
             }
+            this.appendStartupLogLine(`Process error: ${error.message}`);
             this.status = 'error';
             this.process = null;
           },
@@ -1407,16 +1429,11 @@ export class PCodeWebServiceManager {
       if (!listening) {
         log.error('[WebService] Process not listening on port');
         this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
+        this.appendStartupLogLine(`Start failed: service did not listen on ${this.config.host}:${this.config.port}`);
         await this.stop();
         this.status = 'error';
         await this.invalidateRuntimeIdentity('listening-timeout');
-        return {
-          ...failureResult,
-          parsedResult: {
-            ...failureResult.parsedResult,
-            errorMessage: 'Service failed to start listening',
-          },
-        };
+        return this.buildStartupFailureResult('Service failed to start listening');
       }
 
       // Health check
@@ -1485,39 +1502,21 @@ export class PCodeWebServiceManager {
       } else {
         log.error('[WebService] Health check failed');
         this.emitPhase(StartupPhase.Error, 'Health check failed');
+        this.appendStartupLogLine('Start failed: health check did not pass within timeout');
         await this.stop();
         this.status = 'error';
         await this.invalidateRuntimeIdentity('health-check-failed');
-        return {
-          ...failureResult,
-          parsedResult: {
-            ...failureResult.parsedResult,
-            errorMessage: 'Health check failed',
-          },
-        };
+        return this.buildStartupFailureResult('Health check failed');
       }
     } catch (error) {
       log.error('[WebService] Failed to start:', error);
       this.status = 'error';
       this.process = null;
-      this.emitPhase(StartupPhase.Error, `Start failed: ${(error as Error).message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
+      this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
       await this.invalidateRuntimeIdentity('start-exception');
-      return {
-        ...failureResult,
-        resultSession: {
-          exitCode: -1,
-          stdout: '',
-          stderr: (error as Error).message,
-          duration: 0,
-          timestamp: new Date().toISOString(),
-          success: false,
-          errorMessage: (error as Error).message,
-        },
-        parsedResult: {
-          ...failureResult.parsedResult,
-          errorMessage: (error as Error).message,
-        },
-      };
+      return this.buildStartupFailureResult(errorMessage);
     }
   }
 
@@ -1548,24 +1547,14 @@ export class PCodeWebServiceManager {
     this.process.stdout?.on('data', (data) => {
       const output = data.toString().trim();
       if (output) {
-        // Split by lines and log each line
-        output.split('\n').forEach((line: string) => {
-          if (line.trim()) {
-            log.info('[WebService]', line.trim());
-          }
-        });
+        this.captureStartupProcessOutput(output, 'info');
       }
     });
 
     this.process.stderr?.on('data', (data) => {
       const output = data.toString().trim();
       if (output) {
-        // Split by lines and log each line
-        output.split('\n').forEach((line: string) => {
-          if (line.trim()) {
-            log.error('[WebService]', line.trim());
-          }
-        });
+        this.captureStartupProcessOutput(output, 'error');
       }
     });
 
@@ -1577,6 +1566,7 @@ export class PCodeWebServiceManager {
       } else {
         log.error('[WebService] Process error:', error.message);
       }
+      this.appendStartupLogLine(`Process error: ${error.message}`);
       this.status = 'error';
       this.process = null;
       void this.invalidateRuntimeIdentity('process-error');
@@ -1584,6 +1574,7 @@ export class PCodeWebServiceManager {
 
     this.process.on('exit', (code, signal) => {
       log.info('[WebService] Process exited, code:', code, 'signal:', signal);
+      this.appendStartupLogLine(`Process exited: code=${String(code)} signal=${String(signal)}`);
 
       // Enhanced logging for debugging startup failures
       if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
