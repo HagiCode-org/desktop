@@ -35,6 +35,18 @@ export const DOC_LINKS: Record<string, DocLink> = {
     label: 'Claude Code Setup Guide',
     category: LinkCategory.AgentCli,
   },
+  codexSetup: {
+    id: 'codex-setup',
+    url: 'https://docs.hagicode.com/related-software-installation/codex/setup-codex/',
+    label: 'Codex Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  copilotSetup: {
+    id: 'copilot-cli-setup',
+    url: 'https://docs.github.com/copilot/how-tos/use-copilot-agents/copilot-cli',
+    label: 'GitHub Copilot CLI Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
 
   // Placeholder for future Agent CLIs
   // aiderSetup: {

@@ -3,9 +3,20 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import { VersionManager } from './version-manager.js';
 import { DependencyManager } from './dependency-manager.js';
+import {
+  buildOnboardingStartupFailureResult,
+  recoverOnboardingStartupFailure,
+} from './onboarding-startup-recovery.js';
 import { PCodeWebServiceManager } from './web-service-manager.js';
 import { manifestReader, type ParsedDependency } from './manifest-reader.js';
-import type { StoredOnboardingState, DownloadProgress, DependencyItem, ServiceLaunchProgress } from '../types/onboarding.js';
+import type {
+  StoredOnboardingState,
+  DownloadProgress,
+  DependencyItem,
+  ServiceLaunchProgress,
+  OnboardingStartServiceResult,
+  OnboardingRecoveryResult,
+} from '../types/onboarding.js';
 
 /**
  * OnboardingManager manages the first-time user onboarding flow
@@ -491,7 +502,7 @@ export class OnboardingManager {
   async startWebService(
     versionId: string,
     onProgress?: (progress: ServiceLaunchProgress) => void
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<OnboardingStartServiceResult> {
     // Idempotency check: if already starting, ignore duplicate request
     if (this.isStartingService) {
       log.info('[OnboardingManager] Service start already in progress, ignoring duplicate request');
@@ -534,11 +545,9 @@ export class OnboardingManager {
 
       // Start the service using the standard startup logic (same as homepage)
       const startResult = await this.webServiceManager.start();
+      const status = await this.webServiceManager.getStatus();
 
       if (startResult.success) {
-        // Get status
-        const status = await this.webServiceManager.getStatus();
-
         // Send success progress
         if (onProgress) {
           onProgress({
@@ -554,11 +563,11 @@ export class OnboardingManager {
         this.isStartingService = false;
         return { success: true };
       } else {
-        // Start failed
-        const error = startResult.parsedResult.errorMessage || 'Failed to start service';
+        const failureResult = buildOnboardingStartupFailureResult(startResult, status.port);
+        const error = failureResult.error || 'Failed to start service';
         log.error('[OnboardingManager] Failed to start web service:', error);
         this.isStartingService = false;
-        return { success: false, error };
+        return failureResult;
       }
     } catch (error) {
       log.error('[OnboardingManager] Error starting web service:', error);
@@ -566,6 +575,34 @@ export class OnboardingManager {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Recover from an onboarding startup failure by reinstalling the selected
+   * version and re-showing the wizard from a clean onboarding state.
+   */
+  async recoverFromStartupFailure(versionId: string): Promise<OnboardingRecoveryResult> {
+    try {
+      log.info('[OnboardingManager] Recovering from startup failure for version:', versionId);
+      const result = await recoverOnboardingStartupFailure({
+        versionId,
+        reinstallVersion: (targetVersionId) => this.versionManager.reinstallVersion(targetVersionId),
+        getInstalledVersions: () => this.versionManager.getInstalledVersions(),
+        getActiveVersion: () => this.versionManager.getActiveVersion(),
+        resetOnboarding: () => this.resetOnboarding(),
+        sendProgressEvent: (channel, data) => this.sendProgressEvent(channel, data),
+      });
+      if (result.success) {
+        log.info('[OnboardingManager] Startup recovery completed');
+      }
+      return result;
+    } catch (error) {
+      log.error('[OnboardingManager] Failed to recover from startup failure:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

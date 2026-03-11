@@ -9,9 +9,10 @@ import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { switchView } from './store/slices/viewSlice';
-import { selectIsActive, setActive } from './store/slices/onboardingSlice';
+import { restartOnboardingFlow } from './store/slices/onboardingSlice';
 import type { RootState } from './store';
 import { ThemeProvider } from './components/providers/theme-provider';
+import type { AgentCliType } from '../types/agent-cli';
 
 declare global {
   interface Window {
@@ -35,10 +36,10 @@ declare global {
       setDebugMode: (mode: { ignoreDependencyCheck: boolean }) => Promise<{ success: boolean; error?: string }>;
       getDebugMode: () => Promise<{ ignoreDependencyCheck: boolean }>;
       onDebugModeChanged: (callback: (mode: { ignoreDependencyCheck: boolean }) => void) => void;
-      agentCliSave: (data: { cliType: string }) => Promise<{ success: boolean }>;
-      agentCliLoad: () => Promise<{ cliType: string | null; isSkipped: boolean; selectedAt: string | null }>;
+      agentCliSave: (data: { cliType: AgentCliType }) => Promise<{ success: boolean }>;
+      agentCliLoad: () => Promise<{ cliType: AgentCliType | null; isSkipped: boolean; selectedAt: string | null }>;
       agentCliSkip: () => Promise<{ success: boolean }>;
-      agentCliGetSelected: () => Promise<string | null>;
+      agentCliGetSelected: () => Promise<AgentCliType | null>;
     };
   }
 }
@@ -48,7 +49,6 @@ function App() {
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
-  const isOnboardingActive = useSelector((state: RootState) => selectIsActive(state));
 
   useEffect(() => {
     // Listen for view change events from menu (kept for backward compatibility)
@@ -58,7 +58,7 @@ function App() {
 
     // Listen for onboarding show event
     const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow(() => {
-      dispatch(setActive(true));
+      dispatch(restartOnboardingFlow());
     });
 
     // Listen for onboarding completion - open Hagicode

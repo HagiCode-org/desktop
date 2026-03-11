@@ -1683,6 +1683,21 @@ ipcMain.handle('onboarding:start-service', async (_, versionId: string) => {
   }
 });
 
+ipcMain.handle('onboarding:recover-service-startup', async (_, versionId: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.recoverFromStartupFailure(versionId);
+  } catch (error) {
+    console.error('Failed to recover from onboarding startup failure:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
 ipcMain.handle('onboarding:complete', async (_, versionId: string) => {
   if (!onboardingManager) {
     return { success: false, error: 'Onboarding manager not initialized' };
@@ -1962,13 +1977,15 @@ app.whenReady().then(async () => {
 
   // Sync executor env from persisted Agent CLI selection before service start.
   if (webServiceManager && agentCliManager) {
-    const executorType = agentCliManager.getSelectedExecutorType();
+    const selectedCliType = agentCliManager.getSelectedCliType();
+    const managedEnv = await agentCliManager.buildWebServiceEnv(selectedCliType);
     await webServiceManager.updateConfig({
-      env: {
-        AI__Providers__DefaultProvider: executorType,
-      },
+      env: managedEnv,
     });
-    log.info('[App] Synced executor env from Agent CLI selection:', executorType);
+    log.info('[App] Synced executor env from Agent CLI selection:', {
+      cliType: selectedCliType,
+      envKeys: Object.keys(managedEnv),
+    });
   }
 
   // Register Agent CLI IPC handlers
@@ -1977,13 +1994,14 @@ app.whenReady().then(async () => {
     registerAgentCliHandlers(currentAgentCliManager, {
       onSelectionSaved: async (cliType) => {
         if (!webServiceManager) return;
-        const executorType = currentAgentCliManager.getExecutorType(cliType);
+        const managedEnv = await currentAgentCliManager.buildWebServiceEnv(cliType);
         await webServiceManager.updateConfig({
-          env: {
-            AI__Providers__DefaultProvider: executorType,
-          },
+          env: managedEnv,
         });
-        log.info('[App] Synced executor env from Agent CLI save:', executorType);
+        log.info('[App] Synced executor env from Agent CLI save:', {
+          cliType,
+          envKeys: Object.keys(managedEnv),
+        });
       },
       onSkipped: async () => {
         if (!webServiceManager) return;
