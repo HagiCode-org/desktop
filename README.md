@@ -62,6 +62,14 @@ UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local","path":"/path/to/p
 
 For detailed configuration options and development guidelines, see the [Development Guide](./docs/development.md).
 
+### Agent CLI Selection (Claude/Codex/Copilot)
+
+Hagicode Desktop supports `Claude Code`, `Codex`, and `GitHub Copilot CLI` as agent executors.
+
+- You only need to choose the executor in the existing Agent CLI selection flow.
+- CLI path and runtime provider config are resolved automatically by the main process.
+- No extra Copilot-specific path/parameter configuration UI is required.
+
 ## Building
 
 ```bash

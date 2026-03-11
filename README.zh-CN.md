@@ -62,6 +62,14 @@ UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"本地","path":"/path/to/
 
 有关详细的配置选项和开发指南，请参阅[开发指南](./docs/development.md)。
 
+### Agent CLI 选择（Claude/Codex/Copilot）
+
+Hagicode Desktop 当前支持 `Claude Code`、`Codex` 和 `GitHub Copilot CLI` 三种执行器。
+
+- 仅需在现有 Agent CLI 选择流程中选择执行器；
+- CLI 路径与运行时 Provider 配置由主进程自动解析；
+- 无需新增 Copilot 专属的路径/参数配置界面。
+
 ## 构建
 
 ```bash
