@@ -51,6 +51,34 @@ export interface ServiceLaunchProgress {
 }
 
 /**
+ * Structured startup failure details shared with the renderer.
+ */
+export interface StartupFailurePayload {
+  summary: string;
+  log: string;
+  port: number;
+  timestamp: string;
+  truncated: boolean;
+}
+
+/**
+ * Result returned when onboarding tries to start the embedded service.
+ */
+export interface OnboardingStartServiceResult {
+  success: boolean;
+  error?: string;
+  startupFailure?: StartupFailurePayload;
+}
+
+/**
+ * Result returned when onboarding recovers from a startup failure.
+ */
+export interface OnboardingRecoveryResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
  * Script output log entry
  */
 export interface ScriptOutput {
@@ -72,9 +100,12 @@ export interface OnboardingState {
   serviceProgress: ServiceLaunchProgress | null;
   showSkipConfirm: boolean;
   error: string | null;
+  startupFailure: StartupFailurePayload | null;
+  showStartupFailureDialog: boolean;
   // Idempotency flags to prevent duplicate operations
   isDownloading: boolean;
   isStartingService: boolean;
+  isRecoveringFromStartupFailure: boolean;
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
   // Real-time script output logs

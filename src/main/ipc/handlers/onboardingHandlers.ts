@@ -153,6 +153,21 @@ export function registerOnboardingHandlers(deps: {
     }
   });
 
+  ipcMain.handle('onboarding:recover-service-startup', async (_, versionId: string) => {
+    if (!state.onboardingManager) {
+      return { success: false, error: 'Onboarding manager not initialized' };
+    }
+    try {
+      return await state.onboardingManager.recoverFromStartupFailure(versionId);
+    } catch (error) {
+      console.error('Failed to recover from onboarding startup failure:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
   // Onboarding complete handler
   ipcMain.handle('onboarding:complete', async (_, versionId: string) => {
     if (!state.onboardingManager) {

@@ -144,6 +144,25 @@
       "title": "技术支持",
       "docs": "用户文档",
       "issues": "问题反馈"
+    },
+    "failure": {
+      "title": "启动失败",
+      "subtitle": "Hagicode Server 未能完成启动。请查看诊断日志并重新安装后再继续初始化。",
+      "guidance": "您可以先查看完整日志，然后重新安装当前版本并重新开始引导流程。",
+      "viewLog": "查看完整日志",
+      "retryButton": "重试启动",
+      "reinstallButton": "重新安装并重置引导",
+      "reinstallingButton": "重新安装中...",
+      "dialogTitle": "引导启动失败日志",
+      "emptySummary": "未获取到启动失败摘要",
+      "emptyLog": "未获取到启动失败日志",
+      "meta": "端口：{{port}} · 时间：{{timestamp}}",
+      "truncatedHint": "日志已截断，仅显示最近的输出内容。",
+      "recoveryHint": "建议先重新安装当前版本并重置引导状态，然后重新完成首次初始化流程。",
+      "copyButton": "复制日志",
+      "copySuccess": "启动失败日志已复制",
+      "copyError": "复制启动失败日志失败",
+      "copyEmpty": "没有可复制的启动失败日志"
     }
   },
   "actions": {

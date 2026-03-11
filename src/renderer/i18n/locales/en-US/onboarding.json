@@ -144,6 +144,25 @@
       "title": "Support",
       "docs": "Documentation",
       "issues": "Report Issues"
+    },
+    "failure": {
+      "title": "Startup Failed",
+      "subtitle": "Hagicode Server could not finish starting. Review the diagnostics and reinstall before continuing setup.",
+      "guidance": "Open the full log, then reinstall the current version and restart the setup flow.",
+      "viewLog": "View Full Log",
+      "retryButton": "Retry Startup",
+      "reinstallButton": "Reinstall and Restart Setup",
+      "reinstallingButton": "Reinstalling...",
+      "dialogTitle": "Onboarding Startup Failure Log",
+      "emptySummary": "No startup failure summary was captured",
+      "emptyLog": "No startup failure log was captured",
+      "meta": "Port: {{port}} · Time: {{timestamp}}",
+      "truncatedHint": "The startup log was truncated to the most recent output.",
+      "recoveryHint": "We recommend reinstalling the current version and resetting onboarding before trying setup again.",
+      "copyButton": "Copy Log",
+      "copySuccess": "Startup failure log copied",
+      "copyError": "Failed to copy startup failure log",
+      "copyEmpty": "There is no startup failure log to copy"
     }
   },
   "actions": {

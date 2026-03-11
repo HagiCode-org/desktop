@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { X } from 'lucide-react';
@@ -40,8 +40,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
 
   const [showSkipDialog, setShowSkipDialog] = useState(false);
-  const [downloadedVersion, setDownloadedVersion] = useState<string | null>(null);
-  const [downloadCompleted, setDownloadCompleted] = useState(false);
+  const downloadedVersion = downloadProgress?.version || null;
+  const downloadCompleted = downloadProgress?.progress === 100;
 
   // Set up IPC listeners for progress updates
   useEffect(() => {
@@ -53,13 +53,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     const unsubscribeDownloadProgress = window.electronAPI.onDownloadProgress((progress: DownloadProgress) => {
       console.log('[OnboardingWizard] Download progress:', progress);
       dispatch(setDownloadProgress(progress));
-
-      // Store the downloaded version when download completes
-      if (progress.progress === 100 && progress.version && !downloadedVersion) {
-        setDownloadedVersion(progress.version);
-        setDownloadCompleted(true);
-        console.log('[OnboardingWizard] Download complete, version stored:', progress.version);
-      }
     });
 
     // Service progress listener

@@ -1,11 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { Bot, CheckCircle2, AlertCircle, Loader2, Settings, Terminal, Globe, RefreshCw } from 'lucide-react';
+import { Bot, CheckCircle2, AlertCircle, Loader2, Terminal, Globe, RefreshCw } from 'lucide-react';
 import { Button } from '../../ui/button';
-import type { RootState } from '../../../store';
-import { selectClaudeConfigState } from '../../../store/slices/claudeConfigSlice';
-import { selectClaudeConfigDetected, selectClaudeConfigSource, selectClaudeProvider } from '../../../store/slices/llmInstallationSlice';
 import { selectSelectedCliType, selectIsSkipped } from '../../../store/slices/agentCliSlice';
 import PreconditionError from '../PreconditionError';
 import { OnboardingStep } from '../../../../types/onboarding';
@@ -21,13 +18,8 @@ interface LlmInstallationStepProps {
 }
 
 function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId }: LlmInstallationStepProps) {
-  const { t } = useTranslation('onboarding');
+  const { t } = useTranslation(['onboarding', 'common']);
   const dispatch = useDispatch();
-
-  const { isValid: isClaudeValid } = useSelector(selectClaudeConfigState);
-  const claudeConfigDetected = useSelector(selectClaudeConfigDetected);
-  const claudeConfigSource = useSelector(selectClaudeConfigSource);
-  const claudeProvider = useSelector(selectClaudeProvider);
 
   // Agent CLI selection state for precondition validation
   const selectedCliType = useSelector(selectSelectedCliType);
@@ -43,8 +35,24 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
   // Region detection and selection
   const [isDetectingRegion, setIsDetectingRegion] = useState(true);
   const [detectedRegion, setDetectedRegion] = useState<Region | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<Region>('cn');
-  const [executedRegion, setExecutedRegion] = useState<Region | null>(null); // Track which region was actually used
+  const [selectedRegion, setSelectedRegion] = useState<Region>('international');
+  const explicitSelectionRef = useRef(false);
+
+  const toUiRegion = (value: string | null | undefined): Region | null => {
+    if (!value) {
+      return null;
+    }
+
+    if (value === 'CN' || value === 'cn') {
+      return 'cn';
+    }
+
+    if (value === 'INTERNATIONAL' || value === 'international') {
+      return 'international';
+    }
+
+    return null;
+  };
 
   // Precondition validation: Check if Agent CLI Selection step is completed
   // This is a safety check to handle edge cases (direct navigation, state reset)
@@ -60,43 +68,48 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
     dispatch(setCurrentStep(OnboardingStep.AgentCliSelection));
   };
 
-  // Handle navigate to onboarding
-  const handleConfigureClaude = () => {
-    if (onNavigateToOnboarding) {
-      onNavigateToOnboarding();
+  const setPreferredRegion = (region: Region, isExplicitSelection: boolean = true) => {
+    if (isExplicitSelection) {
+      explicitSelectionRef.current = true;
+    }
+    setSelectedRegion(region);
+  };
+
+  const refreshRegionDetection = async () => {
+    setIsDetectingRegion(true);
+    try {
+      const result = await window.electronAPI.llmGetRegion?.();
+      const region = toUiRegion(result?.region);
+
+      if (result?.success && region) {
+        setDetectedRegion(region);
+        if (!explicitSelectionRef.current) {
+          setSelectedRegion(region);
+        }
+      } else {
+        setDetectedRegion('international');
+        if (!explicitSelectionRef.current) {
+          setSelectedRegion('international');
+        }
+      }
+    } catch {
+      setDetectedRegion('international');
+      if (!explicitSelectionRef.current) {
+        setSelectedRegion('international');
+      }
+    } finally {
+      setIsDetectingRegion(false);
     }
   };
 
   // Detect region on component mount
   useEffect(() => {
-    const detectRegion = async () => {
-      setIsDetectingRegion(true);
-      try {
-        // Try to detect region by calling a region detection API
-        const result = await window.electronAPI.llmGetRegion?.();
-        if (result?.success && result.region) {
-          setDetectedRegion(result.region as Region);
-          setSelectedRegion(result.region as Region);
-        } else {
-          // Default to CN if detection fails
-          setDetectedRegion('cn');
-          setSelectedRegion('cn');
-        }
-      } catch (err) {
-        // Default to CN on error
-        setDetectedRegion('cn');
-        setSelectedRegion('cn');
-      } finally {
-        setIsDetectingRegion(false);
-      }
-    };
-    detectRegion();
+    void refreshRegionDetection();
   }, []);
 
   // Handle region selection and start installation
   const handleSelectRegionAndStart = async (region: Region) => {
-    setSelectedRegion(region);
-    setExecutedRegion(region);
+    setPreferredRegion(region);
     setStepStatus('calling');
     setError(null);
 
@@ -153,29 +166,6 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
     onSkip();
   };
 
-  // Get provider display name
-  const getProviderDisplayName = (provider: string | null) => {
-    if (!provider) return 'Unknown';
-    const providerNames: Record<string, string> = {
-      anthropic: 'Anthropic',
-      zai: 'Zhipu AI (智谱)',
-      aliyun: 'Aliyun (阿里云)',
-      custom: 'Custom',
-    };
-    return providerNames[provider] || provider;
-  };
-
-  // Get source display name
-  const getSourceDisplayName = (source: string | null) => {
-    if (!source) return '';
-    const sourceNames: Record<string, string> = {
-      env: 'Environment Variables',
-      settings: 'Settings File',
-      store: 'Application Store',
-    };
-    return sourceNames[source] || source;
-  };
-
   // Get region display info
   const getRegionInfo = (region: Region) => {
     if (region === 'cn') {
@@ -214,35 +204,45 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
 
   // Render region detection UI
   const renderRegionDetection = () => {
-    if (isDetectingRegion) {
-      return (
-        <div className="text-center space-y-4 py-8">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-          <p className="text-lg font-medium">{t('llmInstallation.region.detecting')}</p>
-        </div>
-      );
-    }
-
     return (
       <>
         <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground">
-            {detectedRegion && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            {isDetectingRegion ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span>{t('llmInstallation.region.detecting')}</span>
+              </>
+            ) : detectedRegion ? (
               <span>
                 {t('llmInstallation.region.detected')}: <span className="font-semibold text-foreground">{getRegionInfo(detectedRegion).name}</span>
               </span>
-            )}
-          </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void refreshRegionDetection()}
+              disabled={isDetectingRegion}
+              className="h-7 px-2 text-xs"
+            >
+              <RefreshCw className="mr-1 h-3.5 w-3.5" />
+              {t('mirror.redetect', { ns: 'common' })}
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {(['cn', 'international'] as Region[]).map((region) => {
             const info = getRegionInfo(region);
             const isDetected = detectedRegion === region;
+            const isSelected = selectedRegion === region;
             return (
               <button
                 key={region}
                 onClick={() => handleSelectRegionAndStart(region)}
-                className="p-6 rounded-lg border-2 transition-all hover:border-primary/50 bg-card"
+                className={`p-6 rounded-lg border-2 transition-all bg-card ${
+                  isSelected ? 'border-primary shadow-sm' : 'hover:border-primary/50'
+                }`}
               >
                 <div className="text-center space-y-3">
                   <div className="text-4xl">{info.icon}</div>
@@ -298,13 +298,13 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">
-                当前区域: {getRegionInfo(executedRegion || selectedRegion).name}
+                当前区域: {getRegionInfo(selectedRegion).name}
               </span>
-              <span className="text-2xl">{getRegionInfo(executedRegion || selectedRegion).icon}</span>
+              <span className="text-2xl">{getRegionInfo(selectedRegion).icon}</span>
             </div>
             <select
               value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value as Region)}
+              onChange={(e) => setPreferredRegion(e.target.value as Region)}
               className="px-3 py-1.5 rounded-md border border-input bg-background text-sm"
             >
               <option value="cn">🇨🇳 {t('llmInstallation.region.cn')}</option>
@@ -368,7 +368,7 @@ function LlmInstallationStep({ onNext, onSkip, onNavigateToOnboarding, versionId
           <span className="text-sm font-medium">重试区域:</span>
           <select
             value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value as Region)}
+            onChange={(e) => setPreferredRegion(e.target.value as Region)}
             className="px-3 py-1.5 rounded-md border border-input bg-background text-sm"
           >
             <option value="cn">🇨🇳 {t('llmInstallation.region.cn')}</option>

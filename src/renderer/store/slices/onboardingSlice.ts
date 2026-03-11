@@ -1,15 +1,15 @@
-import { createSlice, createAction, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { OnboardingStep } from '../../../types/onboarding';
 import {
   checkOnboardingTrigger,
   skipOnboarding,
   downloadPackage,
   startService,
+  recoverFromStartupFailure,
   completeOnboarding,
   resetOnboarding,
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
-  TRIGGER_ONBOARDING_NEXT,
 } from '../thunks/onboardingThunks';
 import type {
   OnboardingState,
@@ -17,6 +17,9 @@ import type {
   ServiceLaunchProgress,
   DependencyCheckResult,
   ScriptOutput,
+  StartupFailurePayload,
+  OnboardingStartServiceResult,
+  OnboardingRecoveryResult,
 } from '../../../types/onboarding';
 
 const initialState: OnboardingState = {
@@ -28,9 +31,12 @@ const initialState: OnboardingState = {
   serviceProgress: null,
   showSkipConfirm: false,
   error: null,
+  startupFailure: null,
+  showStartupFailureDialog: false,
   // Idempotency flags
   isDownloading: false,
   isStartingService: false,
+  isRecoveringFromStartupFailure: false,
   // Dependency check results
   dependencyCheckResults: [],
   // Real-time script output logs
@@ -56,6 +62,18 @@ export const onboardingSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setStartupFailure: (state, action: PayloadAction<StartupFailurePayload | null>) => {
+      state.startupFailure = action.payload;
+      state.showStartupFailureDialog = !!action.payload;
+    },
+    showStartupFailureDialog: (state) => {
+      if (state.startupFailure) {
+        state.showStartupFailureDialog = true;
+      }
+    },
+    hideStartupFailureDialog: (state) => {
+      state.showStartupFailureDialog = false;
+    },
     setDownloadProgress: (state, action: PayloadAction<DownloadProgress | null>) => {
       state.downloadProgress = action.payload;
     },
@@ -75,6 +93,10 @@ export const onboardingSlice = createSlice({
     clearScriptOutput: (state) => {
       state.scriptOutputLogs = [];
     },
+    restartOnboardingFlow: () => ({
+      ...initialState,
+      isActive: true,
+    }),
     nextStep: (state) => {
       if (state.currentStep < OnboardingStep.Launch) {
         state.currentStep = (state.currentStep + 1) as OnboardingStep;
@@ -97,6 +119,7 @@ export const onboardingSlice = createSlice({
         if (action.payload.shouldShow) {
           state.isActive = true;
           state.currentStep = OnboardingStep.Welcome;
+          state.error = null;
         } else {
           state.isActive = false;
         }
@@ -166,6 +189,8 @@ export const onboardingSlice = createSlice({
         console.log('[onboardingSlice] startService pending');
         state.error = null;
         state.currentStep = OnboardingStep.Launch;
+        state.startupFailure = null;
+        state.showStartupFailureDialog = false;
         // Only update state if not already starting/running (allow React Strict Mode double-calls)
         if (!state.isStartingService && state.serviceProgress?.phase !== 'running') {
           state.isStartingService = true;
@@ -176,24 +201,44 @@ export const onboardingSlice = createSlice({
           };
         }
       })
-      .addCase(startService.fulfilled, (state) => {
+      .addCase(startService.fulfilled, (state, action) => {
         console.log('[onboardingSlice] startService fulfilled');
         state.isStartingService = false;
+        state.startupFailure = null;
+        state.showStartupFailureDialog = false;
         state.serviceProgress = {
+          ...(state.serviceProgress ?? {}),
           phase: 'running',
           progress: 100,
-          message: 'Service started successfully',
+          message: state.serviceProgress?.message || 'Service started successfully',
         };
       })
       .addCase(startService.rejected, (state, action) => {
         console.error('[onboardingSlice] startService rejected:', action.error);
+        const failure = action.payload as OnboardingStartServiceResult | undefined;
         state.isStartingService = false;
-        state.error = action.payload as string || 'Failed to start service';
+        state.error = failure?.error || 'Failed to start service';
+        state.startupFailure = failure?.startupFailure || null;
+        state.showStartupFailureDialog = !!failure?.startupFailure;
         state.serviceProgress = {
           phase: 'error',
           progress: 0,
-          message: 'Failed to start service',
+          message: failure?.error || 'Failed to start service',
         };
+      })
+
+      .addCase(recoverFromStartupFailure.pending, (state) => {
+        state.error = null;
+        state.isRecoveringFromStartupFailure = true;
+      })
+      .addCase(recoverFromStartupFailure.fulfilled, (state) => {
+        state.isRecoveringFromStartupFailure = false;
+      })
+      .addCase(recoverFromStartupFailure.rejected, (state, action) => {
+        const failure = action.payload as OnboardingRecoveryResult | undefined;
+        state.isRecoveringFromStartupFailure = false;
+        state.error = failure?.error || 'Failed to recover from startup failure';
+        state.showStartupFailureDialog = true;
       });
 
     // completeOnboarding
@@ -209,12 +254,7 @@ export const onboardingSlice = createSlice({
     // resetOnboarding
     builder
       .addCase(resetOnboarding.fulfilled, () => {
-        return {
-          ...initialState,
-          // Reset idempotency flags
-          isDownloading: false,
-          isStartingService: false,
-        };
+        return { ...initialState };
       });
 
     // Handle synchronous actions for navigation
@@ -224,18 +264,25 @@ export const onboardingSlice = createSlice({
 
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to ClaudeConfig');
-            state.currentStep = OnboardingStep.ClaudeConfig;
+            console.log('[onboardingSlice] Moving from Welcome to AgentCliSelection');
+            state.currentStep = OnboardingStep.AgentCliSelection;
             break;
 
-          case OnboardingStep.ClaudeConfig:
-            console.log('[onboardingSlice] Moving from ClaudeConfig to Download');
+          case OnboardingStep.AgentCliSelection:
+            console.log('[onboardingSlice] Moving from AgentCliSelection to Download');
             state.currentStep = OnboardingStep.Download;
             break;
 
           case OnboardingStep.Download:
             if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from Download to Launch');
+              console.log('[onboardingSlice] Moving from Download to LlmInstallation');
+              state.currentStep = OnboardingStep.LlmInstallation;
+            }
+            break;
+
+          case OnboardingStep.LlmInstallation:
+            if (state.downloadProgress?.version) {
+              console.log('[onboardingSlice] Moving from LlmInstallation to Launch');
               state.currentStep = OnboardingStep.Launch;
             }
             break;
@@ -251,16 +298,7 @@ export const onboardingSlice = createSlice({
         if (state.currentStep > OnboardingStep.Welcome) {
           state.currentStep = (state.currentStep - 1) as OnboardingStep;
         }
-      })
-      // Handle dependency installation completion in onboarding context
-      // Removed auto-advance to next step - users will manually click "Next" button
-      // .addCase(TRIGGER_ONBOARDING_NEXT, (state) => {
-      //   console.log('[onboardingSlice] Triggering next step after dependency installation');
-      //   // Only proceed if we're in the Dependencies step
-      //   if (state.currentStep === OnboardingStep.Dependencies) {
-      //     state.currentStep = OnboardingStep.Launch;
-      //   }
-      // });
+      });
   },
 });
 
@@ -271,11 +309,15 @@ export const {
   setShowSkipConfirm,
   setError,
   clearError,
+  setStartupFailure,
+  showStartupFailureDialog,
+  hideStartupFailureDialog,
   setDownloadProgress,
   setServiceProgress,
   setDependencyCheckResults,
   addScriptOutput,
   clearScriptOutput,
+  restartOnboardingFlow,
   nextStep,
   previousStep,
 } = onboardingSlice.actions;
@@ -290,6 +332,10 @@ export const selectDownloadProgress = (state: { onboarding: OnboardingState }) =
 export const selectServiceProgress = (state: { onboarding: OnboardingState }) => state.onboarding.serviceProgress;
 export const selectShowSkipConfirm = (state: { onboarding: OnboardingState }) => state.onboarding.showSkipConfirm;
 export const selectOnboardingError = (state: { onboarding: OnboardingState }) => state.onboarding.error;
+export const selectStartupFailure = (state: { onboarding: OnboardingState }) => state.onboarding.startupFailure;
+export const selectShowStartupFailureDialog = (state: { onboarding: OnboardingState }) => state.onboarding.showStartupFailureDialog;
+export const selectIsRecoveringFromStartupFailure = (state: { onboarding: OnboardingState }) =>
+  state.onboarding.isRecoveringFromStartupFailure;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
 
@@ -300,9 +346,8 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState; claudeConf
   switch (currentStep) {
     case OnboardingStep.Welcome:
       return true; // Can always proceed from welcome
-    case OnboardingStep.ClaudeConfig:
-      // Can proceed if config is valid or using existing config
-      return state.claudeConfig.isValid || state.claudeConfig.useExistingConfig;
+    case OnboardingStep.AgentCliSelection:
+      return true;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
     case OnboardingStep.LlmInstallation:
