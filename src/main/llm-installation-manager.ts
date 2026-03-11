@@ -4,10 +4,79 @@ import os from 'node:os';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import log from 'electron-log';
-import { Region, RegionDetector } from './region-detector.js';
+import { type DetectionResult, Region, RegionDetector } from './region-detector.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 
 const execAsync = promisify(exec);
+const CLI_PRECHECK_TIMEOUT_MS = 8_000;
+
+export type CliExecutionErrorCode =
+  | 'CLI_NOT_FOUND'
+  | 'AUTH_REQUIRED'
+  | 'INVALID_ARGUMENT'
+  | 'EXECUTION_FAILED';
+
+interface CliPrecheckResult {
+  success: boolean;
+  resolvedCommand?: string;
+  errorCode?: CliExecutionErrorCode;
+  error?: string;
+  exitCode?: number;
+}
+
+function resolveProviderId(commandName: string): string {
+  if (commandName.includes('copilot')) {
+    return 'copilot-cli';
+  }
+  if (commandName.includes('codex')) {
+    return 'codex';
+  }
+  return 'claude-code';
+}
+
+function getCommandCandidates(commandName: string): string[] {
+  if (commandName === 'copilot') {
+    return ['copilot', 'github-copilot-cli'];
+  }
+  return [commandName];
+}
+
+function quoteShellArg(value: string): string {
+  return `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
+}
+
+function buildCliLaunchInvocation(commandName: string, promptText: string): { args: string[]; shellCommand: string } {
+  if (commandName === 'copilot') {
+    const args = ['-i', promptText];
+    return {
+      args,
+      shellCommand: `${commandName} -i ${quoteShellArg(promptText)}`,
+    };
+  }
+
+  const args = [promptText];
+  return {
+    args,
+    shellCommand: `${commandName} ${quoteShellArg(promptText)}`,
+  };
+}
+
+export function includesInvalidArgumentHint(content: string): boolean {
+  const normalized = content.toLowerCase();
+  return normalized.includes('unknown option')
+    || normalized.includes('invalid option')
+    || normalized.includes('invalid argument')
+    || normalized.includes('unexpected argument');
+}
+
+export function includesAuthRequiredHint(content: string): boolean {
+  const normalized = content.toLowerCase();
+  return normalized.includes('not logged in')
+    || normalized.includes('authentication required')
+    || normalized.includes('sign in')
+    || normalized.includes('login required')
+    || normalized.includes('authenticate first');
+}
 
 /**
  * LLM prompt configuration
@@ -17,6 +86,7 @@ export interface LlmPromptConfig {
   content: string;
   region: Region;
   filePath: string; // Added file path
+  detection: DetectionResult;
 }
 
 /**
@@ -25,6 +95,8 @@ export interface LlmPromptConfig {
 export interface ApiCallResult {
   success: boolean;
   error?: string;
+  errorCode?: CliExecutionErrorCode;
+  providerId?: string;
   messageId?: string;
 }
 
@@ -44,6 +116,21 @@ export class LlmInstallationManager {
     this.debugMode = debugMode;
   }
 
+  private resolvePromptDetection(overrideRegion?: 'cn' | 'international'): DetectionResult {
+    if (overrideRegion) {
+      return {
+        region: overrideRegion === 'cn' ? 'CN' : 'INTERNATIONAL',
+        detectedAt: new Date(),
+        method: 'override',
+        localeSnapshot: null,
+        rawLocale: null,
+        matchedRule: 'manual-override',
+      };
+    }
+
+    return this.regionDetector.detectWithCache();
+  }
+
   /**
    * Load LLM prompt based on region from manifest
    * @param manifestPath Path to manifest file
@@ -59,11 +146,17 @@ export class LlmInstallationManager {
       const manifestContent = await fs.readFile(manifestPath, 'utf-8');
       const manifest = JSON.parse(manifestContent);
 
-      // Use override region if provided, otherwise detect automatically
-      const region = overrideRegion
-        ? (overrideRegion === 'cn' ? 'CN' : 'INTERNATIONAL')
-        : this.regionDetector.detectRegion();
-      log.info('[LlmInstallationManager] Using region:', region);
+      // Explicit onboarding region selection must win over locale detection.
+      const detection = this.resolvePromptDetection(overrideRegion);
+      const region = detection.region;
+      log.info('[LlmInstallationManager] Using region:', {
+        region,
+        overrideRegion: overrideRegion ?? null,
+        detectionMethod: detection.method,
+        localeSnapshot: detection.localeSnapshot,
+        rawLocale: detection.rawLocale,
+        matchedRule: detection.matchedRule,
+      });
 
       let promptPath: string;
       if (region === 'CN') {
@@ -93,6 +186,7 @@ export class LlmInstallationManager {
         content: promptContent,
         region,
         filePath: resolvedPromptPath, // Include the file path
+        detection,
       };
     } catch (error) {
       log.error('[LlmInstallationManager] Failed to load prompt:', error);
@@ -106,13 +200,34 @@ export class LlmInstallationManager {
    * Instead of passing the entire prompt content, we pass a short command that tells the AI to read the file
    * @param promptFilePath Path to the prompt file
    * @param mainWindow The main window instance
-   * @param commandName The CLI command to use ('claude' or 'codex')
+   * @param commandName The CLI command to use ('claude' | 'codex' | 'copilot')
    */
   async callApi(promptFilePath: string, mainWindow: any, commandName: string = 'claude'): Promise<ApiCallResult> {
+    const providerId = resolveProviderId(commandName);
     try {
       log.info(`[LlmInstallationManager] Opening terminal with ${commandName} CLI...`);
       log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
       log.info('[LlmInstallationManager] Debug mode:', this.debugMode);
+
+      const runtimeEnv = await this.buildCliRuntimeEnv();
+      this.logCliExecution(providerId, 'preflight_start', { commandName });
+      const precheckResult = await this.precheckCli(commandName, runtimeEnv);
+      if (!precheckResult.success) {
+        this.logCliExecution(providerId, 'preflight_failed', {
+          errorCode: precheckResult.errorCode,
+          reason: precheckResult.error,
+          exitCode: precheckResult.exitCode ?? null,
+        });
+        return {
+          success: false,
+          errorCode: precheckResult.errorCode,
+          error: precheckResult.error,
+          providerId,
+        };
+      }
+
+      const resolvedCommand = precheckResult.resolvedCommand || commandName;
+      this.logCliExecution(providerId, 'preflight_ok', { resolvedCommand });
 
       // Determine the platform and appropriate command
       const platform = process.platform;
@@ -120,19 +235,21 @@ export class LlmInstallationManager {
 
       let terminalFound = false;
       let constructedCommand = '';
-      const runtimeEnv = await this.buildCliRuntimeEnv();
       // Get just the filename, not the full path
       const fileName = path.basename(promptFilePath);
       // Set working directory to the directory containing the prompt file
       const promptDir = path.dirname(promptFilePath);
-      // Construct command with file name and instruction
-      const prompt = `"Follow ${fileName} to install hagicode desktop and follow the instructions in it."`;
+      const promptText = `Follow ${fileName} to install hagicode desktop and follow the instructions in it.`;
+      const invocation = buildCliLaunchInvocation(commandName, promptText);
+      const resolvedShellCommand = commandName === resolvedCommand
+        ? invocation.shellCommand
+        : `${resolvedCommand}${invocation.shellCommand.slice(commandName.length)}`;
 
       if (platform === 'win32') {
         // Windows: Directly spawn CLI process
         try {
-          log.info(`[LlmInstallationManager] Windows command:`, `${commandName} "${prompt}"`);
-          spawn(commandName, [prompt], {
+          log.info('[LlmInstallationManager] Windows command:', `${resolvedCommand} ${invocation.args.join(' ')}`);
+          spawn(resolvedCommand, invocation.args, {
             detached: true,
             stdio: 'ignore',
             cwd: promptDir,
@@ -147,8 +264,8 @@ export class LlmInstallationManager {
       } else if (platform === 'darwin') {
         // macOS: Open new Terminal window and run CLI with prompt
         try {
-          const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          constructedCommand = `osascript -e 'tell application "Terminal" to do script "${commandName} \\"${escapedPrompt}\\"; read -p \\"Press enter to exit...\\"; exit"'`;
+          const escapedPrompt = resolvedShellCommand.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+          constructedCommand = `osascript -e 'tell application "Terminal" to do script "${escapedPrompt}; read -p \\"Press enter to exit...\\"; exit"'`;
           log.info('[LlmInstallationManager] macOS command:', constructedCommand);
           await execAsync(constructedCommand, {
             cwd: promptDir,
@@ -191,7 +308,7 @@ export class LlmInstallationManager {
             await execAsync(`which ${term}`, { env: runtimeEnv });
             log.info(`[LlmInstallationManager] Using terminal: ${term}`);
 
-            const command = `${commandName} ${prompt}`;
+            const command = resolvedShellCommand;
             log.info('[LlmInstallationManager] Executing:', command);
 
             spawn(term, ['-e', command], {
@@ -224,10 +341,16 @@ export class LlmInstallationManager {
         log.error('[LlmInstallationManager] Command execution result: Failed - No terminal emulator found');
         return {
           success: false,
+          errorCode: 'EXECUTION_FAILED',
           error: '无法找到可用的终端模拟器',
+          providerId,
         };
       }
 
+      this.logCliExecution(providerId, 'launch_success', {
+        commandName,
+        resolvedCommand,
+      });
       log.info('[LlmInstallationManager] Command execution result: Success - Terminal opened successfully for LLM installation');
 
       // Return success immediately after opening terminal
@@ -235,14 +358,25 @@ export class LlmInstallationManager {
       return {
         success: true,
         messageId: 'LLM installation initiated in terminal window',
+        providerId,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorCode: CliExecutionErrorCode = includesInvalidArgumentHint(errorMessage)
+        ? 'INVALID_ARGUMENT'
+        : 'EXECUTION_FAILED';
       log.error('[LlmInstallationManager] Command execution result: Failed -', errorMessage);
       log.error(`[LlmInstallationManager] Failed to open terminal for ${commandName} CLI:`, errorMessage);
+      this.logCliExecution(providerId, 'launch_failed', {
+        commandName,
+        errorCode,
+        reason: errorMessage,
+      });
       return {
         success: false,
+        errorCode,
         error: `Failed to execute ${commandName} CLI: ${errorMessage}. Make sure ${commandName} CLI is installed.`,
+        providerId,
       };
     }
   }
@@ -289,7 +423,11 @@ export class LlmInstallationManager {
    * Get current region
    */
   getRegion(): Region {
-    return this.regionDetector.detectRegion();
+    return this.regionDetector.detectWithCache().region;
+  }
+
+  getRegionStatus(): DetectionResult {
+    return this.regionDetector.detectWithCache();
   }
 
   /**
@@ -315,10 +453,142 @@ export class LlmInstallationManager {
     const result = await this.callApi(promptPath, null, commandName);
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to open AI CLI');
+      const errorPrefix = result.errorCode ? `[${result.errorCode}] ` : '';
+      throw new Error(`${errorPrefix}${result.error || 'Failed to open AI CLI'}`);
     }
 
     log.info('[LlmInstallationManager] AI CLI launched successfully');
+  }
+
+  private async precheckCli(commandName: string, runtimeEnv: NodeJS.ProcessEnv): Promise<CliPrecheckResult> {
+    const commandCandidates = getCommandCandidates(commandName);
+
+    let resolvedCommand: string | null = null;
+    for (const candidate of commandCandidates) {
+      const lookupCommand = process.platform === 'win32' ? 'where' : 'command -v';
+      try {
+        const { stdout } = await execAsync(`${lookupCommand} ${candidate}`, {
+          env: runtimeEnv,
+          windowsHide: true,
+        });
+        const firstLine = stdout
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .find(line => line.length > 0);
+        if (firstLine) {
+          resolvedCommand = firstLine;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (!resolvedCommand) {
+      return {
+        success: false,
+        errorCode: 'CLI_NOT_FOUND',
+        error: `CLI command not found: ${commandCandidates.join(', ')}`,
+      };
+    }
+
+    const shouldCheckAuth = commandName === 'copilot';
+    if (!shouldCheckAuth) {
+      return { success: true, resolvedCommand };
+    }
+
+    const authProbe = await this.probeCommand(resolvedCommand, ['auth', 'status'], runtimeEnv, CLI_PRECHECK_TIMEOUT_MS);
+    const combinedOutput = `${authProbe.stdout}\n${authProbe.stderr}`.trim();
+    if (authProbe.exitCode !== 0) {
+      if (includesInvalidArgumentHint(combinedOutput)) {
+        // Some Copilot CLI versions don't expose `auth status`; fall back to runtime validation.
+        return { success: true, resolvedCommand };
+      }
+
+      if (includesAuthRequiredHint(combinedOutput)) {
+        return {
+          success: false,
+          errorCode: 'AUTH_REQUIRED',
+          error: 'Copilot CLI authentication required. Please login first.',
+          exitCode: authProbe.exitCode,
+        };
+      }
+
+      if (includesInvalidArgumentHint(combinedOutput)) {
+        return {
+          success: false,
+          errorCode: 'INVALID_ARGUMENT',
+          error: `Copilot CLI precheck failed: ${combinedOutput || 'invalid arguments'}`,
+          exitCode: authProbe.exitCode,
+        };
+      }
+    }
+
+    return { success: true, resolvedCommand };
+  }
+
+  private async probeCommand(
+    command: string,
+    args: string[],
+    env: NodeJS.ProcessEnv,
+    timeoutMs: number,
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    return new Promise((resolve) => {
+      const child = spawn(command, args, {
+        env,
+        shell: true,
+        windowsHide: true,
+      });
+
+      const stdoutChunks: Buffer[] = [];
+      const stderrChunks: Buffer[] = [];
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        child.kill();
+        resolve({
+          exitCode: 124,
+          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+          stderr: `${Buffer.concat(stderrChunks).toString('utf-8')}\nprobe timeout`,
+        });
+      }, timeoutMs);
+
+      child.stdout?.on('data', chunk => stdoutChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk))));
+      child.stderr?.on('data', chunk => stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk))));
+      child.on('error', (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve({
+          exitCode: 1,
+          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+          stderr: `${Buffer.concat(stderrChunks).toString('utf-8')}\n${error.message}`,
+        });
+      });
+      child.on('close', (code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve({
+          exitCode: code ?? 1,
+          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+          stderr: Buffer.concat(stderrChunks).toString('utf-8'),
+        });
+      });
+    });
+  }
+
+  private logCliExecution(
+    providerId: string,
+    phase: string,
+    details: Record<string, unknown> = {}
+  ): void {
+    log.info('[LlmInstallationManager][CliExecution]', {
+      provider: providerId,
+      phase,
+      ...details,
+    });
   }
 
   private async buildCliRuntimeEnv(): Promise<NodeJS.ProcessEnv> {

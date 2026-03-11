@@ -128,10 +128,15 @@ export function registerLlmHandlers(deps: {
   // LLM get region handler
   ipcMain.handle('llm:get-region', async () => {
     if (!state.llmInstallationManager) {
-      return { region: null };
+      return { success: false, region: null };
     }
+    const detection = state.llmInstallationManager.getRegionStatus();
     return {
-      region: state.llmInstallationManager.getRegion(),
+      success: true,
+      region: detection.region,
+      detectedAt: detection.detectedAt.toISOString(),
+      method: detection.method,
+      localeSnapshot: detection.localeSnapshot,
     };
   });
 
