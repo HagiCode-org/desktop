@@ -36,6 +36,7 @@ jobs:
   ################################################################################
   build-windows:
     name: Build for Windows
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-latest
     permissions:
       contents: write
@@ -179,7 +180,313 @@ jobs:
             throw "pkg directory not found: $pkgDir"
           }
 
-          $allFiles = Get-ChildItem -Path $pkgDir -Recurse -File
+          $allFiles = Get-ChildItem -Path $pkgDir -File
+          $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
+          $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
+
+          if ($signable.Count -eq 0) {
+            throw 'No Windows artifacts were found in pkg/ for signing or upload.'
+          }
+
+          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
+          $catalogEntries = $signable | ForEach-Object {
+            [System.IO.Path]::GetRelativePath($pkgDir, $_.FullName)
+          }
+          $catalogEntries | Set-Content -Path $catalogPath
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'nsis_files' $nsis
+          Write-MultilineOutput 'portable_files' $portable
+          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'signable_files' $signable
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
+
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+
+      - name: Sign Windows artifacts with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Verify Windows signatures
+        id: verify_windows_signatures
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          VERIFY_STRICT: "true"
+        run: |
+          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
+
+      - name: Summarize unsigned Windows build
+        if: success() && steps.signing_policy.outputs.required != 'true'
+        shell: bash
+        run: |
+          {
+            echo '## Windows signing skipped'
+            echo
+            echo "- Policy: skipped (${SIGNING_REASON})"
+            echo "- Signed artifacts: 0"
+            echo "- Verification: not required for this build"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
+      - name: Summarize signed Windows build
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        run: |
+          {
+            echo '## Windows signing completed'
+            echo
+            echo "- Policy: required (${SIGNING_REASON})"
+            echo "- Signed artifacts: ${{ steps.windows_artifacts.outputs.signable_count }}"
+            echo '- Verification: passed'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.nsis_files != ''
+        with:
+          name: hagicode-windows-nsis-${{ github.sha }}
+          path: ${{ steps.windows_artifacts.outputs.nsis_files }}
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload NSIS installer to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.nsis_files != ''
+        with:
+          files: ${{ steps.windows_artifacts.outputs.nsis_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AppX package
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        with:
+          name: hagicode-windows-appx-${{ github.sha }}
+          path: ${{ steps.windows_artifacts.outputs.appx_files }}
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload AppX package to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        with:
+          files: ${{ steps.windows_artifacts.outputs.appx_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.portable_files != ''
+        with:
+          name: hagicode-windows-portable-${{ github.sha }}
+          path: ${{ steps.windows_artifacts.outputs.portable_files }}
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload portable to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.portable_files != ''
+        with:
+          files: ${{ steps.windows_artifacts.outputs.portable_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Code signing failure notification
+        if: failure() && steps.signing_policy.outputs.required == 'true'
+        uses: HagiCode-org/haginotifier@v1.0.0
+        with:
+          message: |
+            **代码签名失败**
+
+            平台: Windows
+            版本: ${{ github.ref_name }}
+            提交: `${{ github.sha }}`
+
+            请检查签名配置和证书状态。
+            可能的原因：
+            - GitHub OIDC 到 Azure 的联邦身份或角色配置不完整
+            - Artifact Signing 端点、签名账户或证书配置文件配置错误
+            - 产物签名成功但验签失败
+
+            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          msg_type: 'post'
+          title: '代码签名失败 (Windows) ❌'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+
+  build-windows-release:
+    name: Build for Windows Release
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: windows-latest
+    environment: production
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine release channel
+        id: channel
+        shell: bash
+        run: |
+          # If channel is manually specified, use it
+          if [ -n "${{ github.event.inputs.channel }}" ]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+            echo "Using manually specified channel: ${CHANNEL}"
+          else
+            # Auto-detect channel based on tag or branch
+            if [ "${{ github.ref_type }}" == "tag" ]; then
+              TAG="${GITHUB_REF_NAME#v}"
+              # Check if version contains pre-release identifiers
+              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
+                if [[ "$TAG" =~ -beta ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -alpha ]]; then
+                  CHANNEL="dev"
+                elif [[ "$TAG" =~ -rc ]]; then
+                  CHANNEL="beta"
+                elif [[ "$TAG" =~ -dev ]]; then
+                  CHANNEL="dev"
+                fi
+              else
+                # Stable version (no pre-release identifier)
+                CHANNEL="stable"
+              fi
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              # Main branch without tag - use beta for testing
+              CHANNEL="beta"
+            else
+              # Other branches
+              CHANNEL="dev"
+            fi
+            echo "Auto-detected channel: ${CHANNEL}"
+          fi
+
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> $GITHUB_ENV
+
+      - name: Determine Windows signing policy
+        id: signing_policy
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            required=true
+            reason="tag release"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.sign_windows_release }}" == "true" ]]; then
+            required=true
+            reason="manual workflow_dispatch override"
+          else
+            required=false
+            reason="non-release build"
+          fi
+
+          echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "Windows signing required: ${required} (${reason})"
+
+      - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+        run: |
+          missing=()
+
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+            if [ -z "${!key}" ]; then
+              missing+=("${key}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## Windows code signing configuration error'
+              echo
+              echo 'The release build requires Artifact Signing, but the following values are missing:'
+              echo
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Azure login
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Sync version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Windows
+        run: node scripts/ci-build.js --platform win
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Collect Windows artifacts
+        id: windows_artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          if (-not (Test-Path $pkgDir)) {
+            throw "pkg directory not found: $pkgDir"
+          }
+
+          $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
           $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
@@ -576,8 +883,11 @@ jobs:
   ################################################################################
   build-summary:
     name: Build Summary
+    outputs:
+      channel: ${{ steps.channel.outputs.channel }}
     needs:
       - build-windows
+      - build-windows-release
       - build-linux
       - build-macos
     if: always()
@@ -587,8 +897,26 @@ jobs:
       - name: Check build status
         run: |
           echo "Windows Build: ${{ needs.build-windows.result }}"
+          echo "Windows Release Build: ${{ needs.build-windows-release.result }}"
           echo "Linux Build: ${{ needs.build-linux.result }}"
           echo "macOS Build: ${{ needs.build-macos.result }}"
+
+      - name: Normalize platform status
+        id: platform_status
+        if: always()
+        run: |
+          windows_build_status="${{ needs.build-windows.result }}"
+          windows_release_status="${{ needs.build-windows-release.result }}"
+
+          if [ "${windows_release_status}" != "skipped" ]; then
+            windows_status="${windows_release_status}"
+          else
+            windows_status="${windows_build_status}"
+          fi
+
+          echo "windows=${windows_status}" >> "$GITHUB_OUTPUT"
+          echo "linux=${{ needs.build-linux.result }}" >> "$GITHUB_OUTPUT"
+          echo "macos=${{ needs.build-macos.result }}" >> "$GITHUB_OUTPUT"
 
       - name: Determine release channel
         id: channel
@@ -630,7 +958,7 @@ jobs:
           echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
 
       - name: Build failed notification
-        if: needs.build-windows.result == 'failure' || needs.build-linux.result == 'failure' || needs.build-macos.result == 'failure'
+        if: steps.platform_status.outputs.windows == 'failure' || steps.platform_status.outputs.linux == 'failure' || steps.platform_status.outputs.macos == 'failure'
         run: |
           echo "::error::One or more builds failed. Please check the logs."
           exit 1
@@ -640,9 +968,9 @@ jobs:
         if: always()
         run: |
           # Check all dependent jobs
-          windows_status="${{ needs.build-windows.result }}"
-          linux_status="${{ needs.build-linux.result }}"
-          macos_status="${{ needs.build-macos.result }}"
+          windows_status="${{ steps.platform_status.outputs.windows }}"
+          linux_status="${{ steps.platform_status.outputs.linux }}"
+          macos_status="${{ steps.platform_status.outputs.macos }}"
 
           echo "Windows: ${windows_status}"
           echo "Linux: ${linux_status}"
@@ -663,9 +991,9 @@ jobs:
         id: platforms
         if: always()
         run: |
-          windows_status="${{ needs.build-windows.result }}"
-          linux_status="${{ needs.build-linux.result }}"
-          macos_status="${{ needs.build-macos.result }}"
+          windows_status="${{ steps.platform_status.outputs.windows }}"
+          linux_status="${{ steps.platform_status.outputs.linux }}"
+          macos_status="${{ steps.platform_status.outputs.macos }}"
 
           platforms=()
           [ "${windows_status}" == "success" ] && platforms+=("Windows")

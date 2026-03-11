@@ -10,13 +10,26 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 2. Validate signing configuration from GitHub secrets
 3. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
 4. Build Windows installers into `pkg/`
-5. Collect signable artifacts (`*Setup*.exe`, portable `.exe`, `.appx`)
+5. Collect signable release artifacts from the top level of `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`)
 6. Sign artifacts with `azure/artifact-signing-action@v1`
 7. Verify signatures before any upload or release step runs
+
+Only distributable Windows artifacts are signed in CI.
+Intermediate files under `pkg/win-unpacked/` are excluded so the signing action only touches the final installer and package outputs that are actually published.
 
 Tag releases (`refs/tags/v*.*.*`) always require signing.
 Manual `workflow_dispatch` runs can opt in with `sign_windows_release=true`.
 Regular `main` branch builds stay unsigned by default and are marked as such in the Actions summary.
+
+## Production Environment Scope
+
+The GitHub Actions `production` environment is attached only to the tag-triggered Windows release job.
+That means:
+
+- tag releases enter `production` before Windows signing starts
+- normal `main` branch Windows builds do not use the environment
+- manual `workflow_dispatch` signing runs do not use the environment unless they are converted into a tag-driven release flow
+- the separate Azure Storage sync workflow is not bound to `production`
 
 ## Azure Prerequisites
 
