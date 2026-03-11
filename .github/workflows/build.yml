@@ -16,15 +16,17 @@ on:
           - stable
           - beta
           - dev
+      sign_windows_release:
+        description: 'Sign Windows release artifacts in this manual run'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 env:
   NODE_VERSION: "22"
-  # Code signing configuration
-  # Set ENABLE_CODE_SIGNING to "true" to enable artifact signing
-  ENABLE_CODE_SIGNING: "false"
   # Release channel (auto-detected from tag/branch, can be overridden manually)
   RELEASE_CHANNEL: "${{ github.event.inputs.channel || '' }}"
 
@@ -35,6 +37,9 @@ jobs:
   build-windows:
     name: Build for Windows
     runs-on: windows-latest
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -80,6 +85,25 @@ jobs:
           echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
           echo "RELEASE_CHANNEL=${CHANNEL}" >> $GITHUB_ENV
 
+      - name: Determine Windows signing policy
+        id: signing_policy
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            required=true
+            reason="tag release"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.sign_windows_release }}" == "true" ]]; then
+            required=true
+            reason="manual workflow_dispatch override"
+          else
+            required=false
+            reason="non-release build"
+          fi
+
+          echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "Windows signing required: ${required} (${reason})"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -104,130 +128,195 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Code signing step for Windows artifacts
-      - name: Sign Windows artifacts
-        if: success() && env.ENABLE_CODE_SIGNING == 'true'
-        shell: bash
-        run: |
-          echo "Starting Windows code signing..."
-
-          # Check if Azure credentials are available
-          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ] || [ -z "${{ secrets.AZURE_CLIENT_SECRET }}" ] || [ -z "${{ secrets.AZURE_TENANT_ID }}" ]; then
-            echo "::warning::Azure credentials not configured. Skipping code signing."
-            echo "To enable code signing, set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID secrets."
-            exit 0
-          fi
-
-          # Find all Windows executables and packages
-          echo "Searching for artifacts to sign..."
-          ARTIFACTS=$(find pkg -type f \( -name "*.exe" -o -name "*.appx" \) 2>/dev/null || true)
-
-          if [ -z "$ARTIFACTS" ]; then
-            echo "::warning::No artifacts found in pkg directory"
-            exit 0
-          fi
-
-          # Sign each artifact
-          for artifact in $ARTIFACTS; do
-            echo "Signing: $artifact"
-            node scripts/sign-artifact.js "$artifact" || {
-              echo "::error::Failed to sign $artifact"
-              exit 1
-            }
-          done
-
-          echo "Windows code signing completed successfully"
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
-          AZURE_SIGNING_KEY_URI: ${{ secrets.AZURE_SIGNING_KEY_URI }}
-
-      # Verify signatures
-      - name: Verify Windows signatures
-        if: success() && env.ENABLE_CODE_SIGNING == 'true'
+      - name: Collect Windows artifacts
+        id: windows_artifacts
         shell: pwsh
         run: |
-          echo "Verifying code signatures..."
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          if (-not (Test-Path $pkgDir)) {
+            throw "pkg directory not found: $pkgDir"
+          }
 
-          $artifacts = Get-ChildItem -Path pkg -Include *.exe,*.appx -Recurse -ErrorAction SilentlyContinue
-          $failed = $false
+          $allFiles = Get-ChildItem -Path $pkgDir -Recurse -File
+          $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
+          $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
 
-          foreach ($artifact in $artifacts) {
-            Write-Host "Verifying: $($artifact.FullName)"
-            $result = & "$env:ProgramFiles\Windows Kits\10\bin\10.0.22000.0\x64\signtool.exe" verify /pa "$($artifact.FullName)" 2>&1
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "::error::Signature verification failed for: $($artifact.FullName)"
-              Write-Host $result
-              $failed = $true
-            } else {
-              Write-Host "Signature verified: $($artifact.Name)"
+          if ($signable.Count -eq 0) {
+            throw 'No Windows artifacts were found in pkg/ for signing or upload.'
+          }
+
+          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
+          $catalogEntries = $signable | ForEach-Object {
+            [System.IO.Path]::GetRelativePath($pkgDir, $_.FullName)
+          }
+          $catalogEntries | Set-Content -Path $catalogPath
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
             }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
           }
 
-          if ($failed) {
-            Write-Host "::error::One or more signature verifications failed"
+          Write-MultilineOutput 'nsis_files' $nsis
+          Write-MultilineOutput 'portable_files' $portable
+          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'signable_files' $signable
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
+
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+
+      - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CODESIGN_ENDPOINT: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
+          AZURE_CODESIGN_ACCOUNT_NAME: ${{ vars.AZURE_CODESIGN_ACCOUNT_NAME }}
+          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ vars.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+        run: |
+          missing=()
+
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+            if [ -z "${!key}" ]; then
+              missing+=("${key}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## Windows code signing configuration error'
+              echo
+              echo 'The release build requires Artifact Signing, but the following values are missing:'
+              echo
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 1
-          }
+          fi
 
-          echo "All signatures verified successfully"
+      - name: Azure login
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Upload each artifact separately
+      - name: Sign Windows artifacts with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Verify Windows signatures
+        id: verify_windows_signatures
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          VERIFY_STRICT: "true"
+        run: |
+          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
+
+      - name: Summarize unsigned Windows build
+        if: success() && steps.signing_policy.outputs.required != 'true'
+        shell: bash
+        run: |
+          {
+            echo '## Windows signing skipped'
+            echo
+            echo "- Policy: skipped (${SIGNING_REASON})"
+            echo "- Signed artifacts: 0"
+            echo "- Verification: not required for this build"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
+      - name: Summarize signed Windows build
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        run: |
+          {
+            echo '## Windows signing completed'
+            echo
+            echo "- Policy: required (${SIGNING_REASON})"
+            echo "- Signed artifacts: ${{ steps.windows_artifacts.outputs.signable_count }}"
+            echo '- Verification: passed'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.nsis_files != ''
         with:
           name: hagicode-windows-nsis-${{ github.sha }}
-          path: pkg/*Setup*.exe
+          path: ${{ steps.windows_artifacts.outputs.nsis_files }}
           retention-days: 30
           if-no-files-found: warn
 
       - name: Upload NSIS installer to Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.nsis_files != ''
         with:
-          files: pkg/*Setup*.exe
+          files: ${{ steps.windows_artifacts.outputs.nsis_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload AppX package
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
         with:
           name: hagicode-windows-appx-${{ github.sha }}
-          path: pkg/*.appx
+          path: ${{ steps.windows_artifacts.outputs.appx_files }}
           retention-days: 30
           if-no-files-found: warn
 
       - name: Upload AppX package to Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
         with:
-          files: pkg/*.appx
+          files: ${{ steps.windows_artifacts.outputs.appx_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload portable
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.portable_files != ''
         with:
           name: hagicode-windows-portable-${{ github.sha }}
-          path: pkg/Hagicode*.exe
+          path: ${{ steps.windows_artifacts.outputs.portable_files }}
           retention-days: 30
           if-no-files-found: warn
 
       - name: Upload portable to Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.portable_files != ''
         with:
-          files: pkg/Hagicode*.exe
+          files: ${{ steps.windows_artifacts.outputs.portable_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Code signing failure notification
       - name: Code signing failure notification
-        if: failure() && env.ENABLE_CODE_SIGNING == 'true'
+        if: failure() && steps.signing_policy.outputs.required == 'true'
         uses: HagiCode-org/haginotifier@v1.0.0
         with:
           message: |
@@ -239,9 +328,9 @@ jobs:
 
             请检查签名配置和证书状态。
             可能的原因：
-            - Azure 凭据已过期或无效
-            - 签名端点无法访问
-            - 证书权限不足
+            - GitHub OIDC 到 Azure 的联邦身份或角色配置不完整
+            - Artifact Signing 端点、签名账户或证书配置文件配置错误
+            - 产物签名成功但验签失败
 
             [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           msg_type: 'post'
