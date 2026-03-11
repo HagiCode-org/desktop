@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import * as electron from 'electron';
 import Store from 'electron-store';
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -14,13 +14,66 @@ export type Region = 'CN' | 'INTERNATIONAL';
 export interface DetectionResult {
   region: Region;
   detectedAt: Date;
-  method: 'locale' | 'cache';
+  method: 'locale' | 'cache' | 'override';
+  localeSnapshot: string | null;
+  rawLocale: string | null;
+  matchedRule: 'zh-family' | 'default-international' | 'error-fallback' | 'manual-override';
+}
+
+interface StoredDetectionResult {
+  region: Region;
+  detectedAt: string;
+  localeSnapshot: string | null;
+  rawLocale: string | null;
+  matchedRule: DetectionResult['matchedRule'];
+}
+
+interface LocaleResolution {
+  region: Region;
+  rawLocale: string | null;
+  normalizedLocale: string | null;
+  matchedRule: DetectionResult['matchedRule'];
+}
+
+interface RegionDetectorOptions {
+  getLocale?: () => string;
+  now?: () => Date;
+  logger?: Pick<Console, 'info' | 'warn' | 'error'>;
 }
 
 /**
- * Chinese locale codes that indicate China region
+ * Normalize locale strings into a canonical BCP 47 representation so
+ * cache comparisons and language-family matching stay stable across OSes.
  */
-const CHINESE_LOCALES = ['zh-CN', 'zh-TW', 'zh-HK', 'zh-SG'];
+export function normalizeLocale(locale: string | null | undefined): string | null {
+  const trimmed = locale?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidate = trimmed.replace(/_/g, '-');
+  try {
+    return Intl.getCanonicalLocales(candidate)[0] ?? candidate;
+  } catch {
+    return candidate;
+  }
+}
+
+export function isChineseLocale(locale: string | null | undefined): boolean {
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
+    return false;
+  }
+
+  // Treat the whole zh-* family as the Chinese prompt path so locale
+  // variants like zh, zh-Hans, zh-Hans-CN, zh-TW, and zh-HK stay stable.
+  const [language] = normalizedLocale.split('-');
+  return language.toLowerCase() === 'zh';
+}
+
+export function resolveRegionFromLocale(locale: string | null | undefined): Region {
+  return isChineseLocale(locale) ? 'CN' : 'INTERNATIONAL';
+}
 
 /**
  * RegionDetector handles automatic region detection for manifest-driven dependency installation
@@ -31,50 +84,68 @@ const CHINESE_LOCALES = ['zh-CN', 'zh-TW', 'zh-HK', 'zh-SG'];
  */
 export class RegionDetector {
   private store: Store<Record<string, unknown>>;
+  private readonly getLocale: () => string;
+  private readonly now: () => Date;
+  private readonly logger: Pick<Console, 'info' | 'warn' | 'error'>;
 
-  constructor(store: Store<Record<string, unknown>>) {
+  constructor(store: Store<Record<string, unknown>>, options: RegionDetectorOptions = {}) {
     this.store = store;
+    this.getLocale = options.getLocale ?? (() => {
+      const electronApp = (electron as { app?: { getLocale: () => string } }).app;
+      if (!electronApp) {
+        throw new Error('Electron app unavailable');
+      }
+      return electronApp.getLocale();
+    });
+    this.now = options.now ?? (() => new Date());
+    this.logger = options.logger ?? console;
   }
 
   /**
    * Detect user region based on system locale
    */
   detectRegion(): Region {
-    try {
-      const locale = app.getLocale();
-      console.log(`[RegionDetector] System locale detected: ${locale}`);
-
-      if (CHINESE_LOCALES.includes(locale)) {
-        return 'CN';
-      }
-
-      return 'INTERNATIONAL';
-    } catch (error) {
-      console.error('[RegionDetector] Failed to detect locale, defaulting to INTERNATIONAL:', error);
-      return 'INTERNATIONAL';
-    }
+    return this.resolveCurrentLocale().region;
   }
 
   /**
    * Detect region with caching support
    */
   detectWithCache(): DetectionResult {
-    const cached = this.getCachedDetection();
+    const currentResolution = this.resolveCurrentLocale();
+    const cached = currentResolution.matchedRule === 'error-fallback'
+      ? null
+      : this.getCachedDetection(currentResolution.normalizedLocale);
 
     if (cached) {
-      console.log('[RegionDetector] Using cached detection result');
+      this.logger.info('[RegionDetector] Using cached detection result', {
+        region: cached.region,
+        localeSnapshot: cached.localeSnapshot,
+        rawLocale: cached.rawLocale,
+        matchedRule: cached.matchedRule,
+      });
       return cached;
     }
 
-    console.log('[RegionDetector] Performing new region detection');
-    const region = this.detectRegion();
     const result: DetectionResult = {
-      region,
-      detectedAt: new Date(),
+      region: currentResolution.region,
+      detectedAt: this.now(),
       method: 'locale',
+      localeSnapshot: currentResolution.normalizedLocale,
+      rawLocale: currentResolution.rawLocale,
+      matchedRule: currentResolution.matchedRule,
     };
 
-    this.cacheDetectionResult(result);
+    this.logger.info('[RegionDetector] Performing new region detection', {
+      region: result.region,
+      rawLocale: result.rawLocale,
+      normalizedLocale: result.localeSnapshot,
+      matchedRule: result.matchedRule,
+    });
+
+    if (result.matchedRule !== 'error-fallback') {
+      this.cacheDetectionResult(result);
+    }
 
     return result;
   }
@@ -82,29 +153,53 @@ export class RegionDetector {
   /**
    * Get cached detection result if valid
    */
-  private getCachedDetection(): DetectionResult | null {
+  private getCachedDetection(currentLocaleSnapshot: string | null): DetectionResult | null {
     try {
-      const cached = this.store.get('regionDetection') as DetectionResult | undefined;
+      const cached = this.store.get('regionDetection') as StoredDetectionResult | undefined;
 
       if (!cached) {
         return null;
       }
 
       const detectedAt = new Date(cached.detectedAt);
-      const now = new Date();
-      const cacheAge = now.getTime() - detectedAt.getTime();
+      if (Number.isNaN(detectedAt.getTime())) {
+        this.logger.warn('[RegionDetector] Cached detection has invalid timestamp, ignoring cache');
+        return null;
+      }
+
+      const cacheAge = this.now().getTime() - detectedAt.getTime();
 
       if (cacheAge > CACHE_TTL) {
-        console.log('[RegionDetector] Cache expired, will re-detect');
+        this.logger.info('[RegionDetector] Cache expired, will re-detect', {
+          cacheAgeMs: cacheAge,
+          localeSnapshot: cached.localeSnapshot ?? null,
+        });
+        return null;
+      }
+
+      if (!cached.localeSnapshot) {
+        this.logger.info('[RegionDetector] Cache missing locale snapshot, will re-detect');
+        return null;
+      }
+
+      if (cached.localeSnapshot !== currentLocaleSnapshot) {
+        this.logger.info('[RegionDetector] Locale snapshot changed, invalidating cache', {
+          previousLocaleSnapshot: cached.localeSnapshot,
+          currentLocaleSnapshot,
+        });
         return null;
       }
 
       return {
-        ...cached,
+        region: cached.region,
         detectedAt,
+        method: 'cache',
+        localeSnapshot: cached.localeSnapshot,
+        rawLocale: cached.rawLocale,
+        matchedRule: cached.matchedRule,
       };
     } catch (error) {
-      console.error('[RegionDetector] Failed to read cache:', error);
+      this.logger.error('[RegionDetector] Failed to read cache:', error);
       return null;
     }
   }
@@ -114,10 +209,20 @@ export class RegionDetector {
    */
   private cacheDetectionResult(result: DetectionResult): void {
     try {
-      this.store.set('regionDetection', result);
-      console.log('[RegionDetector] Detection result cached successfully');
+      const cachedResult: StoredDetectionResult = {
+        region: result.region,
+        detectedAt: result.detectedAt.toISOString(),
+        localeSnapshot: result.localeSnapshot,
+        rawLocale: result.rawLocale,
+        matchedRule: result.matchedRule,
+      };
+      this.store.set('regionDetection', cachedResult);
+      this.logger.info('[RegionDetector] Detection result cached successfully', {
+        region: result.region,
+        localeSnapshot: result.localeSnapshot,
+      });
     } catch (error) {
-      console.error('[RegionDetector] Failed to cache detection result:', error);
+      this.logger.error('[RegionDetector] Failed to cache detection result:', error);
     }
   }
 
@@ -127,9 +232,9 @@ export class RegionDetector {
   clearCache(): void {
     try {
       this.store.delete('regionDetection');
-      console.log('[RegionDetector] Cache cleared successfully');
+      this.logger.info('[RegionDetector] Cache cleared successfully');
     } catch (error) {
-      console.error('[RegionDetector] Failed to clear cache:', error);
+      this.logger.error('[RegionDetector] Failed to clear cache:', error);
     }
   }
 
@@ -137,7 +242,7 @@ export class RegionDetector {
    * Force re-detection and clear cache
    */
   redetect(): DetectionResult {
-    console.log('[RegionDetector] Forced re-detection requested');
+    this.logger.info('[RegionDetector] Forced re-detection requested');
     this.clearCache();
     return this.detectWithCache();
   }
@@ -155,5 +260,31 @@ export class RegionDetector {
       region: detection.region,
       detectedAt: detection.detectedAt,
     };
+  }
+
+  private resolveCurrentLocale(): LocaleResolution {
+    try {
+      const rawLocale = this.getLocale();
+      const normalizedLocale = normalizeLocale(rawLocale);
+      const region = resolveRegionFromLocale(normalizedLocale);
+      const matchedRule: DetectionResult['matchedRule'] = region === 'CN'
+        ? 'zh-family'
+        : 'default-international';
+
+      return {
+        region,
+        rawLocale,
+        normalizedLocale,
+        matchedRule,
+      };
+    } catch (error) {
+      this.logger.error('[RegionDetector] Failed to detect locale, defaulting to INTERNATIONAL:', error);
+      return {
+        region: 'INTERNATIONAL',
+        rawLocale: null,
+        normalizedLocale: null,
+        matchedRule: 'error-fallback',
+      };
+    }
   }
 }
