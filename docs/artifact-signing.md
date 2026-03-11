@@ -6,12 +6,13 @@ This document explains how Hagicode Desktop signs Windows release artifacts in G
 
 The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now uses this flow:
 
-1. Build Windows installers into `pkg/`
-2. Collect signable artifacts (`*Setup*.exe`, portable `.exe`, `.appx`)
-3. Decide whether signing is required
-4. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
-5. Sign artifacts with `azure/artifact-signing-action@v1`
-6. Verify signatures before any upload or release step runs
+1. Decide whether signing is required
+2. Validate signing configuration from GitHub secrets
+3. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
+4. Build Windows installers into `pkg/`
+5. Collect signable artifacts (`*Setup*.exe`, portable `.exe`, `.appx`)
+6. Sign artifacts with `azure/artifact-signing-action@v1`
+7. Verify signatures before any upload or release step runs
 
 Tag releases (`refs/tags/v*.*.*`) always require signing.
 Manual `workflow_dispatch` runs can opt in with `sign_windows_release=true`.
@@ -68,9 +69,9 @@ Add these repository secrets:
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID that hosts Artifact Signing |
 | `FEISHU_WEBHOOK_URL` | Existing build/signing failure notification webhook |
 
-### Variables
+### Additional secrets
 
-Add these repository variables:
+Add these repository secrets:
 
 | Name | Purpose |
 | --- | --- |
@@ -94,7 +95,7 @@ The Artifact Signing action authenticates through `DefaultAzureCredential`.
 In this workflow, the primary path is:
 
 1. GitHub Actions obtains an OIDC token
-2. `azure/login@v2` exchanges it for Azure access
+2. `azure/login@v2` exchanges it for Azure access before the Windows build starts
 3. `azure/artifact-signing-action@v1` signs files with the configured signing account and certificate profile
 
 If you need to troubleshoot authentication behavior, the action also supports direct environment credentials and per-credential exclude switches. For this repository, OIDC remains the recommended path.
@@ -113,7 +114,7 @@ If manual signing is ever required for a one-off recovery scenario, use the Micr
 If the workflow summary reports missing Artifact Signing configuration:
 
 1. Check repository secrets for `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-2. Check repository variables for `AZURE_CODESIGN_ENDPOINT`, `AZURE_CODESIGN_ACCOUNT_NAME`, `AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME`
+2. Check repository secrets for `AZURE_CODESIGN_ENDPOINT`, `AZURE_CODESIGN_ACCOUNT_NAME`, `AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME`
 3. Re-run the workflow after updating the missing values
 
 ### Azure login failure

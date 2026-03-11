@@ -104,6 +104,47 @@ jobs:
           echo "reason=${reason}" >> "$GITHUB_OUTPUT"
           echo "Windows signing required: ${required} (${reason})"
 
+      - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+        run: |
+          missing=()
+
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+            if [ -z "${!key}" ]; then
+              missing+=("${key}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## Windows code signing configuration error'
+              echo
+              echo 'The release build requires Artifact Signing, but the following values are missing:'
+              echo
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Azure login
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -171,54 +212,13 @@ jobs:
 
           "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
 
-      - name: Validate Artifact Signing configuration
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        shell: bash
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_CODESIGN_ENDPOINT: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
-          AZURE_CODESIGN_ACCOUNT_NAME: ${{ vars.AZURE_CODESIGN_ACCOUNT_NAME }}
-          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ vars.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-        run: |
-          missing=()
-
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
-            if [ -z "${!key}" ]; then
-              missing+=("${key}")
-            fi
-          done
-
-          if [ ${#missing[@]} -gt 0 ]; then
-            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
-            {
-              echo '## Windows code signing configuration error'
-              echo
-              echo 'The release build requires Artifact Signing, but the following values are missing:'
-              echo
-              for key in "${missing[@]}"; do
-                echo "- ${key}"
-              done
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-      - name: Azure login
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Sign Windows artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
-          endpoint: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
-          signing-account-name: ${{ vars.AZURE_CODESIGN_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ vars.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
           files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
