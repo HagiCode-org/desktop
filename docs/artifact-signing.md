@@ -91,6 +91,10 @@ Add these repository secrets:
 | `AZURE_CODESIGN_ENDPOINT` | Azure Artifact Signing endpoint URL |
 | `AZURE_CODESIGN_ACCOUNT_NAME` | Signing account name |
 | `AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME` | Certificate profile name |
+| `AZURE_CODESIGN_APPX_PUBLISHER` | Exact AppX publisher subject string that must match the signing certificate subject |
+
+`AZURE_CODESIGN_APPX_PUBLISHER` is required because AppX/MSIX packages validate the manifest publisher against the signing certificate subject.
+For signed Windows releases, the workflow rewrites `appx.publisher` in `electron-builder.yml` before the build so the generated `.appx` matches the Azure signing certificate.
 
 ## Signing Policy Switches
 
@@ -146,6 +150,16 @@ If Artifact Signing completes but `scripts/verify-signature.js` fails:
 2. Verify it manually on a Windows machine with `signtool verify /pa <file>`
 3. Confirm the workflow signed the same file list that it later verified and uploaded
 4. Check whether the certificate profile supports the file type being signed
+
+### AppX signing fails with `SignerSign() failed` or `0x8007000b`
+
+If the Azure signing action signs `.exe` files but fails while processing `.appx`:
+
+1. Verify `AZURE_CODESIGN_APPX_PUBLISHER` is configured
+2. Verify the value exactly matches the Azure signing certificate subject used by the certificate profile
+3. Confirm the workflow updated `electron-builder.yml` before the Windows build ran
+
+This error usually means the AppX manifest publisher does not match the certificate subject, which Windows packaging treats as invalid even if the remote signing request itself succeeds.
 
 ## References
 

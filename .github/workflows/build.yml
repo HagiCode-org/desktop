@@ -115,10 +115,11 @@ jobs:
           AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          AZURE_CODESIGN_APPX_PUBLISHER: ${{ secrets.AZURE_CODESIGN_APPX_PUBLISHER }}
         run: |
           missing=()
 
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME AZURE_CODESIGN_APPX_PUBLISHER; do
             if [ -z "${!key}" ]; then
               missing+=("${key}")
             fi
@@ -137,6 +138,28 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+
+      - name: Configure AppX publisher for Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: pwsh
+        env:
+          AZURE_CODESIGN_APPX_PUBLISHER: ${{ secrets.AZURE_CODESIGN_APPX_PUBLISHER }}
+        run: |
+          $configPath = Join-Path $env:GITHUB_WORKSPACE 'electron-builder.yml'
+          $content = Get-Content -Path $configPath -Raw
+          $escapedPublisher = $env:AZURE_CODESIGN_APPX_PUBLISHER.Replace('"', '\"')
+          $updated = [regex]::Replace(
+            $content,
+            '(?m)^  publisher: .*$',
+            "  publisher: `"$escapedPublisher`""
+          )
+
+          if ($updated -eq $content) {
+            throw "Failed to update appx.publisher in $configPath"
+          }
+
+          Set-Content -Path $configPath -Value $updated
+          Write-Host "Configured AppX publisher for Artifact Signing."
 
       - name: Azure login
         if: success() && steps.signing_policy.outputs.required == 'true'
@@ -421,10 +444,11 @@ jobs:
           AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          AZURE_CODESIGN_APPX_PUBLISHER: ${{ secrets.AZURE_CODESIGN_APPX_PUBLISHER }}
         run: |
           missing=()
 
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME AZURE_CODESIGN_APPX_PUBLISHER; do
             if [ -z "${!key}" ]; then
               missing+=("${key}")
             fi
@@ -443,6 +467,28 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+
+      - name: Configure AppX publisher for Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: pwsh
+        env:
+          AZURE_CODESIGN_APPX_PUBLISHER: ${{ secrets.AZURE_CODESIGN_APPX_PUBLISHER }}
+        run: |
+          $configPath = Join-Path $env:GITHUB_WORKSPACE 'electron-builder.yml'
+          $content = Get-Content -Path $configPath -Raw
+          $escapedPublisher = $env:AZURE_CODESIGN_APPX_PUBLISHER.Replace('"', '\"')
+          $updated = [regex]::Replace(
+            $content,
+            '(?m)^  publisher: .*$',
+            "  publisher: `"$escapedPublisher`""
+          )
+
+          if ($updated -eq $content) {
+            throw "Failed to update appx.publisher in $configPath"
+          }
+
+          Set-Content -Path $configPath -Value $updated
+          Write-Host "Configured AppX publisher for Artifact Signing."
 
       - name: Azure login
         if: success() && steps.signing_policy.outputs.required == 'true'
