@@ -12,6 +12,7 @@ import { getDocLink } from './doc-links.js';
 export enum AgentCliType {
   ClaudeCode = 'claude-code',
   Codex = 'codex',
+  CopilotCli = 'copilot-cli',
   // Future extensions:
   // Aider = 'aider',
   // Cursor = 'cursor-cli',
@@ -25,6 +26,12 @@ export interface AgentCliConfig {
   displayName: string;
   description: string;
   package: string; // npm package name
+  commandName: string;
+  commandCandidates: string[];
+  executorType: string;
+  providerId: string;
+  executablePathEnvKey?: string;
+  enabledEnvKey?: string;
   docsLinkId?: string; // Reference to centralized documentation link
   docsUrl?: string; // Computed from docsLinkId
 }
@@ -39,6 +46,10 @@ export const AGENT_CLI_CONFIGS: Record<AgentCliType, AgentCliConfig> = {
     displayName: 'Claude Code',
     description: '官方的 Anthropic Claude 命令行工具',
     package: '@anthropic-ai/claude-code',
+    commandName: 'claude',
+    commandCandidates: ['claude'],
+    executorType: 'ClaudeCodeCli',
+    providerId: 'claude-code',
     docsLinkId: 'claudeCodeSetup',
   },
   [AgentCliType.Codex]: {
@@ -46,7 +57,24 @@ export const AGENT_CLI_CONFIGS: Record<AgentCliType, AgentCliConfig> = {
     displayName: 'Codex',
     description: 'OpenAI Codex 命令行工具',
     package: '@openai/codex',
+    commandName: 'codex',
+    commandCandidates: ['codex'],
+    executorType: 'CodexCli',
+    providerId: 'codex',
     docsLinkId: 'codexSetup',
+  },
+  [AgentCliType.CopilotCli]: {
+    cliType: AgentCliType.CopilotCli,
+    displayName: 'GitHub Copilot CLI',
+    description: 'GitHub Copilot 命令行工具',
+    package: 'github-copilot-cli',
+    commandName: 'copilot',
+    commandCandidates: ['copilot', 'github-copilot-cli'],
+    executorType: 'GitHubCopilot',
+    providerId: 'copilot-cli',
+    executablePathEnvKey: 'AI__Providers__Providers__GitHubCopilot__ExecutablePath',
+    enabledEnvKey: 'AI__Providers__Providers__GitHubCopilot__Enabled',
+    docsLinkId: 'copilotSetup',
   },
 };
 
@@ -93,6 +121,22 @@ export function getAllCliConfigs(): (AgentCliConfig & { docsUrl?: string })[] {
       docsUrl: docLink?.url,
     };
   });
+}
+
+export function getCliCommandName(cliType: AgentCliType): string {
+  return AGENT_CLI_CONFIGS[cliType].commandName;
+}
+
+export function getCliCommandCandidates(cliType: AgentCliType): string[] {
+  return [...AGENT_CLI_CONFIGS[cliType].commandCandidates];
+}
+
+export function getCliExecutorType(cliType: AgentCliType): string {
+  return AGENT_CLI_CONFIGS[cliType].executorType;
+}
+
+export function getCliProviderId(cliType: AgentCliType): string {
+  return AGENT_CLI_CONFIGS[cliType].providerId;
 }
 
 /**

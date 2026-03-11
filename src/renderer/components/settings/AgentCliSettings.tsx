@@ -16,7 +16,7 @@ interface StoredAgentCliSelection {
 declare global {
   interface Window {
     electronAPI: {
-      agentCliSave: (data: { cliType: string }) => Promise<{ success: boolean; error?: string }>;
+      agentCliSave: (data: { cliType: AgentCliType }) => Promise<{ success: boolean; error?: string }>;
       agentCliLoad: () => Promise<StoredAgentCliSelection>;
     };
   }

@@ -1,4 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type {
+  OnboardingRecoveryResult,
+  OnboardingStartServiceResult,
+  StartupFailurePayload,
+} from '../types/onboarding.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -15,20 +20,14 @@ export interface StorageInfo {
   usedPercentage: number;
 }
 
-export interface StartupFailurePayload {
-  summary: string;
-  log: string;
-  port: number;
-  timestamp: string;
-  truncated: boolean;
-}
-
 export interface StartWebServiceResult {
   success: boolean;
   error?: { type: string; details: string };
   warning?: { type: string; missing: any[] };
   startupFailure?: StartupFailurePayload;
 }
+
+type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
@@ -114,15 +113,44 @@ interface ElectronAPI {
 
   // LLM Installation APIs
   llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
-  llmCallApi: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
+  llmCallApi: (
+    manifestPath: string,
+    region?: 'cn' | 'international'
+  ) => Promise<{ success: boolean; error?: string; errorCode?: string; messageId?: string; providerId?: string }>;
   llmDetectConfig: () => Promise<any>;
   llmGetRegion: () => Promise<any>;
   llmGetManifestPath: (versionId: string) => Promise<any>;
-  llmOpenAICliWithResource: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) => Promise<any>;
-  llmOpenAICliWithPrompt: (promptPath: string) => Promise<any>;
+  llmOpenAICliWithResource: (
+    resourceKey: 'smartConfig' | 'diagnosis',
+    customPromptPath?: string
+  ) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
+  llmOpenAICliWithPrompt: (promptPath: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
 
   // Diagnosis APIs
   diagnosisOpenPrompt: () => Promise<{ success: boolean; error?: string }>;
+
+  // Onboarding APIs
+  checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
+  getOnboardingState: () => Promise<any>;
+  skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
+  downloadPackage: () => Promise<any>;
+  checkOnboardingDependencies: (version: string) => Promise<any>;
+  installDependencies: (version: string) => Promise<any>;
+  startService: (version: string) => Promise<OnboardingStartServiceResult>;
+  recoverServiceStartup: (version: string) => Promise<OnboardingRecoveryResult>;
+  completeOnboarding: (version: string) => Promise<{ success: boolean; error?: string }>;
+  resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
+  onDownloadProgress: (callback: (progress: any) => void) => () => void;
+  onDependencyProgress: (callback: (status: any) => void) => () => void;
+  onServiceProgress: (callback: (progress: any) => void) => () => void;
+  onScriptOutput: (callback: (output: any) => void) => () => void;
+  onOnboardingShow: (callback: () => void) => () => void;
+
+  // Agent CLI Selection APIs
+  agentCliSave: (data: { cliType: AgentCliSelectionType }) => Promise<{ success: boolean; error?: string }>;
+  agentCliLoad: () => Promise<{ cliType: AgentCliSelectionType | null; isSkipped: boolean; selectedAt: string | null }>;
+  agentCliSkip: () => Promise<{ success: boolean; error?: string }>;
+  agentCliGetSelected: () => Promise<AgentCliSelectionType | null>;
 }
 
 const electronAPI = {
@@ -340,6 +368,7 @@ const electronAPI = {
   checkOnboardingDependencies: (version: string) => ipcRenderer.invoke('onboarding:check-dependencies', version),
   installDependencies: (version: string) => ipcRenderer.invoke('onboarding:install-dependencies', version),
   startService: (version: string) => ipcRenderer.invoke('onboarding:start-service', version),
+  recoverServiceStartup: (version: string) => ipcRenderer.invoke('onboarding:recover-service-startup', version),
   completeOnboarding: (version: string) => ipcRenderer.invoke('onboarding:complete', version),
   resetOnboarding: () => ipcRenderer.invoke('onboarding:reset'),
   onDownloadProgress: (callback) => {
@@ -409,7 +438,7 @@ const electronAPI = {
   claudeRestoreFromBackup: (backupPath: string) => ipcRenderer.invoke('claude:restore-backup', backupPath),
 
   // Agent CLI Selection APIs
-  agentCliSave: (data: { cliType: string }) => ipcRenderer.invoke('agentCli:save', data),
+  agentCliSave: (data: { cliType: AgentCliSelectionType }) => ipcRenderer.invoke('agentCli:save', data),
   agentCliLoad: () => ipcRenderer.invoke('agentCli:load'),
   agentCliSkip: () => ipcRenderer.invoke('agentCli:skip'),
   agentCliGetSelected: () => ipcRenderer.invoke('agentCli:getSelected'),

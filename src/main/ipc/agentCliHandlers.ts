@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 import type AgentCliManager from '../agent-cli-manager.js';
-import type { AgentCliType } from '../../types/agent-cli.js';
+import { isAgentCliType, type AgentCliType } from '../../types/agent-cli.js';
 
 interface AgentCliHandlerDeps {
   onSelectionSaved?: (cliType: AgentCliType) => Promise<void> | void;
@@ -17,12 +17,15 @@ export function registerAgentCliHandlers(
   // Save Agent CLI selection
   ipcMain.handle('agentCli:save', async (_event, { cliType }: { cliType: AgentCliType }) => {
     try {
+      if (!isAgentCliType(cliType)) {
+        return { success: false, errorCode: 'INVALID_ARGUMENT', error: `Unsupported cliType: ${String(cliType)}` };
+      }
       await agentCliManager.saveSelection(cliType);
       await deps.onSelectionSaved?.(cliType);
       return { success: true };
     } catch (error: any) {
       console.error('[IPC] Failed to save Agent CLI selection:', error);
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'EXECUTION_FAILED', error: error.message };
     }
   });
 
@@ -44,7 +47,7 @@ export function registerAgentCliHandlers(
       return { success: true };
     } catch (error: any) {
       console.error('[IPC] Failed to save Agent CLI skip:', error);
-      return { success: false, error: error.message };
+      return { success: false, errorCode: 'EXECUTION_FAILED', error: error.message };
     }
   });
 
