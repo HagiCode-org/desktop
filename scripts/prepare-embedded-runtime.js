@@ -1,50 +1,26 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import AdmZip from 'adm-zip';
+import {
+  EMBEDDED_RUNTIME_METADATA_FILE,
+  detectRuntimePlatform,
+  ensureOfficialMicrosoftDownloadUrl,
+  getDotnetExecutableName,
+  readPinnedRuntimeConfig,
+  resolvePinnedRuntimeTarget,
+} from './embedded-runtime-config.js';
 
-const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectPlatform();
-const dotnetExecutableName = process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
+const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
+const runtimeConfig = readPinnedRuntimeConfig();
+const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
+const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const stageRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current');
+const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'downloads');
 const stagedRuntimeRoot = path.join(stageRoot, 'dotnet', runtimePlatform);
-const stagedSharedRoot = path.join(stagedRuntimeRoot, 'shared');
-
-function detectPlatform() {
-  if (process.platform === 'win32') return 'win-x64';
-  if (process.platform === 'darwin') return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-  if (process.platform === 'linux') return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
-  throw new Error(`Unsupported build platform: ${process.platform}/${process.arch}`);
-}
-
-function resolveSourceRoot() {
-  const explicitSource = process.env.HAGICODE_EMBEDDED_DOTNET_SOURCE?.trim();
-  const envDotnetRoot = process.env.DOTNET_ROOT?.trim();
-  const guessedRoot = explicitSource || envDotnetRoot || detectLocalDotnetRoot();
-
-  if (!guessedRoot) {
-    throw new Error('Unable to resolve an embedded runtime source. Set HAGICODE_EMBEDDED_DOTNET_SOURCE to a dotnet runtime root.');
-  }
-
-  const resolvedRoot = path.resolve(guessedRoot);
-  const platformScopedRoot = path.join(resolvedRoot, runtimePlatform);
-  if (fs.existsSync(path.join(platformScopedRoot, dotnetExecutableName))) {
-    return platformScopedRoot;
-  }
-
-  return resolvedRoot;
-}
-
-function detectLocalDotnetRoot() {
-  try {
-    const command = process.platform === 'win32' ? 'where' : 'which';
-    const output = execFileSync(command, ['dotnet'], { encoding: 'utf8' }).trim();
-    const firstLine = output.split(/\r?\n/)[0]?.trim();
-    return firstLine ? path.dirname(firstLine) : null;
-  } catch {
-    return null;
-  }
-}
 
 function listVersionDirectories(targetPath) {
   try {
@@ -112,43 +88,85 @@ function validateRuntimeLayout(runtimeRoot) {
   };
 }
 
-function copyVersionedDirectory(sourceBase, targetBase, version) {
-  if (!version) {
+function ensureExpectedPinnedVersions(validation) {
+  const mismatches = [];
+
+  if (validation.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    mismatches.push(`Microsoft.AspNetCore.App expected ${runtimeTarget.aspNetCoreVersion} but found ${validation.aspNetCoreVersion || 'missing'}`);
+  }
+  if (validation.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    mismatches.push(`Microsoft.NETCore.App expected ${runtimeTarget.netCoreVersion} but found ${validation.netCoreVersion || 'missing'}`);
+  }
+  if (validation.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    mismatches.push(`host/fxr expected ${runtimeTarget.hostFxrVersion} but found ${validation.hostFxrVersion || 'missing'}`);
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(`Pinned runtime validation failed for ${runtimePlatform}: ${mismatches.join('; ')}`);
+  }
+}
+
+async function downloadRuntimeArchive(downloadUrl, destinationPath) {
+  const response = await fetch(downloadUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download runtime archive (${response.status} ${response.statusText}): ${downloadUrl}`);
+  }
+
+  const payload = Buffer.from(await response.arrayBuffer());
+  fs.writeFileSync(destinationPath, payload);
+}
+
+function extractArchive(archivePath, archiveType, destinationPath) {
+  if (archiveType === 'zip') {
+    const archive = new AdmZip(archivePath);
+    archive.extractAllTo(destinationPath, true);
     return;
   }
 
-  fs.cpSync(path.join(sourceBase, version), path.join(targetBase, version), { recursive: true, force: true });
+  if (archiveType === 'tar.gz') {
+    execFileSync('tar', ['-xzf', archivePath, '-C', destinationPath], { stdio: 'inherit' });
+    return;
+  }
+
+  throw new Error(`Unsupported embedded runtime archive type: ${archiveType}`);
 }
 
-function stageRuntime() {
-  const sourceRoot = resolveSourceRoot();
-  const validation = validateRuntimeLayout(sourceRoot);
-
-  fs.rmSync(stageRoot, { recursive: true, force: true });
-  fs.mkdirSync(path.join(stagedRuntimeRoot, 'host'), { recursive: true });
-  fs.mkdirSync(stagedSharedRoot, { recursive: true });
-
-  fs.copyFileSync(path.join(sourceRoot, dotnetExecutableName), path.join(stagedRuntimeRoot, dotnetExecutableName));
-  if (fs.existsSync(path.join(sourceRoot, 'LICENSE.txt'))) {
-    fs.copyFileSync(path.join(sourceRoot, 'LICENSE.txt'), path.join(stagedRuntimeRoot, 'LICENSE.txt'));
-  }
-  if (fs.existsSync(path.join(sourceRoot, 'ThirdPartyNotices.txt'))) {
-    fs.copyFileSync(path.join(sourceRoot, 'ThirdPartyNotices.txt'), path.join(stagedRuntimeRoot, 'ThirdPartyNotices.txt'));
+function findExtractedRuntimeRoot(extractRoot) {
+  if (fs.existsSync(path.join(extractRoot, dotnetExecutableName))) {
+    return extractRoot;
   }
 
-  fs.mkdirSync(path.join(stagedRuntimeRoot, 'host', 'fxr'), { recursive: true });
-  fs.mkdirSync(path.join(stagedSharedRoot, 'Microsoft.NETCore.App'), { recursive: true });
-  fs.mkdirSync(path.join(stagedSharedRoot, 'Microsoft.AspNetCore.App'), { recursive: true });
+  const entries = fs.readdirSync(extractRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+  if (entries.length === 1) {
+    const nestedRoot = path.join(extractRoot, entries[0].name);
+    if (fs.existsSync(path.join(nestedRoot, dotnetExecutableName))) {
+      return nestedRoot;
+    }
+  }
 
-  copyVersionedDirectory(path.join(sourceRoot, 'host', 'fxr'), path.join(stagedRuntimeRoot, 'host', 'fxr'), validation.hostFxrVersion);
-  copyVersionedDirectory(path.join(sourceRoot, 'shared', 'Microsoft.NETCore.App'), path.join(stagedSharedRoot, 'Microsoft.NETCore.App'), validation.netCoreVersion);
-  copyVersionedDirectory(path.join(sourceRoot, 'shared', 'Microsoft.AspNetCore.App'), path.join(stagedSharedRoot, 'Microsoft.AspNetCore.App'), validation.aspNetCoreVersion);
+  throw new Error(`Extracted runtime payload at ${extractRoot} does not contain ${dotnetExecutableName}`);
+}
+
+function writeRuntimeMetadata(validation, archivePath) {
+  const sourceUrl = ensureOfficialMicrosoftDownloadUrl(
+    runtimeTarget.downloadUrl,
+    runtimeConfig.source?.allowedDownloadHosts || [],
+  );
 
   const metadata = {
+    schemaVersion: 1,
     platform: runtimePlatform,
-    sourceRoot,
-    stagedRuntimeRoot,
+    provider: runtimeConfig.source.provider,
+    releaseMetadataUrl: runtimeConfig.source.releaseMetadataUrl,
+    allowedDownloadHosts: runtimeConfig.source.allowedDownloadHosts,
+    releaseVersion: runtimeConfig.releaseVersion,
+    releaseDate: runtimeConfig.releaseDate,
+    downloadUrl: runtimeTarget.downloadUrl,
+    sourceHost: sourceUrl.hostname,
+    archiveType: runtimeTarget.archiveType,
+    archivePath,
     dotnetPath: path.join(stagedRuntimeRoot, dotnetExecutableName),
+    runtimeRoot: stagedRuntimeRoot,
     aspNetCoreVersion: validation.aspNetCoreVersion,
     netCoreVersion: validation.netCoreVersion,
     hostFxrVersion: validation.hostFxrVersion,
@@ -156,19 +174,55 @@ function stageRuntime() {
   };
 
   fs.writeFileSync(
-    path.join(stageRoot, '.runtime-stage.json'),
+    path.join(stagedRuntimeRoot, EMBEDDED_RUNTIME_METADATA_FILE),
     `${JSON.stringify(metadata, null, 2)}\n`,
     'utf8',
   );
 
-  console.log(`[embedded-runtime] Staged ${runtimePlatform} runtime from ${sourceRoot}`);
-  console.log(`[embedded-runtime] ASP.NET Core ${validation.aspNetCoreVersion || 'unknown'} -> ${stagedRuntimeRoot}`);
+  fs.writeFileSync(
+    path.join(stageRoot, '.runtime-stage.json'),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+    'utf8',
+  );
 }
 
-try {
-  stageRuntime();
-} catch (error) {
+async function stageRuntime() {
+  fs.mkdirSync(downloadsRoot, { recursive: true });
+  ensureOfficialMicrosoftDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
+
+  const archiveExtension = runtimeTarget.archiveType === 'zip' ? 'zip' : 'tar.gz';
+  const archivePath = path.join(downloadsRoot, `${runtimePlatform}-${runtimeConfig.releaseVersion}.${archiveExtension}`);
+
+  if (!fs.existsSync(archivePath)) {
+    console.log(`[embedded-runtime] Downloading ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
+    await downloadRuntimeArchive(runtimeTarget.downloadUrl, archivePath);
+  } else {
+    console.log(`[embedded-runtime] Reusing cached runtime archive ${archivePath}`);
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `hagicode-runtime-${runtimePlatform}-`));
+
+  try {
+    extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
+    const extractedRuntimeRoot = findExtractedRuntimeRoot(tempRoot);
+
+    fs.rmSync(stageRoot, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(stagedRuntimeRoot), { recursive: true });
+    fs.cpSync(extractedRuntimeRoot, stagedRuntimeRoot, { recursive: true, force: true });
+
+    const validation = validateRuntimeLayout(stagedRuntimeRoot);
+    ensureExpectedPinnedVersions(validation);
+    writeRuntimeMetadata(validation, archivePath);
+
+    console.log(`[embedded-runtime] Staged ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
+    console.log(`[embedded-runtime] ASP.NET Core ${validation.aspNetCoreVersion} -> ${stagedRuntimeRoot}`);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+stageRuntime().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[embedded-runtime] ${message}`);
   process.exit(1);
-}
+});
