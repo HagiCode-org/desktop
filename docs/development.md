@@ -181,7 +181,46 @@ status after app restart when the backend process survives.
 4. Mark `stopped/error` only when both primary and fallback checks fail
 5. Invalidate stale runtime identity on confirmed mismatch
 
+## Embedded Runtime Staging
+
+Desktop-hosted Hagicode Server startup now uses a bundled `dotnet` runtime instead of `start.ps1` / `start.sh`. Packaging expects the staged runtime layout below before `electron-builder` runs:
+
+```
+build/embedded-runtime/current/
+??? dotnet/
+    ??? <platform>/
+        ??? dotnet[.exe]
+        ??? host/fxr/<version>/...
+        ??? shared/Microsoft.NETCore.App/<version>/...
+        ??? shared/Microsoft.AspNetCore.App/<version>/...
+```
+
+### Preparing the staged runtime
+
+- Run `npm run prepare:runtime` from `repos/hagicode-desktop`.
+- On Windows, use `npm run dev:embedded-runtime` to prepare the runtime and launch Desktop with `HAGICODE_EMBEDDED_DOTNET_ROOT` set automatically.
+- The helper resolves its source from `HAGICODE_EMBEDDED_DOTNET_SOURCE`, then `DOTNET_ROOT`, then the locally installed `dotnet` location.
+- `electron-builder.yml` ships `build/embedded-runtime/current/dotnet` through `extraResources`, so the packaged runtime is always outside `app.asar`.
+
+### Local verification override
+
+When running the unpackaged Electron app, point Desktop at the staged runtime with:
+
+```powershell
+$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/build/embedded-runtime/current/dotnet/win-x64"
+npm run dev
+```
+
+Packaged builds ignore this override and always resolve the runtime from `process.resourcesPath/dotnet/<platform>`. Desktop does not fall back to a machine-wide `dotnet` installation when that packaged runtime is missing.
+
 ### Troubleshooting
+
+#### Runtime staging or startup failures
+
+1. Re-run `npm run prepare:runtime` and confirm the staged directory contains `dotnet[.exe]`, `host/fxr`, `shared/Microsoft.NETCore.App`, and `shared/Microsoft.AspNetCore.App`.
+2. Check `npm run smoke-test -- --require-runtime` before packaging.
+3. If Desktop reports `Invalid service payload`, verify the server package still contains `lib/PCode.Web.dll`, `lib/PCode.Web.runtimeconfig.json`, and `lib/PCode.Web.deps.json`.
+4. If Desktop reports `Bundled runtime version incompatible`, compare the packaged ASP.NET Core version with `PCode.Web.runtimeconfig.json` and the manifest `dependencies.dotnet.version.runtime` metadata.
 
 #### Service is running but UI shows stopped
 
