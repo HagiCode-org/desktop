@@ -468,15 +468,23 @@ export class PathManager {
     return process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
   }
 
-  getExpectedPackagedEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+  getExpectedPackagedPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return path.join(process.resourcesPath, 'dotnet', platform);
   }
 
-  getDevelopmentEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+  getExpectedPackagedEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    return this.getExpectedPackagedPinnedRuntimeRoot(platform);
+  }
+
+  getDevelopmentPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return path.resolve(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', platform);
   }
 
-  getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+  getDevelopmentEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    return this.getDevelopmentPinnedRuntimeRoot(platform);
+  }
+
+  getPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     if (!app.isPackaged) {
       const override = process.env.HAGICODE_EMBEDDED_DOTNET_ROOT?.trim();
       if (override) {
@@ -489,14 +497,22 @@ export class PathManager {
         return resolvedOverride;
       }
 
-      return this.getDevelopmentEmbeddedRuntimeRoot(platform);
+      return this.getDevelopmentPinnedRuntimeRoot(platform);
     }
 
-    return this.getExpectedPackagedEmbeddedRuntimeRoot(platform);
+    return this.getExpectedPackagedPinnedRuntimeRoot(platform);
+  }
+
+  getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    return this.getPinnedRuntimeRoot(platform);
+  }
+
+  getPinnedDotnetPath(platform: Platform = this.getCurrentPlatform()): string {
+    return path.join(this.getPinnedRuntimeRoot(platform), this.getEmbeddedDotnetExecutableName());
   }
 
   getEmbeddedDotnetPath(platform: Platform = this.getCurrentPlatform()): string {
-    return path.join(this.getEmbeddedRuntimeRoot(platform), this.getEmbeddedDotnetExecutableName());
+    return this.getPinnedDotnetPath(platform);
   }
 
   /**

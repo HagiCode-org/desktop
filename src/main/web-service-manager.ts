@@ -15,7 +15,12 @@ import {
   type WebServiceConfigMode,
 } from './web-service-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
-import { evaluateRuntimeCompatibility, validateEmbeddedRuntimeLayout, validateFrameworkDependentPayload } from './embedded-runtime.js';
+import {
+  evaluateRuntimeCompatibility,
+  validateEmbeddedRuntimeLayout,
+  validateFrameworkDependentPayload,
+  validatePinnedEmbeddedRuntime,
+} from './embedded-runtime.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -81,6 +86,18 @@ export interface StartupFailureInfo {
   port: number;
   timestamp: string;
   truncated: boolean;
+}
+
+type ManagedLaunchErrorCode = 'invalid-service-payload' | 'missing-runtime-payload' | 'unofficial-runtime-source' | 'pinned-runtime-mismatch' | 'runtime-incompatible';
+
+class ManagedLaunchError extends Error {
+  code: ManagedLaunchErrorCode;
+
+  constructor(code: ManagedLaunchErrorCode, message: string) {
+    super(message);
+    this.name = 'ManagedLaunchError';
+    this.code = code;
+  }
 }
 
 export class PCodeWebServiceManager {
@@ -426,10 +443,15 @@ export class PCodeWebServiceManager {
     mergedEnv: NodeJS.ProcessEnv,
     runtimeRoot: string,
   ): NodeJS.ProcessEnv {
+    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
+    const existingPath = mergedEnv[pathKey] ?? mergedEnv.PATH ?? mergedEnv.Path ?? '';
+    const runtimePath = existingPath ? `${runtimeRoot}${path.delimiter}${existingPath}` : runtimeRoot;
+
     return {
       ...mergedEnv,
       DOTNET_ROOT: runtimeRoot,
       DOTNET_MULTILEVEL_LOOKUP: '0',
+      [pathKey]: runtimePath,
     };
   }
 
@@ -440,6 +462,7 @@ export class PCodeWebServiceManager {
     serviceWorkingDirectory: string;
     bundledRuntimeVersion?: string;
     requiredRuntimeLabel?: string;
+    runtimeSource?: string;
   }> {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
@@ -448,18 +471,44 @@ export class PCodeWebServiceManager {
     const manifest = await manifestReader.readManifest(this.activeVersionPath);
     const payloadValidation = await validateFrameworkDependentPayload(this.activeVersionPath, manifest);
     if (!payloadValidation.startable) {
-      throw new Error(`Invalid service payload: ${payloadValidation.message ?? 'framework-dependent payload validation failed.'}`);
+      throw new ManagedLaunchError(
+        'invalid-service-payload',
+        `Invalid service payload: ${payloadValidation.message ?? 'framework-dependent payload validation failed.'}`,
+      );
     }
 
-    const runtimeRoot = this.pathManager.getEmbeddedRuntimeRoot();
+    const runtimeRoot = this.pathManager.getPinnedRuntimeRoot();
     const runtimeValidation = await validateEmbeddedRuntimeLayout(
       runtimeRoot,
       this.pathManager.getEmbeddedDotnetExecutableName(),
     );
 
     if (!runtimeValidation.valid) {
-      throw new Error(
-        `Bundled runtime missing or incomplete. Expected ${runtimeRoot} (missing: ${runtimeValidation.missingComponents.join(', ')})`,
+      throw new ManagedLaunchError(
+        'missing-runtime-payload',
+        `Pinned runtime missing or incomplete. Expected ${runtimeRoot} (missing: ${runtimeValidation.missingComponents.join(', ')})`,
+      );
+    }
+
+    const pinnedRuntimeValidation = await validatePinnedEmbeddedRuntime(this.pathManager.getCurrentPlatform(), runtimeValidation);
+    if (!pinnedRuntimeValidation.valid) {
+      if (pinnedRuntimeValidation.code === 'unofficial-source') {
+        throw new ManagedLaunchError(
+          'unofficial-runtime-source',
+          `Pinned runtime source validation failed. ${pinnedRuntimeValidation.message ?? 'Expected an official Microsoft runtime source.'}`,
+        );
+      }
+
+      if (pinnedRuntimeValidation.code === 'pinned-version-mismatch') {
+        throw new ManagedLaunchError(
+          'pinned-runtime-mismatch',
+          `Pinned runtime version mismatch. ${pinnedRuntimeValidation.message ?? 'Bundled runtime does not match the pinned Desktop runtime.'}`,
+        );
+      }
+
+      throw new ManagedLaunchError(
+        'missing-runtime-payload',
+        pinnedRuntimeValidation.message ?? `Pinned runtime metadata is missing from ${runtimeRoot}.`,
       );
     }
 
@@ -470,19 +519,25 @@ export class PCodeWebServiceManager {
       );
 
       if (!compatibility.compatible) {
-        throw new Error(`Bundled runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`);
+        throw new ManagedLaunchError(
+          'runtime-incompatible',
+          `Pinned runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`,
+        );
       }
     }
 
-    log.info('[WebService] Using bundled runtime root:', runtimeRoot);
-    log.info('[WebService] Using bundled dotnet executable:', runtimeValidation.dotnetPath);
+    log.info('[WebService] Using pinned runtime root:', runtimeRoot);
+    log.info('[WebService] Using pinned dotnet executable:', runtimeValidation.dotnetPath);
     log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
     log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
     if (runtimeValidation.aspNetCoreVersion) {
-      log.info('[WebService] Bundled ASP.NET Core runtime:', runtimeValidation.aspNetCoreVersion);
+      log.info('[WebService] Pinned ASP.NET Core runtime:', runtimeValidation.aspNetCoreVersion);
     }
-    if (payloadValidation.requirement?.label) {
-      log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.label);
+    if (pinnedRuntimeValidation.metadata?.downloadUrl) {
+      log.info('[WebService] Pinned runtime source:', pinnedRuntimeValidation.metadata.downloadUrl);
+    }
+    if (payloadValidation.requirement?.effectiveLabel) {
+      log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
     }
 
     return {
@@ -491,7 +546,8 @@ export class PCodeWebServiceManager {
       serviceDllPath: payloadValidation.payloadPaths.serviceDllPath,
       serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
       bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
-      requiredRuntimeLabel: payloadValidation.requirement?.label,
+      requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
+      runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
     };
   }
 
@@ -1369,25 +1425,30 @@ export class PCodeWebServiceManager {
         serviceWorkingDirectory: string;
         bundledRuntimeVersion?: string;
         requiredRuntimeLabel?: string;
+        runtimeSource?: string;
       };
 
       try {
         launchContext = await this.resolveManagedLaunchContext();
-        this.appendStartupLogLine(`Bundled runtime root: ${launchContext.runtimeRoot}`);
+        this.appendStartupLogLine(`Pinned runtime root: ${launchContext.runtimeRoot}`);
         this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
         this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
         if (launchContext.bundledRuntimeVersion) {
-          this.appendStartupLogLine(`Bundled ASP.NET Core runtime: ${launchContext.bundledRuntimeVersion}`);
+          this.appendStartupLogLine(`Pinned ASP.NET Core runtime: ${launchContext.bundledRuntimeVersion}`);
+        }
+        if (launchContext.runtimeSource) {
+          this.appendStartupLogLine(`Pinned runtime source: ${launchContext.runtimeSource}`);
         }
         if (launchContext.requiredRuntimeLabel) {
           this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        log.error('[WebService] Managed runtime validation failed:', errorMessage);
+        const errorCode = error instanceof ManagedLaunchError ? error.code : 'runtime-incompatible';
+        log.error('[WebService] Managed runtime validation failed:', errorCode, errorMessage);
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, errorMessage);
-        this.appendStartupLogLine(`Start failed: ${errorMessage}`);
+        this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
         await this.invalidateRuntimeIdentity('managed-runtime-validation-failed');
         return this.buildStartupFailureResult(errorMessage);
       }
@@ -1398,8 +1459,10 @@ export class PCodeWebServiceManager {
         const prepared = await this.prepareServiceEnvironment();
         preparedEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
         envMode = prepared.mode;
+        const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
+        this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         log.error('[WebService] Failed to prepare environment injection:', errorMessage);
