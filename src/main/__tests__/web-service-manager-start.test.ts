@@ -20,8 +20,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /waitForHealthCheck\(\)/);
   });
 
-
-  it('spawns the managed DLL with the bundled dotnet runtime and runtime isolation env', async () => {
+  it('spawns the managed DLL with the pinned dotnet runtime and runtime isolation env', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /resolveManagedLaunchContext/);
@@ -32,13 +31,16 @@ describe('web-service startup flow', () => {
     assert.match(source, /cwd: launchContext\.serviceWorkingDirectory/);
     assert.match(source, /DOTNET_ROOT: runtimeRoot/);
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
+    assert.match(source, /includes pinned runtime root/);
   });
 
-  it('fails fast when the bundled runtime is missing or incompatible and does not fall back to machine dotnet', async () => {
+  it('fails fast when the pinned runtime is missing, unofficial, or incompatible and does not fall back to machine dotnet', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.match(source, /Bundled runtime missing or incomplete/);
-    assert.match(source, /Bundled runtime version incompatible/);
+    assert.match(source, /Pinned runtime missing or incomplete/);
+    assert.match(source, /Pinned runtime source validation failed/);
+    assert.match(source, /Pinned runtime version mismatch/);
+    assert.match(source, /Pinned runtime version incompatible/);
     assert.match(source, /Packaged Desktop does not fall back to a machine-wide dotnet installation/);
     assert.equal(source.includes('Please ensure .NET Runtime 8.0 is installed and in PATH'), false);
   });
