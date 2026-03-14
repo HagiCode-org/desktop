@@ -2,6 +2,17 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { app } from 'electron';
 import log from 'electron-log';
+import type { AspNetRuntimeRequirement } from './embedded-runtime.js';
+
+export type InstalledVersionStatus = 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
+
+export interface InstalledVersionValidation {
+  startable: boolean;
+  message?: string;
+  missingFiles?: string[];
+  requirement?: AspNetRuntimeRequirement;
+  bundledRuntimeVersion?: string;
+}
 
 /**
  * State data structures
@@ -13,9 +24,10 @@ export interface InstalledVersionInfo {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready';
+  status: InstalledVersionStatus;
   dependencies: any[];
   isActive: boolean;
+  validation?: InstalledVersionValidation;
 }
 
 export interface ActiveVersionInfo {

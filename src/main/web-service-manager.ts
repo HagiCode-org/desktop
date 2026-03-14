@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { PathManager } from './path-manager.js';
-import type { EntryPoint, ResultSessionFile, ParsedResult, StartResult } from './manifest-reader.js';
+import { manifestReader, type EntryPoint, type ResultSessionFile, type ParsedResult, type StartResult } from './manifest-reader.js';
 import { PowerShellExecutor } from './utils/powershell-executor.js';
 import {
   buildSnapshotLogLines,
@@ -15,6 +15,7 @@ import {
   type WebServiceConfigMode,
 } from './web-service-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
+import { evaluateRuntimeCompatibility, validateEmbeddedRuntimeLayout, validateFrameworkDependentPayload } from './embedded-runtime.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -418,6 +419,79 @@ export class PCodeWebServiceManager {
         port: failure.port,
       },
       port: failure.port,
+    };
+  }
+
+  private buildManagedRuntimeEnvironment(
+    mergedEnv: NodeJS.ProcessEnv,
+    runtimeRoot: string,
+  ): NodeJS.ProcessEnv {
+    return {
+      ...mergedEnv,
+      DOTNET_ROOT: runtimeRoot,
+      DOTNET_MULTILEVEL_LOOKUP: '0',
+    };
+  }
+
+  private async resolveManagedLaunchContext(): Promise<{
+    runtimeRoot: string;
+    dotnetPath: string;
+    serviceDllPath: string;
+    serviceWorkingDirectory: string;
+    bundledRuntimeVersion?: string;
+    requiredRuntimeLabel?: string;
+  }> {
+    if (!this.activeVersionPath) {
+      throw new Error('No active version set');
+    }
+
+    const manifest = await manifestReader.readManifest(this.activeVersionPath);
+    const payloadValidation = await validateFrameworkDependentPayload(this.activeVersionPath, manifest);
+    if (!payloadValidation.startable) {
+      throw new Error(`Invalid service payload: ${payloadValidation.message ?? 'framework-dependent payload validation failed.'}`);
+    }
+
+    const runtimeRoot = this.pathManager.getEmbeddedRuntimeRoot();
+    const runtimeValidation = await validateEmbeddedRuntimeLayout(
+      runtimeRoot,
+      this.pathManager.getEmbeddedDotnetExecutableName(),
+    );
+
+    if (!runtimeValidation.valid) {
+      throw new Error(
+        `Bundled runtime missing or incomplete. Expected ${runtimeRoot} (missing: ${runtimeValidation.missingComponents.join(', ')})`,
+      );
+    }
+
+    if (payloadValidation.requirement) {
+      const compatibility = evaluateRuntimeCompatibility(
+        payloadValidation.requirement,
+        runtimeValidation.aspNetCoreVersion,
+      );
+
+      if (!compatibility.compatible) {
+        throw new Error(`Bundled runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`);
+      }
+    }
+
+    log.info('[WebService] Using bundled runtime root:', runtimeRoot);
+    log.info('[WebService] Using bundled dotnet executable:', runtimeValidation.dotnetPath);
+    log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
+    log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
+    if (runtimeValidation.aspNetCoreVersion) {
+      log.info('[WebService] Bundled ASP.NET Core runtime:', runtimeValidation.aspNetCoreVersion);
+    }
+    if (payloadValidation.requirement?.label) {
+      log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.label);
+    }
+
+    return {
+      runtimeRoot,
+      dotnetPath: runtimeValidation.dotnetPath,
+      serviceDllPath: payloadValidation.payloadPaths.serviceDllPath,
+      serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
+      bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
+      requiredRuntimeLabel: payloadValidation.requirement?.label,
     };
   }
 
@@ -1254,7 +1328,7 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Start the web service process using entryPoint.start script
+   * Start the web service process with the bundled dotnet host
    * @returns StartResult with service URL and port information
    */
   async start(): Promise<StartResult> {
@@ -1276,15 +1350,6 @@ export class PCodeWebServiceManager {
       return this.buildStartupFailureResult('Max restart attempts reached');
     }
 
-    // Check if entryPoint is available
-    if (!this.entryPoint) {
-      log.error('[WebService] No entryPoint available for start');
-      this.status = 'error';
-      this.emitPhase(StartupPhase.Error, 'No entryPoint configured');
-      this.appendStartupLogLine('Start failed: no entryPoint configured');
-      return this.buildStartupFailureResult('No entryPoint configured');
-    }
-
     if (!this.activeVersionPath) {
       log.error('[WebService] No active version path set');
       this.status = 'error';
@@ -1297,30 +1362,44 @@ export class PCodeWebServiceManager {
       this.status = 'starting';
       log.info('[WebService] Starting with configured port:', this.config.port);
 
-      // Resolve start script path from entryPoint
-      const startScriptPath = path.resolve(
-        this.activeVersionPath!,
-        this.entryPoint.start
-      );
+      let launchContext: {
+        runtimeRoot: string;
+        dotnetPath: string;
+        serviceDllPath: string;
+        serviceWorkingDirectory: string;
+        bundledRuntimeVersion?: string;
+        requiredRuntimeLabel?: string;
+      };
 
       try {
-        await fs.access(startScriptPath);
-        log.info('[WebService] Startup script found:', startScriptPath);
-        this.appendStartupLogLine(`Startup script resolved: ${startScriptPath}`);
-      } catch {
-        log.error('[WebService] Startup script not found:', startScriptPath);
+        launchContext = await this.resolveManagedLaunchContext();
+        this.appendStartupLogLine(`Bundled runtime root: ${launchContext.runtimeRoot}`);
+        this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
+        this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
+        if (launchContext.bundledRuntimeVersion) {
+          this.appendStartupLogLine(`Bundled ASP.NET Core runtime: ${launchContext.bundledRuntimeVersion}`);
+        }
+        if (launchContext.requiredRuntimeLabel) {
+          this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log.error('[WebService] Managed runtime validation failed:', errorMessage);
         this.status = 'error';
-        this.emitPhase(StartupPhase.Error, 'Startup script not found');
-        this.appendStartupLogLine(`Start failed: startup script not found at ${startScriptPath}`);
-        return this.buildStartupFailureResult('Startup script not found');
+        this.emitPhase(StartupPhase.Error, errorMessage);
+        this.appendStartupLogLine(`Start failed: ${errorMessage}`);
+        await this.invalidateRuntimeIdentity('managed-runtime-validation-failed');
+        return this.buildStartupFailureResult(errorMessage);
       }
 
       let preparedEnv: NodeJS.ProcessEnv;
       let envMode: WebServiceConfigMode = 'env';
       try {
         const prepared = await this.prepareServiceEnvironment();
-        preparedEnv = prepared.mergedEnv;
+        preparedEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
         envMode = prepared.mode;
+        this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
+        this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         log.error('[WebService] Failed to prepare environment injection:', errorMessage);
@@ -1331,79 +1410,21 @@ export class PCodeWebServiceManager {
       }
 
       // Spawn the process
-      this.emitPhase(StartupPhase.Spawning, 'Starting service with startup script...');
-      const scriptPath = this.getStartupScriptPath();
-      this.appendStartupLogLine(`Spawning startup script: ${scriptPath}`);
+      this.emitPhase(StartupPhase.Spawning, 'Starting service with bundled dotnet runtime...');
+      const spawnArgs = [launchContext.serviceDllPath, ...(this.config.args || [])];
+      this.appendStartupLogLine(`Spawning managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);
 
-      // Use PowerShellExecutor for .ps1 scripts on Windows
-      if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
-        log.info('[WebService] Using PowerShellExecutor for service spawn');
-        const executor = new PowerShellExecutor();
-        this.process = executor.spawnService(scriptPath, {
-          cwd: path.dirname(scriptPath),
-          env: preparedEnv,
-          scriptArgs: this.getPlatformSpecificArgs(),
-          onStdout: (data) => {
-            const output = data.toString().trim();
-            if (output) {
-              this.captureStartupProcessOutput(output, 'info');
-            }
-          },
-          onStderr: (data) => {
-            const output = data.toString().trim();
-            if (output) {
-              this.captureStartupProcessOutput(output, 'error');
-            }
-          },
-          onExit: (code, signal) => {
-            log.info('[WebService] Process exited, code:', code, 'signal:', signal);
-            this.appendStartupLogLine(`Process exited during startup flow: code=${String(code)} signal=${String(signal)}`);
+      this.process = spawn(launchContext.dotnetPath, spawnArgs, {
+        cwd: launchContext.serviceWorkingDirectory,
+        env: preparedEnv,
+        shell: false,
+        detached: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+      });
 
-            // Enhanced logging for debugging startup failures
-            if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
-              log.error('[WebService] Process exited during startup phase');
-              log.error('[WebService] Startup phase:', this.currentPhase);
-              log.error('[WebService] Script path:', scriptPath);
-              log.error('[WebService] Exit code:', code, 'Signal:', signal);
-
-              if (code === 0 && this.currentPhase === StartupPhase.Spawning) {
-                log.error('[WebService] Early exit with code 0 - script may have opened but not executed');
-                log.error('[WebService] This typically happens when PowerShell script is opened in editor instead of being executed');
-                log.error('[WebService] Check PowerShell execution policy and ensure script is invoked via powershell.exe');
-              }
-            }
-
-            if (this.status === 'running') {
-              log.warn('[WebService] Process exited unexpectedly');
-              this.restartCount++;
-              this.status = 'error';
-            }
-
-            this.process = null;
-          },
-          onError: (error) => {
-            if (error.message.includes('dotnet') || error.message.includes('ENOENT')) {
-              log.error('[WebService] dotnet command not found or DLL not accessible:', error.message);
-              log.error('[WebService] Please ensure .NET Runtime 8.0 is installed and in PATH');
-            } else {
-              log.error('[WebService] Process error:', error.message);
-            }
-            this.appendStartupLogLine(`Process error: ${error.message}`);
-            this.status = 'error';
-            this.process = null;
-          },
-        });
-      } else {
-        // Legacy path for .bat/.cmd on Windows and .sh on Unix
-        const { command, args } = this.getSpawnCommand();
-        const options = this.getSpawnOptions(preparedEnv);
-
-        log.info('[WebService] Spawning process:', command, args.join(' '));
-        this.process = spawn(command, args, options);
-
-        // Setup process event handlers
-        this.setupProcessHandlers();
-      }
+      // Setup process event handlers
+      this.setupProcessHandlers();
 
       // Wait for listening
       this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
@@ -1436,7 +1457,7 @@ export class PCodeWebServiceManager {
           const managedPid = await this.resolveManagedServicePidByPort(this.config.port);
           if (managedPid && managedPid !== runtimePid) {
             log.info('[WebService] Resolved managed runtime PID from listening port:', {
-              powershellPid: runtimePid,
+              spawnPid: runtimePid,
               managedPid,
               port: this.config.port,
             });
@@ -1543,8 +1564,8 @@ export class PCodeWebServiceManager {
     this.process.on('error', (error) => {
       // Provide more context for dotnet-related errors
       if (error.message.includes('dotnet') || error.message.includes('ENOENT')) {
-        log.error('[WebService] dotnet command not found or DLL not accessible:', error.message);
-        log.error('[WebService] Please ensure .NET Runtime 8.0 is installed and in PATH');
+        log.error('[WebService] Bundled dotnet executable or managed payload is not accessible:', error.message);
+        log.error('[WebService] Packaged Desktop does not fall back to a machine-wide dotnet installation.');
       } else {
         log.error('[WebService] Process error:', error.message);
       }
@@ -1562,13 +1583,12 @@ export class PCodeWebServiceManager {
       if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
         log.error('[WebService] Process exited during startup phase');
         log.error('[WebService] Startup phase:', this.currentPhase);
-        log.error('[WebService] Script path:', this.getStartupScriptPath());
+        log.error('[WebService] Managed entry point:', this.activeVersionPath ? path.join(this.activeVersionPath, 'lib', 'PCode.Web.dll') : 'unknown');
         log.error('[WebService] Exit code:', code, 'Signal:', signal);
 
         if (code === 0 && this.currentPhase === StartupPhase.Spawning) {
-          log.error('[WebService] Early exit with code 0 - script may have opened but not executed');
-          log.error('[WebService] This typically happens when PowerShell script is opened in editor instead of being executed');
-          log.error('[WebService] Check PowerShell execution policy and ensure script is invoked via powershell.exe');
+          log.error('[WebService] Early exit with code 0 before the managed service became healthy.');
+          log.error('[WebService] Check bundled runtime validation, runtime compatibility, and service startup logs.');
         }
       }
 

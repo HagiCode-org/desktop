@@ -464,6 +464,41 @@ export class PathManager {
     return totalSize;
   }
 
+  getEmbeddedDotnetExecutableName(): string {
+    return process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
+  }
+
+  getExpectedPackagedEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    return path.join(process.resourcesPath, 'dotnet', platform);
+  }
+
+  getDevelopmentEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    return path.resolve(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', platform);
+  }
+
+  getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
+    if (!app.isPackaged) {
+      const override = process.env.HAGICODE_EMBEDDED_DOTNET_ROOT?.trim();
+      if (override) {
+        const resolvedOverride = path.resolve(override);
+        const nestedPlatformRoot = path.join(resolvedOverride, platform);
+        if (fsSync.existsSync(path.join(nestedPlatformRoot, this.getEmbeddedDotnetExecutableName()))) {
+          return nestedPlatformRoot;
+        }
+
+        return resolvedOverride;
+      }
+
+      return this.getDevelopmentEmbeddedRuntimeRoot(platform);
+    }
+
+    return this.getExpectedPackagedEmbeddedRuntimeRoot(platform);
+  }
+
+  getEmbeddedDotnetPath(platform: Platform = this.getCurrentPlatform()): string {
+    return path.join(this.getEmbeddedRuntimeRoot(platform), this.getEmbeddedDotnetExecutableName());
+  }
+
   /**
    * Get platform identifier for current OS
    * @returns Platform identifier

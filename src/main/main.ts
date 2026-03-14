@@ -1883,6 +1883,11 @@ app.whenReady().then(async () => {
 
   // Initialize PathManager
   pathManager = PathManager.getInstance();
+  log.info('[App] Embedded runtime resolution:', {
+    packaged: app.isPackaged,
+    runtimeRoot: pathManager.getEmbeddedRuntimeRoot(),
+    overrideRoot: process.env.HAGICODE_EMBEDDED_DOTNET_ROOT?.trim() || null,
+  });
 
   // Load data directory with fallback: electron-store -> default
   let dataDirectoryPath = configManager.getDataDirectoryPath();

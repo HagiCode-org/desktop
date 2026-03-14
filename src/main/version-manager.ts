@@ -4,12 +4,13 @@ import { app } from 'electron';
 import log from 'electron-log';
 import { manifestReader, type ParsedDependency, type DependencyTypeName } from './manifest-reader.js';
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
-import { StateManager, type InstalledVersionInfo } from './state-manager.js';
+import { StateManager, type InstalledVersionInfo, type InstalledVersionStatus, type InstalledVersionValidation } from './state-manager.js';
 import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback } from './package-sources/index.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
+import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 
 /**
  * Version information
@@ -49,9 +50,10 @@ export interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready';
+  status: InstalledVersionStatus;
   dependencies: DependencyCheckResult[];
   isActive: boolean;
+  validation?: InstalledVersionValidation;
 }
 
 /**
@@ -106,6 +108,64 @@ export class VersionManager {
       }
     } catch (error) {
       log.error('[VersionManager] Failed to initialize package source:', error);
+    }
+  }
+
+  async validateVersionPayload(versionId: string, bundledRuntimeVersion?: string): Promise<InstalledVersionInfo | null> {
+    const versionInfo = await this.stateManager.getInstalledVersion(versionId);
+    if (!versionInfo) {
+      return null;
+    }
+
+    const validatedVersion = await this.applyRuntimeValidation(versionInfo, bundledRuntimeVersion);
+    await this.stateManager.setInstalledVersion(validatedVersion);
+    return validatedVersion;
+  }
+
+  private async applyRuntimeValidation(
+    versionInfo: InstalledVersionInfo,
+    bundledRuntimeVersion?: string,
+  ): Promise<InstalledVersionInfo> {
+    const manifest = await manifestReader.readManifest(versionInfo.installedPath);
+    const payloadValidation = await validateFrameworkDependentPayload(versionInfo.installedPath, manifest);
+
+    const validation: InstalledVersionValidation = {
+      startable: payloadValidation.startable,
+      message: payloadValidation.message,
+      missingFiles: payloadValidation.missingFiles,
+      requirement: payloadValidation.requirement,
+      bundledRuntimeVersion,
+    };
+
+    let status: InstalledVersionStatus = payloadValidation.startable ? 'installed-ready' : 'payload-invalid';
+
+    if (payloadValidation.startable && bundledRuntimeVersion && payloadValidation.requirement) {
+      const compatibility = evaluateRuntimeCompatibility(payloadValidation.requirement, bundledRuntimeVersion);
+      if (!compatibility.compatible) {
+        status = 'runtime-incompatible';
+        validation.startable = false;
+        validation.message = compatibility.reason;
+      }
+    }
+
+    return {
+      ...versionInfo,
+      status,
+      validation,
+    };
+  }
+
+  private async resolveBundledRuntimeVersion(): Promise<string | undefined> {
+    try {
+      const runtimeRoot = this.pathManager.getEmbeddedRuntimeRoot();
+      if (!runtimeRoot) {
+        return undefined;
+      }
+
+      const validation = await validateEmbeddedRuntimeLayout(runtimeRoot, this.pathManager.getEmbeddedDotnetExecutableName());
+      return validation.aspNetCoreVersion;
+    } catch {
+      return undefined;
     }
   }
 
@@ -297,6 +357,7 @@ export class VersionManager {
 
       const versionsData = await this.stateManager.getInstalledVersions();
       const activeVersionData = await this.stateManager.getActiveVersion();
+      const bundledRuntimeVersion = await this.resolveBundledRuntimeVersion();
 
       const versions: InstalledVersion[] = [];
 
@@ -310,8 +371,13 @@ export class VersionManager {
           continue;
         }
 
+        const validatedVersion = await this.applyRuntimeValidation(data, bundledRuntimeVersion);
+        if (JSON.stringify(validatedVersion) !== JSON.stringify(data)) {
+          await this.stateManager.setInstalledVersion(validatedVersion);
+        }
+
         versions.push({
-          ...data,
+          ...validatedVersion,
           isActive: data.id === activeVersionData?.versionId,
         });
       }
@@ -398,8 +464,15 @@ export class VersionManager {
       // Set executable permissions
       await this.setExecutablePermissions(installPath);
 
-      // Dependencies are now only for display purposes, no checking needed
-      const status = 'installed-ready';
+      const manifest = await manifestReader.readManifest(installPath);
+      const payloadValidation = await validateFrameworkDependentPayload(installPath, manifest);
+      const status: InstalledVersionStatus = payloadValidation.startable ? 'installed-ready' : 'payload-invalid';
+      const validation: InstalledVersionValidation = {
+        startable: payloadValidation.startable,
+        message: payloadValidation.message,
+        missingFiles: payloadValidation.missingFiles,
+        requirement: payloadValidation.requirement,
+      };
 
       // Configure data directory
       log.info('[VersionManager] Configuring data directory...');
@@ -437,6 +510,7 @@ export class VersionManager {
         status,
         dependencies: [],
         isActive: false, // Will be set below if first installation
+        validation,
       };
 
       await this.stateManager.setInstalledVersion(versionInfo);
@@ -710,11 +784,13 @@ export class VersionManager {
       const versionInfo = await this.stateManager.getInstalledVersion(versionId);
 
       if (versionInfo) {
-        // Dependencies are now only for display purposes, no status checking
-        versionInfo.dependencies = dependencies;
-        versionInfo.status = 'installed-ready';
+        const bundledRuntimeVersion = await this.resolveBundledRuntimeVersion();
+        const validatedVersion = await this.applyRuntimeValidation({
+          ...versionInfo,
+          dependencies,
+        }, bundledRuntimeVersion);
 
-        await this.stateManager.setInstalledVersion(versionInfo);
+        await this.stateManager.setInstalledVersion(validatedVersion);
       }
 
       return dependencies;

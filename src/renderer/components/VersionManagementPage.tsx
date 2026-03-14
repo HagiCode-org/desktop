@@ -53,7 +53,7 @@ interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready';
+  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
   dependencies: any[];
   isActive: boolean;
 }
