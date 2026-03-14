@@ -5,14 +5,17 @@ import {
   OctagonX,
   TriangleAlert,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme, theme = "system" } = useTheme()
+
   return (
     <Sonner
-      theme="dark"
+      theme={(resolvedTheme ?? theme) as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: <CircleCheck className="h-4 w-4" />,
@@ -21,6 +24,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <OctagonX className="h-4 w-4" />,
         loading: <LoaderCircle className="h-4 w-4 animate-spin" />,
       }}
+      style={
+        {
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
           toast:
