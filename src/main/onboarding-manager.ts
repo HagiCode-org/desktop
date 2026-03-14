@@ -496,7 +496,7 @@ export class OnboardingManager {
 
   /**
    * Start the web service
-   * Note: This method always allows service launch without pre-flight status checks.
+   * Note: This method always allows service launch without standalone port-monitoring checks.
    * Runtime dependency validation is handled by WebServiceManager.start().
    */
   async startWebService(

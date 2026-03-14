@@ -15,13 +15,11 @@ import {
   type WebServiceConfigMode,
 } from './web-service-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
-import { evaluateFixedPortStartup } from './web-service-startup-policy.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
 export enum StartupPhase {
   Idle = 'idle',
-  CheckingPort = 'checking_port',
   Spawning = 'spawning',
   WaitingListening = 'waiting_listening',
   HealthCheck = 'health_check',
@@ -1298,22 +1296,6 @@ export class PCodeWebServiceManager {
     try {
       this.status = 'starting';
       log.info('[WebService] Starting with configured port:', this.config.port);
-      this.emitPhase(StartupPhase.CheckingPort, 'Checking port availability...');
-      this.appendStartupLogLine(`Checking port availability: ${this.config.host}:${this.config.port}`);
-
-      const portAvailable = await this.checkPortAvailable();
-      const startupDecision = evaluateFixedPortStartup(this.config.port, portAvailable);
-
-      log.info('[WebService] Port availability check:', portAvailable ? 'available' : 'in use');
-      if (!startupDecision.canStart) {
-        log.error('[WebService] Configured port already in use:', `${this.config.host}:${this.config.port}`);
-        this.status = 'error';
-        const message = startupDecision.errorMessage || 'Configured port is already in use';
-        this.emitPhase(StartupPhase.Error, message);
-        this.appendStartupLogLine(`Start failed: ${message}`);
-        await this.invalidateRuntimeIdentity('port-conflict');
-        return this.buildStartupFailureResult(message);
-      }
 
       // Resolve start script path from entryPoint
       const startScriptPath = path.resolve(

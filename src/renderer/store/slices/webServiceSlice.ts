@@ -35,7 +35,6 @@ export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stop
 
 export enum StartupPhase {
   Idle = 'idle',
-  CheckingPort = 'checking_port',
   Spawning = 'spawning',
   WaitingListening = 'waiting_listening',
   HealthCheck = 'health_check',
