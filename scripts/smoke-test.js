@@ -3,29 +3,32 @@
 /**
  * Smoke Test Suite
  *
- * Basic verification tests to ensure the obfuscated application
- * functions correctly. This script performs automated checks on
- * the built application.
- *
- * Usage:
- *   node scripts/smoke-test.js
- *   node scripts/smoke-test.js --verbose
+ * Basic verification tests to ensure the built application functions correctly.
+ * This script validates build outputs, staged runtime inputs, and packaged
+ * runtime resources when they are available.
  */
 
 import fs from 'fs';
 import path from 'path';
+import {
+  EMBEDDED_RUNTIME_METADATA_FILE,
+  detectRuntimePlatform,
+  ensureOfficialMicrosoftDownloadUrl,
+  getDotnetExecutableName,
+  readPinnedRuntimeConfig,
+  resolvePinnedRuntimeTarget,
+} from './embedded-runtime-config.js';
 
-// Parse arguments
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
 const requireRuntimePayload = args.includes('--require-runtime') || process.env.HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME === '1';
-const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectPlatform();
-const dotnetExecutableName = process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
+const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
+const runtimeConfig = readPinnedRuntimeConfig();
+const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
+const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const stagedRuntimeRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', runtimePlatform);
+const packagedRuntimeRoot = resolvePackagedRuntimeRoot(runtimePlatform);
 
-/**
- * ANSI color codes
- */
 const colors = {
   reset: '\x1b[0m',
   green: '\x1b[32m',
@@ -35,9 +38,6 @@ const colors = {
   gray: '\x1b[90m',
 };
 
-/**
- * Test results tracking
- */
 const results = {
   passed: 0,
   failed: 0,
@@ -45,11 +45,14 @@ const results = {
   tests: [],
 };
 
-function detectPlatform() {
-  if (process.platform === 'win32') return 'win-x64';
-  if (process.platform === 'darwin') return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-  if (process.platform === 'linux') return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
-  throw new Error(`Unsupported smoke-test platform: ${process.platform}/${process.arch}`);
+function resolvePackagedRuntimeRoot(platform) {
+  if (platform.startsWith('win-')) {
+    return path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'dotnet', platform);
+  }
+  if (platform.startsWith('linux-')) {
+    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'dotnet', platform);
+  }
+  return null;
 }
 
 function listVersionDirectories(targetPath) {
@@ -61,6 +64,24 @@ function listVersionDirectories(targetPath) {
   } catch {
     return [];
   }
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split('.').map((segment) => Number.parseInt(segment, 10));
+  const rightParts = right.split('.').map((segment) => Number.parseInt(segment, 10));
+
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftValue = leftParts[index] || 0;
+    const rightValue = rightParts[index] || 0;
+    if (leftValue > rightValue) return 1;
+    if (leftValue < rightValue) return -1;
+  }
+
+  return 0;
+}
+
+function pickHighestVersion(versions) {
+  return [...versions].sort((left, right) => compareVersions(right, left))[0];
 }
 
 function validateRuntimePayload(runtimeRoot) {
@@ -84,47 +105,89 @@ function validateRuntimePayload(runtimeRoot) {
   return missing;
 }
 
-/**
- * Log messages with optional colors
- */
+function inspectRuntimeVersions(runtimeRoot) {
+  return {
+    aspNetCoreVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App'))),
+    netCoreVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App'))),
+    hostFxrVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'host', 'fxr'))),
+  };
+}
+
+function readRuntimeMetadata(runtimeRoot) {
+  const metadataPath = path.join(runtimeRoot, EMBEDDED_RUNTIME_METADATA_FILE);
+  if (!fs.existsSync(metadataPath)) {
+    throw new Error(`Runtime metadata file is missing: ${metadataPath}`);
+  }
+
+  return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+}
+
+function validatePinnedRuntimeMetadata(runtimeRoot) {
+  const metadata = readRuntimeMetadata(runtimeRoot);
+  ensureOfficialMicrosoftDownloadUrl(metadata.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
+
+  const errors = [];
+  const versions = inspectRuntimeVersions(runtimeRoot);
+  if (metadata.provider !== runtimeConfig.source.provider) {
+    errors.push(`provider expected ${runtimeConfig.source.provider} but found ${metadata.provider || 'missing'}`);
+  }
+  if (metadata.platform !== runtimePlatform) {
+    errors.push(`platform expected ${runtimePlatform} but found ${metadata.platform || 'missing'}`);
+  }
+  if (metadata.releaseVersion !== runtimeConfig.releaseVersion) {
+    errors.push(`releaseVersion expected ${runtimeConfig.releaseVersion} but found ${metadata.releaseVersion || 'missing'}`);
+  }
+  if (metadata.downloadUrl !== runtimeTarget.downloadUrl) {
+    errors.push('downloadUrl does not match the pinned runtime manifest');
+  }
+  if (metadata.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    errors.push(`metadata ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${metadata.aspNetCoreVersion || 'missing'}`);
+  }
+  if (metadata.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    errors.push(`metadata Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${metadata.netCoreVersion || 'missing'}`);
+  }
+  if (metadata.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    errors.push(`metadata host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${metadata.hostFxrVersion || 'missing'}`);
+  }
+  if (versions.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    errors.push(`staged ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${versions.aspNetCoreVersion || 'missing'}`);
+  }
+  if (versions.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    errors.push(`staged Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${versions.netCoreVersion || 'missing'}`);
+  }
+  if (versions.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    errors.push(`staged host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${versions.hostFxrVersion || 'missing'}`);
+  }
+
+  return errors;
+}
+
 function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-/**
- * Log verbose messages
- */
 function logVerbose(message) {
   if (isVerbose) {
     log(`  [VERBOSE] ${message}`, colors.gray);
   }
 }
 
-/**
- * Run a single test
- */
 function test(name, fn) {
   results.tests.push({ name, fn });
 }
 
-/**
- * Assert a condition is true
- */
 function assert(condition, message) {
   if (condition) {
-    log(`  ✓ ${message}`, colors.green);
+    log(`  + ${message}`, colors.green);
     results.passed++;
     return true;
-  } else {
-    log(`  ✗ ${message}`, colors.red);
-    results.failed++;
-    return false;
   }
+
+  log(`  x ${message}`, colors.red);
+  results.failed++;
+  return false;
 }
 
-/**
- * Test: Check if dist directory exists
- */
 test('dist directory exists', () => {
   const distPath = path.join(process.cwd(), 'dist');
   const exists = fs.existsSync(distPath);
@@ -138,9 +201,6 @@ test('dist directory exists', () => {
   }
 });
 
-/**
- * Test: Check if main process files are built
- */
 test('main process files exist', () => {
   const mainJs = path.join(process.cwd(), 'dist', 'main', 'main.js');
   const exists = fs.existsSync(mainJs);
@@ -153,9 +213,6 @@ test('main process files exist', () => {
   }
 });
 
-/**
- * Test: Check if renderer process files are built
- */
 test('renderer process files exist', () => {
   const indexPath = path.join(process.cwd(), 'dist', 'renderer', 'index.html');
   const exists = fs.existsSync(indexPath);
@@ -167,9 +224,6 @@ test('renderer process files exist', () => {
   }
 });
 
-/**
- * Test: Check if preload script exists
- */
 test('preload script exists', () => {
   const preloadPath = path.join(process.cwd(), 'dist', 'preload', 'index.mjs');
   const exists = fs.existsSync(preloadPath);
@@ -181,9 +235,6 @@ test('preload script exists', () => {
   }
 });
 
-/**
- * Test: Check if package.json is valid
- */
 test('package.json is valid', () => {
   const pkgPath = path.join(process.cwd(), 'package.json');
   const exists = fs.existsSync(pkgPath);
@@ -203,14 +254,11 @@ test('package.json is valid', () => {
   }
 });
 
-/**
- * Test: Check if main.js is non-empty
- */
 test('main.js has content', () => {
   const mainJs = path.join(process.cwd(), 'dist', 'main', 'main.js');
 
   if (!fs.existsSync(mainJs)) {
-    log('  ⊘ Skipping: main.js does not exist', colors.yellow);
+    log('  - Skipping: main.js does not exist', colors.yellow);
     results.skipped++;
     return;
   }
@@ -220,9 +268,6 @@ test('main.js has content', () => {
   logVerbose(`main.js size: ${stats.size} bytes`);
 });
 
-/**
- * Test: Check electron-builder configuration
- */
 test('electron-builder configuration is valid', async () => {
   const yamlPath = path.join(process.cwd(), 'electron-builder.yml');
   const pkgPath = path.join(process.cwd(), 'package.json');
@@ -230,7 +275,6 @@ test('electron-builder configuration is valid', async () => {
   let buildConfig = null;
   let configSource = '';
 
-  // Try to load from electron-builder.yml first
   if (fs.existsSync(yamlPath)) {
     try {
       const yaml = await import('js-yaml');
@@ -241,9 +285,7 @@ test('electron-builder configuration is valid', async () => {
       assert(false, `electron-builder.yml is valid YAML: ${error.message}`);
       return;
     }
-  }
-  // Fallback to package.json build config
-  else if (fs.existsSync(pkgPath)) {
+  } else if (fs.existsSync(pkgPath)) {
     try {
       const content = fs.readFileSync(pkgPath, 'utf8');
       const pkg = JSON.parse(content);
@@ -259,7 +301,7 @@ test('electron-builder configuration is valid', async () => {
   }
 
   if (!buildConfig) {
-    assert(false, 'build configuration exists in ' + configSource);
+    assert(false, `build configuration exists in ${configSource}`);
     return;
   }
 
@@ -282,7 +324,7 @@ test('electron-builder configuration is valid', async () => {
 
 test('staged embedded runtime payload is complete', () => {
   if (!requireRuntimePayload && !fs.existsSync(stagedRuntimeRoot)) {
-    log(`  Skipping: staged runtime not required for this smoke-test run`, colors.yellow);
+    log('  - Skipping: staged runtime not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
   }
@@ -297,13 +339,55 @@ test('staged embedded runtime payload is complete', () => {
     missingComponents.length === 0,
     missingComponents.length === 0
       ? 'staged runtime payload contains dotnet host, host/fxr, Microsoft.NETCore.App, and Microsoft.AspNetCore.App'
-      : `staged runtime payload is missing: ${missingComponents.join(', ')}`
+      : `staged runtime payload is missing: ${missingComponents.join(', ')}`,
+  );
+
+  const metadataErrors = validatePinnedRuntimeMetadata(stagedRuntimeRoot);
+  assert(
+    metadataErrors.length === 0,
+    metadataErrors.length === 0
+      ? 'staged runtime metadata matches the pinned Microsoft runtime manifest'
+      : `staged runtime metadata mismatch: ${metadataErrors.join('; ')}`,
   );
 });
 
-/**
- * Main execution function
- */
+test('packaged runtime payload is complete', () => {
+  if (!packagedRuntimeRoot) {
+    log('  - Skipping: packaged runtime checks are not defined for this platform', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedRuntimeRoot)) {
+    log('  - Skipping: packaged runtime not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(packagedRuntimeRoot);
+  if (!assert(exists, `packaged runtime directory exists (${packagedRuntimeRoot})`)) {
+    return;
+  }
+
+  assert(!packagedRuntimeRoot.includes('app.asar'), 'packaged runtime directory resolves outside app.asar');
+
+  const missingComponents = validateRuntimePayload(packagedRuntimeRoot);
+  assert(
+    missingComponents.length === 0,
+    missingComponents.length === 0
+      ? 'packaged runtime payload contains dotnet host, host/fxr, Microsoft.NETCore.App, and Microsoft.AspNetCore.App'
+      : `packaged runtime payload is missing: ${missingComponents.join(', ')}`,
+  );
+
+  const metadataErrors = validatePinnedRuntimeMetadata(packagedRuntimeRoot);
+  assert(
+    metadataErrors.length === 0,
+    metadataErrors.length === 0
+      ? 'packaged runtime metadata matches the pinned Microsoft runtime manifest'
+      : `packaged runtime metadata mismatch: ${metadataErrors.join('; ')}`,
+  );
+});
+
 async function main() {
   const startTime = Date.now();
 
@@ -312,19 +396,17 @@ async function main() {
   log('='.repeat(60), colors.blue);
   log('');
 
-  // Run all tests
   for (const { name, fn } of results.tests) {
     log(`Running: ${name}`, colors.blue);
     try {
       await fn();
     } catch (error) {
-      log(`  ✗ Test error: ${error.message}`, colors.red);
+      log(`  x Test error: ${error.message}`, colors.red);
       results.failed++;
     }
     log('');
   }
 
-  // Print summary
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
   log('='.repeat(60), colors.blue);
   log('Test Summary', colors.blue);
@@ -339,14 +421,12 @@ async function main() {
   log(`  Duration: ${duration}s`, colors.blue);
   log('='.repeat(60) + '\n', colors.blue);
 
-  // Exit with appropriate code
   if (results.failed > 0) {
     process.exit(1);
   }
 }
 
-// Run the tests
-main().catch(error => {
+main().catch((error) => {
   log(`Fatal error: ${error.message}`, colors.red);
   console.error(error);
   process.exit(1);
