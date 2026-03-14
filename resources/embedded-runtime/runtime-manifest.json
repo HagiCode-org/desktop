@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "channelVersion": "10.0",
+  "releaseVersion": "10.0.5",
+  "releaseDate": "2026-03-12",
+  "source": {
+    "provider": "microsoft",
+    "releaseMetadataUrl": "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json",
+    "allowedDownloadHosts": [
+      "builds.dotnet.microsoft.com"
+    ]
+  },
+  "platforms": {
+    "linux-x64": {
+      "rid": "linux-x64",
+      "archiveType": "tar.gz",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
+      "aspNetCoreVersion": "10.0.5",
+      "netCoreVersion": "10.0.5",
+      "hostFxrVersion": "10.0.5"
+    },
+    "win-x64": {
+      "rid": "win-x64",
+      "archiveType": "zip",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-win-x64.zip",
+      "aspNetCoreVersion": "10.0.5",
+      "netCoreVersion": "10.0.5",
+      "hostFxrVersion": "10.0.5"
+    }
+  },
+  "expectedLayout": {
+    "runtimeRootPattern": "dotnet/<rid>",
+    "requiredEntries": [
+      "dotnet[.exe]",
+      "host/fxr/<hostFxrVersion>",
+      "shared/Microsoft.NETCore.App/<netCoreVersion>",
+      "shared/Microsoft.AspNetCore.App/<aspNetCoreVersion>",
+      ".hagicode-runtime.json"
+    ]
+  }
+}
