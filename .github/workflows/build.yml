@@ -176,6 +176,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      - name: Cache pinned runtime downloads
+        uses: actions/cache@v4
+        with:
+          path: build/embedded-runtime/downloads
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+
       - name: Sync version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -192,6 +198,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
       - name: Collect Windows artifacts
         id: windows_artifacts
@@ -505,6 +512,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      - name: Cache pinned runtime downloads
+        uses: actions/cache@v4
+        with:
+          path: build/embedded-runtime/downloads
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+
       - name: Sync version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -521,6 +534,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
       - name: Collect Windows artifacts
         id: windows_artifacts
@@ -748,6 +762,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      - name: Cache pinned runtime downloads
+        uses: actions/cache@v4
+        with:
+          path: build/embedded-runtime/downloads
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+
       - name: Sync version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -763,6 +783,7 @@ jobs:
         run: node scripts/ci-build.js --platform linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
       # Upload each artifact separately
       - name: Upload AppImage
