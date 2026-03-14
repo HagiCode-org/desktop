@@ -183,58 +183,223 @@ status after app restart when the backend process survives.
 
 ## Embedded Runtime Staging
 
-Desktop-hosted Hagicode Server startup now uses a bundled `dotnet` runtime instead of `start.ps1` / `start.sh`. Packaging expects the staged runtime layout below before `electron-builder` runs:
+Desktop-hosted Hagicode Server startup uses a pinned private `dotnet` runtime instead of `start.ps1` / `start.sh`.
+Windows and Linux builds now stage the runtime from a single manifest:
+
+- Manifest: `resources/embedded-runtime/runtime-manifest.json`
+- Current pinned channel: `.NET 10.0`
+- Current pinned release: `10.0.5` (release date `2026-03-12`)
+- Official release metadata: `https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json`
+- Official download host allowlist: `builds.dotnet.microsoft.com`
+- Supported Desktop private-runtime package targets in this flow:
+  - `linux-x64`
+  - `win-x64`
+
+### Manifest format
+
+```json
+{
+  "channelVersion": "10.0",
+  "releaseVersion": "10.0.5",
+  "source": {
+    "provider": "microsoft",
+    "releaseMetadataUrl": "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json",
+    "allowedDownloadHosts": ["builds.dotnet.microsoft.com"]
+  },
+  "platforms": {
+    "linux-x64": {
+      "rid": "linux-x64",
+      "archiveType": "tar.gz",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz"
+    },
+    "win-x64": {
+      "rid": "win-x64",
+      "archiveType": "zip",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-win-x64.zip"
+    }
+  }
+}
+```
+
+Update the manifest first whenever Desktop should move to a newer Microsoft runtime release.
+The staging script, smoke tests, and GitHub Actions cache key all read from this file.
+
+### Expected staged layout
+
+Packaging expects the staged runtime layout below before `electron-builder` runs:
 
 ```
 build/embedded-runtime/current/
 ??? dotnet/
-    ??? <platform>/
+    ??? <rid>/
         ??? dotnet[.exe]
-        ??? host/fxr/<version>/...
-        ??? shared/Microsoft.NETCore.App/<version>/...
-        ??? shared/Microsoft.AspNetCore.App/<version>/...
+        ??? .hagicode-runtime.json
+        ??? host/fxr/10.0.5/...
+        ??? shared/Microsoft.NETCore.App/10.0.5/...
+        ??? shared/Microsoft.AspNetCore.App/10.0.5/...
 ```
+
+The `.hagicode-runtime.json` file is generated during staging and travels with the packaged runtime.
+Desktop startup uses it to distinguish:
+
+- missing runtime payload
+- unofficial runtime source
+- pinned-version mismatch
+- service payload incompatibility
 
 ### Preparing the staged runtime
 
-- Run `npm run prepare:runtime` from `repos/hagicode-desktop`.
-- On Windows, use `npm run dev:embedded-runtime` to prepare the runtime and launch Desktop with `HAGICODE_EMBEDDED_DOTNET_ROOT` set automatically.
-- The helper resolves its source from `HAGICODE_EMBEDDED_DOTNET_SOURCE`, then `DOTNET_ROOT`, then the locally installed `dotnet` location.
-- `electron-builder.yml` ships `build/embedded-runtime/current/dotnet` through `extraResources`, so the packaged runtime is always outside `app.asar`.
+Run from `repos/hagicode-desktop`:
 
-### Local verification override
+```bash
+npm run prepare:runtime
+```
 
-When running the unpackaged Electron app, point Desktop at the staged runtime with:
+Behavior:
+
+1. Reads `resources/embedded-runtime/runtime-manifest.json`
+2. Verifies the target download URL is HTTPS and uses an allowed Microsoft host
+3. Downloads the pinned archive into `build/embedded-runtime/downloads/`
+4. Extracts the runtime into `build/embedded-runtime/current/dotnet/<rid>/`
+5. Writes `.hagicode-runtime.json` and `.runtime-stage.json`
+6. Verifies the staged payload exposes the pinned `host/fxr`, `Microsoft.NETCore.App`, and `Microsoft.AspNetCore.App` versions
+
+### Packaged runtime location
+
+`electron-builder.yml` ships `build/embedded-runtime/current/dotnet` through `extraResources`, so the packaged runtime remains outside `app.asar`:
+
+- Packaged Linux: `pkg/linux-unpacked/resources/dotnet/<rid>`
+- Packaged Windows: `pkg/win-unpacked/resources/dotnet/<rid>`
+- Runtime resolution in production: `process.resourcesPath/dotnet/<rid>`
+
+Desktop does not fall back to a machine-wide `dotnet` installation when that packaged runtime is missing.
+
+### Development debugging with the staged runtime
+
+Use the helper when debugging Desktop with the same private runtime that packaging uses:
+
+```bash
+npm run dev:embedded-runtime
+```
+
+Notes:
+
+- Windows and Linux are supported in this helper flow.
+- The helper stages the pinned runtime first, then launches `npm run dev` with:
+  - `HAGICODE_EMBEDDED_DOTNET_PLATFORM=<rid>`
+  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/build/embedded-runtime/current/dotnet/<rid>`
+- Development runtime resolution reuses the staged runtime directly instead of relying on global `dotnet`.
+
+Manual override remains available:
+
+```bash
+export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/build/embedded-runtime/current/dotnet/linux-x64"
+npm run dev
+```
+
+Windows PowerShell example:
 
 ```powershell
 $env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/build/embedded-runtime/current/dotnet/win-x64"
 npm run dev
 ```
 
-Packaged builds ignore this override and always resolve the runtime from `process.resourcesPath/dotnet/<platform>`. Desktop does not fall back to a machine-wide `dotnet` installation when that packaged runtime is missing.
+### Verification commands
 
-### Troubleshooting
+Before packaging:
 
-#### Runtime staging or startup failures
+```bash
+npm run build:all
+npm run smoke-test
+```
 
-1. Re-run `npm run prepare:runtime` and confirm the staged directory contains `dotnet[.exe]`, `host/fxr`, `shared/Microsoft.NETCore.App`, and `shared/Microsoft.AspNetCore.App`.
-2. Check `npm run smoke-test -- --require-runtime` before packaging.
-3. If Desktop reports `Invalid service payload`, verify the server package still contains `lib/PCode.Web.dll`, `lib/PCode.Web.runtimeconfig.json`, and `lib/PCode.Web.deps.json`.
-4. If Desktop reports `Bundled runtime version incompatible`, compare the packaged ASP.NET Core version with `PCode.Web.runtimeconfig.json` and the manifest `dependencies.dotnet.version.runtime` metadata.
+After packaging Windows/Linux artifacts:
 
-#### Service is running but UI shows stopped
+```bash
+npm run package:smoke-test
+```
 
-1. Verify `runtime.port` matches expected port in `web-service.json`.
-2. Check `http://localhost:<port>/api/health` returns `200`.
-3. Confirm process command line contains `dotnet` and `PCode.Web.dll`.
-4. Restart desktop to rerun full recovery flow.
+`package:smoke-test` validates both:
 
-#### UI shows running but service is unavailable
+- staged runtime payload under `build/embedded-runtime/current/dotnet/<rid>`
+- packaged runtime payload under `pkg/<platform>-unpacked/resources/dotnet/<rid>`
+- pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
 
-1. Confirm `runtime.pid` still exists.
-2. Confirm the port is bound by the expected target process.
-3. Stop service from desktop UI to trigger runtime state invalidation.
-4. If needed, remove `<userData>/config/web-service.json` and relaunch.
+### GitHub Actions runtime preparation
+
+The Desktop Windows and Linux packaging jobs now share the same runtime rules as local builds:
+
+- cache key source: `hashFiles('resources/embedded-runtime/runtime-manifest.json')`
+- cached download directory: `build/embedded-runtime/downloads`
+- explicit build env:
+  - Windows: `HAGICODE_EMBEDDED_DOTNET_PLATFORM=win-x64`
+  - Linux: `HAGICODE_EMBEDDED_DOTNET_PLATFORM=linux-x64`
+- build entrypoint: `node scripts/ci-build.js --platform <win|linux>`
+- package validation: `npm run package:smoke-test`
+
+When CI fails, diagnose in this order:
+
+1. `prepare:runtime` failed before packaging
+2. staged `.hagicode-runtime.json` does not match the pinned manifest
+3. packaged `resources/dotnet/<rid>` is missing or landed in the wrong location
+4. the service payload is missing `PCode.Web.dll`, `PCode.Web.runtimeconfig.json`, or `PCode.Web.deps.json`
+
+### Operational diagnostics
+
+#### Missing runtime payload
+
+Symptoms:
+
+- Desktop logs `Pinned runtime missing or incomplete`
+- `package:smoke-test` reports missing `dotnet[.exe]`, `host/fxr`, `Microsoft.NETCore.App`, or `Microsoft.AspNetCore.App`
+
+Actions:
+
+1. Re-run `npm run prepare:runtime`
+2. Confirm `build/embedded-runtime/current/dotnet/<rid>` exists
+3. Rebuild the package and rerun `npm run package:smoke-test`
+
+#### Unofficial runtime source
+
+Symptoms:
+
+- Desktop logs `Pinned runtime source validation failed`
+- smoke test reports the download URL host is not in `allowedDownloadHosts`
+
+Actions:
+
+1. Inspect `resources/embedded-runtime/runtime-manifest.json`
+2. Confirm `platforms.<rid>.downloadUrl` still points to `builds.dotnet.microsoft.com`
+3. Remove stale archives from `build/embedded-runtime/downloads/` and stage again
+
+#### Pinned-version mismatch
+
+Symptoms:
+
+- Desktop logs `Pinned runtime version mismatch`
+- smoke test reports metadata or staged directory versions differ from the manifest
+
+Actions:
+
+1. Compare `.hagicode-runtime.json` with `runtime-manifest.json`
+2. Check `host/fxr`, `shared/Microsoft.NETCore.App`, and `shared/Microsoft.AspNetCore.App` version directories
+3. Clear `build/embedded-runtime/current/` and rerun `npm run prepare:runtime`
+
+#### Invalid service payload or runtime incompatibility
+
+Symptoms:
+
+- Desktop logs `Invalid service payload`
+- Desktop logs `Pinned runtime version incompatible`
+
+Actions:
+
+1. Verify the service package still contains:
+   - `lib/PCode.Web.dll`
+   - `lib/PCode.Web.runtimeconfig.json`
+   - `lib/PCode.Web.deps.json`
+2. Compare `PCode.Web.runtimeconfig.json` and manifest runtime constraints with the pinned Desktop runtime version
+3. Republish the service package if it was accidentally built without framework-dependent runtime metadata
 
 ## Prompt Resource Resolution
 
