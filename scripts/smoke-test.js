@@ -14,11 +14,14 @@
 
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
 
 // Parse arguments
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
+const requireRuntimePayload = args.includes('--require-runtime') || process.env.HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME === '1';
+const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectPlatform();
+const dotnetExecutableName = process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
+const stagedRuntimeRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', runtimePlatform);
 
 /**
  * ANSI color codes
@@ -41,6 +44,45 @@ const results = {
   skipped: 0,
   tests: [],
 };
+
+function detectPlatform() {
+  if (process.platform === 'win32') return 'win-x64';
+  if (process.platform === 'darwin') return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+  if (process.platform === 'linux') return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+  throw new Error(`Unsupported smoke-test platform: ${process.platform}/${process.arch}`);
+}
+
+function listVersionDirectories(targetPath) {
+  try {
+    return fs.readdirSync(targetPath, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((entry) => /^\d+(?:\.\d+){1,3}$/.test(entry));
+  } catch {
+    return [];
+  }
+}
+
+function validateRuntimePayload(runtimeRoot) {
+  const missing = [];
+  if (!fs.existsSync(path.join(runtimeRoot, dotnetExecutableName))) {
+    missing.push(dotnetExecutableName);
+  }
+
+  if (listVersionDirectories(path.join(runtimeRoot, 'host', 'fxr')).length === 0) {
+    missing.push('host/fxr');
+  }
+
+  if (listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App')).length === 0) {
+    missing.push('shared/Microsoft.AspNetCore.App');
+  }
+
+  if (listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App')).length === 0) {
+    missing.push('shared/Microsoft.NETCore.App');
+  }
+
+  return missing;
+}
 
 /**
  * Log messages with optional colors
@@ -223,13 +265,40 @@ test('electron-builder configuration is valid', async () => {
 
   const hasAsar = buildConfig?.asar === true;
   const hasFiles = Array.isArray(buildConfig?.files);
+  const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
+  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
+  const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
 
   logVerbose(`config source: ${configSource}`);
   logVerbose(`asar enabled: ${hasAsar}`);
+  logVerbose(`runtime extraResources entries: ${extraResources.length}`);
 
   assert(true, `build configuration exists (${configSource})`);
   assert(hasAsar, 'asar packaging is enabled');
   assert(hasFiles, 'files to include are specified');
+  assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
+  assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
+});
+
+test('staged embedded runtime payload is complete', () => {
+  if (!requireRuntimePayload && !fs.existsSync(stagedRuntimeRoot)) {
+    log(`  Skipping: staged runtime not required for this smoke-test run`, colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(stagedRuntimeRoot);
+  if (!assert(exists, `staged runtime directory exists (${stagedRuntimeRoot})`)) {
+    return;
+  }
+
+  const missingComponents = validateRuntimePayload(stagedRuntimeRoot);
+  assert(
+    missingComponents.length === 0,
+    missingComponents.length === 0
+      ? 'staged runtime payload contains dotnet host, host/fxr, Microsoft.NETCore.App, and Microsoft.AspNetCore.App'
+      : `staged runtime payload is missing: ${missingComponents.join(', ')}`
+  );
 });
 
 /**

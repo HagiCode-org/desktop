@@ -44,3 +44,5 @@ obj/
 .nuke/parameters.json
 
 artifacts/azure-index.json
+build/embedded-runtime/
+

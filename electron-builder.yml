@@ -11,6 +11,9 @@ asar: true
 asarUnpack:
   - '**/node_modules/**/{*.node,dll/*.dll,*.dylib}'
   - '**/vendor/**'
+extraResources:
+  - from: build/embedded-runtime/current/dotnet
+    to: dotnet
 publish:
   provider: github
   owner: HagiCode-org
