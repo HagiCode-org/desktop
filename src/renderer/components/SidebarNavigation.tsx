@@ -9,10 +9,10 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 
 // Lucide 图标
-import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info } from 'lucide-react';
+import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info, MessageSquare } from 'lucide-react';
 
 interface NavigationItem {
-  id: ViewType | 'official-website' | 'tech-support' | 'github-project';
+  id: ViewType | 'official-website' | 'tech-support' | 'discord-community' | 'github-project';
   labelKey: string;
   descriptionKey?: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -39,6 +39,13 @@ const externalLinkItems: NavigationItem[] = [
     descriptionKey: 'navigation.techSupportDesc',
     icon: Users,
     url: 'https://qm.qq.com/q/FoalgKjYOI',
+  },
+  {
+    id: 'discord-community',
+    labelKey: 'navigation.discord',
+    descriptionKey: 'navigation.discordDesc',
+    icon: MessageSquare,
+    url: 'https://discord.gg/qY662sJK',
   },
   {
     id: 'github-project',
