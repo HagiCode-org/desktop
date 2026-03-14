@@ -1,5 +1,12 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import {
+  assertOfficialMicrosoftDownloadUrl,
+  readEmbeddedRuntimeStageMetadata,
+  readPinnedRuntimeManifest,
+  resolvePinnedRuntimeTarget,
+  type EmbeddedRuntimeStageMetadata,
+} from './embedded-runtime-config.js';
 import type { Manifest } from './manifest-reader.js';
 
 export const FRAMEWORK_DEPENDENT_REQUIRED_FILES = [
@@ -26,8 +33,13 @@ export interface AspNetRuntimeRequirement {
   minimumVersion?: string;
   maximumVersion?: string;
   recommendedVersion?: string;
+  pinnedVersion?: string;
+  effectiveMinimumVersion?: string;
+  effectiveMaximumVersion?: string;
+  effectiveVersion?: string;
   requiredMajor?: number;
   label: string;
+  effectiveLabel: string;
 }
 
 export interface ServicePayloadValidationResult {
@@ -45,6 +57,8 @@ export interface EmbeddedRuntimeValidationResult {
   dotnetPath: string;
   missingComponents: string[];
   aspNetCoreVersion?: string;
+  netCoreVersion?: string;
+  hostFxrVersion?: string;
 }
 
 export interface RuntimeCompatibilityResult {
@@ -52,6 +66,13 @@ export interface RuntimeCompatibilityResult {
   reason?: string;
   embeddedVersion?: string;
   requiredVersionLabel: string;
+}
+
+export interface PinnedRuntimeValidationResult {
+  valid: boolean;
+  code?: 'missing-runtime-metadata' | 'unofficial-source' | 'pinned-version-mismatch';
+  message?: string;
+  metadata?: EmbeddedRuntimeStageMetadata | null;
 }
 
 interface RuntimeConfigFrameworkRef {
@@ -110,8 +131,10 @@ export function parseAspNetCoreRuntimeConfig(content: string | RuntimeConfigShap
 export function resolveAspNetCoreRuntimeRequirement(
   runtimeConfigVersion: string | undefined,
   manifestRuntime: ManifestRuntimeMetadata,
+  pinnedVersion?: string,
 ): AspNetRuntimeRequirement {
   const normalizedRuntimeConfigVersion = normalizeVersion(runtimeConfigVersion);
+  const normalizedPinnedVersion = normalizeVersion(pinnedVersion);
   const minimumVersion = pickHighestVersion([
     normalizedRuntimeConfigVersion,
     manifestRuntime.min,
@@ -125,8 +148,19 @@ export function resolveAspNetCoreRuntimeRequirement(
     normalizedRuntimeConfigVersion
     ?? recommendedVersion
     ?? manifestRuntime.min
-    ?? maximumVersion,
+    ?? maximumVersion
+    ?? normalizedPinnedVersion,
   );
+
+  const effectiveMinimumVersion = pickHighestVersion([
+    minimumVersion,
+    normalizedPinnedVersion,
+  ]);
+  const effectiveMaximumVersion = pickLowestVersion([
+    maximumVersion,
+    normalizedPinnedVersion,
+  ]);
+  const effectiveVersion = normalizedPinnedVersion;
 
   const label = requiredMajor !== undefined
     ? `${requiredMajor}.x`
@@ -139,8 +173,13 @@ export function resolveAspNetCoreRuntimeRequirement(
     minimumVersion,
     maximumVersion,
     recommendedVersion,
+    pinnedVersion: normalizedPinnedVersion,
+    effectiveMinimumVersion,
+    effectiveMaximumVersion,
+    effectiveVersion,
     requiredMajor,
     label,
+    effectiveLabel: effectiveVersion ?? label,
   };
 }
 
@@ -154,7 +193,7 @@ export function evaluateRuntimeCompatibility(
       compatible: false,
       reason: 'Bundled ASP.NET Core runtime version could not be resolved.',
       embeddedVersion: embeddedVersion,
-      requiredVersionLabel: requirement.label,
+      requiredVersionLabel: requirement.effectiveLabel,
     };
   }
 
@@ -168,28 +207,30 @@ export function evaluateRuntimeCompatibility(
     };
   }
 
-  if (requirement.minimumVersion && compareVersions(normalizedEmbeddedVersion, requirement.minimumVersion) < 0) {
+  const minimumVersion = requirement.effectiveMinimumVersion ?? requirement.minimumVersion;
+  if (minimumVersion && compareVersions(normalizedEmbeddedVersion, minimumVersion) < 0) {
     return {
       compatible: false,
-      reason: `Service requires ASP.NET Core >= ${requirement.minimumVersion}, but Desktop bundles ${normalizedEmbeddedVersion}.`,
+      reason: `Service requires ASP.NET Core >= ${minimumVersion}, but Desktop bundles ${normalizedEmbeddedVersion}.`,
       embeddedVersion: normalizedEmbeddedVersion,
-      requiredVersionLabel: requirement.minimumVersion,
+      requiredVersionLabel: minimumVersion,
     };
   }
 
-  if (requirement.maximumVersion && compareVersions(normalizedEmbeddedVersion, requirement.maximumVersion) > 0) {
+  const maximumVersion = requirement.effectiveMaximumVersion ?? requirement.maximumVersion;
+  if (maximumVersion && compareVersions(normalizedEmbeddedVersion, maximumVersion) > 0) {
     return {
       compatible: false,
-      reason: `Service supports ASP.NET Core <= ${requirement.maximumVersion}, but Desktop bundles ${normalizedEmbeddedVersion}.`,
+      reason: `Service supports ASP.NET Core <= ${maximumVersion}, but Desktop bundles ${normalizedEmbeddedVersion}.`,
       embeddedVersion: normalizedEmbeddedVersion,
-      requiredVersionLabel: requirement.maximumVersion,
+      requiredVersionLabel: maximumVersion,
     };
   }
 
   return {
     compatible: true,
     embeddedVersion: normalizedEmbeddedVersion,
-    requiredVersionLabel: requirement.label,
+    requiredVersionLabel: requirement.effectiveLabel,
   };
 }
 
@@ -214,7 +255,11 @@ export async function validateFrameworkDependentPayload(
   try {
     const runtimeConfigContent = await fs.readFile(payloadPaths.runtimeConfigPath, 'utf-8');
     const runtimeConfigVersion = parseAspNetCoreRuntimeConfig(runtimeConfigContent);
-    const requirement = resolveAspNetCoreRuntimeRequirement(runtimeConfigVersion, manifestRuntime);
+    const requirement = resolveAspNetCoreRuntimeRequirement(
+      runtimeConfigVersion,
+      manifestRuntime,
+      resolvePinnedAspNetCoreVersion(),
+    );
 
     return {
       startable: true,
@@ -270,6 +315,86 @@ export async function validateEmbeddedRuntimeLayout(
     dotnetPath,
     missingComponents,
     aspNetCoreVersion: pickHighestVersion(aspNetVersions),
+    netCoreVersion: pickHighestVersion(netCoreVersions),
+    hostFxrVersion: pickHighestVersion(hostFxrVersions),
+  };
+}
+
+export async function validatePinnedEmbeddedRuntime(
+  platform: string,
+  runtimeValidation: EmbeddedRuntimeValidationResult,
+): Promise<PinnedRuntimeValidationResult> {
+  const manifest = readPinnedRuntimeManifest();
+  const target = resolvePinnedRuntimeTarget(platform);
+  const metadata = await readEmbeddedRuntimeStageMetadata(runtimeValidation.runtimeRoot);
+
+  if (!metadata) {
+    return {
+      valid: false,
+      code: 'missing-runtime-metadata',
+      message: `Pinned runtime metadata is missing from ${runtimeValidation.runtimeRoot}.`,
+      metadata: null,
+    };
+  }
+
+  try {
+    assertOfficialMicrosoftDownloadUrl(metadata.downloadUrl, manifest.source.allowedDownloadHosts);
+  } catch (error) {
+    return {
+      valid: false,
+      code: 'unofficial-source',
+      message: error instanceof Error ? error.message : String(error),
+      metadata,
+    };
+  }
+
+  if (metadata.provider !== manifest.source.provider) {
+    return {
+      valid: false,
+      code: 'unofficial-source',
+      message: `Pinned runtime metadata provider must be ${manifest.source.provider}, but found ${metadata.provider}.`,
+      metadata,
+    };
+  }
+
+  if (metadata.platform !== platform) {
+    return {
+      valid: false,
+      code: 'pinned-version-mismatch',
+      message: `Pinned runtime metadata targets ${metadata.platform}, but Desktop requires ${platform}.`,
+      metadata,
+    };
+  }
+
+  const mismatches: string[] = [];
+  if (metadata.releaseVersion !== manifest.releaseVersion) {
+    mismatches.push(`release version expected ${manifest.releaseVersion} but found ${metadata.releaseVersion}`);
+  }
+  if (metadata.aspNetCoreVersion !== target.aspNetCoreVersion || runtimeValidation.aspNetCoreVersion !== target.aspNetCoreVersion) {
+    mismatches.push(`ASP.NET Core expected ${target.aspNetCoreVersion} but found ${runtimeValidation.aspNetCoreVersion || metadata.aspNetCoreVersion || 'missing'}`);
+  }
+  if (metadata.netCoreVersion !== target.netCoreVersion || runtimeValidation.netCoreVersion !== target.netCoreVersion) {
+    mismatches.push(`Microsoft.NETCore.App expected ${target.netCoreVersion} but found ${runtimeValidation.netCoreVersion || metadata.netCoreVersion || 'missing'}`);
+  }
+  if (metadata.hostFxrVersion !== target.hostFxrVersion || runtimeValidation.hostFxrVersion !== target.hostFxrVersion) {
+    mismatches.push(`host/fxr expected ${target.hostFxrVersion} but found ${runtimeValidation.hostFxrVersion || metadata.hostFxrVersion || 'missing'}`);
+  }
+  if (metadata.downloadUrl !== target.downloadUrl) {
+    mismatches.push('download URL does not match the pinned Microsoft runtime manifest');
+  }
+
+  if (mismatches.length > 0) {
+    return {
+      valid: false,
+      code: 'pinned-version-mismatch',
+      message: `Pinned runtime metadata mismatch: ${mismatches.join('; ')}`,
+      metadata,
+    };
+  }
+
+  return {
+    valid: true,
+    metadata,
   };
 }
 
@@ -304,6 +429,38 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function resolvePinnedAspNetCoreVersion(): string | undefined {
+  try {
+    const platform = detectCurrentPlatform();
+    return resolvePinnedRuntimeTarget(platform).aspNetCoreVersion;
+  } catch {
+    return undefined;
+  }
+}
+
+function detectCurrentPlatform(): string {
+  if (process.platform === 'linux') {
+    return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+  }
+  if (process.platform === 'win32') {
+    return 'win-x64';
+  }
+  if (process.platform === 'darwin') {
+    return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+  }
+
+  throw new Error(`Unsupported platform: ${process.platform} ${process.arch}`);
+}
+
+function extractMajorVersion(version: string | undefined): number | undefined {
+  const normalized = normalizeVersion(version);
+  if (!normalized) {
+    return undefined;
+  }
+
+  return Number.parseInt(normalized.split('.')[0], 10);
 }
 
 export function normalizeVersion(version: string | undefined): string | undefined {
@@ -358,11 +515,9 @@ export function pickHighestVersion(versions: Array<string | undefined>): string 
     .sort((left, right) => compareVersions(right, left))[0];
 }
 
-export function extractMajorVersion(version: string | undefined): number | undefined {
-  const normalized = normalizeVersion(version);
-  if (!normalized) {
-    return undefined;
-  }
-
-  return Number.parseInt(normalized.split('.')[0], 10);
+export function pickLowestVersion(versions: Array<string | undefined>): string | undefined {
+  return versions
+    .map((version) => normalizeVersion(version))
+    .filter((version): version is string => Boolean(version))
+    .sort((left, right) => compareVersions(left, right))[0];
 }
