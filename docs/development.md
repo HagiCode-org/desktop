@@ -159,16 +159,22 @@ status after app restart when the backend process survives.
 
 - Location: `<userData>/config/web-service.json`
 - Core fields:
+  - `lastSuccessfulHost`
   - `lastSuccessfulPort`
   - `savedAt`
 - Runtime recovery fields:
   - `runtime.pid`
+  - `runtime.host`
   - `runtime.port`
   - `runtime.startedAt`
   - `runtime.versionId`
   - `runtime.recoverySource`
   - `runtime.recoveryMessage`
   - `runtime.updatedAt`
+
+Desktop treats the persisted listen host as the bind address. The renderer and
+WebView derive a separate client-facing access URL from that host, so wildcard
+binds such as `0.0.0.0` still open through loopback (`127.0.0.1`) locally.
 
 ### Recovery Decision Order
 
