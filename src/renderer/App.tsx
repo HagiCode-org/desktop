@@ -10,8 +10,10 @@ import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { switchView } from './store/slices/viewSlice';
 import { restartOnboardingFlow } from './store/slices/onboardingSlice';
+import { selectWebServiceInfo } from './store/slices/webServiceSlice';
 import type { RootState } from './store';
 import type { AgentCliType } from '../types/agent-cli';
+import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 
 declare global {
   interface Window {
@@ -48,6 +50,11 @@ function App() {
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
+  const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
+  const fallbackWebServiceUrl = buildAccessUrl(
+    webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST,
+    webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT
+  );
 
   useEffect(() => {
     // Listen for view change events from menu (kept for backward compatibility)
@@ -98,7 +105,7 @@ function App() {
       <div className="ml-64 transition-all duration-500 ease-out">
         <div className="container mx-auto px-4 py-8 min-h-screen">
           {currentView === 'system' && <SystemManagementView />}
-          {currentView === 'web' && <WebView src={webServiceUrl || 'http://localhost:36556'} />}
+          {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage />}
           {currentView === 'settings' && <SettingsPage />}
         </div>

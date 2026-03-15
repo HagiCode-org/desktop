@@ -128,7 +128,8 @@
       "restartCount": "重启次数",
       "port": "端口",
       "version": "版本",
-      "remoteUrl": "远程 URL"
+      "remoteUrl": "远程 URL",
+      "listenAddress": "监听地址"
     },
     "notInstalledAlert": {
       "title": "未安装包",
@@ -165,6 +166,34 @@
       "openLogsSuccess": "日志文件夹已打开",
       "logsNotFound": "日志文件夹不存在",
       "openLogsError": "无法打开日志文件夹"
+    },
+    "listenAddress": {
+      "label": "监听地址",
+      "description": "在服务停止时选择 Desktop 绑定嵌入式 Web 服务的地址。",
+      "customInputLabel": "自定义 IPv4",
+      "customPlaceholder": "192.168.1.24",
+      "customError": "请输入有效的 IPv4 地址",
+      "accessUrlPreviewLabel": "访问 URL 预览",
+      "wildcardHint": "`0.0.0.0` 会绑定所有网卡；Desktop 仍会通过 `127.0.0.1` 打开本机客户端。",
+      "localOnlyHint": "更改会在下次启动本地服务时生效。",
+      "presets": {
+        "localhost": {
+          "label": "localhost",
+          "description": "适合当前设备上的内置 WebView 和浏览器访问。"
+        },
+        "loopback": {
+          "label": "127.0.0.1",
+          "description": "使用显式 IPv4 回环地址，仅允许本机访问。"
+        },
+        "wildcard": {
+          "label": "0.0.0.0",
+          "description": "绑定所有本地网卡，便于局域网内其他设备访问。"
+        },
+        "custom": {
+          "label": "自定义 IP",
+          "description": "绑定到某个指定的 IPv4 网卡地址，例如独立的局域网接口。"
+        }
+      }
     }
   },
   "languageSelector": {

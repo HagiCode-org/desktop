@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -27,7 +27,7 @@ import {
   restartWebService,
   fetchWebServiceVersion,
   fetchActiveVersion,
-  updateWebServicePort,
+  updateWebServiceConfig,
 } from '../store/thunks/webServiceThunks';
 import { RootState, AppDispatch } from '../store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +44,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Server,
   Square,
@@ -51,12 +53,20 @@ import {
   Loader2,
   AlertCircle,
   Settings,
-  Check,
   Package,
   FolderOpen,
   Globe,
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
+import {
+  buildAccessUrl,
+  DEFAULT_WEB_SERVICE_HOST,
+  DEFAULT_WEB_SERVICE_PORT,
+  isValidIpv4Address,
+  normalizeListenHost,
+  resolveListenHostPreset,
+  type ListenHostPreset,
+} from '../../types/web-service-network';
 
 // Types
 declare global {
@@ -83,9 +93,17 @@ const WebServiceStatusCard: React.FC = () => {
   const remoteModeEnabled = useSelector(selectRemoteModeEnabled);
   const remoteModeUrl = useSelector(selectRemoteModeUrl);
 
-  const [isEditingPort, setIsEditingPort] = useState(false);
-  const [portInputValue, setPortInputValue] = useState((webServiceInfo.port || 36556).toString());
-  const [portError, setPortError] = useState<string | null>(null);
+  const [portInputValue, setPortInputValue] = useState((webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT).toString());
+  const [selectedListenPreset, setSelectedListenPreset] = useState<ListenHostPreset>(
+    resolveListenHostPreset(webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST)
+  );
+  const [customListenHost, setCustomListenHost] = useState(
+    resolveListenHostPreset(webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST) === 'custom'
+      ? (webServiceInfo.host || '')
+      : ''
+  );
+  const [networkConfigError, setNetworkConfigError] = useState<string | null>(null);
+  const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Fetch version on mount
@@ -120,12 +138,65 @@ const WebServiceStatusCard: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Update port input when port changes from outside
+  // Re-sync the stopped-state editor when main-process status changes.
   useEffect(() => {
-    setPortInputValue((webServiceInfo.port || 36556).toString());
-  }, [webServiceInfo.port]);
+    const persistedHost = webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST;
+    const preset = resolveListenHostPreset(persistedHost);
+
+    setPortInputValue((webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT).toString());
+    setSelectedListenPreset(preset);
+    setCustomListenHost(preset === 'custom' ? persistedHost : '');
+    setNetworkConfigError(null);
+  }, [webServiceInfo.host, webServiceInfo.port]);
+
+  const persistNetworkConfig = async () => {
+    const port = parseInt(portInputValue, 10);
+    const candidateHost = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
+    const normalizedHost = normalizeListenHost(candidateHost);
+
+    if (!normalizedHost) {
+      setNetworkConfigError(t('webServiceStatus.listenAddress.customError') as string);
+      return false;
+    }
+
+    if (Number.isNaN(port)) {
+      setNetworkConfigError(t('webServiceStatus.portError.invalid') as string);
+      return false;
+    }
+
+    if (port < 1024 || port > 65535) {
+      setNetworkConfigError(t('webServiceStatus.portError.range') as string);
+      return false;
+    }
+
+    const result = await dispatch(updateWebServiceConfig({ host: normalizedHost, port })).unwrap();
+    if (result.success) {
+      setNetworkConfigError(null);
+      return true;
+    }
+
+    return false;
+  };
+
+  const flushPendingNetworkConfig = async () => {
+    if (debounceSaveTimeoutRef.current) {
+      clearTimeout(debounceSaveTimeoutRef.current);
+      debounceSaveTimeoutRef.current = null;
+    }
+
+    if (!isNetworkConfigDirty) {
+      return true;
+    }
+
+    return await persistNetworkConfig();
+  };
 
   const handleStart = async () => {
+    const saveSucceeded = await flushPendingNetworkConfig();
+    if (!saveSucceeded) {
+      return;
+    }
+
     dispatch(startWebService());
   };
 
@@ -161,30 +232,19 @@ const WebServiceStatusCard: React.FC = () => {
     }
   };
 
-  const handleUpdatePort = () => {
-    const port = parseInt(portInputValue, 10);
-
-    // Validate port
-    if (isNaN(port)) {
-      setPortError(t('webServiceStatus.portError.invalid') as string);
-      return;
+  const handleResetNetworkConfig = () => {
+    if (debounceSaveTimeoutRef.current) {
+      clearTimeout(debounceSaveTimeoutRef.current);
+      debounceSaveTimeoutRef.current = null;
     }
 
-    if (port < 1024 || port > 65535) {
-      setPortError(t('webServiceStatus.portError.range') as string);
-      return;
-    }
+    const persistedHost = webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST;
+    const preset = resolveListenHostPreset(persistedHost);
 
-    // Dispatch action to update port
-    dispatch(updateWebServicePort(port));
-    setPortError(null);
-    setIsEditingPort(false);
-  };
-
-  const handleCancelEditPort = () => {
-    setPortInputValue((webServiceInfo.port || 36556).toString());
-    setPortError(null);
-    setIsEditingPort(false);
+    setPortInputValue((webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT).toString());
+    setSelectedListenPreset(preset);
+    setCustomListenHost(preset === 'custom' ? persistedHost : '');
+    setNetworkConfigError(null);
   };
 
   const handleOpenLogs = async () => {
@@ -281,6 +341,57 @@ const WebServiceStatusCard: React.FC = () => {
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
   const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
   const isDisabled = webServiceInfo.isOperating || isTransitioning;
+  const pendingHostValue = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
+  const normalizedPendingHost = normalizeListenHost(pendingHostValue);
+  const pendingPort = Number.parseInt(portInputValue, 10);
+  const portValidationError = Number.isNaN(pendingPort)
+    ? t('webServiceStatus.portError.invalid')
+    : (pendingPort < 1024 || pendingPort > 65535)
+      ? t('webServiceStatus.portError.range')
+      : null;
+  const isCustomListenHostMissing = selectedListenPreset === 'custom' && customListenHost.trim().length === 0;
+  const customListenHostError = selectedListenPreset === 'custom' && customListenHost.trim().length > 0 && !isValidIpv4Address(customListenHost)
+    ? t('webServiceStatus.listenAddress.customError')
+    : null;
+  const effectiveNetworkConfigError = networkConfigError || customListenHostError || portValidationError;
+  const normalizedCurrentHost = normalizeListenHost(webServiceInfo.host) || DEFAULT_WEB_SERVICE_HOST;
+  const isNetworkConfigDirty = (
+    (normalizedPendingHost ?? pendingHostValue) !== normalizedCurrentHost ||
+    (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
+  );
+  const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
+
+  useEffect(() => {
+    if (remoteModeEnabled || !isStopped || !isNetworkConfigDirty) {
+      return;
+    }
+
+    if (effectiveNetworkConfigError || isCustomListenHostMissing) {
+      return;
+    }
+
+    debounceSaveTimeoutRef.current = setTimeout(() => {
+      void persistNetworkConfig();
+      debounceSaveTimeoutRef.current = null;
+    }, 1000);
+
+    return () => {
+      if (debounceSaveTimeoutRef.current) {
+        clearTimeout(debounceSaveTimeoutRef.current);
+        debounceSaveTimeoutRef.current = null;
+      }
+    };
+  }, [
+    customListenHost,
+    effectiveNetworkConfigError,
+    isCustomListenHostMissing,
+    isNetworkConfigDirty,
+    isStopped,
+    pendingPort,
+    portInputValue,
+    remoteModeEnabled,
+    selectedListenPreset,
+  ]);
 
   // Render blocking reason alert
   const renderBlockingReason = () => {
@@ -550,7 +661,7 @@ const WebServiceStatusCard: React.FC = () => {
 
         <Separator />
 
-        {/* Remote Mode Details or Port Configuration */}
+        {/* Remote Mode Details or Local Network Configuration */}
         {remoteModeEnabled ? (
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">
@@ -561,62 +672,134 @@ const WebServiceStatusCard: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Port Configuration - Always visible when service is stopped in local mode */
+          /* Local bind host + port configuration - only editable while stopped */
           !isRunning && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">{t('webServiceStatus.details.port')}</div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => setIsEditingPort(!isEditingPort)}
-                >
-                  <Settings className="w-3 h-3 mr-1" />
-                  {isEditingPort ? t('common:button.cancel') : t('common:button.edit')}
-                </Button>
+            <div className="space-y-4 rounded-lg border border-border/50 bg-muted/20 p-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Settings className="h-4 w-4" />
+                  <span>{t('webServiceStatus.listenAddress.label')}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('webServiceStatus.listenAddress.description')}
+                </p>
               </div>
-              {isEditingPort ? (
-                <div className="flex items-center gap-2">
+
+              <RadioGroup
+                value={selectedListenPreset}
+                onValueChange={(value) => {
+                  setSelectedListenPreset(value as ListenHostPreset);
+                  setNetworkConfigError(null);
+                }}
+                className="gap-3"
+              >
+                {[
+                  {
+                    value: 'localhost',
+                    label: t('webServiceStatus.listenAddress.presets.localhost.label'),
+                    description: t('webServiceStatus.listenAddress.presets.localhost.description'),
+                  },
+                  {
+                    value: '127.0.0.1',
+                    label: t('webServiceStatus.listenAddress.presets.loopback.label'),
+                    description: t('webServiceStatus.listenAddress.presets.loopback.description'),
+                  },
+                  {
+                    value: '0.0.0.0',
+                    label: t('webServiceStatus.listenAddress.presets.wildcard.label'),
+                    description: t('webServiceStatus.listenAddress.presets.wildcard.description'),
+                  },
+                  {
+                    value: 'custom',
+                    label: t('webServiceStatus.listenAddress.presets.custom.label'),
+                    description: t('webServiceStatus.listenAddress.presets.custom.description'),
+                  },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-start gap-3 rounded-md border border-border/60 bg-background/70 p-3 transition-colors hover:border-primary/50"
+                  >
+                    <RadioGroupItem value={option.value} className="mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">{option.label}</div>
+                      <div className="text-xs text-muted-foreground">{option.description}</div>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
+
+              {selectedListenPreset === 'custom' && (
+                <div className="space-y-2">
+                  <Label htmlFor="custom-listen-host">{t('webServiceStatus.listenAddress.customInputLabel')}</Label>
                   <Input
-                    type="number"
-                    value={portInputValue}
-                    onChange={(e) => setPortInputValue(e.target.value)}
-                    className="flex-1 text-sm"
-                    min={1024}
-                    max={65535}
+                    id="custom-listen-host"
+                    type="text"
+                    inputMode="numeric"
+                    value={customListenHost}
+                    onChange={(e) => {
+                      setCustomListenHost(e.target.value);
+                      setNetworkConfigError(null);
+                    }}
+                    placeholder={t('webServiceStatus.listenAddress.customPlaceholder') as string}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        handleUpdatePort();
+                        void flushPendingNetworkConfig();
                       } else if (e.key === 'Escape') {
-                        handleCancelEditPort();
+                        handleResetNetworkConfig();
                       }
                     }}
-                    autoFocus
                   />
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleUpdatePort}
-                  >
-                    <Check className="w-3 h-3 mr-1" />
-                    {t('common:button.save')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelEditPort}
-                  >
-                    {t('common:button.cancel')}
-                  </Button>
                 </div>
-              ) : (
-                <div className="text-2xl font-mono font-semibold">{webServiceInfo.port || 36556}</div>
               )}
-              {portError && (
+
+              <div className="space-y-2">
+                <Label htmlFor="web-service-port">{t('webServiceStatus.details.port')}</Label>
+                <Input
+                  id="web-service-port"
+                  type="number"
+                  value={portInputValue}
+                  onChange={(e) => {
+                    setPortInputValue(e.target.value);
+                    setNetworkConfigError(null);
+                  }}
+                  min={1024}
+                  max={65535}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void flushPendingNetworkConfig();
+                    } else if (e.key === 'Escape') {
+                      handleResetNetworkConfig();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2 rounded-md border border-dashed border-border/60 bg-background/60 p-3">
+                <div className="text-xs text-muted-foreground">
+                  {t('webServiceStatus.listenAddress.accessUrlPreviewLabel')}
+                </div>
+                <div className="break-all font-mono text-sm text-primary">{accessUrlPreview}</div>
+                <div className="text-xs text-muted-foreground">
+                  {normalizedPendingHost === '0.0.0.0'
+                    ? t('webServiceStatus.listenAddress.wildcardHint')
+                    : t('webServiceStatus.listenAddress.localOnlyHint')}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleResetNetworkConfig}
+                  disabled={!isNetworkConfigDirty}
+                >
+                  {t('common:button.cancel')}
+                </Button>
+              </div>
+
+              {effectiveNetworkConfigError && (
                 <Alert variant="destructive" className="py-2">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">{portError}</AlertDescription>
+                  <AlertDescription className="text-sm">{effectiveNetworkConfigError}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -636,6 +819,7 @@ const WebServiceStatusCard: React.FC = () => {
               >
                 {[
                   { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || 'N/A', mono: true, primary: true },
+                  { label: t('webServiceStatus.details.listenAddress'), value: webServiceInfo.host || 'N/A', mono: true },
                   { label: t('webServiceStatus.details.processId'), value: webServiceInfo.pid || 'N/A', mono: true },
                   { label: t('webServiceStatus.details.uptime'), value: formatUptime(webServiceInfo.uptime), mono: true },
                   { label: t('webServiceStatus.details.restartCount'), value: webServiceInfo.restartCount.toString(), mono: true },

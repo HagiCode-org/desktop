@@ -1,11 +1,12 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import log from 'electron-log';
-import { PCodeWebServiceManager, type ProcessInfo, type WebServiceConfig } from '../../web-service-manager.js';
+import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebServiceConfig } from '../../web-service-manager.js';
 import { VersionManager } from '../../version-manager.js';
 import { ConfigManager } from '../../config.js';
 import { manifestReader } from '../../manifest-reader.js';
 import { buildStartupFailurePayload, type StartupFailurePayload } from '../../startup-failure-payload.js';
 import { setServerStatus, setServiceUrl } from '../../tray.js';
+import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../../../types/web-service-network.js';
 
 interface StartServiceError {
   type: string;
@@ -16,6 +17,12 @@ export interface StartWebServiceResponse {
   success: boolean;
   error?: StartServiceError;
   startupFailure?: StartupFailurePayload;
+}
+
+export interface WebServiceConfigUpdateResponse {
+  success: boolean;
+  error: string | null;
+  errorCode?: 'invalid-listen-host' | 'invalid-port' | 'unknown';
 }
 
 // Module state
@@ -82,6 +89,9 @@ export function registerWebServiceHandlers(deps: {
         startTime: null,
         url: null,
         restartCount: 0,
+        phase: StartupPhase.Idle,
+        host: DEFAULT_WEB_SERVICE_HOST,
+        port: DEFAULT_WEB_SERVICE_PORT,
       } as ProcessInfo;
     }
     try {
@@ -95,6 +105,9 @@ export function registerWebServiceHandlers(deps: {
         startTime: null,
         url: null,
         restartCount: 0,
+        phase: StartupPhase.Error,
+        host: DEFAULT_WEB_SERVICE_HOST,
+        port: DEFAULT_WEB_SERVICE_PORT,
       } as ProcessInfo;
     }
   });
@@ -270,17 +283,18 @@ export function registerWebServiceHandlers(deps: {
       };
     }
     try {
-      const available = await state.webServiceManager.checkPortAvailable();
       const status = await state.webServiceManager.getStatus();
-      const port = status.url ? parseInt(status.url.split(':').pop() || '5000') : 5000;
+      const available = await state.webServiceManager.checkPortAvailable(status.port);
       return {
-        port,
+        host: status.host,
+        port: status.port,
         available,
         error: null
       };
     } catch (error) {
       console.error('Failed to check port:', error);
       return {
+        host: DEFAULT_WEB_SERVICE_HOST,
         port: 5000,
         available: false,
         error: error instanceof Error ? error.message : String(error)
@@ -291,17 +305,26 @@ export function registerWebServiceHandlers(deps: {
   // Set web service config handler
   ipcMain.handle('set-web-service-config', async (_, config: Partial<WebServiceConfig>) => {
     if (!state.webServiceManager) {
-      return { success: false, error: 'Web service manager not initialized' };
+      return { success: false, error: 'Web service manager not initialized', errorCode: 'unknown' } satisfies WebServiceConfigUpdateResponse;
     }
     try {
       await state.webServiceManager.updateConfig(config);
-      return { success: true, error: null };
+      const status = await state.webServiceManager.getStatus();
+      state.mainWindow?.webContents.send('web-service-status-changed', status);
+      return { success: true, error: null } satisfies WebServiceConfigUpdateResponse;
     } catch (error) {
       console.error('Failed to update web service config:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      const errorCode = message.includes('listen host')
+        ? 'invalid-listen-host'
+        : message.includes('Port must be between')
+          ? 'invalid-port'
+          : 'unknown';
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
+        error: message,
+        errorCode,
+      } satisfies WebServiceConfigUpdateResponse;
     }
   });
 

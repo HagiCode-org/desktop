@@ -27,6 +27,27 @@ export interface StartWebServiceResult {
   startupFailure?: StartupFailurePayload;
 }
 
+export interface WebServiceProcessInfo {
+  status: 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
+  pid: number | null;
+  uptime: number;
+  startTime: number | null;
+  url: string | null;
+  restartCount: number;
+  phase: 'idle' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
+  phaseMessage?: string;
+  host: string;
+  port: number;
+  recoverySource?: 'none' | 'pid_file' | 'signature_fallback';
+  recoveryMessage?: string;
+}
+
+export interface SetWebServiceConfigResult {
+  success: boolean;
+  error: string | null;
+  errorCode?: 'invalid-listen-host' | 'invalid-port' | 'unknown';
+}
+
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
@@ -44,14 +65,14 @@ interface ElectronAPI {
   getServerStatus: () => Promise<any>;
 
   // Web Service Management APIs
-  getWebServiceStatus: () => Promise<any>;
+  getWebServiceStatus: () => Promise<WebServiceProcessInfo>;
   startWebService: (force?: boolean) => Promise<StartWebServiceResult>;
   stopWebService: () => Promise<void>;
   restartWebService: () => Promise<void>;
   getWebServiceVersion: () => Promise<string>;
-  getWebServiceUrl: () => Promise<string>;
-  setWebServiceConfig: (config: any) => Promise<void>;
-  onWebServiceStatusChange: (callback: (status: any) => void) => () => void;
+  getWebServiceUrl: () => Promise<string | null>;
+  setWebServiceConfig: (config: { host?: string; port?: number }) => Promise<SetWebServiceConfigResult>;
+  onWebServiceStatusChange: (callback: (status: WebServiceProcessInfo) => void) => () => void;
 
   // Package Management APIs
   checkPackageInstallation: () => Promise<void>;

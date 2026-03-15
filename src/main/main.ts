@@ -7,7 +7,7 @@ import log from 'electron-log';
 import { createTray, destroyTray, setServerStatus, setServiceUrl, updateTrayMenu, setWebServiceManagerRef } from './tray.js';
 import { HagicoServerClient, type ServerStatus } from './server.js';
 import { ConfigManager } from './config.js';
-import { PCodeWebServiceManager, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
+import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
 import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
@@ -42,6 +42,7 @@ import {
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
+import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -339,6 +340,9 @@ ipcMain.handle('get-web-service-status', async () => {
       startTime: null,
       url: null,
       restartCount: 0,
+      phase: StartupPhase.Idle,
+      host: DEFAULT_WEB_SERVICE_HOST,
+      port: DEFAULT_WEB_SERVICE_PORT,
     } as ProcessInfo;
   }
   try {
@@ -352,6 +356,9 @@ ipcMain.handle('get-web-service-status', async () => {
       startTime: null,
       url: null,
       restartCount: 0,
+      phase: StartupPhase.Error,
+      host: DEFAULT_WEB_SERVICE_HOST,
+      port: DEFAULT_WEB_SERVICE_PORT,
     } as ProcessInfo;
   }
 });
@@ -508,24 +515,25 @@ ipcMain.handle('get-web-service-url', async () => {
 ipcMain.handle('check-web-service-port', async () => {
   if (!webServiceManager) {
     return {
+      host: DEFAULT_WEB_SERVICE_HOST,
       port: 5000,
       available: false,
       error: 'Web service manager not initialized'
     };
   }
   try {
-    const available = await webServiceManager.checkPortAvailable();
-    // Get the current port from the manager
     const status = await webServiceManager.getStatus();
-    const port = status.url ? parseInt(status.url.split(':').pop() || '5000') : 5000;
+    const available = await webServiceManager.checkPortAvailable(status.port);
     return {
-      port,
+      host: status.host,
+      port: status.port,
       available,
       error: null
     };
   } catch (error) {
     console.error('Failed to check port:', error);
     return {
+      host: DEFAULT_WEB_SERVICE_HOST,
       port: 5000,
       available: false,
       error: error instanceof Error ? error.message : String(error)
@@ -536,16 +544,25 @@ ipcMain.handle('check-web-service-port', async () => {
 // Web Service Config Update
 ipcMain.handle('set-web-service-config', async (_, config: Partial<WebServiceConfig>) => {
   if (!webServiceManager) {
-    return { success: false, error: 'Web service manager not initialized' };
+    return { success: false, error: 'Web service manager not initialized', errorCode: 'unknown' };
   }
   try {
     await webServiceManager.updateConfig(config);
+    const status = await webServiceManager.getStatus();
+    mainWindow?.webContents.send('web-service-status-changed', status);
     return { success: true, error: null };
   } catch (error) {
     console.error('Failed to update web service config:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    const errorCode = message.includes('listen host')
+      ? 'invalid-listen-host'
+      : message.includes('Port must be between')
+        ? 'invalid-port'
+        : 'unknown';
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: message,
+      errorCode,
     };
   }
 });
@@ -1922,8 +1939,8 @@ app.whenReady().then(async () => {
 
   // Initialize Web Service Manager
   const webServiceConfig: WebServiceConfig = {
-    host: 'localhost',
-    port: 36556, // Default port for embedded web service
+    host: DEFAULT_WEB_SERVICE_HOST,
+    port: DEFAULT_WEB_SERVICE_PORT,
   };
   webServiceManager = new PCodeWebServiceManager(webServiceConfig);
 
@@ -1934,8 +1951,8 @@ app.whenReady().then(async () => {
   log.info('=== Application Starting ===');
   log.info(`[Config] Server host: ${serverConfig.host}`);
   log.info(`[Config] Server port: ${serverConfig.port}`);
-  log.info(`[Config] Web service host: localhost`);
-  log.info(`[Config] Web service port: 36556`);
+  log.info(`[Config] Web service host: ${DEFAULT_WEB_SERVICE_HOST}`);
+  log.info(`[Config] Web service port: ${DEFAULT_WEB_SERVICE_PORT}`);
   log.info(`[Config] Data directory path: ${dataDirectoryPath || 'Not set (will use default)'}`);
   log.info(`[Config] Shutdown directory: ${configManager.getShutdownDirectory() || 'Not set'}`);
   log.info(`[Config] Recording directory: ${configManager.getRecordingDirectory() || 'Not set'}`);
@@ -2369,10 +2386,12 @@ function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
 
   // Check port availability and send to renderer
   try {
-    const portAvailable = await webServiceManager.checkPortAvailable();
+    const currentWebServiceStatus = await webServiceManager.getStatus();
+    const portAvailable = await webServiceManager.checkPortAvailable(currentWebServiceStatus.port);
     mainWindow?.on('ready-to-show', () => {
       mainWindow?.webContents.send('web-service-port-status', {
-        port: webServiceConfig.port,
+        host: currentWebServiceStatus.host,
+        port: currentWebServiceStatus.port,
         available: portAvailable
       });
     });

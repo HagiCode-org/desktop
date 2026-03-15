@@ -20,6 +20,13 @@ import {
   validateBundledRuntimeForPlatform,
   validateFrameworkDependentPayload,
 } from './embedded-runtime.js';
+import {
+  buildAccessUrl,
+  coerceListenHost,
+  DEFAULT_WEB_SERVICE_HOST,
+  normalizeListenHost,
+  resolveProbeHostsForListenHost,
+} from '../types/web-service-network.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -49,6 +56,7 @@ export interface ProcessInfo {
   restartCount: number;
   phase: StartupPhase;
   phaseMessage?: string;
+  host: string;
   port: number;
   recoverySource?: RecoverySource;
   recoveryMessage?: string;
@@ -58,6 +66,7 @@ export type RecoverySource = 'none' | 'pid_file' | 'signature_fallback';
 
 interface RuntimeIdentity {
   pid: number;
+  host: string;
   port: number;
   startedAt: string;
   versionId?: string;
@@ -68,6 +77,7 @@ interface RuntimeIdentity {
 
 interface WebServiceStateFile {
   schemaVersion?: number;
+  lastSuccessfulHost?: string;
   lastSuccessfulPort?: number;
   savedAt?: string;
   runtime?: RuntimeIdentity | null;
@@ -118,6 +128,7 @@ export class PCodeWebServiceManager {
   private recoveryMessage: string | null = null;
   private startupRecoveryAttempted: boolean = false;
   private startupRecoveryPromise: Promise<void> | null = null;
+  private readonly savedConfigInitialization: Promise<void>;
   private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
   private readonly healthCheckPaths: readonly string[] = ['/api/health', '/api/health/dual-monitoring', '/api/status'];
   private readonly startupLogMaxLines: number = 200;
@@ -126,12 +137,14 @@ export class PCodeWebServiceManager {
   private startupLogTruncated: boolean = false;
 
   constructor(config: WebServiceConfig) {
-    this.config = config;
+    this.config = {
+      ...config,
+      host: coerceListenHost(config.host),
+    };
     this.pathManager = PathManager.getInstance();
 
-    // Initialize saved port asynchronously
-    this.initializeSavedPort().catch(error => {
-      log.error('[WebService] Failed to initialize saved port:', error);
+    this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
+      log.error('[WebService] Failed to initialize saved bind config:', error);
     });
   }
 
@@ -175,7 +188,7 @@ export class PCodeWebServiceManager {
       await fs.mkdir(paths.config, { recursive: true });
       const content = await fs.readFile(statePath, 'utf-8');
       const parsed = JSON.parse(content) as WebServiceStateFile;
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      return this.normalizeStateFile(parsed);
     } catch (error) {
       const errno = (error as NodeJS.ErrnoException).code;
       if (errno !== 'ENOENT') {
@@ -199,17 +212,42 @@ export class PCodeWebServiceManager {
     await this.writeStateFile(next);
   }
 
+  private normalizeStateFile(state: WebServiceStateFile | null | undefined): WebServiceStateFile {
+    if (!state || typeof state !== 'object') {
+      return {};
+    }
+
+    const runtimeHost = normalizeListenHost(state.runtime?.host);
+
+    return {
+      ...state,
+      lastSuccessfulHost: coerceListenHost(state.lastSuccessfulHost),
+      runtime: state.runtime
+        ? {
+            ...state.runtime,
+            host: runtimeHost ?? coerceListenHost(state.lastSuccessfulHost),
+          }
+        : null,
+    };
+  }
+
+  private async ensureSavedConfigInitialized(): Promise<void> {
+    await this.savedConfigInitialization;
+  }
+
   private async persistRuntimeIdentity(identity: RuntimeIdentity): Promise<void> {
     try {
       await this.updateStateFile((state) => ({
         ...state,
-        schemaVersion: 2,
+        schemaVersion: 3,
+        lastSuccessfulHost: identity.host,
         lastSuccessfulPort: identity.port,
         savedAt: new Date().toISOString(),
         runtime: identity,
       }));
       log.info('[WebService] Persisted runtime identity:', {
         pid: identity.pid,
+        host: identity.host,
         port: identity.port,
         versionId: identity.versionId,
       });
@@ -836,9 +874,11 @@ export class PCodeWebServiceManager {
    * First tries system command for quick check, then falls back to node's net module
    * @returns Promise resolving to true if port is available, false if in use
    */
-  public async checkPortAvailable(port: number = this.config.port): Promise<boolean> {
+  public async checkPortAvailable(port?: number): Promise<boolean> {
+    await this.ensureSavedConfigInitialized();
+    const targetPort = port ?? this.config.port;
     // Try system command first (faster)
-    const systemCheck = await this.checkPortWithSystemCommand(port);
+    const systemCheck = await this.checkPortWithSystemCommand(targetPort);
     if (systemCheck !== null) {
       return systemCheck;
     }
@@ -857,7 +897,7 @@ export class PCodeWebServiceManager {
         resolve(true); // Port is available
       });
 
-      server.listen(port, this.config.host);
+      server.listen(targetPort, this.config.host);
     });
   }
 
@@ -999,22 +1039,7 @@ export class PCodeWebServiceManager {
   }
 
   private resolveProbeHosts(host: string): string[] {
-    const normalized = host.trim().toLowerCase();
-    if (!normalized) {
-      return ['localhost', '127.0.0.1'];
-    }
-
-    if (normalized === '0.0.0.0' || normalized === '::' || normalized === '[::]') {
-      // Binding hosts are not routable for client probes.
-      return ['127.0.0.1', 'localhost'];
-    }
-
-    if (normalized === 'localhost') {
-      // Include IPv4 fallback to avoid DNS/IPv6 resolution edge cases.
-      return ['localhost', '127.0.0.1'];
-    }
-
-    return [host];
+    return resolveProbeHostsForListenHost(host);
   }
 
   private buildHealthCheckUrls(port: number): string[] {
@@ -1177,6 +1202,7 @@ export class PCodeWebServiceManager {
   private applyRecoveredRunningState(identity: RuntimeIdentity, source: RecoverySource, message: string): void {
     this.status = 'running';
     this.currentPhase = StartupPhase.Running;
+    this.config.host = coerceListenHost(identity.host);
     this.config.port = identity.port;
     this.startTime = Number.isFinite(Date.parse(identity.startedAt)) ? Date.parse(identity.startedAt) : null;
     this.recoveredRuntime = {
@@ -1367,9 +1393,10 @@ export class PCodeWebServiceManager {
    * @returns StartResult with service URL and port information
    */
   async start(): Promise<StartResult> {
+    await this.ensureSavedConfigInitialized();
     await this.ensureStartupRecovery();
     this.resetStartupLogBuffer();
-    this.appendStartupLogLine(`Starting service with configured port ${this.config.port}`);
+    this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
     if (this.process || this.status === 'running') {
       log.warn('[WebService] Process already running');
@@ -1395,7 +1422,10 @@ export class PCodeWebServiceManager {
 
     try {
       this.status = 'starting';
-      log.info('[WebService] Starting with configured port:', this.config.port);
+      log.info('[WebService] Starting with configured host/port:', {
+        host: this.config.host,
+        port: this.config.port,
+      });
 
       let launchContext: {
         runtimeRoot: string;
@@ -1492,8 +1522,8 @@ export class PCodeWebServiceManager {
         this.recoverySource = 'none';
         this.recoveryMessage = null;
 
-        // Persist successful port
-        await this.saveLastSuccessfulPort(this.config.port);
+        // Persist successful bind configuration for future restarts and recovery.
+        await this.saveLastSuccessfulConfig();
         if (this.process?.pid) {
           let runtimePid = this.process.pid;
           const managedPid = await this.resolveManagedServicePidByPort(this.config.port);
@@ -1508,6 +1538,7 @@ export class PCodeWebServiceManager {
 
           await this.persistRuntimeIdentity({
             pid: runtimePid,
+            host: this.config.host,
             port: this.config.port,
             startedAt: new Date(this.startTime).toISOString(),
             versionId: this.activeVersionId || undefined,
@@ -1541,7 +1572,7 @@ export class PCodeWebServiceManager {
             success: true,
             rawOutput: '',
           },
-          url: `http://${this.config.host}:${this.config.port}`,
+          url: buildAccessUrl(this.config.host, this.config.port),
           port: this.config.port,
         };
       } else {
@@ -1835,11 +1866,12 @@ export class PCodeWebServiceManager {
    * Get current process status
    */
   async getStatus(): Promise<ProcessInfo> {
+    await this.ensureSavedConfigInitialized();
     await this.ensureStartupRecovery();
 
     const uptime = this.startTime ? Date.now() - this.startTime : 0;
     const activePid = this.process?.pid || this.recoveredRuntime?.pid || null;
-    const runningUrl = this.status === 'running' ? `http://${this.config.host}:${this.config.port}` : null;
+    const runningUrl = this.status === 'running' ? buildAccessUrl(this.config.host, this.config.port) : null;
 
     return {
       status: this.status,
@@ -1850,6 +1882,7 @@ export class PCodeWebServiceManager {
       restartCount: this.restartCount,
       phase: this.currentPhase,
       port: this.config.port,
+      host: this.config.host,
       recoverySource: this.recoverySource,
       recoveryMessage: this.recoveryMessage || undefined,
     };
@@ -1886,29 +1919,45 @@ export class PCodeWebServiceManager {
    * Update configuration
    */
   async updateConfig(config: Partial<WebServiceConfig>): Promise<void> {
+    await this.ensureSavedConfigInitialized();
     const oldPort = this.config.port;
     const oldHost = this.config.host;
+    const nextHost = config.host !== undefined ? normalizeListenHost(config.host) : undefined;
+
+    if (config.host !== undefined && !nextHost) {
+      throw new Error('Invalid listen host. Supported values: localhost, 127.0.0.1, 0.0.0.0, or a valid IPv4 address.');
+    }
+
+    if (config.port !== undefined && (config.port < 1024 || config.port > 65535)) {
+      throw new Error('Port must be between 1024 and 65535.');
+    }
 
     this.config = {
       ...this.config,
       ...config,
+      host: nextHost ?? this.config.host,
       env: config.env
         ? { ...(this.config.env || {}), ...config.env }
         : this.config.env,
     };
 
+    if ((config.port !== undefined && config.port !== oldPort) ||
+        (nextHost !== undefined && nextHost !== oldHost)) {
+      await this.saveConfig(this.config.host, this.config.port);
+    }
+
     // Keep legacy YAML sync path behind a compatibility switch.
     const shouldSyncLegacyYaml = this.getConfigMode() === 'legacy-yaml';
-    if (shouldSyncLegacyYaml && ((config.port && config.port !== oldPort) ||
-        (config.host && config.host !== oldHost))) {
+    if (shouldSyncLegacyYaml && ((config.port !== undefined && config.port !== oldPort) ||
+        (nextHost !== undefined && nextHost !== oldHost))) {
       try {
         await this.syncConfigToFile();
       } catch (error) {
         log.error('[WebService] Config sync failed, continuing with in-memory config');
         // Don't throw - allow in-memory config to work
       }
-    } else if (!shouldSyncLegacyYaml && ((config.port && config.port !== oldPort) ||
-        (config.host && config.host !== oldHost))) {
+    } else if (!shouldSyncLegacyYaml && ((config.port !== undefined && config.port !== oldPort) ||
+        (nextHost !== undefined && nextHost !== oldHost))) {
       log.info('[WebService] Host/port updated in memory, YAML sync skipped (env mode).');
     }
   }
@@ -1936,45 +1985,53 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Load saved port from config file
+   * Load saved bind host and port from the state file.
    */
-  private async loadSavedPort(): Promise<number | null> {
+  private async loadSavedConfig(): Promise<{ host: string; port: number | null }> {
     const state = await this.readStateFile();
-    return state.lastSuccessfulPort || null;
+    return {
+      host: coerceListenHost(state.lastSuccessfulHost),
+      port: state.lastSuccessfulPort || null,
+    };
   }
 
   /**
-   * Save port to config file
+   * Save configured host and port to the state file
    */
-  private async savePort(port: number): Promise<void> {
+  private async saveConfig(host: string, port: number): Promise<void> {
     try {
       await this.updateStateFile((state) => ({
         ...state,
-        schemaVersion: Math.max(2, state.schemaVersion || 0),
+        schemaVersion: Math.max(3, state.schemaVersion || 0),
+        lastSuccessfulHost: host,
         lastSuccessfulPort: port,
         savedAt: new Date().toISOString(),
       }));
-      log.info('[WebService] Saved port to config:', port);
+      log.info('[WebService] Saved bind config to state file:', { host, port });
     } catch (error) {
-      log.error('[WebService] Error saving port:', error);
+      log.error('[WebService] Error saving bind config:', error);
     }
   }
 
   /**
-   * Save last successful port to config file
+   * Save last successful bind config to the state file
    */
-  private async saveLastSuccessfulPort(port: number): Promise<void> {
+  private async saveLastSuccessfulConfig(): Promise<void> {
     try {
       await this.updateStateFile((state) => ({
         ...state,
-        schemaVersion: Math.max(2, state.schemaVersion || 0),
-        lastSuccessfulPort: port,
+        schemaVersion: Math.max(3, state.schemaVersion || 0),
+        lastSuccessfulHost: this.config.host,
+        lastSuccessfulPort: this.config.port,
         savedAt: new Date().toISOString(),
       }));
-      log.info('[WebService] Saved successful port:', port);
+      log.info('[WebService] Saved successful bind config:', {
+        host: this.config.host,
+        port: this.config.port,
+      });
     } catch (error) {
-      log.error('[WebService] Failed to save port configuration:', error);
-      // Don't throw - port persistence is not critical
+      log.error('[WebService] Failed to save bind configuration:', error);
+      // Don't throw - host/port persistence is not critical
     }
   }
 
@@ -2015,21 +2072,25 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Initialize saved port configuration
+   * Initialize saved bind configuration
    */
-  private async initializeSavedPort(): Promise<void> {
+  private async initializeSavedConfig(): Promise<void> {
     try {
       // Run migration first (one-time operation)
       await this.migrateLegacyConfig();
 
-      // Load saved port
-      const savedPort = await this.loadSavedPort();
+      const { host: savedHost, port: savedPort } = await this.loadSavedConfig();
+      if (savedHost !== this.config.host) {
+        log.info('[WebService] Using saved host:', savedHost);
+        this.config.host = savedHost;
+      }
+
       if (savedPort && savedPort !== this.config.port) {
         log.info('[WebService] Using saved port:', savedPort);
         this.config.port = savedPort;
       }
     } catch (error) {
-      log.error('[WebService] Failed to load saved port:', error);
+      log.error('[WebService] Failed to load saved bind config:', error);
     }
   }
 
@@ -2094,8 +2155,8 @@ export class PCodeWebServiceManager {
       log.info('[WebService] Config synced successfully to file:', configPath);
       log.info('[WebService] New URLs:', config.Urls);
 
-      // Persist successful port for next startup
-      await this.saveLastSuccessfulPort(this.config.port);
+      // Persist successful bind config for next startup
+      await this.saveLastSuccessfulConfig();
     } catch (error) {
       log.error('[WebService] Failed to sync config to file');
       log.error('[WebService] Error details:', error instanceof Error ? error.message : String(error));

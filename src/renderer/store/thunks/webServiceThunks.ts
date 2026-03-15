@@ -12,6 +12,7 @@ import {
   setAvailableVersions,
   setPlatform,
   setPort,
+  setHost,
   setActiveVersion,
   setUrl,
   setPid,
@@ -28,6 +29,7 @@ import {
   type StartupFailurePayload,
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
+import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../../../types/web-service-network';
 
 // Types for window electronAPI
 declare global {
@@ -45,7 +47,11 @@ declare global {
       restartWebService: () => Promise<boolean>;
       getWebServiceVersion: () => Promise<string>;
       getWebServiceUrl: () => Promise<string | null>;
-      setWebServiceConfig: (config: { port?: number; host?: string }) => Promise<{ success: boolean; error: string | null }>;
+      setWebServiceConfig: (config: { port?: number; host?: string }) => Promise<{
+        success: boolean;
+        error: string | null;
+        errorCode?: 'invalid-listen-host' | 'invalid-port' | 'unknown';
+      }>;
       onWebServiceStatusChange: (callback: (status: ProcessInfo) => void) => (() => void) | void;
 
       // Package Management APIs
@@ -488,28 +494,37 @@ export const fetchPlatform = createAsyncThunk(
 export const updateWebServicePort = createAsyncThunk(
   'webService/updatePort',
   async (port: number, { dispatch }) => {
+    return await dispatch(updateWebServiceConfig({ port })).unwrap();
+  }
+);
+
+export const updateWebServiceConfig = createAsyncThunk(
+  'webService/updateConfig',
+  async (config: { host?: string; port?: number }, { dispatch }) => {
     try {
-      // Validate port range
-      if (port < 1024 || port > 65535) {
+      if (config.port !== undefined && (config.port < 1024 || config.port > 65535)) {
         dispatch(setError('Port must be between 1024 and 65535'));
         return { success: false };
       }
 
-      // Call main process to update config
-      const result: { success: boolean; error: string | null } = await window.electronAPI.setWebServiceConfig({ port });
+      const result = await window.electronAPI.setWebServiceConfig(config);
 
       if (result.success) {
-        // Update local state
-        dispatch(setPort(port));
+        if (config.host !== undefined) {
+          dispatch(setHost(config.host));
+        }
+        if (config.port !== undefined) {
+          dispatch(setPort(config.port));
+        }
         dispatch(setError(null));
         return { success: true };
       } else {
-        dispatch(setError(result.error || 'Failed to update port'));
+        dispatch(setError(result.error || 'Failed to update web service configuration'));
         return { success: false };
       }
     } catch (error) {
-      console.error('Update port error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update port';
+      console.error('Update web service config error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update web service configuration';
       dispatch(setError(errorMessage));
       return { success: false };
     }
@@ -601,7 +616,8 @@ export const initializeWebService = createAsyncThunk(
         url: null,
         restartCount: 0,
         phase: 'idle' as any,
-        port: 36556,
+        host: DEFAULT_WEB_SERVICE_HOST,
+        port: DEFAULT_WEB_SERVICE_PORT,
         recoverySource: 'none',
       }));
     }

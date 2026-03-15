@@ -51,6 +51,7 @@ export interface ProcessInfo {
   restartCount: number;
   phase: StartupPhase;
   phaseMessage?: string;
+  host: string;
   port: number;
   recoverySource?: 'none' | 'pid_file' | 'signature_fallback';
   recoveryMessage?: string;
@@ -97,6 +98,7 @@ export interface WebServiceState {
   restartCount: number;
   startTime: number | null;
   uptime: number;
+  host: string;
   port: number;
   recoverySource: 'none' | 'pid_file' | 'signature_fallback';
   recoveryMessage: string | null;
@@ -142,6 +144,7 @@ const initialState: WebServiceState = {
   restartCount: 0,
   startTime: null,
   uptime: 0,
+  host: 'localhost',
   port: 36556,
   recoverySource: 'none',
   recoveryMessage: null,
@@ -227,6 +230,10 @@ export const webServiceSlice = createSlice({
       state.port = action.payload;
     },
 
+    setHost: (state, action: PayloadAction<string>) => {
+      state.host = action.payload;
+    },
+
     // Update entire process info
     setProcessInfo: (state, action: PayloadAction<ProcessInfo>) => {
       state.status = action.payload.status;
@@ -237,6 +244,7 @@ export const webServiceSlice = createSlice({
       state.restartCount = action.payload.restartCount;
       state.phase = action.payload.phase;
       state.phaseMessage = action.payload.phaseMessage || null;
+      state.host = action.payload.host;
       state.port = action.payload.port;
       state.recoverySource = action.payload.recoverySource || 'none';
       state.recoveryMessage = action.payload.recoveryMessage || null;
@@ -348,6 +356,7 @@ export const {
   incrementRestartCount,
   resetRestartCount,
   setPort,
+  setHost,
   setProcessInfo,
   setPortAvailable,
   setStartupPhase,
@@ -384,6 +393,7 @@ export const selectStartupPhase = (state: { webService: WebServiceState }) => st
 export const selectPhaseMessage = (state: { webService: WebServiceState }) => state.webService.phaseMessage;
 export const selectPortAvailable = (state: { webService: WebServiceState }) => state.webService.portAvailable;
 export const selectPortStatusChecked = (state: { webService: WebServiceState }) => state.webService.portStatusChecked;
+export const selectWebServiceHost = (state: { webService: WebServiceState }) => state.webService.host;
 export const selectWebServicePort = (state: { webService: WebServiceState }) => state.webService.port;
 export const selectStartupFailure = (state: { webService: WebServiceState }) => state.webService.startupFailure;
 export const selectShowStartupFailureDialog = (state: { webService: WebServiceState }) => state.webService.showStartupFailureDialog;
@@ -424,6 +434,7 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   restartCount: state.webService.restartCount,
   isOperating: state.webService.isOperating,
   lastError: state.webService.lastError,
+  host: state.webService.host,
   port: state.webService.port,
   recoverySource: state.webService.recoverySource,
   recoveryMessage: state.webService.recoveryMessage,

@@ -128,7 +128,8 @@
       "restartCount": "Restart Count",
       "port": "Port",
       "version": "Version",
-      "remoteUrl": "Remote URL"
+      "remoteUrl": "Remote URL",
+      "listenAddress": "Listen Address"
     },
     "notInstalledAlert": {
       "title": "Package not installed",
@@ -165,6 +166,34 @@
       "openLogsSuccess": "Logs folder opened",
       "logsNotFound": "Logs folder not found",
       "openLogsError": "Failed to open logs folder"
+    },
+    "listenAddress": {
+      "label": "Listening Address",
+      "description": "Choose how Desktop binds the embedded web service while it is stopped.",
+      "customInputLabel": "Custom IPv4",
+      "customPlaceholder": "192.168.1.24",
+      "customError": "Enter a valid IPv4 address",
+      "accessUrlPreviewLabel": "Access URL preview",
+      "wildcardHint": "`0.0.0.0` binds every interface. Desktop still opens the local client through `127.0.0.1`.",
+      "localOnlyHint": "Changes take effect the next time the local service starts.",
+      "presets": {
+        "localhost": {
+          "label": "localhost",
+          "description": "Best for the built-in WebView and browser on this machine."
+        },
+        "loopback": {
+          "label": "127.0.0.1",
+          "description": "Use an explicit IPv4 loopback address for local-only access."
+        },
+        "wildcard": {
+          "label": "0.0.0.0",
+          "description": "Bind every local interface so other devices on the LAN can connect."
+        },
+        "custom": {
+          "label": "Custom IP",
+          "description": "Bind one specific IPv4 interface, such as a dedicated LAN adapter."
+        }
+      }
     }
   },
   "languageSelector": {
