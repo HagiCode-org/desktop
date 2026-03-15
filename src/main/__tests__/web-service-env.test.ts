@@ -28,6 +28,28 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.HAGICODE_LOG_FORMAT, 'plain');
   });
 
+  it('injects wildcard and custom IPv4 bind hosts without rewriting them', () => {
+    const wildcard = buildManagedServiceEnv({
+      host: '0.0.0.0',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+    const custom = buildManagedServiceEnv({
+      host: '192.168.1.24',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(wildcard.injectedEnv.ASPNETCORE_URLS, 'http://0.0.0.0:36556');
+    assert.equal(wildcard.injectedEnv.Urls, 'http://0.0.0.0:36556');
+    assert.equal(custom.injectedEnv.ASPNETCORE_URLS, 'http://192.168.1.24:36556');
+    assert.equal(custom.injectedEnv.Urls, 'http://192.168.1.24:36556');
+  });
+
   it('prefers yaml mapping when provided', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
@@ -146,7 +168,7 @@ describe('web-service-env', () => {
     ], { env, encoding: 'utf-8' });
 
     assert.equal(child.status, 0);
-    assert.equal(child.stdout, 'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|CodexCli');
+    assert.equal(child.stdout, 'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|ClaudeCodeCli');
   });
 
   it('covers migration and rollback scenarios', () => {
