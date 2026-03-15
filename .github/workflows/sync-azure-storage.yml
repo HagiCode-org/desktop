@@ -1,6 +1,7 @@
 name: Sync Release to Azure Storage
 
-# This workflow is called by build.yml after a release is created.
+# This reusable workflow is called by build.yml after platform assets are uploaded
+# and the build-summary job marks the tag release as ready for downstream publish.
 on:
   push:
     branches:

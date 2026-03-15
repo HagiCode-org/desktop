@@ -952,6 +952,10 @@ jobs:
     name: Build Summary
     outputs:
       channel: ${{ steps.channel.outputs.channel }}
+      release_status: ${{ steps.status.outputs.overall }}
+      effective_windows_status: ${{ steps.platform_status.outputs.windows }}
+      effective_windows_job: ${{ steps.platform_status.outputs.windows_job }}
+      sync_eligible: ${{ steps.status.outputs.sync_eligible }}
     needs:
       - build-windows
       - build-windows-release
@@ -977,11 +981,14 @@ jobs:
 
           if [ "${windows_release_status}" != "skipped" ]; then
             windows_status="${windows_release_status}"
+            windows_job="build-windows-release"
           else
             windows_status="${windows_build_status}"
+            windows_job="build-windows"
           fi
 
           echo "windows=${windows_status}" >> "$GITHUB_OUTPUT"
+          echo "windows_job=${windows_job}" >> "$GITHUB_OUTPUT"
           echo "linux=${{ needs.build-linux.result }}" >> "$GITHUB_OUTPUT"
           echo "macos=${{ needs.build-macos.result }}" >> "$GITHUB_OUTPUT"
 
@@ -1024,34 +1031,37 @@ jobs:
 
           echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
 
-      - name: Build failed notification
-        if: steps.platform_status.outputs.windows == 'failure' || steps.platform_status.outputs.linux == 'failure' || steps.platform_status.outputs.macos == 'failure'
-        run: |
-          echo "::error::One or more builds failed. Please check the logs."
-          exit 1
-
       - name: Determine workflow status
         id: status
         if: always()
         run: |
           # Check all dependent jobs
           windows_status="${{ steps.platform_status.outputs.windows }}"
+          windows_job="${{ steps.platform_status.outputs.windows_job }}"
           linux_status="${{ steps.platform_status.outputs.linux }}"
           macos_status="${{ steps.platform_status.outputs.macos }}"
+          is_tag_release="${{ startsWith(github.ref, 'refs/tags/v') }}"
 
-          echo "Windows: ${windows_status}"
+          echo "Windows (${windows_job}): ${windows_status}"
           echo "Linux: ${linux_status}"
           echo "macOS: ${macos_status}"
 
-          # Determine overall status
-          if [ "${windows_status}" == "failure" ] || [ "${linux_status}" == "failure" ] || [ "${macos_status}" == "failure" ]; then
+          # Downstream publish is only allowed after every required platform succeeds.
+          if [ "${windows_status}" != "success" ] || [ "${linux_status}" != "success" ] || [ "${macos_status}" != "success" ]; then
             echo "overall=failed" >> $GITHUB_OUTPUT
             echo "status_icon=❌" >> $GITHUB_OUTPUT
             echo "status_text=失败" >> $GITHUB_OUTPUT
+            echo "sync_eligible=false" >> $GITHUB_OUTPUT
           else
             echo "overall=success" >> $GITHUB_OUTPUT
             echo "status_icon=✅" >> $GITHUB_OUTPUT
             echo "status_text=成功" >> $GITHUB_OUTPUT
+
+            if [ "${is_tag_release}" == "true" ]; then
+              echo "sync_eligible=true" >> $GITHUB_OUTPUT
+            else
+              echo "sync_eligible=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Build platforms summary
@@ -1075,6 +1085,21 @@ jobs:
 
           echo "platforms=${platforms_str}" >> $GITHUB_OUTPUT
 
+      - name: Publish workflow summary
+        if: always()
+        run: |
+          {
+            echo '## Release orchestration summary'
+            echo
+            echo "- Effective Windows job: ${{ steps.platform_status.outputs.windows_job }}"
+            echo "- Effective Windows status: ${{ steps.platform_status.outputs.windows }}"
+            echo "- Linux status: ${{ steps.platform_status.outputs.linux }}"
+            echo "- macOS status: ${{ steps.platform_status.outputs.macos }}"
+            echo "- Normalized overall status: ${{ steps.status.outputs.overall }}"
+            echo "- Release channel: ${{ steps.channel.outputs.channel }}"
+            echo "- Azure sync eligible: ${{ steps.status.outputs.sync_eligible }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Notify Feishu
         if: always()
         uses: HagiCode-org/haginotifier@v1.0.0
@@ -1095,13 +1120,19 @@ jobs:
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
+      - name: Fail workflow on normalized platform failure
+        if: steps.status.outputs.overall != 'success'
+        run: |
+          echo "::error::One or more release platform builds failed. Downstream publish is blocked."
+          exit 1
+
   ################################################################################
   # Sync to Azure Storage Job
   ################################################################################
   sync-azure:
     name: Sync to Azure Storage
     needs: build-summary
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.build-summary.outputs.release_status == 'success' }}
     uses: ./.github/workflows/sync-azure-storage.yml
     with:
       release_tag: ${{ github.ref_name }}
