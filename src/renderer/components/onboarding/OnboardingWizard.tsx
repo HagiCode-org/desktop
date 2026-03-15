@@ -17,7 +17,6 @@ import WelcomeIntro from './steps/WelcomeIntro';
 import AgentCliSelectionStep from './steps/AgentCliSelection';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
-import LlmInstallationStep from './steps/LlmInstallation';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
 import SkipConfirmDialog from './SkipConfirmDialog';
@@ -40,7 +39,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
 
   const [showSkipDialog, setShowSkipDialog] = useState(false);
-  const downloadedVersion = downloadProgress?.version || null;
   const downloadCompleted = downloadProgress?.progress === 100;
 
   // Set up IPC listeners for progress updates
@@ -82,9 +80,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     console.log('[OnboardingWizard] handleNext called, current step:', currentStep);
     dispatch(goToNextStep());
 
-    // Trigger download when moving from Welcome to Download
+    // Trigger download when moving from Agent CLI selection to Download.
     // Only trigger if not already downloading or completed
-    if (currentStep === OnboardingStep.Welcome && !isDownloading && !downloadCompleted) {
+    if (currentStep === OnboardingStep.AgentCliSelection && !isDownloading && !downloadCompleted) {
       console.log('[OnboardingWizard] Triggering download package');
       dispatch(downloadPackage());
     }
@@ -112,15 +110,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
       case OnboardingStep.AgentCliSelection:
-        return <AgentCliSelectionStep onNext={handleNext} onSkip={handleSkip} />;
+        return <AgentCliSelectionStep onNext={handleNext} onSkipSelection={handleNext} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
-      case OnboardingStep.LlmInstallation:
-        return <LlmInstallationStep
-          onNext={handleNext}
-          onSkip={handleSkip}
-          versionId={downloadedVersion}
-        />;
       case OnboardingStep.Launch:
         return <ServiceLauncher onComplete={onComplete} />;
       default:
@@ -136,8 +128,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return t('agent-cli.title');
       case OnboardingStep.Download:
         return t('download.title');
-      case OnboardingStep.LlmInstallation:
-        return t('llmInstallation.title');
       case OnboardingStep.Launch:
         return t('launch.title');
       default:
@@ -145,7 +135,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   return (
     <>
@@ -173,10 +163,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
             {/* Actions */}
             {/* Steps that provide their own action buttons or custom navigation are excluded from OnboardingActions */}
-            {/* Welcome, AgentCliSelection, LlmInstallation, and Launch have custom navigation flows */}
+            {/* Welcome, AgentCliSelection, and Launch have custom navigation flows */}
             {currentStep !== OnboardingStep.Welcome &&
              currentStep !== OnboardingStep.AgentCliSelection &&
-             currentStep !== OnboardingStep.LlmInstallation &&
              currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions

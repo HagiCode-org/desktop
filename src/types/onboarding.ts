@@ -9,8 +9,7 @@ export enum OnboardingStep {
   Welcome = 0,
   AgentCliSelection = 1,
   Download = 2,
-  LlmInstallation = 3,
-  Launch = 4,
+  Launch = 3,
 }
 
 /**

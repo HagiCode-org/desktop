@@ -97,16 +97,6 @@ export const onboardingSlice = createSlice({
       ...initialState,
       isActive: true,
     }),
-    nextStep: (state) => {
-      if (state.currentStep < OnboardingStep.Launch) {
-        state.currentStep = (state.currentStep + 1) as OnboardingStep;
-      }
-    },
-    previousStep: (state) => {
-      if (state.currentStep > OnboardingStep.Welcome) {
-        state.currentStep = (state.currentStep - 1) as OnboardingStep;
-      }
-    },
   },
   extraReducers: (builder) => {
     // checkOnboardingTrigger
@@ -275,14 +265,7 @@ export const onboardingSlice = createSlice({
 
           case OnboardingStep.Download:
             if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from Download to LlmInstallation');
-              state.currentStep = OnboardingStep.LlmInstallation;
-            }
-            break;
-
-          case OnboardingStep.LlmInstallation:
-            if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from LlmInstallation to Launch');
+              console.log('[onboardingSlice] Moving from Download to Launch');
               state.currentStep = OnboardingStep.Launch;
             }
             break;
@@ -318,8 +301,6 @@ export const {
   addScriptOutput,
   clearScriptOutput,
   restartOnboardingFlow,
-  nextStep,
-  previousStep,
 } = onboardingSlice.actions;
 
 // Selectors
@@ -340,7 +321,7 @@ export const selectDependencyCheckResults = (state: { onboarding: OnboardingStat
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
 
 // Computed selectors
-export const selectCanGoNext = (state: { onboarding: OnboardingState; claudeConfig: { isValid: boolean; useExistingConfig: boolean } }) => {
+export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
   const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
 
   switch (currentStep) {
@@ -350,10 +331,6 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState; claudeConf
       return true;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
-    case OnboardingStep.LlmInstallation:
-      // Always allow proceeding (no blocking principle)
-      // Users confirm via dialog, not via status check
-      return true;
     case OnboardingStep.Launch:
       return serviceProgress?.phase === 'running';
     default:

@@ -8,23 +8,20 @@ import {
   selectAgentCli,
   skipAgentCli,
   selectSelectedCliType,
-  selectIsSkipped,
   selectCanProceed,
 } from '../../../store/slices/agentCliSlice';
 import type { AppDispatch } from '../../../store';
-import type { StoredAgentCliSelection } from '../../../../types/agent-cli';
 
 interface AgentCliSelectionProps {
   onNext: () => void;
-  onSkip: () => void;
+  onSkipSelection: () => void;
 }
 
-function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
+function AgentCliSelection({ onNext, onSkipSelection }: AgentCliSelectionProps) {
   const { t } = useTranslation('agent-cli');
   const dispatch = useDispatch<AppDispatch>();
 
   const selectedCliType = useSelector(selectSelectedCliType);
-  const isSkipped = useSelector(selectIsSkipped);
   const canProceed = useSelector(selectCanProceed);
 
   const [showHelp, setShowHelp] = useState(false);
@@ -80,7 +77,7 @@ function AgentCliSelection({ onNext, onSkip }: AgentCliSelectionProps) {
       console.error('Failed to save skip flag:', error);
     }
     setShowSkipDialog(false);
-    onSkip();
+    onSkipSelection();
   }
 
   const cliConfigs = getAllCliConfigs();
