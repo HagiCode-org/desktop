@@ -39,6 +39,8 @@ describe('web-service startup flow', () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /Managed runtime validation failed:/);
+    assert.match(source, /desktop-incompatible/);
+    assert.match(source, /evaluateDesktopCompatibility\(manifest, app\.getVersion\(\)\)/);
     assert.match(source, /Pinned runtime root:/);
     assert.match(source, /Required ASP\.NET Core runtime:/);
     assert.match(source, /Packaged Desktop does not fall back to a machine-wide dotnet installation/);
