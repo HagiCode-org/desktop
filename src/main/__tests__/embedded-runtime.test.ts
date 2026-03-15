@@ -11,6 +11,7 @@ import {
 import {
   evaluateRuntimeCompatibility,
   resolveAspNetCoreRuntimeRequirement,
+  validateBundledRuntimeForPlatform,
   validateFrameworkDependentPayload,
   validatePinnedEmbeddedRuntime,
   validateEmbeddedRuntimeLayout,
@@ -67,6 +68,46 @@ function buildManifest(): Manifest {
       repository: 'https://example.com/repo',
     },
   } as Manifest;
+}
+
+async function createBundledRuntimeFixture(platform: 'linux-x64' | 'osx-x64' | 'osx-arm64', metadataOverrides: Record<string, unknown> = {}) {
+  const runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), `hagicode-${platform}-runtime-`));
+  tempDirectories.push(runtimeRoot);
+
+  const manifest = readPinnedRuntimeManifest();
+  const target = resolvePinnedRuntimeTarget(platform);
+  const dotnetPath = path.join(runtimeRoot, 'dotnet');
+
+  await fs.mkdir(path.join(runtimeRoot, 'host', 'fxr', target.hostFxrVersion), { recursive: true });
+  await fs.mkdir(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App', target.netCoreVersion), { recursive: true });
+  await fs.mkdir(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App', target.aspNetCoreVersion), { recursive: true });
+  await fs.writeFile(dotnetPath, '#!/usr/bin/env bash\nexit 0\n', 'utf8');
+  await fs.chmod(dotnetPath, 0o755);
+  await fs.writeFile(
+    path.join(runtimeRoot, EMBEDDED_RUNTIME_METADATA_FILE),
+    JSON.stringify({
+      schemaVersion: 1,
+      platform,
+      provider: manifest.source.provider,
+      releaseMetadataUrl: manifest.source.releaseMetadataUrl,
+      allowedDownloadHosts: manifest.source.allowedDownloadHosts,
+      releaseVersion: manifest.releaseVersion,
+      releaseDate: manifest.releaseDate,
+      downloadUrl: target.downloadUrl,
+      sourceHost: 'builds.dotnet.microsoft.com',
+      archiveType: target.archiveType,
+      dotnetPath,
+      runtimeRoot,
+      aspNetCoreVersion: target.aspNetCoreVersion,
+      netCoreVersion: target.netCoreVersion,
+      hostFxrVersion: target.hostFxrVersion,
+      stagedAt: '2026-03-14T00:00:00.000Z',
+      ...metadataOverrides,
+    }),
+    'utf8',
+  );
+
+  return { runtimeRoot, target };
 }
 
 describe('embedded runtime support', () => {
@@ -150,6 +191,7 @@ describe('embedded runtime support', () => {
     await fs.mkdir(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App', target.netCoreVersion), { recursive: true });
     await fs.mkdir(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App', target.aspNetCoreVersion), { recursive: true });
     await fs.writeFile(path.join(runtimeRoot, 'dotnet'), 'placeholder', 'utf8');
+    await fs.chmod(path.join(runtimeRoot, 'dotnet'), 0o755);
     await fs.writeFile(
       path.join(runtimeRoot, EMBEDDED_RUNTIME_METADATA_FILE),
       JSON.stringify({
@@ -178,5 +220,68 @@ describe('embedded runtime support', () => {
 
     assert.equal(runtimeValidation.valid, true);
     assert.equal(pinnedValidation.valid, true);
+  });
+
+  it('treats a valid macOS bundled runtime as satisfying the Desktop runtime contract', async () => {
+    const { runtimeRoot, target } = await createBundledRuntimeFixture('osx-arm64');
+    const requirement = resolveAspNetCoreRuntimeRequirement('10.0.0', {
+      min: '10.0.0',
+      recommended: '10.0.0',
+    }, target.aspNetCoreVersion);
+
+    const validation = await validateBundledRuntimeForPlatform({
+      platform: 'osx-arm64',
+      runtimeRoot,
+      requirement,
+      executableName: 'dotnet',
+    });
+
+    assert.equal(validation.valid, true);
+    assert.equal(validation.remediation, 'none');
+    assert.equal(validation.bundledRuntimeVersion, target.aspNetCoreVersion);
+    assert.equal(validation.runtimeSource, target.downloadUrl);
+  });
+
+  it('flags macOS bundled runtime metadata mismatches as Desktop update failures', async () => {
+    const { runtimeRoot } = await createBundledRuntimeFixture('osx-x64', {
+      releaseVersion: '10.0.4',
+    });
+    const requirement = resolveAspNetCoreRuntimeRequirement('10.0.0', {
+      min: '10.0.0',
+      recommended: '10.0.0',
+    }, resolvePinnedRuntimeTarget('osx-x64').aspNetCoreVersion);
+
+    const validation = await validateBundledRuntimeForPlatform({
+      platform: 'osx-x64',
+      runtimeRoot,
+      requirement,
+      executableName: 'dotnet',
+    });
+
+    assert.equal(validation.valid, false);
+    assert.equal(validation.code, 'pinned-runtime-mismatch');
+    assert.equal(validation.remediation, 'update-desktop');
+    assert.match(validation.message || '', /Pinned runtime version mismatch/);
+  });
+
+  it('reports macOS dotnet host permission regressions before startup', async () => {
+    const { runtimeRoot, target } = await createBundledRuntimeFixture('osx-arm64');
+    await fs.chmod(path.join(runtimeRoot, 'dotnet'), 0o644);
+    const requirement = resolveAspNetCoreRuntimeRequirement('10.0.0', {
+      min: '10.0.0',
+      recommended: '10.0.0',
+    }, target.aspNetCoreVersion);
+
+    const validation = await validateBundledRuntimeForPlatform({
+      platform: 'osx-arm64',
+      runtimeRoot,
+      requirement,
+      executableName: 'dotnet',
+    });
+
+    assert.equal(validation.valid, false);
+    assert.equal(validation.code, 'missing-runtime-payload');
+    assert.equal(validation.remediation, 'reinstall-desktop');
+    assert.match(validation.message || '', /dotnet \(not executable\)/);
   });
 });

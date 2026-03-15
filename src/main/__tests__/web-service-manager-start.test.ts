@@ -24,6 +24,7 @@ describe('web-service startup flow', () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /resolveManagedLaunchContext/);
+    assert.match(source, /validateBundledRuntimeForPlatform/);
     assert.match(source, /Starting service with bundled dotnet runtime/);
     assert.match(source, /spawn\(launchContext\.dotnetPath, spawnArgs/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
@@ -37,10 +38,9 @@ describe('web-service startup flow', () => {
   it('fails fast when the pinned runtime is missing, unofficial, or incompatible and does not fall back to machine dotnet', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.match(source, /Pinned runtime missing or incomplete/);
-    assert.match(source, /Pinned runtime source validation failed/);
-    assert.match(source, /Pinned runtime version mismatch/);
-    assert.match(source, /Pinned runtime version incompatible/);
+    assert.match(source, /Managed runtime validation failed:/);
+    assert.match(source, /Pinned runtime root:/);
+    assert.match(source, /Required ASP\.NET Core runtime:/);
     assert.match(source, /Packaged Desktop does not fall back to a machine-wide dotnet installation/);
     assert.equal(source.includes('Please ensure .NET Runtime 8.0 is installed and in PATH'), false);
   });
