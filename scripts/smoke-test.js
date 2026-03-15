@@ -27,7 +27,9 @@ const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const stagedRuntimeRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', runtimePlatform);
-const packagedRuntimeRoot = resolvePackagedRuntimeRoot(runtimePlatform);
+const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
+const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
+const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 
 const colors = {
   reset: '\x1b[0m',
@@ -45,14 +47,40 @@ const results = {
   tests: [],
 };
 
-function resolvePackagedRuntimeRoot(platform) {
+function resolvePackagedRuntimeRoots(platform) {
+  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT?.trim();
+  if (override) {
+    return [path.resolve(process.cwd(), override)];
+  }
+
   if (platform.startsWith('win-')) {
-    return path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'dotnet', platform);
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'dotnet', platform)];
   }
   if (platform.startsWith('linux-')) {
-    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'dotnet', platform);
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'dotnet', platform)];
   }
-  return null;
+  if (platform.startsWith('osx-')) {
+    return [
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
+    ];
+  }
+  return [];
+}
+
+function resolveExistingPackagedRuntimeRoot(candidates) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0] || null;
+}
+
+function isExecutable(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function listVersionDirectories(targetPath) {
@@ -86,8 +114,11 @@ function pickHighestVersion(versions) {
 
 function validateRuntimePayload(runtimeRoot) {
   const missing = [];
-  if (!fs.existsSync(path.join(runtimeRoot, dotnetExecutableName))) {
+  const dotnetPath = path.join(runtimeRoot, dotnetExecutableName);
+  if (!fs.existsSync(dotnetPath)) {
     missing.push(dotnetExecutableName);
+  } else if (requiresExecutableDotnetHost && !isExecutable(dotnetPath)) {
+    missing.push(`${dotnetExecutableName} (not executable)`);
   }
 
   if (listVersionDirectories(path.join(runtimeRoot, 'host', 'fxr')).length === 0) {
@@ -366,6 +397,9 @@ test('packaged runtime payload is complete', () => {
 
   const exists = fs.existsSync(packagedRuntimeRoot);
   if (!assert(exists, `packaged runtime directory exists (${packagedRuntimeRoot})`)) {
+    if (packagedRuntimeCandidates.length > 1) {
+      logVerbose(`checked packaged runtime candidates: ${packagedRuntimeCandidates.join(', ')}`);
+    }
     return;
   }
 

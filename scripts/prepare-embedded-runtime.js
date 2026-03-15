@@ -21,6 +21,7 @@ const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const stageRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current');
 const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'downloads');
 const stagedRuntimeRoot = path.join(stageRoot, 'dotnet', runtimePlatform);
+const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 
 function listVersionDirectories(targetPath) {
   try {
@@ -56,6 +57,8 @@ function validateRuntimeLayout(runtimeRoot) {
   const dotnetPath = path.join(runtimeRoot, dotnetExecutableName);
   if (!fs.existsSync(dotnetPath)) {
     missing.push(dotnetExecutableName);
+  } else if (requiresExecutableDotnetHost && !isExecutable(dotnetPath)) {
+    missing.push(`${dotnetExecutableName} (not executable)`);
   }
 
   const hostFxrRoot = path.join(runtimeRoot, 'host', 'fxr');
@@ -86,6 +89,28 @@ function validateRuntimeLayout(runtimeRoot) {
     netCoreVersion: pickHighestVersion(netCoreVersions),
     hostFxrVersion: pickHighestVersion(fxrVersions),
   };
+}
+
+function isExecutable(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureBundledDotnetHost(runtimeRoot) {
+  if (!requiresExecutableDotnetHost) {
+    return;
+  }
+
+  const dotnetPath = path.join(runtimeRoot, dotnetExecutableName);
+  const currentMode = fs.statSync(dotnetPath).mode;
+  const executableMode = currentMode | 0o755;
+  if (currentMode !== executableMode) {
+    fs.chmodSync(dotnetPath, executableMode);
+  }
 }
 
 function ensureExpectedPinnedVersions(validation) {
@@ -184,6 +209,40 @@ function writeRuntimeMetadata(validation, archivePath) {
     `${JSON.stringify(metadata, null, 2)}\n`,
     'utf8',
   );
+
+  return metadata;
+}
+
+function validateWrittenRuntimeMetadata(metadata) {
+  const metadataPath = path.join(stagedRuntimeRoot, EMBEDDED_RUNTIME_METADATA_FILE);
+  const persisted = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+  const errors = [];
+
+  if (persisted.platform !== runtimePlatform) {
+    errors.push(`platform expected ${runtimePlatform} but found ${persisted.platform || 'missing'}`);
+  }
+  if (persisted.downloadUrl !== runtimeTarget.downloadUrl) {
+    errors.push('downloadUrl does not match the pinned runtime manifest');
+  }
+  if (persisted.runtimeRoot !== stagedRuntimeRoot) {
+    errors.push(`runtimeRoot expected ${stagedRuntimeRoot} but found ${persisted.runtimeRoot || 'missing'}`);
+  }
+  if (persisted.dotnetPath !== metadata.dotnetPath) {
+    errors.push(`dotnetPath expected ${metadata.dotnetPath} but found ${persisted.dotnetPath || 'missing'}`);
+  }
+  if (persisted.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    errors.push(`ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${persisted.aspNetCoreVersion || 'missing'}`);
+  }
+  if (persisted.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    errors.push(`Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${persisted.netCoreVersion || 'missing'}`);
+  }
+  if (persisted.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    errors.push(`host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${persisted.hostFxrVersion || 'missing'}`);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Pinned runtime metadata validation failed for ${runtimePlatform}: ${errors.join('; ')}`);
+  }
 }
 
 async function stageRuntime() {
@@ -209,10 +268,12 @@ async function stageRuntime() {
     fs.rmSync(stageRoot, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(stagedRuntimeRoot), { recursive: true });
     fs.cpSync(extractedRuntimeRoot, stagedRuntimeRoot, { recursive: true, force: true });
+    ensureBundledDotnetHost(stagedRuntimeRoot);
 
     const validation = validateRuntimeLayout(stagedRuntimeRoot);
     ensureExpectedPinnedVersions(validation);
-    writeRuntimeMetadata(validation, archivePath);
+    const metadata = writeRuntimeMetadata(validation, archivePath);
+    validateWrittenRuntimeMetadata(metadata);
 
     console.log(`[embedded-runtime] Staged ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
     console.log(`[embedded-runtime] ASP.NET Core ${validation.aspNetCoreVersion} -> ${stagedRuntimeRoot}`);
