@@ -82,6 +82,34 @@ export function DependencyManagementCard({
 
   const hasMissingDependencies = filteredDependencies.some(dep => !dep.installed || dep.versionMismatch);
 
+  const getDependencyStatusText = (dep: typeof filteredDependencies[number]) => {
+    if (dep.installed && !dep.versionMismatch) {
+      return dep.resolutionSource === 'bundled-desktop'
+        ? t('dependencyManagement.status.bundled')
+        : t('dependencyManagement.status.installed');
+    }
+
+    if (dep.installed && dep.versionMismatch) {
+      return t('dependencyManagement.status.versionMismatch');
+    }
+
+    return t('dependencyManagement.status.notInstalled');
+  };
+
+  const getPrimaryActionLabel = (dep: typeof filteredDependencies[number]) => {
+    if (dep.primaryAction === 'reinstall-desktop') {
+      return t('dependencyManagement.actions.reinstallDesktop');
+    }
+    if (dep.primaryAction === 'update-desktop') {
+      return t('dependencyManagement.actions.updateDesktop');
+    }
+    if (dep.primaryAction === 'visit-website') {
+      return t('dependencyManagement.actions.visitWebsite');
+    }
+
+    return t('dependencyManagement.actions.visitWebsite');
+  };
+
   // Get appropriate install message based on dependency status
   const getInstallMessage = () => {
     if (missingCount > 0 && mismatchCount > 0) {
@@ -161,16 +189,17 @@ export function DependencyManagementCard({
                             ? 'text-yellow-500'
                             : 'text-red-500'
                         }`}>
-                          {dep.installed && !dep.versionMismatch
-                            ? t('dependencyManagement.status.installed')
-                            : dep.installed && dep.versionMismatch
-                            ? t('dependencyManagement.status.versionMismatch')
-                            : t('dependencyManagement.status.notInstalled')}
+                          {getDependencyStatusText(dep)}
                         </p>
                         {dep.version && (
                           <span className="text-sm text-muted-foreground">
                             {t('dependencyManagement.details.currentVersion')}: {dep.version}
                           </span>
+                        )}
+                        {dep.sourcePath && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t('dependencyManagement.details.source')}: {dep.sourcePath}
+                          </p>
                         )}
                         {dep.description && (
                           <p className="text-sm text-muted-foreground mt-2">{dep.description}</p>
@@ -179,6 +208,19 @@ export function DependencyManagementCard({
                           <p className="text-sm text-muted-foreground mt-1">
                             {t('depInstallConfirm.requiredVersion')}: {dep.requiredVersion}
                           </p>
+                        )}
+                        {!dep.installed && dep.downloadUrl && (
+                          <div className="mt-3">
+                            <a
+                              href={dep.downloadUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                            >
+                              <Download className="h-4 w-4" />
+                              {getPrimaryActionLabel(dep)}
+                            </a>
+                          </div>
                         )}
                       </div>
                     </div>

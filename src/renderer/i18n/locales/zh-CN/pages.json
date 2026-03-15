@@ -175,6 +175,7 @@
     "requiredVersion": "所需版本",
     "status": {
       "installed": "已安装",
+      "bundled": "随 Desktop 内置",
       "notInstalled": "未找到",
       "versionMismatch": "版本不匹配"
     },
@@ -182,7 +183,12 @@
       "refresh": "刷新依赖项",
       "install": "安装",
       "installing": "安装中...",
-      "download": "下载"
+      "download": "下载",
+      "reinstallDesktop": "重新安装 Desktop",
+      "updateDesktop": "更新 Desktop"
+    },
+    "details": {
+      "source": "来源"
     }
   },
   "versionManagement": {

@@ -65,12 +65,24 @@ function DependencyManagementCard() {
 
   const getStatusText = (item: any) => {
     if (item.installed && !item.versionMismatch) {
-      return t('dependencyManagement.status.installed');
+      return item.resolutionSource === 'bundled-desktop'
+        ? t('dependencyManagement.status.bundled')
+        : t('dependencyManagement.status.installed');
     } else if (item.installed && item.versionMismatch) {
       return t('dependencyManagement.status.versionMismatch');
     } else {
       return t('dependencyManagement.status.notInstalled');
     }
+  };
+
+  const getPrimaryActionLabel = (item: any) => {
+    if (item.primaryAction === 'reinstall-desktop') {
+      return t('dependencyManagement.actions.reinstallDesktop');
+    }
+    if (item.primaryAction === 'update-desktop') {
+      return t('dependencyManagement.actions.updateDesktop');
+    }
+    return t('dependencyManagement.actions.visitWebsite');
   };
 
   const getStatusColor = (item: any) => {
@@ -136,6 +148,12 @@ function DependencyManagementCard() {
                     <span className="text-gray-300">{item.version}</span>
                   </div>
                 )}
+                {item.sourcePath && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">{t('dependencyManagement.details.source')}:</span>{' '}
+                    <span className="text-gray-300 break-all">{item.sourcePath}</span>
+                  </div>
+                )}
                 {item.requiredVersion && (
                   <div>
                     <span className="text-gray-500">{t('dependencyManagement.details.requiredVersion')}:</span>{' '}
@@ -179,7 +197,7 @@ function DependencyManagementCard() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
-                      {t('dependencyManagement.actions.visitWebsite')}
+                      {getPrimaryActionLabel(item)}
                     </button>
                   )}
                 </div>

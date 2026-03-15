@@ -176,6 +176,7 @@
     "description": "Check and manage system runtime dependencies required by the web service",
     "status": {
       "installed": "Installed",
+      "bundled": "Bundled with Desktop",
       "notInstalled": "Not Installed",
       "versionMismatch": "Version Mismatch",
       "checking": "Checking...",
@@ -185,11 +186,14 @@
       "install": "Install",
       "installing": "Installing...",
       "refresh": "Refresh",
-      "visitWebsite": "Visit Official Website"
+      "visitWebsite": "Visit Official Website",
+      "reinstallDesktop": "Reinstall Desktop",
+      "updateDesktop": "Update Desktop"
     },
     "details": {
       "currentVersion": "Current Version",
-      "requiredVersion": "Required Version"
+      "requiredVersion": "Required Version",
+      "source": "Source"
     },
     "noDependencies": "No dependencies detected"
   },

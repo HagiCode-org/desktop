@@ -11,6 +11,9 @@ interface DependencyCheckResult {
   installCommand?: string;
   downloadUrl?: string;
   description?: string;
+  resolutionSource?: 'bundled-desktop' | 'system';
+  sourcePath?: string;
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
 }
 
 declare global {
@@ -82,7 +85,9 @@ export default function DependencyCheckCard() {
     if (dep.installed && !dep.versionMismatch) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-400 border border-green-700">
-          {t('dependencyManagement.status.installed')}
+          {dep.resolutionSource === 'bundled-desktop'
+            ? t('dependencyManagement.status.bundled')
+            : t('dependencyManagement.status.installed')}
         </span>
       );
     }
@@ -100,6 +105,16 @@ export default function DependencyCheckCard() {
         {t('dependencyManagement.status.notInstalled')}
       </span>
     );
+  };
+
+  const getPrimaryActionLabel = (dep: DependencyCheckResult) => {
+    if (dep.primaryAction === 'reinstall-desktop') {
+      return t('dependencyManagement.actions.reinstallDesktop');
+    }
+    if (dep.primaryAction === 'update-desktop') {
+      return t('dependencyManagement.actions.updateDesktop');
+    }
+    return t('dependencyManagement.actions.download');
   };
 
   if (loading) {
@@ -170,6 +185,11 @@ export default function DependencyCheckCard() {
                 {dep.description && (
                   <p className="text-sm text-gray-400 mb-1">{dep.description}</p>
                 )}
+                {dep.sourcePath && (
+                  <p className="text-xs text-gray-500 break-all">
+                    {t('dependencyManagement.details.source')}: <code className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">{dep.sourcePath}</code>
+                  </p>
+                )}
                 {dep.version && (
                   <p className="text-xs text-gray-500">
                     {t('dependencyManagement.installedVersion')}: <code className="bg-gray-800 px-1.5 py-0.5 rounded text-green-400">{dep.version}</code>
@@ -214,7 +234,7 @@ export default function DependencyCheckCard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    {t('dependencyManagement.actions.download')}
+                    {getPrimaryActionLabel(dep)}
                   </a>
                 )}
               </div>

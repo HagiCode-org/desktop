@@ -176,6 +176,7 @@
     "description": "检查和管理 Hagicode 服务所需的系统运行时依赖",
     "status": {
       "installed": "已安装",
+      "bundled": "随 Desktop 内置",
       "notInstalled": "未安装",
       "versionMismatch": "版本不匹配",
       "checking": "检测中...",
@@ -185,11 +186,14 @@
       "install": "安装",
       "installing": "安装中...",
       "refresh": "刷新",
-      "visitWebsite": "访问官网"
+      "visitWebsite": "访问官网",
+      "reinstallDesktop": "重新安装 Desktop",
+      "updateDesktop": "更新 Desktop"
     },
     "details": {
       "currentVersion": "当前版本",
-      "requiredVersion": "要求版本"
+      "requiredVersion": "要求版本",
+      "source": "来源"
     },
     "noDependencies": "未检测到依赖"
   },
