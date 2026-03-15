@@ -168,7 +168,7 @@ export const InstallationWizard: React.FC<InstallationWizardProps> = ({
               <div className="claude-config-required">
                 <h3>Claude CLI Configuration Required</h3>
                 <p>Claude CLI is not configured. To use LLM-powered installation, please configure Claude Code CLI first.</p>
-                <p className="hint">You can configure Claude through the onboarding flow.</p>
+                <p className="hint">You can configure your preferred Agent CLI from Settings and retry this wizard afterwards.</p>
                 <button className="btn-secondary" onClick={handleCancel}>
                   Cancel
                 </button>

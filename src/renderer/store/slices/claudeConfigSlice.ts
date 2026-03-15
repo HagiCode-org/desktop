@@ -15,8 +15,8 @@ const initialState: ClaudeConfigState = {
 
 /**
  * Legacy Claude Config Slice
- * Kept for backward compatibility with LlmInstallation component
- * This slice will be removed once LlmInstallation is refactored to use AgentCliSlice
+ * Kept for backward compatibility with older manual installation flows
+ * This slice can be removed after all LLM entry points rely on AgentCliSlice
  */
 const claudeConfigSlice = createSlice({
   name: 'claudeConfig',
