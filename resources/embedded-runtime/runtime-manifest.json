@@ -19,6 +19,22 @@
       "netCoreVersion": "10.0.5",
       "hostFxrVersion": "10.0.5"
     },
+    "osx-x64": {
+      "rid": "osx-x64",
+      "archiveType": "tar.gz",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-x64.tar.gz",
+      "aspNetCoreVersion": "10.0.5",
+      "netCoreVersion": "10.0.5",
+      "hostFxrVersion": "10.0.5"
+    },
+    "osx-arm64": {
+      "rid": "osx-arm64",
+      "archiveType": "tar.gz",
+      "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-arm64.tar.gz",
+      "aspNetCoreVersion": "10.0.5",
+      "netCoreVersion": "10.0.5",
+      "hostFxrVersion": "10.0.5"
+    },
     "win-x64": {
       "rid": "win-x64",
       "archiveType": "zip",

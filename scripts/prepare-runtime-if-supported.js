@@ -6,7 +6,11 @@ import { detectRuntimePlatform, resolvePinnedRuntimeTarget } from './embedded-ru
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 
-if (!runtimePlatform.startsWith('win-') && !runtimePlatform.startsWith('linux-')) {
+if (
+  !runtimePlatform.startsWith('win-')
+  && !runtimePlatform.startsWith('linux-')
+  && !runtimePlatform.startsWith('osx-')
+) {
   console.log(`[embedded-runtime] Skipping private runtime staging for unsupported platform ${runtimePlatform}`);
   process.exit(0);
 }

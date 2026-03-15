@@ -29,6 +29,8 @@
     "build:appx": "npm run prepare:runtime && npm run build:prod && electron-builder --win --appx --publish never && npm run package:smoke-test",
     "build:appx:prod": "npm run prepare:runtime && npm run build:prod && electron-builder --win --appx --publish never && npm run package:smoke-test",
     "build:mac": "npm run prepare:runtime:optional && npm run build:prod && electron-builder --mac --publish never",
+    "build:mac:x64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 npm run prepare:runtime && npm run build:prod && electron-builder --mac --x64 --publish never && npm run package:smoke-test:mac:x64",
+    "build:mac:arm64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64 npm run prepare:runtime && npm run build:prod && electron-builder --mac --arm64 --publish never && npm run package:smoke-test:mac:arm64",
     "build:linux": "npm run prepare:runtime && npm run build:prod && electron-builder --linux --publish never && npm run package:smoke-test",
     "dist": "npm run prepare:runtime:optional && npm run build:prod && electron-builder",
     "version:bump": "node scripts/bump-version.js",
@@ -36,6 +38,8 @@
     "build:local:publish": "npm run prepare:runtime:optional && npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js --publish always",
     "prepare:runtime": "node scripts/prepare-embedded-runtime.js",
     "package:smoke-test": "cross-env HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
+    "package:smoke-test:mac:x64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
+    "package:smoke-test:mac:arm64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "dev:embedded-runtime": "node scripts/dev-with-embedded-runtime.js",
     "prepare:runtime:optional": "node scripts/prepare-runtime-if-supported.js"
   },
