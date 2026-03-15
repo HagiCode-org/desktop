@@ -4,7 +4,7 @@ This document describes how to configure Azure Storage for automatic release fil
 
 ## Overview
 
-The Hagicode Desktop project uses a GitHub Actions workflow (`sync-azure-storage.yml`) to automatically synchronize release assets to Azure Storage when a new release is published. This provides:
+The Hagicode Desktop project uses a reusable GitHub Actions workflow (`sync-azure-storage.yml`) to synchronize release assets to Azure Storage after `build.yml` finishes uploading the release assets and explicitly calls the sync workflow. This provides:
 
 - **Redundant backup**: Files stored in both GitHub Releases and Azure Storage
 - **CDN support**: Azure CDN can be configured for faster downloads
@@ -182,17 +182,18 @@ The generated index.json is backward compatible:
 
 ### Automatic Trigger
 
-The workflow automatically runs when a new release is published.
+The workflow automatically runs when `build.yml` reaches its summary-gated release publish stage for a version tag.
 
-**Important**: This workflow is designed to run AFTER the main build workflow completes. The typical flow is:
+**Important**: `sync-azure-storage.yml` is primarily a `workflow_call` workflow. The main build pipeline decides when it is safe to run, so the typical flow is:
 
 1. Create and push a version tag (e.g., `git tag v1.0.0 && git push origin v1.0.0`)
 2. The `build.yml` workflow is triggered and builds all platforms (Windows, macOS, Linux)
-3. `build.yml` uploads all artifacts to the GitHub Release
-4. When the release is marked as "published", this workflow triggers
-5. This workflow downloads all release assets and syncs them to Azure Storage
+3. For tag releases, `build.yml` uses the dedicated `build-windows-release` job to sign and upload the Windows assets, while Linux and macOS upload their release assets
+4. The `build-summary` job normalizes the effective Windows result (`build-windows-release` for tags, `build-windows` for non-tags), resolves the release channel, and emits an explicit overall release status
+5. When the normalized release status is `success`, `build.yml` calls `sync-azure-storage.yml` through `workflow_call` with `release_tag` and `release_channel`
+6. This workflow downloads the final release asset set and syncs it to Azure Storage
 
-**Note**: If you create a draft release or pre-release, this workflow will NOT trigger until you publish it as a full release.
+This caller-driven model avoids races where a GitHub Release exists before the signed Windows assets or other platform assets have finished uploading.
 
 ### Manual Trigger
 
@@ -207,6 +208,8 @@ You can manually trigger the workflow to sync an existing release:
 - Re-syncing an existing release to Azure Storage
 - Testing the workflow configuration
 - Syncing a specific release version
+
+Manual recovery behavior is unchanged by the automated caller flow: `workflow_dispatch` can still be used to retry an existing release without re-running the full build pipeline.
 
 ## CDN Configuration (Optional)
 

@@ -102,8 +102,9 @@ The project uses GitHub Actions for automated building and publishing:
 
 - **Automatic builds**: Triggered on push to main branch or when version tags are created
 - **Multi-platform support**: Automatically builds installers for Windows, macOS, and Linux
-- **Windows release signing**: Tag releases sign Windows artifacts with Azure Artifact Signing before upload
-- **Release sync**: Automatically syncs release files to Azure Storage for CDN acceleration
+- **Windows release signing**: Tag releases switch to the dedicated `build-windows-release` job so signed Windows artifacts are produced before they are uploaded to GitHub Releases
+- **Normalized release gating**: `build-summary` resolves the effective Windows result, keeps the existing release-channel output, and emits the overall release status used by downstream automation
+- **Release sync**: Successful tag releases automatically call the reusable `sync-azure-storage.yml` workflow with `release_tag` and `release_channel` so Azure Storage publishing continues without a manual handoff
 
 For detailed Azure configuration instructions, see:
 
