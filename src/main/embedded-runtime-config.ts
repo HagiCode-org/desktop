@@ -54,6 +54,27 @@ export interface EmbeddedRuntimeStageMetadata {
 
 let cachedManifest: PinnedEmbeddedRuntimeManifest | null = null;
 
+export function detectPinnedRuntimePlatform(
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+): string {
+  if (platform === 'linux') {
+    return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+  }
+  if (platform === 'win32') {
+    return 'win-x64';
+  }
+  if (platform === 'darwin') {
+    return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+  }
+
+  throw new Error(`Unsupported pinned runtime platform: ${platform} ${arch}`);
+}
+
+export function getEmbeddedDotnetExecutableName(platform: string): string {
+  return platform.startsWith('win-') ? 'dotnet.exe' : 'dotnet';
+}
+
 export function getPinnedRuntimeManifestPath(): string {
   const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [

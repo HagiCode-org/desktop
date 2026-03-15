@@ -1,6 +1,13 @@
 import { ParsedDependency, DependencyTypeName, type Manifest, type EntryPoint, type InstallResult } from './manifest-reader.js';
+import { app } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
+import { PathManager } from './path-manager.js';
+import {
+  resolveAspNetCoreRuntimeRequirement,
+  validateBundledRuntimeForPlatform,
+} from './embedded-runtime.js';
+import { resolvePinnedRuntimeTarget } from './embedded-runtime-config.js';
 
 /**
  * Dependency type enumeration
@@ -29,6 +36,9 @@ export interface DependencyCheckResult {
   downloadUrl?: string;
   description?: string;
   isChecking?: boolean;  // True while check is in progress
+  resolutionSource?: 'bundled-desktop' | 'system';
+  sourcePath?: string;
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
 }
 
 /**
@@ -38,6 +48,8 @@ export interface DependencyCheckResult {
  */
 export class DependencyManager {
   private currentManifest: Manifest | null = null;
+  private readonly pathManager = PathManager.getInstance();
+  private static readonly DESKTOP_DOWNLOAD_URL = 'https://hagicode.com/desktop/#download';
 
   constructor(_store?: Store<Record<string, unknown>>) {
     // Constructor kept for compatibility
@@ -87,16 +99,23 @@ export class DependencyManager {
   ): Promise<DependencyCheckResult[]> {
     log.info('[DependencyManager] Checking all dependencies from manifest (script execution disabled)');
 
-    // Return all dependencies as not installed
-    // Actual dependency checking is handled by AI
-    return dependencies.map(dep => ({
-      key: dep.key,
-      name: dep.name,
-      type: this.mapDependencyType(dep.key, dep.type),
-      installed: false,
-      requiredVersion: this.formatRequiredVersion(dep.versionConstraints),
-      description: dep.description,
-      downloadUrl: dep.installHint,
+    return Promise.all(dependencies.map(async (dep) => {
+      const bundledRuntimeResult = await this.checkBundledDotnetDependency(dep);
+      if (bundledRuntimeResult) {
+        return bundledRuntimeResult;
+      }
+
+      // Return all remaining dependencies as not installed.
+      // Actual dependency checking is handled by AI.
+      return {
+        key: dep.key,
+        name: dep.name,
+        type: this.mapDependencyType(dep.key, dep.type),
+        installed: false,
+        requiredVersion: this.formatRequiredVersion(dep.versionConstraints),
+        description: dep.description,
+        downloadUrl: dep.installHint,
+      };
     }));
   }
 
@@ -117,6 +136,67 @@ export class DependencyManager {
 
     if (parts.length === 0) return 'any';
     return parts.join(', ');
+  }
+
+  private async checkBundledDotnetDependency(dep: ParsedDependency): Promise<DependencyCheckResult | null> {
+    if (dep.key !== 'dotnet' || process.platform !== 'darwin' || !app.isPackaged) {
+      return null;
+    }
+
+    const platform = this.pathManager.getCurrentPlatform();
+    const runtimeRoot = this.pathManager.getPinnedRuntimeRoot(platform);
+    const pinnedVersion = resolvePinnedRuntimeTarget(platform).aspNetCoreVersion;
+    const runtimeRequirement = resolveAspNetCoreRuntimeRequirement(
+      undefined,
+      {
+        min: dep.versionConstraints.runtime?.min ?? dep.versionConstraints.min,
+        max: dep.versionConstraints.runtime?.max ?? dep.versionConstraints.max,
+        recommended: dep.versionConstraints.runtime?.recommended ?? dep.versionConstraints.recommended,
+        description: dep.description,
+      },
+      pinnedVersion,
+    );
+    const bundledRuntimeValidation = await validateBundledRuntimeForPlatform({
+      platform,
+      runtimeRoot,
+      requirement: runtimeRequirement,
+      executableName: this.pathManager.getEmbeddedDotnetExecutableName(),
+    });
+
+    if (bundledRuntimeValidation.valid) {
+      return {
+        key: dep.key,
+        name: dep.name,
+        type: this.mapDependencyType(dep.key, dep.type),
+        installed: true,
+        version: bundledRuntimeValidation.bundledRuntimeVersion,
+        requiredVersion: runtimeRequirement.effectiveLabel,
+        description: `Bundled with Desktop at ${runtimeRoot}`,
+        resolutionSource: 'bundled-desktop',
+        sourcePath: runtimeRoot,
+      };
+    }
+
+    const primaryAction = bundledRuntimeValidation.remediation === 'update-desktop'
+      ? 'update-desktop'
+      : 'reinstall-desktop';
+    const remediationText = primaryAction === 'update-desktop'
+      ? 'Update Desktop to refresh the bundled runtime.'
+      : 'Reinstall Desktop to restore the bundled runtime.';
+
+    return {
+      key: dep.key,
+      name: dep.name,
+      type: this.mapDependencyType(dep.key, dep.type),
+      installed: false,
+      version: bundledRuntimeValidation.bundledRuntimeVersion,
+      requiredVersion: runtimeRequirement.effectiveLabel,
+      description: `${bundledRuntimeValidation.message ?? 'Bundled Desktop runtime validation failed.'} ${remediationText}`,
+      downloadUrl: DependencyManager.DESKTOP_DOWNLOAD_URL,
+      resolutionSource: 'bundled-desktop',
+      sourcePath: runtimeRoot,
+      primaryAction,
+    };
   }
 
   /**

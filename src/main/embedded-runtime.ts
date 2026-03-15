@@ -1,7 +1,10 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import {
   assertOfficialMicrosoftDownloadUrl,
+  detectPinnedRuntimePlatform,
+  getEmbeddedDotnetExecutableName,
   readEmbeddedRuntimeStageMetadata,
   readPinnedRuntimeManifest,
   resolvePinnedRuntimeTarget,
@@ -73,6 +76,29 @@ export interface PinnedRuntimeValidationResult {
   code?: 'missing-runtime-metadata' | 'unofficial-source' | 'pinned-version-mismatch';
   message?: string;
   metadata?: EmbeddedRuntimeStageMetadata | null;
+}
+
+export type BundledRuntimeValidationFailureCode =
+  | 'missing-runtime-payload'
+  | 'unofficial-runtime-source'
+  | 'pinned-runtime-mismatch'
+  | 'runtime-incompatible';
+
+export type BundledRuntimeRemediation = 'none' | 'reinstall-desktop' | 'update-desktop';
+
+export interface BundledRuntimeValidationResult {
+  valid: boolean;
+  runtimeRoot: string;
+  platform: string;
+  runtimeValidation: EmbeddedRuntimeValidationResult;
+  pinnedRuntimeValidation: PinnedRuntimeValidationResult;
+  compatibility?: RuntimeCompatibilityResult;
+  bundledRuntimeVersion?: string;
+  requiredRuntimeLabel?: string;
+  runtimeSource?: string;
+  code?: BundledRuntimeValidationFailureCode;
+  message?: string;
+  remediation: BundledRuntimeRemediation;
 }
 
 interface RuntimeConfigFrameworkRef {
@@ -289,6 +315,8 @@ export async function validateEmbeddedRuntimeLayout(
 
   if (!(await pathExists(dotnetPath))) {
     missingComponents.push(executableName);
+  } else if (!executableName.endsWith('.exe') && !(await isExecutable(dotnetPath))) {
+    missingComponents.push(`${executableName} (not executable)`);
   }
 
   const hostFxrDir = path.join(runtimeRoot, 'host', 'fxr');
@@ -317,6 +345,98 @@ export async function validateEmbeddedRuntimeLayout(
     aspNetCoreVersion: pickHighestVersion(aspNetVersions),
     netCoreVersion: pickHighestVersion(netCoreVersions),
     hostFxrVersion: pickHighestVersion(hostFxrVersions),
+  };
+}
+
+export async function validateBundledRuntimeForPlatform(options: {
+  platform: string;
+  runtimeRoot: string;
+  requirement?: AspNetRuntimeRequirement;
+  executableName?: string;
+}): Promise<BundledRuntimeValidationResult> {
+  const executableName = options.executableName ?? getEmbeddedDotnetExecutableName(options.platform);
+  const runtimeValidation = await validateEmbeddedRuntimeLayout(options.runtimeRoot, executableName);
+
+  if (!runtimeValidation.valid) {
+    return {
+      valid: false,
+      platform: options.platform,
+      runtimeRoot: options.runtimeRoot,
+      runtimeValidation,
+      pinnedRuntimeValidation: {
+        valid: false,
+        metadata: null,
+      },
+      bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
+      requiredRuntimeLabel: options.requirement?.effectiveLabel,
+      code: 'missing-runtime-payload',
+      remediation: 'reinstall-desktop',
+      message: `Pinned runtime missing or incomplete. Expected ${options.runtimeRoot} (missing: ${runtimeValidation.missingComponents.join(', ')})`,
+    };
+  }
+
+  const pinnedRuntimeValidation = await validatePinnedEmbeddedRuntime(options.platform, runtimeValidation);
+  if (!pinnedRuntimeValidation.valid) {
+    const remediation = pinnedRuntimeValidation.code === 'pinned-version-mismatch' ? 'update-desktop' : 'reinstall-desktop';
+    const code = pinnedRuntimeValidation.code === 'unofficial-source'
+      ? 'unofficial-runtime-source'
+      : pinnedRuntimeValidation.code === 'pinned-version-mismatch'
+        ? 'pinned-runtime-mismatch'
+        : 'missing-runtime-payload';
+
+    const message = code === 'unofficial-runtime-source'
+      ? `Pinned runtime source validation failed. ${pinnedRuntimeValidation.message ?? 'Expected an official Microsoft runtime source.'}`
+      : code === 'pinned-runtime-mismatch'
+        ? `Pinned runtime version mismatch. ${pinnedRuntimeValidation.message ?? 'Bundled runtime does not match the pinned Desktop runtime.'}`
+        : pinnedRuntimeValidation.message ?? `Pinned runtime metadata is missing from ${options.runtimeRoot}.`;
+
+    return {
+      valid: false,
+      platform: options.platform,
+      runtimeRoot: options.runtimeRoot,
+      runtimeValidation,
+      pinnedRuntimeValidation,
+      bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
+      requiredRuntimeLabel: options.requirement?.effectiveLabel,
+      runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
+      code,
+      remediation,
+      message,
+    };
+  }
+
+  const compatibility = options.requirement
+    ? evaluateRuntimeCompatibility(options.requirement, runtimeValidation.aspNetCoreVersion)
+    : undefined;
+
+  if (compatibility && !compatibility.compatible) {
+    return {
+      valid: false,
+      platform: options.platform,
+      runtimeRoot: options.runtimeRoot,
+      runtimeValidation,
+      pinnedRuntimeValidation,
+      compatibility,
+      bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
+      requiredRuntimeLabel: options.requirement?.effectiveLabel ?? compatibility.requiredVersionLabel,
+      runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
+      code: 'runtime-incompatible',
+      remediation: 'update-desktop',
+      message: `Pinned runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`,
+    };
+  }
+
+  return {
+    valid: true,
+    platform: options.platform,
+    runtimeRoot: options.runtimeRoot,
+    runtimeValidation,
+    pinnedRuntimeValidation,
+    compatibility,
+    bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
+    requiredRuntimeLabel: options.requirement?.effectiveLabel,
+    runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
+    remediation: 'none',
   };
 }
 
@@ -431,6 +551,15 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+async function isExecutable(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function resolvePinnedAspNetCoreVersion(): string | undefined {
   try {
     const platform = detectCurrentPlatform();
@@ -441,17 +570,7 @@ function resolvePinnedAspNetCoreVersion(): string | undefined {
 }
 
 function detectCurrentPlatform(): string {
-  if (process.platform === 'linux') {
-    return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
-  }
-  if (process.platform === 'win32') {
-    return 'win-x64';
-  }
-  if (process.platform === 'darwin') {
-    return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-  }
-
-  throw new Error(`Unsupported platform: ${process.platform} ${process.arch}`);
+  return detectPinnedRuntimePlatform();
 }
 
 function extractMajorVersion(version: string | undefined): number | undefined {

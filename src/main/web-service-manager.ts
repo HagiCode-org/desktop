@@ -17,9 +17,8 @@ import {
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import {
   evaluateRuntimeCompatibility,
-  validateEmbeddedRuntimeLayout,
+  validateBundledRuntimeForPlatform,
   validateFrameworkDependentPayload,
-  validatePinnedEmbeddedRuntime,
 } from './embedded-runtime.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
@@ -478,52 +477,32 @@ export class PCodeWebServiceManager {
     }
 
     const runtimeRoot = this.pathManager.getPinnedRuntimeRoot();
-    const runtimeValidation = await validateEmbeddedRuntimeLayout(
+    const bundledRuntimeValidation = await validateBundledRuntimeForPlatform({
+      platform: this.pathManager.getCurrentPlatform(),
       runtimeRoot,
-      this.pathManager.getEmbeddedDotnetExecutableName(),
-    );
+      requirement: payloadValidation.requirement,
+      executableName: this.pathManager.getEmbeddedDotnetExecutableName(),
+    });
 
-    if (!runtimeValidation.valid) {
+    if (!bundledRuntimeValidation.valid) {
       throw new ManagedLaunchError(
-        'missing-runtime-payload',
-        `Pinned runtime missing or incomplete. Expected ${runtimeRoot} (missing: ${runtimeValidation.missingComponents.join(', ')})`,
+        bundledRuntimeValidation.code ?? 'runtime-incompatible',
+        bundledRuntimeValidation.message ?? 'Bundled Desktop runtime validation failed.',
       );
     }
 
-    const pinnedRuntimeValidation = await validatePinnedEmbeddedRuntime(this.pathManager.getCurrentPlatform(), runtimeValidation);
-    if (!pinnedRuntimeValidation.valid) {
-      if (pinnedRuntimeValidation.code === 'unofficial-source') {
-        throw new ManagedLaunchError(
-          'unofficial-runtime-source',
-          `Pinned runtime source validation failed. ${pinnedRuntimeValidation.message ?? 'Expected an official Microsoft runtime source.'}`,
-        );
-      }
+    const runtimeValidation = bundledRuntimeValidation.runtimeValidation;
+    const pinnedRuntimeValidation = bundledRuntimeValidation.pinnedRuntimeValidation;
+    const compatibility = bundledRuntimeValidation.compatibility
+      ?? (payloadValidation.requirement
+        ? evaluateRuntimeCompatibility(payloadValidation.requirement, runtimeValidation.aspNetCoreVersion)
+        : undefined);
 
-      if (pinnedRuntimeValidation.code === 'pinned-version-mismatch') {
-        throw new ManagedLaunchError(
-          'pinned-runtime-mismatch',
-          `Pinned runtime version mismatch. ${pinnedRuntimeValidation.message ?? 'Bundled runtime does not match the pinned Desktop runtime.'}`,
-        );
-      }
-
+    if (compatibility && !compatibility.compatible) {
       throw new ManagedLaunchError(
-        'missing-runtime-payload',
-        pinnedRuntimeValidation.message ?? `Pinned runtime metadata is missing from ${runtimeRoot}.`,
+        'runtime-incompatible',
+        `Pinned runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`,
       );
-    }
-
-    if (payloadValidation.requirement) {
-      const compatibility = evaluateRuntimeCompatibility(
-        payloadValidation.requirement,
-        runtimeValidation.aspNetCoreVersion,
-      );
-
-      if (!compatibility.compatible) {
-        throw new ManagedLaunchError(
-          'runtime-incompatible',
-          `Pinned runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`,
-        );
-      }
     }
 
     log.info('[WebService] Using pinned runtime root:', runtimeRoot);
