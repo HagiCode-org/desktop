@@ -20,7 +20,7 @@ interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
+  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
   dependencies: any[];
   isActive: boolean;
 }

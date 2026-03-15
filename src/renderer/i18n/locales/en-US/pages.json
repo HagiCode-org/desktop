@@ -196,7 +196,10 @@
       "active": "Active",
       "ready": "Ready",
       "incomplete": "Missing Dependencies",
-      "installed": "Installed"
+      "installed": "Installed",
+      "payloadInvalid": "Payload invalid",
+      "runtimeIncompatible": "Bundled runtime incompatible",
+      "desktopIncompatible": "Desktop incompatible"
     },
     "actions": {
       "refresh": "Refresh",
@@ -209,12 +212,12 @@
       "reinstallPackage": "Reinstall this package",
       "openLogs": "Open Logs",
       "showMoreVersions": "Show More Versions ({{count}} remaining)",
-      "showLessVersions": "Show Less"
+      "showLessVersions": "Show Less",
+      "switchDisabledDesktop": "Upgrade Desktop before switching"
     },
     "progressBar": "Progress bar",
     "progressText": "Progress text",
     "installButton": "Install {{count}} dependencies",
-    "installing": "Installing...",
     "info": {
       "title": "About Version Management",
       "description": "Version management allows you to install multiple Hagicode Server versions and switch between them. Only versions with all dependencies satisfied can be activated."
@@ -230,7 +233,9 @@
       "logsNotFound": "Logs folder not found",
       "openLogsError": "Failed to open logs folder",
       "onboardingStarted": "Setup wizard started",
-      "onboardingFailed": "Failed to start setup wizard"
+      "onboardingFailed": "Failed to start setup wizard",
+      "switchBlocked": "This package requires a newer Desktop version.",
+      "switchFailed": "Failed to switch version"
     },
     "dialog": {
       "reinstallTitle": "Confirm Reinstallation",
@@ -260,6 +265,12 @@
       "description": "These are dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
       "required": "Required",
       "requiredVersion": "Required version:"
+    },
+    "desktopCompatibility": {
+      "blockedTitle": "Upgrade Desktop to activate this package",
+      "requiredVersion": "Required Desktop:",
+      "currentVersion": "Current Desktop:",
+      "upgradeGuidance": "Upgrade Hagicode Desktop, then retry switching or starting this package."
     }
   },
   "installProgressDialog": {

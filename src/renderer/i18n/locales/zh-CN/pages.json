@@ -197,7 +197,7 @@
     "availableVersions": "可用版本",
     "installedVersions": "已安装版本",
     "installed": "已安装",
-    "installing": "安装中...",
+    "installing": "正在安装...",
     "downloading": "下载中",
     "extracting": "解压中",
     "verifying": "验证中",
@@ -220,7 +220,10 @@
       "active": "当前激活",
       "ready": "就绪",
       "incomplete": "缺少依赖项",
-      "installed": "已安装"
+      "installed": "已安装",
+      "payloadInvalid": "软件包无效",
+      "runtimeIncompatible": "运行时不兼容",
+      "desktopIncompatible": "Desktop 不兼容"
     },
     "actions": {
       "refresh": "刷新",
@@ -233,12 +236,12 @@
       "reinstallPackage": "重新安装此软件包",
       "openLogs": "打开日志",
       "showMoreVersions": "显示更多版本 (共 {{count}} 个)",
-      "showLessVersions": "收起"
+      "showLessVersions": "收起",
+      "switchDisabledDesktop": "升级 Desktop 后才能切换"
     },
     "progressBar": "进度条",
     "progressText": "进度文本",
     "installButton": "安装 {{count}} 个依赖",
-    "installing": "正在安装...",
     "info": {
       "title": "关于版本管理",
       "description": "版本管理允许您安装多个 Hagicode Server 版本并在它们之间切换。仅依赖项全部满足的版本可以被激活。"
@@ -254,7 +257,9 @@
       "logsNotFound": "日志文件夹不存在",
       "openLogsError": "无法打开日志文件夹",
       "onboardingStarted": "引导向导已启动",
-      "onboardingFailed": "启动引导向导失败"
+      "onboardingFailed": "启动引导向导失败",
+      "switchBlocked": "此软件包需要更新的 Desktop 版本。",
+      "switchFailed": "切换版本失败"
     },
     "dialog": {
       "reinstallTitle": "确认重新安装",
@@ -284,6 +289,12 @@
       "description": "这是此版本的依赖项要求。请确保在使用此版本之前安装所有依赖项。",
       "required": "必需",
       "requiredVersion": "所需版本："
+    },
+    "desktopCompatibility": {
+      "blockedTitle": "升级 Desktop 后才能激活此软件包",
+      "requiredVersion": "所需 Desktop：",
+      "currentVersion": "当前 Desktop：",
+      "upgradeGuidance": "请先升级 Hagicode Desktop，再重试切换或启动此软件包。"
     }
   },
   "installProgressDialog": {

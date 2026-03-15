@@ -26,9 +26,21 @@ export interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
+  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
   dependencies: any[];
   isActive: boolean;
+  validation?: {
+    startable: boolean;
+    message?: string;
+    desktopCompatibility?: {
+      declared: boolean;
+      compatible: boolean;
+      requiredVersion?: string;
+      currentVersion: string;
+      message?: string;
+      reason?: string;
+    };
+  };
 }
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';

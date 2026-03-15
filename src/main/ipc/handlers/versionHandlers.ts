@@ -172,7 +172,11 @@ export function registerVersionHandlers(deps: {
   // Version switch handler
   ipcMain.handle('version:switch', async (_, versionId: string) => {
     if (!state.versionManager || !state.mainWindow || !state.webServiceManager) {
-      return false;
+      return {
+        success: false,
+        error: 'Version manager not initialized',
+        errorCode: 'unknown',
+      };
     }
     try {
       const result = await state.versionManager.switchVersion(versionId);
@@ -184,10 +188,14 @@ export function registerVersionHandlers(deps: {
         state.mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
       }
 
-      return result.success;
+      return result;
     } catch (error) {
       console.error('Failed to switch version:', error);
-      return false;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        errorCode: 'unknown',
+      };
     }
   });
 

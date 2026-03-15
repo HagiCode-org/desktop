@@ -21,6 +21,7 @@ import { manifestReader } from './manifest-reader.js';
 import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
+import { openHagicodeInAppWindow } from './hagicode-url.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
@@ -210,59 +211,31 @@ ipcMain.handle('show-window', () => {
 });
 
 ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
-  if (!url) {
-    console.error('[Main] No URL provided for open-hagicode-in-app');
-    return false;
-  }
-  try {
-    console.log('[Main] Opening Hagicode in app window:', url);
+  return await openHagicodeInAppWindow({
+    url,
+    logScope: 'Main',
+    createWindow: () => {
+      const distRoot = getDistRootPath();
+      const appRoot = getAppRootPath();
+      const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+      const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
-    // Use the same path helper for consistency
-    const distRoot = getDistRootPath();
-    const appRoot = getAppRootPath();
-    const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-    const iconPath = path.join(appRoot, 'resources', 'icon.png');
-
-    // Create a new window for Hagicode
-    const hagicodeWindow = new BrowserWindow({
-      minWidth: 800,
-      minHeight: 600,
-      show: false,
-      autoHideMenuBar: true,
-      icon: iconPath,
-      webPreferences: {
-        preload: preloadPath,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-        devTools: !app.isPackaged,
-      },
-    });
-
-    console.log('[Main] Hagicode window created');
-
-    // Set up ready-to-show handler before loading URL
-    hagicodeWindow.once('ready-to-show', () => {
-      console.log('[Main] Hagicode window ready to show, maximizing...');
-      hagicodeWindow.maximize();
-      hagicodeWindow.show();
-      hagicodeWindow.focus();
-    });
-
-    // Also set up error handling
-    hagicodeWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('[Main] Hagicode window failed to load:', errorCode, errorDescription);
-    });
-
-    // Load the Hagicode URL
-    await hagicodeWindow.loadURL(url);
-    console.log('[Main] Hagicode URL loaded successfully');
-
-    return true;
-  } catch (error) {
-    console.error('[Main] Failed to open Hagicode in app:', error);
-    return false;
-  }
+      return new BrowserWindow({
+        minWidth: 800,
+        minHeight: 600,
+        show: false,
+        autoHideMenuBar: true,
+        icon: iconPath,
+        webPreferences: {
+          preload: preloadPath,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: false,
+          devTools: !app.isPackaged,
+        },
+      });
+    },
+  });
 });
 
 ipcMain.handle('hide-window', () => {
@@ -709,7 +682,11 @@ ipcMain.handle('version:reinstall', async (_, versionId: string) => {
 
 ipcMain.handle('version:switch', async (_, versionId: string) => {
   if (!versionManager || !mainWindow || !webServiceManager) {
-    return false;
+    return {
+      success: false,
+      error: 'Version manager not initialized',
+      errorCode: 'unknown',
+    };
   }
   try {
     const result = await versionManager.switchVersion(versionId);
@@ -723,10 +700,14 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
       mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
     }
 
-    return result.success;
+    return result;
   } catch (error) {
     console.error('Failed to switch version:', error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+      errorCode: 'unknown',
+    };
   }
 });
 

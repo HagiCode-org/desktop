@@ -62,6 +62,11 @@ export interface StartResult {
   port?: number;    // Service port if started successfully
 }
 
+export interface DesktopCompatibility {
+  minVersion: string;
+  message?: string;
+}
+
 /**
  * Manifest schema version 1.0
  */
@@ -93,6 +98,7 @@ export interface Manifest {
   npmConfig?: NpmConfig;
   donationInfo?: DonationInfo;
   packageMetadata?: PackageMetadata;
+  desktopCompatibility?: DesktopCompatibility;
 }
 
 /**
@@ -279,6 +285,20 @@ export class ManifestReader {
       // Parse JSON
       const manifest: Manifest = JSON.parse(content);
 
+      if (manifest.desktopCompatibility) {
+        const minVersion = manifest.desktopCompatibility.minVersion?.trim();
+        const message = manifest.desktopCompatibility.message?.trim();
+
+        if (minVersion) {
+          manifest.desktopCompatibility = {
+            minVersion,
+            ...(message ? { message } : {}),
+          };
+        } else {
+          delete manifest.desktopCompatibility;
+        }
+      }
+
       // Validate manifest version
       if (manifest.manifestVersion !== '1.0') {
         log.warn('[ManifestReader] Unsupported manifest version:', manifest.manifestVersion);
@@ -462,6 +482,10 @@ export class ManifestReader {
     }
 
     return manifest.entryPoint;
+  }
+
+  readDesktopCompatibility(manifest: Manifest | null): DesktopCompatibility | null {
+    return manifest?.desktopCompatibility ?? null;
   }
 }
 

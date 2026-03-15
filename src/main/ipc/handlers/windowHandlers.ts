@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openHagicodeInAppWindow } from '../../hagicode-url.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -66,54 +67,31 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
 
   // Open Hagicode in app handler
   ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
-    if (!url) {
-      console.error('[WindowHandlers] No URL provided for open-hagicode-in-app');
-      return false;
-    }
-    try {
-      console.log('[WindowHandlers] Opening Hagicode in app window:', url);
+    return await openHagicodeInAppWindow({
+      url,
+      logScope: 'WindowHandlers',
+      createWindow: () => {
+        const distRoot = getDistRootPath();
+        const appRoot = getAppRootPath();
+        const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+        const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
-      const distRoot = getDistRootPath();
-      const appRoot = getAppRootPath();
-      const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-      const iconPath = path.join(appRoot, 'resources', 'icon.png');
-
-      const hagicodeWindow = new BrowserWindow({
-        minWidth: 800,
-        minHeight: 600,
-        show: false,
-        autoHideMenuBar: true,
-        icon: iconPath,
-        webPreferences: {
-          preload: preloadPath,
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: false,
-          devTools: !app.isPackaged,
-        },
-      });
-
-      console.log('[WindowHandlers] Hagicode window created');
-
-      hagicodeWindow.once('ready-to-show', () => {
-        console.log('[WindowHandlers] Hagicode window ready to show, maximizing...');
-        hagicodeWindow.maximize();
-        hagicodeWindow.show();
-        hagicodeWindow.focus();
-      });
-
-      hagicodeWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-        console.error('[WindowHandlers] Hagicode window failed to load:', errorCode, errorDescription);
-      });
-
-      await hagicodeWindow.loadURL(url);
-      console.log('[WindowHandlers] Hagicode URL loaded successfully');
-
-      return true;
-    } catch (error) {
-      console.error('[WindowHandlers] Failed to open Hagicode in app:', error);
-      return false;
-    }
+        return new BrowserWindow({
+          minWidth: 800,
+          minHeight: 600,
+          show: false,
+          autoHideMenuBar: true,
+          icon: iconPath,
+          webPreferences: {
+            preload: preloadPath,
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: false,
+            devTools: !app.isPackaged,
+          },
+        });
+      },
+    });
   });
 
   console.log('[IPC] Window handlers registered');

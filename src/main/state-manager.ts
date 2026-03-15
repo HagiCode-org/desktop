@@ -3,8 +3,9 @@ import fs from 'node:fs/promises';
 import { app } from 'electron';
 import log from 'electron-log';
 import type { AspNetRuntimeRequirement } from './embedded-runtime.js';
+import type { DesktopCompatibilityDetails } from './desktop-compatibility.js';
 
-export type InstalledVersionStatus = 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
+export type InstalledVersionStatus = 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
 
 export interface InstalledVersionValidation {
   startable: boolean;
@@ -12,6 +13,7 @@ export interface InstalledVersionValidation {
   missingFiles?: string[];
   requirement?: AspNetRuntimeRequirement;
   bundledRuntimeVersion?: string;
+  desktopCompatibility?: DesktopCompatibilityDetails;
 }
 
 /**

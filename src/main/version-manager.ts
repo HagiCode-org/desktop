@@ -11,6 +11,7 @@ import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './pa
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback } from './package-sources/index.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
+import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
 
 /**
  * Version information
@@ -64,6 +65,13 @@ export interface InstallResult {
   version: Version;
   installedPath?: string;
   error?: string;
+}
+
+export interface VersionSwitchResult {
+  success: boolean;
+  error?: string;
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  desktopCompatibility?: DesktopCompatibilityDetails;
 }
 
 /**
@@ -128,6 +136,7 @@ export class VersionManager {
   ): Promise<InstalledVersionInfo> {
     const manifest = await manifestReader.readManifest(versionInfo.installedPath);
     const payloadValidation = await validateFrameworkDependentPayload(versionInfo.installedPath, manifest);
+    const desktopCompatibility = evaluateDesktopCompatibility(manifest, app.getVersion());
 
     const validation: InstalledVersionValidation = {
       startable: payloadValidation.startable,
@@ -135,11 +144,18 @@ export class VersionManager {
       missingFiles: payloadValidation.missingFiles,
       requirement: payloadValidation.requirement,
       bundledRuntimeVersion,
+      desktopCompatibility,
     };
 
     let status: InstalledVersionStatus = payloadValidation.startable ? 'installed-ready' : 'payload-invalid';
 
-    if (payloadValidation.startable && bundledRuntimeVersion && payloadValidation.requirement) {
+    if (payloadValidation.startable && !desktopCompatibility.compatible) {
+      status = 'desktop-incompatible';
+      validation.startable = false;
+      validation.message = desktopCompatibility.reason;
+    }
+
+    if (status === 'installed-ready' && bundledRuntimeVersion && payloadValidation.requirement) {
       const compatibility = evaluateRuntimeCompatibility(payloadValidation.requirement, bundledRuntimeVersion);
       if (!compatibility.compatible) {
         status = 'runtime-incompatible';
@@ -464,16 +480,6 @@ export class VersionManager {
       // Set executable permissions
       await this.setExecutablePermissions(installPath);
 
-      const manifest = await manifestReader.readManifest(installPath);
-      const payloadValidation = await validateFrameworkDependentPayload(installPath, manifest);
-      const status: InstalledVersionStatus = payloadValidation.startable ? 'installed-ready' : 'payload-invalid';
-      const validation: InstalledVersionValidation = {
-        startable: payloadValidation.startable,
-        message: payloadValidation.message,
-        missingFiles: payloadValidation.missingFiles,
-        requirement: payloadValidation.requirement,
-      };
-
       // Configure data directory
       log.info('[VersionManager] Configuring data directory...');
       const dataDir = this.pathManager.getDataDirPath();
@@ -500,24 +506,23 @@ export class VersionManager {
       }
 
       // Store installation info
-      const versionInfo: InstalledVersionInfo = {
+      const versionInfo = await this.applyRuntimeValidation({
         id: versionId,
         version: targetVersion.version,
         platform: targetVersion.platform,
         packageFilename: targetVersion.packageFilename,
         installedPath: installPath,
         installedAt: new Date().toISOString(),
-        status,
+        status: 'installed-ready',
         dependencies: [],
         isActive: false, // Will be set below if first installation
-        validation,
-      };
+      }, await this.resolveBundledRuntimeVersion());
 
       await this.stateManager.setInstalledVersion(versionInfo);
 
       // If this is the first installation, make it active
       const currentActive = await this.stateManager.getActiveVersion();
-      if (!currentActive) {
+      if (!currentActive && versionInfo.status !== 'desktop-incompatible') {
         await this.stateManager.setActiveVersion(versionId);
       }
 
@@ -575,9 +580,9 @@ export class VersionManager {
 
   /**
    * Switch active version
-   * Allows switching to any installed version regardless of dependency status
+   * Blocks Desktop-incompatible packages while preserving the current active version
    */
-  async switchVersion(versionId: string): Promise<{ success: boolean }> {
+  async switchVersion(versionId: string): Promise<VersionSwitchResult> {
     try {
       log.info('[VersionManager] Switching to version:', versionId);
 
@@ -586,7 +591,18 @@ export class VersionManager {
 
       if (!targetVersion) {
         log.warn('[VersionManager] Version not installed:', versionId);
-        return { success: false };
+        return { success: false, error: 'Version not installed', errorCode: 'not-installed' };
+      }
+
+      const desktopCompatibility = targetVersion.validation?.desktopCompatibility;
+      if (targetVersion.status === 'desktop-incompatible' && desktopCompatibility) {
+        log.warn('[VersionManager] Blocked switch due to Desktop incompatibility:', versionId, desktopCompatibility);
+        return {
+          success: false,
+          error: desktopCompatibility.reason ?? 'Package requires a newer Desktop version.',
+          errorCode: 'desktop-incompatible',
+          desktopCompatibility,
+        };
       }
 
       // Update active version (allow switching to any installed version)
@@ -604,7 +620,11 @@ export class VersionManager {
       return { success: true };
     } catch (error) {
       log.error('[VersionManager] Failed to switch version:', error);
-      return { success: false };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        errorCode: 'unknown',
+      };
     }
   }
 
@@ -904,30 +924,6 @@ export class VersionManager {
     }
 
     return 'unknown';
-  }
-
-  /**
-   * Compare two version strings
-   * Returns positive if v1 > v2, negative if v1 < v2, 0 if equal
-   */
-  private compareVersions(v1: string, v2: string): number {
-    const parseVersion = (v: string) => {
-      const parts = v.split('-')[0].split('.').map(Number);
-      return parts;
-    };
-
-    const p1 = parseVersion(v1);
-    const p2 = parseVersion(v2);
-
-    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-      const n1 = p1[i] || 0;
-      const n2 = p2[i] || 0;
-
-      if (n1 > n2) return 1;
-      if (n1 < n2) return -1;
-    }
-
-    return 0;
   }
 
   /**

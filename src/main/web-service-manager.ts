@@ -2,6 +2,7 @@ import { spawn, exec, ChildProcess } from 'child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
+import { app } from 'electron';
 import { PathManager } from './path-manager.js';
 import { manifestReader, type EntryPoint, type ResultSessionFile, type ParsedResult, type StartResult } from './manifest-reader.js';
 import { PowerShellExecutor } from './utils/powershell-executor.js';
@@ -20,6 +21,7 @@ import {
   validateBundledRuntimeForPlatform,
   validateFrameworkDependentPayload,
 } from './embedded-runtime.js';
+import { evaluateDesktopCompatibility } from './desktop-compatibility.js';
 import {
   buildAccessUrl,
   coerceListenHost,
@@ -97,7 +99,13 @@ export interface StartupFailureInfo {
   truncated: boolean;
 }
 
-type ManagedLaunchErrorCode = 'invalid-service-payload' | 'missing-runtime-payload' | 'unofficial-runtime-source' | 'pinned-runtime-mismatch' | 'runtime-incompatible';
+type ManagedLaunchErrorCode =
+  | 'invalid-service-payload'
+  | 'missing-runtime-payload'
+  | 'unofficial-runtime-source'
+  | 'pinned-runtime-mismatch'
+  | 'runtime-incompatible'
+  | 'desktop-incompatible';
 
 class ManagedLaunchError extends Error {
   code: ManagedLaunchErrorCode;
@@ -506,6 +514,14 @@ export class PCodeWebServiceManager {
     }
 
     const manifest = await manifestReader.readManifest(this.activeVersionPath);
+    const desktopCompatibility = evaluateDesktopCompatibility(manifest, app.getVersion());
+    if (!desktopCompatibility.compatible) {
+      throw new ManagedLaunchError(
+        'desktop-incompatible',
+        desktopCompatibility.reason ?? 'Package requires a newer Desktop version.',
+      );
+    }
+
     const payloadValidation = await validateFrameworkDependentPayload(this.activeVersionPath, manifest);
     if (!payloadValidation.startable) {
       throw new ManagedLaunchError(

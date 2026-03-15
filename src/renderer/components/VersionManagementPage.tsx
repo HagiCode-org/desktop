@@ -53,9 +53,35 @@ interface InstalledVersion {
   packageFilename: string;
   installedPath: string;
   installedAt: string;
-  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible';
+  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
   dependencies: any[];
   isActive: boolean;
+  validation?: {
+    startable: boolean;
+    message?: string;
+    desktopCompatibility?: {
+      declared: boolean;
+      compatible: boolean;
+      requiredVersion?: string;
+      currentVersion: string;
+      message?: string;
+      reason?: string;
+    };
+  };
+}
+
+interface VersionSwitchResult {
+  success: boolean;
+  error?: string;
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  desktopCompatibility?: {
+    declared: boolean;
+    compatible: boolean;
+    requiredVersion?: string;
+    currentVersion: string;
+    message?: string;
+    reason?: string;
+  };
 }
 
 interface DependencyCheckResult {
@@ -75,7 +101,7 @@ declare global {
       versionGetActive: () => Promise<InstalledVersion | null>;
       versionInstall: (versionId: string) => Promise<{ success: boolean; error?: string }>;
       versionUninstall: (versionId: string) => Promise<boolean>;
-      versionSwitch: (versionId: string) => Promise<boolean>;
+      versionSwitch: (versionId: string) => Promise<VersionSwitchResult>;
       versionReinstall: (versionId: string) => Promise<boolean>;
       versionCheckDependencies: (versionId: string) => Promise<DependencyCheckResult[]>;
       versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
@@ -252,13 +278,18 @@ export default function VersionManagementPage() {
 
     try {
       setSwitching(versionId);
-      const success = await window.electronAPI.versionSwitch(versionId);
+      const result = await window.electronAPI.versionSwitch(versionId);
 
-      if (success) {
+      if (result.success) {
         await fetchAllData();
+      } else if (result.errorCode === 'desktop-incompatible') {
+        toast.error(result.error || t('versionManagement.toast.switchBlocked'));
+      } else if (result.error) {
+        toast.error(result.error);
       }
     } catch (error) {
       console.error('Error switching version:', error);
+      toast.error(t('versionManagement.toast.switchFailed'));
     } finally {
       setSwitching(null);
     }
@@ -412,7 +443,39 @@ export default function VersionManagementPage() {
     return stageTexts[webServiceInstallProgress.stage] || webServiceInstallProgress.message || t('versionManagement.installing');
   };
 
+  const getDesktopCompatibility = (version: InstalledVersion) => version.validation?.desktopCompatibility;
+
+  const isDesktopIncompatible = (version: InstalledVersion) =>
+    version.status === 'desktop-incompatible' && !getDesktopCompatibility(version)?.compatible;
+
   const getVersionStatus = (version: InstalledVersion) => {
+    if (version.status === 'desktop-incompatible') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20 dark:text-amber-300">
+          <AlertCircle className="w-3 h-3" />
+          {t('versionManagement.status.desktopIncompatible')}
+        </span>
+      );
+    }
+
+    if (version.status === 'runtime-incompatible') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+          <AlertCircle className="w-3 h-3" />
+          {t('versionManagement.status.runtimeIncompatible')}
+        </span>
+      );
+    }
+
+    if (version.status === 'payload-invalid') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+          <AlertCircle className="w-3 h-3" />
+          {t('versionManagement.status.payloadInvalid')}
+        </span>
+      );
+    }
+
     if (version.isActive) {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -750,8 +813,9 @@ export default function VersionManagementPage() {
                       {!version.isActive && (
                         <button
                           onClick={() => handleSwitch(version.id)}
-                          disabled={switching === version.id || isInstallingFromState}
+                          disabled={switching === version.id || isInstallingFromState || isDesktopIncompatible(version)}
                           className="px-3 py-1.5 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                          title={isDesktopIncompatible(version) ? t('versionManagement.actions.switchDisabledDesktop') : undefined}
                         >
                           {switching === version.id ? (
                             <>
@@ -783,6 +847,39 @@ export default function VersionManagementPage() {
                       )}
                     </div>
                   </div>
+
+                  {isDesktopIncompatible(version) && (
+                    <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-300" />
+                        <div className="space-y-2 text-sm">
+                          <p className="font-medium text-amber-900 dark:text-amber-100">
+                            {t('versionManagement.desktopCompatibility.blockedTitle')}
+                          </p>
+                          <div className="grid gap-1 text-amber-900/90 dark:text-amber-100/90">
+                            <p>
+                              {t('versionManagement.desktopCompatibility.requiredVersion')}{' '}
+                              <span className="font-mono">{getDesktopCompatibility(version)?.requiredVersion}</span>
+                            </p>
+                            <p>
+                              {t('versionManagement.desktopCompatibility.currentVersion')}{' '}
+                              <span className="font-mono">{getDesktopCompatibility(version)?.currentVersion}</span>
+                            </p>
+                          </div>
+                          {getDesktopCompatibility(version)?.reason && (
+                            <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
+                              {getDesktopCompatibility(version)?.reason}
+                            </p>
+                          )}
+                          {!getDesktopCompatibility(version)?.reason && (
+                            <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
+                              {t('versionManagement.desktopCompatibility.upgradeGuidance')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Dependencies Section */}
                   {expandedVersion === version.id && dependencies[version.id] && (

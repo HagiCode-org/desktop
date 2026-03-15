@@ -48,6 +48,43 @@ export interface SetWebServiceConfigResult {
   errorCode?: 'invalid-listen-host' | 'invalid-port' | 'unknown';
 }
 
+export interface DesktopCompatibilityPayload {
+  declared: boolean;
+  compatible: boolean;
+  requiredVersion?: string;
+  currentVersion: string;
+  message?: string;
+  reason?: string;
+}
+
+export interface InstalledVersionValidationPayload {
+  startable: boolean;
+  message?: string;
+  missingFiles?: string[];
+  bundledRuntimeVersion?: string;
+  desktopCompatibility?: DesktopCompatibilityPayload;
+}
+
+export interface InstalledVersionPayload {
+  id: string;
+  version: string;
+  platform: string;
+  packageFilename: string;
+  installedPath: string;
+  installedAt: string;
+  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
+  dependencies: any[];
+  isActive: boolean;
+  validation?: InstalledVersionValidationPayload;
+}
+
+export interface VersionSwitchResultPayload {
+  success: boolean;
+  error?: string;
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  desktopCompatibility?: DesktopCompatibilityPayload;
+}
+
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
@@ -131,6 +168,20 @@ interface ElectronAPI {
   checkDependencies: () => Promise<any>;
   installDependency: (dependencyType: string) => Promise<void>;
   onDependencyStatusChange: (callback: (dependencies: any) => void) => () => void;
+
+  // Version Management APIs
+  versionList: () => Promise<any[]>;
+  versionGetInstalled: () => Promise<InstalledVersionPayload[]>;
+  versionGetActive: () => Promise<InstalledVersionPayload | null>;
+  versionInstall: (versionId: string) => Promise<{ success: boolean; error?: string }>;
+  versionUninstall: (versionId: string) => Promise<boolean>;
+  versionSwitch: (versionId: string) => Promise<VersionSwitchResultPayload>;
+  versionReinstall: (versionId: string) => Promise<boolean>;
+  versionCheckDependencies: (versionId: string) => Promise<any[]>;
+  versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
+  onInstalledVersionsChanged: (callback: (versions: InstalledVersionPayload[]) => void) => () => void;
+  onActiveVersionChanged: (callback: (version: InstalledVersionPayload | null) => void) => () => void;
+  onVersionListChanged: (callback: () => void) => () => void;
 
   // LLM Installation APIs
   llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
