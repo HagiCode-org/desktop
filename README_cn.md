@@ -1,6 +1,6 @@
 # Hagicode Desktop
 
-English | [简体中文](./README.zh-CN.md)
+[English](./README.md)
 
 > Hagicode Server 管理与监控桌面客户端
 
