@@ -526,7 +526,7 @@ export class VersionManager {
         await this.stateManager.setActiveVersion(versionId);
       }
 
-      log.info('[VersionManager] Version installed successfully:', versionId, 'status:', status);
+      log.info('[VersionManager] Version installed successfully:', versionId, 'status:', versionInfo.status);
 
       return {
         success: true,
