@@ -2,7 +2,7 @@
   "title": "首次使用引导",
   "welcome": {
     "title": "欢迎使用 Hagicode Desktop",
-    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，可以在本地快速使用 Hagicode。接下来，我们将帮助您完成首次安装和配置，大约需要 3-5 分钟。",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，可以在本地快速使用 Hagicode。接下来我们会用五个步骤帮助您完成首次安装和配置，大约需要 3-5 分钟。",
     "features": {
       "manage": {
         "title": "版本管理",
@@ -17,12 +17,13 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装流程包括：",
+    "processTitle": "首次安装共分 5 个步骤：",
     "steps": {
-      "claude": "选择你偏好的 Agent CLI",
+      "welcome": "了解本次引导会完成的准备工作",
+      "agentCli": "选择你偏好的 Agent CLI",
+      "openSpec": "安装并验证 OpenSpec 1.x（> 1.0 且 < 2.0）",
       "download": "下载最新的 Hagicode Server 包",
-      "dependencies": "安装所需的系统依赖项",
-      "launch": "启动服务并验证运行状态"
+      "launch": "启动服务并确认运行正常"
     },
     "skip": "跳过引导",
     "start": "开始安装"
@@ -219,5 +220,37 @@
       "currentVersion": "当前版本",
       "requiredVersion": "要求版本"
     }
+  },
+  "openspec": {
+    "title": "安装 OpenSpec",
+    "description": "在继续下载并启动 Hagicode Server 之前，需要先准备 OpenSpec。建议先使用界面内的一键安装，再在当前机器上验证安装版本。",
+    "installTitle": "1. 全局安装",
+    "installDescription": "一键安装会执行下方展示的 npm 全局安装命令。根据系统配置不同，npm 可能需要管理员权限。",
+    "installCommandLabel": "兼容 1.x 的安装命令",
+    "installButton": "一键安装 OpenSpec",
+    "retryButton": "重试安装",
+    "statusLabel": "当前状态",
+    "status": {
+      "idle": "待检查",
+      "installing": "安装中...",
+      "checking": "检查中...",
+      "installed": "已验证",
+      "failed": "失败"
+    },
+    "successTitle": "OpenSpec 验证通过",
+    "successDescription": "已检测到当前机器上的 OpenSpec 版本符合要求，可以直接继续下载 Hagicode Server，无需额外确认。",
+    "installedVersion": "检测到版本：{{version}}",
+    "failureTitle": "安装未完成",
+    "manualFallback": "请检查错误信息，重试一键安装，或手动执行上方命令后再使用 openspec --version 验证。",
+    "verifyTitle": "2. 验证安装",
+    "verifyDescription": "进入此步骤时，应用会自动检查当前机器上是否已存在可用的 OpenSpec。你仍然可以在终端执行下方命令进行手动验证。",
+    "verifyCommandLabel": "验证命令",
+    "versionRangeLabel": "支持的版本范围",
+    "versionRangeValue": "> 1.0 且 < 2.0",
+    "successCriteria": "成功标准：openspec --version 输出的版本必须大于 1.0 且小于 2.0。",
+    "permissionHint": "如果一键安装因权限或网络问题失败，请使用手动命令安装，完成后再回来确认。",
+    "verifyButton": "检查 OpenSpec",
+    "verifyHint": "打开此步骤时会自动检查支持范围内的版本。如果还没有检测到，请先安装 OpenSpec，安装完成后会再次自动验证。",
+    "verifyReady": "已自动通过验证，现在可以直接继续。"
   }
 }
