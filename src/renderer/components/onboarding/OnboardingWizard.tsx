@@ -15,6 +15,7 @@ import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import AgentCliSelectionStep from './steps/AgentCliSelection';
+import OpenSpecInstallation from './steps/OpenSpecInstallation';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
@@ -80,9 +81,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     console.log('[OnboardingWizard] handleNext called, current step:', currentStep);
     dispatch(goToNextStep());
 
-    // Trigger download when moving from Agent CLI selection to Download.
+    // Trigger download after the OpenSpec confirmation step hands off to Download.
     // Only trigger if not already downloading or completed
-    if (currentStep === OnboardingStep.AgentCliSelection && !isDownloading && !downloadCompleted) {
+    if (currentStep === OnboardingStep.OpenSpecInstallation && !isDownloading && !downloadCompleted) {
       console.log('[OnboardingWizard] Triggering download package');
       dispatch(downloadPackage());
     }
@@ -111,6 +112,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
       case OnboardingStep.AgentCliSelection:
         return <AgentCliSelectionStep onNext={handleNext} onSkipSelection={handleNext} />;
+      case OnboardingStep.OpenSpecInstallation:
+        return <OpenSpecInstallation />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       case OnboardingStep.Launch:
@@ -126,6 +129,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return t('welcome.title');
       case OnboardingStep.AgentCliSelection:
         return t('agent-cli.title');
+      case OnboardingStep.OpenSpecInstallation:
+        return t('openspec.title');
       case OnboardingStep.Download:
         return t('download.title');
       case OnboardingStep.Launch:
@@ -135,7 +140,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   return (
     <>
