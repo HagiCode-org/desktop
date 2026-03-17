@@ -24,15 +24,16 @@ function OpenSpecInstallation() {
   const isChecking = openSpecInstall.status === 'checking';
   const isInstalled = openSpecInstall.status === 'installed';
   const isFailed = openSpecInstall.status === 'failed';
+  const isIdle = openSpecInstall.status === 'idle';
   const isBusy = isInstalling || isChecking;
 
   useEffect(() => {
-    if (canGoNext || isInstalling || isChecking) {
+    if (canGoNext || isInstalling || isChecking || !isIdle) {
       return;
     }
 
     dispatch(verifyOpenSpec());
-  }, [canGoNext, dispatch, isChecking, isInstalling]);
+  }, [canGoNext, dispatch, isChecking, isIdle, isInstalling]);
 
   const handleInstall = () => {
     if (isBusy) {

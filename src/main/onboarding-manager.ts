@@ -28,7 +28,7 @@ import type {
  */
 export class OnboardingManager {
   private static readonly OPEN_SPEC_INSTALL_COMMAND = ['install', '-g', '@fission-ai/openspec@1'];
-  private static readonly OPEN_SPEC_SUPPORTED_RANGE = '>1.0.0 <2.0.0';
+  private static readonly OPEN_SPEC_SUPPORTED_RANGE = '>=1.0.0 <2.0.0';
 
   private versionManager: VersionManager;
   private dependencyManager: DependencyManager;
@@ -712,14 +712,38 @@ export class OnboardingManager {
     };
   }
 
+  private static buildSpawnInvocation(
+    command: string,
+    args: string[],
+    platform: NodeJS.Platform = process.platform,
+  ): { command: string; args: string[]; shell?: boolean } {
+    if (platform !== 'win32') {
+      return { command, args };
+    }
+
+    const lowerCommand = command.toLowerCase();
+    const needsCmdShim = lowerCommand.endsWith('.cmd') || lowerCommand.endsWith('.bat');
+    if (!needsCmdShim) {
+      return { command, args };
+    }
+
+    return {
+      command,
+      args,
+      shell: true,
+    };
+  }
+
   private runCommand(
     command: string,
     args: string[],
     env: NodeJS.ProcessEnv,
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     return new Promise((resolve) => {
-      const child = spawn(command, args, {
+      const spawnInvocation = OnboardingManager.buildSpawnInvocation(command, args);
+      const child = spawn(spawnInvocation.command, spawnInvocation.args, {
         env,
+        shell: spawnInvocation.shell,
         windowsHide: true,
       });
 
@@ -772,7 +796,7 @@ export class OnboardingManager {
     }
 
     if (!satisfies(parsedVersion, OnboardingManager.OPEN_SPEC_SUPPORTED_RANGE)) {
-      const error = `Detected OpenSpec ${parsedVersion}, but onboarding requires > 1.0 and < 2.0.`;
+      const error = `Detected OpenSpec ${parsedVersion}, but onboarding requires >= 1.0.0 and < 2.0.0.`;
       log.error('[OnboardingManager] OpenSpec version outside supported range:', parsedVersion);
       return { success: false, error };
     }
