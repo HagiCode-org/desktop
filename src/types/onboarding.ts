@@ -8,8 +8,17 @@
 export enum OnboardingStep {
   Welcome = 0,
   AgentCliSelection = 1,
-  Download = 2,
-  Launch = 3,
+  OpenSpecInstallation = 2,
+  Download = 3,
+  Launch = 4,
+}
+
+export type OpenSpecInstallStatus = 'idle' | 'installing' | 'checking' | 'installed' | 'failed';
+
+export interface OpenSpecInstallState {
+  status: OpenSpecInstallStatus;
+  error: string | null;
+  installedVersion: string | null;
 }
 
 /**
@@ -69,6 +78,12 @@ export interface OnboardingStartServiceResult {
   startupFailure?: StartupFailurePayload;
 }
 
+export interface OnboardingInstallOpenSpecResult {
+  success: boolean;
+  version?: string;
+  error?: string;
+}
+
 /**
  * Result returned when onboarding recovers from a startup failure.
  */
@@ -99,6 +114,8 @@ export interface OnboardingState {
   serviceProgress: ServiceLaunchProgress | null;
   showSkipConfirm: boolean;
   error: string | null;
+  isOpenSpecConfirmed: boolean;
+  openSpecInstall: OpenSpecInstallState;
   startupFailure: StartupFailurePayload | null;
   showStartupFailureDialog: boolean;
   // Idempotency flags to prevent duplicate operations

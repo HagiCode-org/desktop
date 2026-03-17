@@ -1627,6 +1627,36 @@ ipcMain.handle('onboarding:download-package', async () => {
   }
 });
 
+ipcMain.handle('onboarding:install-openspec', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.installOpenSpec();
+  } catch (error) {
+    console.error('Failed to install OpenSpec:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
+
+ipcMain.handle('onboarding:verify-openspec', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.verifyOpenSpec();
+  } catch (error) {
+    console.error('Failed to verify OpenSpec:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
+
 ipcMain.handle('onboarding:install-dependencies', async (_, versionId: string) => {
   if (!onboardingManager) {
     return { success: false, error: 'Onboarding manager not initialized' };
