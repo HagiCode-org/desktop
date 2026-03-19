@@ -5,6 +5,7 @@ import log from 'electron-log';
 const DISABLE_VALUES = new Set(['0', 'false', 'no', 'off']);
 const ENABLE_VALUES = new Set(['1', 'true', 'yes', 'on']);
 const FEATURE_FLAG = 'HAGICODE_WEB_SERVICE_LOAD_CONSOLE_ENV';
+const NULL_DELIMITED_ENV_COMMAND = 'env -0';
 
 let cachedConsoleEnv: Promise<Record<string, string>> | null = null;
 
@@ -100,20 +101,55 @@ function resolveUnixShellPath(): string {
   return process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash';
 }
 
-function resolveUnixEnvCommand(shellName: string): string[] {
+export function resolveUnixEnvCommand(shellName: string): string[] {
   if (shellName.includes('bash')) {
-    return ['-ic', 'source ~/.bashrc >/dev/null 2>&1 || true; env -0'];
+    return ['--login', '--noprofile', '--norc', '-ic', buildBashEnvExportCommand()];
   }
 
   if (shellName.includes('zsh')) {
-    return ['-ic', 'source ~/.zshrc >/dev/null 2>&1 || true; env -0'];
+    return ['-f', '-l', '-i', '-c', buildZshEnvExportCommand()];
   }
 
   if (shellName.includes('fish')) {
-    return ['-ic', 'env -0'];
+    return ['-ic', NULL_DELIMITED_ENV_COMMAND];
   }
 
-  return ['-lc', 'env -0'];
+  return ['-lc', NULL_DELIMITED_ENV_COMMAND];
+}
+
+function buildBashEnvExportCommand(): string {
+  return [
+    buildFirstAvailableSourceCommand(['$HOME/.bash_profile', '$HOME/.bash_login', '$HOME/.profile']),
+    buildOptionalSourceCommand('$HOME/.bashrc'),
+    NULL_DELIMITED_ENV_COMMAND,
+  ].join(' ');
+}
+
+function buildZshEnvExportCommand(): string {
+  return [buildOptionalSourceCommand('$HOME/.zprofile'), buildOptionalSourceCommand('$HOME/.zshrc'), NULL_DELIMITED_ENV_COMMAND].join(' ');
+}
+
+function buildFirstAvailableSourceCommand(profilePaths: string[]): string {
+  const conditions = profilePaths
+    .map((profilePath, index) => {
+      const branchKeyword = index === 0 ? 'if' : 'elif';
+      return `${branchKeyword} [ -f ${quoteShellPath(profilePath)} ]; then ${buildSourceCommand(profilePath)};`;
+    })
+    .join(' ');
+
+  return `${conditions} fi;`;
+}
+
+function buildOptionalSourceCommand(profilePath: string): string {
+  return `if [ -f ${quoteShellPath(profilePath)} ]; then ${buildSourceCommand(profilePath)}; fi;`;
+}
+
+function buildSourceCommand(profilePath: string): string {
+  return `{ . ${quoteShellPath(profilePath)}; } >/dev/null 2>&1 || true`;
+}
+
+function quoteShellPath(profilePath: string): string {
+  return `"${profilePath}"`;
 }
 
 async function executeCommand(command: string, args: string[]): Promise<string> {

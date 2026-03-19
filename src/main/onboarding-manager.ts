@@ -704,12 +704,19 @@ export class OnboardingManager {
     }
   }
 
-  private async buildRuntimeEnv(): Promise<NodeJS.ProcessEnv> {
-    const consoleEnv = await loadConsoleEnvironment();
+  private static mergeRuntimeEnv(
+    baseEnv: NodeJS.ProcessEnv,
+    consoleEnv: Record<string, string>,
+  ): NodeJS.ProcessEnv {
     return {
-      ...process.env,
+      ...baseEnv,
       ...consoleEnv,
     };
+  }
+
+  private async buildRuntimeEnv(): Promise<NodeJS.ProcessEnv> {
+    const consoleEnv = await loadConsoleEnvironment();
+    return OnboardingManager.mergeRuntimeEnv(process.env, consoleEnv);
   }
 
   private static buildSpawnInvocation(
