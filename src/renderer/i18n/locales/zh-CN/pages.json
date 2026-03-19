@@ -4,50 +4,35 @@
     "tabs": {
       "onboarding": "启动向导",
       "remoteMode": "远程模式",
-      "agentCli": "Agent CLI",
       "debug": "调试",
-      "dataDirectory": "数据目录",
-      "smartConfig": "智能配置"
+      "dataDirectory": "数据目录"
     },
     "agentCli": {
-      "title": "Agent CLI",
-      "description": "展示并切换当前用于 AI 相关流程的命令行工具。",
+      "title": "偏好 Agent CLI",
+      "description": "选择当 Desktop 展示提示词指引时优先高亮的命令行工具。",
       "current": {
-        "label": "当前选择",
-        "none": "未选择",
-        "skipped": "已跳过（将使用默认值）",
+        "label": "当前偏好",
+        "none": "尚未选择偏好工具",
+        "skipped": "已在引导中跳过",
         "updatedAt": "最近更新：{{value}}"
       },
       "actions": {
-        "select": "切换到此项",
-        "selected": "当前使用中",
-        "switching": "切换中..."
+        "select": "设为偏好工具",
+        "selected": "当前偏好",
+        "switching": "保存中..."
       },
       "messages": {
-        "saved": "已切换到 {{name}}",
-        "saveFailed": "切换失败：{{error}}",
-        "loadFailed": "读取当前配置失败：{{error}}"
+        "saved": "已将 {{name}} 设为提示词指引偏好工具",
+        "saveFailed": "保存偏好失败：{{error}}",
+        "loadFailed": "读取当前偏好失败：{{error}}"
       },
       "notes": {
-        "fallback": "未显式选择时，系统默认使用 Claude Code。"
+        "fallback": "即使没有偏好工具，提示词指引依然可用；Desktop 只会用它来高亮推荐和文档入口。"
       }
     },
     "smartConfig": {
-      "title": "智能配置",
-      "description": "点击下方按钮启动 AI CLI 并自动载入配置提示词",
-      "startButton": "启动智能配置",
-      "started": "已启动",
-      "loading": "正在启动...",
-      "success": "AI CLI 已启动",
-      "successHint": "请查看终端窗口获取配置说明",
-      "error": "启动失败",
-      "retry": "重试",
-      "errors": {
-        "unknown": "发生未知错误",
-        "promptNotFound": "提示词文件不存在",
-        "cliNotFound": "AI CLI 未找到",
-        "diagnosticInfo": "诊断信息：activeVersion={{activeVersion}}；attemptedPaths={{paths}}"
-      }
+      "title": "智能配置提示指引",
+      "description": "查看 Desktop 解析出的提示词，复制到你偏好的 AI CLI 中，并手动完成配置流程。"
     },
     "remoteMode": {
       "title": "远程模式",
@@ -269,21 +254,6 @@
       "cancel": "取消",
       "confirm": "确认"
     },
-    "claude": {
-      "installationButton": "Claude 安装",
-      "title": "Claude 安装",
-      "description": "使用 Claude AI 帮助安装此版本的依赖项。",
-      "callButton": "调用 Claude 获取安装帮助",
-      "calling": "正在调用 Claude API...",
-      "completed": "Claude API 调用成功",
-      "completedHint": "请检查终端输出获取安装说明。",
-      "failed": "Claude API 调用失败",
-      "retry": "重试",
-      "region": {
-        "cn": "🇨🇳 CN (中国)",
-        "international": "🌍 国际版"
-      }
-    },
     "dependencyInfo": {
       "title": "依赖项要求",
       "description": "这是此版本的依赖项要求。请确保在使用此版本之前安装所有依赖项。",
@@ -295,6 +265,16 @@
       "requiredVersion": "所需 Desktop：",
       "currentVersion": "当前 Desktop：",
       "upgradeGuidance": "请先升级 Hagicode Desktop，再重试切换或启动此软件包。"
+    },
+    "aiGuidance": {
+      "title": "AI 依赖指引",
+      "description": "使用下方版本专属提示词，在任意受支持的 AI CLI 中安装或校验依赖。",
+      "panelTitle": "版本提示词指引",
+      "panelDescription": "Desktop 会为你解析该版本的提示词，并展示可直接粘贴到 CLI 的完整内容。",
+      "region": {
+        "cn": "中国区提示词",
+        "international": "国际版提示词"
+      }
     }
   },
   "installProgressDialog": {

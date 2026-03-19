@@ -5,6 +5,7 @@ import type {
   OnboardingStartServiceResult,
   StartupFailurePayload,
 } from '../types/onboarding.js';
+import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -193,14 +194,23 @@ interface ElectronAPI {
   llmDetectConfig: () => Promise<any>;
   llmGetRegion: () => Promise<any>;
   llmGetManifestPath: (versionId: string) => Promise<any>;
+  llmGetPromptGuidance: (
+    resourceKey: 'smartConfig' | 'diagnosis',
+    customPromptPath?: string
+  ) => Promise<PromptGuidanceResponse>;
+  llmGetVersionPromptGuidance: (
+    versionId: string,
+    region?: 'cn' | 'international'
+  ) => Promise<PromptGuidanceResponse>;
   llmOpenAICliWithResource: (
     resourceKey: 'smartConfig' | 'diagnosis',
     customPromptPath?: string
-  ) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
-  llmOpenAICliWithPrompt: (promptPath: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
+  ) => Promise<PromptGuidanceResponse>;
+  llmOpenAICliWithPrompt: (promptPath: string) => Promise<PromptGuidanceResponse>;
 
   // Diagnosis APIs
-  diagnosisOpenPrompt: () => Promise<{ success: boolean; error?: string }>;
+  diagnosisGetPromptGuidance: () => Promise<PromptGuidanceResponse>;
+  diagnosisOpenPrompt: () => Promise<PromptGuidanceResponse>;
 
   // Onboarding APIs
   checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
@@ -413,11 +423,16 @@ const electronAPI = {
   llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
   llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
   llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
+  llmGetPromptGuidance: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) =>
+    ipcRenderer.invoke('llm:get-prompt-guidance', resourceKey, customPromptPath),
+  llmGetVersionPromptGuidance: (versionId: string, region?: 'cn' | 'international') =>
+    ipcRenderer.invoke('llm:get-version-prompt-guidance', versionId, region),
   llmOpenAICliWithResource: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) =>
     ipcRenderer.invoke('llm:open-ai-cli-with-resource', resourceKey, customPromptPath),
   llmOpenAICliWithPrompt: (promptPath: string) => ipcRenderer.invoke('llm:open-ai-cli-with-prompt', promptPath),
 
   // Diagnosis APIs
+  diagnosisGetPromptGuidance: () => ipcRenderer.invoke('diagnosis:get-prompt-guidance'),
   diagnosisOpenPrompt: () => ipcRenderer.invoke('diagnosis:open-prompt'),
 
   // Tray service control

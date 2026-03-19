@@ -1,13 +1,13 @@
 {
   "title": "选择 Agent CLI",
-  "description": "选择您已配置好的 AI 编程工具。系统将使用该工具进行后续的安装辅助操作。",
+  "description": "选择以后在 Desktop 展示提示词指引时，你更偏好使用的 CLI 工具。",
   "selectLabel": "选择 Agent CLI",
   "selectPlaceholder": "选择一个 Agent CLI...",
   "viewDocs": "查看文档",
   "skip": "跳过",
   "skipConfirm": {
     "title": "确认跳过？",
-    "message": "跳过此步骤后，AI 辅助安装功能将不可用。您确定要继续吗？",
+    "message": "如果跳过此步骤，Desktop 仍会显示提示词指引，但不会高亮偏好工具。",
     "confirm": "确认跳过"
   },
   "cancel": "取消",
@@ -17,10 +17,10 @@
   "optional": "可选",
   "help": {
     "title": "帮助",
-    "ensureConfigured": "确保您选择的 CLI 已在系统环境变量中正确配置 API Key。",
-    "configLocation": "配置位置: ~/.claude/settings.json",
-    "configInstructions": "如需配置帮助，请查看 CLI 文档。",
-    "whyRequired": "AI 辅助安装功能需要正确配置的 CLI 才能工作。"
+    "ensureConfigured": "请提前配置好你计划使用的 CLI，这样之后就能直接粘贴提示词继续操作。",
+    "configLocation": "Desktop 只保存你的偏好和对应文档入口。",
+    "configInstructions": "你也可以稍后在设置中随时修改。",
+    "whyRequired": "这个偏好是可选的，只影响哪个工具会被优先推荐。"
   },
   "future": {
     "label": "即将推出",

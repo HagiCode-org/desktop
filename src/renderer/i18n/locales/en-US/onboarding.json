@@ -17,10 +17,9 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The 5-step first-time setup includes:",
+    "processTitle": "The 4-step first-time setup includes:",
     "steps": {
       "welcome": "Review the setup and what will happen next",
-      "agentCli": "Select your preferred Agent CLI",
       "openSpec": "Install and verify OpenSpec 1.x (> 1.0 and < 2.0)",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running"

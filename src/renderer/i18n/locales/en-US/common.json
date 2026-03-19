@@ -142,20 +142,14 @@
   },
   "diagnosis": {
     "button": {
-      "text": "Having startup issues? Let AI diagnose it",
-      "loading": "Starting...",
-      "success": "Started",
-      "retry": "Retry",
-      "ariaLabel": "Start AI diagnosis"
+      "text": "Open AI diagnosis guidance",
+      "ariaLabel": "Open AI diagnosis guidance"
     },
-    "toast": {
-      "success": "AI diagnosis started",
-      "error": "Failed to start AI diagnosis"
-    },
-    "errors": {
-      "promptNotFound": "Prompt file not found",
-      "cliNotFound": "AI CLI not found or failed to start",
-      "diagnosticInfo": "Diagnostic: activeVersion={{activeVersion}}; attemptedPaths={{paths}}"
+    "dialog": {
+      "title": "AI diagnosis guidance",
+      "description": "Desktop resolves the diagnosis prompt and lets you run it in whichever AI CLI you prefer.",
+      "panelTitle": "Diagnosis prompt guidance",
+      "panelDescription": "Copy the prompt, run it from the suggested location, and return once you have next steps."
     }
   },
   "system": {

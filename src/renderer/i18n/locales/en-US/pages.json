@@ -5,25 +5,11 @@
       "onboarding": "Onboarding",
       "remoteMode": "Remote Mode",
       "debug": "Debug",
-      "dataDirectory": "Data Directory",
-      "smartConfig": "Smart Config"
+      "dataDirectory": "Data Directory"
     },
     "smartConfig": {
-      "title": "Smart Config",
-      "description": "Click the button below to start AI CLI and automatically load the configuration prompt",
-      "startButton": "Start Smart Config",
-      "started": "Started",
-      "loading": "Starting...",
-      "success": "AI CLI Started",
-      "successHint": "Check the terminal window for configuration instructions",
-      "error": "Startup Failed",
-      "retry": "Retry",
-      "errors": {
-        "unknown": "An unknown error occurred",
-        "promptNotFound": "Prompt file not found",
-        "cliNotFound": "AI CLI not found",
-        "diagnosticInfo": "Diagnostic: activeVersion={{activeVersion}}; attemptedPaths={{paths}}"
-      }
+      "title": "Smart Config prompt guidance",
+      "description": "Review the resolved prompt, copy it into your preferred AI CLI, and complete the configuration flow manually."
     },
     "remoteMode": {
       "title": "Remote Mode",
@@ -120,6 +106,29 @@
       },
       "notes": {
         "absolutePathOnly": "Note: Only absolute paths are supported. Relative paths are not allowed."
+      }
+    },
+    "agentCli": {
+      "title": "Preferred Agent CLI",
+      "description": "Choose which CLI should be highlighted first when Desktop shows prompt guidance.",
+      "current": {
+        "label": "Current preference",
+        "none": "No preferred tool selected",
+        "skipped": "Skipped during onboarding",
+        "updatedAt": "Last updated: {{value}}"
+      },
+      "actions": {
+        "select": "Set as preferred",
+        "selected": "Preferred tool",
+        "switching": "Saving..."
+      },
+      "messages": {
+        "saved": "{{name}} is now the preferred guidance tool",
+        "saveFailed": "Failed to save preference: {{error}}",
+        "loadFailed": "Failed to load current preference: {{error}}"
+      },
+      "notes": {
+        "fallback": "Prompt guidance still works without a preference; Desktop only uses this to highlight recommendations and docs."
       }
     }
   },
@@ -245,21 +254,6 @@
       "cancel": "Cancel",
       "confirm": "Confirm"
     },
-    "claude": {
-      "installationButton": "Claude Installation",
-      "title": "Claude Installation",
-      "description": "Use Claude AI to help install dependencies for this version.",
-      "callButton": "Call Claude for Installation Help",
-      "calling": "Calling Claude API...",
-      "completed": "Claude API call completed successfully",
-      "completedHint": "Please check terminal output for installation instructions.",
-      "failed": "Claude API call failed",
-      "retry": "Retry",
-      "region": {
-        "cn": "🇨🇳 CN (中国)",
-        "international": "🌍 International"
-      }
-    },
     "dependencyInfo": {
       "title": "Dependency Requirements",
       "description": "These are dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
@@ -271,6 +265,16 @@
       "requiredVersion": "Required Desktop:",
       "currentVersion": "Current Desktop:",
       "upgradeGuidance": "Upgrade Hagicode Desktop, then retry switching or starting this package."
+    },
+    "aiGuidance": {
+      "title": "AI dependency guidance",
+      "description": "Use the version-specific prompt below with any supported AI CLI to install or verify dependencies.",
+      "panelTitle": "Version prompt guidance",
+      "panelDescription": "Desktop resolves the version prompt for you and shows the exact instructions to paste into your CLI.",
+      "region": {
+        "cn": "CN prompt",
+        "international": "International prompt"
+      }
     }
   },
   "installProgressDialog": {

@@ -17,10 +17,9 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装共分 5 个步骤：",
+    "processTitle": "首次安装共分 4 个步骤：",
     "steps": {
       "welcome": "了解本次引导会完成的准备工作",
-      "agentCli": "选择你偏好的 Agent CLI",
       "openSpec": "安装并验证 OpenSpec 1.x（> 1.0 且 < 2.0）",
       "download": "下载最新的 Hagicode Server 包",
       "launch": "启动服务并确认运行正常"

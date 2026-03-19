@@ -1,13 +1,13 @@
 {
   "title": "Select Agent CLI",
-  "description": "Select your configured AI programming tool. The system will use this tool for subsequent installation assistance.",
+  "description": "Select the CLI you prefer to use when Desktop later shows prompt guidance.",
   "selectLabel": "Select Agent CLI",
   "selectPlaceholder": "Choose an Agent CLI...",
   "viewDocs": "View Documentation",
   "skip": "Skip",
   "skipConfirm": {
     "title": "Confirm Skip?",
-    "message": "Skipping this step will make AI-assisted installation unavailable. Are you sure you want to continue?",
+    "message": "If you skip this step, Desktop will still show prompt guidance, but it will not highlight a preferred tool.",
     "confirm": "Confirm Skip"
   },
   "cancel": "Cancel",
@@ -17,10 +17,10 @@
   "optional": "Optional",
   "help": {
     "title": "Help",
-    "ensureConfigured": "Ensure your selected CLI has API key properly configured in environment variables.",
-    "configLocation": "Configuration location: ~/.claude/settings.json",
-    "configInstructions": "For help with configuration, see the CLI documentation.",
-    "whyRequired": "AI-assisted installation requires a properly configured CLI to work."
+    "ensureConfigured": "Configure whichever CLI you plan to use so you can paste prompt guidance into it later.",
+    "configLocation": "Desktop only stores your preference and documentation shortcuts.",
+    "configInstructions": "You can always change this later from Settings.",
+    "whyRequired": "This preference is optional and only affects which tool is recommended first."
   },
   "future": {
     "label": "Coming Soon",

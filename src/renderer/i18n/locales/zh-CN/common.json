@@ -142,20 +142,14 @@
   },
   "diagnosis": {
     "button": {
-      "text": "启动遇到问题？点这里让 AI 看看",
-      "loading": "正在启动...",
-      "success": "已启动",
-      "retry": "重试",
-      "ariaLabel": "启动 AI 问题诊断"
+      "text": "打开 AI 诊断提示指引",
+      "ariaLabel": "打开 AI 诊断提示指引"
     },
-    "toast": {
-      "success": "AI 诊断已启动",
-      "error": "启动 AI 诊断失败"
-    },
-    "errors": {
-      "promptNotFound": "提示词文件不存在",
-      "cliNotFound": "AI CLI 未找到或启动失败",
-      "diagnosticInfo": "诊断信息：activeVersion={{activeVersion}}；attemptedPaths={{paths}}"
+    "dialog": {
+      "title": "AI 诊断提示指引",
+      "description": "Desktop 会解析诊断提示词，并让你用自己偏好的 AI CLI 执行它。",
+      "panelTitle": "诊断提示词指引",
+      "panelDescription": "复制提示词，在建议目录中运行，拿到下一步建议后再回到 Desktop。"
     }
   },
   "system": {

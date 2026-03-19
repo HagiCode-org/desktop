@@ -15,6 +15,7 @@ import zhCNPages from './locales/zh-CN/pages.json';
 import zhCNUi from './locales/zh-CN/ui.json';
 import zhCNOnboarding from './locales/zh-CN/onboarding.json';
 import zhCNAgentCli from './locales/zh-CN/agent-cli.json';
+import zhCNPromptGuidance from './locales/zh-CN/prompt-guidance.json';
 
 import enUSCommon from './locales/en-US/common.json';
 import enUSComponents from './locales/en-US/components.json';
@@ -22,6 +23,7 @@ import enUSPages from './locales/en-US/pages.json';
 import enUSUi from './locales/en-US/ui.json';
 import enUSOnboarding from './locales/en-US/onboarding.json';
 import enUSAgentCli from './locales/en-US/agent-cli.json';
+import enUSPromptGuidance from './locales/en-US/prompt-guidance.json';
 
 // Initialize i18next
 i18n
@@ -38,6 +40,7 @@ i18n
         ui: zhCNUi,
         onboarding: zhCNOnboarding,
         'agent-cli': zhCNAgentCli,
+        'prompt-guidance': zhCNPromptGuidance,
       },
       'en-US': {
         common: enUSCommon,
@@ -46,6 +49,7 @@ i18n
         ui: enUSUi,
         onboarding: enUSOnboarding,
         'agent-cli': enUSAgentCli,
+        'prompt-guidance': enUSPromptGuidance,
       },
     },
   })
