@@ -409,12 +409,13 @@ Actions:
 
 ## Prompt Resource Resolution
 
-The desktop app now resolves Smart Config and Diagnosis prompt files through a shared resolver.
+The desktop app resolves Smart Config, Diagnosis, and version-level dependency prompts into a shared prompt-guidance payload for the renderer.
 
 ### Resource Keys and Target Files
 
 - `smartConfig` -> `config/config-prompt.llm.txt`
 - `diagnosis` -> `scripts/diagnosis-prompt.llm.txt`
+- `versionDependencies` -> prompt path declared in the installed version's `manifest.json`
 
 ### Resolution Order
 
@@ -426,14 +427,18 @@ For both entry points, path lookup follows this order:
 
 ### Structured Diagnostic Fields
 
-When prompt resolution fails, IPC responses include:
+When prompt guidance is requested, IPC responses include:
 
-- `errorCode`: stable category (`PROMPT_NOT_FOUND`, `INVALID_PROMPT_PATH`, etc.)
-- `resourceKey`: requested resource (`smartConfig` or `diagnosis`)
+- `promptContent`: resolved prompt text for copy/paste when lookup succeeds
+- `promptPath`: fully resolved prompt file path
+- `promptSource`: where the prompt came from (`active-version`, `packaged-resource`, `development-root`, `manifest-entry`, etc.)
 - `attemptedPaths`: ordered candidate path list that was checked
 - `activeVersion`: active version id at lookup time (if available)
+- `preferredCliType`: the persisted Agent CLI preference, used only to highlight recommendations
+- `supportedTools`: centrally registered CLI metadata, including docs links for shared renderer chips/buttons
+- `suggestedWorkingDirectory`: the directory Desktop recommends opening before pasting the prompt
 
-These fields are intended for troubleshooting and can be surfaced in UI or logs.
+When prompt resolution fails, the same payload keeps `attemptedPaths`, `activeVersion`, and a stable `errorCode` (`PROMPT_NOT_FOUND`, `INVALID_PROMPT_PATH`, etc.) so the renderer can show a structured troubleshooting state instead of auto-launching a terminal.
 
 ## Debugging
 
