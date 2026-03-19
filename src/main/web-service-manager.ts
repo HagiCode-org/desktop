@@ -1390,7 +1390,7 @@ export class PCodeWebServiceManager {
     if (Object.keys(consoleEnv).length > 0) {
       log.info('[WebService] Console environment merged for startup:', {
         envCount: Object.keys(consoleEnv).length,
-        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-rc',
+        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-startup-files',
       });
     }
 

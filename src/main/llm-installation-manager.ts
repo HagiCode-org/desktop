@@ -601,7 +601,7 @@ export class LlmInstallationManager {
     if (Object.keys(consoleEnv).length > 0) {
       log.info('[LlmInstallationManager] Console environment merged for AI CLI:', {
         envCount: Object.keys(consoleEnv).length,
-        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-rc',
+        source: process.platform === 'win32' ? 'powershell-profile' : 'shell-startup-files',
       });
     }
 
