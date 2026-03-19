@@ -316,12 +316,7 @@ export const onboardingSlice = createSlice({
 
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to AgentCliSelection');
-            state.currentStep = OnboardingStep.AgentCliSelection;
-            break;
-
-          case OnboardingStep.AgentCliSelection:
-            console.log('[onboardingSlice] Moving from AgentCliSelection to OpenSpecInstallation');
+            console.log('[onboardingSlice] Moving from Welcome to OpenSpecInstallation');
             state.currentStep = OnboardingStep.OpenSpecInstallation;
             break;
 
@@ -355,9 +350,6 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.OpenSpecInstallation;
             break;
           case OnboardingStep.OpenSpecInstallation:
-            state.currentStep = OnboardingStep.AgentCliSelection;
-            break;
-          case OnboardingStep.AgentCliSelection:
             state.currentStep = OnboardingStep.Welcome;
             break;
           default:
@@ -413,8 +405,6 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
   switch (currentStep) {
     case OnboardingStep.Welcome:
       return true; // Can always proceed from welcome
-    case OnboardingStep.AgentCliSelection:
-      return true;
     case OnboardingStep.OpenSpecInstallation:
       return isOpenSpecConfirmed;
     case OnboardingStep.Download:

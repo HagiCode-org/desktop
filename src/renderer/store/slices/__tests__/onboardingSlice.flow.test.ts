@@ -10,19 +10,15 @@ import reducer, {
 import { goToNextStep, goToPreviousStep, installOpenSpec, verifyOpenSpec } from '../../thunks/onboardingThunks.js';
 
 describe('onboardingSlice flow', () => {
-  it('uses the five-step onboarding sequence', () => {
+  it('uses the four-step onboarding sequence', () => {
     assert.equal(OnboardingStep.Welcome, 0);
-    assert.equal(OnboardingStep.AgentCliSelection, 1);
-    assert.equal(OnboardingStep.OpenSpecInstallation, 2);
-    assert.equal(OnboardingStep.Download, 3);
-    assert.equal(OnboardingStep.Launch, 4);
+    assert.equal(OnboardingStep.OpenSpecInstallation, 1);
+    assert.equal(OnboardingStep.Download, 2);
+    assert.equal(OnboardingStep.Launch, 3);
   });
 
   it('requires OpenSpec verification before moving to download', () => {
     let state = reducer(undefined, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.AgentCliSelection);
-
-    state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.OpenSpecInstallation);
     assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
 
@@ -41,7 +37,6 @@ describe('onboardingSlice flow', () => {
 
   it('preserves OpenSpec verification when navigating back within the same session', () => {
     let state = reducer(undefined, goToNextStep());
-    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       verifyOpenSpec.fulfilled({ success: true, version: '1.1.3' }, 'req-verify-2', undefined)
@@ -57,7 +52,6 @@ describe('onboardingSlice flow', () => {
 
   it('advances from download directly to launch once a version is ready', () => {
     let state = reducer(undefined, goToNextStep());
-    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       verifyOpenSpec.fulfilled({ success: true, version: '1.1.3' }, 'req-verify-3', undefined)
@@ -114,7 +108,6 @@ describe('onboardingSlice flow', () => {
 
   it('only enables next on launch after the embedded service is running', () => {
     let state = reducer(undefined, goToNextStep());
-    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       verifyOpenSpec.fulfilled({ success: true, version: '1.1.3' }, 'req-verify-5', undefined)

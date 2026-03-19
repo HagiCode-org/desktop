@@ -19,13 +19,14 @@ describe('onboarding OpenSpec copy', () => {
     }
   });
 
-  it('keeps the welcome overview aligned with the five-step flow', () => {
+  it('keeps the welcome overview aligned with the four-step flow', () => {
     for (const locale of ['en-US', 'zh-CN'] as const) {
       const steps = readLocale(locale).welcome.steps;
-      assert.equal(Object.keys(steps).length, 5);
+      assert.equal(Object.keys(steps).length, 4);
       assert.ok(steps.openSpec);
       assert.ok(steps.download);
       assert.ok(steps.launch);
+      assert.equal(steps.agentCli, undefined);
     }
   });
 

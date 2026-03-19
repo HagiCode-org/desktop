@@ -14,7 +14,6 @@ import {
 import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
-import AgentCliSelectionStep from './steps/AgentCliSelection';
 import OpenSpecInstallation from './steps/OpenSpecInstallation';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
@@ -110,8 +109,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
-      case OnboardingStep.AgentCliSelection:
-        return <AgentCliSelectionStep onNext={handleNext} onSkipSelection={handleNext} />;
       case OnboardingStep.OpenSpecInstallation:
         return <OpenSpecInstallation />;
       case OnboardingStep.Download:
@@ -127,8 +124,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
-      case OnboardingStep.AgentCliSelection:
-        return t('agent-cli.title');
       case OnboardingStep.OpenSpecInstallation:
         return t('openspec.title');
       case OnboardingStep.Download:
@@ -140,7 +135,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   return (
     <>
@@ -168,9 +163,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
             {/* Actions */}
             {/* Steps that provide their own action buttons or custom navigation are excluded from OnboardingActions */}
-            {/* Welcome, AgentCliSelection, and Launch have custom navigation flows */}
+            {/* Welcome and Launch have custom navigation flows */}
             {currentStep !== OnboardingStep.Welcome &&
-             currentStep !== OnboardingStep.AgentCliSelection &&
              currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions

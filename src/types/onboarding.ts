@@ -7,10 +7,9 @@
  */
 export enum OnboardingStep {
   Welcome = 0,
-  AgentCliSelection = 1,
-  OpenSpecInstallation = 2,
-  Download = 3,
-  Launch = 4,
+  OpenSpecInstallation = 1,
+  Download = 2,
+  Launch = 3,
 }
 
 export type OpenSpecInstallStatus = 'idle' | 'installing' | 'checking' | 'installed' | 'failed';
