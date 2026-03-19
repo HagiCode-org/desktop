@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
@@ -14,7 +14,6 @@ import {
   FolderOpen,
   Loader2,
   Rocket,
-  Bot,
 } from 'lucide-react';
 import {
   Dialog,
@@ -37,6 +36,7 @@ import {
 } from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
+import { VersionDependencyGuidance } from './VersionDependencyGuidance';
 
 
 interface Version {
@@ -129,13 +129,6 @@ export default function VersionManagementPage() {
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [dependencies, setDependencies] = useState<Record<string, DependencyCheckResult[]>>({});
   const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
-
-  // LLM Installation states
-  const [llmCallStatus, setLlmCallStatus] = useState<'idle' | 'calling' | 'completed' | 'error'>('idle');
-  const [llmError, setLlmError] = useState<string | null>(null);
-  const [llmOutput, setLlmOutput] = useState<string>('');
-  const [selectedRegion, setSelectedRegion] = useState<'cn' | 'international'>('cn');
-  const [llmVersionId, setLlmVersionId] = useState<string | null>(null);
 
   // Dialog states
   const [reinstallDialogOpen, setReinstallDialogOpen] = useState(false);
@@ -358,47 +351,6 @@ export default function VersionManagementPage() {
     }
   };
 
-  // LLM Installation handlers
-  const handleCallClaude = async (versionId: string) => {
-    setLlmCallStatus('calling');
-    setLlmError(null);
-    setLlmOutput('');
-    setLlmVersionId(versionId);
-
-    try {
-      const manifestPathResult = await window.electronAPI.llmGetManifestPath(versionId);
-
-      if (!manifestPathResult.success || !manifestPathResult.manifestPath) {
-        throw new Error(manifestPathResult.error || 'Failed to get manifest path');
-      }
-
-      // Call LLM API with selected region
-      const apiResponse = await window.electronAPI.llmCallApi(
-        manifestPathResult.manifestPath,
-        selectedRegion
-      );
-
-      if (!apiResponse.success) {
-        throw new Error(apiResponse.error || 'API call failed');
-      }
-
-      // Set status back to idle to keep button active for retry
-      setLlmCallStatus('idle');
-      // No success toast - button remains active
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setLlmError(errorMessage);
-      setLlmCallStatus('error');
-      toast.error(`Claude API call failed: ${errorMessage}`);
-    }
-  };
-
-  const handleRetryClaude = async () => {
-    if (llmVersionId) {
-      await handleCallClaude(llmVersionId);
-    }
-  };
-
   const handleStartOnboarding = async () => {
     try {
       // Reset onboarding state to allow it to show again
@@ -414,19 +366,6 @@ export default function VersionManagementPage() {
       console.error('Failed to start onboarding:', error);
       toast.error(t('versionManagement.toast.onboardingFailed'));
     }
-  };
-
-  const getDepTypeFromName = (depName: string): string | null => {
-    const nameMap: Record<string, string> = {
-      'Claude Code': 'claudeCode',
-      'ClaudeCode': 'claudeCode',
-      'Dotnet': 'dotnet',
-      'Node': 'node',
-      'Npm': 'npm',
-      'Openspec': 'openspec',
-      'OpenSpec': 'openspec',
-    };
-    return nameMap[depName] || null;
   };
 
   const getInstallProgressText = () => {
@@ -890,88 +829,7 @@ export default function VersionManagementPage() {
                         </h4>
                       </div>
 
-                      {/* Claude Installation Section */}
-                      <div className="mb-3 bg-primary/10 border border-primary/20 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Bot className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-foreground">
-                              {t('versionManagement.claude.title')}
-                            </span>
-                          </div>
-
-                          {/* Region selector */}
-                          <select
-                            value={selectedRegion}
-                            onChange={(e) => setSelectedRegion(e.target.value as 'cn' | 'international')}
-                            disabled={llmCallStatus === 'calling'}
-                            className="px-2 py-1 text-sm border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                          >
-                            <option value="cn">{t('versionManagement.claude.region.cn')}</option>
-                            <option value="international">{t('versionManagement.claude.region.international')}</option>
-                          </select>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {t('versionManagement.claude.description')}
-                        </p>
-
-                        {/* LLM Call Status */}
-                        {llmCallStatus === 'idle' && (
-                          <button
-                            onClick={() => handleCallClaude(version.id)}
-                            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium transition-colors"
-                          >
-                            <Bot className="w-4 h-4" />
-                            {t('versionManagement.claude.callButton')}
-                          </button>
-                        )}
-
-                        {llmCallStatus === 'calling' && (
-                          <div className="flex items-center justify-center gap-2 py-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                            <span className="text-sm text-muted-foreground">
-                              {t('versionManagement.claude.calling')}
-                            </span>
-                          </div>
-                        )}
-
-                        {llmCallStatus === 'completed' && (
-                          <div className="bg-green-500/10 border border-green-500/20 rounded-md p-2">
-                            <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
-                              <CheckCircle className="w-4 h-4" />
-                              <span className="text-sm font-medium">
-                                {t('versionManagement.claude.completed')}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t('versionManagement.claude.completedHint')}
-                            </p>
-                          </div>
-                        )}
-
-                        {llmCallStatus === 'error' && (
-                          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2 text-destructive">
-                                <AlertCircle className="w-4 h-4" />
-                                <span className="text-sm font-medium">{t('versionManagement.claude.failed')}</span>
-                              </div>
-                              <button
-                                onClick={handleRetryClaude}
-                                className="text-xs text-primary hover:underline"
-                              >
-                                {t('versionManagement.claude.retry')}
-                              </button>
-                            </div>
-                            {llmError && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {llmError}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      <VersionDependencyGuidance versionId={version.id} />
 
                       {/* Info banner */}
                       <div className="mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">

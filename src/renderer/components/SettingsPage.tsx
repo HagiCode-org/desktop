@@ -1,10 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnboardingSettings } from './settings/OnboardingSettings';
-import { AgentCliSettings } from './settings/AgentCliSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
-import { SmartConfigTab } from './smart-config/SmartConfigTab';
 
 export default function SettingsPage() {
   const { t } = useTranslation('pages');
@@ -33,22 +31,10 @@ export default function SettingsPage() {
               {t('settings.tabs.remoteMode')}
             </TabsTrigger>
             <TabsTrigger
-              value="agentCli"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.agentCli')}
-            </TabsTrigger>
-            <TabsTrigger
               value="dataDirectory"
               className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               {t('settings.tabs.dataDirectory')}
-            </TabsTrigger>
-            <TabsTrigger
-              value="smartConfig"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.smartConfig')}
             </TabsTrigger>
           </TabsList>
 
@@ -61,16 +47,8 @@ export default function SettingsPage() {
               <RemoteModeSettings />
             </TabsContent>
 
-            <TabsContent value="agentCli" className="mt-0">
-              <AgentCliSettings />
-            </TabsContent>
-
             <TabsContent value="dataDirectory" className="mt-0">
               <DataDirectorySettings />
-            </TabsContent>
-
-            <TabsContent value="smartConfig" className="mt-0">
-              <SmartConfigTab />
             </TabsContent>
           </div>
         </div>

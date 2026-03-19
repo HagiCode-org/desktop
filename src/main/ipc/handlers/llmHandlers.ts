@@ -4,10 +4,10 @@ import { PathManager } from '../../path-manager.js';
 import type { VersionManager } from '../../version-manager.js';
 import {
   PromptResourceResolver,
-  type PromptResolveFailure,
   type PromptResourceKey,
 } from '../../prompt-resource-resolver.js';
 import type AgentCliManager from '../../agent-cli-manager.js';
+import { PromptGuidanceService } from '../../prompt-guidance-service.js';
 
 // Module state
 interface LlmHandlerState {
@@ -161,22 +161,6 @@ export function registerLlmHandlers(deps: {
     }
   });
 
-  const getCommandName = () => {
-    let commandName = 'claude';
-    if (state.agentCliManager) {
-      const selectedCliType = state.agentCliManager.getSelectedCliType();
-      if (selectedCliType) {
-        commandName = state.agentCliManager.getCommandName(selectedCliType);
-        console.log('[LlmHandlers] Using CLI command:', commandName, 'for selected type:', selectedCliType);
-      } else {
-        console.log('[LlmHandlers] No CLI type selected, using default: claude');
-      }
-    } else {
-      console.log('[LlmHandlers] AgentCliManager not available, using default: claude');
-    }
-    return commandName;
-  };
-
   const getActiveVersionContext = async () => {
     if (!state.versionManager) {
       return null;
@@ -191,83 +175,54 @@ export function registerLlmHandlers(deps: {
     };
   };
 
-  const mapPromptResolveFailure = (failure: PromptResolveFailure) => {
-    return {
-      success: false,
-      errorCode: failure.errorCode,
-      resourceKey: failure.resourceKey,
-      attemptedPaths: failure.attemptedPaths,
-      activeVersion: failure.activeVersion,
-      error: failure.error,
-    };
-  };
-
-  const launchWithResolvedPrompt = async (resourceKey: PromptResourceKey, customPromptPath?: string) => {
-    if (!state.llmInstallationManager) {
-      return {
-        success: false,
-        errorCode: 'MANAGER_NOT_INITIALIZED',
-        error: 'LLM Installation Manager not initialized',
-      };
-    }
-
-    if (!state.promptResourceResolver) {
-      return {
-        success: false,
-        errorCode: 'RESOLVER_NOT_INITIALIZED',
-        error: 'Prompt resource resolver not initialized',
-      };
-    }
-
-    try {
-      const resolution = await state.promptResourceResolver.resolve({
-        resourceKey,
-        customPromptPath,
-        activeVersion: await getActiveVersionContext(),
-        runtime: {
-          isPackaged: app.isPackaged,
-          appPath: app.getAppPath(),
-          cwd: process.cwd(),
-          processResourcesPath: process.resourcesPath,
-        },
-      });
-
-      if (!resolution.success) {
-        return mapPromptResolveFailure(resolution);
-      }
-
-      await state.llmInstallationManager.openAICliWithPrompt(resolution.resolvedPath, getCommandName());
-      return {
-        success: true,
-        message: 'AI CLI started successfully',
-        resourceKey,
-        promptPath: resolution.resolvedPath,
-        promptSource: resolution.source,
-        attemptedPaths: resolution.attemptedPaths,
-        activeVersion: resolution.activeVersion,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[LlmHandlers] Failed to open AI CLI with prompt:', errorMessage);
-      return {
-        success: false,
-        errorCode: 'CLI_LAUNCH_FAILED',
-        error: errorMessage,
-      };
-    }
-  };
-
-  // LLM open AI CLI with resource key handler
-  ipcMain.handle('llm:open-ai-cli-with-resource', async (_event, resourceKey: PromptResourceKey, customPromptPath?: string) => {
-    return launchWithResolvedPrompt(resourceKey, customPromptPath);
+  const getPromptGuidanceService = () => new PromptGuidanceService({
+    promptResourceResolver: state.promptResourceResolver,
+    llmInstallationManager: state.llmInstallationManager,
+    agentCliManager: state.agentCliManager,
+    resolveManifestPath: (versionId: string) => {
+      const pathManager = PathManager.getInstance();
+      const versionPath = pathManager.getInstalledVersionPath(versionId);
+      return `${versionPath}/manifest.json`;
+    },
   });
 
-  // LLM open AI CLI with prompt handler (compatibility path)
+  const getPromptGuidance = async (resourceKey: PromptResourceKey, customPromptPath?: string) => {
+    return getPromptGuidanceService().buildResourceGuidance({
+      entryPoint: resourceKey,
+      resourceKey,
+      customPromptPath,
+      activeVersion: await getActiveVersionContext(),
+      runtime: {
+        isPackaged: app.isPackaged,
+        appPath: app.getAppPath(),
+        cwd: process.cwd(),
+        processResourcesPath: process.resourcesPath,
+      },
+    });
+  };
+
+  ipcMain.handle('llm:get-prompt-guidance', async (_event, resourceKey: PromptResourceKey, customPromptPath?: string) => {
+    return getPromptGuidance(resourceKey, customPromptPath);
+  });
+
+  ipcMain.handle('llm:get-version-prompt-guidance', async (_event, versionId: string, region?: 'cn' | 'international') => {
+    return getPromptGuidanceService().buildVersionGuidance({
+      versionId,
+      region,
+    });
+  });
+
+  // Compatibility path kept for existing callers; now returns prompt guidance instead of launching a CLI.
+  ipcMain.handle('llm:open-ai-cli-with-resource', async (_event, resourceKey: PromptResourceKey, customPromptPath?: string) => {
+    return getPromptGuidance(resourceKey, customPromptPath);
+  });
+
+  // Compatibility path kept for existing callers; now returns prompt guidance instead of launching a CLI.
   ipcMain.handle('llm:open-ai-cli-with-prompt', async (_event, promptPath?: string) => {
     if (!promptPath || typeof promptPath !== 'string' || !promptPath.trim()) {
-      return launchWithResolvedPrompt('smartConfig');
+      return getPromptGuidance('smartConfig');
     }
-    return launchWithResolvedPrompt('smartConfig', promptPath);
+    return getPromptGuidance('smartConfig', promptPath);
   });
 
   console.log('[IPC] LLM handlers registered');
