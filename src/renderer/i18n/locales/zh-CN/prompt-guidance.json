@@ -1,0 +1,57 @@
+{
+  "loading": "正在加载提示词指引...",
+  "emptyState": "Desktop 可以解析提示词来源、展示完整内容，并帮你把它准备好用于复制粘贴。",
+  "recommendedTools": "推荐工具",
+  "preferred": "偏好",
+  "promptTitle": "提示词",
+  "promptDescription": "请完整复制下方提示词，再粘贴到你的 AI CLI 中执行。",
+  "tipTitle": "使用建议",
+  "tipDescription": "在建议的工作目录中打开偏好的 CLI，粘贴提示词，应用建议后再回到 Desktop。",
+  "actions": {
+    "refresh": "重新加载指引",
+    "loading": "加载中"
+  },
+  "steps": {
+    "openTool": "打开你想使用的 AI CLI 工具。",
+    "copyPrompt": "复制下方提示词。",
+    "runFromDirectory": "在建议工作目录中运行：{{path}}",
+    "runFromCurrentDirectory": "在最适合当前任务的工作目录中运行。",
+    "returnToDesktop": "按照生成的说明完成操作，然后回到 Desktop。"
+  },
+  "copy": {
+    "button": "复制提示词",
+    "copying": "复制中...",
+    "success": "提示词已复制到剪贴板",
+    "failed": "复制提示词失败",
+    "failedWithReason": "复制提示词失败：{{error}}"
+  },
+  "docs": {
+    "button": "打开 {{tool}} 文档",
+    "failed": "打开文档链接失败"
+  },
+  "metadata": {
+    "source": "来源：",
+    "promptPath": "提示词路径：",
+    "activeVersion": "当前版本：",
+    "workingDirectory": "建议工作目录：",
+    "attemptedPaths": "已尝试路径",
+    "unavailable": "不可用"
+  },
+  "sources": {
+    "custom": "自定义提示词路径",
+    "active-version": "当前已安装版本",
+    "packaged-resource": "打包后的 Desktop 资源",
+    "development-root": "开发环境回退路径",
+    "manifest-entry": "版本清单中的提示词"
+  },
+  "errors": {
+    "title": "提示词指引暂不可用",
+    "defaultMessage": "Desktop 暂时无法解析所请求的提示词指引。",
+    "promptNotFound": "Desktop 没有找到该流程对应的提示词文件。",
+    "resolverUnavailable": "Desktop 的提示词解析器尚未就绪。",
+    "managerUnavailable": "Desktop 当前无法加载版本提示词指引。",
+    "promptLoadFailed": "Desktop 加载版本提示词失败。",
+    "promptReadFailed": "Desktop 找到了提示词文件，但读取失败。",
+    "diagnosticPrefix": "已尝试路径："
+  }
+}

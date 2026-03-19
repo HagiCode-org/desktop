@@ -1,0 +1,57 @@
+{
+  "loading": "Loading prompt guidance...",
+  "emptyState": "Desktop can resolve the prompt, show you where it came from, and keep the exact text ready for copy/paste.",
+  "recommendedTools": "Recommended tools",
+  "preferred": "Preferred",
+  "promptTitle": "Prompt",
+  "promptDescription": "Copy the full prompt exactly as shown before pasting it into your AI CLI.",
+  "tipTitle": "How to use this prompt",
+  "tipDescription": "Open your preferred CLI in the suggested directory, paste the prompt, and come back after applying the recommended changes.",
+  "actions": {
+    "refresh": "Reload guidance",
+    "loading": "Loading"
+  },
+  "steps": {
+    "openTool": "Open the AI CLI tool you want to use.",
+    "copyPrompt": "Copy the prompt below.",
+    "runFromDirectory": "Run it from the suggested working directory: {{path}}",
+    "runFromCurrentDirectory": "Run it from the most relevant working directory for this task.",
+    "returnToDesktop": "Follow the generated instructions and return to Desktop when you are done."
+  },
+  "copy": {
+    "button": "Copy prompt",
+    "copying": "Copying...",
+    "success": "Prompt copied to clipboard",
+    "failed": "Failed to copy the prompt",
+    "failedWithReason": "Failed to copy the prompt: {{error}}"
+  },
+  "docs": {
+    "button": "Open {{tool}} docs",
+    "failed": "Failed to open documentation link"
+  },
+  "metadata": {
+    "source": "Source:",
+    "promptPath": "Prompt path:",
+    "activeVersion": "Active version:",
+    "workingDirectory": "Suggested working directory:",
+    "attemptedPaths": "Attempted paths",
+    "unavailable": "Unavailable"
+  },
+  "sources": {
+    "custom": "Custom prompt path",
+    "active-version": "Active installed version",
+    "packaged-resource": "Packaged desktop resource",
+    "development-root": "Development fallback",
+    "manifest-entry": "Version manifest prompt"
+  },
+  "errors": {
+    "title": "Prompt guidance unavailable",
+    "defaultMessage": "Desktop could not resolve the requested prompt guidance.",
+    "promptNotFound": "Desktop could not find the prompt file for this workflow.",
+    "resolverUnavailable": "Desktop prompt resolution is not ready yet.",
+    "managerUnavailable": "Desktop cannot load version prompt guidance right now.",
+    "promptLoadFailed": "Desktop failed to load the version prompt.",
+    "promptReadFailed": "Desktop found the prompt file but could not read it.",
+    "diagnosticPrefix": "Attempted paths: "
+  }
+}
