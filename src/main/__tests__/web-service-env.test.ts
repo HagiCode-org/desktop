@@ -103,6 +103,37 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.Database__Provider, 'postgresql');
   });
 
+  it('injects GitHub OAuth credentials only when both values are configured', () => {
+    const configured = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 5000,
+      dataDir: '/runtime/data',
+      githubOAuth: {
+        clientId: 'desktop-client-id',
+        clientSecret: 'desktop-client-secret',
+      },
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    const missingSecret = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 5000,
+      dataDir: '/runtime/data',
+      githubOAuth: {
+        clientId: 'desktop-client-id',
+        clientSecret: '',
+      },
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(configured.injectedEnv.GitHub__ClientId, 'desktop-client-id');
+    assert.equal(configured.injectedEnv.GitHub__ClientSecret, 'desktop-client-secret');
+    assert.equal(missingSecret.injectedEnv.GitHub__ClientId, undefined);
+    assert.equal(missingSecret.injectedEnv.GitHub__ClientSecret, undefined);
+  });
+
   it('masks sensitive connection string values in logs', () => {
     const value = 'Host=localhost;Database=hagicode;Username=postgres;Password=postgres';
     const masked = maskEnvValue('ConnectionStrings__Default', value);
@@ -110,6 +141,31 @@ describe('web-service-env', () => {
     assert.ok(masked.includes('Password=***'));
     assert.ok(masked.includes('Username=***'));
     assert.ok(masked.includes('Host=localhost'));
+  });
+
+  it('masks GitHub secrets while keeping the client id visible in logs', () => {
+    const lines = buildSnapshotLogLines([
+      {
+        key: 'GitHub__ClientSecret',
+        value: 'desktop-client-secret',
+        source: 'runtime',
+        sourceConfig: 'githubOAuth (electron-store)',
+        sensitive: true,
+        defaultApplied: false,
+      },
+      {
+        key: 'GitHub__ClientId',
+        value: 'desktop-client-id',
+        source: 'runtime',
+        sourceConfig: 'githubOAuth (electron-store)',
+        sensitive: false,
+        defaultApplied: false,
+      },
+    ], 'detailed');
+
+    assert.equal(lines.some(line => line.includes('GitHub__ClientId=desktop-client-id')), true);
+    assert.equal(lines.some(line => line.includes('GitHub__ClientSecret=***')), true);
+    assert.equal(lines.some(line => line.includes('desktop-client-secret')), false);
   });
 
   it('builds sorted and masked snapshot log lines', () => {

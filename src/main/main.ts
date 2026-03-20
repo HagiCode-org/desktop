@@ -39,6 +39,7 @@ import {
   registerRssHandlers,
   registerDebugHandlers,
   registerViewHandlers,
+  registerGitHubOAuthHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
@@ -1953,7 +1954,14 @@ app.whenReady().then(async () => {
     host: DEFAULT_WEB_SERVICE_HOST,
     port: DEFAULT_WEB_SERVICE_PORT,
   };
-  webServiceManager = new PCodeWebServiceManager(webServiceConfig);
+  webServiceManager = new PCodeWebServiceManager(webServiceConfig, {
+    configManager,
+  });
+
+  registerGitHubOAuthHandlers({
+    configManager,
+    webServiceManager,
+  });
 
   // Set webServiceManager reference for tray
   setWebServiceManagerRef(webServiceManager);
