@@ -10,9 +10,16 @@ export interface RemoteModeConfig {
   url: string;
 }
 
+export interface GitHubOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  lastUpdated: string | null;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   remoteMode: RemoteModeConfig;
+  githubOAuth: GitHubOAuthConfig;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -32,6 +39,11 @@ const defaultConfig: AppConfig = {
     enabled: false,
     url: '',
   },
+  githubOAuth: {
+    clientId: '',
+    clientSecret: '',
+    lastUpdated: null,
+  },
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
@@ -45,11 +57,41 @@ export const defaultRemoteModeConfig: RemoteModeConfig = {
   url: '',
 };
 
+export const defaultGitHubOAuthConfig: GitHubOAuthConfig = {
+  clientId: '',
+  clientSecret: '',
+  lastUpdated: null,
+};
+
+export function normalizeGitHubOAuthConfig(
+  config?: Partial<GitHubOAuthConfig> | null
+): GitHubOAuthConfig {
+  return {
+    clientId: typeof config?.clientId === 'string' ? config.clientId.trim() : '',
+    clientSecret: typeof config?.clientSecret === 'string' ? config.clientSecret.trim() : '',
+    lastUpdated: typeof config?.lastUpdated === 'string' && config.lastUpdated.trim().length > 0
+      ? config.lastUpdated
+      : null,
+  };
+}
+
+export function validateGitHubOAuthConfig(config: GitHubOAuthConfig): string | null {
+  if (!config.clientId) {
+    return 'GitHub Client ID is required.';
+  }
+
+  if (!config.clientSecret) {
+    return 'GitHub Client Secret is required.';
+  }
+
+  return null;
+}
+
 export class ConfigManager {
   private store: Store<AppConfig>;
 
-  constructor() {
-    this.store = new Store<AppConfig>({
+  constructor(store?: Store<AppConfig>) {
+    this.store = store ?? new Store<AppConfig>({
       defaults: defaultConfig,
       name: 'hagicode-desktop-config',
     });
@@ -78,6 +120,24 @@ export class ConfigManager {
   setServerConfig(config: Partial<ServerConfig>): void {
     const current = this.getServerConfig();
     this.set('server', { ...current, ...config });
+  }
+
+  getGitHubOAuthConfig(): GitHubOAuthConfig {
+    return normalizeGitHubOAuthConfig(this.get('githubOAuth'));
+  }
+
+  setGitHubOAuthConfig(config: Partial<GitHubOAuthConfig>): GitHubOAuthConfig {
+    const normalized = normalizeGitHubOAuthConfig({
+      ...defaultGitHubOAuthConfig,
+      ...config,
+    });
+    this.set('githubOAuth', normalized);
+    return normalized;
+  }
+
+  clearGitHubOAuthConfig(): GitHubOAuthConfig {
+    this.set('githubOAuth', { ...defaultGitHubOAuthConfig });
+    return { ...defaultGitHubOAuthConfig };
   }
 
   /**
