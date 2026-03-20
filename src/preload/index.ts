@@ -22,6 +22,20 @@ export interface StorageInfo {
   usedPercentage: number;
 }
 
+export interface GitHubOAuthConfigPayload {
+  clientId: string;
+  clientSecret: string;
+  lastUpdated: string | null;
+  isConfigured: boolean;
+  requiresRestart: boolean;
+}
+
+export interface GitHubOAuthMutationResult {
+  success: boolean;
+  config: GitHubOAuthConfigPayload;
+  error?: string;
+}
+
 export interface StartWebServiceResult {
   success: boolean;
   error?: { type: string; details: string };
@@ -164,6 +178,12 @@ interface ElectronAPI {
     set: (enabled: boolean, url: string) => Promise<{ success: boolean; error?: string }>;
     get: () => Promise<{ enabled: boolean; url: string }>;
     validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
+  };
+
+  githubOAuth: {
+    get: () => Promise<GitHubOAuthConfigPayload>;
+    set: (config: { clientId: string; clientSecret: string }) => Promise<GitHubOAuthMutationResult>;
+    clear: () => Promise<GitHubOAuthMutationResult>;
   };
 
   // Dependency Management APIs
@@ -558,6 +578,12 @@ const electronAPI = {
     set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
     get: () => ipcRenderer.invoke('remote-mode:get'),
     validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
+  },
+
+  githubOAuth: {
+    get: () => ipcRenderer.invoke('github-oauth:get'),
+    set: (config: { clientId: string; clientSecret: string }) => ipcRenderer.invoke('github-oauth:set', config),
+    clear: () => ipcRenderer.invoke('github-oauth:clear'),
   },
 };
 
