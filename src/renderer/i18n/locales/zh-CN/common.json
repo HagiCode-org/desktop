@@ -129,7 +129,8 @@
     "discord": "Discord 社区",
     "discordDesc": "加入 HagiCode 官方 Discord 社区",
     "githubProject": "为项目点赞👍",
-    "githubProjectDesc": "在 GitHub 上查看源码并给我们 Star"
+    "githubProjectDesc": "在 GitHub 上查看源码并给我们 Star",
+    "costCalculator": "算一算，AI会不会淘汰我"
   },
   "sidebar": {
     "dashboard": "仪表盘",

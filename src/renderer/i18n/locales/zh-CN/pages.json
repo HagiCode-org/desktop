@@ -5,7 +5,8 @@
       "onboarding": "启动向导",
       "remoteMode": "远程模式",
       "debug": "调试",
-      "dataDirectory": "数据目录"
+      "dataDirectory": "数据目录",
+      "githubIntegration": "GitHub 集成"
     },
     "agentCli": {
       "title": "偏好 Agent CLI",
@@ -129,6 +130,49 @@
       },
       "notes": {
         "absolutePathOnly": "注意：仅支持绝对路径。不支持相对路径。"
+      }
+    },
+    "githubOAuth": {
+      "title": "GitHub 集成",
+      "description": "配置嵌入式 Web 服务使用的 GitHub OAuth Client ID 与 Client Secret。",
+      "fields": {
+        "clientId": {
+          "label": "Client ID",
+          "placeholder": "输入 GitHub OAuth Client ID",
+          "helper": "GitHub OAuth 应用的公开客户端标识。"
+        },
+        "clientSecret": {
+          "label": "Client Secret",
+          "placeholder": "输入 GitHub OAuth Client Secret",
+          "helper": "此值会保存在本地，并在环境日志中自动脱敏。"
+        }
+      },
+      "actions": {
+        "showSecret": "显示",
+        "hideSecret": "隐藏",
+        "reset": "重置表单",
+        "clear": "清空已保存配置",
+        "clearing": "清空中...",
+        "save": "保存配置",
+        "saving": "保存中..."
+      },
+      "errors": {
+        "clientIdRequired": "请输入 GitHub Client ID。",
+        "clientSecretRequired": "请输入 GitHub Client Secret。"
+      },
+      "messages": {
+        "savedRunning": "GitHub OAuth 配置已保存，重启 Web 服务后生效。",
+        "savedStopped": "GitHub OAuth 配置已保存，下次启动 Web 服务时生效。",
+        "saveFailed": "保存 GitHub OAuth 配置失败。",
+        "clearedRunning": "GitHub OAuth 配置已清空，重启 Web 服务后会移除当前凭据。",
+        "clearedStopped": "GitHub OAuth 配置已清空。",
+        "clearFailed": "清空 GitHub OAuth 配置失败。"
+      },
+      "notes": {
+        "helper": "将桌面端保存的凭据注入嵌入式 Web 服务环境变量，供后续 GitHub 登录功能读取。",
+        "restartRunning": "当前 Web 服务仍在使用旧的 GitHub OAuth 凭据，请手动重启服务后再验证登录流程。",
+        "restartStopped": "最近保存时间：{{value}}。Web 服务停止时，新的 GitHub OAuth 配置会在下一次启动时生效。",
+        "currentlyApplied": "最近保存时间：{{value}}。当前运行中的 Web 服务已经与已保存配置保持一致。"
       }
     }
   },

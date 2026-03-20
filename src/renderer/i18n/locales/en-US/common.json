@@ -129,7 +129,8 @@
     "discord": "Discord Community",
     "discordDesc": "Join the official HagiCode Discord community",
     "githubProject": "GitHub Project",
-    "githubProjectDesc": "View source code and star us on GitHub"
+    "githubProjectDesc": "View source code and star us on GitHub",
+    "costCalculator": "AI Replacement Calculator"
   },
   "sidebar": {
     "dashboard": "Dashboard",
