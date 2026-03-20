@@ -41,6 +41,37 @@ declare global {
       agentCliLoad: () => Promise<{ cliType: AgentCliType | null; isSkipped: boolean; selectedAt: string | null }>;
       agentCliSkip: () => Promise<{ success: boolean }>;
       agentCliGetSelected: () => Promise<AgentCliType | null>;
+      githubOAuth: {
+        get: () => Promise<{
+          clientId: string;
+          clientSecret: string;
+          lastUpdated: string | null;
+          isConfigured: boolean;
+          requiresRestart: boolean;
+        }>;
+        set: (config: { clientId: string; clientSecret: string }) => Promise<{
+          success: boolean;
+          config: {
+            clientId: string;
+            clientSecret: string;
+            lastUpdated: string | null;
+            isConfigured: boolean;
+            requiresRestart: boolean;
+          };
+          error?: string;
+        }>;
+        clear: () => Promise<{
+          success: boolean;
+          config: {
+            clientId: string;
+            clientSecret: string;
+            lastUpdated: string | null;
+            isConfigured: boolean;
+            requiresRestart: boolean;
+          };
+          error?: string;
+        }>;
+      };
     };
   }
 }

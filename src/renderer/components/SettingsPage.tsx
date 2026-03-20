@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnboardingSettings } from './settings/OnboardingSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
+import { GitHubOAuthSettings } from './settings/GitHubOAuthSettings';
 
 export default function SettingsPage() {
   const { t } = useTranslation('pages');
@@ -36,6 +37,12 @@ export default function SettingsPage() {
             >
               {t('settings.tabs.dataDirectory')}
             </TabsTrigger>
+            <TabsTrigger
+              value="githubIntegration"
+              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.githubIntegration')}
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 min-w-0">
@@ -49,6 +56,10 @@ export default function SettingsPage() {
 
             <TabsContent value="dataDirectory" className="mt-0">
               <DataDirectorySettings />
+            </TabsContent>
+
+            <TabsContent value="githubIntegration" className="mt-0">
+              <GitHubOAuthSettings />
             </TabsContent>
           </div>
         </div>
