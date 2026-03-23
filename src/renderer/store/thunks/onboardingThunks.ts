@@ -1,7 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { OnboardingStep } from '../../../types/onboarding';
 import type {
-  OnboardingInstallOpenSpecResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
 } from '../../../types/onboarding';
@@ -12,8 +11,6 @@ declare global {
       checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
       getOnboardingState: () => Promise<unknown>;
       skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
-      installOpenSpec: () => Promise<OnboardingInstallOpenSpecResult>;
-      verifyOpenSpec: () => Promise<OnboardingInstallOpenSpecResult>;
       downloadPackage: () => Promise<{ success: boolean; error?: string; version?: string }>;
       checkOnboardingDependencies: (versionId: string) => Promise<unknown>;
       installDependencies: (versionId: string) => Promise<unknown>;
@@ -76,40 +73,6 @@ export const downloadPackage = createAsyncThunk(
 
       if (!result.success) {
         return rejectWithValue(result.error || 'Download failed');
-      }
-
-      return result;
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const installOpenSpec = createAsyncThunk(
-  'onboarding/installOpenSpec',
-  async (_, { rejectWithValue }) => {
-    try {
-      const result = await window.electronAPI.installOpenSpec();
-
-      if (!result.success) {
-        return rejectWithValue(result.error || 'OpenSpec installation failed');
-      }
-
-      return result;
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const verifyOpenSpec = createAsyncThunk(
-  'onboarding/verifyOpenSpec',
-  async (_, { rejectWithValue }) => {
-    try {
-      const result = await window.electronAPI.verifyOpenSpec();
-
-      if (!result.success) {
-        return rejectWithValue(result.error || 'OpenSpec verification failed');
       }
 
       return result;

@@ -3,8 +3,6 @@ import { OnboardingStep } from '../../../types/onboarding';
 import {
   checkOnboardingTrigger,
   skipOnboarding,
-  installOpenSpec,
-  verifyOpenSpec,
   downloadPackage,
   startService,
   recoverFromStartupFailure,
@@ -16,7 +14,6 @@ import {
 import type {
   OnboardingState,
   DownloadProgress,
-  OpenSpecInstallState,
   ServiceLaunchProgress,
   DependencyCheckResult,
   ScriptOutput,
@@ -34,12 +31,6 @@ const initialState: OnboardingState = {
   serviceProgress: null,
   showSkipConfirm: false,
   error: null,
-  isOpenSpecConfirmed: false,
-  openSpecInstall: {
-    status: 'idle',
-    error: null,
-    installedVersion: null,
-  } satisfies OpenSpecInstallState,
   startupFailure: null,
   showStartupFailureDialog: false,
   // Idempotency flags
@@ -67,17 +58,6 @@ export const onboardingSlice = createSlice({
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-    },
-    setOpenSpecConfirmed: (state, action: PayloadAction<boolean>) => {
-      state.isOpenSpecConfirmed = action.payload;
-    },
-    resetOpenSpecInstallState: (state) => {
-      state.isOpenSpecConfirmed = false;
-      state.openSpecInstall = {
-        status: 'idle',
-        error: null,
-        installedVersion: null,
-      };
     },
     clearError: (state) => {
       state.error = null;
@@ -148,48 +128,6 @@ export const onboardingSlice = createSlice({
       })
       .addCase(skipOnboarding.rejected, (state, action) => {
         state.error = action.payload as string || 'Failed to skip onboarding';
-      });
-
-    builder
-      .addCase(installOpenSpec.pending, (state) => {
-        state.error = null;
-        state.isOpenSpecConfirmed = false;
-        state.openSpecInstall.status = 'installing';
-        state.openSpecInstall.error = null;
-        state.openSpecInstall.installedVersion = null;
-      })
-      .addCase(installOpenSpec.fulfilled, (state, action) => {
-        state.isOpenSpecConfirmed = true;
-        state.openSpecInstall.status = 'installed';
-        state.openSpecInstall.error = null;
-        state.openSpecInstall.installedVersion = action.payload.version || null;
-      })
-      .addCase(installOpenSpec.rejected, (state, action) => {
-        const error = action.payload as string || 'Failed to install OpenSpec';
-        state.error = error;
-        state.isOpenSpecConfirmed = false;
-        state.openSpecInstall.status = 'failed';
-        state.openSpecInstall.error = error;
-        state.openSpecInstall.installedVersion = null;
-      })
-      .addCase(verifyOpenSpec.pending, (state) => {
-        state.error = null;
-        state.isOpenSpecConfirmed = false;
-        state.openSpecInstall.status = 'checking';
-        state.openSpecInstall.error = null;
-      })
-      .addCase(verifyOpenSpec.fulfilled, (state, action) => {
-        state.isOpenSpecConfirmed = true;
-        state.openSpecInstall.status = 'installed';
-        state.openSpecInstall.error = null;
-        state.openSpecInstall.installedVersion = action.payload.version || null;
-      })
-      .addCase(verifyOpenSpec.rejected, (state, action) => {
-        const error = action.payload as string || 'Failed to verify OpenSpec';
-        state.error = error;
-        state.isOpenSpecConfirmed = false;
-        state.openSpecInstall.status = 'failed';
-        state.openSpecInstall.error = error;
       });
 
     // downloadPackage
@@ -316,15 +254,8 @@ export const onboardingSlice = createSlice({
 
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to OpenSpecInstallation');
-            state.currentStep = OnboardingStep.OpenSpecInstallation;
-            break;
-
-          case OnboardingStep.OpenSpecInstallation:
-            if (state.isOpenSpecConfirmed) {
-              console.log('[onboardingSlice] Moving from OpenSpecInstallation to Download');
-              state.currentStep = OnboardingStep.Download;
-            }
+            console.log('[onboardingSlice] Moving from Welcome to Download');
+            state.currentStep = OnboardingStep.Download;
             break;
 
           case OnboardingStep.Download:
@@ -347,9 +278,6 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.Download;
             break;
           case OnboardingStep.Download:
-            state.currentStep = OnboardingStep.OpenSpecInstallation;
-            break;
-          case OnboardingStep.OpenSpecInstallation:
             state.currentStep = OnboardingStep.Welcome;
             break;
           default:
@@ -365,8 +293,6 @@ export const {
   setCurrentStep,
   setShowSkipConfirm,
   setError,
-  setOpenSpecConfirmed,
-  resetOpenSpecInstallState,
   clearError,
   setStartupFailure,
   showStartupFailureDialog,
@@ -389,8 +315,6 @@ export const selectDownloadProgress = (state: { onboarding: OnboardingState }) =
 export const selectServiceProgress = (state: { onboarding: OnboardingState }) => state.onboarding.serviceProgress;
 export const selectShowSkipConfirm = (state: { onboarding: OnboardingState }) => state.onboarding.showSkipConfirm;
 export const selectOnboardingError = (state: { onboarding: OnboardingState }) => state.onboarding.error;
-export const selectIsOpenSpecConfirmed = (state: { onboarding: OnboardingState }) => state.onboarding.isOpenSpecConfirmed;
-export const selectOpenSpecInstall = (state: { onboarding: OnboardingState }) => state.onboarding.openSpecInstall;
 export const selectStartupFailure = (state: { onboarding: OnboardingState }) => state.onboarding.startupFailure;
 export const selectShowStartupFailureDialog = (state: { onboarding: OnboardingState }) => state.onboarding.showStartupFailureDialog;
 export const selectIsRecoveringFromStartupFailure = (state: { onboarding: OnboardingState }) =>
@@ -400,13 +324,11 @@ export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) =
 
 // Computed selectors
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, serviceProgress, isOpenSpecConfirmed } = state.onboarding;
+  const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
       return true; // Can always proceed from welcome
-    case OnboardingStep.OpenSpecInstallation:
-      return isOpenSpecConfirmed;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
     case OnboardingStep.Launch:

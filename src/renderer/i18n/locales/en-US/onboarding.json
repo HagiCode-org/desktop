@@ -17,10 +17,9 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The 4-step first-time setup includes:",
+    "processTitle": "The 3-step first-time setup includes:",
     "steps": {
       "welcome": "Review the setup and what will happen next",
-      "openSpec": "Install and verify OpenSpec 1.x (> 1.0 and < 2.0)",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running"
     },
@@ -219,37 +218,5 @@
       "currentVersion": "Current Version",
       "requiredVersion": "Required Version"
     }
-  },
-  "openspec": {
-    "title": "Install OpenSpec",
-    "description": "OpenSpec is required before you continue to download and launch Hagicode Server. Use the one-click install first, then verify the installed version on this machine.",
-    "installTitle": "1. Install globally",
-    "installDescription": "The guided install runs the same npm global command shown below. Depending on your environment, npm may ask for administrator permissions.",
-    "installCommandLabel": "1.x-compatible install command",
-    "installButton": "Install OpenSpec",
-    "retryButton": "Retry Install",
-    "statusLabel": "Status",
-    "status": {
-      "idle": "Ready",
-      "installing": "Installing...",
-      "checking": "Checking...",
-      "installed": "Verified",
-      "failed": "Failed"
-    },
-    "successTitle": "OpenSpec verification succeeded",
-    "successDescription": "We detected a supported OpenSpec version on this machine. You can continue to download Hagicode Server without any extra confirmation.",
-    "installedVersion": "Detected version: {{version}}",
-    "failureTitle": "Install did not complete",
-    "manualFallback": "Review the error, retry the guided install, or run the manual command above before verifying with openspec --version.",
-    "verifyTitle": "2. Verify the installation",
-    "verifyDescription": "When you enter this step, the app automatically checks whether OpenSpec is already available. If needed, you can still run the command below in your terminal to verify it manually.",
-    "verifyCommandLabel": "Verification command",
-    "versionRangeLabel": "Supported version range",
-    "versionRangeValue": "> 1.0 and < 2.0",
-    "successCriteria": "Success criteria: openspec --version returns a version that is greater than 1.0 and less than 2.0.",
-    "permissionHint": "If the guided install fails because of permissions or network access, use the manual command and retry when ready.",
-    "verifyButton": "Check OpenSpec",
-    "verifyHint": "We automatically check for a supported version when this step opens. If no supported version is found, install OpenSpec and we will verify it again after installation.",
-    "verifyReady": "Verification passed automatically. You can continue right away."
   }
 }

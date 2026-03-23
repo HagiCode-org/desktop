@@ -30,9 +30,8 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
 
   const steps = [
     { number: 1, text: t('welcome.steps.welcome') },
-    { number: 2, text: t('welcome.steps.openSpec') },
-    { number: 3, text: t('welcome.steps.download') },
-    { number: 4, text: t('welcome.steps.launch') },
+    { number: 2, text: t('welcome.steps.download') },
+    { number: 3, text: t('welcome.steps.launch') },
   ];
 
   return (

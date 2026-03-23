@@ -14,7 +14,6 @@ import {
 import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
-import OpenSpecInstallation from './steps/OpenSpecInstallation';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
@@ -80,9 +79,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     console.log('[OnboardingWizard] handleNext called, current step:', currentStep);
     dispatch(goToNextStep());
 
-    // Trigger download after the OpenSpec confirmation step hands off to Download.
+    // Trigger download when leaving Welcome step.
     // Only trigger if not already downloading or completed
-    if (currentStep === OnboardingStep.OpenSpecInstallation && !isDownloading && !downloadCompleted) {
+    if (currentStep === OnboardingStep.Welcome && !isDownloading && !downloadCompleted) {
       console.log('[OnboardingWizard] Triggering download package');
       dispatch(downloadPackage());
     }
@@ -109,8 +108,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
-      case OnboardingStep.OpenSpecInstallation:
-        return <OpenSpecInstallation />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       case OnboardingStep.Launch:
@@ -124,8 +121,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
-      case OnboardingStep.OpenSpecInstallation:
-        return t('openspec.title');
       case OnboardingStep.Download:
         return t('download.title');
       case OnboardingStep.Launch:
@@ -135,7 +130,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 4;
+  const totalSteps = 3;
 
   return (
     <>
