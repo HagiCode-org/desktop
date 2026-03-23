@@ -398,7 +398,7 @@ npm run package:smoke-test
 Desktop release packaging now publishes extractable ZIP archives alongside the existing platform installers:
 
 - Linux keeps the native Electron Builder outputs (`.AppImage`, `.deb`, `.tar.gz`) and now also emits a `.zip` from the same packaging workspace.
-- Windows keeps the signed portable `.exe`, NSIS installer, and `.appx`, then stages a ZIP payload from the portable output before compression so the release ZIP contains the same runnable Windows payload lineage.
+- Windows keeps the portable `.exe`, NSIS installer, and `.appx`, then stages the unpacked app directory into a ZIP payload so the release ZIP behaves as an extract-and-run package instead of a zipped single-file launcher.
 - Non-tag CI runs upload the Windows and Linux ZIP files as workflow artifacts.
 - Tagged builds attach the ZIP files to the GitHub Release, and the downstream Azure sync continues mirroring them with the rest of the release asset set.
 

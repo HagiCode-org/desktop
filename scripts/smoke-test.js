@@ -373,7 +373,7 @@ test('desktop build workflow includes ZIP publication steps', () => {
 
   const content = fs.readFileSync(workflowPath, 'utf8');
 
-  assert(content.includes('Prepare Windows ZIP payload workspace'), 'workflow stages Windows ZIP payload before compression');
+  assert(content.includes('Prepare Windows unpacked ZIP payload workspace'), 'workflow stages the unpacked Windows ZIP payload before compression');
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
   assert(content.includes('Upload Windows ZIP'), 'workflow uploads Windows ZIP CI artifacts');
   assert(content.includes('Upload Windows ZIP to Release'), 'workflow uploads Windows ZIP release assets');

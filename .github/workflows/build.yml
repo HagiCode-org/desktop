@@ -215,17 +215,23 @@ jobs:
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
           $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
           $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
+          $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
 
           if ($signable.Count -eq 0) {
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
-          if ($portable.Count -eq 0) {
-            throw 'No portable Windows artifacts were found in pkg/ for ZIP assembly.'
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
 
           $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
           $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
+          $zipBaseName = if ($portable.Count -gt 0) {
+            [System.IO.Path]::GetFileNameWithoutExtension($portable[0].Name)
+          } else {
+            'hagicode-windows-unpacked'
+          }
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -239,19 +245,23 @@ jobs:
           Write-MultilineOutput 'portable_files' $portable
           Write-MultilineOutput 'appx_files' $appx
           Write-MultilineOutput 'signable_files' $signable
+          Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
-          "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
 
-      - name: Prepare Windows ZIP payload workspace
+      - name: Prepare Windows unpacked ZIP payload workspace
         id: windows_zip_payload
         shell: pwsh
         env:
-          WINDOWS_PORTABLE_FILES: ${{ steps.windows_artifacts.outputs.portable_files }}
+          WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
           WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.signable_files }}
+          WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
         run: |
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
@@ -262,25 +272,35 @@ jobs:
           }
           New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
 
-          $portableFiles = @()
-          $env:WINDOWS_PORTABLE_FILES -split "`r?`n" | ForEach-Object {
+          $unpackedRoots = @()
+          $env:WINDOWS_UNPACKED_ROOTS -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
-              $portableFiles += $trimmed
+              $unpackedRoots += $trimmed
             }
           }
 
-          $zipPayloadFiles = @()
-          foreach ($portablePath in $portableFiles) {
-            $portableItem = Get-Item -LiteralPath $portablePath
-            $payloadDir = Join-Path $zipPayloadRoot ([System.IO.Path]::GetFileNameWithoutExtension($portableItem.Name))
-            New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
-
-            $stagedPortablePath = Join-Path $payloadDir $portableItem.Name
-            Copy-Item -LiteralPath $portableItem.FullName -Destination $stagedPortablePath -Force
-            $zipPayloadFiles += Get-Item -LiteralPath $stagedPortablePath
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No unpacked Windows roots were passed to ZIP payload staging.'
           }
 
+          $payloadDirName = "{0}-unpacked" -f $env:WINDOWS_ZIP_BASE_NAME
+          $payloadDir = Join-Path $zipPayloadRoot $payloadDirName
+          New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
+
+          foreach ($unpackedRootPath in $unpackedRoots) {
+            $unpackedRoot = Get-Item -LiteralPath $unpackedRootPath
+            Get-ChildItem -LiteralPath $unpackedRoot.FullName -Force | ForEach-Object {
+              $targetPath = Join-Path $payloadDir $_.Name
+              if ($_.PSIsContainer) {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Recurse -Force
+              } else {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Force
+              }
+            }
+          }
+
+          $zipPayloadFiles = @(Get-ChildItem -LiteralPath $payloadDir -Recurse -File | Sort-Object FullName)
           if ($zipPayloadFiles.Count -eq 0) {
             throw 'Windows ZIP payload staging did not produce any files.'
           }
@@ -293,7 +313,13 @@ jobs:
             }
           }
 
-          $catalogEntries = @($signableFiles + ($zipPayloadFiles | ForEach-Object { $_.FullName }))
+          $zipPayloadSignableFiles = @(
+            $zipPayloadFiles | Where-Object {
+              @('.exe', '.dll', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+            } | Sort-Object FullName -Unique
+          )
+
+          $catalogEntries = @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
 
@@ -306,8 +332,12 @@ jobs:
           }
 
           Write-MultilineOutput 'zip_payload_files' $zipPayloadFiles
+          Write-MultilineOutput 'zip_payload_signable_files' $zipPayloadSignableFiles
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadSignableFiles.Count)"
 
       - name: Sign Windows artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
@@ -340,37 +370,24 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
-          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
-          if (-not (Test-Path $zipPayloadRoot)) {
-            throw "Windows ZIP payload root not found: $zipPayloadRoot"
+          $payloadDir = '${{ steps.windows_zip_payload.outputs.payload_dir }}'
+          $payloadDirName = '${{ steps.windows_zip_payload.outputs.payload_dir_name }}'
+          if (-not (Test-Path $payloadDir)) {
+            throw "Windows ZIP payload directory not found: $payloadDir"
           }
 
-          $payloadDirs = @(Get-ChildItem -Path $zipPayloadRoot -Directory | Sort-Object FullName)
-          if ($payloadDirs.Count -eq 0) {
-            throw 'No Windows ZIP payload directories were staged.'
+          $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDirName)
+          if (Test-Path $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
           }
 
-          $zipFiles = @()
-          foreach ($payloadDir in $payloadDirs) {
-            $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDir.Name)
-            if (Test-Path $zipPath) {
-              Remove-Item -LiteralPath $zipPath -Force
-            }
+          Compress-Archive -Path (Join-Path $payloadDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+          $zipFile = Get-Item -LiteralPath $zipPath
 
-            Compress-Archive -Path (Join-Path $payloadDir.FullName '*') -DestinationPath $zipPath -CompressionLevel Optimal
-            $zipFiles += Get-Item -LiteralPath $zipPath
-          }
-
-          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
-            foreach ($file in $Files) {
-              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
-            }
-            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
-          }
-
-          Write-MultilineOutput 'zip_files' $zipFiles
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=$($zipFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
+          Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=1"
 
       - name: Summarize unsigned Windows build
         if: success() && steps.signing_policy.outputs.required != 'true'
@@ -380,8 +397,8 @@ jobs:
             echo '## Windows signing skipped'
             echo
             echo "- Policy: skipped (${SIGNING_REASON})"
-            echo "- Signed artifacts: 0"
-            echo "- Verification: not required for this build"
+            echo '- Signed artifacts: 0'
+            echo '- Verification: not required for this build'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
@@ -394,7 +411,8 @@ jobs:
             echo '## Windows signing completed'
             echo
             echo "- Policy: required (${SIGNING_REASON})"
-            echo "- Signed artifacts: ${{ steps.windows_zip_payload.outputs.zip_payload_count }} payload file(s) plus release installers"
+            echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
+            echo '- Signed staged unpacked payload binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -408,7 +426,9 @@ jobs:
             echo '## Windows ZIP packaging'
             echo
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP payload signable binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -684,17 +704,23 @@ jobs:
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
           $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
           $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
+          $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
 
           if ($signable.Count -eq 0) {
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
-          if ($portable.Count -eq 0) {
-            throw 'No portable Windows artifacts were found in pkg/ for ZIP assembly.'
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
 
           $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
           $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
+          $zipBaseName = if ($portable.Count -gt 0) {
+            [System.IO.Path]::GetFileNameWithoutExtension($portable[0].Name)
+          } else {
+            'hagicode-windows-unpacked'
+          }
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -708,19 +734,23 @@ jobs:
           Write-MultilineOutput 'portable_files' $portable
           Write-MultilineOutput 'appx_files' $appx
           Write-MultilineOutput 'signable_files' $signable
+          Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
-          "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
 
-      - name: Prepare Windows ZIP payload workspace
+      - name: Prepare Windows unpacked ZIP payload workspace
         id: windows_zip_payload
         shell: pwsh
         env:
-          WINDOWS_PORTABLE_FILES: ${{ steps.windows_artifacts.outputs.portable_files }}
+          WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
           WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.signable_files }}
+          WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
         run: |
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
@@ -731,25 +761,35 @@ jobs:
           }
           New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
 
-          $portableFiles = @()
-          $env:WINDOWS_PORTABLE_FILES -split "`r?`n" | ForEach-Object {
+          $unpackedRoots = @()
+          $env:WINDOWS_UNPACKED_ROOTS -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
-              $portableFiles += $trimmed
+              $unpackedRoots += $trimmed
             }
           }
 
-          $zipPayloadFiles = @()
-          foreach ($portablePath in $portableFiles) {
-            $portableItem = Get-Item -LiteralPath $portablePath
-            $payloadDir = Join-Path $zipPayloadRoot ([System.IO.Path]::GetFileNameWithoutExtension($portableItem.Name))
-            New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
-
-            $stagedPortablePath = Join-Path $payloadDir $portableItem.Name
-            Copy-Item -LiteralPath $portableItem.FullName -Destination $stagedPortablePath -Force
-            $zipPayloadFiles += Get-Item -LiteralPath $stagedPortablePath
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No unpacked Windows roots were passed to ZIP payload staging.'
           }
 
+          $payloadDirName = "{0}-unpacked" -f $env:WINDOWS_ZIP_BASE_NAME
+          $payloadDir = Join-Path $zipPayloadRoot $payloadDirName
+          New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
+
+          foreach ($unpackedRootPath in $unpackedRoots) {
+            $unpackedRoot = Get-Item -LiteralPath $unpackedRootPath
+            Get-ChildItem -LiteralPath $unpackedRoot.FullName -Force | ForEach-Object {
+              $targetPath = Join-Path $payloadDir $_.Name
+              if ($_.PSIsContainer) {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Recurse -Force
+              } else {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Force
+              }
+            }
+          }
+
+          $zipPayloadFiles = @(Get-ChildItem -LiteralPath $payloadDir -Recurse -File | Sort-Object FullName)
           if ($zipPayloadFiles.Count -eq 0) {
             throw 'Windows ZIP payload staging did not produce any files.'
           }
@@ -762,7 +802,13 @@ jobs:
             }
           }
 
-          $catalogEntries = @($signableFiles + ($zipPayloadFiles | ForEach-Object { $_.FullName }))
+          $zipPayloadSignableFiles = @(
+            $zipPayloadFiles | Where-Object {
+              @('.exe', '.dll', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+            } | Sort-Object FullName -Unique
+          )
+
+          $catalogEntries = @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
 
@@ -775,8 +821,12 @@ jobs:
           }
 
           Write-MultilineOutput 'zip_payload_files' $zipPayloadFiles
+          Write-MultilineOutput 'zip_payload_signable_files' $zipPayloadSignableFiles
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadSignableFiles.Count)"
 
       - name: Sign Windows artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
@@ -809,37 +859,24 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
-          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
-          if (-not (Test-Path $zipPayloadRoot)) {
-            throw "Windows ZIP payload root not found: $zipPayloadRoot"
+          $payloadDir = '${{ steps.windows_zip_payload.outputs.payload_dir }}'
+          $payloadDirName = '${{ steps.windows_zip_payload.outputs.payload_dir_name }}'
+          if (-not (Test-Path $payloadDir)) {
+            throw "Windows ZIP payload directory not found: $payloadDir"
           }
 
-          $payloadDirs = @(Get-ChildItem -Path $zipPayloadRoot -Directory | Sort-Object FullName)
-          if ($payloadDirs.Count -eq 0) {
-            throw 'No Windows ZIP payload directories were staged.'
+          $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDirName)
+          if (Test-Path $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
           }
 
-          $zipFiles = @()
-          foreach ($payloadDir in $payloadDirs) {
-            $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDir.Name)
-            if (Test-Path $zipPath) {
-              Remove-Item -LiteralPath $zipPath -Force
-            }
+          Compress-Archive -Path (Join-Path $payloadDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+          $zipFile = Get-Item -LiteralPath $zipPath
 
-            Compress-Archive -Path (Join-Path $payloadDir.FullName '*') -DestinationPath $zipPath -CompressionLevel Optimal
-            $zipFiles += Get-Item -LiteralPath $zipPath
-          }
-
-          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
-            foreach ($file in $Files) {
-              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
-            }
-            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
-          }
-
-          Write-MultilineOutput 'zip_files' $zipFiles
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=$($zipFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
+          Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=1"
 
       - name: Summarize unsigned Windows build
         if: success() && steps.signing_policy.outputs.required != 'true'
@@ -849,8 +886,8 @@ jobs:
             echo '## Windows signing skipped'
             echo
             echo "- Policy: skipped (${SIGNING_REASON})"
-            echo "- Signed artifacts: 0"
-            echo "- Verification: not required for this build"
+            echo '- Signed artifacts: 0'
+            echo '- Verification: not required for this build'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
@@ -863,7 +900,8 @@ jobs:
             echo '## Windows signing completed'
             echo
             echo "- Policy: required (${SIGNING_REASON})"
-            echo "- Signed artifacts: ${{ steps.windows_zip_payload.outputs.zip_payload_count }} payload file(s) plus release installers"
+            echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
+            echo '- Signed staged unpacked payload binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -877,7 +915,9 @@ jobs:
             echo '## Windows ZIP packaging'
             echo
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP payload signable binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
