@@ -46,12 +46,26 @@ export interface StorageInfo {
   usedPercentage: number; // 0-100
 }
 
+export interface PortablePayloadValidationResult {
+  exists: boolean;
+  isValid: boolean;
+  runtimeRoot: string;
+  missingFiles: string[];
+}
+
 /**
  * PathManager provides centralized path management for application.
  * All paths should be retrieved from this manager to ensure consistency.
  */
 export class PathManager {
   private static instance: PathManager | null = null;
+  private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
+  private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
+    'manifest.json',
+    path.join('lib', 'PCode.Web.dll'),
+    path.join('lib', 'PCode.Web.runtimeconfig.json'),
+    path.join('lib', 'PCode.Web.deps.json'),
+  ] as const;
   private paths: AppPaths;
   private userDataPath: string;
   private customDataDirectory: string | null = null;
@@ -476,12 +490,20 @@ export class PathManager {
     return this.getExpectedPackagedPinnedRuntimeRoot(platform);
   }
 
+  getExpectedPackagedPortableRuntimeRoot(): string {
+    return path.join(process.resourcesPath, ...PathManager.PORTABLE_FIXED_ROOT_SEGMENTS);
+  }
+
   getDevelopmentPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return path.resolve(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', platform);
   }
 
   getDevelopmentEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return this.getDevelopmentPinnedRuntimeRoot(platform);
+  }
+
+  getDevelopmentPortableRuntimeRoot(): string {
+    return path.resolve(process.cwd(), 'resources', 'portable-fixed', 'current');
   }
 
   getPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -505,6 +527,72 @@ export class PathManager {
 
   getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return this.getPinnedRuntimeRoot(platform);
+  }
+
+  getPortableRuntimeRoot(): string {
+    const override = process.env.HAGICODE_PORTABLE_RUNTIME_ROOT?.trim();
+    if (override) {
+      return path.resolve(override);
+    }
+
+    if (!app.isPackaged) {
+      return this.getDevelopmentPortableRuntimeRoot();
+    }
+
+    return this.getExpectedPackagedPortableRuntimeRoot();
+  }
+
+  getPortableRuntimeConfigDir(): string {
+    return path.join(this.getPortableRuntimeRoot(), 'config');
+  }
+
+  getPortableRuntimeLogsPath(): string {
+    return path.join(this.getPortableRuntimeRoot(), 'lib', 'logs');
+  }
+
+  getPortableRuntimeRequiredFiles(): string[] {
+    return [...PathManager.PORTABLE_FIXED_REQUIRED_FILES];
+  }
+
+  async validatePortableRuntimePayload(runtimeRoot: string = this.getPortableRuntimeRoot()): Promise<PortablePayloadValidationResult> {
+    try {
+      const stats = await fs.stat(runtimeRoot);
+      if (!stats.isDirectory()) {
+        return {
+          exists: true,
+          isValid: false,
+          runtimeRoot,
+          missingFiles: ['<runtime root is not a directory>'],
+        };
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return {
+          exists: false,
+          isValid: false,
+          runtimeRoot,
+          missingFiles: [],
+        };
+      }
+
+      throw error;
+    }
+
+    const missingFiles: string[] = [];
+    for (const relativePath of PathManager.PORTABLE_FIXED_REQUIRED_FILES) {
+      try {
+        await fs.access(path.join(runtimeRoot, relativePath));
+      } catch {
+        missingFiles.push(relativePath);
+      }
+    }
+
+    return {
+      exists: true,
+      isValid: missingFiles.length === 0,
+      runtimeRoot,
+      missingFiles,
+    };
   }
 
   getPinnedDotnetPath(platform: Platform = this.getCurrentPlatform()): string {

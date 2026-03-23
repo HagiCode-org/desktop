@@ -29,6 +29,10 @@ import type {
 export class OnboardingManager {
   private static readonly OPEN_SPEC_INSTALL_COMMAND = ['install', '-g', '@fission-ai/openspec@1'];
   private static readonly OPEN_SPEC_SUPPORTED_RANGE = '>=1.0.0 <2.0.0';
+  private static readonly PORTABLE_VERSION_ONBOARDING_ERROR =
+    'Portable version mode skips onboarding because the packaged runtime is already provisioned.';
+  private static readonly PORTABLE_VERSION_OPENSPEC_ERROR =
+    'Portable version mode does not require OpenSpec CLI installation or verification.';
 
   private versionManager: VersionManager;
   private dependencyManager: DependencyManager;
@@ -70,6 +74,11 @@ export class OnboardingManager {
   async checkTriggerCondition(): Promise<{ shouldShow: boolean; reason?: string }> {
     try {
       log.info('[OnboardingManager] Checking trigger condition...');
+
+      if (this.versionManager.isPortableVersionMode()) {
+        log.info('[OnboardingManager] Portable version mode active, treating runtime as already provisioned');
+        return { shouldShow: false, reason: 'portable-version-provisioned' };
+      }
 
       // Get stored onboarding state
       const storedState = this.getStoredState();
@@ -159,6 +168,11 @@ export class OnboardingManager {
   async downloadLatestPackage(
     onProgress?: (progress: DownloadProgress) => void
   ): Promise<{ success: boolean; version?: string; error?: string }> {
+    if (this.versionManager.isPortableVersionMode()) {
+      log.info('[OnboardingManager] Skipping package download in portable version mode');
+      return { success: false, error: OnboardingManager.PORTABLE_VERSION_ONBOARDING_ERROR };
+    }
+
     // Idempotency check: if already downloading, ignore duplicate request
     if (this.isDownloading) {
       log.info('[OnboardingManager] Download already in progress, ignoring duplicate request');
@@ -267,6 +281,14 @@ export class OnboardingManager {
   }
 
   async installOpenSpec(): Promise<OnboardingInstallOpenSpecResult> {
+    if (this.versionManager.isPortableVersionMode()) {
+      log.info('[OnboardingManager] OpenSpec installation skipped in portable version mode');
+      return {
+        success: false,
+        error: OnboardingManager.PORTABLE_VERSION_OPENSPEC_ERROR,
+      };
+    }
+
     try {
       log.info('[OnboardingManager] Installing OpenSpec via onboarding');
       const runtimeEnv = await this.buildRuntimeEnv();
@@ -290,6 +312,14 @@ export class OnboardingManager {
   }
 
   async verifyOpenSpec(): Promise<OnboardingInstallOpenSpecResult> {
+    if (this.versionManager.isPortableVersionMode()) {
+      log.info('[OnboardingManager] OpenSpec verification skipped in portable version mode');
+      return {
+        success: false,
+        error: OnboardingManager.PORTABLE_VERSION_OPENSPEC_ERROR,
+      };
+    }
+
     try {
       log.info('[OnboardingManager] Verifying OpenSpec via onboarding');
       const runtimeEnv = await this.buildRuntimeEnv();
@@ -547,6 +577,14 @@ export class OnboardingManager {
     versionId: string,
     onProgress?: (progress: ServiceLaunchProgress) => void
   ): Promise<OnboardingStartServiceResult> {
+    if (this.versionManager.isPortableVersionMode()) {
+      log.info('[OnboardingManager] Onboarding service start skipped in portable version mode');
+      return {
+        success: false,
+        error: OnboardingManager.PORTABLE_VERSION_ONBOARDING_ERROR,
+      };
+    }
+
     // Idempotency check: if already starting, ignore duplicate request
     if (this.isStartingService) {
       log.info('[OnboardingManager] Service start already in progress, ignoring duplicate request');

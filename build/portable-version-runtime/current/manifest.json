@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.hagicode.com/package-manifest.v1.json",
+  "manifestVersion": "1.0",
+  "package": {
+    "name": "portable-dev-linux-x64-nort",
+    "version": "0.1.0",
+    "buildTimestamp": "1970-01-01T00:00:00.000Z",
+    "gitCommit": "dev-portable-bridge",
+    "platform": "linux-x64"
+  },
+  "dependencies": {},
+  "filesReference": {
+    "path": ".",
+    "checksum": "development-bridge",
+    "format": "symlink-bridge",
+    "count": 0
+  },
+  "metadata": {
+    "description": "Development bridge manifest for portable version mode.",
+    "author": "hagicode-desktop/dev-with-portable-runtime",
+    "license": "development-only",
+    "homepage": "https://hagicode.com",
+    "documentation": "https://hagicode.com/docs",
+    "repository": "https://github.com/HagiCode-org/desktop"
+  }
+}

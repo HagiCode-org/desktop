@@ -12,6 +12,12 @@ import { createPackageSource, type PackageSource, type PackageSourceConfig, type
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
+import {
+  type ActiveRuntimeDescriptor,
+  type DistributionMode,
+  type DistributionModeState,
+  PORTABLE_VERSION_MODE_ERROR,
+} from '../types/distribution-mode.js';
 
 /**
  * Version information
@@ -54,6 +60,8 @@ export interface InstalledVersion {
   status: InstalledVersionStatus;
   dependencies: DependencyCheckResult[];
   isActive: boolean;
+  runtimeSource?: ActiveRuntimeDescriptor['kind'];
+  isReadOnly?: boolean;
   validation?: InstalledVersionValidation;
 }
 
@@ -70,8 +78,17 @@ export interface InstallResult {
 export interface VersionSwitchResult {
   success: boolean;
   error?: string;
-  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'portable-version-mode' | 'unknown';
   desktopCompatibility?: DesktopCompatibilityDetails;
+}
+
+export class DistributionModeError extends Error {
+  readonly code = 'portable-version-mode';
+
+  constructor(message: string = PORTABLE_VERSION_MODE_ERROR) {
+    super(message);
+    this.name = 'DistributionModeError';
+  }
 }
 
 /**
@@ -85,6 +102,8 @@ export class VersionManager {
   private packageSourceConfigManager: PackageSourceConfigManager;
   private userDataPath: string;
   private currentPackageSource: PackageSource | null;
+  private distributionMode: DistributionMode = 'normal';
+  private activePortableRuntime: InstalledVersion | null = null;
 
   constructor(dependencyManager: DependencyManager, packageSourceConfigManager?: PackageSourceConfigManager) {
     this.dependencyManager = dependencyManager;
@@ -182,6 +201,128 @@ export class VersionManager {
       return validation.aspNetCoreVersion;
     } catch {
       return undefined;
+    }
+  }
+
+  async initializeDistributionMode(): Promise<DistributionModeState> {
+    const portableRoot = this.pathManager.getPortableRuntimeRoot();
+
+    try {
+      const validation = await this.pathManager.validatePortableRuntimePayload(portableRoot);
+      if (!validation.exists) {
+        this.distributionMode = 'normal';
+        this.activePortableRuntime = null;
+        log.info('[VersionManager] Portable version payload not found, using normal mode:', portableRoot);
+        return { mode: this.distributionMode, activeRuntime: null };
+      }
+
+      if (!validation.isValid) {
+        this.distributionMode = 'normal';
+        this.activePortableRuntime = null;
+        log.warn('[VersionManager] Portable version payload validation failed, falling back to normal mode:', {
+          runtimeRoot: portableRoot,
+          missingFiles: validation.missingFiles,
+        });
+        return { mode: this.distributionMode, activeRuntime: null };
+      }
+
+      this.activePortableRuntime = await this.createPortableRuntimeDescriptor(validation.runtimeRoot);
+      this.distributionMode = 'steam';
+      log.info('[VersionManager] Portable version payload detected successfully:', {
+        runtimeRoot: validation.runtimeRoot,
+        versionId: this.activePortableRuntime.id,
+        version: this.activePortableRuntime.version,
+      });
+
+      return {
+        mode: this.distributionMode,
+        activeRuntime: this.toRuntimeDescriptor(this.activePortableRuntime),
+      };
+    } catch (error) {
+      this.distributionMode = 'normal';
+      this.activePortableRuntime = null;
+      log.error('[VersionManager] Portable version detection failed, falling back to normal mode:', error);
+      return { mode: this.distributionMode, activeRuntime: null };
+    }
+  }
+
+  getDistributionMode(): DistributionMode {
+    return this.distributionMode;
+  }
+
+  isPortableVersionMode(): boolean {
+    return this.distributionMode === 'steam';
+  }
+
+  getActivePortableRuntime(): InstalledVersion | null {
+    return this.activePortableRuntime;
+  }
+
+  async getActiveRuntimeDescriptor(): Promise<ActiveRuntimeDescriptor | null> {
+    if (this.activePortableRuntime) {
+      return this.toRuntimeDescriptor(this.activePortableRuntime);
+    }
+
+    const activeVersion = await this.getActiveVersion();
+    if (!activeVersion) {
+      return null;
+    }
+
+    return this.toRuntimeDescriptor(activeVersion);
+  }
+
+  private async createPortableRuntimeDescriptor(runtimeRoot: string): Promise<InstalledVersion> {
+    const manifest = await manifestReader.readManifest(runtimeRoot);
+    const packageInfo = ((manifest?.package ?? {}) as {
+      name?: string;
+      version?: string;
+      platform?: string;
+    });
+    const stats = await fs.stat(runtimeRoot);
+    const currentPlatform = this.pathManager.getCurrentPlatform();
+    const versionLabel = typeof packageInfo.version === 'string' ? packageInfo.version : app.getVersion();
+    const descriptor = await this.applyRuntimeValidation({
+      id: typeof packageInfo.name === 'string' && packageInfo.name.length > 0
+        ? `${packageInfo.name}-${versionLabel}-${currentPlatform}-portable-fixed`
+        : `portable-fixed-${versionLabel}-${currentPlatform}`,
+      version: versionLabel,
+      platform: typeof packageInfo.platform === 'string' && packageInfo.platform.length > 0
+        ? packageInfo.platform
+        : currentPlatform,
+      packageFilename: typeof packageInfo.name === 'string' && packageInfo.name.length > 0
+        ? `${packageInfo.name}-${versionLabel}`
+        : `portable-fixed-${versionLabel}`,
+      installedPath: runtimeRoot,
+      installedAt: stats.mtime.toISOString(),
+      status: 'installed-ready',
+      dependencies: [],
+      isActive: true,
+      runtimeSource: 'portable-fixed',
+      isReadOnly: true,
+    }, await this.resolveBundledRuntimeVersion());
+
+    return {
+      ...descriptor,
+      isActive: true,
+      runtimeSource: 'portable-fixed',
+      isReadOnly: true,
+    };
+  }
+
+  private toRuntimeDescriptor(version: InstalledVersion): ActiveRuntimeDescriptor {
+    return {
+      kind: version.runtimeSource === 'portable-fixed' ? 'portable-fixed' : 'installed-version',
+      rootPath: version.installedPath,
+      versionId: version.id,
+      versionLabel: version.version || version.id,
+      displayName: version.packageFilename,
+      isReadOnly: Boolean(version.isReadOnly),
+    };
+  }
+
+  private ensureMutableVersionManagementAllowed(): void {
+    if (this.isPortableVersionMode()) {
+      throw new DistributionModeError();
     }
   }
 
@@ -342,6 +483,11 @@ export class VersionManager {
    * Filters versions based on the current operating system
    */
   async listVersions(): Promise<Version[]> {
+    if (this.isPortableVersionMode()) {
+      log.info('[VersionManager] Portable version mode active, available source versions are hidden');
+      return [];
+    }
+
     try {
       log.info('[VersionManager] Listing available versions...');
 
@@ -422,6 +568,8 @@ export class VersionManager {
       percentage: number;
     }) => void
   ): Promise<InstallResult> {
+    this.ensureMutableVersionManagementAllowed();
+
     try {
       log.info('[VersionManager] Installing version:', versionId);
 
@@ -547,6 +695,8 @@ export class VersionManager {
    * Uninstall a version
    */
   async uninstallVersion(versionId: string): Promise<boolean> {
+    this.ensureMutableVersionManagementAllowed();
+
     try {
       log.info('[VersionManager] Uninstalling version:', versionId);
 
@@ -583,6 +733,8 @@ export class VersionManager {
    * Blocks Desktop-incompatible packages while preserving the current active version
    */
   async switchVersion(versionId: string): Promise<VersionSwitchResult> {
+    this.ensureMutableVersionManagementAllowed();
+
     try {
       log.info('[VersionManager] Switching to version:', versionId);
 
@@ -623,7 +775,7 @@ export class VersionManager {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        errorCode: 'unknown',
+        errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
       };
     }
   }
@@ -633,6 +785,10 @@ export class VersionManager {
    */
   async getActiveVersion(): Promise<InstalledVersion | null> {
     try {
+      if (this.activePortableRuntime) {
+        return this.activePortableRuntime;
+      }
+
       const activeVersionData = await this.stateManager.getActiveVersion();
 
       if (!activeVersionData) {
@@ -652,6 +808,8 @@ export class VersionManager {
    * This will clear the active status, remove the version, and reinstall it
    */
   async reinstallVersion(versionId: string): Promise<{ success: boolean; error?: string }> {
+    this.ensureMutableVersionManagementAllowed();
+
     try {
       log.info('[VersionManager] Reinstalling version:', versionId);
 

@@ -220,11 +220,12 @@ jobs:
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
-          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
-          $catalogEntries = $signable | ForEach-Object {
-            [System.IO.Path]::GetRelativePath($pkgDir, $_.FullName)
+          if ($portable.Count -eq 0) {
+            throw 'No portable Windows artifacts were found in pkg/ for ZIP assembly.'
           }
-          $catalogEntries | Set-Content -Path $catalogPath
+
+          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
+          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -239,9 +240,75 @@ jobs:
           Write-MultilineOutput 'appx_files' $appx
           Write-MultilineOutput 'signable_files' $signable
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
 
           "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+
+      - name: Prepare Windows ZIP payload workspace
+        id: windows_zip_payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+          $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
+
+          if (Test-Path $zipPayloadRoot) {
+            Remove-Item -Path $zipPayloadRoot -Recurse -Force
+          }
+          New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
+
+          $portableFiles = @()
+          @'
+${{ steps.windows_artifacts.outputs.portable_files }}
+'@ -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $portableFiles += $trimmed
+            }
+          }
+
+          $zipPayloadFiles = @()
+          foreach ($portablePath in $portableFiles) {
+            $portableItem = Get-Item -LiteralPath $portablePath
+            $payloadDir = Join-Path $zipPayloadRoot ([System.IO.Path]::GetFileNameWithoutExtension($portableItem.Name))
+            New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
+
+            $stagedPortablePath = Join-Path $payloadDir $portableItem.Name
+            Copy-Item -LiteralPath $portableItem.FullName -Destination $stagedPortablePath -Force
+            $zipPayloadFiles += Get-Item -LiteralPath $stagedPortablePath
+          }
+
+          if ($zipPayloadFiles.Count -eq 0) {
+            throw 'Windows ZIP payload staging did not produce any files.'
+          }
+
+          $signableFiles = @()
+          @'
+${{ steps.windows_artifacts.outputs.signable_files }}
+'@ -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $signableFiles += $trimmed
+            }
+          }
+
+          $catalogEntries = @($signableFiles + ($zipPayloadFiles | ForEach-Object { $_.FullName }))
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'zip_payload_files' $zipPayloadFiles
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
 
       - name: Sign Windows artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
@@ -250,7 +317,7 @@ jobs:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
+          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -265,7 +332,46 @@ jobs:
         env:
           VERIFY_STRICT: "true"
         run: |
-          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
+          node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
+
+      - name: Create Windows ZIP artifact
+        id: windows_zip
+        if: success()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+          if (-not (Test-Path $zipPayloadRoot)) {
+            throw "Windows ZIP payload root not found: $zipPayloadRoot"
+          }
+
+          $payloadDirs = @(Get-ChildItem -Path $zipPayloadRoot -Directory | Sort-Object FullName)
+          if ($payloadDirs.Count -eq 0) {
+            throw 'No Windows ZIP payload directories were staged.'
+          }
+
+          $zipFiles = @()
+          foreach ($payloadDir in $payloadDirs) {
+            $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDir.Name)
+            if (Test-Path $zipPath) {
+              Remove-Item -LiteralPath $zipPath -Force
+            }
+
+            Compress-Archive -Path (Join-Path $payloadDir.FullName '*') -DestinationPath $zipPath -CompressionLevel Optimal
+            $zipFiles += Get-Item -LiteralPath $zipPath
+          }
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'zip_files' $zipFiles
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=$($zipFiles.Count)"
 
       - name: Summarize unsigned Windows build
         if: success() && steps.signing_policy.outputs.required != 'true'
@@ -289,11 +395,23 @@ jobs:
             echo '## Windows signing completed'
             echo
             echo "- Policy: required (${SIGNING_REASON})"
-            echo "- Signed artifacts: ${{ steps.windows_artifacts.outputs.signable_count }}"
+            echo "- Signed artifacts: ${{ steps.windows_zip_payload.outputs.zip_payload_count }} payload file(s) plus release installers"
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
+      - name: Summarize Windows ZIP packaging
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo '## Windows ZIP packaging'
+            echo
+            echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
@@ -346,6 +464,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        with:
+          name: hagicode-windows-zip-${{ github.sha }}
+          path: ${{ steps.windows_zip.outputs.zip_files }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Windows ZIP to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        with:
+          files: ${{ steps.windows_zip.outputs.zip_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Code signing failure notification
         if: failure() && steps.signing_policy.outputs.required == 'true'
         uses: HagiCode-org/haginotifier@v1.0.0
@@ -556,11 +690,12 @@ jobs:
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
-          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
-          $catalogEntries = $signable | ForEach-Object {
-            [System.IO.Path]::GetRelativePath($pkgDir, $_.FullName)
+          if ($portable.Count -eq 0) {
+            throw 'No portable Windows artifacts were found in pkg/ for ZIP assembly.'
           }
-          $catalogEntries | Set-Content -Path $catalogPath
+
+          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
+          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -575,9 +710,75 @@ jobs:
           Write-MultilineOutput 'appx_files' $appx
           Write-MultilineOutput 'signable_files' $signable
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
 
           "Found $($nsis.Count) NSIS, $($portable.Count) portable, and $($appx.Count) AppX artifact(s)."
+
+      - name: Prepare Windows ZIP payload workspace
+        id: windows_zip_payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+          $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
+
+          if (Test-Path $zipPayloadRoot) {
+            Remove-Item -Path $zipPayloadRoot -Recurse -Force
+          }
+          New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
+
+          $portableFiles = @()
+          @'
+${{ steps.windows_artifacts.outputs.portable_files }}
+'@ -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $portableFiles += $trimmed
+            }
+          }
+
+          $zipPayloadFiles = @()
+          foreach ($portablePath in $portableFiles) {
+            $portableItem = Get-Item -LiteralPath $portablePath
+            $payloadDir = Join-Path $zipPayloadRoot ([System.IO.Path]::GetFileNameWithoutExtension($portableItem.Name))
+            New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
+
+            $stagedPortablePath = Join-Path $payloadDir $portableItem.Name
+            Copy-Item -LiteralPath $portableItem.FullName -Destination $stagedPortablePath -Force
+            $zipPayloadFiles += Get-Item -LiteralPath $stagedPortablePath
+          }
+
+          if ($zipPayloadFiles.Count -eq 0) {
+            throw 'Windows ZIP payload staging did not produce any files.'
+          }
+
+          $signableFiles = @()
+          @'
+${{ steps.windows_artifacts.outputs.signable_files }}
+'@ -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $signableFiles += $trimmed
+            }
+          }
+
+          $catalogEntries = @($signableFiles + ($zipPayloadFiles | ForEach-Object { $_.FullName }))
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'zip_payload_files' $zipPayloadFiles
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
 
       - name: Sign Windows artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
@@ -586,7 +787,7 @@ jobs:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
+          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -601,7 +802,46 @@ jobs:
         env:
           VERIFY_STRICT: "true"
         run: |
-          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
+          node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
+
+      - name: Create Windows ZIP artifact
+        id: windows_zip
+        if: success()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+          if (-not (Test-Path $zipPayloadRoot)) {
+            throw "Windows ZIP payload root not found: $zipPayloadRoot"
+          }
+
+          $payloadDirs = @(Get-ChildItem -Path $zipPayloadRoot -Directory | Sort-Object FullName)
+          if ($payloadDirs.Count -eq 0) {
+            throw 'No Windows ZIP payload directories were staged.'
+          }
+
+          $zipFiles = @()
+          foreach ($payloadDir in $payloadDirs) {
+            $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDir.Name)
+            if (Test-Path $zipPath) {
+              Remove-Item -LiteralPath $zipPath -Force
+            }
+
+            Compress-Archive -Path (Join-Path $payloadDir.FullName '*') -DestinationPath $zipPath -CompressionLevel Optimal
+            $zipFiles += Get-Item -LiteralPath $zipPath
+          }
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'zip_files' $zipFiles
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_count=$($zipFiles.Count)"
 
       - name: Summarize unsigned Windows build
         if: success() && steps.signing_policy.outputs.required != 'true'
@@ -625,11 +865,23 @@ jobs:
             echo '## Windows signing completed'
             echo
             echo "- Policy: required (${SIGNING_REASON})"
-            echo "- Signed artifacts: ${{ steps.windows_artifacts.outputs.signable_count }}"
+            echo "- Signed artifacts: ${{ steps.windows_zip_payload.outputs.zip_payload_count }} payload file(s) plus release installers"
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           SIGNING_REASON: ${{ steps.signing_policy.outputs.reason }}
+
+      - name: Summarize Windows ZIP packaging
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo '## Windows ZIP packaging'
+            echo
+            echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
@@ -682,6 +934,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        with:
+          name: hagicode-windows-zip-${{ github.sha }}
+          path: ${{ steps.windows_zip.outputs.zip_files }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Windows ZIP to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        with:
+          files: ${{ steps.windows_zip.outputs.zip_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Code signing failure notification
         if: failure() && steps.signing_policy.outputs.required == 'true'
         uses: HagiCode-org/haginotifier@v1.0.0
@@ -785,6 +1053,33 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
+      - name: Summarize Linux ZIP artifacts
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          zip_files=(pkg/*.zip)
+          zip_count=${#zip_files[@]}
+
+          {
+            echo '## Linux packaging artifacts'
+            echo
+            echo "- AppImage upload pattern: pkg/*.AppImage"
+            echo "- deb upload pattern: pkg/*.deb"
+            echo "- tar.gz upload pattern: pkg/*.tar.gz"
+            if [ "$zip_count" -eq 0 ]; then
+              echo '- ZIP upload pattern: pkg/*.zip (missing)'
+            else
+              echo "- ZIP upload pattern: pkg/*.zip (${zip_count} file(s))"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$zip_count" -eq 0 ]; then
+            echo '::error::Linux ZIP artifact was not produced in pkg/.'
+            exit 1
+          fi
+
       # Upload each artifact separately
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
@@ -834,6 +1129,23 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: pkg/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux ZIP
+        uses: actions/upload-artifact@v4
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: hagicode-linux-zip-${{ github.sha }}
+          path: pkg/*.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux ZIP to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: pkg/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

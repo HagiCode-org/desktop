@@ -37,6 +37,7 @@ import {
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
 import { VersionDependencyGuidance } from './VersionDependencyGuidance';
+import type { DistributionMode } from '../../types/distribution-mode';
 
 
 interface Version {
@@ -56,6 +57,8 @@ interface InstalledVersion {
   status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
   dependencies: any[];
   isActive: boolean;
+  runtimeSource?: 'installed-version' | 'portable-fixed';
+  isReadOnly?: boolean;
   validation?: {
     startable: boolean;
     message?: string;
@@ -73,7 +76,7 @@ interface InstalledVersion {
 interface VersionSwitchResult {
   success: boolean;
   error?: string;
-  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'portable-version-mode' | 'unknown';
   desktopCompatibility?: {
     declared: boolean;
     compatible: boolean;
@@ -112,7 +115,11 @@ declare global {
   }
 }
 
-export default function VersionManagementPage() {
+interface VersionManagementPageProps {
+  distributionMode: DistributionMode;
+}
+
+export default function VersionManagementPage({ distributionMode }: VersionManagementPageProps) {
   const { t } = useTranslation('pages');
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
@@ -487,6 +494,37 @@ export default function VersionManagementPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (distributionMode === 'steam') {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
+              <Package className="w-6 h-6 text-primary" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="text-2xl font-bold text-foreground">
+                {t('versionManagement.portableMode.title')}
+              </h1>
+              <p className="text-muted-foreground">
+                {t('versionManagement.portableMode.description')}
+              </p>
+              {activeVersion && (
+                <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span>{t('versionManagement.portableMode.activeRuntime', { version: activeVersion.packageFilename })}</span>
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t('versionManagement.portableMode.updates')}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

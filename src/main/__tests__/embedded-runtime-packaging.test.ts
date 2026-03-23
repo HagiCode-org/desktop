@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-runtime/runtime-manifest.json');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
+const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -33,5 +35,16 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:smoke-test:mac:arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
+  });
+
+  it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
+    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
+    const docs = await fs.readFile(developmentDocPath, 'utf-8');
+
+    assert.match(builder, /from: resources\/portable-fixed/);
+    assert.match(builder, /to: extra\/portable-fixed/);
+    assert.match(docs, /resources\/portable-fixed\/current/);
+    assert.match(docs, /extra\/portable-fixed\/current/);
+    assert.match(docs, /bundled Node environment/i);
   });
 });

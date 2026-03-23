@@ -253,6 +253,66 @@ Desktop startup uses it to distinguish:
 - pinned-version mismatch
 - service payload incompatibility
 
+### Portable version payload contract
+
+Steam-style portable-version builds can optionally bundle a fixed server payload under `resources/portable-fixed/current/` before `electron-builder` runs.
+
+Expected layout:
+
+```text
+resources/portable-fixed/
+??? current/
+    ??? manifest.json
+    ??? config/
+    ??? lib/
+        ??? PCode.Web.dll
+        ??? PCode.Web.runtimeconfig.json
+        ??? PCode.Web.deps.json
+```
+
+Packaging copies `resources/portable-fixed` into `resources/extra/portable-fixed`, so packaged builds look for the active portable payload at:
+
+- Linux/Windows: `process.resourcesPath/extra/portable-fixed/current`
+- macOS: `Contents/Resources/extra/portable-fixed/current`
+
+If `current/` is missing, Desktop stays in normal mode. If `current/` exists but the required files are incomplete, Desktop logs the validation failure and safely falls back to normal mode.
+
+Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. Future Steam-ready packages are expected to supply the necessary OpenSpec prerequisites through a bundled Node environment and a default installation strategy instead of asking end users to install them manually.
+
+### Dev startup for portable version mode
+
+Use the dedicated dev command when you want Electron dev mode to boot directly into portable version mode with an already-extracted server payload:
+
+```bash
+npm run dev:portable-version
+```
+
+Behavior:
+
+- Reuses the same pinned Desktop runtime preparation as `npm run dev:embedded-runtime`
+- Loads `.env`, `.env.local`, `.env.development`, and `.env.development.local` before resolving overrides
+- Sets `HAGICODE_PORTABLE_RUNTIME_ROOT` before launching `npm run dev`
+- Prefers a valid extracted Linux x64 runtime from these workspace outputs:
+  - `../local_deployment/linux-x64` or `../local_deployment/linux-x64-nort`
+  - `../local_publishment/.local-publishment/linux-x64` or `../local_publishment/.local-publishment/linux-x64-nort`
+  - `../hagicode-core/Release/release-structured/linux-x64` or `../hagicode-core/Release/release-structured/linux-x64-nort`
+  - `../hagibuild/Release/release-structured/linux-x64` or `../hagibuild/Release/release-structured/linux-x64-nort`
+- When the extracted runtime has `lib/PCode.Web.dll` but no top-level `manifest.json`, the script stages a temporary dev bridge payload under `build/portable-version-runtime/current`
+
+Override the extracted runtime directory explicitly when needed:
+
+```bash
+HAGICODE_PORTABLE_RUNTIME_ROOT=/absolute/path/to/extracted/runtime npm run dev:portable-version
+```
+
+You can also put the override into `repos/hagicode-desktop/.env.local`:
+
+```bash
+HAGICODE_PORTABLE_RUNTIME_ROOT=../local_publishment/.local-publishment/linux-x64-nort
+```
+
+The override should point at the extracted runtime root. If that root already contains `manifest.json` and `lib/PCode.Web.dll`, it is used directly. If it only contains the managed payload under `lib/`, the dev script creates the temporary bridge payload automatically.
+
 ### Preparing the staged runtime
 
 Run from `repos/hagicode-desktop`:
@@ -277,6 +337,8 @@ Behavior:
 - Packaged Linux: `pkg/linux-unpacked/resources/dotnet/<rid>`
 - Packaged Windows: `pkg/win-unpacked/resources/dotnet/<rid>`
 - Runtime resolution in production: `process.resourcesPath/dotnet/<rid>`
+
+The same `extraResources` block also copies `resources/portable-fixed` to `resources/extra/portable-fixed/` when a portable-version payload has been staged.
 
 Desktop does not fall back to a machine-wide `dotnet` installation when that packaged runtime is missing.
 

@@ -14,6 +14,8 @@ asarUnpack:
 extraResources:
   - from: build/embedded-runtime/current/dotnet
     to: dotnet
+  - from: resources/portable-fixed
+    to: extra/portable-fixed
 publish:
   provider: github
   owner: HagiCode-org

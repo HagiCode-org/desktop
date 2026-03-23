@@ -41,6 +41,7 @@
     "package:smoke-test:mac:x64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "package:smoke-test:mac:arm64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "dev:embedded-runtime": "node scripts/dev-with-embedded-runtime.js",
+    "dev:portable-version": "node scripts/dev-with-portable-runtime.js",
     "prepare:runtime:optional": "node scripts/prepare-runtime-if-supported.js"
   },
   "keywords": [

@@ -130,8 +130,9 @@ export function registerWebServiceHandlers(deps: {
 
     try {
       const activeVersion = await state.versionManager.getActiveVersion();
+      const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();
 
-      if (!activeVersion) {
+      if (!activeVersion || !activeRuntime) {
         log.warn('[WebServiceHandlers] No active version found, cannot start web service');
         return {
           success: false,
@@ -139,9 +140,9 @@ export function registerWebServiceHandlers(deps: {
         } as StartWebServiceResponse;
       }
 
-      state.webServiceManager.setActiveVersion(activeVersion.id);
+      state.webServiceManager.setActiveRuntime(activeRuntime);
 
-      const manifest = await manifestReader.readManifest(activeVersion.installedPath);
+      const manifest = await manifestReader.readManifest(activeRuntime.rootPath);
       if (manifest) {
         const entryPoint = manifestReader.parseEntryPoint(manifest);
         state.webServiceManager.setEntryPoint(entryPoint);

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import { OnboardingManager } from '../onboarding-manager.js';
+
+const onboardingManagerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
 function createStoreStub() {
   return {
@@ -119,5 +123,16 @@ describe('onboarding-manager OpenSpec verification', () => {
       success: false,
       error: 'spawn openspec ENOENT',
     });
+  });
+});
+
+describe('onboarding-manager portable version mode', () => {
+  it('treats portable version mode as already provisioned and skips OpenSpec guidance', async () => {
+    const source = await fs.readFile(onboardingManagerPath, 'utf-8');
+
+    assert.match(source, /Portable version mode active, treating runtime as already provisioned/);
+    assert.match(source, /PORTABLE_VERSION_OPENSPEC_ERROR/);
+    assert.match(source, /OpenSpec installation skipped in portable version mode/);
+    assert.match(source, /OpenSpec verification skipped in portable version mode/);
   });
 });

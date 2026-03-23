@@ -4,6 +4,7 @@ import { app } from 'electron';
 import log from 'electron-log';
 import type { AspNetRuntimeRequirement } from './embedded-runtime.js';
 import type { DesktopCompatibilityDetails } from './desktop-compatibility.js';
+import type { RuntimeSourceKind } from '../types/distribution-mode.js';
 
 export type InstalledVersionStatus = 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
 
@@ -29,6 +30,8 @@ export interface InstalledVersionInfo {
   status: InstalledVersionStatus;
   dependencies: any[];
   isActive: boolean;
+  runtimeSource?: RuntimeSourceKind;
+  isReadOnly?: boolean;
   validation?: InstalledVersionValidation;
 }
 

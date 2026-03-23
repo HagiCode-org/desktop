@@ -319,6 +319,12 @@
         "cn": "CN prompt",
         "international": "International prompt"
       }
+    },
+    "portableMode": {
+      "title": "Portable version mode",
+      "description": "Version installation, switching, and package source management are hidden because this build runs from a packaged fixed payload.",
+      "activeRuntime": "Active packaged runtime: {{version}}",
+      "updates": "Updates for this build are managed by the packaged distribution instead of in-app version actions."
     }
   },
   "installProgressDialog": {

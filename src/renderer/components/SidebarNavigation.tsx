@@ -7,6 +7,7 @@ import type { RootState } from '../store';
 import type { ViewType } from '../store/slices/viewSlice';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
+import type { DistributionMode } from '../../types/distribution-mode';
 
 // Lucide 图标
 import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info, MessageSquare, Calculator } from 'lucide-react';
@@ -62,10 +63,17 @@ const externalLinkItems: NavigationItem[] = [
   },
 ];
 
-export default function SidebarNavigation() {
+interface SidebarNavigationProps {
+  distributionMode: DistributionMode;
+}
+
+export default function SidebarNavigation({ distributionMode }: SidebarNavigationProps) {
   const { t } = useTranslation('common');
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
+  const visibleNavigationItems = distributionMode === 'steam'
+    ? navigationItems.filter((item) => item.id !== 'version')
+    : navigationItems;
 
   // 侧边栏折叠状态
   const [collapsed, setCollapsed] = useState(false);
@@ -212,7 +220,7 @@ export default function SidebarNavigation() {
 
       {/* 导航项列表 */}
       <nav className="flex-1 py-4 space-y-1 px-2">
-        {navigationItems.map((item, index) => {
+        {visibleNavigationItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = isNavActive(item);
 

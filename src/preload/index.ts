@@ -6,6 +6,7 @@ import type {
   StartupFailurePayload,
 } from '../types/onboarding.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
+import type { DistributionMode } from '../types/distribution-mode.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -91,13 +92,15 @@ export interface InstalledVersionPayload {
   status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
   dependencies: any[];
   isActive: boolean;
+  runtimeSource?: 'installed-version' | 'portable-fixed';
+  isReadOnly?: boolean;
   validation?: InstalledVersionValidationPayload;
 }
 
 export interface VersionSwitchResultPayload {
   success: boolean;
   error?: string;
-  errorCode?: 'not-installed' | 'desktop-incompatible' | 'unknown';
+  errorCode?: 'not-installed' | 'desktop-incompatible' | 'portable-version-mode' | 'unknown';
   desktopCompatibility?: DesktopCompatibilityPayload;
 }
 
@@ -107,6 +110,7 @@ type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
   getAppVersion: () => Promise<string>;
+  getDistributionMode: () => Promise<DistributionMode>;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
@@ -260,6 +264,7 @@ interface ElectronAPI {
 
 const electronAPI = {
   getAppVersion: () => ipcRenderer.invoke('app-version'),
+  getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),

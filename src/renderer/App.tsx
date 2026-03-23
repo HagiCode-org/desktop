@@ -14,11 +14,13 @@ import { selectWebServiceInfo } from './store/slices/webServiceSlice';
 import type { RootState } from './store';
 import type { AgentCliType } from '../types/agent-cli';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
+import type { DistributionMode } from '../types/distribution-mode';
 
 declare global {
   interface Window {
     electronAPI: {
       getAppVersion: () => Promise<string>;
+      getDistributionMode: () => Promise<DistributionMode>;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;
       onServerStatusChange: (callback: (status: 'running' | 'stopped' | 'error') => void) => void;
@@ -86,6 +88,8 @@ function App() {
     webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST,
     webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT
   );
+  const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
+  const [modeLoaded, setModeLoaded] = useState(false);
 
   useEffect(() => {
     // Listen for view change events from menu (kept for backward compatibility)
@@ -121,6 +125,48 @@ function App() {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    let disposed = false;
+
+    const loadDistributionMode = async () => {
+      try {
+        const mode = await window.electronAPI.getDistributionMode();
+        if (!disposed) {
+          setDistributionMode(mode);
+        }
+      } catch (error) {
+        console.error('[App] Failed to load distribution mode:', error);
+        if (!disposed) {
+          setDistributionMode('normal');
+        }
+      } finally {
+        if (!disposed) {
+          setModeLoaded(true);
+        }
+      }
+    };
+
+    void loadDistributionMode();
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (distributionMode === 'steam' && currentView === 'version') {
+      dispatch(switchView('system'));
+    }
+  }, [currentView, dispatch, distributionMode]);
+
+  if (!modeLoaded) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Animated background gradient */}
@@ -130,14 +176,14 @@ function App() {
       </div>
 
       {/* Sidebar Navigation */}
-      <SidebarNavigation />
+      <SidebarNavigation distributionMode={distributionMode} />
 
       {/* Main Content Area */}
       <div className="ml-64 transition-all duration-500 ease-out">
         <div className="container mx-auto px-4 py-8 min-h-screen">
           {currentView === 'system' && <SystemManagementView />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
-          {currentView === 'version' && <VersionManagementPage />}
+          {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
           {currentView === 'settings' && <SettingsPage />}
         </div>
       </div>

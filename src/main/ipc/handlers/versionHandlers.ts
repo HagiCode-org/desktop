@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, shell } from 'electron';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
-import { VersionManager } from '../../version-manager.js';
+import { DistributionModeError, VersionManager } from '../../version-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
 import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
@@ -104,9 +104,9 @@ export function registerVersionHandlers(deps: {
       const result = await state.versionManager.installVersion(versionId);
 
       if (result.success) {
-        const activeVersion = await state.versionManager.getActiveVersion();
-        if (activeVersion) {
-          state.webServiceManager.setActiveVersion(activeVersion.id);
+        const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();
+        if (activeRuntime) {
+          state.webServiceManager.setActiveRuntime(activeRuntime);
         }
       }
 
@@ -119,6 +119,7 @@ export function registerVersionHandlers(deps: {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
+        errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
       };
     }
   });
@@ -129,6 +130,10 @@ export function registerVersionHandlers(deps: {
       return false;
     }
     try {
+      if (state.versionManager.isPortableVersionMode()) {
+        throw new DistributionModeError();
+      }
+
       const activeVersion = await state.versionManager.getActiveVersion();
       const isActive = activeVersion?.id === versionId;
 
@@ -144,7 +149,7 @@ export function registerVersionHandlers(deps: {
       return result;
     } catch (error) {
       console.error('Failed to uninstall version:', error);
-      return false;
+      throw error;
     }
   });
 
@@ -154,6 +159,10 @@ export function registerVersionHandlers(deps: {
       return false;
     }
     try {
+      if (state.versionManager.isPortableVersionMode()) {
+        throw new DistributionModeError();
+      }
+
       const result = await state.versionManager.reinstallVersion(versionId);
 
       const installedVersions = await state.versionManager.getInstalledVersions();
@@ -165,7 +174,7 @@ export function registerVersionHandlers(deps: {
       return result.success;
     } catch (error) {
       console.error('Failed to reinstall version:', error);
-      return false;
+      throw error;
     }
   });
 
@@ -182,7 +191,10 @@ export function registerVersionHandlers(deps: {
       const result = await state.versionManager.switchVersion(versionId);
 
       if (result.success) {
-        state.webServiceManager.setActiveVersion(versionId);
+        const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();
+        if (activeRuntime) {
+          state.webServiceManager.setActiveRuntime(activeRuntime);
+        }
 
         const activeVersion = await state.versionManager.getActiveVersion();
         state.mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
@@ -194,7 +206,7 @@ export function registerVersionHandlers(deps: {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        errorCode: 'unknown',
+        errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
       };
     }
   });
@@ -296,6 +308,10 @@ export function registerVersionHandlers(deps: {
       return false;
     }
     try {
+      if (state.versionManager.isPortableVersionMode()) {
+        throw new DistributionModeError();
+      }
+
       console.log('[VersionHandlers] Installing/reinstalling web service package:', version);
 
       const installedVersions = await state.versionManager.getInstalledVersions();
@@ -313,9 +329,9 @@ export function registerVersionHandlers(deps: {
       }
 
       if (success) {
-        const activeVersion = await state.versionManager.getActiveVersion();
-        if (activeVersion) {
-          state.webServiceManager.setActiveVersion(activeVersion.id);
+        const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();
+        if (activeRuntime) {
+          state.webServiceManager.setActiveRuntime(activeRuntime);
         }
 
         const updatedVersions = await state.versionManager.getInstalledVersions();
@@ -325,7 +341,7 @@ export function registerVersionHandlers(deps: {
       return success;
     } catch (error) {
       console.error('Failed to install/reinstall web service package:', error);
-      return false;
+      throw error;
     }
   });
 

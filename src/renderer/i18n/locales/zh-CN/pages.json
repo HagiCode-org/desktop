@@ -319,6 +319,12 @@
         "cn": "中国区提示词",
         "international": "国际版提示词"
       }
+    },
+    "portableMode": {
+      "title": "便携版模式",
+      "description": "当前构建使用打包内置的固定运行时，因此隐藏版本安装、切换和包源管理操作。",
+      "activeRuntime": "当前打包运行时：{{version}}",
+      "updates": "此构建的更新由外部分发渠道负责，不通过应用内版本管理执行。"
     }
   },
   "installProgressDialog": {

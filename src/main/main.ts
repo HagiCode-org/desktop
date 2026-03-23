@@ -14,7 +14,7 @@ import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
 import { DiagnosisManager } from './diagnosis-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
-import { VersionManager } from './version-manager.js';
+import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
@@ -45,6 +45,7 @@ import { PathManager, type ValidationResult, type StorageInfo } from './path-man
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
+import type { DistributionMode } from '../types/distribution-mode.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -112,6 +113,41 @@ let rssFeedManager: RSSFeedManager | null = null;
 let agentCliManager: AgentCliManager | null = null;
 let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
+
+function getDistributionMode(): DistributionMode {
+  return versionManager?.getDistributionMode() ?? 'normal';
+}
+
+function isPortableVersionMode(): boolean {
+  return versionManager?.isPortableVersionMode() ?? false;
+}
+
+async function applyActiveRuntimeToWebServiceManager(): Promise<InstalledVersion | null> {
+  if (!versionManager || !webServiceManager) {
+    return null;
+  }
+
+  const activeVersion = await versionManager.getActiveVersion();
+  const runtimeDescriptor = await versionManager.getActiveRuntimeDescriptor();
+
+  if (!activeVersion || !runtimeDescriptor) {
+    webServiceManager.clearActiveVersion();
+    webServiceManager.setEntryPoint(null);
+    return null;
+  }
+
+  webServiceManager.setActiveRuntime(runtimeDescriptor);
+
+  const manifest = await manifestReader.readManifest(runtimeDescriptor.rootPath);
+  if (manifest) {
+    webServiceManager.setEntryPoint(manifestReader.parseEntryPoint(manifest));
+  } else {
+    log.warn('[Main] No manifest found for active runtime:', runtimeDescriptor.rootPath);
+    webServiceManager.setEntryPoint(null);
+  }
+
+  return activeVersion;
+}
 
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
@@ -199,6 +235,10 @@ function createWindow(): void {
 // IPC handlers
 ipcMain.handle('app-version', () => {
   return app.getVersion();
+});
+
+ipcMain.handle('get-distribution-mode', () => {
+  return getDistributionMode();
 });
 
 ipcMain.handle('show-window', () => {
@@ -353,8 +393,7 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
   }
 
   try {
-    // Get active version before starting
-    const activeVersion = await versionManager.getActiveVersion();
+    const activeVersion = await applyActiveRuntimeToWebServiceManager();
 
     if (!activeVersion) {
       log.warn('[Main] No active version found, cannot start web service');
@@ -367,19 +406,6 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
     // No blocking principle: don't check dependency status before starting
     // Users confirm via dialog, not via status check
     // The service will handle missing dependencies at runtime
-
-    // Set the active version path in web service manager
-    webServiceManager.setActiveVersion(activeVersion.id);
-
-    // Read manifest and set entryPoint
-    const manifest = await manifestReader.readManifest(activeVersion.installedPath);
-    if (manifest) {
-      const entryPoint = manifestReader.parseEntryPoint(manifest);
-      webServiceManager.setEntryPoint(entryPoint);
-    } else {
-      log.warn('[Main] No manifest found, entryPoint may not be available');
-      webServiceManager.setEntryPoint(null);
-    }
 
     log.info('[Main] Starting web service with version:', activeVersion.id, 'at path:', activeVersion.installedPath);
 
@@ -611,11 +637,7 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
     const result = await versionManager.installVersion(versionId);
 
     if (result.success) {
-      // Check if this is the first installed version (now active)
-      const activeVersion = await versionManager.getActiveVersion();
-      if (activeVersion) {
-        webServiceManager.setActiveVersion(activeVersion.id);
-      }
+      await applyActiveRuntimeToWebServiceManager();
     }
 
     // Notify renderer of installed versions change
@@ -628,6 +650,7 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
+      errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
     };
   }
 });
@@ -637,6 +660,10 @@ ipcMain.handle('version:uninstall', async (_, versionId: string) => {
     return false;
   }
   try {
+    if (isPortableVersionMode()) {
+      throw new DistributionModeError();
+    }
+
     // Check if this is the active version before uninstalling
     const activeVersion = await versionManager.getActiveVersion();
     const isActive = activeVersion?.id === versionId;
@@ -655,7 +682,7 @@ ipcMain.handle('version:uninstall', async (_, versionId: string) => {
     return result;
   } catch (error) {
     console.error('Failed to uninstall version:', error);
-    return false;
+    throw error;
   }
 });
 
@@ -664,6 +691,10 @@ ipcMain.handle('version:reinstall', async (_, versionId: string) => {
     return false;
   }
   try {
+    if (isPortableVersionMode()) {
+      throw new DistributionModeError();
+    }
+
     const result = await versionManager.reinstallVersion(versionId);
 
     // Notify renderer of installed versions change
@@ -677,7 +708,7 @@ ipcMain.handle('version:reinstall', async (_, versionId: string) => {
     return result.success;
   } catch (error) {
     console.error('Failed to reinstall version:', error);
-    return false;
+    throw error;
   }
 });
 
@@ -693,8 +724,7 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
     const result = await versionManager.switchVersion(versionId);
 
     if (result.success) {
-      // Update web service manager with new active version
-      webServiceManager.setActiveVersion(versionId);
+      await applyActiveRuntimeToWebServiceManager();
 
       // Notify renderer of active version change
       const activeVersion = await versionManager.getActiveVersion();
@@ -707,7 +737,7 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
-      errorCode: 'unknown',
+      errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
     };
   }
 });
@@ -814,6 +844,10 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
     return false;
   }
   try {
+    if (isPortableVersionMode()) {
+      throw new DistributionModeError();
+    }
+
     console.log('[Main] Installing/reinstalling web service package:', version);
 
     // Check if the version is already installed
@@ -834,11 +868,7 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
     }
 
     if (success) {
-      // Update active version in web service manager
-      const activeVersion = await versionManager.getActiveVersion();
-      if (activeVersion) {
-        webServiceManager.setActiveVersion(activeVersion.id);
-      }
+      await applyActiveRuntimeToWebServiceManager();
 
       // Notify renderer of installed versions change
       const updatedVersions = await versionManager.getInstalledVersions();
@@ -848,7 +878,7 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
     return success;
   } catch (error) {
     console.error('Failed to install/reinstall web service package:', error);
-    return false;
+    throw error;
   }
 });
 
@@ -1219,6 +1249,13 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 // View Management IPC Handlers
 ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
+
+  if (view === 'version' && isPortableVersionMode()) {
+    return {
+      success: false,
+      reason: 'portable-version-mode',
+    };
+  }
 
   if (view === 'web') {
     // Check if web service is running
@@ -1749,8 +1786,11 @@ ipcMain.handle('onboarding:reset', async () => {
   }
   try {
     await onboardingManager.resetOnboarding();
-    // Notify renderer to show onboarding wizard
-    mainWindow?.webContents.send('onboarding:show');
+    if (!isPortableVersionMode()) {
+      mainWindow?.webContents.send('onboarding:show');
+    } else {
+      log.info('[Main] Onboarding reset completed without auto-open because portable version mode is active');
+    }
     return { success: true };
   } catch (error) {
     console.error('Failed to reset onboarding:', error);
@@ -1990,6 +2030,8 @@ app.whenReady().then(async () => {
 
   // Initialize Version Manager with package source config manager
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
+  const distributionModeState = await versionManager.initializeDistributionMode();
+  log.info('[App] Distribution mode initialized:', distributionModeState.mode);
 
   // Initialize Onboarding Manager
   if (dependencyManager && versionManager && webServiceManager) {
@@ -2366,16 +2408,18 @@ function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
 
   // Set active version before initial status hydration so recovery can use it.
   try {
-    const activeVersion = await versionManager.getActiveVersion();
+    const activeVersion = await applyActiveRuntimeToWebServiceManager();
     if (activeVersion) {
-      webServiceManager.setActiveVersion(activeVersion.id);
-      log.info('Active version set in web service manager:', activeVersion.id);
+      log.info('Active runtime set in web service manager:', {
+        versionId: activeVersion.id,
+        runtimeSource: activeVersion.runtimeSource ?? 'installed-version',
+        installedPath: activeVersion.installedPath,
+      });
     } else {
-      webServiceManager.clearActiveVersion();
-      log.info('No active version found, web service manager cleared');
+      log.info('No active runtime found, web service manager cleared');
     }
   } catch (error) {
-    log.error('Failed to set active version in web service manager:', error);
+    log.error('Failed to set active runtime in web service manager:', error);
   }
 
   createWindow();

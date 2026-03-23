@@ -35,6 +35,15 @@ describe('web-service startup flow', () => {
     assert.match(source, /includes pinned runtime root/);
   });
 
+  it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /setActiveRuntime\(runtime: ActiveRuntimeDescriptor \| null\)/);
+    assert.match(source, /this\.activeRuntime = runtime/);
+    assert.match(source, /this\.activeVersionPath = runtime\?\.rootPath \?\? null/);
+    assert.match(source, /this\.setActiveRuntime\(\{/);
+  });
+
   it('fails fast when the pinned runtime is missing, unofficial, or incompatible and does not fall back to machine dotnet', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 

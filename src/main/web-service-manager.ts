@@ -36,6 +36,7 @@ import {
   normalizeListenHost,
   resolveProbeHostsForListenHost,
 } from '../types/web-service-network.js';
+import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -152,6 +153,7 @@ export class PCodeWebServiceManager {
   private activeVersionPath: string | null = null; // Path to the active version installation
   private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
   private activeVersionId: string | null = null;
+  private activeRuntime: ActiveRuntimeDescriptor | null = null;
   private recoveredRuntime: RuntimeIdentity | null = null;
   private recoverySource: RecoverySource = 'none';
   private recoveryMessage: string | null = null;
@@ -242,18 +244,38 @@ export class PCodeWebServiceManager {
    * @param versionId - Version ID (e.g., "hagicode-0.1.0-alpha.9-linux-x64-nort")
    */
   setActiveVersion(versionId: string): void {
-    this.activeVersionId = versionId;
-    this.activeVersionPath = this.pathManager.getInstalledVersionPath(versionId);
-    log.info('[WebService] Active version path set to:', this.activeVersionPath);
+    this.setActiveRuntime({
+      kind: 'installed-version',
+      rootPath: this.pathManager.getInstalledVersionPath(versionId),
+      versionId,
+      versionLabel: versionId,
+      displayName: versionId,
+      isReadOnly: false,
+    });
+  }
+
+  setActiveRuntime(runtime: ActiveRuntimeDescriptor | null): void {
+    this.activeRuntime = runtime;
+    this.activeVersionId = runtime?.versionId ?? null;
+    this.activeVersionPath = runtime?.rootPath ?? null;
+
+    if (runtime) {
+      log.info('[WebService] Active runtime set:', {
+        kind: runtime.kind,
+        rootPath: runtime.rootPath,
+        versionId: runtime.versionId ?? null,
+      });
+      return;
+    }
+
+    log.info('[WebService] Active runtime cleared');
   }
 
   /**
    * Clear the active version (when no version is installed)
    */
   clearActiveVersion(): void {
-    this.activeVersionId = null;
-    this.activeVersionPath = null;
-    log.info('[WebService] Active version cleared');
+    this.setActiveRuntime(null);
   }
 
   private getStateFilePath(): string {
