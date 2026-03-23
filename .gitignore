@@ -45,4 +45,7 @@ obj/
 
 artifacts/azure-index.json
 build/embedded-runtime/
-
+build/portable-version-runtime/*
+!build/portable-version-runtime/current/
+build/portable-version-runtime/current/*
+!build/portable-version-runtime/current/.gitkeep
