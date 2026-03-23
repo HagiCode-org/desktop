@@ -17,7 +17,7 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 9. Create the Windows ZIP from the signed staged unpacked payload before upload
 
 Only distributable Windows artifacts are signed in CI.
-The workflow signs the final installer outputs and the staged signable binaries copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
+The workflow signs the final installer outputs and only the staged `.exe`, `.appx`, `.msix`, and `.msi` files copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
 
 Tag releases (`refs/tags/v*.*.*`) always require signing.
 Manual `workflow_dispatch` runs can opt in with `sign_windows_release=true`.

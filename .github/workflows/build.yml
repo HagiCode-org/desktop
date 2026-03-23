@@ -316,7 +316,7 @@ jobs:
 
           $zipPayloadSignableFiles = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.dll', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
             } | Sort-Object FullName -Unique
           )
 
@@ -417,7 +417,7 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -433,7 +433,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -823,7 +823,7 @@ jobs:
 
           $zipPayloadSignableFiles = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.dll', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
             } | Sort-Object FullName -Unique
           )
 
@@ -924,7 +924,7 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -940,7 +940,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable binaries: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
