@@ -46,8 +46,10 @@ mac:
   category: public.app-category.utilities
 linux:
   target:
+    # Keep the existing Linux release formats and add ZIP for extractable distribution.
     - AppImage
     - deb
     - tar.gz
+    - zip
   category: Utility
   maintainer: newbe36524 <support@hagicode.com>

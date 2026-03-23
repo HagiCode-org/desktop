@@ -249,6 +249,9 @@ jobs:
       - name: Prepare Windows ZIP payload workspace
         id: windows_zip_payload
         shell: pwsh
+        env:
+          WINDOWS_PORTABLE_FILES: ${{ steps.windows_artifacts.outputs.portable_files }}
+          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.signable_files }}
         run: |
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
@@ -260,9 +263,7 @@ jobs:
           New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
 
           $portableFiles = @()
-          @'
-${{ steps.windows_artifacts.outputs.portable_files }}
-'@ -split "`r?`n" | ForEach-Object {
+          $env:WINDOWS_PORTABLE_FILES -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
               $portableFiles += $trimmed
@@ -285,9 +286,7 @@ ${{ steps.windows_artifacts.outputs.portable_files }}
           }
 
           $signableFiles = @()
-          @'
-${{ steps.windows_artifacts.outputs.signable_files }}
-'@ -split "`r?`n" | ForEach-Object {
+          $env:WINDOWS_SIGNABLE_FILES -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
               $signableFiles += $trimmed
@@ -719,6 +718,9 @@ ${{ steps.windows_artifacts.outputs.signable_files }}
       - name: Prepare Windows ZIP payload workspace
         id: windows_zip_payload
         shell: pwsh
+        env:
+          WINDOWS_PORTABLE_FILES: ${{ steps.windows_artifacts.outputs.portable_files }}
+          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.signable_files }}
         run: |
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
@@ -730,9 +732,7 @@ ${{ steps.windows_artifacts.outputs.signable_files }}
           New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
 
           $portableFiles = @()
-          @'
-${{ steps.windows_artifacts.outputs.portable_files }}
-'@ -split "`r?`n" | ForEach-Object {
+          $env:WINDOWS_PORTABLE_FILES -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
               $portableFiles += $trimmed
@@ -755,9 +755,7 @@ ${{ steps.windows_artifacts.outputs.portable_files }}
           }
 
           $signableFiles = @()
-          @'
-${{ steps.windows_artifacts.outputs.signable_files }}
-'@ -split "`r?`n" | ForEach-Object {
+          $env:WINDOWS_SIGNABLE_FILES -split "`r?`n" | ForEach-Object {
             $trimmed = $_.Trim()
             if ($trimmed) {
               $signableFiles += $trimmed

@@ -341,16 +341,45 @@ test('electron-builder configuration is valid', async () => {
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
+  const linuxTargets = Array.isArray(buildConfig?.linux?.target)
+    ? buildConfig.linux.target
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
+      .filter(Boolean)
+    : [];
 
   logVerbose(`config source: ${configSource}`);
   logVerbose(`asar enabled: ${hasAsar}`);
   logVerbose(`runtime extraResources entries: ${extraResources.length}`);
+  logVerbose(`linux targets: ${linuxTargets.join(', ') || 'none'}`);
 
   assert(true, `build configuration exists (${configSource})`);
   assert(hasAsar, 'asar packaging is enabled');
   assert(hasFiles, 'files to include are specified');
   assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
+  assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
+  assert(linuxTargets.includes('deb'), 'linux packaging keeps deb output');
+  assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
+  assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');
+});
+
+test('desktop build workflow includes ZIP publication steps', () => {
+  const workflowPath = path.join(process.cwd(), '.github', 'workflows', 'build.yml');
+  const exists = fs.existsSync(workflowPath);
+
+  if (!assert(exists, '.github/workflows/build.yml exists')) {
+    return;
+  }
+
+  const content = fs.readFileSync(workflowPath, 'utf8');
+
+  assert(content.includes('Prepare Windows ZIP payload workspace'), 'workflow stages Windows ZIP payload before compression');
+  assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
+  assert(content.includes('Upload Windows ZIP'), 'workflow uploads Windows ZIP CI artifacts');
+  assert(content.includes('Upload Windows ZIP to Release'), 'workflow uploads Windows ZIP release assets');
+  assert(content.includes('Summarize Linux ZIP artifacts'), 'workflow reports Linux ZIP diagnostics');
+  assert(content.includes('Upload Linux ZIP'), 'workflow uploads Linux ZIP CI artifacts');
+  assert(content.includes('Upload Linux ZIP to Release'), 'workflow uploads Linux ZIP release assets');
 });
 
 test('staged embedded runtime payload is complete', () => {
