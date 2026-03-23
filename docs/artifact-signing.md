@@ -10,12 +10,14 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 2. Validate signing configuration from GitHub secrets
 3. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
 4. Build Windows installers into `pkg/`
-5. Collect signable release artifacts from the top level of `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`)
-6. Sign artifacts with `azure/artifact-signing-action@v1`
-7. Verify signatures before any upload or release step runs
+5. Collect signable release artifacts from `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`)
+6. Stage the Windows ZIP payload workspace under `pkg/windows-zip-payload/`
+7. Sign artifacts with `azure/artifact-signing-action@v1`
+8. Verify signatures before any upload or release step runs
+9. Create the Windows ZIP from the signed payload workspace before upload
 
 Only distributable Windows artifacts are signed in CI.
-Intermediate files under `pkg/win-unpacked/` are excluded so the signing action only touches the final installer and package outputs that are actually published.
+Intermediate files under `pkg/win-unpacked/` are excluded so the signing action only touches the final installer outputs plus the staged ZIP payload copy that is later compressed for publication.
 
 Tag releases (`refs/tags/v*.*.*`) always require signing.
 Manual `workflow_dispatch` runs can opt in with `sign_windows_release=true`.
