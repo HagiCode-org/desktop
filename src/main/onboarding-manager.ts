@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import { BrowserWindow } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { clean, satisfies } from 'semver';
 import { VersionManager } from './version-manager.js';
 import { DependencyManager } from './dependency-manager.js';
 import {
@@ -16,7 +15,6 @@ import type {
   StoredOnboardingState,
   DownloadProgress,
   DependencyItem,
-  OnboardingInstallOpenSpecResult,
   ServiceLaunchProgress,
   OnboardingStartServiceResult,
   OnboardingRecoveryResult,
@@ -27,12 +25,8 @@ import type {
  * Coordinates between VersionManager, DependencyManager, and WebServiceManager
  */
 export class OnboardingManager {
-  private static readonly OPEN_SPEC_INSTALL_COMMAND = ['install', '-g', '@fission-ai/openspec@1'];
-  private static readonly OPEN_SPEC_SUPPORTED_RANGE = '>=1.0.0 <2.0.0';
   private static readonly PORTABLE_VERSION_ONBOARDING_ERROR =
     'Portable version mode skips onboarding because the packaged runtime is already provisioned.';
-  private static readonly PORTABLE_VERSION_OPENSPEC_ERROR =
-    'Portable version mode does not require OpenSpec CLI installation or verification.';
 
   private versionManager: VersionManager;
   private dependencyManager: DependencyManager;
@@ -276,59 +270,6 @@ export class OnboardingManager {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  async installOpenSpec(): Promise<OnboardingInstallOpenSpecResult> {
-    if (this.versionManager.isPortableVersionMode()) {
-      log.info('[OnboardingManager] OpenSpec installation skipped in portable version mode');
-      return {
-        success: false,
-        error: OnboardingManager.PORTABLE_VERSION_OPENSPEC_ERROR,
-      };
-    }
-
-    try {
-      log.info('[OnboardingManager] Installing OpenSpec via onboarding');
-      const runtimeEnv = await this.buildRuntimeEnv();
-      const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-      const installResult = await this.runCommand(npmCommand, OnboardingManager.OPEN_SPEC_INSTALL_COMMAND, runtimeEnv);
-
-      if (installResult.exitCode !== 0) {
-        const error = installResult.stderr || installResult.stdout || 'OpenSpec installation failed';
-        log.error('[OnboardingManager] OpenSpec install command failed:', error);
-        return { success: false, error };
-      }
-
-      return await this.verifyOpenSpecWithEnv(runtimeEnv);
-    } catch (error) {
-      log.error('[OnboardingManager] Failed to install OpenSpec:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  async verifyOpenSpec(): Promise<OnboardingInstallOpenSpecResult> {
-    if (this.versionManager.isPortableVersionMode()) {
-      log.info('[OnboardingManager] OpenSpec verification skipped in portable version mode');
-      return {
-        success: false,
-        error: OnboardingManager.PORTABLE_VERSION_OPENSPEC_ERROR,
-      };
-    }
-
-    try {
-      log.info('[OnboardingManager] Verifying OpenSpec via onboarding');
-      const runtimeEnv = await this.buildRuntimeEnv();
-      return await this.verifyOpenSpecWithEnv(runtimeEnv);
-    } catch (error) {
-      log.error('[OnboardingManager] Failed to verify OpenSpec:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -820,45 +761,4 @@ export class OnboardingManager {
     });
   }
 
-  private async verifyOpenSpecWithEnv(env: NodeJS.ProcessEnv): Promise<OnboardingInstallOpenSpecResult> {
-    const versionResult = await this.runCommand(
-      process.platform === 'win32' ? 'openspec.cmd' : 'openspec',
-      ['--version'],
-      env
-    );
-
-    if (versionResult.exitCode !== 0) {
-      const error = versionResult.stderr || versionResult.stdout || 'OpenSpec verification failed';
-      log.error('[OnboardingManager] OpenSpec version verification failed:', error);
-      return { success: false, error };
-    }
-
-    const parsedVersion = this.extractOpenSpecVersion(versionResult.stdout);
-    if (!parsedVersion) {
-      const error = `Unable to parse OpenSpec version from output: ${versionResult.stdout.trim() || '(empty output)'}`;
-      log.error('[OnboardingManager] Failed to parse OpenSpec version:', versionResult.stdout);
-      return { success: false, error };
-    }
-
-    if (!satisfies(parsedVersion, OnboardingManager.OPEN_SPEC_SUPPORTED_RANGE)) {
-      const error = `Detected OpenSpec ${parsedVersion}, but onboarding requires >= 1.0.0 and < 2.0.0.`;
-      log.error('[OnboardingManager] OpenSpec version outside supported range:', parsedVersion);
-      return { success: false, error };
-    }
-
-    log.info('[OnboardingManager] OpenSpec verified successfully:', parsedVersion);
-    return {
-      success: true,
-      version: parsedVersion,
-    };
-  }
-
-  private extractOpenSpecVersion(rawOutput: string): string | null {
-    const versionMatch = rawOutput.match(/(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)/);
-    if (!versionMatch) {
-      return null;
-    }
-
-    return clean(versionMatch[1]) ?? versionMatch[1];
-  }
 }

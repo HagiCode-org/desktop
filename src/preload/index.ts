@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
-  OnboardingInstallOpenSpecResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
   StartupFailurePayload,
@@ -240,8 +239,6 @@ interface ElectronAPI {
   checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
   getOnboardingState: () => Promise<any>;
   skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
-  installOpenSpec: () => Promise<OnboardingInstallOpenSpecResult>;
-  verifyOpenSpec: () => Promise<OnboardingInstallOpenSpecResult>;
   downloadPackage: () => Promise<any>;
   checkOnboardingDependencies: (version: string) => Promise<any>;
   installDependencies: (version: string) => Promise<any>;
@@ -479,8 +476,6 @@ const electronAPI = {
   checkTriggerCondition: () => ipcRenderer.invoke('onboarding:check-trigger'),
   getOnboardingState: () => ipcRenderer.invoke('onboarding:get-state'),
   skipOnboarding: () => ipcRenderer.invoke('onboarding:skip'),
-  installOpenSpec: () => ipcRenderer.invoke('onboarding:install-openspec'),
-  verifyOpenSpec: () => ipcRenderer.invoke('onboarding:verify-openspec'),
   downloadPackage: () => ipcRenderer.invoke('onboarding:download-package'),
   checkOnboardingDependencies: (version: string) => ipcRenderer.invoke('onboarding:check-dependencies', version),
   installDependencies: (version: string) => ipcRenderer.invoke('onboarding:install-dependencies', version),

@@ -1120,7 +1120,6 @@ export class VersionManager {
     // Map based on key for known dependencies
     const keyMapping: Record<string, DependencyType> = {
       'claudeCode': DependencyType.ClaudeCode,
-      'openspec': DependencyType.OpenSpec,
       'dotnet': DependencyType.DotNetRuntime,
       'node': DependencyType.NodeJs,
       'npm': DependencyType.NodeJs, // Treat npm as Node.js dependency
