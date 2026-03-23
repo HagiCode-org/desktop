@@ -266,6 +266,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
           $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
+          $pkgDir = Split-Path -Path $catalogPath -Parent
 
           if (Test-Path $zipPayloadRoot) {
             Remove-Item -Path $zipPayloadRoot -Recurse -Force
@@ -319,7 +320,11 @@ jobs:
             } | Sort-Object FullName -Unique
           )
 
-          $catalogEntries = @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))
+          $catalogEntries = @()
+          foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
+            $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+          }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
 
@@ -501,24 +506,37 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Code signing failure notification
         if: failure() && steps.signing_policy.outputs.required == 'true'
-        uses: HagiCode-org/haginotifier@v1.0.0
-        with:
-          message: |
-            **代码签名失败**
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
+            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
+            exit 0
+          }
 
-            平台: Windows
-            版本: ${{ github.ref_name }}
-            提交: `${{ github.sha }}`
+          $message = @(
+            '代码签名失败 (Windows) ❌',
+            '',
+            '平台: Windows',
+            '版本: ${{ github.ref_name }}',
+            '提交: ${{ github.sha }}',
+            '',
+            '请检查签名配置和证书状态。',
+            '可能的原因：',
+            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
+            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
+            '- 产物签名成功但验签失败',
+            '',
+            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ) -join "`n"
 
-            请检查签名配置和证书状态。
-            可能的原因：
-            - GitHub OIDC 到 Azure 的联邦身份或角色配置不完整
-            - Artifact Signing 端点、签名账户或证书配置文件配置错误
-            - 产物签名成功但验签失败
+          $payload = @{
+            msg_type = 'text'
+            content = @{
+              text = $message
+            }
+          } | ConvertTo-Json -Depth 4
 
-            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          msg_type: 'post'
-          title: '代码签名失败 (Windows) ❌'
+          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
@@ -755,6 +773,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
           $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
+          $pkgDir = Split-Path -Path $catalogPath -Parent
 
           if (Test-Path $zipPayloadRoot) {
             Remove-Item -Path $zipPayloadRoot -Recurse -Force
@@ -808,7 +827,11 @@ jobs:
             } | Sort-Object FullName -Unique
           )
 
-          $catalogEntries = @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))
+          $catalogEntries = @()
+          foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
+            $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+          }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
 
@@ -990,24 +1013,37 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Code signing failure notification
         if: failure() && steps.signing_policy.outputs.required == 'true'
-        uses: HagiCode-org/haginotifier@v1.0.0
-        with:
-          message: |
-            **代码签名失败**
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
+            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
+            exit 0
+          }
 
-            平台: Windows
-            版本: ${{ github.ref_name }}
-            提交: `${{ github.sha }}`
+          $message = @(
+            '代码签名失败 (Windows) ❌',
+            '',
+            '平台: Windows',
+            '版本: ${{ github.ref_name }}',
+            '提交: ${{ github.sha }}',
+            '',
+            '请检查签名配置和证书状态。',
+            '可能的原因：',
+            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
+            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
+            '- 产物签名成功但验签失败',
+            '',
+            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ) -join "`n"
 
-            请检查签名配置和证书状态。
-            可能的原因：
-            - GitHub OIDC 到 Azure 的联邦身份或角色配置不完整
-            - Artifact Signing 端点、签名账户或证书配置文件配置错误
-            - 产物签名成功但验签失败
+          $payload = @{
+            msg_type = 'text'
+            content = @{
+              text = $message
+            }
+          } | ConvertTo-Json -Depth 4
 
-            [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          msg_type: 'post'
-          title: '代码签名失败 (Windows) ❌'
+          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
