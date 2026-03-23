@@ -53,8 +53,6 @@ try {
     $NpmMinVersion = if ($EnvVars.NPM_MIN_VERSION) { $EnvVars.NPM_MIN_VERSION } else { "9.0.0" }
     $NpmRecommendedVersion = if ($EnvVars.NPM_RECOMMENDED_VERSION) { $EnvVars.NPM_RECOMMENDED_VERSION } else { "10.9.0" }
     $ClaudeCodeMinVersion = if ($EnvVars.CLAUDE_CODE_MIN_VERSION) { $EnvVars.CLAUDE_CODE_MIN_VERSION } else { "1.0.0" }
-    $OpenspecMinVersion = if ($EnvVars.OPENSPEC_MIN_VERSION) { $EnvVars.OPENSPEC_MIN_VERSION } else { "0.23.0" }
-    $OpenspecMaxVersion = if ($EnvVars.OPENSPEC_MAX_VERSION) { $EnvVars.OPENSPEC_MAX_VERSION } else { "1.0.0" }
 
     Write-Host "=== PCode Dependency Check ==="
     Write-Host ""
@@ -79,12 +77,6 @@ try {
     }
 
     $ClaudeStatus = [ordered]@{
-        status = "not_installed"
-        version = $null
-        path = $null
-    }
-
-    $OpenspecStatus = [ordered]@{
         status = "not_installed"
         version = $null
         path = $null
@@ -158,34 +150,6 @@ try {
         Write-ColorOutput "Claude Code not found (min: $ClaudeCodeMinVersion)" "error"
     }
 
-    # Check OpenSpec with version range validation
-    Write-Host "Checking OpenSpec..."
-    $OpenspecInfo = Get-DependencyStatus -CommandName "openspec" -VersionArgument "--version"
-    if ($OpenspecInfo.status -eq "installed") {
-        $VersionTest = Test-DependencyVersion -CurrentVersion $OpenspecInfo.version -MinVersion $OpenspecMinVersion -MaxVersion $OpenspecMaxVersion
-
-        if ($VersionTest.isValid) {
-            Write-ColorOutput "OpenSpec found: $($OpenspecInfo.version)" "ok"
-            $OpenspecStatus.status = "installed"
-            $OpenspecStatus.version = $OpenspecInfo.version
-            $OpenspecStatus.path = $OpenspecInfo.path
-        }
-        else {
-            Write-ColorOutput "OpenSpec version $($OpenspecInfo.version) is out of range (min: $OpenspecMinVersion, max: $OpenspecMaxVersion)" "error"
-            $OpenspecStatus.status = "version_mismatch"
-            $OpenspecStatus.version = $OpenspecInfo.version
-            $OpenspecStatus.path = $OpenspecInfo.path
-            $OpenspecStatus.error = $VersionTest.error
-        }
-
-        if ($Verbose) {
-            Write-Host "  Path: $($OpenspecInfo.path)"
-        }
-    }
-    else {
-        Write-ColorOutput "OpenSpec not found (min: $OpenspecMinVersion, max: $OpenspecMaxVersion)" "error"
-    }
-
     # Generate JSON result
     Write-Host ""
     Write-ColorOutput "Check complete. Generating result file..." "info"
@@ -222,18 +186,9 @@ try {
                 required = $true
                 minVersion = $ClaudeCodeMinVersion
             }
-            openspec = [ordered]@{
-                status = $OpenspecStatus.status
-                version = $OpenspecStatus.version
-                path = $OpenspecStatus.path
-                required = $true
-                minVersion = $OpenspecMinVersion
-                maxVersion = $OpenspecMaxVersion
-                error = $OpenspecStatus.error
-            }
         }
         summary = [ordered]@{
-            total = 5
+            total = 4
             installed = $null
             requiredInstalled = $null
             ready = $null
@@ -248,17 +203,15 @@ try {
     if ($NodeStatus.status -eq "installed") { $installedCount++ }
     if ($NpmStatus.status -eq "installed") { $installedCount++ }
     if ($ClaudeStatus.status -eq "installed") { $installedCount++ }
-    if ($OpenspecStatus.status -eq "installed") { $installedCount++ }
 
     if ($DotNetStatus.status -eq "installed") { $requiredInstalledCount++ }
     if ($NodeStatus.status -eq "installed") { $requiredInstalledCount++ }
     if ($NpmStatus.status -eq "installed") { $requiredInstalledCount++ }
     if ($ClaudeStatus.status -eq "installed") { $requiredInstalledCount++ }
-    if ($OpenspecStatus.status -eq "installed") { $requiredInstalledCount++ }
 
     $Result.summary.installed = $installedCount
     $Result.summary.requiredInstalled = $requiredInstalledCount
-    $Result.summary.ready = ($requiredInstalledCount -eq 5)
+    $Result.summary.ready = ($requiredInstalledCount -eq 4)
 
     # Write JSON output
     $ResultPath = Join-Path $ScriptDir "check-result.json"
@@ -271,7 +224,7 @@ try {
         # Display summary
         Write-Host ""
         Write-Host "Summary:"
-        Write-Host "  Required dependencies: $requiredInstalledCount/5 installed"
+        Write-Host "  Required dependencies: $requiredInstalledCount/4 installed"
         Write-Host "  Ready: $(if ($Result.summary.ready) { 'Yes' } else { 'No' })"
     }
     else {

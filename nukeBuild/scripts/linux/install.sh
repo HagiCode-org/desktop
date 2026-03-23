@@ -42,8 +42,6 @@ NODE_RECOMMENDED_VERSION="${NODE_RECOMMENDED_VERSION:-24.12.0}"
 NPM_MIN_VERSION="${NPM_MIN_VERSION:-9.0.0}"
 NPM_RECOMMENDED_VERSION="${NPM_RECOMMENDED_VERSION:-10.9.0}"
 CLAUDE_CODE_MIN_VERSION="${CLAUDE_CODE_MIN_VERSION:-1.0.0}"
-OPENSPEC_MIN_VERSION="${OPENSPEC_MIN_VERSION:-0.23.0}"
-OPENSPEC_MAX_VERSION="${OPENSPEC_MAX_VERSION:-1.0.0}"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -239,34 +237,6 @@ else
 
         if [ "$DRY_RUN" = false ]; then
             echo -e "${GREEN}✓ Claude Code installed${NC}"
-            ((INSTALLED_COUNT++))
-        fi
-    fi
-fi
-
-# Check and install OpenSpec (optional)
-echo ""
-echo "Checking OpenSpec (optional)..."
-if command -v openspec &> /dev/null; then
-    OPENSPEC_VERSION=$(openspec --version 2>/dev/null || echo "unknown")
-    echo -e "${GREEN}✓ OpenSpec already installed: $OPENSPEC_VERSION${NC}"
-else
-    echo -e "${YELLOW}⚠ OpenSpec not found (optional), installing...${NC}"
-
-    if ! command -v npm &> /dev/null; then
-        echo -e "${YELLOW}⚠ NPM not available, skipping OpenSpec installation${NC}"
-    else
-        if [ "$REGION" = "cn" ]; then
-            NPM_REGISTRY="--registry=https://registry.npmmirror.com"
-        else
-            NPM_REGISTRY=""
-        fi
-
-        # Install OpenSpec at the minimum version
-        run_cmd "npm install @fission-ai/openspec@${OPENSPEC_MIN_VERSION} -g $NPM_REGISTRY"
-
-        if [ "$DRY_RUN" = false ]; then
-            echo -e "${GREEN}✓ OpenSpec installed${NC}"
             ((INSTALLED_COUNT++))
         fi
     fi

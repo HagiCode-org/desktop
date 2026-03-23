@@ -59,7 +59,6 @@ try {
     $NpmMinVersion = if ($EnvVars.NPM_MIN_VERSION) { $EnvVars.NPM_MIN_VERSION } else { "9.0.0" }
     $NpmRecommendedVersion = if ($EnvVars.NPM_RECOMMENDED_VERSION) { $EnvVars.NPM_RECOMMENDED_VERSION } else { "10.9.0" }
     $ClaudeCodeMinVersion = if ($EnvVars.CLAUDE_CODE_MIN_VERSION) { $EnvVars.CLAUDE_CODE_MIN_VERSION } else { "1.0.0" }
-    $OpenspecMinVersion = if ($EnvVars.OPENSPEC_MIN_VERSION) { $EnvVars.OPENSPEC_MIN_VERSION } else { "0.23.0" }
 
     # Normalize architecture names
     switch -Wildcard ($Arch) {
@@ -234,51 +233,6 @@ try {
             }
             else {
                 Write-ColorOutput "Failed to install Claude Code" "error"
-                $FailedCount++
-            }
-        }
-    }
-
-    # Check and install OpenSpec
-    Write-Host ""
-    Write-Host "Checking OpenSpec..."
-    $OpenspecInfo = Get-DependencyStatus -CommandName "openspec" -VersionArgument "--version"
-    if ($OpenspecInfo.status -eq "installed") {
-        Write-ColorOutput "OpenSpec already installed: $($OpenspecInfo.version)" "ok"
-    }
-    else {
-        Write-Host "OpenSpec not found, installing..."
-
-        # Check if npm is available
-        $NpmCheck = Get-DependencyStatus -CommandName "npm" -VersionArgument "--version"
-        if ($NpmCheck.status -ne "installed") {
-            Write-ColorOutput "NPM not available, cannot install OpenSpec" "error"
-            $FailedCount++
-        }
-        else {
-            # Region-aware npm registry selection
-            $NpmRegistryArgs = if ($Region -eq "china") { "--registry=https://registry.npmmirror.com" } else { "" }
-
-            if (-not $DryRun) {
-                if ($Verbose) {
-                    Write-Host "Executing: npm install @fission-ai/openspec@$OpenspecMinVersion -g $NpmRegistryArgs --silent --quiet" -ForegroundColor Cyan
-                }
-
-                $process = Start-Process -FilePath "npm" -ArgumentList "install", "@fission-ai/openspec@$OpenspecMinVersion", "-g", $NpmRegistryArgs, "--silent", "--quiet" -NoNewWindow -Wait -PassThru
-                $success = ($process.ExitCode -eq 0)
-            }
-            else {
-                Write-Host "[DRY RUN] npm install @fission-ai/openspec@$OpenspecMinVersion -g $NpmRegistryArgs --silent --quiet" -ForegroundColor Yellow
-                $success = $true
-            }
-
-            $OpenspecCheck = Get-DependencyStatus -CommandName "openspec" -VersionArgument "--version"
-            if ($OpenspecCheck.status -eq "installed") {
-                Write-ColorOutput "OpenSpec installed" "ok"
-                $InstalledCount++
-            }
-            else {
-                Write-ColorOutput "Failed to install OpenSpec" "error"
                 $FailedCount++
             }
         }

@@ -33,8 +33,6 @@ DOTNET_MIN_VERSION="${DOTNET_MIN_VERSION:-10.0}"
 NODE_MIN_VERSION="${NODE_MIN_VERSION:-18.0.0}"
 NPM_MIN_VERSION="${NPM_MIN_VERSION:-9.0.0}"
 CLAUDE_CODE_MIN_VERSION="${CLAUDE_CODE_MIN_VERSION:-1.0.0}"
-OPENSPEC_MIN_VERSION="${OPENSPEC_MIN_VERSION:-0.23.0}"
-OPENSPEC_MAX_VERSION="${OPENSPEC_MAX_VERSION:-1.0.0}"
 
 echo -e "${GREEN}=== PCode Dependency Check ===${NC}"
 echo ""
@@ -90,29 +88,6 @@ else
     CLAUDE_STATUS="\"status\": \"not_installed\", \"version\": null, \"path\": null"
 fi
 
-# Check OpenSpec
-echo "Checking OpenSpec..."
-if command -v openspec &> /dev/null; then
-    OPENSPEC_VERSION=$(openspec --version 2>/dev/null || echo "unknown")
-    OPENSPEC_PATH=$(which openspec 2>/dev/null || echo "")
-
-    # Extract version number (remove 'v' prefix if present, format like "0.23.0")
-    VERSION_NUM=$(echo "$OPENSPEC_VERSION" | sed 's/^v//' | sed 's/[^0-9.]//g')
-
-    # Simple version comparison: check if version is within range [min, max)
-    # This uses string comparison which works for semver-like versions
-    if [[ "$VERSION_NUM" > "$OPENSPEC_MIN_VERSION" || "$VERSION_NUM" == "$OPENSPEC_MIN_VERSION" ]] && [[ "$VERSION_NUM" < "$OPENSPEC_MAX_VERSION" ]]; then
-        echo -e "${GREEN}✓ OpenSpec found: $OPENSPEC_VERSION${NC}"
-        OPENSPEC_STATUS="\"status\": \"installed\", \"version\": \"$OPENSPEC_VERSION\", \"path\": \"$OPENSPEC_PATH\""
-    else
-        echo -e "${RED}✗ OpenSpec version $OPENSPEC_VERSION is out of range (min: $OPENSPEC_MIN_VERSION, max: $OPENSPEC_MAX_VERSION)${NC}"
-        OPENSPEC_STATUS="\"status\": \"version_mismatch\", \"version\": \"$OPENSPEC_VERSION\", \"path\": \"$OPENSPEC_PATH\", \"error\": \"Version must be between $OPENSPEC_MIN_VERSION and $OPENSPEC_MAX_VERSION\""
-    fi
-else
-    echo -e "${YELLOW}⚠ OpenSpec not found (optional)${NC}"
-    OPENSPEC_STATUS="\"status\": \"not_installed\", \"version\": null, \"path\": null"
-fi
-
 # Calculate installed counts before generating JSON
 TOTAL_INSTALLED=0
 REQUIRED_INSTALLED=0
@@ -122,7 +97,6 @@ READY=false
 [ -n "$NODE_VERSION" ] && TOTAL_INSTALLED=$((TOTAL_INSTALLED + 1)) && REQUIRED_INSTALLED=$((REQUIRED_INSTALLED + 1))
 [ -n "$NPM_VERSION" ] && TOTAL_INSTALLED=$((TOTAL_INSTALLED + 1)) && REQUIRED_INSTALLED=$((REQUIRED_INSTALLED + 1))
 [ -n "$CLAUDE_VERSION" ] && TOTAL_INSTALLED=$((TOTAL_INSTALLED + 1))
-[ -n "$OPENSPEC_VERSION" ] && TOTAL_INSTALLED=$((TOTAL_INSTALLED + 1))
 
 # Check if ready (all required dependencies installed)
 [ -n "$DOTNET_VERSION" ] && [ -n "$NODE_VERSION" ] && [ -n "$NPM_VERSION" ] && READY=true || READY=false
@@ -136,11 +110,10 @@ cat > "$RESULT_FILE" << EOF
     "dotnet": { $DOTNET_STATUS, "required": true, "minVersion": "$DOTNET_MIN_VERSION" },
     "node": { $NODE_STATUS, "required": true, "minVersion": "$NODE_MIN_VERSION" },
     "npm": { $NPM_STATUS, "required": true, "minVersion": "$NPM_MIN_VERSION" },
-    "claude-code": { $CLAUDE_STATUS, "required": false, "minVersion": "$CLAUDE_CODE_MIN_VERSION" },
-    "openspec": { $OPENSPEC_STATUS, "required": false, "minVersion": "$OPENSPEC_MIN_VERSION", "maxVersion": "$OPENSPEC_MAX_VERSION" }
+    "claude-code": { $CLAUDE_STATUS, "required": false, "minVersion": "$CLAUDE_CODE_MIN_VERSION" }
   },
   "summary": {
-    "total": 5,
+    "total": 4,
     "installed": $TOTAL_INSTALLED,
     "requiredInstalled": $REQUIRED_INSTALLED,
     "ready": $READY
