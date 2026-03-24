@@ -288,7 +288,7 @@ export class PackageSourceConfigManager {
         const defaultSource = this.addSource({
           type: 'http-index',
           name: 'HagiCode 官方源',
-          indexUrl: 'https://server.dl.hagicode.com/index.json',
+          indexUrl: 'https://index.hagicode.com/server/index.json',
         });
 
         log.info('[PackageSourceConfigManager] Default source initialized:', defaultSource.id);
@@ -368,7 +368,7 @@ export class PackageSourceConfigManager {
       id: 'http-index-default',
       type: 'http-index',
       name: 'HagiCode 官方源',
-      indexUrl: 'https://server.dl.hagicode.com/index.json',
+      indexUrl: 'https://index.hagicode.com/server/index.json',
       createdAt: new Date().toISOString(),
     };
   }

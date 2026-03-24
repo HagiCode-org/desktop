@@ -115,7 +115,7 @@ export function PackageSourceSelector() {
           : {
               type: 'http-index' as const,
               name: 'HTTP 索引源',
-              indexUrl: httpIndexUrl || 'https://server.dl.hagicode.com/index.json',
+              indexUrl: httpIndexUrl || 'https://index.hagicode.com/server/index.json',
             };
 
       // Save and switch to the new source
@@ -142,7 +142,7 @@ export function PackageSourceSelector() {
         : {
             type: 'http-index' as const,
             name: 'HTTP 索引源',
-            indexUrl: httpIndexUrl || 'https://server.dl.hagicode.com/index.json',
+            indexUrl: httpIndexUrl || 'https://index.hagicode.com/server/index.json',
           };
 
     // Save the configuration via Redux thunk

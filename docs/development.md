@@ -22,7 +22,7 @@ HagiCode Desktop supports multiple update sources for fetching application versi
 The default update source is configured to use the official HagiCode server:
 
 - **Type**: HTTP Index
-- **URL**: `https://server.dl.hagicode.com/index.json`
+- **URL**: `https://index.hagicode.com/server/index.json`
 - **Name**: HagiCode 官方源
 
 This unified configuration ensures consistent version availability across development and production environments.

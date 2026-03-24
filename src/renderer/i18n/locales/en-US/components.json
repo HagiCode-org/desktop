@@ -281,7 +281,7 @@
     "httpIndex": {
       "indexUrl": {
         "label": "Index URL",
-        "placeholder": "https://server.dl.hagicode.com/index.json",
+        "placeholder": "https://index.hagicode.com/server/index.json",
         "hint": "The index file must contain a versions array and assets for each version"
       }
     },

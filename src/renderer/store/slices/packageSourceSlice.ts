@@ -58,7 +58,7 @@ const initialState: PackageSourceState = {
   githubOwner: 'HagiCode-org',
   githubRepo: 'releases',
   githubToken: '',
-  httpIndexUrl: 'https://server.dl.hagicode.com/index.json',
+  httpIndexUrl: 'https://index.hagicode.com/server/index.json',
   scanResult: null,
   selectedChannel: null,
 };

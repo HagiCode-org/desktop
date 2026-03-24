@@ -281,7 +281,7 @@
     "httpIndex": {
       "indexUrl": {
         "label": "索引 URL",
-        "placeholder": "https://server.dl.hagicode.com/index.json",
+        "placeholder": "https://index.hagicode.com/server/index.json",
         "hint": "索引文件必须包含 versions 数组和每个版本的 assets"
       }
     },
