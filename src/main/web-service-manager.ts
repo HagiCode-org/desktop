@@ -23,6 +23,12 @@ import {
   type WebServiceConfigMode,
 } from './web-service-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
+import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
+import {
+  detectToolchainCommandName,
+  resolveToolchainLaunchPlan,
+  shouldUseShellForCommand,
+} from './toolchain-launch.js';
 import {
   evaluateRuntimeCompatibility,
   validateBundledRuntimeForPlatform,
@@ -741,16 +747,34 @@ export class PCodeWebServiceManager {
       args = [];
     }
 
+    const toolchainCommandName = detectToolchainCommandName(command);
+    if (toolchainCommandName) {
+      const launchPlan = resolveToolchainLaunchPlan({
+        commandName: toolchainCommandName,
+        args,
+        pathManager: this.pathManager,
+      });
+      command = launchPlan.command;
+      args = launchPlan.args;
+      log.info('[WebService] Resolved desktop-owned toolchain launch:', {
+        commandName: toolchainCommandName,
+        command,
+        usedBundledToolchain: launchPlan.usedBundledToolchain,
+        fellBackToSystemPath: launchPlan.fellBackToSystemPath,
+      });
+    }
+
     // Execute script
     return new Promise((resolve, reject) => {
       // On Windows with shell: true, paths with spaces need to be quoted
       const spawnCommand = (process.platform === 'win32' && !scriptPath.endsWith('.ps1') && command.includes(' '))
         ? `"${command}"`
         : command;
+      const useShell = !scriptPath.endsWith('.ps1') && shouldUseShellForCommand(spawnCommand);
 
       const child = spawn(spawnCommand, args, {
         cwd: workingDirectory,
-        shell: !scriptPath.endsWith('.ps1') && process.platform === 'win32', // Only use shell for .bat files
+        shell: useShell,
         stdio: 'ignore',
         detached: process.platform === 'win32',
         // Hide console window on Windows to prevent visual disruption
@@ -898,7 +922,7 @@ export class PCodeWebServiceManager {
     // On Unix: direct script execution with output capture
     if (process.platform === 'win32') {
       // BAT/CMD files: legacy shell mode
-      options.shell = true;
+      options.shell = shouldUseShellForCommand(scriptPath);
       options.detached = true;
       options.windowsHide = true;
     } else {
@@ -1588,13 +1612,29 @@ export class PCodeWebServiceManager {
       let githubOAuthSignature: GitHubOAuthRuntimeSignature | null = null;
       try {
         const prepared = await this.prepareServiceEnvironment();
-        preparedEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
+        const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
+        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager);
+        preparedEnv = toolchainEnv.env;
         envMode = prepared.mode;
         githubOAuthSignature = prepared.githubOAuthSignature;
-        const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
+        const pathKey = toolchainEnv.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
         this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
+        if (toolchainEnv.usedBundledToolchain) {
+          this.appendStartupLogLine(`HAGICODE_PORTABLE_TOOLCHAIN_ROOT=${toolchainEnv.toolchainRoot}`);
+          this.appendStartupLogLine(`${pathKey} prepends bundled toolchain paths: ${toolchainEnv.injectedPaths.join(', ')}`);
+          log.info('[WebService] Portable toolchain injection enabled:', {
+            pathKey,
+            toolchainRoot: toolchainEnv.toolchainRoot,
+            injectedPaths: toolchainEnv.injectedPaths,
+          });
+        } else {
+          this.appendStartupLogLine('Bundled portable toolchain unavailable, fallback to inherited system PATH');
+          log.info('[WebService] Portable toolchain injection skipped, falling back to inherited PATH:', {
+            toolchainRoot: toolchainEnv.toolchainRoot,
+          });
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         log.error('[WebService] Failed to prepare environment injection:', errorMessage);
