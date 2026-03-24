@@ -4,6 +4,19 @@ import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import yaml from 'js-yaml';
 import log from 'electron-log';
+import {
+  buildPortableToolchainPaths,
+  resolvePortableToolchainRoot,
+  type PortableToolchainPathOptions,
+  type PortableToolchainPaths,
+} from './portable-toolchain-paths.js';
+
+export {
+  buildPortableToolchainPaths,
+  resolvePortableToolchainRoot,
+  type PortableToolchainPathOptions,
+  type PortableToolchainPaths,
+} from './portable-toolchain-paths.js';
 
 /**
  * Path types for different platforms
@@ -60,6 +73,7 @@ export interface PortablePayloadValidationResult {
 export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
+  private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -494,6 +508,10 @@ export class PathManager {
     return path.join(process.resourcesPath, ...PathManager.PORTABLE_FIXED_ROOT_SEGMENTS);
   }
 
+  getExpectedPackagedPortableToolchainRoot(): string {
+    return path.join(process.resourcesPath, ...PathManager.PORTABLE_TOOLCHAIN_ROOT_SEGMENTS);
+  }
+
   getDevelopmentPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return path.resolve(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', platform);
   }
@@ -504,6 +522,10 @@ export class PathManager {
 
   getDevelopmentPortableRuntimeRoot(): string {
     return path.resolve(process.cwd(), 'resources', 'portable-fixed', 'current');
+  }
+
+  getDevelopmentPortableToolchainRoot(): string {
+    return path.resolve(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
   }
 
   getPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -540,6 +562,86 @@ export class PathManager {
     }
 
     return this.getExpectedPackagedPortableRuntimeRoot();
+  }
+
+  getPortableToolchainRoot(): string {
+    return resolvePortableToolchainRoot({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    });
+  }
+
+  getPortableNodeRoot(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).nodeRoot;
+  }
+
+  getPortableToolchainBinRoot(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).toolchainBinRoot;
+  }
+
+  getPortableNodeBinRoot(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).nodeBinRoot;
+  }
+
+  getPortableNpmGlobalBinRoot(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).npmGlobalBinRoot;
+  }
+
+  getPortableNodeExecutablePath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).nodeExecutablePath;
+  }
+
+  getPortableNpmExecutablePath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).npmExecutablePath;
+  }
+
+  getPortableOpenspecExecutablePath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).openspecExecutablePath;
   }
 
   getPortableRuntimeConfigDir(): string {
