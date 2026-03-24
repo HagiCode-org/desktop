@@ -8,6 +8,12 @@ import {
   resolveEnvSnapshotLogLevel,
   resolveWebServiceConfigMode,
 } from '../web-service-env.js';
+import {
+  collectPortableToolchainPathEntries,
+  dedupePathEntries,
+  injectPortableToolchainEnv,
+  resolvePathEnvKey,
+} from '../portable-toolchain-env.js';
 
 describe('web-service-env', () => {
   it('builds managed env vars with runtime and defaults', () => {
@@ -225,6 +231,116 @@ describe('web-service-env', () => {
 
     assert.equal(child.status, 0);
     assert.equal(child.stdout, 'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|ClaudeCodeCli');
+  });
+
+  it('prepends portable toolchain paths in deterministic order and injects the marker env', () => {
+    const baseEnv = {
+      PATH: '/system/bin',
+      HOME: '/tmp/home',
+    };
+    const result = injectPortableToolchainEnv(baseEnv, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+    }, {
+      platform: 'linux',
+      existsSync: target => target !== '/portable/toolchain/npm-global/bin.missing',
+    });
+
+    assert.equal(result.pathKey, 'PATH');
+    assert.equal(
+      result.env.PATH,
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/portable/toolchain/npm-global/bin:/system/bin',
+    );
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/portable/toolchain');
+    assert.equal(baseEnv.PATH, '/system/bin');
+    assert.equal(result.usedBundledToolchain, true);
+    assert.equal(result.fellBackToSystemPath, false);
+  });
+
+  it('skips missing bundled directories and preserves the inherited PATH order', () => {
+    const baseEnv = {
+      PATH: '/usr/local/bin:/usr/bin',
+    };
+    const result = injectPortableToolchainEnv(baseEnv, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+    }, {
+      platform: 'linux',
+      existsSync: () => false,
+    });
+
+    assert.equal(result.env.PATH, '/usr/local/bin:/usr/bin');
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
+    assert.equal(result.injectedPaths.length, 0);
+    assert.equal(result.fellBackToSystemPath, true);
+  });
+
+  it('deduplicates injected and inherited PATH entries without mutating the source env object', () => {
+    const baseEnv = {
+      PATH: '/portable/toolchain/bin:/usr/bin',
+    };
+    const result = injectPortableToolchainEnv(baseEnv, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/bin',
+    }, {
+      platform: 'linux',
+      existsSync: () => true,
+    });
+
+    assert.equal(result.env.PATH, '/portable/toolchain/bin:/portable/toolchain/node/bin:/usr/bin');
+    assert.equal(baseEnv.PATH, '/portable/toolchain/bin:/usr/bin');
+    assert.notEqual(result.env, baseEnv);
+  });
+
+  it('keeps Windows PATH key casing and path dedupe case-insensitive', () => {
+    const result = injectPortableToolchainEnv({
+      Path: 'C:\\Portable\\Toolchain\\Bin;C:\\Windows\\System32',
+    }, {
+      getPortableToolchainRoot: () => 'C:\\Portable\\Toolchain',
+      getPortableToolchainBinRoot: () => 'C:\\portable\\toolchain\\bin',
+      getPortableNodeBinRoot: () => 'C:\\Portable\\Toolchain\\node',
+      getPortableNpmGlobalBinRoot: () => 'C:\\Portable\\Toolchain\\npm-global\\bin',
+    }, {
+      platform: 'win32',
+      existsSync: () => true,
+    });
+
+    assert.equal(result.pathKey, 'Path');
+    assert.equal(
+      result.env.Path,
+      'C:\\portable\\toolchain\\bin;C:\\Portable\\Toolchain\\node;C:\\Portable\\Toolchain\\npm-global\\bin;C:\\Windows\\System32',
+    );
+  });
+
+  it('exposes helper coverage for PATH key resolution and path collection', () => {
+    assert.equal(resolvePathEnvKey({ PATH: '/usr/bin' }, 'linux'), 'PATH');
+    assert.equal(resolvePathEnvKey({ Path: 'C:\\Windows\\System32' }, 'win32'), 'Path');
+    assert.deepEqual(
+      dedupePathEntries(['/a', '/a', '/b'], 'linux'),
+      ['/a', '/b'],
+    );
+
+    const collected = collectPortableToolchainPathEntries({
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+    }, {
+      platform: 'linux',
+      existsSync: target => target !== '/portable/toolchain/node/bin',
+    });
+
+    assert.equal(collected.toolchainRoot, '/portable/toolchain');
+    assert.deepEqual(collected.injectedPaths, [
+      '/portable/toolchain/bin',
+      '/portable/toolchain/npm-global/bin',
+    ]);
   });
 
   it('covers migration and rollback scenarios', () => {

@@ -4,6 +4,10 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { buildStartupFailurePayload } from '../startup-failure-payload.js';
 import type { StartResult } from '../manifest-reader.js';
+import {
+  resolveToolchainLaunchPlan,
+  shouldUseShellForCommand,
+} from '../toolchain-launch.js';
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
@@ -26,6 +30,8 @@ describe('web-service startup flow', () => {
     assert.match(source, /resolveManagedLaunchContext/);
     assert.match(source, /validateBundledRuntimeForPlatform/);
     assert.match(source, /Starting service with bundled dotnet runtime/);
+    assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager\)/);
+    assert.match(source, /resolveToolchainLaunchPlan\(\{/);
     assert.match(source, /spawn\(launchContext\.dotnetPath, spawnArgs/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
@@ -33,6 +39,8 @@ describe('web-service startup flow', () => {
     assert.match(source, /DOTNET_ROOT: runtimeRoot/);
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /includes pinned runtime root/);
+    assert.match(source, /prepends bundled toolchain paths/);
+    assert.match(source, /fallback to inherited system PATH/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
@@ -90,5 +98,59 @@ describe('web-service startup flow', () => {
     assert.equal(payload.port, 36556);
     assert.equal(payload.timestamp, '2026-03-13T09:00:00.000Z');
     assert.equal(payload.truncated, false);
+  });
+
+  it('prefers bundled absolute toolchain executables and falls back to system PATH when missing', () => {
+    const bundledNode = '/portable/toolchain/node/bin/node';
+    const bundledNpm = '/portable/toolchain/node/bin/npm';
+    const pathManager = {
+      getPortableNodeExecutablePath: () => bundledNode,
+      getPortableNpmExecutablePath: () => bundledNpm,
+    };
+
+    const nodePlan = resolveToolchainLaunchPlan({
+      commandName: 'node',
+      args: ['server.js', '--watch'],
+      platform: 'linux',
+      existsSync: target => target === bundledNode,
+      pathManager,
+    });
+    const npmPlan = resolveToolchainLaunchPlan({
+      commandName: 'npm',
+      args: ['run', 'dev'],
+      platform: 'linux',
+      existsSync: () => false,
+      pathManager,
+    });
+
+    assert.equal(nodePlan.command, bundledNode);
+    assert.deepEqual(nodePlan.args, ['server.js', '--watch']);
+    assert.equal(nodePlan.usedBundledToolchain, true);
+    assert.equal(nodePlan.fellBackToSystemPath, false);
+    assert.equal(nodePlan.shell, false);
+
+    assert.equal(npmPlan.command, 'npm');
+    assert.deepEqual(npmPlan.args, ['run', 'dev']);
+    assert.equal(npmPlan.usedBundledToolchain, false);
+    assert.equal(npmPlan.fellBackToSystemPath, true);
+  });
+
+  it('uses shell mode only for Windows command-wrapper executables and keeps args unchanged', () => {
+    const plan = resolveToolchainLaunchPlan({
+      commandName: 'npm',
+      args: ['install', '--global', '@openspec/cli'],
+      platform: 'win32',
+      existsSync: target => target.endsWith('npm.cmd'),
+      pathManager: {
+        getPortableNodeExecutablePath: () => 'C:\\portable\\toolchain\\node\\node.exe',
+        getPortableNpmExecutablePath: () => 'C:\\portable\\toolchain\\node\\npm.cmd',
+      },
+    });
+
+    assert.equal(plan.command, 'C:\\portable\\toolchain\\node\\npm.cmd');
+    assert.deepEqual(plan.args, ['install', '--global', '@openspec/cli']);
+    assert.equal(plan.shell, true);
+    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\node.exe', 'win32'), false);
+    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), true);
   });
 });
