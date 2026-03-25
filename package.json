@@ -36,6 +36,7 @@
     "version:bump": "node scripts/bump-version.js",
     "build:local": "npm run prepare:runtime:optional && npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js",
     "build:local:publish": "npm run prepare:runtime:optional && npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js --publish always",
+    "publish:local": "npm run build:local:publish",
     "prepare:runtime": "node scripts/prepare-embedded-runtime.js",
     "package:smoke-test": "cross-env HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
     "package:smoke-test:mac:x64": "cross-env HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME=1 node scripts/smoke-test.js",
