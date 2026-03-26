@@ -22,6 +22,7 @@ import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
 import { openHagicodeInAppWindow } from './hagicode-url.js';
+import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
@@ -178,6 +179,7 @@ function createWindow(): void {
       devTools: !app.isPackaged,
     },
   });
+  wireDesktopWindowClipboard(mainWindow);
 
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
@@ -261,7 +263,7 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
       const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
       const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
-      return new BrowserWindow({
+      const childWindow = new BrowserWindow({
         minWidth: 800,
         minHeight: 600,
         show: false,
@@ -275,6 +277,9 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
           devTools: !app.isPackaged,
         },
       });
+
+      wireDesktopWindowClipboard(childWindow);
+      return childWindow;
     },
   });
 });
@@ -284,6 +289,8 @@ ipcMain.handle('hide-window', () => {
     mainWindow.hide();
   }
 });
+
+registerClipboardHandlers();
 
 ipcMain.handle('get-server-status', async () => {
   if (!serverClient) {

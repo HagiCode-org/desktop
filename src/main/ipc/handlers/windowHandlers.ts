@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openHagicodeInAppWindow } from '../../hagicode-url.js';
+import { registerClipboardHandlers, wireDesktopWindowClipboard } from '../../clipboard-integration.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +42,7 @@ export function getMainWindow(): BrowserWindow | null {
  */
 export function registerWindowHandlers(window: BrowserWindow | null): void {
   mainWindow = window;
+  registerClipboardHandlers();
 
   // Get version handler
   ipcMain.handle('app-version', () => {
@@ -76,7 +78,7 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
         const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
         const iconPath = path.join(appRoot, 'resources', 'icon.png');
 
-        return new BrowserWindow({
+        const childWindow = new BrowserWindow({
           minWidth: 800,
           minHeight: 600,
           show: false,
@@ -90,6 +92,9 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
             devTools: !app.isPackaged,
           },
         });
+
+        wireDesktopWindowClipboard(childWindow);
+        return childWindow;
       },
     });
   });
