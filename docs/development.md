@@ -132,6 +132,31 @@ npm run smoke-test
 npm run smoke-test:verbose
 ```
 
+## Clipboard Integration
+
+Desktop now keeps standard clipboard behavior at the host layer even when
+`autoHideMenuBar` is enabled:
+
+- The application menu always registers the standard Electron `Edit` roles for
+  undo, redo, cut, copy, paste, and select-all.
+- Main-window content, attached WebView content, and in-app Hagicode windows
+  all share the same focus-aware editing context-menu wiring.
+- Native renderer copy actions should use the renderer clipboard helper so the
+  browser clipboard API stays the first choice and the preload bridge is used
+  only as a secure fallback.
+
+### Manual Verification Checklist
+
+Run these four checks after touching desktop clipboard behavior:
+
+1. Copy and paste inside a native desktop input, such as the remote-mode URL
+   field in Settings.
+2. Copy and paste inside an input rendered by the embedded WebView.
+3. Select read-only text inside the embedded WebView, then confirm the
+   right-click menu exposes `Copy` and writes to the system clipboard.
+4. Open Hagicode in a dedicated in-app window and confirm copy/paste shortcuts
+   still apply to the focused field there.
+
 ## Environment Variables
 
 ### Application-Level Variables
