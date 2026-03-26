@@ -4,8 +4,10 @@ import type {
   OnboardingStartServiceResult,
   StartupFailurePayload,
 } from '../types/onboarding.js';
+import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
+import { createClipboardBridge } from './clipboard-bridge.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -188,6 +190,10 @@ interface ElectronAPI {
     set: (config: { clientId: string; clientSecret: string }) => Promise<GitHubOAuthMutationResult>;
     clear: () => Promise<GitHubOAuthMutationResult>;
   };
+  clipboard: {
+    readText: () => Promise<string>;
+    writeText: (text: string) => Promise<void>;
+  };
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -259,7 +265,13 @@ interface ElectronAPI {
   agentCliGetSelected: () => Promise<AgentCliSelectionType | null>;
 }
 
-const electronAPI = {
+const clipboardBridge = createClipboardBridge(ipcRenderer, clipboardChannels);
+const rendererEventTarget = globalThis as unknown as {
+  dispatchEvent: (event: unknown) => void;
+  CustomEvent: new <T>(type: string, init?: { detail?: T }) => unknown;
+};
+
+const electronAPI: ElectronAPI = {
   getAppVersion: () => ipcRenderer.invoke('app-version'),
   getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
   showWindow: () => ipcRenderer.invoke('show-window'),
@@ -585,6 +597,17 @@ const electronAPI = {
     set: (config: { clientId: string; clientSecret: string }) => ipcRenderer.invoke('github-oauth:set', config),
     clear: () => ipcRenderer.invoke('github-oauth:clear'),
   },
+  clipboard: clipboardBridge,
 };
+
+ipcRenderer.on('webview-navigate', (_event, direction: 'back' | 'forward' | 'refresh') => {
+  rendererEventTarget.dispatchEvent(
+    new rendererEventTarget.CustomEvent('webview-navigate', { detail: direction }),
+  );
+});
+
+ipcRenderer.on('webview-devtools', () => {
+  rendererEventTarget.dispatchEvent(new rendererEventTarget.CustomEvent('webview-devtools'));
+});
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
