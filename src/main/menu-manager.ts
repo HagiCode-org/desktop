@@ -1,16 +1,5 @@
 import { BrowserWindow, Menu, MenuItemConstructorOptions, app } from 'electron';
-
-interface MenuTranslations {
-  hagicoWeb: string;
-  navigate: string;
-  back: string;
-  forward: string;
-  refresh: string;
-  devTools: string;
-  help: string;
-  about: string;
-  quit: string;
-}
+import { buildMenuTemplate, type MenuTranslations } from './menu-template.js';
 
 export class MenuManager {
   private menu: Menu | null = null;
@@ -41,72 +30,14 @@ export class MenuManager {
   }
 
   private getMenuTemplate(): MenuItemConstructorOptions[] {
-    const i18n = this.getTranslations();
-    const isMac = process.platform === 'darwin';
-
-    // Application menu (macOS only)
-    const appMenu: MenuItemConstructorOptions = isMac
-      ? {
-          label: app.name,
-          submenu: [
-            { label: i18n.about, role: 'about' as const },
-            { type: 'separator' as const },
-            { label: i18n.quit, role: 'quit' as const },
-          ],
-        }
-      : { label: i18n.help, role: 'help' as const };
-
-    // Hagicode Web menu (web view navigation only)
-    const hagicoWebMenu: MenuItemConstructorOptions = {
-      label: i18n.hagicoWeb,
-      submenu: [
-        {
-          label: i18n.navigate,
-          submenu: [
-            {
-              label: i18n.back,
-              accelerator: 'CmdOrCtrl+Left',
-              click: () => this.navigateWebView('back'),
-              enabled: this.webServiceRunning,
-            },
-            {
-              label: i18n.forward,
-              accelerator: 'CmdOrCtrl+Right',
-              click: () => this.navigateWebView('forward'),
-              enabled: this.webServiceRunning,
-            },
-            {
-              label: i18n.refresh,
-              accelerator: 'CmdOrCtrl+R',
-              click: () => this.navigateWebView('refresh'),
-              enabled: this.webServiceRunning,
-            },
-          ],
-        },
-        { type: 'separator' as const },
-        {
-          label: i18n.devTools,
-          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-          click: () => this.openDevTools(),
-          enabled: this.webServiceRunning,
-        },
-      ],
-    };
-
-    // Help menu (Windows/Linux)
-    const helpMenu: MenuItemConstructorOptions = {
-      label: i18n.help,
-      submenu: [
-        { label: i18n.about, role: 'about' as const },
-      ],
-    };
-
-    // Build menu based on platform
-    if (isMac) {
-      return [appMenu, hagicoWebMenu, helpMenu];
-    } else {
-      return [hagicoWebMenu, helpMenu];
-    }
+    return buildMenuTemplate({
+      translations: this.getTranslations(),
+      isMac: process.platform === 'darwin',
+      appName: app.name,
+      webServiceRunning: this.webServiceRunning,
+      onNavigateWebView: (direction) => this.navigateWebView(direction),
+      onOpenDevTools: () => this.openDevTools(),
+    });
   }
 
   private navigateWebView(direction: 'back' | 'forward' | 'refresh'): void {
@@ -124,6 +55,7 @@ export class MenuManager {
   private getTranslations(): MenuTranslations {
     const translations: Record<string, MenuTranslations> = {
       'zh-CN': {
+        edit: '编辑',
         hagicoWeb: 'Hagicode Web',
         navigate: '导航',
         back: '后退',
@@ -135,6 +67,7 @@ export class MenuManager {
         quit: '退出',
       },
       'en-US': {
+        edit: 'Edit',
         hagicoWeb: 'Hagicode Web',
         navigate: 'Navigation',
         back: 'Back',
