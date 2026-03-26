@@ -38,6 +38,7 @@ import {
   recoverFromStartupFailure,
   startService,
 } from '../../../store/thunks/onboardingThunks';
+import { writeTextToClipboard } from '../../../lib/clipboard.js';
 import { fetchActiveVersion } from '../../../store/thunks/webServiceThunks';
 import type { RootState } from '../../../store';
 import type { AppDispatch } from '../../../store';
@@ -97,7 +98,7 @@ function ServiceLauncher({ onComplete }: ServiceLauncherProps) {
     }
 
     try {
-      await navigator.clipboard.writeText(startupFailure.log);
+      await writeTextToClipboard(startupFailure.log);
       toast.success(t('launch.failure.copySuccess'));
     } catch (error) {
       console.error('Failed to copy onboarding startup failure log:', error);

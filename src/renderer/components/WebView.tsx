@@ -55,7 +55,8 @@ export default function WebView({ src }: WebViewProps) {
     webView.addEventListener('crashed', handleCrashed);
 
     // Listen for navigation commands from menu
-    const handleNavigate = (event: any, direction: 'back' | 'forward' | 'refresh') => {
+    const handleNavigate = (event: Event) => {
+      const direction = (event as CustomEvent<'back' | 'forward' | 'refresh'>).detail;
       if (!webView) return;
 
       switch (direction) {
@@ -113,8 +114,7 @@ export default function WebView({ src }: WebViewProps) {
   };
 
   const handleOpenInBrowser = () => {
-    const { shell } = require('electron');
-    shell.openExternal(src);
+    void window.electronAPI.openExternal(src);
   };
 
   // Show service not running message

@@ -21,6 +21,7 @@ import {
   selectRemoteModeEnabled,
   selectRemoteModeUrl,
 } from '../store/slices/remoteModeSlice';
+import { writeTextToClipboard } from '../lib/clipboard.js';
 import {
   startWebService,
   stopWebService,
@@ -286,7 +287,7 @@ const WebServiceStatusCard: React.FC = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(startupFailure.log);
+      await writeTextToClipboard(startupFailure.log);
       toast.success(t('webServiceStatus.startupFailureDialog.copySuccess'));
     } catch (copyError) {
       console.error('Failed to copy startup failure log:', copyError);

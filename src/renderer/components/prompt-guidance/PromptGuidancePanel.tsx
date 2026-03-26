@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { PromptGuidanceResponse } from '../../../types/prompt-guidance.js';
+import { writeTextToClipboard } from '../../lib/clipboard.js';
 import {
   copyPromptContent,
   formatPromptGuidanceError,
@@ -83,13 +84,13 @@ export function PromptGuidancePanel({
     : null;
 
   const handleCopy = async () => {
-    if (!guidance || !guidance.success || !navigator.clipboard?.writeText) {
+    if (!guidance || !guidance.success) {
       toast.error(t('copy.failed'));
       return;
     }
 
     setIsCopying(true);
-    const result = await copyPromptContent(guidance.promptContent, (value) => navigator.clipboard.writeText(value));
+    const result = await copyPromptContent(guidance.promptContent, writeTextToClipboard);
     setIsCopying(false);
 
     if (result.success) {
