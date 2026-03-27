@@ -2,7 +2,7 @@
   "title": "First-Time Setup",
   "welcome": {
     "title": "Welcome to Hagicode Desktop",
-    "description": "Hagicode Desktop is the local launcher for Hagicode, allowing you to quickly use Hagicode locally. We'll guide you through a five-step setup in about 3-5 minutes.",
+    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup in four steps.",
     "features": {
       "manage": {
         "title": "Version Management",
@@ -17,11 +17,12 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The 3-step first-time setup includes:",
+    "processTitle": "The first-time setup has 4 steps:",
     "steps": {
       "welcome": "Review the setup and what will happen next",
       "download": "Download the latest Hagicode Server package",
-      "launch": "Start the service and confirm it is running"
+      "launch": "Start the service and confirm it is running",
+      "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default"
     },
     "skip": "Skip Setup",
     "start": "Get Started"
@@ -217,6 +218,17 @@
       "collapse": "Hide details",
       "currentVersion": "Current Version",
       "requiredVersion": "Required Version"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "Download & Sharing Acceleration",
+    "description": "This helps large desktop/web packages download faster and falls back automatically when needed.",
+    "toggleTitle": "Enable LAN/Internet sharing acceleration (default)",
+    "toggleDescription": "You can turn it off now and adjust it later in Settings.",
+    "bullets": {
+      "latest": "Used to speed up the latest desktop package and web deployment package downloads",
+      "fallback": "When shared acceleration is unavailable, the installer falls back automatically",
+      "disable": "Disable it now if your network restricts sharing traffic"
     }
   }
 }

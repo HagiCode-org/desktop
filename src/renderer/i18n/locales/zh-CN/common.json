@@ -154,6 +154,32 @@
     }
   },
   "system": {
+    "logQuickAccess": {
+      "title": "日志快捷访问",
+      "description": "直接打开 Desktop 与 Web App 的日志目录，减少排障时的路径查找成本。",
+      "loading": "正在检查日志目录...",
+      "hint": "按钮状态会随活动版本自动刷新",
+      "status": {
+        "available": "可用",
+        "unavailable": "不可用"
+      },
+      "desktop": {
+        "label": "Desktop 日志文件夹",
+        "description": "打开当前设备上的 Desktop 日志目录。",
+        "openSuccess": "Desktop 日志文件夹已打开"
+      },
+      "webApp": {
+        "label": "Web App 日志文件夹",
+        "description": "打开当前活动版本的 Web App 日志目录。",
+        "openSuccess": "Web App 日志文件夹已打开"
+      },
+      "errors": {
+        "load_failed": "无法获取日志目录状态",
+        "logs_not_found": "日志文件夹不存在",
+        "no_active_version": "当前没有活动版本",
+        "open_failed": "无法打开日志文件夹"
+      }
+    },
     "noVersionInstalled": {
       "title": "未安装任何版本",
       "description": "开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。",

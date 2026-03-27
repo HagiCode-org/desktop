@@ -2,7 +2,7 @@
   "title": "首次使用引导",
   "welcome": {
     "title": "欢迎使用 Hagicode Desktop",
-    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，可以在本地快速使用 Hagicode。接下来我们会用五个步骤帮助您完成首次安装和配置，大约需要 3-5 分钟。",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用四个步骤完成首次安装与配置。",
     "features": {
       "manage": {
         "title": "版本管理",
@@ -17,11 +17,12 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装共分 3 个步骤：",
+    "processTitle": "首次安装共分 4 个步骤：",
     "steps": {
       "welcome": "了解本次引导会完成的准备工作",
       "download": "下载最新的 Hagicode Server 包",
-      "launch": "启动服务并确认运行正常"
+      "launch": "启动服务并确认运行正常",
+      "sharingAcceleration": "确认是否开启共享加速，默认已为您开启"
     },
     "skip": "跳过引导",
     "start": "开始安装"
@@ -217,6 +218,17 @@
       "collapse": "隐藏详情",
       "currentVersion": "当前版本",
       "requiredVersion": "要求版本"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "下载与共享加速",
+    "description": "此功能会优先帮助您更快获取最新 desktop/web 大文件包，并在需要时自动回源。",
+    "toggleTitle": "开启局域网/互联网共享加速（默认）",
+    "toggleDescription": "您可以在这里取消，后续也能在设置页随时调整。",
+    "bullets": {
+      "latest": "用于更快下载最新 desktop 包与 web 部署包",
+      "fallback": "共享加速不可用时会自动回源，不会中断安装",
+      "disable": "企业网络受限或不希望共享时，可以现在关闭"
     }
   }
 }

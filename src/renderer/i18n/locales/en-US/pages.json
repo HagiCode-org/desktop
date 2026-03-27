@@ -6,7 +6,8 @@
       "remoteMode": "Remote Mode",
       "debug": "Debug",
       "dataDirectory": "Data Directory",
-      "githubIntegration": "GitHub Integration"
+      "githubIntegration": "GitHub Integration",
+      "sharingAcceleration": "Download & Sharing"
     },
     "smartConfig": {
       "title": "Smart Config prompt guidance",
@@ -174,6 +175,23 @@
         "restartStopped": "Last saved: {{value}}. Because the web service is stopped, the new GitHub OAuth settings will apply on the next start.",
         "currentlyApplied": "Last saved: {{value}}. The running web service already matches the saved GitHub OAuth settings."
       }
+    },
+    "sharingAcceleration": {
+      "title": "Download & Sharing Acceleration",
+      "description": "Manage large-package sharing acceleration, cache retention, and fallback download policy.",
+      "enabledTitle": "Enable LAN/Internet sharing acceleration",
+      "enabledDescription": "Large packages try sharing acceleration first, then fall back to HTTPS automatically.",
+      "uploadLimit": "Upload limit (MB/s)",
+      "cacheLimit": "Cache limit (GB)",
+      "retentionDays": "Retention days",
+      "thresholdHint": "Only HTTP index packages larger than 100 MB enter the shared-acceleration pipeline.",
+      "networkHint": "If your network restricts sharing traffic, disable it and continue with fallback downloads.",
+      "portableModeHint": "Portable mode always disables sharing acceleration at runtime and keeps downloads on the HTTP/WebSeed fallback path.",
+      "save": "Save Settings",
+      "saving": "Saving...",
+      "saveSuccess": "Sharing acceleration settings saved",
+      "saveError": "Failed to save sharing acceleration settings",
+      "loadError": "Failed to load sharing acceleration settings"
     }
   },
   "footer": {
@@ -325,6 +343,23 @@
       "description": "Version installation, switching, and package source management are hidden because this build runs from a packaged fixed payload.",
       "activeRuntime": "Active packaged runtime: {{version}}",
       "updates": "Updates for this build are managed by the packaged distribution instead of in-app version actions."
+    },
+    "downloadStage": {
+      "queued": "Queued",
+      "backfilling": "Fallback downloading"
+    },
+    "downloadMode": {
+      "shared": "Shared acceleration",
+      "fallback": "Fallback",
+      "direct": "Direct HTTP"
+    },
+    "installTelemetry": {
+      "mode": "Mode",
+      "stage": "Stage",
+      "peers": "Peers",
+      "sharedBytes": "Shared bytes",
+      "fallbackBytes": "Fallback bytes",
+      "verified": "Verified"
     }
   },
   "installProgressDialog": {

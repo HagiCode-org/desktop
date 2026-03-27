@@ -6,7 +6,8 @@
       "remoteMode": "远程模式",
       "debug": "调试",
       "dataDirectory": "数据目录",
-      "githubIntegration": "GitHub 集成"
+      "githubIntegration": "GitHub 集成",
+      "sharingAcceleration": "下载与共享加速"
     },
     "agentCli": {
       "title": "偏好 Agent CLI",
@@ -174,6 +175,23 @@
         "restartStopped": "最近保存时间：{{value}}。Web 服务停止时，新的 GitHub OAuth 配置会在下一次启动时生效。",
         "currentlyApplied": "最近保存时间：{{value}}。当前运行中的 Web 服务已经与已保存配置保持一致。"
       }
+    },
+    "sharingAcceleration": {
+      "title": "下载与共享加速",
+      "description": "管理大文件下载时的共享加速、缓存保留与回源兜底策略。",
+      "enabledTitle": "开启局域网/互联网共享加速",
+      "enabledDescription": "大文件优先尝试共享加速，缺失部分会自动回源到 HTTPS。",
+      "uploadLimit": "上传限速 (MB/s)",
+      "cacheLimit": "缓存上限 (GB)",
+      "retentionDays": "缓存保留时间 (天)",
+      "thresholdHint": "仅 100 MB 及以上的 HTTP index 大文件会进入共享加速管线。",
+      "networkHint": "如果企业网络受限，可关闭共享加速并继续使用回源下载。",
+      "portableModeHint": "便携版会在运行时强制关闭共享加速，并让下载固定走 HTTP/WebSeed 回源链路。",
+      "save": "保存设置",
+      "saving": "保存中...",
+      "saveSuccess": "下载与共享加速设置已保存",
+      "saveError": "保存下载与共享加速设置失败",
+      "loadError": "读取下载与共享加速设置失败"
     }
   },
   "footer": {
@@ -325,6 +343,23 @@
       "description": "当前构建使用打包内置的固定运行时，因此隐藏版本安装、切换和包源管理操作。",
       "activeRuntime": "当前打包运行时：{{version}}",
       "updates": "此构建的更新由外部分发渠道负责，不通过应用内版本管理执行。"
+    },
+    "downloadStage": {
+      "queued": "等待开始",
+      "backfilling": "回源补块中"
+    },
+    "downloadMode": {
+      "shared": "共享加速",
+      "fallback": "回源下载",
+      "direct": "直连下载"
+    },
+    "installTelemetry": {
+      "mode": "下载模式",
+      "stage": "当前阶段",
+      "peers": "已连接节点",
+      "sharedBytes": "共享获取",
+      "fallbackBytes": "回源获取",
+      "verified": "校验通过"
     }
   },
   "installProgressDialog": {

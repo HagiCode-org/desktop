@@ -154,6 +154,32 @@
     }
   },
   "system": {
+    "logQuickAccess": {
+      "title": "Log Quick Access",
+      "description": "Open the Desktop and Web App log folders directly to shorten diagnostics time.",
+      "loading": "Checking log folders...",
+      "hint": "Button states refresh automatically with the active version",
+      "status": {
+        "available": "Available",
+        "unavailable": "Unavailable"
+      },
+      "desktop": {
+        "label": "Desktop Logs Folder",
+        "description": "Open the current Desktop logs directory on this device.",
+        "openSuccess": "Desktop logs folder opened"
+      },
+      "webApp": {
+        "label": "Web App Logs Folder",
+        "description": "Open the Web App logs directory for the active version.",
+        "openSuccess": "Web App logs folder opened"
+      },
+      "errors": {
+        "load_failed": "Failed to load log folder status",
+        "logs_not_found": "Logs folder not found",
+        "no_active_version": "No active version is selected",
+        "open_failed": "Failed to open logs folder"
+      }
+    },
     "noVersionInstalled": {
       "title": "No Versions Installed Yet",
       "description": "The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.",
