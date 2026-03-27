@@ -5,6 +5,9 @@ using Nuke.Common.IO;
 /// </summary>
 internal static class BuildConfig
 {
+    internal const string GitHubReleaseRepositoryName = "hagicode-desktop";
+    internal const string DesktopPublicBaseUrl = "https://desktop.dl.hagicode.com";
+
     /// <summary>
     /// The release packaged directory path
     /// </summary>

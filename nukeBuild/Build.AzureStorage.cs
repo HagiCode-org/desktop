@@ -1,6 +1,7 @@
 using Adapters;
 using AzureStorage;
 using System.Diagnostics;
+using Utils;
 
 public partial class Build
 {
@@ -80,7 +81,13 @@ public partial class Build
             Log.Information("使用指定的 ReleaseTag: {Tag}", versionTag);
         }
 
-        BuildConfig.Version = versionTag;
+        var effectiveVersion = NormalizePublishedVersionPrefix(
+            !string.IsNullOrWhiteSpace(ReleaseVersion)
+                ? ReleaseVersion
+                : versionTag);
+
+        BuildConfig.Version = effectiveVersion;
+        Log.Information("Azure publish version prefix: {Version}", effectiveVersion);
 
         if (!UploadArtifacts && !UploadIndex)
         {
@@ -115,9 +122,22 @@ public partial class Build
         Log.Information("使用 gh CLI 下载 release 资产...");
 
         await DownloadReleaseAssetsUsingGhAsync(versionTag, downloadDirectory);
-        downloadedFiles = Directory.GetFiles(downloadDirectory)
+        var allDownloadedFiles = Directory.GetFiles(downloadDirectory)
             .Where((path) => !File.GetAttributes(path).HasFlag(FileAttributes.Directory))
             .ToList();
+
+        downloadedFiles = allDownloadedFiles
+            .Where((path) => !AzureBlobPathUtilities.IsGitHubGeneratedSourceArchive(
+                Path.GetFileName(path),
+                BuildConfig.GitHubReleaseRepositoryName,
+                effectiveVersion))
+            .ToList();
+
+        var filteredAssetCount = allDownloadedFiles.Count - downloadedFiles.Count;
+        if (filteredAssetCount > 0)
+        {
+            Log.Information("已过滤 {Count} 个 GitHub 自动生成源码包资产", filteredAssetCount);
+        }
 
         if (downloadedFiles.Count > 0)
         {
@@ -140,7 +160,8 @@ public partial class Build
         {
             SasUrl = AzureBlobSasUrl,
             UploadRetries = AzureUploadRetries,
-            VersionPrefix = versionTag,
+            VersionPrefix = effectiveVersion,
+            PublicBaseUrl = AzurePublicBaseUrl,
         };
         var localIndexPath = (RootDirectory / "artifacts" / "azure-index.json").ToString();
 
@@ -213,6 +234,7 @@ public partial class Build
 
         Log.Information("=== 同步完成 ===");
         Log.Information("  Release Tag: {Tag}", versionTag);
+        Log.Information("  Azure Version Prefix: {Version}", effectiveVersion);
         Log.Information("  下载资源: {DownloadCount}", downloadedFiles.Count);
         Log.Information("  产物上传: {ArtifactsStatus}", UploadArtifacts ? "已执行" : "已跳过");
         Log.Information("  Index 上传: {IndexStatus}", UploadIndex ? "已执行" : "已跳过");
@@ -284,6 +306,18 @@ public partial class Build
             ArtifactPublishFailureStage.IndexWrite => "index-write",
             _ => "publish",
         };
+    }
+
+    private static string NormalizePublishedVersionPrefix(string versionOrTag)
+    {
+        var normalized = versionOrTag.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        normalized = normalized.TrimStart('v', 'V');
+        return $"v{normalized}";
     }
 
     private async Task DownloadReleaseAssetsUsingGhAsync(string tag, AbsolutePath downloadDirectory)

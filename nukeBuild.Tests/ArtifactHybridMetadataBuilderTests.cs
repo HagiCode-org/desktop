@@ -16,15 +16,15 @@ public sealed class ArtifactHybridMetadataBuilderTests
             await File.WriteAllBytesAsync(artifactPath, Enumerable.Repeat((byte)0x2A, 4096).ToArray());
 
             var builder = new ArtifactHybridMetadataBuilder(new TorrentSidecarGenerator(pieceLengthBytes: 64), thresholdBytes: 1);
-            var result = await builder.BuildAsync(new[] { artifactPath }, "1.2.3", "https://example.blob.core.windows.net/releases/");
+            var result = await builder.BuildAsync(new[] { artifactPath }, "v1.2.3", "https://desktop.dl.hagicode.com/");
 
             var artifact = Assert.Single(result.Artifacts);
             Assert.True(artifact.MeetsThreshold);
             Assert.True(artifact.HybridEligible);
             Assert.False(artifact.LegacyHttpFallback);
-            Assert.Equal("1.2.3/hagicode-1.2.3-win-x64-nort.zip", artifact.Path);
-            Assert.Equal("https://example.blob.core.windows.net/releases/1.2.3/hagicode-1.2.3-win-x64-nort.zip", artifact.DirectUrl);
-            Assert.Equal("https://example.blob.core.windows.net/releases/1.2.3/hagicode-1.2.3-win-x64-nort.zip.torrent", artifact.TorrentUrl);
+            Assert.Equal("v1.2.3/hagicode-1.2.3-win-x64-nort.zip", artifact.Path);
+            Assert.Equal("https://desktop.dl.hagicode.com/v1.2.3/hagicode-1.2.3-win-x64-nort.zip", artifact.DirectUrl);
+            Assert.Equal("https://desktop.dl.hagicode.com/v1.2.3/hagicode-1.2.3-win-x64-nort.zip.torrent", artifact.TorrentUrl);
             Assert.Contains(artifact.DirectUrl, artifact.WebSeeds);
             Assert.False(string.IsNullOrWhiteSpace(artifact.InfoHash));
             Assert.False(string.IsNullOrWhiteSpace(artifact.Sha256));

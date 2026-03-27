@@ -1,0 +1,566 @@
+name: Publish Dev Build
+
+on:
+  push:
+    branches:
+      - publish
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  PUBLISH_BASE_VERSION: "0.0.1"
+  RELEASE_CHANNEL: "dev"
+
+jobs:
+  prepare-release:
+    name: Prepare Dev Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      channel: ${{ steps.meta.outputs.channel }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compute dev release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${PUBLISH_BASE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+          RELEASE_TAG="V${VERSION}"
+          RELEASE_NAME="Publish Dev ${VERSION}"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "release_name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "channel=${RELEASE_CHANNEL}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo '## Publish dev release prepared'
+            echo
+            echo "- Version: ${VERSION}"
+            echo "- Release tag: ${RELEASE_TAG}"
+            echo "- Release channel: ${RELEASE_CHANNEL}"
+            echo "- Commit: ${GITHUB_SHA}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
+          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
+        run: |
+          set -euo pipefail
+          NOTES_FILE="$(mktemp)"
+          cat > "$NOTES_FILE" <<NOTES
+          Automated publish branch prerelease.
+
+          - Branch: ${GITHUB_REF_NAME}
+          - Commit: ${GITHUB_SHA}
+          - Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          NOTES
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Updating existing prerelease ${RELEASE_TAG}"
+            gh release edit "$RELEASE_TAG" \
+              --title "$RELEASE_NAME" \
+              --prerelease
+          else
+            echo "Creating prerelease ${RELEASE_TAG}"
+            gh release create "$RELEASE_TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_NAME" \
+              --prerelease \
+              --latest=false \
+              --notes-file "$NOTES_FILE"
+          fi
+
+  build-windows:
+    name: Build Windows Dev Artifacts
+    runs-on: windows-latest
+    needs: prepare-release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cache pinned runtime downloads
+        uses: actions/cache@v4
+        with:
+          path: build/embedded-runtime/downloads
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+
+      - name: Sync package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Windows
+        shell: bash
+        run: node scripts/ci-build.js --platform win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
+
+      - name: Collect Windows artifacts
+        id: windows_artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          if (-not (Test-Path $pkgDir)) {
+            throw "pkg directory not found: $pkgDir"
+          }
+
+          $allFiles = Get-ChildItem -Path $pkgDir -File
+          $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
+          $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
+
+          if ($nsis.Count -eq 0 -and $portable.Count -eq 0 -and $appx.Count -eq 0) {
+            throw 'No Windows artifacts were found in pkg/ for release upload.'
+          }
+
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
+          }
+
+          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
+          $zipBaseName = if ($portable.Count -gt 0) {
+            [System.IO.Path]::GetFileNameWithoutExtension($portable[0].Name)
+          } else {
+            'hagicode-windows-unpacked'
+          }
+
+          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
+            foreach ($file in $Files) {
+              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          }
+
+          Write-MultilineOutput 'nsis_files' $nsis
+          Write-MultilineOutput 'portable_files' $portable
+          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'unpacked_roots' $unpackedRoots
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
+
+      - name: Prepare Windows unpacked ZIP payload workspace
+        id: windows_zip_payload
+        shell: pwsh
+        env:
+          WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
+          WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+
+          if (Test-Path $zipPayloadRoot) {
+            Remove-Item -Path $zipPayloadRoot -Recurse -Force
+          }
+          New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
+
+          $unpackedRoots = @()
+          $env:WINDOWS_UNPACKED_ROOTS -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $unpackedRoots += $trimmed
+            }
+          }
+
+          if ($unpackedRoots.Count -eq 0) {
+            throw 'No unpacked Windows roots were passed to ZIP payload staging.'
+          }
+
+          $payloadDirName = "{0}-unpacked" -f $env:WINDOWS_ZIP_BASE_NAME
+          $payloadDir = Join-Path $zipPayloadRoot $payloadDirName
+          New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
+
+          foreach ($unpackedRootPath in $unpackedRoots) {
+            $unpackedRoot = Get-Item -LiteralPath $unpackedRootPath
+            Get-ChildItem -LiteralPath $unpackedRoot.FullName -Force | ForEach-Object {
+              $targetPath = Join-Path $payloadDir $_.Name
+              if ($_.PSIsContainer) {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Recurse -Force
+              } else {
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Force
+              }
+            }
+          }
+
+          $zipPayloadFiles = @(Get-ChildItem -LiteralPath $payloadDir -Recurse -File | Sort-Object FullName)
+          if ($zipPayloadFiles.Count -eq 0) {
+            throw 'Windows ZIP payload staging did not produce any files.'
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
+
+      - name: Create Windows ZIP artifact
+        id: windows_zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
+          $payloadDir = '${{ steps.windows_zip_payload.outputs.payload_dir }}'
+          $payloadDirName = '${{ steps.windows_zip_payload.outputs.payload_dir_name }}'
+          if (-not (Test-Path $payloadDir)) {
+            throw "Windows ZIP payload directory not found: $payloadDir"
+          }
+
+          $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDirName)
+          if (Test-Path $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
+          }
+
+          Compress-Archive -Path (Join-Path $payloadDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+          $zipFile = Get-Item -LiteralPath $zipPath
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
+          Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
+
+      - name: Summarize Windows packaging
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo '## Windows packaging'
+            echo
+            echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload NSIS installer to prerelease
+        uses: softprops/action-gh-release@v2
+        if: success() && steps.windows_artifacts.outputs.nsis_files != ''
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: ${{ steps.windows_artifacts.outputs.nsis_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AppX package to prerelease
+        uses: softprops/action-gh-release@v2
+        if: success() && steps.windows_artifacts.outputs.appx_files != ''
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: ${{ steps.windows_artifacts.outputs.appx_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload portable to prerelease
+        uses: softprops/action-gh-release@v2
+        if: success() && steps.windows_artifacts.outputs.portable_files != ''
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: ${{ steps.windows_artifacts.outputs.portable_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows ZIP to prerelease
+        uses: softprops/action-gh-release@v2
+        if: success() && steps.windows_zip.outputs.zip_files != ''
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: ${{ steps.windows_zip.outputs.zip_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    name: Build Linux Dev Artifacts
+    runs-on: ubuntu-latest
+    needs: prepare-release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cache pinned runtime downloads
+        uses: actions/cache@v4
+        with:
+          path: build/embedded-runtime/downloads
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+
+      - name: Sync package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Linux
+        run: node scripts/ci-build.js --platform linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
+
+      - name: Summarize Linux artifacts
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          zip_files=(pkg/*.zip)
+          zip_count=${#zip_files[@]}
+
+          {
+            echo '## Linux packaging artifacts'
+            echo
+            echo '- AppImage upload pattern: pkg/*.AppImage'
+            echo '- deb upload pattern: pkg/*.deb'
+            echo '- tar.gz upload pattern: pkg/*.tar.gz'
+            if [ "$zip_count" -eq 0 ]; then
+              echo '- ZIP upload pattern: pkg/*.zip (missing)'
+            else
+              echo "- ZIP upload pattern: pkg/*.zip (${zip_count} file(s))"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$zip_count" -eq 0 ]; then
+            echo '::error::Linux ZIP artifact was not produced in pkg/.'
+            exit 1
+          fi
+
+      - name: Upload AppImage to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload deb to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload tar.gz to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux ZIP to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    name: Build macOS Dev Artifacts
+    runs-on: macos-latest
+    needs: prepare-release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Sync package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for macOS
+        run: node scripts/ci-build.js --platform mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ZIP to prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: 'false'
+          prerelease: 'true'
+          overwrite_files: 'true'
+          files: pkg/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-summary:
+    name: Publish Dev Summary
+    needs:
+      - prepare-release
+      - build-windows
+      - build-linux
+      - build-macos
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      release_status: ${{ steps.status.outputs.overall }}
+      channel: ${{ steps.status.outputs.channel }}
+
+    steps:
+      - name: Determine workflow status
+        id: status
+        shell: bash
+        run: |
+          set -euo pipefail
+          windows_status="${{ needs.build-windows.result }}"
+          linux_status="${{ needs.build-linux.result }}"
+          macos_status="${{ needs.build-macos.result }}"
+
+          echo "Windows: ${windows_status}"
+          echo "Linux: ${linux_status}"
+          echo "macOS: ${macos_status}"
+
+          if [ "$windows_status" != 'success' ] || [ "$linux_status" != 'success' ] || [ "$macos_status" != 'success' ]; then
+            echo 'overall=failed' >> "$GITHUB_OUTPUT"
+          else
+            echo 'overall=success' >> "$GITHUB_OUTPUT"
+          fi
+
+          echo 'channel=dev' >> "$GITHUB_OUTPUT"
+
+      - name: Publish workflow summary
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.status.outputs.overall }}" = "success" ]; then
+            azure_sync_eligible=true
+          else
+            azure_sync_eligible=false
+          fi
+
+          {
+            echo '## Publish dev orchestration summary'
+            echo
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Release tag: ${{ needs.prepare-release.outputs.release_tag }}'
+            echo '- Windows status: ${{ needs.build-windows.result }}'
+            echo '- Linux status: ${{ needs.build-linux.result }}'
+            echo '- macOS status: ${{ needs.build-macos.result }}'
+            echo '- Overall status: ${{ steps.status.outputs.overall }}'
+            echo "- Azure sync eligible: ${azure_sync_eligible}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail workflow on platform failure
+        if: steps.status.outputs.overall != 'success'
+        shell: bash
+        run: |
+          echo '::error::One or more publish dev platform builds failed. Azure sync is blocked.'
+          exit 1
+
+  sync-azure:
+    name: Sync Dev Release to Azure Storage
+    needs:
+      - prepare-release
+      - build-summary
+    if: ${{ always() && needs.build-summary.outputs.release_status == 'success' }}
+    uses: ./.github/workflows/sync-azure-storage.yml
+    with:
+      release_tag: ${{ needs.prepare-release.outputs.release_tag }}
+      release_version: v${{ needs.prepare-release.outputs.version }}
+      release_channel: ${{ needs.prepare-release.outputs.channel }}
+    secrets: inherit

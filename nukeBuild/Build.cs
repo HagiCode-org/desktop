@@ -27,6 +27,9 @@ partial class Build : NukeBuild
     [Parameter("Azure Blob SAS URL for authentication and upload")]
     [Secret] readonly string AzureBlobSasUrl = "";
 
+    [Parameter("Public base URL for published desktop artifacts")]
+    readonly string AzurePublicBaseUrl = BuildConfig.DesktopPublicBaseUrl;
+
     [Parameter("Skip Azure Blob publish")] readonly bool SkipAzureBlobPublish = false;
 
     [Parameter("Generate Azure index.json")] readonly bool AzureGenerateIndex = true;
@@ -54,6 +57,9 @@ partial class Build : NukeBuild
 
     [Parameter("Release tag to sync (e.g., v1.0.0)")]
     readonly string ReleaseTag = "";
+
+    [Parameter("Version prefix to publish (defaults to release tag)")]
+    readonly string ReleaseVersion = "";
 
     [Parameter("Release channel (stable, beta, dev)")]
     readonly string ReleaseChannel = "beta";

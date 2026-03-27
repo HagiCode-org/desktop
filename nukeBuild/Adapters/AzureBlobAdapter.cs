@@ -327,7 +327,7 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             }
 
             var blobs = await ListBlobsAsync(options);
-            var result = BuildIndexResult(blobs, options.SasUrl, publishedArtifacts);
+            var result = BuildIndexResult(blobs, options.SasUrl, publishedArtifacts, options.PublicBaseUrl);
             result.IndexJson = SerializeJson(result.Document!, minify);
             await File.WriteAllTextAsync(outputPath, result.IndexJson);
 
@@ -348,9 +348,10 @@ public class AzureBlobAdapter : IAzureBlobAdapter
     public AzureBlobIndexGenerationResult BuildIndexResult(
         IReadOnlyCollection<AzureBlobInfo> blobs,
         string sasUrl,
-        IReadOnlyCollection<PublishedArtifactMetadata>? publishedArtifacts = null)
+        IReadOnlyCollection<PublishedArtifactMetadata> publishedArtifacts = null,
+        string publicBaseUrl = "")
     {
-        var containerBaseUrl = AzureBlobPathUtilities.BuildContainerBaseUrl(sasUrl);
+        var containerBaseUrl = AzureBlobPathUtilities.ResolvePublicBaseUrl(sasUrl, publicBaseUrl);
         var metadataByPath = (publishedArtifacts ?? Array.Empty<PublishedArtifactMetadata>())
             .ToDictionary((artifact) => artifact.Path, StringComparer.OrdinalIgnoreCase);
 
@@ -369,6 +370,10 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             var blobsByName = versionGroup.ToDictionary((blob) => blob.Name, StringComparer.OrdinalIgnoreCase);
             var artifactBlobs = versionGroup
                 .Where((blob) => !blob.Name.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
+                .Where((blob) => !AzureBlobPathUtilities.IsGitHubGeneratedSourceArchive(
+                    Path.GetFileName(blob.Name),
+                    BuildConfig.GitHubReleaseRepositoryName,
+                    versionGroup.Key))
                 .OrderBy((blob) => blob.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 

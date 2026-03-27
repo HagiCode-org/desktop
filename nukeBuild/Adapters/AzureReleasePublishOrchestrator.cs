@@ -23,7 +23,7 @@ public sealed class AzureReleasePublishOrchestrator
         bool minifyIndexJson)
     {
         var summary = new ReleasePublishSummary();
-        var containerBaseUrl = Utils.AzureBlobPathUtilities.BuildContainerBaseUrl(options.SasUrl);
+        var containerBaseUrl = Utils.AzureBlobPathUtilities.ResolvePublicBaseUrl(options.SasUrl, options.PublicBaseUrl);
         var metadataResult = await _metadataBuilder.BuildAsync(downloadedFiles, options.VersionPrefix, containerBaseUrl);
 
         summary.EligibleAssetCount = metadataResult.EligibleArtifactCount;

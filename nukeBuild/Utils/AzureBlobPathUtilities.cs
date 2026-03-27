@@ -2,7 +2,7 @@ namespace Utils;
 
 public static class AzureBlobPathUtilities
 {
-    public static string NormalizeVersionPrefix(string? versionPrefix)
+    public static string NormalizeVersionPrefix(string versionPrefix)
     {
         if (string.IsNullOrWhiteSpace(versionPrefix))
         {
@@ -12,7 +12,7 @@ public static class AzureBlobPathUtilities
         return versionPrefix.Trim().Trim('/').Replace('\\', '/');
     }
 
-    public static string BuildBlobPath(string? versionPrefix, string fileName)
+    public static string BuildBlobPath(string versionPrefix, string fileName)
     {
         var normalizedPrefix = NormalizeVersionPrefix(versionPrefix);
         var normalizedFileName = fileName.Replace('\\', '/');
@@ -27,6 +27,16 @@ public static class AzureBlobPathUtilities
         return $"{uri.GetLeftPart(UriPartial.Path).TrimEnd('/')}/";
     }
 
+    public static string ResolvePublicBaseUrl(string sasUrl, string publicBaseUrl = "")
+    {
+        if (!string.IsNullOrWhiteSpace(publicBaseUrl))
+        {
+            return $"{publicBaseUrl.Trim().TrimEnd('/')}/";
+        }
+
+        return BuildContainerBaseUrl(sasUrl);
+    }
+
     public static string BuildBlobUrl(string containerBaseUrl, string blobPath)
     {
         var baseUri = new Uri(containerBaseUrl.EndsWith('/') ? containerBaseUrl : $"{containerBaseUrl}/");
@@ -37,5 +47,24 @@ public static class AzureBlobPathUtilities
     {
         var slashIndex = blobName.IndexOf('/');
         return slashIndex > 0 ? blobName[..slashIndex] : "latest";
+    }
+
+    public static bool IsGitHubGeneratedSourceArchive(string fileName, string repositoryName, string releaseVersionOrTag)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) ||
+            string.IsNullOrWhiteSpace(repositoryName) ||
+            string.IsNullOrWhiteSpace(releaseVersionOrTag))
+        {
+            return false;
+        }
+
+        var normalizedVersion = releaseVersionOrTag.Trim().TrimStart('v', 'V');
+        if (string.IsNullOrWhiteSpace(normalizedVersion))
+        {
+            return false;
+        }
+
+        return fileName.Equals($"{repositoryName}-{normalizedVersion}.zip", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals($"{repositoryName}-{normalizedVersion}.tar.gz", StringComparison.OrdinalIgnoreCase);
     }
 }
