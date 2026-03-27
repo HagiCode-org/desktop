@@ -56,6 +56,29 @@ public interface IAzureBlobAdapter
     Task<bool> ValidateIndexFileAsync(string localIndexPath);
 
     /// <summary>
+    /// 从 Azure Blob 中生成版本索引
+    /// </summary>
+    /// <param name="options">发布配置选项</param>
+    /// <param name="outputPath">本地输出文件路径</param>
+    /// <param name="minify">是否压缩 JSON 输出</param>
+    /// <returns>索引 JSON 内容</returns>
+    Task<string> GenerateIndexFromBlobsAsync(AzureBlobPublishOptions options, string outputPath, bool minify = false);
+
+    /// <summary>
+    /// 从 Azure Blob 中生成带发布期 hybrid metadata 的版本索引
+    /// </summary>
+    /// <param name="options">发布配置选项</param>
+    /// <param name="outputPath">本地输出文件路径</param>
+    /// <param name="publishedArtifacts">发布期产物元数据</param>
+    /// <param name="minify">是否压缩 JSON 输出</param>
+    /// <returns>索引生成结果</returns>
+    Task<AzureBlobIndexGenerationResult> GenerateIndexFromBlobsWithMetadataAsync(
+        AzureBlobPublishOptions options,
+        string outputPath,
+        IReadOnlyCollection<PublishedArtifactMetadata> publishedArtifacts,
+        bool minify = false);
+
+    /// <summary>
     /// 上传 index.json 到 Azure Blob Storage
     /// </summary>
     /// <param name="options">发布配置选项</param>

@@ -12,7 +12,10 @@ public class AzureBlobPublishResult
 {
     public bool Success { get; set; }
     public List<string> UploadedBlobs { get; set; } = new();
+    public List<string> UploadedBlobNames { get; set; } = new();
     public List<string> SkippedBlobs { get; set; } = new();
+    public List<string> SkippedBlobNames { get; set; } = new();
+    public List<string> MissingBlobNames { get; set; } = new();
     public string ErrorMessage { get; set; } = string.Empty;
     public List<string> Warnings { get; set; } = new();
 }
