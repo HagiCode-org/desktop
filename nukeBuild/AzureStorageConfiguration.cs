@@ -48,6 +48,12 @@ public class AzureBlobPublishOptions
     public string VersionPrefix { get; set; } = string.Empty;
 
     /// <summary>
+    /// Public base URL used in generated download links and web seeds.
+    /// Falls back to the SAS container URL when empty.
+    /// </summary>
+    public string PublicBaseUrl { get; set; } = string.Empty;
+
+    /// <summary>
     /// Container name (parsed from SAS URL)
     /// </summary>
     public string ContainerName { get; set; } = string.Empty;
