@@ -7,6 +7,12 @@ import type {
 import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
+import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type {
+  LogDirectoryOpenResult,
+  LogDirectoryTarget,
+  LogDirectoryTargetStatus,
+} from '../types/log-directory.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 
 // Validation result interface
@@ -105,6 +111,8 @@ export interface VersionSwitchResultPayload {
   desktopCompatibility?: DesktopCompatibilityPayload;
 }
 
+export type VersionInstallProgressPayload = VersionDownloadProgress;
+
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
@@ -137,7 +145,7 @@ interface ElectronAPI {
   installWebServicePackage: (version: string) => Promise<void>;
   getAvailableVersions: () => Promise<string[]>;
   getPlatform: () => Promise<string>;
-  onPackageInstallProgress: (callback: (progress: any) => void) => () => void;
+  onPackageInstallProgress: (callback: (progress: VersionInstallProgressPayload) => void) => () => void;
 
   // Package Source Management APIs
   createPackageSource: (config: any) => Promise<void>;
@@ -185,6 +193,12 @@ interface ElectronAPI {
     validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
   };
 
+  sharingAcceleration: {
+    get: () => Promise<SharingAccelerationSettings | null>;
+    set: (settings: SharingAccelerationSettingsInput & { enabled: boolean }) => Promise<SharingAccelerationSettings | null>;
+    recordOnboardingChoice: (enabled: boolean) => Promise<SharingAccelerationSettings | null>;
+  };
+
   githubOAuth: {
     get: () => Promise<GitHubOAuthConfigPayload>;
     set: (config: { clientId: string; clientSecret: string }) => Promise<GitHubOAuthMutationResult>;
@@ -210,6 +224,12 @@ interface ElectronAPI {
   versionReinstall: (versionId: string) => Promise<boolean>;
   versionCheckDependencies: (versionId: string) => Promise<any[]>;
   versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
+  versionSetChannel: (channel: string) => Promise<{ success: boolean; error?: string }>;
+  logDirectory: {
+    listTargets: () => Promise<LogDirectoryTargetStatus[]>;
+    open: (target: LogDirectoryTarget) => Promise<LogDirectoryOpenResult>;
+  };
+  onVersionInstallProgress: (callback: (progress: VersionInstallProgressPayload) => void) => () => void;
   onInstalledVersionsChanged: (callback: (versions: InstalledVersionPayload[]) => void) => () => void;
   onActiveVersionChanged: (callback: (version: InstalledVersionPayload | null) => void) => () => void;
   onVersionListChanged: (callback: () => void) => () => void;
@@ -400,6 +420,17 @@ const electronAPI: ElectronAPI = {
   versionCheckDependencies: (versionId) => ipcRenderer.invoke('version:checkDependencies', versionId),
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
+  logDirectory: {
+    listTargets: () => ipcRenderer.invoke('log-directory:list-targets'),
+    open: (target) => ipcRenderer.invoke('log-directory:open', target),
+  },
+  onVersionInstallProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('version:install-progress', listener);
+    return () => ipcRenderer.removeListener('version:install-progress', listener);
+  },
   onInstalledVersionsChanged: (callback) => {
     const listener = (_event, versions) => {
       callback(versions);
@@ -590,6 +621,12 @@ const electronAPI: ElectronAPI = {
     set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
     get: () => ipcRenderer.invoke('remote-mode:get'),
     validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
+  },
+
+  sharingAcceleration: {
+    get: () => ipcRenderer.invoke('sharing-acceleration:get'),
+    set: (settings) => ipcRenderer.invoke('sharing-acceleration:set', settings),
+    recordOnboardingChoice: (enabled) => ipcRenderer.invoke('sharing-acceleration:record-onboarding-choice', enabled),
   },
 
   githubOAuth: {

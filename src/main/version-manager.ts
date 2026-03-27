@@ -7,8 +7,9 @@ import { DependencyManager, type DependencyCheckResult, DependencyType } from '.
 import { StateManager, type InstalledVersionInfo, type InstalledVersionStatus, type InstalledVersionValidation } from './state-manager.js';
 import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
+import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordinator.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
-import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback } from './package-sources/index.js';
+import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
@@ -18,6 +19,7 @@ import {
   type DistributionModeState,
   PORTABLE_VERSION_MODE_ERROR,
 } from '../types/distribution-mode.js';
+import type { HybridDistributionMetadata, VersionAssetKind, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 
 /**
  * Version information
@@ -45,6 +47,9 @@ export interface Version {
   releaseNotes?: string;
   /** Release channel (e.g., "stable", "beta", "alpha"). Default: "beta" */
   channel?: string;
+  sourceType?: PackageSourceType;
+  assetKind?: VersionAssetKind;
+  hybrid?: HybridDistributionMetadata;
 }
 
 /**
@@ -73,6 +78,7 @@ export interface InstallResult {
   version: Version;
   installedPath?: string;
   error?: string;
+  progress?: VersionDownloadProgress;
 }
 
 export interface VersionSwitchResult {
@@ -100,6 +106,7 @@ export class VersionManager {
   private pathManager: PathManager;
   private configManager: ConfigManager;
   private packageSourceConfigManager: PackageSourceConfigManager;
+  private hybridDownloadCoordinator: HybridDownloadCoordinator;
   private userDataPath: string;
   private currentPackageSource: PackageSource | null;
   private distributionMode: DistributionMode = 'normal';
@@ -110,6 +117,7 @@ export class VersionManager {
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
     this.configManager = new ConfigManager();
+    this.hybridDownloadCoordinator = new HybridDownloadCoordinator();
     // Use Electron's app.getPath('userData') to get the correct user data path
     this.userDataPath = app.getPath('userData');
 
@@ -228,6 +236,7 @@ export class VersionManager {
 
       this.activePortableRuntime = await this.createPortableRuntimeDescriptor(validation.runtimeRoot);
       this.distributionMode = 'steam';
+      await this.hybridDownloadCoordinator.stopSharingActivity();
       log.info('[VersionManager] Portable version payload detected successfully:', {
         runtimeRoot: validation.runtimeRoot,
         versionId: this.activePortableRuntime.id,
@@ -460,6 +469,51 @@ export class VersionManager {
     return this.packageSourceConfigManager.getAllSources();
   }
 
+  getSharingAccelerationSettings(): SharingAccelerationSettings {
+    return this.toEffectiveSharingAccelerationSettings(
+      this.hybridDownloadCoordinator.getSettingsStore().getSettings(),
+    );
+  }
+
+  async updateSharingAccelerationSettings(
+    settings: SharingAccelerationSettingsInput & { enabled: boolean }
+  ): Promise<SharingAccelerationSettings> {
+    if (this.isPortableVersionMode()) {
+      await this.hybridDownloadCoordinator.stopSharingActivity();
+      return this.getSharingAccelerationSettings();
+    }
+
+    const nextSettings = this.hybridDownloadCoordinator.getSettingsStore().updateSettings(settings);
+    if (!nextSettings.enabled) {
+      await this.hybridDownloadCoordinator.disableSharingAcceleration();
+    }
+    return this.toEffectiveSharingAccelerationSettings(nextSettings);
+  }
+
+  async recordOnboardingSharingAccelerationChoice(enabled: boolean): Promise<SharingAccelerationSettings> {
+    if (this.isPortableVersionMode()) {
+      await this.hybridDownloadCoordinator.stopSharingActivity();
+      return this.getSharingAccelerationSettings();
+    }
+
+    const nextSettings = this.hybridDownloadCoordinator.getSettingsStore().recordOnboardingChoice(enabled);
+    if (!enabled) {
+      await this.hybridDownloadCoordinator.disableSharingAcceleration();
+    }
+    return this.toEffectiveSharingAccelerationSettings(nextSettings);
+  }
+
+  private toEffectiveSharingAccelerationSettings(settings: SharingAccelerationSettings): SharingAccelerationSettings {
+    if (!this.isPortableVersionMode()) {
+      return settings;
+    }
+
+    return {
+      ...settings,
+      enabled: false,
+    };
+  }
+
   /**
    * Validate a package source configuration
    */
@@ -492,7 +546,10 @@ export class VersionManager {
       log.info('[VersionManager] Listing available versions...');
 
       const packageSource = await this.ensurePackageSource();
-      const versions = await packageSource.listAvailableVersions();
+      const versions = (await packageSource.listAvailableVersions()).map((version) => ({
+        ...version,
+        sourceType: version.sourceType ?? packageSource.type,
+      }));
 
       log.info('[VersionManager] Found', versions.length, 'available versions');
       return versions;
@@ -562,11 +619,7 @@ export class VersionManager {
    */
   async installVersion(
     versionId: string,
-    onProgress?: (progress: {
-      current: number;
-      total: number;
-      percentage: number;
-    }) => void
+    onProgress?: DownloadProgressCallback
   ): Promise<InstallResult> {
     this.ensureMutableVersionManagementAllowed();
 
@@ -615,9 +668,28 @@ export class VersionManager {
       const cachePath = this.pathManager.getCachePath(targetVersion.packageFilename);
 
       log.info('[VersionManager] Downloading package to cache...');
-      await packageSource.downloadPackage(targetVersion, cachePath, onProgress);
+      const effectiveSharingAccelerationSettings = this.getSharingAccelerationSettings();
+      const downloadResult = await this.hybridDownloadCoordinator.download(
+        targetVersion,
+        cachePath,
+        packageSource,
+        onProgress,
+        {
+          settings: effectiveSharingAccelerationSettings,
+          distributionMode: this.getDistributionMode(),
+        },
+      );
 
       // Extract package
+      onProgress?.({
+        current: targetVersion.size ?? 0,
+        total: targetVersion.size ?? 0,
+        percentage: 100,
+        stage: 'extracting',
+        mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+        verified: downloadResult.verified,
+        message: 'extracting-package',
+      });
       log.info('[VersionManager] Extracting package...');
       const AdmZip = (await import('adm-zip')).default;
       const zip = new AdmZip(cachePath);
@@ -676,17 +748,45 @@ export class VersionManager {
 
       log.info('[VersionManager] Version installed successfully:', versionId, 'status:', versionInfo.status);
 
+      onProgress?.({
+        current: targetVersion.size ?? 0,
+        total: targetVersion.size ?? 0,
+        percentage: 100,
+        stage: 'completed',
+        mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+        verified: downloadResult.verified,
+        message: 'installation-complete',
+      });
+
       return {
         success: true,
         version: targetVersion,
         installedPath: installPath,
+        progress: {
+          current: targetVersion.size ?? 0,
+          total: targetVersion.size ?? 0,
+          percentage: 100,
+          stage: 'completed',
+          mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+          verified: downloadResult.verified,
+          message: 'installation-complete',
+        },
       };
     } catch (error) {
       log.error('[VersionManager] Failed to install version:', error);
       return {
         success: false,
-        version: { id: versionId, version: '', platform: '', packageFilename: versionId },
+        version: { id: versionId, version: '', platform: '', packageFilename: versionId, sourceType: 'http-index' },
         error: error instanceof Error ? error.message : String(error),
+        progress: {
+          current: 0,
+          total: 0,
+          percentage: 0,
+          stage: 'error',
+          mode: 'http-direct',
+          verified: false,
+          message: error instanceof Error ? error.message : String(error),
+        },
       };
     }
   }
@@ -807,7 +907,10 @@ export class VersionManager {
    * Reinstall a version (works even for active versions)
    * This will clear the active status, remove the version, and reinstall it
    */
-  async reinstallVersion(versionId: string): Promise<{ success: boolean; error?: string }> {
+  async reinstallVersion(
+    versionId: string,
+    onProgress?: DownloadProgressCallback
+  ): Promise<{ success: boolean; error?: string }> {
     this.ensureMutableVersionManagementAllowed();
 
     try {
@@ -840,7 +943,7 @@ export class VersionManager {
       log.info('[VersionManager] Version removed for reinstallation:', versionId);
 
       // Now reinstall using installVersion
-      const result = await this.installVersion(versionId);
+      const result = await this.installVersion(versionId, onProgress);
 
       if (result.success && wasActive) {
         // Set it as active again if it was active before

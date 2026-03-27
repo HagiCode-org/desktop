@@ -1,7 +1,7 @@
 import axios from 'axios';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import log from 'electron-log';
+import type { HybridDistributionMetadata, VersionAssetKind } from '../../types/sharing-acceleration.js';
 import type { Version } from '../version-manager.js';
 import type {
   PackageSource,
@@ -10,113 +10,74 @@ import type {
   DownloadProgressCallback,
 } from './package-source.js';
 
-/**
- * HTTP Index file asset interface (official format)
- */
+const HYBRID_THRESHOLD_BYTES = 100 * 1024 * 1024;
+
 export interface HttpIndexAsset {
   name: string;
   path?: string;
   size?: number;
   lastModified?: string;
+  directUrl?: string;
+  torrentUrl?: string;
+  infoHash?: string;
+  webSeeds?: string[];
+  sha256?: string;
 }
 
-/**
- * HTTP Index file version interface (official format)
- */
+export interface HttpIndexLegacyFile {
+  name?: string;
+  path?: string;
+  size?: number;
+  lastModified?: string;
+  directUrl?: string;
+}
+
 export interface HttpIndexVersion {
   version: string;
-  files?: string[];
-  assets: HttpIndexAsset[];
+  files?: Array<string | HttpIndexLegacyFile>;
+  assets?: HttpIndexAsset[];
 }
 
-/**
- * Channel information interface
- * Represents a release channel (e.g., stable, beta, alpha)
- *
- * @example
- * ```json
- * {
- *   "latest": "1.0.0",
- *   "versions": ["1.0.0", "0.9.0"]
- * }
- * ```
- */
 export interface ChannelInfo {
-  /** The latest version string in this channel */
   latest: string;
-  /** Array of version strings belonging to this channel */
   versions: string[];
 }
 
-/**
- * HTTP Index file structure
- * Represents the response from the HTTP index server
- *
- * @example
- * ```json
- * {
- *   "versions": [...],
- *   "channels": {
- *     "beta": { "latest": "0.1.0-beta.11", "versions": ["0.1.0-beta.11"] },
- *     "stable": { "latest": "1.0.0", "versions": ["1.0.0"] }
- *   }
- * }
- * ```
- */
 export interface HttpIndexFile {
   versions: HttpIndexVersion[];
-  /** Optional channels object mapping channel names to their version information.
-   * When absent, all versions default to 'beta' channel for backward compatibility. */
   channels?: Record<string, ChannelInfo>;
 }
 
-/**
- * Cache entry for version list
- */
 interface VersionCacheEntry {
   versions: Version[];
   timestamp: number;
 }
 
-/**
- * HTTP Index package source implementation
- * Fetches release information from a custom HTTP index server
- */
 export class HttpIndexPackageSource implements PackageSource {
   readonly type = 'http-index' as const;
   private config: HttpIndexConfig;
   private cache: Map<string, VersionCacheEntry>;
-  private readonly CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+  private readonly cacheTtl = 60 * 60 * 1000;
 
   constructor(config: HttpIndexConfig) {
     this.config = config;
     this.cache = new Map();
   }
 
-  /**
-   * List all available versions from HTTP index
-   */
   async listAvailableVersions(): Promise<Version[]> {
     try {
       log.info('[HttpIndexSource] Fetching index from:', this.config.indexUrl);
 
-      // Check cache first
       const cacheKey = this.getCacheKey();
       const cached = this.cache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      if (cached && Date.now() - cached.timestamp < this.cacheTtl) {
         log.info('[HttpIndexSource] Using cached versions');
         return cached.versions;
       }
 
-      // Prepare request headers
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-      };
-
-      // Fetch index from HTTP server
       const response = await axios.get<HttpIndexFile>(this.config.indexUrl, {
-        headers,
-        timeout: 30000, // 30 second timeout
+        headers: { Accept: 'application/json' },
+        timeout: 30000,
       });
 
       if (response.status !== 200) {
@@ -124,71 +85,54 @@ export class HttpIndexPackageSource implements PackageSource {
       }
 
       const indexData = response.data;
+      this.assertIndexShape(indexData);
 
-      // Validate index structure
-      if (!indexData || !Array.isArray(indexData.versions)) {
-        throw new Error('Invalid index file format: missing or invalid versions array');
-      }
-
-      log.info('[HttpIndexSource] Found', indexData.versions.length, 'versions in index');
-
-      // Get current platform for filtering
       const currentPlatform = this.getCurrentPlatform();
-      log.info('[HttpIndexSource] Current platform:', currentPlatform);
-
-      // Parse version information from index
+      const latestVersionSet = this.buildLatestVersionSet(indexData.channels);
       const versions: Version[] = [];
+
       for (const versionEntry of indexData.versions) {
-        // Process assets
-        for (const asset of versionEntry.assets) {
-          // Extract platform from filename
+        for (const asset of this.normalizeVersionAssets(versionEntry)) {
           const platform = this.extractPlatformFromFilename(asset.name);
-          if (!platform) {
-            log.warn('[HttpIndexSource] Could not extract platform from filename:', asset.name);
+          if (!platform || platform !== currentPlatform) {
             continue;
           }
 
-          // Only include versions compatible with current platform
-          if (platform === currentPlatform) {
-            const downloadUrl = this.resolveAssetUrl(asset);
-            const id = asset.name.replace(/\.zip$/, '');
+          const directUrl = this.resolveAssetUrl(asset);
+          const assetKind = this.detectAssetKind(asset.name, versionEntry.version, latestVersionSet);
+          const hybrid = this.buildHybridMetadata(asset, directUrl, assetKind);
 
-            versions.push({
-              id,
-              version: versionEntry.version,
-              platform,
-              packageFilename: asset.name,
-              releasedAt: asset.lastModified || new Date().toISOString(),
-              size: asset.size,
-              downloadUrl,
+          versions.push({
+            id: asset.name.replace(/\.zip$/, ''),
+            version: versionEntry.version,
+            platform,
+            packageFilename: asset.name,
+            releasedAt: asset.lastModified || new Date().toISOString(),
+            size: asset.size,
+            downloadUrl: directUrl,
+            sourceType: 'http-index',
+            assetKind,
+            hybrid,
+          });
+        }
+      }
+
+      if (indexData.channels) {
+        for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
+          for (const versionStr of channelInfo.versions) {
+            versions.filter((version) => version.version === versionStr).forEach((version) => {
+              version.channel = channelName;
             });
           }
         }
-      }
-
-      // Map versions to channels if channels object exists
-      if (indexData.channels) {
-        log.info('[HttpIndexSource] Mapping versions to channels');
-        for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
-          for (const versionStr of channelInfo.versions) {
-            const version = versions.find(v => v.version === versionStr);
-            if (version) {
-              version.channel = channelName;
-            }
-          }
-        }
       } else {
-        // Backward compatibility: default all versions to 'beta' when no channels specified
-        log.info('[HttpIndexSource] No channels object found, defaulting all versions to beta');
-        versions.forEach(v => v.channel = 'beta');
+        versions.forEach((version) => {
+          version.channel = 'beta';
+        });
       }
 
-      // Sort by version (newest first)
       versions.sort((a, b) => this.compareVersions(b.version, a.version));
 
-      log.info('[HttpIndexSource] Found', versions.length, 'versions for platform:', currentPlatform);
-
-      // Cache the results
       this.cache.set(cacheKey, {
         versions,
         timestamp: Date.now(),
@@ -199,21 +143,13 @@ export class HttpIndexPackageSource implements PackageSource {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         if (status === 404) {
-          log.error('[HttpIndexSource] Index file not found:', this.config.indexUrl);
-          throw new Error(
-            `Index file not found at ${this.config.indexUrl}. ` +
-            'Please check the URL is correct and accessible.'
-          );
-        } else if (status === 401 || status === 403) {
-          log.error('[HttpIndexSource] Authentication failed');
-          throw new Error(
-            'Authentication failed. Please check your authentication token.'
-          );
-        } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-          log.error('[HttpIndexSource] Failed to connect to server');
-          throw new Error(
-            'Failed to connect to the server. Please check your internet connection.'
-          );
+          throw new Error(`Index file not found at ${this.config.indexUrl}. Please check the URL is correct and accessible.`);
+        }
+        if (status === 401 || status === 403) {
+          throw new Error('Authentication failed. Please check your authentication token.');
+        }
+        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+          throw new Error('Failed to connect to the server. Please check your internet connection.');
         }
       }
 
@@ -222,22 +158,12 @@ export class HttpIndexPackageSource implements PackageSource {
     }
   }
 
-  /**
-   * Download package from HTTP index source
-   */
-  async downloadPackage(
-    version: Version,
-    cachePath: string,
-    onProgress?: DownloadProgressCallback
-  ): Promise<void> {
+  async downloadPackage(version: Version, cachePath: string, onProgress?: DownloadProgressCallback): Promise<void> {
     try {
       if (!version.downloadUrl) {
         throw new Error(`No download URL available for version: ${version.id}`);
       }
 
-      log.info('[HttpIndexSource] Downloading package:', version.id);
-
-      // Download with progress tracking
       const response = await axios.get<ArrayBuffer>(version.downloadUrl, {
         responseType: 'arraybuffer',
         onDownloadProgress: (progressEvent) => {
@@ -245,118 +171,73 @@ export class HttpIndexPackageSource implements PackageSource {
             const current = progressEvent.loaded;
             const total = progressEvent.total;
             const percentage = Math.round((current / total) * 100);
-            onProgress({ current, total, percentage });
+            onProgress({
+              current,
+              total,
+              percentage,
+              stage: 'downloading',
+              mode: 'http-direct',
+              p2pBytes: 0,
+              fallbackBytes: current,
+              peers: 0,
+              message: version.hybrid?.legacyHttpFallback ? 'legacy-http-fallback' : 'direct-http',
+            });
           }
         },
       });
 
-      // Write to cache file
-      const buffer = Buffer.from(response.data);
-      await fs.writeFile(cachePath, buffer);
-
-      log.info('[HttpIndexSource] Package downloaded successfully');
+      await fs.writeFile(cachePath, Buffer.from(response.data));
     } catch (error) {
       log.error('[HttpIndexSource] Failed to download package:', error);
       throw error;
     }
   }
 
-  /**
-   * Validate the HTTP index configuration
-   */
   async validateConfig(): Promise<PackageSourceValidationResult> {
     try {
-      // Check if required fields are provided
       if (!this.config.indexUrl || this.config.indexUrl.trim() === '') {
-        return {
-          valid: false,
-          error: 'Index URL is required',
-        };
+        return { valid: false, error: 'Index URL is required' };
       }
 
-      // Validate URL format
+      let parsedUrl: URL;
       try {
-        new URL(this.config.indexUrl);
+        parsedUrl = new URL(this.config.indexUrl);
       } catch {
-        return {
-          valid: false,
-          error: 'Invalid index URL format',
-        };
+        return { valid: false, error: 'Invalid index URL format' };
       }
 
-      // Test index file access
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-      };
-
-      try {
-        const response = await axios.get<HttpIndexFile>(this.config.indexUrl, {
-          headers,
-          timeout: 10000, // 10 second timeout for validation
-          validateStatus: (status) => status < 500,
-        });
-
-        if (response.status === 404) {
-          return {
-            valid: false,
-            error: 'Index file not found',
-          };
-        }
-
-        if (response.status === 401 || response.status === 403) {
-          return {
-            valid: false,
-            error: 'Authentication failed',
-          };
-        }
-
-        if (response.status !== 200) {
-          return {
-            valid: false,
-            error: `Server returned status ${response.status}`,
-          };
-        }
-
-        // Validate index structure
-        const indexData = response.data;
-        if (!indexData || !Array.isArray(indexData.versions)) {
-          return {
-            valid: false,
-            error: 'Invalid index file format',
-          };
-        }
-
-        // Validate channels structure if present
-        if (indexData.channels) {
-          for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
-            if (!channelInfo.latest || !Array.isArray(channelInfo.versions)) {
-              return {
-                valid: false,
-                error: `Invalid channel structure for '${channelName}'`,
-              };
-            }
-          }
-        }
-
-        return { valid: true };
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-            return {
-              valid: false,
-              error: 'Failed to connect to server',
-            };
-          }
-          if (error.code === 'ETIMEDOUT') {
-            return {
-              valid: false,
-              error: 'Connection timed out',
-            };
-          }
-        }
-        throw error;
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return { valid: false, error: 'Index URL must use http or https' };
       }
+
+      const response = await axios.get<HttpIndexFile>(this.config.indexUrl, {
+        headers: { Accept: 'application/json' },
+        timeout: 10000,
+        validateStatus: (status) => status < 500,
+      });
+
+      if (response.status === 404) {
+        return { valid: false, error: 'Index file not found' };
+      }
+      if (response.status === 401 || response.status === 403) {
+        return { valid: false, error: 'Authentication failed' };
+      }
+      if (response.status !== 200) {
+        return { valid: false, error: `Server returned status ${response.status}` };
+      }
+
+      this.assertIndexShape(response.data);
+      return { valid: true };
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+          return { valid: false, error: 'Failed to connect to server' };
+        }
+        if (error.code === 'ETIMEDOUT') {
+          return { valid: false, error: 'Connection timed out' };
+        }
+      }
+
       return {
         valid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -364,70 +245,209 @@ export class HttpIndexPackageSource implements PackageSource {
     }
   }
 
-  /**
-   * Clear cached version data
-   */
   clearCache(): void {
-    const cacheKey = this.getCacheKey();
-    this.cache.delete(cacheKey);
-    log.info('[HttpIndexSource] Cache cleared');
+    this.cache.delete(this.getCacheKey());
   }
 
-  /**
-   * Get cache key for this configuration
-   */
   private getCacheKey(): string {
     return this.config.indexUrl;
   }
 
-  /**
-   * Resolve the full download URL for an asset
-   * Constructs URL based on the index URL location
-   */
+  private assertIndexShape(indexData: HttpIndexFile | undefined): asserts indexData is HttpIndexFile {
+    if (!indexData || !Array.isArray(indexData.versions)) {
+      throw new Error('Invalid index file format: missing or invalid versions array');
+    }
+
+    for (const versionEntry of indexData.versions) {
+      const hasAssets = Array.isArray(versionEntry?.assets);
+      const hasFiles = Array.isArray(versionEntry?.files);
+      if (!versionEntry || typeof versionEntry.version !== 'string' || (!hasAssets && !hasFiles)) {
+        throw new Error('Invalid index file format');
+      }
+      for (const asset of this.normalizeVersionAssets(versionEntry)) {
+        if (!asset || typeof asset.name !== 'string') {
+          throw new Error('Invalid index file format');
+        }
+        if (asset.webSeeds && !Array.isArray(asset.webSeeds)) {
+          throw new Error('Invalid index file format');
+        }
+      }
+    }
+
+    if (!indexData.channels) {
+      return;
+    }
+
+    for (const [channelName, channelInfo] of Object.entries(indexData.channels)) {
+      if (!channelInfo.latest || !Array.isArray(channelInfo.versions)) {
+        throw new Error(`Invalid channel structure for '${channelName}'`);
+      }
+    }
+  }
+
+  private buildLatestVersionSet(channels?: Record<string, ChannelInfo>): Set<string> {
+    const latestVersions = new Set<string>();
+    if (!channels) {
+      return latestVersions;
+    }
+
+    Object.values(channels).forEach((channelInfo) => {
+      if (channelInfo.latest) {
+        latestVersions.add(channelInfo.latest);
+      }
+    });
+
+    return latestVersions;
+  }
+
   private resolveAssetUrl(asset: HttpIndexAsset): string {
-    // Construct URL from index URL and asset path
+    if (asset.directUrl) {
+      return new URL(asset.directUrl, this.config.indexUrl).toString();
+    }
+
     if (asset.path) {
-      const indexUrl = new URL(this.config.indexUrl);
-      const baseUrl = `${indexUrl.protocol}//${indexUrl.host}`;
-      const pathPrefix = indexUrl.pathname.substring(0, indexUrl.pathname.lastIndexOf('/') + 1);
-      const assetPath = asset.path.startsWith('/') ? asset.path.slice(1) : asset.path;
-      return `${baseUrl}${pathPrefix}${assetPath}`;
+      return new URL(asset.path, this.config.indexUrl).toString();
     }
 
     throw new Error(`Cannot resolve download URL for asset: ${asset.name}`);
   }
 
-  /**
-   * Extract platform from asset filename
-   * Supports formats: hagicode-{version}-{platform}-nort.zip or hagicode-{version}-{platform}.zip
-   */
+  private resolveOptionalUrl(urlValue?: string): string | undefined {
+    if (!urlValue) {
+      return undefined;
+    }
+
+    return new URL(urlValue, this.config.indexUrl).toString();
+  }
+
+  private normalizeVersionAssets(versionEntry: HttpIndexVersion): HttpIndexAsset[] {
+    if (Array.isArray(versionEntry.assets) && versionEntry.assets.length > 0) {
+      return versionEntry.assets;
+    }
+
+    if (!Array.isArray(versionEntry.files)) {
+      return [];
+    }
+
+    return versionEntry.files.map((fileEntry) => this.normalizeLegacyFile(fileEntry));
+  }
+
+  private normalizeLegacyFile(fileEntry: string | HttpIndexLegacyFile): HttpIndexAsset {
+    if (typeof fileEntry === 'string') {
+      return {
+        name: this.extractNameFromPath(fileEntry),
+        path: fileEntry,
+      };
+    }
+
+    const fallbackPath = fileEntry.path ?? fileEntry.directUrl;
+    return {
+      name: fileEntry.name ?? this.extractNameFromPath(fallbackPath),
+      path: fileEntry.path,
+      size: fileEntry.size,
+      lastModified: fileEntry.lastModified,
+      directUrl: fileEntry.directUrl,
+    };
+  }
+
+  private extractNameFromPath(pathValue?: string): string {
+    if (!pathValue) {
+      throw new Error('Invalid index file format');
+    }
+
+    try {
+      const url = new URL(pathValue, this.config.indexUrl);
+      const segments = url.pathname.split('/').filter(Boolean);
+      const name = segments.at(-1);
+      if (name) {
+        return name;
+      }
+    } catch {
+      const segments = pathValue.split('/').filter(Boolean);
+      const name = segments.at(-1);
+      if (name) {
+        return name;
+      }
+    }
+
+    throw new Error('Invalid index file format');
+  }
+
+  private buildHybridMetadata(asset: HttpIndexAsset, directUrl: string, assetKind: VersionAssetKind): HybridDistributionMetadata {
+    const webSeeds = Array.isArray(asset.webSeeds)
+      ? asset.webSeeds
+        .map((seed) => this.resolveOptionalUrl(seed))
+        .filter((seed): seed is string => Boolean(seed))
+      : [];
+
+    if (directUrl && !webSeeds.includes(directUrl)) {
+      webSeeds.push(directUrl);
+    }
+
+    const hasRequiredMetadata = Boolean(asset.torrentUrl && asset.infoHash && asset.sha256 && webSeeds.length > 0);
+    const meetsThreshold = typeof asset.size === 'number' && asset.size >= HYBRID_THRESHOLD_BYTES;
+    const isLatestDesktopAsset = assetKind === 'desktop-latest';
+    const isLatestWebAsset = assetKind === 'web-latest';
+
+    return {
+      torrentUrl: this.resolveOptionalUrl(asset.torrentUrl),
+      infoHash: asset.infoHash,
+      webSeeds,
+      sha256: asset.sha256,
+      directUrl,
+      eligible: hasRequiredMetadata && meetsThreshold,
+      legacyHttpFallback: !hasRequiredMetadata || !meetsThreshold,
+      thresholdBytes: HYBRID_THRESHOLD_BYTES,
+      assetKind,
+      isLatestDesktopAsset,
+      isLatestWebAsset,
+    };
+  }
+
+  private detectAssetKind(filename: string, version: string, latestVersionSet: Set<string>): VersionAssetKind {
+    const lower = filename.toLowerCase();
+    const isLatest = latestVersionSet.has(version);
+    const isWebAsset = lower.includes('web') || lower.includes('deploy');
+    const isDesktopAsset = lower.startsWith('hagicode-') || lower.includes('portable') || lower.includes('-nort');
+
+    if (isWebAsset && isLatest) {
+      return 'web-latest';
+    }
+    if (isDesktopAsset && isLatest) {
+      return 'desktop-latest';
+    }
+    if (isWebAsset) {
+      return 'web-package';
+    }
+    if (isDesktopAsset) {
+      return 'desktop-package';
+    }
+    return 'generic';
+  }
+
   private extractPlatformFromFilename(filename: string): string | null {
-    // New format: hagicode-{version}-{platform}-nort.zip
-    // Examples:
-    // - hagicode-0.1.0-beta.1-linux-x64-nort.zip
-    // - hagicode-0.1.0-linux-arm64-nort.zip
     const newFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)-nort\.zip$/);
     if (newFormatMatch) {
       return newFormatMatch[2];
     }
 
-    // Fallback: old format with -x64 hardcoded
     const oldFormatMatch = filename.match(/^hagicode-([0-9]\.[0-9](?:\.[0-9])?(?:-[a-zA-Z0-9\.]+)?)-(linux|osx|windows|win)-x64(-nort)?\.zip$/);
     if (oldFormatMatch) {
       const platform = oldFormatMatch[2];
-      // Normalize 'win' to 'windows' and map to full platform identifier
       if (platform === 'win') return 'win-x64';
       if (platform === 'linux') return 'linux-x64';
       if (platform === 'osx') return 'osx-x64';
-      return platform === 'win' ? 'windows' : platform;
+      return platform;
+    }
+
+    const webArchiveMatch = filename.match(/(linux-x64|linux-arm64|win-x64|osx-x64|osx-arm64)/);
+    if (webArchiveMatch) {
+      return webArchiveMatch[1];
     }
 
     return null;
   }
 
-  /**
-   * Get the current platform name for filtering
-   */
   private getCurrentPlatform(): string {
     const platform = process.platform;
     const arch = process.arch;
@@ -435,7 +455,9 @@ export class HttpIndexPackageSource implements PackageSource {
     if (platform === 'linux') {
       return arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
     }
-    if (platform === 'win32') return 'win-x64';
+    if (platform === 'win32') {
+      return 'win-x64';
+    }
     if (platform === 'darwin') {
       return arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
     }
@@ -443,64 +465,41 @@ export class HttpIndexPackageSource implements PackageSource {
     return 'unknown';
   }
 
-  /**
-   * Compare two version strings
-   * Returns positive if v1 > v2, negative if v1 < v2, 0 if equal
-   * Handles semantic versioning with pre-release tags (e.g., 0.1.0-beta.1)
-   */
   private compareVersions(v1: string, v2: string): number {
-    const parseVersion = (v: string) => {
-      const [versionPart, prereleasePart] = v.split('-');
-      const parts = versionPart.split('.').map(Number);
-      let prerelease: string[] = [];
-      if (prereleasePart) {
-        // Parse prerelease identifiers (e.g., "beta.1" -> ["beta", "1"])
-        prerelease = prereleasePart.split('.');
-      }
-      return { parts, prerelease };
+    const parseVersion = (version: string) => {
+      const [versionPart, prereleasePart] = version.split('-');
+      return {
+        parts: versionPart.split('.').map(Number),
+        prerelease: prereleasePart ? prereleasePart.split('.') : [],
+      };
     };
 
-    const p1 = parseVersion(v1);
-    const p2 = parseVersion(v2);
+    const left = parseVersion(v1);
+    const right = parseVersion(v2);
 
-    // Compare main version parts
-    for (let i = 0; i < Math.max(p1.parts.length, p2.parts.length); i++) {
-      const n1 = p1.parts[i] || 0;
-      const n2 = p2.parts[i] || 0;
-
-      if (n1 > n2) return 1;
-      if (n1 < n2) return -1;
+    for (let index = 0; index < Math.max(left.parts.length, right.parts.length); index += 1) {
+      const leftValue = left.parts[index] || 0;
+      const rightValue = right.parts[index] || 0;
+      if (leftValue !== rightValue) {
+        return leftValue > rightValue ? 1 : -1;
+      }
     }
 
-    // Main versions are equal, compare prerelease identifiers
-    // Versions without prerelease are greater than those with prerelease
-    if (p1.prerelease.length === 0 && p2.prerelease.length > 0) return 1;
-    if (p1.prerelease.length > 0 && p2.prerelease.length === 0) return -1;
-    if (p1.prerelease.length === 0 && p2.prerelease.length === 0) return 0;
+    if (left.prerelease.length === 0 && right.prerelease.length > 0) return 1;
+    if (left.prerelease.length > 0 && right.prerelease.length === 0) return -1;
 
-    // Both have prerelease identifiers, compare them
-    const maxLength = Math.max(p1.prerelease.length, p2.prerelease.length);
-    for (let i = 0; i < maxLength; i++) {
-      const id1 = p1.prerelease[i] || '';
-      const id2 = p2.prerelease[i] || '';
-
-      // Empty identifier is less than any non-empty identifier
-      if (id1 === '' && id2 !== '') return -1;
-      if (id1 !== '' && id2 === '') return 1;
-      if (id1 === '' && id2 === '') return 0;
-
-      // Try to compare as numbers
-      const num1 = parseInt(id1, 10);
-      const num2 = parseInt(id2, 10);
-
-      if (!isNaN(num1) && !isNaN(num2)) {
-        if (num1 > num2) return 1;
-        if (num1 < num2) return -1;
-      } else {
-        // At least one is not a number, compare as strings
-        if (id1 > id2) return 1;
-        if (id1 < id2) return -1;
+    for (let index = 0; index < Math.max(left.prerelease.length, right.prerelease.length); index += 1) {
+      const leftId = left.prerelease[index] || '';
+      const rightId = right.prerelease[index] || '';
+      if (leftId === rightId) {
+        continue;
       }
+      const leftNumeric = Number.parseInt(leftId, 10);
+      const rightNumeric = Number.parseInt(rightId, 10);
+      if (!Number.isNaN(leftNumeric) && !Number.isNaN(rightNumeric)) {
+        return leftNumeric > rightNumeric ? 1 : -1;
+      }
+      return leftId > rightId ? 1 : -1;
     }
 
     return 0;

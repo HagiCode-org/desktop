@@ -16,6 +16,9 @@ export { registerWebServiceHandlers, initWebServiceHandlers } from './webService
 // Version handlers
 export { registerVersionHandlers, initVersionHandlers } from './versionHandlers.js';
 
+// Log directory handlers
+export { registerLogDirectoryHandlers, initLogDirectoryHandlers } from './logDirectoryHandlers.js';
+
 // Dependency handlers
 export { registerDependencyHandlers, initDependencyHandlers } from './dependencyHandlers.js';
 
