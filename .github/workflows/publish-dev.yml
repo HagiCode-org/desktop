@@ -29,6 +29,9 @@ jobs:
       channel: ${{ steps.meta.outputs.channel }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Compute dev release metadata
         id: meta
         shell: bash
@@ -56,6 +59,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
           RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
         run: |
