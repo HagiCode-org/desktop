@@ -561,6 +561,6 @@ jobs:
     uses: ./.github/workflows/sync-azure-storage.yml
     with:
       release_tag: ${{ needs.prepare-release.outputs.release_tag }}
-      release_version: ${{ needs.prepare-release.outputs.version }}
+      release_version: v${{ needs.prepare-release.outputs.version }}
       release_channel: ${{ needs.prepare-release.outputs.channel }}
     secrets: inherit
