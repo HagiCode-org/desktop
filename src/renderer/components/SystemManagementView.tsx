@@ -1,16 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '../hooks/useNavigate';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, CheckCircle, AlertCircle, Activity } from 'lucide-react';
+import { Package, CheckCircle, Activity, FolderOpen, Globe, Monitor, LoaderCircle, type LucideIcon } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import DiagnosisButton from './DiagnosisButton';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import type { RootState } from '../store';
+import type {
+  LogDirectoryErrorCode,
+  LogDirectoryTarget,
+  LogDirectoryTargetStatus,
+} from '@types/log-directory';
 import hagicodeIcon from '../assets/hagicode-icon.png';
 
 interface InstalledVersion {
@@ -29,12 +36,40 @@ declare global {
   interface Window {
     electronAPI: {
       versionGetActive: () => Promise<InstalledVersion | null>;
-      onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => void;
+      onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => (() => void) | void;
+      logDirectory: {
+        listTargets: () => Promise<LogDirectoryTargetStatus[]>;
+        open: (target: LogDirectoryTarget) => Promise<LogDirectoryOpenResult>;
+      };
     };
   }
 }
 
 type ServerStatus = 'running' | 'stopped' | 'error';
+type LogTargetStateMap = Record<LogDirectoryTarget, LogDirectoryTargetStatus>;
+
+const createDefaultLogTarget = (target: LogDirectoryTarget): LogDirectoryTargetStatus => ({
+  target,
+  available: false,
+  exists: false,
+  path: null,
+  reason: target === 'web-app' ? 'no_active_version' : 'logs_not_found',
+});
+
+const createDefaultLogTargetMap = (): LogTargetStateMap => ({
+  desktop: createDefaultLogTarget('desktop'),
+  'web-app': createDefaultLogTarget('web-app'),
+});
+
+const toLogTargetStateMap = (targets: LogDirectoryTargetStatus[]): LogTargetStateMap => {
+  const nextState = createDefaultLogTargetMap();
+
+  for (const target of targets) {
+    nextState[target.target] = target;
+  }
+
+  return nextState;
+};
 
 export default function SystemManagementView() {
   const { t } = useTranslation('common');
@@ -43,22 +78,114 @@ export default function SystemManagementView() {
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
+  const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
+  const [isLogTargetsLoading, setIsLogTargetsLoading] = useState(true);
+  const [openingTarget, setOpeningTarget] = useState<LogDirectoryTarget | null>(null);
+
+  const loadLogTargets = useCallback(async (showErrorToast = true) => {
+    setIsLogTargetsLoading(true);
+
+    try {
+      const targets = await window.electronAPI.logDirectory.listTargets();
+      setLogTargets(toLogTargetStateMap(targets));
+    } catch (error) {
+      console.error('Failed to load log directory targets:', error);
+      setLogTargets(createDefaultLogTargetMap());
+
+      if (showErrorToast) {
+        toast.error(t('system.logQuickAccess.errors.load_failed'));
+      }
+    } finally {
+      setIsLogTargetsLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
-    // Get active version
-    window.electronAPI.versionGetActive().then(setActiveVersion);
+    let isDisposed = false;
 
-    // Listen for active version changes
+    const loadInitialState = async () => {
+      try {
+        const [version, targets] = await Promise.all([
+          window.electronAPI.versionGetActive(),
+          window.electronAPI.logDirectory.listTargets(),
+        ]);
+
+        if (isDisposed) {
+          return;
+        }
+
+        setActiveVersion(version);
+        setLogTargets(toLogTargetStateMap(targets));
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+
+        console.error('Failed to initialize system dashboard state:', error);
+        toast.error(t('system.logQuickAccess.errors.load_failed'));
+      } finally {
+        if (!isDisposed) {
+          setIsLogTargetsLoading(false);
+        }
+      }
+    };
+
+    void loadInitialState();
+
     const unsubscribeVersion = window.electronAPI.onActiveVersionChanged((version) => {
       setActiveVersion(version);
+      void loadLogTargets(false);
     });
 
     return () => {
+      isDisposed = true;
       if (typeof unsubscribeVersion === 'function') {
         unsubscribeVersion();
       }
     };
-  }, []);
+  }, [loadLogTargets, t]);
+
+  const getLogTargetDescription = useCallback((target: LogDirectoryTarget, status: LogDirectoryTargetStatus) => {
+    if (status.reason) {
+      return t(`system.logQuickAccess.errors.${status.reason}`);
+    }
+
+    return target === 'desktop'
+      ? t('system.logQuickAccess.desktop.description')
+      : t('system.logQuickAccess.webApp.description');
+  }, [t]);
+
+  const getOpenSuccessMessage = useCallback((target: LogDirectoryTarget) => {
+    return target === 'desktop'
+      ? t('system.logQuickAccess.desktop.openSuccess')
+      : t('system.logQuickAccess.webApp.openSuccess');
+  }, [t]);
+
+  const getOpenErrorMessage = useCallback((errorCode?: LogDirectoryErrorCode) => {
+    const normalizedCode = errorCode ?? 'open_failed';
+    return t(`system.logQuickAccess.errors.${normalizedCode}`);
+  }, [t]);
+
+  const handleOpenLogDirectory = useCallback(async (target: LogDirectoryTarget) => {
+    setOpeningTarget(target);
+
+    try {
+      const result = await window.electronAPI.logDirectory.open(target);
+
+      if (result.success) {
+        toast.success(getOpenSuccessMessage(target));
+      } else {
+        toast.error(getOpenErrorMessage(result.error));
+      }
+
+      await loadLogTargets(false);
+    } catch (error) {
+      console.error('Failed to open log directory:', error);
+      toast.error(getOpenErrorMessage('open_failed'));
+    } finally {
+      setOpeningTarget(null);
+    }
+  }, [getOpenErrorMessage, getOpenSuccessMessage, loadLogTargets]);
 
   // Get server status from Redux store
   const serverStatus: ServerStatus =
@@ -112,9 +239,7 @@ export default function SystemManagementView() {
 
   const handleStartWizard = async () => {
     try {
-      // Reset onboarding state to allow it to show again
       await dispatch(resetOnboarding()).unwrap();
-      // Check trigger condition to activate onboarding
       const result = await dispatch(checkOnboardingTrigger()).unwrap();
       if (result.shouldShow) {
         toast.success(t('versionManagement.toast.onboardingStarted'));
@@ -127,9 +252,28 @@ export default function SystemManagementView() {
     }
   };
 
+  const logQuickAccessItems: Array<{
+    target: LogDirectoryTarget;
+    icon: LucideIcon;
+    label: string;
+    status: LogDirectoryTargetStatus;
+  }> = [
+    {
+      target: 'desktop',
+      icon: Monitor,
+      label: t('system.logQuickAccess.desktop.label'),
+      status: logTargets.desktop,
+    },
+    {
+      target: 'web-app',
+      icon: Globe,
+      label: t('system.logQuickAccess.webApp.label'),
+      status: logTargets['web-app'],
+    },
+  ];
+
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -158,7 +302,6 @@ export default function SystemManagementView() {
           </div>
         </motion.div>
 
-        {/* Service Status Indicator */}
         <AnimatePresence mode="wait">
           <motion.div
             key={serverStatus}
@@ -194,11 +337,11 @@ export default function SystemManagementView() {
                   ${serverStatus === 'running' ? 'shadow-lg shadow-primary/50' : ''}
                 `}
               />
-              <Activity className={`w-4 h-4 ${serverStatus === 'running' ? 'text-primary' : serverStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'}`} />
-              <span className={`font-semibold ${serverStatus === 'running' ? 'text-primary' : serverStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>
+              <Activity className={cn('w-4 h-4', getStatusColor(serverStatus))} />
+              <span className={cn('font-semibold', getStatusColor(serverStatus))}>
                 {getStatusText(serverStatus)}
               </span>
-              {serverStatus === 'running' && (
+              {serverStatus === 'running' ? (
                 <motion.span
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -206,13 +349,12 @@ export default function SystemManagementView() {
                 >
                   • Hagicode 服务在线
                 </motion.span>
-              )}
+              ) : null}
             </motion.div>
           </motion.div>
         </AnimatePresence>
       </motion.div>
 
-      {/* Diagnosis Button */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -222,7 +364,6 @@ export default function SystemManagementView() {
         <DiagnosisButton />
       </motion.div>
 
-      {/* Embedded Web Service Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -231,7 +372,6 @@ export default function SystemManagementView() {
         <WebServiceStatusCard />
       </motion.div>
 
-      {/* Blog Feed Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -241,18 +381,97 @@ export default function SystemManagementView() {
         <BlogFeedCard />
       </motion.div>
 
-      {/* Active Version Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="mt-6 bg-card rounded-xl p-6 border border-border relative overflow-hidden group"
+      >
+        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+        <div className="relative z-10">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-primary" />
+                {t('system.logQuickAccess.title')}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('system.logQuickAccess.description')}
+              </p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {logQuickAccessItems.map(({ target, icon: Icon, label, status }) => {
+              const isOpening = openingTarget === target;
+              const isDisabled = isLogTargetsLoading || isOpening || !status.available;
+
+              return (
+                <div
+                  key={target}
+                  className="rounded-xl border border-border/70 bg-muted/30 p-4 flex flex-col gap-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-lg bg-background/80 p-2 border border-border/60">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-foreground">{label}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {getLogTargetDescription(target, status)}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                        status.available
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {status.available
+                        ? t('system.logQuickAccess.status.available')
+                        : t('system.logQuickAccess.status.unavailable')}
+                    </span>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleOpenLogDirectory(target)}
+                    disabled={isDisabled}
+                    className="justify-between"
+                  >
+                    <span>{label}</span>
+                    {isOpening ? (
+                      <LoaderCircle className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FolderOpen className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
+
       <AnimatePresence>
-        {activeVersion && (
+        {activeVersion ? (
           <motion.div
             key="version-card"
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
+            transition={{ delay: 0.45, duration: 0.4 }}
             className="mt-6 bg-card rounded-xl p-6 border border-border relative overflow-hidden group"
           >
-            {/* Subtle gradient background */}
             <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             <div className="relative z-10">
@@ -263,10 +482,7 @@ export default function SystemManagementView() {
                   transition={{ delay: 0.5 }}
                   className="text-xl font-semibold flex items-center gap-2"
                 >
-                  <motion.div
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
+                  <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>
                     <Package className="w-6 h-6 text-primary" />
                   </motion.div>
                   {t('common.version')}
@@ -296,7 +512,7 @@ export default function SystemManagementView() {
                   { label: t('common.platform'), value: activeVersion.platform },
                   {
                     label: '安装于',
-                    value: new Date(activeVersion.installedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+                    value: new Date(activeVersion.installedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
                   },
                 ].map((item, index) => (
                   <motion.div
@@ -334,21 +550,19 @@ export default function SystemManagementView() {
               </div>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
-      {/* No Version State */}
       <AnimatePresence mode="wait">
-        {!activeVersion && (
+        {!activeVersion ? (
           <motion.div
             key="no-version"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
+            transition={{ delay: 0.45, duration: 0.4 }}
             className="mt-6 bg-card rounded-xl p-8 border border-border text-center relative overflow-hidden"
           >
-            {/* Animated background elements */}
             <motion.div
               animate={{
                 scale: [1, 1.2, 1],
@@ -404,10 +618,9 @@ export default function SystemManagementView() {
               </motion.button>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
-      {/* Footer */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

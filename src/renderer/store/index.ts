@@ -171,7 +171,14 @@ if (typeof window !== 'undefined') {
   // Listen for package install progress
   window.electronAPI.onPackageInstallProgress?.((progress: any) => {
     console.log('Package install progress:', progress);
-    store.dispatch({ type: 'webService/setInstallProgress', payload: progress });
+    store.dispatch({
+      type: 'webService/setInstallProgress',
+      payload: {
+        ...progress,
+        progress: typeof progress?.progress === 'number' ? progress.progress : progress?.percentage ?? 0,
+        message: progress?.message || progress?.stage || 'installing',
+      },
+    });
   });
 
 }

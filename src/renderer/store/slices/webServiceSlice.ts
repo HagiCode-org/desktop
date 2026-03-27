@@ -77,9 +77,14 @@ export interface PackageInfo {
 }
 
 export interface InstallProgress {
-  stage: 'downloading' | 'extracting' | 'verifying' | 'completed' | 'error';
+  stage: 'queued' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
   progress: number;
   message: string;
+  mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
+  peers?: number;
+  p2pBytes?: number;
+  fallbackBytes?: number;
+  verified?: boolean;
 }
 
 export interface StartupFailurePayload {

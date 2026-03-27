@@ -45,6 +45,14 @@ interface Version {
   version: string;
   platform: string;
   packageFilename: string;
+  sourceType?: 'local-folder' | 'github-release' | 'http-index';
+  assetKind?: string;
+  hybrid?: {
+    eligible: boolean;
+    legacyHttpFallback: boolean;
+    isLatestDesktopAsset: boolean;
+    isLatestWebAsset: boolean;
+  };
 }
 
 interface InstalledVersion {
@@ -379,7 +387,9 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     if (!webServiceInstallProgress) return t('versionManagement.installing');
 
     const stageTexts: Record<string, string> = {
+      'queued': t('versionManagement.downloadStage.queued'),
       'downloading': t('versionManagement.downloading'),
+      'backfilling': t('versionManagement.downloadStage.backfilling'),
       'extracting': t('versionManagement.extracting'),
       'verifying': t('versionManagement.verifying'),
       'completed': t('versionManagement.completed'),
@@ -387,6 +397,41 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     };
 
     return stageTexts[webServiceInstallProgress.stage] || webServiceInstallProgress.message || t('versionManagement.installing');
+  };
+
+  const getDownloadModeLabel = (mode?: string) => {
+    if (mode === 'shared-acceleration') return t('versionManagement.downloadMode.shared');
+    if (mode === 'source-fallback') return t('versionManagement.downloadMode.fallback');
+    return t('versionManagement.downloadMode.direct');
+  };
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / 1024 ** exponent;
+    return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[exponent]}`;
+  };
+
+  const renderInstallTelemetry = () => {
+    if (!isInstallingFromState || !webServiceInstallProgress) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3">
+          <span>{t('versionManagement.installTelemetry.mode')}: {getDownloadModeLabel(webServiceInstallProgress.mode)}</span>
+          <span>{t('versionManagement.installTelemetry.stage')}: {getInstallProgressText()}</span>
+          <span>{t('versionManagement.installTelemetry.peers')}: {webServiceInstallProgress.peers ?? 0}</span>
+          <span>{t('versionManagement.installTelemetry.sharedBytes')}: {formatBytes(webServiceInstallProgress.p2pBytes)}</span>
+          <span>{t('versionManagement.installTelemetry.fallbackBytes')}: {formatBytes(webServiceInstallProgress.fallbackBytes)}</span>
+          {webServiceInstallProgress.verified && (
+            <span className="text-primary">{t('versionManagement.installTelemetry.verified')}</span>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const getDesktopCompatibility = (version: InstalledVersion) => version.validation?.desktopCompatibility;
@@ -639,6 +684,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                     </span>
                   )}
                 </div>
+                {renderInstallTelemetry()}
               </div>
             );
           })}
@@ -857,6 +903,8 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                       </div>
                     </div>
                   )}
+
+                  {renderInstallTelemetry()}
 
                   {/* Dependencies Section */}
                   {expandedVersion === version.id && dependencies[version.id] && (

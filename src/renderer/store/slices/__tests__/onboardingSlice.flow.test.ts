@@ -9,20 +9,29 @@ import reducer, {
 import { goToNextStep, goToPreviousStep } from '../../thunks/onboardingThunks.js';
 
 describe('onboardingSlice flow', () => {
-  it('uses the three-step onboarding sequence', () => {
+  it('uses the four-step onboarding sequence', () => {
     assert.equal(OnboardingStep.Welcome, 0);
-    assert.equal(OnboardingStep.Download, 1);
-    assert.equal(OnboardingStep.Launch, 2);
+    assert.equal(OnboardingStep.SharingAcceleration, 1);
+    assert.equal(OnboardingStep.Download, 2);
+    assert.equal(OnboardingStep.Launch, 3);
   });
 
-  it('advances from welcome directly to download', () => {
+  it('advances from welcome to sharing acceleration first', () => {
     const state = reducer(undefined, goToNextStep());
+    assert.equal(state.currentStep, OnboardingStep.SharingAcceleration);
+    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
+  });
+
+  it('advances from sharing acceleration to download', () => {
+    const welcomeState = reducer(undefined, goToNextStep());
+    const state = reducer(welcomeState, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.Download);
     assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
   });
 
   it('advances from download directly to launch once a version is ready', () => {
     let state = reducer(undefined, goToNextStep());
+    state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.Download);
 
     const blockedAtDownload = reducer(state, goToNextStep());
@@ -46,14 +55,19 @@ describe('onboardingSlice flow', () => {
 
   it('navigates back from download to welcome', () => {
     let state = reducer(undefined, goToNextStep());
+    state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.Download);
 
-    const backToWelcome = reducer(state, goToPreviousStep());
+    const backToSharing = reducer(state, goToPreviousStep());
+    assert.equal(backToSharing.currentStep, OnboardingStep.SharingAcceleration);
+
+    const backToWelcome = reducer(backToSharing, goToPreviousStep());
     assert.equal(backToWelcome.currentStep, OnboardingStep.Welcome);
   });
 
   it('navigates back from launch to download', () => {
     let state = reducer(undefined, goToNextStep());
+    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       setDownloadProgress({
@@ -74,6 +88,7 @@ describe('onboardingSlice flow', () => {
 
   it('only enables next on launch after the embedded service is running', () => {
     let state = reducer(undefined, goToNextStep());
+    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       setDownloadProgress({

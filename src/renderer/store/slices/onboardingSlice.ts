@@ -254,7 +254,12 @@ export const onboardingSlice = createSlice({
 
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to Download');
+            console.log('[onboardingSlice] Moving from Welcome to SharingAcceleration');
+            state.currentStep = OnboardingStep.SharingAcceleration;
+            break;
+
+          case OnboardingStep.SharingAcceleration:
+            console.log('[onboardingSlice] Moving from SharingAcceleration to Download');
             state.currentStep = OnboardingStep.Download;
             break;
 
@@ -278,6 +283,9 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.Download;
             break;
           case OnboardingStep.Download:
+            state.currentStep = OnboardingStep.SharingAcceleration;
+            break;
+          case OnboardingStep.SharingAcceleration:
             state.currentStep = OnboardingStep.Welcome;
             break;
           default:
@@ -329,6 +337,8 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
   switch (currentStep) {
     case OnboardingStep.Welcome:
       return true; // Can always proceed from welcome
+    case OnboardingStep.SharingAcceleration:
+      return true;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100;
     case OnboardingStep.Launch:

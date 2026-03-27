@@ -184,7 +184,7 @@ function App() {
           {currentView === 'system' && <SystemManagementView />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
-          {currentView === 'settings' && <SettingsPage />}
+          {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
         </div>
       </div>
 

@@ -4,9 +4,17 @@ import { OnboardingSettings } from './settings/OnboardingSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
 import { GitHubOAuthSettings } from './settings/GitHubOAuthSettings';
+import { SharingAccelerationSettings } from './settings/SharingAccelerationSettings';
+import { shouldShowSharingAccelerationSettings } from './settings';
+import type { DistributionMode } from '../../types/distribution-mode';
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  distributionMode: DistributionMode;
+}
+
+export default function SettingsPage({ distributionMode }: SettingsPageProps) {
   const { t } = useTranslation('pages');
+  const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings(distributionMode);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -37,6 +45,14 @@ export default function SettingsPage() {
             >
               {t('settings.tabs.dataDirectory')}
             </TabsTrigger>
+            {showSharingAccelerationSettings ? (
+              <TabsTrigger
+                value="sharingAcceleration"
+                className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                {t('settings.tabs.sharingAcceleration')}
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger
               value="githubIntegration"
               className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -57,6 +73,12 @@ export default function SettingsPage() {
             <TabsContent value="dataDirectory" className="mt-0">
               <DataDirectorySettings />
             </TabsContent>
+
+            {showSharingAccelerationSettings ? (
+              <TabsContent value="sharingAcceleration" className="mt-0">
+                <SharingAccelerationSettings distributionMode={distributionMode} />
+              </TabsContent>
+            ) : null}
 
             <TabsContent value="githubIntegration" className="mt-0">
               <GitHubOAuthSettings />

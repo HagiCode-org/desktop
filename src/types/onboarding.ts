@@ -7,8 +7,9 @@
  */
 export enum OnboardingStep {
   Welcome = 0,
-  Download = 1,
-  Launch = 2,
+  SharingAcceleration = 1,
+  Download = 2,
+  Launch = 3,
 }
 
 /**
@@ -21,6 +22,12 @@ export interface DownloadProgress {
   speed: number; // bytes per second
   remainingSeconds: number;
   version: string;
+  stage?: 'queued' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
+  mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
+  peers?: number;
+  p2pBytes?: number;
+  fallbackBytes?: number;
+  verified?: boolean;
 }
 
 /**

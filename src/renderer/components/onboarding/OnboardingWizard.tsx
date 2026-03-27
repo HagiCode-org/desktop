@@ -14,6 +14,7 @@ import {
 import { OnboardingStep } from '../../../types/onboarding';
 import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
+import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
@@ -38,6 +39,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
 
   const [showSkipDialog, setShowSkipDialog] = useState(false);
+  const [sharingStepReady, setSharingStepReady] = useState(false);
   const downloadCompleted = downloadProgress?.progress === 100;
 
   // Set up IPC listeners for progress updates
@@ -79,9 +81,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     console.log('[OnboardingWizard] handleNext called, current step:', currentStep);
     dispatch(goToNextStep());
 
-    // Trigger download when leaving Welcome step.
+    // Trigger download when leaving the sharing acceleration step.
     // Only trigger if not already downloading or completed
-    if (currentStep === OnboardingStep.Welcome && !isDownloading && !downloadCompleted) {
+    if (currentStep === OnboardingStep.SharingAcceleration && !isDownloading && !downloadCompleted) {
       console.log('[OnboardingWizard] Triggering download package');
       dispatch(downloadPackage());
     }
@@ -108,6 +110,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
+      case OnboardingStep.SharingAcceleration:
+        return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       case OnboardingStep.Launch:
@@ -121,6 +125,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
+      case OnboardingStep.SharingAcceleration:
+        return t('sharingAcceleration.title');
       case OnboardingStep.Download:
         return t('download.title');
       case OnboardingStep.Launch:
@@ -130,7 +136,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   return (
     <>
@@ -163,7 +169,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
              currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions
-                  canGoNext={canGoNext}
+                  canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : canGoNext}
                   canGoPrevious={canGoPrevious}
                   onNext={handleNext}
                   onPrevious={handlePrevious}
