@@ -29,6 +29,7 @@ import {
   registerWindowHandlers,
   registerServerHandlers,
   registerWebServiceHandlers,
+  registerLogDirectoryHandlers,
   registerVersionHandlers,
   registerDependencyHandlers,
   registerPackageSourceHandlers,
@@ -641,7 +642,10 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
     return { success: false, error: 'Version manager not initialized' };
   }
   try {
-    const result = await versionManager.installVersion(versionId);
+    const result = await versionManager.installVersion(versionId, (progress) => {
+      mainWindow?.webContents.send('version:install-progress', progress);
+      mainWindow?.webContents.send('package-install-progress', progress);
+    });
 
     if (result.success) {
       await applyActiveRuntimeToWebServiceManager();
@@ -660,6 +664,27 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
       errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
     };
   }
+});
+
+ipcMain.handle('sharing-acceleration:get', async () => {
+  if (!versionManager) {
+    return null;
+  }
+  return versionManager.getSharingAccelerationSettings();
+});
+
+ipcMain.handle('sharing-acceleration:set', async (_, settings) => {
+  if (!versionManager) {
+    return null;
+  }
+  return versionManager.updateSharingAccelerationSettings(settings);
+});
+
+ipcMain.handle('sharing-acceleration:record-onboarding-choice', async (_, enabled: boolean) => {
+  if (!versionManager) {
+    return null;
+  }
+  return versionManager.recordOnboardingSharingAccelerationChoice(enabled);
 });
 
 ipcMain.handle('version:uninstall', async (_, versionId: string) => {
@@ -866,11 +891,17 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
     if (isInstalled) {
       // Version is already installed, use reinstall
       console.log('[Main] Version already installed, performing reinstall');
-      const reinstallResult = await versionManager.reinstallVersion(version);
+      const reinstallResult = await versionManager.reinstallVersion(version, (progress) => {
+        mainWindow?.webContents.send('version:install-progress', progress);
+        mainWindow?.webContents.send('package-install-progress', progress);
+      });
       success = reinstallResult.success;
     } else {
       // New installation
-      const installResult = await versionManager.installVersion(version);
+      const installResult = await versionManager.installVersion(version, (progress) => {
+        mainWindow?.webContents.send('version:install-progress', progress);
+        mainWindow?.webContents.send('package-install-progress', progress);
+      });
       success = installResult.success;
     }
 
@@ -2009,6 +2040,11 @@ app.whenReady().then(async () => {
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
   const distributionModeState = await versionManager.initializeDistributionMode();
   log.info('[App] Distribution mode initialized:', distributionModeState.mode);
+
+  registerLogDirectoryHandlers({
+    versionManager,
+  });
+  log.info('[App] Log directory IPC handlers registered');
 
   // Initialize Onboarding Manager
   if (dependencyManager && versionManager && webServiceManager) {

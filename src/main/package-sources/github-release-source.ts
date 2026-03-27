@@ -215,7 +215,7 @@ export class GitHubReleasePackageSource implements PackageSource {
             const current = progressEvent.loaded;
             const total = progressEvent.total;
             const percentage = Math.round((current / total) * 100);
-            onProgress({ current, total, percentage });
+            onProgress({ current, total, percentage, stage: 'downloading', mode: 'http-direct', fallbackBytes: current, p2pBytes: 0, peers: 0 });
           }
         },
       });

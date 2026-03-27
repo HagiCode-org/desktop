@@ -1,4 +1,16 @@
-import type { PackageSource, PackageSourceConfig, LocalFolderConfig, GitHubReleaseConfig, HttpIndexConfig, PackageSourceValidationResult, DownloadProgressCallback } from './package-source.js';
+import type {
+  PackageSource,
+  PackageSourceConfig,
+  PackageSourceType,
+  LocalFolderConfig,
+  GitHubReleaseConfig,
+  HttpIndexConfig,
+  PackageSourceValidationResult,
+  DownloadProgressCallback,
+  SharingAccelerationSettings,
+  SharingAccelerationSettingsInput,
+  SharingAccelerationSettingsUpdate,
+} from './package-source.js';
 import { LocalFolderPackageSource } from './local-folder-source.js';
 import { GitHubReleasePackageSource } from './github-release-source.js';
 import { HttpIndexPackageSource } from './http-index-source.js';
@@ -36,9 +48,13 @@ export {
 
 export type {
   PackageSourceConfig,
+  PackageSourceType,
   LocalFolderConfig,
   GitHubReleaseConfig,
   HttpIndexConfig,
   PackageSourceValidationResult,
   DownloadProgressCallback,
+  SharingAccelerationSettings,
+  SharingAccelerationSettingsInput,
+  SharingAccelerationSettingsUpdate,
 };

@@ -111,7 +111,7 @@ export class LocalFolderPackageSource implements PackageSource {
         const totalSize = stats.size;
 
         // Report progress in chunks for large files
-        onProgress({ current: 0, total: totalSize, percentage: 0 });
+        onProgress({ current: 0, total: totalSize, percentage: 0, stage: 'downloading', mode: 'http-direct', fallbackBytes: 0, p2pBytes: 0, peers: 0 });
       }
 
       // Copy file to cache
@@ -124,6 +124,11 @@ export class LocalFolderPackageSource implements PackageSource {
           current: stats.size,
           total: stats.size,
           percentage: 100,
+          stage: 'downloading',
+          mode: 'http-direct',
+          fallbackBytes: stats.size,
+          p2pBytes: 0,
+          peers: 0,
         });
       }
 
