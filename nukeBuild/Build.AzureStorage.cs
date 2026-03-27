@@ -80,7 +80,12 @@ public partial class Build
             Log.Information("使用指定的 ReleaseTag: {Tag}", versionTag);
         }
 
-        BuildConfig.Version = versionTag;
+        var effectiveVersion = !string.IsNullOrWhiteSpace(ReleaseVersion)
+            ? ReleaseVersion
+            : versionTag;
+
+        BuildConfig.Version = effectiveVersion;
+        Log.Information("Azure publish version prefix: {Version}", effectiveVersion);
 
         if (!UploadArtifacts && !UploadIndex)
         {
@@ -140,7 +145,7 @@ public partial class Build
         {
             SasUrl = AzureBlobSasUrl,
             UploadRetries = AzureUploadRetries,
-            VersionPrefix = versionTag,
+            VersionPrefix = effectiveVersion,
         };
         var localIndexPath = (RootDirectory / "artifacts" / "azure-index.json").ToString();
 
@@ -213,6 +218,7 @@ public partial class Build
 
         Log.Information("=== 同步完成 ===");
         Log.Information("  Release Tag: {Tag}", versionTag);
+        Log.Information("  Azure Version Prefix: {Version}", effectiveVersion);
         Log.Information("  下载资源: {DownloadCount}", downloadedFiles.Count);
         Log.Information("  产物上传: {ArtifactsStatus}", UploadArtifacts ? "已执行" : "已跳过");
         Log.Information("  Index 上传: {IndexStatus}", UploadIndex ? "已执行" : "已跳过");

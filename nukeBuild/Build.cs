@@ -55,6 +55,9 @@ partial class Build : NukeBuild
     [Parameter("Release tag to sync (e.g., v1.0.0)")]
     readonly string ReleaseTag = "";
 
+    [Parameter("Version prefix to publish (defaults to release tag)")]
+    readonly string ReleaseVersion = "";
+
     [Parameter("Release channel (stable, beta, dev)")]
     readonly string ReleaseChannel = "beta";
 
