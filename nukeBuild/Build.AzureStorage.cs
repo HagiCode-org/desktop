@@ -1,6 +1,7 @@
 using Adapters;
 using AzureStorage;
 using System.Diagnostics;
+using Utils;
 
 public partial class Build
 {
@@ -80,9 +81,10 @@ public partial class Build
             Log.Information("使用指定的 ReleaseTag: {Tag}", versionTag);
         }
 
-        var effectiveVersion = !string.IsNullOrWhiteSpace(ReleaseVersion)
-            ? ReleaseVersion
-            : versionTag;
+        var effectiveVersion = NormalizePublishedVersionPrefix(
+            !string.IsNullOrWhiteSpace(ReleaseVersion)
+                ? ReleaseVersion
+                : versionTag);
 
         BuildConfig.Version = effectiveVersion;
         Log.Information("Azure publish version prefix: {Version}", effectiveVersion);
@@ -120,9 +122,22 @@ public partial class Build
         Log.Information("使用 gh CLI 下载 release 资产...");
 
         await DownloadReleaseAssetsUsingGhAsync(versionTag, downloadDirectory);
-        downloadedFiles = Directory.GetFiles(downloadDirectory)
+        var allDownloadedFiles = Directory.GetFiles(downloadDirectory)
             .Where((path) => !File.GetAttributes(path).HasFlag(FileAttributes.Directory))
             .ToList();
+
+        downloadedFiles = allDownloadedFiles
+            .Where((path) => !AzureBlobPathUtilities.IsGitHubGeneratedSourceArchive(
+                Path.GetFileName(path),
+                BuildConfig.GitHubReleaseRepositoryName,
+                effectiveVersion))
+            .ToList();
+
+        var filteredAssetCount = allDownloadedFiles.Count - downloadedFiles.Count;
+        if (filteredAssetCount > 0)
+        {
+            Log.Information("已过滤 {Count} 个 GitHub 自动生成源码包资产", filteredAssetCount);
+        }
 
         if (downloadedFiles.Count > 0)
         {
@@ -146,6 +161,7 @@ public partial class Build
             SasUrl = AzureBlobSasUrl,
             UploadRetries = AzureUploadRetries,
             VersionPrefix = effectiveVersion,
+            PublicBaseUrl = AzurePublicBaseUrl,
         };
         var localIndexPath = (RootDirectory / "artifacts" / "azure-index.json").ToString();
 
@@ -290,6 +306,18 @@ public partial class Build
             ArtifactPublishFailureStage.IndexWrite => "index-write",
             _ => "publish",
         };
+    }
+
+    private static string NormalizePublishedVersionPrefix(string versionOrTag)
+    {
+        var normalized = versionOrTag.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        normalized = normalized.TrimStart('v', 'V');
+        return $"v{normalized}";
     }
 
     private async Task DownloadReleaseAssetsUsingGhAsync(string tag, AbsolutePath downloadDirectory)
