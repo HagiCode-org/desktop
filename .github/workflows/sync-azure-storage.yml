@@ -12,6 +12,11 @@ on:
         description: 'Release tag to sync'
         required: true
         type: string
+      release_version:
+        description: 'Version prefix to publish into Azure (defaults to release_tag)'
+        required: false
+        type: string
+        default: ''
       release_channel:
         description: 'Release channel (stable, beta, dev)'
         required: false
@@ -24,6 +29,10 @@ on:
     inputs:
       release_tag:
         description: 'Release tag to sync (empty for latest release)'
+        required: false
+        type: string
+      release_version:
+        description: 'Version prefix to publish into Azure (defaults to release_tag)'
         required: false
         type: string
       release_channel:
@@ -81,6 +90,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
         RELEASE_TAG: ${{ steps.release_info.outputs.tag }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
         RELEASE_CHANNEL: ${{ inputs.release_channel }}
         FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
