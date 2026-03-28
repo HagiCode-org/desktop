@@ -3,7 +3,6 @@ import type {
   PackageSourceConfig,
   PackageSourceType,
   LocalFolderConfig,
-  GitHubReleaseConfig,
   HttpIndexConfig,
   PackageSourceValidationResult,
   DownloadProgressCallback,
@@ -12,7 +11,6 @@ import type {
   SharingAccelerationSettingsUpdate,
 } from './package-source.js';
 import { LocalFolderPackageSource } from './local-folder-source.js';
-import { GitHubReleasePackageSource } from './github-release-source.js';
 import { HttpIndexPackageSource } from './http-index-source.js';
 
 /**
@@ -25,14 +23,11 @@ export function createPackageSource(config: PackageSourceConfig): PackageSource 
     case 'local-folder':
       return new LocalFolderPackageSource(config as LocalFolderConfig);
 
-    case 'github-release':
-      return new GitHubReleasePackageSource(config as GitHubReleaseConfig);
-
     case 'http-index':
       return new HttpIndexPackageSource(config as HttpIndexConfig);
 
     default:
-      throw new Error(`Unknown package source type: ${(config as any).type}`);
+      throw new Error(`Unknown package source type: ${(config as { type?: string }).type ?? 'undefined'}`);
   }
 }
 
@@ -42,7 +37,6 @@ export function createPackageSource(config: PackageSourceConfig): PackageSource 
 export {
   PackageSource,
   LocalFolderPackageSource,
-  GitHubReleasePackageSource,
   HttpIndexPackageSource,
 };
 
@@ -50,7 +44,6 @@ export type {
   PackageSourceConfig,
   PackageSourceType,
   LocalFolderConfig,
-  GitHubReleaseConfig,
   HttpIndexConfig,
   PackageSourceValidationResult,
   DownloadProgressCallback,

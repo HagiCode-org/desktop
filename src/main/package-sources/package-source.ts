@@ -8,28 +8,19 @@ import type {
 } from '../../types/sharing-acceleration.js';
 import type { Version } from '../version-manager.js';
 
-export type PackageSourceType = 'local-folder' | 'github-release' | 'http-index';
+export type PackageSourceType = 'local-folder' | 'http-index';
 
-export interface PackageSourceConfig {
-  type: PackageSourceType;
-}
-
-export interface LocalFolderConfig extends PackageSourceConfig {
+export interface LocalFolderConfig {
   type: 'local-folder';
   path: string;
 }
 
-export interface GitHubReleaseConfig extends PackageSourceConfig {
-  type: 'github-release';
-  owner: string;
-  repo: string;
-  token?: string;
-}
-
-export interface HttpIndexConfig extends PackageSourceConfig {
+export interface HttpIndexConfig {
   type: 'http-index';
   indexUrl: string;
 }
+
+export type PackageSourceConfig = LocalFolderConfig | HttpIndexConfig;
 
 export interface PackageSourceValidationResult {
   valid: boolean;

@@ -9,7 +9,7 @@ import { PathManager } from './path-manager.js';
 import { ConfigManager } from './config-manager.js';
 import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordinator.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
-import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type GitHubReleaseConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
+import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
@@ -344,20 +344,24 @@ export class VersionManager {
         type: 'local-folder',
         path: stored.path || '',
       } as LocalFolderConfig;
-    } else if (stored.type === 'github-release') {
-      return {
-        type: 'github-release',
-        owner: stored.owner || '',
-        repo: stored.repo || '',
-        token: stored.token,
-      } as GitHubReleaseConfig;
-    } else if (stored.type === 'http-index') {
+    }
+
+    if (stored.type === 'http-index') {
       return {
         type: 'http-index',
         indexUrl: stored.indexUrl || '',
       } as HttpIndexConfig;
     }
+
     throw new Error(`Unknown package source type: ${stored.type}`);
+  }
+
+  private ensureSupportedSourceType(type: string | undefined): asserts type is PackageSourceType {
+    if (type === 'local-folder' || type === 'http-index') {
+      return;
+    }
+
+    throw new Error(`Package source type ${type ?? 'undefined'} is no longer supported. Use http-index or local-folder instead.`);
   }
 
   /**
@@ -387,46 +391,34 @@ export class VersionManager {
    */
   async setSourceConfig(config: PackageSourceConfig & { name?: string }): Promise<boolean> {
     try {
-      // Check if a source of this type already exists
+      this.ensureSupportedSourceType((config as { type?: string }).type);
+
       const sources = this.packageSourceConfigManager.getAllSources();
-      const existingSource = sources.find(s => s.type === config.type);
+      const existingSource = sources.find(source => source.type === config.type);
 
       let newSource: StoredPackageSourceConfig;
 
       if (existingSource) {
-        // Update existing source
         const updates: Partial<Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>> = {
           type: config.type,
           name: config.name,
         };
 
         if (config.type === 'local-folder') {
-          updates.path = (config as any).path;
-        } else if (config.type === 'github-release') {
-          updates.owner = (config as any).owner;
-          updates.repo = (config as any).repo;
-          updates.token = (config as any).token;
-        } else if (config.type === 'http-index') {
-          updates.indexUrl = (config as any).indexUrl;
+          updates.path = config.path;
+        } else {
+          updates.indexUrl = config.indexUrl;
         }
 
         this.packageSourceConfigManager.updateSource(existingSource.id, updates);
         newSource = { ...existingSource, ...updates } as StoredPackageSourceConfig;
         log.info('[VersionManager] Package source updated:', newSource.type, 'ID:', newSource.id);
       } else {
-        // Create new source
         const storedConfig: Omit<StoredPackageSourceConfig, 'id' | 'createdAt'> = {
           type: config.type,
           name: config.name,
-          ...(config.type === 'local-folder' ? { path: (config as any).path } : {}),
-          ...(config.type === 'github-release' ? {
-            owner: (config as any).owner,
-            repo: (config as any).repo,
-            token: (config as any).token
-          } : {}),
-          ...(config.type === 'http-index' ? {
-            indexUrl: (config as any).indexUrl
-          } : {}),
+          ...(config.type === 'local-folder' ? { path: config.path } : {}),
+          ...(config.type === 'http-index' ? { indexUrl: config.indexUrl } : {}),
         };
         newSource = this.packageSourceConfigManager.addSource(storedConfig);
         log.info('[VersionManager] Package source created:', newSource.type, 'ID:', newSource.id);
@@ -519,6 +511,7 @@ export class VersionManager {
    */
   async validateSourceConfig(config: PackageSourceConfig): Promise<{ valid: boolean; error?: string }> {
     try {
+      this.ensureSupportedSourceType((config as { type?: string }).type);
       const source = createPackageSource(config);
       if (source.validateConfig) {
         return await source.validateConfig();
@@ -686,9 +679,10 @@ export class VersionManager {
         total: targetVersion.size ?? 0,
         percentage: 100,
         stage: 'extracting',
-        mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+        mode: downloadResult.finalMode,
         verified: downloadResult.verified,
         message: 'extracting-package',
+        serviceScope: downloadResult.policy.serviceScope,
       });
       log.info('[VersionManager] Extracting package...');
       const AdmZip = (await import('adm-zip')).default;
@@ -753,9 +747,10 @@ export class VersionManager {
         total: targetVersion.size ?? 0,
         percentage: 100,
         stage: 'completed',
-        mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+        mode: downloadResult.finalMode,
         verified: downloadResult.verified,
         message: 'installation-complete',
+        serviceScope: downloadResult.policy.serviceScope,
       });
 
       return {
@@ -767,9 +762,10 @@ export class VersionManager {
           total: targetVersion.size ?? 0,
           percentage: 100,
           stage: 'completed',
-          mode: downloadResult.policy.useHybrid ? 'shared-acceleration' : 'http-direct',
+          mode: downloadResult.finalMode,
           verified: downloadResult.verified,
           message: 'installation-complete',
+          serviceScope: downloadResult.policy.serviceScope,
         },
       };
     } catch (error) {

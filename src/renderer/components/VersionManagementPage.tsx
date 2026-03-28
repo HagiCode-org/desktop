@@ -45,13 +45,15 @@ interface Version {
   version: string;
   platform: string;
   packageFilename: string;
-  sourceType?: 'local-folder' | 'github-release' | 'http-index';
+  sourceType?: 'local-folder' | 'http-index';
   assetKind?: string;
   hybrid?: {
+    torrentFirst: boolean;
     eligible: boolean;
     legacyHttpFallback: boolean;
     isLatestDesktopAsset: boolean;
     isLatestWebAsset: boolean;
+    serviceScope: 'latest-desktop' | 'latest-server' | 'local-cache';
   };
 }
 
@@ -388,7 +390,8 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
     const stageTexts: Record<string, string> = {
       'queued': t('versionManagement.downloadStage.queued'),
-      'downloading': t('versionManagement.downloading'),
+      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent'),
+      'downloading': t('versionManagement.downloadStage.sharedDownloading'),
       'backfilling': t('versionManagement.downloadStage.backfilling'),
       'extracting': t('versionManagement.extracting'),
       'verifying': t('versionManagement.verifying'),
@@ -396,7 +399,15 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
       'error': t('versionManagement.toast.installFailed'),
     };
 
-    return stageTexts[webServiceInstallProgress.stage] || webServiceInstallProgress.message || t('versionManagement.installing');
+    const messageKey = webServiceInstallProgress.message;
+    if (messageKey) {
+      const translated = t(`versionManagement.progressMessage.${messageKey}`, { defaultValue: '' });
+      if (translated) {
+        return translated;
+      }
+    }
+
+    return stageTexts[webServiceInstallProgress.stage] || t('versionManagement.installing');
   };
 
   const getDownloadModeLabel = (mode?: string) => {
@@ -413,6 +424,25 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[exponent]}`;
   };
 
+  const getInstallStageFlow = () => {
+    if (!webServiceInstallProgress) {
+      return t('versionManagement.installTelemetry.flow');
+    }
+
+    const stageTexts: Record<string, string> = {
+      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent'),
+      'downloading': t('versionManagement.downloadStage.sharedDownloading'),
+      'backfilling': t('versionManagement.downloadStage.backfilling'),
+      'verifying': t('versionManagement.verifying'),
+      'extracting': t('versionManagement.extracting'),
+      'completed': t('versionManagement.completed'),
+    };
+
+    return t('versionManagement.installTelemetry.flowActive', {
+      stage: stageTexts[webServiceInstallProgress.stage] ?? getInstallProgressText(),
+    });
+  };
+
   const renderInstallTelemetry = () => {
     if (!isInstallingFromState || !webServiceInstallProgress) {
       return null;
@@ -420,6 +450,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
     return (
       <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <div className="mb-2 text-foreground">{getInstallStageFlow()}</div>
         <div className="flex flex-wrap items-center gap-3">
           <span>{t('versionManagement.installTelemetry.mode')}: {getDownloadModeLabel(webServiceInstallProgress.mode)}</span>
           <span>{t('versionManagement.installTelemetry.stage')}: {getInstallProgressText()}</span>
@@ -651,7 +682,9 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                           </div>
                           {/* 进度文本 */}
                           <span className="text-xs text-muted-foreground min-w-[60px]">
+                            {webServiceInstallProgress.stage === 'fetching-torrent' && t('versionManagement.downloadStage.fetchingTorrent')}
                             {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
                             {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
@@ -796,7 +829,9 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                           </div>
                           {/* 进度文本 */}
                           <span className="text-xs text-muted-foreground min-w-[50px]">
+                            {webServiceInstallProgress.stage === 'fetching-torrent' && t('versionManagement.downloadStage.fetchingTorrent')}
                             {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
+                            {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
                             {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}

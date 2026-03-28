@@ -152,20 +152,17 @@ interface ElectronAPI {
   getAvailableVersionsFromSource: () => Promise<string[]>;
   installPackageFromSource: (versionIdentifier: string) => Promise<void>;
   validateSourceConfig: (config: any) => Promise<ValidationResult>;
-  onConfigChange: (callback: (config: any) => void) => () => void;
 
   // Package Source Configuration APIs
   packageSource: {
     getConfig: () => Promise<any>;
     getAllConfigs: () => Promise<any[]>;
-    saveConfig: (config: any) => Promise<boolean>;
-    switchSource: (sourceId: string) => Promise<void>;
-    removeSource: (sourceId: string) => Promise<boolean>;
+    setConfig: (config: any) => Promise<any>;
+    switchSource: (sourceId: string) => Promise<any>;
     validateConfig: (config: any) => Promise<ValidationResult>;
     scanFolder: (folderPath: string) => Promise<any>;
-    fetchGithub: (config: any) => Promise<any>;
     fetchHttpIndex: (config: any) => Promise<any>;
-    getCurrentConfig: () => Promise<string | null>;
+    onConfigChange: (callback: (config: any) => void) => () => void;
   };
 
   // Preset Management APIs
@@ -351,7 +348,6 @@ const electronAPI: ElectronAPI = {
     switchSource: (sourceId) => ipcRenderer.invoke('package-source:switch-source', sourceId),
     validateConfig: (config) => ipcRenderer.invoke('package-source:validate-config', config),
     scanFolder: (folderPath) => ipcRenderer.invoke('package-source:scan-folder', folderPath),
-    fetchGithub: (config) => ipcRenderer.invoke('package-source:fetch-github', config),
     fetchHttpIndex: (config) => ipcRenderer.invoke('package-source:fetch-http-index', config),
     onConfigChange: (callback) => {
       const listener = (_event, config) => {

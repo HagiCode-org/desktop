@@ -1,11 +1,15 @@
 import Store from 'electron-store';
 import log from 'electron-log';
 
+const DEFAULT_HTTP_INDEX_SOURCE_ID = 'http-index-default';
+const DEFAULT_HTTP_INDEX_NAME = 'HagiCode 官方源';
+const DEFAULT_HTTP_INDEX_URL = 'https://index.hagicode.com/server/index.json';
+
 /**
  * Package source configuration with metadata
  */
 export interface StoredPackageSourceConfig {
-  type: 'local-folder' | 'github-release' | 'http-index';
+  type: 'local-folder' | 'http-index';
   id: string;
   name?: string;
   createdAt: string;
@@ -15,11 +19,23 @@ export interface StoredPackageSourceConfig {
   defaultChannel?: string;
   // Local folder source properties
   path?: string;
-  // GitHub release source properties
+  // HTTP index source properties
+  indexUrl?: string;
+  baseUrl?: string;
+  httpAuthToken?: string;
+}
+
+interface RawStoredPackageSourceConfig {
+  type?: string;
+  id?: string;
+  name?: string;
+  createdAt?: string;
+  lastUsedAt?: string;
+  defaultChannel?: string;
+  path?: string;
   owner?: string;
   repo?: string;
   token?: string;
-  // HTTP index source properties
   indexUrl?: string;
   baseUrl?: string;
   httpAuthToken?: string;
@@ -61,7 +77,7 @@ export class PackageSourceConfigManager {
       });
     }
 
-    // Initialize with default source if none exists
+    this.reconcileStoredSources();
     this.initializeDefaultSource();
   }
 
@@ -77,8 +93,8 @@ export class PackageSourceConfigManager {
    */
   getAllSources(): StoredPackageSourceConfig[] {
     try {
-      const sources = this.store.get('sources', []);
-      return sources;
+      this.reconcileStoredSources();
+      return this.readSupportedSources();
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to get sources:', error);
       return [];
@@ -103,9 +119,9 @@ export class PackageSourceConfigManager {
    */
   getActiveSource(): StoredPackageSourceConfig | null {
     try {
+      this.reconcileStoredSources();
       const activeSourceId = this.store.get('activeSourceId');
       if (!activeSourceId) {
-        // Return default source if no active source is set
         return this.getDefaultSource();
       }
       return this.getSourceById(activeSourceId);
@@ -120,13 +136,13 @@ export class PackageSourceConfigManager {
    */
   getDefaultSource(): StoredPackageSourceConfig | null {
     try {
+      this.reconcileStoredSources();
       const defaultSourceId = this.store.get('defaultSourceId');
       if (defaultSourceId) {
         return this.getSourceById(defaultSourceId);
       }
 
-      // If no default source is set, return the first available source
-      const sources = this.getAllSources();
+      const sources = this.readSupportedSources();
       return sources.length > 0 ? sources[0] : null;
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to get default source:', error);
@@ -147,11 +163,12 @@ export class PackageSourceConfigManager {
 
       this.store.set('activeSourceId', id);
 
-      // Update last used timestamp
       const sources = this.getAllSources();
-      const updatedSources = sources.map(s =>
-        s.id === id ? { ...s, lastUsedAt: new Date().toISOString() } : s
-      );
+      const updatedSources = sources.map((storedSource) => (
+        storedSource.id === id
+          ? { ...storedSource, lastUsedAt: new Date().toISOString() }
+          : storedSource
+      ));
       this.store.set('sources', updatedSources);
 
       log.info('[PackageSourceConfigManager] Active source set:', id);
@@ -168,8 +185,9 @@ export class PackageSourceConfigManager {
   addSource(config: Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>): StoredPackageSourceConfig {
     try {
       const sources = this.getAllSources();
+      const normalizedConfig = this.normalizeWritableConfig(config);
       const newSource: StoredPackageSourceConfig = {
-        ...config,
+        ...normalizedConfig,
         id: this.generateSourceId(),
         createdAt: new Date().toISOString(),
       };
@@ -177,7 +195,6 @@ export class PackageSourceConfigManager {
       sources.push(newSource);
       this.store.set('sources', sources);
 
-      // Set as default if this is the first source
       if (sources.length === 1) {
         this.store.set('defaultSourceId', newSource.id);
         this.store.set('activeSourceId', newSource.id);
@@ -204,7 +221,15 @@ export class PackageSourceConfigManager {
         return false;
       }
 
-      sources[index] = { ...sources[index], ...updates };
+      const merged = this.normalizeWritableConfig({
+        ...sources[index],
+        ...updates,
+      });
+
+      sources[index] = {
+        ...sources[index],
+        ...merged,
+      };
       this.store.set('sources', sources);
 
       log.info('[PackageSourceConfigManager] Source updated:', id);
@@ -230,15 +255,12 @@ export class PackageSourceConfigManager {
 
       this.store.set('sources', filteredSources);
 
-      // Update active source if needed
       const activeSourceId = this.store.get('activeSourceId');
       if (activeSourceId === id) {
-        // Set new active source to first available or null
         const newActiveSource = filteredSources.length > 0 ? filteredSources[0].id : null;
         this.store.set('activeSourceId', newActiveSource);
       }
 
-      // Update default source if needed
       const defaultSourceId = this.store.get('defaultSourceId');
       if (defaultSourceId === id) {
         const newDefaultSource = filteredSources.length > 0 ? filteredSources[0].id : null;
@@ -250,6 +272,24 @@ export class PackageSourceConfigManager {
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to remove source:', error);
       return false;
+    }
+  }
+
+  getDefaultHttpIndexSource(): StoredPackageSourceConfig {
+    return this.createDefaultHttpIndexSource();
+  }
+
+  /**
+   * Clear all package source configurations (useful for testing)
+   */
+  clearAllSources(): void {
+    try {
+      this.store.set('sources', []);
+      this.store.set('activeSourceId', null);
+      this.store.set('defaultSourceId', null);
+      log.info('[PackageSourceConfigManager] All sources cleared');
+    } catch (error) {
+      log.error('[PackageSourceConfigManager] Failed to clear sources:', error);
     }
   }
 
@@ -275,24 +315,19 @@ export class PackageSourceConfigManager {
   private initializeDefaultSource(): void {
     try {
       const sources = this.getAllSources();
-      if (sources.length === 0) {
-        // Check for environment variable override first
-        const overrideConfig = this.loadEnvironmentOverride();
-        if (overrideConfig) {
-          const defaultSource = this.addSource(overrideConfig);
-          log.info('[PackageSourceConfigManager] Default source initialized from environment override:', defaultSource.id);
-          return;
-        }
-
-        // Unified default: use HTTP index source for both development and production
-        const defaultSource = this.addSource({
-          type: 'http-index',
-          name: 'HagiCode 官方源',
-          indexUrl: 'https://index.hagicode.com/server/index.json',
-        });
-
-        log.info('[PackageSourceConfigManager] Default source initialized:', defaultSource.id);
+      if (sources.length > 0) {
+        return;
       }
+
+      const overrideConfig = this.loadEnvironmentOverride();
+      if (overrideConfig) {
+        const defaultSource = this.addSource(overrideConfig);
+        log.info('[PackageSourceConfigManager] Default source initialized from environment override:', defaultSource.id);
+        return;
+      }
+
+      const defaultSource = this.addSource(this.createDefaultHttpIndexConfig());
+      log.info('[PackageSourceConfigManager] Default source initialized:', defaultSource.id);
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to initialize default source:', error);
     }
@@ -309,89 +344,272 @@ export class PackageSourceConfigManager {
     }
 
     try {
-      const overrideConfig = JSON.parse(overrideEnv);
+      const overrideConfig = JSON.parse(overrideEnv) as RawStoredPackageSourceConfig;
 
-      // Validate required fields
       if (!overrideConfig.type) {
         log.warn('[PackageSourceConfigManager] Invalid override configuration: missing type field');
         return null;
       }
 
-      // Validate type is supported
-      const validTypes = ['local-folder', 'github-release', 'http-index'];
-      if (!validTypes.includes(overrideConfig.type)) {
+      if (overrideConfig.type === 'github-release') {
+        log.warn('[PackageSourceConfigManager] UPDATE_SOURCE_OVERRIDE no longer supports github-release; falling back to default http-index source');
+        return this.createDefaultHttpIndexConfig();
+      }
+
+      if (overrideConfig.type !== 'local-folder' && overrideConfig.type !== 'http-index') {
         log.warn('[PackageSourceConfigManager] Invalid override configuration: unsupported type:', overrideConfig.type);
         return null;
       }
 
-      // Validate type-specific required fields
-      if (overrideConfig.type === 'local-folder' && !overrideConfig.path) {
-        log.warn('[PackageSourceConfigManager] Invalid override configuration: local-folder requires path');
-        return null;
+      if (overrideConfig.type === 'local-folder') {
+        if (!overrideConfig.path) {
+          log.warn('[PackageSourceConfigManager] Invalid override configuration: local-folder requires path');
+          return null;
+        }
+        return {
+          type: 'local-folder',
+          name: overrideConfig.name,
+          defaultChannel: overrideConfig.defaultChannel,
+          lastUsedAt: overrideConfig.lastUsedAt,
+          path: overrideConfig.path,
+        };
       }
-      if (overrideConfig.type === 'github-release' && (!overrideConfig.owner || !overrideConfig.repo)) {
-        log.warn('[PackageSourceConfigManager] Invalid override configuration: github-release requires owner and repo');
-        return null;
-      }
-      if (overrideConfig.type === 'http-index' && !overrideConfig.indexUrl) {
+
+      if (!overrideConfig.indexUrl) {
         log.warn('[PackageSourceConfigManager] Invalid override configuration: http-index requires indexUrl');
         return null;
       }
 
-      log.info('[PackageSourceConfigManager] Using environment override for package source:', overrideConfig.type);
-      return overrideConfig as Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>;
+      return {
+        type: 'http-index',
+        name: overrideConfig.name,
+        defaultChannel: overrideConfig.defaultChannel,
+        lastUsedAt: overrideConfig.lastUsedAt,
+        indexUrl: overrideConfig.indexUrl,
+        baseUrl: overrideConfig.baseUrl,
+        httpAuthToken: overrideConfig.httpAuthToken,
+      };
     } catch (error) {
       log.error('[PackageSourceConfigManager] Failed to parse UPDATE_SOURCE_OVERRIDE environment variable:', error);
       return null;
     }
   }
 
-  /**
-   * Get default GitHub Releases source configuration
-   */
-  getDefaultGitHubSource(): StoredPackageSourceConfig {
-    return {
-      id: 'github-default',
-      type: 'github-release',
-      name: 'HagiCode Releases',
-      owner: 'HagiCode-org',
-      repo: 'releases',
-      createdAt: new Date().toISOString(),
-    };
-  }
+  private reconcileStoredSources(): void {
+    const rawSources = this.readRawSources();
+    const previousActiveSourceId = this.store.get('activeSourceId');
+    const previousDefaultSourceId = this.store.get('defaultSourceId');
 
-  /**
-   * Get default HTTP Index source configuration
-   */
-  getDefaultHttpIndexSource(): StoredPackageSourceConfig {
-    return {
-      id: 'http-index-default',
-      type: 'http-index',
-      name: 'HagiCode 官方源',
-      indexUrl: 'https://index.hagicode.com/server/index.json',
-      createdAt: new Date().toISOString(),
-    };
-  }
+    let hadLegacyGithubSource = false;
+    let mutated = false;
 
-  /**
-   * Get default production path for packages
-   */
-  private getDefaultProductionPath(): string {
-    const { app } = require('electron');
-    return require('node:path').join(app.getPath('userData'), 'packages');
-  }
+    const supportedSources = rawSources.flatMap((rawSource) => {
+      const normalized = this.normalizeStoredSource(rawSource);
+      if (rawSource.type === 'github-release') {
+        hadLegacyGithubSource = true;
+        mutated = true;
+      } else if (!normalized) {
+        mutated = true;
+      } else if (
+        rawSource.id !== normalized.id
+        || rawSource.createdAt !== normalized.createdAt
+      ) {
+        mutated = true;
+      }
 
-  /**
-   * Clear all package source configurations (useful for testing)
-   */
-  clearAllSources(): void {
-    try {
-      this.store.set('sources', []);
-      this.store.set('activeSourceId', null);
-      this.store.set('defaultSourceId', null);
-      log.info('[PackageSourceConfigManager] All sources cleared');
-    } catch (error) {
-      log.error('[PackageSourceConfigManager] Failed to clear sources:', error);
+      return normalized ? [normalized] : [];
+    });
+
+    if (supportedSources.length === 0 && rawSources.length > 0) {
+      supportedSources.push(this.createDefaultHttpIndexSource());
+      mutated = true;
     }
+
+    let fallbackHttpIndex = supportedSources.find(source => source.type === 'http-index');
+    if (!fallbackHttpIndex && hadLegacyGithubSource) {
+      fallbackHttpIndex = this.createDefaultHttpIndexSource();
+      supportedSources.push(fallbackHttpIndex);
+      mutated = true;
+    }
+
+    const supportedIds = new Set(supportedSources.map(source => source.id));
+
+    const nextDefaultSourceId = this.resolvePreferredSourceId({
+      currentId: previousDefaultSourceId,
+      supportedSources,
+      supportedIds,
+      preferHttpIndex: hadLegacyGithubSource,
+      fallbackHttpIndex,
+    });
+
+    const nextActiveSourceId = this.resolvePreferredSourceId({
+      currentId: previousActiveSourceId,
+      supportedSources,
+      supportedIds,
+      preferHttpIndex: hadLegacyGithubSource,
+      fallbackHttpIndex,
+      secondaryId: nextDefaultSourceId,
+    });
+
+    if (!mutated
+      && previousActiveSourceId === nextActiveSourceId
+      && previousDefaultSourceId === nextDefaultSourceId) {
+      return;
+    }
+
+    this.store.set('sources', supportedSources);
+    this.store.set('defaultSourceId', nextDefaultSourceId);
+    this.store.set('activeSourceId', nextActiveSourceId);
+
+    if (hadLegacyGithubSource) {
+      log.info('[PackageSourceConfigManager] Migrated legacy github-release source to supported fallback:', nextActiveSourceId);
+    }
+  }
+
+  private resolvePreferredSourceId(params: {
+    currentId: string | null;
+    secondaryId?: string | null;
+    supportedSources: StoredPackageSourceConfig[];
+    supportedIds: Set<string>;
+    preferHttpIndex: boolean;
+    fallbackHttpIndex?: StoredPackageSourceConfig;
+  }): string | null {
+    const {
+      currentId,
+      secondaryId,
+      supportedSources,
+      supportedIds,
+      preferHttpIndex,
+      fallbackHttpIndex,
+    } = params;
+
+    if (currentId && supportedIds.has(currentId)) {
+      return currentId;
+    }
+
+    if (preferHttpIndex && fallbackHttpIndex) {
+      return fallbackHttpIndex.id;
+    }
+
+    if (secondaryId && supportedIds.has(secondaryId)) {
+      return secondaryId;
+    }
+
+    return supportedSources[0]?.id ?? null;
+  }
+
+  private readSupportedSources(): StoredPackageSourceConfig[] {
+    const sources = this.store.get('sources', []);
+    return Array.isArray(sources) ? sources : [];
+  }
+
+  private readRawSources(): RawStoredPackageSourceConfig[] {
+    const sources = this.store.get('sources', []) as unknown;
+    return Array.isArray(sources) ? sources as RawStoredPackageSourceConfig[] : [];
+  }
+
+  private normalizeStoredSource(rawSource: RawStoredPackageSourceConfig): StoredPackageSourceConfig | null {
+    if (rawSource.type === 'local-folder') {
+      if (!rawSource.path) {
+        log.warn('[PackageSourceConfigManager] Dropping invalid local-folder source without path:', rawSource.id);
+        return null;
+      }
+
+      return {
+        type: 'local-folder',
+        id: rawSource.id || this.generateRecoveredSourceId('local-folder'),
+        name: rawSource.name,
+        createdAt: rawSource.createdAt || new Date().toISOString(),
+        lastUsedAt: rawSource.lastUsedAt,
+        defaultChannel: rawSource.defaultChannel,
+        path: rawSource.path,
+      };
+    }
+
+    if (rawSource.type === 'http-index') {
+      if (!rawSource.indexUrl) {
+        log.warn('[PackageSourceConfigManager] Dropping invalid http-index source without indexUrl:', rawSource.id);
+        return null;
+      }
+
+      return {
+        type: 'http-index',
+        id: rawSource.id || this.generateRecoveredSourceId('http-index'),
+        name: rawSource.name,
+        createdAt: rawSource.createdAt || new Date().toISOString(),
+        lastUsedAt: rawSource.lastUsedAt,
+        defaultChannel: rawSource.defaultChannel,
+        indexUrl: rawSource.indexUrl,
+        baseUrl: rawSource.baseUrl,
+        httpAuthToken: rawSource.httpAuthToken,
+      };
+    }
+
+    if (rawSource.type === 'github-release') {
+      return null;
+    }
+
+    if (rawSource.type) {
+      log.warn('[PackageSourceConfigManager] Dropping unsupported package source type:', rawSource.type);
+    }
+    return null;
+  }
+
+  private normalizeWritableConfig(
+    config: Partial<Omit<StoredPackageSourceConfig, 'id' | 'createdAt'>>,
+  ): Omit<StoredPackageSourceConfig, 'id' | 'createdAt'> {
+    if (config.type === 'local-folder') {
+      if (!config.path) {
+        throw new Error('Local folder source requires a path');
+      }
+
+      return {
+        type: 'local-folder',
+        name: config.name,
+        lastUsedAt: config.lastUsedAt,
+        defaultChannel: config.defaultChannel,
+        path: config.path,
+      };
+    }
+
+    if (config.type === 'http-index') {
+      if (!config.indexUrl) {
+        throw new Error('HTTP index source requires an indexUrl');
+      }
+
+      return {
+        type: 'http-index',
+        name: config.name,
+        lastUsedAt: config.lastUsedAt,
+        defaultChannel: config.defaultChannel,
+        indexUrl: config.indexUrl,
+        baseUrl: config.baseUrl,
+        httpAuthToken: config.httpAuthToken,
+      };
+    }
+
+    throw new Error(`Package source type ${(config as { type?: string }).type ?? 'undefined'} is no longer supported`);
+  }
+
+  private createDefaultHttpIndexConfig(): Omit<StoredPackageSourceConfig, 'id' | 'createdAt'> {
+    return {
+      type: 'http-index',
+      name: DEFAULT_HTTP_INDEX_NAME,
+      indexUrl: DEFAULT_HTTP_INDEX_URL,
+    };
+  }
+
+  private createDefaultHttpIndexSource(): StoredPackageSourceConfig {
+    return {
+      id: DEFAULT_HTTP_INDEX_SOURCE_ID,
+      type: 'http-index',
+      name: DEFAULT_HTTP_INDEX_NAME,
+      indexUrl: DEFAULT_HTTP_INDEX_URL,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  private generateRecoveredSourceId(type: StoredPackageSourceConfig['type']): string {
+    return `${type}-recovered-${Date.now()}`;
   }
 }

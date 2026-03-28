@@ -101,7 +101,10 @@ export function registerVersionHandlers(deps: {
       return { success: false, error: 'Version manager not initialized' };
     }
     try {
-      const result = await state.versionManager.installVersion(versionId);
+      const result = await state.versionManager.installVersion(versionId, (progress) => {
+        state.mainWindow?.webContents.send('version:install-progress', progress);
+        state.mainWindow?.webContents.send('package-install-progress', progress);
+      });
 
       if (result.success) {
         const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();

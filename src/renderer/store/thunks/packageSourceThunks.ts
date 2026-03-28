@@ -257,56 +257,6 @@ export const scanFolder = createAsyncThunk(
 );
 
 /**
- * Fetch releases from GitHub
- * Replaces packageSourceSaga/fetchGithub
- */
-export const fetchGithub = createAsyncThunk(
-  'packageSource/fetchGithub',
-  async (params: { owner: string; repo: string; token?: string }, { dispatch }) => {
-    try {
-      dispatch(setFetchingVersions(true));
-      dispatch(clearErrors());
-
-      const result: { success: boolean; versions?: Version[]; count?: number; error?: string } =
-        await window.electronAPI.packageSource.fetchGithub(params);
-
-      if (result.success && result.versions) {
-        dispatch(setScanResult({
-          versions: result.versions,
-          count: result.count || result.versions.length,
-        }));
-
-        // Show success message
-        toast.success('GitHub 版本获取完成', {
-          description: `Found ${result.count || result.versions.length} versions`,
-        });
-
-        return result.versions;
-      } else {
-        dispatch(setError(result.error || 'Failed to fetch GitHub releases'));
-
-        toast.error('获取失败', {
-          description: result.error || 'Failed to fetch releases from GitHub',
-        });
-
-        return [];
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch GitHub releases';
-      dispatch(setError(errorMessage));
-
-      toast.error('获取失败', {
-        description: errorMessage,
-      });
-
-      throw error;
-    } finally {
-      dispatch(setFetchingVersions(false));
-    }
-  }
-);
-
-/**
  * Fetch versions from HTTP index
  * Replaces packageSourceSaga/fetchHttpIndex
  */

@@ -10,7 +10,7 @@ import type {
   DownloadProgressCallback,
 } from './package-source.js';
 
-const HYBRID_THRESHOLD_BYTES = 100 * 1024 * 1024;
+const HYBRID_THRESHOLD_BYTES = 0;
 
 export interface HttpIndexAsset {
   name: string;
@@ -93,6 +93,10 @@ export class HttpIndexPackageSource implements PackageSource {
 
       for (const versionEntry of indexData.versions) {
         for (const asset of this.normalizeVersionAssets(versionEntry)) {
+          if (!this.isInstallablePackageAsset(asset.name)) {
+            continue;
+          }
+
           const platform = this.extractPlatformFromFilename(asset.name);
           if (!platform || platform !== currentPlatform) {
             continue;
@@ -373,6 +377,10 @@ export class HttpIndexPackageSource implements PackageSource {
     throw new Error('Invalid index file format');
   }
 
+  private isInstallablePackageAsset(filename: string): boolean {
+    return filename.toLowerCase().endsWith('.zip');
+  }
+
   private buildHybridMetadata(asset: HttpIndexAsset, directUrl: string, assetKind: VersionAssetKind): HybridDistributionMetadata {
     const webSeeds = Array.isArray(asset.webSeeds)
       ? asset.webSeeds
@@ -384,23 +392,31 @@ export class HttpIndexPackageSource implements PackageSource {
       webSeeds.push(directUrl);
     }
 
-    const hasRequiredMetadata = Boolean(asset.torrentUrl && asset.infoHash && asset.sha256 && webSeeds.length > 0);
-    const meetsThreshold = typeof asset.size === 'number' && asset.size >= HYBRID_THRESHOLD_BYTES;
+    const torrentUrl = this.resolveOptionalUrl(asset.torrentUrl);
+    const hasTorrentMetadata = Boolean(torrentUrl || asset.infoHash);
     const isLatestDesktopAsset = assetKind === 'desktop-latest';
     const isLatestWebAsset = assetKind === 'web-latest';
+    const serviceScope = isLatestDesktopAsset
+      ? 'latest-desktop'
+      : isLatestWebAsset
+        ? 'latest-server'
+        : 'local-cache';
 
     return {
-      torrentUrl: this.resolveOptionalUrl(asset.torrentUrl),
+      torrentUrl,
       infoHash: asset.infoHash,
       webSeeds,
       sha256: asset.sha256,
       directUrl,
-      eligible: hasRequiredMetadata && meetsThreshold,
-      legacyHttpFallback: !hasRequiredMetadata || !meetsThreshold,
+      hasTorrentMetadata,
+      torrentFirst: hasTorrentMetadata,
+      eligible: hasTorrentMetadata,
+      legacyHttpFallback: !hasTorrentMetadata,
       thresholdBytes: HYBRID_THRESHOLD_BYTES,
       assetKind,
       isLatestDesktopAsset,
       isLatestWebAsset,
+      serviceScope,
     };
   }
 
