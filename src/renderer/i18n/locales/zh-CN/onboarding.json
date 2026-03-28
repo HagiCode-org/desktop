@@ -222,13 +222,14 @@
   },
   "sharingAcceleration": {
     "title": "下载与共享加速",
-    "description": "此功能会优先帮助您更快获取最新 desktop/web 大文件包，并在需要时自动回源。",
+    "description": "默认开启。凡提供种子元数据之 latest desktop/server，先走种子；失败自动回源。",
     "toggleTitle": "开启局域网/互联网共享加速（默认）",
-    "toggleDescription": "您可以在这里取消，后续也能在设置页随时调整。",
+    "toggleDescription": "此处可先关闭，后续仍可在设置页调整。",
     "bullets": {
-      "latest": "用于更快下载最新 desktop 包与 web 部署包",
-      "fallback": "共享加速不可用时会自动回源，不会中断安装",
-      "disable": "企业网络受限或不希望共享时，可以现在关闭"
+      "latest": "对外共享主范围仅 latest desktop 与 latest server",
+      "fallback": "种子 sidecar 不可用或握手失败时，会自动回源补块",
+      "disable": "若网络受限或不愿共享，可现在关闭",
+      "portable": "portable mode 下此能力强制关闭，不会隐式做种"
     }
   }
 }

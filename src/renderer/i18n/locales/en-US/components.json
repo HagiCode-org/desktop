@@ -232,7 +232,6 @@
     "sourceType": {
       "label": "Package Source Type",
       "folder": "Local Folder",
-      "github": "GitHub Release",
       "httpIndex": "HTTP Index",
       "http": "HTTP URL"
     },
@@ -245,32 +244,6 @@
       "scanButton": "Scan Available Versions",
       "scanning": "Scanning...",
       "notFound": "Folder does not exist or is not accessible"
-    },
-    "github": {
-      "owner": {
-        "label": "Repository Owner",
-        "placeholder": "e.g., newbe36524"
-      },
-      "repository": {
-        "label": "Repository Name",
-        "placeholder": "e.g., hagicode"
-      },
-      "token": {
-        "label": "GitHub Token (Optional)",
-        "placeholder": "For private repositories",
-        "hint": "Optional: Only needed for private repositories",
-        "showButton": "Show",
-        "hideButton": "Hide",
-        "clearButton": "Clear",
-        "rateLimitHint": "Increases API rate limit to 5000 requests/hour"
-      },
-      "fetchButton": "Fetch from GitHub",
-      "fetching": "Fetching...",
-      "repoPath": "Repository Path",
-      "rateLimitError": "GitHub API rate limit exceeded (60/hour). Please provide an auth token to increase the limit to 5000 requests/hour, or wait 15 minutes before retrying.",
-      "repoNotFoundError": "Repository not found. Please check the repository owner and name.",
-      "networkError": "Network connection failed. Please check your internet connection.",
-      "invalidTokenError": "Invalid GitHub token. Please check your authentication token."
     },
     "http": {
       "url": {

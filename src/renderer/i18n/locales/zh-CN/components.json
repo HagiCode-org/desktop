@@ -232,7 +232,6 @@
     "sourceType": {
       "label": "包源类型",
       "folder": "本地文件夹",
-      "github": "GitHub Release",
       "httpIndex": "HTTP 索引源",
       "http": "HTTP URL"
     },
@@ -245,32 +244,6 @@
       "scanButton": "扫描可用版本",
       "scanning": "扫描中...",
       "notFound": "文件夹不存在或无法访问"
-    },
-    "github": {
-      "owner": {
-        "label": "仓库所有者",
-        "placeholder": "例如：newbe36524"
-      },
-      "repository": {
-        "label": "仓库名称",
-        "placeholder": "例如：hagicode"
-      },
-      "token": {
-        "label": "GitHub 令牌（可选）",
-        "placeholder": "用于私有仓库",
-        "hint": "可选：仅私有仓库需要",
-        "showButton": "显示",
-        "hideButton": "隐藏",
-        "clearButton": "清除",
-        "rateLimitHint": "提高 API 限制至 5000 次/小时"
-      },
-      "fetchButton": "从 GitHub 获取",
-      "fetching": "获取中...",
-      "repoPath": "仓库路径",
-      "rateLimitError": "GitHub API 速率限制已超出（60 次/小时）。请提供认证令牌以提高限制至 5000 次/小时，或等待 15 分钟后重试。",
-      "repoNotFoundError": "仓库未找到。请检查仓库所有者和名称。",
-      "networkError": "网络连接失败。请检查您的网络连接。",
-      "invalidTokenError": "无效的 GitHub 令牌。请检查您的认证令牌。"
     },
     "http": {
       "url": {

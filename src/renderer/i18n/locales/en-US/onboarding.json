@@ -222,13 +222,14 @@
   },
   "sharingAcceleration": {
     "title": "Download & Sharing Acceleration",
-    "description": "This helps large desktop/web packages download faster and falls back automatically when needed.",
+    "description": "Enabled by default. Latest desktop/server assets with torrent metadata start from torrent first and fall back automatically.",
     "toggleTitle": "Enable LAN/Internet sharing acceleration (default)",
-    "toggleDescription": "You can turn it off now and adjust it later in Settings.",
+    "toggleDescription": "You can disable it here first and adjust it later in Settings.",
     "bullets": {
-      "latest": "Used to speed up the latest desktop package and web deployment package downloads",
-      "fallback": "When shared acceleration is unavailable, the installer falls back automatically",
-      "disable": "Disable it now if your network restricts sharing traffic"
+      "latest": "External seeding stays focused on latest desktop and latest server assets",
+      "fallback": "If the torrent sidecar is missing or the handshake fails, fallback backfill starts automatically",
+      "disable": "Disable it now if your network is restricted or you do not want to share",
+      "portable": "Portable mode forces this feature off and never seeds implicitly"
     }
   }
 }

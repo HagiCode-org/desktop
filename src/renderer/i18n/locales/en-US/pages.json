@@ -178,20 +178,22 @@
     },
     "sharingAcceleration": {
       "title": "Download & Sharing Acceleration",
-      "description": "Manage large-package sharing acceleration, cache retention, and fallback download policy.",
+      "description": "Manage torrent-first downloads, trusted cache reuse, and automatic fallback behavior.",
       "enabledTitle": "Enable LAN/Internet sharing acceleration",
-      "enabledDescription": "Large packages try sharing acceleration first, then fall back to HTTPS automatically.",
-      "uploadLimit": "Upload limit (MB/s)",
-      "cacheLimit": "Cache limit (GB)",
+      "enabledDescription": "Any asset with torrent metadata starts from torrent first and falls back automatically when needed.",
+      "uploadLimit": "Upload limit (Mbps)",
+      "cacheLimit": "Cache limit (GiB)",
       "retentionDays": "Retention days",
-      "thresholdHint": "Only HTTP index packages larger than 100 MB enter the shared-acceleration pipeline.",
-      "networkHint": "If your network restricts sharing traffic, disable it and continue with fallback downloads.",
-      "portableModeHint": "Portable mode always disables sharing acceleration at runtime and keeps downloads on the HTTP/WebSeed fallback path.",
+      "thresholdHint": "Assets with torrent metadata are no longer gated by the old 100 MB threshold.",
+      "networkHint": "Disable sharing acceleration on restricted networks; portable mode always forces it off.",
+      "portableModeHint": "Portable mode disables sharing acceleration and external seeding, then keeps downloads on HTTP/WebSeed fallback.",
       "save": "Save Settings",
       "saving": "Saving...",
       "saveSuccess": "Sharing acceleration settings saved",
       "saveError": "Failed to save sharing acceleration settings",
-      "loadError": "Failed to load sharing acceleration settings"
+      "loadError": "Failed to load sharing acceleration settings",
+      "modeHint": "Mode: torrent first, automatic fallback on failure.",
+      "scopeHint": "External seeding stays focused on latest desktop and latest server. Default cache limit: 5 GiB."
     }
   },
   "footer": {
@@ -346,12 +348,14 @@
     },
     "downloadStage": {
       "queued": "Queued",
-      "backfilling": "Fallback downloading"
+      "backfilling": "Fallback backfilling",
+      "fetchingTorrent": "Fetching torrent",
+      "sharedDownloading": "Torrent-first downloading"
     },
     "downloadMode": {
-      "shared": "Shared acceleration",
-      "fallback": "Fallback",
-      "direct": "Direct HTTP"
+      "shared": "Torrent first",
+      "fallback": "Fallback backfill",
+      "direct": "HTTP/WebSeed"
     },
     "installTelemetry": {
       "mode": "Mode",
@@ -359,7 +363,25 @@
       "peers": "Peers",
       "sharedBytes": "Shared bytes",
       "fallbackBytes": "Fallback bytes",
-      "verified": "Verified"
+      "verified": "Verified",
+      "flow": "Flow: Fetch torrent -> Torrent-first download -> Fallback backfill (if needed) -> Verify -> Extract -> Complete",
+      "flowActive": "Current flow: {{stage}}"
+    },
+    "progressMessage": {
+      "direct-http": "Downloading over HTTP/WebSeed",
+      "fetching-torrent-metadata": "Fetching torrent metadata",
+      "torrent-metadata-ready": "Torrent ready, starting shared acceleration",
+      "torrent-first-started": "Torrent-first download started",
+      "shared-acceleration-active": "Shared acceleration active",
+      "source-fallback-active": "Fallback backfill active",
+      "torrent-unavailable-fallback": "Torrent unavailable, switched to fallback automatically",
+      "portable-mode-http-fallback": "Portable mode forces fallback download",
+      "legacy-http-fallback": "No torrent metadata, using HTTP/WebSeed only",
+      "no-sha256-required": "No extra verification required",
+      "sha256-verifying": "Verifying package integrity",
+      "sha256-verified": "Verification completed",
+      "extracting-package": "Extracting package",
+      "installation-complete": "Installation complete"
     }
   },
   "installProgressDialog": {

@@ -178,20 +178,22 @@
     },
     "sharingAcceleration": {
       "title": "下载与共享加速",
-      "description": "管理大文件下载时的共享加速、缓存保留与回源兜底策略。",
+      "description": "管理种子优先下载、可信缓存与自动回源策略。",
       "enabledTitle": "开启局域网/互联网共享加速",
-      "enabledDescription": "大文件优先尝试共享加速，缺失部分会自动回源到 HTTPS。",
-      "uploadLimit": "上传限速 (MB/s)",
-      "cacheLimit": "缓存上限 (GB)",
+      "enabledDescription": "只要资产提供 torrent metadata，安装即优先走种子；失败会自动回源。",
+      "uploadLimit": "上传上限 (Mbps)",
+      "cacheLimit": "缓存上限 (GiB)",
       "retentionDays": "缓存保留时间 (天)",
-      "thresholdHint": "仅 100 MB 及以上的 HTTP index 大文件会进入共享加速管线。",
-      "networkHint": "如果企业网络受限，可关闭共享加速并继续使用回源下载。",
-      "portableModeHint": "便携版会在运行时强制关闭共享加速，并让下载固定走 HTTP/WebSeed 回源链路。",
+      "thresholdHint": "已提供 torrent metadata 的资产不再受 100 MB 门槛限制。",
+      "networkHint": "若网络受限，可关闭共享加速；portable mode 会强制禁用。",
+      "portableModeHint": "portable mode 下共享加速与对外做种均被禁用，下载固定走 HTTP/WebSeed 回源。",
       "save": "保存设置",
       "saving": "保存中...",
       "saveSuccess": "下载与共享加速设置已保存",
       "saveError": "保存下载与共享加速设置失败",
-      "loadError": "读取下载与共享加速设置失败"
+      "loadError": "读取下载与共享加速设置失败",
+      "modeHint": "模式：种子优先，失败自动回源。",
+      "scopeHint": "对外共享主范围：latest desktop 与 latest server。默认缓存上限 5 GiB。"
     }
   },
   "footer": {
@@ -346,12 +348,14 @@
     },
     "downloadStage": {
       "queued": "等待开始",
-      "backfilling": "回源补块中"
+      "backfilling": "回源补块中",
+      "fetchingTorrent": "获取种子",
+      "sharedDownloading": "共享加速下载中"
     },
     "downloadMode": {
-      "shared": "共享加速",
-      "fallback": "回源下载",
-      "direct": "直连下载"
+      "shared": "种子优先",
+      "fallback": "回源补块",
+      "direct": "HTTP/WebSeed"
     },
     "installTelemetry": {
       "mode": "下载模式",
@@ -359,7 +363,25 @@
       "peers": "已连接节点",
       "sharedBytes": "共享获取",
       "fallbackBytes": "回源获取",
-      "verified": "校验通过"
+      "verified": "校验通过",
+      "flow": "阶段：获取种子 -> 共享加速 -> 回源补块(如需) -> 校验 -> 解压 -> 完成",
+      "flowActive": "当前流程：{{stage}}"
+    },
+    "progressMessage": {
+      "direct-http": "HTTP/WebSeed 下载中",
+      "fetching-torrent-metadata": "获取种子中",
+      "torrent-metadata-ready": "种子已就绪，开始共享加速",
+      "torrent-first-started": "种子优先下载已启动",
+      "shared-acceleration-active": "共享加速下载中",
+      "source-fallback-active": "回源补块中",
+      "torrent-unavailable-fallback": "种子不可用，已自动回源",
+      "portable-mode-http-fallback": "portable mode：固定回源下载",
+      "legacy-http-fallback": "资产未提供种子，改走 HTTP/WebSeed",
+      "no-sha256-required": "无需额外校验",
+      "sha256-verifying": "校验包完整性中",
+      "sha256-verified": "校验完成",
+      "extracting-package": "解压安装包中",
+      "installation-complete": "安装完成"
     }
   },
   "installProgressDialog": {
