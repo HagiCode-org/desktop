@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { PackageSourceConfigManager } from '../package-source-config-manager.js';
+import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../shared/package-source-defaults.js';
 
 class MockStore {
   private data: Record<string, unknown>;
@@ -46,7 +47,7 @@ describe('package source github-release removal', () => {
           id: 'official-http',
           type: 'http-index',
           name: 'Official HTTP Index',
-          indexUrl: 'https://index.hagicode.com/server/index.json',
+          indexUrl: OFFICIAL_SERVER_HTTP_INDEX_URL,
           createdAt: '2026-03-02T00:00:00.000Z',
         },
       ],
@@ -83,7 +84,7 @@ describe('package source github-release removal', () => {
 
     assert.equal(sources.length, 1);
     assert.equal(sources[0]?.type, 'http-index');
-    assert.equal(sources[0]?.indexUrl, 'https://index.hagicode.com/server/index.json');
+    assert.equal(sources[0]?.indexUrl, OFFICIAL_SERVER_HTTP_INDEX_URL);
     assert.equal(manager.getActiveSource()?.type, 'http-index');
     assert.equal(manager.getDefaultSource()?.type, 'http-index');
   });
@@ -101,7 +102,7 @@ describe('package source github-release removal', () => {
       const source = manager.getActiveSource();
 
       assert.equal(source?.type, 'http-index');
-      assert.equal(source?.indexUrl, 'https://index.hagicode.com/server/index.json');
+      assert.equal(source?.indexUrl, OFFICIAL_SERVER_HTTP_INDEX_URL);
     } finally {
       if (previousOverride === undefined) {
         delete process.env.UPDATE_SOURCE_OVERRIDE;
@@ -109,6 +110,29 @@ describe('package source github-release removal', () => {
         process.env.UPDATE_SOURCE_OVERRIDE = previousOverride;
       }
     }
+  });
+
+  it('migrates the legacy official http-index URL to the new official server index URL', () => {
+    const store = new MockStore({
+      sources: [
+        {
+          id: 'legacy-official-http',
+          type: 'http-index',
+          name: 'HagiCode 官方源',
+          indexUrl: 'https://server.dl.hagicode.com/index.json',
+          createdAt: '2026-03-01T00:00:00.000Z',
+        },
+      ],
+      activeSourceId: 'legacy-official-http',
+      defaultSourceId: 'legacy-official-http',
+    });
+
+    const manager = new PackageSourceConfigManager(store as never);
+    const source = manager.getActiveSource();
+
+    assert.equal(source?.type, 'http-index');
+    assert.equal(source?.indexUrl, OFFICIAL_SERVER_HTTP_INDEX_URL);
+    assert.equal(manager.getDefaultSource()?.indexUrl, OFFICIAL_SERVER_HTTP_INDEX_URL);
   });
 
   it('removes github package source contracts and IPC bridges from the main/preload surfaces', async () => {

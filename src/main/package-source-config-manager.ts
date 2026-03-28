@@ -1,9 +1,12 @@
 import Store from 'electron-store';
 import log from 'electron-log';
+import {
+  OFFICIAL_SERVER_HTTP_INDEX_URL,
+  normalizeOfficialServerHttpIndexUrl,
+} from '../shared/package-source-defaults.js';
 
 const DEFAULT_HTTP_INDEX_SOURCE_ID = 'http-index-default';
 const DEFAULT_HTTP_INDEX_NAME = 'HagiCode 官方源';
-const DEFAULT_HTTP_INDEX_URL = 'https://index.hagicode.com/server/index.json';
 
 /**
  * Package source configuration with metadata
@@ -385,7 +388,7 @@ export class PackageSourceConfigManager {
         name: overrideConfig.name,
         defaultChannel: overrideConfig.defaultChannel,
         lastUsedAt: overrideConfig.lastUsedAt,
-        indexUrl: overrideConfig.indexUrl,
+        indexUrl: normalizeOfficialServerHttpIndexUrl(overrideConfig.indexUrl),
         baseUrl: overrideConfig.baseUrl,
         httpAuthToken: overrideConfig.httpAuthToken,
       };
@@ -410,10 +413,7 @@ export class PackageSourceConfigManager {
         mutated = true;
       } else if (!normalized) {
         mutated = true;
-      } else if (
-        rawSource.id !== normalized.id
-        || rawSource.createdAt !== normalized.createdAt
-      ) {
+      } else if (this.didNormalizeStoredSourceChange(rawSource, normalized)) {
         mutated = true;
       }
 
@@ -539,7 +539,7 @@ export class PackageSourceConfigManager {
         createdAt: rawSource.createdAt || new Date().toISOString(),
         lastUsedAt: rawSource.lastUsedAt,
         defaultChannel: rawSource.defaultChannel,
-        indexUrl: rawSource.indexUrl,
+        indexUrl: normalizeOfficialServerHttpIndexUrl(rawSource.indexUrl),
         baseUrl: rawSource.baseUrl,
         httpAuthToken: rawSource.httpAuthToken,
       };
@@ -582,7 +582,7 @@ export class PackageSourceConfigManager {
         name: config.name,
         lastUsedAt: config.lastUsedAt,
         defaultChannel: config.defaultChannel,
-        indexUrl: config.indexUrl,
+        indexUrl: normalizeOfficialServerHttpIndexUrl(config.indexUrl),
         baseUrl: config.baseUrl,
         httpAuthToken: config.httpAuthToken,
       };
@@ -595,7 +595,7 @@ export class PackageSourceConfigManager {
     return {
       type: 'http-index',
       name: DEFAULT_HTTP_INDEX_NAME,
-      indexUrl: DEFAULT_HTTP_INDEX_URL,
+      indexUrl: OFFICIAL_SERVER_HTTP_INDEX_URL,
     };
   }
 
@@ -604,12 +604,41 @@ export class PackageSourceConfigManager {
       id: DEFAULT_HTTP_INDEX_SOURCE_ID,
       type: 'http-index',
       name: DEFAULT_HTTP_INDEX_NAME,
-      indexUrl: DEFAULT_HTTP_INDEX_URL,
+      indexUrl: OFFICIAL_SERVER_HTTP_INDEX_URL,
       createdAt: new Date().toISOString(),
     };
   }
 
   private generateRecoveredSourceId(type: StoredPackageSourceConfig['type']): string {
     return `${type}-recovered-${Date.now()}`;
+  }
+
+  private didNormalizeStoredSourceChange(
+    rawSource: RawStoredPackageSourceConfig,
+    normalized: StoredPackageSourceConfig,
+  ): boolean {
+    if (rawSource.id !== normalized.id || rawSource.createdAt !== normalized.createdAt) {
+      return true;
+    }
+
+    if (rawSource.type !== normalized.type) {
+      return true;
+    }
+
+    if (rawSource.name !== normalized.name || rawSource.lastUsedAt !== normalized.lastUsedAt) {
+      return true;
+    }
+
+    if (rawSource.defaultChannel !== normalized.defaultChannel) {
+      return true;
+    }
+
+    if (normalized.type === 'local-folder') {
+      return rawSource.path !== normalized.path;
+    }
+
+    return rawSource.indexUrl !== normalized.indexUrl
+      || rawSource.baseUrl !== normalized.baseUrl
+      || rawSource.httpAuthToken !== normalized.httpAuthToken;
   }
 }

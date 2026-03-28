@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Version } from '../../../main/version-manager';
 import type { StoredPackageSourceConfig } from '../../../main/package-source-config-manager';
+import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../../shared/package-source-defaults';
 
 export interface PackageSourceState {
   currentConfig: StoredPackageSourceConfig | null;
@@ -34,7 +35,7 @@ const initialState: PackageSourceState = {
   folderPath: process.env.NODE_ENV === 'development'
     ? '/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagibuild/Release/release-packages'
     : '',
-  httpIndexUrl: 'https://index.hagicode.com/server/index.json',
+  httpIndexUrl: OFFICIAL_SERVER_HTTP_INDEX_URL,
   scanResult: null,
   selectedChannel: null,
 };

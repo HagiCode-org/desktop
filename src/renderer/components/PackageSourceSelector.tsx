@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder, Globe, Package } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../shared/package-source-defaults';
 import type { RootState, AppDispatch } from '../store';
 import {
   selectAllConfigs,
@@ -17,7 +18,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-const DEFAULT_HTTP_INDEX_URL = 'https://index.hagicode.com/server/index.json';
 const DEFAULT_DEV_FOLDER_PATH = '/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagibuild/Release/release-packages';
 
 export function PackageSourceSelector() {
@@ -42,7 +42,7 @@ export function PackageSourceSelector() {
       : {
           type: 'http-index' as const,
           name: t('packageSource.sourceType.httpIndex'),
-          indexUrl: httpIndexUrl || DEFAULT_HTTP_INDEX_URL,
+          indexUrl: httpIndexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL,
         }
   ), [defaultFolderPath, folderPath, httpIndexUrl, sourceType, t]);
 
@@ -54,7 +54,7 @@ export function PackageSourceSelector() {
     if (currentConfig.type === 'local-folder') {
       dispatch(setFolderPath(currentConfig.path || ''));
     } else {
-      dispatch(setHttpIndexUrl(currentConfig.indexUrl || DEFAULT_HTTP_INDEX_URL));
+      dispatch(setHttpIndexUrl(currentConfig.indexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL));
     }
     setHasChanges(false);
   }, [currentConfig, dispatch]);
@@ -90,7 +90,7 @@ export function PackageSourceSelector() {
     dispatch(setSourceConfig({
       type: 'http-index',
       name: t('packageSource.sourceType.httpIndex'),
-      indexUrl: httpIndexUrl || DEFAULT_HTTP_INDEX_URL,
+      indexUrl: httpIndexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL,
     }));
   };
 
@@ -157,7 +157,7 @@ export function PackageSourceSelector() {
                 type="text"
                 value={httpIndexUrl}
                 onChange={(event) => dispatch(setHttpIndexUrl(event.target.value))}
-                placeholder={t('packageSource.httpIndex.indexUrl.placeholder')}
+                placeholder={OFFICIAL_SERVER_HTTP_INDEX_URL}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
