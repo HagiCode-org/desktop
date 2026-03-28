@@ -30,6 +30,7 @@ import {
   selectInstallState,
   selectIsInstallingFromState,
   selectInstallProgress,
+  selectInstallingVersionId,
 } from '../store/slices/webServiceSlice';
 import {
   installWebServicePackage,
@@ -137,6 +138,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
   const installState = useSelector((state: RootState) => selectInstallState(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
   const webServiceInstallProgress = useSelector((state: RootState) => selectInstallProgress(state));
+  const installingVersionId = useSelector((state: RootState) => selectInstallingVersionId(state));
   const [availableVersions, setAvailableVersions] = useState<Version[]>([]);
   const [installedVersions, setInstalledVersions] = useState<InstalledVersion[]>([]);
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
@@ -443,8 +445,8 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     });
   };
 
-  const renderInstallTelemetry = () => {
-    if (!isInstallingFromState || !webServiceInstallProgress) {
+  const renderInstallTelemetry = (versionId: string) => {
+    if (!isInstallingFromState || !webServiceInstallProgress || installingVersionId !== versionId) {
       return null;
     }
 
@@ -647,6 +649,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
         <div className="space-y-3">
           {displayVersions.map((version) => {
             const installed = installedVersions.find((v) => v.id === version.id);
+            const isInstallingCurrentVersion = isInstallingFromState && installingVersionId === version.id;
 
             return (
               <div
@@ -671,7 +674,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
                   {!installed ? (
                     <div className="flex items-center gap-2">
-                      {isInstallingFromState && webServiceInstallProgress ? (
+                      {isInstallingCurrentVersion && webServiceInstallProgress ? (
                         <div className="flex items-center gap-2">
                           {/* 进度条 */}
                           <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
@@ -696,7 +699,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                           disabled={isInstallingFromState || webServiceOperating}
                           className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                          {isInstallingFromState ? (
+                          {isInstallingCurrentVersion ? (
                             <>
                               <Loader2 className="animate-spin h-4 w-4" />
                               {getInstallProgressText()}
@@ -717,7 +720,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                     </span>
                   )}
                 </div>
-                {renderInstallTelemetry()}
+                {renderInstallTelemetry(version.id)}
               </div>
             );
           })}

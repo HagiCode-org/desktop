@@ -9,6 +9,7 @@ import {
   setVersion,
   setPackageInfo,
   setInstallProgress,
+  setInstallingVersionId,
   setAvailableVersions,
   setPlatform,
   setPort,
@@ -334,10 +335,12 @@ export const installWebServicePackage = createAsyncThunk(
 
       // Service is not running, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
+      dispatch(setInstallingVersionId(version));
       return await doInstallPackage(version, dispatch);
     } catch (error) {
       console.error('Install package error:', error);
       dispatch(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
+      dispatch(setInstallingVersionId(null));
       dispatch(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
       dispatch(setInstallState(InstallState.Error));
       throw error;
@@ -384,6 +387,7 @@ export const confirmInstallAndStop = createAsyncThunk(
 
       // Service stopped successfully, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
+      dispatch(setInstallingVersionId(pendingVersion));
       const result = await doInstallPackage(pendingVersion, dispatch);
 
       // Hide confirmation dialog after installation completes
@@ -395,6 +399,7 @@ export const confirmInstallAndStop = createAsyncThunk(
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       dispatch(setError(errorMessage));
       dispatch(hideInstallConfirm());
+      dispatch(setInstallingVersionId(null));
       dispatch(setInstallState(InstallState.Error));
       throw error;
     }
@@ -430,6 +435,7 @@ async function doInstallPackage(version: string, dispatch: any) {
 
     // Reset to idle state after 3 seconds
     setTimeout(() => {
+      dispatch(setInstallingVersionId(null));
       dispatch(setInstallState(InstallState.Idle));
     }, 3000);
 
@@ -445,6 +451,7 @@ async function doInstallPackage(version: string, dispatch: any) {
     });
 
     // Reset to idle state immediately after error
+    dispatch(setInstallingVersionId(null));
     dispatch(setInstallState(InstallState.Idle));
 
     return { success: false };

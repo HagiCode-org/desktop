@@ -137,6 +137,7 @@ export interface WebServiceState {
   packageInfo: PackageInfo | null;
   installProgress: InstallProgress | null;
   isInstalling: boolean;
+  installingVersionId: string | null;
   availableVersions: string[];
   platform: string | null;
 
@@ -180,6 +181,7 @@ const initialState: WebServiceState = {
   packageInfo: null,
   installProgress: null,
   isInstalling: false,
+  installingVersionId: null,
   availableVersions: [],
   platform: null,
 
@@ -325,6 +327,10 @@ export const webServiceSlice = createSlice({
       state.isInstalling = action.payload;
     },
 
+    setInstallingVersionId: (state, action: PayloadAction<string | null>) => {
+      state.installingVersionId = action.payload;
+    },
+
     setAvailableVersions: (state, action: PayloadAction<string[]>) => {
       state.availableVersions = action.payload;
     },
@@ -387,6 +393,7 @@ export const {
   setPackageInfo,
   setInstallProgress,
   setIsInstalling,
+  setInstallingVersionId,
   setAvailableVersions,
   setPlatform,
   setActiveVersion,
@@ -420,6 +427,7 @@ export const selectShowDependencyWarning = (state: { webService: WebServiceState
 export const selectPackageInfo = (state: { webService: WebServiceState }) => state.webService.packageInfo;
 export const selectInstallProgress = (state: { webService: WebServiceState }) => state.webService.installProgress;
 export const selectIsInstalling = (state: { webService: WebServiceState }) => state.webService.isInstalling;
+export const selectInstallingVersionId = (state: { webService: WebServiceState }) => state.webService.installingVersionId;
 export const selectAvailableVersions = (state: { webService: WebServiceState }) => state.webService.availableVersions;
 export const selectPlatform = (state: { webService: WebServiceState }) => state.webService.platform;
 
@@ -461,6 +469,7 @@ export const selectPackageManagementInfo = (state: { webService: WebServiceState
   packageInfo: state.webService.packageInfo,
   installProgress: state.webService.installProgress,
   isInstalling: state.webService.isInstalling,
+  installingVersionId: state.webService.installingVersionId,
   availableVersions: state.webService.availableVersions,
   platform: state.webService.platform,
 });

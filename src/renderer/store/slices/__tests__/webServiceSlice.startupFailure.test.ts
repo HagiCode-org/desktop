@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import reducer, {
   hideStartupFailureDialog,
+  setInstallProgress,
+  setInstallingVersionId,
   setStartupFailure,
   showStartupFailureDialog,
   type StartupFailurePayload,
@@ -39,5 +41,20 @@ describe('webServiceSlice startup failure dialog state', () => {
     assert.equal(hidden.showStartupFailureDialog, false);
     assert.equal(hidden.startupFailure?.summary, 'Health check failed');
     assert.equal(reopened.showStartupFailureDialog, true);
+  });
+
+  it('tracks the active install target so only one version card renders progress', () => {
+    const selectingTarget = reducer(undefined, setInstallingVersionId('version-1'));
+    const progressing = reducer(selectingTarget, setInstallProgress({
+      stage: 'downloading',
+      progress: 42,
+      message: 'shared-acceleration-active',
+    }));
+    const cleared = reducer(progressing, setInstallingVersionId(null));
+
+    assert.equal(selectingTarget.installingVersionId, 'version-1');
+    assert.equal(progressing.isInstalling, true);
+    assert.equal(progressing.installingVersionId, 'version-1');
+    assert.equal(cleared.installingVersionId, null);
   });
 });
