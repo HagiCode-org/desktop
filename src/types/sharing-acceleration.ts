@@ -2,8 +2,27 @@ export type VersionAssetKind = 'desktop-package' | 'desktop-latest' | 'web-packa
 
 export type VersionDownloadMode = 'http-direct' | 'shared-acceleration' | 'source-fallback';
 
+export type SharingAccelerationServiceScope = 'latest-desktop' | 'latest-server' | 'local-cache';
+
+export type VersionDownloadMessage =
+  | 'direct-http'
+  | 'fetching-torrent-metadata'
+  | 'torrent-metadata-ready'
+  | 'torrent-first-started'
+  | 'shared-acceleration-active'
+  | 'source-fallback-active'
+  | 'torrent-unavailable-fallback'
+  | 'portable-mode-http-fallback'
+  | 'legacy-http-fallback'
+  | 'no-sha256-required'
+  | 'sha256-verifying'
+  | 'sha256-verified'
+  | 'extracting-package'
+  | 'installation-complete';
+
 export type VersionInstallStage =
   | 'queued'
+  | 'fetching-torrent'
   | 'downloading'
   | 'backfilling'
   | 'verifying'
@@ -17,12 +36,15 @@ export interface HybridDistributionMetadata {
   webSeeds: string[];
   sha256?: string;
   directUrl?: string;
+  hasTorrentMetadata: boolean;
+  torrentFirst: boolean;
   eligible: boolean;
   legacyHttpFallback: boolean;
   thresholdBytes: number;
   assetKind: VersionAssetKind;
   isLatestDesktopAsset: boolean;
   isLatestWebAsset: boolean;
+  serviceScope: SharingAccelerationServiceScope;
 }
 
 export interface SharingAccelerationSettings {
@@ -52,15 +74,17 @@ export interface VersionDownloadProgress {
   percentage: number;
   stage: VersionInstallStage;
   mode: VersionDownloadMode;
-  message?: string;
+  message?: VersionDownloadMessage | string;
   peers?: number;
   p2pBytes?: number;
   fallbackBytes?: number;
   verified?: boolean;
+  serviceScope?: SharingAccelerationServiceScope;
 }
 
 export interface HybridDownloadPolicy {
   useHybrid: boolean;
+  preferTorrent: boolean;
   reason:
     | 'shared-enabled'
     | 'shared-disabled'
@@ -70,6 +94,8 @@ export interface HybridDownloadPolicy {
     | 'legacy-http'
     | 'latest-only';
   thresholdBytes: number;
+  serviceScope: SharingAccelerationServiceScope;
+  seedEligible: boolean;
 }
 
 export interface CacheRetentionSummary {
@@ -82,6 +108,9 @@ export interface TrustedCacheRecord {
   versionId: string;
   cachePath: string;
   cacheSize: number;
+  assetKind: VersionAssetKind;
+  serviceScope: SharingAccelerationServiceScope;
+  seedEligible: boolean;
   verifiedAt: string;
   lastUsedAt: string;
   expiresAt: string;

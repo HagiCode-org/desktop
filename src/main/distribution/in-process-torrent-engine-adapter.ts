@@ -67,6 +67,7 @@ export class InProcessTorrentEngineAdapter implements DownloadEngineAdapter {
           if (sourceFile !== destinationPath) {
             await fsPromises.copyFile(sourceFile, destinationPath);
           }
+          this.activeTorrents.delete(version.id);
           resolve();
         } catch (error) {
           reject(error);
@@ -112,6 +113,7 @@ export class InProcessTorrentEngineAdapter implements DownloadEngineAdapter {
           p2pBytes,
           fallbackBytes,
           message: mode === 'shared-acceleration' ? 'shared-acceleration-active' : 'source-fallback-active',
+          serviceScope: hybrid.serviceScope,
         });
       };
 
@@ -122,6 +124,18 @@ export class InProcessTorrentEngineAdapter implements DownloadEngineAdapter {
         if (hybrid.directUrl) {
           torrent.addWebSeed(hybrid.directUrl);
         }
+        onProgress?.({
+          current: torrent.downloaded,
+          total: torrent.length || version.size || 0,
+          percentage: 0,
+          stage: 'fetching-torrent',
+          mode: 'shared-acceleration',
+          peers: torrent.numPeers,
+          p2pBytes,
+          fallbackBytes,
+          message: 'torrent-metadata-ready',
+          serviceScope: hybrid.serviceScope,
+        });
         reportProgress();
       });
 
@@ -143,12 +157,13 @@ export class InProcessTorrentEngineAdapter implements DownloadEngineAdapter {
         current: 0,
         total: version.size ?? 0,
         percentage: 0,
-        stage: 'downloading',
+        stage: 'fetching-torrent',
         mode: 'shared-acceleration',
         peers: 0,
         p2pBytes: 0,
         fallbackBytes: 0,
-        message: 'shared-acceleration-started',
+        message: 'fetching-torrent-metadata',
+        serviceScope: hybrid.serviceScope,
       });
     });
   }

@@ -11,9 +11,9 @@ import type { Version } from '../version-manager.js';
 const baseSettings = {
   enabled: true,
   uploadLimitMbps: 2,
-  cacheLimitGb: 10,
+  cacheLimitGb: 5,
   retentionDays: 7,
-  hybridThresholdMb: 100,
+  hybridThresholdMb: 0,
   onboardingChoiceRecorded: true,
 };
 
@@ -59,19 +59,25 @@ describe('HybridDownloadCoordinator', () => {
         webSeeds: ['https://example.com/hagicode.zip'],
         sha256: sha256(payload),
         directUrl: 'https://example.com/hagicode.zip',
+        hasTorrentMetadata: true,
+        torrentFirst: true,
         eligible: true,
         legacyHttpFallback: false,
-        thresholdBytes: 100 * 1024 * 1024,
+        thresholdBytes: 0,
         assetKind: 'desktop-latest',
         isLatestDesktopAsset: true,
         isLatestWebAsset: false,
+        serviceScope: 'latest-desktop',
       },
     };
 
     const result = await coordinator.download(version, cachePath, { downloadPackage: async () => { throw new Error('should not fallback'); }, listAvailableVersions: async () => [] } as any);
 
     assert.equal(result.policy.useHybrid, true);
+    assert.equal(result.policy.preferTorrent, true);
+    assert.equal(result.policy.serviceScope, 'latest-desktop');
     assert.equal(result.verified, true);
+    assert.equal(result.finalMode, 'shared-acceleration');
     assert.deepEqual(records, ['v1']);
   });
 
@@ -111,12 +117,15 @@ describe('HybridDownloadCoordinator', () => {
         webSeeds: ['https://example.com/hagicode.zip'],
         sha256: sha256('expected-payload'),
         directUrl: 'https://example.com/hagicode.zip',
+        hasTorrentMetadata: true,
+        torrentFirst: true,
         eligible: true,
         legacyHttpFallback: false,
-        thresholdBytes: 100 * 1024 * 1024,
+        thresholdBytes: 0,
         assetKind: 'desktop-latest',
         isLatestDesktopAsset: true,
         isLatestWebAsset: false,
+        serviceScope: 'latest-desktop',
       },
     };
 
@@ -199,12 +208,15 @@ describe('HybridDownloadCoordinator', () => {
         webSeeds: ['https://example.com/hagicode.zip'],
         sha256: sha256(payload),
         directUrl: 'https://example.com/hagicode.zip',
+        hasTorrentMetadata: true,
+        torrentFirst: true,
         eligible: true,
         legacyHttpFallback: false,
-        thresholdBytes: 100 * 1024 * 1024,
+        thresholdBytes: 0,
         assetKind: 'desktop-latest',
         isLatestDesktopAsset: true,
         isLatestWebAsset: false,
+        serviceScope: 'latest-desktop',
       },
     };
 
@@ -232,9 +244,154 @@ describe('HybridDownloadCoordinator', () => {
 
     assert.equal(result.policy.useHybrid, false);
     assert.equal(result.policy.reason, 'portable-mode');
+    assert.equal(result.policy.seedEligible, true);
     assert.equal(sourceDownloadCalled, true);
     assert.equal(engineDownloadCalled, false);
     assert.equal(stopSeedingCalled, true);
     assert.equal(engineStopCalled, true);
+    assert.equal(result.finalMode, 'source-fallback');
+  });
+
+  it('falls back to HTTP/WebSeed automatically when torrent-first fails', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hybrid-download-fallback-'));
+    const cachePath = path.join(tempRoot, 'hagicode.zip');
+    const payload = 'http-fallback-success';
+    const progressMessages: string[] = [];
+    let sourceDownloadCalled = false;
+
+    const coordinator = new HybridDownloadCoordinator({
+      engine: {
+        async download() {
+          throw new Error('torrent handshake failed');
+        },
+        async stopAll() {},
+      },
+      settingsStore: { getSettings: () => baseSettings, updateSettings: () => baseSettings } as any,
+      cacheRetentionManager: {
+        async stopAllSeeding() {},
+        async prune() {
+          return { totalBytes: 0, removedEntries: [], retainedEntries: [] };
+        },
+        async markTrusted(record: any) {
+          return record;
+        },
+        async discard() {},
+      } as any,
+    });
+
+    const version: Version = {
+      id: 'v4',
+      version: '1.0.1',
+      platform: 'win-x64',
+      packageFilename: 'hagicode.zip',
+      sourceType: 'http-index',
+      size: payload.length,
+      hybrid: {
+        torrentUrl: 'https://example.com/hagicode.torrent',
+        infoHash: 'ghi',
+        webSeeds: ['https://example.com/hagicode.zip'],
+        sha256: sha256(payload),
+        directUrl: 'https://example.com/hagicode.zip',
+        hasTorrentMetadata: true,
+        torrentFirst: true,
+        eligible: true,
+        legacyHttpFallback: false,
+        thresholdBytes: 0,
+        assetKind: 'desktop-package',
+        isLatestDesktopAsset: false,
+        isLatestWebAsset: false,
+        serviceScope: 'local-cache',
+      },
+    };
+
+    const result = await coordinator.download(
+      version,
+      cachePath,
+      {
+        async downloadPackage(_version: Version, destinationPath: string, onProgress?: any) {
+          sourceDownloadCalled = true;
+          onProgress?.({
+            current: payload.length,
+            total: payload.length,
+            percentage: 100,
+            stage: 'downloading',
+            mode: 'http-direct',
+            message: 'direct-http',
+          });
+          await fs.writeFile(destinationPath, payload);
+        },
+        async listAvailableVersions() {
+          return [];
+        },
+      } as any,
+      (progress) => {
+        if (progress.message) {
+          progressMessages.push(progress.message);
+        }
+      },
+    );
+
+    assert.equal(sourceDownloadCalled, true);
+    assert.equal(result.policy.useHybrid, true);
+    assert.equal(result.policy.seedEligible, false);
+    assert.equal(result.finalMode, 'source-fallback');
+    assert.ok(progressMessages.includes('torrent-unavailable-fallback'));
+    assert.ok(progressMessages.includes('source-fallback-active'));
+  });
+
+  it('marks non-latest torrent assets as trusted local cache without seeding scope', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hybrid-download-local-cache-'));
+    const cachePath = path.join(tempRoot, 'hagicode.zip');
+    const payload = 'local-cache-success';
+    let trustedRecord: any;
+
+    const coordinator = new HybridDownloadCoordinator({
+      engine: {
+        async download(_version, destinationPath) {
+          await fs.writeFile(destinationPath, payload);
+        },
+        async stopAll() {},
+      },
+      settingsStore: { getSettings: () => baseSettings, updateSettings: () => baseSettings } as any,
+      cacheRetentionManager: {
+        async stopAllSeeding() {},
+        async prune() {
+          return { totalBytes: 0, removedEntries: [], retainedEntries: [] };
+        },
+        async markTrusted(record: any) {
+          trustedRecord = record;
+          return record;
+        },
+        async discard() {},
+      } as any,
+    });
+
+    await coordinator.download({
+      id: 'v5',
+      version: '1.0.2',
+      platform: 'win-x64',
+      packageFilename: 'hagicode.zip',
+      sourceType: 'http-index',
+      size: payload.length,
+      hybrid: {
+        torrentUrl: 'https://example.com/hagicode.torrent',
+        infoHash: 'jkl',
+        webSeeds: ['https://example.com/hagicode.zip'],
+        sha256: sha256(payload),
+        directUrl: 'https://example.com/hagicode.zip',
+        hasTorrentMetadata: true,
+        torrentFirst: true,
+        eligible: true,
+        legacyHttpFallback: false,
+        thresholdBytes: 0,
+        assetKind: 'desktop-package',
+        isLatestDesktopAsset: false,
+        isLatestWebAsset: false,
+        serviceScope: 'local-cache',
+      },
+    }, cachePath, { downloadPackage: async () => undefined, listAvailableVersions: async () => [] } as any);
+
+    assert.equal(trustedRecord.serviceScope, 'local-cache');
+    assert.equal(trustedRecord.seedEligible, false);
   });
 });

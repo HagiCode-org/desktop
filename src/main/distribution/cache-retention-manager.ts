@@ -11,6 +11,8 @@ interface CacheRetentionStoreSchema {
   records: TrustedCacheRecord[];
 }
 
+type TrustedCacheInput = Omit<TrustedCacheRecord, 'verifiedAt' | 'lastUsedAt' | 'expiresAt' | 'seeding'>;
+
 export class CacheRetentionManager {
   private store: Store<CacheRetentionStoreSchema>;
 
@@ -27,14 +29,14 @@ export class CacheRetentionManager {
     return this.store.get('records', []);
   }
 
-  async markTrusted(record: Omit<TrustedCacheRecord, 'verifiedAt' | 'lastUsedAt' | 'expiresAt' | 'seeding'>, settings: SharingAccelerationSettings): Promise<TrustedCacheRecord> {
+  async markTrusted(record: TrustedCacheInput, settings: SharingAccelerationSettings): Promise<TrustedCacheRecord> {
     const now = new Date();
     const nextRecord: TrustedCacheRecord = {
       ...record,
       verifiedAt: now.toISOString(),
       lastUsedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + settings.retentionDays * 24 * 60 * 60 * 1000).toISOString(),
-      seeding: settings.enabled,
+      seeding: settings.enabled && record.seedEligible,
     };
 
     const records = this.listRecords().filter((existing) => existing.versionId !== record.versionId);
@@ -55,7 +57,8 @@ export class CacheRetentionManager {
   }
 
   async prune(settings: SharingAccelerationSettings): Promise<CacheRetentionSummary> {
-    const records = [...this.listRecords()].sort((left, right) => new Date(left.lastUsedAt).getTime() - new Date(right.lastUsedAt).getTime());
+    const records = [...this.listRecords()]
+      .sort((left, right) => new Date(left.lastUsedAt).getTime() - new Date(right.lastUsedAt).getTime());
     const removedEntries: string[] = [];
     const retainedEntries: string[] = [];
     const maxBytes = settings.cacheLimitGb * 1024 * 1024 * 1024;
@@ -64,7 +67,8 @@ export class CacheRetentionManager {
 
     for (const record of records) {
       const expired = new Date(record.expiresAt).getTime() <= now;
-      if (expired) {
+      const missing = await fs.access(record.cachePath).then(() => false).catch(() => true);
+      if (expired || missing) {
         removedEntries.push(record.versionId);
         await fs.rm(record.cachePath, { force: true }).catch(() => undefined);
         continue;
@@ -74,8 +78,16 @@ export class CacheRetentionManager {
       retainedEntries.push(record.versionId);
     }
 
+    const retainedRecords = () => records.filter((record) => retainedEntries.includes(record.versionId));
+
     while (totalBytes > maxBytes && retainedEntries.length > 0) {
-      const evicted = records.find((record) => retainedEntries.includes(record.versionId));
+      const evicted = retainedRecords()
+        .sort((left, right) => {
+          if (left.seedEligible !== right.seedEligible) {
+            return left.seedEligible ? 1 : -1;
+          }
+          return new Date(left.lastUsedAt).getTime() - new Date(right.lastUsedAt).getTime();
+        })[0];
       if (!evicted) {
         break;
       }
@@ -87,7 +99,8 @@ export class CacheRetentionManager {
 
     const nextRecords = records.filter((record) => retainedEntries.includes(record.versionId)).map((record) => ({
       ...record,
-      seeding: settings.enabled && record.seeding,
+      seeding: settings.enabled && record.seedEligible,
+      lastUsedAt: record.lastUsedAt || new Date().toISOString(),
     }));
     this.store.set('records', nextRecords);
     log.info('[CacheRetentionManager] Prune summary:', { totalBytes, removedEntries, retainedEntries });

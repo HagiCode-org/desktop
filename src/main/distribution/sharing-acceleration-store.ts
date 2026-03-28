@@ -12,9 +12,9 @@ interface SharingAccelerationStoreSchema {
 const DEFAULT_SETTINGS: SharingAccelerationSettings = {
   enabled: true,
   uploadLimitMbps: 2,
-  cacheLimitGb: 10,
+  cacheLimitGb: 5,
   retentionDays: 7,
-  hybridThresholdMb: 100,
+  hybridThresholdMb: 0,
   onboardingChoiceRecorded: false,
 };
 

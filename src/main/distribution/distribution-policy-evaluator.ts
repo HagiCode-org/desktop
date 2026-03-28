@@ -8,25 +8,24 @@ export class DistributionPolicyEvaluator {
     settings: SharingAccelerationSettings,
     options?: { distributionMode?: DistributionMode },
   ): HybridDownloadPolicy {
-    const thresholdBytes = settings.hybridThresholdMb * 1024 * 1024;
+    const thresholdBytes = version.hybrid?.thresholdBytes ?? 0;
+    const serviceScope = version.hybrid?.serviceScope ?? 'local-cache';
+    const seedEligible = Boolean(version.hybrid?.isLatestDesktopAsset || version.hybrid?.isLatestWebAsset);
     if (version.sourceType !== 'http-index') {
-      return { useHybrid: false, reason: 'not-http-index', thresholdBytes };
+      return { useHybrid: false, preferTorrent: false, reason: 'not-http-index', thresholdBytes, serviceScope, seedEligible };
     }
     if (!version.hybrid) {
-      return { useHybrid: false, reason: 'not-eligible', thresholdBytes };
+      return { useHybrid: false, preferTorrent: false, reason: 'not-eligible', thresholdBytes, serviceScope, seedEligible };
     }
-    if (!version.hybrid.eligible || version.hybrid.legacyHttpFallback) {
-      return { useHybrid: false, reason: 'legacy-http', thresholdBytes };
+    if (!version.hybrid.hasTorrentMetadata || !version.hybrid.eligible || version.hybrid.legacyHttpFallback) {
+      return { useHybrid: false, preferTorrent: false, reason: 'legacy-http', thresholdBytes, serviceScope, seedEligible };
     }
     if (options?.distributionMode === 'steam') {
-      return { useHybrid: false, reason: 'portable-mode', thresholdBytes };
+      return { useHybrid: false, preferTorrent: false, reason: 'portable-mode', thresholdBytes, serviceScope, seedEligible };
     }
     if (!settings.enabled) {
-      return { useHybrid: false, reason: 'shared-disabled', thresholdBytes };
+      return { useHybrid: false, preferTorrent: false, reason: 'shared-disabled', thresholdBytes, serviceScope, seedEligible };
     }
-    if (!version.hybrid.isLatestDesktopAsset && !version.hybrid.isLatestWebAsset) {
-      return { useHybrid: false, reason: 'latest-only', thresholdBytes };
-    }
-    return { useHybrid: true, reason: 'shared-enabled', thresholdBytes };
+    return { useHybrid: true, preferTorrent: version.hybrid.torrentFirst, reason: 'shared-enabled', thresholdBytes, serviceScope, seedEligible };
   }
 }

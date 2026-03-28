@@ -4,7 +4,11 @@ import fsPromises from 'node:fs/promises';
 import log from 'electron-log';
 import type { DownloadProgressCallback, PackageSource } from '../package-sources/package-source.js';
 import type { Version } from '../version-manager.js';
-import type { HybridDownloadPolicy, SharingAccelerationSettings } from '../../types/sharing-acceleration.js';
+import type {
+  HybridDownloadPolicy,
+  SharingAccelerationSettings,
+  VersionDownloadMode,
+} from '../../types/sharing-acceleration.js';
 import type { DistributionMode } from '../../types/distribution-mode.js';
 import { CacheRetentionManager } from './cache-retention-manager.js';
 import type { DownloadEngineAdapter } from './download-engine-adapter.js';
@@ -16,6 +20,7 @@ export interface HybridDownloadResult {
   cachePath: string;
   policy: HybridDownloadPolicy;
   verified: boolean;
+  finalMode: VersionDownloadMode;
 }
 
 export class HybridDownloadCoordinator {
@@ -45,8 +50,8 @@ export class HybridDownloadCoordinator {
     return this.cacheRetentionManager;
   }
 
-  async prepare(settings: SharingAccelerationSettings): Promise<void> {
-    if (!settings.enabled) {
+  async prepare(settings: SharingAccelerationSettings, distributionMode?: DistributionMode): Promise<void> {
+    if (!settings.enabled || distributionMode === 'steam') {
       await this.cacheRetentionManager.stopAllSeeding();
       await this.engine.stopAll();
     }
@@ -64,42 +69,98 @@ export class HybridDownloadCoordinator {
     },
   ): Promise<HybridDownloadResult> {
     const settings = options?.settings ?? this.settingsStore.getSettings();
+    const distributionMode = options?.distributionMode;
     const policy = this.policyEvaluator.evaluate(version, settings, {
-      distributionMode: options?.distributionMode,
+      distributionMode,
     });
-    await this.prepare(settings);
+    await this.prepare(settings, distributionMode);
+    let finalMode: VersionDownloadMode = policy.useHybrid ? 'shared-acceleration' : 'http-direct';
 
     if (policy.useHybrid) {
-      await this.engine.download(version, cachePath, settings, onProgress);
+      try {
+        await this.engine.download(version, cachePath, settings, onProgress);
+      } catch (error) {
+        log.warn('[HybridDownloadCoordinator] Torrent-first failed, falling back to HTTP/WebSeed:', {
+          versionId: version.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        finalMode = 'source-fallback';
+        onProgress?.({
+          current: 0,
+          total: version.size ?? 0,
+          percentage: 0,
+          stage: 'backfilling',
+          mode: 'source-fallback',
+          message: 'torrent-unavailable-fallback',
+          serviceScope: policy.serviceScope,
+        });
+        await packageSource.downloadPackage(
+          version,
+          cachePath,
+          this.createSourceFallbackProgress(version, policy.serviceScope, onProgress),
+        );
+      }
     } else {
-      await packageSource.downloadPackage(version, cachePath, onProgress);
+      if (distributionMode === 'steam') {
+        onProgress?.({
+          current: 0,
+          total: version.size ?? 0,
+          percentage: 0,
+          stage: 'backfilling',
+          mode: 'source-fallback',
+          message: 'portable-mode-http-fallback',
+          serviceScope: policy.serviceScope,
+        });
+      }
+      await packageSource.downloadPackage(
+        version,
+        cachePath,
+        policy.preferTorrent
+          ? this.createSourceFallbackProgress(version, policy.serviceScope, onProgress)
+          : onProgress,
+      );
+      finalMode = distributionMode === 'steam' ? 'source-fallback' : finalMode;
     }
 
-    const verified = await this.verify(version, cachePath, onProgress);
-    const cacheSize = (await fsPromises.stat(cachePath)).size;
-    await this.cacheRetentionManager.markTrusted({
-      versionId: version.id,
-      cachePath,
-      cacheSize,
-    }, settings);
+    const verified = await this.verify(version, cachePath, finalMode, policy.serviceScope, onProgress);
+    const shouldTrackTrustedCache = Boolean(version.hybrid?.hasTorrentMetadata);
+    if (shouldTrackTrustedCache) {
+      const cacheSize = (await fsPromises.stat(cachePath)).size;
+      await this.cacheRetentionManager.markTrusted({
+        versionId: version.id,
+        cachePath,
+        cacheSize,
+        assetKind: version.hybrid?.assetKind ?? version.assetKind ?? 'generic',
+        serviceScope: policy.serviceScope,
+        seedEligible: policy.seedEligible,
+      }, settings);
+    }
 
     return {
       cachePath,
       policy,
       verified,
+      finalMode,
     };
   }
 
-  async verify(version: Version, cachePath: string, onProgress?: DownloadProgressCallback): Promise<boolean> {
+  async verify(
+    version: Version,
+    cachePath: string,
+    mode: VersionDownloadMode,
+    serviceScope: HybridDownloadPolicy['serviceScope'],
+    onProgress?: DownloadProgressCallback,
+  ): Promise<boolean> {
     if (!version.hybrid?.sha256) {
       onProgress?.({
         current: 0,
         total: 0,
         percentage: 100,
         stage: 'verifying',
-        mode: 'http-direct',
+        mode,
         verified: true,
         message: 'no-sha256-required',
+        serviceScope,
       });
       return true;
     }
@@ -109,9 +170,10 @@ export class HybridDownloadCoordinator {
       total: 0,
       percentage: 0,
       stage: 'verifying',
-      mode: 'source-fallback',
+      mode,
       verified: false,
       message: 'sha256-verifying',
+      serviceScope,
     });
 
     const computedHash = await this.computeSha256(cachePath);
@@ -125,9 +187,10 @@ export class HybridDownloadCoordinator {
       total: 0,
       percentage: 100,
       stage: 'verifying',
-      mode: 'source-fallback',
+      mode,
       verified: true,
       message: 'sha256-verified',
+      serviceScope,
     });
 
     return true;
@@ -141,6 +204,23 @@ export class HybridDownloadCoordinator {
   async stopSharingActivity(): Promise<void> {
     await this.cacheRetentionManager.stopAllSeeding();
     await this.engine.stopAll();
+  }
+
+  private createSourceFallbackProgress(
+    version: Version,
+    serviceScope: HybridDownloadPolicy['serviceScope'],
+    onProgress?: DownloadProgressCallback,
+  ): DownloadProgressCallback {
+    return (progress) => {
+      onProgress?.({
+        ...progress,
+        stage: 'backfilling',
+        mode: 'source-fallback',
+        message: progress.message === 'direct-http' ? 'source-fallback-active' : progress.message,
+        serviceScope,
+        total: progress.total || version.size || 0,
+      });
+    };
   }
 
   private async computeSha256(filePath: string): Promise<string> {
