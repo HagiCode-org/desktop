@@ -263,13 +263,16 @@ export class HttpIndexPackageSource implements PackageSource {
     }
 
     for (const versionEntry of indexData.versions) {
-      const hasAssets = Array.isArray(versionEntry?.assets);
-      const hasFiles = Array.isArray(versionEntry?.files);
+      const hasAssets = Array.isArray(versionEntry?.assets) && versionEntry.assets.length > 0;
+      const hasFiles = Array.isArray(versionEntry?.files) && versionEntry.files.length > 0;
       if (!versionEntry || typeof versionEntry.version !== 'string' || (!hasAssets && !hasFiles)) {
         throw new Error('Invalid index file format');
       }
       for (const asset of this.normalizeVersionAssets(versionEntry)) {
         if (!asset || typeof asset.name !== 'string') {
+          throw new Error('Invalid index file format');
+        }
+        if (!this.hasResolvableAssetTarget(asset)) {
           throw new Error('Invalid index file format');
         }
         if (asset.webSeeds && !Array.isArray(asset.webSeeds)) {
@@ -322,6 +325,10 @@ export class HttpIndexPackageSource implements PackageSource {
     }
 
     return new URL(urlValue, this.config.indexUrl).toString();
+  }
+
+  private hasResolvableAssetTarget(asset: HttpIndexAsset): boolean {
+    return typeof asset.directUrl === 'string' || typeof asset.path === 'string';
   }
 
   private normalizeVersionAssets(versionEntry: HttpIndexVersion): HttpIndexAsset[] {
@@ -402,6 +409,7 @@ export class HttpIndexPackageSource implements PackageSource {
         ? 'latest-server'
         : 'local-cache';
 
+    // Torrent metadata switches the asset onto the accelerated path; HTTP/WebSeed remains the fallback path.
     return {
       torrentUrl,
       infoHash: asset.infoHash,
