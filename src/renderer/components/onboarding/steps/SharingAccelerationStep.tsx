@@ -40,6 +40,7 @@ function SharingAccelerationStep({ onReadyChange }: SharingAccelerationStepProps
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>{t('sharingAcceleration.bullets.latest')}</li>
               <li>{t('sharingAcceleration.bullets.fallback')}</li>
+              <li>{t('sharingAcceleration.bullets.portable')}</li>
               <li>{t('sharingAcceleration.bullets.disable')}</li>
             </ul>
           </div>

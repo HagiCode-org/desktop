@@ -18,7 +18,7 @@ interface SharingAccelerationFormState {
 const defaultState: SharingAccelerationFormState = {
   enabled: true,
   uploadLimitMbps: 2,
-  cacheLimitGb: 10,
+  cacheLimitGb: 5,
   retentionDays: 7,
 };
 
@@ -136,7 +136,8 @@ export function SharingAccelerationSettings({ distributionMode = 'normal' }: Sha
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-          <p>{t('settings.sharingAcceleration.thresholdHint')}</p>
+          <p>{t('settings.sharingAcceleration.modeHint')}</p>
+          <p className="mt-1">{t('settings.sharingAcceleration.scopeHint')}</p>
           <p className="mt-1">{t('settings.sharingAcceleration.networkHint')}</p>
         </div>
 

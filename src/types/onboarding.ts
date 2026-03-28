@@ -22,7 +22,7 @@ export interface DownloadProgress {
   speed: number; // bytes per second
   remainingSeconds: number;
   version: string;
-  stage?: 'queued' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
+  stage?: 'queued' | 'fetching-torrent' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
   mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
   peers?: number;
   p2pBytes?: number;
