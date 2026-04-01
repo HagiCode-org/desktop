@@ -9,6 +9,7 @@ import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type {
+  LogDirectoryBridge,
   LogDirectoryOpenResult,
   LogDirectoryTarget,
   LogDirectoryTargetStatus,
@@ -222,10 +223,7 @@ interface ElectronAPI {
   versionCheckDependencies: (versionId: string) => Promise<any[]>;
   versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
   versionSetChannel: (channel: string) => Promise<{ success: boolean; error?: string }>;
-  logDirectory: {
-    listTargets: () => Promise<LogDirectoryTargetStatus[]>;
-    open: (target: LogDirectoryTarget) => Promise<LogDirectoryOpenResult>;
-  };
+  logDirectory: LogDirectoryBridge;
   onVersionInstallProgress: (callback: (progress: VersionInstallProgressPayload) => void) => () => void;
   onInstalledVersionsChanged: (callback: (versions: InstalledVersionPayload[]) => void) => () => void;
   onActiveVersionChanged: (callback: (version: InstalledVersionPayload | null) => void) => () => void;
@@ -283,6 +281,10 @@ interface ElectronAPI {
 }
 
 const clipboardBridge = createClipboardBridge(ipcRenderer, clipboardChannels);
+const logDirectoryBridge: LogDirectoryBridge = {
+  listTargets: () => ipcRenderer.invoke('log-directory:list-targets'),
+  open: (target) => ipcRenderer.invoke('log-directory:open', target),
+};
 const rendererEventTarget = globalThis as unknown as {
   dispatchEvent: (event: unknown) => void;
   CustomEvent: new <T>(type: string, init?: { detail?: T }) => unknown;
@@ -416,10 +418,7 @@ const electronAPI: ElectronAPI = {
   versionCheckDependencies: (versionId) => ipcRenderer.invoke('version:checkDependencies', versionId),
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
-  logDirectory: {
-    listTargets: () => ipcRenderer.invoke('log-directory:list-targets'),
-    open: (target) => ipcRenderer.invoke('log-directory:open', target),
-  },
+  logDirectory: logDirectoryBridge,
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);

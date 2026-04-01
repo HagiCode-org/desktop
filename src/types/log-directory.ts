@@ -2,7 +2,9 @@ export const logDirectoryTargets = ['desktop', 'web-app'] as const;
 
 /**
  * Stable target identifiers exposed through preload so renderer callers do not
- * need to know any platform-specific path conventions.
+ * need to know any platform-specific path conventions. The `web-app` target
+ * always resolves against the active version logs directory and does not depend
+ * on the embedded service runtime state.
  */
 export type LogDirectoryTarget = (typeof logDirectoryTargets)[number];
 
@@ -25,4 +27,9 @@ export interface LogDirectoryOpenResult {
   success: boolean;
   error?: LogDirectoryErrorCode;
   path?: string;
+}
+
+export interface LogDirectoryBridge {
+  listTargets: () => Promise<LogDirectoryTargetStatus[]>;
+  open: (target: LogDirectoryTarget) => Promise<LogDirectoryOpenResult>;
 }

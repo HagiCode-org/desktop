@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { createLogDirectoryService } from '../../log-directory-service.js';
 import { VersionManager } from '../../version-manager.js';
-import type { LogDirectoryTarget } from '../../../types/log-directory.js';
+import type { LogDirectoryOpenResult, LogDirectoryTarget } from '../../../types/log-directory.js';
 
 interface LogDirectoryHandlerState {
   versionManager: VersionManager | null;
@@ -48,7 +48,7 @@ export function registerLogDirectoryHandlers(deps: {
     }
   });
 
-  ipcMain.handle('log-directory:open', async (_, target: LogDirectoryTarget) => {
+  ipcMain.handle('log-directory:open', async (_, target: LogDirectoryTarget): Promise<LogDirectoryOpenResult> => {
     try {
       return await createService().open(target);
     } catch (error) {

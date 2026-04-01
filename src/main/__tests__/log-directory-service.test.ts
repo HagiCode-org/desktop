@@ -63,6 +63,44 @@ describe('log directory service', () => {
     assert.deepEqual(openCalls, []);
   });
 
+  it('opens active-version web-app logs without requiring runtime state', async () => {
+    const { service, openCalls } = createService();
+
+    const result = await service.open('web-app');
+
+    assert.deepEqual(result, {
+      success: true,
+      path: '/versions/v1/logs',
+    });
+    assert.deepEqual(openCalls, ['/versions/v1/logs']);
+  });
+
+  it('returns no_active_version when opening web-app logs without an active version', async () => {
+    const { service, openCalls } = createService({ activeVersionId: null });
+
+    const result = await service.open('web-app');
+
+    assert.deepEqual(result, {
+      success: false,
+      error: 'no_active_version',
+    });
+    assert.deepEqual(openCalls, []);
+  });
+
+  it('returns logs_not_found for web-app when the active-version logs folder is missing', async () => {
+    const { service, openCalls } = createService({
+      existingPaths: ['/desktop-logs'],
+    });
+
+    const result = await service.open('web-app');
+
+    assert.deepEqual(result, {
+      success: false,
+      error: 'logs_not_found',
+    });
+    assert.deepEqual(openCalls, []);
+  });
+
   it('opens the requested logs folder when the target exists', async () => {
     const { service, openCalls } = createService();
 
