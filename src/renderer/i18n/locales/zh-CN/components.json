@@ -147,7 +147,7 @@
       "invalid": "无效的端口号",
       "range": "端口必须在 1024 到 65535 之间"
     },
-    "openLogsButton": "打开日志",
+    "openLogsButton": "打开 Web 日志",
     "startupFailureDialog": {
       "title": "启动失败日志",
       "viewButton": "查看失败日志",
@@ -162,10 +162,10 @@
       "copyEmpty": "没有可复制的日志内容"
     },
     "toast": {
-      "noActiveVersion": "没有激活的版本",
-      "openLogsSuccess": "日志文件夹已打开",
-      "logsNotFound": "日志文件夹不存在",
-      "openLogsError": "无法打开日志文件夹"
+      "noActiveVersion": "当前没有可打开 Web 日志的活动版本",
+      "openLogsSuccess": "已打开活动版本的 Web 日志文件夹",
+      "logsNotFound": "未找到活动版本的 Web 日志文件夹",
+      "openLogsError": "无法打开活动版本的 Web 日志文件夹"
     },
     "listenAddress": {
       "label": "监听地址",

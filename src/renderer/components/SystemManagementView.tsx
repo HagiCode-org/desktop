@@ -15,6 +15,7 @@ import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboard
 import type { RootState } from '../store';
 import type {
   LogDirectoryErrorCode,
+  LogDirectoryBridge,
   LogDirectoryTarget,
   LogDirectoryTargetStatus,
 } from '@types/log-directory';
@@ -37,10 +38,7 @@ declare global {
     electronAPI: {
       versionGetActive: () => Promise<InstalledVersion | null>;
       onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => (() => void) | void;
-      logDirectory: {
-        listTargets: () => Promise<LogDirectoryTargetStatus[]>;
-        open: (target: LogDirectoryTarget) => Promise<LogDirectoryOpenResult>;
-      };
+      logDirectory: LogDirectoryBridge;
     };
   }
 }

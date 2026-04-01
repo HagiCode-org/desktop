@@ -68,6 +68,11 @@ import {
   resolveListenHostPreset,
   type ListenHostPreset,
 } from '../../types/web-service-network';
+import type {
+  LogDirectoryBridge,
+  LogDirectoryErrorCode,
+  LogDirectoryTarget,
+} from '@types/log-directory';
 
 // Types
 declare global {
@@ -75,10 +80,14 @@ declare global {
     electronAPI: {
       getWebServiceVersion: () => Promise<string>;
       onWebServiceStatusChange: (callback: (status: any) => void) => (() => void) | void;
-      versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
+      onTrayStartService: (callback: () => void) => (() => void) | void;
+      onTrayStopService: (callback: () => void) => (() => void) | void;
+      logDirectory: LogDirectoryBridge;
     };
   }
 }
+
+const WEB_APP_LOG_DIRECTORY_TARGET: LogDirectoryTarget = 'web-app';
 
 const WebServiceStatusCard: React.FC = () => {
   const { t } = useTranslation(['components', 'common', 'pages']);
@@ -248,27 +257,30 @@ const WebServiceStatusCard: React.FC = () => {
     setNetworkConfigError(null);
   };
 
-  const handleOpenLogs = async () => {
-    if (!activeVersion) {
-      toast.error(t('webServiceStatus.toast.noActiveVersion'));
-      return;
+  const getOpenLogsErrorMessage = (errorCode?: LogDirectoryErrorCode) => {
+    switch (errorCode) {
+      case 'no_active_version':
+        return t('webServiceStatus.toast.noActiveVersion');
+      case 'logs_not_found':
+        return t('webServiceStatus.toast.logsNotFound');
+      case 'open_failed':
+      default:
+        return t('webServiceStatus.toast.openLogsError');
     }
+  };
 
+  const handleOpenLogs = async () => {
     try {
-      const result = await window.electronAPI.versionOpenLogs(activeVersion.id);
+      const result = await window.electronAPI.logDirectory.open(WEB_APP_LOG_DIRECTORY_TARGET);
 
       if (result.success) {
         toast.success(t('webServiceStatus.toast.openLogsSuccess'));
       } else {
-        if (result.error === 'logs_not_found') {
-          toast.error(t('webServiceStatus.toast.logsNotFound'));
-        } else {
-          toast.error(t('webServiceStatus.toast.openLogsError'));
-        }
+        toast.error(getOpenLogsErrorMessage(result.error));
       }
     } catch (error) {
       console.error('Error opening logs folder:', error);
-      toast.error(t('webServiceStatus.toast.openLogsError'));
+      toast.error(getOpenLogsErrorMessage('open_failed'));
     }
   };
 
@@ -342,6 +354,8 @@ const WebServiceStatusCard: React.FC = () => {
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
   const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
   const isDisabled = webServiceInfo.isOperating || isTransitioning;
+  const showRuntimeSecondaryControls = !remoteModeEnabled && isRunning;
+  const showOpenLogsButton = !remoteModeEnabled && Boolean(activeVersion);
   const pendingHostValue = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
   const normalizedPendingHost = normalizeListenHost(pendingHostValue);
   const pendingPort = Number.parseInt(portInputValue, 10);
@@ -581,66 +595,69 @@ const WebServiceStatusCard: React.FC = () => {
 
           {/* Secondary Controls - Restart/Stop/Logs - Only show in local mode */}
           <AnimatePresence mode="wait">
-            {!remoteModeEnabled && isRunning && (
+            {(showRuntimeSecondaryControls || showOpenLogsButton) && (
               <motion.div
                 key="secondary-controls"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2, delay: 0.1 }}
-                className="flex gap-2 justify-center"
+                className="flex flex-wrap gap-2 justify-center"
               >
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    onClick={handleRestart}
-                    disabled={isDisabled}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    {isDisabled && webServiceInfo.status === 'stopping' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {t('webServiceStatus.restartingButton')}
-                      </>
-                    ) : (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2" />
-                        {t('webServiceStatus.restartButton')}
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
+                {showRuntimeSecondaryControls && (
+                  <>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        onClick={handleRestart}
+                        disabled={isDisabled}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {isDisabled && webServiceInfo.status === 'stopping' ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {t('webServiceStatus.restartingButton')}
+                          </>
+                        ) : (
+                          <>
+                            <RotateCw className="w-4 h-4 mr-2" />
+                            {t('webServiceStatus.restartButton')}
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
 
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    onClick={handleStop}
-                    disabled={isDisabled}
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    {isDisabled && webServiceInfo.status === 'stopping' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {t('webServiceStatus.stoppingButton')}
-                      </>
-                    ) : (
-                      <>
-                        <Square className="w-4 h-4 mr-2" />
-                        {t('webServiceStatus.stopButton')}
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        onClick={handleStop}
+                        disabled={isDisabled}
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        {isDisabled && webServiceInfo.status === 'stopping' ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {t('webServiceStatus.stoppingButton')}
+                          </>
+                        ) : (
+                          <>
+                            <Square className="w-4 h-4 mr-2" />
+                            {t('webServiceStatus.stopButton')}
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                  </>
+                )}
 
-                {/* Open Logs Button - only when active version exists */}
-                {activeVersion && (
+                {showOpenLogsButton && (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

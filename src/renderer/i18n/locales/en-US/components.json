@@ -147,7 +147,7 @@
       "invalid": "Invalid port number",
       "range": "Port must be between 1024 and 65535"
     },
-    "openLogsButton": "Open Logs",
+    "openLogsButton": "Open Web Logs",
     "startupFailureDialog": {
       "title": "Startup Failure Log",
       "viewButton": "View Failure Log",
@@ -162,10 +162,10 @@
       "copyEmpty": "No log content to copy"
     },
     "toast": {
-      "noActiveVersion": "No active version",
-      "openLogsSuccess": "Logs folder opened",
-      "logsNotFound": "Logs folder not found",
-      "openLogsError": "Failed to open logs folder"
+      "noActiveVersion": "No active version is selected for Web logs",
+      "openLogsSuccess": "Active version Web logs folder opened",
+      "logsNotFound": "Active version Web logs folder not found",
+      "openLogsError": "Failed to open active version Web logs folder"
     },
     "listenAddress": {
       "label": "Listening Address",
