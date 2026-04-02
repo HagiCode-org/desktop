@@ -31,20 +31,6 @@ export interface StorageInfo {
   usedPercentage: number;
 }
 
-export interface GitHubOAuthConfigPayload {
-  clientId: string;
-  clientSecret: string;
-  lastUpdated: string | null;
-  isConfigured: boolean;
-  requiresRestart: boolean;
-}
-
-export interface GitHubOAuthMutationResult {
-  success: boolean;
-  config: GitHubOAuthConfigPayload;
-  error?: string;
-}
-
 export interface StartWebServiceResult {
   success: boolean;
   error?: { type: string; details: string };
@@ -195,12 +181,6 @@ interface ElectronAPI {
     get: () => Promise<SharingAccelerationSettings | null>;
     set: (settings: SharingAccelerationSettingsInput & { enabled: boolean }) => Promise<SharingAccelerationSettings | null>;
     recordOnboardingChoice: (enabled: boolean) => Promise<SharingAccelerationSettings | null>;
-  };
-
-  githubOAuth: {
-    get: () => Promise<GitHubOAuthConfigPayload>;
-    set: (config: { clientId: string; clientSecret: string }) => Promise<GitHubOAuthMutationResult>;
-    clear: () => Promise<GitHubOAuthMutationResult>;
   };
   clipboard: {
     readText: () => Promise<string>;
@@ -622,12 +602,6 @@ const electronAPI: ElectronAPI = {
     get: () => ipcRenderer.invoke('sharing-acceleration:get'),
     set: (settings) => ipcRenderer.invoke('sharing-acceleration:set', settings),
     recordOnboardingChoice: (enabled) => ipcRenderer.invoke('sharing-acceleration:record-onboarding-choice', enabled),
-  },
-
-  githubOAuth: {
-    get: () => ipcRenderer.invoke('github-oauth:get'),
-    set: (config: { clientId: string; clientSecret: string }) => ipcRenderer.invoke('github-oauth:set', config),
-    clear: () => ipcRenderer.invoke('github-oauth:clear'),
   },
   clipboard: clipboardBridge,
 };

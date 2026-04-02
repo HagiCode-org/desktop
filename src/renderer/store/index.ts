@@ -11,7 +11,6 @@ import agentCliReducer from './slices/agentCliSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
 import dataDirectoryReducer from './slices/dataDirectorySlice';
 import remoteModeReducer from './slices/remoteModeSlice';
-import githubOAuthReducer from './slices/githubOAuthSlice';
 import listenerMiddleware from './listenerMiddleware';
 import { setProcessInfo } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
@@ -31,7 +30,6 @@ export type AppDispatch = Dispatch<
   | typeof import('./slices/llmInstallationSlice').actions
   | typeof import('./slices/dataDirectorySlice').actions
   | typeof import('./slices/remoteModeSlice').actions
-  | typeof import('./slices/githubOAuthSlice').actions
 >;
 
 // Import thunks for initialization
@@ -43,7 +41,6 @@ import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import { initializeRemoteMode } from './thunks/remoteModeThunks';
-import { initializeGitHubOAuth } from './thunks/githubOAuthThunks';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -68,7 +65,6 @@ export const store = configureStore({
     llmInstallation: llmInstallationReducer,
     dataDirectory: dataDirectoryReducer,
     remoteMode: remoteModeReducer,
-    githubOAuth: githubOAuthReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -136,9 +132,6 @@ store.dispatch(initializeRSSFeed());
 
 // Initialize remote mode
 store.dispatch(initializeRemoteMode());
-
-// Initialize GitHub OAuth settings state
-store.dispatch(initializeGitHubOAuth());
 
 // Initialize web service (must be last as it may depend on other modules)
 store.dispatch(initializeWebService());
