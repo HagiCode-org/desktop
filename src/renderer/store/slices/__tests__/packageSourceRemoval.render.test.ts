@@ -5,10 +5,13 @@ import { describe, it } from 'node:test';
 import { OFFICIAL_SERVER_HTTP_INDEX_URL } from '../../../../shared/package-source-defaults.js';
 
 const selectorPath = path.resolve(process.cwd(), 'src/renderer/components/PackageSourceSelector.tsx');
+const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/packageSourceSlice.ts');
 const managerPath = path.resolve(process.cwd(), 'src/main/package-source-config-manager.ts');
 const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/components.json');
 const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/components.json');
+const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/pages.json');
+const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/pages.json');
 const githubOAuthSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/GitHubOAuthSettings.tsx');
 
 describe('package source renderer cleanup', () => {
@@ -44,20 +47,30 @@ describe('package source renderer cleanup', () => {
     assert.equal(managerSource.includes(OFFICIAL_SERVER_HTTP_INDEX_URL), false);
   });
 
-  it('removes github source copy while keeping github oauth settings intact', async () => {
-    const [zhRaw, enRaw, githubOAuthSource] = await Promise.all([
+  it('removes github source copy and the desktop github oauth settings surface', async () => {
+    const [zhRaw, enRaw, zhPagesRaw, enPagesRaw, settingsPageSource] = await Promise.all([
       fs.readFile(zhComponentsPath, 'utf8'),
       fs.readFile(enComponentsPath, 'utf8'),
-      fs.readFile(githubOAuthSettingsPath, 'utf8'),
+      fs.readFile(zhPagesPath, 'utf8'),
+      fs.readFile(enPagesPath, 'utf8'),
+      fs.readFile(settingsPagePath, 'utf8'),
     ]);
 
     const zh = JSON.parse(zhRaw);
     const en = JSON.parse(enRaw);
+    const zhPages = JSON.parse(zhPagesRaw);
+    const enPages = JSON.parse(enPagesRaw);
 
     assert.equal('github' in zh.packageSource.sourceType, false);
     assert.equal('github' in en.packageSource.sourceType, false);
     assert.equal('github' in zh.packageSource, false);
     assert.equal('github' in en.packageSource, false);
-    assert.match(githubOAuthSource, /githubOAuth/);
+    assert.equal('githubIntegration' in zhPages.settings.tabs, false);
+    assert.equal('githubIntegration' in enPages.settings.tabs, false);
+    assert.equal('githubOAuth' in zhPages.settings, false);
+    assert.equal('githubOAuth' in enPages.settings, false);
+    assert.doesNotMatch(settingsPageSource, /githubIntegration/);
+    assert.doesNotMatch(settingsPageSource, /GitHubOAuthSettings/);
+    await assert.rejects(fs.access(githubOAuthSettingsPath));
   });
 });
