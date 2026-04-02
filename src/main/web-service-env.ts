@@ -26,10 +26,6 @@ export interface BuildManagedEnvInput {
   host: string;
   port: number;
   dataDir?: string | null;
-  githubOAuth?: {
-    clientId?: string | null;
-    clientSecret?: string | null;
-  } | null;
   yamlConfig?: Record<string, unknown> | null;
   existingEnv?: Record<string, string | undefined>;
 }
@@ -84,18 +80,6 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     required: true,
     sensitive: false,
     defaultValue: 'ClaudeCodeCli',
-  },
-  {
-    key: 'GitHub__ClientId',
-    sourceConfig: 'githubOAuth (electron-store)',
-    required: false,
-    sensitive: false,
-  },
-  {
-    key: 'GitHub__ClientSecret',
-    sourceConfig: 'githubOAuth (electron-store)',
-    required: false,
-    sensitive: true,
   },
   {
     key: 'HAGICODE_LOG_FORMAT',
@@ -177,20 +161,6 @@ function resolveValue(
     if (runtimeDataDir) {
       return { value: runtimeDataDir, source: 'runtime' };
     }
-  }
-
-  if (definition.key === 'GitHub__ClientId' || definition.key === 'GitHub__ClientSecret') {
-    const clientId = sanitizeString(input.githubOAuth?.clientId);
-    const clientSecret = sanitizeString(input.githubOAuth?.clientSecret);
-
-    if (!clientId || !clientSecret) {
-      return { source: 'default' };
-    }
-
-    return {
-      value: definition.key === 'GitHub__ClientId' ? clientId : clientSecret,
-      source: 'runtime',
-    };
   }
 
   const existingValue = sanitizeString(existingEnv[definition.key]);

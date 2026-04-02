@@ -1,15 +1,9 @@
 import { spawn, exec, ChildProcess } from 'child_process';
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { app } from 'electron';
-import {
-  ConfigManager,
-  defaultGitHubOAuthConfig,
-  normalizeGitHubOAuthConfig,
-  type GitHubOAuthConfig,
-} from './config.js';
+import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
 import { manifestReader, type EntryPoint, type ResultSessionFile, type ParsedResult, type StartResult } from './manifest-reader.js';
 import { PowerShellExecutor } from './utils/powershell-executor.js';
@@ -86,8 +80,6 @@ interface RuntimeIdentity {
   port: number;
   startedAt: string;
   versionId?: string;
-  githubOAuthClientId?: string;
-  githubOAuthSecretDigest?: string | null;
   recoverySource?: RecoverySource;
   recoveryMessage?: string;
   updatedAt: string;
@@ -105,13 +97,6 @@ interface PreparedServiceEnvironment {
   mode: WebServiceConfigMode;
   mergedEnv: NodeJS.ProcessEnv;
   managedSnapshot: ManagedEnvSnapshotEntry[];
-  githubOAuthSignature: GitHubOAuthRuntimeSignature;
-}
-
-interface GitHubOAuthRuntimeSignature {
-  clientId: string;
-  secretDigest: string | null;
-  configured: boolean;
 }
 
 interface WebServiceManagerDeps {
@@ -167,7 +152,6 @@ export class PCodeWebServiceManager {
   private startupRecoveryPromise: Promise<void> | null = null;
   private readonly savedConfigInitialization: Promise<void>;
   private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
-  private lastAppliedGitHubOAuth: GitHubOAuthRuntimeSignature | null = null;
   private readonly healthCheckPaths: readonly string[] = ['/api/health', '/api/health/dual-monitoring', '/api/status'];
   private readonly startupLogMaxLines: number = 200;
   private readonly startupLogMaxChars: number = 16 * 1024;
@@ -185,55 +169,6 @@ export class PCodeWebServiceManager {
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
       log.error('[WebService] Failed to initialize saved bind config:', error);
     });
-  }
-
-  getGitHubOAuthRuntimeStatus(config: GitHubOAuthConfig): { requiresRestart: boolean } {
-    const savedSignature = this.buildGitHubOAuthRuntimeSignature(config);
-    if (this.status !== 'running') {
-      return { requiresRestart: false };
-    }
-
-    if (!this.lastAppliedGitHubOAuth) {
-      return { requiresRestart: savedSignature.configured };
-    }
-
-    return {
-      requiresRestart: !this.isGitHubOAuthSignatureEqual(savedSignature, this.lastAppliedGitHubOAuth),
-    };
-  }
-
-  private getSavedGitHubOAuthConfig(): GitHubOAuthConfig {
-    if (!this.configManager) {
-      return defaultGitHubOAuthConfig;
-    }
-
-    return this.configManager.getGitHubOAuthConfig();
-  }
-
-  private buildGitHubOAuthRuntimeSignature(config: GitHubOAuthConfig): GitHubOAuthRuntimeSignature {
-    const normalized = normalizeGitHubOAuthConfig(config);
-    if (!normalized.clientId || !normalized.clientSecret) {
-      return {
-        clientId: '',
-        secretDigest: null,
-        configured: false,
-      };
-    }
-
-    return {
-      clientId: normalized.clientId,
-      secretDigest: createHash('sha256').update(normalized.clientSecret).digest('hex'),
-      configured: true,
-    };
-  }
-
-  private isGitHubOAuthSignatureEqual(
-    left: GitHubOAuthRuntimeSignature | null,
-    right: GitHubOAuthRuntimeSignature | null
-  ): boolean {
-    return left?.configured === right?.configured
-      && left?.clientId === right?.clientId
-      && left?.secretDigest === right?.secretDigest;
   }
 
   /**
@@ -368,7 +303,6 @@ export class PCodeWebServiceManager {
     this.recoveredRuntime = null;
     this.recoverySource = 'none';
     this.recoveryMessage = null;
-    this.lastAppliedGitHubOAuth = null;
 
     try {
       await this.updateStateFile((state) => ({
@@ -1346,11 +1280,6 @@ export class PCodeWebServiceManager {
       recoveryMessage: message,
       updatedAt: new Date().toISOString(),
     };
-    this.lastAppliedGitHubOAuth = {
-      clientId: identity.githubOAuthClientId ?? '',
-      secretDigest: identity.githubOAuthSecretDigest ?? null,
-      configured: Boolean(identity.githubOAuthClientId && identity.githubOAuthSecretDigest),
-    };
     this.recoverySource = source;
     this.recoveryMessage = message;
   }
@@ -1491,15 +1420,11 @@ export class PCodeWebServiceManager {
     const consoleEnv = await loadConsoleEnvironment();
     const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
     const dataDir = this.pathManager.getDataDirectory();
-    // Keep GitHub OAuth reads in main so the renderer never touches electron-store directly.
-    const githubOAuth = this.getSavedGitHubOAuthConfig();
-    const githubOAuthSignature = this.buildGitHubOAuthRuntimeSignature(githubOAuth);
 
     const buildResult = buildManagedServiceEnv({
       host: this.config.host,
       port: this.config.port,
       dataDir,
-      githubOAuth,
       yamlConfig: existingConfig,
       existingEnv,
     });
@@ -1529,7 +1454,6 @@ export class PCodeWebServiceManager {
       mode,
       mergedEnv,
       managedSnapshot: buildResult.snapshot,
-      githubOAuthSignature,
     };
   }
 
@@ -1609,14 +1533,12 @@ export class PCodeWebServiceManager {
 
       let preparedEnv: NodeJS.ProcessEnv;
       let envMode: WebServiceConfigMode = 'env';
-      let githubOAuthSignature: GitHubOAuthRuntimeSignature | null = null;
       try {
         const prepared = await this.prepareServiceEnvironment();
         const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
         const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager);
         preparedEnv = toolchainEnv.env;
         envMode = prepared.mode;
-        githubOAuthSignature = prepared.githubOAuthSignature;
         const pathKey = toolchainEnv.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
@@ -1684,7 +1606,6 @@ export class PCodeWebServiceManager {
         this.recoveredRuntime = null;
         this.recoverySource = 'none';
         this.recoveryMessage = null;
-        this.lastAppliedGitHubOAuth = githubOAuthSignature;
 
         // Persist successful bind configuration for future restarts and recovery.
         await this.saveLastSuccessfulConfig();
@@ -1706,8 +1627,6 @@ export class PCodeWebServiceManager {
             port: this.config.port,
             startedAt: new Date(this.startTime).toISOString(),
             versionId: this.activeVersionId || undefined,
-            githubOAuthClientId: githubOAuthSignature?.clientId || undefined,
-            githubOAuthSecretDigest: githubOAuthSignature?.secretDigest ?? null,
             recoverySource: 'none',
             recoveryMessage: 'started-by-desktop',
             updatedAt: new Date().toISOString(),
