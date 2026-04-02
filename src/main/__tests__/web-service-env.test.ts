@@ -109,35 +109,26 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.Database__Provider, 'postgresql');
   });
 
-  it('injects GitHub OAuth credentials only when both values are configured', () => {
-    const configured = buildManagedServiceEnv({
+  it('never injects deprecated GitHub OAuth env vars from legacy or existing env inputs', () => {
+    const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
-      githubOAuth: {
-        clientId: 'desktop-client-id',
-        clientSecret: 'desktop-client-secret',
+      yamlConfig: {
+        GitHub: {
+          ClientId: 'legacy-client-id',
+          ClientSecret: 'legacy-client-secret',
+        },
       },
-      yamlConfig: null,
-      existingEnv: {},
+      existingEnv: {
+        GitHub__ClientId: 'existing-client-id',
+        GitHub__ClientSecret: 'existing-client-secret',
+      },
     });
 
-    const missingSecret = buildManagedServiceEnv({
-      host: 'localhost',
-      port: 5000,
-      dataDir: '/runtime/data',
-      githubOAuth: {
-        clientId: 'desktop-client-id',
-        clientSecret: '',
-      },
-      yamlConfig: null,
-      existingEnv: {},
-    });
-
-    assert.equal(configured.injectedEnv.GitHub__ClientId, 'desktop-client-id');
-    assert.equal(configured.injectedEnv.GitHub__ClientSecret, 'desktop-client-secret');
-    assert.equal(missingSecret.injectedEnv.GitHub__ClientId, undefined);
-    assert.equal(missingSecret.injectedEnv.GitHub__ClientSecret, undefined);
+    assert.equal(result.injectedEnv.GitHub__ClientId, undefined);
+    assert.equal(result.injectedEnv.GitHub__ClientSecret, undefined);
+    assert.equal(result.snapshot.some(entry => entry.key.startsWith('GitHub__')), false);
   });
 
   it('masks sensitive connection string values in logs', () => {
@@ -147,31 +138,6 @@ describe('web-service-env', () => {
     assert.ok(masked.includes('Password=***'));
     assert.ok(masked.includes('Username=***'));
     assert.ok(masked.includes('Host=localhost'));
-  });
-
-  it('masks GitHub secrets while keeping the client id visible in logs', () => {
-    const lines = buildSnapshotLogLines([
-      {
-        key: 'GitHub__ClientSecret',
-        value: 'desktop-client-secret',
-        source: 'runtime',
-        sourceConfig: 'githubOAuth (electron-store)',
-        sensitive: true,
-        defaultApplied: false,
-      },
-      {
-        key: 'GitHub__ClientId',
-        value: 'desktop-client-id',
-        source: 'runtime',
-        sourceConfig: 'githubOAuth (electron-store)',
-        sensitive: false,
-        defaultApplied: false,
-      },
-    ], 'detailed');
-
-    assert.equal(lines.some(line => line.includes('GitHub__ClientId=desktop-client-id')), true);
-    assert.equal(lines.some(line => line.includes('GitHub__ClientSecret=***')), true);
-    assert.equal(lines.some(line => line.includes('desktop-client-secret')), false);
   });
 
   it('builds sorted and masked snapshot log lines', () => {

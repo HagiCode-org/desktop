@@ -52,8 +52,5 @@ export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
 // Remote mode handlers
 export { registerRemoteModeHandlers, initRemoteModeHandlers } from './remoteModeHandlers.js';
 
-// GitHub OAuth handlers
-export { registerGitHubOAuthHandlers, initGitHubOAuthHandlers } from './githubOAuthHandlers.js';
-
 // Types
 export type { HandlerSuccess, HandlerError, HandlerResponse, IpcHandler } from './types.js';

@@ -41,7 +41,6 @@ import {
   registerRssHandlers,
   registerDebugHandlers,
   registerViewHandlers,
-  registerGitHubOAuthHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
@@ -1797,11 +1796,6 @@ app.whenReady().then(async () => {
   };
   webServiceManager = new PCodeWebServiceManager(webServiceConfig, {
     configManager,
-  });
-
-  registerGitHubOAuthHandlers({
-    configManager,
-    webServiceManager,
   });
 
   // Set webServiceManager reference for tray
