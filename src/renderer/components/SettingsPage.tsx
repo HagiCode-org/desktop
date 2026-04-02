@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnboardingSettings } from './settings/OnboardingSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
-import { GitHubOAuthSettings } from './settings/GitHubOAuthSettings';
 import { SharingAccelerationSettings } from './settings/SharingAccelerationSettings';
 import { shouldShowSharingAccelerationSettings } from './settings';
 import type { DistributionMode } from '../../types/distribution-mode';
@@ -53,12 +52,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
                 {t('settings.tabs.sharingAcceleration')}
               </TabsTrigger>
             ) : null}
-            <TabsTrigger
-              value="githubIntegration"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.githubIntegration')}
-            </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 min-w-0">
@@ -79,10 +72,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
                 <SharingAccelerationSettings distributionMode={distributionMode} />
               </TabsContent>
             ) : null}
-
-            <TabsContent value="githubIntegration" className="mt-0">
-              <GitHubOAuthSettings />
-            </TabsContent>
           </div>
         </div>
       </Tabs>
