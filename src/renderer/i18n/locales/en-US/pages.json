@@ -6,7 +6,6 @@
       "remoteMode": "Remote Mode",
       "debug": "Debug",
       "dataDirectory": "Data Directory",
-      "githubIntegration": "GitHub Integration",
       "sharingAcceleration": "Download & Sharing"
     },
     "smartConfig": {
@@ -131,49 +130,6 @@
       },
       "notes": {
         "fallback": "Prompt guidance still works without a preference; Desktop only uses this to highlight recommendations and docs."
-      }
-    },
-    "githubOAuth": {
-      "title": "GitHub Integration",
-      "description": "Configure the GitHub OAuth Client ID and Client Secret used by the embedded web service.",
-      "fields": {
-        "clientId": {
-          "label": "Client ID",
-          "placeholder": "Enter the GitHub OAuth Client ID",
-          "helper": "Public identifier for your GitHub OAuth application."
-        },
-        "clientSecret": {
-          "label": "Client Secret",
-          "placeholder": "Enter the GitHub OAuth Client Secret",
-          "helper": "This value is stored locally and masked automatically in environment diagnostics."
-        }
-      },
-      "actions": {
-        "showSecret": "Show",
-        "hideSecret": "Hide",
-        "reset": "Reset Form",
-        "clear": "Clear Saved Config",
-        "clearing": "Clearing...",
-        "save": "Save Configuration",
-        "saving": "Saving..."
-      },
-      "errors": {
-        "clientIdRequired": "Please enter the GitHub Client ID.",
-        "clientSecretRequired": "Please enter the GitHub Client Secret."
-      },
-      "messages": {
-        "savedRunning": "GitHub OAuth settings were saved. Restart the web service to apply them.",
-        "savedStopped": "GitHub OAuth settings were saved and will apply the next time the web service starts.",
-        "saveFailed": "Failed to save the GitHub OAuth settings.",
-        "clearedRunning": "GitHub OAuth settings were cleared. Restart the web service to remove the active credentials.",
-        "clearedStopped": "GitHub OAuth settings were cleared.",
-        "clearFailed": "Failed to clear the GitHub OAuth settings."
-      },
-      "notes": {
-        "helper": "Desktop injects these credentials into the embedded web service environment for the upcoming GitHub sign-in flow.",
-        "restartRunning": "The running web service is still using the previous GitHub OAuth credentials. Restart it before validating sign-in.",
-        "restartStopped": "Last saved: {{value}}. Because the web service is stopped, the new GitHub OAuth settings will apply on the next start.",
-        "currentlyApplied": "Last saved: {{value}}. The running web service already matches the saved GitHub OAuth settings."
       }
     },
     "sharingAcceleration": {
