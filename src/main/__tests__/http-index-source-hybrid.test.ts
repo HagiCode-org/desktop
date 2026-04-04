@@ -41,6 +41,22 @@ describe('http index hybrid metadata support', () => {
                 torrentUrl: `./desktop/${desktopName}.torrent`,
                 infoHash: 'desktophash',
                 webSeeds: [`./desktop/${desktopName}`],
+                downloadSources: [
+                  {
+                    kind: 'official',
+                    label: 'Official',
+                    url: `./desktop/${desktopName}`,
+                    primary: true,
+                    webSeed: true,
+                  },
+                  {
+                    kind: 'github-release',
+                    label: 'GitHub Release',
+                    url: `https://github.com/HagiCode-org/releases/releases/download/v${version}/${desktopName}`,
+                    primary: false,
+                    webSeed: true,
+                  },
+                ],
                 sha256: 'desktopsha',
               },
               {
@@ -78,7 +94,10 @@ describe('http index hybrid metadata support', () => {
       assert.equal(desktop.hybrid?.serviceScope, 'latest-desktop');
       assert.equal(desktop.downloadUrl, `https://example.com/desktop/${desktopName}`);
       assert.equal(desktop.hybrid?.torrentUrl, `https://example.com/desktop/${desktopName}.torrent`);
-      assert.deepEqual(desktop.hybrid?.webSeeds, [`https://example.com/desktop/${desktopName}`]);
+      assert.deepEqual(desktop.hybrid?.webSeeds, [
+        `https://example.com/desktop/${desktopName}`,
+        `https://github.com/HagiCode-org/releases/releases/download/v${version}/${desktopName}`,
+      ]);
       assert.equal(server.hybrid?.torrentFirst, true);
       assert.equal(server.hybrid?.hasTorrentMetadata, true);
       assert.equal(server.hybrid?.serviceScope, 'latest-server');
@@ -121,6 +140,70 @@ describe('http index hybrid metadata support', () => {
       assert.equal(versions[0].hybrid?.hasTorrentMetadata, false);
       assert.equal(versions[0].hybrid?.legacyHttpFallback, true);
       assert.deepEqual(versions[0].hybrid?.webSeeds, [`https://example.com/server/official/${packageName}`]);
+    } finally {
+      axios.get = originalGet;
+    }
+  });
+
+  it('ignores malformed or unknown structured download sources without breaking legacy downloads', async () => {
+    const version = '1.2.6';
+    const packageName = desktopAssetName(version);
+    const originalGet = axios.get;
+    axios.get = (async () => ({
+      status: 200,
+      data: {
+        versions: [
+          {
+            version,
+            assets: [
+              {
+                name: packageName,
+                size: 1536,
+                directUrl: `https://downloads.example.com/${packageName}`,
+                downloadSources: [
+                  {
+                    kind: 'official',
+                    label: 'Official',
+                    url: `https://downloads.example.com/${packageName}`,
+                    primary: true,
+                    webSeed: true,
+                  },
+                  {
+                    kind: 'github-release',
+                    label: 'GitHub Release',
+                    webSeed: true,
+                  },
+                  {
+                    kind: 'mirror',
+                    label: 'Mirror',
+                    url: 'https://mirror.example.com/unknown.zip',
+                    primary: false,
+                    webSeed: true,
+                  },
+                  {
+                    kind: 'github-release',
+                    label: 'Broken URL',
+                    url: 'ht!tp://bad url',
+                    primary: false,
+                    webSeed: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })) as typeof axios.get;
+
+    try {
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const validation = await source.validateConfig();
+      const versions = await source.listAvailableVersions();
+
+      assert.equal(validation.valid, true);
+      assert.equal(versions.length, 1);
+      assert.equal(versions[0].downloadUrl, `https://downloads.example.com/${packageName}`);
+      assert.deepEqual(versions[0].hybrid?.webSeeds, [`https://downloads.example.com/${packageName}`]);
     } finally {
       axios.get = originalGet;
     }

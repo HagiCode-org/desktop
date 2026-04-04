@@ -21,7 +21,16 @@ export interface HttpIndexAsset {
   torrentUrl?: string;
   infoHash?: string;
   webSeeds?: string[];
+  downloadSources?: HttpIndexDownloadSource[];
   sha256?: string;
+}
+
+export interface HttpIndexDownloadSource {
+  kind?: string;
+  label?: string;
+  url?: string;
+  primary?: boolean;
+  webSeed?: boolean;
 }
 
 export interface HttpIndexLegacyFile {
@@ -278,6 +287,9 @@ export class HttpIndexPackageSource implements PackageSource {
         if (asset.webSeeds && !Array.isArray(asset.webSeeds)) {
           throw new Error('Invalid index file format');
         }
+        if (asset.downloadSources && !Array.isArray(asset.downloadSources)) {
+          throw new Error('Invalid index file format');
+        }
       }
     }
 
@@ -324,7 +336,11 @@ export class HttpIndexPackageSource implements PackageSource {
       return undefined;
     }
 
-    return new URL(urlValue, this.config.indexUrl).toString();
+    try {
+      return new URL(urlValue, this.config.indexUrl).toString();
+    } catch {
+      return undefined;
+    }
   }
 
   private hasResolvableAssetTarget(asset: HttpIndexAsset): boolean {
@@ -389,13 +405,18 @@ export class HttpIndexPackageSource implements PackageSource {
   }
 
   private buildHybridMetadata(asset: HttpIndexAsset, directUrl: string, assetKind: VersionAssetKind): HybridDistributionMetadata {
-    const webSeeds = Array.isArray(asset.webSeeds)
+    const legacyWebSeeds = Array.isArray(asset.webSeeds)
       ? asset.webSeeds
         .map((seed) => this.resolveOptionalUrl(seed))
         .filter((seed): seed is string => Boolean(seed))
       : [];
+    const structuredWebSeeds = this.resolveStructuredDownloadSources(asset.downloadSources)
+      .filter((source) => source.webSeed)
+      .map((source) => source.url);
+    const webSeeds = [...legacyWebSeeds, ...structuredWebSeeds]
+      .filter((seed, index, collection) => collection.findIndex((candidate) => candidate.toLowerCase() === seed.toLowerCase()) === index);
 
-    if (directUrl && !webSeeds.includes(directUrl)) {
+    if (directUrl && !webSeeds.some((seed) => seed.toLowerCase() === directUrl.toLowerCase())) {
       webSeeds.push(directUrl);
     }
 
@@ -426,6 +447,38 @@ export class HttpIndexPackageSource implements PackageSource {
       isLatestWebAsset,
       serviceScope,
     };
+  }
+
+  private resolveStructuredDownloadSources(downloadSources?: HttpIndexDownloadSource[]): Array<Required<Pick<HttpIndexDownloadSource, 'kind' | 'label' | 'url' | 'primary' | 'webSeed'>>> {
+    if (!Array.isArray(downloadSources)) {
+      return [];
+    }
+
+    return downloadSources
+      .map((source) => {
+        const kind = typeof source?.kind === 'string' ? source.kind.trim().toLowerCase() : '';
+        if (!this.isKnownDownloadSourceKind(kind)) {
+          return null;
+        }
+
+        const url = typeof source.url === 'string' ? this.resolveOptionalUrl(source.url) : undefined;
+        if (!url) {
+          return null;
+        }
+
+        return {
+          kind,
+          label: typeof source.label === 'string' && source.label.trim().length > 0 ? source.label.trim() : kind,
+          url,
+          primary: source.primary === true,
+          webSeed: source.webSeed === true,
+        };
+      })
+      .filter((source): source is Required<Pick<HttpIndexDownloadSource, 'kind' | 'label' | 'url' | 'primary' | 'webSeed'>> => Boolean(source));
+  }
+
+  private isKnownDownloadSourceKind(kind: string): boolean {
+    return kind === 'official' || kind === 'github-release';
   }
 
   private detectAssetKind(filename: string, version: string, latestVersionSet: Set<string>): VersionAssetKind {
