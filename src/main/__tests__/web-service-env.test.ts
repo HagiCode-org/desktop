@@ -9,6 +9,10 @@ import {
   resolveWebServiceConfigMode,
 } from '../web-service-env.js';
 import {
+  buildDesktopSystemVaultEnv,
+  SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX,
+} from '../system-vault-env.js';
+import {
   collectPortableToolchainPathEntries,
   dedupePathEntries,
   injectPortableToolchainEnv,
@@ -176,11 +180,99 @@ describe('web-service-env', () => {
     assert.equal(resolveEnvSnapshotLogLevel('detailed'), 'detailed');
   });
 
+  it('builds Desktop system-managed vault descriptors as hierarchical ASP.NET Core env keys', async () => {
+    const ensuredPaths: string[] = [];
+    const result = await buildDesktopSystemVaultEnv({
+      pathResolver: {
+        getDesktopLogsDirectory: () => '/tmp/hagicode/logs',
+        getDesktopAppsRoot: () => '/tmp/hagicode/apps',
+        getDesktopConfigDirectory: () => '/tmp/hagicode/config',
+      },
+      ensureDirectory: async targetPath => {
+        ensuredPaths.push(targetPath);
+      },
+    });
+
+    assert.equal(result.warnings.length, 0);
+    assert.deepEqual(ensuredPaths, [
+      '/tmp/hagicode/logs',
+      '/tmp/hagicode/apps',
+      '/tmp/hagicode/config',
+    ]);
+    assert.deepEqual(result.envEntries, {
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Name`]: 'Desktop Logs',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath`]: '/tmp/hagicode/logs',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}1__Id`]: 'desktopapps',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}1__Name`]: 'Desktop Apps',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}1__PhysicalPath`]: '/tmp/hagicode/apps',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}2__Id`]: 'desktopconfig',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}2__Name`]: 'Desktop Config',
+      [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}2__PhysicalPath`]: '/tmp/hagicode/config',
+    });
+  });
+
+  it('skips failing Desktop system-managed vault descriptors and keeps remaining env entries', async () => {
+    const result = await buildDesktopSystemVaultEnv({
+      pathResolver: {
+        getDesktopLogsDirectory: () => '/tmp/hagicode/logs',
+        getDesktopAppsRoot: () => '/tmp/hagicode/apps',
+        getDesktopConfigDirectory: () => '/tmp/hagicode/config',
+      },
+      ensureDirectory: async targetPath => {
+        if (targetPath === '/tmp/hagicode/apps') {
+          throw new Error('permission denied');
+        }
+      },
+    });
+
+    assert.equal(result.descriptors.length, 2);
+    assert.equal(result.warnings.length, 1);
+    assert.equal(result.warnings[0].includes('desktopapps'), true);
+    assert.equal(result.envEntries[`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`], 'desktoplogs');
+    assert.equal(result.envEntries[`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}1__Id`], 'desktopconfig');
+    assert.equal(result.envEntries[`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}2__Id`], undefined);
+  });
+
+  it('omits Desktop system-managed env injection when every descriptor fails', async () => {
+    const systemVaultEnv = await buildDesktopSystemVaultEnv({
+      pathResolver: {
+        getDesktopLogsDirectory: () => '/tmp/hagicode/logs',
+        getDesktopAppsRoot: () => '/tmp/hagicode/apps',
+        getDesktopConfigDirectory: () => '/tmp/hagicode/config',
+      },
+      ensureDirectory: async () => {
+        throw new Error('disk offline');
+      },
+    });
+
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      systemVaultEnvEntries: systemVaultEnv.envEntries,
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(systemVaultEnv.descriptors.length, 0);
+    assert.equal(Object.keys(systemVaultEnv.envEntries).length, 0);
+    assert.equal(
+      Object.keys(result.injectedEnv).some(key => key.startsWith(SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX)),
+      false,
+    );
+  });
+
   it('injects managed env vars into child process spawn environment', () => {
     const buildResult = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
       dataDir: '/tmp/hagicode-integration',
+      systemVaultEnvEntries: {
+        [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
+        [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Name`]: 'Desktop Logs',
+        [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath`]: '/tmp/hagicode/logs',
+      },
       yamlConfig: {
         Database: { Provider: 'sqlite' },
         AI: { Service: { DefaultExecutorType: 'CodexCli' } },
@@ -190,13 +282,24 @@ describe('web-service-env', () => {
 
     assert.equal(buildResult.errors.length, 0);
     const env = { ...process.env, ...buildResult.injectedEnv };
+    assert.equal(process.env[`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`], undefined);
     const child = spawnSync(process.execPath, [
       '-e',
-      "process.stdout.write([process.env.ASPNETCORE_URLS, process.env.Urls, process.env.DATADIR, process.env.AI__Providers__DefaultProvider].join('|'))",
+      `process.stdout.write([
+        process.env.ASPNETCORE_URLS,
+        process.env.Urls,
+        process.env.DATADIR,
+        process.env.AI__Providers__DefaultProvider,
+        process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id,
+        process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath
+      ].join('|'))`,
     ], { env, encoding: 'utf-8' });
 
     assert.equal(child.status, 0);
-    assert.equal(child.stdout, 'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|ClaudeCodeCli');
+    assert.equal(
+      child.stdout,
+      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
+    );
   });
 
   it('prepends portable toolchain paths in deterministic order and injects the marker env', () => {

@@ -169,6 +169,18 @@ export class PathManager {
     return path.join(this.paths.appsInstalled, versionId, 'config');
   }
 
+  getDesktopLogsDirectory(): string {
+    return app.getPath('logs');
+  }
+
+  getDesktopAppsRoot(): string {
+    return path.join(this.userDataPath, 'apps');
+  }
+
+  getDesktopConfigDirectory(): string {
+    return this.paths.config;
+  }
+
   /**
    * Get data directory path (legacy method)
    * @returns Path to data directory

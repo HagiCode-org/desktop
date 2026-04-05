@@ -1757,6 +1757,11 @@ app.whenReady().then(async () => {
     runtimeRoot: pathManager.getEmbeddedRuntimeRoot(),
     overrideRoot: process.env.HAGICODE_EMBEDDED_DOTNET_ROOT?.trim() || null,
   });
+  log.info('[App] Desktop system-managed vault roots:', {
+    logs: pathManager.getDesktopLogsDirectory(),
+    apps: pathManager.getDesktopAppsRoot(),
+    config: pathManager.getDesktopConfigDirectory(),
+  });
 
   // Load data directory with fallback: electron-store -> default
   let dataDirectoryPath = configManager.getDataDirectoryPath();

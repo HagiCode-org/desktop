@@ -16,6 +16,11 @@ import {
   type ManagedEnvSnapshotEntry,
   type WebServiceConfigMode,
 } from './web-service-env.js';
+import {
+  buildDesktopSystemVaultEnv,
+  createDesktopSystemVaultPathResolver,
+  SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX,
+} from './system-vault-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
 import {
@@ -1420,11 +1425,19 @@ export class PCodeWebServiceManager {
     const consoleEnv = await loadConsoleEnvironment();
     const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
     const dataDir = this.pathManager.getDataDirectory();
+    const systemVaultEnv = await buildDesktopSystemVaultEnv({
+      pathResolver: createDesktopSystemVaultPathResolver(this.pathManager),
+    });
+
+    for (const warning of systemVaultEnv.warnings) {
+      log.warn('[WebService][SystemVaultEnv]', warning);
+    }
 
     const buildResult = buildManagedServiceEnv({
       host: this.config.host,
       port: this.config.port,
       dataDir,
+      systemVaultEnvEntries: systemVaultEnv.envEntries,
       yamlConfig: existingConfig,
       existingEnv,
     });
@@ -1433,12 +1446,25 @@ export class PCodeWebServiceManager {
       throw new Error(`Environment mapping validation failed: ${buildResult.errors.join('; ')}`);
     }
 
+    for (const warning of buildResult.warnings) {
+      log.warn('[WebService][Env]', warning);
+    }
+
     const mergedEnv: NodeJS.ProcessEnv = {
       ...process.env,
       ...consoleEnv,
       ...this.config.env,
-      ...buildResult.injectedEnv,
     };
+
+    // Desktop owns this env contract and injects it only into the managed
+    // backend child process, so inherited process-level values must not leak.
+    for (const key of Object.keys(mergedEnv)) {
+      if (key.startsWith(SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX)) {
+        delete mergedEnv[key];
+      }
+    }
+
+    Object.assign(mergedEnv, buildResult.injectedEnv);
 
     if (Object.keys(consoleEnv).length > 0) {
       log.info('[WebService] Console environment merged for startup:', {

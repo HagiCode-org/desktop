@@ -26,6 +26,7 @@ export interface BuildManagedEnvInput {
   host: string;
   port: number;
   dataDir?: string | null;
+  systemVaultEnvEntries?: Record<string, string> | null;
   yamlConfig?: Record<string, unknown> | null;
   existingEnv?: Record<string, string | undefined>;
 }
@@ -34,6 +35,7 @@ export interface BuildManagedEnvResult {
   injectedEnv: Record<string, string>;
   snapshot: ManagedEnvSnapshotEntry[];
   errors: string[];
+  warnings: string[];
 }
 
 const MAX_ENV_VALUE_LENGTH = 32767;
@@ -109,6 +111,7 @@ export function buildManagedServiceEnv(input: BuildManagedEnvInput): BuildManage
   const injectedEnv: Record<string, string> = {};
   const snapshot: ManagedEnvSnapshotEntry[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
   const existingEnv = input.existingEnv ?? {};
 
   for (const definition of MANAGED_ENV_VAR_DEFINITIONS) {
@@ -141,7 +144,35 @@ export function buildManagedServiceEnv(input: BuildManagedEnvInput): BuildManage
     });
   }
 
-  return { injectedEnv, snapshot, errors };
+  for (const [key, rawValue] of Object.entries(input.systemVaultEnvEntries ?? {})) {
+    if (!isValidEnvKey(key)) {
+      warnings.push(`Skipped system-managed vault env key '${key}' because the key is invalid.`);
+      continue;
+    }
+
+    const value = sanitizeString(rawValue);
+    if (!value) {
+      warnings.push(`Skipped system-managed vault env key '${key}' because the value was empty.`);
+      continue;
+    }
+
+    if (value.length > MAX_ENV_VALUE_LENGTH) {
+      warnings.push(`Skipped system-managed vault env key '${key}' because the value exceeds ${MAX_ENV_VALUE_LENGTH} characters.`);
+      continue;
+    }
+
+    injectedEnv[key] = value;
+    snapshot.push({
+      key,
+      value,
+      source: 'runtime',
+      sourceConfig: 'desktop system-managed vault descriptors',
+      sensitive: false,
+      defaultApplied: false,
+    });
+  }
+
+  return { injectedEnv, snapshot, errors, warnings };
 }
 
 function resolveValue(
