@@ -22,10 +22,15 @@ public sealed class ArtifactHybridMetadataBuilder : IArtifactHybridMetadataBuild
         _thresholdBytes = thresholdBytes;
     }
 
-    public async Task<ArtifactMetadataBuildResult> BuildAsync(IEnumerable<string> filePaths, string versionPrefix, string containerBaseUrl)
+    public async Task<ArtifactMetadataBuildResult> BuildAsync(
+        IEnumerable<string> filePaths,
+        string versionPrefix,
+        string containerBaseUrl,
+        string? gitHubRepository = null)
     {
         var result = new ArtifactMetadataBuildResult();
         var normalizedPrefix = AzureBlobPathUtilities.NormalizeVersionPrefix(versionPrefix);
+        var normalizedRepository = NormalizeGitHubRepository(gitHubRepository);
 
         foreach (var filePath in filePaths
             .Where((path) => !path.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
@@ -60,13 +65,27 @@ public sealed class ArtifactHybridMetadataBuilder : IArtifactHybridMetadataBuild
                 FallbackReason = "http-only-below-threshold",
             };
 
+            AddDownloadSource(artifact, CreateOfficialDownloadSource(directUrl));
+            if (TryCreateGitHubReleaseDownloadSource(fileInfo.Name, normalizedPrefix, normalizedRepository, out var gitHubSource))
+            {
+                AddDownloadSource(artifact, gitHubSource!);
+            }
+            else
+            {
+                result.Diagnostics.Add(new ArtifactPublishDiagnostic
+                {
+                    ArtifactName = artifact.Name,
+                    Code = "github-release-mirror-omitted",
+                    Message = "无法解析 GitHub Release 镜像，已仅保留官网下载源。",
+                    Stage = ArtifactPublishFailureStage.MetadataBuild,
+                });
+            }
+
             if (!artifact.MeetsThreshold)
             {
                 result.Artifacts.Add(artifact);
                 continue;
             }
-
-            artifact.WebSeeds.Add(directUrl);
 
             try
             {
@@ -146,6 +165,80 @@ public sealed class ArtifactHybridMetadataBuilder : IArtifactHybridMetadataBuild
             && !string.IsNullOrWhiteSpace(artifact.InfoHash)
             && !string.IsNullOrWhiteSpace(artifact.Sha256)
             && artifact.WebSeeds.Count > 0;
+    }
+
+    private static ArtifactDownloadSource CreateOfficialDownloadSource(string directUrl)
+    {
+        return new ArtifactDownloadSource
+        {
+            Kind = ArtifactDownloadSourceKinds.Official,
+            Label = "Official",
+            Url = directUrl,
+            Primary = true,
+            WebSeed = true,
+        };
+    }
+
+    private static bool TryCreateGitHubReleaseDownloadSource(
+        string fileName,
+        string versionPrefix,
+        string? gitHubRepository,
+        out ArtifactDownloadSource? downloadSource)
+    {
+        downloadSource = null;
+
+        if (string.IsNullOrWhiteSpace(gitHubRepository))
+        {
+            return false;
+        }
+
+        var tagName = NormalizeTagName(versionPrefix);
+        var encodedFileName = Uri.EscapeDataString(fileName);
+        downloadSource = new ArtifactDownloadSource
+        {
+            Kind = ArtifactDownloadSourceKinds.GitHubRelease,
+            Label = "GitHub Release",
+            Url = $"https://github.com/{gitHubRepository}/releases/download/{tagName}/{encodedFileName}",
+            Primary = false,
+            WebSeed = true,
+        };
+
+        return true;
+    }
+
+    private static string NormalizeTagName(string versionPrefix)
+    {
+        var value = versionPrefix.Trim();
+        if (value.StartsWith('v') || value.StartsWith('V'))
+        {
+            return $"v{value[1..]}";
+        }
+
+        return $"v{value}";
+    }
+
+    private static string? NormalizeGitHubRepository(string? gitHubRepository)
+    {
+        var value = gitHubRepository?.Trim();
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim('/');
+    }
+
+    private static void AddDownloadSource(PublishedArtifactMetadata artifact, ArtifactDownloadSource downloadSource)
+    {
+        var existing = artifact.DownloadSources.Any((item) =>
+            string.Equals(item.Url, downloadSource.Url, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.Kind, downloadSource.Kind, StringComparison.OrdinalIgnoreCase));
+
+        if (!existing)
+        {
+            artifact.DownloadSources.Add(downloadSource);
+        }
+
+        if (downloadSource.WebSeed
+            && !artifact.WebSeeds.Contains(downloadSource.Url, StringComparer.OrdinalIgnoreCase))
+        {
+            artifact.WebSeeds.Add(downloadSource.Url);
+        }
     }
 
     private static async Task<string> ComputeSha256Async(string filePath)

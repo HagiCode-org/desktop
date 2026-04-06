@@ -4,5 +4,9 @@ namespace Adapters;
 
 public interface IArtifactHybridMetadataBuilder
 {
-    Task<ArtifactMetadataBuildResult> BuildAsync(IEnumerable<string> filePaths, string versionPrefix, string containerBaseUrl);
+    Task<ArtifactMetadataBuildResult> BuildAsync(
+        IEnumerable<string> filePaths,
+        string versionPrefix,
+        string containerBaseUrl,
+        string? gitHubRepository = null);
 }

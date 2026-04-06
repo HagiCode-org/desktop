@@ -55,6 +55,9 @@ partial class Build : NukeBuild
     [Parameter("GitHub Token for API access")]
     [Secret] readonly string GitHubToken = "";
 
+    [Parameter("GitHub repository in owner/name format")]
+    readonly string GitHubRepository = BuildConfig.DefaultGitHubReleaseRepository;
+
     [Parameter("Release tag to sync (e.g., v1.0.0)")]
     readonly string ReleaseTag = "";
 

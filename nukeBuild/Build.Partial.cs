@@ -9,4 +9,8 @@ public partial class Build
     /// Priority: GitHubActions.Instance.Token (CI) > GitHubToken (parameter)
     /// </summary>
     string EffectiveGitHubToken => GitHubActions?.Token;
+
+    string EffectiveGitHubRepository =>
+        BuildConfig.NormalizeGitHubRepository(
+            Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? GitHubRepository);
 }

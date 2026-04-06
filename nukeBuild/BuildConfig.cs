@@ -5,7 +5,7 @@ using Nuke.Common.IO;
 /// </summary>
 internal static class BuildConfig
 {
-    internal const string GitHubReleaseRepositoryName = "hagicode-desktop";
+    internal const string DefaultGitHubReleaseRepository = "HagiCode-org/desktop";
     internal const string DesktopPublicBaseUrl = "https://desktop.dl.hagicode.com";
 
     /// <summary>
@@ -23,4 +23,20 @@ internal static class BuildConfig
     /// The release channel
     /// </summary>
     internal static string ReleaseChannel { get; set; } = "beta";
+
+    internal static string NormalizeGitHubRepository(string? repository)
+    {
+        var value = repository?.Trim();
+        return string.IsNullOrWhiteSpace(value)
+            ? DefaultGitHubReleaseRepository
+            : value.Trim('/');
+    }
+
+    internal static string ResolveGitHubReleaseRepositoryName(string? repository)
+    {
+        var value = NormalizeGitHubRepository(repository);
+
+        var segments = value.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length == 0 ? value : segments[^1];
+    }
 }

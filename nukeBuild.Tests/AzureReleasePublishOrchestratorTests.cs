@@ -26,7 +26,8 @@ public sealed class AzureReleasePublishOrchestratorTests
                 new AzureBlobPublishOptions { SasUrl = "https://example.blob.core.windows.net/releases?sig=test", VersionPrefix = "1.2.3" },
                 Path.Combine(tempDirectory, "index.json"),
                 uploadIndex: true,
-                minifyIndexJson: true);
+                minifyIndexJson: true,
+                gitHubRepository: BuildConfig.DefaultGitHubReleaseRepository);
 
             Assert.True(summary.Success);
             Assert.True(summary.IndexUploaded);
@@ -60,7 +61,8 @@ public sealed class AzureReleasePublishOrchestratorTests
                 new AzureBlobPublishOptions { SasUrl = "https://example.blob.core.windows.net/releases?sig=test", VersionPrefix = "1.2.3" },
                 Path.Combine(tempDirectory, "index.json"),
                 uploadIndex: true,
-                minifyIndexJson: true);
+                minifyIndexJson: true,
+                gitHubRepository: BuildConfig.DefaultGitHubReleaseRepository);
 
             Assert.False(summary.Success);
             Assert.Equal("上传 index.json 失败", summary.ErrorMessage);
@@ -121,7 +123,11 @@ public sealed class AzureReleasePublishOrchestratorTests
             _result = result;
         }
 
-        public Task<ArtifactMetadataBuildResult> BuildAsync(IEnumerable<string> filePaths, string versionPrefix, string containerBaseUrl)
+        public Task<ArtifactMetadataBuildResult> BuildAsync(
+            IEnumerable<string> filePaths,
+            string versionPrefix,
+            string containerBaseUrl,
+            string? gitHubRepository = null)
             => Task.FromResult(_result);
     }
 

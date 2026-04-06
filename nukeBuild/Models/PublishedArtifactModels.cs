@@ -36,10 +36,26 @@ public sealed class PublishedArtifactMetadata
     public string? InfoHash { get; set; }
     public string? Sha256 { get; set; }
     public List<string> WebSeeds { get; init; } = new();
+    public List<ArtifactDownloadSource> DownloadSources { get; init; } = new();
     public bool MeetsThreshold { get; init; }
     public bool HybridEligible { get; set; }
     public bool LegacyHttpFallback { get; set; }
     public string? FallbackReason { get; set; }
+}
+
+public static class ArtifactDownloadSourceKinds
+{
+    public const string Official = "official";
+    public const string GitHubRelease = "github-release";
+}
+
+public sealed class ArtifactDownloadSource
+{
+    public required string Kind { get; init; }
+    public required string Label { get; init; }
+    public required string Url { get; init; }
+    public bool Primary { get; init; }
+    public bool WebSeed { get; init; }
 }
 
 public sealed class ArtifactMetadataBuildResult

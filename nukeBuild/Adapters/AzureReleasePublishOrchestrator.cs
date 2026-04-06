@@ -20,11 +20,12 @@ public sealed class AzureReleasePublishOrchestrator
         AzureBlobPublishOptions options,
         string localIndexPath,
         bool uploadIndex,
-        bool minifyIndexJson)
+        bool minifyIndexJson,
+        string? gitHubRepository = null)
     {
         var summary = new ReleasePublishSummary();
         var containerBaseUrl = Utils.AzureBlobPathUtilities.ResolvePublicBaseUrl(options.SasUrl, options.PublicBaseUrl);
-        var metadataResult = await _metadataBuilder.BuildAsync(downloadedFiles, options.VersionPrefix, containerBaseUrl);
+        var metadataResult = await _metadataBuilder.BuildAsync(downloadedFiles, options.VersionPrefix, containerBaseUrl, gitHubRepository);
 
         summary.EligibleAssetCount = metadataResult.EligibleArtifactCount;
         summary.SidecarSuccessCount = metadataResult.SidecarSuccessCount;

@@ -16,7 +16,11 @@ public sealed class ArtifactHybridMetadataBuilderTests
             await File.WriteAllBytesAsync(artifactPath, Enumerable.Repeat((byte)0x2A, 4096).ToArray());
 
             var builder = new ArtifactHybridMetadataBuilder(new TorrentSidecarGenerator(pieceLengthBytes: 64), thresholdBytes: 1);
-            var result = await builder.BuildAsync(new[] { artifactPath }, "v1.2.3", "https://desktop.dl.hagicode.com/");
+            var result = await builder.BuildAsync(
+                new[] { artifactPath },
+                "v1.2.3",
+                "https://desktop.dl.hagicode.com/",
+                BuildConfig.DefaultGitHubReleaseRepository);
 
             var artifact = Assert.Single(result.Artifacts);
             Assert.True(artifact.MeetsThreshold);
@@ -26,6 +30,10 @@ public sealed class ArtifactHybridMetadataBuilderTests
             Assert.Equal("https://desktop.dl.hagicode.com/v1.2.3/hagicode-1.2.3-win-x64-nort.zip", artifact.DirectUrl);
             Assert.Equal("https://desktop.dl.hagicode.com/v1.2.3/hagicode-1.2.3-win-x64-nort.zip.torrent", artifact.TorrentUrl);
             Assert.Contains(artifact.DirectUrl, artifact.WebSeeds);
+            Assert.Contains(artifact.DownloadSources, (source) => source.Kind == ArtifactDownloadSourceKinds.Official);
+            Assert.Contains(artifact.DownloadSources, (source) =>
+                source.Kind == ArtifactDownloadSourceKinds.GitHubRelease
+                && source.Url == "https://github.com/HagiCode-org/desktop/releases/download/v1.2.3/hagicode-1.2.3-win-x64-nort.zip");
             Assert.False(string.IsNullOrWhiteSpace(artifact.InfoHash));
             Assert.False(string.IsNullOrWhiteSpace(artifact.Sha256));
             Assert.True(File.Exists(artifact.TorrentSidecarLocalPath));
@@ -47,7 +55,11 @@ public sealed class ArtifactHybridMetadataBuilderTests
             await File.WriteAllBytesAsync(artifactPath, new byte[] { 1, 2, 3, 4 });
 
             var builder = new ArtifactHybridMetadataBuilder(thresholdBytes: 1024);
-            var result = await builder.BuildAsync(new[] { artifactPath }, "1.2.3", "https://example.blob.core.windows.net/releases/");
+            var result = await builder.BuildAsync(
+                new[] { artifactPath },
+                "1.2.3",
+                "https://example.blob.core.windows.net/releases/",
+                BuildConfig.DefaultGitHubReleaseRepository);
 
             var artifact = Assert.Single(result.Artifacts);
             Assert.False(artifact.MeetsThreshold);
@@ -55,6 +67,8 @@ public sealed class ArtifactHybridMetadataBuilderTests
             Assert.True(artifact.LegacyHttpFallback);
             Assert.Equal("http-only-below-threshold", artifact.FallbackReason);
             Assert.Null(artifact.TorrentSidecarLocalPath);
+            Assert.Equal(2, artifact.DownloadSources.Count);
+            Assert.Equal(2, artifact.WebSeeds.Count);
             Assert.False(File.Exists($"{artifactPath}.torrent"));
         }
         finally
@@ -73,7 +87,11 @@ public sealed class ArtifactHybridMetadataBuilderTests
             await File.WriteAllBytesAsync(artifactPath, Enumerable.Repeat((byte)0x3A, 128).ToArray());
 
             var builder = new ArtifactHybridMetadataBuilder(new FailingTorrentSidecarGenerator(), thresholdBytes: 1);
-            var result = await builder.BuildAsync(new[] { artifactPath }, "1.2.3", "https://example.blob.core.windows.net/releases/");
+            var result = await builder.BuildAsync(
+                new[] { artifactPath },
+                "1.2.3",
+                "https://example.blob.core.windows.net/releases/",
+                BuildConfig.DefaultGitHubReleaseRepository);
 
             var artifact = Assert.Single(result.Artifacts);
             Assert.False(artifact.HybridEligible);

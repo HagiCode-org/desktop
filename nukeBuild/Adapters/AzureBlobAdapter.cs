@@ -16,11 +16,18 @@ public class AzureBlobAdapter : IAzureBlobAdapter
 {
     private readonly AbsolutePath _rootDirectory;
     private readonly Dictionary<string, string> _customChannelMapping;
+    private readonly string _gitHubRepository;
+    private readonly string _gitHubRepositoryName;
 
-    public AzureBlobAdapter(AbsolutePath rootDirectory, string channelMappingJson = "")
+    public AzureBlobAdapter(
+        AbsolutePath rootDirectory,
+        string channelMappingJson = "",
+        string gitHubRepository = BuildConfig.DefaultGitHubReleaseRepository)
     {
         _rootDirectory = rootDirectory;
         _customChannelMapping = ParseChannelMapping(channelMappingJson);
+        _gitHubRepository = BuildConfig.NormalizeGitHubRepository(gitHubRepository);
+        _gitHubRepositoryName = BuildConfig.ResolveGitHubReleaseRepositoryName(_gitHubRepository);
     }
 
     private static Dictionary<string, string> ParseChannelMapping(string channelMappingJson)
@@ -162,14 +169,13 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 Directory.CreateDirectory(outputDir);
             }
 
-            var indexData = new
-            {
-                updatedAt = DateTime.UtcNow.ToString("o"),
-                versions = new List<object>(),
-                channels = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase),
-            };
+            var indexResult = BuildIndexResult(
+                Array.Empty<AzureBlobInfo>(),
+                options.SasUrl,
+                Array.Empty<PublishedArtifactMetadata>(),
+                options.PublicBaseUrl);
 
-            var jsonContent = SerializeJson(indexData, minify);
+            var jsonContent = SerializeJson(indexResult.Document!, minify);
             await File.WriteAllTextAsync(outputPath, jsonContent);
 
             Log.Information("Index.json generated at: {Path}", outputPath);
@@ -216,9 +222,29 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             using var document = JsonDocument.Parse(content);
             var root = document.RootElement;
 
-            if (!root.TryGetProperty("versions", out _))
+            if (root.ValueKind != JsonValueKind.Object)
             {
-                Log.Warning("Index.json may be missing expected versions property");
+                Log.Error("Index.json root must be an object");
+                return false;
+            }
+
+            if (!TryValidateRequiredString(root, "updatedAt", out var updatedAtValue)
+                || !DateTimeOffset.TryParse(updatedAtValue, out _))
+            {
+                Log.Error("Index.json updatedAt is missing or invalid");
+                return false;
+            }
+
+            if (!root.TryGetProperty("versions", out var versions) || versions.ValueKind != JsonValueKind.Array)
+            {
+                Log.Error("Index.json versions must be an array");
+                return false;
+            }
+
+            if (!root.TryGetProperty("channels", out var channels) || channels.ValueKind != JsonValueKind.Object)
+            {
+                Log.Error("Index.json channels must be an object");
+                return false;
             }
 
             Log.Information("Index.json validation passed");
@@ -372,7 +398,7 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 .Where((blob) => !blob.Name.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
                 .Where((blob) => !AzureBlobPathUtilities.IsGitHubGeneratedSourceArchive(
                     Path.GetFileName(blob.Name),
-                    BuildConfig.GitHubReleaseRepositoryName,
+                    _gitHubRepositoryName,
                     versionGroup.Key))
                 .OrderBy((blob) => blob.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -399,11 +425,22 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 var sidecarBlobName = $"{blob.Name}.torrent";
                 var hasSidecarBlob = blobsByName.ContainsKey(sidecarBlobName);
                 var canPublishHybrid = metadata?.HybridEligible == true && hasSidecarBlob;
+                var indexedDownloadSources = BuildIndexedDownloadSources(metadata, directUrl);
+                var indexedWebSeeds = BuildIndexedWebSeeds(metadata, indexedDownloadSources, directUrl);
+
+                if (indexedDownloadSources.Count > 0)
+                {
+                    asset.DownloadSources = indexedDownloadSources;
+                }
+
+                if (indexedWebSeeds.Count > 0)
+                {
+                    asset.WebSeeds = indexedWebSeeds;
+                }
 
                 if (canPublishHybrid)
                 {
                     asset.TorrentUrl = metadata!.TorrentUrl;
-                    asset.WebSeeds = metadata.WebSeeds.Count > 0 ? metadata.WebSeeds : new List<string> { directUrl };
                     asset.InfoHash = metadata.InfoHash;
                     asset.Sha256 = metadata.Sha256;
                 }
@@ -464,6 +501,62 @@ public class AzureBlobAdapter : IAzureBlobAdapter
         return result;
     }
 
+    private static List<ArtifactDownloadSource> BuildIndexedDownloadSources(
+        PublishedArtifactMetadata? metadata,
+        string directUrl)
+    {
+        if (metadata is null)
+        {
+            return new List<ArtifactDownloadSource>();
+        }
+
+        var sources = metadata.DownloadSources.Count > 0
+            ? metadata.DownloadSources
+            : new List<ArtifactDownloadSource>
+            {
+                new()
+                {
+                    Kind = ArtifactDownloadSourceKinds.Official,
+                    Label = "Official",
+                    Url = directUrl,
+                    Primary = true,
+                    WebSeed = true,
+                }
+            };
+
+        return sources
+            .Where((source) => !string.IsNullOrWhiteSpace(source.Url))
+            .GroupBy((source) => $"{source.Kind}|{source.Url}", StringComparer.OrdinalIgnoreCase)
+            .Select((group) => group.First())
+            .OrderByDescending((source) => source.Primary)
+            .ThenBy((source) => source.Kind, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<string> BuildIndexedWebSeeds(
+        PublishedArtifactMetadata? metadata,
+        IReadOnlyCollection<ArtifactDownloadSource> downloadSources,
+        string directUrl)
+    {
+        if (metadata is null)
+        {
+            return new List<string>();
+        }
+
+        var seeds = metadata.WebSeeds
+            .Concat(downloadSources.Where((source) => source.WebSeed).Select((source) => source.Url))
+            .Where((url) => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (seeds.Count == 0)
+        {
+            seeds.Add(directUrl);
+        }
+
+        return seeds;
+    }
+
     private static string SerializeJson(object value, bool minify)
     {
         var jsonOptions = new JsonSerializerOptions
@@ -474,6 +567,25 @@ public class AzureBlobAdapter : IAzureBlobAdapter
         };
 
         return JsonSerializer.Serialize(value, jsonOptions);
+    }
+
+    private static bool TryValidateRequiredString(JsonElement element, string propertyName, out string value)
+    {
+        value = string.Empty;
+
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var stringValue = property.GetString();
+        if (string.IsNullOrWhiteSpace(stringValue))
+        {
+            return false;
+        }
+
+        value = stringValue;
+        return true;
     }
 
     private string ExtractChannelFromVersion(string version)
@@ -609,6 +721,7 @@ public class AzureIndexedAsset
     public required string DirectUrl { get; init; }
     public string? TorrentUrl { get; set; }
     public List<string>? WebSeeds { get; set; }
+    public List<ArtifactDownloadSource>? DownloadSources { get; set; }
     public string? InfoHash { get; set; }
     public string? Sha256 { get; set; }
 }

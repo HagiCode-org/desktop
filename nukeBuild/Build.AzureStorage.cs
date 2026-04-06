@@ -8,6 +8,7 @@ public partial class Build
     private async Task ExecuteGenerateAzureIndex()
     {
         Log.Information("=== 生成 Azure Index ===");
+        Log.Information("GitHub repository: {Repository}", EffectiveGitHubRepository);
 
         if (string.IsNullOrWhiteSpace(AzureBlobSasUrl))
         {
@@ -16,7 +17,7 @@ public partial class Build
             throw new Exception("必须配置 Azure Blob SAS URL");
         }
 
-        var adapter = new AzureBlobAdapter(RootDirectory);
+        var adapter = new AzureBlobAdapter(RootDirectory, gitHubRepository: EffectiveGitHubRepository);
         if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
         {
             Log.Error("Azure Blob SAS URL 验证失败");
@@ -32,6 +33,7 @@ public partial class Build
             SasUrl = AzureBlobSasUrl,
             UploadRetries = AzureUploadRetries,
             LocalIndexPath = outputPath,
+            PublicBaseUrl = AzurePublicBaseUrl,
         };
 
         Log.Information("压缩设置: {Minify} (MinifyIndexJson: {MinifyIndexJson})",
@@ -88,6 +90,7 @@ public partial class Build
 
         BuildConfig.Version = effectiveVersion;
         Log.Information("Azure publish version prefix: {Version}", effectiveVersion);
+        Log.Information("GitHub repository: {Repository}", EffectiveGitHubRepository);
 
         if (!UploadArtifacts && !UploadIndex)
         {
@@ -129,7 +132,7 @@ public partial class Build
         downloadedFiles = allDownloadedFiles
             .Where((path) => !AzureBlobPathUtilities.IsGitHubGeneratedSourceArchive(
                 Path.GetFileName(path),
-                BuildConfig.GitHubReleaseRepositoryName,
+                BuildConfig.ResolveGitHubReleaseRepositoryName(EffectiveGitHubRepository),
                 effectiveVersion))
             .ToList();
 
@@ -149,7 +152,7 @@ public partial class Build
             Log.Warning("Tag: {Tag}", versionTag);
         }
 
-        var adapter = new AzureBlobAdapter(RootDirectory, ChannelMapping);
+        var adapter = new AzureBlobAdapter(RootDirectory, ChannelMapping, EffectiveGitHubRepository);
         if (!await adapter.ValidateSasUrlAsync(AzureBlobSasUrl))
         {
             Log.Error("Azure Blob SAS URL 验证失败");
@@ -177,7 +180,8 @@ public partial class Build
                 publishOptions,
                 localIndexPath,
                 UploadIndex,
-                MinifyIndexJson);
+                MinifyIndexJson,
+                EffectiveGitHubRepository);
 
             ReportPublishSummary(publishSummary);
 
