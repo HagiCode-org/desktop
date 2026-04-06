@@ -10,6 +10,7 @@ import { ConfigManager } from './config-manager.js';
 import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordinator.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
+import type { RegionDetector } from './region-detector.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
@@ -112,12 +113,16 @@ export class VersionManager {
   private distributionMode: DistributionMode = 'normal';
   private activePortableRuntime: InstalledVersion | null = null;
 
-  constructor(dependencyManager: DependencyManager, packageSourceConfigManager?: PackageSourceConfigManager) {
+  constructor(
+    dependencyManager: DependencyManager,
+    packageSourceConfigManager?: PackageSourceConfigManager,
+    regionDetector?: RegionDetector,
+  ) {
     this.dependencyManager = dependencyManager;
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
     this.configManager = new ConfigManager();
-    this.hybridDownloadCoordinator = new HybridDownloadCoordinator();
+    this.hybridDownloadCoordinator = new HybridDownloadCoordinator({ regionDetector });
     // Use Electron's app.getPath('userData') to get the correct user data path
     this.userDataPath = app.getPath('userData');
 

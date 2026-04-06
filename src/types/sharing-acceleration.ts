@@ -4,6 +4,16 @@ export type VersionDownloadMode = 'http-direct' | 'shared-acceleration' | 'sourc
 
 export type SharingAccelerationServiceScope = 'latest-desktop' | 'latest-server' | 'local-cache';
 
+export type StructuredFallbackSourceKind = 'official' | 'github-release';
+
+export interface StructuredFallbackSource {
+  kind: StructuredFallbackSourceKind;
+  label: string;
+  url: string;
+  primary: boolean;
+  webSeed: boolean;
+}
+
 export type VersionDownloadMessage =
   | 'direct-http'
   | 'fetching-torrent-metadata'
@@ -34,6 +44,7 @@ export interface HybridDistributionMetadata {
   torrentUrl?: string;
   infoHash?: string;
   webSeeds: string[];
+  downloadSources?: StructuredFallbackSource[];
   sha256?: string;
   directUrl?: string;
   hasTorrentMetadata: boolean;

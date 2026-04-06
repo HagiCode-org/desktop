@@ -109,4 +109,21 @@ describe('RegionDetector cache behavior', () => {
     assert.equal(redetected.method, 'locale');
     assert.equal(redetected.localeSnapshot, 'ja-JP');
   });
+
+  it('marks locale resolution failures as error-fallback for conservative callers', () => {
+    const store = new MemoryStore();
+    const detector = new RegionDetector(store as unknown as Store<Record<string, unknown>>, {
+      getLocale: () => {
+        throw new Error('locale unavailable');
+      },
+      now: () => new Date('2026-03-10T00:00:00.000Z'),
+      logger: silentLogger,
+    });
+
+    const detection = detector.detectWithCache();
+    assert.equal(detection.region, 'INTERNATIONAL');
+    assert.equal(detection.method, 'locale');
+    assert.equal(detection.matchedRule, 'error-fallback');
+    assert.equal(detection.localeSnapshot, null);
+  });
 });

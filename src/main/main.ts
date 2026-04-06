@@ -1829,7 +1829,7 @@ app.whenReady().then(async () => {
   packageSourceConfigManager = new PackageSourceConfigManager(configManager.getStore() as unknown as Store);
 
   // Initialize Version Manager with package source config manager
-  versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
+  versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
   log.info('[App] Distribution mode initialized:', distributionModeState.mode);
 

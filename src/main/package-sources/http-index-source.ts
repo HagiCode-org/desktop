@@ -1,7 +1,11 @@
 import axios from 'axios';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
-import type { HybridDistributionMetadata, VersionAssetKind } from '../../types/sharing-acceleration.js';
+import type {
+  HybridDistributionMetadata,
+  StructuredFallbackSource,
+  VersionAssetKind,
+} from '../../types/sharing-acceleration.js';
 import type { Version } from '../version-manager.js';
 import type {
   PackageSource,
@@ -405,12 +409,13 @@ export class HttpIndexPackageSource implements PackageSource {
   }
 
   private buildHybridMetadata(asset: HttpIndexAsset, directUrl: string, assetKind: VersionAssetKind): HybridDistributionMetadata {
+    const structuredSources = this.resolveStructuredDownloadSources(asset.downloadSources);
     const legacyWebSeeds = Array.isArray(asset.webSeeds)
       ? asset.webSeeds
         .map((seed) => this.resolveOptionalUrl(seed))
         .filter((seed): seed is string => Boolean(seed))
       : [];
-    const structuredWebSeeds = this.resolveStructuredDownloadSources(asset.downloadSources)
+    const structuredWebSeeds = structuredSources
       .filter((source) => source.webSeed)
       .map((source) => source.url);
     const webSeeds = [...legacyWebSeeds, ...structuredWebSeeds]
@@ -435,6 +440,7 @@ export class HttpIndexPackageSource implements PackageSource {
       torrentUrl,
       infoHash: asset.infoHash,
       webSeeds,
+      downloadSources: structuredSources.length > 0 ? structuredSources : undefined,
       sha256: asset.sha256,
       directUrl,
       hasTorrentMetadata,
@@ -449,7 +455,7 @@ export class HttpIndexPackageSource implements PackageSource {
     };
   }
 
-  private resolveStructuredDownloadSources(downloadSources?: HttpIndexDownloadSource[]): Array<Required<Pick<HttpIndexDownloadSource, 'kind' | 'label' | 'url' | 'primary' | 'webSeed'>>> {
+  private resolveStructuredDownloadSources(downloadSources?: HttpIndexDownloadSource[]): StructuredFallbackSource[] {
     if (!Array.isArray(downloadSources)) {
       return [];
     }
@@ -461,7 +467,7 @@ export class HttpIndexPackageSource implements PackageSource {
           return null;
         }
 
-        const url = typeof source.url === 'string' ? this.resolveOptionalUrl(source.url) : undefined;
+        const url = typeof source.url === 'string' ? this.resolveStructuredSourceUrl(source.url) : undefined;
         if (!url) {
           return null;
         }
@@ -474,7 +480,20 @@ export class HttpIndexPackageSource implements PackageSource {
           webSeed: source.webSeed === true,
         };
       })
-      .filter((source): source is Required<Pick<HttpIndexDownloadSource, 'kind' | 'label' | 'url' | 'primary' | 'webSeed'>> => Boolean(source));
+      .filter((source): source is StructuredFallbackSource => Boolean(source));
+  }
+
+  private resolveStructuredSourceUrl(urlValue: string): string | undefined {
+    const trimmed = urlValue.trim();
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+
+    if (trimmed.includes('://') && !/^https?:\/\//i.test(trimmed)) {
+      return undefined;
+    }
+
+    return this.resolveOptionalUrl(trimmed);
   }
 
   private isKnownDownloadSourceKind(kind: string): boolean {
