@@ -132,6 +132,28 @@ npm run smoke-test
 npm run smoke-test:verbose
 ```
 
+### Region-Aware Source Fallback
+
+Desktop now preserves structured `official` and `github-release` download sources from the HTTP index metadata so the main-process installer can route fallback traffic deterministically:
+
+- `CN` locale snapshots prefer `official` first, then `github-release`
+- `INTERNATIONAL` locale snapshots prefer `github-release` first, then `official`
+- locale detection failures (`matchedRule = error-fallback`) deliberately fall back to `official` first
+
+This priority only affects the HTTP/source-fallback path. Torrent-first behavior, `sha256` verification, extraction, and legacy single-source `directUrl` / `path` assets keep their existing semantics.
+
+### Focused Verification
+
+When touching desktop download routing, run the targeted main-process checks from `repos/hagicode-desktop`:
+
+```bash
+npx tsc --noEmit
+npx tsc
+node --test dist/main/__tests__/http-index-source-hybrid.test.js dist/main/__tests__/hybrid-download-coordinator.test.js dist/main/__tests__/region-detector.test.js
+```
+
+Use mocked `RegionDetector` results for `CN`, `INTERNATIONAL`, and `error-fallback` when smoke-checking fallback order. Legacy single-source assets should still download through the preserved `downloadUrl` path without requiring structured `downloadSources`.
+
 ## Clipboard Integration
 
 Desktop now keeps standard clipboard behavior at the host layer even when
