@@ -82,6 +82,24 @@ export interface InstallResult {
   progress?: VersionDownloadProgress;
 }
 
+interface PreparedVersionArchive {
+  cachePath: string;
+  fileSize: number;
+  verified: boolean;
+  mode: VersionDownloadProgress['mode'];
+  reusedExisting: boolean;
+}
+
+export interface PredownloadVersionResult {
+  success: boolean;
+  version: Version;
+  cachePath?: string;
+  fileSize?: number;
+  reusedExisting?: boolean;
+  verified?: boolean;
+  error?: string;
+}
+
 export interface VersionSwitchResult {
   success: boolean;
   error?: string;
@@ -624,16 +642,7 @@ export class VersionManager {
     try {
       log.info('[VersionManager] Installing version:', versionId);
 
-      // Ensure required directories exist
-      await this.pathManager.ensureDirectories();
-
-      // Get available versions to find the target
-      const versions = await this.listVersions();
-      const targetVersion = versions.find((v) => v.id === versionId);
-
-      if (!targetVersion) {
-        throw new Error(`Version not found: ${versionId}`);
-      }
+      const targetVersion = await this.resolveVersion(versionId);
 
       // Check if already installed
       const installedVersions = await this.getInstalledVersions();
@@ -661,22 +670,7 @@ export class VersionManager {
       // Create installation directory
       await fs.mkdir(installPath, { recursive: true });
 
-      // Get package from current source
-      const packageSource = await this.ensurePackageSource();
-      const cachePath = this.pathManager.getCachePath(targetVersion.packageFilename);
-
-      log.info('[VersionManager] Downloading package to cache...');
-      const effectiveSharingAccelerationSettings = this.getSharingAccelerationSettings();
-      const downloadResult = await this.hybridDownloadCoordinator.download(
-        targetVersion,
-        cachePath,
-        packageSource,
-        onProgress,
-        {
-          settings: effectiveSharingAccelerationSettings,
-          distributionMode: this.getDistributionMode(),
-        },
-      );
+      const archive = await this.ensureVersionArchive(targetVersion, onProgress);
 
       // Extract package
       onProgress?.({
@@ -684,14 +678,14 @@ export class VersionManager {
         total: targetVersion.size ?? 0,
         percentage: 100,
         stage: 'extracting',
-        mode: downloadResult.finalMode,
-        verified: downloadResult.verified,
+        mode: archive.mode,
+        verified: archive.verified,
         message: 'extracting-package',
-        serviceScope: downloadResult.policy.serviceScope,
+        serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
       });
       log.info('[VersionManager] Extracting package...');
       const AdmZip = (await import('adm-zip')).default;
-      const zip = new AdmZip(cachePath);
+      const zip = new AdmZip(archive.cachePath);
       zip.extractAllTo(installPath, true);
 
       log.info('[VersionManager] Package extracted to:', installPath);
@@ -752,10 +746,10 @@ export class VersionManager {
         total: targetVersion.size ?? 0,
         percentage: 100,
         stage: 'completed',
-        mode: downloadResult.finalMode,
-        verified: downloadResult.verified,
+        mode: archive.mode,
+        verified: archive.verified,
         message: 'installation-complete',
-        serviceScope: downloadResult.policy.serviceScope,
+        serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
       });
 
       return {
@@ -767,10 +761,10 @@ export class VersionManager {
           total: targetVersion.size ?? 0,
           percentage: 100,
           stage: 'completed',
-          mode: downloadResult.finalMode,
-          verified: downloadResult.verified,
+          mode: archive.mode,
+          verified: archive.verified,
           message: 'installation-complete',
-          serviceScope: downloadResult.policy.serviceScope,
+          serviceScope: targetVersion.hybrid?.serviceScope ?? 'local-cache',
         },
       };
     } catch (error) {
@@ -788,6 +782,34 @@ export class VersionManager {
           verified: false,
           message: error instanceof Error ? error.message : String(error),
         },
+      };
+    }
+  }
+
+  async predownloadVersion(
+    versionId: string,
+    onProgress?: DownloadProgressCallback,
+  ): Promise<PredownloadVersionResult> {
+    this.ensureMutableVersionManagementAllowed();
+
+    try {
+      const targetVersion = await this.resolveVersion(versionId);
+      const archive = await this.ensureVersionArchive(targetVersion, onProgress);
+
+      return {
+        success: true,
+        version: targetVersion,
+        cachePath: archive.cachePath,
+        fileSize: archive.fileSize,
+        reusedExisting: archive.reusedExisting,
+        verified: archive.verified,
+      };
+    } catch (error) {
+      log.error('[VersionManager] Failed to predownload version:', error);
+      return {
+        success: false,
+        version: { id: versionId, version: '', platform: '', packageFilename: versionId, sourceType: 'http-index' },
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -900,6 +922,103 @@ export class VersionManager {
       return installedVersions.find((v) => v.id === activeVersionData.versionId) || null;
     } catch (error) {
       log.error('[VersionManager] Failed to get active version:', error);
+      return null;
+    }
+  }
+
+  private async resolveVersion(versionId: string): Promise<Version> {
+    await this.pathManager.ensureDirectories();
+
+    const versions = await this.listVersions();
+    const targetVersion = versions.find((version) => version.id === versionId);
+
+    if (!targetVersion) {
+      throw new Error(`Version not found: ${versionId}`);
+    }
+
+    return targetVersion;
+  }
+
+  private async ensureVersionArchive(
+    targetVersion: Version,
+    onProgress?: DownloadProgressCallback,
+  ): Promise<PreparedVersionArchive> {
+    const packageSource = await this.ensurePackageSource();
+    const cachePath = this.pathManager.getCachePath(targetVersion.packageFilename);
+    const cachedArchive = await this.tryUseCachedArchive(targetVersion, cachePath, onProgress);
+
+    if (cachedArchive) {
+      log.info('[VersionManager] Reusing verified cached archive:', {
+        versionId: targetVersion.id,
+        cachePath,
+      });
+      return cachedArchive;
+    }
+
+    log.info('[VersionManager] Downloading package to cache...');
+    const effectiveSharingAccelerationSettings = this.getSharingAccelerationSettings();
+
+    try {
+      const downloadResult = await this.hybridDownloadCoordinator.download(
+        targetVersion,
+        cachePath,
+        packageSource,
+        onProgress,
+        {
+          settings: effectiveSharingAccelerationSettings,
+          distributionMode: this.getDistributionMode(),
+        },
+      );
+      const fileSize = (await fs.stat(cachePath)).size;
+
+      return {
+        cachePath,
+        fileSize,
+        verified: downloadResult.verified,
+        mode: downloadResult.finalMode,
+        reusedExisting: false,
+      };
+    } catch (error) {
+      await fs.rm(cachePath, { force: true }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async tryUseCachedArchive(
+    targetVersion: Version,
+    cachePath: string,
+    onProgress?: DownloadProgressCallback,
+  ): Promise<PreparedVersionArchive | null> {
+    try {
+      await fs.access(cachePath);
+    } catch {
+      return null;
+    }
+
+    try {
+      const verified = await this.hybridDownloadCoordinator.verify(
+        targetVersion,
+        cachePath,
+        'source-fallback',
+        targetVersion.hybrid?.serviceScope ?? 'local-cache',
+        onProgress,
+      );
+      const fileSize = (await fs.stat(cachePath)).size;
+
+      return {
+        cachePath,
+        fileSize,
+        verified,
+        mode: 'source-fallback',
+        reusedExisting: true,
+      };
+    } catch (error) {
+      log.warn('[VersionManager] Cached archive verification failed, discarding stale archive:', {
+        versionId: targetVersion.id,
+        cachePath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await fs.rm(cachePath, { force: true }).catch(() => undefined);
       return null;
     }
   }

@@ -40,6 +40,59 @@ export interface ActiveVersionInfo {
   switchedAt: string;
 }
 
+export type VersionUpdateSnapshotStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed' | 'disabled';
+export type VersionUpdateDisabledReason = 'settings-disabled' | 'portable-mode' | 'no-package-source' | null;
+
+export interface VersionUpdateVersionInfo {
+  id: string;
+  version: string;
+  packageFilename: string;
+  platform: string;
+  sourceType?: string;
+}
+
+export interface VersionUpdateCachedArchive {
+  versionId: string;
+  version: string;
+  packageFilename: string;
+  cachePath: string;
+  retainedAt: string;
+  verifiedAt: string;
+  fileSize: number;
+  sourceType?: string;
+}
+
+export interface VersionUpdateFailureInfo {
+  message: string;
+  at: string;
+}
+
+export interface VersionUpdateSnapshot {
+  status: VersionUpdateSnapshotStatus;
+  currentVersion: VersionUpdateVersionInfo | null;
+  latestVersion: VersionUpdateVersionInfo | null;
+  downloadedVersionId: string | null;
+  lastCheckedAt: string | null;
+  lastUpdatedAt: string | null;
+  disabledReason: VersionUpdateDisabledReason;
+  cachedArchives: VersionUpdateCachedArchive[];
+  failure: VersionUpdateFailureInfo | null;
+}
+
+export function createEmptyVersionUpdateSnapshot(): VersionUpdateSnapshot {
+  return {
+    status: 'idle',
+    currentVersion: null,
+    latestVersion: null,
+    downloadedVersionId: null,
+    lastCheckedAt: null,
+    lastUpdatedAt: null,
+    disabledReason: null,
+    cachedArchives: [],
+    failure: null,
+  };
+}
+
 /**
  * StateManager handles all state/persistence for the Hagicode Desktop application
  * State is stored in the config/state/ directory
@@ -50,15 +103,17 @@ export class StateManager {
   private dependenciesPath: string;
   private installedVersionsPath: string;
   private activeVersionPath: string;
+  private versionUpdateSnapshotPath: string;
 
-  constructor() {
+  constructor(userDataPath?: string) {
     // Use userDataPath/config/state/ for state files
-    const userDataPath = app.getPath('userData');
-    this.statePath = path.join(userDataPath, 'config', 'state');
+    const resolvedUserDataPath = userDataPath ?? app.getPath('userData');
+    this.statePath = path.join(resolvedUserDataPath, 'config', 'state');
     this.versionsPath = path.join(this.statePath, 'versions');
     this.dependenciesPath = path.join(this.statePath, 'dependencies.json');
     this.installedVersionsPath = path.join(this.versionsPath, 'installed.json');
     this.activeVersionPath = path.join(this.versionsPath, 'active.json');
+    this.versionUpdateSnapshotPath = path.join(this.versionsPath, 'update-snapshot.json');
 
     // Initialize directories
     this.initializeDirectories();
@@ -201,6 +256,40 @@ export class StateManager {
     }
   }
 
+  async getVersionUpdateSnapshot(): Promise<VersionUpdateSnapshot> {
+    try {
+      await this.initializeDirectories();
+      const content = await fs.readFile(this.versionUpdateSnapshotPath, 'utf-8');
+      const parsed = JSON.parse(content) as Partial<VersionUpdateSnapshot> | null;
+
+      return {
+        ...createEmptyVersionUpdateSnapshot(),
+        ...(parsed ?? {}),
+        currentVersion: parsed?.currentVersion ?? null,
+        latestVersion: parsed?.latestVersion ?? null,
+        downloadedVersionId: parsed?.downloadedVersionId ?? null,
+        lastCheckedAt: parsed?.lastCheckedAt ?? null,
+        lastUpdatedAt: parsed?.lastUpdatedAt ?? null,
+        disabledReason: parsed?.disabledReason ?? null,
+        cachedArchives: Array.isArray(parsed?.cachedArchives) ? parsed.cachedArchives : [],
+        failure: parsed?.failure ?? null,
+      };
+    } catch {
+      return createEmptyVersionUpdateSnapshot();
+    }
+  }
+
+  async setVersionUpdateSnapshot(snapshot: VersionUpdateSnapshot): Promise<void> {
+    try {
+      await this.initializeDirectories();
+      await fs.writeFile(this.versionUpdateSnapshotPath, JSON.stringify(snapshot, null, 2), 'utf-8');
+      log.info('[StateManager] Saved version update snapshot:', snapshot.status);
+    } catch (error) {
+      log.error('[StateManager] Failed to save version update snapshot:', error);
+      throw error;
+    }
+  }
+
   /**
    * Get all state (for debugging/backup)
    */
@@ -214,6 +303,7 @@ export class StateManager {
       return {
         installedVersions,
         activeVersion,
+        versionUpdateSnapshot: await this.getVersionUpdateSnapshot(),
         exportedAt: new Date().toISOString(),
       };
     } catch (error) {

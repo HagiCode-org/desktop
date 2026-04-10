@@ -5,6 +5,11 @@ export interface AppSettings {
   language: string;
 }
 
+export interface VersionAutoUpdateSettings {
+  enabled: boolean;
+  retainedArchiveCount: number;
+}
+
 export interface RemoteModeConfig {
   enabled: boolean;
   url: string;
@@ -13,6 +18,7 @@ export interface RemoteModeConfig {
 export interface AppConfig {
   server: ServerConfig;
   remoteMode: RemoteModeConfig;
+  versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -21,6 +27,30 @@ export interface AppConfig {
   shutdownDirectory?: string;
   recordingDirectory?: string;
   logsDirectory?: string;
+}
+
+export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
+  enabled: true,
+  retainedArchiveCount: 5,
+};
+
+export function normalizeRetainedArchiveCount(value: unknown, fallback: number = DEFAULT_VERSION_AUTO_UPDATE_SETTINGS.retainedArchiveCount): number {
+  const parsed = typeof value === 'string'
+    ? Number.parseInt(value, 10)
+    : typeof value === 'number'
+      ? value
+      : Number.NaN;
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function normalizeVersionAutoUpdateSettings(
+  settings?: Partial<VersionAutoUpdateSettings> | null,
+): VersionAutoUpdateSettings {
+  return {
+    enabled: settings?.enabled ?? DEFAULT_VERSION_AUTO_UPDATE_SETTINGS.enabled,
+    retainedArchiveCount: normalizeRetainedArchiveCount(settings?.retainedArchiveCount),
+  };
 }
 
 const defaultConfig: AppConfig = {
@@ -32,6 +62,7 @@ const defaultConfig: AppConfig = {
     enabled: false,
     url: '',
   },
+  versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
@@ -163,5 +194,37 @@ export class ConfigManager {
    */
   setCurrentLanguage(language: string): void {
     this.store.set('language', language);
+  }
+
+  getVersionAutoUpdateSettings(): VersionAutoUpdateSettings {
+    const current = this.store.get('versionAutoUpdate');
+    const normalized = normalizeVersionAutoUpdateSettings(current);
+
+    if (
+      current?.enabled !== normalized.enabled
+      || current?.retainedArchiveCount !== normalized.retainedArchiveCount
+    ) {
+      this.store.set('versionAutoUpdate', normalized);
+    }
+
+    return normalized;
+  }
+
+  setVersionAutoUpdateSettings(
+    nextSettings: Partial<VersionAutoUpdateSettings>,
+  ): VersionAutoUpdateSettings {
+    if (
+      nextSettings.retainedArchiveCount !== undefined
+      && normalizeRetainedArchiveCount(nextSettings.retainedArchiveCount) !== nextSettings.retainedArchiveCount
+    ) {
+      throw new Error('retainedArchiveCount must be a positive integer');
+    }
+
+    const merged = normalizeVersionAutoUpdateSettings({
+      ...this.getVersionAutoUpdateSettings(),
+      ...nextSettings,
+    });
+    this.store.set('versionAutoUpdate', merged);
+    return merged;
   }
 }
