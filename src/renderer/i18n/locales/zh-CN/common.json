@@ -184,6 +184,35 @@
       "title": "未安装任何版本",
       "description": "开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。",
       "startWizard": "启动向导"
+    },
+    "updateReminder": {
+      "title": "检测到可用更新",
+      "labels": {
+        "current": "当前版本",
+        "latest": "最新版本",
+        "state": "更新状态"
+      },
+      "states": {
+        "checking": "检查中",
+        "downloading": "下载中",
+        "ready": "已就绪",
+        "failed": "失败",
+        "disabled": "已暂停"
+      },
+      "descriptions": {
+        "checking": "正在检查当前包源中的兼容新版本。",
+        "downloading": "已检测到新版本，正在后台预下载归档。",
+        "ready": "新版本归档已验证完成，可前往版本管理页继续安装流程。",
+        "failed": "后台更新失败：{{error}}",
+        "settings-disabled": "你已关闭后台自动下载，可在设置页重新启用。",
+        "portable-mode": "portable mode 下已跳过后台更新，当前运行环境保持只读。",
+        "no-package-source": "尚未配置有效的软件包源，无法执行后台更新。"
+      },
+      "actions": {
+        "openVersionPage": "打开版本管理",
+        "installLatest": "安装最新版本",
+        "openSettings": "打开设置"
+      }
     }
   }
 }

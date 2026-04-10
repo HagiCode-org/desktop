@@ -184,6 +184,35 @@
       "title": "No Versions Installed Yet",
       "description": "The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.",
       "startWizard": "Launch Wizard"
+    },
+    "updateReminder": {
+      "title": "Update Available",
+      "labels": {
+        "current": "Current",
+        "latest": "Latest",
+        "state": "State"
+      },
+      "states": {
+        "checking": "Checking",
+        "downloading": "Downloading",
+        "ready": "Ready",
+        "failed": "Failed",
+        "disabled": "Paused"
+      },
+      "descriptions": {
+        "checking": "Checking the active package source for a compatible newer version.",
+        "downloading": "A newer version was found and the archive is being predownloaded in the background.",
+        "ready": "The latest archive is verified and ready for the existing version-management install flow.",
+        "failed": "Background update failed: {{error}}",
+        "settings-disabled": "Background predownloads are disabled. You can turn them back on in Settings.",
+        "portable-mode": "Portable mode skips background updates and keeps the current runtime read-only.",
+        "no-package-source": "No active package source is configured, so background updates cannot start."
+      },
+      "actions": {
+        "openVersionPage": "Open Version Management",
+        "installLatest": "Install Latest",
+        "openSettings": "Open Settings"
+      }
     }
   }
 }

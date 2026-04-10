@@ -6,7 +6,8 @@
       "remoteMode": "Remote Mode",
       "debug": "Debug",
       "dataDirectory": "Data Directory",
-      "sharingAcceleration": "Download & Sharing"
+      "sharingAcceleration": "Download & Sharing",
+      "updates": "Background Updates"
     },
     "smartConfig": {
       "title": "Smart Config prompt guidance",
@@ -150,6 +151,35 @@
       "loadError": "Failed to load sharing acceleration settings",
       "modeHint": "Mode: torrent first, automatic fallback on failure.",
       "scopeHint": "External seeding stays focused on latest desktop and latest server. Default cache limit: 5 GiB."
+    },
+    "updates": {
+      "title": "Background Updates",
+      "description": "Manage automatic checks, background predownloads, and verified archive retention.",
+      "enabled": {
+        "label": "Enable background predownloads",
+        "description": "When a compatible newer version is found, download the archive in the background without switching the current runtime."
+      },
+      "retainedArchiveCount": {
+        "label": "Retained archive count",
+        "description": "Only verified auto-downloaded archives are kept. Older entries are removed when the limit is exceeded."
+      },
+      "actions": {
+        "save": "Save Settings",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      },
+      "messages": {
+        "saveSuccess": "Background update settings saved",
+        "saveFailed": "Failed to save background update settings"
+      },
+      "errors": {
+        "retainedArchiveCountPositive": "Retained archive count must be a positive integer.",
+        "saveErrorDetail": "Save failed: {{error}}"
+      },
+      "notes": {
+        "snapshotModel": "The dashboard reminder is driven by a persisted main-process snapshot, so the last known update state survives Desktop reloads.",
+        "retentionPolicy": "Retention cleanup only removes cached archives and metadata. Installed version directories stay untouched."
+      }
     }
   },
   "footer": {

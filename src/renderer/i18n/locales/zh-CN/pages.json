@@ -6,7 +6,8 @@
       "remoteMode": "远程模式",
       "debug": "调试",
       "dataDirectory": "数据目录",
-      "sharingAcceleration": "下载与共享加速"
+      "sharingAcceleration": "下载与共享加速",
+      "updates": "后台更新"
     },
     "agentCli": {
       "title": "偏好 Agent CLI",
@@ -150,6 +151,35 @@
       "loadError": "读取下载与共享加速设置失败",
       "modeHint": "模式：种子优先，失败自动回源。",
       "scopeHint": "对外共享主范围：latest desktop 与 latest server。默认缓存上限 5 GiB。"
+    },
+    "updates": {
+      "title": "后台更新",
+      "description": "管理自动检查、后台预下载与已验证归档保留策略。",
+      "enabled": {
+        "label": "启用后台自动预下载",
+        "description": "检测到兼容新版本时，先在后台下载归档并保持当前运行版本不变。"
+      },
+      "retainedArchiveCount": {
+        "label": "保留的历史归档数量",
+        "description": "仅保留已验证通过的自动下载归档，超过上限时会自动清理最旧记录。"
+      },
+      "actions": {
+        "save": "保存设置",
+        "saving": "保存中...",
+        "cancel": "取消"
+      },
+      "messages": {
+        "saveSuccess": "后台更新设置已保存",
+        "saveFailed": "保存后台更新设置失败"
+      },
+      "errors": {
+        "retainedArchiveCountPositive": "保留数量必须是大于 0 的整数。",
+        "saveErrorDetail": "保存失败：{{error}}"
+      },
+      "notes": {
+        "snapshotModel": "首页提醒依赖主进程持久化快照，重启 Desktop 后仍会恢复最近一次更新状态。",
+        "retentionPolicy": "保留策略只会清理缓存归档文件，不会删除已经安装完成的版本目录。"
+      }
     }
   },
   "footer": {
