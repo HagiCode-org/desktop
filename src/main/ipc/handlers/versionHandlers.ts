@@ -2,9 +2,11 @@ import { ipcMain, BrowserWindow, shell } from 'electron';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { DistributionModeError, VersionManager } from '../../version-manager.js';
+import { VersionUpdateManager } from '../../version-update-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
 import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
+import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
 
 // Module state
 interface VersionHandlerState {
@@ -13,6 +15,7 @@ interface VersionHandlerState {
   webServiceManager: PCodeWebServiceManager | null;
   mainWindow: BrowserWindow | null;
   configManager: ConfigManager | null;
+  versionUpdateManager: VersionUpdateManager | null;
 }
 
 const state: VersionHandlerState = {
@@ -21,6 +24,7 @@ const state: VersionHandlerState = {
   webServiceManager: null,
   mainWindow: null,
   configManager: null,
+  versionUpdateManager: null,
 };
 
 /**
@@ -31,13 +35,15 @@ export function initVersionHandlers(
   dependencyManager: DependencyManager | null,
   webServiceManager: PCodeWebServiceManager | null,
   mainWindow: BrowserWindow | null,
-  configManager: ConfigManager | null
+  configManager: ConfigManager | null,
+  versionUpdateManager: VersionUpdateManager | null,
 ): void {
   state.versionManager = versionManager;
   state.dependencyManager = dependencyManager;
   state.webServiceManager = webServiceManager;
   state.mainWindow = mainWindow;
   state.configManager = configManager;
+  state.versionUpdateManager = versionUpdateManager;
 }
 
 /**
@@ -49,12 +55,14 @@ export function registerVersionHandlers(deps: {
   webServiceManager: PCodeWebServiceManager | null;
   mainWindow: BrowserWindow | null;
   configManager: ConfigManager | null;
+  versionUpdateManager: VersionUpdateManager | null;
 }): void {
   state.versionManager = deps.versionManager;
   state.dependencyManager = deps.dependencyManager;
   state.webServiceManager = deps.webServiceManager;
   state.mainWindow = deps.mainWindow;
   state.configManager = deps.configManager;
+  state.versionUpdateManager = deps.versionUpdateManager;
 
   // Version list handler
   ipcMain.handle('version:list', async () => {
@@ -93,6 +101,37 @@ export function registerVersionHandlers(deps: {
       console.error('Failed to get active version:', error);
       return null;
     }
+  });
+
+  ipcMain.handle('version:getUpdateSnapshot', async () => {
+    if (!state.versionUpdateManager) {
+      return createEmptyVersionUpdateSnapshot();
+    }
+    try {
+      return await state.versionUpdateManager.getSnapshot();
+    } catch (error) {
+      console.error('Failed to get version update snapshot:', error);
+      return createEmptyVersionUpdateSnapshot();
+    }
+  });
+
+  ipcMain.handle('version:getAutoUpdateSettings', async () => {
+    try {
+      return state.versionUpdateManager?.getSettings() ?? state.configManager?.getVersionAutoUpdateSettings();
+    } catch (error) {
+      console.error('Failed to get version auto-update settings:', error);
+      return state.configManager?.getVersionAutoUpdateSettings();
+    }
+  });
+
+  ipcMain.handle('version:setAutoUpdateSettings', async (_, settings) => {
+    if (state.versionUpdateManager) {
+      return state.versionUpdateManager.updateSettings(settings);
+    }
+    if (state.configManager) {
+      return state.configManager.setVersionAutoUpdateSettings(settings);
+    }
+    throw new Error('Version update manager not initialized');
   });
 
   // Version install handler

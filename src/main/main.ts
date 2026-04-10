@@ -15,6 +15,7 @@ import { LlmInstallationManager } from './llm-installation-manager.js';
 import { DiagnosisManager } from './diagnosis-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
+import { VersionUpdateManager } from './version-update-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
@@ -47,6 +48,7 @@ import { ConfigManager as YamlConfigManager } from './config-manager.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
+import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,6 +104,7 @@ let statusPollingInterval: NodeJS.Timeout | null = null;
 let webServiceManager: PCodeWebServiceManager | null = null;
 let dependencyManager: DependencyManager | null = null;
 let versionManager: VersionManager | null = null;
+let versionUpdateManager: VersionUpdateManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
@@ -636,6 +639,37 @@ ipcMain.handle('version:getActive', async () => {
   }
 });
 
+ipcMain.handle('version:getUpdateSnapshot', async () => {
+  if (!versionUpdateManager) {
+    return createEmptyVersionUpdateSnapshot();
+  }
+
+  try {
+    return await versionUpdateManager.getSnapshot();
+  } catch (error) {
+    console.error('Failed to get version update snapshot:', error);
+    return createEmptyVersionUpdateSnapshot();
+  }
+});
+
+ipcMain.handle('version:getAutoUpdateSettings', async () => {
+  try {
+    return versionUpdateManager?.getSettings() ?? configManager.getVersionAutoUpdateSettings();
+  } catch (error) {
+    console.error('Failed to get version auto-update settings:', error);
+    return configManager.getVersionAutoUpdateSettings();
+  }
+});
+
+ipcMain.handle('version:setAutoUpdateSettings', async (_, settings) => {
+  try {
+    return await (versionUpdateManager?.updateSettings(settings) ?? Promise.resolve(configManager.setVersionAutoUpdateSettings(settings)));
+  } catch (error) {
+    console.error('Failed to set version auto-update settings:', error);
+    throw error;
+  }
+});
+
 ipcMain.handle('version:install', async (_, versionId: string) => {
   if (!versionManager || !mainWindow || !webServiceManager) {
     return { success: false, error: 'Version manager not initialized' };
@@ -653,6 +687,7 @@ ipcMain.handle('version:install', async (_, versionId: string) => {
     // Notify renderer of installed versions change
     const installedVersions = await versionManager.getInstalledVersions();
     mainWindow?.webContents.send('version:installedVersionsChanged', installedVersions);
+    await versionUpdateManager?.refreshSnapshot('version-installed');
 
     return result;
   } catch (error) {
@@ -709,6 +744,7 @@ ipcMain.handle('version:uninstall', async (_, versionId: string) => {
     // Notify renderer of installed versions change
     const installedVersions = await versionManager.getInstalledVersions();
     mainWindow?.webContents.send('version:installedVersionsChanged', installedVersions);
+    await versionUpdateManager?.refreshSnapshot('version-uninstalled');
 
     return result;
   } catch (error) {
@@ -735,6 +771,7 @@ ipcMain.handle('version:reinstall', async (_, versionId: string) => {
     // Notify active version change if it was the active version
     const activeVersion = await versionManager.getActiveVersion();
     mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
+    await versionUpdateManager?.refreshSnapshot('version-reinstalled');
 
     return result.success;
   } catch (error) {
@@ -760,6 +797,7 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
       // Notify renderer of active version change
       const activeVersion = await versionManager.getActiveVersion();
       mainWindow?.webContents.send('version:activeVersionChanged', activeVersion);
+      await versionUpdateManager?.refreshSnapshot('version-switched');
     }
 
     return result;
@@ -910,6 +948,7 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
       // Notify renderer of installed versions change
       const updatedVersions = await versionManager.getInstalledVersions();
       mainWindow?.webContents.send('version:installedVersionsChanged', updatedVersions);
+      await versionUpdateManager?.refreshSnapshot('web-service-package-installed');
     }
 
     return success;
@@ -1832,6 +1871,14 @@ app.whenReady().then(async () => {
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
   log.info('[App] Distribution mode initialized:', distributionModeState.mode);
+  versionUpdateManager = new VersionUpdateManager({
+    versionManager,
+    configManager,
+  });
+  versionUpdateManager.onSnapshotChanged((snapshot) => {
+    mainWindow?.webContents.send('version:update-state-changed', snapshot);
+  });
+  log.info('[App] Version Update Manager initialized');
 
   registerPackageSourceHandlers({
     versionManager,
@@ -2237,6 +2284,8 @@ function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
   createTray();
   setServerStatus('stopped');
   startStatusPolling();
+  await versionUpdateManager.refreshSnapshot('startup');
+  versionUpdateManager.startScheduledRefresh();
 
   // Get initial web service status and update tray before starting polling
   try {
@@ -2294,6 +2343,7 @@ app.on('before-quit', async (event) => {
     if (rssFeedManager) {
       rssFeedManager.destroy();
     }
+    versionUpdateManager?.dispose();
     destroyTray();
   } catch (error) {
     console.error('[App] Error during cleanup:', error);

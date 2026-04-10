@@ -98,6 +98,42 @@ export interface VersionSwitchResultPayload {
   desktopCompatibility?: DesktopCompatibilityPayload;
 }
 
+export interface VersionAutoUpdateSettingsPayload {
+  enabled: boolean;
+  retainedArchiveCount: number;
+}
+
+export interface VersionUpdateVersionPayload {
+  id: string;
+  version: string;
+  packageFilename: string;
+  platform: string;
+  sourceType?: string;
+}
+
+export interface VersionUpdateCachedArchivePayload {
+  versionId: string;
+  version: string;
+  packageFilename: string;
+  cachePath: string;
+  retainedAt: string;
+  verifiedAt: string;
+  fileSize: number;
+  sourceType?: string;
+}
+
+export interface VersionUpdateSnapshotPayload {
+  status: 'idle' | 'checking' | 'downloading' | 'ready' | 'failed' | 'disabled';
+  currentVersion: VersionUpdateVersionPayload | null;
+  latestVersion: VersionUpdateVersionPayload | null;
+  downloadedVersionId: string | null;
+  lastCheckedAt: string | null;
+  lastUpdatedAt: string | null;
+  disabledReason: 'settings-disabled' | 'portable-mode' | 'no-package-source' | null;
+  cachedArchives: VersionUpdateCachedArchivePayload[];
+  failure: { message: string; at: string } | null;
+}
+
 export type VersionInstallProgressPayload = VersionDownloadProgress;
 
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
@@ -196,6 +232,9 @@ interface ElectronAPI {
   versionList: () => Promise<any[]>;
   versionGetInstalled: () => Promise<InstalledVersionPayload[]>;
   versionGetActive: () => Promise<InstalledVersionPayload | null>;
+  versionGetUpdateSnapshot: () => Promise<VersionUpdateSnapshotPayload>;
+  versionGetAutoUpdateSettings: () => Promise<VersionAutoUpdateSettingsPayload>;
+  versionSetAutoUpdateSettings: (settings: VersionAutoUpdateSettingsPayload) => Promise<VersionAutoUpdateSettingsPayload>;
   versionInstall: (versionId: string) => Promise<{ success: boolean; error?: string }>;
   versionUninstall: (versionId: string) => Promise<boolean>;
   versionSwitch: (versionId: string) => Promise<VersionSwitchResultPayload>;
@@ -208,6 +247,7 @@ interface ElectronAPI {
   onInstalledVersionsChanged: (callback: (versions: InstalledVersionPayload[]) => void) => () => void;
   onActiveVersionChanged: (callback: (version: InstalledVersionPayload | null) => void) => () => void;
   onVersionListChanged: (callback: () => void) => () => void;
+  onVersionUpdateChanged: (callback: (snapshot: VersionUpdateSnapshotPayload) => void) => () => void;
 
   // LLM Installation APIs
   llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
@@ -391,6 +431,9 @@ const electronAPI: ElectronAPI = {
   versionList: () => ipcRenderer.invoke('version:list'),
   versionGetInstalled: () => ipcRenderer.invoke('version:getInstalled'),
   versionGetActive: () => ipcRenderer.invoke('version:getActive'),
+  versionGetUpdateSnapshot: () => ipcRenderer.invoke('version:getUpdateSnapshot'),
+  versionGetAutoUpdateSettings: () => ipcRenderer.invoke('version:getAutoUpdateSettings'),
+  versionSetAutoUpdateSettings: (settings) => ipcRenderer.invoke('version:setAutoUpdateSettings', settings),
   versionInstall: (versionId) => ipcRenderer.invoke('version:install', versionId),
   versionUninstall: (versionId) => ipcRenderer.invoke('version:uninstall', versionId),
   versionSwitch: (versionId) => ipcRenderer.invoke('version:switch', versionId),
@@ -426,6 +469,13 @@ const electronAPI: ElectronAPI = {
     };
     ipcRenderer.on('version:list:changed', listener);
     return () => ipcRenderer.removeListener('version:list:changed', listener);
+  },
+  onVersionUpdateChanged: (callback) => {
+    const listener = (_event, snapshot) => {
+      callback(snapshot);
+    };
+    ipcRenderer.on('version:update-state-changed', listener);
+    return () => ipcRenderer.removeListener('version:update-state-changed', listener);
   },
   onOnboardingSwitchToWeb: (callback) => {
     const listener = (_event, data) => {
