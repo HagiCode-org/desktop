@@ -4,6 +4,7 @@ import { OnboardingSettings } from './settings/OnboardingSettings';
 import { DataDirectorySettings } from './settings/DataDirectorySettings';
 import { RemoteModeSettings } from './settings/RemoteModeSettings';
 import { SharingAccelerationSettings } from './settings/SharingAccelerationSettings';
+import { VersionUpdateSettings } from './settings/VersionUpdateSettings';
 import { shouldShowSharingAccelerationSettings } from './settings';
 import type { DistributionMode } from '../../types/distribution-mode';
 
@@ -44,6 +45,12 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             >
               {t('settings.tabs.dataDirectory')}
             </TabsTrigger>
+            <TabsTrigger
+              value="updates"
+              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.updates')}
+            </TabsTrigger>
             {showSharingAccelerationSettings ? (
               <TabsTrigger
                 value="sharingAcceleration"
@@ -65,6 +72,10 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
 
             <TabsContent value="dataDirectory" className="mt-0">
               <DataDirectorySettings />
+            </TabsContent>
+
+            <TabsContent value="updates" className="mt-0">
+              <VersionUpdateSettings />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (

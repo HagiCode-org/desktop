@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '../hooks/useNavigate';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, CheckCircle, Activity, FolderOpen, Globe, Monitor, LoaderCircle, type LucideIcon } from 'lucide-react';
+import { Package, CheckCircle, Activity, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
@@ -11,8 +11,10 @@ import DiagnosisButton from './DiagnosisButton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
+import { selectVisibleVersionUpdateReminder } from '../store/slices/versionUpdateSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
-import type { RootState } from '../store';
+import { installWebServicePackage } from '../store/thunks/webServiceThunks';
+import type { AppDispatch, RootState } from '../store';
 import type {
   LogDirectoryErrorCode,
   LogDirectoryBridge,
@@ -72,8 +74,9 @@ const toLogTargetStateMap = (targets: LogDirectoryTargetStatus[]): LogTargetStat
 export default function SystemManagementView() {
   const { t } = useTranslation('common');
   const { navigateTo } = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
+  const versionUpdateReminder = useSelector((state: RootState) => selectVisibleVersionUpdateReminder(state));
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
@@ -250,6 +253,45 @@ export default function SystemManagementView() {
     }
   };
 
+  const handleOpenVersionManagement = () => {
+    navigateTo('version');
+  };
+
+  const handleOpenUpdateSettings = () => {
+    navigateTo('settings');
+  };
+
+  const handleInstallLatest = async () => {
+    if (!versionUpdateReminder?.latestVersion?.id) {
+      return;
+    }
+
+    await dispatch(installWebServicePackage(versionUpdateReminder.latestVersion.id));
+  };
+
+  const getUpdateReminderDescription = () => {
+    if (!versionUpdateReminder) {
+      return '';
+    }
+
+    switch (versionUpdateReminder.status) {
+      case 'checking':
+        return t('system.updateReminder.descriptions.checking');
+      case 'downloading':
+        return t('system.updateReminder.descriptions.downloading');
+      case 'ready':
+        return t('system.updateReminder.descriptions.ready');
+      case 'failed':
+        return t('system.updateReminder.descriptions.failed', {
+          error: versionUpdateReminder.failure?.message ?? t('status.failed'),
+        });
+      case 'disabled':
+        return t(`system.updateReminder.descriptions.${versionUpdateReminder.disabledReason ?? 'settings-disabled'}`);
+      default:
+        return '';
+    }
+  };
+
   const logQuickAccessItems: Array<{
     target: LogDirectoryTarget;
     icon: LucideIcon;
@@ -361,6 +403,65 @@ export default function SystemManagementView() {
       >
         <DiagnosisButton />
       </motion.div>
+
+      {versionUpdateReminder ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.45 }}
+          className="mb-6 rounded-2xl border border-border bg-card p-6 shadow-sm"
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-primary/10 p-3">
+                  <BellRing className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
+                  <p className="text-sm text-muted-foreground">{getUpdateReminderDescription()}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-xl border border-border bg-muted/30 p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.current')}</div>
+                  <div className="mt-1 font-medium text-foreground">
+                    {versionUpdateReminder.currentVersion?.version ?? t('status.loading')}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.latest')}</div>
+                  <div className="mt-1 font-medium text-foreground">
+                    {versionUpdateReminder.latestVersion?.version ?? t('status.loading')}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.state')}</div>
+                  <div className="mt-1 font-medium text-foreground">{t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <Button type="button" onClick={handleOpenVersionManagement} className="justify-between">
+                <span>{t('system.updateReminder.actions.openVersionPage')}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              {versionUpdateReminder.status === 'ready' ? (
+                <Button type="button" variant="outline" onClick={() => void handleInstallLatest()}>
+                  {t('system.updateReminder.actions.installLatest')}
+                </Button>
+              ) : null}
+              {versionUpdateReminder.status === 'disabled' ? (
+                <Button type="button" variant="outline" onClick={handleOpenUpdateSettings}>
+                  {t('system.updateReminder.actions.openSettings')}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

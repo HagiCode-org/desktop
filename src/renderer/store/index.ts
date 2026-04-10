@@ -11,6 +11,11 @@ import agentCliReducer from './slices/agentCliSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
 import dataDirectoryReducer from './slices/dataDirectorySlice';
 import remoteModeReducer from './slices/remoteModeSlice';
+import versionUpdateReducer, {
+  fetchVersionAutoUpdateSettings,
+  fetchVersionUpdateSnapshot,
+  setVersionUpdateSnapshotFromEvent,
+} from './slices/versionUpdateSlice';
 import listenerMiddleware from './listenerMiddleware';
 import { setProcessInfo } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
@@ -30,6 +35,7 @@ export type AppDispatch = Dispatch<
   | typeof import('./slices/llmInstallationSlice').actions
   | typeof import('./slices/dataDirectorySlice').actions
   | typeof import('./slices/remoteModeSlice').actions
+  | typeof import('./slices/versionUpdateSlice').actions
 >;
 
 // Import thunks for initialization
@@ -65,6 +71,7 @@ export const store = configureStore({
     llmInstallation: llmInstallationReducer,
     dataDirectory: dataDirectoryReducer,
     remoteMode: remoteModeReducer,
+    versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -133,6 +140,10 @@ store.dispatch(initializeRSSFeed());
 // Initialize remote mode
 store.dispatch(initializeRemoteMode());
 
+// Initialize version update snapshot and settings
+store.dispatch(fetchVersionUpdateSnapshot());
+store.dispatch(fetchVersionAutoUpdateSettings());
+
 // Initialize web service (must be last as it may depend on other modules)
 store.dispatch(initializeWebService());
 
@@ -149,6 +160,10 @@ if (typeof window !== 'undefined') {
   window.electronAPI.onWebServiceStatusChange?.((status: any) => {
     store.dispatch(setProcessInfo(status));
     console.log('Web service status changed:', status);
+  });
+
+  window.electronAPI.onVersionUpdateChanged?.((snapshot: any) => {
+    store.dispatch(setVersionUpdateSnapshotFromEvent(snapshot));
   });
 
   // Set up polling as backup for web service status
