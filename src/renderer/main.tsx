@@ -7,6 +7,7 @@ import { Toaster } from './components/ui/sonner';
 import { store } from './store';
 import i18n from './i18n';
 import App from './App';
+import 'driver.js/dist/driver.css';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

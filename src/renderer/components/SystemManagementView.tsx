@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '../hooks/useNavigate';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,6 +9,16 @@ import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import DiagnosisButton from './DiagnosisButton';
 import { Button } from '@/components/ui/button';
+import {
+  buildHomepageTourSteps,
+  HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE,
+  HOMEPAGE_TOUR_DOM_STABLE_DELAY_MS,
+  HOMEPAGE_TOUR_VARIANTS,
+  HOMEPAGE_TOUR_VARIANT_ATTRIBUTE,
+  shouldAutoStartHomepageTour,
+  startHomepageTour,
+  type HomepageTourSession,
+} from '@/lib/homepageInteractiveTour';
 import { cn } from '@/lib/utils';
 import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
 import { selectVisibleVersionUpdateReminder } from '../store/slices/versionUpdateSlice';
@@ -77,11 +87,33 @@ export default function SystemManagementView() {
   const dispatch = useDispatch<AppDispatch>();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
   const versionUpdateReminder = useSelector((state: RootState) => selectVisibleVersionUpdateReminder(state));
+  const currentView = useSelector((state: RootState) => state.view.currentView);
+  const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
   const [isLogTargetsLoading, setIsLogTargetsLoading] = useState(true);
   const [openingTarget, setOpeningTarget] = useState<LogDirectoryTarget | null>(null);
+  const homepageTourSessionRef = useRef<HomepageTourSession | null>(null);
+  const homepageTourFrameRef = useRef<number | null>(null);
+  const homepageTourTimeoutRef = useRef<number | null>(null);
+
+  const clearPendingHomepageTourStartup = useCallback(() => {
+    if (homepageTourFrameRef.current !== null) {
+      window.cancelAnimationFrame(homepageTourFrameRef.current);
+      homepageTourFrameRef.current = null;
+    }
+
+    if (homepageTourTimeoutRef.current !== null) {
+      window.clearTimeout(homepageTourTimeoutRef.current);
+      homepageTourTimeoutRef.current = null;
+    }
+  }, []);
+
+  const destroyHomepageTourSession = useCallback((markCompleted = false) => {
+    homepageTourSessionRef.current?.destroy({ markCompleted });
+    homepageTourSessionRef.current = null;
+  }, []);
 
   const loadLogTargets = useCallback(async (showErrorToast = true) => {
     setIsLogTargetsLoading(true);
@@ -145,6 +177,59 @@ export default function SystemManagementView() {
       }
     };
   }, [loadLogTargets, t]);
+
+  useEffect(() => {
+    if (onboardingActive) {
+      clearPendingHomepageTourStartup();
+      destroyHomepageTourSession(false);
+      return;
+    }
+
+    if (homepageTourSessionRef.current?.isActive()) {
+      return;
+    }
+
+    clearPendingHomepageTourStartup();
+
+    homepageTourFrameRef.current = window.requestAnimationFrame(() => {
+      homepageTourFrameRef.current = null;
+      homepageTourTimeoutRef.current = window.setTimeout(() => {
+        homepageTourTimeoutRef.current = null;
+
+        const steps = buildHomepageTourSteps({ t });
+        if (!shouldAutoStartHomepageTour({ currentView, onboardingActive, steps })) {
+          return;
+        }
+
+        homepageTourSessionRef.current = startHomepageTour({
+          t,
+          steps,
+          onDestroyed: () => {
+            homepageTourSessionRef.current = null;
+          },
+        });
+      }, HOMEPAGE_TOUR_DOM_STABLE_DELAY_MS);
+    });
+
+    return () => {
+      clearPendingHomepageTourStartup();
+    };
+  }, [
+    clearPendingHomepageTourStartup,
+    currentView,
+    destroyHomepageTourSession,
+    onboardingActive,
+    t,
+    activeVersion?.id,
+    Boolean(versionUpdateReminder),
+  ]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingHomepageTourStartup();
+      destroyHomepageTourSession(false);
+    };
+  }, [clearPendingHomepageTourStartup, destroyHomepageTourSession]);
 
   const getLogTargetDescription = useCallback((target: LogDirectoryTarget, status: LogDirectoryTargetStatus) => {
     if (status.reason) {
@@ -319,6 +404,7 @@ export default function SystemManagementView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
         className="text-center mb-12"
+        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'hero' }}
       >
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -400,6 +486,7 @@ export default function SystemManagementView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.5 }}
         className="mb-6"
+        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'diagnosis' }}
       >
         <DiagnosisButton />
       </motion.div>
@@ -410,6 +497,7 @@ export default function SystemManagementView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.28, duration: 0.45 }}
           className="mb-6 rounded-2xl border border-border bg-card p-6 shadow-sm"
+          {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'update-reminder' }}
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
@@ -467,6 +555,7 @@ export default function SystemManagementView() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
+        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}
       >
         <WebServiceStatusCard />
       </motion.div>
@@ -485,6 +574,7 @@ export default function SystemManagementView() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.5 }}
         className="mt-6 bg-card rounded-xl p-6 border border-border relative overflow-hidden group"
+        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
       >
         <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -570,6 +660,10 @@ export default function SystemManagementView() {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ delay: 0.45, duration: 0.4 }}
             className="mt-6 bg-card rounded-xl p-6 border border-border relative overflow-hidden group"
+            {...{
+              [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
+              [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.activeVersion,
+            }}
           >
             <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -661,6 +755,10 @@ export default function SystemManagementView() {
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ delay: 0.45, duration: 0.4 }}
             className="mt-6 bg-card rounded-xl p-8 border border-border text-center relative overflow-hidden"
+            {...{
+              [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
+              [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.noVersionInstalled,
+            }}
           >
             <motion.div
               animate={{
