@@ -213,6 +213,43 @@
         "installLatest": "Install Latest",
         "openSettings": "Open Settings"
       }
+    },
+    "homepageTour": {
+      "buttons": {
+        "next": "Next",
+        "previous": "Back",
+        "done": "Done"
+      },
+      "steps": {
+        "hero": {
+          "title": "Welcome to the homepage",
+          "description": "This top section summarizes service health and helps you understand where to start on the Desktop dashboard."
+        },
+        "diagnosis": {
+          "title": "Open AI diagnosis guidance",
+          "description": "Use this shortcut when you need structured troubleshooting guidance before changing service or package settings."
+        },
+        "updateReminder": {
+          "title": "Track available updates",
+          "description": "When a compatible newer package is discovered, this reminder card shows its state and links to the next action."
+        },
+        "serviceCard": {
+          "title": "Monitor service status",
+          "description": "Review the embedded service state here, then start, stop, restart, or open Hagicode when the runtime is ready."
+        },
+        "logAccess": {
+          "title": "Jump to log folders",
+          "description": "These quick actions open Desktop and Web App log folders so you can collect evidence faster during diagnostics."
+        },
+        "activeVersion": {
+          "title": "Review the active version",
+          "description": "This section shows which package is installed right now and gives you a quick route into version management."
+        },
+        "noVersionInstalled": {
+          "title": "Install your first version",
+          "description": "When no package is installed yet, use this call to action to launch the setup wizard and complete the first runtime install."
+        }
+      }
     }
   }
 }

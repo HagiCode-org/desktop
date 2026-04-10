@@ -81,7 +81,15 @@
       "restartButton": "重新启动向导",
       "resetting": "重置中...",
       "resetSuccess": "启动向导已重置",
-      "resetError": "重置失败: {{error}}"
+      "resetError": "重置失败: {{error}}",
+      "homepageTour": {
+        "title": "重置首页导览",
+        "description": "清除首页导览完成状态，这样下次打开系统管理首页时会再次自动播放讲解。",
+        "resetButton": "重置首页导览",
+        "resetting": "重置导览中...",
+        "resetSuccess": "首页导览已重置",
+        "resetError": "重置首页导览失败: {{error}}"
+      }
     },
     "debug": {
       "title": "调试",

@@ -213,6 +213,43 @@
         "installLatest": "安装最新版本",
         "openSettings": "打开设置"
       }
+    },
+    "homepageTour": {
+      "buttons": {
+        "next": "下一步",
+        "previous": "上一步",
+        "done": "完成"
+      },
+      "steps": {
+        "hero": {
+          "title": "这是你的首页总览",
+          "description": "这里会先告诉你服务当前是否在线，并帮助你快速理解 Desktop 首页的核心入口。"
+        },
+        "diagnosis": {
+          "title": "从 AI 诊断入口开始排查",
+          "description": "遇到异常时可以先打开这里，获取结构化的 AI 诊断提示，再决定下一步要检查什么。"
+        },
+        "updateReminder": {
+          "title": "查看可用更新提醒",
+          "description": "发现兼容新版本后，这张卡片会展示后台更新状态，并提供继续安装或查看详情的入口。"
+        },
+        "serviceCard": {
+          "title": "关注服务运行状态",
+          "description": "在这里查看嵌入式服务当前状态，并执行启动、停止、重启或打开 Hagicode 等操作。"
+        },
+        "logAccess": {
+          "title": "快速打开日志目录",
+          "description": "需要排查问题时，可以直接从这里打开 Desktop 与 Web App 的日志文件夹，减少手动查找路径。"
+        },
+        "activeVersion": {
+          "title": "查看当前活动版本",
+          "description": "这里展示当前已安装并可运行的版本信息，同时也能快速进入版本管理页。"
+        },
+        "noVersionInstalled": {
+          "title": "先安装第一个版本",
+          "description": "如果当前还没有安装任何版本，可以从这里启动向导，完成首次下载、依赖安装与服务启动。"
+        }
+      }
     }
   }
 }

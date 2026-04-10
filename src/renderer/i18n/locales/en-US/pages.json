@@ -58,7 +58,15 @@
       "restartButton": "Restart Wizard",
       "resetting": "Resetting...",
       "resetSuccess": "Wizard has been reset",
-      "resetError": "Reset failed: {{error}}"
+      "resetError": "Reset failed: {{error}}",
+      "homepageTour": {
+        "title": "Reset Homepage Tour",
+        "description": "Clear the homepage tour completion state so the guided walkthrough can auto-play again the next time you open System Management.",
+        "resetButton": "Reset Homepage Tour",
+        "resetting": "Resetting Tour...",
+        "resetSuccess": "Homepage tour has been reset",
+        "resetError": "Failed to reset homepage tour: {{error}}"
+      }
     },
     "debug": {
       "title": "Debug",
