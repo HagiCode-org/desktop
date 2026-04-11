@@ -12,4 +12,16 @@ describe('version management install progress rendering', () => {
     assert.match(source, /installingVersionId === version\.id/);
     assert.match(source, /renderInstallTelemetry\(version\.id\)/);
   });
+
+  it('removes dependency affordances from installed version cards', async () => {
+    const source = await fs.readFile(pagePath, 'utf8');
+
+    assert.equal(source.includes('VersionDependencyGuidance'), false);
+    assert.equal(source.includes('handleToggleDependencies'), false);
+    assert.equal(source.includes('getDependencyList('), false);
+    assert.equal(source.includes('viewDependencies'), false);
+    assert.equal(source.includes('collapseDependencies'), false);
+    assert.equal(source.includes('dependencyInfo'), false);
+    assert.equal(source.includes('aiGuidance'), false);
+  });
 });
