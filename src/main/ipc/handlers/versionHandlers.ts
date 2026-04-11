@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { DistributionModeError, VersionManager } from '../../version-manager.js';
 import { VersionUpdateManager } from '../../version-update-manager.js';
-import { DependencyManager } from '../../dependency-manager.js';
 import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
 import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
@@ -11,7 +10,6 @@ import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
 // Module state
 interface VersionHandlerState {
   versionManager: VersionManager | null;
-  dependencyManager: DependencyManager | null;
   webServiceManager: PCodeWebServiceManager | null;
   mainWindow: BrowserWindow | null;
   configManager: ConfigManager | null;
@@ -20,7 +18,6 @@ interface VersionHandlerState {
 
 const state: VersionHandlerState = {
   versionManager: null,
-  dependencyManager: null,
   webServiceManager: null,
   mainWindow: null,
   configManager: null,
@@ -32,14 +29,12 @@ const state: VersionHandlerState = {
  */
 export function initVersionHandlers(
   versionManager: VersionManager | null,
-  dependencyManager: DependencyManager | null,
   webServiceManager: PCodeWebServiceManager | null,
   mainWindow: BrowserWindow | null,
   configManager: ConfigManager | null,
   versionUpdateManager: VersionUpdateManager | null,
 ): void {
   state.versionManager = versionManager;
-  state.dependencyManager = dependencyManager;
   state.webServiceManager = webServiceManager;
   state.mainWindow = mainWindow;
   state.configManager = configManager;
@@ -51,14 +46,12 @@ export function initVersionHandlers(
  */
 export function registerVersionHandlers(deps: {
   versionManager: VersionManager | null;
-  dependencyManager: DependencyManager | null;
   webServiceManager: PCodeWebServiceManager | null;
   mainWindow: BrowserWindow | null;
   configManager: ConfigManager | null;
   versionUpdateManager: VersionUpdateManager | null;
 }): void {
   state.versionManager = deps.versionManager;
-  state.dependencyManager = deps.dependencyManager;
   state.webServiceManager = deps.webServiceManager;
   state.mainWindow = deps.mainWindow;
   state.configManager = deps.configManager;
@@ -250,29 +243,6 @@ export function registerVersionHandlers(deps: {
         error: error instanceof Error ? error.message : String(error),
         errorCode: error instanceof DistributionModeError ? error.code : 'unknown',
       };
-    }
-  });
-
-  // Version checkDependencies handler
-  ipcMain.handle('version:checkDependencies', async (_, versionId: string) => {
-    if (!state.versionManager) {
-      return [];
-    }
-    try {
-      const dependencies = await state.versionManager.checkVersionDependencies(versionId);
-
-      const debugMode = state.configManager?.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-      if (debugMode?.ignoreDependencyCheck) {
-        return dependencies.map(dep => ({
-          ...dep,
-          installed: false,
-        }));
-      }
-
-      return dependencies;
-    } catch (error) {
-      console.error('Failed to check version dependencies:', error);
-      return [];
     }
   });
 

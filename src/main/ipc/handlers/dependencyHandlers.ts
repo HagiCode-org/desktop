@@ -2,7 +2,6 @@ import { ipcMain, BrowserWindow, app } from 'electron';
 import log from 'electron-log';
 import { VersionManager } from '../../version-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
-import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
 import { manifestReader } from '../../manifest-reader.js';
 
@@ -289,13 +288,17 @@ export function registerDependencyHandlers(deps: {
 
   // Dependency get list handler
   ipcMain.handle('dependency:get-list', async (_, versionId: string) => {
-    if (!state.versionManager) {
+    if (!state.versionManager || !state.dependencyManager) {
       return [];
     }
 
     try {
-      const dependencies = await state.versionManager.getDependencyListFromManifest(versionId);
-      return dependencies;
+      const installPath = await state.versionManager.resolveVersionInstallPath(versionId);
+      if (!installPath) {
+        return [];
+      }
+
+      return await state.dependencyManager.getDependencyListFromManifest(installPath);
     } catch (error) {
       log.error('[DependencyHandlers] Failed to get dependency list:', error);
       return [];

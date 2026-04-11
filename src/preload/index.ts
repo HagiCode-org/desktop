@@ -239,7 +239,6 @@ interface ElectronAPI {
   versionUninstall: (versionId: string) => Promise<boolean>;
   versionSwitch: (versionId: string) => Promise<VersionSwitchResultPayload>;
   versionReinstall: (versionId: string) => Promise<boolean>;
-  versionCheckDependencies: (versionId: string) => Promise<any[]>;
   versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
   versionSetChannel: (channel: string) => Promise<{ success: boolean; error?: string }>;
   logDirectory: LogDirectoryBridge;
@@ -438,7 +437,6 @@ const electronAPI: ElectronAPI = {
   versionUninstall: (versionId) => ipcRenderer.invoke('version:uninstall', versionId),
   versionSwitch: (versionId) => ipcRenderer.invoke('version:switch', versionId),
   versionReinstall: (versionId) => ipcRenderer.invoke('version:reinstall', versionId),
-  versionCheckDependencies: (versionId) => ipcRenderer.invoke('version:checkDependencies', versionId),
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   logDirectory: logDirectoryBridge,

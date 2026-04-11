@@ -811,30 +811,6 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
   }
 });
 
-ipcMain.handle('version:checkDependencies', async (_, versionId: string) => {
-  if (!versionManager) {
-    return [];
-  }
-  try {
-    const dependencies = await versionManager.checkVersionDependencies(versionId);
-
-    // Check if debug mode is enabled (ignore dependency check)
-    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-    if (debugMode?.ignoreDependencyCheck) {
-      // Force all dependencies to appear as not installed
-      return dependencies.map(dep => ({
-        ...dep,
-        installed: false,
-      }));
-    }
-
-    return dependencies;
-  } catch (error) {
-    console.error('Failed to check version dependencies:', error);
-    return [];
-  }
-});
-
 ipcMain.handle('version:openLogs', async (_, versionId: string) => {
   if (!versionManager) {
     return {
@@ -1268,13 +1244,17 @@ ipcMain.handle('dependency:get-all', async (_, versionId: string) => {
 
 // Get dependency list from manifest without checking installation status (fast)
 ipcMain.handle('dependency:get-list', async (_, versionId: string) => {
-  if (!versionManager) {
+  if (!versionManager || !dependencyManager) {
     return [];
   }
 
   try {
-    const dependencies = await versionManager.getDependencyListFromManifest(versionId);
-    return dependencies;
+    const installPath = await versionManager.resolveVersionInstallPath(versionId);
+    if (!installPath) {
+      return [];
+    }
+
+    return await dependencyManager.getDependencyListFromManifest(installPath);
   } catch (error) {
     log.error('[Main] Failed to get dependency list:', error);
     return [];
