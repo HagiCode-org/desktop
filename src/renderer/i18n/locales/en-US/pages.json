@@ -249,7 +249,6 @@
     "reinstalling": "Reinstalling...",
     "installedAt": "Installed at",
     "notInstalled": "Not Installed",
-    "dependencies": "Dependencies",
     "confirmUninstall": "Are you sure you want to uninstall this version?",
     "confirmReinstall": "Are you sure you want to reinstall this package? This will delete cache and installed version, then download and install again.",
     "reinstall": "Reinstall",
@@ -273,8 +272,6 @@
       "install": "Install Version",
       "switch": "Switch",
       "uninstall": "Uninstall",
-      "viewDependencies": "View Dependencies",
-      "collapseDependencies": "Collapse Dependencies",
       "reinstall": "Reinstall",
       "reinstallPackage": "Reinstall this package",
       "openLogs": "Open Logs",
@@ -284,10 +281,9 @@
     },
     "progressBar": "Progress bar",
     "progressText": "Progress text",
-    "installButton": "Install {{count}} dependencies",
     "info": {
       "title": "About Version Management",
-      "description": "Version management allows you to install multiple Hagicode Server versions and switch between them. Only versions with all dependencies satisfied can be activated."
+      "description": "Version management lets you install multiple Hagicode Server versions, switch between them, and review desktop compatibility before activation."
     },
     "toast": {
       "installSuccess": "Installation successful",
@@ -312,27 +308,11 @@
       "cancel": "Cancel",
       "confirm": "Confirm"
     },
-    "dependencyInfo": {
-      "title": "Dependency Requirements",
-      "description": "These are dependency requirements for this version. Please ensure all dependencies are installed before using this version.",
-      "required": "Required",
-      "requiredVersion": "Required version:"
-    },
     "desktopCompatibility": {
       "blockedTitle": "Upgrade Desktop to activate this package",
       "requiredVersion": "Required Desktop:",
       "currentVersion": "Current Desktop:",
       "upgradeGuidance": "Upgrade Hagicode Desktop, then retry switching or starting this package."
-    },
-    "aiGuidance": {
-      "title": "AI dependency guidance",
-      "description": "Use the version-specific prompt below with any supported AI CLI to install or verify dependencies.",
-      "panelTitle": "Version prompt guidance",
-      "panelDescription": "Desktop resolves the version prompt for you and shows the exact instructions to paste into your CLI.",
-      "region": {
-        "cn": "CN prompt",
-        "international": "International prompt"
-      }
     },
     "portableMode": {
       "title": "Portable version mode",

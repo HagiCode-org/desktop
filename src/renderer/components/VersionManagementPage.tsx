@@ -26,8 +26,6 @@ import {
 import { Button } from './ui/button';
 import {
   selectWebServiceOperating,
-  selectWebServiceStatus,
-  selectInstallState,
   selectIsInstallingFromState,
   selectInstallProgress,
   selectInstallingVersionId,
@@ -37,7 +35,6 @@ import {
 } from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
-import { VersionDependencyGuidance } from './VersionDependencyGuidance';
 import type { DistributionMode } from '../../types/distribution-mode';
 
 
@@ -66,7 +63,6 @@ interface InstalledVersion {
   installedPath: string;
   installedAt: string;
   status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
-  dependencies: any[];
   isActive: boolean;
   runtimeSource?: 'installed-version' | 'portable-fixed';
   isReadOnly?: boolean;
@@ -98,15 +94,6 @@ interface VersionSwitchResult {
   };
 }
 
-interface DependencyCheckResult {
-  name: string;
-  type: string;
-  requiredVersion?: string;
-  description?: string;
-  installHint?: string;
-  // Removed status fields - static display only
-}
-
 declare global {
   interface Window {
     electronAPI: {
@@ -117,11 +104,12 @@ declare global {
       versionUninstall: (versionId: string) => Promise<boolean>;
       versionSwitch: (versionId: string) => Promise<VersionSwitchResult>;
       versionReinstall: (versionId: string) => Promise<boolean>;
-      versionCheckDependencies: (versionId: string) => Promise<DependencyCheckResult[]>;
       versionOpenLogs: (versionId: string) => Promise<{ success: boolean; error?: string }>;
-      onInstalledVersionsChanged: (callback: (versions: InstalledVersion[]) => void) => void;
-      onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => void;
-      installDependency: (type: string) => Promise<boolean>;
+      onInstalledVersionsChanged: (callback: (versions: InstalledVersion[]) => void) => () => void;
+      onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => () => void;
+      onVersionListChanged: (callback: () => void) => () => void;
+      resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
+      checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
     };
   }
 }
@@ -134,8 +122,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
   const { t } = useTranslation('pages');
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
-  const webServiceStatus = useSelector((state: RootState) => selectWebServiceStatus(state));
-  const installState = useSelector((state: RootState) => selectInstallState(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
   const webServiceInstallProgress = useSelector((state: RootState) => selectInstallProgress(state));
   const installingVersionId = useSelector((state: RootState) => selectInstallingVersionId(state));
@@ -145,8 +131,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
   const [uninstalling, setUninstalling] = useState<string | null>(null);
-  const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
-  const [dependencies, setDependencies] = useState<Record<string, DependencyCheckResult[]>>({});
   const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
 
   // Dialog states
@@ -164,28 +148,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
     const unsubscribeActive = window.electronAPI.onActiveVersionChanged((version) => {
       setActiveVersion(version);
-      // Auto-expand dependencies if active version (now just shows static requirements)
-      if (version && version.dependencies && version.dependencies.length > 0) {
-        setExpandedVersion(version.id);
-        // Pre-load dependencies for the expanded version (static list)
-        if (!dependencies[version.id]) {
-          (async () => {
-            try {
-              const deps = await window.electronAPI.getDependencyList(version.id);
-              const formattedDeps = deps.map((dep: any) => ({
-                name: dep.name,
-                type: dep.type,
-                requiredVersion: dep.requiredVersion, // API already computed this
-                description: dep.description,
-                installHint: dep.installHint,
-              }));
-              setDependencies((prev) => ({ ...prev, [version.id]: formattedDeps }));
-            } catch (error) {
-              console.error('Failed to load dependencies:', error);
-            }
-          })();
-        }
-      }
     });
 
     const unsubscribeVersionListChanged = window.electronAPI.onVersionListChanged(() => {
@@ -218,23 +180,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
       setAvailableVersions(available);
       setInstalledVersions(installed);
       setActiveVersion(active);
-
-      // Auto-expand dependencies if active version (now just shows static requirements)
-      if (active && active.dependencies && active.dependencies.length > 0) {
-        setExpandedVersion(active.id);
-        // Pre-load dependencies for the expanded version (static list)
-        if (!dependencies[active.id]) {
-          const deps = await window.electronAPI.getDependencyList(active.id);
-          const formattedDeps = deps.map((dep: any) => ({
-            name: dep.name,
-            type: dep.type,
-            requiredVersion: dep.requiredVersion, // API already computed this
-            description: dep.description,
-            installHint: dep.installHint,
-          }));
-          setDependencies((prev) => ({ ...prev, [active.id]: formattedDeps }));
-        }
-      }
     } catch (error) {
       console.error('Failed to fetch version data:', error);
     } finally {
@@ -272,7 +217,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
       if (success) {
         toast.success(t('versionManagement.toast.uninstallSuccess'));
         await fetchAllData();
-        setExpandedVersion(null);
       } else {
         toast.error(t('versionManagement.toast.uninstallFailed'));
       }
@@ -343,30 +287,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     } catch (error) {
       console.error('Error opening logs folder:', error);
       toast.error(t('versionManagement.toast.openLogsError'));
-    }
-  };
-
-  const handleToggleDependencies = async (versionId: string) => {
-    // Toggle dependency view - now just shows static requirements without status checking
-    if (expandedVersion === versionId) {
-      setExpandedVersion(null);
-    } else {
-      setExpandedVersion(versionId);
-      // No longer calling versionCheckDependencies - just get static list
-      if (!dependencies[versionId]) {
-        // Use getDependencyList instead of versionCheckDependencies for static display
-        const deps = await window.electronAPI.getDependencyList(versionId);
-        // Transform to our format without status checking
-        const formattedDeps = deps.map((dep: any) => ({
-          name: dep.name,
-          type: dep.type,
-          requiredVersion: dep.requiredVersion, // API already computed this
-          description: dep.description,
-          installHint: dep.installHint,
-          // No status fields - static display only
-        }));
-        setDependencies((prev) => ({ ...prev, [versionId]: formattedDeps }));
-      }
     }
   };
 
@@ -807,19 +727,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Always show "View Dependencies" button for all installed versions */}
-                      <button
-                        onClick={() => handleToggleDependencies(version.id)}
-                        className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
-                          expandedVersion === version.id
-                            ? 'bg-primary/10 hover:bg-primary/20 text-primary'
-                            : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
-                        }`}
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                        {expandedVersion === version.id ? t('versionManagement.actions.collapseDependencies') : t('versionManagement.actions.viewDependencies')}
-                      </button>
-
                       {/* Reinstall button for all installed versions */}
                       {isInstallingFromState && webServiceInstallProgress ? (
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg">
@@ -942,61 +849,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                     </div>
                   )}
 
-                  {renderInstallTelemetry()}
-
-                  {/* Dependencies Section */}
-                  {expandedVersion === version.id && dependencies[version.id] && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-foreground">
-                          {t('versionManagement.dependencies')}
-                        </h4>
-                      </div>
-
-                      <VersionDependencyGuidance versionId={version.id} />
-
-                      {/* Info banner */}
-                      <div className="mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                        <p className="text-xs text-blue-800 dark:text-blue-300">
-                          {t('versionManagement.dependencyInfo.description')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        {dependencies[version.id].map((dep: any, index: number) => (
-                          <div
-                            key={index}
-                            className="bg-muted rounded-lg p-3"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0 mt-0.5">
-                                <Package className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-foreground">{dep.name}</span>
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                    {t('versionManagement.dependencyInfo.required')}
-                                  </span>
-                                </div>
-                                {dep.requiredVersion && (
-                                  <div className="mt-1 text-xs text-muted-foreground">
-                                    {t('versionManagement.dependencyInfo.requiredVersion')} <span className="font-mono">{dep.requiredVersion}</span>
-                                  </div>
-                                )}
-                                {dep.description && (
-                                  <p className="text-xs text-muted-foreground mt-1">{dep.description}</p>
-                                )}
-                                {dep.installHint && (
-                                  <p className="text-xs text-primary mt-1">{dep.installHint}</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {renderInstallTelemetry(version.id)}
                 </div>
               </div>
             ))}
