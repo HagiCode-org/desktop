@@ -1,4 +1,4 @@
-import { ParsedDependency, DependencyTypeName, type Manifest, type EntryPoint, type InstallResult } from './manifest-reader.js';
+import { manifestReader, ParsedDependency, DependencyTypeName, type Manifest, type EntryPoint, type InstallResult } from './manifest-reader.js';
 import { app } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
@@ -115,6 +115,29 @@ export class DependencyManager {
         description: dep.description,
         downloadUrl: dep.installHint,
       };
+    }));
+  }
+
+  async getDependencyListFromManifest(installPath: string): Promise<DependencyCheckResult[]> {
+    log.info('[DependencyManager] Getting dependency list from manifest for:', installPath);
+
+    const manifest = await manifestReader.readManifest(installPath);
+    if (!manifest) {
+      log.warn('[DependencyManager] No manifest found for install path:', installPath);
+      return [];
+    }
+
+    const parsedDeps = manifestReader.parseDependencies(manifest);
+    return parsedDeps.map(dep => ({
+      key: dep.key,
+      name: dep.name,
+      type: this.mapDependencyType(dep.key, dep.type),
+      installed: false,
+      requiredVersion: dep.versionConstraints?.exact ||
+        (dep.versionConstraints?.min ? `${dep.versionConstraints.min}+` : undefined),
+      versionMismatch: false,
+      description: dep.description,
+      isChecking: true,
     }));
   }
 
