@@ -10,6 +10,7 @@ import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
+import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
 import type {
   LogDirectoryBridge,
   LogDirectoryOpenResult,
@@ -168,7 +169,10 @@ interface ElectronAPI {
 
   // Package Management APIs
   checkPackageInstallation: () => Promise<void>;
-  installWebServicePackage: (version: string) => Promise<void>;
+  installWebServicePackage: (
+    version: string,
+    options?: InstallWebServicePackageOptions,
+  ) => Promise<InstallWebServicePackageResult>;
   getAvailableVersions: () => Promise<string[]>;
   getPlatform: () => Promise<string>;
   onPackageInstallProgress: (callback: (progress: VersionInstallProgressPayload) => void) => () => void;
@@ -349,7 +353,7 @@ const electronAPI: ElectronAPI = {
 
   // Package Management APIs
   checkPackageInstallation: () => ipcRenderer.invoke('check-package-installation'),
-  installWebServicePackage: (version) => ipcRenderer.invoke('install-web-service-package', version),
+  installWebServicePackage: (version, options) => ipcRenderer.invoke('install-web-service-package', version, options),
   getAvailableVersions: () => ipcRenderer.invoke('get-available-versions'),
   getPlatform: () => ipcRenderer.invoke('get-platform'),
   onPackageInstallProgress: (callback) => {

@@ -6,6 +6,8 @@ import { VersionUpdateManager } from '../../version-update-manager.js';
 import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
 import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
+import { installWebServicePackageWithAutoSwitch } from '../../install-web-service-package.js';
+import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
 
 // Module state
 interface VersionHandlerState {
@@ -315,9 +317,13 @@ export function registerVersionHandlers(deps: {
   });
 
   // Install web service package handler
-  ipcMain.handle('install-web-service-package', async (_, version: string) => {
+  ipcMain.handle('install-web-service-package', async (_, version: string, options?: InstallWebServicePackageOptions) => {
     if (!state.versionManager || !state.mainWindow || !state.webServiceManager) {
-      return false;
+      return {
+        success: false,
+        autoSwitched: false,
+        activeVersionId: null,
+      };
     }
     try {
       if (state.versionManager.isPortableVersionMode()) {
@@ -325,32 +331,16 @@ export function registerVersionHandlers(deps: {
       }
 
       console.log('[VersionHandlers] Installing/reinstalling web service package:', version);
-
-      const installedVersions = await state.versionManager.getInstalledVersions();
-      const isInstalled = installedVersions.some((v: any) => v.id === version);
-
-      let success = false;
-
-      if (isInstalled) {
-        console.log('[VersionHandlers] Version already installed, performing reinstall');
-        const reinstallResult = await state.versionManager.reinstallVersion(version);
-        success = reinstallResult.success;
-      } else {
-        const installResult = await state.versionManager.installVersion(version);
-        success = installResult.success;
-      }
-
-      if (success) {
-        const activeRuntime = await state.versionManager.getActiveRuntimeDescriptor();
-        if (activeRuntime) {
-          state.webServiceManager.setActiveRuntime(activeRuntime);
-        }
-
-        const updatedVersions = await state.versionManager.getInstalledVersions();
-        state.mainWindow?.webContents.send('version:installedVersionsChanged', updatedVersions);
-      }
-
-      return success;
+      return await installWebServicePackageWithAutoSwitch(
+        {
+          versionManager: state.versionManager,
+          webServiceManager: state.webServiceManager,
+          mainWindow: state.mainWindow,
+          refreshVersionUpdateSnapshot: (reason) => state.versionUpdateManager?.refreshSnapshot(reason) ?? Promise.resolve(),
+        },
+        version,
+        options,
+      );
     } catch (error) {
       console.error('Failed to install/reinstall web service package:', error);
       throw error;

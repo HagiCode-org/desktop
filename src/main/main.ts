@@ -24,6 +24,7 @@ import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
 import { openHagicodeInAppWindow } from './hagicode-url.js';
+import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
@@ -51,6 +52,7 @@ import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
+import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -887,9 +889,13 @@ ipcMain.handle('version:setChannel', async (_, channel: string) => {
 });
 
 // Package Management IPC Handlers (for web service packages)
-ipcMain.handle('install-web-service-package', async (_, version: string) => {
+ipcMain.handle('install-web-service-package', async (_, version: string, options?: InstallWebServicePackageOptions) => {
   if (!versionManager || !mainWindow || !webServiceManager) {
-    return false;
+    return {
+      success: false,
+      autoSwitched: false,
+      activeVersionId: null,
+    };
   }
   try {
     if (isPortableVersionMode()) {
@@ -897,40 +903,18 @@ ipcMain.handle('install-web-service-package', async (_, version: string) => {
     }
 
     console.log('[Main] Installing/reinstalling web service package:', version);
-
-    // Check if the version is already installed
-    const installedVersions = await versionManager.getInstalledVersions();
-    const isInstalled = installedVersions.some((v: any) => v.id === version);
-
-    let success = false;
-
-    if (isInstalled) {
-      // Version is already installed, use reinstall
-      console.log('[Main] Version already installed, performing reinstall');
-      const reinstallResult = await versionManager.reinstallVersion(version, (progress) => {
-        mainWindow?.webContents.send('version:install-progress', progress);
-        mainWindow?.webContents.send('package-install-progress', progress);
-      });
-      success = reinstallResult.success;
-    } else {
-      // New installation
-      const installResult = await versionManager.installVersion(version, (progress) => {
-        mainWindow?.webContents.send('version:install-progress', progress);
-        mainWindow?.webContents.send('package-install-progress', progress);
-      });
-      success = installResult.success;
-    }
-
-    if (success) {
-      await applyActiveRuntimeToWebServiceManager();
-
-      // Notify renderer of installed versions change
-      const updatedVersions = await versionManager.getInstalledVersions();
-      mainWindow?.webContents.send('version:installedVersionsChanged', updatedVersions);
-      await versionUpdateManager?.refreshSnapshot('web-service-package-installed');
-    }
-
-    return success;
+    // Homepage auto-switch is opt-in per entry point so version-management installs
+    // keep their existing install-only behavior unless the renderer requests it.
+    return await installWebServicePackageWithAutoSwitch(
+      {
+        versionManager,
+        webServiceManager,
+        mainWindow,
+        refreshVersionUpdateSnapshot: (reason) => versionUpdateManager?.refreshSnapshot(reason) ?? Promise.resolve(),
+      },
+      version,
+      options,
+    );
   } catch (error) {
     console.error('Failed to install/reinstall web service package:', error);
     throw error;

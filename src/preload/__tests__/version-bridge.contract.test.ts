@@ -19,4 +19,12 @@ describe('version preload bridge contract', () => {
     assert.match(source, /versionSwitch: \(versionId\) => ipcRenderer\.invoke\('version:switch', versionId\)/);
     assert.match(source, /versionOpenLogs: \(versionId\) => ipcRenderer\.invoke\('version:openLogs', versionId\)/);
   });
+
+  it('keeps install-web-service-package typed with explicit auto-switch options and structured results', async () => {
+    const source = await fs.readFile(preloadPath, 'utf8');
+
+    assert.match(source, /import type \{ InstallWebServicePackageOptions, InstallWebServicePackageResult \} from '\.\.\/types\/version-install\.js';/);
+    assert.match(source, /installWebServicePackage: \(\s*version: string,\s*options\?: InstallWebServicePackageOptions,\s*\) => Promise<InstallWebServicePackageResult>;/s);
+    assert.match(source, /installWebServicePackage: \(version, options\) => ipcRenderer\.invoke\('install-web-service-package', version, options\)/);
+  });
 });
