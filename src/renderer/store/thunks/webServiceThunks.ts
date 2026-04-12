@@ -1,5 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'sonner';
+import i18n from '../../i18n';
 import {
   setStatus,
   setOperating,
@@ -31,6 +32,7 @@ import {
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../../../types/web-service-network';
+import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../../../types/version-install.js';
 
 // Types for window electronAPI
 declare global {
@@ -57,7 +59,10 @@ declare global {
 
       // Package Management APIs
       checkPackageInstallation: () => Promise<PackageInfo>;
-      installWebServicePackage: (version: string) => Promise<boolean>;
+      installWebServicePackage: (
+        version: string,
+        options?: InstallWebServicePackageOptions,
+      ) => Promise<InstallWebServicePackageResult>;
       getPackageVersion: () => Promise<string>;
       getAvailableVersions: () => Promise<string[]>;
       getPlatform: () => Promise<string>;
@@ -69,6 +74,34 @@ declare global {
       onVersionDependencyWarning: (callback: (warning: { missing: any[] }) => void) => (() => void) | void;
     };
   }
+}
+
+export interface InstallWebServicePackageRequestObject {
+  version: string;
+  options?: InstallWebServicePackageOptions;
+}
+
+export type InstallWebServicePackageRequest = string | InstallWebServicePackageRequestObject;
+
+function normalizeInstallWebServicePackageRequest(
+  request: InstallWebServicePackageRequest,
+): InstallWebServicePackageRequestObject {
+  return typeof request === 'string' ? { version: request } : request;
+}
+
+function getInstallSuccessDescription(
+  result: InstallWebServicePackageResult,
+  options?: InstallWebServicePackageOptions,
+): string {
+  if (result.autoSwitched) {
+    return i18n.t('pages:versionManagement.toast.installSuccessAutoSwitchedDescription');
+  }
+
+  if (options?.autoSwitchWhenIdle) {
+    return i18n.t('pages:versionManagement.toast.installSuccessNoAutoSwitchDescription');
+  }
+
+  return i18n.t('pages:versionManagement.toast.installSuccessDescription');
 }
 
 /**
@@ -320,8 +353,10 @@ export const checkPackageInstallation = createAsyncThunk(
  */
 export const installWebServicePackage = createAsyncThunk(
   'webService/installPackage',
-  async (version: string, { dispatch, getState }) => {
+  async (request: InstallWebServicePackageRequest, { dispatch, getState }) => {
     try {
+      const { version, options } = normalizeInstallWebServicePackageRequest(request);
+
       // Check service status before installing
       const state = getState() as { webService: { status: ProcessStatus } };
       const currentStatus = state.webService.status;
@@ -329,17 +364,17 @@ export const installWebServicePackage = createAsyncThunk(
       // If service is running, show confirmation dialog
       if (currentStatus === 'running') {
         dispatch(setInstallState(InstallState.Confirming));
-        dispatch(showInstallConfirm(version));
+        dispatch(showInstallConfirm({ version, options }));
         return { confirmed: false };
       }
 
       // Service is not running, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
       dispatch(setInstallingVersionId(version));
-      return await doInstallPackage(version, dispatch);
+      return await doInstallPackage(version, options, dispatch);
     } catch (error) {
       console.error('Install package error:', error);
-      dispatch(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
+      dispatch(setInstallProgress({ stage: 'error', progress: 0, message: i18n.t('pages:versionManagement.toast.installFailedDescription') }));
       dispatch(setInstallingVersionId(null));
       dispatch(setError(error instanceof Error ? error.message : 'Unknown error occurred'));
       dispatch(setInstallState(InstallState.Error));
@@ -356,8 +391,14 @@ export const confirmInstallAndStop = createAsyncThunk(
   'webService/confirmInstallAndStop',
   async (_, { dispatch, getState }) => {
     try {
-      const state = getState() as { webService: { pendingInstallVersion: string | null } };
+      const state = getState() as {
+        webService: {
+          pendingInstallVersion: string | null;
+          pendingInstallOptions: InstallWebServicePackageOptions | null;
+        };
+      };
       const pendingVersion = state.webService.pendingInstallVersion;
+      const pendingInstallOptions = state.webService.pendingInstallOptions ?? undefined;
 
       if (!pendingVersion) {
         dispatch(hideInstallConfirm());
@@ -388,7 +429,7 @@ export const confirmInstallAndStop = createAsyncThunk(
       // Service stopped successfully, proceed with installation
       dispatch(setInstallState(InstallState.Installing));
       dispatch(setInstallingVersionId(pendingVersion));
-      const result = await doInstallPackage(pendingVersion, dispatch);
+      const result = await doInstallPackage(pendingVersion, pendingInstallOptions, dispatch);
 
       // Hide confirmation dialog after installation completes
       dispatch(hideInstallConfirm());
@@ -409,13 +450,17 @@ export const confirmInstallAndStop = createAsyncThunk(
 /**
  * Helper function: Execute installation
  */
-async function doInstallPackage(version: string, dispatch: any) {
+async function doInstallPackage(
+  version: string,
+  options: InstallWebServicePackageOptions | undefined,
+  dispatch: any,
+) {
   dispatch(setInstallProgress({ stage: 'verifying', progress: 0, message: 'Starting installation...' }));
   dispatch(setError(null));
 
-  const success: boolean = await window.electronAPI.installWebServicePackage(version);
+  const result = await window.electronAPI.installWebServicePackage(version, options);
 
-  if (success) {
+  if (result.success) {
     dispatch(setInstallState(InstallState.Completed));
     dispatch(setInstallProgress({ stage: 'completed', progress: 100, message: 'Installation completed successfully' }));
     // Refresh package info
@@ -426,8 +471,8 @@ async function doInstallPackage(version: string, dispatch: any) {
     await dispatch(fetchActiveVersion());
 
     // Show success toast
-    toast.success('安装成功', {
-      description: '版本已成功安装，请手动启动服务。'
+    toast.success(i18n.t('pages:versionManagement.toast.installSuccess'), {
+      description: getInstallSuccessDescription(result, options)
     });
 
     // Check dependencies after installation
@@ -439,22 +484,22 @@ async function doInstallPackage(version: string, dispatch: any) {
       dispatch(setInstallState(InstallState.Idle));
     }, 3000);
 
-    return { success: true };
+    return result;
   } else {
     dispatch(setInstallState(InstallState.Error));
-    dispatch(setInstallProgress({ stage: 'error', progress: 0, message: 'Installation failed' }));
+    dispatch(setInstallProgress({ stage: 'error', progress: 0, message: i18n.t('pages:versionManagement.toast.installFailedDescription') }));
     dispatch(setError('Failed to install package'));
 
     // Show error toast
-    toast.error('安装失败', {
-      description: '安装过程中出现错误，请重试。'
+    toast.error(i18n.t('pages:versionManagement.toast.installFailed'), {
+      description: i18n.t('pages:versionManagement.toast.installFailedDescription')
     });
 
     // Reset to idle state immediately after error
     dispatch(setInstallingVersionId(null));
     dispatch(setInstallState(InstallState.Idle));
 
-    return { success: false };
+    return result;
   }
 }
 

@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
 
 /**
  * Enum representing the different states of the version installation process
@@ -147,6 +148,7 @@ export interface WebServiceState {
   // Install confirmation dialog state
   showInstallConfirm: boolean;      // Whether to show the install confirmation dialog
   pendingInstallVersion: string | null;  // The version ID waiting to be installed
+  pendingInstallOptions: InstallWebServicePackageOptions | null;
 
   // Install state for loading feedback
   installState: InstallState;  // Current installation state for UI feedback
@@ -189,6 +191,7 @@ const initialState: WebServiceState = {
 
   showInstallConfirm: false,
   pendingInstallVersion: null,
+  pendingInstallOptions: null,
 
   installState: InstallState.Idle,
 };
@@ -345,14 +348,19 @@ export const webServiceSlice = createSlice({
     },
 
     // Install confirmation dialog actions
-    showInstallConfirm: (state, action: PayloadAction<string>) => {
+    showInstallConfirm: (
+      state,
+      action: PayloadAction<{ version: string; options?: InstallWebServicePackageOptions }>,
+    ) => {
       state.showInstallConfirm = true;
-      state.pendingInstallVersion = action.payload;
+      state.pendingInstallVersion = action.payload.version;
+      state.pendingInstallOptions = action.payload.options ?? null;
     },
 
     hideInstallConfirm: (state) => {
       state.showInstallConfirm = false;
       state.pendingInstallVersion = null;
+      state.pendingInstallOptions = null;
     },
 
     // Install state actions for loading feedback
