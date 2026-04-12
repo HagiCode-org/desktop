@@ -158,8 +158,8 @@ export class AgentCliManager {
     }
 
     const config = getCliConfig(cliType);
-    const runtimeEnv = await this.loadRuntimeEnv();
-    const executablePath = await this.resolveExecutablePath(config.commandCandidates, runtimeEnv);
+    const runtimeEnv = await this.getRuntimeEnv();
+    const executablePath = await this.resolveCommandPath(config.commandCandidates, runtimeEnv);
     const env: Record<string, string> = {
       AI__Providers__DefaultProvider: config.executorType,
     };
@@ -179,6 +179,27 @@ export class AgentCliManager {
       executablePathEnvKey: config.executablePathEnvKey || null,
     });
     return env;
+  }
+
+  async getRuntimeEnv(): Promise<NodeJS.ProcessEnv> {
+    return this.loadRuntimeEnv();
+  }
+
+  async resolveCommandPath(
+    commandCandidates: string[],
+    env?: NodeJS.ProcessEnv
+  ): Promise<string | null> {
+    const runtimeEnv = env ?? await this.getRuntimeEnv();
+    return this.resolveExecutablePath(commandCandidates, runtimeEnv);
+  }
+
+  async resolveSelectedExecutablePath(env?: NodeJS.ProcessEnv): Promise<string | null> {
+    const selectedCliType = this.getSelectedCliType();
+    if (!selectedCliType) {
+      return null;
+    }
+
+    return this.resolveCommandPath(this.getCommandCandidates(selectedCliType), env);
   }
 
   private async buildRuntimeEnv(): Promise<NodeJS.ProcessEnv> {
