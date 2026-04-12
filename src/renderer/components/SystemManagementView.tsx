@@ -351,7 +351,12 @@ export default function SystemManagementView() {
       return;
     }
 
-    await dispatch(installWebServicePackage(versionUpdateReminder.latestVersion.id));
+    await dispatch(installWebServicePackage({
+      version: versionUpdateReminder.latestVersion.id,
+      options: {
+        autoSwitchWhenIdle: true,
+      },
+    }));
   };
 
   const getUpdateReminderDescription = () => {

@@ -287,7 +287,11 @@
     },
     "toast": {
       "installSuccess": "Installation successful",
+      "installSuccessDescription": "The version was installed successfully. Start the service manually when you are ready.",
+      "installSuccessAutoSwitchedDescription": "The version was installed successfully and is now the active version.",
+      "installSuccessNoAutoSwitchDescription": "The version was installed successfully, but the active version did not change.",
       "installFailed": "Installation failed",
+      "installFailedDescription": "An error occurred during installation. Please try again.",
       "reinstallSuccess": "Reinstalled successfully",
       "reinstallFailed": "Reinstallation failed",
       "uninstallSuccess": "Uninstalled successfully",

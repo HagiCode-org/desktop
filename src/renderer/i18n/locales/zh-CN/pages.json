@@ -287,7 +287,11 @@
     },
     "toast": {
       "installSuccess": "安装成功",
+      "installSuccessDescription": "版本已成功安装，请手动启动服务。",
+      "installSuccessAutoSwitchedDescription": "版本已成功安装，并已自动切换为当前活动版本。",
+      "installSuccessNoAutoSwitchDescription": "版本已成功安装，但当前活动版本保持不变。",
       "installFailed": "安装失败",
+      "installFailedDescription": "安装过程中出现错误，请重试。",
       "reinstallSuccess": "重新安装成功",
       "reinstallFailed": "重新安装失败",
       "uninstallSuccess": "卸载成功",
