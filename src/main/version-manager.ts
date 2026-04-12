@@ -412,7 +412,9 @@ export class VersionManager {
   /**
    * Set a new package source configuration
    */
-  async setSourceConfig(config: PackageSourceConfig & { name?: string }): Promise<boolean> {
+  async setSourceConfig(
+    config: PackageSourceConfig & { name?: string },
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       this.ensureSupportedSourceType((config as { type?: string }).type);
 
@@ -449,10 +451,13 @@ export class VersionManager {
 
       this.currentPackageSource = createPackageSource(this.storedToConfig(newSource));
       this.packageSourceConfigManager.setActiveSource(newSource.id);
-      return true;
+      return { success: true };
     } catch (error) {
       log.error('[VersionManager] Failed to set package source:', error);
-      return false;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 

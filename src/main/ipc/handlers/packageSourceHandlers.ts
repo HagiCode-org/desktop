@@ -55,13 +55,13 @@ export function registerPackageSourceHandlers(deps: {
       return { success: false, error: 'Version manager not initialized' };
     }
     try {
-      const success = await state.versionManager.setSourceConfig(config);
-      if (success) {
+      const result = await state.versionManager.setSourceConfig(config);
+      if (result.success) {
         const newConfig = state.versionManager.getCurrentSourceConfig();
         state.mainWindow?.webContents.send('package-source:configChanged', newConfig);
         state.mainWindow?.webContents.send('version:list:changed');
       }
-      return { success };
+      return result;
     } catch (error) {
       console.error('Failed to set package source config:', error);
       return {
