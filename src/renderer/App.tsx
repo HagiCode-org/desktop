@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import SidebarNavigation from './components/SidebarNavigation';
 import SystemManagementView from './components/SystemManagementView';
+import SystemDiagnosticPage from './components/SystemDiagnosticPage';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
 import SettingsPage from './components/SettingsPage';
@@ -27,9 +28,9 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'settings') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
@@ -62,7 +63,7 @@ function App() {
 
   useEffect(() => {
     // Listen for view change events from menu (kept for backward compatibility)
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'settings') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => {
       dispatch(switchView(view));
     });
 
@@ -153,6 +154,7 @@ function App() {
           {currentView === 'system' && <SystemManagementView />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
+          {currentView === 'diagnostic' && <SystemDiagnosticPage />}
           {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
         </div>
       </div>

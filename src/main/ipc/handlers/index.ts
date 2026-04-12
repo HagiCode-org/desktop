@@ -40,6 +40,9 @@ export { registerLlmHandlers, initLlmHandlers } from './llmHandlers.js';
 // Diagnosis handlers
 export { registerDiagnosisHandlers, initDiagnosisHandlers } from './diagnosisHandlers.js';
 
+// System diagnostic handlers
+export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from './systemDiagnosticHandlers.js';
+
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 

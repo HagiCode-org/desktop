@@ -10,7 +10,7 @@ import { LanguageToggle } from './ui/language-toggle';
 import type { DistributionMode } from '../../types/distribution-mode';
 
 // Lucide 图标
-import { Settings, Globe as GlobeIcon, Package, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info, MessageSquare, Calculator } from 'lucide-react';
+import { Settings, Globe as GlobeIcon, FileText, ChevronLeft, ChevronRight, Users, Star, ExternalLink, Info, MessageSquare, Calculator, Stethoscope } from 'lucide-react';
 
 interface NavigationItem {
   id: ViewType | 'official-website' | 'tech-support' | 'discord-community' | 'github-project' | 'cost-calculator';
@@ -23,6 +23,7 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings },
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
+  { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
   { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];
 

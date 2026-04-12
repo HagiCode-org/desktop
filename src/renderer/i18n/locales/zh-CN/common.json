@@ -136,6 +136,7 @@
     "dashboard": "仪表盘",
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
+    "diagnostic": "诊断",
     "settings": "设置",
     "toggle": "切换侧边栏",
     "collapse": "收起",
@@ -151,6 +152,48 @@
       "description": "Desktop 会解析诊断提示词，并让你用自己偏好的 AI CLI 执行它。",
       "panelTitle": "诊断提示词指引",
       "panelDescription": "复制提示词，在建议目录中运行，拿到下一步建议后再回到 Desktop。"
+    }
+  },
+  "systemDiagnostic": {
+    "title": "系统诊断",
+    "description": "收集当前设备的本地环境信息，并将纯文本报告直接发给技术支持。",
+    "reportTitle": "纯文本报告",
+    "reportDescription": "每次重新诊断都会替换旧报告，因此复制结果始终对应最新一次诊断。",
+    "empty": "运行系统诊断后，这里会显示操作系统、硬件、Agent CLI 与核心工具链的环境信息。",
+    "loading": "正在收集本机环境信息...",
+    "actions": {
+      "run": "开始诊断",
+      "running": "诊断中",
+      "rerun": "重新诊断",
+      "copy": "复制结果",
+      "copying": "复制中"
+    },
+    "status": {
+      "success": "已完成",
+      "partialFailure": "部分失败"
+    },
+    "summary": {
+      "completedAt": "完成时间：{{value}}",
+      "issueCount": "问题条目：{{count}}"
+    },
+    "boundary": {
+      "title": "它和 AI 诊断提示指引不是同一件事",
+      "description": "这个页面只负责采集本机环境信息。现有的 AI 诊断提示指引仍然用于为你偏好的 AI CLI 生成排障提示词。"
+    },
+    "partialFailure": {
+      "title": "部分检查未能完整完成",
+      "description": "这份报告仍然可用。共有 {{count}} 个检查项被标记为缺失或失败，原因已经追加到报告末尾。"
+    },
+    "error": {
+      "title": "诊断运行失败",
+      "description": "Desktop 本次未能完成系统诊断：{{error}}"
+    },
+    "toast": {
+      "success": "系统诊断已完成",
+      "partialFailure": "系统诊断已完成，但有 {{count}} 个问题条目",
+      "runFailed": "系统诊断失败：{{error}}",
+      "copySuccess": "诊断报告已复制",
+      "copyFailed": "复制诊断报告失败：{{error}}"
     }
   },
   "system": {

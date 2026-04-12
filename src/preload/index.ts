@@ -8,6 +8,8 @@ import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
+import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type {
   LogDirectoryBridge,
   LogDirectoryOpenResult,
@@ -15,6 +17,7 @@ import type {
   LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
+import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -222,6 +225,7 @@ interface ElectronAPI {
     readText: () => Promise<string>;
     writeText: (text: string) => Promise<void>;
   };
+  systemDiagnostic: SystemDiagnosticBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -300,6 +304,7 @@ interface ElectronAPI {
 }
 
 const clipboardBridge = createClipboardBridge(ipcRenderer, clipboardChannels);
+const systemDiagnosticBridge = createSystemDiagnosticBridge(ipcRenderer, systemDiagnosticChannels);
 const logDirectoryBridge: LogDirectoryBridge = {
   listTargets: () => ipcRenderer.invoke('log-directory:list-targets'),
   open: (target) => ipcRenderer.invoke('log-directory:open', target),
@@ -491,7 +496,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -652,6 +657,7 @@ const electronAPI: ElectronAPI = {
     recordOnboardingChoice: (enabled) => ipcRenderer.invoke('sharing-acceleration:record-onboarding-choice', enabled),
   },
   clipboard: clipboardBridge,
+  systemDiagnostic: systemDiagnosticBridge,
 };
 
 ipcRenderer.on('webview-navigate', (_event, direction: 'back' | 'forward' | 'refresh') => {

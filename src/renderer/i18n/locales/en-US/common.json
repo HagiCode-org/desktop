@@ -136,6 +136,7 @@
     "dashboard": "Dashboard",
     "webService": "Web Service",
     "versionManagement": "Version Management",
+    "diagnostic": "Diagnostic",
     "settings": "Settings",
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
@@ -151,6 +152,48 @@
       "description": "Desktop resolves the diagnosis prompt and lets you run it in whichever AI CLI you prefer.",
       "panelTitle": "Diagnosis prompt guidance",
       "panelDescription": "Copy the prompt, run it from the suggested location, and return once you have next steps."
+    }
+  },
+  "systemDiagnostic": {
+    "title": "System Diagnostic",
+    "description": "Collect this device's local environment details and share the plain text report with technical support.",
+    "reportTitle": "Plain text report",
+    "reportDescription": "Each rerun replaces the previous report so the copied content always reflects the newest diagnostic snapshot.",
+    "empty": "Run a system diagnostic to capture operating system, hardware, Agent CLI, and core toolchain details.",
+    "loading": "Collecting local environment details...",
+    "actions": {
+      "run": "Start Diagnostic",
+      "running": "Running Diagnostic",
+      "rerun": "Run Again",
+      "copy": "Copy Result",
+      "copying": "Copying"
+    },
+    "status": {
+      "success": "Completed",
+      "partialFailure": "Partial Failure"
+    },
+    "summary": {
+      "completedAt": "Completed at: {{value}}",
+      "issueCount": "Issues captured: {{count}}"
+    },
+    "boundary": {
+      "title": "Different from AI diagnosis guidance",
+      "description": "This page only collects local machine diagnostics. The existing AI diagnosis guidance still helps you generate prompts for your preferred AI CLI."
+    },
+    "partialFailure": {
+      "title": "Some checks did not finish cleanly",
+      "description": "The report is still usable. {{count}} item(s) were marked as missing or failed, and their reasons were appended to the report."
+    },
+    "error": {
+      "title": "Diagnostic run failed",
+      "description": "Desktop could not complete this diagnostic run: {{error}}"
+    },
+    "toast": {
+      "success": "System diagnostic completed",
+      "partialFailure": "System diagnostic completed with {{count}} issue(s)",
+      "runFailed": "System diagnostic failed: {{error}}",
+      "copySuccess": "Diagnostic report copied",
+      "copyFailed": "Failed to copy diagnostic report: {{error}}"
     }
   },
   "system": {

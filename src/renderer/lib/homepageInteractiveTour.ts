@@ -22,7 +22,7 @@ export const HOMEPAGE_TOUR_VARIANTS = {
 } as const;
 
 type HomepageTourVariant = typeof HOMEPAGE_TOUR_VARIANTS[keyof typeof HOMEPAGE_TOUR_VARIANTS];
-type HomepageView = 'system' | 'web' | 'version' | 'settings';
+type HomepageView = 'system' | 'web' | 'version' | 'diagnostic' | 'settings';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type DocumentLike = Pick<Document, 'querySelector'>;

@@ -13,6 +13,7 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
 import { DiagnosisManager } from './diagnosis-manager.js';
+import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { VersionUpdateManager } from './version-update-manager.js';
@@ -39,6 +40,7 @@ import {
   registerRegionHandlers,
   registerLlmHandlers,
   registerDiagnosisHandlers,
+  registerSystemDiagnosticHandlers,
   registerRssHandlers,
   registerDebugHandlers,
   registerViewHandlers,
@@ -111,6 +113,7 @@ let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
 let diagnosisManager: DiagnosisManager | null = null;
+let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
@@ -1303,7 +1306,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'settings') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'version' && isPortableVersionMode()) {
@@ -1963,6 +1966,12 @@ app.whenReady().then(async () => {
   diagnosisManager = new DiagnosisManager();
   log.info('[App] Diagnosis Manager initialized');
 
+  // Initialize System Diagnostic Manager
+  systemDiagnosticManager = new SystemDiagnosticManager({
+    agentCliManager,
+  });
+  log.info('[App] System Diagnostic Manager initialized');
+
   // Register Diagnosis IPC Handlers
   if (diagnosisManager && llmInstallationManager) {
     registerDiagnosisHandlers({
@@ -1973,6 +1982,13 @@ app.whenReady().then(async () => {
       agentCliManager,
     });
     log.info('[App] Diagnosis IPC handlers registered');
+  }
+
+  if (systemDiagnosticManager) {
+    registerSystemDiagnosticHandlers({
+      systemDiagnosticManager,
+    });
+    log.info('[App] System Diagnostic IPC handlers registered');
   }
 
 // Data Directory IPC Handlers
