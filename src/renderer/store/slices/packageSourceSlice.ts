@@ -40,12 +40,34 @@ const initialState: PackageSourceState = {
   selectedChannel: null,
 };
 
+function syncDraftFromCurrentConfig(
+  state: PackageSourceState,
+  config: StoredPackageSourceConfig | null,
+): void {
+  if (!config) {
+    state.selectedSourceType = 'http-index';
+    return;
+  }
+
+  state.selectedSourceType = config.type;
+  state.validationError = null;
+  state.scanResult = null;
+
+  if (config.type === 'local-folder') {
+    state.folderPath = config.path || '';
+    return;
+  }
+
+  state.httpIndexUrl = config.indexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL;
+}
+
 const packageSourceSlice = createSlice({
   name: 'packageSource',
   initialState,
   reducers: {
     setCurrentConfig: (state, action: PayloadAction<StoredPackageSourceConfig | null>) => {
       state.currentConfig = action.payload;
+      syncDraftFromCurrentConfig(state, action.payload);
     },
     setAllConfigs: (state, action: PayloadAction<StoredPackageSourceConfig[]>) => {
       state.allConfigs = action.payload;
@@ -101,6 +123,7 @@ const packageSourceSlice = createSlice({
     resetForm: (state) => {
       state.folderPath = '';
       state.httpIndexUrl = '';
+      state.selectedSourceType = state.currentConfig?.type ?? 'http-index';
       state.validationError = null;
       state.scanResult = null;
     },

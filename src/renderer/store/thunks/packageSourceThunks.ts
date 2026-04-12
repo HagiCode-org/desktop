@@ -89,11 +89,14 @@ export const setSourceConfig = createAsyncThunk(
       const result: { success: boolean; error?: string } = await window.electronAPI.packageSource.setConfig(config);
 
       if (result.success) {
-        // Reload the current configuration
-        await dispatch(loadSourceConfig());
+        await Promise.all([
+          dispatch(loadSourceConfig()),
+          dispatch(loadAllSourceConfigs()),
+        ]);
 
         // Clear available versions
         dispatch(setAvailableVersions([]));
+        dispatch(setValidationError(null));
 
         // Show success message
         toast.success('包源配置已保存', {
@@ -102,10 +105,12 @@ export const setSourceConfig = createAsyncThunk(
 
         return true;
       } else {
-        dispatch(setError(result.error || 'Failed to set package source configuration'));
+        const errorMessage = result.error || 'Failed to set package source configuration';
+        dispatch(setError(errorMessage));
+        dispatch(setValidationError(errorMessage));
 
         toast.error('配置保存失败', {
-          description: result.error || 'Failed to save package source configuration',
+          description: errorMessage,
         });
 
         return false;
@@ -113,6 +118,7 @@ export const setSourceConfig = createAsyncThunk(
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to set package source configuration';
       dispatch(setError(errorMessage));
+      dispatch(setValidationError(errorMessage));
 
       toast.error('配置保存失败', {
         description: errorMessage,
@@ -139,8 +145,10 @@ export const switchSource = createAsyncThunk(
       const result: { success: boolean; error?: string } = await window.electronAPI.packageSource.switchSource(sourceId);
 
       if (result.success) {
-        // Reload the current configuration
-        await dispatch(loadSourceConfig());
+        await Promise.all([
+          dispatch(loadSourceConfig()),
+          dispatch(loadAllSourceConfigs()),
+        ]);
 
         // Clear available versions when switching sources
         dispatch(setAvailableVersions([]));

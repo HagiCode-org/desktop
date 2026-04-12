@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder, Globe, Package } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,91 +7,61 @@ import type { RootState, AppDispatch } from '../store';
 import {
   selectAllConfigs,
   selectCurrentConfig,
+  selectFolderPath,
   selectHttpIndexUrl,
+  selectSelectedSourceType,
   setFolderPath,
   setHttpIndexUrl,
+  setSelectedSourceType,
 } from '../store/slices/packageSourceSlice';
 import { setSourceConfig, switchSource } from '../store/thunks/packageSourceThunks';
+import {
+  buildDraftSourceConfig,
+  hasPackageSourceDraftChanges,
+  resolveSourceTypeChange,
+} from './packageSourceSelectorState';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-const DEFAULT_DEV_FOLDER_PATH = '/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagibuild/Release/release-packages';
-
 export function PackageSourceSelector() {
   const { t } = useTranslation('components');
   const dispatch = useDispatch<AppDispatch>();
   const currentConfig = useSelector((state: RootState) => selectCurrentConfig(state));
   const allConfigs = useSelector((state: RootState) => selectAllConfigs(state));
-  const folderPath = useSelector((state: RootState) => state.packageSource.folderPath);
+  const folderPath = useSelector((state: RootState) => selectFolderPath(state));
   const httpIndexUrl = useSelector((state: RootState) => selectHttpIndexUrl(state));
-
-  const [hasChanges, setHasChanges] = useState(false);
-  const sourceType = currentConfig?.type ?? 'http-index';
-  const defaultFolderPath = process.env.NODE_ENV === 'development' ? DEFAULT_DEV_FOLDER_PATH : '';
+  const sourceType = useSelector((state: RootState) => selectSelectedSourceType(state));
 
   const draftConfig = useMemo(() => (
-    sourceType === 'local-folder'
-      ? {
-          type: 'local-folder' as const,
-          name: t('packageSource.sourceType.folder'),
-          path: folderPath || defaultFolderPath,
-        }
-      : {
-          type: 'http-index' as const,
-          name: t('packageSource.sourceType.httpIndex'),
-          indexUrl: httpIndexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL,
-        }
-  ), [defaultFolderPath, folderPath, httpIndexUrl, sourceType, t]);
+    buildDraftSourceConfig({
+      sourceType,
+      folderPath,
+      httpIndexUrl,
+      folderSourceName: t('packageSource.sourceType.folder'),
+      httpIndexSourceName: t('packageSource.sourceType.httpIndex'),
+    })
+  ), [folderPath, httpIndexUrl, sourceType, t]);
 
-  useEffect(() => {
-    if (!currentConfig) {
-      return;
-    }
-
-    if (currentConfig.type === 'local-folder') {
-      dispatch(setFolderPath(currentConfig.path || ''));
-    } else {
-      dispatch(setHttpIndexUrl(currentConfig.indexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL));
-    }
-    setHasChanges(false);
-  }, [currentConfig, dispatch]);
-
-  useEffect(() => {
-    if (!currentConfig) {
-      return;
-    }
-
-    const changed = currentConfig.type === 'local-folder'
-      ? folderPath !== (currentConfig.path || '')
-      : httpIndexUrl !== (currentConfig.indexUrl || '');
-
-    setHasChanges(changed);
-  }, [currentConfig, folderPath, httpIndexUrl]);
+  const hasChanges = useMemo(() => (
+    hasPackageSourceDraftChanges({
+      currentConfig,
+      sourceType,
+      folderPath,
+      httpIndexUrl,
+    })
+  ), [currentConfig, folderPath, httpIndexUrl, sourceType]);
 
   const handleSourceTypeChange = (value: 'local-folder' | 'http-index') => {
-    const existingSource = allConfigs.find(config => config.type === value);
-    if (existingSource) {
-      dispatch(switchSource(existingSource.id));
+    const nextAction = resolveSourceTypeChange(allConfigs, value);
+    if (nextAction.kind === 'switch-saved-source') {
+      dispatch(switchSource(nextAction.sourceId));
       return;
     }
 
-    if (value === 'local-folder') {
-      dispatch(setSourceConfig({
-        type: 'local-folder',
-        name: t('packageSource.sourceType.folder'),
-        path: folderPath || defaultFolderPath,
-      }));
-      return;
-    }
-
-    dispatch(setSourceConfig({
-      type: 'http-index',
-      name: t('packageSource.sourceType.httpIndex'),
-      indexUrl: httpIndexUrl || OFFICIAL_SERVER_HTTP_INDEX_URL,
-    }));
+    dispatch(setSelectedSourceType(nextAction.sourceType));
   };
 
   const handleSave = () => {
