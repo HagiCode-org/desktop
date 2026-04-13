@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import log from 'electron-log';
@@ -108,12 +107,9 @@ export interface ApiCallResult {
  */
 export class LlmInstallationManager {
   private regionDetector: RegionDetector;
-  // Debug mode flag - can be extended to read from electron-store in future
-  private debugMode: boolean = false;
 
-  constructor(regionDetector: RegionDetector, debugMode: boolean = false) {
+  constructor(regionDetector: RegionDetector) {
     this.regionDetector = regionDetector;
-    this.debugMode = debugMode;
   }
 
   private resolvePromptDetection(overrideRegion?: 'cn' | 'international'): DetectionResult {
@@ -207,7 +203,6 @@ export class LlmInstallationManager {
     try {
       log.info(`[LlmInstallationManager] Opening terminal with ${commandName} CLI...`);
       log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
-      log.info('[LlmInstallationManager] Debug mode:', this.debugMode);
 
       const runtimeEnv = await this.buildCliRuntimeEnv();
       this.logCliExecution(providerId, 'preflight_start', { commandName });
@@ -234,7 +229,6 @@ export class LlmInstallationManager {
       log.info('[LlmInstallationManager] Platform:', platform);
 
       let terminalFound = false;
-      let constructedCommand = '';
       // Get just the filename, not the full path
       const fileName = path.basename(promptFilePath);
       // Set working directory to the directory containing the prompt file
@@ -265,7 +259,7 @@ export class LlmInstallationManager {
         // macOS: Open new Terminal window and run CLI with prompt
         try {
           const escapedPrompt = resolvedShellCommand.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          constructedCommand = `osascript -e 'tell application "Terminal" to do script "${escapedPrompt}; read -p \\"Press enter to exit...\\"; exit"'`;
+          const constructedCommand = `osascript -e 'tell application "Terminal" to do script "${escapedPrompt}; read -p \\"Press enter to exit...\\"; exit"'`;
           log.info('[LlmInstallationManager] macOS command:', constructedCommand);
           await execAsync(constructedCommand, {
             cwd: promptDir,
@@ -324,16 +318,6 @@ export class LlmInstallationManager {
             log.warn(`[LlmInstallationManager] Failed to open ${term}:`, err);
             continue;
           }
-        }
-      }
-
-      // Save debug state if debug mode is enabled
-      if (this.debugMode && constructedCommand) {
-        try {
-          const debugFile = await this.saveDebugState(promptFilePath, constructedCommand);
-          log.info('[LlmInstallationManager] Debug file created at:', debugFile);
-        } catch (err) {
-          log.error('[LlmInstallationManager] Failed to save debug state:', err);
         }
       }
 
@@ -398,25 +382,6 @@ export class LlmInstallationManager {
     log.info('[LlmInstallationManager] Prompt file path:', promptFilePath);
     log.info('[LlmInstallationManager] Prompt content length:', content.length);
     log.info('[LlmInstallationManager] Prompt content preview:', content.substring(0, 100) + (content.length > 100 ? '...' : ''));
-  }
-
-  /**
-   * Save debug state to a temporary file
-   * @param promptFilePath Path to the prompt file
-   * @param command Command that was constructed
-   * @returns Path to the debug file
-   */
-  private async saveDebugState(promptFilePath: string, command: string): Promise<string> {
-    const debugDir = path.join(os.tmpdir(), 'hagicode-debug');
-    await fs.mkdir(debugDir, { recursive: true });
-    const debugFile = path.join(debugDir, `prompt-debug-${Date.now()}.json`);
-    await fs.writeFile(debugFile, JSON.stringify({
-      timestamp: new Date().toISOString(),
-      promptFilePath,
-      command,
-      platform: process.platform,
-    }, null, 2));
-    return debugFile;
   }
 
   /**

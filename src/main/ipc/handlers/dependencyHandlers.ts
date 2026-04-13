@@ -2,7 +2,6 @@ import { ipcMain, BrowserWindow, app } from 'electron';
 import log from 'electron-log';
 import { VersionManager } from '../../version-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
-import { ConfigManager } from '../../config.js';
 import { manifestReader } from '../../manifest-reader.js';
 
 // Module state
@@ -10,14 +9,12 @@ interface DependencyHandlerState {
   versionManager: VersionManager | null;
   dependencyManager: DependencyManager | null;
   mainWindow: BrowserWindow | null;
-  configManager: ConfigManager | null;
 }
 
 const state: DependencyHandlerState = {
   versionManager: null,
   dependencyManager: null,
   mainWindow: null,
-  configManager: null,
 };
 
 /**
@@ -27,12 +24,10 @@ export function initDependencyHandlers(
   versionManager: VersionManager | null,
   dependencyManager: DependencyManager | null,
   mainWindow: BrowserWindow | null,
-  configManager: ConfigManager | null
 ): void {
   state.versionManager = versionManager;
   state.dependencyManager = dependencyManager;
   state.mainWindow = mainWindow;
-  state.configManager = configManager;
 }
 
 /**
@@ -42,12 +37,10 @@ export function registerDependencyHandlers(deps: {
   versionManager: VersionManager | null;
   dependencyManager: DependencyManager | null;
   mainWindow: BrowserWindow | null;
-  configManager: ConfigManager | null;
 }): void {
   state.versionManager = deps.versionManager;
   state.dependencyManager = deps.dependencyManager;
   state.mainWindow = deps.mainWindow;
-  state.configManager = deps.configManager;
 
   // Check dependencies handler
   ipcMain.handle('check-dependencies', async () => {
@@ -55,17 +48,7 @@ export function registerDependencyHandlers(deps: {
       return [];
     }
     try {
-      const dependencies = await state.dependencyManager.checkAllDependencies();
-
-      const debugMode = state.configManager?.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-      if (debugMode?.ignoreDependencyCheck) {
-        return dependencies.map(dep => ({
-          ...dep,
-          installed: false,
-        }));
-      }
-
-      return dependencies;
+      return await state.dependencyManager.checkAllDependencies();
     } catch (error) {
       console.error('Failed to check dependencies:', error);
       return [];
@@ -243,17 +226,7 @@ export function registerDependencyHandlers(deps: {
     }
 
     try {
-      let dependencies = await state.versionManager.checkVersionDependencies(versionId);
-
-      const debugMode = state.configManager?.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-      if (debugMode?.ignoreDependencyCheck) {
-        return dependencies.map(dep => ({
-          ...dep,
-          installed: false,
-          versionMismatch: true,
-        }));
-      }
-
+      const dependencies = await state.versionManager.checkVersionDependencies(versionId);
       return dependencies.filter(dep => !dep.installed || dep.versionMismatch);
     } catch (error) {
       log.error('[DependencyHandlers] Failed to get missing dependencies:', error);
@@ -268,18 +241,7 @@ export function registerDependencyHandlers(deps: {
     }
 
     try {
-      let dependencies = await state.versionManager.checkVersionDependencies(versionId);
-
-      const debugMode = state.configManager?.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-      if (debugMode?.ignoreDependencyCheck) {
-        return dependencies.map(dep => ({
-          ...dep,
-          installed: false,
-          versionMismatch: true,
-        }));
-      }
-
-      return dependencies;
+      return await state.versionManager.checkVersionDependencies(versionId);
     } catch (error) {
       log.error('[DependencyHandlers] Failed to get all dependencies:', error);
       return [];

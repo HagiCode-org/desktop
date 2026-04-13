@@ -546,8 +546,8 @@ export class SystemDiagnosticManager {
     const probes: SystemDiagnosticCommandProbe[] = [];
 
     // Keep this whitelist aligned with the audited hagicode-core dependency matrix.
-    // Prompt-guidance diagnostics stay in DiagnosisManager; this manager only inspects
-    // local machine prerequisites and CLI executables that support runtime troubleshooting.
+    // This manager only inspects local machine prerequisites and CLI executables
+    // that support runtime troubleshooting.
     for (const toolchainProbe of TOOLCHAIN_PROBES) {
       let resolvedPath: string | null = null;
 

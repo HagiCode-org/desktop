@@ -27,7 +27,7 @@ interface PromptGuidanceServiceDeps {
 }
 
 interface ResourceGuidanceInput {
-  entryPoint: Extract<PromptGuidanceEntryPoint, 'smartConfig' | 'diagnosis'>;
+  entryPoint: Extract<PromptGuidanceEntryPoint, 'smartConfig'>;
   resourceKey: PromptResourceKey;
   runtime: PromptRuntimeContext;
   activeVersion?: ActiveVersionContext | null;

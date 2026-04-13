@@ -12,7 +12,6 @@ import { DependencyManager, type DependencyCheckResult, DependencyType } from '.
 import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
-import { DiagnosisManager } from './diagnosis-manager.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
@@ -23,7 +22,7 @@ import { manifestReader } from './manifest-reader.js';
 import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
-import { openHagicodeInAppWindow } from './hagicode-url.js';
+import { openCodeServerWindow, openHagicodeInAppWindow } from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
@@ -40,10 +39,8 @@ import {
   registerDataDirectoryHandlers,
   registerRegionHandlers,
   registerLlmHandlers,
-  registerDiagnosisHandlers,
   registerSystemDiagnosticHandlers,
   registerRssHandlers,
-  registerDebugHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
@@ -114,7 +111,6 @@ let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
-let diagnosisManager: DiagnosisManager | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
@@ -242,6 +238,31 @@ function createWindow(): void {
   });
 }
 
+function createManagedChildWindow(): BrowserWindow {
+  const distRoot = getDistRootPath();
+  const appRoot = getAppRootPath();
+  const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+
+  const childWindow = new BrowserWindow({
+    minWidth: 800,
+    minHeight: 600,
+    show: false,
+    autoHideMenuBar: true,
+    icon: iconPath,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      devTools: !app.isPackaged,
+    },
+  });
+
+  wireDesktopWindowClipboard(childWindow);
+  return childWindow;
+}
+
 // IPC handlers
 ipcMain.handle('app-version', () => {
   return app.getVersion();
@@ -265,30 +286,15 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   return await openHagicodeInAppWindow({
     url,
     logScope: 'Main',
-    createWindow: () => {
-      const distRoot = getDistRootPath();
-      const appRoot = getAppRootPath();
-      const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-      const iconPath = path.join(appRoot, 'resources', 'icon.png');
+    createWindow: createManagedChildWindow,
+  });
+});
 
-      const childWindow = new BrowserWindow({
-        minWidth: 800,
-        minHeight: 600,
-        show: false,
-        autoHideMenuBar: true,
-        icon: iconPath,
-        webPreferences: {
-          preload: preloadPath,
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: false,
-          devTools: !app.isPackaged,
-        },
-      });
-
-      wireDesktopWindowClipboard(childWindow);
-      return childWindow;
-    },
+ipcMain.handle('open-code-server-window', async (_, url: string) => {
+  return await openCodeServerWindow({
+    url,
+    logScope: 'Main',
+    createWindow: createManagedChildWindow,
   });
 });
 
@@ -588,19 +594,7 @@ ipcMain.handle('check-dependencies', async () => {
     return [];
   }
   try {
-    const dependencies = await dependencyManager.checkAllDependencies();
-
-    // Check if debug mode is enabled (ignore dependency check)
-    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-    if (debugMode?.ignoreDependencyCheck) {
-      // Force all dependencies to appear as not installed
-      return dependencies.map(dep => ({
-        ...dep,
-        installed: false,
-      }));
-    }
-
-    return dependencies;
+    return await dependencyManager.checkAllDependencies();
   } catch (error) {
     console.error('Failed to check dependencies:', error);
     return [];
@@ -1179,20 +1173,7 @@ ipcMain.handle('dependency:get-missing', async (_, versionId: string) => {
   }
 
   try {
-    let dependencies = await versionManager.checkVersionDependencies(versionId);
-
-    // Check if debug mode is enabled (ignore dependency check)
-    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-    if (debugMode?.ignoreDependencyCheck) {
-      // Force all dependencies to appear as not installed (missing)
-      // This ensures all dependencies are shown as installable
-      return dependencies.map(dep => ({
-        ...dep,
-        installed: false,
-        versionMismatch: true, // Also set versionMismatch to ensure they appear as missing
-      }));
-    }
-
+    const dependencies = await versionManager.checkVersionDependencies(versionId);
     return dependencies.filter(dep => !dep.installed || dep.versionMismatch);
   } catch (error) {
     log.error('[Main] Failed to get missing dependencies:', error);
@@ -1207,22 +1188,7 @@ ipcMain.handle('dependency:get-all', async (_, versionId: string) => {
   }
 
   try {
-    let dependencies = await versionManager.checkVersionDependencies(versionId);
-
-    // Check if debug mode is enabled (ignore dependency check)
-    const debugMode = configManager.getStore().get('debugMode') as { ignoreDependencyCheck: boolean } | undefined;
-    if (debugMode?.ignoreDependencyCheck) {
-      // Force all dependencies to appear as not installed (missing)
-      // This ensures all dependencies are shown as installable
-      return dependencies.map(dep => ({
-        ...dep,
-        installed: false,
-        versionMismatch: true, // Also set versionMismatch to ensure they appear as missing
-      }));
-    }
-
-    // Return ALL dependencies, not just missing ones
-    return dependencies;
+    return await versionManager.checkVersionDependencies(versionId);
   } catch (error) {
     log.error('[Main] Failed to get all dependencies:', error);
     return [];
@@ -1615,35 +1581,6 @@ ipcMain.handle('preset:get-provider', presetGetProviderHandler);
 ipcMain.handle('preset:get-all-providers', presetGetAllProvidersHandler);
 ipcMain.handle('preset:get-cache-stats', presetGetCacheStatsHandler);
 
-// Debug Mode IPC Handlers
-ipcMain.handle('set-debug-mode', async (_, mode: { ignoreDependencyCheck: boolean }) => {
-  try {
-    // Store debug mode in electron-store
-    const storeKey = 'debugMode';
-    configManager.getStore().set(storeKey, mode);
-    // Notify renderer of debug mode change
-    mainWindow?.webContents.send('debug-mode-changed', mode);
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to set debug mode:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('get-debug-mode', async () => {
-  try {
-    const storeKey = 'debugMode';
-    const mode = configManager.getStore().get(storeKey, { ignoreDependencyCheck: false }) as { ignoreDependencyCheck: boolean };
-    return mode;
-  } catch (error) {
-    console.error('Failed to get debug mode:', error);
-    return { ignoreDependencyCheck: false };
-  }
-});
-
 // RSS Feed IPC Handlers
 ipcMain.handle('rss-get-feed-items', async () => {
   if (!rssFeedManager) {
@@ -1753,6 +1690,7 @@ app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
 
 app.whenReady().then(async () => {
   configManager = new ConfigManager();
+  (configManager.getStore() as unknown as Store<Record<string, unknown>>).delete('debugMode');
   const serverConfig = configManager.getServerConfig();
   serverClient = new HagicoServerClient(serverConfig);
 
@@ -1930,7 +1868,7 @@ app.whenReady().then(async () => {
   );
   log.info('[App] LLM Installation Manager initialized');
 
-  // Shared prompt resolver for smart-config and diagnosis entry points
+  // Shared prompt resolver for retained prompt-guidance entry points
   promptResourceResolver = new PromptResourceResolver();
   log.info('[App] Prompt Resource Resolver initialized');
 
@@ -1946,27 +1884,11 @@ app.whenReady().then(async () => {
     log.info('[App] LLM IPC handlers registered');
   }
 
-  // Initialize Diagnosis Manager
-  diagnosisManager = new DiagnosisManager();
-  log.info('[App] Diagnosis Manager initialized');
-
   // Initialize System Diagnostic Manager
   systemDiagnosticManager = new SystemDiagnosticManager({
     agentCliManager,
   });
   log.info('[App] System Diagnostic Manager initialized');
-
-  // Register Diagnosis IPC Handlers
-  if (diagnosisManager && llmInstallationManager) {
-    registerDiagnosisHandlers({
-      diagnosisManager,
-      llmInstallationManager,
-      versionManager,
-      promptResourceResolver,
-      agentCliManager,
-    });
-    log.info('[App] Diagnosis IPC handlers registered');
-  }
 
   if (systemDiagnosticManager) {
     registerSystemDiagnosticHandlers({

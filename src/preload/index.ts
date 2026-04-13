@@ -150,6 +150,8 @@ interface ElectronAPI {
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
+  // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
+  openCodeServerWindow: (url: string) => Promise<{ success: boolean; error?: string }>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
 
   // Server Control APIs
@@ -266,7 +268,7 @@ interface ElectronAPI {
   llmGetRegion: () => Promise<any>;
   llmGetManifestPath: (versionId: string) => Promise<any>;
   llmGetPromptGuidance: (
-    resourceKey: 'smartConfig' | 'diagnosis',
+    resourceKey: 'smartConfig',
     customPromptPath?: string
   ) => Promise<PromptGuidanceResponse>;
   llmGetVersionPromptGuidance: (
@@ -274,14 +276,10 @@ interface ElectronAPI {
     region?: 'cn' | 'international'
   ) => Promise<PromptGuidanceResponse>;
   llmOpenAICliWithResource: (
-    resourceKey: 'smartConfig' | 'diagnosis',
+    resourceKey: 'smartConfig',
     customPromptPath?: string
   ) => Promise<PromptGuidanceResponse>;
   llmOpenAICliWithPrompt: (promptPath: string) => Promise<PromptGuidanceResponse>;
-
-  // Diagnosis APIs
-  diagnosisGetPromptGuidance: () => Promise<PromptGuidanceResponse>;
-  diagnosisOpenPrompt: () => Promise<PromptGuidanceResponse>;
 
   // Onboarding APIs
   checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
@@ -324,6 +322,7 @@ const electronAPI: ElectronAPI = {
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
+  openCodeServerWindow: (url: string) => ipcRenderer.invoke('open-code-server-window', url),
   onServerStatusChange: (callback) => {
     const listener = (_event, status) => {
       callback(status);
@@ -520,17 +519,13 @@ const electronAPI: ElectronAPI = {
   llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
   llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
   llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
-  llmGetPromptGuidance: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) =>
+  llmGetPromptGuidance: (resourceKey: 'smartConfig', customPromptPath?: string) =>
     ipcRenderer.invoke('llm:get-prompt-guidance', resourceKey, customPromptPath),
   llmGetVersionPromptGuidance: (versionId: string, region?: 'cn' | 'international') =>
     ipcRenderer.invoke('llm:get-version-prompt-guidance', versionId, region),
-  llmOpenAICliWithResource: (resourceKey: 'smartConfig' | 'diagnosis', customPromptPath?: string) =>
+  llmOpenAICliWithResource: (resourceKey: 'smartConfig', customPromptPath?: string) =>
     ipcRenderer.invoke('llm:open-ai-cli-with-resource', resourceKey, customPromptPath),
   llmOpenAICliWithPrompt: (promptPath: string) => ipcRenderer.invoke('llm:open-ai-cli-with-prompt', promptPath),
-
-  // Diagnosis APIs
-  diagnosisGetPromptGuidance: () => ipcRenderer.invoke('diagnosis:get-prompt-guidance'),
-  diagnosisOpenPrompt: () => ipcRenderer.invoke('diagnosis:open-prompt'),
 
   // Tray service control
   onTrayStartService: (callback) => {
@@ -593,17 +588,6 @@ const electronAPI: ElectronAPI = {
     };
     ipcRenderer.on('onboarding:show', listener);
     return () => ipcRenderer.removeListener('onboarding:show', listener);
-  },
-
-  // Debug Mode APIs
-  setDebugMode: (mode: { ignoreDependencyCheck: boolean }) => ipcRenderer.invoke('set-debug-mode', mode),
-  getDebugMode: () => ipcRenderer.invoke('get-debug-mode'),
-  onDebugModeChanged: (callback) => {
-    const listener = (_event, mode: { ignoreDependencyCheck: boolean }) => {
-      callback(mode);
-    };
-    ipcRenderer.on('debug-mode-changed', listener);
-    return () => ipcRenderer.removeListener('debug-mode-changed', listener);
   },
 
   // RSS Feed APIs

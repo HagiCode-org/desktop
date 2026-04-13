@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-export type PromptResourceKey = 'smartConfig' | 'diagnosis';
+export type PromptResourceKey = 'smartConfig';
 export type PromptSource = 'custom' | 'active-version' | 'packaged-resource' | 'development-root';
 export type PromptResolveErrorCode = 'INVALID_PROMPT_PATH' | 'PROMPT_NOT_FOUND';
 
@@ -46,7 +46,6 @@ interface ResolveInput {
 
 const RESOURCE_RELATIVE_PATH: Record<PromptResourceKey, string> = {
   smartConfig: path.join('config', 'config-prompt.llm.txt'),
-  diagnosis: path.join('scripts', 'diagnosis-prompt.llm.txt'),
 };
 
 export class PromptResourceResolver {
@@ -148,4 +147,3 @@ export class PromptResourceResolver {
     return candidates;
   }
 }
-

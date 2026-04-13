@@ -37,17 +37,11 @@ export { registerRegionHandlers, initRegionHandlers } from './regionHandlers.js'
 // LLM handlers
 export { registerLlmHandlers, initLlmHandlers } from './llmHandlers.js';
 
-// Diagnosis handlers
-export { registerDiagnosisHandlers, initDiagnosisHandlers } from './diagnosisHandlers.js';
-
 // System diagnostic handlers
 export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from './systemDiagnosticHandlers.js';
 
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
-
-// Debug handlers
-export { registerDebugHandlers, initDebugHandlers } from './debugHandlers.js';
 
 // View handlers
 export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
