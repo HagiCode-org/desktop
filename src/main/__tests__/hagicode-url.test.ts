@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildFreshHagicodeUrl,
+  CODE_SERVER_WINDOW_PROTOCOLS,
   HAGICODE_CACHE_BYPASS_PARAM,
+  openCodeServerWindow,
   openHagicodeInAppWindow,
   type HagicodeWindowLike,
 } from '../hagicode-url.js';
 
-function createMockWindow() {
+function createMockWindow(loadUrlError?: Error) {
   const readyHandlers: Array<() => void> = [];
   const failLoadHandlers: Array<(event: unknown, errorCode: number, errorDescription: string) => void> = [];
   let loadedUrl: string | null = null;
@@ -30,6 +32,9 @@ function createMockWindow() {
       focusCalls += 1;
     },
     async loadURL(url) {
+      if (loadUrlError) {
+        throw loadUrlError;
+      }
       loadedUrl = url;
     },
     webContents: {
@@ -91,7 +96,7 @@ describe('hagicode URL helpers', () => {
     assert.equal(new URL(secondUrl).searchParams.get(HAGICODE_CACHE_BYPASS_PARAM), '1700000000004');
   });
 
-  it('does not create a BrowserWindow when the URL is invalid', async () => {
+  it('does not create a BrowserWindow when the Hagicode URL is invalid', async () => {
     let createWindowCalls = 0;
 
     const result = await openHagicodeInAppWindow({
@@ -107,7 +112,7 @@ describe('hagicode URL helpers', () => {
     assert.equal(createWindowCalls, 0);
   });
 
-  it('loads the rewritten fresh URL into the BrowserWindow', async () => {
+  it('loads the rewritten fresh URL into the Hagicode BrowserWindow', async () => {
     const mockWindow = createMockWindow();
 
     const result = await openHagicodeInAppWindow({
@@ -133,6 +138,81 @@ describe('hagicode URL helpers', () => {
       maximizeCalls: 1,
       showCalls: 1,
       focusCalls: 1,
+    });
+  });
+
+  it('rejects malformed Code Server URLs before creating a window', async () => {
+    let createWindowCalls = 0;
+
+    const result = await openCodeServerWindow({
+      url: 'not-a-valid-url',
+      logScope: 'Test',
+      createWindow: () => {
+        createWindowCalls += 1;
+        return createMockWindow().window;
+      },
+    });
+
+    assert.deepEqual(result, {
+      success: false,
+      error: 'Invalid URL provided for open-code-server-window',
+    });
+    assert.equal(createWindowCalls, 0);
+  });
+
+  it('rejects unsupported Code Server protocols before creating a window', async () => {
+    let createWindowCalls = 0;
+
+    const result = await openCodeServerWindow({
+      url: 'file:///tmp/code-server',
+      logScope: 'Test',
+      createWindow: () => {
+        createWindowCalls += 1;
+        return createMockWindow().window;
+      },
+    });
+
+    assert.deepEqual(result, {
+      success: false,
+      error: 'Invalid URL protocol for open-code-server-window: file:',
+    });
+    assert.equal(createWindowCalls, 0);
+    assert.deepEqual(CODE_SERVER_WINDOW_PROTOCOLS, ['http:', 'https:']);
+  });
+
+  it('reports a successful managed Code Server window creation result', async () => {
+    const mockWindow = createMockWindow();
+
+    const result = await openCodeServerWindow({
+      url: 'https://code.example.test/?folder=/workspace/project-1&tkn=token-123',
+      logScope: 'Test',
+      createWindow: () => mockWindow.window,
+    });
+
+    assert.deepEqual(result, { success: true });
+    assert.equal(
+      mockWindow.getLoadedUrl(),
+      'https://code.example.test/?folder=/workspace/project-1&tkn=token-123',
+    );
+
+    mockWindow.readyHandlers[0]();
+    assert.deepEqual(mockWindow.getWindowLifecycleCalls(), {
+      maximizeCalls: 1,
+      showCalls: 1,
+      focusCalls: 1,
+    });
+  });
+
+  it('reports a structured failure when the managed Code Server window cannot load', async () => {
+    const result = await openCodeServerWindow({
+      url: 'https://code.example.test/?folder=/workspace/project-1&tkn=token-123',
+      logScope: 'Test',
+      createWindow: () => createMockWindow(new Error('loadURL failed')).window,
+    });
+
+    assert.deepEqual(result, {
+      success: false,
+      error: 'loadURL failed',
     });
   });
 });

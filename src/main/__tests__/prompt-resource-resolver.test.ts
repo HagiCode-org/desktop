@@ -32,11 +32,11 @@ describe('PromptResourceResolver', () => {
   });
 
   it('falls back to development path when active version path is missing', async () => {
-    const expectedPath = path.normalize('/workspace/scripts/diagnosis-prompt.llm.txt');
+    const expectedPath = path.normalize('/workspace/config/config-prompt.llm.txt');
     const resolver = new PromptResourceResolver(async (candidatePath) => candidatePath === expectedPath);
 
     const result = await resolver.resolve({
-      resourceKey: 'diagnosis',
+      resourceKey: 'smartConfig',
       runtime,
       activeVersion: {
         id: 'hagicode-1',
@@ -69,4 +69,3 @@ describe('PromptResourceResolver', () => {
     }
   });
 });
-

@@ -46,7 +46,7 @@ describe('promptGuidanceModel', () => {
   it('formats prompt-guidance errors with attempted path diagnostics', () => {
     const guidance: PromptGuidanceFailure = {
       success: false,
-      entryPoint: 'diagnosis',
+      entryPoint: 'smartConfig',
       errorCode: 'PROMPT_NOT_FOUND',
       error: 'missing prompt',
       attemptedPaths: ['/one', '/two'],

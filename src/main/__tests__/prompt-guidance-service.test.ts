@@ -10,9 +10,9 @@ import { PromptGuidanceService } from '../prompt-guidance-service.js';
 describe('PromptGuidanceService', () => {
   it('returns prompt content, fallback metadata, and preferred tool context', async () => {
     const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-guidance-'));
-    const fallbackPromptPath = path.join(tmpRoot, 'scripts', 'diagnosis-prompt.llm.txt');
+    const fallbackPromptPath = path.join(tmpRoot, 'config', 'config-prompt.llm.txt');
     await fs.mkdir(path.dirname(fallbackPromptPath), { recursive: true });
-    await fs.writeFile(fallbackPromptPath, 'diagnosis prompt from development root');
+    await fs.writeFile(fallbackPromptPath, 'smart config prompt from development root');
 
     const service = new PromptGuidanceService({
       promptResourceResolver: new PromptResourceResolver(),
@@ -22,8 +22,8 @@ describe('PromptGuidanceService', () => {
     });
 
     const result = await service.buildResourceGuidance({
-      entryPoint: 'diagnosis',
-      resourceKey: 'diagnosis',
+      entryPoint: 'smartConfig',
+      resourceKey: 'smartConfig',
       activeVersion: {
         id: 'hagicode-missing',
         installedPath: path.join(tmpRoot, 'missing-version'),
@@ -37,11 +37,11 @@ describe('PromptGuidanceService', () => {
 
     assert.equal(result.success, true);
     if (result.success) {
-      assert.equal(result.promptContent, 'diagnosis prompt from development root');
+      assert.equal(result.promptContent, 'smart config prompt from development root');
       assert.equal(result.promptSource, 'development-root');
       assert.equal(result.preferredCliType, null);
       assert.equal(result.suggestedWorkingDirectory, path.join(tmpRoot, 'missing-version'));
-      assert.ok(result.attemptedPaths.some((candidate) => candidate.endsWith(path.join('scripts', 'diagnosis-prompt.llm.txt'))));
+      assert.ok(result.attemptedPaths.some((candidate) => candidate.endsWith(path.join('config', 'config-prompt.llm.txt'))));
       assert.ok(result.supportedTools.some((tool) => tool.cliType === AgentCliType.CopilotCli));
     }
   });
