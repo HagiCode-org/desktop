@@ -93,7 +93,7 @@ describe('homepageInteractiveTour', () => {
   it('filters missing steps and selects the active version branch when available', () => {
     const documentRef = createDocument({
       [HOMEPAGE_TOUR_SELECTORS.hero]: createElement(),
-      [HOMEPAGE_TOUR_SELECTORS.diagnosis]: createElement(),
+      [HOMEPAGE_TOUR_SELECTORS.updateReminder]: createElement(),
       [HOMEPAGE_TOUR_SELECTORS.serviceCard]: createElement(),
       [HOMEPAGE_TOUR_SELECTORS.logAccess]: createElement(),
       [HOMEPAGE_TOUR_SELECTORS.versionSection]: createElement({
@@ -108,7 +108,7 @@ describe('homepageInteractiveTour', () => {
 
     assert.equal(steps.length, 5);
     assert.equal(steps[0]?.element, HOMEPAGE_TOUR_SELECTORS.hero);
-    assert.equal(steps[1]?.element, HOMEPAGE_TOUR_SELECTORS.diagnosis);
+    assert.equal(steps[1]?.element, HOMEPAGE_TOUR_SELECTORS.updateReminder);
     assert.equal(steps[2]?.element, HOMEPAGE_TOUR_SELECTORS.serviceCard);
     assert.equal(steps[4]?.popover?.title, 'system.homepageTour.steps.activeVersion.title');
   });

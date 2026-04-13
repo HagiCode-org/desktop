@@ -11,7 +11,7 @@ declare global {
   interface Window {
     electronAPI: {
       llmGetPromptGuidance: (
-        resourceKey: 'smartConfig' | 'diagnosis',
+        resourceKey: 'smartConfig',
         customPromptPath?: string,
       ) => Promise<PromptGuidanceResponse>;
     };

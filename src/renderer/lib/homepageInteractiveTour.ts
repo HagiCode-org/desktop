@@ -8,7 +8,6 @@ export const HOMEPAGE_TOUR_VARIANT_ATTRIBUTE = 'data-homepage-tour-variant';
 
 export const HOMEPAGE_TOUR_SELECTORS = {
   hero: `[${HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE}="hero"]`,
-  diagnosis: `[${HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE}="diagnosis"]`,
   updateReminder: `[${HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE}="update-reminder"]`,
   serviceCard: `[${HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE}="service-card"]`,
   logAccess: `[${HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE}="log-access"]`,
@@ -74,11 +73,6 @@ const HOMEPAGE_TOUR_STEP_ORDER = [
   {
     id: 'hero',
     selector: HOMEPAGE_TOUR_SELECTORS.hero,
-    side: 'bottom' as const,
-  },
-  {
-    id: 'diagnosis',
-    selector: HOMEPAGE_TOUR_SELECTORS.diagnosis,
     side: 'bottom' as const,
   },
   {

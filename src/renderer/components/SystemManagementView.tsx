@@ -7,7 +7,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
-import DiagnosisButton from './DiagnosisButton';
 import { Button } from '@/components/ui/button';
 import {
   buildHomepageTourSteps,
@@ -484,16 +483,6 @@ export default function SystemManagementView() {
             </motion.div>
           </motion.div>
         </AnimatePresence>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, duration: 0.5 }}
-        className="mb-6"
-        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'diagnosis' }}
-      >
-        <DiagnosisButton />
       </motion.div>
 
       {versionUpdateReminder ? (

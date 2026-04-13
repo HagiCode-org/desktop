@@ -26,7 +26,6 @@ describe('homepage tour renderer integration', () => {
     ]);
 
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'hero'/);
-    assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'diagnosis'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'update-reminder'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'service-card'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'log-access'/);

@@ -37,9 +37,6 @@ declare global {
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: () => void) => () => void;
-      setDebugMode: (mode: { ignoreDependencyCheck: boolean }) => Promise<{ success: boolean; error?: string }>;
-      getDebugMode: () => Promise<{ ignoreDependencyCheck: boolean }>;
-      onDebugModeChanged: (callback: (mode: { ignoreDependencyCheck: boolean }) => void) => void;
       agentCliSave: (data: { cliType: AgentCliType }) => Promise<{ success: boolean }>;
       agentCliLoad: () => Promise<{ cliType: AgentCliType | null; isSkipped: boolean; selectedAt: string | null }>;
       agentCliSkip: () => Promise<{ success: boolean }>;

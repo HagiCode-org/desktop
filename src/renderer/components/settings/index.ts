@@ -3,7 +3,6 @@ import type { DistributionMode } from '../../../types/distribution-mode';
 export { LanguageSelector } from './LanguageSelector';
 export { OnboardingSettings } from './OnboardingSettings';
 export { AgentCliSettings } from './AgentCliSettings';
-export { DebugSettings } from './DebugSettings';
 export { DataDirectorySettings } from './DataDirectorySettings';
 export { RemoteModeSettings } from './RemoteModeSettings';
 export { SharingAccelerationSettings } from './SharingAccelerationSettings';

@@ -1,6 +1,6 @@
 import type { AgentCliType } from './agent-cli.js';
 
-export type PromptGuidanceEntryPoint = 'smartConfig' | 'diagnosis' | 'versionDependencies';
+export type PromptGuidanceEntryPoint = 'smartConfig' | 'versionDependencies';
 export type PromptGuidanceSource =
   | 'custom'
   | 'active-version'
