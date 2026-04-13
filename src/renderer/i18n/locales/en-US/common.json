@@ -142,18 +142,6 @@
     "collapse": "Collapse",
     "expand": "Expand"
   },
-  "diagnosis": {
-    "button": {
-      "text": "Open AI diagnosis guidance",
-      "ariaLabel": "Open AI diagnosis guidance"
-    },
-    "dialog": {
-      "title": "AI diagnosis guidance",
-      "description": "Desktop resolves the diagnosis prompt and lets you run it in whichever AI CLI you prefer.",
-      "panelTitle": "Diagnosis prompt guidance",
-      "panelDescription": "Copy the prompt, run it from the suggested location, and return once you have next steps."
-    }
-  },
   "systemDiagnostic": {
     "title": "System Diagnostic",
     "description": "Collect this device's local environment details and share the plain text report with technical support.",
@@ -177,8 +165,8 @@
       "issueCount": "Issues captured: {{count}}"
     },
     "boundary": {
-      "title": "Different from AI diagnosis guidance",
-      "description": "This page only collects local machine diagnostics. The existing AI diagnosis guidance still helps you generate prompts for your preferred AI CLI."
+      "title": "Local machine diagnostics only",
+      "description": "This page collects plain-text environment details from the current device so you can share them with technical support."
     },
     "partialFailure": {
       "title": "Some checks did not finish cleanly",
@@ -267,10 +255,6 @@
         "hero": {
           "title": "Welcome to the homepage",
           "description": "This top section summarizes service health and helps you understand where to start on the Desktop dashboard."
-        },
-        "diagnosis": {
-          "title": "Open AI diagnosis guidance",
-          "description": "Use this shortcut when you need structured troubleshooting guidance before changing service or package settings."
         },
         "updateReminder": {
           "title": "Track available updates",

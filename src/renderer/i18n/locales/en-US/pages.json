@@ -4,7 +4,6 @@
     "tabs": {
       "onboarding": "Onboarding",
       "remoteMode": "Remote Mode",
-      "debug": "Debug",
       "dataDirectory": "Data Directory",
       "sharingAcceleration": "Download & Sharing",
       "updates": "Background Updates"
@@ -67,16 +66,6 @@
         "resetSuccess": "Homepage tour has been reset",
         "resetError": "Failed to reset homepage tour: {{error}}"
       }
-    },
-    "debug": {
-      "title": "Debug",
-      "description": "Debug options and developer tools.",
-      "deprecatedNotice": "Dependency-check debug options were removed. Use the homepage AI diagnosis entry for troubleshooting.",
-      "ignoreDependencyCheck": "Ignore dependency check",
-      "ignoreDependencyCheckDescription": "When enabled, all dependencies will be treated as not installed for testing purposes.",
-      "ignoreDependencyCheckEnabled": "Ignore dependency check enabled",
-      "ignoreDependencyCheckDisabled": "Ignore dependency check disabled",
-      "toggleError": "Toggle failed: {{error}}"
     },
     "dataDirectory": {
       "title": "Data Directory",

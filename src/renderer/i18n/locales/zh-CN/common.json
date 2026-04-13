@@ -142,18 +142,6 @@
     "collapse": "收起",
     "expand": "展开"
   },
-  "diagnosis": {
-    "button": {
-      "text": "打开 AI 诊断提示指引",
-      "ariaLabel": "打开 AI 诊断提示指引"
-    },
-    "dialog": {
-      "title": "AI 诊断提示指引",
-      "description": "Desktop 会解析诊断提示词，并让你用自己偏好的 AI CLI 执行它。",
-      "panelTitle": "诊断提示词指引",
-      "panelDescription": "复制提示词，在建议目录中运行，拿到下一步建议后再回到 Desktop。"
-    }
-  },
   "systemDiagnostic": {
     "title": "系统诊断",
     "description": "收集当前设备的本地环境信息，并将纯文本报告直接发给技术支持。",
@@ -177,8 +165,8 @@
       "issueCount": "问题条目：{{count}}"
     },
     "boundary": {
-      "title": "它和 AI 诊断提示指引不是同一件事",
-      "description": "这个页面只负责采集本机环境信息。现有的 AI 诊断提示指引仍然用于为你偏好的 AI CLI 生成排障提示词。"
+      "title": "这里只提供本机诊断",
+      "description": "这个页面会采集当前设备的纯文本环境信息，方便你直接分享给技术支持。"
     },
     "partialFailure": {
       "title": "部分检查未能完整完成",
@@ -267,10 +255,6 @@
         "hero": {
           "title": "这是你的首页总览",
           "description": "这里会先告诉你服务当前是否在线，并帮助你快速理解 Desktop 首页的核心入口。"
-        },
-        "diagnosis": {
-          "title": "从 AI 诊断入口开始排查",
-          "description": "遇到异常时可以先打开这里，获取结构化的 AI 诊断提示，再决定下一步要检查什么。"
         },
         "updateReminder": {
           "title": "查看可用更新提醒",
