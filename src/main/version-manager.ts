@@ -139,7 +139,7 @@ export class VersionManager {
     this.dependencyManager = dependencyManager;
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
-    this.configManager = new ConfigManager();
+    this.configManager = new ConfigManager(this.pathManager);
     this.hybridDownloadCoordinator = new HybridDownloadCoordinator({ regionDetector });
     // Use Electron's app.getPath('userData') to get the correct user data path
     this.userDataPath = app.getPath('userData');

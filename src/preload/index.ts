@@ -1,7 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  AcceptLegalDocumentsPayload,
+  LegalDocumentType,
+  OnboardingTriggerResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
+  ResolvedLegalDocumentsPayload,
   StartupFailurePayload,
 } from '../types/onboarding.js';
 import { clipboardChannels } from '../types/clipboard.js';
@@ -17,8 +21,21 @@ import type {
   LogDirectoryTarget,
   LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
+import type {
+  ManagedWebTelemetryBridge,
+  ManagedWebTelemetryPayload,
+  ManagedWebTelemetrySettings,
+  ManagedWebTelemetrySettingsInput,
+} from '../types/telemetry.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
+
+export type {
+  ManagedWebTelemetryBridge,
+  ManagedWebTelemetryPayload,
+  ManagedWebTelemetrySettings,
+  ManagedWebTelemetrySettingsInput,
+} from '../types/telemetry.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -140,6 +157,12 @@ export interface VersionUpdateSnapshotPayload {
 
 export type VersionInstallProgressPayload = VersionDownloadProgress;
 
+export interface AboutWindowOpenResult {
+  success: boolean;
+  status: 'created' | 'focused' | 'suppressed';
+  error?: string;
+}
+
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
@@ -152,6 +175,7 @@ interface ElectronAPI {
   openHagicodeInApp: (url: string) => Promise<void>;
   // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
   openCodeServerWindow: (url: string) => Promise<{ success: boolean; error?: string }>;
+  openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
 
   // Server Control APIs
@@ -221,6 +245,7 @@ interface ElectronAPI {
     get: () => Promise<{ enabled: boolean; url: string }>;
     validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
   };
+  telemetry: ManagedWebTelemetryBridge;
 
   sharingAcceleration: {
     get: () => Promise<SharingAccelerationSettings | null>;
@@ -282,8 +307,12 @@ interface ElectronAPI {
   llmOpenAICliWithPrompt: (promptPath: string) => Promise<PromptGuidanceResponse>;
 
   // Onboarding APIs
-  checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
+  checkTriggerCondition: () => Promise<OnboardingTriggerResult>;
   getOnboardingState: () => Promise<any>;
+  getLegalDocuments: (locale: string, refresh?: boolean) => Promise<ResolvedLegalDocumentsPayload>;
+  openLegalDocument: (documentType: LegalDocumentType, locale: string) => Promise<{ success: boolean; error?: string }>;
+  acceptLegalDocuments: (payload: AcceptLegalDocumentsPayload) => Promise<{ success: boolean; error?: string }>;
+  declineLegalDocuments: () => Promise<{ success: boolean; error?: string }>;
   skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
   downloadPackage: () => Promise<any>;
   checkOnboardingDependencies: (version: string) => Promise<any>;
@@ -323,6 +352,7 @@ const electronAPI: ElectronAPI = {
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
   openCodeServerWindow: (url: string) => ipcRenderer.invoke('open-code-server-window', url),
+  openAboutWindow: (url: string) => ipcRenderer.invoke('open-about-window', url),
   onServerStatusChange: (callback) => {
     const listener = (_event, status) => {
       callback(status);
@@ -545,6 +575,12 @@ const electronAPI: ElectronAPI = {
   // Onboarding APIs
   checkTriggerCondition: () => ipcRenderer.invoke('onboarding:check-trigger'),
   getOnboardingState: () => ipcRenderer.invoke('onboarding:get-state'),
+  getLegalDocuments: (locale: string, refresh = false) => ipcRenderer.invoke('onboarding:get-legal-documents', locale, refresh),
+  openLegalDocument: (documentType: LegalDocumentType, locale: string) =>
+    ipcRenderer.invoke('onboarding:open-legal-document', documentType, locale),
+  acceptLegalDocuments: (payload: AcceptLegalDocumentsPayload) =>
+    ipcRenderer.invoke('onboarding:accept-legal-documents', payload),
+  declineLegalDocuments: () => ipcRenderer.invoke('onboarding:decline-legal-documents'),
   skipOnboarding: () => ipcRenderer.invoke('onboarding:skip'),
   downloadPackage: () => ipcRenderer.invoke('onboarding:download-package'),
   checkOnboardingDependencies: (version: string) => ipcRenderer.invoke('onboarding:check-dependencies', version),
@@ -637,6 +673,10 @@ const electronAPI: ElectronAPI = {
     set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
     get: () => ipcRenderer.invoke('remote-mode:get'),
     validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
+  },
+  telemetry: {
+    get: () => ipcRenderer.invoke('telemetry:get'),
+    set: (settings) => ipcRenderer.invoke('telemetry:set', settings),
   },
 
   sharingAcceleration: {

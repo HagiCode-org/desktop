@@ -2,7 +2,7 @@
   "title": "首次使用引导",
   "welcome": {
     "title": "欢迎使用 Hagicode Desktop",
-    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用四个步骤完成首次安装与配置。",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用五个步骤完成首次安装与合规确认。",
     "features": {
       "manage": {
         "title": "版本管理",
@@ -17,12 +17,13 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装共分 4 个步骤：",
+    "processTitle": "首次安装共分 5 个步骤：",
     "steps": {
       "welcome": "了解本次引导会完成的准备工作",
       "download": "下载最新的 Hagicode Server 包",
       "launch": "启动服务并确认运行正常",
-      "sharingAcceleration": "确认是否开启共享加速，默认已为您开启"
+      "sharingAcceleration": "确认是否开启共享加速，默认已为您开启",
+      "legalConsent": "确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档"
     },
     "skip": "跳过引导",
     "start": "开始安装"
@@ -230,6 +231,37 @@
       "fallback": "种子 sidecar 不可用或握手失败时，会自动回源补块",
       "disable": "若网络受限或不愿共享，可现在关闭",
       "portable": "portable mode 下此能力强制关闭，不会隐式做种"
+    }
+  },
+  "legal": {
+    "title": "终端用户许可协议与隐私政策",
+    "descriptionFull": "在继续下载和启动 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。",
+    "descriptionLegalOnly": "检测到当前协议版本尚未确认。请先在默认浏览器中查看正式文档，然后返回 Desktop 完成确认。",
+    "progressFull": "完整引导：欢迎 -> 协议确认 -> 共享加速 -> 下载 -> 启动",
+    "progressLegalOnly": "合规拦截模式：仅显示当前协议确认步骤",
+    "browserInstruction": "请先点击下方按钮在默认浏览器中查看正式文档。Desktop 只展示版本摘要，不内嵌协议全文。",
+    "cacheHint": "当前显示的是最近一次成功获取的协议版本摘要。建议在网络恢复后刷新并再次确认是否有更新。",
+    "unavailableHint": "暂时无法获取协议版本摘要，也没有可用缓存。请检查网络后重试；在获取到有效版本信息前，无法继续。",
+    "reviewPrompt": "阅读完成后，再返回 Desktop 勾选同意并继续。",
+    "effectiveDate": "生效日期",
+    "revision": "修订版本",
+    "openInBrowser": "在浏览器中打开 {{title}}",
+    "checkbox": "我已在浏览器中阅读并同意当前 EULA 与隐私政策。",
+    "modeHintFull": "确认后将继续进入共享加速、下载和启动步骤。",
+    "modeHintLegalOnly": "确认后将关闭拦截并返回主界面；拒绝则会退出当前应用。",
+    "accept": "同意并继续",
+    "accepting": "正在记录同意...",
+    "decline": "拒绝并退出",
+    "declining": "正在退出...",
+    "refresh": "刷新协议信息",
+    "metadata": {
+      "remote": "已加载最新协议版本",
+      "cache": "正在使用最近缓存的协议版本",
+      "unavailable": "协议版本信息暂不可用"
+    },
+    "types": {
+      "eula": "EULA",
+      "privacy-policy": "隐私政策"
     }
   }
 }

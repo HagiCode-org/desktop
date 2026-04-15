@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 
 interface WelcomeIntroProps {
   onNext: () => void;
-  onSkip: () => void;
+  onSkip?: () => void;
 }
 
 function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
@@ -30,9 +30,10 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
 
   const steps = [
     { number: 1, text: t('welcome.steps.welcome') },
-    { number: 2, text: t('welcome.steps.sharingAcceleration') },
-    { number: 3, text: t('welcome.steps.download') },
-    { number: 4, text: t('welcome.steps.launch') },
+    { number: 2, text: t('welcome.steps.legalConsent') },
+    { number: 3, text: t('welcome.steps.sharingAcceleration') },
+    { number: 4, text: t('welcome.steps.download') },
+    { number: 5, text: t('welcome.steps.launch') },
   ];
 
   return (
@@ -81,9 +82,11 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
 
       {/* CTA buttons */}
       <div className="flex justify-center gap-3 pt-4">
-        <Button variant="ghost" onClick={onSkip} className="text-muted-foreground">
-          {t('welcome.skip')}
-        </Button>
+        {onSkip && (
+          <Button variant="ghost" onClick={onSkip} className="text-muted-foreground">
+            {t('welcome.skip')}
+          </Button>
+        )}
         <Button onClick={onNext} size="lg" className="gap-2">
           {t('welcome.start')}
           <Rocket className="h-4 w-4" />

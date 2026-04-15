@@ -1,15 +1,24 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { OnboardingStep } from '../../../types/onboarding';
 import type {
+  AcceptLegalDocumentsPayload,
+  LegalDocumentType,
+  OnboardingMode,
+  OnboardingTriggerResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
+  ResolvedLegalDocumentsPayload,
 } from '../../../types/onboarding';
+import { OnboardingStep } from '../../../types/onboarding';
 
 declare global {
   interface Window {
     electronAPI: {
-      checkTriggerCondition: () => Promise<{ shouldShow: boolean; reason?: string }>;
+      checkTriggerCondition: () => Promise<OnboardingTriggerResult>;
       getOnboardingState: () => Promise<unknown>;
+      getLegalDocuments: (locale: string, refresh?: boolean) => Promise<ResolvedLegalDocumentsPayload>;
+      openLegalDocument: (documentType: LegalDocumentType, locale: string) => Promise<{ success: boolean; error?: string }>;
+      acceptLegalDocuments: (payload: AcceptLegalDocumentsPayload) => Promise<{ success: boolean; error?: string }>;
+      declineLegalDocuments: () => Promise<{ success: boolean; error?: string }>;
       skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
       downloadPackage: () => Promise<{ success: boolean; error?: string; version?: string }>;
       checkOnboardingDependencies: (versionId: string) => Promise<unknown>;
@@ -40,8 +49,63 @@ export const checkOnboardingTrigger = createAsyncThunk(
   CHECK_ONBOARDING_TRIGGER,
   async (_, { rejectWithValue }) => {
     try {
-      const result = await window.electronAPI.checkTriggerCondition();
-      return result;
+      return await window.electronAPI.checkTriggerCondition();
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const loadLegalDocuments = createAsyncThunk(
+  'onboarding/loadLegalDocuments',
+  async ({ locale, refresh = false }: { locale: string; refresh?: boolean }, { rejectWithValue }) => {
+    try {
+      return await window.electronAPI.getLegalDocuments(locale, refresh);
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const openLegalDocument = createAsyncThunk(
+  'onboarding/openLegalDocument',
+  async ({ documentType, locale }: { documentType: LegalDocumentType; locale: string }, { rejectWithValue }) => {
+    try {
+      const result = await window.electronAPI.openLegalDocument(documentType, locale);
+      if (!result.success) {
+        return rejectWithValue(result.error || 'Failed to open legal document');
+      }
+      return { documentType };
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const acceptLegalDocuments = createAsyncThunk(
+  'onboarding/acceptLegalDocuments',
+  async (payload: AcceptLegalDocumentsPayload, { rejectWithValue }) => {
+    try {
+      const result = await window.electronAPI.acceptLegalDocuments(payload);
+      if (!result.success) {
+        return rejectWithValue(result.error || 'Failed to accept legal documents');
+      }
+      return payload;
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const declineLegalDocuments = createAsyncThunk(
+  'onboarding/declineLegalDocuments',
+  async (_, { rejectWithValue }) => {
+    try {
+      const result = await window.electronAPI.declineLegalDocuments();
+      if (!result.success) {
+        return rejectWithValue(result.error || 'Failed to decline legal documents');
+      }
+      return { success: true };
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
@@ -66,7 +130,6 @@ export const downloadPackage = createAsyncThunk(
     try {
       console.log('[OnboardingThunks] Starting download...');
 
-      // Set step to Download before starting
       dispatch({ type: 'onboarding/setCurrentStep', payload: OnboardingStep.Download });
 
       const result = await window.electronAPI.downloadPackage();
@@ -153,3 +216,18 @@ export const resetOnboarding = createAsyncThunk(
 // Sync action creators
 export const goToNextStep = () => ({ type: GO_TO_NEXT_STEP });
 export const goToPreviousStep = () => ({ type: GO_TO_PREVIOUS_STEP });
+
+export function buildAcceptLegalDocumentsPayload(
+  mode: Exclude<OnboardingMode, 'none'>,
+  locale: string,
+  documents: ResolvedLegalDocumentsPayload['documents'],
+): AcceptLegalDocumentsPayload {
+  return {
+    mode,
+    locale,
+    documents: documents.map((document) => ({
+      documentType: document.documentType,
+      revision: document.revision,
+    })),
+  };
+}

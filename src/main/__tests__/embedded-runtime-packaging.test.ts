@@ -8,6 +8,7 @@ const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
 const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
+const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -40,11 +41,16 @@ describe('embedded runtime packaging configuration', () => {
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
     const builder = await fs.readFile(electronBuilderPath, 'utf-8');
     const docs = await fs.readFile(developmentDocPath, 'utf-8');
+    const releaseReadme = await fs.readFile(releaseReadmePath, 'utf-8');
 
     assert.match(builder, /from: resources\/portable-fixed/);
     assert.match(builder, /to: extra\/portable-fixed/);
     assert.match(docs, /resources\/portable-fixed\/current/);
     assert.match(docs, /extra\/portable-fixed\/current/);
     assert.match(docs, /bundled Node environment/i);
+    assert.match(docs, /Steam Linux startup compatibility/i);
+    assert.match(docs, /Direct CLI startup already works/i);
+    assert.match(releaseReadme, /Steam Linux desktop artifact verification/i);
+    assert.match(releaseReadme, /direct CLI launch keeps the default graphics path/i);
   });
 });

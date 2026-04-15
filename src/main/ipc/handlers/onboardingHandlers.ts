@@ -1,5 +1,4 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron';
-import log from 'electron-log';
+import { ipcMain, BrowserWindow } from 'electron';
 import { OnboardingManager } from '../../onboarding-manager.js';
 
 // Module state
@@ -37,13 +36,25 @@ export function registerOnboardingHandlers(deps: {
   // Onboarding check trigger handler
   ipcMain.handle('onboarding:check-trigger', async () => {
     if (!state.onboardingManager) {
-      return { shouldShow: false, reason: 'not-initialized' };
+      return {
+        shouldShow: false,
+        mode: 'none',
+        reason: 'not-initialized',
+        runtimeProvisioned: false,
+        metadataSource: 'unavailable',
+      };
     }
     try {
       return await state.onboardingManager.checkTriggerCondition();
     } catch (error) {
       console.error('Failed to check onboarding trigger:', error);
-      return { shouldShow: false, reason: 'error' };
+      return {
+        shouldShow: false,
+        mode: 'none',
+        reason: 'error',
+        runtimeProvisioned: false,
+        metadataSource: 'unavailable',
+      };
     }
   });
 
@@ -73,6 +84,83 @@ export function registerOnboardingHandlers(deps: {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('onboarding:get-legal-documents', async (_, locale: string, refresh = false) => {
+    if (!state.onboardingManager) {
+      return {
+        schemaVersion: null,
+        publishedAt: null,
+        resolvedLocale: locale,
+        source: 'unavailable',
+        cachedAt: null,
+        lastSuccessfulFetchAt: null,
+        documents: [],
+      };
+    }
+
+    try {
+      return await state.onboardingManager.getResolvedLegalDocuments(locale, refresh);
+    } catch (error) {
+      console.error('Failed to get legal documents:', error);
+      return {
+        schemaVersion: null,
+        publishedAt: null,
+        resolvedLocale: locale,
+        source: 'unavailable',
+        cachedAt: null,
+        lastSuccessfulFetchAt: null,
+        documents: [],
+      };
+    }
+  });
+
+  ipcMain.handle('onboarding:open-legal-document', async (_, documentType: string, locale: string) => {
+    if (!state.onboardingManager) {
+      return { success: false, error: 'Onboarding manager not initialized' };
+    }
+
+    try {
+      return await state.onboardingManager.openLegalDocument(documentType as 'eula' | 'privacy-policy', locale);
+    } catch (error) {
+      console.error('Failed to open legal document:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  ipcMain.handle('onboarding:accept-legal-documents', async (_, payload) => {
+    if (!state.onboardingManager) {
+      return { success: false, error: 'Onboarding manager not initialized' };
+    }
+
+    try {
+      return await state.onboardingManager.acceptLegalDocuments(payload);
+    } catch (error) {
+      console.error('Failed to accept legal documents:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+  ipcMain.handle('onboarding:decline-legal-documents', async () => {
+    if (!state.onboardingManager) {
+      return { success: false, error: 'Onboarding manager not initialized' };
+    }
+
+    try {
+      return await state.onboardingManager.declineLegalDocuments();
+    } catch (error) {
+      console.error('Failed to decline legal documents:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   });

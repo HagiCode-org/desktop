@@ -2,7 +2,7 @@
   "title": "First-Time Setup",
   "welcome": {
     "title": "Welcome to Hagicode Desktop",
-    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup in four steps.",
+    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in five steps.",
     "features": {
       "manage": {
         "title": "Version Management",
@@ -17,12 +17,13 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The first-time setup has 4 steps:",
+    "processTitle": "The first-time setup has 5 steps:",
     "steps": {
       "welcome": "Review the setup and what will happen next",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running",
-      "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default"
+      "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default",
+      "legalConsent": "Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser"
     },
     "skip": "Skip Setup",
     "start": "Get Started"
@@ -230,6 +231,37 @@
       "fallback": "If the torrent sidecar is missing or the handshake fails, fallback backfill starts automatically",
       "disable": "Disable it now if your network is restricted or you do not want to share",
       "portable": "Portable mode forces this feature off and never seeds implicitly"
+    }
+  },
+  "legal": {
+    "title": "End User License Agreement and Privacy Policy",
+    "descriptionFull": "Before downloading and starting HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.",
+    "descriptionLegalOnly": "The current legal revisions have not been accepted yet. Review the official documents in your default browser, then return to Desktop to confirm.",
+    "progressFull": "Full setup: Welcome -> Legal Consent -> Sharing Acceleration -> Download -> Launch",
+    "progressLegalOnly": "Compliance gate mode: only the current legal consent step is shown",
+    "browserInstruction": "Open the official documents in your default browser before you accept. Desktop only shows the revision summary, not the full legal text.",
+    "cacheHint": "You are currently seeing the most recent successfully cached legal summary. Refresh after network recovery to confirm whether a newer revision exists.",
+    "unavailableHint": "The legal revision summary is unavailable and no cached copy is available yet. Check your network and try again; setup cannot continue until valid metadata is loaded.",
+    "reviewPrompt": "After reviewing the official page, return to Desktop and confirm your acceptance.",
+    "effectiveDate": "Effective Date",
+    "revision": "Revision",
+    "openInBrowser": "Open {{title}} in Browser",
+    "checkbox": "I have reviewed the current EULA and Privacy Policy in the browser and agree to them.",
+    "modeHintFull": "After acceptance, setup continues to sharing acceleration, download, and launch.",
+    "modeHintLegalOnly": "After acceptance, the gate closes and the main interface resumes; declining exits the current app session.",
+    "accept": "Accept and Continue",
+    "accepting": "Recording acceptance...",
+    "decline": "Decline and Exit",
+    "declining": "Exiting...",
+    "refresh": "Refresh Legal Metadata",
+    "metadata": {
+      "remote": "Latest legal metadata loaded",
+      "cache": "Using the last successful cached legal metadata",
+      "unavailable": "Legal metadata is currently unavailable"
+    },
+    "types": {
+      "eula": "EULA",
+      "privacy-policy": "Privacy Policy"
     }
   }
 }

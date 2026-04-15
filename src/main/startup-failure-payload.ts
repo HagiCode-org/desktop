@@ -1,4 +1,10 @@
 import type { StartResult } from './manifest-reader.js';
+import {
+  buildStartupCompatibilityDiagnosticLine,
+  createStartupCompatibilitySnapshot,
+  getRecordedStartupCompatibilityDecision,
+  type StartupCompatibilitySnapshot,
+} from './linux-startup-compatibility.js';
 
 export interface StartupFailurePayload {
   summary: string;
@@ -6,6 +12,7 @@ export interface StartupFailurePayload {
   port: number;
   timestamp: string;
   truncated: boolean;
+  startupCompatibility?: StartupCompatibilitySnapshot;
 }
 
 export function buildStartupFailurePayload(result: StartResult, fallbackPort: number): StartupFailurePayload {
@@ -13,14 +20,20 @@ export function buildStartupFailurePayload(result: StartResult, fallbackPort: nu
     result.parsedResult.errorMessage ||
     result.resultSession.errorMessage ||
     'Failed to start web service';
+  const compatibilityDecision = getRecordedStartupCompatibilityDecision();
+  const compatibilityLine = buildStartupCompatibilityDiagnosticLine(compatibilityDecision);
   const logOutput = result.parsedResult.rawOutput?.trim() || summary;
-  const truncated = logOutput.includes('[Startup log truncated');
+  const enrichedLogOutput = compatibilityLine ? `${compatibilityLine}\n${logOutput}` : logOutput;
+  const truncated = enrichedLogOutput.includes('[Startup log truncated');
 
   return {
     summary,
-    log: logOutput,
+    log: enrichedLogOutput,
     port: result.port ?? result.parsedResult.port ?? result.resultSession.port ?? fallbackPort,
     timestamp: result.resultSession.timestamp || new Date().toISOString(),
     truncated,
+    startupCompatibility: compatibilityDecision
+      ? createStartupCompatibilitySnapshot(compatibilityDecision)
+      : undefined,
   };
 }

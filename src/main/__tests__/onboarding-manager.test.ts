@@ -2,53 +2,54 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { OnboardingManager } from '../onboarding-manager.js';
 
 const onboardingManagerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
-function createStoreStub() {
-  return {
-    get: () => ({ isSkipped: false, isCompleted: false }),
-    set: () => undefined,
-    delete: () => undefined,
-  };
+async function readSource() {
+  return fs.readFile(onboardingManagerPath, 'utf-8');
 }
 
-describe('onboarding-manager spawn invocation', () => {
-  it('routes Windows .cmd commands through cmd.exe', () => {
-    const invocation = (OnboardingManager as unknown as {
-      buildSpawnInvocation: (
-        command: string,
-        args: string[],
-        platform?: NodeJS.Platform,
-      ) => { command: string; args: string[]; shell?: boolean };
-    }).buildSpawnInvocation('npm.cmd', ['install', '-g', 'some-package'], 'win32');
+describe('onboarding-manager legal consent gating', () => {
+  it('adds dedicated legal consent and metadata cache store keys', async () => {
+    const source = await readSource();
 
-    assert.equal(invocation.command, 'npm.cmd');
-    assert.deepEqual(invocation.args, ['install', '-g', 'some-package']);
-    assert.equal(invocation.shell, true);
+    assert.match(source, /LEGAL_CONSENT_STORE_KEY = 'legalConsent'/);
+    assert.match(source, /LEGAL_METADATA_CACHE_STORE_KEY = 'legalMetadataCache'/);
+    assert.match(source, /DEFAULT_LEGAL_METADATA_URL = 'https:\/\/index\.hagicode\.com\/legal-documents\.json'/);
   });
 
-  it('keeps non-Windows commands unchanged', () => {
-    const invocation = (OnboardingManager as unknown as {
-      buildSpawnInvocation: (
-        command: string,
-        args: string[],
-        platform?: NodeJS.Platform,
-      ) => { command: string; args: string[]; shell?: boolean };
-    }).buildSpawnInvocation('npm', ['install', '-g', 'some-package'], 'linux');
+  it('distinguishes full onboarding from legal-only compliance gating', async () => {
+    const source = await readSource();
 
-    assert.equal(invocation.command, 'npm');
-    assert.deepEqual(invocation.args, ['install', '-g', 'some-package']);
-    assert.equal(invocation.shell, undefined);
+    assert.match(source, /const runtimeProvisioned = this\.versionManager\.isPortableVersionMode\(\) \|\| installedVersions\.length > 0/);
+    assert.match(source, /const mode = runtimeProvisioned \? 'legal-only' : 'full'/);
+    assert.match(source, /reason: legalMetadata\.payload \? 'legal-consent-required' : 'legal-metadata-unavailable'/);
+    assert.match(source, /mode: 'full'/);
   });
-});
 
-describe('onboarding-manager portable version mode', () => {
-  it('treats portable version mode as already provisioned and skips onboarding', async () => {
-    const source = await fs.readFile(onboardingManagerPath, 'utf-8');
+  it('persists revision-aware consent independently from onboarding completion', async () => {
+    const source = await readSource();
 
-    assert.match(source, /PORTABLE_VERSION_ONBOARDING_ERROR/);
-    assert.match(source, /Portable version mode active, treating runtime as already provisioned/);
+    assert.match(source, /setLegalConsentState\(/);
+    assert.match(source, /eulaRevision: currentRevisions\.get\('eula'\) \?\? ''/);
+    assert.match(source, /privacyPolicyRevision: currentRevisions\.get\('privacy-policy'\) \?\? ''/);
+    assert.match(source, /acceptedFrom: payload\.mode/);
+    assert.match(source, /completedAt: this\.now\(\)\.toISOString\(\)/);
+  });
+
+  it('falls back to cached legal metadata when the remote payload is unavailable', async () => {
+    const source = await readSource();
+
+    assert.match(source, /Failed to fetch legal metadata, trying cache/);
+    assert.match(source, /const cacheState = this\.getLegalMetadataCache\(\)/);
+    assert.match(source, /source: 'cache'/);
+    assert.match(source, /source: 'unavailable'/);
+  });
+
+  it('treats portable version mode as already provisioned after consent succeeds', async () => {
+    const source = await readSource();
+
+    assert.match(source, /reason: this\.versionManager\.isPortableVersionMode\(\)/);
+    assert.match(source, /'portable-version-provisioned'/);
   });
 });

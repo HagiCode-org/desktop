@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { BrowserWindow } from 'electron';
+import axios from 'axios';
+import { app, BrowserWindow, shell } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
 import { VersionManager } from './version-manager.js';
@@ -9,16 +10,41 @@ import {
   recoverOnboardingStartupFailure,
 } from './onboarding-startup-recovery.js';
 import { PCodeWebServiceManager } from './web-service-manager.js';
-import { manifestReader, type ParsedDependency } from './manifest-reader.js';
+import { manifestReader } from './manifest-reader.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import type {
+  AcceptLegalDocumentsPayload,
   StoredOnboardingState,
   DownloadProgress,
   DependencyItem,
   ServiceLaunchProgress,
   OnboardingStartServiceResult,
   OnboardingRecoveryResult,
+  LegalConsentState,
+  LegalMetadataCacheState,
+  LegalMetadataSource,
+  OnboardingTriggerResult,
+  PublishedLegalDocument,
+  PublishedLegalDocumentsPayload,
+  ResolvedLegalDocument,
+  ResolvedLegalDocumentsPayload,
+  LegalDocumentType,
 } from '../types/onboarding.js';
+
+interface OnboardingManagerOptions {
+  legalMetadataUrl?: string;
+  fetchLegalMetadata?: (url: string) => Promise<PublishedLegalDocumentsPayload>;
+  openExternal?: (url: string) => Promise<void>;
+  exitApplication?: () => void;
+  now?: () => Date;
+}
+
+interface ResolvedLegalMetadataSnapshot {
+  payload: PublishedLegalDocumentsPayload | null;
+  source: LegalMetadataSource;
+  cachedAt: string | null;
+  lastSuccessfulFetchAt: string | null;
+}
 
 /**
  * OnboardingManager manages the first-time user onboarding flow
@@ -27,15 +53,22 @@ import type {
 export class OnboardingManager {
   private static readonly PORTABLE_VERSION_ONBOARDING_ERROR =
     'Portable version mode skips onboarding because the packaged runtime is already provisioned.';
+  private static readonly STORE_KEY = 'onboarding';
+  private static readonly LEGAL_CONSENT_STORE_KEY = 'legalConsent';
+  private static readonly LEGAL_METADATA_CACHE_STORE_KEY = 'legalMetadataCache';
+  private static readonly DEFAULT_LEGAL_METADATA_URL = 'https://index.hagicode.com/legal-documents.json';
 
   private versionManager: VersionManager;
   private dependencyManager: DependencyManager;
   private webServiceManager: PCodeWebServiceManager;
   private store: Store;
   private mainWindow: BrowserWindow | null;
-
-  // Store key for onboarding state
-  private static readonly STORE_KEY = 'onboarding';
+  private legalMetadataUrl: string;
+  private fetchLegalMetadata: (url: string) => Promise<PublishedLegalDocumentsPayload>;
+  private openExternal: (url: string) => Promise<void>;
+  private exitApplication: () => void;
+  private now: () => Date;
+  private lastResolvedLegalMetadata: ResolvedLegalMetadataSnapshot | null = null;
 
   // Idempotency flags to prevent duplicate operations
   private isDownloading = false;
@@ -46,7 +79,8 @@ export class OnboardingManager {
     versionManager: VersionManager,
     dependencyManager: DependencyManager,
     webServiceManager: PCodeWebServiceManager,
-    store: Store
+    store: Store,
+    options: OnboardingManagerOptions = {}
   ) {
     this.versionManager = versionManager;
     this.dependencyManager = dependencyManager;
@@ -56,6 +90,16 @@ export class OnboardingManager {
 
     // Get reference to main window from global
     this.mainWindow = (global as any).mainWindow || null;
+    this.legalMetadataUrl = options.legalMetadataUrl ?? OnboardingManager.DEFAULT_LEGAL_METADATA_URL;
+    this.fetchLegalMetadata = options.fetchLegalMetadata ?? OnboardingManager.fetchPublishedLegalMetadata;
+    this.openExternal = options.openExternal ?? (async (url) => {
+      await shell.openExternal(url, { activate: true });
+    });
+    this.exitApplication = options.exitApplication ?? (() => {
+      this.mainWindow?.close();
+      app.quit();
+    });
+    this.now = options.now ?? (() => new Date());
   }
 
   /**
@@ -65,62 +109,76 @@ export class OnboardingManager {
    * - User has not completed onboarding
    * - No installed versions exist OR onboarding was explicitly marked as incomplete
    */
-  async checkTriggerCondition(): Promise<{ shouldShow: boolean; reason?: string }> {
+  async checkTriggerCondition(): Promise<OnboardingTriggerResult> {
     try {
       log.info('[OnboardingManager] Checking trigger condition...');
-
-      if (this.versionManager.isPortableVersionMode()) {
-        log.info('[OnboardingManager] Portable version mode active, treating runtime as already provisioned');
-        return { shouldShow: false, reason: 'portable-version-provisioned' };
-      }
-
-      // Get stored onboarding state
       const storedState = this.getStoredState();
-
       log.info('[OnboardingManager] Stored onboarding state:', storedState);
 
-      // If already skipped, don't show
-      if (storedState.isSkipped) {
-        log.info('[OnboardingManager] Onboarding has been skipped');
-        return { shouldShow: false, reason: 'skipped' };
-      }
+      const installedVersions = await this.versionManager.getInstalledVersions();
+      const runtimeProvisioned = this.versionManager.isPortableVersionMode() || installedVersions.length > 0;
 
-      // If already completed, verify the version still exists
-      if (storedState.isCompleted) {
-        if (storedState.version) {
-          // Check if the completed version still exists
-          const installedVersions = await this.versionManager.getInstalledVersions();
-          const versionStillExists = installedVersions.some(v => v.id === storedState.version);
-
-          if (!versionStillExists) {
-            log.info('[OnboardingManager] Completed version no longer exists, resetting onboarding state');
-            // Reset the state since the version is gone
-            await this.resetOnboarding();
-            // Fall through to show onboarding again
-          } else {
-            log.info('[OnboardingManager] Onboarding has been completed and version still exists');
-            return { shouldShow: false, reason: 'completed' };
-          }
-        } else {
-          log.info('[OnboardingManager] Onboarding has been completed (no version info)');
-          return { shouldShow: false, reason: 'completed' };
+      if (storedState.isCompleted && storedState.version) {
+        const versionStillExists = installedVersions.some((version) => version.id === storedState.version);
+        if (!versionStillExists && !runtimeProvisioned) {
+          log.info('[OnboardingManager] Completed version no longer exists, resetting onboarding state');
+          await this.resetOnboarding();
         }
       }
 
-      // Check if there are any installed versions
-      const installedVersions = await this.versionManager.getInstalledVersions();
+      const legalMetadata = await this.resolveLegalMetadataSnapshot({ refresh: true });
+      const legalConsent = this.getLegalConsentState();
+      const legalAccepted = this.hasAcceptedCurrentLegalDocuments(legalConsent, legalMetadata.payload);
 
-      if (installedVersions.length > 0) {
-        log.info('[OnboardingManager] Found installed versions, skipping onboarding:', installedVersions.map(v => v.id));
-        // Don't automatically mark as completed - only mark if user explicitly completes
-        return { shouldShow: false, reason: 'has-versions' };
+      if (!legalAccepted) {
+        const mode = runtimeProvisioned ? 'legal-only' : 'full';
+        return {
+          shouldShow: true,
+          mode,
+          reason: legalMetadata.payload ? 'legal-consent-required' : 'legal-metadata-unavailable',
+          runtimeProvisioned,
+          metadataSource: legalMetadata.source,
+        };
       }
 
-      log.info('[OnboardingManager] Onboarding should be shown - no completed state and no installed versions');
-      return { shouldShow: true };
+      if (runtimeProvisioned) {
+        return {
+          shouldShow: false,
+          mode: 'none',
+          reason: this.versionManager.isPortableVersionMode()
+            ? 'portable-version-provisioned'
+            : 'runtime-already-provisioned',
+          runtimeProvisioned,
+          metadataSource: legalMetadata.source,
+        };
+      }
+
+      if (storedState.isSkipped) {
+        return {
+          shouldShow: false,
+          mode: 'none',
+          reason: 'skipped',
+          runtimeProvisioned,
+          metadataSource: legalMetadata.source,
+        };
+      }
+
+      return {
+        shouldShow: true,
+        mode: 'full',
+        reason: 'runtime-onboarding-required',
+        runtimeProvisioned,
+        metadataSource: legalMetadata.source,
+      };
     } catch (error) {
       log.error('[OnboardingManager] Failed to check trigger condition:', error);
-      return { shouldShow: false, reason: 'error' };
+      return {
+        shouldShow: false,
+        mode: 'none',
+        reason: 'error',
+        runtimeProvisioned: false,
+        metadataSource: 'unavailable',
+      };
     }
   }
 
@@ -143,6 +201,124 @@ export class OnboardingManager {
     const updated = { ...current, ...state };
     this.store.set(OnboardingManager.STORE_KEY, updated);
     log.info('[OnboardingManager] Stored state updated:', updated);
+  }
+
+  getLegalConsentState(): LegalConsentState | null {
+    return this.store.get(OnboardingManager.LEGAL_CONSENT_STORE_KEY, null) as LegalConsentState | null;
+  }
+
+  private setLegalConsentState(state: LegalConsentState): void {
+    this.store.set(OnboardingManager.LEGAL_CONSENT_STORE_KEY, state);
+    log.info('[OnboardingManager] Legal consent updated:', state);
+  }
+
+  private getLegalMetadataCache(): LegalMetadataCacheState | null {
+    return this.store.get(OnboardingManager.LEGAL_METADATA_CACHE_STORE_KEY, null) as LegalMetadataCacheState | null;
+  }
+
+  private setLegalMetadataCache(payload: PublishedLegalDocumentsPayload): LegalMetadataCacheState {
+    const timestamp = this.now().toISOString();
+    const cacheState: LegalMetadataCacheState = {
+      payload,
+      cachedAt: timestamp,
+      lastSuccessfulFetchAt: timestamp,
+    };
+    this.store.set(OnboardingManager.LEGAL_METADATA_CACHE_STORE_KEY, cacheState);
+    return cacheState;
+  }
+
+  async getResolvedLegalDocuments(
+    locale: string,
+    refresh = false,
+  ): Promise<ResolvedLegalDocumentsPayload> {
+    const resolvedLocale = OnboardingManager.normalizeLocale(locale);
+    const snapshot = await this.resolveLegalMetadataSnapshot({ refresh });
+
+    return {
+      schemaVersion: snapshot.payload?.schemaVersion ?? null,
+      publishedAt: snapshot.payload?.publishedAt ?? null,
+      resolvedLocale,
+      source: snapshot.source,
+      cachedAt: snapshot.cachedAt,
+      lastSuccessfulFetchAt: snapshot.lastSuccessfulFetchAt,
+      documents: (snapshot.payload?.documents ?? []).map((document) =>
+        this.resolveLegalDocument(document, resolvedLocale),
+      ),
+    };
+  }
+
+  async openLegalDocument(documentType: LegalDocumentType, locale: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const metadata = await this.getResolvedLegalDocuments(locale);
+      const target = metadata.documents.find((document) => document.documentType === documentType);
+
+      if (!target) {
+        return { success: false, error: `No legal document metadata found for ${documentType}` };
+      }
+
+      await this.openExternal(target.browserOpenUrl);
+      return { success: true };
+    } catch (error) {
+      log.error('[OnboardingManager] Failed to open legal document:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async acceptLegalDocuments(payload: AcceptLegalDocumentsPayload): Promise<{ success: boolean; error?: string }> {
+    try {
+      const metadata = await this.getResolvedLegalDocuments(payload.locale);
+      if (metadata.documents.length === 0) {
+        return { success: false, error: 'Legal document metadata is unavailable' };
+      }
+
+      const acceptedRevisions = new Map(
+        payload.documents.map((document) => [document.documentType, document.revision]),
+      );
+      const currentRevisions = new Map(
+        metadata.documents.map((document) => [document.documentType, document.revision]),
+      );
+
+      for (const requiredType of ['eula', 'privacy-policy'] as const) {
+        if (acceptedRevisions.get(requiredType) !== currentRevisions.get(requiredType)) {
+          return {
+            success: false,
+            error: `Legal document revision mismatch for ${requiredType}`,
+          };
+        }
+      }
+
+      this.setLegalConsentState({
+        eulaRevision: currentRevisions.get('eula') ?? '',
+        privacyPolicyRevision: currentRevisions.get('privacy-policy') ?? '',
+        acceptedAt: this.now().toISOString(),
+        locale: OnboardingManager.normalizeLocale(payload.locale),
+        acceptedFrom: payload.mode,
+      });
+
+      return { success: true };
+    } catch (error) {
+      log.error('[OnboardingManager] Failed to accept legal documents:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async declineLegalDocuments(): Promise<{ success: boolean; error?: string }> {
+    try {
+      this.exitApplication();
+      return { success: true };
+    } catch (error) {
+      log.error('[OnboardingManager] Failed to decline legal documents:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
@@ -272,6 +448,113 @@ export class OnboardingManager {
         error: error instanceof Error ? error.message : String(error)
       };
     }
+  }
+
+  private hasAcceptedCurrentLegalDocuments(
+    legalConsent: LegalConsentState | null,
+    publishedMetadata: PublishedLegalDocumentsPayload | null,
+  ): boolean {
+    if (!legalConsent || !publishedMetadata) {
+      return false;
+    }
+
+    const eula = publishedMetadata.documents.find((document) => document.documentType === 'eula');
+    const privacyPolicy = publishedMetadata.documents.find((document) => document.documentType === 'privacy-policy');
+
+    if (!eula || !privacyPolicy) {
+      return false;
+    }
+
+    return (
+      legalConsent.eulaRevision === eula.revision &&
+      legalConsent.privacyPolicyRevision === privacyPolicy.revision
+    );
+  }
+
+  private resolveLegalDocument(
+    document: PublishedLegalDocument,
+    locale: string,
+  ): ResolvedLegalDocument {
+    const normalizedLocale = OnboardingManager.normalizeLocale(locale);
+    const localeEntry =
+      document.locales[normalizedLocale] ??
+      document.locales['zh-CN'] ??
+      document.locales['en-US'] ??
+      Object.values(document.locales)[0];
+
+    return {
+      documentType: document.documentType,
+      title: localeEntry?.title ?? document.documentType,
+      effectiveDate: document.effectiveDate,
+      revision: document.revision,
+      canonicalUrl: document.canonicalUrl,
+      browserOpenUrl: localeEntry?.browserOpenUrl ?? document.canonicalUrl,
+    };
+  }
+
+  private async resolveLegalMetadataSnapshot(
+    options: { refresh?: boolean } = {},
+  ): Promise<ResolvedLegalMetadataSnapshot> {
+    if (!options.refresh && this.lastResolvedLegalMetadata) {
+      return this.lastResolvedLegalMetadata;
+    }
+
+    try {
+      const payload = await this.fetchLegalMetadata(this.legalMetadataUrl);
+      const cacheState = this.setLegalMetadataCache(payload);
+      const snapshot: ResolvedLegalMetadataSnapshot = {
+        payload,
+        source: 'remote',
+        cachedAt: cacheState.cachedAt,
+        lastSuccessfulFetchAt: cacheState.lastSuccessfulFetchAt,
+      };
+      this.lastResolvedLegalMetadata = snapshot;
+      return snapshot;
+    } catch (error) {
+      log.warn('[OnboardingManager] Failed to fetch legal metadata, trying cache:', error);
+      const cacheState = this.getLegalMetadataCache();
+      if (cacheState?.payload) {
+        const snapshot: ResolvedLegalMetadataSnapshot = {
+          payload: cacheState.payload,
+          source: 'cache',
+          cachedAt: cacheState.cachedAt,
+          lastSuccessfulFetchAt: cacheState.lastSuccessfulFetchAt,
+        };
+        this.lastResolvedLegalMetadata = snapshot;
+        return snapshot;
+      }
+
+      const snapshot: ResolvedLegalMetadataSnapshot = {
+        payload: null,
+        source: 'unavailable',
+        cachedAt: null,
+        lastSuccessfulFetchAt: null,
+      };
+      this.lastResolvedLegalMetadata = snapshot;
+      return snapshot;
+    }
+  }
+
+  private static normalizeLocale(locale: string | undefined): string {
+    if (!locale) {
+      return 'zh-CN';
+    }
+
+    const normalized = locale.toLowerCase();
+    if (normalized.startsWith('en')) {
+      return 'en-US';
+    }
+
+    return 'zh-CN';
+  }
+
+  private static async fetchPublishedLegalMetadata(url: string): Promise<PublishedLegalDocumentsPayload> {
+    const response = await axios.get<PublishedLegalDocumentsPayload>(url, {
+      timeout: 5000,
+      responseType: 'json',
+    });
+
+    return response.data;
   }
 
   /**
@@ -631,7 +914,7 @@ export class OnboardingManager {
     this.setStoredState({
       isSkipped: false,
       isCompleted: true,
-      completedAt: new Date().toISOString(),
+      completedAt: this.now().toISOString(),
       version: versionId,
     });
 

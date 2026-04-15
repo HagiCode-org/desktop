@@ -1,27 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSelector, useDispatch } from 'react-redux';
-import { X } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
-  selectIsActive,
-  selectCurrentStep,
+  getOnboardingSequence,
   selectCanGoNext,
   selectCanGoPrevious,
+  selectCurrentStep,
   selectDownloadProgress,
+  selectIsActive,
+  selectOnboardingMode,
   setDownloadProgress,
   setServiceProgress,
 } from '../../store/slices/onboardingSlice';
 import { OnboardingStep } from '../../../types/onboarding';
-import { goToNextStep, goToPreviousStep, skipOnboarding, downloadPackage } from '../../store/thunks/onboardingThunks';
+import {
+  downloadPackage,
+  goToNextStep,
+  goToPreviousStep,
+  loadLegalDocuments,
+} from '../../store/thunks/onboardingThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
+import LegalConsentStep from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import PackageDownload from './steps/PackageDownload';
 import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
-import SkipConfirmDialog from './SkipConfirmDialog';
-import type { RootState } from '../../store';
-import type { AppDispatch } from '../../store';
+import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress, ServiceLaunchProgress } from '../../../types/onboarding';
 
 interface OnboardingWizardProps {
@@ -32,59 +37,56 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const { t } = useTranslation('onboarding');
   const dispatch = useDispatch<AppDispatch>();
   const isActive = useSelector((state: RootState) => selectIsActive(state));
+  const mode = useSelector((state: RootState) => selectOnboardingMode(state));
   const currentStep = useSelector((state: RootState) => selectCurrentStep(state));
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
+  const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
-  const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [sharingStepReady, setSharingStepReady] = useState(false);
   const downloadCompleted = downloadProgress?.progress === 100;
 
-  // Set up IPC listeners for progress updates
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      return;
+    }
 
-    console.log('[OnboardingWizard] Setting up IPC listeners');
-
-    // Download progress listener
     const unsubscribeDownloadProgress = window.electronAPI.onDownloadProgress((progress: DownloadProgress) => {
-      console.log('[OnboardingWizard] Download progress:', progress);
       dispatch(setDownloadProgress(progress));
     });
 
-    // Service progress listener
     const unsubscribeServiceProgress = window.electronAPI.onServiceProgress((progress: ServiceLaunchProgress) => {
-      console.log('[OnboardingWizard] Service progress:', progress);
       dispatch(setServiceProgress(progress));
     });
 
     return () => {
-      console.log('[OnboardingWizard] Cleaning up IPC listeners');
-      unsubscribeDownloadProgress();
-      unsubscribeServiceProgress();
+      unsubscribeDownloadProgress?.();
+      unsubscribeServiceProgress?.();
     };
   }, [isActive, dispatch]);
 
-  // Debug logging for step changes
   useEffect(() => {
-    console.log('[OnboardingWizard] currentStep changed to:', currentStep, 'OnboardingStep.Welcome:', OnboardingStep.Welcome);
-  }, [currentStep]);
+    if (!isActive) {
+      return;
+    }
 
-  // If not active, don't render
+    dispatch(loadLegalDocuments({ locale }));
+  }, [isActive, locale, dispatch]);
+
   if (!isActive) {
     return null;
   }
 
+  const stepSequence = getOnboardingSequence(mode);
+  const totalSteps = stepSequence.length;
+  const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
+
   const handleNext = () => {
-    console.log('[OnboardingWizard] handleNext called, current step:', currentStep);
     dispatch(goToNextStep());
 
-    // Trigger download when leaving the sharing acceleration step.
-    // Only trigger if not already downloading or completed
     if (currentStep === OnboardingStep.SharingAcceleration && !isDownloading && !downloadCompleted) {
-      console.log('[OnboardingWizard] Triggering download package');
       dispatch(downloadPackage());
     }
   };
@@ -93,23 +95,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     dispatch(goToPreviousStep());
   };
 
-  const handleSkip = () => {
-    setShowSkipDialog(true);
-  };
-
-  const handleConfirmSkip = () => {
-    dispatch(skipOnboarding());
-    setShowSkipDialog(false);
-  };
-
-  const handleCancelSkip = () => {
-    setShowSkipDialog(false);
-  };
-
   const renderStep = () => {
     switch (currentStep) {
       case OnboardingStep.Welcome:
-        return <WelcomeIntro onNext={handleNext} onSkip={handleSkip} />;
+        return <WelcomeIntro onNext={handleNext} />;
+      case OnboardingStep.LegalConsent:
+        return <LegalConsentStep />;
       case OnboardingStep.SharingAcceleration:
         return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
       case OnboardingStep.Download:
@@ -121,10 +112,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const getStepTitle = () => {
+  const title = useMemo(() => {
     switch (currentStep) {
       case OnboardingStep.Welcome:
         return t('welcome.title');
+      case OnboardingStep.LegalConsent:
+        return t('legal.title');
       case OnboardingStep.SharingAcceleration:
         return t('sharingAcceleration.title');
       case OnboardingStep.Download:
@@ -134,74 +127,39 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       default:
         return '';
     }
-  };
-
-  const totalSteps = 4;
+  }, [currentStep, t]);
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4">
-        <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6 flex-shrink-0">
-            <h1 className="text-2xl font-semibold">{getStepTitle()}</h1>
-            <div className="flex items-center gap-4">
-              <OnboardingProgress currentStep={currentStep} totalSteps={totalSteps} />
-              <button
-                onClick={handleSkip}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col">
+        <div className="mb-6 flex flex-shrink-0 items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">{title}</h1>
+            <p className="text-sm text-muted-foreground">
+              {t(mode === 'legal-only' ? 'legal.progressLegalOnly' : 'legal.progressFull')}
+            </p>
           </div>
+          <OnboardingProgress currentStepNumber={currentStepNumber} totalSteps={totalSteps} />
+        </div>
 
-          {/* Content */}
-          <div className="bg-card rounded-lg border shadow-lg flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-8 flex-1 overflow-y-auto">
-              {renderStep()}
-            </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-lg">
+          <div className="flex-1 overflow-y-auto p-8">{renderStep()}</div>
 
-            {/* Actions */}
-            {/* Steps that provide their own action buttons or custom navigation are excluded from OnboardingActions */}
-            {/* Welcome and Launch have custom navigation flows */}
-            {currentStep !== OnboardingStep.Welcome &&
-             currentStep !== OnboardingStep.Launch && (
+          {currentStep !== OnboardingStep.Welcome &&
+            currentStep !== OnboardingStep.LegalConsent &&
+            currentStep !== OnboardingStep.Launch && (
               <div className="flex-shrink-0">
                 <OnboardingActions
                   canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : canGoNext}
                   canGoPrevious={canGoPrevious}
                   onNext={handleNext}
                   onPrevious={handlePrevious}
-                  onSkip={handleSkip}
                 />
               </div>
             )}
-          </div>
-
-          {/* Skip checkbox */}
-          {currentStep !== OnboardingStep.Launch && (
-            <div className="flex items-center mt-4 flex-shrink-0">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="rounded border-input"
-                  onChange={handleSkip}
-                />
-                {t('skip.checkbox')}
-              </label>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Skip confirmation dialog */}
-      <SkipConfirmDialog
-        open={showSkipDialog}
-        onConfirm={handleConfirmSkip}
-        onCancel={handleCancelSkip}
-      />
-    </>
+    </div>
   );
 }
 

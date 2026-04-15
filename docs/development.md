@@ -326,6 +326,32 @@ If `current/` is missing, Desktop stays in normal mode. If `current/` exists but
 
 Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. Future Steam-ready packages are expected to supply the necessary OpenSpec prerequisites through a bundled Node environment and a default installation strategy instead of asking end users to install them manually.
 
+### Steam Linux startup compatibility
+
+Packaged Linux builds now evaluate Steam runtime hints before the first `BrowserWindow` is created.
+
+- Direct CLI startup already works and stays on the default graphics path.
+- Steam-launched packaged Linux sessions enable an early software-rendering compatibility path only when the startup detector sees Steam-specific runtime evidence.
+- The detector records `launchSource`, whether compatibility mode was enabled or skipped, and the `detectorCategory` that explains the decision.
+- Later startup-failure payloads preserve the same compatibility snapshot so service-start triage can separate graphics-mode handling from unrelated errors.
+
+Look for structured main-process logs like:
+
+```text
+[StartupCompatibility] Steam Linux compatibility mode enabled {
+  launchSource: 'steam',
+  compatibilityMode: 'steam-linux-software-rendering',
+  compatibilityEnabled: true,
+  detectorCategory: 'steam-runtime-env+portable-payload'
+}
+```
+
+Validation guidance for packaged Linux artifacts:
+
+1. Launch the packaged app directly from a shell and confirm the log records `compatibilityEnabled: false` with `launchSource: 'direct-cli'`.
+2. Launch the same packaged payload through Steam and confirm the log records `compatibilityEnabled: true` before the first window is created.
+3. If service startup later fails, copy the startup-failure log and verify the `[StartupCompatibility]` line is still present at the top of the captured diagnostics.
+
 ### Dev startup for portable version mode
 
 Use the dedicated dev command when you want Electron dev mode to boot directly into portable version mode with an already-extracted server payload:

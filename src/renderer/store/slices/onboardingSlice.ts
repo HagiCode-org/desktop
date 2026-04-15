@@ -1,29 +1,65 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { OnboardingStep } from '../../../types/onboarding';
 import {
+  OnboardingMode,
+  OnboardingStep,
+  type DownloadProgress,
+  type OnboardingRecoveryResult,
+  type OnboardingStartServiceResult,
+  type OnboardingState,
+  type ResolvedLegalDocumentsPayload,
+  type StartupFailurePayload,
+  type DependencyCheckResult,
+  type ScriptOutput,
+} from '../../../types/onboarding';
+import {
+  acceptLegalDocuments,
   checkOnboardingTrigger,
-  skipOnboarding,
+  declineLegalDocuments,
   downloadPackage,
-  startService,
-  recoverFromStartupFailure,
-  completeOnboarding,
-  resetOnboarding,
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
+  loadLegalDocuments,
+  completeOnboarding,
+  openLegalDocument,
+  recoverFromStartupFailure,
+  resetOnboarding,
+  skipOnboarding,
+  startService,
 } from '../thunks/onboardingThunks';
-import type {
-  OnboardingState,
-  DownloadProgress,
-  ServiceLaunchProgress,
-  DependencyCheckResult,
-  ScriptOutput,
-  StartupFailurePayload,
-  OnboardingStartServiceResult,
-  OnboardingRecoveryResult,
-} from '../../../types/onboarding';
+
+const fullSequence = [
+  OnboardingStep.Welcome,
+  OnboardingStep.LegalConsent,
+  OnboardingStep.SharingAcceleration,
+  OnboardingStep.Download,
+  OnboardingStep.Launch,
+] as const;
+
+const legalOnlySequence = [OnboardingStep.LegalConsent] as const;
+
+export function getOnboardingSequence(mode: OnboardingMode) {
+  return mode === 'legal-only' ? [...legalOnlySequence] : [...fullSequence];
+}
+
+function getStepIndex(mode: OnboardingMode, step: OnboardingStep) {
+  return getOnboardingSequence(mode).indexOf(step);
+}
+
+function getNextStep(mode: OnboardingMode, step: OnboardingStep) {
+  const sequence = getOnboardingSequence(mode);
+  const index = sequence.indexOf(step);
+  return index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : step;
+}
+
+function getPreviousStep(mode: OnboardingMode, step: OnboardingStep) {
+  const sequence = getOnboardingSequence(mode);
+  const index = sequence.indexOf(step);
+  return index > 0 ? sequence[index - 1] : step;
+}
 
 const initialState: OnboardingState = {
   isActive: false,
+  mode: 'none',
   currentStep: OnboardingStep.Welcome,
   isSkipped: false,
   isCompleted: false,
@@ -33,13 +69,20 @@ const initialState: OnboardingState = {
   error: null,
   startupFailure: null,
   showStartupFailureDialog: false,
-  // Idempotency flags
+  legalDocuments: [],
+  legalMetadataSource: 'unavailable',
+  legalMetadataSchemaVersion: null,
+  legalMetadataPublishedAt: null,
+  legalMetadataResolvedLocale: null,
+  legalMetadataCachedAt: null,
+  legalMetadataLastSuccessfulFetchAt: null,
+  isLoadingLegalMetadata: false,
+  isAcceptingLegalDocuments: false,
+  isDecliningLegalDocuments: false,
   isDownloading: false,
   isStartingService: false,
   isRecoveringFromStartupFailure: false,
-  // Dependency check results
   dependencyCheckResults: [],
-  // Real-time script output logs
   scriptOutputLogs: [],
 };
 
@@ -77,14 +120,13 @@ export const onboardingSlice = createSlice({
     setDownloadProgress: (state, action: PayloadAction<DownloadProgress | null>) => {
       state.downloadProgress = action.payload;
     },
-    setServiceProgress: (state, action: PayloadAction<ServiceLaunchProgress | null>) => {
+    setServiceProgress: (state, action: PayloadAction<OnboardingState['serviceProgress']>) => {
       state.serviceProgress = action.payload;
     },
     setDependencyCheckResults: (state, action: PayloadAction<DependencyCheckResult[]>) => {
       state.dependencyCheckResults = action.payload;
     },
     addScriptOutput: (state, action: PayloadAction<ScriptOutput>) => {
-      // Limit log entries to prevent memory issues (keep last 500 entries)
       if (state.scriptOutputLogs.length >= 500) {
         state.scriptOutputLogs = state.scriptOutputLogs.slice(-400);
       }
@@ -96,31 +138,90 @@ export const onboardingSlice = createSlice({
     restartOnboardingFlow: () => ({
       ...initialState,
       isActive: true,
+      mode: 'full' as OnboardingMode,
+      currentStep: OnboardingStep.Welcome,
     }),
   },
   extraReducers: (builder) => {
-    // checkOnboardingTrigger
     builder
-      .addCase(checkOnboardingTrigger.pending, (state) => {
-        console.log('[onboardingSlice] checkOnboardingTrigger pending');
-      })
       .addCase(checkOnboardingTrigger.fulfilled, (state, action) => {
-        console.log('[onboardingSlice] checkOnboardingTrigger fulfilled:', action.payload);
         if (action.payload.shouldShow) {
           state.isActive = true;
-          state.currentStep = OnboardingStep.Welcome;
+          state.mode = action.payload.mode;
+          state.currentStep = action.payload.mode === 'legal-only'
+            ? OnboardingStep.LegalConsent
+            : OnboardingStep.Welcome;
+          state.legalMetadataSource = action.payload.metadataSource;
           state.error = null;
         } else {
           state.isActive = false;
+          state.mode = 'none';
         }
       })
       .addCase(checkOnboardingTrigger.rejected, (state, action) => {
-        console.error('[onboardingSlice] checkOnboardingTrigger rejected:', action.error);
         state.isActive = false;
+        state.mode = 'none';
         state.error = action.payload as string || 'Failed to check onboarding trigger';
       });
 
-    // skipOnboarding
+    builder
+      .addCase(loadLegalDocuments.pending, (state) => {
+        state.isLoadingLegalMetadata = true;
+        state.error = null;
+      })
+      .addCase(loadLegalDocuments.fulfilled, (state, action: PayloadAction<ResolvedLegalDocumentsPayload>) => {
+        state.isLoadingLegalMetadata = false;
+        state.legalDocuments = action.payload.documents;
+        state.legalMetadataSource = action.payload.source;
+        state.legalMetadataSchemaVersion = action.payload.schemaVersion;
+        state.legalMetadataPublishedAt = action.payload.publishedAt;
+        state.legalMetadataResolvedLocale = action.payload.resolvedLocale;
+        state.legalMetadataCachedAt = action.payload.cachedAt;
+        state.legalMetadataLastSuccessfulFetchAt = action.payload.lastSuccessfulFetchAt;
+      })
+      .addCase(loadLegalDocuments.rejected, (state, action) => {
+        state.isLoadingLegalMetadata = false;
+        state.error = action.payload as string || 'Failed to load legal documents';
+      });
+
+    builder
+      .addCase(openLegalDocument.rejected, (state, action) => {
+        state.error = action.payload as string || 'Failed to open legal document';
+      });
+
+    builder
+      .addCase(acceptLegalDocuments.pending, (state) => {
+        state.isAcceptingLegalDocuments = true;
+        state.error = null;
+      })
+      .addCase(acceptLegalDocuments.fulfilled, (state, action) => {
+        state.isAcceptingLegalDocuments = false;
+        if (action.payload.mode === 'legal-only') {
+          state.isActive = false;
+          state.mode = 'none';
+        } else {
+          state.currentStep = OnboardingStep.SharingAcceleration;
+        }
+      })
+      .addCase(acceptLegalDocuments.rejected, (state, action) => {
+        state.isAcceptingLegalDocuments = false;
+        state.error = action.payload as string || 'Failed to accept legal documents';
+      });
+
+    builder
+      .addCase(declineLegalDocuments.pending, (state) => {
+        state.isDecliningLegalDocuments = true;
+        state.error = null;
+      })
+      .addCase(declineLegalDocuments.fulfilled, (state) => {
+        state.isDecliningLegalDocuments = false;
+        state.isActive = false;
+      })
+      .addCase(declineLegalDocuments.rejected, (state, action) => {
+        state.isDecliningLegalDocuments = false;
+        state.error = action.payload as string || 'Failed to decline legal documents';
+      });
+
     builder
       .addCase(skipOnboarding.fulfilled, (state) => {
         state.isSkipped = true;
@@ -130,32 +231,24 @@ export const onboardingSlice = createSlice({
         state.error = action.payload as string || 'Failed to skip onboarding';
       });
 
-    // downloadPackage
     builder
       .addCase(downloadPackage.pending, (state) => {
-        console.log('[onboardingSlice] downloadPackage pending');
         state.error = null;
         state.downloadProgress = null;
         state.currentStep = OnboardingStep.Download;
-        // Only set isDownloading if not already downloading (allow React Strict Mode double-calls)
         if (!state.isDownloading) {
           state.isDownloading = true;
         }
       })
       .addCase(downloadPackage.fulfilled, (state, action) => {
-        console.log('[onboardingSlice] downloadPackage fulfilled:', action.payload);
         state.isDownloading = false;
-        // Preserve the progress data that was set via IPC events during download
-        // Only set progress to 100% if not already set, and keep the byte values
         if (action.payload.version) {
           if (state.downloadProgress) {
-            // Update progress to 100% but preserve the byte values from IPC events
             state.downloadProgress.progress = 100;
             state.downloadProgress.version = action.payload.version;
             state.downloadProgress.speed = 0;
             state.downloadProgress.remainingSeconds = 0;
           } else {
-            // Fallback if no progress was received via IPC (shouldn't happen with proper implementation)
             state.downloadProgress = {
               progress: 100,
               downloadedBytes: 0,
@@ -168,20 +261,16 @@ export const onboardingSlice = createSlice({
         }
       })
       .addCase(downloadPackage.rejected, (state, action) => {
-        console.error('[onboardingSlice] downloadPackage rejected:', action.error);
         state.isDownloading = false;
         state.error = action.payload as string || 'Failed to download package';
       });
 
-    // startService
     builder
       .addCase(startService.pending, (state) => {
-        console.log('[onboardingSlice] startService pending');
         state.error = null;
         state.currentStep = OnboardingStep.Launch;
         state.startupFailure = null;
         state.showStartupFailureDialog = false;
-        // Only update state if not already starting/running (allow React Strict Mode double-calls)
         if (!state.isStartingService && state.serviceProgress?.phase !== 'running') {
           state.isStartingService = true;
           state.serviceProgress = {
@@ -191,8 +280,7 @@ export const onboardingSlice = createSlice({
           };
         }
       })
-      .addCase(startService.fulfilled, (state, action) => {
-        console.log('[onboardingSlice] startService fulfilled');
+      .addCase(startService.fulfilled, (state) => {
         state.isStartingService = false;
         state.startupFailure = null;
         state.showStartupFailureDialog = false;
@@ -204,7 +292,6 @@ export const onboardingSlice = createSlice({
         };
       })
       .addCase(startService.rejected, (state, action) => {
-        console.error('[onboardingSlice] startService rejected:', action.error);
         const failure = action.payload as OnboardingStartServiceResult | undefined;
         state.isStartingService = false;
         state.error = failure?.error || 'Failed to start service';
@@ -216,7 +303,6 @@ export const onboardingSlice = createSlice({
           message: failure?.error || 'Failed to start service',
         };
       })
-
       .addCase(recoverFromStartupFailure.pending, (state) => {
         state.error = null;
         state.isRecoveringFromStartupFailure = true;
@@ -231,49 +317,36 @@ export const onboardingSlice = createSlice({
         state.showStartupFailureDialog = true;
       });
 
-    // completeOnboarding
     builder
       .addCase(completeOnboarding.fulfilled, (state) => {
         state.isCompleted = true;
         state.isActive = false;
+        state.mode = 'none';
       })
       .addCase(completeOnboarding.rejected, (state, action) => {
         state.error = action.payload as string || 'Failed to complete onboarding';
       });
 
-    // resetOnboarding
     builder
-      .addCase(resetOnboarding.fulfilled, () => {
-        return { ...initialState };
-      });
+      .addCase(resetOnboarding.fulfilled, () => ({ ...initialState }));
 
-    // Handle synchronous actions for navigation
     builder
       .addCase(GO_TO_NEXT_STEP, (state) => {
-        console.log('[onboardingSlice] goToNextStep, current step:', state.currentStep);
-
         switch (state.currentStep) {
           case OnboardingStep.Welcome:
-            console.log('[onboardingSlice] Moving from Welcome to SharingAcceleration');
-            state.currentStep = OnboardingStep.SharingAcceleration;
+            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome);
             break;
-
+          case OnboardingStep.LegalConsent:
+            break;
           case OnboardingStep.SharingAcceleration:
-            console.log('[onboardingSlice] Moving from SharingAcceleration to Download');
             state.currentStep = OnboardingStep.Download;
             break;
-
           case OnboardingStep.Download:
             if (state.downloadProgress?.version) {
-              console.log('[onboardingSlice] Moving from Download to Launch');
               state.currentStep = OnboardingStep.Launch;
             }
             break;
-
           case OnboardingStep.Launch:
-            if (state.downloadProgress?.version && state.serviceProgress?.phase === 'running') {
-              console.log('[onboardingSlice] Onboarding complete, ready to finish');
-            }
             break;
         }
       })
@@ -286,7 +359,10 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.SharingAcceleration;
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = OnboardingStep.Welcome;
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration);
+            break;
+          case OnboardingStep.LegalConsent:
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent);
             break;
           default:
             break;
@@ -295,7 +371,6 @@ export const onboardingSlice = createSlice({
   },
 });
 
-// Export actions
 export const {
   setActive,
   setCurrentStep,
@@ -313,9 +388,9 @@ export const {
   restartOnboardingFlow,
 } = onboardingSlice.actions;
 
-// Selectors
 export const selectOnboardingState = (state: { onboarding: OnboardingState }) => state.onboarding;
 export const selectIsActive = (state: { onboarding: OnboardingState }) => state.onboarding.isActive;
+export const selectOnboardingMode = (state: { onboarding: OnboardingState }) => state.onboarding.mode;
 export const selectCurrentStep = (state: { onboarding: OnboardingState }) => state.onboarding.currentStep;
 export const selectIsSkipped = (state: { onboarding: OnboardingState }) => state.onboarding.isSkipped;
 export const selectIsCompleted = (state: { onboarding: OnboardingState }) => state.onboarding.isCompleted;
@@ -329,14 +404,20 @@ export const selectIsRecoveringFromStartupFailure = (state: { onboarding: Onboar
   state.onboarding.isRecoveringFromStartupFailure;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
+export const selectLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.legalDocuments;
+export const selectLegalMetadataSource = (state: { onboarding: OnboardingState }) => state.onboarding.legalMetadataSource;
+export const selectIsLoadingLegalMetadata = (state: { onboarding: OnboardingState }) => state.onboarding.isLoadingLegalMetadata;
+export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isAcceptingLegalDocuments;
+export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
-// Computed selectors
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
   const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
-      return true; // Can always proceed from welcome
+      return true;
+    case OnboardingStep.LegalConsent:
+      return false;
     case OnboardingStep.SharingAcceleration:
       return true;
     case OnboardingStep.Download:
@@ -349,7 +430,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
 };
 
 export const selectCanGoPrevious = (state: { onboarding: OnboardingState }) => {
-  return state.onboarding.currentStep > OnboardingStep.Welcome;
+  return getStepIndex(state.onboarding.mode, state.onboarding.currentStep) > 0;
 };
 
 export default onboardingSlice.reducer;
