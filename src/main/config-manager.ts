@@ -2,11 +2,35 @@ import yaml from 'js-yaml';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import log from 'electron-log';
-import { PathManager, Platform } from './path-manager.js';
+import {
+  normalizeManagedWebTelemetrySettings,
+  normalizeTelemetryEndpoint,
+} from './config.js';
+import type { PathManager } from './path-manager.js';
+import type {
+  ManagedWebTelemetrySettings,
+  ManagedWebTelemetrySyncStatus,
+} from '../types/telemetry.js';
 
 export interface AppConfig {
   DataDir?: string;
+  Telemetry?: {
+    Enabled?: boolean;
+    EnableTracing?: boolean;
+    EnableMetrics?: boolean;
+    Otlp?: {
+      Endpoint?: string | null;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
   [key: string]: any;
+}
+
+type PathManagerLike = Pick<PathManager, 'getPaths' | 'getAppSettingsPath'>;
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
@@ -14,10 +38,10 @@ export interface AppConfig {
  * Provides methods to read, write, and update application configuration.
  */
 export class ConfigManager {
-  private pathManager: PathManager;
+  private pathManager: PathManagerLike;
 
-  constructor() {
-    this.pathManager = PathManager.getInstance();
+  constructor(pathManager: PathManagerLike) {
+    this.pathManager = pathManager;
   }
   /**
    * Read appsettings.yml configuration file
@@ -215,5 +239,154 @@ export class ConfigManager {
     }
 
     return updatedVersions;
+  }
+
+  private async listInstalledVersionIds(): Promise<string[]> {
+    const installedDir = this.pathManager.getPaths().appsInstalled;
+
+    try {
+      const entries = await fs.readdir(installedDir, { withFileTypes: true });
+      return entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort((left, right) => left.localeCompare(right));
+    } catch {
+      return [];
+    }
+  }
+
+  private readManagedWebTelemetrySettings(config: AppConfig): ManagedWebTelemetrySettings {
+    const telemetry = isRecord(config.Telemetry) ? config.Telemetry : {};
+    const otlp = isRecord(telemetry.Otlp) ? telemetry.Otlp : {};
+
+    return normalizeManagedWebTelemetrySettings({
+      enabled: typeof telemetry.Enabled === 'boolean' ? telemetry.Enabled : undefined,
+      enableTracing: typeof telemetry.EnableTracing === 'boolean' ? telemetry.EnableTracing : undefined,
+      enableMetrics: typeof telemetry.EnableMetrics === 'boolean' ? telemetry.EnableMetrics : undefined,
+      endpoint: normalizeTelemetryEndpoint(otlp.Endpoint),
+    });
+  }
+
+  private async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async inspectManagedWebTelemetrySettings(
+    settings: ManagedWebTelemetrySettings,
+  ): Promise<ManagedWebTelemetrySyncStatus> {
+    const installedVersionIds = await this.listInstalledVersionIds();
+
+    if (installedVersionIds.length === 0) {
+      return {
+        state: 'local-only',
+        installedVersionIds,
+        syncedVersionIds: [],
+        unsyncedVersionIds: [],
+      };
+    }
+
+    const syncedVersionIds: string[] = [];
+    const unsyncedVersionIds: string[] = [];
+    const expected = normalizeManagedWebTelemetrySettings(settings);
+
+    for (const versionId of installedVersionIds) {
+      const configPath = this.pathManager.getAppSettingsPath(versionId);
+
+      if (!(await this.fileExists(configPath))) {
+        unsyncedVersionIds.push(versionId);
+        continue;
+      }
+
+      try {
+        const config = await this.readConfig(configPath);
+        const current = this.readManagedWebTelemetrySettings(config);
+        const isSynced =
+          current.enabled === expected.enabled
+          && current.enableTracing === expected.enableTracing
+          && current.enableMetrics === expected.enableMetrics
+          && current.endpoint === expected.endpoint;
+
+        if (isSynced) {
+          syncedVersionIds.push(versionId);
+        } else {
+          unsyncedVersionIds.push(versionId);
+        }
+      } catch (error) {
+        log.warn(`[ConfigManager] Failed to inspect telemetry for version ${versionId}:`, error);
+        unsyncedVersionIds.push(versionId);
+      }
+    }
+
+    return {
+      state: unsyncedVersionIds.length === 0 ? 'synced' : 'partial',
+      installedVersionIds,
+      syncedVersionIds,
+      unsyncedVersionIds,
+    };
+  }
+
+  async updateTelemetrySettings(
+    versionId: string,
+    settings: ManagedWebTelemetrySettings,
+  ): Promise<void> {
+    const configPath = this.pathManager.getAppSettingsPath(versionId);
+    const nextSettings = normalizeManagedWebTelemetrySettings(settings);
+    let config: AppConfig = {};
+
+    if (await this.fileExists(configPath)) {
+      config = await this.readConfig(configPath);
+    }
+
+    const telemetry = isRecord(config.Telemetry) ? { ...config.Telemetry } : {};
+    const otlp = isRecord(telemetry.Otlp) ? { ...telemetry.Otlp } : {};
+
+    telemetry.Enabled = nextSettings.enabled;
+    telemetry.EnableTracing = nextSettings.enableTracing;
+    telemetry.EnableMetrics = nextSettings.enableMetrics;
+    otlp.Endpoint = nextSettings.endpoint;
+    telemetry.Otlp = otlp;
+    config.Telemetry = telemetry;
+
+    await this.writeConfig(configPath, config);
+  }
+
+  async updateAllTelemetrySettings(
+    settings: ManagedWebTelemetrySettings,
+  ): Promise<ManagedWebTelemetrySyncStatus> {
+    const installedVersionIds = await this.listInstalledVersionIds();
+
+    if (installedVersionIds.length === 0) {
+      return {
+        state: 'local-only',
+        installedVersionIds,
+        syncedVersionIds: [],
+        unsyncedVersionIds: [],
+      };
+    }
+
+    const syncedVersionIds: string[] = [];
+    const unsyncedVersionIds: string[] = [];
+
+    for (const versionId of installedVersionIds) {
+      try {
+        await this.updateTelemetrySettings(versionId, settings);
+        syncedVersionIds.push(versionId);
+      } catch (error) {
+        log.warn(`[ConfigManager] Failed to update telemetry for version ${versionId}:`, error);
+        unsyncedVersionIds.push(versionId);
+      }
+    }
+
+    return {
+      state: unsyncedVersionIds.length === 0 ? 'synced' : 'partial',
+      installedVersionIds,
+      syncedVersionIds,
+      unsyncedVersionIds,
+    };
   }
 }
