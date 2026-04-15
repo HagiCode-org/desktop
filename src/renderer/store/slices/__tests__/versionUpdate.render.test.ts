@@ -32,12 +32,18 @@ describe('version update renderer integration', () => {
   });
 
   it('renders dashboard reminder states and wires CTA routing into the existing version flow', async () => {
-    const source = await fs.readFile(dashboardPath, 'utf8');
+    const [dashboardSource, sliceSource] = await Promise.all([
+      fs.readFile(dashboardPath, 'utf8'),
+      fs.readFile(slicePath, 'utf8'),
+    ]);
 
-    assert.match(source, /selectVisibleVersionUpdateReminder/);
-    assert.match(source, /system\.updateReminder\.states/);
-    assert.match(source, /handleOpenVersionManagement/);
-    assert.match(source, /installWebServicePackage/);
-    assert.match(source, /navigateTo\('settings'\)/);
+    assert.match(sliceSource, /Keep this selector snapshot-focused; homepage portable-mode suppression happens in SystemManagementView\./);
+    assert.match(dashboardSource, /selectVisibleVersionUpdateReminder/);
+    assert.match(dashboardSource, /const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean\(versionUpdateReminder\);/);
+    assert.match(dashboardSource, /shouldShowVersionUpdateReminder \? \(/);
+    assert.match(dashboardSource, /system\.updateReminder\.states/);
+    assert.match(dashboardSource, /handleOpenVersionManagement/);
+    assert.match(dashboardSource, /installWebServicePackage/);
+    assert.match(dashboardSource, /navigateTo\('settings'\)/);
   });
 });

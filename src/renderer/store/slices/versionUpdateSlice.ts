@@ -168,6 +168,7 @@ export const selectVersionUpdateSettingsLoading = (state: { versionUpdate: Versi
 export const selectVersionUpdateSaving = (state: { versionUpdate: VersionUpdateState }) => state.versionUpdate.isSavingSettings;
 export const selectVersionUpdateSaveError = (state: { versionUpdate: VersionUpdateState }) => state.versionUpdate.saveError;
 
+// Keep this selector snapshot-focused; homepage portable-mode suppression happens in SystemManagementView.
 export const selectVisibleVersionUpdateReminder = (state: { versionUpdate: VersionUpdateState }) => {
   const snapshot = state.versionUpdate.snapshot;
   if (!snapshot) {

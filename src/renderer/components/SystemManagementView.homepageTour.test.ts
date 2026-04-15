@@ -26,7 +26,8 @@ describe('homepage tour renderer integration', () => {
     ]);
 
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'hero'/);
-    assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'update-reminder'/);
+    assert.match(viewSource, /const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean\(versionUpdateReminder\);/);
+    assert.match(viewSource, /shouldShowVersionUpdateReminder \? \(\s*<motion\.div[\s\S]*?\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'update-reminder'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'service-card'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'log-access'/);
     assert.match(viewSource, /\[HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE\]: 'version-section'/);

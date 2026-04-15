@@ -30,6 +30,7 @@ import type {
   LogDirectoryTarget,
   LogDirectoryTargetStatus,
 } from '@types/log-directory';
+import type { DistributionMode } from '../../types/distribution-mode';
 import hagicodeIcon from '../assets/hagicode-icon.png';
 
 interface InstalledVersion {
@@ -57,6 +58,10 @@ declare global {
 type ServerStatus = 'running' | 'stopped' | 'error';
 type LogTargetStateMap = Record<LogDirectoryTarget, LogDirectoryTargetStatus>;
 
+interface SystemManagementViewProps {
+  distributionMode?: DistributionMode;
+}
+
 const createDefaultLogTarget = (target: LogDirectoryTarget): LogDirectoryTargetStatus => ({
   target,
   available: false,
@@ -80,7 +85,9 @@ const toLogTargetStateMap = (targets: LogDirectoryTargetStatus[]): LogTargetStat
   return nextState;
 };
 
-export default function SystemManagementView() {
+export default function SystemManagementView({
+  distributionMode = 'normal',
+}: SystemManagementViewProps) {
   const { t } = useTranslation('common');
   const { navigateTo } = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -88,6 +95,7 @@ export default function SystemManagementView() {
   const versionUpdateReminder = useSelector((state: RootState) => selectVisibleVersionUpdateReminder(state));
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
+  const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean(versionUpdateReminder);
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
@@ -220,7 +228,7 @@ export default function SystemManagementView() {
     onboardingActive,
     t,
     activeVersion?.id,
-    Boolean(versionUpdateReminder),
+    shouldShowVersionUpdateReminder,
   ]);
 
   useEffect(() => {
@@ -485,7 +493,7 @@ export default function SystemManagementView() {
         </AnimatePresence>
       </motion.div>
 
-      {versionUpdateReminder ? (
+      {shouldShowVersionUpdateReminder ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

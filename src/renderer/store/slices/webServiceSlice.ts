@@ -94,6 +94,19 @@ export interface StartupFailurePayload {
   port: number;
   timestamp: string;
   truncated: boolean;
+  startupCompatibility?: {
+    enabled: boolean;
+    mode: 'default' | 'steam-linux-software-rendering';
+    launchSource: 'steam' | 'direct-cli';
+    detectorCategory:
+      | 'not-packaged-linux'
+      | 'direct-cli-default'
+      | 'steam-runtime-env'
+      | 'steam-runtime-env+portable-payload'
+      | 'steam-runtime-env+steam-install-path'
+      | 'steam-launch-args'
+      | 'steam-launch-args+portable-payload';
+  };
 }
 
 export interface DependencyItem {
