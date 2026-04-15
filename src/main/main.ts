@@ -20,9 +20,18 @@ import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { buildStartupFailurePayload } from './startup-failure-payload.js';
+import {
+  applySteamLinuxStartupCompatibility,
+  buildStartupCompatibilityLogContext,
+} from './linux-startup-compatibility.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import { AgentCliManager } from './agent-cli-manager.js';
-import { openCodeServerWindow, openHagicodeInAppWindow } from './hagicode-url.js';
+import {
+  openAboutWindow,
+  openCodeServerWindow,
+  openHagicodeInAppWindow,
+  WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY,
+} from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
 import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
@@ -45,6 +54,10 @@ import {
 } from './ipc/handlers/index.js';
 import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
+import {
+  getManagedWebTelemetryPayload,
+  setManagedWebTelemetryPayload,
+} from './managed-web-telemetry.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
@@ -52,6 +65,36 @@ import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const startupCompatibilityDecision = applySteamLinuxStartupCompatibility(app, {
+  platform: process.platform,
+  isPackaged: app.isPackaged,
+  env: process.env,
+  argv: process.argv,
+  execPath: process.execPath,
+  cwd: process.cwd(),
+  resourcesPath: process.resourcesPath,
+});
+
+if (startupCompatibilityDecision.enabled) {
+  log.warn('[StartupCompatibility] Steam Linux compatibility mode enabled', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
+} else {
+  log.info('[StartupCompatibility] Steam Linux compatibility mode skipped', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
+}
+
+process.on('uncaughtException', (error: Error) => {
+  log.error('[App] Uncaught exception during startup/runtime:', {
+    error,
+    startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
+  });
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  log.error('[App] Unhandled rejection during startup/runtime:', {
+    reason,
+    startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
+  });
+});
 
 /**
  * Single Instance Lock
@@ -118,6 +161,7 @@ let rssFeedManager: RSSFeedManager | null = null;
 let agentCliManager: AgentCliManager | null = null;
 let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
+let aboutWindow: BrowserWindow | null = null;
 
 function getDistributionMode(): DistributionMode {
   return versionManager?.getDistributionMode() ?? 'normal';
@@ -263,6 +307,58 @@ function createManagedChildWindow(): BrowserWindow {
   return childWindow;
 }
 
+function createAboutPopupWindow(): BrowserWindow {
+  const distRoot = getDistRootPath();
+  const appRoot = getAppRootPath();
+  const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
+  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+
+  const childWindow = new BrowserWindow({
+    width: 1120,
+    height: 780,
+    minWidth: 860,
+    minHeight: 620,
+    show: false,
+    autoHideMenuBar: true,
+    parent: mainWindow ?? undefined,
+    modal: false,
+    icon: iconPath,
+    title: 'HagiCode About',
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      devTools: !app.isPackaged,
+    },
+  });
+
+  wireDesktopWindowClipboard(childWindow);
+  return childWindow;
+}
+
+function hasShownAboutPopupMarker(): boolean {
+  if (!configManager) {
+    return false;
+  }
+
+  const marker = (configManager.getStore() as unknown as Store<Record<string, unknown>>)
+    .get(WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY);
+
+  return Boolean(marker);
+}
+
+function markAboutPopupShown(shownAt: number): void {
+  if (!configManager) {
+    return;
+  }
+
+  (configManager.getStore() as unknown as Store<Record<string, unknown>>).set(
+    WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY,
+    { shownAt },
+  );
+}
+
 // IPC handlers
 ipcMain.handle('app-version', () => {
   return app.getVersion();
@@ -295,6 +391,20 @@ ipcMain.handle('open-code-server-window', async (_, url: string) => {
     url,
     logScope: 'Main',
     createWindow: createManagedChildWindow,
+  });
+});
+
+ipcMain.handle('open-about-window', async (_, url: string) => {
+  return await openAboutWindow({
+    url,
+    logScope: 'Main',
+    createWindow: createAboutPopupWindow,
+    getExistingWindow: () => aboutWindow,
+    setExistingWindow: (nextWindow) => {
+      aboutWindow = nextWindow as BrowserWindow | null;
+    },
+    hasShownBefore: hasShownAboutPopupMarker,
+    markShown: markAboutPopupShown,
   });
 });
 
@@ -350,6 +460,23 @@ ipcMain.handle('stop-server', async () => {
 
 ipcMain.handle('get-config', () => {
   return configManager?.getAll() || null;
+});
+
+ipcMain.handle('telemetry:get', async () => {
+  return await getManagedWebTelemetryPayload({
+    configManager,
+    yamlConfigManager,
+  });
+});
+
+ipcMain.handle('telemetry:set', async (_, settings) => {
+  return await setManagedWebTelemetryPayload(
+    {
+      configManager,
+      yamlConfigManager,
+    },
+    settings,
+  );
 });
 
 ipcMain.handle('set-config', (_, config) => {
@@ -1411,13 +1538,25 @@ ipcMain.handle('open-external', async (_event, url: string) => {
 // Onboarding IPC Handlers
 ipcMain.handle('onboarding:check-trigger', async () => {
   if (!onboardingManager) {
-    return { shouldShow: false, reason: 'not-initialized' };
+    return {
+      shouldShow: false,
+      mode: 'none',
+      reason: 'not-initialized',
+      runtimeProvisioned: false,
+      metadataSource: 'unavailable',
+    };
   }
   try {
     return await onboardingManager.checkTriggerCondition();
   } catch (error) {
     console.error('Failed to check onboarding trigger:', error);
-    return { shouldShow: false, reason: 'error' };
+    return {
+      shouldShow: false,
+      mode: 'none',
+      reason: 'error',
+      runtimeProvisioned: false,
+      metadataSource: 'unavailable',
+    };
   }
 });
 
@@ -1445,6 +1584,79 @@ ipcMain.handle('onboarding:skip', async () => {
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error)
+    };
+  }
+});
+
+ipcMain.handle('onboarding:get-legal-documents', async (_, locale: string, refresh = false) => {
+  if (!onboardingManager) {
+    return {
+      schemaVersion: null,
+      publishedAt: null,
+      resolvedLocale: locale,
+      source: 'unavailable',
+      cachedAt: null,
+      lastSuccessfulFetchAt: null,
+      documents: [],
+    };
+  }
+  try {
+    return await onboardingManager.getResolvedLegalDocuments(locale, refresh);
+  } catch (error) {
+    console.error('Failed to get legal documents:', error);
+    return {
+      schemaVersion: null,
+      publishedAt: null,
+      resolvedLocale: locale,
+      source: 'unavailable',
+      cachedAt: null,
+      lastSuccessfulFetchAt: null,
+      documents: [],
+    };
+  }
+});
+
+ipcMain.handle('onboarding:open-legal-document', async (_, documentType: string, locale: string) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.openLegalDocument(documentType as 'eula' | 'privacy-policy', locale);
+  } catch (error) {
+    console.error('Failed to open legal document:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
+
+ipcMain.handle('onboarding:accept-legal-documents', async (_, payload) => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.acceptLegalDocuments(payload);
+  } catch (error) {
+    console.error('Failed to accept legal documents:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});
+
+ipcMain.handle('onboarding:decline-legal-documents', async () => {
+  if (!onboardingManager) {
+    return { success: false, error: 'Onboarding manager not initialized' };
+  }
+  try {
+    return await onboardingManager.declineLegalDocuments();
+  } catch (error) {
+    console.error('Failed to decline legal documents:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 });
@@ -1728,7 +1940,7 @@ app.whenReady().then(async () => {
   }
 
   // Initialize YamlConfigManager
-  yamlConfigManager = new YamlConfigManager();
+  yamlConfigManager = new YamlConfigManager(pathManager);
 
   // Initialize Region Detector
   regionDetector = new RegionDetector(configManager.getStore() as unknown as Store<Record<string, unknown>>);
@@ -1761,6 +1973,7 @@ app.whenReady().then(async () => {
   log.info(`[Config] Recording directory: ${configManager.getRecordingDirectory() || 'Not set'}`);
   log.info(`[Config] Logs directory: ${configManager.getLogsDirectory() || 'Not set'}`);
   log.info(`[Config] Current language: ${configManager.getCurrentLanguage() || 'Not set'}`);
+  log.info('[StartupCompatibility] Active startup context:', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
   log.info('======================================');
 
   // Set webServiceManager reference for tray
@@ -1775,7 +1988,13 @@ app.whenReady().then(async () => {
   // Initialize Version Manager with package source config manager
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
-  log.info('[App] Distribution mode initialized:', distributionModeState.mode);
+  log.info('[App] Distribution mode initialized:', {
+    distributionMode: distributionModeState.mode,
+    startupCompatibilityEnabled: startupCompatibilityDecision.enabled,
+    startupCompatibilityLaunchSource: startupCompatibilityDecision.launchSource,
+    startupCompatibilityDetectorCategory: startupCompatibilityDecision.detectorCategory,
+    portablePayloadDetectedDuringStartup: startupCompatibilityDecision.portablePayloadDetected,
+  });
   versionUpdateManager = new VersionUpdateManager({
     versionManager,
     configManager,
