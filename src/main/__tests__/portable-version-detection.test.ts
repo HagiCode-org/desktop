@@ -41,8 +41,10 @@ describe('portable version payload detection', () => {
     const source = await fs.readFile(mainPath, 'utf-8');
 
     assert.match(source, /get-distribution-mode/);
+    assert.match(source, /applySteamLinuxStartupCompatibility\(app/);
     assert.match(source, /initializeDistributionMode\(\)/);
     assert.match(source, /applyActiveRuntimeToWebServiceManager/);
     assert.match(source, /setActiveRuntime\(runtimeDescriptor\)/);
+    assert.match(source, /portablePayloadDetectedDuringStartup/);
   });
 });

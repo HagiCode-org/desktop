@@ -1,16 +1,30 @@
 export const HAGICODE_CACHE_BYPASS_PARAM = 'hc_desktop_ts';
 export const CODE_SERVER_WINDOW_PROTOCOLS = ['http:', 'https:'] as const;
+export const ABOUT_WINDOW_PROTOCOLS = ['http:', 'https:'] as const;
+export const WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY = 'wizardLastStepAboutPopup';
 
 export type ManagedWindowOpenResult = {
   success: boolean;
   error?: string;
 };
 
+export type AboutWindowOpenStatus = 'created' | 'focused' | 'suppressed';
+
+export type AboutWindowOpenResult = {
+  success: boolean;
+  status: AboutWindowOpenStatus;
+  error?: string;
+};
+
 export interface HagicodeWindowLike {
   once(event: 'ready-to-show', listener: () => void): void;
+  on?(event: 'closed', listener: () => void): void;
   maximize(): void;
   show(): void;
   focus(): void;
+  restore?(): void;
+  isMinimized?(): boolean;
+  isDestroyed?(): boolean;
   loadURL(url: string): Promise<unknown>;
   webContents: {
     on(
@@ -33,6 +47,17 @@ export interface OpenCodeServerWindowOptions {
   createWindow: () => HagicodeWindowLike;
 }
 
+export interface OpenAboutWindowOptions {
+  url: string;
+  logScope: string;
+  createWindow: () => HagicodeWindowLike;
+  getExistingWindow: () => HagicodeWindowLike | null;
+  setExistingWindow: (window: HagicodeWindowLike | null) => void;
+  hasShownBefore: () => boolean;
+  markShown: (shownAt: number) => void;
+  getTimestamp?: () => number;
+}
+
 type OpenManagedUrlWindowOptions = {
   actionName: string;
   url: string;
@@ -41,6 +66,23 @@ type OpenManagedUrlWindowOptions = {
   rewriteUrl?: (url: string) => string;
   supportedProtocols?: readonly string[];
 };
+
+function isManagedWindowAlive(window: HagicodeWindowLike | null): window is HagicodeWindowLike {
+  if (!window) {
+    return false;
+  }
+
+  return !(window.isDestroyed?.() ?? false);
+}
+
+function focusManagedWindow(window: HagicodeWindowLike): void {
+  if (window.isMinimized?.()) {
+    window.restore?.();
+  }
+
+  window.show();
+  window.focus();
+}
 
 export function buildFreshHagicodeUrl(rawUrl: string, getTimestamp: () => number = () => Date.now()): string {
   const parsedUrl = new URL(rawUrl);
@@ -159,4 +201,76 @@ export async function openCodeServerWindow({
     createWindow,
     supportedProtocols: CODE_SERVER_WINDOW_PROTOCOLS,
   });
+}
+
+export async function openAboutWindow({
+  url,
+  logScope,
+  createWindow,
+  getExistingWindow,
+  setExistingWindow,
+  hasShownBefore,
+  markShown,
+  getTimestamp = () => Date.now(),
+}: OpenAboutWindowOptions): Promise<AboutWindowOpenResult> {
+  const existingWindow = getExistingWindow();
+  if (isManagedWindowAlive(existingWindow)) {
+    focusManagedWindow(existingWindow);
+    return {
+      success: true,
+      status: 'focused',
+    };
+  }
+
+  if (existingWindow) {
+    setExistingWindow(null);
+  }
+
+  if (hasShownBefore()) {
+    return {
+      success: true,
+      status: 'suppressed',
+    };
+  }
+
+  const validation = validateManagedWindowUrl('open-about-window', url, ABOUT_WINDOW_PROTOCOLS);
+  if (!validation.success || !validation.loadUrl) {
+    console.error(`[${logScope}] ${validation.error}`);
+    return {
+      success: false,
+      status: 'suppressed',
+      error: validation.error,
+    };
+  }
+
+  try {
+    const aboutWindow = createWindow();
+    setExistingWindow(aboutWindow);
+    aboutWindow.on?.('closed', () => {
+      setExistingWindow(null);
+    });
+    aboutWindow.once('ready-to-show', () => {
+      focusManagedWindow(aboutWindow);
+      markShown(getTimestamp());
+    });
+    aboutWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+      console.error(`[${logScope}] About window failed to load:`, errorCode, errorDescription);
+    });
+
+    await aboutWindow.loadURL(validation.loadUrl);
+
+    return {
+      success: true,
+      status: 'created',
+    };
+  } catch (error) {
+    setExistingWindow(null);
+    const message = error instanceof Error ? error.message : 'Failed to open About window';
+    console.error(`[${logScope}] Failed to open About window:`, error);
+    return {
+      success: false,
+      status: 'suppressed',
+      error: message,
+    };
+  }
 }

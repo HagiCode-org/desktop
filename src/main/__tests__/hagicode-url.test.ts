@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  ABOUT_WINDOW_PROTOCOLS,
   buildFreshHagicodeUrl,
   CODE_SERVER_WINDOW_PROTOCOLS,
   HAGICODE_CACHE_BYPASS_PARAM,
+  openAboutWindow,
   openCodeServerWindow,
   openHagicodeInAppWindow,
   type HagicodeWindowLike,
@@ -11,16 +13,24 @@ import {
 
 function createMockWindow(loadUrlError?: Error) {
   const readyHandlers: Array<() => void> = [];
+  const closedHandlers: Array<() => void> = [];
   const failLoadHandlers: Array<(event: unknown, errorCode: number, errorDescription: string) => void> = [];
   let loadedUrl: string | null = null;
   let maximizeCalls = 0;
   let showCalls = 0;
   let focusCalls = 0;
+  let restoreCalls = 0;
+  let minimized = false;
+  let destroyed = false;
 
   const window: HagicodeWindowLike = {
     once(event, listener) {
       assert.equal(event, 'ready-to-show');
       readyHandlers.push(listener);
+    },
+    on(event, listener) {
+      assert.equal(event, 'closed');
+      closedHandlers.push(listener);
     },
     maximize() {
       maximizeCalls += 1;
@@ -30,6 +40,16 @@ function createMockWindow(loadUrlError?: Error) {
     },
     focus() {
       focusCalls += 1;
+    },
+    restore() {
+      restoreCalls += 1;
+      minimized = false;
+    },
+    isMinimized() {
+      return minimized;
+    },
+    isDestroyed() {
+      return destroyed;
     },
     async loadURL(url) {
       if (loadUrlError) {
@@ -48,13 +68,21 @@ function createMockWindow(loadUrlError?: Error) {
   return {
     window,
     readyHandlers,
+    closedHandlers,
     failLoadHandlers,
     getLoadedUrl: () => loadedUrl,
     getWindowLifecycleCalls: () => ({
       maximizeCalls,
       showCalls,
       focusCalls,
+      restoreCalls,
     }),
+    setMinimized: (value: boolean) => {
+      minimized = value;
+    },
+    destroy: () => {
+      destroyed = true;
+    },
   };
 }
 
@@ -138,6 +166,7 @@ describe('hagicode URL helpers', () => {
       maximizeCalls: 1,
       showCalls: 1,
       focusCalls: 1,
+      restoreCalls: 0,
     });
   });
 
@@ -200,6 +229,7 @@ describe('hagicode URL helpers', () => {
       maximizeCalls: 1,
       showCalls: 1,
       focusCalls: 1,
+      restoreCalls: 0,
     });
   });
 
@@ -214,5 +244,92 @@ describe('hagicode URL helpers', () => {
       success: false,
       error: 'loadURL failed',
     });
+  });
+
+  it('creates the About popup, persists the device marker after show, and clears the ref on close', async () => {
+    const mockWindow = createMockWindow();
+    let existingWindow: HagicodeWindowLike | null = null;
+    let shownAt: number | null = null;
+
+    const result = await openAboutWindow({
+      url: 'https://hagicode.com/about/',
+      logScope: 'Test',
+      createWindow: () => mockWindow.window,
+      getExistingWindow: () => existingWindow,
+      setExistingWindow: (nextWindow) => {
+        existingWindow = nextWindow;
+      },
+      hasShownBefore: () => false,
+      markShown: (nextShownAt) => {
+        shownAt = nextShownAt;
+      },
+      getTimestamp: () => 1700000000006,
+    });
+
+    assert.deepEqual(result, { success: true, status: 'created' });
+    assert.equal(mockWindow.getLoadedUrl(), 'https://hagicode.com/about/');
+    assert.deepEqual(ABOUT_WINDOW_PROTOCOLS, ['http:', 'https:']);
+    assert.equal(shownAt, null);
+    assert.equal(existingWindow, mockWindow.window);
+
+    mockWindow.readyHandlers[0]();
+    assert.equal(shownAt, 1700000000006);
+    assert.deepEqual(mockWindow.getWindowLifecycleCalls(), {
+      maximizeCalls: 0,
+      showCalls: 1,
+      focusCalls: 1,
+      restoreCalls: 0,
+    });
+
+    mockWindow.closedHandlers[0]();
+    assert.equal(existingWindow, null);
+  });
+
+  it('focuses the existing About popup instead of creating another window', async () => {
+    const existingWindow = createMockWindow();
+    existingWindow.setMinimized(true);
+    let createWindowCalls = 0;
+
+    const result = await openAboutWindow({
+      url: 'https://hagicode.com/about/',
+      logScope: 'Test',
+      createWindow: () => {
+        createWindowCalls += 1;
+        return createMockWindow().window;
+      },
+      getExistingWindow: () => existingWindow.window,
+      setExistingWindow: () => {},
+      hasShownBefore: () => false,
+      markShown: () => {},
+    });
+
+    assert.deepEqual(result, { success: true, status: 'focused' });
+    assert.equal(createWindowCalls, 0);
+    assert.deepEqual(existingWindow.getWindowLifecycleCalls(), {
+      maximizeCalls: 0,
+      showCalls: 1,
+      focusCalls: 1,
+      restoreCalls: 1,
+    });
+  });
+
+  it('suppresses repeated About auto popups once the device marker exists', async () => {
+    let createWindowCalls = 0;
+
+    const result = await openAboutWindow({
+      url: 'https://hagicode.com/about/',
+      logScope: 'Test',
+      createWindow: () => {
+        createWindowCalls += 1;
+        return createMockWindow().window;
+      },
+      getExistingWindow: () => null,
+      setExistingWindow: () => {},
+      hasShownBefore: () => true,
+      markShown: () => {},
+    });
+
+    assert.deepEqual(result, { success: true, status: 'suppressed' });
+    assert.equal(createWindowCalls, 0);
   });
 });
