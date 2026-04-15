@@ -66,6 +66,85 @@ export interface PortablePayloadValidationResult {
   missingFiles: string[];
 }
 
+export interface PortableBundleManifestMember {
+  platform: 'osx-x64' | 'osx-arm64';
+  relativePath: string;
+  requiredPaths: string[];
+}
+
+export interface PortableBundleManifest {
+  schemaVersion: number;
+  kind: 'macos-universal';
+  publicationPlatform: 'osx-universal';
+  currentLayout: string;
+  fallbackRule: string;
+  manifestPath: string;
+  includedPlatforms: Array<'osx-x64' | 'osx-arm64'>;
+  members: PortableBundleManifestMember[];
+}
+
+export interface PortableRuntimeSelection {
+  bundleRoot: string;
+  runtimeRoot: string;
+  manifestPath: string | null;
+  selectedPlatform: Platform | null;
+  selectionSource: 'legacy-current-root' | 'bundle-member';
+}
+
+export function mapProcessArchToMacosPlatform(
+  runtimePlatform: NodeJS.Platform = process.platform,
+  runtimeArch: string = process.arch,
+): 'osx-x64' | 'osx-arm64' | null {
+  if (runtimePlatform !== 'darwin') {
+    return null;
+  }
+
+  return runtimeArch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+}
+
+export function parsePortableBundleManifest(raw: unknown): PortableBundleManifest | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const manifest = raw as Partial<PortableBundleManifest>;
+  if (manifest.kind !== 'macos-universal' || !Array.isArray(manifest.members)) {
+    return null;
+  }
+
+  const members = manifest.members.filter((member): member is PortableBundleManifestMember => (
+    !!member &&
+    typeof member === 'object' &&
+    (member.platform === 'osx-x64' || member.platform === 'osx-arm64') &&
+    typeof member.relativePath === 'string' &&
+    Array.isArray(member.requiredPaths)
+  ));
+  if (members.length === 0) {
+    return null;
+  }
+
+  const includedPlatforms = Array.isArray(manifest.includedPlatforms)
+    ? manifest.includedPlatforms.filter((entry): entry is 'osx-x64' | 'osx-arm64' => (
+      entry === 'osx-x64' || entry === 'osx-arm64'
+    ))
+    : members.map((member) => member.platform);
+
+  return {
+    schemaVersion: typeof manifest.schemaVersion === 'number' ? manifest.schemaVersion : 1,
+    kind: 'macos-universal',
+    publicationPlatform: 'osx-universal',
+    currentLayout: typeof manifest.currentLayout === 'string'
+      ? manifest.currentLayout
+      : 'portable-fixed/current/{osx-x64,osx-arm64}',
+    fallbackRule: typeof manifest.fallbackRule === 'string'
+      ? manifest.fallbackRule
+      : 'When this manifest is absent, Desktop must use portable-fixed/current as the legacy single-root payload.',
+    manifestPath: typeof manifest.manifestPath === 'string' ? manifest.manifestPath : 'bundle-manifest.json',
+    includedPlatforms,
+    members,
+  };
+}
+
 /**
  * PathManager provides centralized path management for application.
  * All paths should be retrieved from this manager to ensure consistency.
@@ -74,6 +153,7 @@ export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
   private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
+  private static readonly PORTABLE_BUNDLE_MANIFEST_FILE = 'bundle-manifest.json';
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -563,7 +643,7 @@ export class PathManager {
     return this.getPinnedRuntimeRoot(platform);
   }
 
-  getPortableRuntimeRoot(): string {
+  getPortableRuntimeBundleRoot(): string {
     const override = process.env.HAGICODE_PORTABLE_RUNTIME_ROOT?.trim();
     if (override) {
       return path.resolve(override);
@@ -574,6 +654,78 @@ export class PathManager {
     }
 
     return this.getExpectedPackagedPortableRuntimeRoot();
+  }
+
+  private readPortableBundleManifest(bundleRoot: string): PortableBundleManifest | null {
+    const manifestPath = path.join(bundleRoot, PathManager.PORTABLE_BUNDLE_MANIFEST_FILE);
+    if (!fsSync.existsSync(manifestPath)) {
+      return null;
+    }
+
+    try {
+      const manifest = parsePortableBundleManifest(JSON.parse(fsSync.readFileSync(manifestPath, 'utf8')));
+      if (!manifest) {
+        log.warn('[PathManager] Ignoring invalid portable bundle manifest:', manifestPath);
+        return null;
+      }
+
+      return manifest;
+    } catch (error) {
+      log.warn('[PathManager] Failed to read portable bundle manifest:', manifestPath, error);
+      return null;
+    }
+  }
+
+  getPortableRuntimeSelection(): PortableRuntimeSelection {
+    const bundleRoot = this.getPortableRuntimeBundleRoot();
+    const manifestPath = path.join(bundleRoot, PathManager.PORTABLE_BUNDLE_MANIFEST_FILE);
+    const bundleManifest = this.readPortableBundleManifest(bundleRoot);
+    if (!bundleManifest) {
+      return {
+        bundleRoot,
+        runtimeRoot: bundleRoot,
+        manifestPath: fsSync.existsSync(manifestPath) ? manifestPath : null,
+        selectedPlatform: null,
+        selectionSource: 'legacy-current-root',
+      };
+    }
+
+    const selectedPlatform = mapProcessArchToMacosPlatform();
+    if (!selectedPlatform) {
+      log.warn('[PathManager] Portable bundle manifest is present but current platform is not a supported macOS member:', {
+        manifestPath,
+        currentPlatform: process.platform,
+        currentArch: process.arch,
+      });
+      return {
+        bundleRoot,
+        runtimeRoot: bundleRoot,
+        manifestPath,
+        selectedPlatform: null,
+        selectionSource: 'legacy-current-root',
+      };
+    }
+
+    const selectedMember = bundleManifest.members.find((member) => member.platform === selectedPlatform);
+    if (!selectedMember) {
+      log.warn('[PathManager] Portable bundle manifest does not contain the selected macOS architecture member:', {
+        manifestPath,
+        selectedPlatform,
+        includedPlatforms: bundleManifest.includedPlatforms,
+      });
+    }
+
+    return {
+      bundleRoot,
+      runtimeRoot: path.join(bundleRoot, selectedMember?.relativePath ?? selectedPlatform),
+      manifestPath,
+      selectedPlatform,
+      selectionSource: 'bundle-member',
+    };
+  }
+
+  getPortableRuntimeRoot(): string {
+    return this.getPortableRuntimeSelection().runtimeRoot;
   }
 
   getPortableToolchainRoot(): string {

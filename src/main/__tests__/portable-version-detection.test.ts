@@ -12,10 +12,15 @@ describe('portable version payload detection', () => {
     const source = await fs.readFile(pathManagerPath, 'utf-8');
 
     assert.match(source, /portable-fixed/);
+    assert.match(source, /bundle-manifest\.json/);
+    assert.match(source, /portable-fixed\/current\/\{osx-x64,osx-arm64\}/);
     assert.match(source, /PCode\.Web\.dll/);
     assert.match(source, /PCode\.Web\.runtimeconfig\.json/);
     assert.match(source, /PCode\.Web\.deps\.json/);
     assert.match(source, /validatePortableRuntimePayload/);
+    assert.match(source, /mapProcessArchToMacosPlatform/);
+    assert.match(source, /getPortableRuntimeSelection/);
+    assert.match(source, /selectedPlatform/);
   });
 
   it('switches into steam mode only when the packaged payload validates and otherwise falls back safely', async () => {
@@ -23,8 +28,12 @@ describe('portable version payload detection', () => {
 
     assert.match(source, /initializeDistributionMode/);
     assert.match(source, /Portable version payload not found, using normal mode/);
+    assert.match(source, /Portable version bundle member not found, falling back to normal mode/);
     assert.match(source, /Portable version payload validation failed, falling back to normal mode/);
     assert.match(source, /Portable version payload detected successfully/);
+    assert.match(source, /selectedPlatform/);
+    assert.match(source, /bundleRoot/);
+    assert.match(source, /manifestPath/);
     assert.match(source, /this\.distributionMode = 'steam'/);
   });
 

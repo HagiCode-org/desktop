@@ -236,14 +236,24 @@ export class VersionManager {
   }
 
   async initializeDistributionMode(): Promise<DistributionModeState> {
-    const portableRoot = this.pathManager.getPortableRuntimeRoot();
+    const portableSelection = this.pathManager.getPortableRuntimeSelection();
+    const portableRoot = portableSelection.runtimeRoot;
 
     try {
       const validation = await this.pathManager.validatePortableRuntimePayload(portableRoot);
       if (!validation.exists) {
         this.distributionMode = 'normal';
         this.activePortableRuntime = null;
-        log.info('[VersionManager] Portable version payload not found, using normal mode:', portableRoot);
+        if (portableSelection.selectionSource === 'bundle-member' && portableSelection.selectedPlatform) {
+          log.warn('[VersionManager] Portable version bundle member not found, falling back to normal mode:', {
+            bundleRoot: portableSelection.bundleRoot,
+            runtimeRoot: portableRoot,
+            selectedPlatform: portableSelection.selectedPlatform,
+            manifestPath: portableSelection.manifestPath,
+          });
+        } else {
+          log.info('[VersionManager] Portable version payload not found, using normal mode:', portableRoot);
+        }
         return { mode: this.distributionMode, activeRuntime: null };
       }
 
@@ -251,7 +261,11 @@ export class VersionManager {
         this.distributionMode = 'normal';
         this.activePortableRuntime = null;
         log.warn('[VersionManager] Portable version payload validation failed, falling back to normal mode:', {
+          bundleRoot: portableSelection.bundleRoot,
           runtimeRoot: portableRoot,
+          selectedPlatform: portableSelection.selectedPlatform,
+          manifestPath: portableSelection.manifestPath,
+          selectionSource: portableSelection.selectionSource,
           missingFiles: validation.missingFiles,
         });
         return { mode: this.distributionMode, activeRuntime: null };
@@ -261,7 +275,11 @@ export class VersionManager {
       this.distributionMode = 'steam';
       await this.hybridDownloadCoordinator.stopSharingActivity();
       log.info('[VersionManager] Portable version payload detected successfully:', {
+        bundleRoot: portableSelection.bundleRoot,
         runtimeRoot: validation.runtimeRoot,
+        selectedPlatform: portableSelection.selectedPlatform,
+        manifestPath: portableSelection.manifestPath,
+        selectionSource: portableSelection.selectionSource,
         versionId: this.activePortableRuntime.id,
         version: this.activePortableRuntime.version,
       });
