@@ -148,7 +148,7 @@ function App() {
       {/* Main Content Area */}
       <div className="ml-64 transition-all duration-500 ease-out">
         <div className="container mx-auto px-4 py-8 min-h-screen">
-          {currentView === 'system' && <SystemManagementView />}
+          {currentView === 'system' && <SystemManagementView distributionMode={distributionMode} />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
