@@ -163,6 +163,43 @@ export interface AboutWindowOpenResult {
   error?: string;
 }
 
+export type CodeServerWindowFailureStage =
+  | 'invalid-url'
+  | 'load-url'
+  | 'did-fail-load'
+  | 'render-timeout'
+  | 'probe-error'
+  | 'render-process-gone'
+  | 'unresponsive';
+
+export interface CodeServerWindowDiagnostics {
+  failureStage?: CodeServerWindowFailureStage;
+  lastUrl?: string;
+  lastConsoleErrors: string[];
+  failedLoads: string[];
+  rendererExit?: string;
+  unresponsive: boolean;
+}
+
+export type CodeServerWindowOpenResult =
+  | {
+    success: true;
+    state: 'render-ready';
+    lastUrl: string;
+    canOpenExternal: true;
+    diagnostics: CodeServerWindowDiagnostics;
+  }
+  | {
+    success: false;
+    state: 'render-failed';
+    error: string;
+    failureStage: CodeServerWindowFailureStage;
+    diagnosticsSummary: string;
+    diagnostics: CodeServerWindowDiagnostics;
+    canOpenExternal: boolean;
+    lastUrl?: string;
+  };
+
 type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 
 // ElectronAPI interface combines all individual interfaces defined above
@@ -174,7 +211,7 @@ interface ElectronAPI {
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
   // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
-  openCodeServerWindow: (url: string) => Promise<{ success: boolean; error?: string }>;
+  openCodeServerWindow: (url: string) => Promise<CodeServerWindowOpenResult>;
   openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
 

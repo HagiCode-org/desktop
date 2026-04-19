@@ -162,6 +162,7 @@ let agentCliManager: AgentCliManager | null = null;
 let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
+const CODE_SERVER_SESSION_PARTITION = 'persist:hagicode-code-server';
 
 function getDistributionMode(): DistributionMode {
   return versionManager?.getDistributionMode() ?? 'normal';
@@ -307,6 +308,30 @@ function createManagedChildWindow(): BrowserWindow {
   return childWindow;
 }
 
+function createCodeServerWindow(): BrowserWindow {
+  const appRoot = getAppRootPath();
+  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+
+  const childWindow = new BrowserWindow({
+    minWidth: 960,
+    minHeight: 640,
+    show: false,
+    autoHideMenuBar: true,
+    icon: iconPath,
+    title: 'HagiCode Code Server',
+    webPreferences: {
+      partition: CODE_SERVER_SESSION_PARTITION,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      devTools: !app.isPackaged,
+    },
+  });
+
+  wireDesktopWindowClipboard(childWindow);
+  return childWindow;
+}
+
 function createAboutPopupWindow(): BrowserWindow {
   const distRoot = getDistRootPath();
   const appRoot = getAppRootPath();
@@ -390,7 +415,7 @@ ipcMain.handle('open-code-server-window', async (_, url: string) => {
   return await openCodeServerWindow({
     url,
     logScope: 'Main',
-    createWindow: createManagedChildWindow,
+    createWindow: createCodeServerWindow,
   });
 });
 
