@@ -11,6 +11,10 @@ describe('version management install progress rendering', () => {
 
     assert.match(source, /installingVersionId === version\.id/);
     assert.match(source, /renderInstallTelemetry\(version\.id\)/);
+    assert.match(source, /versionManagement\.installTelemetry\.mode/);
+    assert.match(source, /versionManagement\.installTelemetry\.stage/);
+    assert.match(source, /versionManagement\.installTelemetry\.peers/);
+    assert.match(source, /versionManagement\.installTelemetry\.verified/);
   });
 
   it('removes dependency affordances from installed version cards', async () => {
