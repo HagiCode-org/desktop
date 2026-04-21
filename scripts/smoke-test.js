@@ -339,7 +339,9 @@ test('electron-builder configuration is valid', async () => {
   const hasAsar = buildConfig?.asar === true;
   const hasFiles = Array.isArray(buildConfig?.files);
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
+  const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
+  const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
@@ -355,6 +357,8 @@ test('electron-builder configuration is valid', async () => {
   assert(true, `build configuration exists (${configSource})`);
   assert(hasAsar, 'asar packaging is enabled');
   assert(hasFiles, 'files to include are specified');
+  assert(Boolean(windowIconExtraResource), 'window icon is shipped via extraResources');
+  assert(windowIconOutsideAsar, 'window icon is staged outside app.asar');
   assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');

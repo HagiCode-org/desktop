@@ -12,6 +12,8 @@ asarUnpack:
   - '**/node_modules/**/{*.node,dll/*.dll,*.dylib}'
   - '**/vendor/**'
 extraResources:
+  - from: resources/icon.png
+    to: icon.png
   - from: build/embedded-runtime/current/dotnet
     to: dotnet
   - from: resources/portable-fixed
