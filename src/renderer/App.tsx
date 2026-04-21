@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, FileText, FolderSync, LoaderCircle, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'sonner';
 import SidebarNavigation from './components/SidebarNavigation';
 import SystemManagementView from './components/SystemManagementView';
 import SystemDiagnosticPage from './components/SystemDiagnosticPage';
@@ -9,17 +11,38 @@ import VersionManagementPage from './components/VersionManagementPage';
 import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+import { Button } from './components/ui/button';
 import { switchView } from './store/slices/viewSlice';
 import { restartOnboardingFlow } from './store/slices/onboardingSlice';
 import { selectWebServiceInfo } from './store/slices/webServiceSlice';
-import type { RootState } from './store';
+import { runCriticalStartupInitialization, startBackgroundStartupInitialization } from './store';
+import type { RootState, AppDispatch } from './store';
 import type { AgentCliType } from '../types/agent-cli';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
+import type {
+  DataDirectoryMutationResult,
+  DesktopBootstrapSnapshot,
+} from '../types/bootstrap';
+import type { LogDirectoryOpenResult } from '../types/log-directory';
+
+type BootstrapPhase = 'loading' | 'ready' | 'error';
+
+interface AppProps {
+  onShellReady?: () => void;
+  onBootstrapErrorVisible?: () => void;
+}
 
 declare global {
   interface Window {
     electronAPI: {
+      bootstrap?: {
+        getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
+        refresh: () => Promise<DesktopBootstrapSnapshot>;
+        restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
+        openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
+      };
       getAppVersion: () => Promise<string>;
       getDistributionMode: () => Promise<DistributionMode>;
       showWindow: () => Promise<void>;
@@ -45,9 +68,29 @@ declare global {
   }
 }
 
-function App() {
-  const { t } = useTranslation('common');
-  const dispatch = useDispatch();
+function buildRendererBootstrapErrorSnapshot(
+  summary: string,
+  details: string,
+  stage: DesktopBootstrapSnapshot['stage'] = 'renderer-shell',
+): DesktopBootstrapSnapshot {
+  return {
+    status: 'error',
+    stage,
+    summary,
+    details,
+    dataDirectory: null,
+    diagnostics: [],
+    recovery: {
+      canRetry: true,
+      canRestoreDefault: false,
+      canOpenDesktopLogs: false,
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function DesktopAppContent({ distributionMode }: { distributionMode: DistributionMode }) {
+  const dispatch = useDispatch<AppDispatch>();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
@@ -55,23 +98,17 @@ function App() {
     webServiceInfo.host || DEFAULT_WEB_SERVICE_HOST,
     webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT
   );
-  const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
-  const [modeLoaded, setModeLoaded] = useState(false);
 
   useEffect(() => {
-    // Listen for view change events from menu (kept for backward compatibility)
     const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => {
       dispatch(switchView(view));
     });
 
-    // Listen for onboarding show event
     const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow(() => {
       dispatch(restartOnboardingFlow());
     });
 
-    // Listen for onboarding completion - open Hagicode
     const unsubscribeOnboardingOpenHagicode = window.electronAPI.onOnboardingOpenHagicode(async (data) => {
-      // Open Hagicode in app window
       try {
         await window.electronAPI.openHagicodeInApp(data.url);
       } catch (error) {
@@ -93,59 +130,20 @@ function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    let disposed = false;
-
-    const loadDistributionMode = async () => {
-      try {
-        const mode = await window.electronAPI.getDistributionMode();
-        if (!disposed) {
-          setDistributionMode(mode);
-        }
-      } catch (error) {
-        console.error('[App] Failed to load distribution mode:', error);
-        if (!disposed) {
-          setDistributionMode('normal');
-        }
-      } finally {
-        if (!disposed) {
-          setModeLoaded(true);
-        }
-      }
-    };
-
-    void loadDistributionMode();
-
-    return () => {
-      disposed = true;
-    };
-  }, []);
-
-  useEffect(() => {
     if (distributionMode === 'steam' && currentView === 'version') {
       dispatch(switchView('system'));
     }
   }, [currentView, dispatch, distributionMode]);
 
-  if (!modeLoaded) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Animated background gradient */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
       </div>
 
-      {/* Sidebar Navigation */}
       <SidebarNavigation distributionMode={distributionMode} />
 
-      {/* Main Content Area */}
       <div className="ml-64 transition-all duration-500 ease-out">
         <div className="container mx-auto px-4 py-8 min-h-screen">
           {currentView === 'system' && <SystemManagementView distributionMode={distributionMode} />}
@@ -156,13 +154,349 @@ function App() {
         </div>
       </div>
 
-      {/* Global Dialogs */}
       <InstallConfirmDialog />
-
-      {/* Onboarding Wizard - shown when active */}
       <OnboardingWizard />
     </div>
   );
+}
+
+function BootstrapLoadingShell({
+  summary,
+  details,
+  stage,
+}: {
+  summary: string;
+  details?: string;
+  stage: DesktopBootstrapSnapshot['stage'];
+}) {
+  const { t } = useTranslation('common');
+  const stageIndex = useMemo(() => {
+    const order: DesktopBootstrapSnapshot['stage'][] = [
+      'bootstrap-start',
+      'config-ready',
+      'data-directory-ready',
+      'shell-ready',
+    ];
+
+    return Math.max(order.indexOf(stage), 0);
+  }, [stage]);
+  const steps = [
+    t('bootstrap.steps.shell'),
+    t('bootstrap.steps.config'),
+    t('bootstrap.steps.dataDirectory'),
+    t('bootstrap.steps.render'),
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-6">
+      <div className="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-slate-950/40">
+        <div className="flex items-center gap-3 text-slate-200">
+          <LoaderCircle className="h-7 w-7 animate-spin text-cyan-400" />
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Hagicode Desktop</p>
+            <h1 className="mt-2 text-2xl font-semibold">{t('bootstrap.loading.title')}</h1>
+          </div>
+        </div>
+
+        <p className="mt-6 text-lg text-slate-200">{summary}</p>
+        <p className="mt-2 text-sm text-slate-400">
+          {details || t('bootstrap.loading.description')}
+        </p>
+
+        <div className="mt-8 grid gap-3">
+          {steps.map((label, index) => {
+            const active = index <= stageIndex;
+
+            return (
+              <div
+                key={label}
+                className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                  active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-800 bg-slate-950/40 text-slate-500'
+                }`}
+              >
+                <span>{label}</span>
+                <span className="text-xs uppercase tracking-[0.2em]">
+                  {active ? t('bootstrap.loading.stepActive') : t('bootstrap.loading.stepPending')}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="mt-6 text-xs uppercase tracking-[0.2em] text-slate-500">
+          {t('bootstrap.loading.stage', { stage })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BootstrapErrorShell({
+  snapshot,
+  pendingAction,
+  onRetry,
+  onRestoreDefault,
+  onOpenLogs,
+}: {
+  snapshot: DesktopBootstrapSnapshot;
+  pendingAction: 'retry' | 'restore' | 'logs' | null;
+  onRetry: () => Promise<void>;
+  onRestoreDefault: () => Promise<void>;
+  onOpenLogs: () => Promise<void>;
+}) {
+  const { t } = useTranslation('common');
+  const diagnostic = snapshot.diagnostics[0];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-6">
+      <div className="w-full max-w-3xl rounded-3xl border border-rose-500/30 bg-slate-900/95 p-8 shadow-2xl shadow-slate-950/50">
+        <div className="flex items-start gap-4">
+          <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-300">
+            <AlertCircle className="h-7 w-7" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm uppercase tracking-[0.3em] text-rose-300/70">Hagicode Desktop</p>
+            <h1 className="mt-2 text-2xl font-semibold">{t('bootstrap.error.title')}</h1>
+            <p className="mt-3 text-base text-slate-200">{snapshot.summary}</p>
+            <p className="mt-2 text-sm text-slate-400">{snapshot.details || t('bootstrap.error.description')}</p>
+          </div>
+        </div>
+
+        <Alert className="mt-8 border-slate-800 bg-slate-950/60 text-slate-200">
+          <AlertTitle>{t('bootstrap.error.diagnosticTitle')}</AlertTitle>
+          <AlertDescription className="mt-3 space-y-2 text-sm leading-6">
+            <p>{t('bootstrap.error.stage', { stage: snapshot.stage })}</p>
+            {diagnostic?.summary && <p>{t('bootstrap.error.summary', { summary: diagnostic.summary })}</p>}
+            {diagnostic?.normalizedPath && (
+              <p>{t('bootstrap.error.path', { path: diagnostic.normalizedPath })}</p>
+            )}
+            {diagnostic?.detail && <p>{diagnostic.detail}</p>}
+          </AlertDescription>
+        </Alert>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          {snapshot.recovery.canOpenDesktopLogs && (
+            <Button
+              variant="outline"
+              onClick={() => void onOpenLogs()}
+              disabled={pendingAction !== null}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {pendingAction === 'logs' ? t('bootstrap.actions.working') : t('bootstrap.actions.openLogs')}
+            </Button>
+          )}
+          {snapshot.recovery.canRestoreDefault && (
+            <Button
+              variant="outline"
+              onClick={() => void onRestoreDefault()}
+              disabled={pendingAction !== null}
+            >
+              <FolderSync className="mr-2 h-4 w-4" />
+              {pendingAction === 'restore' ? t('bootstrap.actions.working') : t('bootstrap.actions.restoreDefault')}
+            </Button>
+          )}
+          {snapshot.recovery.canRetry && (
+            <Button onClick={() => void onRetry()} disabled={pendingAction !== null}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              {pendingAction === 'retry' ? t('bootstrap.actions.working') : t('bootstrap.actions.retry')}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
+  const { t } = useTranslation('common');
+  const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
+  const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('loading');
+  const [bootstrapSnapshot, setBootstrapSnapshot] = useState<DesktopBootstrapSnapshot | null>(null);
+  const [pendingAction, setPendingAction] = useState<'retry' | 'restore' | 'logs' | null>(null);
+  const mountedRef = useRef(true);
+  const shellReadyNotifiedRef = useRef(false);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const hydrateBootstrap = async (requestMode: 'initial' | 'refresh') => {
+    const bridge = window.electronAPI?.bootstrap;
+    if (!bridge) {
+      const snapshot = buildRendererBootstrapErrorSnapshot(
+        'bootstrap bridge is unavailable',
+        'window.electronAPI.bootstrap is missing before the Desktop shell can initialize.',
+        'preload-bridge',
+      );
+      if (mountedRef.current) {
+        setBootstrapSnapshot(snapshot);
+        setBootstrapPhase('error');
+      }
+      return;
+    }
+
+    if (mountedRef.current) {
+      setBootstrapPhase('loading');
+    }
+
+    try {
+      const snapshot = requestMode === 'refresh'
+        ? await bridge.refresh()
+        : await bridge.getSnapshot();
+
+      if (!mountedRef.current) {
+        return;
+      }
+
+      if (snapshot.status === 'error') {
+        setBootstrapSnapshot(snapshot);
+        setBootstrapPhase('error');
+        return;
+      }
+
+      setBootstrapSnapshot(snapshot);
+
+      await runCriticalStartupInitialization();
+      const resolvedMode = await window.electronAPI.getDistributionMode();
+
+      if (!mountedRef.current) {
+        return;
+      }
+
+      setDistributionMode(resolvedMode);
+      setBootstrapSnapshot({
+        ...snapshot,
+        status: 'ready',
+        stage: 'shell-ready',
+      });
+      setBootstrapPhase('ready');
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      if (!mountedRef.current) {
+        return;
+      }
+
+      setBootstrapSnapshot(buildRendererBootstrapErrorSnapshot(
+        'renderer shell initialization failed',
+        detail,
+      ));
+      setBootstrapPhase('error');
+    }
+  };
+
+  useEffect(() => {
+    void hydrateBootstrap('initial');
+  }, []);
+
+  useEffect(() => {
+    if (bootstrapPhase !== 'ready') {
+      return;
+    }
+
+    startBackgroundStartupInitialization();
+
+    if (shellReadyNotifiedRef.current) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      onShellReady?.();
+      shellReadyNotifiedRef.current = true;
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [bootstrapPhase, onShellReady]);
+
+  useEffect(() => {
+    if (bootstrapPhase === 'error') {
+      onBootstrapErrorVisible?.();
+    }
+  }, [bootstrapPhase, onBootstrapErrorVisible]);
+
+  const handleRetry = async () => {
+    setPendingAction('retry');
+    try {
+      await hydrateBootstrap('refresh');
+    } finally {
+      if (mountedRef.current) {
+        setPendingAction(null);
+      }
+    }
+  };
+
+  const handleRestoreDefault = async () => {
+    const bridge = window.electronAPI?.bootstrap;
+    if (!bridge) {
+      return;
+    }
+
+    setPendingAction('restore');
+    try {
+      const result = await bridge.restoreDefaultDataDirectory();
+      if (!result.success) {
+        const detail = result.error || t('bootstrap.toasts.restoreFailed');
+        setBootstrapSnapshot((current) => current ?? buildRendererBootstrapErrorSnapshot(
+          'failed to restore default data directory',
+          detail,
+        ));
+        setBootstrapPhase('error');
+        toast.error(detail);
+        return;
+      }
+
+      toast.success(t('bootstrap.toasts.restoreSuccess'));
+      await hydrateBootstrap('refresh');
+    } finally {
+      if (mountedRef.current) {
+        setPendingAction(null);
+      }
+    }
+  };
+
+  const handleOpenLogs = async () => {
+    const bridge = window.electronAPI?.bootstrap;
+    if (!bridge) {
+      return;
+    }
+
+    setPendingAction('logs');
+    try {
+      const result = await bridge.openDesktopLogs();
+      if (result.success) {
+        toast.success(t('bootstrap.toasts.logsOpened'));
+      } else {
+        toast.error(t('bootstrap.toasts.logsFailed'));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setPendingAction(null);
+      }
+    }
+  };
+
+  if (bootstrapPhase !== 'ready') {
+    if (bootstrapPhase === 'error' && bootstrapSnapshot) {
+      return (
+        <BootstrapErrorShell
+          snapshot={bootstrapSnapshot}
+          pendingAction={pendingAction}
+          onRetry={handleRetry}
+          onRestoreDefault={handleRestoreDefault}
+          onOpenLogs={handleOpenLogs}
+        />
+      );
+    }
+
+    return (
+      <BootstrapLoadingShell
+        summary={bootstrapSnapshot?.summary || t('bootstrap.loading.summary')}
+        details={bootstrapSnapshot?.details}
+        stage={bootstrapSnapshot?.stage || 'bootstrap-start'}
+      />
+    );
+  }
+
+  return <DesktopAppContent distributionMode={distributionMode} />;
 }
 
 export default App;
