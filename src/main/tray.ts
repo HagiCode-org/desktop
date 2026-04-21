@@ -1,7 +1,9 @@
 import { Tray, Menu, nativeImage, app, Notification, shell, ipcMain } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mainWindow } from './main.js';
+import { resolveWindowIconPath } from './window-icon-path.js';
 
 // Reference to webServiceManager - will be set from main.ts
 let webServiceManagerRef: any = null;
@@ -11,6 +13,26 @@ export function setWebServiceManagerRef(ref: any): void {
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getAppRootPath(): string {
+  return path.resolve(__dirname, '..', '..');
+}
+
+function loadTrayIcon(): Electron.NativeImage {
+  const iconPath = resolveWindowIconPath({
+    appRootPath: getAppRootPath(),
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    existsSync: fs.existsSync,
+  });
+  const icon = nativeImage.createFromPath(iconPath);
+
+  if (icon.isEmpty()) {
+    console.warn('[Tray] Tray icon could not be loaded:', iconPath);
+  }
+
+  return icon;
+}
 
 let tray: Tray | null = null;
 let serverStatus: 'running' | 'stopped' | 'error' = 'stopped';
@@ -65,9 +87,7 @@ const getTrayLabel = (key: string): string => {
 };
 
 export function createTray(): void {
-  // Load tray icon
-  const iconPath = path.join(__dirname, '../../resources/icon.png');
-  const icon = nativeImage.createFromPath(iconPath);
+  const icon = loadTrayIcon();
 
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
 

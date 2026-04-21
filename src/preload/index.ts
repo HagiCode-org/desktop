@@ -47,6 +47,24 @@ export type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
 
+function readInitialBootstrapSnapshot(): DesktopBootstrapSnapshot | null {
+  const argPrefix = '--desktop-bootstrap-snapshot=';
+  const serialized = process.argv.find((arg) => arg.startsWith(argPrefix))?.slice(argPrefix.length);
+
+  if (!serialized) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(decodeURIComponent(serialized)) as DesktopBootstrapSnapshot;
+  } catch (error) {
+    console.error('[Preload] Failed to parse initial bootstrap snapshot:', error);
+    return null;
+  }
+}
+
+const initialBootstrapSnapshot = readInitialBootstrapSnapshot();
+
 // Validation result interface
 export interface ValidationResult {
   isValid: boolean;
@@ -216,6 +234,7 @@ type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
   bootstrap: {
+    getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
     getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
     refresh: () => Promise<DesktopBootstrapSnapshot>;
     restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
@@ -400,6 +419,7 @@ const rendererEventTarget = globalThis as unknown as {
 
 const electronAPI: ElectronAPI = {
   bootstrap: {
+    getCachedSnapshot: () => initialBootstrapSnapshot,
     getSnapshot: () => ipcRenderer.invoke('bootstrap:get-snapshot'),
     refresh: () => ipcRenderer.invoke('bootstrap:refresh'),
     restoreDefaultDataDirectory: () => ipcRenderer.invoke('data-directory:restore-default'),

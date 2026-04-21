@@ -179,6 +179,7 @@ describe('homepageInteractiveTour', () => {
     });
 
     assert.ok(session);
+    assert.equal(readHomepageTourSnapshot(storageRef.storage).completed, true);
     session?.driver.destroy();
     assert.equal(readHomepageTourSnapshot(storageRef.storage).completed, true);
     assert.equal(shouldAutoStartHomepageTour({ currentView: 'system', onboardingActive: false, steps, storage: storageRef.storage }), false);

@@ -311,6 +311,9 @@ export function startHomepageTour({
     },
   });
 
+  // Mark the tour as seen as soon as it auto-starts so route changes,
+  // StrictMode remounts, or early dismissals do not replay it on every visit.
+  markHomepageTourCompleted(storage);
   tourDriver.drive();
 
   return {

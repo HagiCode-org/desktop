@@ -176,7 +176,6 @@ export async function runCriticalStartupInitialization(): Promise<void> {
     await store.dispatch(initializeI18n()).unwrap();
     await Promise.allSettled([
       store.dispatch(initializeView()),
-      store.dispatch(checkOnboardingTrigger()),
       store.dispatch(initializeRemoteMode()),
     ]);
   })().catch((error) => {
@@ -196,6 +195,7 @@ export function startBackgroundStartupInitialization(): void {
   registerRealtimeListeners();
 
   void Promise.allSettled([
+    store.dispatch(checkOnboardingTrigger()),
     store.dispatch(initializePackageSource()),
     store.dispatch(initializeDependency()),
     store.dispatch(initializeRSSFeed()),

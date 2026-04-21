@@ -10,10 +10,13 @@ describe('desktop bootstrap preload bridge contract', () => {
     const source = await fs.readFile(preloadPath, 'utf8');
 
     assert.match(source, /import type \{\s*DataDirectoryMutationResult,\s*DataDirectoryValidationPayload,\s*DesktopBootstrapSnapshot,\s*\} from '\.\.\/types\/bootstrap\.js';/s);
-    assert.match(source, /bootstrap: \{\s*getSnapshot: \(\) => Promise<DesktopBootstrapSnapshot>;/s);
+    assert.match(source, /const initialBootstrapSnapshot = readInitialBootstrapSnapshot\(\);/);
+    assert.match(source, /bootstrap: \{\s*getCachedSnapshot: \(\) => DesktopBootstrapSnapshot \| null;/s);
+    assert.match(source, /getSnapshot: \(\) => Promise<DesktopBootstrapSnapshot>;/);
     assert.match(source, /refresh: \(\) => Promise<DesktopBootstrapSnapshot>;/);
     assert.match(source, /restoreDefaultDataDirectory: \(\) => Promise<DataDirectoryMutationResult>;/);
     assert.match(source, /openDesktopLogs: \(\) => Promise<LogDirectoryOpenResult>;/);
+    assert.match(source, /getCachedSnapshot: \(\) => initialBootstrapSnapshot/);
     assert.match(source, /getSnapshot: \(\) => ipcRenderer\.invoke\('bootstrap:get-snapshot'\)/);
     assert.match(source, /refresh: \(\) => ipcRenderer\.invoke\('bootstrap:refresh'\)/);
     assert.match(source, /restoreDefaultDataDirectory: \(\) => ipcRenderer\.invoke\('data-directory:restore-default'\)/);

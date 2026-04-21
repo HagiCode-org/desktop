@@ -5,6 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEV_SERVER_HOST = '127.0.0.1';
+const DEV_SERVER_PORT = 36598;
+
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, __dirname, '');
@@ -33,7 +36,8 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
     },
     server: {
-      port: 36598,
+      host: DEV_SERVER_HOST,
+      port: DEV_SERVER_PORT,
       strictPort: true,
     },
     // Expose env variables to the renderer process

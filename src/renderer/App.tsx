@@ -30,14 +30,41 @@ import type { LogDirectoryOpenResult } from '../types/log-directory';
 type BootstrapPhase = 'loading' | 'ready' | 'error';
 
 interface AppProps {
+  onRendererMounted?: () => void;
   onShellReady?: () => void;
   onBootstrapErrorVisible?: () => void;
+}
+
+const BOOTSTRAP_TIMEOUT_MS = 10000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs: number = BOOTSTRAP_TIMEOUT_MS,
+): Promise<T> {
+  let timeoutHandle: number | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutHandle = window.setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle !== null) {
+      window.clearTimeout(timeoutHandle);
+    }
+  }
 }
 
 declare global {
   interface Window {
     electronAPI: {
       bootstrap?: {
+        getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
         getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
         refresh: () => Promise<DesktopBootstrapSnapshot>;
         restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
@@ -307,7 +334,7 @@ function BootstrapErrorShell({
   );
 }
 
-function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
+function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppProps) {
   const { t } = useTranslation('common');
   const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('loading');
@@ -315,10 +342,15 @@ function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
   const [pendingAction, setPendingAction] = useState<'retry' | 'restore' | 'logs' | null>(null);
   const mountedRef = useRef(true);
   const shellReadyNotifiedRef = useRef(false);
+  const postShellInitializationStartedRef = useRef(false);
 
   useEffect(() => () => {
     mountedRef.current = false;
   }, []);
+
+  useEffect(() => {
+    onRendererMounted?.();
+  }, [onRendererMounted]);
 
   const hydrateBootstrap = async (requestMode: 'initial' | 'refresh') => {
     const bridge = window.electronAPI?.bootstrap;
@@ -340,9 +372,14 @@ function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
     }
 
     try {
-      const snapshot = requestMode === 'refresh'
-        ? await bridge.refresh()
-        : await bridge.getSnapshot();
+      const cachedSnapshot = requestMode === 'initial'
+        ? bridge.getCachedSnapshot?.() ?? null
+        : null;
+      const snapshot = cachedSnapshot ?? (
+        requestMode === 'refresh'
+          ? await withTimeout(bridge.refresh(), 'bootstrap refresh')
+          : await withTimeout(bridge.getSnapshot(), 'bootstrap snapshot')
+      );
 
       if (!mountedRef.current) {
         return;
@@ -355,15 +392,6 @@ function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
       }
 
       setBootstrapSnapshot(snapshot);
-
-      await runCriticalStartupInitialization();
-      const resolvedMode = await window.electronAPI.getDistributionMode();
-
-      if (!mountedRef.current) {
-        return;
-      }
-
-      setDistributionMode(resolvedMode);
       setBootstrapSnapshot({
         ...snapshot,
         status: 'ready',
@@ -399,13 +427,58 @@ function App({ onShellReady, onBootstrapErrorVisible }: AppProps) {
       return;
     }
 
-    const animationFrame = window.requestAnimationFrame(() => {
-      onShellReady?.();
-      shellReadyNotifiedRef.current = true;
-    });
+    shellReadyNotifiedRef.current = true;
 
-    return () => window.cancelAnimationFrame(animationFrame);
+    let shellRevealed = false;
+    const revealShell = () => {
+      if (shellRevealed) {
+        return;
+      }
+
+      shellRevealed = true;
+      onShellReady?.();
+    };
+
+    const animationFrame = window.requestAnimationFrame(revealShell);
+    const revealTimeout = window.setTimeout(revealShell, 160);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(revealTimeout);
+    };
   }, [bootstrapPhase, onShellReady]);
+
+  useEffect(() => {
+    if (bootstrapPhase !== 'ready' || postShellInitializationStartedRef.current) {
+      return;
+    }
+
+    postShellInitializationStartedRef.current = true;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await withTimeout(
+          runCriticalStartupInitialization(),
+          'critical startup initialization',
+        );
+        const resolvedMode = await withTimeout(
+          window.electronAPI.getDistributionMode(),
+          'distribution mode lookup',
+        );
+
+        if (!cancelled && mountedRef.current) {
+          setDistributionMode(resolvedMode);
+        }
+      } catch (error) {
+        console.error('[App] Post-shell startup initialization failed:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrapPhase]);
 
   useEffect(() => {
     if (bootstrapPhase === 'error') {

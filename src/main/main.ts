@@ -67,6 +67,9 @@ import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEV_RENDERER_HOST = '127.0.0.1';
+const DEV_RENDERER_PORT = 36598;
+const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 
 const startupCompatibilityDecision = applySteamLinuxStartupCompatibility(app, {
   platform: process.platform,
@@ -373,6 +376,9 @@ function createWindow(): void {
   const appRoot = getAppRootPath();
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
   const { icon, iconPath } = loadWindowIcon(appRoot);
+  const bootstrapSnapshotArg = bootstrapSnapshotCache
+    ? `--desktop-bootstrap-snapshot=${encodeURIComponent(JSON.stringify(bootstrapSnapshotCache))}`
+    : null;
 
   console.log('[Hagicode] Using preload path:', preloadPath);
   console.log('[Hagicode] Dist root path:', distRoot);
@@ -388,6 +394,7 @@ function createWindow(): void {
     icon,
     webPreferences: {
       preload: preloadPath,
+      additionalArguments: bootstrapSnapshotArg ? [bootstrapSnapshotArg] : [],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -406,8 +413,8 @@ function createWindow(): void {
   console.log('[Hagicode] Window created');
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Hagicode] Loading dev server at http://localhost:36598');
-    mainWindow.loadURL('http://localhost:36598');
+    console.log(`[Hagicode] Loading dev server at ${DEV_RENDERER_URL}`);
+    mainWindow.loadURL(DEV_RENDERER_URL);
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from the correct renderer path

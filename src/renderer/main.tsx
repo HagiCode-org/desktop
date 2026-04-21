@@ -37,6 +37,7 @@ try {
         <I18nextProvider i18n={i18n}>
           <ThemeProvider defaultTheme="dark" storageKey="hagicode-desktop-theme" attribute="class" enableSystem>
             <App
+              onRendererMounted={hideLoadingContainer}
               onShellReady={removeLoadingContainer}
               onBootstrapErrorVisible={hideLoadingContainer}
             />
