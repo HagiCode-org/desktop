@@ -2,11 +2,10 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import { promisify } from 'node:util';
-import log from 'electron-log';
-import type AgentCliManager from './agent-cli-manager.js';
-import { AgentCliType, getCliConfig } from '../types/agent-cli.js';
+import { AgentCliType, getAllCliConfigs } from '../types/agent-cli.js';
 import type {
   SystemDiagnosticAgentCliInfo,
+  SystemDiagnosticAgentCliProbe,
   SystemDiagnosticCommandProbe,
   SystemDiagnosticCommandScope,
   SystemDiagnosticCoverageMatrix,
@@ -32,7 +31,7 @@ export const AUDITED_CORE_DEPENDENCY_COVERAGE_MATRIX: SystemDiagnosticCoverageMa
   ],
   requiredCommands: ['node', 'npm', 'npx', 'git'],
   notes: [
-    'Selected Agent CLI probing follows the same command-candidate and version-lookup shape used by hagicode-core provider version checks.',
+    'Static Agent CLI registry probing follows the same command-candidate and version-lookup shape used by hagicode-core provider version checks.',
     'node, npm, npx, and git are the first-pass commands because hagicode-core currently consumes them in runtime detection, install prerequisites, or managed skill flows.',
   ],
 });
@@ -69,15 +68,8 @@ type RunCommand = (
   options?: CommandExecutionOptions,
 ) => Promise<CommandExecutionResult>;
 
-interface AgentCliDiagnosticAdapter {
-  loadSelection: () => { cliType: AgentCliType | null; isSkipped: boolean; selectedAt: string | null };
-  getCommandCandidates: (cliType: AgentCliType) => string[];
-  getRuntimeEnv: () => Promise<NodeJS.ProcessEnv>;
-  resolveCommandPath: (commandCandidates: string[], env?: NodeJS.ProcessEnv) => Promise<string | null>;
-}
-
 interface SystemDiagnosticManagerDeps {
-  agentCliManager?: AgentCliDiagnosticAdapter | null;
+  getRuntimeEnv?: () => Promise<NodeJS.ProcessEnv>;
   runCommand?: RunCommand;
   readFile?: (filePath: string, encoding: BufferEncoding) => Promise<string>;
   platform?: NodeJS.Platform;
@@ -202,7 +194,7 @@ async function defaultRunCommand(
 }
 
 export class SystemDiagnosticManager {
-  private readonly agentCliManager: AgentCliDiagnosticAdapter | null;
+  private readonly getRuntimeEnv: () => Promise<NodeJS.ProcessEnv>;
   private readonly runCommand: RunCommand;
   private readonly readFile: (filePath: string, encoding: BufferEncoding) => Promise<string>;
   private readonly platform: NodeJS.Platform;
@@ -218,7 +210,7 @@ export class SystemDiagnosticManager {
   private lastResult: SystemDiagnosticResult | null = null;
 
   constructor(deps: SystemDiagnosticManagerDeps = {}) {
-    this.agentCliManager = deps.agentCliManager ?? null;
+    this.getRuntimeEnv = deps.getRuntimeEnv ?? (async () => ({ ...process.env }));
     this.runCommand = deps.runCommand ?? defaultRunCommand;
     this.readFile = deps.readFile ?? ((filePath, encoding) => fs.readFile(filePath, encoding));
     this.platform = deps.platform ?? process.platform;
@@ -292,14 +284,9 @@ export class SystemDiagnosticManager {
   }
 
   private async loadRuntimeEnvironment(): Promise<NodeJS.ProcessEnv> {
-    if (!this.agentCliManager) {
-      return { ...process.env };
-    }
-
     try {
-      return await this.agentCliManager.getRuntimeEnv();
-    } catch (error) {
-      log.warn('[SystemDiagnosticManager] Failed to load runtime environment, falling back to process.env', error);
+      return await this.getRuntimeEnv();
+    } catch {
       return { ...process.env };
     }
   }
@@ -436,46 +423,29 @@ export class SystemDiagnosticManager {
     runtimeEnv: NodeJS.ProcessEnv,
     issues: SystemDiagnosticIssue[],
   ): Promise<SystemDiagnosticAgentCliInfo> {
-    if (!this.agentCliManager) {
-      return {
-        selectedCliType: null,
-        displayName: null,
-        status: 'not-selected',
-        commandCandidates: [],
-        resolvedPath: null,
-        version: null,
-        message: 'Agent CLI manager is not available during this diagnostic run.',
-      };
-    }
+    const probes = await Promise.all(
+      getAllCliConfigs().map((config) => this.probeAgentCli(config, runtimeEnv, issues)),
+    );
 
-    const selection = this.agentCliManager.loadSelection();
-    const selectedCliType = selection.cliType;
+    return { probes };
+  }
 
-    if (!selectedCliType) {
-      return {
-        selectedCliType: null,
-        displayName: null,
-        status: 'not-selected',
-        commandCandidates: [],
-        resolvedPath: null,
-        version: null,
-        message: selection.isSkipped
-          ? 'Agent CLI selection was skipped in Desktop settings.'
-          : 'No Agent CLI is currently selected in Desktop settings.',
-      };
-    }
-
-    const commandCandidates = this.agentCliManager.getCommandCandidates(selectedCliType);
-    const displayName = getCliConfig(selectedCliType).displayName;
+  private async probeAgentCli(
+    config: ReturnType<typeof getAllCliConfigs>[number],
+    runtimeEnv: NodeJS.ProcessEnv,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticAgentCliProbe> {
+    const { cliType, displayName } = config;
+    const commandCandidates = [...config.commandCandidates];
     let resolvedPath: string | null = null;
 
     try {
-      resolvedPath = await this.agentCliManager.resolveCommandPath(commandCandidates, runtimeEnv);
+      resolvedPath = await this.resolveExecutablePath(commandCandidates, runtimeEnv);
     } catch (error) {
       const message = this.describeError(error, `Failed to resolve ${displayName} command candidates.`);
-      this.pushIssue(issues, 'agent-cli', selectedCliType, 'error', message);
+      this.pushIssue(issues, 'agent-cli', cliType, 'error', message);
       return {
-        selectedCliType,
+        cliType,
         displayName,
         status: 'error',
         commandCandidates,
@@ -486,10 +456,10 @@ export class SystemDiagnosticManager {
     }
 
     if (!resolvedPath) {
-      const message = `No executable matched the stored ${displayName} command candidates.`;
-      this.pushIssue(issues, 'agent-cli', selectedCliType, 'missing', message);
+      const message = `No executable matched the ${displayName} command candidates.`;
+      this.pushIssue(issues, 'agent-cli', cliType, 'missing', message);
       return {
-        selectedCliType,
+        cliType,
         displayName,
         status: 'missing',
         commandCandidates,
@@ -500,12 +470,12 @@ export class SystemDiagnosticManager {
     }
 
     try {
-      const version = await this.probeVersion(resolvedPath, AGENT_CLI_VERSION_ARGS[selectedCliType], runtimeEnv);
+      const version = await this.probeVersion(resolvedPath, AGENT_CLI_VERSION_ARGS[cliType], runtimeEnv);
       if (!version) {
         const message = `The ${displayName} executable was found, but its version could not be determined.`;
-        this.pushIssue(issues, 'agent-cli', selectedCliType, 'error', message);
+        this.pushIssue(issues, 'agent-cli', cliType, 'error', message);
         return {
-          selectedCliType,
+          cliType,
           displayName,
           status: 'error',
           commandCandidates,
@@ -516,9 +486,9 @@ export class SystemDiagnosticManager {
       }
 
       return {
-        selectedCliType,
+        cliType,
         displayName,
-        status: 'healthy',
+        status: 'available',
         commandCandidates,
         resolvedPath,
         version,
@@ -526,9 +496,9 @@ export class SystemDiagnosticManager {
       };
     } catch (error) {
       const message = this.describeError(error, `Failed to probe ${displayName} version.`);
-      this.pushIssue(issues, 'agent-cli', selectedCliType, 'error', message);
+      this.pushIssue(issues, 'agent-cli', cliType, 'error', message);
       return {
-        selectedCliType,
+        cliType,
         displayName,
         status: 'error',
         commandCandidates,
@@ -711,10 +681,6 @@ export class SystemDiagnosticManager {
     commandCandidates: string[],
     runtimeEnv: NodeJS.ProcessEnv,
   ): Promise<string | null> {
-    if (this.agentCliManager) {
-      return this.agentCliManager.resolveCommandPath(commandCandidates, runtimeEnv);
-    }
-
     for (const candidate of commandCandidates) {
       try {
         const result = this.platform === 'win32'
@@ -799,13 +765,14 @@ export class SystemDiagnosticManager {
     ]);
 
     pushSection('agent-cli', [
-      `selected=${data.agentCli.selectedCliType ?? 'none'}`,
-      `displayName=${data.agentCli.displayName ?? 'none'}`,
-      `status=${data.agentCli.status}`,
-      `commandCandidates=${data.agentCli.commandCandidates.join(',') || 'none'}`,
-      `resolvedPath=${data.agentCli.resolvedPath ?? 'unresolved'}`,
-      `version=${data.agentCli.version ?? 'unknown'}`,
-      data.agentCli.message ? `message=${data.agentCli.message}` : null,
+      ...data.agentCli.probes.flatMap((probe) => ([
+        `${probe.cliType}.displayName=${probe.displayName}`,
+        `${probe.cliType}.status=${probe.status}`,
+        `${probe.cliType}.commandCandidates=${probe.commandCandidates.join(',') || 'none'}`,
+        `${probe.cliType}.resolvedPath=${probe.resolvedPath ?? 'unresolved'}`,
+        `${probe.cliType}.version=${probe.version ?? 'unknown'}`,
+        probe.message ? `${probe.cliType}.message=${probe.message}` : null,
+      ])),
     ]);
 
     const toolchainLines = data.toolchain.flatMap((probe) => ([

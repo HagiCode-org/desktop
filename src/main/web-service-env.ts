@@ -78,7 +78,7 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
   },
   {
     key: 'AI__Providers__DefaultProvider',
-    sourceConfig: 'agentCliSelection (electron-store)',
+    sourceConfig: 'desktop default provider',
     required: true,
     sensitive: false,
     defaultValue: 'ClaudeCodeCli',

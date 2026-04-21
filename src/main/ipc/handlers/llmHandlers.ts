@@ -6,14 +6,12 @@ import {
   PromptResourceResolver,
   type PromptResourceKey,
 } from '../../prompt-resource-resolver.js';
-import type AgentCliManager from '../../agent-cli-manager.js';
 import { PromptGuidanceService } from '../../prompt-guidance-service.js';
 
 // Module state
 interface LlmHandlerState {
   llmInstallationManager: LlmInstallationManager | null;
   mainWindow: BrowserWindow | null;
-  agentCliManager: AgentCliManager | null;
   versionManager: VersionManager | null;
   promptResourceResolver: PromptResourceResolver | null;
 }
@@ -21,7 +19,6 @@ interface LlmHandlerState {
 const state: LlmHandlerState = {
   llmInstallationManager: null,
   mainWindow: null,
-  agentCliManager: null,
   versionManager: null,
   promptResourceResolver: null,
 };
@@ -32,13 +29,11 @@ const state: LlmHandlerState = {
 export function initLlmHandlers(
   llmInstallationManager: LlmInstallationManager | null,
   mainWindow: BrowserWindow | null,
-  agentCliManager: AgentCliManager | null = null,
   versionManager: VersionManager | null = null,
   promptResourceResolver: PromptResourceResolver | null = null,
 ): void {
   state.llmInstallationManager = llmInstallationManager;
   state.mainWindow = mainWindow;
-  state.agentCliManager = agentCliManager;
   state.versionManager = versionManager;
   state.promptResourceResolver = promptResourceResolver;
 }
@@ -49,13 +44,11 @@ export function initLlmHandlers(
 export function registerLlmHandlers(deps: {
   llmInstallationManager: LlmInstallationManager | null;
   mainWindow: BrowserWindow | null;
-  agentCliManager?: AgentCliManager | null;
   versionManager?: VersionManager | null;
   promptResourceResolver?: PromptResourceResolver | null;
 }): void {
   state.llmInstallationManager = deps.llmInstallationManager;
   state.mainWindow = deps.mainWindow;
-  state.agentCliManager = deps.agentCliManager || null;
   state.versionManager = deps.versionManager || null;
   state.promptResourceResolver = deps.promptResourceResolver || null;
 
@@ -98,22 +91,7 @@ export function registerLlmHandlers(deps: {
     }
     try {
       const prompt = await state.llmInstallationManager.loadPrompt(manifestPath, region);
-
-      // Determine CLI command based on user selection
-      let commandName = 'claude'; // Default fallback
-      if (state.agentCliManager) {
-        const selectedCliType = state.agentCliManager.getSelectedCliType();
-        if (selectedCliType) {
-          commandName = state.agentCliManager.getCommandName(selectedCliType);
-          console.log('[LlmHandlers] Using CLI command:', commandName, 'for selected type:', selectedCliType);
-        } else {
-          console.log('[LlmHandlers] No CLI type selected, using default: claude');
-        }
-      } else {
-        console.log('[LlmHandlers] AgentCliManager not available, using default: claude');
-      }
-
-      const result = await state.llmInstallationManager.callApi(prompt.filePath, event.sender, commandName);
+      const result = await state.llmInstallationManager.callApi(prompt.filePath, event.sender, 'claude');
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -178,7 +156,6 @@ export function registerLlmHandlers(deps: {
   const getPromptGuidanceService = () => new PromptGuidanceService({
     promptResourceResolver: state.promptResourceResolver,
     llmInstallationManager: state.llmInstallationManager,
-    agentCliManager: state.agentCliManager,
     resolveManifestPath: (versionId: string) => {
       const pathManager = PathManager.getInstance();
       const versionPath = pathManager.getInstalledVersionPath(versionId);

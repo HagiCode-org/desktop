@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { LlmInstallationManager } from './llm-installation-manager.js';
-import type AgentCliManager from './agent-cli-manager.js';
 import type {
   ActiveVersionContext,
   PromptResourceKey,
@@ -16,12 +15,10 @@ import type {
   PromptGuidanceSuccess,
   PromptGuidanceTool,
 } from '../types/prompt-guidance.js';
-import type { AgentCliType } from '../types/agent-cli.js';
 
 interface PromptGuidanceServiceDeps {
   promptResourceResolver?: PromptResourceResolver | null;
   llmInstallationManager?: LlmInstallationManager | null;
-  agentCliManager?: AgentCliManager | null;
   readFile?: (filePath: string, encoding: BufferEncoding) => Promise<string>;
   resolveManifestPath?: (versionId: string) => string;
 }
@@ -144,7 +141,7 @@ export class PromptGuidanceService {
   }
 
   private createSuccess(
-    input: Omit<PromptGuidanceSuccess, 'success' | 'preferredCliType' | 'supportedTools'>,
+    input: Omit<PromptGuidanceSuccess, 'success' | 'supportedTools'>,
   ): PromptGuidanceSuccess {
     return {
       success: true,
@@ -154,7 +151,7 @@ export class PromptGuidanceService {
   }
 
   private createFailure(
-    input: Omit<PromptGuidanceFailure, 'success' | 'preferredCliType' | 'supportedTools'>,
+    input: Omit<PromptGuidanceFailure, 'success' | 'supportedTools'>,
   ): PromptGuidanceFailure {
     return {
       success: false,
@@ -163,12 +160,8 @@ export class PromptGuidanceService {
     };
   }
 
-  private getToolContext(): {
-    preferredCliType: AgentCliType | null;
-    supportedTools: PromptGuidanceTool[];
-  } {
+  private getToolContext(): { supportedTools: PromptGuidanceTool[] } {
     return {
-      preferredCliType: null,
       supportedTools: getAllCliConfigs().map((config) => ({
         cliType: config.cliType,
         displayName: config.displayName,

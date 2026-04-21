@@ -228,8 +228,6 @@ export type CodeServerWindowOpenResult =
     lastUrl?: string;
   };
 
-type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
-
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
@@ -398,12 +396,6 @@ interface ElectronAPI {
   onServiceProgress: (callback: (progress: any) => void) => () => void;
   onScriptOutput: (callback: (output: any) => void) => () => void;
   onOnboardingShow: (callback: () => void) => () => void;
-
-  // Agent CLI Selection APIs
-  agentCliSave: (data: { cliType: AgentCliSelectionType }) => Promise<{ success: boolean; error?: string }>;
-  agentCliLoad: () => Promise<{ cliType: AgentCliSelectionType | null; isSkipped: boolean; selectedAt: string | null }>;
-  agentCliSkip: () => Promise<{ success: boolean; error?: string }>;
-  agentCliGetSelected: () => Promise<AgentCliSelectionType | null>;
 }
 
 const clipboardBridge = createClipboardBridge(ipcRenderer, clipboardChannels);
@@ -722,12 +714,6 @@ const electronAPI: ElectronAPI = {
   claudeTest: () => ipcRenderer.invoke('claude:test'),
   claudeListBackups: () => ipcRenderer.invoke('claude:list-backups'),
   claudeRestoreFromBackup: (backupPath: string) => ipcRenderer.invoke('claude:restore-backup', backupPath),
-
-  // Agent CLI Selection APIs
-  agentCliSave: (data: { cliType: AgentCliSelectionType }) => ipcRenderer.invoke('agentCli:save', data),
-  agentCliLoad: () => ipcRenderer.invoke('agentCli:load'),
-  agentCliSkip: () => ipcRenderer.invoke('agentCli:skip'),
-  agentCliGetSelected: () => ipcRenderer.invoke('agentCli:getSelected'),
 
   // Preset Management APIs
   presetFetch: () => ipcRenderer.invoke('preset:fetch'),

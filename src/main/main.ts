@@ -25,7 +25,6 @@ import {
   buildStartupCompatibilityLogContext,
 } from './linux-startup-compatibility.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
-import { AgentCliManager } from './agent-cli-manager.js';
 import {
   openAboutWindow,
   openCodeServerWindow,
@@ -34,7 +33,6 @@ import {
 } from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
-import { registerAgentCliHandlers } from './ipc/agentCliHandlers.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
   registerWindowHandlers,
@@ -179,7 +177,6 @@ let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
-let agentCliManager: AgentCliManager | null = null;
 let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
@@ -2220,53 +2217,6 @@ app.whenReady().then(async () => {
   const presetLoader = getPresetLoader();
   log.info('[App] Claude Config Manager initialized');
 
-  // Initialize Agent CLI Manager
-  agentCliManager = new AgentCliManager(
-    configManager.getStore() as unknown as Store<Record<string, unknown>>
-  );
-  log.info('[App] Agent CLI Manager initialized');
-
-  // Sync executor env from persisted Agent CLI selection before service start.
-  if (webServiceManager && agentCliManager) {
-    const selectedCliType = agentCliManager.getSelectedCliType();
-    const managedEnv = await agentCliManager.buildWebServiceEnv(selectedCliType);
-    await webServiceManager.updateConfig({
-      env: managedEnv,
-    });
-    log.info('[App] Synced executor env from Agent CLI selection:', {
-      cliType: selectedCliType,
-      envKeys: Object.keys(managedEnv),
-    });
-  }
-
-  // Register Agent CLI IPC handlers
-  if (agentCliManager) {
-    const currentAgentCliManager = agentCliManager;
-    registerAgentCliHandlers(currentAgentCliManager, {
-      onSelectionSaved: async (cliType) => {
-        if (!webServiceManager) return;
-        const managedEnv = await currentAgentCliManager.buildWebServiceEnv(cliType);
-        await webServiceManager.updateConfig({
-          env: managedEnv,
-        });
-        log.info('[App] Synced executor env from Agent CLI save:', {
-          cliType,
-          envKeys: Object.keys(managedEnv),
-        });
-      },
-      onSkipped: async () => {
-        if (!webServiceManager) return;
-        await webServiceManager.updateConfig({
-          env: {
-            AI__Providers__DefaultProvider: 'ClaudeCodeCli',
-          },
-        });
-        log.info('[App] Agent CLI skipped, executor env reset to default: ClaudeCodeCli');
-      },
-    });
-    log.info('[App] Agent CLI IPC handlers registered');
-  }
-
   // Initialize LLM Installation Manager (after ClaudeConfigManager)
   llmInstallationManager = new LlmInstallationManager(
     regionDetector,
@@ -2282,7 +2232,6 @@ app.whenReady().then(async () => {
     registerLlmHandlers({
       llmInstallationManager,
       mainWindow,
-      agentCliManager,
       versionManager,
       promptResourceResolver,
     });
@@ -2290,9 +2239,7 @@ app.whenReady().then(async () => {
   }
 
   // Initialize System Diagnostic Manager
-  systemDiagnosticManager = new SystemDiagnosticManager({
-    agentCliManager,
-  });
+  systemDiagnosticManager = new SystemDiagnosticManager();
   log.info('[App] System Diagnostic Manager initialized');
 
   if (systemDiagnosticManager) {
