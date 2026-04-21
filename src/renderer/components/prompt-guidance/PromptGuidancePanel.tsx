@@ -59,7 +59,7 @@ export function PromptGuidancePanel({
     if (!guidance) {
       return [];
     }
-    return orderPromptGuidanceTools(guidance.supportedTools, guidance.preferredCliType);
+    return orderPromptGuidanceTools(guidance.supportedTools);
   }, [guidance]);
 
   const steps = useMemo(() => [
@@ -163,14 +163,10 @@ export function PromptGuidancePanel({
           <>
             <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{t('recommendedTools')}</span>
+                <span className="text-sm font-medium text-foreground">{t('availableTools')}</span>
                 {orderedTools.map((tool) => (
-                  <Badge
-                    key={tool.cliType}
-                    variant={tool.cliType === guidance.preferredCliType ? 'default' : 'secondary'}
-                  >
+                  <Badge key={tool.cliType} variant="secondary">
                     {tool.displayName}
-                    {tool.cliType === guidance.preferredCliType ? ` · ${t('preferred')}` : ''}
                   </Badge>
                 ))}
               </div>
@@ -266,7 +262,7 @@ export function PromptGuidancePanel({
                   .map((tool) => (
                     <Button
                       key={tool.cliType}
-                      variant={tool.cliType === guidance.preferredCliType ? 'default' : 'outline'}
+                      variant="outline"
                       onClick={() => void handleOpenDocs(tool.docsUrl!, tool.cliType)}
                       disabled={isOpeningDocs === tool.cliType}
                     >

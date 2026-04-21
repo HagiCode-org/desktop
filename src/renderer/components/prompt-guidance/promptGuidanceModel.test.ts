@@ -20,7 +20,7 @@ describe('promptGuidanceModel', () => {
     assert.equal(copiedValue, 'line 1\nline 2');
   });
 
-  it('orders the preferred tool first without hard-coded page lists', () => {
+  it('preserves the registry order without introducing a preferred tool state', () => {
     const tools: PromptGuidanceTool[] = [
       {
         cliType: AgentCliType.ClaudeCode,
@@ -38,9 +38,9 @@ describe('promptGuidanceModel', () => {
       },
     ];
 
-    const ordered = orderPromptGuidanceTools(tools, AgentCliType.Codex);
+    const ordered = orderPromptGuidanceTools(tools);
 
-    assert.deepEqual(ordered.map((tool) => tool.cliType), [AgentCliType.Codex, AgentCliType.ClaudeCode]);
+    assert.deepEqual(ordered.map((tool) => tool.cliType), [AgentCliType.ClaudeCode, AgentCliType.Codex]);
   });
 
   it('formats prompt-guidance errors with attempted path diagnostics', () => {
@@ -51,7 +51,6 @@ describe('promptGuidanceModel', () => {
       error: 'missing prompt',
       attemptedPaths: ['/one', '/two'],
       activeVersion: 'hagicode-1',
-      preferredCliType: null,
       supportedTools: [],
     };
 

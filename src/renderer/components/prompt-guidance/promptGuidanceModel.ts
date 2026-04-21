@@ -1,6 +1,5 @@
 import type {
   PromptGuidanceFailure,
-  PromptGuidanceResponse,
   PromptGuidanceTool,
 } from '../../../types/prompt-guidance.js';
 
@@ -21,17 +20,8 @@ interface PromptGuidanceErrorLabels {
 
 export function orderPromptGuidanceTools(
   tools: PromptGuidanceTool[],
-  preferredCliType: PromptGuidanceResponse['preferredCliType'],
 ): PromptGuidanceTool[] {
-  return [...tools].sort((left, right) => {
-    if (left.cliType === preferredCliType && right.cliType !== preferredCliType) {
-      return -1;
-    }
-    if (right.cliType === preferredCliType && left.cliType !== preferredCliType) {
-      return 1;
-    }
-    return left.displayName.localeCompare(right.displayName);
-  });
+  return [...tools];
 }
 
 export async function copyPromptContent(

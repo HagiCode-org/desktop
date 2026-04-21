@@ -18,7 +18,6 @@ import { restartOnboardingFlow } from './store/slices/onboardingSlice';
 import { selectWebServiceInfo } from './store/slices/webServiceSlice';
 import { runCriticalStartupInitialization, startBackgroundStartupInitialization } from './store';
 import type { RootState, AppDispatch } from './store';
-import type { AgentCliType } from '../types/agent-cli';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
 import type {
@@ -87,10 +86,6 @@ declare global {
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: () => void) => () => void;
-      agentCliSave: (data: { cliType: AgentCliType }) => Promise<{ success: boolean }>;
-      agentCliLoad: () => Promise<{ cliType: AgentCliType | null; isSkipped: boolean; selectedAt: string | null }>;
-      agentCliSkip: () => Promise<{ success: boolean }>;
-      agentCliGetSelected: () => Promise<AgentCliType | null>;
     };
   }
 }
