@@ -1,6 +1,6 @@
 /**
  * Agent CLI Types
- * Types and interfaces for Agent CLI selection management
+ * Static registry used by prompt guidance and diagnostics.
  */
 
 import { getDocLink } from './doc-links.js';
@@ -121,46 +121,4 @@ export function getAllCliConfigs(): (AgentCliConfig & { docsUrl?: string })[] {
       docsUrl: docLink?.url,
     };
   });
-}
-
-export function getCliCommandName(cliType: AgentCliType): string {
-  return AGENT_CLI_CONFIGS[cliType].commandName;
-}
-
-export function getCliCommandCandidates(cliType: AgentCliType): string[] {
-  return [...AGENT_CLI_CONFIGS[cliType].commandCandidates];
-}
-
-export function getCliExecutorType(cliType: AgentCliType): string {
-  return AGENT_CLI_CONFIGS[cliType].executorType;
-}
-
-export function getCliProviderId(cliType: AgentCliType): string {
-  return AGENT_CLI_CONFIGS[cliType].providerId;
-}
-
-/**
- * Agent CLI selection stored in electron-store
- */
-export interface StoredAgentCliSelection {
-  cliType: AgentCliType | null;
-  isSkipped: boolean;
-  selectedAt: string | null;
-}
-
-/**
- * Parse persisted selection defensively to avoid unsupported values leaking into runtime.
- */
-export function sanitizeStoredAgentCliSelection(value: unknown): StoredAgentCliSelection {
-  const candidate = (value ?? {}) as Partial<StoredAgentCliSelection> & { cliType?: unknown };
-
-  const cliType = normalizeAgentCliType(candidate.cliType);
-  const isSkipped = Boolean(candidate.isSkipped);
-  const selectedAt = typeof candidate.selectedAt === 'string' ? candidate.selectedAt : null;
-
-  return {
-    cliType,
-    isSkipped: cliType ? false : isSkipped,
-    selectedAt,
-  };
 }

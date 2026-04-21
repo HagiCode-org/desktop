@@ -29,7 +29,6 @@ interface PromptGuidanceBase {
   entryPoint: PromptGuidanceEntryPoint;
   attemptedPaths: string[];
   activeVersion?: string;
-  preferredCliType: AgentCliType | null;
   supportedTools: PromptGuidanceTool[];
   suggestedWorkingDirectory?: string;
 }

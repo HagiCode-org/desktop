@@ -10,7 +10,7 @@ export type SystemDiagnosticChannelMap = typeof systemDiagnosticChannels;
 export type SystemDiagnosticOverallStatus = 'success' | 'partial-failure';
 export type SystemDiagnosticIssueKind = 'missing' | 'error';
 export type SystemDiagnosticCommandStatus = 'available' | 'missing' | 'error';
-export type SystemDiagnosticAgentCliStatus = 'healthy' | 'missing' | 'not-selected' | 'error';
+export type SystemDiagnosticAgentCliStatus = 'available' | 'missing' | 'error';
 export type SystemDiagnosticCommandScope = 'required-by-core-runtime';
 
 export interface SystemDiagnosticCoverageMatrix {
@@ -42,14 +42,18 @@ export interface SystemDiagnosticHardwareInfo {
   memoryFreeGb: string;
 }
 
-export interface SystemDiagnosticAgentCliInfo {
-  selectedCliType: AgentCliType | null;
-  displayName: string | null;
+export interface SystemDiagnosticAgentCliProbe {
+  cliType: AgentCliType;
+  displayName: string;
   status: SystemDiagnosticAgentCliStatus;
   commandCandidates: string[];
   resolvedPath: string | null;
   version: string | null;
   message: string | null;
+}
+
+export interface SystemDiagnosticAgentCliInfo {
+  probes: SystemDiagnosticAgentCliProbe[];
 }
 
 export interface SystemDiagnosticCommandProbe {
