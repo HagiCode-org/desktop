@@ -19,6 +19,13 @@
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         z-index: 9999;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition: opacity 180ms ease, visibility 180ms ease;
+      }
+
+      .loading-container-hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
       }
 
       /* Brand logo styles */
