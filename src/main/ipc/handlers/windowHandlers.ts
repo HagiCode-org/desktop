@@ -1,8 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { openHagicodeInAppWindow } from '../../hagicode-url.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from '../../clipboard-integration.js';
+import { resolveWindowIconPath } from '../../window-icon-path.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +20,18 @@ function getDistRootPath(): string {
  */
 function getAppRootPath(): string {
   return path.resolve(__dirname, '../..', '..');
+}
+
+function loadWindowIcon(appRootPath: string): Electron.NativeImage | undefined {
+  const iconPath = resolveWindowIconPath({
+    appRootPath,
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    existsSync: fs.existsSync,
+  });
+  const icon = nativeImage.createFromPath(iconPath);
+
+  return icon.isEmpty() ? undefined : icon;
 }
 
 // Module state
@@ -76,14 +90,14 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
         const distRoot = getDistRootPath();
         const appRoot = getAppRootPath();
         const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-        const iconPath = path.join(appRoot, 'resources', 'icon.png');
+        const icon = loadWindowIcon(appRoot);
 
         const childWindow = new BrowserWindow({
           minWidth: 800,
           minHeight: 600,
           show: false,
           autoHideMenuBar: true,
-          icon: iconPath,
+          icon,
           webPreferences: {
             preload: preloadPath,
             contextIsolation: true,

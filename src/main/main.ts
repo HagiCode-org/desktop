@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
@@ -64,6 +64,7 @@ import type { DistributionMode } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
+import { resolveWindowIconPath } from './window-icon-path.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -140,6 +141,22 @@ function getAppRootPath(): string {
   // Going up three levels from 'dist/main' gets us to project root
   // Going up three levels from 'app.asar/dist/main' gets us to app.asar root
   return path.resolve(__dirname, '..', '..');
+}
+
+function loadWindowIcon(appRootPath: string): { icon: Electron.NativeImage | undefined; iconPath: string } {
+  const iconPath = resolveWindowIconPath({
+    appRootPath,
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+  });
+  const icon = nativeImage.createFromPath(iconPath);
+
+  if (icon.isEmpty()) {
+    console.warn('[Hagicode] Window icon could not be loaded:', iconPath);
+    return { icon: undefined, iconPath };
+  }
+
+  return { icon, iconPath };
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -355,7 +372,7 @@ function createWindow(): void {
   const distRoot = getDistRootPath();
   const appRoot = getAppRootPath();
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+  const { icon, iconPath } = loadWindowIcon(appRoot);
 
   console.log('[Hagicode] Using preload path:', preloadPath);
   console.log('[Hagicode] Dist root path:', distRoot);
@@ -368,7 +385,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    icon: iconPath,
+    icon,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -439,14 +456,14 @@ function createManagedChildWindow(): BrowserWindow {
   const distRoot = getDistRootPath();
   const appRoot = getAppRootPath();
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+  const { icon } = loadWindowIcon(appRoot);
 
   const childWindow = new BrowserWindow({
     minWidth: 800,
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    icon: iconPath,
+    icon,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -462,14 +479,14 @@ function createManagedChildWindow(): BrowserWindow {
 
 function createCodeServerWindow(): BrowserWindow {
   const appRoot = getAppRootPath();
-  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+  const { icon } = loadWindowIcon(appRoot);
 
   const childWindow = new BrowserWindow({
     minWidth: 960,
     minHeight: 640,
     show: false,
     autoHideMenuBar: true,
-    icon: iconPath,
+    icon,
     title: 'HagiCode Code Server',
     webPreferences: {
       partition: CODE_SERVER_SESSION_PARTITION,
@@ -488,7 +505,7 @@ function createAboutPopupWindow(): BrowserWindow {
   const distRoot = getDistRootPath();
   const appRoot = getAppRootPath();
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
-  const iconPath = path.join(appRoot, 'resources', 'icon.png');
+  const { icon } = loadWindowIcon(appRoot);
 
   const childWindow = new BrowserWindow({
     width: 1120,
@@ -499,7 +516,7 @@ function createAboutPopupWindow(): BrowserWindow {
     autoHideMenuBar: true,
     parent: mainWindow ?? undefined,
     modal: false,
-    icon: iconPath,
+    icon,
     title: 'HagiCode About',
     webPreferences: {
       preload: preloadPath,
