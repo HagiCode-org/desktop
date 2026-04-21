@@ -578,9 +578,10 @@ When prompt guidance is requested, IPC responses include:
 - `promptSource`: where the prompt came from (`active-version`, `packaged-resource`, `development-root`, `manifest-entry`, etc.)
 - `attemptedPaths`: ordered candidate path list that was checked
 - `activeVersion`: active version id at lookup time (if available)
-- `preferredCliType`: the persisted Agent CLI preference, used only to highlight recommendations
 - `supportedTools`: centrally registered CLI metadata, including docs links for shared renderer chips/buttons
 - `suggestedWorkingDirectory`: the directory Desktop recommends opening before pasting the prompt
+
+Desktop no longer persists or reads `agentCliSelection`; any legacy electron-store value is ignored.
 
 When prompt resolution fails, the same payload keeps `attemptedPaths`, `activeVersion`, and a stable `errorCode` (`PROMPT_NOT_FOUND`, `INVALID_PROMPT_PATH`, etc.) so the renderer can show a structured troubleshooting state instead of auto-launching a terminal.
 
