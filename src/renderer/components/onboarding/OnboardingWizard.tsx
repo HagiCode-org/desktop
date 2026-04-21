@@ -75,10 +75,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     dispatch(loadLegalDocuments({ locale }));
   }, [isActive, locale, dispatch]);
 
-  if (!isActive) {
-    return null;
-  }
-
   const stepSequence = getOnboardingSequence(mode);
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
@@ -128,6 +124,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return '';
     }
   }, [currentStep, t]);
+
+  if (!isActive) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm">
