@@ -124,13 +124,29 @@
     "webServiceNotRunning": "Web service is not running",
     "officialWebsite": "Official Website",
     "officialWebsiteDesc": "Visit Hagicode official website for latest news and documentation",
-    "techSupport": "Technical Support",
-    "techSupportDesc": "Join our QQ group for technical support (Group: 610394020)",
-    "discord": "Discord Community",
-    "discordDesc": "Join the official HagiCode Discord community",
-    "githubProject": "GitHub Project",
-    "githubProjectDesc": "View source code and star us on GitHub",
-    "costCalculator": "AI Replacement Calculator"
+    "costCalculator": "AI Replacement Calculator",
+    "about": {
+      "sectionDescription": "Render the bundled snapshot first, then refresh the latest official destinations in place.",
+      "snapshotLabel": "Bundled snapshot",
+      "runtimeLabel": "Live data",
+      "updatedAt": "Updated {{value}}",
+      "loading": "Refreshing the latest official about data...",
+      "refreshFailed": "The latest official about data failed to load. Showing the bundled snapshot instead.",
+      "loadFailed": "Official about data is temporarily unavailable, but the website entry still works.",
+      "snapshotMissing": "This build does not include a bundled about snapshot. Trying the live endpoint directly.",
+      "empty": "No official about entries are available right now.",
+      "sections": {
+        "store": "Store",
+        "community": "Community",
+        "content": "Content"
+      },
+      "types": {
+        "link": "Link",
+        "contact": "Contact",
+        "qr": "QR",
+        "image": "Image"
+      }
+    }
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -138,6 +154,9 @@
     "versionManagement": "Version Management",
     "diagnostic": "Diagnostic",
     "settings": "Settings",
+    "desktopVersion": "Desktop version",
+    "webVersion": "Web version",
+    "unknownVersion": "Unavailable",
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"

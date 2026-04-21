@@ -124,13 +124,29 @@
     "webServiceNotRunning": "Hagicode 服务未运行，无法访问",
     "officialWebsite": "官方网站",
     "officialWebsiteDesc": "访问 Hagicode 官方网站获取最新资讯和文档",
-    "techSupport": "加入技术支持群",
-    "techSupportDesc": "加入 QQ 技术交流群获取帮助（群号：610394020）",
-    "discord": "Discord 社区",
-    "discordDesc": "加入 HagiCode 官方 Discord 社区",
-    "githubProject": "为项目点赞👍",
-    "githubProjectDesc": "在 GitHub 上查看源码并给我们 Star",
-    "costCalculator": "算一算，AI会不会淘汰我"
+    "costCalculator": "算一算，AI会不会淘汰我",
+    "about": {
+      "sectionDescription": "首屏使用打包 snapshot，随后自动刷新最新官方入口。",
+      "snapshotLabel": "打包 snapshot",
+      "runtimeLabel": "最新数据",
+      "updatedAt": "更新于 {{value}}",
+      "loading": "正在刷新最新官方 about 信息…",
+      "refreshFailed": "最新官方 about 加载失败，当前继续显示打包 snapshot。",
+      "loadFailed": "官方 about 暂时不可用，但官网入口仍可正常打开。",
+      "snapshotMissing": "当前构建未携带 about snapshot，正在尝试直接拉取最新官方数据。",
+      "empty": "暂时没有可展示的官方 about 条目。",
+      "sections": {
+        "store": "商店",
+        "community": "社区",
+        "content": "内容"
+      },
+      "types": {
+        "link": "链接",
+        "contact": "联系",
+        "qr": "二维码",
+        "image": "图片"
+      }
+    }
   },
   "sidebar": {
     "dashboard": "仪表盘",
@@ -138,6 +154,9 @@
     "versionManagement": "版本管理",
     "diagnostic": "诊断",
     "settings": "设置",
+    "desktopVersion": "Desktop 版本",
+    "webVersion": "Web 版本",
+    "unknownVersion": "不可用",
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"

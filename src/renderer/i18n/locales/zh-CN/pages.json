@@ -6,8 +6,7 @@
       "remoteMode": "远程模式",
       "dataDirectory": "数据目录",
       "sharingAcceleration": "下载与共享加速",
-      "updates": "后台更新",
-      "telemetry": "Telemetry"
+      "updates": "后台更新"
     },
     "smartConfig": {
       "title": "智能配置提示指引",
@@ -154,77 +153,6 @@
       "notes": {
         "snapshotModel": "首页提醒依赖主进程持久化快照，重启 Desktop 后仍会恢复最近一次更新状态。",
         "retentionPolicy": "保留策略只会清理缓存归档文件，不会删除已经安装完成的版本目录。"
-      }
-    },
-    "telemetry": {
-      "title": "托管 Web Telemetry",
-      "description": "集中查看并保存 Desktop 应用于托管 Web 服务的 Telemetry 偏好，包括是否启用导出以及数据发送到哪个 OTLP Endpoint。",
-      "summary": {
-        "title": "托管 Web Telemetry 状态",
-        "stateLabel": "当前状态",
-        "appliesToLabel": "应用范围",
-        "applyRuleLabel": "生效方式",
-        "applyRuleValue": "保存后立即写入本地偏好；如需让 YAML 完整生效，请重启托管服务。",
-        "scopePending": "正在读取托管 Web Telemetry 状态...",
-        "scopeLocalOnly": "仅缓存到 Desktop 本地，目前没有已安装的托管 Web 版本需要同步 YAML。",
-        "scopeSynced": "已缓存到 Desktop 本地，并同步到 {{count}} 个已安装的托管 Web 版本。",
-        "scopePartial": "已缓存到 Desktop 本地，其中 {{total}} 个已安装版本里已有 {{synced}} 个完成同步。"
-      },
-      "status": {
-        "current": {
-          "enabled": "已启用",
-          "disabled": "已禁用"
-        },
-        "badges": {
-          "localOnly": "仅本地",
-          "synced": "已同步",
-          "partial": "需要处理"
-        }
-      },
-      "enabled": {
-        "label": "启用托管 Web Telemetry",
-        "description": "控制托管 Web 服务是否导出 tracing 与 metrics；Desktop 自身的本地分析不在此页范围内。"
-      },
-      "endpoint": {
-        "label": "OTLP Endpoint",
-        "placeholder": "http://localhost:4317",
-        "description": "留空可继续沿用后端默认行为；如需导出到指定采集器或服务，请在这里填写 OTLP Endpoint。"
-      },
-      "disclosures": {
-        "enablement": {
-          "title": "启用范围",
-          "description": "启用后，托管 Web 服务可导出请求、Grain、运行时 tracing span，以及 AI 延迟、Token 用量、错误结果等运维 metrics。"
-        },
-        "endpoint": {
-          "title": "Endpoint 说明",
-          "description": "该 Endpoint 决定托管 Web Telemetry 导出到哪里。Desktop 只会同步它管理的字段，不会覆盖无关的 OTLP Headers、Protocol 或 Timeout 配置。"
-        },
-        "exclusions": {
-          "title": "敏感数据排除",
-          "description": "这里展示的托管 Web Telemetry 说明明确排除了原始 Prompt、密钥、凭据以及其他敏感负载内容。"
-        }
-      },
-      "actions": {
-        "cancel": "取消",
-        "save": "保存设置",
-        "saving": "保存中..."
-      },
-      "messages": {
-        "loadFailed": "读取托管 Web Telemetry 设置失败：{{error}}",
-        "saveSuccess": "托管 Web Telemetry 设置已保存",
-        "saveWarning": "托管 Web Telemetry 已保存到本地，但仍有 {{count}} 个已安装版本尚未完成 YAML 同步。",
-        "saveFailed": "保存托管 Web Telemetry 设置失败：{{error}}"
-      },
-      "errors": {
-        "loadTitle": "无法读取 Telemetry 设置"
-      },
-      "notes": {
-        "applyTitle": "生效时机",
-        "applyDescription": "Desktop 会立即保存该偏好，但托管 Web 服务通常需要在下次启动或服务重启后，才会完整应用同步后的 YAML 配置。",
-        "localOnlyTitle": "尚未安装托管 Web 版本",
-        "localOnlyDescription": "Desktop 会先将该 Telemetry 偏好缓存到本地，等下次安装托管 Web Runtime 时再继续同步。",
-        "partialTitle": "YAML 同步不完整",
-        "partialDescription": "Desktop 已保存本地 Telemetry 偏好，但还有 {{count}} 个已安装版本需要处理：{{versions}}。"
       }
     }
   },

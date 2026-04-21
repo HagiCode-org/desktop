@@ -6,8 +6,7 @@
       "remoteMode": "Remote Mode",
       "dataDirectory": "Data Directory",
       "sharingAcceleration": "Download & Sharing",
-      "updates": "Background Updates",
-      "telemetry": "Telemetry"
+      "updates": "Background Updates"
     },
     "smartConfig": {
       "title": "Smart Config prompt guidance",
@@ -154,77 +153,6 @@
       "notes": {
         "snapshotModel": "The dashboard reminder is driven by a persisted main-process snapshot, so the last known update state survives Desktop reloads.",
         "retentionPolicy": "Retention cleanup only removes cached archives and metadata. Installed version directories stay untouched."
-      }
-    },
-    "telemetry": {
-      "title": "Managed Web Telemetry",
-      "description": "Review and save the telemetry preference Desktop applies to the managed Web service, including whether export is enabled and which OTLP endpoint receives data.",
-      "summary": {
-        "title": "Managed Web telemetry status",
-        "stateLabel": "Current state",
-        "appliesToLabel": "Applies to",
-        "applyRuleLabel": "Apply rule",
-        "applyRuleValue": "Saved immediately; restart the managed service to fully apply YAML changes.",
-        "scopePending": "Loading managed Web telemetry status...",
-        "scopeLocalOnly": "Cached locally in Desktop. No installed managed Web version needs YAML sync yet.",
-        "scopeSynced": "Cached locally in Desktop and synchronized to {{count}} installed managed Web version(s).",
-        "scopePartial": "Cached locally in Desktop, with {{synced}} of {{total}} installed version(s) synchronized."
-      },
-      "status": {
-        "current": {
-          "enabled": "Enabled",
-          "disabled": "Disabled"
-        },
-        "badges": {
-          "localOnly": "Local only",
-          "synced": "Synchronized",
-          "partial": "Needs attention"
-        }
-      },
-      "enabled": {
-        "label": "Enable managed Web telemetry",
-        "description": "Turn managed Web tracing and metrics export on or off while keeping Desktop-local analytics outside the scope of this tab."
-      },
-      "endpoint": {
-        "label": "OTLP endpoint",
-        "placeholder": "http://localhost:4317",
-        "description": "Leave this blank to preserve the backend default, or point it to the OTLP collector or service that should receive managed Web telemetry."
-      },
-      "disclosures": {
-        "enablement": {
-          "title": "Enablement scope",
-          "description": "When enabled, the managed Web service may emit request, grain, and runtime tracing spans plus operational metrics such as AI latency, token usage, and error outcomes."
-        },
-        "endpoint": {
-          "title": "Endpoint guidance",
-          "description": "The endpoint controls where managed Web telemetry is exported. Desktop syncs this value into installed appsettings files without overwriting unrelated OTLP headers, protocol, or timeout settings."
-        },
-        "exclusions": {
-          "title": "Sensitive data exclusions",
-          "description": "This disclosure summary excludes raw prompts, secrets, credentials, and other sensitive payload details from the managed Web telemetry categories shown here."
-        }
-      },
-      "actions": {
-        "cancel": "Cancel",
-        "save": "Save Settings",
-        "saving": "Saving..."
-      },
-      "messages": {
-        "loadFailed": "Failed to load managed Web telemetry settings: {{error}}",
-        "saveSuccess": "Managed Web telemetry settings saved",
-        "saveWarning": "Managed Web telemetry settings were saved locally, but {{count}} installed version(s) still need YAML synchronization.",
-        "saveFailed": "Failed to save managed Web telemetry settings: {{error}}"
-      },
-      "errors": {
-        "loadTitle": "Telemetry settings could not be loaded"
-      },
-      "notes": {
-        "applyTitle": "Apply timing",
-        "applyDescription": "Desktop saves this preference immediately, but the managed Web service may need a restart or next launch before the synchronized YAML values fully take effect.",
-        "localOnlyTitle": "No installed managed Web version yet",
-        "localOnlyDescription": "Desktop will keep this telemetry preference cached locally so it is ready to synchronize the next time a managed Web runtime is installed.",
-        "partialTitle": "Partial YAML synchronization",
-        "partialDescription": "Desktop saved the local telemetry preference, but {{count}} installed version(s) still need attention: {{versions}}."
       }
     }
   },
