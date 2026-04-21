@@ -7,7 +7,6 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
-import agentCliReducer from './slices/agentCliSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
 import dataDirectoryReducer from './slices/dataDirectorySlice';
 import remoteModeReducer from './slices/remoteModeSlice';
@@ -31,7 +30,6 @@ export type AppDispatch = Dispatch<
   | typeof import('./slices/onboardingSlice').actions
   | typeof import('./slices/rssFeedSlice').actions
   | typeof import('./slices/claudeConfigSlice').actions
-  | typeof import('./slices/agentCliSlice').actions
   | typeof import('./slices/llmInstallationSlice').actions
   | typeof import('./slices/dataDirectorySlice').actions
   | typeof import('./slices/remoteModeSlice').actions
@@ -67,7 +65,6 @@ export const store = configureStore({
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
-    agentCli: agentCliReducer,
     llmInstallation: llmInstallationReducer,
     dataDirectory: dataDirectoryReducer,
     remoteMode: remoteModeReducer,
