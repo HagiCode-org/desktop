@@ -10,6 +10,11 @@ import {
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
+import type {
+  BootstrapDataDirectoryContext,
+  DataDirectoryDiagnostic,
+  DataDirectorySource,
+} from '../types/bootstrap.js';
 
 export {
   buildPortableToolchainPaths,
@@ -47,6 +52,8 @@ export interface ValidationResult {
   isValid: boolean;
   message: string;
   warnings?: string[];
+  normalizedPath?: string;
+  diagnostic?: DataDirectoryDiagnostic;
 }
 
 /**
@@ -57,6 +64,20 @@ export interface StorageInfo {
   total: number; // bytes
   available: number; // bytes
   usedPercentage: number; // 0-100
+}
+
+export interface DataDirectoryPreparationResult {
+  isReady: boolean;
+  validation: ValidationResult;
+  context: BootstrapDataDirectoryContext;
+  diagnostic?: DataDirectoryDiagnostic;
+}
+
+export interface DirectoryAccessAdapter {
+  access: (targetPath: string) => Promise<void>;
+  mkdir: (targetPath: string, options: { recursive: true }) => Promise<void>;
+  writeFile: (targetPath: string, data: string, options: { flag: 'wx' }) => Promise<void>;
+  unlink: (targetPath: string) => Promise<void>;
 }
 
 export interface PortablePayloadValidationResult {
@@ -142,6 +163,227 @@ export function parsePortableBundleManifest(raw: unknown): PortableBundleManifes
     manifestPath: typeof manifest.manifestPath === 'string' ? manifest.manifestPath : 'bundle-manifest.json',
     includedPlatforms,
     members,
+  };
+}
+
+function getPathModuleForPlatform(platform: NodeJS.Platform): typeof path.posix | typeof path.win32 {
+  return platform === 'win32' ? path.win32 : path.posix;
+}
+
+export function normalizeDataDirectoryPathForPlatform(
+  dirPath: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const trimmed = dirPath.trim();
+  const pathModule = getPathModuleForPlatform(platform);
+  const slashNormalized = platform === 'win32'
+    ? trimmed.replace(/\//g, '\\')
+    : trimmed.replace(/\\/g, '/');
+
+  return pathModule.normalize(slashNormalized);
+}
+
+export function isAbsoluteDataDirectoryPath(
+  dirPath: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const trimmed = dirPath.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+
+  return platform === 'win32'
+    ? path.win32.isAbsolute(trimmed)
+    : path.posix.isAbsolute(trimmed);
+}
+
+export function hasInvalidDataDirectoryCharacters(
+  dirPath: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform !== 'win32') {
+    return /\0/.test(dirPath);
+  }
+
+  const withoutDrive = dirPath.trim().replace(/^[A-Za-z]:/, '');
+  return /[<>:"|?*]/.test(withoutDrive);
+}
+
+function buildDataDirectoryDiagnostic(input: {
+  code: DataDirectoryDiagnostic['code'];
+  operation: DataDirectoryDiagnostic['operation'];
+  summary: string;
+  detail?: string;
+  requestedPath: string | null;
+  normalizedPath: string;
+  fallbackUsed?: boolean;
+  fallbackPath?: string;
+}): DataDirectoryDiagnostic {
+  return {
+    code: input.code,
+    operation: input.operation,
+    summary: input.summary,
+    detail: input.detail,
+    requestedPath: input.requestedPath,
+    normalizedPath: input.normalizedPath,
+    fallbackUsed: input.fallbackUsed ?? false,
+    fallbackPath: input.fallbackPath,
+  };
+}
+
+export async function prepareDataDirectoryAccess(
+  dirPath: string,
+  options?: {
+    defaultPath?: string;
+    source?: DataDirectorySource;
+    requestedPath?: string | null;
+    platform?: NodeJS.Platform;
+    accessAdapter?: DirectoryAccessAdapter;
+  },
+): Promise<DataDirectoryPreparationResult> {
+  const platform = options?.platform ?? process.platform;
+  const normalizedPath = normalizeDataDirectoryPathForPlatform(dirPath, platform);
+  const defaultPath = normalizeDataDirectoryPathForPlatform(
+    options?.defaultPath ?? normalizedPath,
+    platform,
+  );
+  const accessAdapter = options?.accessAdapter ?? {
+    access: (targetPath) => fs.access(targetPath),
+    mkdir: (targetPath, mkdirOptions) => fs.mkdir(targetPath, mkdirOptions),
+    writeFile: (targetPath, data, writeOptions) => fs.writeFile(targetPath, data, writeOptions),
+    unlink: (targetPath) => fs.unlink(targetPath),
+  };
+  const pathModule = getPathModuleForPlatform(platform);
+  const context: BootstrapDataDirectoryContext = {
+    source: options?.source ?? 'configured',
+    requestedPath: options?.requestedPath ?? dirPath,
+    normalizedPath,
+    defaultPath,
+    existed: false,
+    created: false,
+    writable: false,
+    usingDefault: normalizedPath === defaultPath,
+    fallbackUsed: false,
+  };
+
+  if (!isAbsoluteDataDirectoryPath(dirPath, platform)) {
+    const diagnostic = buildDataDirectoryDiagnostic({
+      code: 'invalid-path',
+      operation: 'normalize',
+      summary: 'data directory must be an absolute path',
+      detail: 'Only absolute paths are supported for the Desktop data directory.',
+      requestedPath: context.requestedPath,
+      normalizedPath,
+    });
+
+    return {
+      isReady: false,
+      validation: {
+        isValid: false,
+        message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
+        normalizedPath,
+        diagnostic,
+      },
+      context,
+      diagnostic,
+    };
+  }
+
+  if (hasInvalidDataDirectoryCharacters(dirPath, platform)) {
+    const diagnostic = buildDataDirectoryDiagnostic({
+      code: 'invalid-path',
+      operation: 'normalize',
+      summary: 'data directory path contains unsupported characters',
+      detail: 'Windows paths cannot contain < > : " | ? * outside the drive prefix.',
+      requestedPath: context.requestedPath,
+      normalizedPath,
+    });
+
+    return {
+      isReady: false,
+      validation: {
+        isValid: false,
+        message: 'Path contains invalid characters: < > : " | ? *',
+        normalizedPath,
+        diagnostic,
+      },
+      context,
+      diagnostic,
+    };
+  }
+
+  try {
+    await accessAdapter.access(normalizedPath);
+    context.existed = true;
+  } catch {
+    try {
+      await accessAdapter.mkdir(normalizedPath, { recursive: true });
+      context.created = true;
+    } catch (error) {
+      const diagnostic = buildDataDirectoryDiagnostic({
+        code: 'mkdir-failed',
+        operation: 'mkdir',
+        summary: 'failed to create Desktop data directory',
+        detail: error instanceof Error ? error.message : String(error),
+        requestedPath: context.requestedPath,
+        normalizedPath,
+      });
+
+      return {
+        isReady: false,
+        validation: {
+          isValid: false,
+          message: `Cannot create directory at ${normalizedPath}: ${diagnostic.detail}`,
+          normalizedPath,
+          diagnostic,
+        },
+        context,
+        diagnostic,
+      };
+    }
+  }
+
+  const writeTestPath = pathModule.join(
+    normalizedPath,
+    `.hagicode-write-test-${process.pid}-${Date.now()}`,
+  );
+
+  try {
+    await accessAdapter.writeFile(writeTestPath, 'ok', { flag: 'wx' });
+    await accessAdapter.unlink(writeTestPath);
+    context.writable = true;
+  } catch (error) {
+    const diagnostic = buildDataDirectoryDiagnostic({
+      code: 'write-test-failed',
+      operation: 'write-test',
+      summary: 'data directory is not writable',
+      detail: error instanceof Error ? error.message : String(error),
+      requestedPath: context.requestedPath,
+      normalizedPath,
+    });
+
+    return {
+      isReady: false,
+      validation: {
+        isValid: false,
+        message: `No write permission for directory ${normalizedPath}: ${diagnostic.detail}`,
+        normalizedPath,
+        diagnostic,
+      },
+      context,
+      diagnostic,
+    };
+  }
+
+  return {
+    isReady: true,
+    validation: {
+      isValid: true,
+      message: 'Path is valid and writable',
+      warnings: ['Note: Full disk space check may not be available on all platforms'],
+      normalizedPath,
+    },
+    context,
   };
 }
 
@@ -344,7 +586,10 @@ export class PathManager {
    * @returns The default absolute path to the data directory
    */
   getDefaultDataDirectory(): string {
-    return path.join(this.userDataPath, 'apps', 'data');
+    return normalizeDataDirectoryPathForPlatform(
+      path.join(this.userDataPath, 'apps', 'data'),
+      process.platform,
+    );
   }
 
   /**
@@ -357,9 +602,13 @@ export class PathManager {
     if (!validation.isValid) {
       throw new Error(`Invalid data directory: ${validation.message}`);
     }
-    this.customDataDirectory = customPath;
-    this.paths.appsData = customPath;
+    this.applyDataDirectoryPath(validation.normalizedPath ?? customPath);
     log.info('[PathManager] Data directory updated to:', customPath);
+  }
+
+  applyDataDirectoryPath(resolvedPath: string): void {
+    this.customDataDirectory = resolvedPath;
+    this.paths.appsData = resolvedPath;
   }
 
   /**
@@ -368,77 +617,80 @@ export class PathManager {
    * @returns Validation result with status and messages
    */
   validatePathSync(dirPath: string): ValidationResult {
-    const warnings: string[] = [];
+    const normalizedPath = normalizeDataDirectoryPathForPlatform(dirPath, process.platform);
 
-    // 1. Validate absolute path (requirement: only absolute paths allowed)
-    if (!path.isAbsolute(dirPath)) {
+    if (!isAbsoluteDataDirectoryPath(dirPath, process.platform)) {
       return {
         isValid: false,
         message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
+        normalizedPath,
       };
     }
 
-    // 2. Validate path format (invalid characters)
-    // Note: Allow ':' for Windows drive letters (e.g., C:\)
-    const invalidChars = /[<>:"|?*]/;
-    const windowsDrivePattern = /^[A-Za-z]:/;
-    const hasInvalidChars = invalidChars.test(dirPath.replace(windowsDrivePattern, ''));
-    if (hasInvalidChars) {
+    if (hasInvalidDataDirectoryCharacters(dirPath, process.platform)) {
       return {
         isValid: false,
         message: 'Path contains invalid characters: < > : " | ? *',
+        normalizedPath,
       };
     }
 
-    // Normalize path for cross-platform compatibility
-    const normalizedPath = path.normalize(dirPath);
-
-    // 3. Check if path exists, try to create if not
-    let pathExists = false;
+    let existed = false;
     try {
       fsSync.accessSync(normalizedPath);
-      pathExists = true;
+      existed = true;
     } catch {
-      // Path doesn't exist, try to create it
       try {
         fsSync.mkdirSync(normalizedPath, { recursive: true });
         log.info('[PathManager] Created data directory:', normalizedPath);
-        pathExists = true;
       } catch (error) {
         return {
           isValid: false,
           message: `Cannot create directory at ${normalizedPath}: ${error}`,
+          normalizedPath,
+          diagnostic: buildDataDirectoryDiagnostic({
+            code: 'mkdir-failed',
+            operation: 'mkdir',
+            summary: 'failed to create Desktop data directory',
+            detail: error instanceof Error ? error.message : String(error),
+            requestedPath: dirPath,
+            normalizedPath,
+          }),
         };
       }
     }
 
-    // 4. Check writability if path exists
-    if (pathExists) {
-      const testFile = path.join(normalizedPath, '.write-test');
-      try {
-        fsSync.writeFileSync(testFile, 'test', { flag: 'wx' });
-        fsSync.unlinkSync(testFile);
-      } catch (error) {
-        return {
-          isValid: false,
-          message: `No write permission for directory ${normalizedPath}: ${error}`,
-        };
-      }
+    const pathModule = getPathModuleForPlatform(process.platform);
+    const testFile = pathModule.join(normalizedPath, `.hagicode-write-test-${process.pid}`);
 
-      // 5. Check disk space (minimum 1GB) - sync version with limited info
-      try {
-        const stats = fsSync.statSync(normalizedPath);
-        warnings.push('Note: Full disk space check requires async validation');
-      } catch (error) {
-        // Continue without disk space check
-        log.warn('[PathManager] Could not check disk space:', error);
-      }
+    try {
+      fsSync.writeFileSync(testFile, 'test', { flag: 'wx' });
+      fsSync.unlinkSync(testFile);
+    } catch (error) {
+      return {
+        isValid: false,
+        message: `No write permission for directory ${normalizedPath}: ${error}`,
+        normalizedPath,
+        diagnostic: buildDataDirectoryDiagnostic({
+          code: 'write-test-failed',
+          operation: 'write-test',
+          summary: 'data directory is not writable',
+          detail: error instanceof Error ? error.message : String(error),
+          requestedPath: dirPath,
+          normalizedPath,
+        }),
+      };
     }
+
+    const warnings = existed
+      ? ['Note: Full disk space check requires async validation']
+      : ['Directory was created during validation. Full disk space check requires async validation'];
 
     return {
       isValid: true,
       message: 'Path is valid and writable',
-      warnings: warnings.length > 0 ? warnings : undefined,
+      warnings,
+      normalizedPath,
     };
   }
 
@@ -448,79 +700,27 @@ export class PathManager {
    * @returns Validation result with status and messages
    */
   async validatePath(dirPath: string): Promise<ValidationResult> {
-    const warnings: string[] = [];
+    const preparation = await prepareDataDirectoryAccess(dirPath, {
+      source: 'configured',
+      defaultPath: this.getDefaultDataDirectory(),
+    });
 
-    // 1. Validate absolute path (requirement: only absolute paths allowed)
-    if (!path.isAbsolute(dirPath)) {
-      return {
-        isValid: false,
-        message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
-      };
-    }
+    return preparation.validation;
+  }
 
-    // 2. Validate path format (invalid characters)
-    // Note: Allow ':' for Windows drive letters (e.g., C:\)
-    const invalidChars = /[<>:"|?*]/;
-    const windowsDrivePattern = /^[A-Za-z]:/;
-    const hasInvalidChars = invalidChars.test(dirPath.replace(windowsDrivePattern, ''));
-    if (hasInvalidChars) {
-      return {
-        isValid: false,
-        message: 'Path contains invalid characters: < > : " | ? *',
-      };
-    }
-
-    // Normalize path for cross-platform compatibility
-    const normalizedPath = path.normalize(dirPath);
-
-    // 3. Check if path exists, try to create if not
-    let pathExists = false;
-    try {
-      await fs.access(normalizedPath);
-      pathExists = true;
-    } catch {
-      // Path doesn't exist, try to create it
-      try {
-        await fs.mkdir(normalizedPath, { recursive: true });
-        log.info('[PathManager] Created data directory:', normalizedPath);
-        pathExists = true;
-      } catch (error) {
-        return {
-          isValid: false,
-          message: `Cannot create directory at ${normalizedPath}: ${error}`,
-        };
-      }
-    }
-
-    // 4. Check writability if path exists
-    if (pathExists) {
-      const testFile = path.join(normalizedPath, '.write-test');
-      try {
-        await fs.writeFile(testFile, 'test', { flag: 'wx' });
-        await fs.unlink(testFile);
-      } catch (error) {
-        return {
-          isValid: false,
-          message: `No write permission for directory ${normalizedPath}: ${error}`,
-        };
-      }
-
-      // 5. Check disk space (minimum 1GB)
-      try {
-        const stats = await fs.stat(normalizedPath);
-        warnings.push('Note: Full disk space check may not be available on all platforms');
-      } catch (error) {
-        // Disk space check is not critical, just log warning
-        log.warn('[PathManager] Could not check disk space:', error);
-        warnings.push('Could not verify available disk space.');
-      }
-    }
-
-    return {
-      isValid: true,
-      message: 'Path is valid and writable',
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
+  async prepareDataDirectoryForBootstrap(
+    dirPath: string,
+    options?: {
+      source?: DataDirectorySource;
+      requestedPath?: string | null;
+      defaultPath?: string;
+    },
+  ): Promise<DataDirectoryPreparationResult> {
+    return prepareDataDirectoryAccess(dirPath, {
+      source: options?.source,
+      requestedPath: options?.requestedPath,
+      defaultPath: options?.defaultPath ?? this.getDefaultDataDirectory(),
+    });
   }
 
   /**

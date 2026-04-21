@@ -4,6 +4,7 @@ import type {
   ManagedWebTelemetrySettings,
   ManagedWebTelemetrySettingsInput,
 } from '../types/telemetry.js';
+import type { DataDirectorySource } from '../types/bootstrap.js';
 
 export interface AppSettings {
   language: string;
@@ -61,6 +62,13 @@ export interface AppConfig {
   shutdownDirectory?: string;
   recordingDirectory?: string;
   logsDirectory?: string;
+}
+
+export interface ResolvedDataDirectorySelection {
+  source: Extract<DataDirectorySource, 'default' | 'configured'>;
+  requestedPath: string;
+  configuredPath: string | null;
+  defaultPath: string;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -159,6 +167,26 @@ export class ConfigManager {
    */
   getDataDirectoryPath(): string | undefined {
     return this.get('dataDirectoryPath');
+  }
+
+  resolveDataDirectorySelection(defaultPath: string): ResolvedDataDirectorySelection {
+    const configuredPath = this.getDataDirectoryPath()?.trim() ?? '';
+
+    if (configuredPath.length > 0) {
+      return {
+        source: 'configured',
+        requestedPath: configuredPath,
+        configuredPath,
+        defaultPath,
+      };
+    }
+
+    return {
+      source: 'default',
+      requestedPath: defaultPath,
+      configuredPath: null,
+      defaultPath,
+    };
   }
 
   /**
