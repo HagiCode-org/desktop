@@ -4,12 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import yaml from 'js-yaml';
-import {
-  ConfigManager as DesktopConfigManager,
-  DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS,
-} from '../config.js';
-import { ConfigManager as YamlConfigManager } from '../config-manager.js';
-import { setManagedWebTelemetryPayload } from '../managed-web-telemetry.js';
+import { ConfigManager as DesktopConfigManager } from '../config.ts';
+import { ConfigManager as YamlConfigManager } from '../config-manager.ts';
 
 const tempDirectories: string[] = [];
 const mainProcessPath = path.resolve(process.cwd(), 'src/main/main.ts');
@@ -56,130 +52,84 @@ function createPathManagerLike(root: string) {
   };
 }
 
-describe('managed Web telemetry settings', () => {
-  it('uses backend-aligned defaults and persists the local cached preference', () => {
-    const store = new MockStore();
+describe('desktop telemetry retirement', () => {
+  it('removes legacy local telemetry data without affecting supported settings', () => {
+    const store = new MockStore({
+      telemetry: {
+        enabled: false,
+        endpoint: 'http://collector.internal:4317',
+      },
+      remoteMode: {
+        enabled: true,
+        url: 'https://remote.hagicode.test',
+      },
+      versionAutoUpdate: {
+        enabled: false,
+        retainedArchiveCount: 9,
+      },
+    });
     const manager = new DesktopConfigManager(store as never);
 
-    assert.deepEqual(manager.getManagedWebTelemetrySettings(), DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS);
-
-    const saved = manager.setManagedWebTelemetrySettings({
-      enabled: false,
-      endpoint: '  http://collector.internal:4317  ',
+    assert.equal(store.get('telemetry'), undefined);
+    assert.deepEqual(manager.get('remoteMode'), {
+      enabled: true,
+      url: 'https://remote.hagicode.test',
     });
-
-    assert.deepEqual(saved, {
-      ...DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS,
+    assert.deepEqual(manager.getVersionAutoUpdateSettings(), {
       enabled: false,
-      endpoint: 'http://collector.internal:4317',
+      retainedArchiveCount: 9,
     });
-    assert.deepEqual(manager.getManagedWebTelemetrySettings(), saved);
+    assert.equal('telemetry' in manager.getAll(), false);
   });
 
-  it('synchronizes telemetry values across installed versions without overwriting unrelated OTLP settings', async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-telemetry-'));
+  it('keeps existing Telemetry YAML blocks untouched while unrelated DataDir sync still works', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-config-'));
     tempDirectories.push(tempRoot);
     const pathManager = createPathManagerLike(tempRoot);
     const manager = new YamlConfigManager(pathManager as never);
-    const versionIds = ['hagicode-1.0.0-linux-x64-nort', 'hagicode-1.0.1-linux-x64-nort'];
+    const versionId = 'hagicode-1.0.0-linux-x64-nort';
+    const configPath = pathManager.getAppSettingsPath(versionId);
 
-    await Promise.all(versionIds.map(async (versionId) => {
-      const configPath = pathManager.getAppSettingsPath(versionId);
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, yaml.dump({
-        Telemetry: {
-          Enabled: true,
-          EnableTracing: true,
-          EnableMetrics: true,
-          Otlp: {
-            Enabled: false,
-            Endpoint: '',
-            Headers: 'authorization=keep-me',
-            Protocol: 'grpc',
-            TimeoutMilliseconds: 10000,
-          },
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, yaml.dump({
+      SomeOtherSetting: true,
+      Telemetry: {
+        Enabled: true,
+        EnableTracing: false,
+        EnableMetrics: true,
+        Otlp: {
+          Endpoint: 'http://existing-collector:4317',
+          Headers: 'authorization=keep-me',
         },
-      }), 'utf8');
-    }));
+      },
+    }), 'utf8');
 
-    const result = await manager.updateAllTelemetrySettings({
-      ...DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS,
-      enabled: false,
-      endpoint: 'http://collector.internal:4317',
-    });
+    const updatedVersions = await manager.updateAllDataDirs('/tmp/hagicode-data');
 
-    assert.equal(result.state, 'synced');
-    assert.deepEqual(result.syncedVersionIds, versionIds);
-    assert.deepEqual(result.unsyncedVersionIds, []);
+    assert.deepEqual(updatedVersions, [versionId]);
 
     const updatedConfig = yaml.load(
-      await fs.readFile(pathManager.getAppSettingsPath(versionIds[0]), 'utf8'),
+      await fs.readFile(configPath, 'utf8'),
     ) as Record<string, any>;
-    assert.equal(updatedConfig.Telemetry.Enabled, false);
-    assert.equal(updatedConfig.Telemetry.EnableTracing, true);
+    assert.equal(updatedConfig.DataDir, '/tmp/hagicode-data');
+    assert.equal(updatedConfig.SomeOtherSetting, true);
+    assert.equal(updatedConfig.Telemetry.Enabled, true);
+    assert.equal(updatedConfig.Telemetry.EnableTracing, false);
     assert.equal(updatedConfig.Telemetry.EnableMetrics, true);
-    assert.equal(updatedConfig.Telemetry.Otlp.Endpoint, 'http://collector.internal:4317');
+    assert.equal(updatedConfig.Telemetry.Otlp.Endpoint, 'http://existing-collector:4317');
     assert.equal(updatedConfig.Telemetry.Otlp.Headers, 'authorization=keep-me');
-    assert.equal(updatedConfig.Telemetry.Otlp.Protocol, 'grpc');
-    assert.equal(updatedConfig.Telemetry.Otlp.TimeoutMilliseconds, 10000);
   });
 
-  it('keeps the local cached preference when one installed version fails YAML synchronization and returns warning metadata', async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-telemetry-partial-'));
-    tempDirectories.push(tempRoot);
-    const pathManager = createPathManagerLike(tempRoot);
-    const yamlManager = new YamlConfigManager(pathManager as never);
-    const store = new MockStore();
-    const desktopManager = new DesktopConfigManager(store as never);
-    const goodVersion = 'hagicode-1.0.0-linux-x64-nort';
-    const brokenVersion = 'hagicode-1.0.1-linux-x64-nort';
-
-    const goodConfigPath = pathManager.getAppSettingsPath(goodVersion);
-    const brokenConfigPath = pathManager.getAppSettingsPath(brokenVersion);
-    await fs.mkdir(path.dirname(goodConfigPath), { recursive: true });
-    await fs.mkdir(path.dirname(brokenConfigPath), { recursive: true });
-    await fs.writeFile(goodConfigPath, yaml.dump({ Telemetry: { Otlp: { Headers: 'keep' } } }), 'utf8');
-    await fs.writeFile(brokenConfigPath, 'Telemetry: [\n', 'utf8');
-
-    const result = await setManagedWebTelemetryPayload(
-      {
-        configManager: desktopManager,
-        yamlConfigManager: yamlManager,
-      },
-      {
-        enabled: false,
-        endpoint: ' http://collector.internal:4317 ',
-      },
-    );
-
-    assert.deepEqual(desktopManager.getManagedWebTelemetrySettings(), {
-      ...DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS,
-      enabled: false,
-      endpoint: 'http://collector.internal:4317',
-    });
-    assert.equal(result.status.state, 'partial');
-    assert.deepEqual(result.status.syncedVersionIds, [goodVersion]);
-    assert.deepEqual(result.status.unsyncedVersionIds, [brokenVersion]);
-    assert.deepEqual(result.warning, {
-      code: 'partial-sync',
-      failedVersionIds: [brokenVersion],
-    });
-
-    const syncedConfig = yaml.load(await fs.readFile(goodConfigPath, 'utf8')) as Record<string, any>;
-    assert.equal(syncedConfig.Telemetry.Enabled, false);
-    assert.equal(syncedConfig.Telemetry.Otlp.Endpoint, 'http://collector.internal:4317');
-    assert.equal(syncedConfig.Telemetry.Otlp.Headers, 'keep');
-  });
-
-  it('registers telemetry IPC handlers in the main process and exposes the preload bridge', async () => {
+  it('omits telemetry IPC handlers and preload bridge exposure from the runtime', async () => {
     const [mainSource, preloadSource] = await Promise.all([
       fs.readFile(mainProcessPath, 'utf8'),
       fs.readFile(preloadPath, 'utf8'),
     ]);
 
-    assert.match(mainSource, /ipcMain\.handle\('telemetry:get'/);
-    assert.match(mainSource, /ipcMain\.handle\('telemetry:set'/);
-    assert.match(preloadSource, /telemetry: ManagedWebTelemetryBridge;/);
-    assert.match(preloadSource, /telemetry: \{\s*get: \(\) => ipcRenderer\.invoke\('telemetry:get'\),\s*set: \(settings\) => ipcRenderer\.invoke\('telemetry:set', settings\),\s*\},/s);
+    assert.equal(mainSource.includes("ipcMain.handle('telemetry:get'"), false);
+    assert.equal(mainSource.includes("ipcMain.handle('telemetry:set'"), false);
+    assert.equal(preloadSource.includes('telemetry:'), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:get')"), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:set'"), false);
   });
 });
