@@ -83,6 +83,11 @@ export const store = configureStore({
   devTools: process.env.NODE_ENV !== 'production',
 });
 
+let criticalInitializationPromise: Promise<void> | null = null;
+let backgroundInitializationStarted = false;
+let realtimeListenersRegistered = false;
+let webServicePollingHandle: ReturnType<typeof setInterval> | null = null;
+
 // Set up listener middleware for state change monitoring
 // This replaces the saga event watching capabilities
 
@@ -117,41 +122,13 @@ listenerMiddleware.startListening({
   },
 });
 
-// Initialize data on startup using thunks instead of sagas
+function registerRealtimeListeners(): void {
+  if (realtimeListenersRegistered || typeof window === 'undefined') {
+    return;
+  }
 
-// Initialize i18n
-store.dispatch(initializeI18n());
+  realtimeListenersRegistered = true;
 
-// Initialize dependencies
-store.dispatch(initializeDependency());
-
-// Initialize view
-store.dispatch(initializeView());
-
-// Initialize package source
-store.dispatch(initializePackageSource());
-
-// Initialize onboarding (using thunk instead of saga)
-store.dispatch(checkOnboardingTrigger());
-
-// Initialize RSS feed
-store.dispatch(initializeRSSFeed());
-
-// Initialize remote mode
-store.dispatch(initializeRemoteMode());
-
-// Initialize version update snapshot and settings
-store.dispatch(fetchVersionUpdateSnapshot());
-store.dispatch(fetchVersionAutoUpdateSettings());
-
-// Initialize web service (must be last as it may depend on other modules)
-store.dispatch(initializeWebService());
-
-// Set up main process event listeners for real-time updates
-// These replace the saga fork watchers
-
-// Listen for web service status changes from main process
-if (typeof window !== 'undefined') {
   window.electronAPI.onActiveVersionChanged?.((version: any) => {
     store.dispatch({ type: 'webService/setActiveVersion', payload: version });
     console.log('Active version changed:', version);
@@ -166,17 +143,6 @@ if (typeof window !== 'undefined') {
     store.dispatch(setVersionUpdateSnapshotFromEvent(snapshot));
   });
 
-  // Set up polling as backup for web service status
-  setInterval(async () => {
-    try {
-      const status = await window.electronAPI.getWebServiceStatus();
-      store.dispatch(setProcessInfo(status));
-    } catch (error) {
-      console.error('Watch web service status error:', error);
-    }
-  }, 5000); // Poll every 5 seconds
-
-  // Listen for package install progress
   window.electronAPI.onPackageInstallProgress?.((progress: any) => {
     console.log('Package install progress:', progress);
     store.dispatch({
@@ -189,6 +155,54 @@ if (typeof window !== 'undefined') {
     });
   });
 
+  if (!webServicePollingHandle) {
+    webServicePollingHandle = setInterval(async () => {
+      try {
+        const status = await window.electronAPI.getWebServiceStatus();
+        store.dispatch(setProcessInfo(status));
+      } catch (error) {
+        console.error('Watch web service status error:', error);
+      }
+    }, 5000);
+  }
+}
+
+export async function runCriticalStartupInitialization(): Promise<void> {
+  if (criticalInitializationPromise) {
+    return criticalInitializationPromise;
+  }
+
+  criticalInitializationPromise = (async () => {
+    await store.dispatch(initializeI18n()).unwrap();
+    await Promise.allSettled([
+      store.dispatch(initializeView()),
+      store.dispatch(checkOnboardingTrigger()),
+      store.dispatch(initializeRemoteMode()),
+    ]);
+  })().catch((error) => {
+    criticalInitializationPromise = null;
+    throw error;
+  });
+
+  return criticalInitializationPromise;
+}
+
+export function startBackgroundStartupInitialization(): void {
+  if (backgroundInitializationStarted) {
+    return;
+  }
+
+  backgroundInitializationStarted = true;
+  registerRealtimeListeners();
+
+  void Promise.allSettled([
+    store.dispatch(initializePackageSource()),
+    store.dispatch(initializeDependency()),
+    store.dispatch(initializeRSSFeed()),
+    store.dispatch(fetchVersionUpdateSnapshot()),
+    store.dispatch(fetchVersionAutoUpdateSettings()),
+    store.dispatch(initializeWebService()),
+  ]);
 }
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
