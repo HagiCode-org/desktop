@@ -13,6 +13,8 @@ interface ElectronAppLike {
 type EnvSource = NodeJS.ProcessEnv | Record<string, string | undefined>;
 type ExistsSync = (targetPath: string) => boolean;
 
+const FORCED_STEAM_COMPAT_ENV_KEY = 'HAGICODE_FORCE_STEAM_COMPAT';
+
 export type StartupCompatibilityMode = 'default' | 'steam-linux-software-rendering';
 export type StartupCompatibilityLaunchSource = 'steam' | 'direct-cli';
 export type StartupCompatibilityDetectorCategory =
@@ -109,6 +111,15 @@ function collectSteamRuntimeHints(env: EnvSource): string[] {
     const value = env[key];
     return typeof value === 'string' && value.trim().length > 0;
   });
+}
+
+function isTruthyEnvFlag(value: string | undefined): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes' || normalizedValue === 'on';
 }
 
 function collectMatchingValues(values: readonly string[], patterns: readonly RegExp[], prefix: string): string[] {
@@ -228,10 +239,15 @@ export function resolveSteamLinuxStartupCompatibility(
   const argv = options.argv ?? process.argv;
   const execPath = options.execPath ?? process.execPath;
   const cwd = options.cwd ?? process.cwd();
-  const resourcesPath = options.resourcesPath ?? process.resourcesPath;
+  const processResourcesPath =
+    'resourcesPath' in process
+      ? (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath
+      : undefined;
+  const resourcesPath = options.resourcesPath ?? processResourcesPath;
   const existsSync = options.existsSync ?? fs.existsSync;
 
-  const isPackagedLinux = platform === 'linux' && isPackaged;
+  const forceSteamCompat = isTruthyEnvFlag(env[FORCED_STEAM_COMPAT_ENV_KEY]);
+  const isEligibleLinuxLaunch = platform === 'linux' && (isPackaged || forceSteamCompat);
   const portablePayloadRoot = options.portablePayloadRoot ?? resolvePackagedPortablePayloadRoot(resourcesPath);
   const portablePayloadSignals = detectPortablePayloadSignals(portablePayloadRoot, existsSync);
   const steamRuntimeHints = collectSteamRuntimeHints(env);
@@ -243,14 +259,14 @@ export function resolveSteamLinuxStartupCompatibility(
   );
 
   const enabled = shouldEnableCompatibility(
-    isPackagedLinux,
+    isEligibleLinuxLaunch,
     steamRuntimeHints,
     launchArgHints,
     pathHints,
     portablePayloadSignals,
-  );
+  ) || forceSteamCompat;
   const detectorCategory = resolveDetectorCategory(
-    isPackagedLinux,
+    isEligibleLinuxLaunch,
     steamRuntimeHints,
     launchArgHints,
     pathHints,

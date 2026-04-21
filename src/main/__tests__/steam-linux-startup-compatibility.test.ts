@@ -72,6 +72,33 @@ describe('steam linux startup compatibility', () => {
     assert.deepEqual(decision.electronSwitches, []);
   });
 
+  it('allows dev steam simulation to force the compatibility branch on Linux', () => {
+    const decision = resolveSteamLinuxStartupCompatibility({
+      platform: 'linux',
+      isPackaged: false,
+      env: {
+        HAGICODE_FORCE_STEAM_COMPAT: '1',
+        SteamAppId: '4625540',
+        SteamGameId: '4625540',
+        STEAM_COMPAT_DATA_PATH: '/tmp/hagicode-steam-sim',
+      },
+      argv: ['/workspace/hagicode-desktop/node_modules/.bin/electron', '.', '--steam-appid=4625540'],
+      execPath: '/workspace/hagicode-desktop/node_modules/.bin/electron',
+      cwd: '/workspace/hagicode-desktop',
+      resourcesPath: '/workspace/hagicode-desktop/resources',
+    });
+
+    assert.equal(decision.enabled, true);
+    assert.equal(decision.mode, 'steam-linux-software-rendering');
+    assert.equal(decision.launchSource, 'steam');
+    assert.equal(decision.detectorCategory, 'steam-launch-args');
+    assert.equal(decision.disableHardwareAcceleration, true);
+    assert.deepEqual(
+      decision.electronSwitches.map((electronSwitch) => electronSwitch.name),
+      ['disable-gpu', 'disable-gpu-compositing', 'disable-gpu-rasterization'],
+    );
+  });
+
   it('records the compatibility state so later startup diagnostics keep the Steam-vs-CLI distinction', () => {
     const appliedSwitches: string[] = [];
     const electronApp = {
@@ -138,5 +165,14 @@ describe('steam linux startup compatibility', () => {
     assert.ok(applyIndex < createWindowIndex);
     assert.match(source, /Steam Linux compatibility mode enabled/);
     assert.match(source, /startupCompatibilityDetectorCategory/);
+  });
+
+  it('exposes a dedicated steam simulation dev script', async () => {
+    const packageJsonSource = await fs.readFile(path.resolve(process.cwd(), 'package.json'), 'utf-8');
+
+    assert.match(packageJsonSource, /"dev:steam-sim":/);
+    assert.match(packageJsonSource, /"dev:electron:steam-sim":/);
+    assert.match(packageJsonSource, /HAGICODE_FORCE_STEAM_COMPAT=1/);
+    assert.match(packageJsonSource, /SteamAppId=4625540/);
   });
 });
