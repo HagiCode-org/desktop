@@ -14,14 +14,17 @@ describe('sidebar about section integration', () => {
     assert.match(source, /refreshSidebarAboutModel/);
     assert.match(source, /aboutFetchState\.status === 'loading'/);
     assert.match(source, /aboutFetchState\.status === 'error'/);
-    assert.match(source, /aboutModel\?\.source === 'runtime'/);
+    assert.match(source, /data-about-source=\{aboutModel\?\.source \?\? 'none'\}/);
   });
 
   it('renders nested official about sections and removes duplicated hard-coded links', async () => {
     const source = await fs.readFile(sidebarPath, 'utf8');
 
     assert.match(source, /renderAboutSectionTitle\(section\.id\)/);
-    assert.match(source, /navigation\.about\.sectionDescription/);
+    assert.match(source, /<ScrollArea className="h-full" type="always">/);
+    assert.doesNotMatch(source, /navigation\.about\.sectionDescription/);
+    assert.doesNotMatch(source, /navigation\.about\.runtimeLabel/);
+    assert.doesNotMatch(source, /navigation\.about\.updatedAt/);
     assert.match(source, /navigation\.about\.snapshotMissing/);
     assert.doesNotMatch(source, /tech-support/);
     assert.doesNotMatch(source, /discord-community/);

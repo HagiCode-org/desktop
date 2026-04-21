@@ -24,6 +24,7 @@ import type { RootState } from '../store';
 import type { ViewType } from '../store/slices/viewSlice';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
+import { ScrollArea } from './ui/scroll-area';
 import type { DistributionMode } from '../../types/distribution-mode';
 import {
   createLoadingSidebarAboutFetchState,
@@ -33,7 +34,6 @@ import {
   refreshSidebarAboutModel,
   type SidebarAboutEntry,
   type SidebarAboutFetchState,
-  type SidebarAboutLocale,
   type SidebarAboutModel,
   type SidebarAboutSectionId,
 } from '../lib/about-sidebar';
@@ -85,22 +85,6 @@ function getAboutEntryIcon(entry: SidebarAboutEntry): ComponentType<{ className?
     default:
       return LinkIcon;
   }
-}
-
-function formatAboutUpdatedAt(updatedAt: string, locale: SidebarAboutLocale): string {
-  const parsedDate = new Date(updatedAt);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return updatedAt;
-  }
-
-  return parsedDate.toLocaleString(locale === 'zh-CN' ? 'zh-CN' : 'en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function SidebarNavigation({ distributionMode }: SidebarNavigationProps) {
@@ -194,14 +178,6 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
     : t('sidebar.unknownVersion');
 
   const hasAboutContent = hasSidebarAboutEntries(aboutModel);
-  const aboutStatusLabel = aboutModel?.source === 'runtime'
-    ? t('navigation.about.runtimeLabel')
-    : t('navigation.about.snapshotLabel');
-  const aboutUpdatedAtLabel = aboutModel
-    ? t('navigation.about.updatedAt', {
-      value: formatAboutUpdatedAt(aboutModel.updatedAt, aboutLocale),
-    })
-    : '';
 
   const openExternalUrl = async (url: string) => {
     try {
@@ -304,8 +280,8 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   return (
     <aside
       className={`
-        fixed left-0 top-0 h-screen bg-background border-border border-r
-        transition-all duration-300 ease-in-out z-40
+        fixed left-0 top-0 z-40 flex h-screen min-h-0 flex-col border-r border-border bg-background
+        transition-all duration-300 ease-in-out
         ${collapsed ? 'w-16' : 'w-64'}
       `}
     >
@@ -380,265 +356,259 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
         </AnimatePresence>
       </motion.div>
 
-      <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-2 pb-28">
-        {visibleNavigationItems.map((item, index) => {
-          const Icon = item.icon;
-          const isActive = isNavActive(item);
+      <nav className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col px-2 py-4">
+          <div className="space-y-1">
+            {visibleNavigationItems.map((item, index) => {
+              const Icon = item.icon;
+              const isActive = isNavActive(item);
 
-          return (
-            <motion.button
-              key={item.id}
-              onClick={() => void handleNavClick(item)}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.3 }}
-              whileHover={{ x: isActive ? 0 : 4 }}
-              whileTap={{ scale: 0.98 }}
-              className={`
-                relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                overflow-hidden group
-                ${isActive
-                  ? 'text-primary-foreground'
-                  : 'text-muted-foreground hover:text-accent-foreground'
-                }
-              `}
-            >
-              <AnimatePresence>
-                {isActive && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute inset-0 bg-linear-to-br from-primary to-primary/80"
-                  />
-                )}
-              </AnimatePresence>
+              return (
+                <motion.button
+                  key={item.id}
+                  onClick={() => void handleNavClick(item)}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                  whileHover={{ x: isActive ? 0 : 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`
+                    relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                    overflow-hidden group
+                    ${isActive
+                      ? 'text-primary-foreground'
+                      : 'text-muted-foreground hover:text-accent-foreground'
+                    }
+                  `}
+                >
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-0 bg-linear-to-br from-primary to-primary/80"
+                      />
+                    )}
+                  </AnimatePresence>
 
-              {!isActive && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileHover={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-accent/50"
-                />
-              )}
+                  {!isActive && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      whileHover={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 bg-accent/50"
+                    />
+                  )}
 
-              {isActive && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute inset-0 bg-primary/30 blur-md"
-                />
-              )}
+                  {isActive && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute inset-0 bg-primary/30 blur-md"
+                    />
+                  )}
 
-              <AnimatePresence>
-                {isActive && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: 24 }}
-                    exit={{ height: 0 }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary-foreground rounded-r-full"
-                  />
-                )}
-              </AnimatePresence>
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 24 }}
+                        exit={{ height: 0 }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary-foreground rounded-r-full"
+                      />
+                    )}
+                  </AnimatePresence>
 
-              <Icon className={`w-5 h-5 flex-shrink-0 relative z-10 ${isActive ? 'text-primary-foreground' : ''}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 relative z-10 ${isActive ? 'text-primary-foreground' : ''}`} />
 
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="font-medium text-sm whitespace-nowrap relative z-10"
-                  >
-                    {t(item.labelKey)}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          );
-        })}
+                  <AnimatePresence mode="wait">
+                    {!collapsed && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="font-medium text-sm whitespace-nowrap relative z-10"
+                      >
+                        {t(item.labelKey)}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              );
+            })}
+          </div>
 
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0, scaleX: 0 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 0.15, duration: 0.3 }}
-            className="my-2 border-t border-border"
-          />
-        )}
-
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
-          className="space-y-2"
-        >
-          <motion.button
-            type="button"
-            onClick={() => void handleNavClick(officialWebsiteItem)}
-            title={t(officialWebsiteItem.descriptionKey ?? '')}
-            whileHover={{ x: 4 }}
-            whileTap={{ scale: 0.98 }}
-            className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-left group"
-          >
+          {!collapsed && (
             <motion.div
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-accent/40"
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
+              className="my-2 border-t border-border"
             />
+          )}
 
-            <div className="relative z-10 flex items-start gap-3">
-              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80">
-                <OfficialWebsiteIcon className="h-5 w-5 text-foreground" />
-              </div>
-
-              {!collapsed ? (
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {t(officialWebsiteItem.labelKey)}
-                    </p>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" />
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {t(officialWebsiteItem.descriptionKey ?? '')}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            {collapsed && (
-              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                {t(officialWebsiteItem.labelKey)}
-              </div>
-            )}
-          </motion.button>
-
-          {!collapsed ? (
-            <div className="space-y-3 pl-3" data-about-source={aboutModel?.source ?? 'none'}>
-              <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-2.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {aboutStatusLabel}
-                  </span>
-                  {aboutModel ? (
-                    <span className="text-[11px] text-muted-foreground">{aboutUpdatedAtLabel}</span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {t('navigation.about.sectionDescription')}
-                </p>
-              </div>
-
-              {!bundledAboutModel ? (
-                <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                  {t('navigation.about.snapshotMissing')}
-                </div>
-              ) : null}
-
-              {aboutFetchState.status === 'loading' ? (
-                <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  <span>{t('navigation.about.loading')}</span>
-                </div>
-              ) : null}
-
-              {aboutFetchState.status === 'error' ? (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    {bundledAboutModel
-                      ? t('navigation.about.refreshFailed')
-                      : t('navigation.about.loadFailed')}
-                  </span>
-                </div>
-              ) : null}
-
-              {hasAboutContent && aboutModel ? (
-                aboutModel.sections.map((section) => (
-                  <div key={section.id} className="space-y-2">
-                    {renderAboutSectionTitle(section.id)}
-                    <div className="space-y-2">
-                      {section.entries.map((entry) => renderAboutEntryCard(entry))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-                  {t('navigation.about.empty')}
-                </div>
-              )}
-            </div>
-          ) : null}
-        </motion.div>
-
-        {remainingExternalLinkItems.map((item, index) => {
-          const Icon = item.icon;
-
-          return (
-            <motion.button
-              key={item.id}
-              onClick={() => void handleNavClick(item)}
-              title={item.descriptionKey ? t(item.descriptionKey) : ''}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 + index * 0.05, duration: 0.3 }}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg overflow-hidden group text-muted-foreground hover:text-accent-foreground"
-            >
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-accent/50"
-              />
-
-              <Icon className="w-5 h-5 flex-shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-200" />
-
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.span
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+            className="min-h-0 flex-1 overflow-hidden"
+          >
+            <ScrollArea className="h-full" type="always">
+              <div className="space-y-2 pb-6">
+                <motion.button
+                  type="button"
+                  onClick={() => void handleNavClick(officialWebsiteItem)}
+                  title={t(officialWebsiteItem.descriptionKey ?? '')}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-left group"
+                >
+                  <motion.div
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    whileHover={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="font-medium text-sm whitespace-nowrap relative z-10"
-                  >
-                    {t(item.labelKey)}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+                    className="absolute inset-0 bg-accent/40"
+                  />
 
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    className="ml-auto text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </motion.span>
-                )}
-              </AnimatePresence>
+                  <div className="relative z-10 flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80">
+                      <OfficialWebsiteIcon className="h-5 w-5 text-foreground" />
+                    </div>
 
-              {collapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                  {t(item.labelKey)}
-                </div>
-              )}
-            </motion.button>
-          );
-        })}
+                    {!collapsed ? (
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {t(officialWebsiteItem.labelKey)}
+                          </p>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" />
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {t(officialWebsiteItem.descriptionKey ?? '')}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {collapsed && (
+                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                      {t(officialWebsiteItem.labelKey)}
+                    </div>
+                  )}
+                </motion.button>
+
+                {!collapsed ? (
+                  <div className="space-y-3 pl-3 pr-2" data-about-source={aboutModel?.source ?? 'none'}>
+                    {!bundledAboutModel ? (
+                      <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
+                        {t('navigation.about.snapshotMissing')}
+                      </div>
+                    ) : null}
+
+                    {aboutFetchState.status === 'loading' ? (
+                      <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        <span>{t('navigation.about.loading')}</span>
+                      </div>
+                    ) : null}
+
+                    {aboutFetchState.status === 'error' ? (
+                      <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {bundledAboutModel
+                            ? t('navigation.about.refreshFailed')
+                            : t('navigation.about.loadFailed')}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {hasAboutContent && aboutModel ? (
+                      aboutModel.sections.map((section) => (
+                        <div key={section.id} className="space-y-2">
+                          {renderAboutSectionTitle(section.id)}
+                          <div className="space-y-2">
+                            {section.entries.map((entry) => renderAboutEntryCard(entry))}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
+                        {t('navigation.about.empty')}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {remainingExternalLinkItems.map((item, index) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <motion.button
+                      key={item.id}
+                      onClick={() => void handleNavClick(item)}
+                      title={item.descriptionKey ? t(item.descriptionKey) : ''}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25 + index * 0.05, duration: 0.3 }}
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg overflow-hidden group text-muted-foreground hover:text-accent-foreground"
+                    >
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-accent/50"
+                      />
+
+                      <Icon className="w-5 h-5 flex-shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-200" />
+
+                      <AnimatePresence mode="wait">
+                        {!collapsed && (
+                          <motion.span
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="font-medium text-sm whitespace-nowrap relative z-10"
+                          >
+                            {t(item.labelKey)}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+
+                      <AnimatePresence mode="wait">
+                        {!collapsed && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="ml-auto text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+
+                      {collapsed && (
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                          {t(item.labelKey)}
+                        </div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </motion.div>
+        </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background">
+      <div className="border-t border-border bg-background">
         <AnimatePresence mode="wait">
           {!collapsed && appVersion && (
             <motion.div
