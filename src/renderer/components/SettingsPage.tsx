@@ -6,7 +6,6 @@ import {
   RemoteModeSettings,
   SharingAccelerationSettings,
   shouldShowSharingAccelerationSettings,
-  TelemetrySettings,
   VersionUpdateSettings,
 } from './settings';
 import type { DistributionMode } from '../../types/distribution-mode';
@@ -54,12 +53,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             >
               {t('settings.tabs.updates')}
             </TabsTrigger>
-            <TabsTrigger
-              value="telemetry"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.telemetry')}
-            </TabsTrigger>
             {showSharingAccelerationSettings ? (
               <TabsTrigger
                 value="sharingAcceleration"
@@ -85,10 +78,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
 
             <TabsContent value="updates" className="mt-0">
               <VersionUpdateSettings />
-            </TabsContent>
-
-            <TabsContent value="telemetry" className="mt-0">
-              <TelemetrySettings />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (

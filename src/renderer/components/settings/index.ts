@@ -5,7 +5,6 @@ export { OnboardingSettings } from './OnboardingSettings';
 export { DataDirectorySettings } from './DataDirectorySettings';
 export { RemoteModeSettings } from './RemoteModeSettings';
 export { SharingAccelerationSettings } from './SharingAccelerationSettings';
-export { TelemetrySettings } from './TelemetrySettings';
 export { VersionUpdateSettings } from './VersionUpdateSettings';
 
 export function shouldShowSharingAccelerationSettings(distributionMode: DistributionMode): boolean {
