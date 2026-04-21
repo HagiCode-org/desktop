@@ -142,6 +142,42 @@
     "collapse": "收起",
     "expand": "展开"
   },
+  "bootstrap": {
+    "loading": {
+      "title": "正在完成首次启动初始化…",
+      "summary": "正在准备 Desktop bridge、本地配置和数据目录。",
+      "description": "应用壳会在关键启动依赖就绪后继续挂载，避免首次启动时出现空白窗口。",
+      "stepActive": "进行中",
+      "stepPending": "等待中",
+      "stage": "当前阶段：{{stage}}"
+    },
+    "steps": {
+      "shell": "初始化应用壳",
+      "config": "读取本地配置",
+      "dataDirectory": "准备数据目录",
+      "render": "挂载主界面"
+    },
+    "error": {
+      "title": "首次启动未完成",
+      "description": "无法准备 Desktop 首屏所需的本地资源。",
+      "diagnosticTitle": "诊断摘要",
+      "stage": "阶段：{{stage}}",
+      "summary": "摘要：{{summary}}",
+      "path": "路径：{{path}}"
+    },
+    "actions": {
+      "openLogs": "打开日志目录",
+      "restoreDefault": "恢复默认目录",
+      "retry": "重新加载应用壳",
+      "working": "处理中…"
+    },
+    "toasts": {
+      "restoreSuccess": "已恢复默认数据目录",
+      "restoreFailed": "恢复默认数据目录失败",
+      "logsOpened": "已打开 Desktop 日志目录",
+      "logsFailed": "无法打开 Desktop 日志目录"
+    }
+  },
   "systemDiagnostic": {
     "title": "系统诊断",
     "description": "收集当前设备的本地环境信息，并将纯文本报告直接发给技术支持。",

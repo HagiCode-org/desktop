@@ -142,6 +142,42 @@
     "collapse": "Collapse",
     "expand": "Expand"
   },
+  "bootstrap": {
+    "loading": {
+      "title": "Finishing first-launch initialization...",
+      "summary": "Preparing the Desktop bridge, local configuration, and data directory.",
+      "description": "The app shell stays visible until the critical startup dependencies are ready, so packaged first launch never drops to a blank window.",
+      "stepActive": "In progress",
+      "stepPending": "Pending",
+      "stage": "Current stage: {{stage}}"
+    },
+    "steps": {
+      "shell": "Initialize app shell",
+      "config": "Load local configuration",
+      "dataDirectory": "Prepare data directory",
+      "render": "Mount main interface"
+    },
+    "error": {
+      "title": "First launch did not finish",
+      "description": "Desktop could not prepare the local resources required for the first screen.",
+      "diagnosticTitle": "Diagnostic summary",
+      "stage": "Stage: {{stage}}",
+      "summary": "Summary: {{summary}}",
+      "path": "Path: {{path}}"
+    },
+    "actions": {
+      "openLogs": "Open logs folder",
+      "restoreDefault": "Restore default directory",
+      "retry": "Reload app shell",
+      "working": "Working..."
+    },
+    "toasts": {
+      "restoreSuccess": "Restored the default data directory",
+      "restoreFailed": "Failed to restore the default data directory",
+      "logsOpened": "Opened the Desktop logs folder",
+      "logsFailed": "Failed to open the Desktop logs folder"
+    }
+  },
   "systemDiagnostic": {
     "title": "System Diagnostic",
     "description": "Collect this device's local environment details and share the plain text report with technical support.",
