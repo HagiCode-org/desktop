@@ -26,21 +26,8 @@ import type {
   DataDirectoryValidationPayload,
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
-import type {
-  ManagedWebTelemetryBridge,
-  ManagedWebTelemetryPayload,
-  ManagedWebTelemetrySettings,
-  ManagedWebTelemetrySettingsInput,
-} from '../types/telemetry.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
-
-export type {
-  ManagedWebTelemetryBridge,
-  ManagedWebTelemetryPayload,
-  ManagedWebTelemetrySettings,
-  ManagedWebTelemetrySettingsInput,
-} from '../types/telemetry.js';
 export type {
   DataDirectoryMutationResult,
   DataDirectoryValidationPayload,
@@ -315,7 +302,6 @@ interface ElectronAPI {
     get: () => Promise<{ enabled: boolean; url: string }>;
     validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
   };
-  telemetry: ManagedWebTelemetryBridge;
 
   sharingAcceleration: {
     get: () => Promise<SharingAccelerationSettings | null>;
@@ -738,10 +724,6 @@ const electronAPI: ElectronAPI = {
     set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
     get: () => ipcRenderer.invoke('remote-mode:get'),
     validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
-  },
-  telemetry: {
-    get: () => ipcRenderer.invoke('telemetry:get'),
-    set: (settings) => ipcRenderer.invoke('telemetry:set', settings),
   },
 
   sharingAcceleration: {
