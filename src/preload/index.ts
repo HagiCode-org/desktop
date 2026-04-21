@@ -22,6 +22,11 @@ import type {
   LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
 import type {
+  DataDirectoryMutationResult,
+  DataDirectoryValidationPayload,
+  DesktopBootstrapSnapshot,
+} from '../types/bootstrap.js';
+import type {
   ManagedWebTelemetryBridge,
   ManagedWebTelemetryPayload,
   ManagedWebTelemetrySettings,
@@ -36,6 +41,11 @@ export type {
   ManagedWebTelemetrySettings,
   ManagedWebTelemetrySettingsInput,
 } from '../types/telemetry.js';
+export type {
+  DataDirectoryMutationResult,
+  DataDirectoryValidationPayload,
+  DesktopBootstrapSnapshot,
+} from '../types/bootstrap.js';
 
 // Validation result interface
 export interface ValidationResult {
@@ -205,6 +215,12 @@ type AgentCliSelectionType = 'claude-code' | 'codex' | 'copilot-cli';
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
+  bootstrap: {
+    getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
+    refresh: () => Promise<DesktopBootstrapSnapshot>;
+    restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
+    openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
+  };
   getAppVersion: () => Promise<string>;
   getDistributionMode: () => Promise<DistributionMode>;
   showWindow: () => Promise<void>;
@@ -269,10 +285,10 @@ interface ElectronAPI {
   // Data Directory Configuration APIs
   dataDirectory: {
     get: () => Promise<string>;
-    set: (path: string) => Promise<{ success: boolean; error?: string }>;
-    validate: (path: string) => Promise<ValidationResult>;
+    set: (path: string) => Promise<DataDirectoryMutationResult>;
+    validate: (path: string) => Promise<DataDirectoryValidationPayload>;
     getStorageInfo: (path?: string) => Promise<StorageInfo>;
-    restoreDefault: () => Promise<{ success: boolean; path: string }>;
+    restoreDefault: () => Promise<DataDirectoryMutationResult>;
     openPicker: () => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   };
 
@@ -383,6 +399,12 @@ const rendererEventTarget = globalThis as unknown as {
 };
 
 const electronAPI: ElectronAPI = {
+  bootstrap: {
+    getSnapshot: () => ipcRenderer.invoke('bootstrap:get-snapshot'),
+    refresh: () => ipcRenderer.invoke('bootstrap:refresh'),
+    restoreDefaultDataDirectory: () => ipcRenderer.invoke('data-directory:restore-default'),
+    openDesktopLogs: () => ipcRenderer.invoke('log-directory:open', 'desktop'),
+  },
   getAppVersion: () => ipcRenderer.invoke('app-version'),
   getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
   showWindow: () => ipcRenderer.invoke('show-window'),
