@@ -299,16 +299,9 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center gap-3"
+              className="flex min-w-0 flex-1 items-center"
             >
-              <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
-              >
-                <span className="text-xl font-bold text-primary-foreground">H</span>
-              </motion.div>
-              <div>
+              <div className="min-w-0">
                 <motion.h1
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -333,9 +326,9 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
+              className="text-sm font-semibold text-foreground"
             >
-              <span className="text-xl font-bold text-primary-foreground">H</span>
+              H
             </motion.div>
           )}
         </AnimatePresence>
