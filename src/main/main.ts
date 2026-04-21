@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
@@ -46,23 +46,24 @@ import {
   registerPackageSourceHandlers,
   registerOnboardingHandlers,
   registerDataDirectoryHandlers,
+  initDataDirectoryHandlers,
   registerRegionHandlers,
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
-import { PathManager, type ValidationResult, type StorageInfo } from './path-manager.js';
+import { PathManager } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
 import {
   getManagedWebTelemetryPayload,
   setManagedWebTelemetryPayload,
 } from './managed-web-telemetry.js';
-import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
+import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -163,6 +164,154 @@ let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
 const CODE_SERVER_SESSION_PARTITION = 'persist:hagicode-code-server';
+let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
+let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
+
+function buildBootstrapSnapshot(input: {
+  status: DesktopBootstrapSnapshot['status'];
+  stage: DesktopBootstrapSnapshot['stage'];
+  summary: string;
+  details?: string;
+  dataDirectory: DesktopBootstrapSnapshot['dataDirectory'];
+  diagnostics?: DesktopBootstrapSnapshot['diagnostics'];
+}): DesktopBootstrapSnapshot {
+  return {
+    status: input.status,
+    stage: input.stage,
+    summary: input.summary,
+    details: input.details,
+    dataDirectory: input.dataDirectory,
+    diagnostics: input.diagnostics ?? [],
+    recovery: {
+      canRetry: true,
+      canRestoreDefault: true,
+      canOpenDesktopLogs: true,
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function createBootstrapErrorSnapshot(
+  summary: string,
+  details?: string,
+): DesktopBootstrapSnapshot {
+  return buildBootstrapSnapshot({
+    status: 'error',
+    stage: 'data-directory-ready',
+    summary,
+    details,
+    dataDirectory: null,
+  });
+}
+
+async function resolveBootstrapSnapshot(forceRefresh: boolean = false): Promise<DesktopBootstrapSnapshot> {
+  if (!forceRefresh && bootstrapSnapshotCache) {
+    return bootstrapSnapshotCache;
+  }
+
+  if (!forceRefresh && bootstrapSnapshotPromise) {
+    return bootstrapSnapshotPromise;
+  }
+
+  bootstrapSnapshotPromise = (async () => {
+    if (!pathManager || !configManager) {
+      return createBootstrapErrorSnapshot(
+        'bootstrap dependencies are not initialized',
+        'PathManager or ConfigManager is unavailable during Desktop startup.',
+      );
+    }
+
+    const defaultPath = pathManager.getDefaultDataDirectory();
+    const selection = configManager.resolveDataDirectorySelection(defaultPath);
+    let preparation = await pathManager.prepareDataDirectoryForBootstrap(selection.requestedPath, {
+      source: selection.source,
+      requestedPath: selection.configuredPath ?? selection.requestedPath,
+      defaultPath,
+    });
+
+    if (!preparation.isReady && selection.source === 'configured') {
+      log.warn('[Bootstrap] Configured data directory failed validation, trying default fallback', {
+        configuredPath: selection.configuredPath,
+        diagnostic: preparation.diagnostic,
+      });
+
+      const fallbackPreparation = await pathManager.prepareDataDirectoryForBootstrap(defaultPath, {
+        source: 'fallback-default',
+        requestedPath: selection.configuredPath,
+        defaultPath,
+      });
+
+      if (fallbackPreparation.isReady) {
+        fallbackPreparation.context.fallbackUsed = true;
+        fallbackPreparation.context.fallbackReason = preparation.validation.message;
+        fallbackPreparation.diagnostic = preparation.diagnostic;
+        configManager.setDataDirectoryPath(fallbackPreparation.context.normalizedPath);
+        preparation = fallbackPreparation;
+      }
+    }
+
+    if (!preparation.isReady) {
+      return buildBootstrapSnapshot({
+        status: 'error',
+        stage: 'data-directory-ready',
+        summary: 'data directory initialization failed',
+        details: preparation.validation.message,
+        dataDirectory: preparation.context,
+        diagnostics: preparation.diagnostic ? [preparation.diagnostic] : [],
+      });
+    }
+
+    try {
+      pathManager.applyDataDirectoryPath(preparation.context.normalizedPath);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      log.error('[Bootstrap] Failed to apply prepared data directory', {
+        path: preparation.context.normalizedPath,
+        error,
+      });
+
+      return buildBootstrapSnapshot({
+        status: 'error',
+        stage: 'data-directory-ready',
+        summary: 'failed to apply resolved data directory',
+        details: detail,
+        dataDirectory: preparation.context,
+        diagnostics: [
+          {
+            code: 'apply-failed',
+            operation: 'apply',
+            summary: 'failed to apply resolved data directory',
+            detail,
+            requestedPath: preparation.context.requestedPath,
+            normalizedPath: preparation.context.normalizedPath,
+            fallbackUsed: preparation.context.fallbackUsed,
+            fallbackPath: preparation.context.usingDefault
+              ? preparation.context.normalizedPath
+              : preparation.context.defaultPath,
+          },
+        ],
+      });
+    }
+
+    return buildBootstrapSnapshot({
+      status: 'ready',
+      stage: 'data-directory-ready',
+      summary: 'bootstrap ready',
+      details: preparation.context.fallbackUsed
+        ? `Desktop fell back to the default data directory after validating ${selection.configuredPath}.`
+        : `Desktop data directory ready at ${preparation.context.normalizedPath}.`,
+      dataDirectory: preparation.context,
+      diagnostics: preparation.diagnostic ? [preparation.diagnostic] : [],
+    });
+  })();
+
+  try {
+    bootstrapSnapshotCache = await bootstrapSnapshotPromise;
+    return bootstrapSnapshotCache;
+  } finally {
+    bootstrapSnapshotPromise = null;
+  }
+}
 
 function getDistributionMode(): DistributionMode {
   return versionManager?.getDistributionMode() ?? 'normal';
@@ -229,6 +378,9 @@ function createWindow(): void {
     },
   });
   wireDesktopWindowClipboard(mainWindow);
+  initDataDirectoryHandlers(pathManager, yamlConfigManager, configManager, mainWindow, () => {
+    bootstrapSnapshotCache = null;
+  });
 
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
@@ -1944,25 +2096,10 @@ app.whenReady().then(async () => {
     config: pathManager.getDesktopConfigDirectory(),
   });
 
-  // Load data directory with fallback: electron-store -> default
-  let dataDirectoryPath = configManager.getDataDirectoryPath();
-  if (dataDirectoryPath) {
-    log.info('[Config] Loaded data directory from electron-store:', dataDirectoryPath);
-  } else {
-    dataDirectoryPath = pathManager.getDefaultDataDirectory();
-    log.info('[Config] No data directory config found, using default:', dataDirectoryPath);
-  }
-
-  // Set the data directory in PathManager
-  try {
-    pathManager.setDataDirectory(dataDirectoryPath);
-  } catch (error) {
-    const fallbackDataDirectory = pathManager.getDefaultDataDirectory();
-    log.warn('[Config] Invalid configured data directory, falling back to default:', dataDirectoryPath, error);
-    pathManager.setDataDirectory(fallbackDataDirectory);
-    configManager.setDataDirectoryPath(fallbackDataDirectory);
-    dataDirectoryPath = fallbackDataDirectory;
-  }
+  const initialBootstrapSnapshot = await resolveBootstrapSnapshot(true);
+  const dataDirectoryPath = initialBootstrapSnapshot.dataDirectory?.normalizedPath
+    ?? pathManager.getDefaultDataDirectory();
+  log.info('[Bootstrap] Initial Desktop bootstrap snapshot resolved:', initialBootstrapSnapshot);
 
   // Initialize YamlConfigManager
   yamlConfigManager = new YamlConfigManager(pathManager);
@@ -2141,183 +2278,11 @@ app.whenReady().then(async () => {
     log.info('[App] System Diagnostic IPC handlers registered');
   }
 
-// Data Directory IPC Handlers
-ipcMain.handle('data-directory:open-picker', async () => {
-  try {
-    if (!mainWindow) {
-      return {
-        canceled: true,
-        error: 'Main window not available'
-      };
-    }
-
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Select Data Directory',
-      properties: ['openDirectory', 'createDirectory'],
-      buttonLabel: 'Select Folder',
-    });
-
-    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-      return { canceled: true };
-    }
-
-    return {
-      canceled: false,
-      filePath: result.filePaths[0]
-    };
-  } catch (error) {
-    console.error('[Data Directory] Failed to open directory picker:', error);
-    return {
-      canceled: true,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('data-directory:get', async () => {
-  try {
-    const currentPath = pathManager?.getDataDirectory() || '';
-    return currentPath;
-  } catch (error) {
-    console.error('[Data Directory] Failed to get data directory:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('data-directory:set', async (_, dataDirPath: string) => {
-  try {
-    if (!pathManager || !yamlConfigManager) {
-      throw new Error('PathManager or YamlConfigManager not initialized');
-    }
-
-    // Validate the path first
-    const validation = await pathManager.validatePath(dataDirPath);
-    if (!validation.isValid) {
-      log.warn('[Data Directory] Validation failed:', validation.message);
-      return {
-        success: false,
-        error: validation.message
-      };
-    }
-    log.info('[Data Directory] Path validation passed');
-
-    // Save to electron-store
-    configManager.setDataDirectoryPath(dataDirPath);
-    log.info('[Data Directory] Saved to electron-store:', dataDirPath);
-
-    // Update path manager
-    pathManager.setDataDirectory(dataDirPath);
-    log.info('[Data Directory] Updated PathManager memory state');
-
-    // Keep YAML sync as an explicit rollback path only.
-    if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
-      try {
-        const updatedVersions = await yamlConfigManager.updateAllDataDirs(dataDirPath);
-        log.info('[Data Directory] Configuration sync completed:');
-        log.info('[Data Directory]   - Source: electron-store');
-        log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
-        log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
-      } catch (error) {
-        log.error('[Data Directory] Failed to update appsettings.yml:', error);
-        // Don't fail the operation, just log warning
-        log.warn('[Data Directory] Operation completed with partial sync (electron-store updated, YAML sync failed)');
-      }
-    } else {
-      log.info('[Data Directory] Skipped YAML sync (env mode).');
-    }
-
-    log.info('[Data Directory] Data directory configuration completed successfully');
-
-    return { success: true };
-  } catch (error) {
-    console.error('[Data Directory] Failed to set data directory:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-ipcMain.handle('data-directory:validate', async (_, dataDirPath: string) => {
-  try {
-    if (!pathManager) {
-      throw new Error('PathManager not initialized');
-    }
-
-    const validation = await pathManager.validatePath(dataDirPath);
-    return {
-      isValid: validation.isValid,
-      message: validation.message,
-      warnings: validation.warnings || []
-    };
-  } catch (error) {
-    console.error('[Data Directory] Failed to validate path:', error);
-    return {
-      isValid: false,
-      message: error instanceof Error ? error.message : String(error),
-      warnings: []
-    };
-  }
-});
-
-ipcMain.handle('data-directory:get-storage-info', async (_, dataDirPath?: string) => {
-  try {
-    if (!pathManager) {
-      throw new Error('PathManager not initialized');
-    }
-
-    const targetPath = dataDirPath || pathManager.getDataDirectory();
-    const storageInfo = await pathManager.getStorageInfo(targetPath);
-    return storageInfo;
-  } catch (error) {
-    console.error('[Data Directory] Failed to get storage info:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('data-directory:restore-default', async () => {
-  try {
-    if (!pathManager || !yamlConfigManager) {
-      throw new Error('PathManager or YamlConfigManager not initialized');
-    }
-
-    // Clear custom path from electron-store
-    configManager.clearDataDirectoryPath();
-    log.info('[Data Directory] Cleared custom path from electron-store');
-
-    // Reset to default
-    const defaultPath = pathManager.getDefaultDataDirectory();
-    pathManager.setDataDirectory(defaultPath);
-    log.info('[Data Directory] Reset to default path:', defaultPath);
-
-    // Keep YAML sync as an explicit rollback path only.
-    if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
-      try {
-        const updatedVersions = await yamlConfigManager.updateAllDataDirs(defaultPath);
-        log.info('[Data Directory] Configuration sync completed:');
-        log.info('[Data Directory]   - Action: Restore to default');
-        log.info('[Data Directory]   - Target: appsettings.yml for versions:', updatedVersions);
-        log.info('[Data Directory]   - Successfully updated:', updatedVersions.length, 'version(s)');
-      } catch (error) {
-        log.error('[Data Directory] Failed to update appsettings.yml:', error);
-        // Don't fail the operation, just log warning
-        log.warn('[Data Directory] Operation completed with partial sync (default path set in memory, YAML sync failed)');
-      }
-    } else {
-      log.info('[Data Directory] Skipped YAML sync while restoring default path (env mode).');
-    }
-
-    log.info('[Data Directory] Default data directory restored successfully');
-
-    return { success: true, path: defaultPath };
-  } catch (error) {
-    console.error('[Data Directory] Failed to restore default:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
+  ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
+  ipcMain.handle('bootstrap:refresh', async () => {
+    bootstrapSnapshotCache = null;
+    return resolveBootstrapSnapshot(true);
+  });
 
 // Remote mode handlers
 ipcMain.handle('remote-mode:set', async (_, enabled: boolean, url: string) => {
@@ -2427,6 +2392,16 @@ function validateRemoteUrl(url: string): { isValid: boolean; error?: string } {
   }
 
   createWindow();
+  registerDataDirectoryHandlers({
+    pathManager,
+    yamlConfigManager,
+    configManager,
+    mainWindow,
+    invalidateBootstrapSnapshot: () => {
+      bootstrapSnapshotCache = null;
+    },
+  });
+  log.info('[App] Data directory IPC handlers registered');
   createTray();
   setServerStatus('stopped');
   startStatusPolling();

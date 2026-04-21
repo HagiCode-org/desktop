@@ -1,8 +1,13 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
-import { PathManager, type ValidationResult, type StorageInfo } from '../../path-manager.js';
+import { PathManager } from '../../path-manager.js';
 import { ConfigManager as YamlConfigManager } from '../../config-manager.js';
 import { ConfigManager } from '../../config.js';
+import type {
+  DataDirectoryMutationResult,
+  DataDirectoryValidationPayload,
+} from '../../../types/bootstrap.js';
+import { resolveWebServiceConfigMode } from '../../web-service-env.js';
 
 // Module state
 interface DataDirectoryHandlerState {
@@ -10,6 +15,7 @@ interface DataDirectoryHandlerState {
   yamlConfigManager: YamlConfigManager | null;
   configManager: ConfigManager | null;
   mainWindow: BrowserWindow | null;
+  invalidateBootstrapSnapshot?: (() => void) | null;
 }
 
 const state: DataDirectoryHandlerState = {
@@ -17,6 +23,7 @@ const state: DataDirectoryHandlerState = {
   yamlConfigManager: null,
   configManager: null,
   mainWindow: null,
+  invalidateBootstrapSnapshot: null,
 };
 
 /**
@@ -26,12 +33,14 @@ export function initDataDirectoryHandlers(
   pathManager: PathManager | null,
   yamlConfigManager: YamlConfigManager | null,
   configManager: ConfigManager | null,
-  mainWindow: BrowserWindow | null
+  mainWindow: BrowserWindow | null,
+  invalidateBootstrapSnapshot?: (() => void) | null,
 ): void {
   state.pathManager = pathManager;
   state.yamlConfigManager = yamlConfigManager;
   state.configManager = configManager;
   state.mainWindow = mainWindow;
+  state.invalidateBootstrapSnapshot = invalidateBootstrapSnapshot ?? state.invalidateBootstrapSnapshot ?? null;
 }
 
 /**
@@ -42,11 +51,13 @@ export function registerDataDirectoryHandlers(deps: {
   yamlConfigManager: YamlConfigManager | null;
   configManager: ConfigManager | null;
   mainWindow: BrowserWindow | null;
+  invalidateBootstrapSnapshot?: (() => void) | null;
 }): void {
   state.pathManager = deps.pathManager;
   state.yamlConfigManager = deps.yamlConfigManager;
   state.configManager = deps.configManager;
   state.mainWindow = deps.mainWindow;
+  state.invalidateBootstrapSnapshot = deps.invalidateBootstrapSnapshot ?? null;
 
   // Data directory open picker handler
   ipcMain.handle('data-directory:open-picker', async () => {
@@ -93,31 +104,46 @@ export function registerDataDirectoryHandlers(deps: {
   });
 
   // Data directory set handler
-  ipcMain.handle('data-directory:set', async (_, dataDirPath: string) => {
+  ipcMain.handle('data-directory:set', async (_, dataDirPath: string): Promise<DataDirectoryMutationResult> => {
     try {
       if (!state.pathManager || !state.yamlConfigManager) {
         throw new Error('PathManager or YamlConfigManager not initialized');
       }
 
-      const validation = await state.pathManager.validatePath(dataDirPath);
-      if (!validation.isValid) {
+      const preparation = await state.pathManager.prepareDataDirectoryForBootstrap(dataDirPath, {
+        source: 'configured',
+        requestedPath: dataDirPath,
+        defaultPath: state.pathManager.getDefaultDataDirectory(),
+      });
+
+      if (!preparation.isReady) {
         return {
           success: false,
-          error: validation.message
+          error: preparation.validation.message,
+          diagnostic: preparation.diagnostic,
         };
       }
 
-      state.configManager?.setDataDirectoryPath(dataDirPath);
-      state.pathManager.setDataDirectory(dataDirPath);
+      state.configManager?.setDataDirectoryPath(preparation.context.normalizedPath);
+      state.pathManager.applyDataDirectoryPath(preparation.context.normalizedPath);
 
       try {
-        const updatedVersions = await state.yamlConfigManager.updateAllDataDirs(dataDirPath);
-        log.info('[DataDirectoryHandlers] Updated appsettings.yml for versions:', updatedVersions);
-      } catch (error) {
-        log.warn('[DataDirectoryHandlers] Failed to update appsettings.yml:', error);
+        if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
+          const updatedVersions = await state.yamlConfigManager.updateAllDataDirs(preparation.context.normalizedPath);
+          log.info('[DataDirectoryHandlers] Updated appsettings.yml for versions:', updatedVersions);
+        } else {
+          log.info('[DataDirectoryHandlers] Skipped YAML synchronization in env-managed mode.');
+        }
+      } catch (yamlError) {
+        log.warn('[DataDirectoryHandlers] Failed to update appsettings.yml:', yamlError);
       }
 
-      return { success: true };
+      state.invalidateBootstrapSnapshot?.();
+
+      return {
+        success: true,
+        path: preparation.context.normalizedPath,
+      };
     } catch (error) {
       console.error('[DataDirectoryHandlers] Failed to set data directory:', error);
       return {
@@ -128,7 +154,7 @@ export function registerDataDirectoryHandlers(deps: {
   });
 
   // Data directory validate handler
-  ipcMain.handle('data-directory:validate', async (_, dataDirPath: string) => {
+  ipcMain.handle('data-directory:validate', async (_, dataDirPath: string): Promise<DataDirectoryValidationPayload> => {
     try {
       if (!state.pathManager) {
         throw new Error('PathManager not initialized');
@@ -138,7 +164,9 @@ export function registerDataDirectoryHandlers(deps: {
       return {
         isValid: validation.isValid,
         message: validation.message,
-        warnings: validation.warnings || []
+        warnings: validation.warnings || [],
+        normalizedPath: validation.normalizedPath,
+        diagnostic: validation.diagnostic,
       };
     } catch (error) {
       console.error('[DataDirectoryHandlers] Failed to validate path:', error);
@@ -167,7 +195,7 @@ export function registerDataDirectoryHandlers(deps: {
   });
 
   // Data directory restore default handler
-  ipcMain.handle('data-directory:restore-default', async () => {
+  ipcMain.handle('data-directory:restore-default', async (): Promise<DataDirectoryMutationResult> => {
     try {
       if (!state.pathManager) {
         throw new Error('PathManager not initialized');
@@ -175,16 +203,42 @@ export function registerDataDirectoryHandlers(deps: {
 
       state.configManager?.clearDataDirectoryPath();
       const defaultPath = state.pathManager.getDefaultDataDirectory();
-      state.pathManager.setDataDirectory(defaultPath);
+      const preparation = await state.pathManager.prepareDataDirectoryForBootstrap(defaultPath, {
+        source: 'default',
+        requestedPath: defaultPath,
+        defaultPath,
+      });
 
-      try {
-        const updatedVersions = await state.yamlConfigManager?.updateAllDataDirs(defaultPath);
-        log.info('[DataDirectoryHandlers] Restored default and updated appsettings.yml for versions:', updatedVersions);
-      } catch (error) {
-        log.warn('[DataDirectoryHandlers] Failed to update appsettings.yml:', error);
+      if (!preparation.isReady) {
+        return {
+          success: false,
+          error: preparation.validation.message,
+          diagnostic: preparation.diagnostic,
+        };
       }
 
-      return { success: true, path: defaultPath };
+      state.pathManager.applyDataDirectoryPath(preparation.context.normalizedPath);
+
+      try {
+        if (
+          state.yamlConfigManager
+          && resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml'
+        ) {
+          const updatedVersions = await state.yamlConfigManager.updateAllDataDirs(preparation.context.normalizedPath);
+          log.info('[DataDirectoryHandlers] Restored default and updated appsettings.yml for versions:', updatedVersions);
+        } else {
+          log.info('[DataDirectoryHandlers] Skipped YAML synchronization while restoring default path.');
+        }
+      } catch (yamlError) {
+        log.warn('[DataDirectoryHandlers] Failed to update appsettings.yml:', yamlError);
+      }
+
+      state.invalidateBootstrapSnapshot?.();
+
+      return {
+        success: true,
+        path: preparation.context.normalizedPath,
+      };
     } catch (error) {
       console.error('[DataDirectoryHandlers] Failed to restore default:', error);
       return {
