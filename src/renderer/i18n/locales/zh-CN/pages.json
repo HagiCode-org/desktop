@@ -9,32 +9,9 @@
       "updates": "后台更新",
       "telemetry": "Telemetry"
     },
-    "agentCli": {
-      "title": "偏好 Agent CLI",
-      "description": "选择当 Desktop 展示提示词指引时优先高亮的命令行工具。",
-      "current": {
-        "label": "当前偏好",
-        "none": "尚未选择偏好工具",
-        "skipped": "已在引导中跳过",
-        "updatedAt": "最近更新：{{value}}"
-      },
-      "actions": {
-        "select": "设为偏好工具",
-        "selected": "当前偏好",
-        "switching": "保存中..."
-      },
-      "messages": {
-        "saved": "已将 {{name}} 设为提示词指引偏好工具",
-        "saveFailed": "保存偏好失败：{{error}}",
-        "loadFailed": "读取当前偏好失败：{{error}}"
-      },
-      "notes": {
-        "fallback": "即使没有偏好工具，提示词指引依然可用；Desktop 只会用它来高亮推荐和文档入口。"
-      }
-    },
     "smartConfig": {
       "title": "智能配置提示指引",
-      "description": "查看 Desktop 解析出的提示词，复制到你偏好的 AI CLI 中，并手动完成配置流程。"
+      "description": "查看 Desktop 解析出的提示词，复制到任意受支持的 AI CLI 中，并手动完成配置流程。"
     },
     "remoteMode": {
       "title": "远程模式",

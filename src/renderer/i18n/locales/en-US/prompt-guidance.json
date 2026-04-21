@@ -1,12 +1,11 @@
 {
   "loading": "Loading prompt guidance...",
   "emptyState": "Desktop can resolve the prompt, show you where it came from, and keep the exact text ready for copy/paste.",
-  "recommendedTools": "Recommended tools",
-  "preferred": "Preferred",
+  "availableTools": "Available tools",
   "promptTitle": "Prompt",
   "promptDescription": "Copy the full prompt exactly as shown before pasting it into your AI CLI.",
   "tipTitle": "How to use this prompt",
-  "tipDescription": "Open your preferred CLI in the suggested directory, paste the prompt, and come back after applying the recommended changes.",
+  "tipDescription": "Open any supported CLI in the suggested directory, paste the prompt, and come back after applying the recommended changes.",
   "actions": {
     "refresh": "Reload guidance",
     "loading": "Loading"

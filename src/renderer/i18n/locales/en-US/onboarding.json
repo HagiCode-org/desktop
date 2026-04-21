@@ -31,9 +31,6 @@
   "claude": {
     "title": "Configure Claude Code"
   },
-  "agent-cli": {
-    "title": "Select Agent CLI"
-  },
   "download": {
     "title": "Download Hagicode Server",
     "version": "Version",

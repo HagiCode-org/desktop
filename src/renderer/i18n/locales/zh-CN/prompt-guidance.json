@@ -1,12 +1,11 @@
 {
   "loading": "正在加载提示词指引...",
   "emptyState": "Desktop 可以解析提示词来源、展示完整内容，并帮你把它准备好用于复制粘贴。",
-  "recommendedTools": "推荐工具",
-  "preferred": "偏好",
+  "availableTools": "可用工具",
   "promptTitle": "提示词",
   "promptDescription": "请完整复制下方提示词，再粘贴到你的 AI CLI 中执行。",
   "tipTitle": "使用建议",
-  "tipDescription": "在建议的工作目录中打开偏好的 CLI，粘贴提示词，应用建议后再回到 Desktop。",
+  "tipDescription": "在建议的工作目录中打开任意受支持的 CLI，粘贴提示词，应用建议后再回到 Desktop。",
   "actions": {
     "refresh": "重新加载指引",
     "loading": "加载中"

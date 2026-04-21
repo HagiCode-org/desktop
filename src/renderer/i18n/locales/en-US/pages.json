@@ -11,7 +11,7 @@
     },
     "smartConfig": {
       "title": "Smart Config prompt guidance",
-      "description": "Review the resolved prompt, copy it into your preferred AI CLI, and complete the configuration flow manually."
+      "description": "Review the resolved prompt, copy it into any supported AI CLI, and complete the configuration flow manually."
     },
     "remoteMode": {
       "title": "Remote Mode",
@@ -106,29 +106,6 @@
       },
       "notes": {
         "absolutePathOnly": "Note: Only absolute paths are supported. Relative paths are not allowed."
-      }
-    },
-    "agentCli": {
-      "title": "Preferred Agent CLI",
-      "description": "Choose which CLI should be highlighted first when Desktop shows prompt guidance.",
-      "current": {
-        "label": "Current preference",
-        "none": "No preferred tool selected",
-        "skipped": "Skipped during onboarding",
-        "updatedAt": "Last updated: {{value}}"
-      },
-      "actions": {
-        "select": "Set as preferred",
-        "selected": "Preferred tool",
-        "switching": "Saving..."
-      },
-      "messages": {
-        "saved": "{{name}} is now the preferred guidance tool",
-        "saveFailed": "Failed to save preference: {{error}}",
-        "loadFailed": "Failed to load current preference: {{error}}"
-      },
-      "notes": {
-        "fallback": "Prompt guidance still works without a preference; Desktop only uses this to highlight recommendations and docs."
       }
     },
     "sharingAcceleration": {

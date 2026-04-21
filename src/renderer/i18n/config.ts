@@ -20,7 +20,7 @@ export const i18nConfig = {
   defaultNS: 'common',
 
   // Available namespaces
-  ns: ['common', 'components', 'pages', 'ui', 'onboarding', 'claude', 'agent-cli', 'prompt-guidance'],
+  ns: ['common', 'components', 'pages', 'ui', 'onboarding', 'claude', 'prompt-guidance'],
 
   // Namespace separator
   nsSeparator: ':',

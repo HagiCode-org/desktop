@@ -31,9 +31,6 @@
   "claude": {
     "title": "配置 Claude Code"
   },
-  "agent-cli": {
-    "title": "选择 Agent CLI"
-  },
   "download": {
     "title": "下载 Hagicode Server",
     "version": "版本",

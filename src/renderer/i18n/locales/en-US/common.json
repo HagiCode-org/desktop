@@ -183,7 +183,7 @@
     "description": "Collect this device's local environment details and share the plain text report with technical support.",
     "reportTitle": "Plain text report",
     "reportDescription": "Each rerun replaces the previous report so the copied content always reflects the newest diagnostic snapshot.",
-    "empty": "Run a system diagnostic to capture operating system, hardware, Agent CLI, and core toolchain details.",
+    "empty": "Run a system diagnostic to capture operating system, hardware, Agent CLI registry probes, and core toolchain details.",
     "loading": "Collecting local environment details...",
     "actions": {
       "run": "Start Diagnostic",
