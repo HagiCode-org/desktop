@@ -11,6 +11,14 @@ describe('version preload bridge contract', () => {
 
     assert.equal(source.includes('versionCheckDependencies'), false);
     assert.equal(source.includes('version:checkDependencies'), false);
+    assert.equal(source.includes('agentCliSave'), false);
+    assert.equal(source.includes('agentCliLoad'), false);
+    assert.equal(source.includes('agentCliSkip'), false);
+    assert.equal(source.includes('agentCliGetSelected'), false);
+    assert.equal(source.includes('agentCli:save'), false);
+    assert.equal(source.includes('agentCli:load'), false);
+    assert.equal(source.includes('agentCli:skip'), false);
+    assert.equal(source.includes('agentCli:getSelected'), false);
     assert.match(source, /versionList: \(\) => ipcRenderer\.invoke\('version:list'\)/);
     assert.match(source, /versionGetInstalled: \(\) => ipcRenderer\.invoke\('version:getInstalled'\)/);
     assert.match(source, /versionGetActive: \(\) => ipcRenderer\.invoke\('version:getActive'\)/);

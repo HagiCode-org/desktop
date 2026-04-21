@@ -8,7 +8,7 @@ import { PromptResourceResolver } from '../prompt-resource-resolver.js';
 import { PromptGuidanceService } from '../prompt-guidance-service.js';
 
 describe('PromptGuidanceService', () => {
-  it('returns prompt content, fallback metadata, and preferred tool context', async () => {
+  it('returns prompt content, fallback metadata, and static tool context', async () => {
     const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-guidance-'));
     const fallbackPromptPath = path.join(tmpRoot, 'config', 'config-prompt.llm.txt');
     await fs.mkdir(path.dirname(fallbackPromptPath), { recursive: true });
@@ -16,9 +16,6 @@ describe('PromptGuidanceService', () => {
 
     const service = new PromptGuidanceService({
       promptResourceResolver: new PromptResourceResolver(),
-      agentCliManager: {
-        getSelectedCliType: () => AgentCliType.Codex,
-      } as any,
     });
 
     const result = await service.buildResourceGuidance({
@@ -39,19 +36,19 @@ describe('PromptGuidanceService', () => {
     if (result.success) {
       assert.equal(result.promptContent, 'smart config prompt from development root');
       assert.equal(result.promptSource, 'development-root');
-      assert.equal(result.preferredCliType, null);
       assert.equal(result.suggestedWorkingDirectory, path.join(tmpRoot, 'missing-version'));
       assert.ok(result.attemptedPaths.some((candidate) => candidate.endsWith(path.join('config', 'config-prompt.llm.txt'))));
-      assert.ok(result.supportedTools.some((tool) => tool.cliType === AgentCliType.CopilotCli));
+      assert.deepEqual(result.supportedTools.map((tool) => tool.cliType), [
+        AgentCliType.ClaudeCode,
+        AgentCliType.Codex,
+        AgentCliType.CopilotCli,
+      ]);
     }
   });
 
   it('returns structured failure diagnostics when prompt resolution fails', async () => {
     const service = new PromptGuidanceService({
       promptResourceResolver: new PromptResourceResolver(async () => false),
-      agentCliManager: {
-        getSelectedCliType: () => null,
-      } as any,
     });
 
     const result = await service.buildResourceGuidance({
@@ -69,7 +66,6 @@ describe('PromptGuidanceService', () => {
     if (!result.success) {
       assert.equal(result.errorCode, 'PROMPT_NOT_FOUND');
       assert.ok(result.attemptedPaths.length > 0);
-      assert.equal(result.preferredCliType, null);
     }
   });
 
@@ -90,9 +86,6 @@ describe('PromptGuidanceService', () => {
             matchedRule: 'manual-override',
           },
         }),
-      } as any,
-      agentCliManager: {
-        getSelectedCliType: () => AgentCliType.ClaudeCode,
       } as any,
       resolveManifestPath: (versionId) => `/versions/${versionId}/manifest.json`,
     });

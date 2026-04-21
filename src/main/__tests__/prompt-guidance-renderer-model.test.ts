@@ -1,70 +1,22 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { describe, it } from 'node:test';
-import { AgentCliType } from '../../types/agent-cli.js';
-import type { PromptGuidanceFailure, PromptGuidanceTool } from '../../types/prompt-guidance.js';
-import {
-  copyPromptContent,
-  formatPromptGuidanceError,
-  orderPromptGuidanceTools,
-} from '../../renderer/components/prompt-guidance/promptGuidanceModel.js';
 
-describe('promptGuidanceModel', () => {
-  it('copies the full prompt text through the provided writer', async () => {
-    let copiedValue = '';
+const modelPath = path.resolve(process.cwd(), 'src/renderer/components/prompt-guidance/promptGuidanceModel.ts');
+const panelPath = path.resolve(process.cwd(), 'src/renderer/components/prompt-guidance/PromptGuidancePanel.tsx');
 
-    const result = await copyPromptContent('line 1\nline 2', async (value) => {
-      copiedValue = value;
-    });
+describe('promptGuidance renderer cleanup', () => {
+  it('keeps renderer ordering registry-driven and removes preferred CLI handling', async () => {
+    const [modelSource, panelSource] = await Promise.all([
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(panelPath, 'utf8'),
+    ]);
 
-    assert.equal(result.success, true);
-    assert.equal(copiedValue, 'line 1\nline 2');
-  });
-
-  it('orders the preferred tool first without hard-coded page lists', () => {
-    const tools: PromptGuidanceTool[] = [
-      {
-        cliType: AgentCliType.ClaudeCode,
-        displayName: 'Claude Code',
-        description: 'Claude',
-        commandName: 'claude',
-        providerId: 'claude-code',
-      },
-      {
-        cliType: AgentCliType.Codex,
-        displayName: 'Codex',
-        description: 'Codex',
-        commandName: 'codex',
-        providerId: 'codex',
-      },
-    ];
-
-    const ordered = orderPromptGuidanceTools(tools, AgentCliType.Codex);
-
-    assert.deepEqual(ordered.map((tool) => tool.cliType), [AgentCliType.Codex, AgentCliType.ClaudeCode]);
-  });
-
-  it('formats prompt-guidance errors with attempted path diagnostics', () => {
-    const guidance: PromptGuidanceFailure = {
-      success: false,
-      entryPoint: 'smartConfig',
-      errorCode: 'PROMPT_NOT_FOUND',
-      error: 'missing prompt',
-      attemptedPaths: ['/one', '/two'],
-      activeVersion: 'hagicode-1',
-      preferredCliType: null,
-      supportedTools: [],
-    };
-
-    const message = formatPromptGuidanceError(guidance, {
-      defaultMessage: 'default',
-      promptNotFound: 'not found',
-      resolverUnavailable: 'resolver',
-      managerUnavailable: 'manager',
-      promptLoadFailed: 'load failed',
-      promptReadFailed: 'read failed',
-      diagnosticPrefix: 'Paths: ',
-    });
-
-    assert.equal(message, 'not found Paths: /one | /two');
+    assert.match(modelSource, /return \[\.\.\.tools\];/);
+    assert.equal(modelSource.includes('preferredCliType'), false);
+    assert.equal(panelSource.includes('guidance.preferredCliType'), false);
+    assert.match(panelSource, /variant="secondary"/);
+    assert.match(panelSource, /variant="outline"/);
   });
 });
