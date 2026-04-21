@@ -7,6 +7,9 @@
   "description": "Desktop client for Hagicode Server management and monitoring",
   "main": "dist/main/main.js",
   "scripts": {
+    "prepare:about-snapshot": "node scripts/generate-about-snapshot.js",
+    "prebuild:renderer": "npm run prepare:about-snapshot",
+    "predev:renderer": "npm run prepare:about-snapshot",
     "build:tsc": "npx tsc",
     "build:preload": "vite build --config vite.preload.config.ts",
     "build:tsc:check": "npx tsc --noEmit",
@@ -91,8 +94,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
-    "@microsoft/applicationinsights-react-js": "^19.3.8",
-    "@microsoft/applicationinsights-web": "^3.3.10",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",

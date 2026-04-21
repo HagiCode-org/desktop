@@ -75,7 +75,6 @@ Any code directly referencing `darwin-arm64` should be updated to use `osx-arm64
 - **electron-store**: 10.0.0 (persistent storage)
 - **electron-updater**: 6.6.2 (auto-updates)
 - **electron-log**: 5.4.3 (logging)
-- **@microsoft/applicationinsights-react-js**: 19.3.8 (telemetry)
 - **rss-parser**: 3.13.0 (RSS feed parsing)
 - **semver**: 7.7.3 (version comparison)
 
