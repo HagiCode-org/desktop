@@ -1,9 +1,5 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
-import type {
-  ManagedWebTelemetrySettings,
-  ManagedWebTelemetrySettingsInput,
-} from '../types/telemetry.js';
 import type { DataDirectorySource } from '../types/bootstrap.js';
 
 export interface AppSettings {
@@ -20,40 +16,10 @@ export interface RemoteModeConfig {
   url: string;
 }
 
-export const DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS: ManagedWebTelemetrySettings = {
-  enabled: true,
-  enableTracing: true,
-  enableMetrics: true,
-  endpoint: '',
-};
-
-export function normalizeTelemetryEndpoint(
-  value: unknown,
-  fallback: string = DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS.endpoint,
-): string {
-  if (typeof value !== 'string') {
-    return fallback;
-  }
-
-  return value.trim();
-}
-
-export function normalizeManagedWebTelemetrySettings(
-  settings?: ManagedWebTelemetrySettingsInput | null,
-): ManagedWebTelemetrySettings {
-  return {
-    enabled: settings?.enabled ?? DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS.enabled,
-    enableTracing: settings?.enableTracing ?? DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS.enableTracing,
-    enableMetrics: settings?.enableMetrics ?? DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS.enableMetrics,
-    endpoint: normalizeTelemetryEndpoint(settings?.endpoint),
-  };
-}
-
 export interface AppConfig {
   server: ServerConfig;
   remoteMode: RemoteModeConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
-  telemetry: ManagedWebTelemetrySettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -105,7 +71,6 @@ const defaultConfig: AppConfig = {
     url: '',
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
-  telemetry: DEFAULT_MANAGED_WEB_TELEMETRY_SETTINGS,
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
@@ -127,6 +92,19 @@ export class ConfigManager {
       defaults: defaultConfig,
       name: 'hagicode-desktop-config',
     });
+
+    this.removeLegacyTelemetryPreference();
+  }
+
+  private removeLegacyTelemetryPreference(): void {
+    const legacyStore = this.store as unknown as {
+      get: (key: string) => unknown;
+      delete: (key: string) => void;
+    };
+
+    if (legacyStore.get('telemetry') !== undefined) {
+      legacyStore.delete('telemetry');
+    }
   }
 
   get<K extends keyof AppConfig>(key: K): AppConfig[K] {
@@ -288,33 +266,6 @@ export class ConfigManager {
       ...nextSettings,
     });
     this.store.set('versionAutoUpdate', merged);
-    return merged;
-  }
-
-  getManagedWebTelemetrySettings(): ManagedWebTelemetrySettings {
-    const current = this.store.get('telemetry');
-    const normalized = normalizeManagedWebTelemetrySettings(current);
-
-    if (
-      current?.enabled !== normalized.enabled
-      || current?.enableTracing !== normalized.enableTracing
-      || current?.enableMetrics !== normalized.enableMetrics
-      || current?.endpoint !== normalized.endpoint
-    ) {
-      this.store.set('telemetry', normalized);
-    }
-
-    return normalized;
-  }
-
-  setManagedWebTelemetrySettings(
-    nextSettings: ManagedWebTelemetrySettingsInput,
-  ): ManagedWebTelemetrySettings {
-    const merged = normalizeManagedWebTelemetrySettings({
-      ...this.getManagedWebTelemetrySettings(),
-      ...nextSettings,
-    });
-    this.store.set('telemetry', merged);
     return merged;
   }
 }

@@ -53,10 +53,6 @@ import {
 } from './ipc/handlers/index.js';
 import { PathManager } from './path-manager.js';
 import { ConfigManager as YamlConfigManager } from './config-manager.js';
-import {
-  getManagedWebTelemetryPayload,
-  setManagedWebTelemetryPayload,
-} from './managed-web-telemetry.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
@@ -658,23 +654,6 @@ ipcMain.handle('stop-server', async () => {
 
 ipcMain.handle('get-config', () => {
   return configManager?.getAll() || null;
-});
-
-ipcMain.handle('telemetry:get', async () => {
-  return await getManagedWebTelemetryPayload({
-    configManager,
-    yamlConfigManager,
-  });
-});
-
-ipcMain.handle('telemetry:set', async (_, settings) => {
-  return await setManagedWebTelemetryPayload(
-    {
-      configManager,
-      yamlConfigManager,
-    },
-    settings,
-  );
 });
 
 ipcMain.handle('set-config', (_, config) => {
