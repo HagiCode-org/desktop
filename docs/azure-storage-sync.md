@@ -87,7 +87,6 @@ desktop-releases/
 │   ├── Hagicode-Setup-1.0.0.exe
 │   ├── Hagicode-1.0.0.dmg
 │   ├── Hagicode-1.0.0.AppImage
-│   ├── hagicode-desktop_1.0.0_amd64.deb
 │   └── hagicode-desktop-1.0.0.tar.gz
 └── v1.1.0/
     ├── Hagicode-Setup-1.1.0.exe
