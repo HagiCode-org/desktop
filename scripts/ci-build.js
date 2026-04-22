@@ -282,7 +282,6 @@ function printBuildSummary() {
       a.path.endsWith('.appx') ||
       a.path.endsWith('.dmg') ||
       a.path.endsWith('.AppImage') ||
-      a.path.endsWith('.deb') ||
       a.path.endsWith('.rpm') ||
       a.path.endsWith('.tar.gz') ||
       a.path.endsWith('.zip')

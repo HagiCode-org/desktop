@@ -362,9 +362,9 @@ test('electron-builder configuration is valid', async () => {
   assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
-  assert(linuxTargets.includes('deb'), 'linux packaging keeps deb output');
   assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
   assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');
+  assert(!linuxTargets.includes('deb'), 'linux packaging no longer emits deb output');
 });
 
 test('desktop build workflow includes ZIP publication steps', () => {
