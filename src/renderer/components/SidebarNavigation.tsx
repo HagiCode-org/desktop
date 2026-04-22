@@ -20,6 +20,7 @@ import type { RootState } from '../store';
 import type { ViewType } from '../store/slices/viewSlice';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import type { DistributionMode } from '../../types/distribution-mode';
 import {
@@ -68,6 +69,95 @@ const remainingExternalLinkItems: NavigationItem[] = [
 
 interface SidebarNavigationProps {
   distributionMode: DistributionMode;
+}
+
+const ABOUT_BRAND_DOMAIN_OVERRIDES: Partial<Record<SidebarAboutEntry['id'], string>> = {
+  'product-hunt': 'producthunt.com',
+  'qq-group': 'qq.com',
+  'feishu-group': 'feishu.cn',
+  'douyin-account': 'douyin.com',
+  'douyin-qr': 'douyin.com',
+  'wechat-account': 'weixin.qq.com',
+};
+
+function normalizeAboutBrandDomain(hostname: string): string {
+  const normalizedHostname = hostname.toLowerCase().replace(/^www\./, '');
+
+  if (normalizedHostname.endsWith('.qq.com')) {
+    return 'qq.com';
+  }
+
+  if (normalizedHostname.endsWith('.feishu.cn')) {
+    return 'feishu.cn';
+  }
+
+  return normalizedHostname;
+}
+
+function getAboutBrandDomain(entry: SidebarAboutEntry): string | null {
+  const explicitDomain = ABOUT_BRAND_DOMAIN_OVERRIDES[entry.id];
+  if (explicitDomain) {
+    return explicitDomain;
+  }
+
+  if (!entry.href) {
+    return null;
+  }
+
+  try {
+    return normalizeAboutBrandDomain(new URL(entry.href).hostname);
+  } catch {
+    return null;
+  }
+}
+
+function getAboutEntryMonogram(label: string): string {
+  const latin = Array.from(label.matchAll(/[A-Za-z0-9]/g))
+    .map((match) => match[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  if (latin.length > 0) {
+    return latin;
+  }
+
+  return Array.from(label.replace(/\s+/g, '')).slice(0, 2).join('');
+}
+
+function getAboutEntryHint(entry: SidebarAboutEntry): string {
+  if (entry.value) {
+    return entry.value;
+  }
+
+  return entry.detail;
+}
+
+function AboutBrandLogo({ entry }: { entry: SidebarAboutEntry }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const domain = getAboutBrandDomain(entry);
+
+  if (!imageFailed && domain) {
+    return (
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
+        alt=""
+        aria-hidden
+        className="h-6 w-6 rounded-md object-contain"
+        loading="lazy"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden
+      className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70"
+    >
+      {getAboutEntryMonogram(entry.label)}
+    </span>
+  );
 }
 
 export default function SidebarNavigation({ distributionMode }: SidebarNavigationProps) {
@@ -198,47 +288,77 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
     </p>
   );
 
-  const renderAboutEntryCard = (entry: SidebarAboutEntry) => {
+  const renderAboutEntryIcon = (entry: SidebarAboutEntry) => {
     const actionable = Boolean(entry.href);
-    const cardContent = (
-      <div className="text-left">
-        {entry.imageUrl ? (
-          <img
-            src={entry.imageUrl}
-            alt={entry.alt}
-            className="mb-3 h-12 w-12 rounded-lg border border-border/60 bg-background object-cover shadow-sm"
-            loading="lazy"
-          />
-        ) : null}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-foreground">{entry.label}</p>
-            <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              {t(`navigation.about.types.${entry.type}`)}
-            </span>
-          </div>
-          {entry.value ? (
-            <p className="mt-1 break-all text-xs font-medium text-foreground/90">{entry.value}</p>
-          ) : null}
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{entry.detail}</p>
-        </div>
-
+    const hint = getAboutEntryHint(entry);
+    const accessibleLabel = hint ? `${entry.label} · ${hint}` : entry.label;
+    const iconButton = (
+      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-background/80 shadow-sm transition-colors group-hover:border-primary/40 group-hover:bg-accent/50 group-focus-visible:border-primary/40 group-focus-visible:bg-accent/50">
+        <AboutBrandLogo entry={entry} />
         {actionable ? (
-          <div className="mt-2 flex justify-end">
-            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          </div>
+          <span className="absolute -right-1 -top-1 rounded-full border border-background bg-background p-0.5 shadow-sm">
+            <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+          </span>
         ) : null}
       </div>
     );
+
+    if (entry.imageUrl) {
+      return (
+        <Popover key={entry.id}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={accessibleLabel}
+              title={accessibleLabel}
+              className="group flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+            >
+              {iconButton}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 space-y-3" align="start">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">{entry.label}</p>
+              <p className="text-xs text-muted-foreground">{t(`navigation.about.types.${entry.type}`)}</p>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20 p-2">
+              <img
+                src={entry.imageUrl}
+                alt={entry.alt}
+                className="mx-auto max-h-52 w-auto rounded-lg object-contain"
+                loading="lazy"
+              />
+            </div>
+
+            {hint ? (
+              <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
+            ) : null}
+
+            {entry.href ? (
+              <button
+                type="button"
+                onClick={() => void openExternalUrl(entry.href!)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent/50"
+              >
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                {t('button.open')}
+              </button>
+            ) : null}
+          </PopoverContent>
+        </Popover>
+      );
+    }
 
     if (!actionable || !entry.href) {
       return (
         <div
           key={entry.id}
-          className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3"
+          aria-label={accessibleLabel}
+          title={accessibleLabel}
+          className="flex items-center justify-center rounded-xl"
         >
-          {cardContent}
+          {iconButton}
         </div>
       );
     }
@@ -247,10 +367,12 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
       <button
         key={entry.id}
         type="button"
+        aria-label={accessibleLabel}
+        title={accessibleLabel}
         onClick={() => void openExternalUrl(entry.href!)}
-        className="w-full rounded-xl border border-border/60 bg-muted/20 px-3 py-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
+        className="group flex items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
-        {cardContent}
+        {iconButton}
       </button>
     );
   };
@@ -511,8 +633,8 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                       aboutModel.sections.map((section) => (
                         <div key={section.id} className="space-y-2">
                           {renderAboutSectionTitle(section.id)}
-                          <div className="space-y-2">
-                            {section.entries.map((entry) => renderAboutEntryCard(entry))}
+                          <div className="grid grid-cols-4 gap-2">
+                            {section.entries.map((entry) => renderAboutEntryIcon(entry))}
                           </div>
                         </div>
                       ))

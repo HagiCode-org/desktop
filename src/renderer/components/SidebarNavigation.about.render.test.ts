@@ -22,6 +22,9 @@ describe('sidebar about section integration', () => {
 
     assert.match(source, /renderAboutSectionTitle\(section\.id\)/);
     assert.match(source, /<ScrollArea className="h-full" type="always">/);
+    assert.match(source, /grid grid-cols-4 gap-2/);
+    assert.match(source, /https:\/\/www\.google\.com\/s2\/favicons/);
+    assert.match(source, /<PopoverContent className="w-64 space-y-3" align="start">/);
     assert.doesNotMatch(source, /navigation\.about\.sectionDescription/);
     assert.doesNotMatch(source, /navigation\.about\.runtimeLabel/);
     assert.doesNotMatch(source, /navigation\.about\.updatedAt/);
