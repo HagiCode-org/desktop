@@ -37,6 +37,8 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(String(zhOnboarding.download.complete.message), /手动启动服务/);
     assert.match(String(enOnboarding.download.complete.message), /return to the homepage/i);
     assert.match(String(enOnboarding.download.complete.message), /start the service manually/i);
+    assert.equal(String(zhOnboarding.actions.finish), '进入 Hagicode Desktop');
+    assert.equal(String(enOnboarding.actions.finish), 'Enter Hagicode Desktop');
     assert.equal(String(zhOnboarding.legal.progressFull).includes('启动'), false);
     assert.equal(String(enOnboarding.legal.progressFull).includes('Launch'), false);
   });
