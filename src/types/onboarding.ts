@@ -10,7 +10,6 @@ export enum OnboardingStep {
   LegalConsent = 1,
   SharingAcceleration = 2,
   Download = 3,
-  Launch = 4,
 }
 
 export type LegalDocumentType = 'eula' | 'privacy-policy';

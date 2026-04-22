@@ -2,7 +2,7 @@
   "title": "首次使用引导",
   "welcome": {
     "title": "欢迎使用 Hagicode Desktop",
-    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用五个步骤完成首次安装与合规确认。",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用四个步骤完成首次安装与合规确认。",
     "features": {
       "manage": {
         "title": "版本管理",
@@ -17,7 +17,7 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装共分 5 个步骤：",
+    "processTitle": "首次安装共分 4 个步骤：",
     "steps": {
       "welcome": "了解本次引导会完成的准备工作",
       "download": "下载最新的 Hagicode Server 包",
@@ -41,7 +41,7 @@
     },
     "complete": {
       "title": "下载完成！",
-      "message": "包文件已验证完整。现在可以继续启动服务。",
+      "message": "包文件已验证完整。现在可以返回首页，并在需要时手动启动服务。",
       "fileSize": "文件大小"
     },
     "downloaded": "已下载",
@@ -165,6 +165,7 @@
   },
   "actions": {
     "next": "下一步",
+    "finish": "返回首页",
     "previous": "上一步",
     "skip": "跳过引导"
   },
@@ -232,9 +233,9 @@
   },
   "legal": {
     "title": "终端用户许可协议与隐私政策",
-    "descriptionFull": "在继续下载和启动 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。",
+    "descriptionFull": "在继续下载 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。",
     "descriptionLegalOnly": "检测到当前协议版本尚未确认。请先在默认浏览器中查看正式文档，然后返回 Desktop 完成确认。",
-    "progressFull": "完整引导：欢迎 -> 协议确认 -> 共享加速 -> 下载 -> 启动",
+    "progressFull": "完整引导：欢迎 -> 协议确认 -> 共享加速 -> 下载",
     "progressLegalOnly": "合规拦截模式：仅显示当前协议确认步骤",
     "browserInstruction": "请先点击下方按钮在默认浏览器中查看正式文档。Desktop 只展示版本摘要，不内嵌协议全文。",
     "cacheHint": "当前显示的是最近一次成功获取的协议版本摘要。建议在网络恢复后刷新并再次确认是否有更新。",
@@ -244,7 +245,7 @@
     "revision": "修订版本",
     "openInBrowser": "在浏览器中打开 {{title}}",
     "checkbox": "我已在浏览器中阅读并同意当前 EULA 与隐私政策。",
-    "modeHintFull": "确认后将继续进入共享加速、下载和启动步骤。",
+    "modeHintFull": "确认后将继续进入共享加速和下载步骤。",
     "modeHintLegalOnly": "确认后将关闭拦截并返回主界面；拒绝则会退出当前应用。",
     "accept": "同意并继续",
     "accepting": "正在记录同意...",

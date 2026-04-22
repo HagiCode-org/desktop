@@ -8,6 +8,7 @@ interface OnboardingActionsProps {
   onNext: () => void;
   onPrevious: () => void;
   onSkip?: () => void;
+  nextLabel?: string;
 }
 
 function OnboardingActions({
@@ -16,6 +17,7 @@ function OnboardingActions({
   onNext,
   onPrevious,
   onSkip,
+  nextLabel,
 }: OnboardingActionsProps) {
   const { t } = useTranslation('onboarding');
 
@@ -51,7 +53,7 @@ function OnboardingActions({
           disabled={!canGoNext}
           className="gap-2"
         >
-          {t('actions.next')}
+          {nextLabel ?? t('actions.next')}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

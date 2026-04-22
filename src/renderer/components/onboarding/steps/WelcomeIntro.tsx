@@ -33,7 +33,6 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
     { number: 2, text: t('welcome.steps.legalConsent') },
     { number: 3, text: t('welcome.steps.sharingAcceleration') },
     { number: 4, text: t('welcome.steps.download') },
-    { number: 5, text: t('welcome.steps.launch') },
   ];
 
   return (

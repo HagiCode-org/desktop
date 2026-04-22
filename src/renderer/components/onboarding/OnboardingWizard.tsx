@@ -10,24 +10,24 @@ import {
   selectIsActive,
   selectOnboardingMode,
   setDownloadProgress,
-  setServiceProgress,
 } from '../../store/slices/onboardingSlice';
 import { OnboardingStep } from '../../../types/onboarding';
 import {
+  completeOnboarding,
   downloadPackage,
   goToNextStep,
   goToPreviousStep,
   loadLegalDocuments,
 } from '../../store/thunks/onboardingThunks';
+import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import LegalConsentStep from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import PackageDownload from './steps/PackageDownload';
-import ServiceLauncher from './steps/ServiceLauncher';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
 import type { AppDispatch, RootState } from '../../store';
-import type { DownloadProgress, ServiceLaunchProgress } from '../../../types/onboarding';
+import type { DownloadProgress } from '../../../types/onboarding';
 
 interface OnboardingWizardProps {
   onComplete?: () => void;
@@ -57,13 +57,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       dispatch(setDownloadProgress(progress));
     });
 
-    const unsubscribeServiceProgress = window.electronAPI.onServiceProgress((progress: ServiceLaunchProgress) => {
-      dispatch(setServiceProgress(progress));
-    });
-
     return () => {
-      unsubscribeDownloadProgress?.();
-      unsubscribeServiceProgress?.();
+      if (typeof unsubscribeDownloadProgress === 'function') {
+        unsubscribeDownloadProgress();
+      }
     };
   }, [isActive, dispatch]);
 
@@ -80,6 +77,13 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
 
   const handleNext = () => {
+    if (currentStep === OnboardingStep.Download && downloadCompleted && downloadProgress?.version) {
+      dispatch(completeOnboarding(downloadProgress.version));
+      dispatch(fetchActiveVersion());
+      onComplete?.();
+      return;
+    }
+
     dispatch(goToNextStep());
 
     if (currentStep === OnboardingStep.SharingAcceleration && !isDownloading && !downloadCompleted) {
@@ -101,8 +105,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
       case OnboardingStep.Download:
         return <PackageDownload />;
-      case OnboardingStep.Launch:
-        return <ServiceLauncher onComplete={onComplete} />;
       default:
         return null;
     }
@@ -118,12 +120,14 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return t('sharingAcceleration.title');
       case OnboardingStep.Download:
         return t('download.title');
-      case OnboardingStep.Launch:
-        return t('launch.title');
       default:
         return '';
     }
   }, [currentStep, t]);
+
+  const nextLabel = currentStep === OnboardingStep.Download && downloadCompleted
+    ? t('actions.finish')
+    : undefined;
 
   if (!isActive) {
     return null;
@@ -146,14 +150,14 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           <div className="flex-1 overflow-y-auto p-8">{renderStep()}</div>
 
           {currentStep !== OnboardingStep.Welcome &&
-            currentStep !== OnboardingStep.LegalConsent &&
-            currentStep !== OnboardingStep.Launch && (
+            currentStep !== OnboardingStep.LegalConsent && (
               <div className="flex-shrink-0">
                 <OnboardingActions
                   canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : canGoNext}
                   canGoPrevious={canGoPrevious}
                   onNext={handleNext}
                   onPrevious={handlePrevious}
+                  nextLabel={nextLabel}
                 />
               </div>
             )}

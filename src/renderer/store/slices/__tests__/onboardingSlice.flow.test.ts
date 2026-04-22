@@ -11,7 +11,6 @@ import reducer, {
   selectLegalDocuments,
   selectLegalMetadataSource,
   setDownloadProgress,
-  setServiceProgress,
 } from '../onboardingSlice.js';
 import {
   acceptLegalDocuments,
@@ -49,18 +48,17 @@ const legalDocumentsPayload: ResolvedLegalDocumentsPayload = {
 };
 
 describe('onboardingSlice flow', () => {
-  it('uses the five-step onboarding sequence in full mode', () => {
+  it('uses the four-step onboarding sequence in full mode', () => {
     assert.equal(OnboardingStep.Welcome, 0);
     assert.equal(OnboardingStep.LegalConsent, 1);
     assert.equal(OnboardingStep.SharingAcceleration, 2);
     assert.equal(OnboardingStep.Download, 3);
-    assert.equal(OnboardingStep.Launch, 4);
+    assert.equal('Launch' in OnboardingStep, false);
     assert.deepEqual(getOnboardingSequence('full'), [
       OnboardingStep.Welcome,
       OnboardingStep.LegalConsent,
       OnboardingStep.SharingAcceleration,
       OnboardingStep.Download,
-      OnboardingStep.Launch,
     ]);
   });
 
@@ -204,7 +202,7 @@ describe('onboardingSlice flow', () => {
     assert.equal(accepted.mode, 'none');
   });
 
-  it('advances from download directly to launch once a version is ready', () => {
+  it('keeps the flow on download after the package is ready so the wizard can finish there', () => {
     let state = reducer(
       undefined,
       checkOnboardingTrigger.fulfilled(
@@ -259,9 +257,9 @@ describe('onboardingSlice flow', () => {
         version: 'v1.0.0',
       }),
     );
-    const launched = reducer(readyToLaunch, goToNextStep());
+    const finishedAtDownload = reducer(readyToLaunch, goToNextStep());
 
-    assert.equal(launched.currentStep, OnboardingStep.Launch);
+    assert.equal(finishedAtDownload.currentStep, OnboardingStep.Download);
   });
 
   it('navigates back from download to welcome across the inserted legal step', () => {
@@ -315,7 +313,7 @@ describe('onboardingSlice flow', () => {
     assert.equal(backToWelcome.currentStep, OnboardingStep.Welcome);
   });
 
-  it('only enables next on launch after the embedded service is running', () => {
+  it('only enables next on download after the package is ready', () => {
     let state = reducer(
       undefined,
       checkOnboardingTrigger.fulfilled(
@@ -365,22 +363,7 @@ describe('onboardingSlice flow', () => {
         version: 'v1.0.0',
       }),
     );
-    const launchState = reducer(state, goToNextStep());
 
-    assert.equal(launchState.currentStep, OnboardingStep.Launch);
-    assert.equal(selectCanGoNext({ onboarding: launchState as OnboardingState }), false);
-
-    const runningState = reducer(
-      launchState,
-      setServiceProgress({
-        phase: 'running',
-        progress: 100,
-        message: 'Service started successfully',
-        port: 36556,
-        url: 'http://127.0.0.1:36556',
-      }),
-    );
-
-    assert.equal(selectCanGoNext({ onboarding: runningState as OnboardingState }), true);
+    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
   });
 });

@@ -32,7 +32,6 @@ const fullSequence = [
   OnboardingStep.LegalConsent,
   OnboardingStep.SharingAcceleration,
   OnboardingStep.Download,
-  OnboardingStep.Launch,
 ] as const;
 
 const legalOnlySequence = [OnboardingStep.LegalConsent] as const;
@@ -268,7 +267,6 @@ export const onboardingSlice = createSlice({
     builder
       .addCase(startService.pending, (state) => {
         state.error = null;
-        state.currentStep = OnboardingStep.Launch;
         state.startupFailure = null;
         state.showStartupFailureDialog = false;
         if (!state.isStartingService && state.serviceProgress?.phase !== 'running') {
@@ -342,19 +340,11 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.Download;
             break;
           case OnboardingStep.Download:
-            if (state.downloadProgress?.version) {
-              state.currentStep = OnboardingStep.Launch;
-            }
-            break;
-          case OnboardingStep.Launch:
             break;
         }
       })
       .addCase(GO_TO_PREVIOUS_STEP, (state) => {
         switch (state.currentStep) {
-          case OnboardingStep.Launch:
-            state.currentStep = OnboardingStep.Download;
-            break;
           case OnboardingStep.Download:
             state.currentStep = OnboardingStep.SharingAcceleration;
             break;
@@ -411,7 +401,7 @@ export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingS
 export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, serviceProgress } = state.onboarding;
+  const { currentStep, downloadProgress } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
@@ -421,9 +411,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
     case OnboardingStep.SharingAcceleration:
       return true;
     case OnboardingStep.Download:
-      return downloadProgress?.progress === 100;
-    case OnboardingStep.Launch:
-      return serviceProgress?.phase === 'running';
+      return downloadProgress?.progress === 100 && Boolean(downloadProgress.version);
     default:
       return false;
   }
