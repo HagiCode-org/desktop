@@ -165,7 +165,7 @@
   },
   "actions": {
     "next": "下一步",
-    "finish": "返回首页",
+    "finish": "进入 Hagicode Desktop",
     "previous": "上一步",
     "skip": "跳过引导"
   },

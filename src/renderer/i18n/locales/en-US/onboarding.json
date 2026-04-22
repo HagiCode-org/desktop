@@ -165,7 +165,7 @@
   },
   "actions": {
     "next": "Next",
-    "finish": "Return Home",
+    "finish": "Enter Hagicode Desktop",
     "previous": "Previous",
     "skip": "Skip Setup"
   },
