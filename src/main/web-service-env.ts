@@ -62,16 +62,8 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     yamlPath: 'DataDir',
   },
   {
-    key: 'Database__Provider',
-    sourceConfig: 'Database.Provider',
-    required: true,
-    sensitive: false,
-    defaultValue: 'sqlite',
-    yamlPath: 'Database.Provider',
-  },
-  {
     key: 'ConnectionStrings__Default',
-    sourceConfig: 'ConnectionStrings.Default',
+    sourceConfig: 'ConnectionStrings.Default (SQLite data file override)',
     required: false,
     sensitive: true,
     yamlPath: 'ConnectionStrings.Default',
@@ -121,6 +113,10 @@ export function buildManagedServiceEnv(input: BuildManagedEnvInput): BuildManage
     }
 
     const resolved = resolveValue(definition, input, existingEnv);
+    if (resolved.warning) {
+      warnings.push(resolved.warning);
+    }
+
     if (resolved.value === undefined || resolved.value === null || resolved.value === '') {
       if (definition.required) {
         errors.push(`Missing required env value: ${definition.key}`);
@@ -179,7 +175,7 @@ function resolveValue(
   definition: ManagedEnvVarDefinition,
   input: BuildManagedEnvInput,
   existingEnv: Record<string, string | undefined>
-): { value?: string; source: ManagedEnvSource } {
+): { value?: string; source: ManagedEnvSource; warning?: string } {
   if (definition.key === 'ASPNETCORE_URLS' || definition.key === 'Urls') {
     return {
       value: `http://${input.host}:${input.port}`,
@@ -196,19 +192,39 @@ function resolveValue(
 
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
-    return { value: existingValue, source: 'existing-env' };
+    return normalizeResolvedValue(definition, existingValue, 'existing-env');
   }
 
   const yamlValue = definition.yamlPath ? sanitizeString(getNestedValue(input.yamlConfig, definition.yamlPath)) : undefined;
   if (yamlValue) {
-    return { value: yamlValue, source: 'yaml' };
+    return normalizeResolvedValue(definition, yamlValue, 'yaml');
   }
 
   if (definition.defaultValue !== undefined) {
-    return { value: definition.defaultValue, source: 'default' };
+    return normalizeResolvedValue(definition, definition.defaultValue, 'default');
   }
 
   return { source: 'default' };
+}
+
+function normalizeResolvedValue(
+  definition: ManagedEnvVarDefinition,
+  value: string,
+  source: ManagedEnvSource
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  if (definition.key !== 'ConnectionStrings__Default') {
+    return { value, source };
+  }
+
+  const sqliteValue = normalizeSqliteConnectionString(value);
+  if (sqliteValue) {
+    return { value: sqliteValue, source };
+  }
+
+  return {
+    source,
+    warning: `Ignored unsupported SQLite override for ${definition.key} from ${source}.`,
+  };
 }
 
 function sanitizeString(value: unknown): string | undefined {
@@ -238,6 +254,40 @@ function getNestedValue(source: Record<string, unknown> | null | undefined, path
 
 function isValidEnvKey(key: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
+}
+
+function normalizeSqliteConnectionString(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/\b(host|server|port|database|username|user\s*id|uid|password|pwd)\s*=/i.test(trimmed)) {
+    return undefined;
+  }
+
+  if (/\b(data\s*source|datasource|filename|file\s*name)\s*=/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (!trimmed.includes('=') && looksLikeFilesystemPath(trimmed)) {
+    return trimmed;
+  }
+
+  return undefined;
+}
+
+function looksLikeFilesystemPath(value: string): boolean {
+  return (
+    value.startsWith('./') ||
+    value.startsWith('../') ||
+    value.startsWith('/') ||
+    value.startsWith('~') ||
+    /^[A-Za-z]:[\\/]/.test(value) ||
+    /[\\/]/.test(value) ||
+    /\.(db|sqlite|sqlite3)$/i.test(value) ||
+    value === ':memory:'
+  );
 }
 
 export function isSensitiveEnvKey(key: string): boolean {

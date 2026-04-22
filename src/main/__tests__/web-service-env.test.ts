@@ -33,9 +33,10 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.ASPNETCORE_URLS, 'http://127.0.0.1:36556');
     assert.equal(result.injectedEnv.Urls, 'http://127.0.0.1:36556');
     assert.equal(result.injectedEnv.DATADIR, '/tmp/hagicode-data');
-    assert.equal(result.injectedEnv.Database__Provider, 'sqlite');
+    assert.equal(result.injectedEnv.Database__Provider, undefined);
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
     assert.equal(result.injectedEnv.HAGICODE_LOG_FORMAT, 'plain');
+    assert.equal(result.snapshot.some(entry => entry.key === 'Database__Provider'), false);
   });
 
   it('injects wildcard and custom IPv4 bind hosts without rewriting them', () => {
@@ -60,14 +61,14 @@ describe('web-service-env', () => {
     assert.equal(custom.injectedEnv.Urls, 'http://192.168.1.24:36556');
   });
 
-  it('prefers yaml mapping when provided', () => {
+  it('uses SQLite data file overrides from yaml when provided', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
-        ConnectionStrings: { Default: 'Host=db;Database=hagicode;Username=postgres;Password=secret' },
+        ConnectionStrings: { Default: 'Data Source=/runtime/data/hagicode.db;Cache=Shared' },
         AI: { Service: { DefaultExecutorType: 'CodexCli' } },
       },
       existingEnv: {
@@ -76,8 +77,8 @@ describe('web-service-env', () => {
     });
 
     assert.equal(result.errors.length, 0);
-    assert.equal(result.injectedEnv.Database__Provider, 'postgresql');
-    assert.equal(result.injectedEnv.ConnectionStrings__Default, 'Host=db;Database=hagicode;Username=postgres;Password=secret');
+    assert.equal(result.injectedEnv.Database__Provider, undefined);
+    assert.equal(result.injectedEnv.ConnectionStrings__Default, 'Data Source=/runtime/data/hagicode.db;Cache=Shared');
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'CodexCli');
   });
 
@@ -96,21 +97,45 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
   });
 
-  it('uses existing environment over yaml for non-runtime keys', () => {
+  it('uses existing SQLite overrides over yaml for non-runtime keys', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
       yamlConfig: {
-        Database: { Provider: 'sqlite' },
+        ConnectionStrings: { Default: 'Data Source=/yaml/hagicode.db' },
       },
       existingEnv: {
-        Database__Provider: 'postgresql',
+        ConnectionStrings__Default: 'Data Source=/env/hagicode.db',
       },
     });
 
     assert.equal(result.errors.length, 0);
-    assert.equal(result.injectedEnv.Database__Provider, 'postgresql');
+    assert.equal(result.injectedEnv.ConnectionStrings__Default, 'Data Source=/env/hagicode.db');
+  });
+
+  it('ignores legacy PostgreSQL provider and connection string values', () => {
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 5000,
+      dataDir: '/runtime/data',
+      yamlConfig: {
+        Database: { Provider: 'postgresql' },
+        ConnectionStrings: { Default: 'Host=db;Database=hagicode;Username=postgres;Password=secret' },
+      },
+      existingEnv: {
+        Database__Provider: 'postgresql',
+        ConnectionStrings__Default: 'Host=legacy;Database=hagicode;Username=postgres;Password=secret',
+      },
+    });
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.injectedEnv.Database__Provider, undefined);
+    assert.equal(result.injectedEnv.ConnectionStrings__Default, undefined);
+    assert.equal(
+      result.warnings.some((warning) => warning.includes('Ignored unsupported SQLite override for ConnectionStrings__Default')),
+      true,
+    );
   });
 
   it('never injects deprecated GitHub OAuth env vars from legacy or existing env inputs', () => {
@@ -135,22 +160,19 @@ describe('web-service-env', () => {
     assert.equal(result.snapshot.some(entry => entry.key.startsWith('GitHub__')), false);
   });
 
-  it('masks sensitive connection string values in logs', () => {
-    const value = 'Host=localhost;Database=hagicode;Username=postgres;Password=postgres';
-    const masked = maskEnvValue('ConnectionStrings__Default', value);
+  it('masks generic sensitive env values in logs', () => {
+    const masked = maskEnvValue('OPENAI_APIKEY', 'sk-test-secret');
 
-    assert.ok(masked.includes('Password=***'));
-    assert.ok(masked.includes('Username=***'));
-    assert.ok(masked.includes('Host=localhost'));
+    assert.equal(masked, '***');
   });
 
   it('builds sorted and masked snapshot log lines', () => {
     const lines = buildSnapshotLogLines([
       {
         key: 'ConnectionStrings__Default',
-        value: 'Host=db;Username=postgres;Password=postgres',
+        value: 'Data Source=/runtime/data/hagicode.db;Cache=Shared',
         source: 'yaml',
-        sourceConfig: 'ConnectionStrings.Default',
+        sourceConfig: 'ConnectionStrings.Default (SQLite data file override)',
         sensitive: true,
         defaultApplied: false,
       },
@@ -167,7 +189,7 @@ describe('web-service-env', () => {
     assert.equal(lines.length, 2);
     assert.equal(lines[0].includes('ASPNETCORE_URLS'), true);
     assert.equal(lines[1].includes('ConnectionStrings__Default'), true);
-    assert.equal(lines[1].includes('Password=***'), true);
+    assert.equal(lines[1].includes('Data Source=/runtime/data/hagicode.db'), true);
   });
 
   it('resolves config mode and log level with safe defaults', () => {
@@ -413,34 +435,34 @@ describe('web-service-env', () => {
   });
 
   it('covers migration and rollback scenarios', () => {
-    // Migration scenario: read from existing YAML structure without changing semantic fields.
+    // Migration scenario: legacy provider fields no longer expand the supported env surface.
     const migrated = buildManagedServiceEnv({
       host: 'localhost',
       port: 5000,
       dataDir: '/tmp/hagicode-migrate',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
+        ConnectionStrings: { Default: 'Data Source=/tmp/hagicode-migrate/hagicode.db' },
         AI: { Service: { DefaultExecutorType: 'ClaudeCodeCli' } },
       },
       existingEnv: {},
     });
     assert.equal(migrated.errors.length, 0);
-    assert.equal(migrated.injectedEnv.Database__Provider, 'postgresql');
+    assert.equal(migrated.injectedEnv.Database__Provider, undefined);
+    assert.equal(migrated.injectedEnv.ConnectionStrings__Default, 'Data Source=/tmp/hagicode-migrate/hagicode.db');
 
     // Rollback scenario: compatibility switch should fall back to legacy mode.
     assert.equal(resolveWebServiceConfigMode('legacy-yaml'), 'legacy-yaml');
 
-    // Error branch: missing required values should fail validation.
+    // Error branch: oversized required env values should fail validation.
     const invalid = buildManagedServiceEnv({
       host: '',
       port: 0,
       dataDir: '',
-      yamlConfig: {
-        Database: {
-          Provider: 'x'.repeat(40000),
-        },
+      yamlConfig: null,
+      existingEnv: {
+        HAGICODE_LOG_FORMAT: 'x'.repeat(40000),
       },
-      existingEnv: {},
     });
     assert.ok(invalid.errors.length > 0);
   });
