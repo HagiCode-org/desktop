@@ -4,18 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertCircle,
-  AtSign,
   Calculator,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   FileText,
   Globe as GlobeIcon,
-  Image as ImageIcon,
   Info,
-  Link as LinkIcon,
   LoaderCircle,
-  QrCode,
   Settings,
   Stethoscope,
 } from 'lucide-react';
@@ -72,19 +68,6 @@ const remainingExternalLinkItems: NavigationItem[] = [
 
 interface SidebarNavigationProps {
   distributionMode: DistributionMode;
-}
-
-function getAboutEntryIcon(entry: SidebarAboutEntry): ComponentType<{ className?: string }> {
-  switch (entry.type) {
-    case 'contact':
-      return AtSign;
-    case 'qr':
-      return QrCode;
-    case 'image':
-      return ImageIcon;
-    default:
-      return LinkIcon;
-  }
 }
 
 export default function SidebarNavigation({ distributionMode }: SidebarNavigationProps) {
@@ -216,22 +199,17 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   );
 
   const renderAboutEntryCard = (entry: SidebarAboutEntry) => {
-    const EntryIcon = getAboutEntryIcon(entry);
     const actionable = Boolean(entry.href);
     const cardContent = (
-      <div className="flex items-start gap-3 text-left">
+      <div className="text-left">
         {entry.imageUrl ? (
           <img
             src={entry.imageUrl}
             alt={entry.alt}
-            className="h-12 w-12 rounded-lg border border-border/60 bg-background object-cover shadow-sm"
+            className="mb-3 h-12 w-12 rounded-lg border border-border/60 bg-background object-cover shadow-sm"
             loading="lazy"
           />
-        ) : (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/70">
-            <EntryIcon className="h-4 w-4 text-muted-foreground" />
-          </div>
-        )}
+        ) : null}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -247,7 +225,9 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
         </div>
 
         {actionable ? (
-          <ExternalLink className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <div className="mt-2 flex justify-end">
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </div>
         ) : null}
       </div>
     );
@@ -299,9 +279,16 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex min-w-0 flex-1 items-center"
+              className="flex items-center gap-3"
             >
-              <div className="min-w-0">
+              <motion.div
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
+              >
+                <span className="text-xl font-bold text-primary-foreground">H</span>
+              </motion.div>
+              <div>
                 <motion.h1
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -326,9 +313,9 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-sm font-semibold text-foreground"
+              className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
             >
-              H
+              <span className="text-xl font-bold text-primary-foreground">H</span>
             </motion.div>
           )}
         </AnimatePresence>
