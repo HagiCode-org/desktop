@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import yaml from 'js-yaml';
-import { ConfigManager as DesktopConfigManager } from '../config.ts';
-import { ConfigManager as YamlConfigManager } from '../config-manager.ts';
+import { ConfigManager as DesktopConfigManager } from '../config.js';
+import { ConfigManager as YamlConfigManager } from '../config-manager.js';
 
 const tempDirectories: string[] = [];
 const mainProcessPath = path.resolve(process.cwd(), 'src/main/main.ts');

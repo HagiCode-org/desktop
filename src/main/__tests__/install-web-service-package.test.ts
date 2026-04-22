@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-// @ts-ignore Node's test runner executes the source TypeScript module directly in this package.
-import { installWebServicePackageWithAutoSwitch } from '../install-web-service-package.ts';
+import { installWebServicePackageWithAutoSwitch } from '../install-web-service-package.js';
 
 interface HarnessOptions {
   serviceStatus?: 'running' | 'stopped';
