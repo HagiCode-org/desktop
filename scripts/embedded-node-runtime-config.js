@@ -72,6 +72,22 @@ export function getNpmExecutableRelativePath(platform) {
   return path.join(getNodeBinRelativePath(platform), getNpmExecutableName(platform));
 }
 
+export function getNpmExecutableRelativePathCandidates(platform) {
+  const compatibilityPath = getNpmExecutableRelativePath(platform);
+  if (platform.startsWith('win-')) {
+    return [
+      compatibilityPath,
+      path.join(getNodeBinRelativePath(platform), 'npm'),
+    ];
+  }
+
+  return [
+    compatibilityPath,
+    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm'),
+  ];
+}
+
 export function getNpmGlobalBinRelativePath(platform) {
   return platform.startsWith('win-') ? 'npm-global' : path.join('npm-global', 'bin');
 }

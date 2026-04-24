@@ -24,6 +24,7 @@ import {
   getCommandExecutableName,
   getNodeExecutableRelativePath,
   getNpmExecutableRelativePath,
+  getNpmExecutableRelativePathCandidates,
   readPinnedNodeRuntimeConfig,
 } from './embedded-node-runtime-config.js';
 
@@ -229,11 +230,21 @@ function validatePinnedRuntimeMetadata(runtimeRoot) {
   return errors;
 }
 
+function readToolchainManifest(toolchainRoot) {
+  const manifestPath = path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE);
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
 function validateToolchainPayload(toolchainRoot) {
   const missing = [];
+  const manifest = readToolchainManifest(toolchainRoot);
   const requiredCommands = [
-    getNodeExecutableRelativePath(nodeRuntimePlatform),
-    getNpmExecutableRelativePath(nodeRuntimePlatform),
+    manifest?.commands?.node || getNodeExecutableRelativePath(nodeRuntimePlatform),
+    manifest?.commands?.npm || getNpmExecutableRelativePath(nodeRuntimePlatform),
     path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'openspec')),
     path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'skills')),
     path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'omniroute')),
@@ -249,16 +260,21 @@ function validateToolchainPayload(toolchainRoot) {
     }
   }
 
+  const candidateNpmPaths = getNpmExecutableRelativePathCandidates(nodeRuntimePlatform)
+    .map((relativePath) => path.join(toolchainRoot, relativePath));
+  if (!candidateNpmPaths.some((candidatePath) => fs.existsSync(candidatePath))) {
+    missing.push(`${getNpmExecutableRelativePath(nodeRuntimePlatform)} or equivalent npm entrypoint`);
+  }
+
   return missing;
 }
 
 function validateToolchainManifest(toolchainRoot) {
-  const manifestPath = path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE);
-  if (!fs.existsSync(manifestPath)) {
+  const manifest = readToolchainManifest(toolchainRoot);
+  if (!manifest) {
     return [`${TOOLCHAIN_MANIFEST_FILE} is missing`];
   }
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const errors = [];
   if (manifest.owner !== 'hagicode-desktop') {
     errors.push(`owner expected hagicode-desktop but found ${manifest.owner || 'missing'}`);
@@ -278,6 +294,10 @@ function validateToolchainManifest(toolchainRoot) {
     if (!relativePath || !fs.existsSync(path.join(toolchainRoot, relativePath))) {
       errors.push(`manifest command ${commandName} is missing or points to a missing entry`);
     }
+  }
+
+  if (manifest.node?.npmExecutableRelativePath !== manifest.commands?.npm) {
+    errors.push('manifest node.npmExecutableRelativePath must match commands.npm');
   }
 
   for (const [name, packageConfig] of Object.entries(nodeRuntimeConfig.corePackages || {})) {

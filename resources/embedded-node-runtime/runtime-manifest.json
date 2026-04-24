@@ -5,6 +5,10 @@
   "releaseVersion": "22.22.2",
   "releaseDate": "2026-03-30",
   "layoutVersion": 1,
+  "defaultEnabledByConsumer": {
+    "desktop": false,
+    "steam-packer": true
+  },
   "source": {
     "provider": "nodejs.org",
     "releaseMetadataUrl": "https://nodejs.org/download/release/v22.22.2/SHASUMS256.txt",
@@ -80,7 +84,7 @@
     "nodeRootPattern": "portable-fixed/toolchain/node",
     "requiredEntries": [
       "node/bin/node|node/node.exe",
-      "node/bin/npm|node/npm.cmd",
+      "node/bin/npm|node/npm.cmd|node/lib/node_modules/npm/bin/npm-cli.js",
       "bin/openspec[.cmd]",
       "bin/skills[.cmd]",
       "bin/omniroute[.cmd]",

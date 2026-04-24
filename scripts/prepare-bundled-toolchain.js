@@ -13,6 +13,7 @@ import {
   getCommandExecutableName,
   getNodeExecutableRelativePath,
   getNpmExecutableRelativePath,
+  getNpmExecutableRelativePathCandidates,
   getNpmGlobalBinRelativePath,
   getNpmGlobalModulesRelativePath,
   readPinnedNodeRuntimeConfig,
@@ -31,6 +32,16 @@ const npmGlobalRoot = path.join(toolchainRoot, 'npm-global');
 const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'downloads');
 const npmCacheRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'npm-cache');
 const packageEntries = Object.entries(runtimeConfig.corePackages || {});
+const stagingDiagnostics = {
+  archiveName: runtimeTarget.archiveName,
+  archiveType: runtimeTarget.archiveType,
+  downloadUrl: runtimeTarget.downloadUrl,
+  extractRoot: runtimeTarget.extractRoot,
+  platform: runtimePlatform,
+  attemptedCandidates: [],
+};
+let resolvedNodeCommand = null;
+let resolvedNpmCommand = null;
 
 function isWindowsPlatform(platform) {
   return platform.startsWith('win-');
@@ -46,6 +57,26 @@ function toWindowsPath(relativePath) {
 
 function pathExists(targetPath) {
   return fs.existsSync(targetPath);
+}
+
+function isDirectory(targetPath) {
+  try {
+    return fs.statSync(targetPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function toRelativeToolchainPath(targetPath) {
+  return path.relative(toolchainRoot, targetPath);
+}
+
+function toAbsoluteToolchainPath(relativePath) {
+  return path.join(toolchainRoot, relativePath);
+}
+
+function recordCandidate(commandName, relativePath, exists) {
+  stagingDiagnostics.attemptedCandidates.push({ commandName, relativePath, exists });
 }
 
 function ensureExecutable(targetPath) {
@@ -91,6 +122,109 @@ function validateArchiveChecksum(archivePath) {
   const actual = hashFile(archivePath);
   if (actual !== runtimeTarget.checksumSha256) {
     throw new Error(`Pinned Node archive checksum mismatch for ${archivePath}. Expected ${runtimeTarget.checksumSha256}, got ${actual}.`);
+  }
+}
+
+function getNodeRelativePathCandidates(platform) {
+  return [getNodeExecutableRelativePath(platform)];
+}
+
+function findFirstExistingCandidate(commandName, relativeCandidates) {
+  for (const relativePath of relativeCandidates) {
+    const exists = pathExists(toAbsoluteToolchainPath(relativePath));
+    recordCandidate(commandName, relativePath, exists);
+    if (exists) {
+      return relativePath;
+    }
+  }
+
+  return null;
+}
+
+function isJavaScriptNpmEntrypoint(relativePath) {
+  return relativePath.endsWith('.js');
+}
+
+function createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativePath) {
+  const shimPath = toAbsoluteToolchainPath(compatibilityRelativePath);
+  fs.mkdirSync(path.dirname(shimPath), { recursive: true });
+  fs.writeFileSync(shimPath, [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
+    'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"',
+    `exec "$TOOLCHAIN_ROOT/${toPosixPath(getNodeExecutableRelativePath(runtimePlatform))}" "$TOOLCHAIN_ROOT/${toPosixPath(npmRelativePath)}" "$@"`,
+  ].join('\n') + '\n', 'utf8');
+  ensureExecutable(shimPath);
+}
+
+function materializeNpmCompatibilityPath(npmRelativePath) {
+  const compatibilityRelativePath = getNpmExecutableRelativePath(runtimePlatform);
+  if (npmRelativePath === compatibilityRelativePath || pathExists(toAbsoluteToolchainPath(compatibilityRelativePath))) {
+    ensureExecutable(toAbsoluteToolchainPath(compatibilityRelativePath));
+    return compatibilityRelativePath;
+  }
+
+  if (isWindowsPlatform(runtimePlatform)) {
+    throw new Error(`Bundled Node layout is incomplete. Missing compatibility npm command: ${compatibilityRelativePath}`);
+  }
+
+  createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativePath);
+  return compatibilityRelativePath;
+}
+
+function snapshotDirectory(rootPath, maxDepth = 2, maxEntries = 80) {
+  if (!pathExists(rootPath)) {
+    return [`${rootPath} (missing)`];
+  }
+
+  const snapshot = [];
+  const visit = (currentPath, depth) => {
+    if (snapshot.length >= maxEntries || depth > maxDepth) {
+      return;
+    }
+
+    const entries = fs.readdirSync(currentPath, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    for (const entry of entries) {
+      if (snapshot.length >= maxEntries) {
+        snapshot.push('... truncated ...');
+        return;
+      }
+
+      const absolutePath = path.join(currentPath, entry.name);
+      const relativePath = toRelativeToolchainPath(absolutePath) || '.';
+      const suffix = entry.isDirectory() ? '/' : entry.isSymbolicLink() ? ' -> symlink' : '';
+      snapshot.push(`${relativePath}${suffix}`);
+      if (entry.isDirectory()) {
+        visit(absolutePath, depth + 1);
+      }
+    }
+  };
+
+  visit(rootPath, 0);
+  return snapshot;
+}
+
+function printStagingDiagnostics(error) {
+  console.error('[bundled-toolchain] Staging diagnostics:');
+  console.error(`[bundled-toolchain]   platform: ${stagingDiagnostics.platform}`);
+  console.error(`[bundled-toolchain]   archive: ${stagingDiagnostics.archiveName} (${stagingDiagnostics.archiveType})`);
+  console.error(`[bundled-toolchain]   downloadUrl: ${stagingDiagnostics.downloadUrl}`);
+  console.error(`[bundled-toolchain]   extractRoot: ${stagingDiagnostics.extractRoot}`);
+  if (stagingDiagnostics.attemptedCandidates.length > 0) {
+    console.error('[bundled-toolchain]   attempted command candidates:');
+    for (const candidate of stagingDiagnostics.attemptedCandidates) {
+      console.error(`[bundled-toolchain]     ${candidate.commandName}: ${candidate.relativePath} (${candidate.exists ? 'found' : 'missing'})`);
+    }
+  }
+  console.error(`[bundled-toolchain]   shallow snapshot: ${nodeRoot}`);
+  for (const entry of snapshotDirectory(nodeRoot)) {
+    console.error(`[bundled-toolchain]     ${entry}`);
+  }
+  if (error?.stack) {
+    console.error(`[bundled-toolchain]   error: ${error.stack}`);
   }
 }
 
@@ -245,31 +379,43 @@ function writeActivationArtifacts() {
 }
 
 function validateNodeLayout() {
-  const required = [
-    getNodeExecutableRelativePath(runtimePlatform),
-    getNpmExecutableRelativePath(runtimePlatform),
-  ];
-  const missing = required.filter((relativePath) => !pathExists(path.join(toolchainRoot, relativePath)));
+  const nodeRelativePath = findFirstExistingCandidate('node', getNodeRelativePathCandidates(runtimePlatform));
+  const npmRelativePath = findFirstExistingCandidate('npm', getNpmExecutableRelativePathCandidates(runtimePlatform));
+  const missing = [];
+  if (!nodeRelativePath) {
+    missing.push('node');
+  }
+  if (!npmRelativePath) {
+    missing.push('npm');
+  }
   if (missing.length > 0) {
-    throw new Error(`Bundled Node layout is incomplete. Missing: ${missing.join(', ')}`);
+    throw new Error(`Bundled Node layout is incomplete. Missing commands: ${missing.join(', ')}`);
   }
 
-  ensureExecutable(path.join(toolchainRoot, getNodeExecutableRelativePath(runtimePlatform)));
-  if (!isWindowsPlatform(runtimePlatform)) {
-    ensureExecutable(path.join(toolchainRoot, getNpmExecutableRelativePath(runtimePlatform)));
+  ensureExecutable(toAbsoluteToolchainPath(nodeRelativePath));
+  if (!isWindowsPlatform(runtimePlatform) && !isJavaScriptNpmEntrypoint(npmRelativePath)) {
+    ensureExecutable(toAbsoluteToolchainPath(npmRelativePath));
   }
+
+  resolvedNodeCommand = nodeRelativePath;
+  resolvedNpmCommand = materializeNpmCompatibilityPath(npmRelativePath);
+  recordCandidate('npm-compat', resolvedNpmCommand, pathExists(toAbsoluteToolchainPath(resolvedNpmCommand)));
+  return { node: resolvedNodeCommand, npm: resolvedNpmCommand, archiveNpm: npmRelativePath };
 }
 
-function installCorePackages() {
+function installCorePackages(npmCommandRelativePath = resolvedNpmCommand) {
   if (packageEntries.length === 0) {
     throw new Error('No core CLI packages are configured for the bundled toolchain.');
+  }
+  if (!npmCommandRelativePath) {
+    throw new Error('Cannot install core packages before npm command resolution.');
   }
 
   fs.rmSync(npmGlobalRoot, { recursive: true, force: true });
   fs.mkdirSync(npmGlobalRoot, { recursive: true });
   fs.mkdirSync(npmCacheRoot, { recursive: true });
 
-  const npmExecutablePath = path.join(toolchainRoot, getNpmExecutableRelativePath(runtimePlatform));
+  const npmExecutablePath = toAbsoluteToolchainPath(npmCommandRelativePath);
   const installSpecs = packageEntries.map(([, packageConfig]) => `${packageConfig.packageName}@${packageConfig.version}`);
   const env = {
     ...process.env,
@@ -290,8 +436,8 @@ function installCorePackages() {
 function stagePackageCommands() {
   const packages = {};
   const commands = {
-    node: getNodeExecutableRelativePath(runtimePlatform),
-    npm: getNpmExecutableRelativePath(runtimePlatform),
+    node: resolvedNodeCommand || getNodeExecutableRelativePath(runtimePlatform),
+    npm: resolvedNpmCommand || getNpmExecutableRelativePath(runtimePlatform),
   };
 
   fs.rmSync(binRoot, { recursive: true, force: true });
@@ -330,13 +476,14 @@ function stagePackageCommands() {
   return { packages, commands };
 }
 
-function writeToolchainManifest({ archivePath, sourceHost, packages, commands, activation }) {
+function writeToolchainManifest({ archivePath, sourceHost, packages, commands, activation, nodeLayout }) {
   const manifest = {
     schemaVersion: 1,
     layoutVersion: runtimeConfig.layoutVersion || 1,
     owner: 'hagicode-desktop',
     source: 'bundled-desktop',
     platform: runtimePlatform,
+    defaultEnabledByConsumer: { ...(runtimeConfig.defaultEnabledByConsumer || {}) },
     stagedAt: new Date().toISOString(),
     portableFixedRoot: resourcesRoot,
     toolchainRoot,
@@ -354,8 +501,9 @@ function writeToolchainManifest({ archivePath, sourceHost, packages, commands, a
       archivePath,
       checksumSha256: runtimeTarget.checksumSha256,
       extractRoot: runtimeTarget.extractRoot,
-      executableRelativePath: getNodeExecutableRelativePath(runtimePlatform),
-      npmExecutableRelativePath: getNpmExecutableRelativePath(runtimePlatform),
+      executableRelativePath: nodeLayout?.node || getNodeExecutableRelativePath(runtimePlatform),
+      npmExecutableRelativePath: nodeLayout?.npm || getNpmExecutableRelativePath(runtimePlatform),
+      archiveNpmExecutableRelativePath: nodeLayout?.archiveNpm || nodeLayout?.npm || getNpmExecutableRelativePath(runtimePlatform),
     },
     packages,
     commands,
@@ -422,14 +570,14 @@ async function stageNodeRuntime() {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 
-  validateNodeLayout();
-  return { archivePath, sourceHost: sourceUrl.hostname };
+  const nodeLayout = validateNodeLayout();
+  return { archivePath, sourceHost: sourceUrl.hostname, nodeLayout };
 }
 
 async function main() {
   console.log(`[bundled-toolchain] Preparing Desktop-owned Node toolchain for ${runtimePlatform}`);
   const stageResult = await stageNodeRuntime();
-  installCorePackages();
+  installCorePackages(stageResult.nodeLayout.npm);
   const commandResult = stagePackageCommands();
   const activation = writeActivationArtifacts();
   const manifest = writeToolchainManifest({
@@ -446,5 +594,6 @@ async function main() {
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[bundled-toolchain] ${message}`);
+  printStagingDiagnostics(error);
   process.exit(1);
 });
