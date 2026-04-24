@@ -67,6 +67,19 @@ export interface SystemDiagnosticCommandProbe {
   message: string | null;
 }
 
+export interface SystemDiagnosticBundledToolchainInfo {
+  available: boolean;
+  integrity: string;
+  platform: string;
+  toolchainRoot: string;
+  manifestPath: string;
+  runtimeManifestPath: string;
+  remediation: string;
+  commands: Record<string, string | null>;
+  packages: Record<string, { packageName: string; version: string | null; integrity?: string }>;
+  errors: string[];
+}
+
 export interface SystemDiagnosticWindowsCodePageInfo {
   activeCodePage: string | null;
   outputEncoding: string | null;
@@ -86,6 +99,7 @@ export interface SystemDiagnosticData {
   hardware: SystemDiagnosticHardwareInfo;
   agentCli: SystemDiagnosticAgentCliInfo;
   toolchain: SystemDiagnosticCommandProbe[];
+  bundledToolchain?: SystemDiagnosticBundledToolchainInfo;
   windowsCodePage?: SystemDiagnosticWindowsCodePageInfo;
   issues: SystemDiagnosticIssue[];
 }

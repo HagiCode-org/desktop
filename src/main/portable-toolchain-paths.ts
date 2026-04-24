@@ -14,9 +14,12 @@ export interface PortableToolchainPaths {
   toolchainBinRoot: string;
   nodeBinRoot: string;
   npmGlobalBinRoot: string;
+  toolchainManifestPath: string;
   nodeExecutablePath: string;
   npmExecutablePath: string;
   openspecExecutablePath: string;
+  skillsExecutablePath: string;
+  omnirouteExecutablePath: string;
 }
 
 export function resolvePortableToolchainRoot(options: PortableToolchainPathOptions): string {
@@ -42,6 +45,8 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
   const nodeExecutableName = platform === 'win32' ? 'node.exe' : 'node';
   const npmExecutableName = platform === 'win32' ? 'npm.cmd' : 'npm';
   const openspecExecutableName = platform === 'win32' ? 'openspec.cmd' : 'openspec';
+  const skillsExecutableName = platform === 'win32' ? 'skills.cmd' : 'skills';
+  const omnirouteExecutableName = platform === 'win32' ? 'omniroute.cmd' : 'omniroute';
 
   return {
     toolchainRoot,
@@ -49,8 +54,11 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
     toolchainBinRoot,
     nodeBinRoot,
     npmGlobalBinRoot,
+    toolchainManifestPath: path.join(toolchainRoot, 'toolchain-manifest.json'),
     nodeExecutablePath: path.join(nodeBinRoot, nodeExecutableName),
     npmExecutablePath: path.join(nodeBinRoot, npmExecutableName),
     openspecExecutablePath: path.join(toolchainBinRoot, openspecExecutableName),
+    skillsExecutablePath: path.join(toolchainBinRoot, skillsExecutableName),
+    omnirouteExecutablePath: path.join(toolchainBinRoot, omnirouteExecutableName),
   };
 }

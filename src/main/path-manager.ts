@@ -395,6 +395,7 @@ export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
   private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
+  private static readonly EMBEDDED_NODE_RUNTIME_MANIFEST_SEGMENTS = ['resources', 'embedded-node-runtime', 'runtime-manifest.json'] as const;
   private static readonly PORTABLE_BUNDLE_MANIFEST_FILE = 'bundle-manifest.json';
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
@@ -1006,6 +1007,40 @@ export class PathManager {
       platform: process.platform,
       overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
     }).openspecExecutablePath;
+  }
+
+  getPortableToolchainManifestPath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).toolchainManifestPath;
+  }
+
+  getPortableSkillsExecutablePath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).skillsExecutablePath;
+  }
+
+  getPortableOmnirouteExecutablePath(): string {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
+    }).omnirouteExecutablePath;
+  }
+
+  getEmbeddedNodeRuntimeManifestPath(): string {
+    return path.resolve(process.cwd(), ...PathManager.EMBEDDED_NODE_RUNTIME_MANIFEST_SEGMENTS);
   }
 
   getPortableRuntimeConfigDir(): string {

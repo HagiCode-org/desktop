@@ -74,6 +74,41 @@ describe('SystemDiagnosticManager', () => {
       totalMem: () => 32 * 1024 ** 3,
       freeMem: () => 12 * 1024 ** 3,
       now: () => new Date('2026-04-11T08:00:00.000Z'),
+      getBundledToolchainStatus: async () => ({
+        available: true,
+        integrity: 'ok',
+        platform: 'linux-x64',
+        toolchainRoot: '/opt/hagicode/toolchain',
+        manifestPath: '/opt/hagicode/toolchain/toolchain-manifest.json',
+        runtimeManifestPath: '/app/resources/embedded-node-runtime/runtime-manifest.json',
+        components: {} as any,
+        missingEntries: [],
+        errors: [],
+        remediation: 'none',
+        manifest: {
+          schemaVersion: 1,
+          layoutVersion: 1,
+          owner: 'hagicode-desktop',
+          source: 'bundled-desktop',
+          platform: 'linux-x64',
+          stagedAt: '2026-04-11T08:00:00.000Z',
+          portableFixedRoot: '/opt/hagicode',
+          toolchainRoot: '/opt/hagicode/toolchain',
+          node: {} as any,
+          commands: {
+            node: 'node/bin/node',
+            npm: 'node/bin/npm',
+            openspec: 'bin/openspec',
+            skills: 'bin/skills',
+            omniroute: 'bin/omniroute',
+          },
+          packages: {
+            openspec: { packageName: '@fission-ai/openspec', version: '1.3.1', binName: 'openspec', packageRootRelativePath: '', cliScriptRelativePath: '', commandArtifacts: [] },
+            skills: { packageName: 'skills', version: '1.5.1', binName: 'skills', packageRootRelativePath: '', cliScriptRelativePath: '', commandArtifacts: [] },
+            omniroute: { packageName: 'omniroute', version: '3.6.9', binName: 'omniroute', packageRootRelativePath: '', cliScriptRelativePath: '', commandArtifacts: [] },
+          },
+        },
+      }),
       readFile: async () => 'PRETTY_NAME="Ubuntu 24.04 LTS"\nVERSION_ID="24.04"\n',
       getRuntimeEnv: async () => ({
         PATH: '/opt/bin',
@@ -136,6 +171,8 @@ describe('SystemDiagnosticManager', () => {
       ['node', 'npm', 'npx', 'git'],
     );
     assert.match(result.report, /\[agent-cli\]/);
+    assert.match(result.report, /\[bundled-toolchain\]/);
+    assert.match(result.report, /package\.omniroute\.version=3\.6\.9/);
     assert.match(result.report, /claude-code\.status=available/);
     assert.match(result.report, /coverage\.requiredByCoreRuntime=node,npm,npx,git/);
     assert.equal(result.data.windowsCodePage, undefined);

@@ -316,6 +316,8 @@ interface ElectronAPI {
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
+  getBundledToolchainStatus: () => Promise<any>;
+  refreshBundledToolchainStatus: () => Promise<any>;
   installDependency: (dependencyType: string) => Promise<void>;
   onDependencyStatusChange: (callback: (dependencies: any) => void) => () => void;
 
@@ -476,6 +478,8 @@ const electronAPI: ElectronAPI = {
 
   // Dependency Management APIs
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
+  getBundledToolchainStatus: () => ipcRenderer.invoke('dependency:get-bundled-toolchain-status'),
+  refreshBundledToolchainStatus: () => ipcRenderer.invoke('dependency:refresh-bundled-toolchain-status'),
   installDependency: (dependencyType) => ipcRenderer.invoke('install-dependency', dependencyType),
   onDependencyStatusChange: (callback) => {
     const listener = (_event, dependencies) => {

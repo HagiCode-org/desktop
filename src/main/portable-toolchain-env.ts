@@ -21,6 +21,8 @@ export interface PortableToolchainEnvResult {
   markerInjected: boolean;
   usedBundledToolchain: boolean;
   fellBackToSystemPath: boolean;
+  resolutionSource: 'bundled-desktop' | 'system';
+  missingInjectedPaths: string[];
 }
 
 function normalizePathForComparison(entry: string, platform: NodeJS.Platform): string {
@@ -83,7 +85,7 @@ export function dedupePathEntries(
 export function collectPortableToolchainPathEntries(
   pathAccessor: PortableToolchainPathAccessor,
   options: InjectPortableToolchainEnvOptions = {},
-): { toolchainRoot: string; injectedPaths: string[] } {
+): { toolchainRoot: string; injectedPaths: string[]; missingInjectedPaths: string[] } {
   const existsSync = options.existsSync ?? fsSync.existsSync;
   const platform = options.platform ?? process.platform;
   const candidates = [
@@ -95,6 +97,7 @@ export function collectPortableToolchainPathEntries(
   return {
     toolchainRoot: pathAccessor.getPortableToolchainRoot(),
     injectedPaths: dedupePathEntries(candidates.filter(candidate => existsSync(candidate)), platform),
+    missingInjectedPaths: candidates.filter(candidate => !existsSync(candidate)),
   };
 }
 
@@ -132,5 +135,7 @@ export function injectPortableToolchainEnv(
     markerInjected,
     usedBundledToolchain: markerInjected,
     fellBackToSystemPath: !markerInjected,
+    resolutionSource: markerInjected ? 'bundled-desktop' : 'system',
+    missingInjectedPaths: toolchainEntries.missingInjectedPaths,
   };
 }

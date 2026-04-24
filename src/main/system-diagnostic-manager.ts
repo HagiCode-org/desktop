@@ -1,11 +1,13 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { AgentCliType, getAllCliConfigs } from '../types/agent-cli.js';
 import type {
   SystemDiagnosticAgentCliInfo,
   SystemDiagnosticAgentCliProbe,
+  SystemDiagnosticBundledToolchainInfo,
   SystemDiagnosticCommandProbe,
   SystemDiagnosticCommandScope,
   SystemDiagnosticCoverageMatrix,
@@ -17,6 +19,8 @@ import type {
   SystemDiagnosticSystemInfo,
   SystemDiagnosticWindowsCodePageInfo,
 } from '../types/system-diagnostic.js';
+import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
+import type { BundledToolchainStatus } from './bundled-node-runtime-manager.js';
 
 const execFileAsync = promisify(execFile);
 const COMMAND_TIMEOUT_MS = 5_000;
@@ -82,6 +86,7 @@ interface SystemDiagnosticManagerDeps {
   totalMem?: () => number;
   freeMem?: () => number;
   now?: () => Date;
+  getBundledToolchainStatus?: () => Promise<BundledToolchainStatus>;
 }
 
 function normalizeVersionOutput(rawOutput: string): string | null {
@@ -207,6 +212,7 @@ export class SystemDiagnosticManager {
   private readonly totalMem: () => number;
   private readonly freeMem: () => number;
   private readonly now: () => Date;
+  private readonly getBundledToolchainStatus: () => Promise<BundledToolchainStatus>;
   private lastResult: SystemDiagnosticResult | null = null;
 
   constructor(deps: SystemDiagnosticManagerDeps = {}) {
@@ -223,6 +229,7 @@ export class SystemDiagnosticManager {
     this.totalMem = deps.totalMem ?? os.totalmem;
     this.freeMem = deps.freeMem ?? os.freemem;
     this.now = deps.now ?? (() => new Date());
+    this.getBundledToolchainStatus = deps.getBundledToolchainStatus ?? (() => new BundledNodeRuntimeManager().verify());
   }
 
   getLastResult(): SystemDiagnosticResult | null {
@@ -245,6 +252,7 @@ export class SystemDiagnosticManager {
     const hardware = await this.collectHardwareInfo(runtimeEnv, issues);
     const agentCli = await this.collectAgentCliInfo(runtimeEnv, issues);
     const toolchain = await this.collectToolchainInfo(runtimeEnv, issues);
+    const bundledToolchain = await this.collectBundledToolchainInfo(issues);
     const windowsCodePage = this.platform === 'win32'
       ? await this.collectWindowsCodePageInfo(runtimeEnv, issues)
       : undefined;
@@ -261,6 +269,7 @@ export class SystemDiagnosticManager {
       hardware,
       agentCli,
       toolchain,
+      bundledToolchain,
       issues,
       ...(windowsCodePage ? { windowsCodePage } : {}),
     };
@@ -269,7 +278,7 @@ export class SystemDiagnosticManager {
       status: issues.length > 0 ? 'partial-failure' : 'success',
       completedAt,
       errorCount: issues.length,
-      sectionCount: windowsCodePage ? 5 : 4,
+      sectionCount: windowsCodePage ? 6 : 5,
     } as const;
 
     const result: SystemDiagnosticResult = {
@@ -602,6 +611,48 @@ export class SystemDiagnosticManager {
     return probes;
   }
 
+  private async collectBundledToolchainInfo(
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticBundledToolchainInfo> {
+    const status = await this.getBundledToolchainStatus();
+    if (!status.available) {
+      this.pushIssue(
+        issues,
+        'bundled-toolchain',
+        'integrity',
+        status.integrity === 'missing' ? 'missing' : 'error',
+        status.errors.join('; ') || 'Bundled Desktop toolchain is incomplete.',
+      );
+    }
+
+    const commands: Record<string, string | null> = {};
+    for (const [command, relativePath] of Object.entries(status.manifest?.commands ?? {})) {
+      commands[command] = relativePath ? path.join(status.toolchainRoot, relativePath) : null;
+    }
+
+    const packages: SystemDiagnosticBundledToolchainInfo['packages'] = {};
+    for (const [name, packageRecord] of Object.entries(status.manifest?.packages ?? {})) {
+      packages[name] = {
+        packageName: packageRecord.packageName,
+        version: packageRecord.version ?? null,
+        integrity: packageRecord.integrity,
+      };
+    }
+
+    return {
+      available: status.available,
+      integrity: status.integrity,
+      platform: status.platform,
+      toolchainRoot: status.toolchainRoot,
+      manifestPath: status.manifestPath,
+      runtimeManifestPath: status.runtimeManifestPath,
+      remediation: status.remediation,
+      commands,
+      packages,
+      errors: status.errors,
+    };
+  }
+
   private async collectWindowsCodePageInfo(
     runtimeEnv: NodeJS.ProcessEnv,
     issues: SystemDiagnosticIssue[],
@@ -783,6 +834,25 @@ export class SystemDiagnosticManager {
       probe.message ? `${probe.command}.message=${probe.message}` : null,
     ]));
     pushSection('toolchain', toolchainLines);
+
+    if (data.bundledToolchain) {
+      pushSection('bundled-toolchain', [
+        `available=${data.bundledToolchain.available}`,
+        `integrity=${data.bundledToolchain.integrity}`,
+        `platform=${data.bundledToolchain.platform}`,
+        `toolchainRoot=${data.bundledToolchain.toolchainRoot}`,
+        `manifestPath=${data.bundledToolchain.manifestPath}`,
+        `runtimeManifestPath=${data.bundledToolchain.runtimeManifestPath}`,
+        `remediation=${data.bundledToolchain.remediation}`,
+        ...Object.entries(data.bundledToolchain.commands).map(([command, commandPath]) => `command.${command}=${commandPath ?? 'missing'}`),
+        ...Object.entries(data.bundledToolchain.packages).flatMap(([name, packageRecord]) => ([
+          `package.${name}.name=${packageRecord.packageName}`,
+          `package.${name}.version=${packageRecord.version ?? 'unknown'}`,
+          packageRecord.integrity ? `package.${name}.integrity=${packageRecord.integrity}` : null,
+        ])),
+        ...data.bundledToolchain.errors.map((error, index) => `error.${index + 1}=${error}`),
+      ]);
+    }
 
     if (data.windowsCodePage) {
       pushSection('windows-code-page', [

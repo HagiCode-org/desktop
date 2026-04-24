@@ -23,6 +23,9 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/node');
     assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/npm');
     assert.equal(paths.openspecExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/bin/openspec');
+    assert.equal(paths.skillsExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/bin/skills');
+    assert.equal(paths.omnirouteExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/bin/omniroute');
+    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/toolchain-manifest.json');
   });
 
   it('resolves packaged mode toolchain paths from resources on windows', () => {
@@ -39,6 +42,8 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.nodeExecutablePath, path.join(paths.nodeRoot, 'node.exe'));
     assert.equal(paths.npmExecutablePath, path.join(paths.nodeRoot, 'npm.cmd'));
     assert.equal(paths.openspecExecutablePath, path.join(paths.toolchainBinRoot, 'openspec.cmd'));
+    assert.equal(paths.skillsExecutablePath, path.join(paths.toolchainBinRoot, 'skills.cmd'));
+    assert.equal(paths.omnirouteExecutablePath, path.join(paths.toolchainBinRoot, 'omniroute.cmd'));
   });
 
   it('supports explicit toolchain root override for all derived paths', () => {

@@ -608,6 +608,11 @@ export class OnboardingManager {
         progress: dep.installed ? 100 : 0,
         version: dep.version,
         requiredVersion: dep.requiredVersion,
+        error: dep.installed ? undefined : dep.description,
+        installHint: dep.downloadUrl,
+        resolutionSource: dep.resolutionSource,
+        sourcePath: dep.sourcePath,
+        primaryAction: dep.primaryAction,
       }));
 
       // Send initial status
@@ -762,6 +767,11 @@ export class OnboardingManager {
         progress: dep.installed ? 100 : 0,
         version: dep.version,
         requiredVersion: dep.requiredVersion,
+        error: dep.installed ? undefined : dep.description,
+        installHint: dep.downloadUrl,
+        resolutionSource: dep.resolutionSource,
+        sourcePath: dep.sourcePath,
+        primaryAction: dep.primaryAction,
       }));
 
       // Send status

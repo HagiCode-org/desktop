@@ -115,6 +115,9 @@ export interface DependencyItem {
   requiredVersion?: string;
   error?: string;
   installHint?: string;
+  resolutionSource?: 'bundled-desktop' | 'system';
+  sourcePath?: string;
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
 }
 
 /**

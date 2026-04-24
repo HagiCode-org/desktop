@@ -8,6 +8,8 @@ import {
   validateBundledRuntimeForPlatform,
 } from './embedded-runtime.js';
 import { resolvePinnedRuntimeTarget } from './embedded-runtime-config.js';
+import { BundledNodeRuntimeManager, type BundledToolchainComponentId } from './bundled-node-runtime-manager.js';
+import { satisfies } from 'semver';
 
 /**
  * Dependency type enumeration
@@ -17,6 +19,7 @@ export enum DependencyType {
   NodeJs = 'nodejs',
   JavaRuntime = 'java-runtime',
   ClaudeCode = 'claude-code',
+  CliTool = 'cli-tool',
 }
 
 /**
@@ -48,6 +51,7 @@ export interface DependencyCheckResult {
 export class DependencyManager {
   private currentManifest: Manifest | null = null;
   private readonly pathManager = PathManager.getInstance();
+  private readonly bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
   private static readonly DESKTOP_DOWNLOAD_URL = 'https://hagicode.com/desktop/#download';
 
   constructor(_store?: Store<Record<string, unknown>>) {
@@ -102,6 +106,11 @@ export class DependencyManager {
       const bundledRuntimeResult = await this.checkBundledDotnetDependency(dep);
       if (bundledRuntimeResult) {
         return bundledRuntimeResult;
+      }
+
+      const bundledToolchainResult = await this.checkBundledToolchainDependency(dep);
+      if (bundledToolchainResult) {
+        return bundledToolchainResult;
       }
 
       // Return all remaining dependencies as not installed.
@@ -221,6 +230,93 @@ export class DependencyManager {
     };
   }
 
+  private normalizeToolchainDependencyKey(dep: ParsedDependency): BundledToolchainComponentId | null {
+    const normalizedKey = dep.key.toLowerCase();
+    const normalizedName = dep.name.toLowerCase();
+    if (normalizedKey === 'node' || normalizedName.includes('node.js')) return 'node';
+    if (normalizedKey === 'npm' || normalizedName === 'npm') return 'npm';
+    if (normalizedKey === 'openspec' || normalizedName.includes('openspec')) return 'openspec';
+    if (normalizedKey === 'skills' || normalizedName.includes('skills')) return 'skills';
+    if (normalizedKey === 'omniroute' || normalizedName.includes('omniroute')) return 'omniroute';
+    return null;
+  }
+
+  private async checkBundledToolchainDependency(dep: ParsedDependency): Promise<DependencyCheckResult | null> {
+    const componentId = this.normalizeToolchainDependencyKey(dep);
+    if (!componentId) {
+      return null;
+    }
+
+    const bundledStatus = await this.bundledNodeRuntimeManager.verify();
+    const component = bundledStatus.components[componentId];
+    const requiredVersion = component.requiredVersion ?? this.formatRequiredVersion(dep.versionConstraints);
+
+    if (component.installed) {
+      const versionMismatch = !this.isBundledToolchainVersionCompatible(componentId, component.version, dep);
+      return {
+        key: dep.key,
+        name: dep.name,
+        type: this.mapDependencyType(dep.key, dep.type),
+        installed: !versionMismatch,
+        version: component.version,
+        requiredVersion,
+        versionMismatch,
+        description: versionMismatch
+          ? `Bundled Desktop ${componentId} version does not satisfy ${requiredVersion}. Update Desktop to refresh the managed toolchain.`
+          : `Bundled with Desktop at ${component.sourcePath}`,
+        resolutionSource: 'bundled-desktop',
+        sourcePath: component.executablePath ?? component.sourcePath,
+        primaryAction: versionMismatch ? 'update-desktop' : 'reinstall-desktop',
+      };
+    }
+
+    return {
+      key: dep.key,
+      name: dep.name,
+      type: this.mapDependencyType(dep.key, dep.type),
+      installed: false,
+      version: component.version,
+      requiredVersion,
+      versionMismatch: true,
+      description: `${component.message ?? (bundledStatus.errors.join('; ') || 'Bundled Desktop toolchain validation failed.')} Reinstall or update Desktop to restore the managed toolchain.`,
+      downloadUrl: DependencyManager.DESKTOP_DOWNLOAD_URL,
+      resolutionSource: 'bundled-desktop',
+      sourcePath: component.executablePath ?? component.sourcePath,
+      primaryAction: component.primaryAction === 'update-desktop' ? 'update-desktop' : 'reinstall-desktop',
+    };
+  }
+
+  private isBundledToolchainVersionCompatible(
+    componentId: BundledToolchainComponentId,
+    version: string | undefined,
+    dep: ParsedDependency,
+  ): boolean {
+    if (!version) {
+      return false;
+    }
+
+    if (componentId === 'openspec') {
+      return satisfies(version, '>=1.0.0 <2.0.0', { includePrerelease: true });
+    }
+
+    if (componentId === 'skills' || componentId === 'omniroute') {
+      return true;
+    }
+
+    if (dep.versionConstraints.exact) {
+      return version === dep.versionConstraints.exact;
+    }
+
+    const rangeParts = [];
+    if (dep.versionConstraints.min) rangeParts.push(`>=${dep.versionConstraints.min}`);
+    if (dep.versionConstraints.max) rangeParts.push(`<${dep.versionConstraints.max}`);
+    if (rangeParts.length === 0) {
+      return true;
+    }
+
+    return satisfies(version, rangeParts.join(' '), { includePrerelease: true });
+  }
+
   /**
    * Map manifest dependency key and type to DependencyType enum
    * @param key - Dependency key from manifest
@@ -234,6 +330,9 @@ export class DependencyManager {
       'dotnet': DependencyType.DotNetRuntime,
       'node': DependencyType.NodeJs,
       'npm': DependencyType.NodeJs, // Treat npm as Node.js dependency
+      'openspec': DependencyType.CliTool,
+      'skills': DependencyType.CliTool,
+      'omniroute': DependencyType.CliTool,
     };
 
     if (keyMapping[key]) {
