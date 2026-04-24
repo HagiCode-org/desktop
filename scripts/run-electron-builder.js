@@ -44,7 +44,7 @@ const command = process.platform === 'darwin' ? '/bin/bash' : process.execPath;
 const commandArgs = process.platform === 'darwin'
   ? [
     '-lc',
-    'ulimit -n "$HAGICODE_MACOS_NOFILE_LIMIT" 2>/dev/null || ulimit -n 16384 2>/dev/null || true; echo "[electron-builder] effective macOS open file limit: $(ulimit -n)"; exec "$@"',
+    'ulimit -n "$HAGICODE_MACOS_NOFILE_LIMIT" 2>/dev/null || ulimit -n 16384 2>/dev/null || true; effective_limit=$(ulimit -n); echo "[electron-builder] effective macOS open file limit: $effective_limit"; if [ "$effective_limit" -lt 16384 ]; then echo "[electron-builder] macOS open file limit is too low for bundled toolchain packaging" >&2; exit 1; fi; exec "$@"',
     'electron-builder-runner',
     process.execPath,
     electronBuilderCliPath,

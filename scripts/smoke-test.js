@@ -304,6 +304,22 @@ function findUnexpectedNpmGlobalPackageFiles(rootPath, maxResults) {
     return matches;
   }
 
+  const forbiddenPackages = [
+    path.join('caniuse-lite'),
+    path.join('browserslist'),
+    path.join('electron-to-chromium'),
+    path.join('@mdn', 'browser-compat-data'),
+  ];
+
+  for (const relativePath of forbiddenPackages) {
+    if (fs.existsSync(path.join(rootPath, relativePath))) {
+      matches.push(relativePath);
+      if (matches.length >= maxResults) {
+        return matches;
+      }
+    }
+  }
+
   const visit = (currentPath) => {
     if (matches.length >= maxResults) {
       return;

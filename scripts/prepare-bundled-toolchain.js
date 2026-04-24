@@ -311,6 +311,12 @@ function pruneNpmGlobalPackagePayload() {
     return;
   }
 
+  const removablePackageNames = new Set([
+    'browserslist',
+    'caniuse-lite',
+    'electron-to-chromium',
+    '@mdn/browser-compat-data',
+  ]);
   const removableDirectoryNames = new Set([
     '__tests__',
     'test',
@@ -323,6 +329,10 @@ function pruneNpmGlobalPackagePayload() {
     '.github',
     '.vscode',
     'coverage',
+    'fixture',
+    'fixtures',
+    'locale',
+    'locales',
   ]);
   const removableFileNames = new Set([
     'README',
@@ -337,6 +347,19 @@ function pruneNpmGlobalPackagePayload() {
   ]);
   const removableFileExtensions = new Set(['.d.ts', '.d.ts.map', '.map', '.md', '.markdown', '.tsbuildinfo']);
 
+  const npmGlobalModulesRoot = path.join(toolchainRoot, getNpmGlobalModulesRelativePath(runtimePlatform));
+  const packageNameForPath = (currentPath) => {
+    const relativePath = path.relative(npmGlobalModulesRoot, currentPath);
+    const segments = relativePath.split(path.sep).filter(Boolean);
+    if (segments.length === 0) {
+      return null;
+    }
+    if (segments[0].startsWith('@') && segments.length >= 2) {
+      return `${segments[0]}/${segments[1]}`;
+    }
+    return segments[0];
+  };
+
   const visit = (currentPath) => {
     let entries;
     try {
@@ -349,7 +372,8 @@ function pruneNpmGlobalPackagePayload() {
       const entryPath = path.join(currentPath, entry.name);
 
       if (entry.isDirectory()) {
-        if (removableDirectoryNames.has(entry.name)) {
+        const packageName = packageNameForPath(entryPath);
+        if (removablePackageNames.has(packageName) || removableDirectoryNames.has(entry.name)) {
           prunePath(entryPath);
         } else {
           visit(entryPath);

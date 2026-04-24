@@ -54,6 +54,7 @@ describe('embedded runtime packaging configuration', () => {
 
     assert.match(runner, /HAGICODE_MACOS_NOFILE_LIMIT/);
     assert.match(runner, /ulimit -n/);
+    assert.match(runner, /effective_limit.*-lt 16384/);
     assert.match(runner, /electron-builder\/out\/cli\/cli\.js/);
   });
 
@@ -65,11 +66,14 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(stagingScript, /entry !== 'node'/);
     assert.match(stagingScript, /createPosixNpmCompatibilityShim\(stableNpmRelativePath, compatibilityRelativePath\)/);
     assert.match(stagingScript, /pruneNpmGlobalPackagePayload/);
+    assert.match(stagingScript, /caniuse-lite/);
+    assert.match(stagingScript, /browserslist/);
     assert.match(stagingScript, /lowerName\.endsWith\('\.d\.ts'\)/);
     assert.match(stagingScript, /Pruned \$\{prunedToolchainEntries\} non-runtime npm package entries/);
     assert.match(smokeTest, /node', 'bin', 'corepack'/);
     assert.match(smokeTest, /node', 'bin', 'npx'/);
     assert.match(smokeTest, /unused Node entrypoint must be pruned before packaging/);
+    assert.match(smokeTest, /caniuse-lite/);
     assert.match(smokeTest, /npm global package payload contains non-runtime files/);
   });
 
