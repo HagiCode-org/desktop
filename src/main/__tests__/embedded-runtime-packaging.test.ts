@@ -9,6 +9,7 @@ const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
 const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
+const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -31,11 +32,17 @@ describe('embedded runtime packaging configuration', () => {
 
   it('package scripts provide targeted macOS runtime smoke validation for both architectures', async () => {
     const pkg = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+    const macBuildScript = await fs.readFile(macBuildScriptPath, 'utf-8');
 
+    assert.equal(pkg.scripts['build:mac'], 'node scripts/build-macos.js');
     assert.match(pkg.scripts['build:mac:x64'] || '', /package:smoke-test:mac:x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:smoke-test:mac:arm64/);
+    assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
+    assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
+    assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
+    assert.match(macBuildScript, /build:mac:\$\{arch\}/);
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {

@@ -101,6 +101,19 @@ function resolvePackagedToolchainRoots() {
     return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'portable-fixed', 'toolchain')];
   }
   if (process.platform === 'darwin') {
+    if (nodeRuntimePlatform === 'osx-x64') {
+      return [
+        path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      ];
+    }
+    if (nodeRuntimePlatform === 'osx-arm64') {
+      return [
+        path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      ];
+    }
+
     return [
       path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
       path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
