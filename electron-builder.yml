@@ -52,6 +52,8 @@ mac:
         - arm64
   icon: resources/icon.icns
   category: public.app-category.utilities
+  signIgnore:
+    - Contents/Resources/extra/portable-fixed/toolchain/.*
 linux:
   target:
     # Keep the currently supported Linux release formats and add ZIP for extractable distribution.
