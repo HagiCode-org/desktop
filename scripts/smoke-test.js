@@ -279,6 +279,13 @@ function validateToolchainPayload(toolchainRoot) {
     missing.push(`${getNpmExecutableRelativePath(nodeRuntimePlatform)} or equivalent npm entrypoint`);
   }
 
+  const corepackEntrypoint = nodeRuntimePlatform.startsWith('win-')
+    ? path.join(toolchainRoot, 'node', 'corepack.cmd')
+    : path.join(toolchainRoot, 'node', 'bin', 'corepack');
+  if (fs.existsSync(corepackEntrypoint)) {
+    missing.push('unused corepack entrypoint must be pruned before packaging');
+  }
+
   return missing;
 }
 

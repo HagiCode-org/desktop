@@ -177,6 +177,18 @@ function materializeNpmCompatibilityPath(npmRelativePath) {
   return compatibilityRelativePath;
 }
 
+function removeUnusedCorepackEntrypoints() {
+  const candidates = isWindowsPlatform(runtimePlatform)
+    ? [path.join(nodeRoot, 'corepack'), path.join(nodeRoot, 'corepack.cmd')]
+    : [path.join(nodeRoot, 'bin', 'corepack')];
+
+  for (const candidate of candidates) {
+    if (pathExistsOrIsSymlink(candidate)) {
+      fs.rmSync(candidate, { force: true });
+    }
+  }
+}
+
 function snapshotDirectory(rootPath, maxDepth = 2, maxEntries = 80) {
   if (!pathExists(rootPath)) {
     return [`${rootPath} (missing)`];
@@ -570,6 +582,7 @@ async function stageNodeRuntime() {
     fs.rmSync(nodeRoot, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(nodeRoot), { recursive: true });
     fs.cpSync(extractedNodeRoot, nodeRoot, { recursive: true, force: true });
+    removeUnusedCorepackEntrypoints();
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

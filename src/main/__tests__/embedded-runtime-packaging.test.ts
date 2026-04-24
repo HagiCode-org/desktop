@@ -10,6 +10,7 @@ const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
 const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
+const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -43,6 +44,16 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
     assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
+  });
+
+  it('prunes unused corepack entrypoints before macOS signing', async () => {
+    const stagingScript = await fs.readFile(bundledToolchainScriptPath, 'utf-8');
+    const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
+
+    assert.match(stagingScript, /removeUnusedCorepackEntrypoints/);
+    assert.match(stagingScript, /bin', 'corepack'/);
+    assert.match(stagingScript, /fs\.rmSync\(candidate, \{ force: true \}\)/);
+    assert.match(smokeTest, /unused corepack entrypoint must be pruned before packaging/);
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
