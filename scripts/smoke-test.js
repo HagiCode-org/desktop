@@ -279,11 +279,13 @@ function validateToolchainPayload(toolchainRoot) {
     missing.push(`${getNpmExecutableRelativePath(nodeRuntimePlatform)} or equivalent npm entrypoint`);
   }
 
-  const corepackEntrypoint = nodeRuntimePlatform.startsWith('win-')
-    ? path.join(toolchainRoot, 'node', 'corepack.cmd')
-    : path.join(toolchainRoot, 'node', 'bin', 'corepack');
-  if (fs.existsSync(corepackEntrypoint)) {
-    missing.push('unused corepack entrypoint must be pruned before packaging');
+  const unusedNodeEntrypoints = nodeRuntimePlatform.startsWith('win-')
+    ? [path.join('node', 'corepack.cmd'), path.join('node', 'npx.cmd')]
+    : [path.join('node', 'bin', 'corepack'), path.join('node', 'bin', 'npx')];
+  for (const relativePath of unusedNodeEntrypoints) {
+    if (fs.existsSync(path.join(toolchainRoot, relativePath))) {
+      missing.push(`unused Node entrypoint must be pruned before packaging: ${relativePath}`);
+    }
   }
 
   return missing;

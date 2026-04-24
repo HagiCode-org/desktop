@@ -146,6 +146,17 @@ function isJavaScriptNpmEntrypoint(relativePath) {
   return relativePath.endsWith('.js');
 }
 
+function resolveStableNpmEntrypoint(npmRelativePath) {
+  if (isWindowsPlatform(runtimePlatform) || isJavaScriptNpmEntrypoint(npmRelativePath)) {
+    return npmRelativePath;
+  }
+
+  const candidates = getNpmExecutableRelativePathCandidates(runtimePlatform)
+    .filter((candidate) => candidate !== npmRelativePath && isJavaScriptNpmEntrypoint(candidate));
+  const jsEntrypoint = candidates.find((candidate) => pathExists(toAbsoluteToolchainPath(candidate)));
+  return jsEntrypoint || npmRelativePath;
+}
+
 function createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativePath) {
   const shimPath = toAbsoluteToolchainPath(compatibilityRelativePath);
   fs.mkdirSync(path.dirname(shimPath), { recursive: true });
@@ -164,27 +175,40 @@ function createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativeP
 
 function materializeNpmCompatibilityPath(npmRelativePath) {
   const compatibilityRelativePath = getNpmExecutableRelativePath(runtimePlatform);
+  const stableNpmRelativePath = resolveStableNpmEntrypoint(npmRelativePath);
+
+  if (!isWindowsPlatform(runtimePlatform)) {
+    createPosixNpmCompatibilityShim(stableNpmRelativePath, compatibilityRelativePath);
+    return compatibilityRelativePath;
+  }
+
   if (npmRelativePath === compatibilityRelativePath || pathExists(toAbsoluteToolchainPath(compatibilityRelativePath))) {
     ensureExecutable(toAbsoluteToolchainPath(compatibilityRelativePath));
     return compatibilityRelativePath;
   }
 
-  if (isWindowsPlatform(runtimePlatform)) {
-    throw new Error(`Bundled Node layout is incomplete. Missing compatibility npm command: ${compatibilityRelativePath}`);
-  }
-
-  createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativePath);
-  return compatibilityRelativePath;
+  throw new Error(`Bundled Node layout is incomplete. Missing compatibility npm command: ${compatibilityRelativePath}`);
 }
 
-function removeUnusedCorepackEntrypoints() {
-  const candidates = isWindowsPlatform(runtimePlatform)
-    ? [path.join(nodeRoot, 'corepack'), path.join(nodeRoot, 'corepack.cmd')]
-    : [path.join(nodeRoot, 'bin', 'corepack')];
+function removeUnusedNodeBinEntrypoints() {
+  if (isWindowsPlatform(runtimePlatform)) {
+    const candidates = [path.join(nodeRoot, 'corepack'), path.join(nodeRoot, 'corepack.cmd'), path.join(nodeRoot, 'npx'), path.join(nodeRoot, 'npx.cmd')];
+    for (const candidate of candidates) {
+      if (pathExistsOrIsSymlink(candidate)) {
+        fs.rmSync(candidate, { force: true });
+      }
+    }
+    return;
+  }
 
-  for (const candidate of candidates) {
-    if (pathExistsOrIsSymlink(candidate)) {
-      fs.rmSync(candidate, { force: true });
+  const binDirectory = path.join(nodeRoot, 'bin');
+  if (!pathExists(binDirectory)) {
+    return;
+  }
+
+  for (const entry of fs.readdirSync(binDirectory)) {
+    if (entry !== 'node') {
+      fs.rmSync(path.join(binDirectory, entry), { recursive: true, force: true });
     }
   }
 }
@@ -582,7 +606,7 @@ async function stageNodeRuntime() {
     fs.rmSync(nodeRoot, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(nodeRoot), { recursive: true });
     fs.cpSync(extractedNodeRoot, nodeRoot, { recursive: true, force: true });
-    removeUnusedCorepackEntrypoints();
+    removeUnusedNodeBinEntrypoints();
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

@@ -46,14 +46,16 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
   });
 
-  it('prunes unused corepack entrypoints before macOS signing', async () => {
+  it('prunes unused Node bin entrypoints before macOS signing', async () => {
     const stagingScript = await fs.readFile(bundledToolchainScriptPath, 'utf-8');
     const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
 
-    assert.match(stagingScript, /removeUnusedCorepackEntrypoints/);
-    assert.match(stagingScript, /bin', 'corepack'/);
-    assert.match(stagingScript, /fs\.rmSync\(candidate, \{ force: true \}\)/);
-    assert.match(smokeTest, /unused corepack entrypoint must be pruned before packaging/);
+    assert.match(stagingScript, /removeUnusedNodeBinEntrypoints/);
+    assert.match(stagingScript, /entry !== 'node'/);
+    assert.match(stagingScript, /createPosixNpmCompatibilityShim\(stableNpmRelativePath, compatibilityRelativePath\)/);
+    assert.match(smokeTest, /node', 'bin', 'corepack'/);
+    assert.match(smokeTest, /node', 'bin', 'npx'/);
+    assert.match(smokeTest, /unused Node entrypoint must be pruned before packaging/);
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
