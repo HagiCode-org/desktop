@@ -50,6 +50,8 @@ assertCandidateContract('win-x64', {
 
 const prepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain.js', import.meta.url), 'utf8');
 assert.match(prepareScript, /materializeNpmCompatibilityPath/, 'prepare script materializes the Desktop npm compatibility path');
+assert.match(prepareScript, /pathExistsOrIsSymlink/, 'prepare script detects dangling compatibility-path symlinks');
+assert.match(prepareScript, /fs\.rmSync\(shimPath, \{ force: true \}\)/, 'prepare script removes stale npm compatibility entries before writing the shim');
 assert.match(prepareScript, /printStagingDiagnostics/, 'prepare script emits staging diagnostics on failure');
 assert.match(prepareScript, /attempted command candidates/, 'diagnostics include attempted command candidates');
 assert.match(prepareScript, /shallow snapshot/, 'diagnostics include a shallow staged directory snapshot');
