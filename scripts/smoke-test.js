@@ -25,6 +25,7 @@ import {
   getNodeExecutableRelativePath,
   getNpmExecutableRelativePath,
   getNpmExecutableRelativePathCandidates,
+  getNpmGlobalModulesRelativePath,
   readPinnedNodeRuntimeConfig,
 } from './embedded-node-runtime-config.js';
 
