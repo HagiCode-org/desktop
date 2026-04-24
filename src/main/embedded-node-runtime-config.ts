@@ -5,6 +5,10 @@ export const TOOLCHAIN_MANIFEST_FILE = 'toolchain-manifest.json';
 
 const CONFIG_PATH = path.resolve(process.cwd(), 'resources', 'embedded-node-runtime', 'runtime-manifest.json');
 
+export type EmbeddedNodeRuntimeConsumer = 'desktop' | 'steam-packer' | string;
+
+export type EmbeddedNodeRuntimeConsumerDefaultMatrix = Record<EmbeddedNodeRuntimeConsumer, boolean>;
+
 export interface EmbeddedNodeRuntimePackageConfig {
   packageName: string;
   version: string;
@@ -29,6 +33,7 @@ export interface EmbeddedNodeRuntimeConfig {
   releaseVersion: string;
   releaseDate: string;
   layoutVersion: number;
+  defaultEnabledByConsumer?: EmbeddedNodeRuntimeConsumerDefaultMatrix;
   source: {
     provider: string;
     releaseMetadataUrl: string;
@@ -95,6 +100,35 @@ export function getNodeExecutableName(platform: NodeJS.Platform | string): strin
 
 export function getNpmExecutableName(platform: NodeJS.Platform | string): string {
   return String(platform).startsWith('win') ? 'npm.cmd' : 'npm';
+}
+
+export function getNodeBinRelativePath(platform: NodeJS.Platform | string): string {
+  return String(platform).startsWith('win') ? 'node' : path.join('node', 'bin');
+}
+
+export function getNodeExecutableRelativePath(platform: NodeJS.Platform | string): string {
+  return path.join(getNodeBinRelativePath(platform), getNodeExecutableName(platform));
+}
+
+export function getNpmExecutableRelativePath(platform: NodeJS.Platform | string): string {
+  return path.join(getNodeBinRelativePath(platform), getNpmExecutableName(platform));
+}
+
+export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform | string): string[] {
+  const platformValue = String(platform);
+  const compatibilityPath = getNpmExecutableRelativePath(platformValue);
+  if (platformValue.startsWith('win')) {
+    return [
+      compatibilityPath,
+      path.join(getNodeBinRelativePath(platformValue), 'npm'),
+    ];
+  }
+
+  return [
+    compatibilityPath,
+    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm'),
+  ];
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {

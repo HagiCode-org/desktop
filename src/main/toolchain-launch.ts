@@ -1,6 +1,7 @@
 import fsSync from 'node:fs';
 import path from 'node:path';
 import type { PathManager } from './path-manager.js';
+import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
 
 export interface ToolchainLaunchPlan {
   command: string;
@@ -9,6 +10,8 @@ export interface ToolchainLaunchPlan {
   usedBundledToolchain: boolean;
   fellBackToSystemPath: boolean;
   bundledCandidatePath: string;
+  resolutionSource: 'bundled-desktop' | 'system';
+  activationPolicy?: BundledNodeRuntimePolicyDecision;
 }
 
 export interface ResolveToolchainLaunchOptions {
@@ -16,6 +19,7 @@ export interface ResolveToolchainLaunchOptions {
   args?: string[];
   platform?: NodeJS.Platform;
   existsSync?: (path: string) => boolean;
+  activationPolicy?: BundledNodeRuntimePolicyDecision;
   pathManager: Pick<PathManager, 'getPortableNodeExecutablePath' | 'getPortableNpmExecutablePath'>;
 }
 
@@ -45,7 +49,8 @@ export function resolveToolchainLaunchPlan(options: ResolveToolchainLaunchOption
     ? options.pathManager.getPortableNodeExecutablePath()
     : options.pathManager.getPortableNpmExecutablePath();
   const existsSync = options.existsSync ?? fsSync.existsSync;
-  const command = existsSync(bundledCandidatePath) ? bundledCandidatePath : options.commandName;
+  const enabled = options.activationPolicy?.enabled ?? true;
+  const command = enabled && existsSync(bundledCandidatePath) ? bundledCandidatePath : options.commandName;
 
   return {
     command,
@@ -54,5 +59,7 @@ export function resolveToolchainLaunchPlan(options: ResolveToolchainLaunchOption
     usedBundledToolchain: command === bundledCandidatePath,
     fellBackToSystemPath: command !== bundledCandidatePath,
     bundledCandidatePath,
+    resolutionSource: command === bundledCandidatePath ? 'bundled-desktop' : 'system',
+    activationPolicy: options.activationPolicy,
   };
 }

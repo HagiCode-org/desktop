@@ -85,12 +85,25 @@ describe('SystemDiagnosticManager', () => {
         missingEntries: [],
         errors: [],
         remediation: 'none',
+        activeForDesktop: false,
+        activationPolicy: {
+          consumer: 'desktop',
+          enabled: false,
+          source: 'manifest-default',
+          explicitEnabled: null,
+          manifestDefault: false,
+          legacyFallbackEnabled: true,
+        },
         manifest: {
           schemaVersion: 1,
           layoutVersion: 1,
           owner: 'hagicode-desktop',
           source: 'bundled-desktop',
           platform: 'linux-x64',
+          defaultEnabledByConsumer: {
+            desktop: false,
+            'steam-packer': true,
+          },
           stagedAt: '2026-04-11T08:00:00.000Z',
           portableFixedRoot: '/opt/hagicode',
           toolchainRoot: '/opt/hagicode/toolchain',
@@ -172,6 +185,8 @@ describe('SystemDiagnosticManager', () => {
     );
     assert.match(result.report, /\[agent-cli\]/);
     assert.match(result.report, /\[bundled-toolchain\]/);
+    assert.match(result.report, /activeForDesktop=false/);
+    assert.match(result.report, /activationSource=manifest-default/);
     assert.match(result.report, /package\.omniroute\.version=3\.6\.9/);
     assert.match(result.report, /claude-code\.status=available/);
     assert.match(result.report, /coverage\.requiredByCoreRuntime=node,npm,npx,git/);

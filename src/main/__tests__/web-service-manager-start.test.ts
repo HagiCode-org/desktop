@@ -8,6 +8,7 @@ import {
   resolveToolchainLaunchPlan,
   shouldUseShellForCommand,
 } from '../toolchain-launch.js';
+import { resolveBundledNodeRuntimePolicy } from '../bundled-node-runtime-policy.js';
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
@@ -30,7 +31,8 @@ describe('web-service startup flow', () => {
     assert.match(source, /resolveManagedLaunchContext/);
     assert.match(source, /validateBundledRuntimeForPlatform/);
     assert.match(source, /Starting service with bundled dotnet runtime/);
-    assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager\)/);
+    assert.match(source, /resolveDesktopBundledNodeRuntimePolicyFromEnv/);
+    assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager, \{ activationPolicy \}\)/);
     assert.match(source, /resolveToolchainLaunchPlan\(\{/);
     assert.match(source, /spawn\(launchContext\.dotnetPath, spawnArgs/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
@@ -40,7 +42,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /includes pinned runtime root/);
     assert.match(source, /prepends bundled toolchain paths/);
-    assert.match(source, /fallback to inherited system PATH/);
+    assert.match(source, /disabled or unavailable, fallback to inherited system PATH/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
@@ -133,6 +135,27 @@ describe('web-service startup flow', () => {
     assert.deepEqual(npmPlan.args, ['run', 'dev']);
     assert.equal(npmPlan.usedBundledToolchain, false);
     assert.equal(npmPlan.fellBackToSystemPath, true);
+  });
+
+  it('does not resolve bundled node or npm when the effective desktop policy is disabled', () => {
+    const bundledNode = '/portable/toolchain/node/bin/node';
+    const policy = resolveBundledNodeRuntimePolicy({ defaultEnabledByConsumer: { desktop: false } });
+    const plan = resolveToolchainLaunchPlan({
+      commandName: 'node',
+      args: ['server.js'],
+      platform: 'linux',
+      existsSync: target => target === bundledNode,
+      activationPolicy: policy,
+      pathManager: {
+        getPortableNodeExecutablePath: () => bundledNode,
+        getPortableNpmExecutablePath: () => '/portable/toolchain/node/bin/npm',
+      },
+    });
+
+    assert.equal(plan.command, 'node');
+    assert.equal(plan.usedBundledToolchain, false);
+    assert.equal(plan.resolutionSource, 'system');
+    assert.equal(plan.activationPolicy?.source, 'manifest-default');
   });
 
   it('uses shell mode only for Windows command-wrapper executables and keeps args unchanged', () => {

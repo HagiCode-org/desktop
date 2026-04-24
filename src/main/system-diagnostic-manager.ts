@@ -647,6 +647,8 @@ export class SystemDiagnosticManager {
       manifestPath: status.manifestPath,
       runtimeManifestPath: status.runtimeManifestPath,
       remediation: status.remediation,
+      activeForDesktop: status.activeForDesktop,
+      activationSource: status.activationPolicy.source,
       commands,
       packages,
       errors: status.errors,
@@ -844,6 +846,8 @@ export class SystemDiagnosticManager {
         `manifestPath=${data.bundledToolchain.manifestPath}`,
         `runtimeManifestPath=${data.bundledToolchain.runtimeManifestPath}`,
         `remediation=${data.bundledToolchain.remediation}`,
+        `activeForDesktop=${data.bundledToolchain.activeForDesktop}`,
+        `activationSource=${data.bundledToolchain.activationSource}`,
         ...Object.entries(data.bundledToolchain.commands).map(([command, commandPath]) => `command.${command}=${commandPath ?? 'missing'}`),
         ...Object.entries(data.bundledToolchain.packages).flatMap(([name, packageRecord]) => ([
           `package.${name}.name=${packageRecord.packageName}`,

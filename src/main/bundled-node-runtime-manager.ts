@@ -8,8 +8,13 @@ import {
   detectNodeRuntimePlatform,
   readPinnedNodeRuntimeConfig,
   resolvePinnedNodeRuntimeTarget,
+  type EmbeddedNodeRuntimeConsumerDefaultMatrix,
   type EmbeddedNodeRuntimeConfig,
 } from './embedded-node-runtime-config.js';
+import {
+  resolveDesktopBundledNodeRuntimePolicyFromEnv,
+  type BundledNodeRuntimePolicyDecision,
+} from './bundled-node-runtime-policy.js';
 
 export type BundledToolchainComponentId = 'node' | 'npm' | 'openspec' | 'skills' | 'omniroute';
 export type BundledToolchainIntegrity = 'ok' | 'missing' | 'corrupt' | 'incompatible';
@@ -32,6 +37,7 @@ export interface BundledToolchainManifest {
   owner: 'hagicode-desktop';
   source: 'bundled-desktop';
   platform: string;
+  defaultEnabledByConsumer?: EmbeddedNodeRuntimeConsumerDefaultMatrix;
   stagedAt: string;
   portableFixedRoot: string;
   toolchainRoot: string;
@@ -83,6 +89,8 @@ export interface BundledToolchainStatus {
   missingEntries: string[];
   errors: string[];
   remediation: BundledToolchainRemediation;
+  activationPolicy: BundledNodeRuntimePolicyDecision;
+  activeForDesktop: boolean;
 }
 
 const COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm', 'openspec', 'skills', 'omniroute'];
@@ -153,6 +161,9 @@ export class BundledNodeRuntimeManager {
     const manifestPath = this.getManifestPath();
     const runtimeManifestPath = this.pathManager.getEmbeddedNodeRuntimeManifestPath();
     const manifest = await this.readToolchainManifest();
+    const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(
+      manifest?.defaultEnabledByConsumer ?? this.runtimeConfig.defaultEnabledByConsumer,
+    );
     const missingEntries: string[] = [];
     const errors: string[] = [];
 
@@ -208,6 +219,8 @@ export class BundledNodeRuntimeManager {
       missingEntries,
       errors,
       remediation: available ? 'none' : 'reinstall-desktop',
+      activationPolicy,
+      activeForDesktop: activationPolicy.enabled,
     };
   }
 

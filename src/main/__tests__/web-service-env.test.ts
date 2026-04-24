@@ -13,6 +13,10 @@ import {
   SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX,
 } from '../system-vault-env.js';
 import {
+  resolveBundledNodeRuntimePolicy,
+  parseBundledNodeRuntimeOverride,
+} from '../bundled-node-runtime-policy.js';
+import {
   collectPortableToolchainPathEntries,
   dedupePathEntries,
   injectPortableToolchainEnv,
@@ -348,6 +352,45 @@ describe('web-service-env', () => {
     assert.equal(baseEnv.PATH, '/system/bin');
     assert.equal(result.usedBundledToolchain, true);
     assert.equal(result.fellBackToSystemPath, false);
+  });
+
+  it('keeps bundled toolchain verified but inactive when desktop manifest default is disabled', () => {
+    const activationPolicy = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: {
+        desktop: false,
+        'steam-packer': true,
+      },
+    });
+    const result = injectPortableToolchainEnv({ PATH: '/system/bin' }, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+    }, {
+      platform: 'linux',
+      existsSync: () => true,
+      activationPolicy,
+    });
+
+    assert.equal(activationPolicy.enabled, false);
+    assert.equal(activationPolicy.source, 'manifest-default');
+    assert.equal(result.env.PATH, '/system/bin');
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
+    assert.equal(result.usedBundledToolchain, false);
+    assert.equal(result.fellBackToSystemPath, true);
+  });
+
+  it('honors explicit desktop opt-in and legacy fallback for bundled toolchain activation', () => {
+    const explicitOptIn = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: { desktop: false },
+      explicitEnabled: parseBundledNodeRuntimeOverride('true'),
+    });
+    const legacyFallback = resolveBundledNodeRuntimePolicy({});
+
+    assert.equal(explicitOptIn.enabled, true);
+    assert.equal(explicitOptIn.source, 'override');
+    assert.equal(legacyFallback.enabled, true);
+    assert.equal(legacyFallback.source, 'legacy-fallback');
   });
 
   it('skips missing bundled directories and preserves the inherited PATH order', () => {

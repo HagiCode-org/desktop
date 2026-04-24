@@ -1,5 +1,6 @@
 import fsSync from 'node:fs';
 import path from 'node:path';
+import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
 
 export interface PortableToolchainPathAccessor {
   getPortableToolchainRoot(): string;
@@ -11,6 +12,7 @@ export interface PortableToolchainPathAccessor {
 export interface InjectPortableToolchainEnvOptions {
   platform?: NodeJS.Platform;
   existsSync?: (path: string) => boolean;
+  activationPolicy?: BundledNodeRuntimePolicyDecision;
 }
 
 export interface PortableToolchainEnvResult {
@@ -23,6 +25,7 @@ export interface PortableToolchainEnvResult {
   fellBackToSystemPath: boolean;
   resolutionSource: 'bundled-desktop' | 'system';
   missingInjectedPaths: string[];
+  activationPolicy?: BundledNodeRuntimePolicyDecision;
 }
 
 function normalizePathForComparison(entry: string, platform: NodeJS.Platform): string {
@@ -111,7 +114,9 @@ export function injectPortableToolchainEnv(
   const inheritedPathValue = baseEnv[pathKey] ?? baseEnv.PATH ?? baseEnv.Path;
   const inheritedEntries = splitPathEntries(inheritedPathValue, platform);
   const toolchainEntries = collectPortableToolchainPathEntries(pathAccessor, options);
-  const nextEntries = dedupePathEntries([...toolchainEntries.injectedPaths, ...inheritedEntries], platform);
+  const activationPolicy = options.activationPolicy;
+  const activeInjectedPaths = activationPolicy?.enabled === false ? [] : toolchainEntries.injectedPaths;
+  const nextEntries = dedupePathEntries([...activeInjectedPaths, ...inheritedEntries], platform);
   const env: NodeJS.ProcessEnv = {
     ...baseEnv,
   };
@@ -120,7 +125,7 @@ export function injectPortableToolchainEnv(
     env[pathKey] = nextEntries.join(getPathDelimiter(platform));
   }
 
-  const markerInjected = toolchainEntries.injectedPaths.length > 0;
+  const markerInjected = activeInjectedPaths.length > 0;
   if (markerInjected) {
     env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = toolchainEntries.toolchainRoot;
   } else {
@@ -130,12 +135,13 @@ export function injectPortableToolchainEnv(
   return {
     env,
     pathKey,
-    injectedPaths: toolchainEntries.injectedPaths,
+    injectedPaths: activeInjectedPaths,
     toolchainRoot: toolchainEntries.toolchainRoot,
     markerInjected,
     usedBundledToolchain: markerInjected,
     fellBackToSystemPath: !markerInjected,
     resolutionSource: markerInjected ? 'bundled-desktop' : 'system',
     missingInjectedPaths: toolchainEntries.missingInjectedPaths,
+    activationPolicy,
   };
 }

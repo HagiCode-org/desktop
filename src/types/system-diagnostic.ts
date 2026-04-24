@@ -75,6 +75,8 @@ export interface SystemDiagnosticBundledToolchainInfo {
   manifestPath: string;
   runtimeManifestPath: string;
   remediation: string;
+  activeForDesktop: boolean;
+  activationSource: string;
   commands: Record<string, string | null>;
   packages: Record<string, { packageName: string; version: string | null; integrity?: string }>;
   errors: string[];

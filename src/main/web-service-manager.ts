@@ -23,11 +23,13 @@ import {
 } from './system-vault-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
+import { resolveDesktopBundledNodeRuntimePolicyFromEnv } from './bundled-node-runtime-policy.js';
 import {
   detectToolchainCommandName,
   resolveToolchainLaunchPlan,
   shouldUseShellForCommand,
 } from './toolchain-launch.js';
+import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import {
   evaluateRuntimeCompatibility,
   validateBundledRuntimeForPlatform,
@@ -688,18 +690,23 @@ export class PCodeWebServiceManager {
 
     const toolchainCommandName = detectToolchainCommandName(command);
     if (toolchainCommandName) {
+      const manifest = await new BundledNodeRuntimeManager(this.pathManager).readToolchainManifest();
+      const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(manifest?.defaultEnabledByConsumer);
       const launchPlan = resolveToolchainLaunchPlan({
         commandName: toolchainCommandName,
         args,
         pathManager: this.pathManager,
+        activationPolicy,
       });
       command = launchPlan.command;
       args = launchPlan.args;
       log.info('[WebService] Resolved desktop-owned toolchain launch:', {
         commandName: toolchainCommandName,
         command,
+        resolutionSource: launchPlan.resolutionSource,
         usedBundledToolchain: launchPlan.usedBundledToolchain,
         fellBackToSystemPath: launchPlan.fellBackToSystemPath,
+        activationPolicy,
       });
     }
 
@@ -1562,13 +1569,16 @@ export class PCodeWebServiceManager {
       try {
         const prepared = await this.prepareServiceEnvironment();
         const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
-        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager);
+        const manifest = await new BundledNodeRuntimeManager(this.pathManager).readToolchainManifest();
+        const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(manifest?.defaultEnabledByConsumer);
+        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, { activationPolicy });
         preparedEnv = toolchainEnv.env;
         envMode = prepared.mode;
         const pathKey = toolchainEnv.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
         this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
+        this.appendStartupLogLine(`Bundled portable toolchain policy: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
         if (toolchainEnv.usedBundledToolchain) {
           this.appendStartupLogLine(`HAGICODE_PORTABLE_TOOLCHAIN_ROOT=${toolchainEnv.toolchainRoot}`);
           this.appendStartupLogLine(`${pathKey} prepends bundled toolchain paths: ${toolchainEnv.injectedPaths.join(', ')}`);
@@ -1576,11 +1586,13 @@ export class PCodeWebServiceManager {
             pathKey,
             toolchainRoot: toolchainEnv.toolchainRoot,
             injectedPaths: toolchainEnv.injectedPaths,
+            activationPolicy,
           });
         } else {
-          this.appendStartupLogLine('Bundled portable toolchain unavailable, fallback to inherited system PATH');
+          this.appendStartupLogLine('Bundled portable toolchain disabled or unavailable, fallback to inherited system PATH');
           log.info('[WebService] Portable toolchain injection skipped, falling back to inherited PATH:', {
             toolchainRoot: toolchainEnv.toolchainRoot,
+            activationPolicy,
           });
         }
       } catch (error) {
