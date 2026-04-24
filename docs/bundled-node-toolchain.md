@@ -9,7 +9,24 @@ HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, port
 - Packaged output root: `resources/extra/portable-fixed/toolchain/` on Windows/Linux and `Contents/Resources/extra/portable-fixed/toolchain/` on macOS
 - Required runtime: Node.js 22 plus npm
 - Required managed CLI packages: `openspec`, `skills`, and `omniroute`
-- Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop` and `source=bundled-desktop`
+- Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop`, `source=bundled-desktop`, and `defaultEnabledByConsumer`
+
+## Default Activation Policy
+
+`resources/embedded-node-runtime/runtime-manifest.json` is the source of truth for consumer defaults:
+
+- `defaultEnabledByConsumer.desktop = false`
+- `defaultEnabledByConsumer.steam-packer = true`
+
+`npm run prepare:bundled-toolchain` copies that matrix into the emitted `toolchain-manifest.json`; do not hard-code separate downstream defaults in build or packaging scripts.
+
+Desktop still packages and verifies the bundled toolchain by default, but it does not automatically prepend bundled Node paths or resolve bundled `node`/`npm` unless the effective Desktop policy is enabled. To opt in manually for Desktop runtime activation, set:
+
+```bash
+HAGICODE_BUNDLED_NODE_ENABLED=true npm run dev
+```
+
+Accepted true values are `1`, `true`, `yes`, `on`, and `enabled`; accepted false values are `0`, `false`, `no`, `off`, and `disabled`. The resolver priority is explicit override first, manifest default second, and legacy fallback last. Legacy manifests without `defaultEnabledByConsumer` keep the old Desktop activation behavior as a compatibility fallback.
 
 ## Local Staging
 
@@ -25,7 +42,9 @@ For a specific macOS architecture:
 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 npm run prepare:bundled-toolchain
 ```
 
-The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `portable-fixed/toolchain/node`, installs the pinned CLI packages into `portable-fixed/toolchain/npm-global`, creates command shims under `portable-fixed/toolchain/bin`, and writes `portable-fixed/toolchain/toolchain-manifest.json`.
+The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `portable-fixed/toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, installs the pinned CLI packages into `portable-fixed/toolchain/npm-global`, creates command shims under `portable-fixed/toolchain/bin`, and writes `portable-fixed/toolchain/toolchain-manifest.json`.
+
+On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `toolchain/node` directory snapshot before exiting.
 
 ## Packaging
 
@@ -48,10 +67,10 @@ Run the desktop smoke test after staging or packaging:
 npm run smoke-test:verbose
 ```
 
-Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, `openspec`, `skills`, `omniroute`, and `toolchain-manifest.json` in both staged and packaged locations when present.
+Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, `openspec`, `skills`, `omniroute`, and `toolchain-manifest.json` in both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
 
 ## Downstream Consumers
 
 - `portable-version` validates the Desktop-authored manifest during Steam release hydration.
-- `steam_packer` validates the same manifest and packages the Desktop-provided toolchain as input.
+- `steam_packer` validates the same manifest, requires `defaultEnabledByConsumer.steam-packer = true` when the field is present, and packages the Desktop-provided toolchain as input.
 - Neither downstream repository should download Node, install npm packages, or define its own Node/toolchain version contract.
