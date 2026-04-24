@@ -206,6 +206,7 @@
     "status": {
       "installed": "Installed",
       "bundled": "Bundled with Desktop",
+      "desktopManaged": "Desktop managed",
       "notInstalled": "Not Installed",
       "versionMismatch": "Version Mismatch",
       "checking": "Checking...",
@@ -222,7 +223,9 @@
     "details": {
       "currentVersion": "Current Version",
       "requiredVersion": "Required Version",
-      "source": "Source"
+      "source": "Source",
+      "bundledSource": "Bundled source",
+      "systemSource": "System source"
     },
     "noDependencies": "No dependencies detected"
   },

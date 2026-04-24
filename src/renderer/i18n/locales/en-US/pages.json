@@ -185,6 +185,7 @@
     "status": {
       "installed": "Installed",
       "bundled": "Bundled with Desktop",
+      "desktopManaged": "Desktop managed",
       "notInstalled": "Not Found",
       "versionMismatch": "Version Mismatch"
     },
@@ -197,7 +198,9 @@
       "updateDesktop": "Update Desktop"
     },
     "details": {
-      "source": "Source"
+      "source": "Source",
+      "bundledSource": "Bundled source",
+      "systemSource": "System source"
     }
   },
   "versionManagement": {

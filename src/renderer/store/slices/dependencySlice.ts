@@ -7,6 +7,7 @@ export enum DependencyType {
   DotNetRuntime = 'dotnet-runtime',
   NodeJs = 'nodejs',
   JavaRuntime = 'java-runtime',
+  CliTool = 'cli-tool',
 }
 
 /**

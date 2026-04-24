@@ -185,6 +185,7 @@
     "status": {
       "installed": "已安装",
       "bundled": "随 Desktop 内置",
+      "desktopManaged": "Desktop 托管",
       "notInstalled": "未找到",
       "versionMismatch": "版本不匹配"
     },
@@ -197,7 +198,9 @@
       "updateDesktop": "更新 Desktop"
     },
     "details": {
-      "source": "来源"
+      "source": "来源",
+      "bundledSource": "内置来源",
+      "systemSource": "系统来源"
     }
   },
   "versionManagement": {

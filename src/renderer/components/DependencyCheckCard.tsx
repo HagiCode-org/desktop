@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface DependencyCheckResult {
+  key?: string;
   name: string;
   type: string;
   installed: boolean;
@@ -21,6 +22,7 @@ declare global {
     electronAPI: {
       getPackageDependencies: () => Promise<DependencyCheckResult[]>;
       refreshPackageDependencies: () => Promise<DependencyCheckResult[]>;
+      refreshBundledToolchainStatus: () => Promise<any>;
       installPackageDependency: (dependencyType: string) => Promise<boolean>;
       onPackageDependenciesUpdated: (callback: (deps: DependencyCheckResult[]) => void) => void;
     };
@@ -61,6 +63,7 @@ export default function DependencyCheckCard() {
   };
 
   const handleRefresh = async () => {
+    await window.electronAPI.refreshBundledToolchainStatus?.();
     await fetchDependencies();
   };
 
@@ -115,6 +118,13 @@ export default function DependencyCheckCard() {
       return t('dependencyManagement.actions.updateDesktop');
     }
     return t('dependencyManagement.actions.download');
+  };
+
+  const getSourceLabel = (dep: DependencyCheckResult) => {
+    if (dep.resolutionSource === 'bundled-desktop') {
+      return t('dependencyManagement.details.bundledSource');
+    }
+    return t('dependencyManagement.details.systemSource');
   };
 
   if (loading) {
@@ -181,13 +191,18 @@ export default function DependencyCheckCard() {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-gray-200">{dep.name}</h3>
                   {getStatusBadge(dep)}
+                  {dep.resolutionSource === 'bundled-desktop' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-900/40 text-blue-300 border border-blue-700/70">
+                      {t('dependencyManagement.status.desktopManaged')}
+                    </span>
+                  )}
                 </div>
                 {dep.description && (
                   <p className="text-sm text-gray-400 mb-1">{dep.description}</p>
                 )}
                 {dep.sourcePath && (
                   <p className="text-xs text-gray-500 break-all">
-                    {t('dependencyManagement.details.source')}: <code className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">{dep.sourcePath}</code>
+                    {getSourceLabel(dep)}: <code className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">{dep.sourcePath}</code>
                   </p>
                 )}
                 {dep.version && (

@@ -96,6 +96,13 @@ export function DependencyManagementCard({
     return t('dependencyManagement.status.notInstalled');
   };
 
+  const getSourceLabel = (dep: typeof filteredDependencies[number]) => {
+    if (dep.resolutionSource === 'bundled-desktop') {
+      return t('dependencyManagement.details.bundledSource');
+    }
+    return t('dependencyManagement.details.systemSource');
+  };
+
   const getPrimaryActionLabel = (dep: typeof filteredDependencies[number]) => {
     if (dep.primaryAction === 'reinstall-desktop') {
       return t('dependencyManagement.actions.reinstallDesktop');
@@ -182,6 +189,11 @@ export function DependencyManagementCard({
                       )}
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{dep.name}</p>
+                        {dep.resolutionSource === 'bundled-desktop' && (
+                          <span className="mt-1 inline-flex rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {t('dependencyManagement.status.desktopManaged')}
+                          </span>
+                        )}
                         <p className={`text-sm ${
                           dep.installed && !dep.versionMismatch
                             ? 'text-green-500'
@@ -198,7 +210,7 @@ export function DependencyManagementCard({
                         )}
                         {dep.sourcePath && (
                           <p className="text-sm text-muted-foreground mt-1">
-                            {t('dependencyManagement.details.source')}: {dep.sourcePath}
+                            {getSourceLabel(dep)}: {dep.sourcePath}
                           </p>
                         )}
                         {dep.description && (
