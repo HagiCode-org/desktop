@@ -59,9 +59,10 @@ function pathExists(targetPath) {
   return fs.existsSync(targetPath);
 }
 
-function isDirectory(targetPath) {
+function pathExistsOrIsSymlink(targetPath) {
   try {
-    return fs.statSync(targetPath).isDirectory();
+    fs.lstatSync(targetPath);
+    return true;
   } catch {
     return false;
   }
@@ -148,6 +149,9 @@ function isJavaScriptNpmEntrypoint(relativePath) {
 function createPosixNpmCompatibilityShim(npmRelativePath, compatibilityRelativePath) {
   const shimPath = toAbsoluteToolchainPath(compatibilityRelativePath);
   fs.mkdirSync(path.dirname(shimPath), { recursive: true });
+  if (pathExistsOrIsSymlink(shimPath)) {
+    fs.rmSync(shimPath, { force: true });
+  }
   fs.writeFileSync(shimPath, [
     '#!/usr/bin/env bash',
     'set -euo pipefail',
