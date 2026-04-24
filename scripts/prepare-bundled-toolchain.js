@@ -1,0 +1,450 @@
+#!/usr/bin/env node
+
+import crypto from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { execFileSync } from 'child_process';
+import AdmZip from 'adm-zip';
+import {
+  TOOLCHAIN_MANIFEST_FILE,
+  detectNodeRuntimePlatform,
+  ensureOfficialNodeDownloadUrl,
+  getCommandExecutableName,
+  getNodeExecutableRelativePath,
+  getNpmExecutableRelativePath,
+  getNpmGlobalBinRelativePath,
+  getNpmGlobalModulesRelativePath,
+  readPinnedNodeRuntimeConfig,
+  resolvePinnedNodeRuntimeTarget,
+} from './embedded-node-runtime-config.js';
+
+const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
+const runtimeConfig = readPinnedNodeRuntimeConfig();
+const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeConfig);
+const resourcesRoot = path.join(process.cwd(), 'resources', 'portable-fixed');
+const toolchainRoot = path.join(resourcesRoot, 'toolchain');
+const nodeRoot = path.join(toolchainRoot, 'node');
+const binRoot = path.join(toolchainRoot, 'bin');
+const envRoot = path.join(toolchainRoot, 'env');
+const npmGlobalRoot = path.join(toolchainRoot, 'npm-global');
+const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'downloads');
+const npmCacheRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'npm-cache');
+const packageEntries = Object.entries(runtimeConfig.corePackages || {});
+
+function isWindowsPlatform(platform) {
+  return platform.startsWith('win-');
+}
+
+function toPosixPath(relativePath) {
+  return String(relativePath).split(path.sep).join('/');
+}
+
+function toWindowsPath(relativePath) {
+  return String(relativePath).split('/').join('\\');
+}
+
+function pathExists(targetPath) {
+  return fs.existsSync(targetPath);
+}
+
+function ensureExecutable(targetPath) {
+  if (isWindowsPlatform(runtimePlatform) || !pathExists(targetPath)) {
+    return;
+  }
+
+  const currentMode = fs.statSync(targetPath).mode;
+  fs.chmodSync(targetPath, currentMode | 0o755);
+}
+
+function hashFile(filePath) {
+  const hash = crypto.createHash('sha256');
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest('hex');
+}
+
+async function downloadArchive(downloadUrl, destinationPath) {
+  const response = await fetch(downloadUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download Node archive (${response.status} ${response.statusText}): ${downloadUrl}`);
+  }
+
+  fs.writeFileSync(destinationPath, Buffer.from(await response.arrayBuffer()));
+}
+
+function extractArchive(archivePath, archiveType, destinationPath) {
+  if (archiveType === 'zip') {
+    const archive = new AdmZip(archivePath);
+    archive.extractAllTo(destinationPath, true);
+    return;
+  }
+
+  if (archiveType === 'tar.gz' || archiveType === 'tar.xz') {
+    execFileSync('tar', ['-xf', archivePath, '-C', destinationPath], { stdio: 'inherit' });
+    return;
+  }
+
+  throw new Error(`Unsupported embedded Node archive type: ${archiveType}`);
+}
+
+function validateArchiveChecksum(archivePath) {
+  const actual = hashFile(archivePath);
+  if (actual !== runtimeTarget.checksumSha256) {
+    throw new Error(`Pinned Node archive checksum mismatch for ${archivePath}. Expected ${runtimeTarget.checksumSha256}, got ${actual}.`);
+  }
+}
+
+function resolveExtractedNodeRoot(extractRoot) {
+  const configuredRoot = path.join(extractRoot, runtimeTarget.extractRoot);
+  if (pathExists(path.join(configuredRoot, getNodeExecutableRelativePath(runtimePlatform).replace(/^node[\\/]/, '')))) {
+    return configuredRoot;
+  }
+
+  const directNodePath = path.join(extractRoot, getNodeExecutableRelativePath(runtimePlatform).replace(/^node[\\/]/, ''));
+  if (pathExists(directNodePath)) {
+    return extractRoot;
+  }
+
+  throw new Error(`Extracted Node archive did not produce ${runtimeTarget.extractRoot} under ${extractRoot}.`);
+}
+
+function buildToolchainPath(currentPath = process.env.PATH || '') {
+  const entries = [
+    binRoot,
+    path.join(toolchainRoot, path.dirname(getNodeExecutableRelativePath(runtimePlatform))),
+    path.join(toolchainRoot, getNpmGlobalBinRelativePath(runtimePlatform)),
+    currentPath,
+  ];
+  return entries.filter(Boolean).join(path.delimiter);
+}
+
+function readPackageJson(packageRoot) {
+  return JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
+}
+
+function getPackageRoot(packageName) {
+  return path.join(toolchainRoot, getNpmGlobalModulesRelativePath(runtimePlatform), ...packageName.split('/').filter(Boolean));
+}
+
+function resolveBinEntry(packageJson, binName) {
+  if (typeof packageJson.bin === 'string') {
+    return packageJson.bin;
+  }
+
+  if (packageJson.bin?.[binName]) {
+    return packageJson.bin[binName];
+  }
+
+  throw new Error(`Unable to resolve bin entry "${binName}" from ${packageJson.name} package metadata.`);
+}
+
+function createPosixShim(commandName, cliScriptRelativePath) {
+  const pathEntries = [
+    'bin',
+    path.dirname(getNodeExecutableRelativePath(runtimePlatform)),
+    getNpmGlobalBinRelativePath(runtimePlatform),
+  ].map(toPosixPath).join(':$TOOLCHAIN_ROOT/');
+
+  return [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
+    'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"',
+    `NODE_EXEC="$TOOLCHAIN_ROOT/${toPosixPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
+    `CLI_ENTRY="$TOOLCHAIN_ROOT/${toPosixPath(cliScriptRelativePath)}"`,
+    `PATH="$TOOLCHAIN_ROOT/${pathEntries}:$PATH"`,
+    'export PATH',
+    'exec "$NODE_EXEC" "$CLI_ENTRY" "$@"',
+  ].join('\n');
+}
+
+function createWindowsCmdShim(cliScriptRelativePath) {
+  return [
+    '@echo off',
+    'setlocal',
+    'set "SCRIPT_DIR=%~dp0"',
+    'for %%I in ("%SCRIPT_DIR%..") do set "TOOLCHAIN_ROOT=%%~fI"',
+    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%TOOLCHAIN_ROOT%\\npm-global;%PATH%"',
+    `set "NODE_EXEC=%TOOLCHAIN_ROOT%\\${toWindowsPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
+    `set "CLI_ENTRY=%TOOLCHAIN_ROOT%\\${toWindowsPath(cliScriptRelativePath)}"`,
+    '"%NODE_EXEC%" "%CLI_ENTRY%" %*',
+    'exit /b %ERRORLEVEL%',
+  ].join('\r\n');
+}
+
+function createWindowsPowerShellShim(cliScriptRelativePath) {
+  return [
+    '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
+    '$toolchainRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path',
+    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;$toolchainRoot\\npm-global;" + $env:PATH',
+    `$nodeExec = Join-Path $toolchainRoot "${toWindowsPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
+    `$cliEntry = Join-Path $toolchainRoot "${toWindowsPath(cliScriptRelativePath)}"`,
+    '& $nodeExec $cliEntry @args',
+    'exit $LASTEXITCODE',
+  ].join('\r\n');
+}
+
+function writeCommandShims(commandName, cliScriptRelativePath) {
+  fs.mkdirSync(binRoot, { recursive: true });
+
+  if (!isWindowsPlatform(runtimePlatform)) {
+    const commandPath = path.join(binRoot, commandName);
+    fs.writeFileSync(commandPath, `${createPosixShim(commandName, cliScriptRelativePath)}\n`, 'utf8');
+    ensureExecutable(commandPath);
+    return [path.join('bin', commandName)];
+  }
+
+  const cmdPath = path.join(binRoot, `${commandName}.cmd`);
+  const ps1Path = path.join(binRoot, `${commandName}.ps1`);
+  fs.writeFileSync(cmdPath, `${createWindowsCmdShim(cliScriptRelativePath)}\r\n`, 'utf8');
+  fs.writeFileSync(ps1Path, `${createWindowsPowerShellShim(cliScriptRelativePath)}\r\n`, 'utf8');
+  return [path.join('bin', `${commandName}.cmd`), path.join('bin', `${commandName}.ps1`)];
+}
+
+function writeActivationArtifacts() {
+  fs.mkdirSync(envRoot, { recursive: true });
+  if (!isWindowsPlatform(runtimePlatform)) {
+    const activationPath = path.join(envRoot, 'activate.sh');
+    const pathEntries = [
+      'bin',
+      path.dirname(getNodeExecutableRelativePath(runtimePlatform)),
+      getNpmGlobalBinRelativePath(runtimePlatform),
+    ].map((entry) => `$TOOLCHAIN_ROOT/${toPosixPath(entry)}`).join(':');
+    fs.writeFileSync(activationPath, [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
+      'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"',
+      'export HAGICODE_PORTABLE_TOOLCHAIN_ROOT="$TOOLCHAIN_ROOT"',
+      `export PATH="${pathEntries}:$PATH"`,
+      'echo "HagiCode bundled toolchain activated: $TOOLCHAIN_ROOT"',
+    ].join('\n') + '\n', 'utf8');
+    ensureExecutable(activationPath);
+    return [path.join('env', 'activate.sh')];
+  }
+
+  const cmdPath = path.join(envRoot, 'activate.cmd');
+  const ps1Path = path.join(envRoot, 'activate.ps1');
+  fs.writeFileSync(cmdPath, [
+    '@echo off',
+    'setlocal',
+    'set "SCRIPT_DIR=%~dp0"',
+    'for %%I in ("%SCRIPT_DIR%..") do set "TOOLCHAIN_ROOT=%%~fI"',
+    'set "HAGICODE_PORTABLE_TOOLCHAIN_ROOT=%TOOLCHAIN_ROOT%"',
+    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%TOOLCHAIN_ROOT%\\npm-global;%PATH%"',
+    'echo HagiCode bundled toolchain activated: %TOOLCHAIN_ROOT%',
+  ].join('\r\n') + '\r\n', 'utf8');
+  fs.writeFileSync(ps1Path, [
+    '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
+    '$toolchainRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path',
+    '$env:HAGICODE_PORTABLE_TOOLCHAIN_ROOT = $toolchainRoot',
+    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;$toolchainRoot\\npm-global;" + $env:PATH',
+    'Write-Output "HagiCode bundled toolchain activated: $toolchainRoot"',
+  ].join('\r\n') + '\r\n', 'utf8');
+  return [path.join('env', 'activate.cmd'), path.join('env', 'activate.ps1')];
+}
+
+function validateNodeLayout() {
+  const required = [
+    getNodeExecutableRelativePath(runtimePlatform),
+    getNpmExecutableRelativePath(runtimePlatform),
+  ];
+  const missing = required.filter((relativePath) => !pathExists(path.join(toolchainRoot, relativePath)));
+  if (missing.length > 0) {
+    throw new Error(`Bundled Node layout is incomplete. Missing: ${missing.join(', ')}`);
+  }
+
+  ensureExecutable(path.join(toolchainRoot, getNodeExecutableRelativePath(runtimePlatform)));
+  if (!isWindowsPlatform(runtimePlatform)) {
+    ensureExecutable(path.join(toolchainRoot, getNpmExecutableRelativePath(runtimePlatform)));
+  }
+}
+
+function installCorePackages() {
+  if (packageEntries.length === 0) {
+    throw new Error('No core CLI packages are configured for the bundled toolchain.');
+  }
+
+  fs.rmSync(npmGlobalRoot, { recursive: true, force: true });
+  fs.mkdirSync(npmGlobalRoot, { recursive: true });
+  fs.mkdirSync(npmCacheRoot, { recursive: true });
+
+  const npmExecutablePath = path.join(toolchainRoot, getNpmExecutableRelativePath(runtimePlatform));
+  const installSpecs = packageEntries.map(([, packageConfig]) => `${packageConfig.packageName}@${packageConfig.version}`);
+  const env = {
+    ...process.env,
+    PATH: buildToolchainPath(),
+    npm_config_cache: npmCacheRoot,
+    npm_config_update_notifier: 'false',
+    npm_config_fund: 'false',
+    npm_config_audit: 'false',
+  };
+
+  execFileSync(
+    npmExecutablePath,
+    ['install', '-g', '--prefix', npmGlobalRoot, '--loglevel=error', ...installSpecs],
+    { cwd: process.cwd(), env, stdio: 'inherit', shell: isWindowsPlatform(runtimePlatform) },
+  );
+}
+
+function stagePackageCommands() {
+  const packages = {};
+  const commands = {
+    node: getNodeExecutableRelativePath(runtimePlatform),
+    npm: getNpmExecutableRelativePath(runtimePlatform),
+  };
+
+  fs.rmSync(binRoot, { recursive: true, force: true });
+  fs.mkdirSync(binRoot, { recursive: true });
+
+  for (const [logicalName, packageConfig] of packageEntries) {
+    const packageRoot = getPackageRoot(packageConfig.packageName);
+    const packageJson = readPackageJson(packageRoot);
+    if (packageJson.version !== packageConfig.version) {
+      throw new Error(`${packageConfig.packageName} version mismatch. Expected ${packageConfig.version}, got ${packageJson.version}.`);
+    }
+
+    const binEntry = resolveBinEntry(packageJson, packageConfig.binName);
+    const cliScriptRelativePath = path.relative(toolchainRoot, path.join(packageRoot, binEntry));
+    const commandNames = [packageConfig.binName, ...(packageConfig.aliases || [])];
+    const commandArtifacts = [];
+
+    for (const commandName of commandNames) {
+      const artifacts = writeCommandShims(commandName, cliScriptRelativePath);
+      commandArtifacts.push(...artifacts);
+      commands[commandName] = artifacts.find((entry) => entry.endsWith(getCommandExecutableName(runtimePlatform, commandName))) || artifacts[0];
+    }
+
+    packages[logicalName] = {
+      packageName: packageConfig.packageName,
+      version: packageConfig.version,
+      integrity: packageConfig.integrity,
+      binName: packageConfig.binName,
+      aliases: packageConfig.aliases || [],
+      packageRootRelativePath: path.relative(toolchainRoot, packageRoot),
+      cliScriptRelativePath,
+      commandArtifacts,
+    };
+  }
+
+  return { packages, commands };
+}
+
+function writeToolchainManifest({ archivePath, sourceHost, packages, commands, activation }) {
+  const manifest = {
+    schemaVersion: 1,
+    layoutVersion: runtimeConfig.layoutVersion || 1,
+    owner: 'hagicode-desktop',
+    source: 'bundled-desktop',
+    platform: runtimePlatform,
+    stagedAt: new Date().toISOString(),
+    portableFixedRoot: resourcesRoot,
+    toolchainRoot,
+    node: {
+      version: runtimeConfig.releaseVersion,
+      channelVersion: runtimeConfig.channelVersion,
+      releaseDate: runtimeConfig.releaseDate,
+      provider: runtimeConfig.source.provider,
+      releaseMetadataUrl: runtimeConfig.source.releaseMetadataUrl,
+      allowedDownloadHosts: runtimeConfig.source.allowedDownloadHosts,
+      downloadUrl: runtimeTarget.downloadUrl,
+      sourceHost,
+      archiveName: runtimeTarget.archiveName,
+      archiveType: runtimeTarget.archiveType,
+      archivePath,
+      checksumSha256: runtimeTarget.checksumSha256,
+      extractRoot: runtimeTarget.extractRoot,
+      executableRelativePath: getNodeExecutableRelativePath(runtimePlatform),
+      npmExecutableRelativePath: getNpmExecutableRelativePath(runtimePlatform),
+    },
+    packages,
+    commands,
+    activation,
+  };
+
+  fs.writeFileSync(path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  return manifest;
+}
+
+function validateToolchainManifest(manifest) {
+  const errors = [];
+  if (manifest.owner !== 'hagicode-desktop') {
+    errors.push('owner must be hagicode-desktop');
+  }
+  if (manifest.platform !== runtimePlatform) {
+    errors.push(`platform expected ${runtimePlatform} but found ${manifest.platform || 'missing'}`);
+  }
+  if (manifest.node?.version !== runtimeConfig.releaseVersion) {
+    errors.push(`Node version expected ${runtimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
+  }
+
+  for (const commandName of ['node', 'npm', 'openspec', 'skills', 'omniroute']) {
+    const relativePath = manifest.commands?.[commandName];
+    if (!relativePath || !pathExists(path.join(toolchainRoot, relativePath))) {
+      errors.push(`command ${commandName} is missing or points to a missing entry`);
+    }
+  }
+
+  for (const [logicalName, packageConfig] of packageEntries) {
+    if (manifest.packages?.[logicalName]?.version !== packageConfig.version) {
+      errors.push(`${logicalName} package version expected ${packageConfig.version}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Bundled toolchain manifest validation failed: ${errors.join('; ')}`);
+  }
+}
+
+async function stageNodeRuntime() {
+  fs.mkdirSync(downloadsRoot, { recursive: true });
+  fs.mkdirSync(toolchainRoot, { recursive: true });
+  const sourceUrl = ensureOfficialNodeDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
+  const archivePath = path.join(downloadsRoot, runtimeTarget.archiveName);
+
+  if (!pathExists(archivePath)) {
+    console.log(`[bundled-toolchain] Downloading ${runtimePlatform} Node runtime from ${runtimeTarget.downloadUrl}`);
+    await downloadArchive(runtimeTarget.downloadUrl, archivePath);
+  } else {
+    console.log(`[bundled-toolchain] Reusing cached Node archive ${archivePath}`);
+  }
+
+  validateArchiveChecksum(archivePath);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `hagicode-node-${runtimePlatform}-`));
+
+  try {
+    extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
+    const extractedNodeRoot = resolveExtractedNodeRoot(tempRoot);
+    fs.rmSync(nodeRoot, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(nodeRoot), { recursive: true });
+    fs.cpSync(extractedNodeRoot, nodeRoot, { recursive: true, force: true });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+
+  validateNodeLayout();
+  return { archivePath, sourceHost: sourceUrl.hostname };
+}
+
+async function main() {
+  console.log(`[bundled-toolchain] Preparing Desktop-owned Node toolchain for ${runtimePlatform}`);
+  const stageResult = await stageNodeRuntime();
+  installCorePackages();
+  const commandResult = stagePackageCommands();
+  const activation = writeActivationArtifacts();
+  const manifest = writeToolchainManifest({
+    ...stageResult,
+    ...commandResult,
+    activation,
+  });
+  validateToolchainManifest(manifest);
+
+  console.log(`[bundled-toolchain] Staged Node ${runtimeConfig.releaseVersion} at ${nodeRoot}`);
+  console.log(`[bundled-toolchain] Wrote ${path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE)}`);
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[bundled-toolchain] ${message}`);
+  process.exit(1);
+});

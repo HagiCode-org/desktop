@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "runtime": "node",
+  "channelVersion": "22",
+  "releaseVersion": "22.22.2",
+  "releaseDate": "2026-03-30",
+  "layoutVersion": 1,
+  "source": {
+    "provider": "nodejs.org",
+    "releaseMetadataUrl": "https://nodejs.org/download/release/v22.22.2/SHASUMS256.txt",
+    "allowedDownloadHosts": [
+      "nodejs.org"
+    ]
+  },
+  "corePackages": {
+    "openspec": {
+      "packageName": "@fission-ai/openspec",
+      "version": "1.3.1",
+      "binName": "openspec",
+      "aliases": [
+        "opsx"
+      ],
+      "integrity": "sha512-QnbJfq/lUNCRY+TTXo87fuIpGCCaOYt280tmbuI112B/1vF0feIneK0/qhoTZNslRDhwwg1YcYDX0suxq2h6tw=="
+    },
+    "skills": {
+      "packageName": "skills",
+      "version": "1.5.1",
+      "binName": "skills",
+      "aliases": [
+        "add-skill"
+      ],
+      "integrity": "sha512-8LQFrbFPexuV8U1B0LnIexL2KRjGBNiy+9+rLp8iDrBQrVPhb6TbFon7ngspnTTqkA/Up+GkBbCeUGx0gtK2VQ=="
+    },
+    "omniroute": {
+      "packageName": "omniroute",
+      "version": "3.6.9",
+      "binName": "omniroute",
+      "aliases": [
+        "omniroute-reset-password"
+      ],
+      "integrity": "sha512-Oy1ty9Wy3+djnsy26/5ckVKgk2Bt35XahauBjn3yuzX3gQiPyxztC9LcDCZv8sjo73DE0ZyZsDVD3R7KRzcIJg=="
+    }
+  },
+  "platforms": {
+    "linux-x64": {
+      "rid": "linux-x64",
+      "archiveType": "tar.xz",
+      "archiveName": "node-v22.22.2-linux-x64.tar.xz",
+      "downloadUrl": "https://nodejs.org/download/release/v22.22.2/node-v22.22.2-linux-x64.tar.xz",
+      "extractRoot": "node-v22.22.2-linux-x64",
+      "checksumSha256": "88fd1ce767091fd8d4a99fdb2356e98c819f93f3b1f8663853a2dee9b438068a"
+    },
+    "osx-x64": {
+      "rid": "osx-x64",
+      "archiveType": "tar.gz",
+      "archiveName": "node-v22.22.2-darwin-x64.tar.gz",
+      "downloadUrl": "https://nodejs.org/download/release/v22.22.2/node-v22.22.2-darwin-x64.tar.gz",
+      "extractRoot": "node-v22.22.2-darwin-x64",
+      "checksumSha256": "12a6abb9c2902cf48a21120da13f87fde1ed1b71a13330712949e8db818708ba"
+    },
+    "osx-arm64": {
+      "rid": "osx-arm64",
+      "archiveType": "tar.gz",
+      "archiveName": "node-v22.22.2-darwin-arm64.tar.gz",
+      "downloadUrl": "https://nodejs.org/download/release/v22.22.2/node-v22.22.2-darwin-arm64.tar.gz",
+      "extractRoot": "node-v22.22.2-darwin-arm64",
+      "checksumSha256": "db4b275b83736df67533529a18cc55de2549a8329ace6c7bcc68f8d22d3c9000"
+    },
+    "win-x64": {
+      "rid": "win-x64",
+      "archiveType": "zip",
+      "archiveName": "node-v22.22.2-win-x64.zip",
+      "downloadUrl": "https://nodejs.org/download/release/v22.22.2/node-v22.22.2-win-x64.zip",
+      "extractRoot": "node-v22.22.2-win-x64",
+      "checksumSha256": "7c93e9d92bf68c07182b471aa187e35ee6cd08ef0f24ab060dfff605fcc1c57c"
+    }
+  },
+  "expectedLayout": {
+    "toolchainRootPattern": "portable-fixed/toolchain",
+    "nodeRootPattern": "portable-fixed/toolchain/node",
+    "requiredEntries": [
+      "node/bin/node|node/node.exe",
+      "node/bin/npm|node/npm.cmd",
+      "bin/openspec[.cmd]",
+      "bin/skills[.cmd]",
+      "bin/omniroute[.cmd]",
+      "toolchain-manifest.json"
+    ]
+  }
+}

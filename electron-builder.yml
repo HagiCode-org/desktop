@@ -16,8 +16,14 @@ extraResources:
     to: icon.png
   - from: build/embedded-runtime/current/dotnet
     to: dotnet
-  - from: resources/portable-fixed
-    to: extra/portable-fixed
+  - from: resources/portable-fixed/current
+    to: extra/portable-fixed/current
+    filter:
+      - '**/*'
+  - from: resources/portable-fixed/toolchain
+    to: extra/portable-fixed/toolchain
+    filter:
+      - '**/*'
 publish:
   provider: github
   owner: HagiCode-org

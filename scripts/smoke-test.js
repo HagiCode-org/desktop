@@ -18,6 +18,14 @@ import {
   readPinnedRuntimeConfig,
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
+import {
+  TOOLCHAIN_MANIFEST_FILE,
+  detectNodeRuntimePlatform,
+  getCommandExecutableName,
+  getNodeExecutableRelativePath,
+  getNpmExecutableRelativePath,
+  readPinnedNodeRuntimeConfig,
+} from './embedded-node-runtime-config.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -30,6 +38,11 @@ const stagedRuntimeRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 
 const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
 const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
+const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
+const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
+const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
+const packagedToolchainCandidates = resolvePackagedToolchainRoots();
+const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
 
 const colors = {
   reset: '\x1b[0m',
@@ -72,6 +85,29 @@ function resolvePackagedRuntimeRoots(platform) {
 
 function resolveExistingPackagedRuntimeRoot(candidates) {
   return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0] || null;
+}
+
+function resolvePackagedToolchainRoots() {
+  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT?.trim();
+  if (override) {
+    return [path.resolve(process.cwd(), override)];
+  }
+
+  if (process.platform === 'win32') {
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'portable-fixed', 'toolchain')];
+  }
+  if (process.platform === 'linux') {
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'portable-fixed', 'toolchain')];
+  }
+  if (process.platform === 'darwin') {
+    return [
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+    ];
+  }
+  return [];
 }
 
 function isExecutable(targetPath) {
@@ -188,6 +224,66 @@ function validatePinnedRuntimeMetadata(runtimeRoot) {
   }
   if (versions.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
     errors.push(`staged host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${versions.hostFxrVersion || 'missing'}`);
+  }
+
+  return errors;
+}
+
+function validateToolchainPayload(toolchainRoot) {
+  const missing = [];
+  const requiredCommands = [
+    getNodeExecutableRelativePath(nodeRuntimePlatform),
+    getNpmExecutableRelativePath(nodeRuntimePlatform),
+    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'openspec')),
+    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'skills')),
+    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'omniroute')),
+    TOOLCHAIN_MANIFEST_FILE,
+  ];
+
+  for (const relativePath of requiredCommands) {
+    const absolutePath = path.join(toolchainRoot, relativePath);
+    if (!fs.existsSync(absolutePath)) {
+      missing.push(relativePath);
+    } else if (process.platform !== 'win32' && (relativePath.endsWith('/node') || relativePath.startsWith('bin/')) && !isExecutable(absolutePath)) {
+      missing.push(`${relativePath} (not executable)`);
+    }
+  }
+
+  return missing;
+}
+
+function validateToolchainManifest(toolchainRoot) {
+  const manifestPath = path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE);
+  if (!fs.existsSync(manifestPath)) {
+    return [`${TOOLCHAIN_MANIFEST_FILE} is missing`];
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const errors = [];
+  if (manifest.owner !== 'hagicode-desktop') {
+    errors.push(`owner expected hagicode-desktop but found ${manifest.owner || 'missing'}`);
+  }
+  if (manifest.source !== 'bundled-desktop') {
+    errors.push(`source expected bundled-desktop but found ${manifest.source || 'missing'}`);
+  }
+  if (manifest.platform !== nodeRuntimePlatform) {
+    errors.push(`platform expected ${nodeRuntimePlatform} but found ${manifest.platform || 'missing'}`);
+  }
+  if (manifest.node?.version !== nodeRuntimeConfig.releaseVersion) {
+    errors.push(`Node version expected ${nodeRuntimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
+  }
+
+  for (const commandName of ['node', 'npm', 'openspec', 'skills', 'omniroute']) {
+    const relativePath = manifest.commands?.[commandName];
+    if (!relativePath || !fs.existsSync(path.join(toolchainRoot, relativePath))) {
+      errors.push(`manifest command ${commandName} is missing or points to a missing entry`);
+    }
+  }
+
+  for (const [name, packageConfig] of Object.entries(nodeRuntimeConfig.corePackages || {})) {
+    if (manifest.packages?.[name]?.version !== packageConfig.version) {
+      errors.push(`${name} package version expected ${packageConfig.version} but found ${manifest.packages?.[name]?.version || 'missing'}`);
+    }
   }
 
   return errors;
@@ -341,8 +437,10 @@ test('electron-builder configuration is valid', async () => {
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
+  const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/portable-fixed/toolchain');
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
+  const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/portable-fixed/toolchain';
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
       .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
@@ -361,6 +459,8 @@ test('electron-builder configuration is valid', async () => {
   assert(windowIconOutsideAsar, 'window icon is staged outside app.asar');
   assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
+  assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
+  assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/portable-fixed/toolchain');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
   assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
   assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');
@@ -384,6 +484,76 @@ test('desktop build workflow includes ZIP publication steps', () => {
   assert(content.includes('Summarize Linux ZIP artifacts'), 'workflow reports Linux ZIP diagnostics');
   assert(content.includes('Upload Linux ZIP'), 'workflow uploads Linux ZIP CI artifacts');
   assert(content.includes('Upload Linux ZIP to Release'), 'workflow uploads Linux ZIP release assets');
+});
+
+test('staged bundled Node toolchain payload is complete', () => {
+  if (!requireRuntimePayload && !fs.existsSync(stagedToolchainRoot)) {
+    log('  - Skipping: staged bundled Node toolchain not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(stagedToolchainRoot);
+  if (!assert(exists, `staged bundled Node toolchain directory exists (${stagedToolchainRoot})`)) {
+    return;
+  }
+
+  const missingComponents = validateToolchainPayload(stagedToolchainRoot);
+  assert(
+    missingComponents.length === 0,
+    missingComponents.length === 0
+      ? 'staged bundled Node toolchain contains node, npm, openspec, skills, omniroute, and manifest'
+      : `staged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
+  );
+
+  const manifestErrors = validateToolchainManifest(stagedToolchainRoot);
+  assert(
+    manifestErrors.length === 0,
+    manifestErrors.length === 0
+      ? 'staged bundled Node toolchain manifest matches the pinned Desktop contract'
+      : `staged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
+  );
+});
+
+test('packaged bundled Node toolchain payload is complete', () => {
+  if (!packagedToolchainRoot) {
+    log('  - Skipping: packaged bundled Node toolchain checks are not defined for this platform', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedToolchainRoot)) {
+    log('  - Skipping: packaged bundled Node toolchain not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(packagedToolchainRoot);
+  if (!assert(exists, `packaged bundled Node toolchain directory exists (${packagedToolchainRoot})`)) {
+    if (packagedToolchainCandidates.length > 1) {
+      logVerbose(`checked packaged toolchain candidates: ${packagedToolchainCandidates.join(', ')}`);
+    }
+    return;
+  }
+
+  assert(!packagedToolchainRoot.includes('app.asar'), 'packaged bundled Node toolchain directory resolves outside app.asar');
+  assert(packagedToolchainRoot.includes(path.join('extra', 'portable-fixed', 'toolchain')), 'packaged bundled Node toolchain uses canonical extra/portable-fixed/toolchain path');
+
+  const missingComponents = validateToolchainPayload(packagedToolchainRoot);
+  assert(
+    missingComponents.length === 0,
+    missingComponents.length === 0
+      ? 'packaged bundled Node toolchain contains node, npm, openspec, skills, omniroute, and manifest'
+      : `packaged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
+  );
+
+  const manifestErrors = validateToolchainManifest(packagedToolchainRoot);
+  assert(
+    manifestErrors.length === 0,
+    manifestErrors.length === 0
+      ? 'packaged bundled Node toolchain manifest matches the pinned Desktop contract'
+      : `packaged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
+  );
 });
 
 test('staged embedded runtime payload is complete', () => {
