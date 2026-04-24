@@ -288,7 +288,53 @@ function validateToolchainPayload(toolchainRoot) {
     }
   }
 
+  const npmGlobalModulesRoot = path.join(toolchainRoot, getNpmGlobalModulesRelativePath(nodeRuntimePlatform));
+  const unexpectedPackageFiles = findUnexpectedNpmGlobalPackageFiles(npmGlobalModulesRoot, 5);
+  if (unexpectedPackageFiles.length > 0) {
+    missing.push(`npm global package payload contains non-runtime files: ${unexpectedPackageFiles.join(', ')}`);
+  }
+
   return missing;
+}
+
+function findUnexpectedNpmGlobalPackageFiles(rootPath, maxResults) {
+  const matches = [];
+  if (!fs.existsSync(rootPath)) {
+    return matches;
+  }
+
+  const visit = (currentPath) => {
+    if (matches.length >= maxResults) {
+      return;
+    }
+
+    let entries;
+    try {
+      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (matches.length >= maxResults) {
+        return;
+      }
+
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        visit(entryPath);
+        continue;
+      }
+
+      const lowerName = entry.name.toLowerCase();
+      if (entry.isFile() && (lowerName.endsWith('.d.ts') || lowerName.endsWith('.d.ts.map') || lowerName.endsWith('.map'))) {
+        matches.push(path.relative(rootPath, entryPath));
+      }
+    }
+  };
+
+  visit(rootPath);
+  return matches;
 }
 
 function validateToolchainManifest(toolchainRoot) {
@@ -483,6 +529,10 @@ test('electron-builder configuration is valid', async () => {
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
   const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/portable-fixed/toolchain';
+  const macSignIgnore = Array.isArray(buildConfig?.mac?.signIgnore)
+    ? buildConfig.mac.signIgnore
+    : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
+  const toolchainSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/portable-fixed/toolchain'));
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
       .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
@@ -503,6 +553,7 @@ test('electron-builder configuration is valid', async () => {
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
   assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/portable-fixed/toolchain');
+  assert(toolchainSkippedByMacSigning, 'bundled Node toolchain is excluded from recursive macOS code signing');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
   assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
   assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');

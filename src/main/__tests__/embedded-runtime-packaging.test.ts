@@ -11,6 +11,7 @@ const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
+const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-builder.js');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -40,10 +41,20 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:smoke-test:mac:arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
+    assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/run-electron-builder\.js --mac --x64/);
+    assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/run-electron-builder\.js --mac --arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
     assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
+  });
+
+  it('raises macOS open file limits before electron-builder packaging', async () => {
+    const runner = await fs.readFile(electronBuilderRunnerPath, 'utf-8');
+
+    assert.match(runner, /HAGICODE_MACOS_NOFILE_LIMIT/);
+    assert.match(runner, /ulimit -n/);
+    assert.match(runner, /electron-builder\/out\/cli\/cli\.js/);
   });
 
   it('prunes unused Node bin entrypoints before macOS signing', async () => {
@@ -53,9 +64,22 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(stagingScript, /removeUnusedNodeBinEntrypoints/);
     assert.match(stagingScript, /entry !== 'node'/);
     assert.match(stagingScript, /createPosixNpmCompatibilityShim\(stableNpmRelativePath, compatibilityRelativePath\)/);
+    assert.match(stagingScript, /pruneNpmGlobalPackagePayload/);
+    assert.match(stagingScript, /lowerName\.endsWith\('\.d\.ts'\)/);
+    assert.match(stagingScript, /Pruned \$\{prunedToolchainEntries\} non-runtime npm package entries/);
     assert.match(smokeTest, /node', 'bin', 'corepack'/);
     assert.match(smokeTest, /node', 'bin', 'npx'/);
     assert.match(smokeTest, /unused Node entrypoint must be pruned before packaging/);
+    assert.match(smokeTest, /npm global package payload contains non-runtime files/);
+  });
+
+  it('excludes the bundled Node toolchain from recursive macOS signing', async () => {
+    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
+    const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
+
+    assert.match(builder, /signIgnore:/);
+    assert.match(builder, /Contents\/Resources\/extra\/portable-fixed\/toolchain\/\.\*/);
+    assert.match(smokeTest, /excluded from recursive macOS code signing/);
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {

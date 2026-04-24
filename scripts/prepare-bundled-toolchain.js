@@ -42,6 +42,7 @@ const stagingDiagnostics = {
 };
 let resolvedNodeCommand = null;
 let resolvedNpmCommand = null;
+let prunedToolchainEntries = 0;
 
 function isWindowsPlatform(platform) {
   return platform.startsWith('win-');
@@ -294,6 +295,85 @@ function buildToolchainPath(currentPath = process.env.PATH || '') {
 
 function readPackageJson(packageRoot) {
   return JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
+}
+
+function prunePath(targetPath) {
+  if (!pathExistsOrIsSymlink(targetPath)) {
+    return;
+  }
+
+  fs.rmSync(targetPath, { recursive: true, force: true });
+  prunedToolchainEntries += 1;
+}
+
+function pruneNpmGlobalPackagePayload() {
+  if (!pathExists(npmGlobalRoot)) {
+    return;
+  }
+
+  const removableDirectoryNames = new Set([
+    '__tests__',
+    'test',
+    'tests',
+    'testing',
+    'example',
+    'examples',
+    'docs',
+    'doc',
+    '.github',
+    '.vscode',
+    'coverage',
+  ]);
+  const removableFileNames = new Set([
+    'README',
+    'README.md',
+    'CHANGELOG',
+    'CHANGELOG.md',
+    'HISTORY.md',
+    'LICENSE',
+    'LICENSE.md',
+    'NOTICE',
+    '.npmignore',
+  ]);
+  const removableFileExtensions = new Set(['.d.ts', '.d.ts.map', '.map', '.md', '.markdown', '.tsbuildinfo']);
+
+  const visit = (currentPath) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(currentPath, entry.name);
+
+      if (entry.isDirectory()) {
+        if (removableDirectoryNames.has(entry.name)) {
+          prunePath(entryPath);
+        } else {
+          visit(entryPath);
+        }
+        continue;
+      }
+
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      const lowerName = entry.name.toLowerCase();
+      if (
+        removableFileNames.has(entry.name)
+        || removableFileExtensions.has(path.extname(lowerName))
+        || lowerName.endsWith('.d.ts')
+        || lowerName.endsWith('.d.ts.map')
+      ) {
+        prunePath(entryPath);
+      }
+    }
+  };
+
+  visit(npmGlobalRoot);
 }
 
 function getPackageRoot(packageName) {
@@ -619,6 +699,7 @@ async function main() {
   console.log(`[bundled-toolchain] Preparing Desktop-owned Node toolchain for ${runtimePlatform}`);
   const stageResult = await stageNodeRuntime();
   installCorePackages(stageResult.nodeLayout.npm);
+  pruneNpmGlobalPackagePayload();
   const commandResult = stagePackageCommands();
   const activation = writeActivationArtifacts();
   const manifest = writeToolchainManifest({
@@ -629,6 +710,7 @@ async function main() {
   validateToolchainManifest(manifest);
 
   console.log(`[bundled-toolchain] Staged Node ${runtimeConfig.releaseVersion} at ${nodeRoot}`);
+  console.log(`[bundled-toolchain] Pruned ${prunedToolchainEntries} non-runtime npm package entries`);
   console.log(`[bundled-toolchain] Wrote ${path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE)}`);
 }
 
