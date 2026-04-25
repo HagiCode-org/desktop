@@ -101,6 +101,18 @@ export class NpmManagementService {
   }
 
   async uninstall(packageId: string): Promise<NpmManagementOperationResult> {
+    const definition = findManagedNpmPackage(packageId);
+    if (definition?.required) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageId: definition.id,
+        operation: 'uninstall',
+        error: `${definition.displayName} is a required managed tool and cannot be removed.`,
+        snapshot,
+      };
+    }
+
     return this.runPackageOperation(packageId, 'uninstall');
   }
 
@@ -382,4 +394,3 @@ export class NpmManagementService {
 }
 
 export default NpmManagementService;
-
