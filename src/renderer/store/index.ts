@@ -9,7 +9,6 @@ import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
 import llmInstallationReducer from './slices/llmInstallationSlice';
 import dataDirectoryReducer from './slices/dataDirectorySlice';
-import remoteModeReducer from './slices/remoteModeSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -27,7 +26,6 @@ import { initializeWebService } from './thunks/webServiceThunks';
 import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
-import { initializeRemoteMode } from './thunks/remoteModeThunks';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -50,7 +48,6 @@ export const store = configureStore({
     claudeConfig: claudeConfigReducer,
     llmInstallation: llmInstallationReducer,
     dataDirectory: dataDirectoryReducer,
-    remoteMode: remoteModeReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -154,10 +151,7 @@ export async function runCriticalStartupInitialization(): Promise<void> {
 
   criticalInitializationPromise = (async () => {
     await store.dispatch(initializeI18n()).unwrap();
-    await Promise.allSettled([
-      store.dispatch(initializeView()),
-      store.dispatch(initializeRemoteMode()),
-    ]);
+    await Promise.allSettled([store.dispatch(initializeView())]);
   })().catch((error) => {
     criticalInitializationPromise = null;
     throw error;

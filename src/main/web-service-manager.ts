@@ -1581,6 +1581,7 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`Bundled portable toolchain policy: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
         if (toolchainEnv.usedBundledToolchain) {
           this.appendStartupLogLine(`HAGICODE_PORTABLE_TOOLCHAIN_ROOT=${toolchainEnv.toolchainRoot}`);
+          this.appendStartupLogLine('Bundled portable toolchain activated for desktop-managed startup');
           this.appendStartupLogLine(`${pathKey} prepends bundled toolchain paths: ${toolchainEnv.injectedPaths.join(', ')}`);
           log.info('[WebService] Portable toolchain injection enabled:', {
             pathKey,
@@ -1589,9 +1590,17 @@ export class PCodeWebServiceManager {
             activationPolicy,
           });
         } else {
-          this.appendStartupLogLine('Bundled portable toolchain disabled or unavailable, fallback to inherited system PATH');
+          if (activationPolicy.enabled === false) {
+            this.appendStartupLogLine(`Bundled portable toolchain explicitly disabled for desktop startup; keeping inherited system PATH (${activationPolicy.source})`);
+          } else {
+            this.appendStartupLogLine('Bundled portable toolchain unavailable for desktop startup; keeping inherited system PATH');
+            if (toolchainEnv.missingInjectedPaths.length > 0) {
+              this.appendStartupLogLine(`Missing bundled PATH entries: ${toolchainEnv.missingInjectedPaths.join(', ')}`);
+            }
+          }
           log.info('[WebService] Portable toolchain injection skipped, falling back to inherited PATH:', {
             toolchainRoot: toolchainEnv.toolchainRoot,
+            missingInjectedPaths: toolchainEnv.missingInjectedPaths,
             activationPolicy,
           });
         }

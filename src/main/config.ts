@@ -11,14 +11,8 @@ export interface VersionAutoUpdateSettings {
   retainedArchiveCount: number;
 }
 
-export interface RemoteModeConfig {
-  enabled: boolean;
-  url: string;
-}
-
 export interface AppConfig {
   server: ServerConfig;
-  remoteMode: RemoteModeConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;
@@ -66,10 +60,6 @@ const defaultConfig: AppConfig = {
     host: 'localhost',
     port: 36546,
   },
-  remoteMode: {
-    enabled: false,
-    url: '',
-  },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
   startOnStartup: false,
   minimizeToTray: true,
@@ -77,11 +67,6 @@ const defaultConfig: AppConfig = {
   settings: {
     language: 'zh-CN',
   },
-};
-
-export const defaultRemoteModeConfig: RemoteModeConfig = {
-  enabled: false,
-  url: '',
 };
 
 export class ConfigManager {
@@ -94,6 +79,7 @@ export class ConfigManager {
     });
 
     this.removeLegacyTelemetryPreference();
+    this.removeRetiredRemoteModeConfig();
   }
 
   private removeLegacyTelemetryPreference(): void {
@@ -104,6 +90,17 @@ export class ConfigManager {
 
     if (legacyStore.get('telemetry') !== undefined) {
       legacyStore.delete('telemetry');
+    }
+  }
+
+  private removeRetiredRemoteModeConfig(): void {
+    const legacyStore = this.store as unknown as {
+      get: (key: string) => unknown;
+      delete: (key: string) => void;
+    };
+
+    if (legacyStore.get('remoteMode') !== undefined) {
+      legacyStore.delete('remoteMode');
     }
   }
 

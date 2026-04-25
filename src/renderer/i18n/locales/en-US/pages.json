@@ -3,7 +3,6 @@
     "title": "Settings",
     "tabs": {
       "onboarding": "Onboarding",
-      "remoteMode": "Remote Mode",
       "dataDirectory": "Data Directory",
       "sharingAcceleration": "Download & Sharing",
       "updates": "Background Updates"
@@ -11,43 +10,6 @@
     "smartConfig": {
       "title": "Smart Config prompt guidance",
       "description": "Review the resolved prompt, copy it into any supported AI CLI, and complete the configuration flow manually."
-    },
-    "remoteMode": {
-      "title": "Remote Mode",
-      "description": "Configure Hagicode Desktop to connect to a remote Hagicode instance instead of running a local service.",
-      "enabled": {
-        "label": "Enable Remote Mode",
-        "description": "When enabled, the application will connect to the configured remote Hagicode instance instead of running a local service."
-      },
-      "url": {
-        "label": "Remote Server URL",
-        "placeholder": "https://hagicode.example.com"
-      },
-      "errors": {
-        "invalidUrl": "Please enter a valid HTTP/HTTPS URL",
-        "urlRequired": "Please enter a remote server URL"
-      },
-      "messages": {
-        "modeSwitchedRemote": "Successfully switched to remote mode",
-        "modeSwitchedLocal": "Successfully switched to local mode",
-        "saveFailed": "Failed to save remote mode configuration",
-        "connectionSuccess": "Connection test successful",
-        "connectionFailed": "Connection test failed. Please check the URL and network connection."
-      },
-      "actions": {
-        "testConnection": "Test Connection",
-        "testing": "Testing...",
-        "save": "Save Configuration",
-        "saving": "Saving...",
-        "cancel": "Cancel"
-      },
-      "validation": {
-        "valid": "URL format is valid",
-        "invalid": "URL format is invalid"
-      },
-      "notes": {
-        "modeExplanation": "Remote mode allows you to connect to a cloud-deployed Hagicode instance. The local service will be disabled when remote mode is active."
-      }
     },
     "onboarding": {
       "title": "Onboarding",

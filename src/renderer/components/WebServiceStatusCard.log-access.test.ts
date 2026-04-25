@@ -9,15 +9,16 @@ describe('web service status card log access wiring', () => {
   it('shows the homepage log button whenever local mode has an active version', async () => {
     const source = await fs.readFile(webServiceStatusCardPath, 'utf8');
 
-    assert.match(source, /const showOpenLogsButton = !remoteModeEnabled && Boolean\(activeVersion\);/);
+    assert.match(source, /const showOpenLogsButton = Boolean\(activeVersion\);/);
     assert.match(source, /\{\(showRuntimeSecondaryControls \|\| showOpenLogsButton\) && \(/);
     assert.match(source, /\{showOpenLogsButton && \(/);
+    assert.doesNotMatch(source, /remoteModeEnabled/);
   });
 
   it('keeps runtime-only controls gated to the running local service state', async () => {
     const source = await fs.readFile(webServiceStatusCardPath, 'utf8');
 
-    assert.match(source, /const showRuntimeSecondaryControls = !remoteModeEnabled && isRunning;/);
+    assert.match(source, /const showRuntimeSecondaryControls = isRunning;/);
     assert.match(source, /\{showRuntimeSecondaryControls && \(/);
   });
 

@@ -49,8 +49,5 @@ export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 // View handlers
 export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
 
-// Remote mode handlers
-export { registerRemoteModeHandlers, initRemoteModeHandlers } from './remoteModeHandlers.js';
-
 // Types
 export type { HandlerSuccess, HandlerError, HandlerResponse, IpcHandler } from './types.js';

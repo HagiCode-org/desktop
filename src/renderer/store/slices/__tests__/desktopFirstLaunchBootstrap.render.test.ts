@@ -60,7 +60,8 @@ describe('desktop first-launch renderer bootstrap integration', () => {
     assert.match(source, /export async function runCriticalStartupInitialization\(\): Promise<void>/);
     assert.match(criticalSection, /await store\.dispatch\(initializeI18n\(\)\)\.unwrap\(\);/);
     assert.match(criticalSection, /initializeView\(\)/);
-    assert.match(criticalSection, /initializeRemoteMode\(\)/);
+    assert.doesNotMatch(source, /remoteMode:/);
+    assert.doesNotMatch(source, /initializeRemoteMode\(\)/);
     assert.equal(criticalSection.includes('checkOnboardingTrigger()'), false);
     assert.match(source, /export function startBackgroundStartupInitialization\(\): void/);
     assert.match(backgroundSection, /checkOnboardingTrigger\(\)/);

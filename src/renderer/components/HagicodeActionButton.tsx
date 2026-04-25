@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Play, Monitor, Loader2, ExternalLink, Globe } from 'lucide-react';
+import { Play, Monitor, Loader2, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import hagicodeIcon from '../assets/hagicode-icon.png';
 
@@ -11,8 +11,6 @@ interface HagicodeActionButtonProps {
   onOpenApp: () => void;
   onOpenBrowser: () => void;
   canLaunchService?: boolean;
-  remoteModeEnabled?: boolean;
-  remoteModeUrl?: string;
 }
 
 export default function HagicodeActionButton({
@@ -23,19 +21,10 @@ export default function HagicodeActionButton({
   onOpenApp,
   onOpenBrowser,
   canLaunchService = true,
-  remoteModeEnabled = false,
-  remoteModeUrl = '',
 }: HagicodeActionButtonProps) {
   const { t } = useTranslation(['components', 'tray']);
 
   const isStarting = status === 'starting';
-  const isStopping = status === 'stopping';
-
-  // In remote mode, this component should not be used directly
-  // Remote mode rendering is handled in WebServiceStatusCard
-  if (remoteModeEnabled) {
-    return null;
-  }
 
   // Stopped state - Start button
   if (!isRunning) {

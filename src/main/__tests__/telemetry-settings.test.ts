@@ -71,15 +71,13 @@ describe('desktop telemetry retirement', () => {
     const manager = new DesktopConfigManager(store as never);
 
     assert.equal(store.get('telemetry'), undefined);
-    assert.deepEqual(manager.get('remoteMode'), {
-      enabled: true,
-      url: 'https://remote.hagicode.test',
-    });
+    assert.equal(store.get('remoteMode'), undefined);
     assert.deepEqual(manager.getVersionAutoUpdateSettings(), {
       enabled: false,
       retainedArchiveCount: 9,
     });
     assert.equal('telemetry' in manager.getAll(), false);
+    assert.equal('remoteMode' in manager.getAll(), false);
   });
 
   it('keeps existing Telemetry YAML blocks untouched while unrelated DataDir sync still works', async () => {
@@ -91,7 +89,7 @@ describe('desktop telemetry retirement', () => {
     const configPath = pathManager.getAppSettingsPath(versionId);
 
     await fs.mkdir(path.dirname(configPath), { recursive: true });
-    await fs.writeFile(configPath, yaml.dump({
+    await fs.writeFile(path.resolve(configPath), yaml.dump({
       SomeOtherSetting: true,
       Telemetry: {
         Enabled: true,
@@ -120,7 +118,7 @@ describe('desktop telemetry retirement', () => {
     assert.equal(updatedConfig.Telemetry.Otlp.Headers, 'authorization=keep-me');
   });
 
-  it('omits telemetry IPC handlers and preload bridge exposure from the runtime', async () => {
+  it('omits retired telemetry and remote-mode IPC handlers and preload bridge exposure from the runtime', async () => {
     const [mainSource, preloadSource] = await Promise.all([
       fs.readFile(mainProcessPath, 'utf8'),
       fs.readFile(preloadPath, 'utf8'),
@@ -130,6 +128,13 @@ describe('desktop telemetry retirement', () => {
     assert.equal(mainSource.includes("ipcMain.handle('telemetry:set'"), false);
     assert.equal(preloadSource.includes('telemetry:'), false);
     assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:get')"), false);
-    assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:set'"), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:set')"), false);
+    assert.equal(mainSource.includes("ipcMain.handle('remote-mode:set'"), false);
+    assert.equal(mainSource.includes("ipcMain.handle('remote-mode:get'"), false);
+    assert.equal(mainSource.includes("ipcMain.handle('remote-mode:validate-url'"), false);
+    assert.equal(preloadSource.includes('remoteMode:'), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('remote-mode:set')"), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('remote-mode:get')"), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('remote-mode:validate-url')"), false);
   });
 });

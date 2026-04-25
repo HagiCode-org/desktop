@@ -26,7 +26,7 @@ describe('renderer listen-host integration', () => {
     assert.match(source, /host: DEFAULT_WEB_SERVICE_HOST/);
   });
 
-  it('shows preset listen-address choices, validates custom IPv4 input, auto-saves with debounce, and hides local controls in remote mode', async () => {
+  it('shows preset listen-address choices, validates custom IPv4 input, auto-saves with debounce, and keeps service controls local-only', async () => {
     const source = await fs.readFile(cardPath, 'utf-8');
 
     assert.match(source, /value: 'localhost'/);
@@ -38,6 +38,8 @@ describe('renderer listen-host integration', () => {
     assert.match(source, /setTimeout\(\(\) => \{/);
     assert.match(source, /}, 1000\)/);
     assert.match(source, /await flushPendingNetworkConfig\(\)/);
-    assert.match(source, /remoteModeEnabled \? \(/);
+    assert.match(source, /const showRuntimeSecondaryControls = isRunning;/);
+    assert.match(source, /const showOpenLogsButton = Boolean\(activeVersion\);/);
+    assert.doesNotMatch(source, /remoteModeEnabled/);
   });
 });

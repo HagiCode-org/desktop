@@ -8,7 +8,6 @@ import {
   selectWebServiceError,
   selectStartupFailure,
   selectShowStartupFailureDialog,
-  selectPackageManagementInfo,
   selectActiveVersion,
   selectCanLaunchService,
   selectLaunchBlockingReason,
@@ -17,10 +16,6 @@ import {
   setProcessInfo,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
-import {
-  selectRemoteModeEnabled,
-  selectRemoteModeUrl,
-} from '../store/slices/remoteModeSlice';
 import { writeTextToClipboard } from '../lib/clipboard.js';
 import {
   startWebService,
@@ -56,7 +51,6 @@ import {
   Settings,
   Package,
   FolderOpen,
-  Globe,
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
 import {
@@ -96,12 +90,9 @@ const WebServiceStatusCard: React.FC = () => {
   const error = useSelector(selectWebServiceError);
   const startupFailure = useSelector((state: RootState) => selectStartupFailure(state));
   const showStartupFailure = useSelector((state: RootState) => selectShowStartupFailureDialog(state));
-  const { packageInfo } = useSelector((state: RootState) => selectPackageManagementInfo(state));
   const activeVersion = useSelector(selectActiveVersion);
   const canLaunchService = useSelector(selectCanLaunchService);
   const launchBlockingReason = useSelector(selectLaunchBlockingReason);
-  const remoteModeEnabled = useSelector(selectRemoteModeEnabled);
-  const remoteModeUrl = useSelector(selectRemoteModeUrl);
 
   const [portInputValue, setPortInputValue] = useState((webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT).toString());
   const [selectedListenPreset, setSelectedListenPreset] = useState<ListenHostPreset>(
@@ -219,8 +210,7 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleOpenHagicode = async () => {
-    // In remote mode, use the configured remote URL
-    const url = remoteModeEnabled ? remoteModeUrl : webServiceInfo.url;
+    const url = webServiceInfo.url;
     if (url) {
       try {
         await window.electronAPI.openHagicodeInApp(url);
@@ -231,8 +221,7 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleOpenInBrowser = async () => {
-    // In remote mode, use the configured remote URL
-    const url = remoteModeEnabled ? remoteModeUrl : webServiceInfo.url;
+    const url = webServiceInfo.url;
     if (url) {
       try {
         await window.electronAPI.openExternal(url);
@@ -354,8 +343,8 @@ const WebServiceStatusCard: React.FC = () => {
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
   const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
   const isDisabled = webServiceInfo.isOperating || isTransitioning;
-  const showRuntimeSecondaryControls = !remoteModeEnabled && isRunning;
-  const showOpenLogsButton = !remoteModeEnabled && Boolean(activeVersion);
+  const showRuntimeSecondaryControls = isRunning;
+  const showOpenLogsButton = Boolean(activeVersion);
   const pendingHostValue = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
   const normalizedPendingHost = normalizeListenHost(pendingHostValue);
   const pendingPort = Number.parseInt(portInputValue, 10);
@@ -377,7 +366,7 @@ const WebServiceStatusCard: React.FC = () => {
   const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
 
   useEffect(() => {
-    if (remoteModeEnabled || !isStopped || !isNetworkConfigDirty) {
+    if (!isStopped || !isNetworkConfigDirty) {
       return;
     }
 
@@ -404,7 +393,6 @@ const WebServiceStatusCard: React.FC = () => {
     isStopped,
     pendingPort,
     portInputValue,
-    remoteModeEnabled,
     selectedListenPreset,
   ]);
 
@@ -456,7 +444,7 @@ const WebServiceStatusCard: React.FC = () => {
         <motion.div
           className="absolute top-0 left-0 h-1 bg-linear-to-r from-primary to-primary/50"
           initial={{ width: 0 }}
-          animate={{ width: (isRunning || remoteModeEnabled) ? '100%' : isStopped ? '0%' : '50%' }}
+          animate={{ width: isRunning ? '100%' : isStopped ? '0%' : '50%' }}
           transition={{ duration: 0.5 }}
         />
 
@@ -468,17 +456,15 @@ const WebServiceStatusCard: React.FC = () => {
           >
             <CardTitle className="flex items-center gap-2">
               <motion.div
-                animate={(isRunning || remoteModeEnabled) ? {
+                animate={isRunning ? {
                   rotate: [0, 5, -5, 0],
                   scale: [1, 1.1, 1],
                 } : {}}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                <Server className={`w-5 h-5 ${(isRunning || remoteModeEnabled) ? 'text-primary' : ''}`} />
+                <Server className={`w-5 h-5 ${isRunning ? 'text-primary' : ''}`} />
               </motion.div>
-              {remoteModeEnabled
-                ? t('settings.remoteMode.title') || 'Remote Mode'
-                : t('webServiceStatus.cardTitle')}
+              {t('webServiceStatus.cardTitle')}
             </CardTitle>
             <CardDescription className="flex items-center gap-2">
               <motion.span
@@ -486,11 +472,9 @@ const WebServiceStatusCard: React.FC = () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                {remoteModeEnabled
-                  ? t('webServiceStatus.status.running') || 'Connected to Remote'
-                  : getStatusDescription(webServiceInfo.status)}
+                {getStatusDescription(webServiceInfo.status)}
               </motion.span>
-              {(isRunning || remoteModeEnabled) && (
+              {isRunning && (
                 <motion.span
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -510,19 +494,17 @@ const WebServiceStatusCard: React.FC = () => {
           >
             <AnimatePresence mode="wait">
               <motion.span
-                key={remoteModeEnabled ? 'remote' : webServiceInfo.status}
+                key={webServiceInfo.status}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
                 <Badge
-                  variant={remoteModeEnabled ? 'default' : getStatusVariant(webServiceInfo.status)}
+                  variant={getStatusVariant(webServiceInfo.status)}
                   className="text-sm px-3 py-1"
                 >
-                  {remoteModeEnabled
-                    ? t('webServiceStatus.status.connected') || 'Connected to Remote'
-                    : getStatusText(webServiceInfo.status)}
+                  {getStatusText(webServiceInfo.status)}
                 </Badge>
               </motion.span>
             </AnimatePresence>
@@ -530,34 +512,7 @@ const WebServiceStatusCard: React.FC = () => {
 
           {/* Primary Action Button */}
           <AnimatePresence mode="wait">
-            {remoteModeEnabled ? (
-              <motion.div
-                key="remote-mode-buttons"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleOpenHagicode}
-                    className="flex-1"
-                    disabled={!remoteModeUrl}
-                  >
-                    <Globe className="mr-2 h-4 w-4" />
-                    {t('webServiceStatus.openAppButton') || 'Open Application'}
-                  </Button>
-                  <Button
-                    onClick={handleOpenInBrowser}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={!remoteModeUrl}
-                  >
-                    <Globe className="mr-2 h-4 w-4" />
-                    {t('webServiceStatus.openBrowserButton') || 'Open in Browser'}
-                  </Button>
-                </div>
-              </motion.div>
-            ) : isStopped && !canLaunchService ? (
+            {isStopped && !canLaunchService ? (
               <motion.div
                 key="blocking-reason"
                 initial={{ opacity: 0 }}
@@ -572,8 +527,6 @@ const WebServiceStatusCard: React.FC = () => {
                 isDisabled={isDisabled}
                 status={webServiceInfo.status}
                 canLaunchService={canLaunchService}
-                remoteModeEnabled={remoteModeEnabled}
-                remoteModeUrl={remoteModeUrl}
                 onStart={handleStart}
                 onOpenApp={handleOpenHagicode}
                 onOpenBrowser={handleOpenInBrowser}
@@ -581,7 +534,7 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {!remoteModeEnabled && startupFailure && (
+          {startupFailure && (
             <Button
               onClick={handleOpenStartupFailure}
               variant="outline"
@@ -593,7 +546,7 @@ const WebServiceStatusCard: React.FC = () => {
             </Button>
           )}
 
-          {/* Secondary Controls - Restart/Stop/Logs - Only show in local mode */}
+          {/* Secondary Controls - Restart/Stop/Logs */}
           <AnimatePresence mode="wait">
             {(showRuntimeSecondaryControls || showOpenLogsButton) && (
               <motion.div
@@ -677,21 +630,10 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-        <Separator />
+          <Separator />
 
-        {/* Remote Mode Details or Local Network Configuration */}
-        {remoteModeEnabled ? (
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">
-              {t('webServiceStatus.details.remoteUrl') || 'Remote URL'}
-            </div>
-            <div className="text-2xl font-mono font-semibold text-primary break-all">
-              {remoteModeUrl}
-            </div>
-          </div>
-        ) : (
-          /* Local bind host + port configuration - only editable while stopped */
-          !isRunning && (
+          {/* Local bind host + port configuration - only editable while stopped */}
+          {!isRunning && (
             <div className="space-y-4 rounded-lg border border-border/50 bg-muted/20 p-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -821,12 +763,11 @@ const WebServiceStatusCard: React.FC = () => {
                 </Alert>
               )}
             </div>
-          )
-        )}
+          )}
 
-          {/* Service Details - Only show in local mode */}
+          {/* Service Details */}
           <AnimatePresence mode="wait">
-            {!remoteModeEnabled && isRunning && (
+            {isRunning && (
               <motion.div
                 key="service-details"
                 initial={{ opacity: 0, y: 20 }}
@@ -869,9 +810,9 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Error Display - Only show in local mode */}
+          {/* Error Display */}
           <AnimatePresence mode="wait">
-            {!remoteModeEnabled && error && (
+            {error && (
               <motion.div
                 key="error-alert"
                 initial={{ opacity: 0, x: -20 }}

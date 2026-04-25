@@ -300,13 +300,6 @@ interface ElectronAPI {
     openPicker: () => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   };
 
-  // Remote Mode APIs
-  remoteMode: {
-    set: (enabled: boolean, url: string) => Promise<{ success: boolean; error?: string }>;
-    get: () => Promise<{ enabled: boolean; url: string }>;
-    validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
-  };
-
   sharingAcceleration: {
     get: () => Promise<SharingAccelerationSettings | null>;
     set: (settings: SharingAccelerationSettingsInput & { enabled: boolean }) => Promise<SharingAccelerationSettings | null>;
@@ -726,13 +719,6 @@ const electronAPI: ElectronAPI = {
     getStorageInfo: (path?: string) => ipcRenderer.invoke('data-directory:get-storage-info', path),
     restoreDefault: () => ipcRenderer.invoke('data-directory:restore-default'),
     openPicker: () => ipcRenderer.invoke('data-directory:open-picker'),
-  },
-
-  // Remote Mode APIs
-  remoteMode: {
-    set: (enabled: boolean, url: string) => ipcRenderer.invoke('remote-mode:set', enabled, url),
-    get: () => ipcRenderer.invoke('remote-mode:get'),
-    validateUrl: (url: string) => ipcRenderer.invoke('remote-mode:validate-url', url),
   },
 
   sharingAcceleration: {

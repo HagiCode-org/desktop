@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DataDirectorySettings,
   OnboardingSettings,
-  RemoteModeSettings,
   SharingAccelerationSettings,
   shouldShowSharingAccelerationSettings,
   VersionUpdateSettings,
@@ -36,12 +35,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
               {t('settings.tabs.onboarding')}
             </TabsTrigger>
             <TabsTrigger
-              value="remoteMode"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.remoteMode')}
-            </TabsTrigger>
-            <TabsTrigger
               value="dataDirectory"
               className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
@@ -66,10 +59,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
           <div className="flex-1 min-w-0">
             <TabsContent value="onboarding" className="mt-0">
               <OnboardingSettings />
-            </TabsContent>
-
-            <TabsContent value="remoteMode" className="mt-0">
-              <RemoteModeSettings />
             </TabsContent>
 
             <TabsContent value="dataDirectory" className="mt-0">
