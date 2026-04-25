@@ -4,11 +4,26 @@ import { Provider } from 'react-redux';
 import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from './components/providers/theme-provider';
 import { Toaster } from './components/ui/sonner';
+import {
+  applyDesktopTheme,
+  DESKTOP_THEME_STORAGE_KEY,
+  resolveInitialDesktopTheme,
+} from './lib/desktop-theme';
 import { store } from './store';
 import i18n from './i18n';
 import App from './App';
 import 'driver.js/dist/driver.css';
 import './index.css';
+
+const initialTheme = resolveInitialDesktopTheme({
+  storage: window.localStorage,
+  mediaQueryList: typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-color-scheme: dark)')
+    : null,
+  storageKey: DESKTOP_THEME_STORAGE_KEY,
+});
+
+applyDesktopTheme(document.documentElement, initialTheme);
 
 const loadingContainer = document.getElementById('loading-container');
 const rootElement = document.getElementById('root');
@@ -35,7 +50,7 @@ try {
     <React.StrictMode>
       <Provider store={store}>
         <I18nextProvider i18n={i18n}>
-          <ThemeProvider defaultTheme="dark" storageKey="hagicode-desktop-theme" attribute="class" enableSystem>
+          <ThemeProvider defaultTheme={initialTheme} storageKey={DESKTOP_THEME_STORAGE_KEY}>
             <App
               onRendererMounted={hideLoadingContainer}
               onShellReady={removeLoadingContainer}

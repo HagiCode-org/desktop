@@ -466,6 +466,10 @@
           "description": "如果当前还没有安装任何版本，可以从这里启动向导，完成首次下载、依赖安装与服务启动。"
         }
       }
+    },
+    "themeToggle": {
+      "switchToLight": "切换到亮色模式",
+      "switchToDark": "切换到暗色模式"
     }
   }
 }

@@ -466,6 +466,10 @@
           "description": "When no package is installed yet, use this call to action to launch the setup wizard and complete the first runtime install."
         }
       }
+    },
+    "themeToggle": {
+      "switchToLight": "Switch to light mode",
+      "switchToDark": "Switch to dark mode"
     }
   }
 }
