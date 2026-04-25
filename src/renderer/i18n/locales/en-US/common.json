@@ -193,7 +193,8 @@
     },
     "package": {
       "version": "Version",
-      "packageName": "Package"
+      "packageName": "Package",
+      "category": "Category"
     },
     "packageStatus": {
       "installed": "Installed",
@@ -201,6 +202,9 @@
       "unknown": "Unknown"
     },
     "packages": {
+      "hagiscript": {
+        "description": "Required package orchestration CLI used to synchronize Desktop-managed npm tools."
+      },
       "openspec": {
         "description": "OpenSpec proposal, spec, and task workflow CLI."
       },
@@ -210,14 +214,66 @@
       "omniroute": {
         "description": "OmniRoute local routing and toolchain CLI."
       },
+      "claudeCode": {
+        "description": "Claude Code Agent CLI for AI-assisted coding sessions."
+      },
+      "codex": {
+        "description": "OpenAI Codex Agent CLI for coding workflows."
+      },
+      "githubCopilot": {
+        "description": "GitHub Copilot CLI distributed through the official @github/copilot npm package."
+      },
+      "codebuddy": {
+        "description": "CodeBuddy CLI distributed through the official @tencent-ai/codebuddy-code npm package."
+      },
+      "opencode": {
+        "description": "OpenCode Agent CLI distributed through the opencode-ai npm package."
+      },
+      "qoder": {
+        "description": "QoderCLI distributed through the official @qoder-ai/qodercli npm package."
+      },
+      "gemini": {
+        "description": "Google Gemini CLI distributed through the official @google/gemini-cli npm package."
+      },
       "codeServer": {
         "description": "code-server browser-based development environment CLI."
       }
+    },
+    "categories": {
+      "bootstrap": "Bootstrap",
+      "workflow": "Workflow",
+      "agent-cli": "Agent CLI",
+      "developer-tool": "Developer tool"
+    },
+    "bootstrap": {
+      "title": "Required"
+    },
+    "dependencyGate": {
+      "title": "Install hagiscript first",
+      "missing": "Non-hagiscript package actions are disabled until hagiscript is installed in the Desktop-managed npm environment.",
+      "unknown": "Desktop cannot verify hagiscript right now. Refresh or reinstall hagiscript before changing other npm packages."
+    },
+    "packageTable": {
+      "title": "Managed npm packages",
+      "description": "Select Agent CLI and workflow packages to install through hagiscript npm--sync.",
+      "tool": "Tool",
+      "status": "Status",
+      "action": "Action"
+    },
+    "selection": {
+      "selectAll": "Select all eligible packages",
+      "selectPackage": "Select {{name}}",
+      "selectedCount": "{{count}} selected"
+    },
+    "disabled": {
+      "unknown": "This package status is unknown. Refresh before selecting or installing it."
     },
     "actions": {
       "refresh": "Refresh",
       "install": "Install",
       "installed": "Installed",
+      "reinstall": "Reinstall",
+      "installSelected": "Batch install selected",
       "uninstall": "Uninstall"
     },
     "errors": {

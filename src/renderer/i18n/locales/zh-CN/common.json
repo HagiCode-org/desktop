@@ -193,7 +193,8 @@
     },
     "package": {
       "version": "版本",
-      "packageName": "包名"
+      "packageName": "包名",
+      "category": "分类"
     },
     "packageStatus": {
       "installed": "已安装",
@@ -201,6 +202,9 @@
       "unknown": "未知"
     },
     "packages": {
+      "hagiscript": {
+        "description": "必需的包编排 CLI，用于同步 Desktop 管理的 npm 工具。"
+      },
       "openspec": {
         "description": "OpenSpec 提案、规范和任务流 CLI。"
       },
@@ -210,14 +214,66 @@
       "omniroute": {
         "description": "OmniRoute 本地路由与工具链 CLI。"
       },
+      "claudeCode": {
+        "description": "用于 AI 辅助编码会话的 Claude Code Agent CLI。"
+      },
+      "codex": {
+        "description": "用于编码工作流的 OpenAI Codex Agent CLI。"
+      },
+      "githubCopilot": {
+        "description": "通过官方 @github/copilot npm 包分发的 GitHub Copilot CLI。"
+      },
+      "codebuddy": {
+        "description": "通过官方 @tencent-ai/codebuddy-code npm 包分发的 CodeBuddy CLI。"
+      },
+      "opencode": {
+        "description": "通过 opencode-ai npm 包分发的 OpenCode Agent CLI。"
+      },
+      "qoder": {
+        "description": "通过官方 @qoder-ai/qodercli npm 包分发的 QoderCLI。"
+      },
+      "gemini": {
+        "description": "通过官方 @google/gemini-cli npm 包分发的 Gemini CLI。"
+      },
       "codeServer": {
         "description": "code-server 浏览器开发环境 CLI。"
       }
+    },
+    "categories": {
+      "bootstrap": "引导依赖",
+      "workflow": "工作流",
+      "agent-cli": "Agent CLI",
+      "developer-tool": "开发工具"
+    },
+    "bootstrap": {
+      "title": "必需"
+    },
+    "dependencyGate": {
+      "title": "请先安装 hagiscript",
+      "missing": "安装到 Desktop 管理的 npm 环境之前，非 hagiscript 包操作会保持禁用。",
+      "unknown": "Desktop 当前无法验证 hagiscript。刷新或重新安装 hagiscript 后再修改其他 npm 包。"
+    },
+    "packageTable": {
+      "title": "托管 npm 包",
+      "description": "选择 Agent CLI 和工作流包，通过 hagiscript npm--sync 安装。",
+      "tool": "工具",
+      "status": "状态",
+      "action": "操作"
+    },
+    "selection": {
+      "selectAll": "选择全部可操作包",
+      "selectPackage": "选择 {{name}}",
+      "selectedCount": "已选择 {{count}} 个"
+    },
+    "disabled": {
+      "unknown": "此包状态未知。请先刷新，再选择或安装。"
     },
     "actions": {
       "refresh": "刷新",
       "install": "安装",
       "installed": "已安装",
+      "reinstall": "重新安装",
+      "installSelected": "批量安装已选项",
       "uninstall": "卸载"
     },
     "errors": {
