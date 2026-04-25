@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { AgentCliType } from '../../../types/agent-cli.js';
 import type { PromptGuidanceFailure, PromptGuidanceTool } from '../../../types/prompt-guidance.js';
 import {
   copyPromptContent,
@@ -23,14 +22,21 @@ describe('promptGuidanceModel', () => {
   it('preserves the registry order without introducing a preferred tool state', () => {
     const tools: PromptGuidanceTool[] = [
       {
-        cliType: AgentCliType.ClaudeCode,
+        cliType: 'kiro-cli',
+        displayName: 'Kiro',
+        description: 'Kiro',
+        commandName: 'kiro-cli',
+        providerId: 'kiro-cli',
+      },
+      {
+        cliType: 'claude-code',
         displayName: 'Claude Code',
         description: 'Claude',
         commandName: 'claude',
         providerId: 'claude-code',
       },
       {
-        cliType: AgentCliType.Codex,
+        cliType: 'codex',
         displayName: 'Codex',
         description: 'Codex',
         commandName: 'codex',
@@ -40,7 +46,7 @@ describe('promptGuidanceModel', () => {
 
     const ordered = orderPromptGuidanceTools(tools);
 
-    assert.deepEqual(ordered.map((tool) => tool.cliType), [AgentCliType.ClaudeCode, AgentCliType.Codex]);
+    assert.deepEqual(ordered.map((tool) => tool.cliType), ['kiro-cli', 'claude-code', 'codex']);
   });
 
   it('formats prompt-guidance errors with attempted path diagnostics', () => {

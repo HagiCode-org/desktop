@@ -26,9 +26,24 @@ describe('npm management renderer wiring', () => {
 
     assert.match(source, /getNpmManagementBridge\(\)\.getSnapshot\(\)/);
     assert.match(source, /environment\.available/);
-    assert.match(source, /snapshot\.packages\.map/);
-    assert.match(source, /Progress value=\{itemProgress\.percentage \?\? 20\}/);
+    assert.match(source, /managedPackages\.map/);
+    assert.match(source, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
     assert.match(source, /operationError\[item\.id\]/);
+  });
+
+  it('renders the hagiscript bootstrap card and gated selectable package table', async () => {
+    const source = await fs.readFile(pagePath, 'utf8');
+
+    assert.match(source, /item\.id === 'hagiscript'/);
+    assert.match(source, /npmManagement\.bootstrap\.title/);
+    assert.match(source, /hagiscriptGateOpen/);
+    assert.match(source, /npmManagement\.dependencyGate\.title/);
+    assert.match(source, /npmManagement\.packageTable\.title/);
+    assert.match(source, /Checkbox/);
+    assert.match(source, /selectedPackageIds/);
+    assert.match(source, /toggleSelectAll/);
+    assert.match(source, /getNpmManagementBridge\(\)\.syncPackages\(\{ packageIds \}\)/);
+    assert.match(source, /npmManagement\.categories\.\$\{item\.definition\.category\}/);
   });
 
   it('renders mirror acceleration controls with save, revert, and disabled states', async () => {
@@ -56,6 +71,15 @@ describe('npm management renderer wiring', () => {
     assert.equal(JSON.parse(en).sidebar.npmManagement, 'npm Management');
     assert.equal(typeof JSON.parse(zh).npmManagement.environment.status.available, 'string');
     assert.equal(typeof JSON.parse(en).npmManagement.actions.install, 'string');
+    assert.equal(JSON.parse(en).npmManagement.categories['agent-cli'], 'Agent CLI');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.claudeCode.description, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.codex.description, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.githubCopilot.description, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.opencode.description, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.qoder.description, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.packages.gemini.description, 'string');
+    assert.equal(typeof JSON.parse(zh).npmManagement.dependencyGate.missing, 'string');
+    assert.equal(typeof JSON.parse(zh).npmManagement.selection.selectedCount, 'string');
     assert.equal(JSON.parse(zh).npmManagement.mirror.title, 'npm 镜像加速');
     assert.equal(JSON.parse(en).npmManagement.mirror.registryUrl, 'Registry URL');
     assert.equal(typeof JSON.parse(zh).npmManagement.mirror.saveFailed, 'string');

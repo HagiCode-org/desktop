@@ -16,6 +16,7 @@ describe('npm management preload contract', () => {
     assert.match(source, /setMirrorSettings: \(settings: NpmMirrorSettingsInput\) => ipcRenderer\.invoke\(npmManagementChannels\.setMirrorSettings, settings\)/);
     assert.match(source, /install: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(npmManagementChannels\.install, packageId\)/);
     assert.match(source, /uninstall: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(npmManagementChannels\.uninstall, packageId\)/);
+    assert.match(source, /syncPackages: \(request: NpmManagementBatchSyncRequest\) => ipcRenderer\.invoke\(npmManagementChannels\.syncPackages, request\)/);
     assert.match(source, /ipcRenderer\.on\(npmManagementChannels\.progress, listener\)/);
     assert.match(source, /return \(\) => ipcRenderer\.removeListener\(npmManagementChannels\.progress, listener\)/);
   });

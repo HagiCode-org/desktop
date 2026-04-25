@@ -55,6 +55,31 @@ describe('npm management service contract', () => {
     assert.match(source, /snapshot,/);
   });
 
+  it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm--sync', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /definition\.installMode === 'hagiscript-sync'/);
+    assert.match(source, /runHagiscriptSync\(\[definition\]\)/);
+    assert.match(source, /buildHagiscriptSyncArgs/);
+    assert.match(source, /'npm--sync'/);
+    assert.match(source, /'--npm'/);
+    assert.match(source, /environment\.npm\.executablePath/);
+    assert.match(source, /'--package'/);
+    assert.match(source, /definition\.installSpec/);
+  });
+
+  it('gates non-hagiscript mutations and validates batch sync package ids before spawning', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /resolvePackageDefinitions\(request\.packageIds, 'sync'\)/);
+    assert.match(source, /Unknown managed npm package/);
+    assert.match(source, /validateHagiscriptDependency/);
+    assert.match(source, /Install hagiscript before managing other npm packages/);
+    assert.match(source, /hagiscript status is unknown/);
+    assert.match(source, /hagiscript executable path is unavailable/);
+    assert.match(source, /this\.runCommand\(\s*hagiscriptExecutablePath/);
+  });
+
   it('persists npm mirror settings with a disabled default and includes them in snapshots', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
@@ -91,14 +116,33 @@ describe('npm management service contract', () => {
   it('defines the initial managed catalog for required tools', async () => {
     const source = await fs.readFile(catalogPath, 'utf8');
 
+    assert.match(source, /id: 'hagiscript'/);
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'omniroute'/);
     assert.match(source, /id: 'code-server'/);
+    assert.match(source, /id: 'claude-code'/);
+    assert.match(source, /id: 'codex'/);
+    assert.match(source, /id: 'github-copilot'/);
+    assert.match(source, /id: 'codebuddy'/);
+    assert.match(source, /id: 'opencode'/);
+    assert.match(source, /id: 'qoder'/);
+    assert.match(source, /id: 'gemini'/);
+    assert.match(source, /category: 'bootstrap'/);
+    assert.match(source, /category: 'agent-cli'/);
+    assert.match(source, /installMode: 'embedded-npm'/);
+    assert.match(source, /installMode: 'hagiscript-sync'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
     assert.match(source, /installSpec: 'code-server@latest'/);
+    assert.match(source, /installSpec: '@anthropic-ai\/claude-code'/);
+    assert.match(source, /installSpec: '@openai\/codex'/);
+    assert.match(source, /installSpec: '@github\/copilot'/);
+    assert.match(source, /installSpec: '@tencent-ai\/codebuddy-code'/);
+    assert.match(source, /installSpec: 'opencode-ai'/);
+    assert.match(source, /installSpec: '@qoder-ai\/qodercli'/);
+    assert.match(source, /installSpec: '@google\/gemini-cli'/);
     assert.match(source, /required: true/);
   });
 

@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { AgentCliType } from '../../types/agent-cli.js';
 import { PromptResourceResolver } from '../prompt-resource-resolver.js';
 import { PromptGuidanceService } from '../prompt-guidance-service.js';
 
@@ -39,9 +38,17 @@ describe('PromptGuidanceService', () => {
       assert.equal(result.suggestedWorkingDirectory, path.join(tmpRoot, 'missing-version'));
       assert.ok(result.attemptedPaths.some((candidate) => candidate.endsWith(path.join('config', 'config-prompt.llm.txt'))));
       assert.deepEqual(result.supportedTools.map((tool) => tool.cliType), [
-        AgentCliType.ClaudeCode,
-        AgentCliType.Codex,
-        AgentCliType.CopilotCli,
+        'claude-code',
+        'codex',
+        'copilot',
+        'opencode',
+        'qoder',
+        'kiro-cli',
+        'kimi',
+        'gemini',
+        'deepagents',
+        'codebuddy',
+        'hermes',
       ]);
     }
   });
