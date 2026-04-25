@@ -15,15 +15,15 @@ HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, port
 
 `resources/embedded-node-runtime/runtime-manifest.json` is the source of truth for consumer defaults:
 
-- `defaultEnabledByConsumer.desktop = false`
+- `defaultEnabledByConsumer.desktop = true`
 - `defaultEnabledByConsumer.steam-packer = true`
 
 `npm run prepare:bundled-toolchain` copies that matrix into the emitted `toolchain-manifest.json`; do not hard-code separate downstream defaults in build or packaging scripts.
 
-Desktop still packages and verifies the bundled toolchain by default, but it does not automatically prepend bundled Node paths or resolve bundled `node`/`npm` unless the effective Desktop policy is enabled. To opt in manually for Desktop runtime activation, set:
+Desktop packages and verifies the bundled toolchain by default, and it automatically prepends bundled Node paths for Desktop-managed startup when the effective Desktop policy remains enabled. To force the old system-PATH behavior for troubleshooting, set:
 
 ```bash
-HAGICODE_BUNDLED_NODE_ENABLED=true npm run dev
+HAGICODE_BUNDLED_NODE_ENABLED=false npm run dev
 ```
 
 Accepted true values are `1`, `true`, `yes`, `on`, and `enabled`; accepted false values are `0`, `false`, `no`, `off`, and `disabled`. The resolver priority is explicit override first, manifest default second, and legacy fallback last. Legacy manifests without `defaultEnabledByConsumer` keep the old Desktop activation behavior as a compatibility fallback.

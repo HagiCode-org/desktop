@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 const runtimeManagerPath = path.resolve(process.cwd(), 'src/main/bundled-node-runtime-manager.ts');
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-node-runtime/runtime-manifest.json');
+const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 
 describe('bundled node runtime manager contract', () => {
   it('keeps runtime health focused on node and npm while managed CLI packages stay pending-manual', async () => {
@@ -16,6 +17,8 @@ describe('bundled node runtime manager contract', () => {
 
     assert.equal(manifest.schemaVersion, 2);
     assert.equal(manifest.layoutVersion, 2);
+    assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
+    assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/openspec[.cmd]'), false);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/skills[.cmd]'), false);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/omniroute[.cmd]'), false);
@@ -34,5 +37,20 @@ describe('bundled node runtime manager contract', () => {
     assert.match(source, /resolveDesktopActivationPolicy\(manifest: BundledToolchainManifest \| null\)/);
     assert.match(source, /manifest\?\.defaultEnabledByConsumer \?\? this\.runtimeConfig\.defaultEnabledByConsumer/);
     assert.match(source, /getDesktopActivationPolicy\(\)/);
+  });
+
+  it('keeps smoke-test validation aligned with the pinned consumer default matrix', async () => {
+    const [smokeTestSource, manifestRaw] = await Promise.all([
+      fs.readFile(smokeTestPath, 'utf8'),
+      fs.readFile(runtimeManifestPath, 'utf8'),
+    ]);
+    const manifest = JSON.parse(manifestRaw);
+
+    assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
+    assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
+    assert.match(smokeTestSource, /defaultEnabledByConsumer\.desktop expected/);
+    assert.match(smokeTestSource, /defaultEnabledByConsumer\.steam-packer expected/);
+    assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.desktop/);
+    assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.\['steam-packer'\]/);
   });
 });

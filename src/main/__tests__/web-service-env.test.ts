@@ -354,10 +354,10 @@ describe('web-service-env', () => {
     assert.equal(result.fellBackToSystemPath, false);
   });
 
-  it('keeps bundled toolchain verified but inactive when desktop manifest default is disabled', () => {
+  it('uses bundled toolchain paths when the desktop manifest default is enabled', () => {
     const activationPolicy = resolveBundledNodeRuntimePolicy({
       defaultEnabledByConsumer: {
-        desktop: false,
+        desktop: true,
         'steam-packer': true,
       },
     });
@@ -372,23 +372,39 @@ describe('web-service-env', () => {
       activationPolicy,
     });
 
-    assert.equal(activationPolicy.enabled, false);
+    assert.equal(activationPolicy.enabled, true);
     assert.equal(activationPolicy.source, 'manifest-default');
-    assert.equal(result.env.PATH, '/system/bin');
-    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
-    assert.equal(result.usedBundledToolchain, false);
-    assert.equal(result.fellBackToSystemPath, true);
+    assert.equal(
+      result.env.PATH,
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/portable/toolchain/npm-global/bin:/system/bin',
+    );
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/portable/toolchain');
+    assert.equal(result.usedBundledToolchain, true);
+    assert.equal(result.fellBackToSystemPath, false);
   });
 
-  it('honors explicit desktop opt-in and legacy fallback for bundled toolchain activation', () => {
-    const explicitOptIn = resolveBundledNodeRuntimePolicy({
-      defaultEnabledByConsumer: { desktop: false },
-      explicitEnabled: parseBundledNodeRuntimeOverride('true'),
+  it('honors explicit desktop disable override and legacy fallback for bundled toolchain activation', () => {
+    const explicitDisable = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: { desktop: true },
+      explicitEnabled: parseBundledNodeRuntimeOverride('false'),
     });
     const legacyFallback = resolveBundledNodeRuntimePolicy({});
+    const disabledEnv = injectPortableToolchainEnv({ PATH: '/system/bin' }, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+    }, {
+      platform: 'linux',
+      existsSync: () => true,
+      activationPolicy: explicitDisable,
+    });
 
-    assert.equal(explicitOptIn.enabled, true);
-    assert.equal(explicitOptIn.source, 'override');
+    assert.equal(explicitDisable.enabled, false);
+    assert.equal(explicitDisable.source, 'override');
+    assert.equal(disabledEnv.env.PATH, '/system/bin');
+    assert.equal(disabledEnv.usedBundledToolchain, false);
+    assert.equal(disabledEnv.fellBackToSystemPath, true);
     assert.equal(legacyFallback.enabled, true);
     assert.equal(legacyFallback.source, 'legacy-fallback');
   });

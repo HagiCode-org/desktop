@@ -324,6 +324,16 @@ function validateToolchainManifest(toolchainRoot) {
   if (manifest.node?.version !== nodeRuntimeConfig.releaseVersion) {
     errors.push(`Node version expected ${nodeRuntimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
   }
+  if (manifest.defaultEnabledByConsumer?.desktop !== nodeRuntimeConfig.defaultEnabledByConsumer?.desktop) {
+    errors.push(
+      `defaultEnabledByConsumer.desktop expected ${String(nodeRuntimeConfig.defaultEnabledByConsumer?.desktop)} but found ${String(manifest.defaultEnabledByConsumer?.desktop)}`,
+    );
+  }
+  if (manifest.defaultEnabledByConsumer?.['steam-packer'] !== nodeRuntimeConfig.defaultEnabledByConsumer?.['steam-packer']) {
+    errors.push(
+      `defaultEnabledByConsumer.steam-packer expected ${String(nodeRuntimeConfig.defaultEnabledByConsumer?.['steam-packer'])} but found ${String(manifest.defaultEnabledByConsumer?.['steam-packer'])}`,
+    );
+  }
 
   for (const commandName of ['node', 'npm']) {
     const relativePath = manifest.commands?.[commandName];

@@ -41,8 +41,11 @@ describe('web-service startup flow', () => {
     assert.match(source, /DOTNET_ROOT: runtimeRoot/);
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /includes pinned runtime root/);
+    assert.match(source, /Bundled portable toolchain activated for desktop-managed startup/);
     assert.match(source, /prepends bundled toolchain paths/);
-    assert.match(source, /disabled or unavailable, fallback to inherited system PATH/);
+    assert.match(source, /explicitly disabled for desktop startup; keeping inherited system PATH/);
+    assert.match(source, /unavailable for desktop startup; keeping inherited system PATH/);
+    assert.match(source, /Missing bundled PATH entries:/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
@@ -137,9 +140,25 @@ describe('web-service startup flow', () => {
     assert.equal(npmPlan.fellBackToSystemPath, true);
   });
 
+  it('uses desktop default-enabled policy unless an explicit disable override is present', () => {
+    const defaultPolicy = resolveBundledNodeRuntimePolicy({ defaultEnabledByConsumer: { desktop: true } });
+    const disabledPolicy = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: { desktop: true },
+      explicitEnabled: false,
+    });
+
+    assert.equal(defaultPolicy.enabled, true);
+    assert.equal(defaultPolicy.source, 'manifest-default');
+    assert.equal(disabledPolicy.enabled, false);
+    assert.equal(disabledPolicy.source, 'override');
+  });
+
   it('does not resolve bundled node or npm when the effective desktop policy is disabled', () => {
     const bundledNode = '/portable/toolchain/node/bin/node';
-    const policy = resolveBundledNodeRuntimePolicy({ defaultEnabledByConsumer: { desktop: false } });
+    const policy = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: { desktop: true },
+      explicitEnabled: false,
+    });
     const plan = resolveToolchainLaunchPlan({
       commandName: 'node',
       args: ['server.js'],
@@ -155,7 +174,7 @@ describe('web-service startup flow', () => {
     assert.equal(plan.command, 'node');
     assert.equal(plan.usedBundledToolchain, false);
     assert.equal(plan.resolutionSource, 'system');
-    assert.equal(plan.activationPolicy?.source, 'manifest-default');
+    assert.equal(plan.activationPolicy?.source, 'override');
   });
 
   it('uses shell mode only for Windows command-wrapper executables and keeps args unchanged', () => {

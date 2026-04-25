@@ -11,6 +11,10 @@ describe('npm management service contract', () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /getDesktopActivationPolicy\(\)/);
+    assert.match(source, /injectPortableToolchainEnv\(process\.env, this\.pathManager, \{/);
+    assert.match(source, /activationPolicy,/);
+    assert.match(source, /const pathValue = devNodeBinRoot/);
+    assert.match(source, /\[devNodeBinRoot, envResult\.env\[pathKey\]\]\.filter\(Boolean\)\.join/);
     assert.match(source, /process\.env\.npm_node_execpath\?\.trim\(\) \|\| 'node'/);
     assert.match(source, /return 'npm'/);
     assert.match(source, /getPortableNodeExecutablePath\(\)/);
@@ -24,6 +28,7 @@ describe('npm management service contract', () => {
     assert.match(source, /return this\.pathManager\.getPortableNodeRoot\(\)/);
     assert.match(source, /npm_config_prefix: npmGlobalPrefix/);
     assert.match(source, /NPM_CONFIG_PREFIX: npmGlobalPrefix/);
+    assert.match(source, /HAGICODE_PORTABLE_TOOLCHAIN_ROOT/);
     assert.match(source, /this\.spawnProcess\(command, args/);
   });
 
