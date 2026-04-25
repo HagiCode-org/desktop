@@ -153,6 +153,7 @@
     "webService": "Web Service",
     "versionManagement": "Version Management",
     "diagnostic": "Diagnostic",
+    "npmManagement": "npm Management",
     "settings": "Settings",
     "desktopVersion": "Desktop version",
     "webVersion": "Web version",
@@ -160,6 +161,54 @@
     "toggle": "Toggle Sidebar",
     "collapse": "Collapse",
     "expand": "Expand"
+  },
+  "npmManagement": {
+    "title": "npm Management",
+    "description": "Inspect the Desktop embedded Node/npm environment and manage common npm CLI tools.",
+    "loading": "Reading npm environment...",
+    "unavailable": "Unavailable",
+    "environment": {
+      "title": "Node Environment",
+      "description": "All actions use the Desktop-managed embedded Node/npm toolchain instead of system Node.",
+      "version": "Version",
+      "toolchainRoot": "Toolchain root",
+      "globalPrefix": "Global prefix",
+      "status": {
+        "available": "Available",
+        "unavailable": "Unavailable",
+        "error": "Error"
+      }
+    },
+    "package": {
+      "version": "Version",
+      "packageName": "Package"
+    },
+    "packageStatus": {
+      "installed": "Installed",
+      "not-installed": "Not installed",
+      "unknown": "Unknown"
+    },
+    "packages": {
+      "openspec": {
+        "description": "OpenSpec proposal, spec, and task workflow CLI."
+      },
+      "skills": {
+        "description": "Codex/Agent skill management CLI."
+      },
+      "omniroute": {
+        "description": "OmniRoute local routing and toolchain CLI."
+      }
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "install": "Install",
+      "installed": "Installed",
+      "uninstall": "Uninstall"
+    },
+    "errors": {
+      "loadFailed": "Failed to load npm management status",
+      "operationFailed": "npm operation failed"
+    }
   },
   "bootstrap": {
     "loading": {

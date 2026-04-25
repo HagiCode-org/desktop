@@ -153,6 +153,7 @@
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
     "diagnostic": "诊断",
+    "npmManagement": "npm 管理",
     "settings": "设置",
     "desktopVersion": "Desktop 版本",
     "webVersion": "Web 版本",
@@ -160,6 +161,54 @@
     "toggle": "切换侧边栏",
     "collapse": "收起",
     "expand": "展开"
+  },
+  "npmManagement": {
+    "title": "npm 管理",
+    "description": "查看 Desktop 内置 Node/npm 环境，并管理常用 npm CLI 工具。",
+    "loading": "正在读取 npm 环境...",
+    "unavailable": "不可用",
+    "environment": {
+      "title": "Node 环境",
+      "description": "所有操作都使用 Desktop 管理的内置 Node/npm，不依赖系统 Node。",
+      "version": "版本",
+      "toolchainRoot": "工具链目录",
+      "globalPrefix": "全局安装目录",
+      "status": {
+        "available": "可用",
+        "unavailable": "不可用",
+        "error": "错误"
+      }
+    },
+    "package": {
+      "version": "版本",
+      "packageName": "包名"
+    },
+    "packageStatus": {
+      "installed": "已安装",
+      "not-installed": "未安装",
+      "unknown": "未知"
+    },
+    "packages": {
+      "openspec": {
+        "description": "OpenSpec 提案、规范和任务流 CLI。"
+      },
+      "skills": {
+        "description": "Codex/Agent 技能管理 CLI。"
+      },
+      "omniroute": {
+        "description": "OmniRoute 本地路由与工具链 CLI。"
+      }
+    },
+    "actions": {
+      "refresh": "刷新",
+      "install": "安装",
+      "installed": "已安装",
+      "uninstall": "卸载"
+    },
+    "errors": {
+      "loadFailed": "无法加载 npm 管理状态",
+      "operationFailed": "npm 操作失败"
+    }
   },
   "bootstrap": {
     "loading": {
