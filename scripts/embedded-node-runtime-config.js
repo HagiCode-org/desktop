@@ -9,11 +9,11 @@ export function readPinnedNodeRuntimeConfig() {
   return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 }
 
-export function detectNodeRuntimePlatform() {
-  if (process.platform === 'win32') return 'win-x64';
-  if (process.platform === 'linux') return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
-  if (process.platform === 'darwin') return process.arch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-  throw new Error(`Unsupported Node runtime platform: ${process.platform}/${process.arch}`);
+export function detectNodeRuntimePlatform(runtimePlatform = process.platform, runtimeArch = process.arch) {
+  if (runtimePlatform === 'win32') return 'win-x64';
+  if (runtimePlatform === 'linux') return runtimeArch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+  if (runtimePlatform === 'darwin') return runtimeArch === 'arm64' ? 'osx-arm64' : 'osx-x64';
+  throw new Error(`Unsupported Node runtime platform: ${runtimePlatform}/${runtimeArch}`);
 }
 
 export function resolvePinnedNodeRuntimeTarget(platform = detectNodeRuntimePlatform(), config = readPinnedNodeRuntimeConfig()) {
@@ -25,6 +25,16 @@ export function resolvePinnedNodeRuntimeTarget(platform = detectNodeRuntimePlatf
 
   ensureOfficialNodeDownloadUrl(target.downloadUrl, config.source?.allowedDownloadHosts || []);
   return target;
+}
+
+export function getGovernedNodeRuntimeMajor(config = readPinnedNodeRuntimeConfig()) {
+  return String(config.channelVersion || config.releaseVersion || '').split('.')[0];
+}
+
+export function nodeVersionMatchesGovernedMajor(version, config = readPinnedNodeRuntimeConfig()) {
+  const governedMajor = getGovernedNodeRuntimeMajor(config);
+  const candidateMajor = String(version || '').replace(/^v/, '').split('.')[0];
+  return governedMajor.length > 0 && candidateMajor === governedMajor;
 }
 
 export function ensureOfficialNodeDownloadUrl(downloadUrl, allowedHosts) {

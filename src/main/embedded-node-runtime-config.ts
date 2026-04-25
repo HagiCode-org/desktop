@@ -75,6 +75,19 @@ export function resolvePinnedNodeRuntimeTarget(
   return target;
 }
 
+export function getGovernedNodeRuntimeMajor(config: EmbeddedNodeRuntimeConfig = readPinnedNodeRuntimeConfig()): string {
+  return String(config.channelVersion || config.releaseVersion || '').split('.')[0];
+}
+
+export function nodeVersionMatchesGovernedMajor(
+  version: string | undefined | null,
+  config: EmbeddedNodeRuntimeConfig = readPinnedNodeRuntimeConfig(),
+): boolean {
+  const governedMajor = getGovernedNodeRuntimeMajor(config);
+  const candidateMajor = String(version || '').replace(/^v/, '').split('.')[0];
+  return governedMajor.length > 0 && candidateMajor === governedMajor;
+}
+
 export function ensureOfficialNodeDownloadUrl(downloadUrl: string, allowedHosts: string[]): URL {
   let parsed: URL;
   try {
