@@ -163,10 +163,11 @@ function findExistingNpmExecutable() {
 }
 
 function createPosixNpmShim(targetNpmPath) {
-  if (isWindowsPlatform(runtimePlatform) || targetNpmPath === npmExecutablePath || pathExists(npmExecutablePath)) {
+  if (isWindowsPlatform(runtimePlatform) || targetNpmPath === npmExecutablePath) {
     return;
   }
 
+  fs.rmSync(npmExecutablePath, { force: true });
   fs.mkdirSync(path.dirname(npmExecutablePath), { recursive: true });
   const relativeNode = path.relative(path.dirname(npmExecutablePath), nodeExecutablePath).split(path.sep).join('/');
   const relativeNpm = path.relative(path.dirname(npmExecutablePath), targetNpmPath).split(path.sep).join('/');
@@ -177,6 +178,41 @@ function createPosixNpmShim(targetNpmPath) {
     `exec "$SCRIPT_DIR/${relativeNode}" "$SCRIPT_DIR/${relativeNpm}" "$@"`,
   ].join('\n') + '\n', 'utf8');
   ensureExecutable(npmExecutablePath);
+}
+
+function createPosixToolShim(commandName, targetScriptPath) {
+  if (isWindowsPlatform(runtimePlatform)) {
+    return;
+  }
+
+  const shimPath = path.join(installRoot, getNodeBinRelativePath(runtimePlatform), commandName);
+  fs.rmSync(shimPath, { force: true });
+  fs.mkdirSync(path.dirname(shimPath), { recursive: true });
+  const relativeNode = path.relative(path.dirname(shimPath), nodeExecutablePath).split(path.sep).join('/');
+  const relativeScript = path.relative(path.dirname(shimPath), targetScriptPath).split(path.sep).join('/');
+  fs.writeFileSync(shimPath, [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
+    `exec "$SCRIPT_DIR/${relativeNode}" "$SCRIPT_DIR/${relativeScript}" "$@"`,
+  ].join('\n') + '\n', 'utf8');
+  ensureExecutable(shimPath);
+}
+
+function repairPosixPackageManagerShims() {
+  if (isWindowsPlatform(runtimePlatform)) {
+    return;
+  }
+
+  const npmCliPath = path.join(installRoot, 'node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  const npxCliPath = path.join(installRoot, 'node', 'lib', 'node_modules', 'npm', 'bin', 'npx-cli.js');
+  const corepackCliPath = path.join(installRoot, 'node', 'lib', 'node_modules', 'corepack', 'dist', 'corepack.js');
+
+  createPosixToolShim('npm', npmCliPath);
+  createPosixToolShim('npx', npxCliPath);
+  if (pathExists(corepackCliPath)) {
+    createPosixToolShim('corepack', corepackCliPath);
+  }
 }
 
 function validateInstalledRuntime() {
@@ -246,6 +282,7 @@ function extractRuntime(archivePath) {
     fs.rmSync(installRoot, { recursive: true, force: true });
     fs.mkdirSync(path.join(installRoot, 'node'), { recursive: true });
     fs.cpSync(extractedNodeRoot, path.join(installRoot, 'node'), { recursive: true, force: true });
+    repairPosixPackageManagerShims();
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
