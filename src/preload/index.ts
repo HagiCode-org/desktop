@@ -16,6 +16,7 @@ import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, Ver
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type { ManagedNpmPackageId, NpmManagementBridge } from '../types/npm-management.js';
+import type { NpmMirrorSettingsInput } from '../types/npm-management.js';
 import { npmManagementChannels } from '../types/npm-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
 import type {
@@ -744,6 +745,8 @@ const electronAPI: ElectronAPI = {
   npmManagement: {
     getSnapshot: () => ipcRenderer.invoke(npmManagementChannels.snapshot),
     refresh: () => ipcRenderer.invoke(npmManagementChannels.refresh),
+    getMirrorSettings: () => ipcRenderer.invoke(npmManagementChannels.getMirrorSettings),
+    setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(npmManagementChannels.setMirrorSettings, settings),
     install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.install, packageId),
     uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.uninstall, packageId),
     onProgress: (callback) => {

@@ -42,9 +42,19 @@ export interface ManagedNpmPackageStatusSnapshot {
   message?: string;
 }
 
+export interface NpmMirrorSettings {
+  enabled: boolean;
+  registryUrl: string | null;
+}
+
+export interface NpmMirrorSettingsInput {
+  enabled: boolean;
+}
+
 export interface NpmManagementSnapshot {
   environment: NpmManagementEnvironmentStatus;
   packages: ManagedNpmPackageStatusSnapshot[];
+  mirrorSettings: NpmMirrorSettings;
   activeOperation: NpmManagementOperationProgress | null;
   generatedAt: string;
 }
@@ -70,6 +80,8 @@ export interface NpmManagementOperationResult {
 export interface NpmManagementBridge {
   getSnapshot: () => Promise<NpmManagementSnapshot>;
   refresh: () => Promise<NpmManagementSnapshot>;
+  getMirrorSettings: () => Promise<NpmMirrorSettings>;
+  setMirrorSettings: (settings: NpmMirrorSettingsInput) => Promise<NpmManagementSnapshot>;
   install: (packageId: ManagedNpmPackageId) => Promise<NpmManagementOperationResult>;
   uninstall: (packageId: ManagedNpmPackageId) => Promise<NpmManagementOperationResult>;
   onProgress: (callback: (event: NpmManagementOperationProgress) => void) => () => void;
@@ -78,6 +90,8 @@ export interface NpmManagementBridge {
 export const npmManagementChannels = {
   snapshot: 'npm-management:snapshot',
   refresh: 'npm-management:refresh',
+  getMirrorSettings: 'npm-management:get-mirror-settings',
+  setMirrorSettings: 'npm-management:set-mirror-settings',
   install: 'npm-management:install',
   uninstall: 'npm-management:uninstall',
   progress: 'npm-management:progress',

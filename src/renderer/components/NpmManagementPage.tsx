@@ -1,6 +1,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, Loader2, PackageOpen, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Gauge, Loader2, PackageOpen, RefreshCw, Trash2 } from 'lucide-react';
 import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
@@ -13,8 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 
 type PageStatus = 'loading' | 'ready' | 'error';
+
+const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 
 function getNpmManagementBridge(): NpmManagementBridge {
   return (window as Window & {
@@ -51,6 +54,8 @@ export default function NpmManagementPage() {
     omniroute: undefined,
     'code-server': undefined,
   });
+  const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
+  const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const refreshSnapshot = async () => {
@@ -121,9 +126,38 @@ export default function NpmManagementPage() {
     }
   };
 
+  const updateMirrorSettings = async (enabled: boolean) => {
+    if (!snapshot) {
+      return;
+    }
+
+    const previousSnapshot = snapshot;
+    setMirrorSaveError(null);
+    setIsSavingMirrorSettings(true);
+    setSnapshot({
+      ...snapshot,
+      mirrorSettings: {
+        enabled,
+        registryUrl: enabled ? NPM_MIRROR_REGISTRY_URL : null,
+      },
+    });
+
+    try {
+      const nextSnapshot = await getNpmManagementBridge().setMirrorSettings({ enabled });
+      setSnapshot(nextSnapshot);
+    } catch (error) {
+      setSnapshot(previousSnapshot);
+      setMirrorSaveError(error instanceof Error ? error.message : t('npmManagement.mirror.saveFailed'));
+    } finally {
+      setIsSavingMirrorSettings(false);
+    }
+  };
+
   const activePackageId = snapshot?.activeOperation?.packageId;
   const environmentAvailable = snapshot?.environment.available ?? false;
   const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId);
+  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
+  const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -194,6 +228,54 @@ export default function NpmManagementPage() {
                 <p>{t('npmManagement.environment.toolchainRoot')}: {snapshot.environment.toolchainRoot}</p>
                 <p>{t('npmManagement.environment.globalPrefix')}: {snapshot.environment.npmGlobalPrefix}</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gauge className="h-5 w-5 text-primary" />
+                {t('npmManagement.mirror.title')}
+              </CardTitle>
+              <CardDescription>{t('npmManagement.mirror.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{t('npmManagement.mirror.toggleLabel')}</span>
+                    <Badge variant={snapshot.mirrorSettings.enabled ? 'default' : 'secondary'}>
+                      {isSavingMirrorSettings
+                        ? t('npmManagement.mirror.saving')
+                        : snapshot.mirrorSettings.enabled
+                          ? t('npmManagement.mirror.enabled')
+                          : t('npmManagement.mirror.disabled')}
+                    </Badge>
+                  </div>
+                  <p className="break-all text-sm text-muted-foreground">
+                    {t('npmManagement.mirror.registryUrl')}: {mirrorRegistryUrl}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {snapshot.mirrorSettings.enabled
+                      ? t('npmManagement.mirror.enabledHelp')
+                      : t('npmManagement.mirror.disabledHelp')}
+                  </p>
+                </div>
+                <Switch
+                  checked={snapshot.mirrorSettings.enabled}
+                  onCheckedChange={(enabled) => void updateMirrorSettings(enabled)}
+                  disabled={mirrorToggleDisabled}
+                  aria-label={t('npmManagement.mirror.toggleLabel')}
+                />
+              </div>
+
+              {mirrorSaveError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>{t('npmManagement.mirror.saveFailed')}</AlertTitle>
+                  <AlertDescription>{mirrorSaveError}</AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 

@@ -59,6 +59,22 @@ export function registerNpmManagementHandlers(deps: {
     return state.npmManagementService.getSnapshot();
   });
 
+  ipcMain.handle(npmManagementChannels.getMirrorSettings, async () => {
+    if (!state.npmManagementService) {
+      throw new Error('NpmManagementService is not initialized');
+    }
+
+    return state.npmManagementService.getMirrorSettings();
+  });
+
+  ipcMain.handle(npmManagementChannels.setMirrorSettings, async (_event, settings) => {
+    if (!state.npmManagementService) {
+      throw new Error('NpmManagementService is not initialized');
+    }
+
+    return state.npmManagementService.setMirrorSettings(settings);
+  });
+
   ipcMain.handle(npmManagementChannels.install, async (_event, packageId: string) => {
     if (!state.npmManagementService) {
       throw new Error('NpmManagementService is not initialized');
@@ -75,4 +91,3 @@ export function registerNpmManagementHandlers(deps: {
     return state.npmManagementService.uninstall(packageId);
   });
 }
-

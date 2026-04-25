@@ -4,6 +4,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import log from 'electron-log';
+import Store from 'electron-store';
 import { PathManager } from './path-manager.js';
 import { getCommandExecutableName, getNpmGlobalModulesRelativePath } from './embedded-node-runtime-config.js';
 import { shouldUseShellForCommand } from './toolchain-launch.js';
@@ -15,6 +16,8 @@ import type {
   ManagedNpmPackageStatusSnapshot,
   NpmEnvironmentComponent,
   NpmManagementEnvironmentStatus,
+  NpmMirrorSettings,
+  NpmMirrorSettingsInput,
   NpmManagementOperation,
   NpmManagementOperationProgress,
   NpmManagementOperationResult,
@@ -26,6 +29,11 @@ interface NpmManagementServiceOptions {
   spawnProcess?: typeof spawn;
   existsSync?: (targetPath: string) => boolean;
   platform?: NodeJS.Platform;
+  settingsStore?: Store<NpmManagementSettingsStoreSchema>;
+}
+
+interface NpmManagementSettingsStoreSchema {
+  mirrorSettings: NpmMirrorSettingsInput;
 }
 
 interface CommandResult {
@@ -35,6 +43,12 @@ interface CommandResult {
 }
 
 type ProgressListener = (event: NpmManagementOperationProgress) => void;
+
+export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
+
+const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
+  enabled: false,
+};
 
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
@@ -69,6 +83,7 @@ export class NpmManagementService {
   private readonly spawnProcess: typeof spawn;
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
+  private readonly settingsStore: Store<NpmManagementSettingsStoreSchema>;
   private readonly events = new EventEmitter();
   private activeOperation: NpmManagementOperationProgress | null = null;
 
@@ -77,6 +92,12 @@ export class NpmManagementService {
     this.spawnProcess = options.spawnProcess ?? spawn;
     this.existsSync = options.existsSync ?? fsSync.existsSync;
     this.platform = options.platform ?? process.platform;
+    this.settingsStore = options.settingsStore ?? new Store<NpmManagementSettingsStoreSchema>({
+      name: 'npm-management',
+      defaults: {
+        mirrorSettings: DEFAULT_MIRROR_SETTINGS,
+      },
+    });
   }
 
   onProgress(listener: ProgressListener): () => void {
@@ -87,13 +108,26 @@ export class NpmManagementService {
   async getSnapshot(): Promise<NpmManagementSnapshot> {
     const environment = await this.detectEnvironment();
     const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition)));
+    const mirrorSettings = this.getMirrorSettings();
 
     return {
       environment,
       packages,
+      mirrorSettings,
       activeOperation: this.activeOperation,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  getMirrorSettings(): NpmMirrorSettings {
+    return this.normalizeMirrorSettings(this.settingsStore.get('mirrorSettings', DEFAULT_MIRROR_SETTINGS));
+  }
+
+  async setMirrorSettings(input: NpmMirrorSettingsInput): Promise<NpmManagementSnapshot> {
+    this.settingsStore.set('mirrorSettings', {
+      enabled: Boolean(input.enabled),
+    });
+    return this.getSnapshot();
   }
 
   async install(packageId: string): Promise<NpmManagementOperationResult> {
@@ -118,6 +152,30 @@ export class NpmManagementService {
 
   private getNpmGlobalPrefix(): string {
     return path.join(this.pathManager.getPortableToolchainRoot(), 'npm-global');
+  }
+
+  private normalizeMirrorSettings(input?: Partial<NpmMirrorSettingsInput> | null): NpmMirrorSettings {
+    const enabled = Boolean(input?.enabled ?? DEFAULT_MIRROR_SETTINGS.enabled);
+    return {
+      enabled,
+      registryUrl: enabled ? NPM_MIRROR_REGISTRY_URL : null,
+    };
+  }
+
+  private buildNpmOperationArgs(
+    operation: NpmManagementOperation,
+    environment: NpmManagementEnvironmentStatus,
+    definition: ManagedNpmPackageDefinition,
+    mirrorSettings: NpmMirrorSettings,
+  ): string[] {
+    if (operation === 'install') {
+      const registryArgs = mirrorSettings.enabled && mirrorSettings.registryUrl
+        ? ['--registry', mirrorSettings.registryUrl]
+        : [];
+      return ['install', '-g', '--prefix', environment.npmGlobalPrefix, ...registryArgs, definition.installSpec];
+    }
+
+    return ['uninstall', '-g', '--prefix', environment.npmGlobalPrefix, definition.packageName];
   }
 
   private buildCommandEnv(): NodeJS.ProcessEnv {
@@ -284,11 +342,13 @@ export class NpmManagementService {
       };
     }
 
-    const args = operation === 'install'
-      ? ['install', '-g', '--prefix', environment.npmGlobalPrefix, definition.installSpec]
-      : ['uninstall', '-g', '--prefix', environment.npmGlobalPrefix, definition.packageName];
+    const mirrorSettings = this.getMirrorSettings();
+    const args = this.buildNpmOperationArgs(operation, environment, definition, mirrorSettings);
 
-    this.emitProgress(definition.id, operation, 'started', `${operation} ${definition.displayName} started`, 0);
+    const mirrorSuffix = operation === 'install' && mirrorSettings.enabled && mirrorSettings.registryUrl
+      ? ` using registry mirror ${mirrorSettings.registryUrl}`
+      : '';
+    this.emitProgress(definition.id, operation, 'started', `${operation} ${definition.displayName} started${mirrorSuffix}`, 0);
 
     let success = false;
     let errorMessage: string | undefined;

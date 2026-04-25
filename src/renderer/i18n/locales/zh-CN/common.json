@@ -179,6 +179,18 @@
         "error": "错误"
       }
     },
+    "mirror": {
+      "title": "npm 镜像加速",
+      "description": "为托管 npm 包同步和安装操作启用 npmmirror.com。",
+      "toggleLabel": "使用 npmmirror.com 加速",
+      "registryUrl": "Registry 地址",
+      "enabled": "已启用",
+      "disabled": "未启用",
+      "saving": "保存中",
+      "enabledHelp": "后续同步/安装操作将使用 npmmirror.com registry 镜像。",
+      "disabledHelp": "后续 npm 操作将使用 npm 默认 registry 行为。",
+      "saveFailed": "保存镜像设置失败"
+    },
     "package": {
       "version": "版本",
       "packageName": "包名"

@@ -179,6 +179,18 @@
         "error": "Error"
       }
     },
+    "mirror": {
+      "title": "npm Mirror Acceleration",
+      "description": "Enable npmmirror.com for managed npm package sync and install operations.",
+      "toggleLabel": "Use npmmirror.com acceleration",
+      "registryUrl": "Registry URL",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "saving": "Saving",
+      "enabledHelp": "Upcoming sync/install operations will use the npmmirror.com registry mirror.",
+      "disabledHelp": "Upcoming npm operations will use the default npm registry behavior.",
+      "saveFailed": "Failed to save mirror setting"
+    },
     "package": {
       "version": "Version",
       "packageName": "Package"

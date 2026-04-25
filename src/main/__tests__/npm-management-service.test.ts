@@ -50,6 +50,37 @@ describe('npm management service contract', () => {
     assert.match(source, /snapshot,/);
   });
 
+  it('persists npm mirror settings with a disabled default and includes them in snapshots', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /NPM_MIRROR_REGISTRY_URL = 'https:\/\/registry\.npmmirror\.com\/'/);
+    assert.match(source, /DEFAULT_MIRROR_SETTINGS[\s\S]*enabled: false/);
+    assert.match(source, /name: 'npm-management'/);
+    assert.match(source, /mirrorSettings: DEFAULT_MIRROR_SETTINGS/);
+    assert.match(source, /const mirrorSettings = this\.getMirrorSettings\(\)/);
+    assert.match(source, /mirrorSettings,/);
+    assert.match(source, /setMirrorSettings\(input: NpmMirrorSettingsInput\)/);
+    assert.match(source, /this\.settingsStore\.set\('mirrorSettings'/);
+  });
+
+  it('adds registry args only to install operations when mirror acceleration is enabled', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /buildNpmOperationArgs/);
+    assert.match(source, /operation === 'install'/);
+    assert.match(source, /'--registry', mirrorSettings\.registryUrl/);
+    assert.match(source, /return \['install', '-g', '--prefix', environment\.npmGlobalPrefix, \.\.\.registryArgs, definition\.installSpec\]/);
+    assert.match(source, /return \['uninstall', '-g', '--prefix', environment\.npmGlobalPrefix, definition\.packageName\]/);
+  });
+
+  it('reports mirror usage when enabled without changing uninstall registry behavior', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /operation === 'install' && mirrorSettings\.enabled && mirrorSettings\.registryUrl/);
+    assert.match(source, /using registry mirror \$\{mirrorSettings\.registryUrl\}/);
+    assert.doesNotMatch(source, /uninstall[^\n]+--registry/);
+  });
+
   it('defines the initial managed catalog for required tools', async () => {
     const source = await fs.readFile(catalogPath, 'utf8');
 

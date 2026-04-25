@@ -31,6 +31,21 @@ describe('npm management renderer wiring', () => {
     assert.match(source, /operationError\[item\.id\]/);
   });
 
+  it('renders mirror acceleration controls with save, revert, and disabled states', async () => {
+    const source = await fs.readFile(pagePath, 'utf8');
+
+    assert.match(source, /npmManagement\.mirror\.title/);
+    assert.match(source, /npmManagement\.mirror\.toggleLabel/);
+    assert.match(source, /npmManagement\.mirror\.registryUrl/);
+    assert.match(source, /npmManagement\.mirror\.enabled/);
+    assert.match(source, /npmManagement\.mirror\.disabled/);
+    assert.match(source, /npmManagement\.mirror\.saving/);
+    assert.match(source, /npmManagement\.mirror\.saveFailed/);
+    assert.match(source, /getNpmManagementBridge\(\)\.setMirrorSettings\(\{ enabled \}\)/);
+    assert.match(source, /setSnapshot\(previousSnapshot\)/);
+    assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\)/);
+  });
+
   it('adds zh-CN and en-US localization keys', async () => {
     const [zh, en] = await Promise.all([
       fs.readFile(zhLocalePath, 'utf8'),
@@ -41,5 +56,9 @@ describe('npm management renderer wiring', () => {
     assert.equal(JSON.parse(en).sidebar.npmManagement, 'npm Management');
     assert.equal(typeof JSON.parse(zh).npmManagement.environment.status.available, 'string');
     assert.equal(typeof JSON.parse(en).npmManagement.actions.install, 'string');
+    assert.equal(JSON.parse(zh).npmManagement.mirror.title, 'npm 镜像加速');
+    assert.equal(JSON.parse(en).npmManagement.mirror.registryUrl, 'Registry URL');
+    assert.equal(typeof JSON.parse(zh).npmManagement.mirror.saveFailed, 'string');
+    assert.equal(typeof JSON.parse(en).npmManagement.mirror.enabledHelp, 'string');
   });
 });
