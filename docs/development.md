@@ -324,7 +324,7 @@ Packaging copies `resources/portable-fixed` into `resources/extra/portable-fixed
 
 If `current/` is missing, Desktop stays in normal mode. If `current/` exists but the required files are incomplete, Desktop logs the validation failure and safely falls back to normal mode.
 
-Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. Future Steam-ready packages are expected to supply the necessary OpenSpec prerequisites through a bundled Node environment and a default installation strategy instead of asking end users to install them manually.
+Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. The bundled Desktop Node environment now ships as `node` + `npm` plus deferred metadata for the managed CLI packages, so any future Steam-ready packaging work should preserve the same manual-handoff contract unless it also introduces an explicit user-triggered installation flow.
 
 ### Steam Linux startup compatibility
 

@@ -8,7 +8,7 @@ HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, port
 - Development output root: `resources/portable-fixed/toolchain/`
 - Packaged output root: `resources/extra/portable-fixed/toolchain/` on Windows/Linux and `Contents/Resources/extra/portable-fixed/toolchain/` on macOS
 - Required runtime: Node.js 22 plus npm
-- Required managed CLI packages: `openspec`, `skills`, and `omniroute`
+- Deferred managed CLI packages: `openspec`, `skills`, and `omniroute`
 - Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop`, `source=bundled-desktop`, and `defaultEnabledByConsumer`
 
 ## Default Activation Policy
@@ -42,9 +42,15 @@ For a specific macOS architecture:
 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 npm run prepare:bundled-toolchain
 ```
 
-The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `portable-fixed/toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, installs the pinned CLI packages into `portable-fixed/toolchain/npm-global`, creates command shims under `portable-fixed/toolchain/bin`, and writes `portable-fixed/toolchain/toolchain-manifest.json`.
+The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `portable-fixed/toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `portable-fixed/toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec`, `skills`, and `omniroute`.
 
 On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `toolchain/node` directory snapshot before exiting.
+
+Desktop no longer guarantees that the managed CLI packages are preinstalled when the app ships. In this release:
+
+- `node` and `npm` are the only required bundled executables.
+- `toolchain-manifest.json` records pinned package versions, install specs, and `manualActionId` values for the deferred CLI packages.
+- Users or support flows can install those packages later with the bundled npm and then refresh Desktop to re-evaluate availability.
 
 ## Packaging
 
@@ -67,7 +73,7 @@ Run the desktop smoke test after staging or packaging:
 npm run smoke-test:verbose
 ```
 
-Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, `openspec`, `skills`, `omniroute`, and `toolchain-manifest.json` in both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
+Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, and the deferred package metadata contract in `toolchain-manifest.json` for both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
 
 ## Downstream Consumers
 
