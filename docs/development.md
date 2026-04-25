@@ -186,6 +186,70 @@ Run these four checks after touching desktop clipboard behavior:
 - `NODE_ENV`: Set to `development` for development mode
 - `HAGICO_CONFIG_PATH`: Optional path to configuration directory
 - `UPDATE_SOURCE_OVERRIDE`: Override default update source (see above)
+- `HAGICODE_DISABLE_ELECTRON_SANDBOX`: Optional process-level Electron sandbox disable override for restricted launch environments
+
+### Electron Sandbox Disable Override
+
+`HAGICODE_DISABLE_ELECTRON_SANDBOX` is an opt-in startup escape hatch for environments where Chromium sandbox startup fails before HagiCode Desktop becomes usable. When the value is truthy, the main process appends Electron's process-level `no-sandbox` command-line switch during early bootstrap before any managed `BrowserWindow` is created.
+
+Accepted truthy values are case-insensitive and may include surrounding whitespace:
+
+- `1`
+- `true`
+- `yes`
+- `on`
+
+Any missing value or other value keeps the default startup path and does not append sandbox-disabling switches for this feature.
+
+#### Development Launch Examples
+
+Run from `repos/hagicode-desktop`.
+
+```bash
+# Linux/macOS development mode
+HAGICODE_DISABLE_ELECTRON_SANDBOX=1 npm run dev
+
+# Windows PowerShell development mode
+$env:HAGICODE_DISABLE_ELECTRON_SANDBOX = '1'
+npm run dev
+
+# Windows Command Prompt development mode
+set HAGICODE_DISABLE_ELECTRON_SANDBOX=1
+npm run dev
+```
+
+If you want to verify the built app path without packaging first, the same variable works with `npm start` because that command builds all desktop components and then launches Electron:
+
+```bash
+HAGICODE_DISABLE_ELECTRON_SANDBOX=true npm start
+```
+
+#### Packaged Launch Examples
+
+For packaged builds, set the variable in the shell, shortcut, service wrapper, or launcher script before starting the desktop executable:
+
+```bash
+# Linux packaged executable
+HAGICODE_DISABLE_ELECTRON_SANDBOX=yes ./Hagicode\ Desktop
+
+# macOS packaged app bundle
+HAGICODE_DISABLE_ELECTRON_SANDBOX=on open -a "Hagicode Desktop"
+```
+
+```powershell
+# Windows PowerShell packaged executable
+$env:HAGICODE_DISABLE_ELECTRON_SANDBOX = 'true'
+& '.\Hagicode Desktop.exe'
+```
+
+#### Sandbox Terminology
+
+- `HAGICODE_DISABLE_ELECTRON_SANDBOX` is a process-level launch override. It appends Electron/Chromium startup switches before managed windows are created.
+- `webPreferences.sandbox` is a per-window renderer preference. Existing HagiCode Desktop managed windows keep their current renderer sandbox settings; this environment variable does not rewrite them.
+- `app.enableSandbox()` enables sandboxing for renderers globally when used before renderer creation. This override is the opposite kind of emergency compatibility path and does not call `app.enableSandbox()`.
+- `nodeIntegration` controls whether renderer code can access Node.js APIs. This feature does not change any existing `nodeIntegration` value and must not be used as the sandbox toggle.
+
+Disabling Electron sandboxing weakens Chromium's process isolation and security boundaries for the whole desktop process. Use this only as a temporary compatibility workaround in restricted environments where the default launch path fails, and prefer fixing the host environment when possible. Startup logs include either `Electron sandbox override skipped` or a warning that `HAGICODE_DISABLE_ELECTRON_SANDBOX` disabled Electron sandboxing so support diagnostics can distinguish default and override-enabled launches.
 
 ### Example Configuration
 
