@@ -14,7 +14,11 @@ interface DependencyCheckResult {
   description?: string;
   resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
-  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
+  status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
+  manualAction?: {
+    command?: string;
+  };
 }
 
 declare global {
@@ -95,6 +99,14 @@ export default function DependencyCheckCard() {
       );
     }
 
+    if (dep.primaryAction === 'manual-install' || dep.status === 'manual-install-required') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-900/50 text-amber-300 border border-amber-700">
+          {t('dependencyManagement.status.manualInstallRequired')}
+        </span>
+      );
+    }
+
     if (dep.installed && dep.versionMismatch) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-900/50 text-yellow-400 border border-yellow-700">
@@ -111,6 +123,9 @@ export default function DependencyCheckCard() {
   };
 
   const getPrimaryActionLabel = (dep: DependencyCheckResult) => {
+    if (dep.primaryAction === 'manual-install') {
+      return t('dependencyManagement.actions.viewManualSteps');
+    }
     if (dep.primaryAction === 'reinstall-desktop') {
       return t('dependencyManagement.actions.reinstallDesktop');
     }
@@ -218,7 +233,7 @@ export default function DependencyCheckCard() {
               </div>
 
               <div className="flex items-center gap-2 ml-4">
-                {!dep.installed && dep.installCommand && (
+                {!dep.installed && dep.installCommand && dep.primaryAction !== 'manual-install' && (
                   <button
                     onClick={() => handleInstall(dep)}
                     disabled={installing === dep.type}
@@ -239,7 +254,7 @@ export default function DependencyCheckCard() {
                     )}
                   </button>
                 )}
-                {!dep.installed && dep.downloadUrl && (
+                {!dep.installed && dep.downloadUrl && dep.primaryAction !== 'manual-install' && (
                   <a
                     href={dep.downloadUrl}
                     target="_blank"
@@ -259,6 +274,17 @@ export default function DependencyCheckCard() {
               <div className="mt-2 pt-2 border-t border-gray-700/50">
                 <code className="text-xs bg-gray-800 px-2 py-1 rounded text-yellow-400 block">
                   {dep.installCommand}
+                </code>
+              </div>
+            )}
+
+            {dep.manualAction?.command && (
+              <div className="mt-2 pt-2 border-t border-gray-700/50">
+                <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">
+                  {t('dependencyManagement.details.manualCommand')}
+                </p>
+                <code className="text-xs bg-gray-800 px-2 py-1 rounded text-amber-300 block break-all">
+                  {dep.manualAction.command}
                 </code>
               </div>
             )}

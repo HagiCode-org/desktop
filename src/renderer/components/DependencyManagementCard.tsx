@@ -5,6 +5,7 @@ import {
   selectDependencies,
   selectDependenciesLoading,
   selectDependencyInstalling,
+  type DependencyItem,
   DependencyType,
 } from '../store/slices/dependencySlice';
 
@@ -41,11 +42,20 @@ function DependencyManagementCard() {
     window.open(downloadUrl, '_blank');
   };
 
-  const getStatusIcon = (item: any) => {
+  const isManualInstallRequired = (item: DependencyItem) =>
+    item.primaryAction === 'manual-install' || item.status === 'manual-install-required';
+
+  const getStatusIcon = (item: DependencyItem) => {
     if (item.installed && !item.versionMismatch) {
       return (
         <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    } else if (isManualInstallRequired(item)) {
+      return (
+        <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01m-7.938 4h15.876c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 17c-.77 1.333.192 3 1.732 3z" />
         </svg>
       );
     } else if (item.installed && item.versionMismatch) {
@@ -63,11 +73,13 @@ function DependencyManagementCard() {
     }
   };
 
-  const getStatusText = (item: any) => {
+  const getStatusText = (item: DependencyItem) => {
     if (item.installed && !item.versionMismatch) {
       return item.resolutionSource === 'bundled-desktop'
         ? t('dependencyManagement.status.bundled')
         : t('dependencyManagement.status.installed');
+    } else if (isManualInstallRequired(item)) {
+      return t('dependencyManagement.status.manualInstallRequired');
     } else if (item.installed && item.versionMismatch) {
       return t('dependencyManagement.status.versionMismatch');
     } else {
@@ -75,7 +87,10 @@ function DependencyManagementCard() {
     }
   };
 
-  const getPrimaryActionLabel = (item: any) => {
+  const getPrimaryActionLabel = (item: DependencyItem) => {
+    if (item.primaryAction === 'manual-install') {
+      return t('dependencyManagement.actions.viewManualSteps');
+    }
     if (item.primaryAction === 'reinstall-desktop') {
       return t('dependencyManagement.actions.reinstallDesktop');
     }
@@ -85,9 +100,11 @@ function DependencyManagementCard() {
     return t('dependencyManagement.actions.visitWebsite');
   };
 
-  const getStatusColor = (item: any) => {
+  const getStatusColor = (item: DependencyItem) => {
     if (item.installed && !item.versionMismatch) {
       return 'text-green-500';
+    } else if (isManualInstallRequired(item)) {
+      return 'text-amber-500';
     } else if (item.installed && item.versionMismatch) {
       return 'text-yellow-500';
     } else {
@@ -166,9 +183,20 @@ function DependencyManagementCard() {
                 <p className="text-sm text-gray-500 mb-3">{item.description}</p>
               )}
 
+              {item.manualAction?.command && (
+                <div className="mb-3 rounded-lg border border-gray-700 bg-gray-950/60 p-3">
+                  <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">
+                    {t('dependencyManagement.details.manualCommand')}
+                  </p>
+                  <code className="block break-all text-xs text-gray-200">
+                    {item.manualAction.command}
+                  </code>
+                </div>
+              )}
+
               {!item.installed || item.versionMismatch ? (
                 <div className="flex gap-2">
-                  {item.installCommand && (
+                  {item.installCommand && !isManualInstallRequired(item) && (
                     <button
                       onClick={() => handleInstall(item.type)}
                       disabled={installing}
@@ -189,7 +217,7 @@ function DependencyManagementCard() {
                       )}
                     </button>
                   )}
-                  {item.downloadUrl && (
+                  {item.downloadUrl && !isManualInstallRequired(item) && (
                     <button
                       onClick={() => handleDownload(item.downloadUrl)}
                       className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
