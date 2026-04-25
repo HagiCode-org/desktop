@@ -7,7 +7,8 @@ import type {
   PromptResourceResolver,
   PromptRuntimeContext,
 } from './prompt-resource-resolver.js';
-import { getAllCliConfigs } from '../types/agent-cli.js';
+import { desktopAgentCliCatalog } from '../shared/agent-cli-catalog.js';
+import { getDocLink } from '../types/doc-links.js';
 import type {
   PromptGuidanceEntryPoint,
   PromptGuidanceFailure,
@@ -162,13 +163,13 @@ export class PromptGuidanceService {
 
   private getToolContext(): { supportedTools: PromptGuidanceTool[] } {
     return {
-      supportedTools: getAllCliConfigs().map((config) => ({
-        cliType: config.cliType,
-        displayName: config.displayName,
-        description: config.description,
-        commandName: config.commandName,
-        docsUrl: config.docsUrl,
-        providerId: config.providerId,
+      supportedTools: desktopAgentCliCatalog.map((definition) => ({
+        cliType: definition.id,
+        displayName: definition.displayName,
+        description: definition.descriptionKey,
+        commandName: definition.commandName,
+        docsUrl: definition.docsLinkId ? getDocLink(definition.docsLinkId)?.url : undefined,
+        providerId: definition.providerId,
       })),
     };
   }

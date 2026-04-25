@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { AgentCliType, getAllCliConfigs } from '../types/agent-cli.js';
+import { desktopAgentCliCatalog } from '../shared/agent-cli-catalog.js';
+import type { AgentCliDefinition, AgentCliId } from '../types/agent-cli-catalog.js';
 import type {
   SystemDiagnosticAgentCliInfo,
   SystemDiagnosticAgentCliProbe,
@@ -49,10 +50,18 @@ const TOOLCHAIN_PROBES = [
   { command: 'git', displayName: 'Git', versionArgs: [['--version']] },
 ] as const;
 
-const AGENT_CLI_VERSION_ARGS: Record<AgentCliType, string[][]> = {
-  [AgentCliType.ClaudeCode]: [['--version'], ['version'], ['-v']],
-  [AgentCliType.Codex]: [['--version'], ['version'], ['-v']],
-  [AgentCliType.CopilotCli]: [['version'], ['--version'], ['-v']],
+const AGENT_CLI_VERSION_ARGS: Partial<Record<AgentCliId, string[][]>> = {
+  'claude-code': [['--version'], ['version'], ['-v']],
+  codex: [['--version'], ['version'], ['-v']],
+  copilot: [['--version'], ['version'], ['-v']],
+  codebuddy: [['--version'], ['version'], ['-v']],
+  opencode: [['--version'], ['version'], ['-v']],
+  qoder: [['--version'], ['version'], ['-v']],
+  'kiro-cli': [['--version'], ['version'], ['-v']],
+  kimi: [['--version'], ['version'], ['-v']],
+  gemini: [['--version'], ['version'], ['-v']],
+  deepagents: [['--version'], ['version'], ['-v']],
+  hermes: [['--version'], ['version'], ['-v']],
 };
 
 interface CommandExecutionResult {
@@ -433,19 +442,20 @@ export class SystemDiagnosticManager {
     issues: SystemDiagnosticIssue[],
   ): Promise<SystemDiagnosticAgentCliInfo> {
     const probes = await Promise.all(
-      getAllCliConfigs().map((config) => this.probeAgentCli(config, runtimeEnv, issues)),
+      desktopAgentCliCatalog.map((definition) => this.probeAgentCli(definition, runtimeEnv, issues)),
     );
 
     return { probes };
   }
 
   private async probeAgentCli(
-    config: ReturnType<typeof getAllCliConfigs>[number],
+    definition: AgentCliDefinition,
     runtimeEnv: NodeJS.ProcessEnv,
     issues: SystemDiagnosticIssue[],
   ): Promise<SystemDiagnosticAgentCliProbe> {
-    const { cliType, displayName } = config;
-    const commandCandidates = [...config.commandCandidates];
+    const cliType = definition.id;
+    const displayName = definition.displayName;
+    const commandCandidates = [...definition.commandCandidates];
     let resolvedPath: string | null = null;
 
     try {
@@ -479,7 +489,7 @@ export class SystemDiagnosticManager {
     }
 
     try {
-      const version = await this.probeVersion(resolvedPath, AGENT_CLI_VERSION_ARGS[cliType], runtimeEnv);
+      const version = await this.probeVersion(resolvedPath, AGENT_CLI_VERSION_ARGS[cliType] ?? [['--version'], ['version'], ['-v']], runtimeEnv);
       if (!version) {
         const message = `The ${displayName} executable was found, but its version could not be determined.`;
         this.pushIssue(issues, 'agent-cli', cliType, 'error', message);
