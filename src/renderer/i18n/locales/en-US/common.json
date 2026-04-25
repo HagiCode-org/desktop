@@ -169,7 +169,13 @@
     "unavailable": "Unavailable",
     "environment": {
       "title": "Node Environment",
-      "description": "All actions use the Desktop-managed embedded Node/npm toolchain instead of system Node.",
+      "description": "Desktop uses an isolated Node/npm runtime for managed CLIs instead of reusing the system-wide environment.",
+      "rationaleTitle": "Why Desktop ships with a dedicated Node runtime",
+      "rationale": {
+        "fixedRuntime": "A dedicated Node runtime with a fixed version lets Hagicode and its toolchain run against a known-good version, which improves stability across different host machines.",
+        "isolatedConfig": "CLI-related configuration is stored separately from host-wide global configuration so updates, switching, and recovery keep a stable and usable config surface.",
+        "nonIntrusive": "This isolation avoids polluting the host environment, and uninstalling Desktop will not disturb the Node, npm, or config that already existed on the machine."
+      },
       "version": "Version",
       "toolchainRoot": "Toolchain root",
       "globalPrefix": "Global prefix",
@@ -234,9 +240,6 @@
       },
       "gemini": {
         "description": "Google Gemini CLI distributed through the official @google/gemini-cli npm package."
-      },
-      "codeServer": {
-        "description": "code-server browser-based development environment CLI."
       }
     },
     "categories": {
@@ -255,10 +258,21 @@
     },
     "packageTable": {
       "title": "Managed npm packages",
-      "description": "Select Agent CLI and workflow packages to install through hagiscript npm--sync.",
+      "description": "Select Agent CLI and workflow packages to install through hagiscript npm-sync.",
       "tool": "Tool",
       "status": "Status",
       "action": "Action"
+    },
+    "batchLog": {
+      "title": "Batch install log",
+      "description": "Combined output for {{count}} selected packages.",
+      "empty": "Logs will appear here after the batch install starts.",
+      "completed": "Batch install completed.",
+      "status": {
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed"
+      }
     },
     "selection": {
       "selectAll": "Select all eligible packages",

@@ -419,7 +419,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                   transition={{ delay: 0.1 }}
                   className="text-lg font-bold text-foreground"
                 >
-                  Hagico
+                  Hagicode
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0, x: -10 }}

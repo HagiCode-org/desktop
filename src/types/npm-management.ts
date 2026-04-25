@@ -5,7 +5,6 @@ export type ManagedNpmPackageId =
   | 'openspec'
   | 'skills'
   | 'omniroute'
-  | 'code-server'
   | 'claude-code'
   | 'codex'
   | 'github-copilot'
@@ -45,6 +44,7 @@ export interface NpmEnvironmentComponent {
 export interface NpmManagementEnvironmentStatus {
   available: boolean;
   toolchainRoot: string;
+  nodeRuntimeRoot: string;
   npmGlobalPrefix: string;
   npmGlobalBinRoot: string;
   node: NpmEnvironmentComponent;

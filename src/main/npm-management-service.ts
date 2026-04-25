@@ -1,10 +1,12 @@
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import log from 'electron-log';
 import Store from 'electron-store';
+import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
 import { getCommandExecutableName } from './embedded-node-runtime-config.js';
 import { shouldUseShellForCommand } from './toolchain-launch.js';
@@ -35,10 +37,11 @@ interface NpmManagementServiceOptions {
   existsSync?: (targetPath: string) => boolean;
   platform?: NodeJS.Platform;
   settingsStore?: Store<NpmManagementSettingsStoreSchema>;
+  configManager?: ConfigManager;
 }
 
 interface NpmManagementSettingsStoreSchema {
-  mirrorSettings: NpmMirrorSettingsInput;
+  mirrorSettings?: NpmMirrorSettingsInput;
 }
 
 interface CommandResult {
@@ -50,6 +53,15 @@ interface CommandResult {
 interface ManagedNpmPackagePaths {
   packageRoot: string;
   executablePath: string;
+}
+
+interface HagiscriptSyncManifestEntry {
+  version: string;
+  target?: string;
+}
+
+interface HagiscriptSyncManifest {
+  packages: Record<string, HagiscriptSyncManifestEntry>;
 }
 
 type ProgressListener = (event: NpmManagementOperationProgress) => void;
@@ -89,12 +101,17 @@ function normalizeVersionOutput(value: string): string | null {
   return line ? line.replace(/^v/, '') : null;
 }
 
+function looksLikeSemverRange(selector: string): boolean {
+  return /^[vV0-9*<>=~^xX|.\-\s]+$/.test(selector.trim());
+}
+
 export class NpmManagementService {
   private readonly pathManager: PathManager;
   private readonly spawnProcess: typeof spawn;
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
   private readonly settingsStore: Store<NpmManagementSettingsStoreSchema>;
+  private readonly configManager: ConfigManager;
   private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
   private readonly devNodeRuntimeManager: DevNodeRuntimeManager;
   private readonly events = new EventEmitter();
@@ -105,13 +122,11 @@ export class NpmManagementService {
     this.spawnProcess = options.spawnProcess ?? spawn;
     this.existsSync = options.existsSync ?? fsSync.existsSync;
     this.platform = options.platform ?? process.platform;
+    this.configManager = options.configManager ?? new ConfigManager();
     this.bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
     this.devNodeRuntimeManager = new DevNodeRuntimeManager();
     this.settingsStore = options.settingsStore ?? new Store<NpmManagementSettingsStoreSchema>({
       name: 'npm-management',
-      defaults: {
-        mirrorSettings: DEFAULT_MIRROR_SETTINGS,
-      },
     });
   }
 
@@ -135,7 +150,11 @@ export class NpmManagementService {
   }
 
   getMirrorSettings(): NpmMirrorSettings {
-    return this.normalizeMirrorSettings(this.settingsStore.get('mirrorSettings', DEFAULT_MIRROR_SETTINGS));
+    if (!this.settingsStore.has('mirrorSettings')) {
+      return this.getDefaultMirrorSettings();
+    }
+
+    return this.normalizeMirrorSettings(this.settingsStore.get('mirrorSettings'));
   }
 
   async setMirrorSettings(input: NpmMirrorSettingsInput): Promise<NpmManagementSnapshot> {
@@ -208,7 +227,7 @@ export class NpmManagementService {
       }
 
       if (operation === 'sync' && definition.installMode !== 'hagiscript-sync') {
-        return { success: false, error: `${definition.displayName} cannot be synchronized through hagiscript npm--sync.` };
+        return { success: false, error: `${definition.displayName} cannot be synchronized through hagiscript npm-sync.` };
       }
 
       if (!seen.has(definition.id)) {
@@ -224,11 +243,7 @@ export class NpmManagementService {
     activationPolicy?: BundledNodeRuntimePolicyDecision,
     devStatus?: DevNodeRuntimeStatus,
   ): string {
-    if (!activationPolicy?.enabled && devStatus?.available) {
-      return path.join(devStatus.runtimeRoot, 'npm-global');
-    }
-
-    return path.join(this.pathManager.getPortableToolchainRoot(), 'npm-global');
+    return this.getNodeRuntimeRoot(activationPolicy, devStatus);
   }
 
   private getNpmCacheRoot(
@@ -252,19 +267,35 @@ export class NpmManagementService {
       : path.join(npmGlobalPrefix, 'lib', 'node_modules');
   }
 
+  private getManagedPackageInstallPrefix(
+    _definition: ManagedNpmPackageDefinition,
+    environment: NpmManagementEnvironmentStatus,
+  ): string {
+    return environment.nodeRuntimeRoot;
+  }
+
+  private getManagedPackageBinRoot(
+    definition: ManagedNpmPackageDefinition,
+    environment: NpmManagementEnvironmentStatus,
+  ): string {
+    const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
+    return this.platform === 'win32' ? installPrefix : path.join(installPrefix, 'bin');
+  }
+
   private getManagedPackagePaths(
     definition: ManagedNpmPackageDefinition,
     environment: NpmManagementEnvironmentStatus,
   ): ManagedNpmPackagePaths {
+    const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     const packageRoot = path.join(
-      this.getNpmGlobalModulesRoot(environment.npmGlobalPrefix),
+      this.getNpmGlobalModulesRoot(installPrefix),
       ...definition.packageName.split('/').filter(Boolean),
     );
     const executableName = getCommandExecutableName(this.platform, definition.binName);
 
     return {
       packageRoot,
-      executablePath: path.join(environment.npmGlobalBinRoot, executableName),
+      executablePath: path.join(this.getManagedPackageBinRoot(definition, environment), executableName),
     };
   }
 
@@ -285,44 +316,88 @@ export class NpmManagementService {
     };
   }
 
+  private getDefaultMirrorSettings(): NpmMirrorSettings {
+    const language = this.configManager.getAll()?.settings?.language ?? 'zh-CN';
+    return this.normalizeMirrorSettings({
+      enabled: language === 'zh-CN',
+    });
+  }
+
   private buildNpmOperationArgs(
     operation: NpmManagementOperation,
     environment: NpmManagementEnvironmentStatus,
     definition: ManagedNpmPackageDefinition,
     registryUrl?: string | null,
   ): string[] {
+    const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     if (operation === 'install') {
       const registryArgs = registryUrl
         ? ['--registry', registryUrl]
         : [];
-      return ['install', '-g', '--prefix', environment.npmGlobalPrefix, ...registryArgs, definition.installSpec];
+      return ['install', '-g', '--prefix', installPrefix, ...registryArgs, definition.installSpec];
     }
 
-    return ['uninstall', '-g', '--prefix', environment.npmGlobalPrefix, definition.packageName];
+    return ['uninstall', '-g', '--prefix', installPrefix, definition.packageName];
   }
 
   private buildHagiscriptSyncArgs(
     environment: NpmManagementEnvironmentStatus,
-    definitions: readonly ManagedNpmPackageDefinition[],
+    manifestPath: string,
     registryUrl?: string | null,
   ): string[] {
     const args = [
-      'npm--sync',
-      '--npm',
-      environment.npm.executablePath,
-      '--prefix',
-      environment.npmGlobalPrefix,
+      'npm-sync',
+      '--runtime',
+      environment.nodeRuntimeRoot,
+      '--manifest',
+      manifestPath,
     ];
 
     if (registryUrl) {
-      args.push('--registry', registryUrl);
-    }
-
-    for (const definition of definitions) {
-      args.push('--package', definition.installSpec);
+      args.push('--registry-mirror', registryUrl);
     }
 
     return args;
+  }
+
+  private getHagiscriptInstallTarget(definition: ManagedNpmPackageDefinition): string {
+    const installSpec = definition.installSpec.trim();
+    const scopedTargetPrefix = `${definition.packageName}@`;
+    if (installSpec === definition.packageName) {
+      return 'latest';
+    }
+
+    if (installSpec.startsWith(scopedTargetPrefix)) {
+      const selector = installSpec.slice(scopedTargetPrefix.length).trim();
+      return selector || 'latest';
+    }
+
+    return 'latest';
+  }
+
+  private buildHagiscriptSyncManifest(
+    definitions: readonly ManagedNpmPackageDefinition[],
+  ): HagiscriptSyncManifest {
+    const packages = Object.fromEntries(definitions.map((definition) => {
+      const target = this.getHagiscriptInstallTarget(definition);
+      const version = looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*';
+      return [definition.packageName, { version, target }];
+    }));
+
+    return { packages };
+  }
+
+  private async writeHagiscriptSyncManifest(
+    definitions: readonly ManagedNpmPackageDefinition[],
+  ): Promise<{ manifestDirectory: string; manifestPath: string }> {
+    const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-hagiscript-sync-'));
+    const manifestPath = path.join(manifestDirectory, 'manifest.json');
+    await fs.writeFile(
+      manifestPath,
+      JSON.stringify(this.buildHagiscriptSyncManifest(definitions), null, 2),
+      'utf8',
+    );
+    return { manifestDirectory, manifestPath };
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: NpmManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
@@ -411,12 +486,26 @@ export class NpmManagementService {
     return 'npm';
   }
 
+  private getNodeRuntimeRoot(
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): string {
+    if (activationPolicy?.enabled === false && devStatus?.available && devStatus.nodeExecutablePath) {
+      return this.platform === 'win32'
+        ? path.dirname(devStatus.nodeExecutablePath)
+        : path.dirname(path.dirname(devStatus.nodeExecutablePath));
+    }
+
+    return this.pathManager.getPortableNodeRoot();
+  }
+
   private async detectEnvironment(
     activationPolicy?: BundledNodeRuntimePolicyDecision,
   ): Promise<NpmManagementEnvironmentStatus> {
     const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
     const devStatus = effectivePolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify();
     const toolchainRoot = this.pathManager.getPortableToolchainRoot();
+    const nodeRuntimeRoot = this.getNodeRuntimeRoot(effectivePolicy, devStatus);
     const npmGlobalPrefix = this.getNpmGlobalPrefix(effectivePolicy, devStatus);
     const commandEnv = this.buildCommandEnv(effectivePolicy, devStatus);
     const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy, devStatus), ['--version'], commandEnv);
@@ -426,6 +515,7 @@ export class NpmManagementService {
     return {
       available,
       toolchainRoot,
+      nodeRuntimeRoot,
       npmGlobalPrefix,
       npmGlobalBinRoot: this.getNpmGlobalBinRoot(npmGlobalPrefix),
       node,
@@ -571,7 +661,7 @@ export class NpmManagementService {
       };
     }
 
-    // Only hagiscript bootstraps through npm directly; every other install is delegated to hagiscript npm--sync.
+    // Only hagiscript bootstraps through npm directly; every other install is delegated to hagiscript npm-sync.
     if (operation === 'install' && definition.installMode === 'hagiscript-sync') {
       const result = await this.runHagiscriptSync([definition]);
       return {
@@ -721,7 +811,6 @@ export class NpmManagementService {
     }
 
     const mirrorSettings = this.getMirrorSettings();
-    const syncLabel = definitions.map((definition) => definition.displayName).join(', ');
     const mirrorSuffix = mirrorSettings.enabled && mirrorSettings.registryUrl
       ? ` using registry mirror ${mirrorSettings.registryUrl}`
       : '';
@@ -731,11 +820,14 @@ export class NpmManagementService {
 
     let success = false;
     let errorMessage: string | undefined;
+    let manifestDirectory: string | null = null;
     try {
+      const manifest = await this.writeHagiscriptSyncManifest(definitions);
+      manifestDirectory = manifest.manifestDirectory;
       const commandEnv = this.buildCommandEnv(activationPolicy, activationPolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify());
       const result = await this.runCommand(
         hagiscriptExecutablePath,
-        this.buildHagiscriptSyncArgs(environment, definitions, mirrorSettings.registryUrl),
+        this.buildHagiscriptSyncArgs(environment, manifest.manifestPath, mirrorSettings.registryUrl),
         (chunk) => {
           const message = firstMeaningfulLine(chunk);
           if (message) {
@@ -749,10 +841,14 @@ export class NpmManagementService {
 
       success = result.exitCode === 0;
       if (!success) {
-        errorMessage = firstMeaningfulLine(result.stderr || result.stdout) ?? `hagiscript npm--sync exited with code ${result.exitCode}`;
+        errorMessage = firstMeaningfulLine(result.stderr || result.stdout) ?? `hagiscript npm-sync exited with code ${result.exitCode}`;
       }
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (manifestDirectory) {
+        await fs.rm(manifestDirectory, { recursive: true, force: true }).catch(() => undefined);
+      }
     }
 
     for (const definition of definitions) {

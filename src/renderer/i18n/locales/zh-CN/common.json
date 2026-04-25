@@ -169,7 +169,13 @@
     "unavailable": "不可用",
     "environment": {
       "title": "Node 环境",
-      "description": "所有操作都使用 Desktop 管理的内置 Node/npm，不依赖系统 Node。",
+      "description": "Desktop 使用独立的 Node/npm 运行时来承载托管 CLI，而不是直接复用系统环境。",
+      "rationaleTitle": "为什么 Desktop 会带一个独立的 Node 运行时",
+      "rationale": {
+        "fixedRuntime": "独立的 Node 和固定版本号，让我们可以和 Hagicode 的工具链一起按固定版本协同，减少宿主机差异带来的不稳定因素。",
+        "isolatedConfig": "CLI 依赖的配置会单独存储，并与主机范围的全局配置区分开，保证升级、切换和恢复时配置仍然稳定可用。",
+        "nonIntrusive": "这种隔离方式可以避免 Hagicode 污染主机环境；卸载 Desktop 时，也不会影响你原本系统里的 Node、npm 和已有配置。"
+      },
       "version": "版本",
       "toolchainRoot": "工具链目录",
       "globalPrefix": "全局安装目录",
@@ -234,9 +240,6 @@
       },
       "gemini": {
         "description": "通过官方 @google/gemini-cli npm 包分发的 Gemini CLI。"
-      },
-      "codeServer": {
-        "description": "code-server 浏览器开发环境 CLI。"
       }
     },
     "categories": {
@@ -255,10 +258,21 @@
     },
     "packageTable": {
       "title": "托管 npm 包",
-      "description": "选择 Agent CLI 和工作流包，通过 hagiscript npm--sync 安装。",
+      "description": "选择 Agent CLI 和工作流包，通过 hagiscript npm-sync 安装。",
       "tool": "工具",
       "status": "状态",
       "action": "操作"
+    },
+    "batchLog": {
+      "title": "批量安装日志",
+      "description": "{{count}} 个已选包的合并输出。",
+      "empty": "批量安装开始后，日志会显示在这里。",
+      "completed": "批量安装已完成。",
+      "status": {
+        "running": "进行中",
+        "completed": "已完成",
+        "failed": "失败"
+      }
     },
     "selection": {
       "selectAll": "选择全部可操作包",

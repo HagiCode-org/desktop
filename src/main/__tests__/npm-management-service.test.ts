@@ -15,10 +15,13 @@ describe('npm management service contract', () => {
     assert.match(source, /return 'npm'/);
     assert.match(source, /getPortableNodeExecutablePath\(\)/);
     assert.match(source, /getPortableNpmExecutablePath\(\)/);
-    assert.match(source, /path\.join\(devStatus\.runtimeRoot, 'npm-global'\)/);
+    assert.match(source, /getPortableNodeRoot\(\)/);
+    assert.match(source, /devStatus\?\.available && devStatus\.nodeExecutablePath/);
+    assert.match(source, /path\.dirname\(path\.dirname\(devStatus\.nodeExecutablePath\)\)/);
     assert.match(source, /path\.join\(devStatus\.runtimeRoot, 'npm-cache'\)/);
+    assert.match(source, /return this\.getNodeRuntimeRoot\(activationPolicy, devStatus\)/);
     assert.match(source, /getNpmGlobalBinRoot\(npmGlobalPrefix\)/);
-    assert.match(source, /path\.join\(this\.pathManager\.getPortableToolchainRoot\(\), 'npm-global'\)/);
+    assert.match(source, /return this\.pathManager\.getPortableNodeRoot\(\)/);
     assert.match(source, /npm_config_prefix: npmGlobalPrefix/);
     assert.match(source, /NPM_CONFIG_PREFIX: npmGlobalPrefix/);
     assert.match(source, /this\.spawnProcess\(command, args/);
@@ -55,17 +58,19 @@ describe('npm management service contract', () => {
     assert.match(source, /snapshot,/);
   });
 
-  it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm--sync', async () => {
+  it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm-sync manifests', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /definition\.installMode === 'hagiscript-sync'/);
     assert.match(source, /runHagiscriptSync\(\[definition\]\)/);
     assert.match(source, /buildHagiscriptSyncArgs/);
-    assert.match(source, /'npm--sync'/);
-    assert.match(source, /'--npm'/);
-    assert.match(source, /environment\.npm\.executablePath/);
-    assert.match(source, /'--package'/);
-    assert.match(source, /definition\.installSpec/);
+    assert.match(source, /buildHagiscriptSyncManifest/);
+    assert.match(source, /writeHagiscriptSyncManifest/);
+    assert.match(source, /'npm-sync'/);
+    assert.match(source, /'--runtime'/);
+    assert.match(source, /environment\.nodeRuntimeRoot/);
+    assert.match(source, /'--manifest'/);
+    assert.match(source, /'--registry-mirror'/);
   });
 
   it('gates non-hagiscript mutations and validates batch sync package ids before spawning', async () => {
@@ -80,13 +85,19 @@ describe('npm management service contract', () => {
     assert.match(source, /this\.runCommand\(\s*hagiscriptExecutablePath/);
   });
 
-  it('persists npm mirror settings with a disabled default and includes them in snapshots', async () => {
+  it('persists npm mirror settings, derives locale-based defaults before manual changes, and includes them in snapshots', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /NPM_MIRROR_REGISTRY_URL = 'https:\/\/registry\.npmmirror\.com\/'/);
     assert.match(source, /DEFAULT_MIRROR_SETTINGS[\s\S]*enabled: false/);
+    assert.match(source, /configManager\?: ConfigManager/);
+    assert.match(source, /this\.configManager = options\.configManager \?\? new ConfigManager\(\)/);
     assert.match(source, /name: 'npm-management'/);
-    assert.match(source, /mirrorSettings: DEFAULT_MIRROR_SETTINGS/);
+    assert.match(source, /if \(!this\.settingsStore\.has\('mirrorSettings'\)\)/);
+    assert.match(source, /return this\.getDefaultMirrorSettings\(\)/);
+    assert.match(source, /private getDefaultMirrorSettings\(\): NpmMirrorSettings/);
+    assert.match(source, /const language = this\.configManager\.getAll\(\)\?\.settings\?\.language \?\? 'zh-CN'/);
+    assert.match(source, /enabled: language === 'zh-CN'/);
     assert.match(source, /const mirrorSettings = this\.getMirrorSettings\(\)/);
     assert.match(source, /mirrorSettings,/);
     assert.match(source, /setMirrorSettings\(input: NpmMirrorSettingsInput\)/);
@@ -101,8 +112,9 @@ describe('npm management service contract', () => {
     assert.match(source, /'--registry', registryUrl/);
     assert.match(source, /NPM_DEFAULT_REGISTRY_URL = 'https:\/\/registry\.npmjs\.org\/'/);
     assert.match(source, /shouldRetryWithoutMirror/);
-    assert.match(source, /return \['install', '-g', '--prefix', environment\.npmGlobalPrefix, \.\.\.registryArgs, definition\.installSpec\]/);
-    assert.match(source, /return \['uninstall', '-g', '--prefix', environment\.npmGlobalPrefix, definition\.packageName\]/);
+    assert.match(source, /const installPrefix = this\.getManagedPackageInstallPrefix\(definition, environment\)/);
+    assert.match(source, /return \['install', '-g', '--prefix', installPrefix, \.\.\.registryArgs, definition\.installSpec\]/);
+    assert.match(source, /return \['uninstall', '-g', '--prefix', installPrefix, definition\.packageName\]/);
   });
 
   it('reports mirror usage when enabled without changing uninstall registry behavior', async () => {
@@ -120,7 +132,6 @@ describe('npm management service contract', () => {
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'omniroute'/);
-    assert.match(source, /id: 'code-server'/);
     assert.match(source, /id: 'claude-code'/);
     assert.match(source, /id: 'codex'/);
     assert.match(source, /id: 'github-copilot'/);
@@ -132,10 +143,11 @@ describe('npm management service contract', () => {
     assert.match(source, /category: 'agent-cli'/);
     assert.match(source, /installMode: 'embedded-npm'/);
     assert.match(source, /installMode: 'hagiscript-sync'/);
+    assert.match(source, /packageName: '@hagicode\/hagiscript'/);
+    assert.match(source, /installSpec: '@hagicode\/hagiscript'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
-    assert.match(source, /installSpec: 'code-server@latest'/);
     assert.match(source, /installSpec: '@anthropic-ai\/claude-code'/);
     assert.match(source, /installSpec: '@openai\/codex'/);
     assert.match(source, /installSpec: '@github\/copilot'/);
