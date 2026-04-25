@@ -17,6 +17,8 @@ import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
+  NpmManagementBatchSyncRequest,
+  NpmManagementBatchSyncResult,
   NpmEnvironmentComponent,
   NpmManagementEnvironmentStatus,
   NpmMirrorSettings,
@@ -147,6 +149,35 @@ export class NpmManagementService {
     return this.runPackageOperation(packageId, 'install');
   }
 
+  async syncPackages(request: NpmManagementBatchSyncRequest): Promise<NpmManagementBatchSyncResult> {
+    const validation = this.resolvePackageDefinitions(request.packageIds, 'sync');
+    if (!validation.success) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageIds: request.packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: validation.error,
+        snapshot,
+      };
+    }
+
+    const definitions = validation.definitions.filter((definition) => definition.id !== 'hagiscript');
+    if (definitions.length === 0) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: true,
+        packageIds: [],
+        operation: 'sync',
+        statuses: [],
+        snapshot,
+      };
+    }
+
+    return this.runHagiscriptSync(definitions);
+  }
+
   async uninstall(packageId: string): Promise<NpmManagementOperationResult> {
     const definition = findManagedNpmPackage(packageId);
     if (definition?.required) {
@@ -161,6 +192,32 @@ export class NpmManagementService {
     }
 
     return this.runPackageOperation(packageId, 'uninstall');
+  }
+
+  private resolvePackageDefinitions(
+    packageIds: readonly string[],
+    operation: NpmManagementOperation,
+  ): { success: true; definitions: ManagedNpmPackageDefinition[] } | { success: false; error: string } {
+    const definitions: ManagedNpmPackageDefinition[] = [];
+    const seen = new Set<ManagedNpmPackageId>();
+
+    for (const packageId of packageIds) {
+      const definition = findManagedNpmPackage(packageId);
+      if (!definition) {
+        return { success: false, error: `Unknown managed npm package: ${packageId}` };
+      }
+
+      if (operation === 'sync' && definition.installMode !== 'hagiscript-sync') {
+        return { success: false, error: `${definition.displayName} cannot be synchronized through hagiscript npm--sync.` };
+      }
+
+      if (!seen.has(definition.id)) {
+        definitions.push(definition);
+        seen.add(definition.id);
+      }
+    }
+
+    return { success: true, definitions };
   }
 
   private getNpmGlobalPrefix(
@@ -242,6 +299,30 @@ export class NpmManagementService {
     }
 
     return ['uninstall', '-g', '--prefix', environment.npmGlobalPrefix, definition.packageName];
+  }
+
+  private buildHagiscriptSyncArgs(
+    environment: NpmManagementEnvironmentStatus,
+    definitions: readonly ManagedNpmPackageDefinition[],
+    registryUrl?: string | null,
+  ): string[] {
+    const args = [
+      'npm--sync',
+      '--npm',
+      environment.npm.executablePath,
+      '--prefix',
+      environment.npmGlobalPrefix,
+    ];
+
+    if (registryUrl) {
+      args.push('--registry', registryUrl);
+    }
+
+    for (const definition of definitions) {
+      args.push('--package', definition.installSpec);
+    }
+
+    return args;
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: NpmManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
@@ -439,6 +520,30 @@ export class NpmManagementService {
     }
   }
 
+  private findPackageStatus(
+    snapshot: NpmManagementSnapshot,
+    packageId: ManagedNpmPackageId,
+  ): ManagedNpmPackageStatusSnapshot | undefined {
+    return snapshot.packages.find((item) => item.id === packageId);
+  }
+
+  private getHagiscriptStatus(snapshot: NpmManagementSnapshot): ManagedNpmPackageStatusSnapshot | undefined {
+    return this.findPackageStatus(snapshot, 'hagiscript');
+  }
+
+  private validateHagiscriptDependency(snapshot: NpmManagementSnapshot): string | null {
+    const hagiscriptStatus = this.getHagiscriptStatus(snapshot);
+    if (!hagiscriptStatus || hagiscriptStatus.status === 'unknown') {
+      return 'hagiscript status is unknown. Install or refresh hagiscript before managing other npm packages.';
+    }
+
+    if (hagiscriptStatus.status !== 'installed' || !hagiscriptStatus.executablePath) {
+      return 'Install hagiscript before managing other npm packages.';
+    }
+
+    return null;
+  }
+
   private async runPackageOperation(
     packageId: string,
     operation: NpmManagementOperation,
@@ -463,6 +568,19 @@ export class NpmManagementService {
         operation,
         error: `Another npm operation is already active for ${this.activeOperation.packageId}`,
         snapshot,
+      };
+    }
+
+    // Only hagiscript bootstraps through npm directly; every other install is delegated to hagiscript npm--sync.
+    if (operation === 'install' && definition.installMode === 'hagiscript-sync') {
+      const result = await this.runHagiscriptSync([definition]);
+      return {
+        success: result.success,
+        packageId: definition.id,
+        operation: 'install',
+        status: this.findPackageStatus(result.snapshot, definition.id),
+        error: result.error,
+        snapshot: result.snapshot,
       };
     }
 
@@ -540,6 +658,119 @@ export class NpmManagementService {
       packageId: definition.id,
       operation,
       status,
+      error: errorMessage,
+      snapshot,
+    };
+  }
+
+  private async runHagiscriptSync(
+    definitions: readonly ManagedNpmPackageDefinition[],
+  ): Promise<NpmManagementBatchSyncResult> {
+    const packageIds = definitions.map((definition) => definition.id);
+
+    if (this.activeOperation) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: `Another npm operation is already active for ${this.activeOperation.packageId}`,
+        snapshot,
+      };
+    }
+
+    const activationPolicy = await this.getDesktopActivationPolicy();
+    const environment = await this.detectEnvironment(activationPolicy);
+    if (!environment.available) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: environment.error ?? 'Embedded Node/npm environment is unavailable',
+        snapshot,
+      };
+    }
+
+    const dependencySnapshot = await this.getSnapshot();
+    const dependencyError = this.validateHagiscriptDependency(dependencySnapshot);
+    if (dependencyError) {
+      return {
+        success: false,
+        packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: dependencyError,
+        snapshot: dependencySnapshot,
+      };
+    }
+
+    const hagiscriptStatus = this.getHagiscriptStatus(dependencySnapshot);
+    const hagiscriptExecutablePath = hagiscriptStatus?.executablePath;
+    if (!hagiscriptExecutablePath) {
+      return {
+        success: false,
+        packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: 'hagiscript executable path is unavailable. Refresh npm management status and retry.',
+        snapshot: dependencySnapshot,
+      };
+    }
+
+    const mirrorSettings = this.getMirrorSettings();
+    const syncLabel = definitions.map((definition) => definition.displayName).join(', ');
+    const mirrorSuffix = mirrorSettings.enabled && mirrorSettings.registryUrl
+      ? ` using registry mirror ${mirrorSettings.registryUrl}`
+      : '';
+    for (const definition of definitions) {
+      this.emitProgress(definition.id, 'sync', 'started', `sync ${definition.displayName} started${mirrorSuffix}`, 0);
+    }
+
+    let success = false;
+    let errorMessage: string | undefined;
+    try {
+      const commandEnv = this.buildCommandEnv(activationPolicy, activationPolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify());
+      const result = await this.runCommand(
+        hagiscriptExecutablePath,
+        this.buildHagiscriptSyncArgs(environment, definitions, mirrorSettings.registryUrl),
+        (chunk) => {
+          const message = firstMeaningfulLine(chunk);
+          if (message) {
+            for (const definition of definitions) {
+              this.emitProgress(definition.id, 'sync', 'output', message, extractPercent(message));
+            }
+          }
+        },
+        commandEnv,
+      );
+
+      success = result.exitCode === 0;
+      if (!success) {
+        errorMessage = firstMeaningfulLine(result.stderr || result.stdout) ?? `hagiscript npm--sync exited with code ${result.exitCode}`;
+      }
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    for (const definition of definitions) {
+      this.emitProgress(
+        definition.id,
+        'sync',
+        success ? 'completed' : 'failed',
+        success ? `sync ${definition.displayName} completed` : (errorMessage ?? `sync ${definition.displayName} failed`),
+        success ? 100 : undefined,
+      );
+    }
+
+    const snapshot = await this.getSnapshot();
+    return {
+      success,
+      packageIds,
+      operation: 'sync',
+      statuses: snapshot.packages.filter((item) => packageIds.includes(item.id)),
       error: errorMessage,
       snapshot,
     };

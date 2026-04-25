@@ -90,4 +90,12 @@ export function registerNpmManagementHandlers(deps: {
 
     return state.npmManagementService.uninstall(packageId);
   });
+
+  ipcMain.handle(npmManagementChannels.syncPackages, async (_event, request) => {
+    if (!state.npmManagementService) {
+      throw new Error('NpmManagementService is not initialized');
+    }
+
+    return state.npmManagementService.syncPackages(request);
+  });
 }
