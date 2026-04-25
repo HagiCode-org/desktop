@@ -28,6 +28,8 @@ publish:
   provider: github
   owner: HagiCode-org
   repo: desktop
+afterPack: scripts/macos-toolchain-signing-hook.cjs
+afterSign: scripts/macos-toolchain-signing-hook.cjs
 win:
   target:
     - portable
