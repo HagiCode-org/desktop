@@ -23,6 +23,8 @@ import {
   getDevNodeRuntimeCacheRoot,
   getDevNodeRuntimeInstallRoot,
   getDevNodeRuntimeMetadataPath,
+  getDevNodeRuntimeNpmCacheRoot,
+  getDevNodeRuntimeNpmGlobalRoot,
   getDevNodeRuntimeRoot,
 } from './dev-node-runtime-config.js';
 
@@ -34,6 +36,8 @@ const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeCon
 const runtimeRoot = getDevNodeRuntimeRoot(projectRoot);
 const cacheRoot = getDevNodeRuntimeCacheRoot(projectRoot);
 const installRoot = getDevNodeRuntimeInstallRoot(runtimePlatform, runtimeConfig.releaseVersion, projectRoot);
+const npmGlobalRoot = getDevNodeRuntimeNpmGlobalRoot(projectRoot);
+const npmCacheRoot = getDevNodeRuntimeNpmCacheRoot(projectRoot);
 const metadataPath = getDevNodeRuntimeMetadataPath(projectRoot);
 const nodeExecutablePath = path.join(installRoot, getNodeExecutableRelativePath(runtimePlatform));
 const npmExecutablePath = path.join(installRoot, getNpmExecutableRelativePath(runtimePlatform));
@@ -246,7 +250,8 @@ function existingRuntimeIsValid() {
   }
 
   try {
-    validateInstalledRuntime();
+    const toolchain = validateInstalledRuntime();
+    writeMetadata(metadata.archive?.archivePath || path.join(cacheRoot, runtimeTarget.archiveName), toolchain);
     return true;
   } catch {
     return false;
@@ -289,6 +294,8 @@ function extractRuntime(archivePath) {
 }
 
 function writeMetadata(archivePath, toolchain) {
+  fs.mkdirSync(npmGlobalRoot, { recursive: true });
+  fs.mkdirSync(npmCacheRoot, { recursive: true });
   const metadata = buildDevNodeRuntimeMetadata({
     runtimeConfig,
     runtimeTarget,
@@ -297,6 +304,8 @@ function writeMetadata(archivePath, toolchain) {
     nodeExecutablePath,
     npmExecutablePath,
     corepackExecutablePath,
+    npmGlobalRoot,
+    npmCacheRoot,
     archivePath,
     toolchain,
   });

@@ -31,7 +31,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /resolveManagedLaunchContext/);
     assert.match(source, /validateBundledRuntimeForPlatform/);
     assert.match(source, /Starting service with bundled dotnet runtime/);
-    assert.match(source, /resolveDesktopBundledNodeRuntimePolicyFromEnv/);
+    assert.match(source, /getDesktopActivationPolicy\(\)/);
     assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager, \{ activationPolicy \}\)/);
     assert.match(source, /resolveToolchainLaunchPlan\(\{/);
     assert.match(source, /spawn\(launchContext\.dotnetPath, spawnArgs/);

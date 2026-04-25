@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require('node:fs');
-const net = require('node:net');
+import fs from 'node:fs';
+import net from 'node:net';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 250;
@@ -80,4 +80,3 @@ waitForTargets().catch((error) => {
   console.error(`[wait-for-dev-ready] ${error.message}`);
   process.exit(1);
 });
-

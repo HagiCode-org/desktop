@@ -20,6 +20,15 @@ const REQUIRED_ABOUT_ENTRY_IDS = [
 ];
 const OUTPUT_PATH = path.resolve(process.cwd(), 'src/renderer/lib/generated/aboutSnapshot.js');
 
+async function pathExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -179,7 +188,13 @@ async function main() {
   console.log(`[about-snapshot] Wrote ${OUTPUT_PATH}`);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
+  if (await pathExists(OUTPUT_PATH)) {
+    console.warn(`[about-snapshot] ${error.message}`);
+    console.warn(`[about-snapshot] Using existing snapshot at ${OUTPUT_PATH}`);
+    return;
+  }
+
   console.error(`[about-snapshot] ${error.message}`);
   process.exit(1);
 });

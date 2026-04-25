@@ -3,11 +3,11 @@ import type { ManagedNpmPackageDefinition, ManagedNpmPackageId } from '../types/
 export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
   {
     id: 'openspec',
-    packageName: 'openspec',
+    packageName: '@fission-ai/openspec',
     displayName: 'OpenSpec',
     descriptionKey: 'npmManagement.packages.openspec.description',
     binName: 'openspec',
-    installSpec: 'openspec@latest',
+    installSpec: '@fission-ai/openspec@1.3.1',
     required: true,
   },
   {
@@ -16,7 +16,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'Skills',
     descriptionKey: 'npmManagement.packages.skills.description',
     binName: 'skills',
-    installSpec: 'skills@latest',
+    installSpec: 'skills@1.5.1',
     required: true,
   },
   {
@@ -25,7 +25,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'OmniRoute',
     descriptionKey: 'npmManagement.packages.omniroute.description',
     binName: 'omniroute',
-    installSpec: 'omniroute@latest',
+    installSpec: 'omniroute@3.6.9',
     required: true,
   },
   {

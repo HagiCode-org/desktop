@@ -24,7 +24,6 @@ import {
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
-import { resolveDesktopBundledNodeRuntimePolicyFromEnv } from './bundled-node-runtime-policy.js';
 import {
   detectToolchainCommandName,
   resolveToolchainLaunchPlan,
@@ -694,8 +693,7 @@ export class PCodeWebServiceManager {
 
     const toolchainCommandName = detectToolchainCommandName(command);
     if (toolchainCommandName) {
-      const manifest = await new BundledNodeRuntimeManager(this.pathManager).readToolchainManifest();
-      const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(manifest?.defaultEnabledByConsumer);
+      const activationPolicy = await new BundledNodeRuntimeManager(this.pathManager).getDesktopActivationPolicy();
       const launchPlan = resolveToolchainLaunchPlan({
         commandName: toolchainCommandName,
         args,
@@ -1572,8 +1570,7 @@ export class PCodeWebServiceManager {
       try {
         const prepared = await this.prepareServiceEnvironment();
         const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
-        const manifest = await new BundledNodeRuntimeManager(this.pathManager).readToolchainManifest();
-        const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(manifest?.defaultEnabledByConsumer);
+        const activationPolicy = await new BundledNodeRuntimeManager(this.pathManager).getDesktopActivationPolicy();
         const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, { activationPolicy });
         preparedEnv = toolchainEnv.env;
         envMode = prepared.mode;

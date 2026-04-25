@@ -30,6 +30,8 @@ export interface DevNodeRuntimeMetadata {
   nodeExecutablePath: string;
   npmExecutablePath?: string;
   corepackExecutablePath?: string;
+  npmGlobalRoot?: string;
+  npmCacheRoot?: string;
   installedAt: string;
   toolchain?: {
     node?: { available?: boolean; version?: string | null; executablePath?: string };

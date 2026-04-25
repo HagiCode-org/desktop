@@ -7,12 +7,17 @@ const servicePath = path.resolve(process.cwd(), 'src/main/npm-management-service
 const catalogPath = path.resolve(process.cwd(), 'src/shared/npm-managed-packages.ts');
 
 describe('npm management service contract', () => {
-  it('uses portable toolchain paths for environment detection and embedded npm operations', async () => {
+  it('uses activation policy to choose local or portable Node/npm for environment detection and operations', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
+    assert.match(source, /getDesktopActivationPolicy\(\)/);
+    assert.match(source, /process\.env\.npm_node_execpath\?\.trim\(\) \|\| 'node'/);
+    assert.match(source, /return 'npm'/);
     assert.match(source, /getPortableNodeExecutablePath\(\)/);
     assert.match(source, /getPortableNpmExecutablePath\(\)/);
-    assert.match(source, /getPortableNpmGlobalBinRoot\(\)/);
+    assert.match(source, /path\.join\(devStatus\.runtimeRoot, 'npm-global'\)/);
+    assert.match(source, /path\.join\(devStatus\.runtimeRoot, 'npm-cache'\)/);
+    assert.match(source, /getNpmGlobalBinRoot\(npmGlobalPrefix\)/);
     assert.match(source, /path\.join\(this\.pathManager\.getPortableToolchainRoot\(\), 'npm-global'\)/);
     assert.match(source, /npm_config_prefix: npmGlobalPrefix/);
     assert.match(source, /NPM_CONFIG_PREFIX: npmGlobalPrefix/);
@@ -68,7 +73,9 @@ describe('npm management service contract', () => {
 
     assert.match(source, /buildNpmOperationArgs/);
     assert.match(source, /operation === 'install'/);
-    assert.match(source, /'--registry', mirrorSettings\.registryUrl/);
+    assert.match(source, /'--registry', registryUrl/);
+    assert.match(source, /NPM_DEFAULT_REGISTRY_URL = 'https:\/\/registry\.npmjs\.org\/'/);
+    assert.match(source, /shouldRetryWithoutMirror/);
     assert.match(source, /return \['install', '-g', '--prefix', environment\.npmGlobalPrefix, \.\.\.registryArgs, definition\.installSpec\]/);
     assert.match(source, /return \['uninstall', '-g', '--prefix', environment\.npmGlobalPrefix, definition\.packageName\]/);
   });
@@ -88,9 +95,9 @@ describe('npm management service contract', () => {
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'omniroute'/);
     assert.match(source, /id: 'code-server'/);
-    assert.match(source, /installSpec: 'openspec@latest'/);
-    assert.match(source, /installSpec: 'skills@latest'/);
-    assert.match(source, /installSpec: 'omniroute@latest'/);
+    assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
+    assert.match(source, /installSpec: 'skills@1\.5\.1'/);
+    assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
     assert.match(source, /installSpec: 'code-server@latest'/);
     assert.match(source, /required: true/);
   });

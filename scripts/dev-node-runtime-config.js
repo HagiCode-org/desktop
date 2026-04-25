@@ -20,6 +20,14 @@ export function getDevNodeRuntimeInstallRoot(platform, nodeVersion, projectRoot 
   return path.join(getDevNodeRuntimeRoot(projectRoot), 'node', nodeVersion, platform);
 }
 
+export function getDevNodeRuntimeNpmGlobalRoot(projectRoot = process.cwd()) {
+  return path.join(getDevNodeRuntimeRoot(projectRoot), 'npm-global');
+}
+
+export function getDevNodeRuntimeNpmCacheRoot(projectRoot = process.cwd()) {
+  return path.join(getDevNodeRuntimeRoot(projectRoot), 'npm-cache');
+}
+
 export function getDevNodeRuntimeMetadataPath(projectRoot = process.cwd()) {
   return path.join(getDevNodeRuntimeRoot(projectRoot), DEV_NODE_RUNTIME_METADATA_FILE);
 }
@@ -33,6 +41,8 @@ export function buildDevNodeRuntimeMetadata({
   nodeExecutablePath,
   npmExecutablePath,
   corepackExecutablePath,
+  npmGlobalRoot,
+  npmCacheRoot,
   archivePath,
   toolchain,
 }) {
@@ -48,6 +58,8 @@ export function buildDevNodeRuntimeMetadata({
     nodeExecutablePath,
     npmExecutablePath,
     corepackExecutablePath,
+    npmGlobalRoot,
+    npmCacheRoot,
     installedAt: new Date().toISOString(),
     runtimeManifest: {
       schemaVersion: runtimeConfig.schemaVersion,

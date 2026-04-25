@@ -219,15 +219,23 @@ export class BundledNodeRuntimeManager {
     }
   }
 
+  resolveDesktopActivationPolicy(manifest: BundledToolchainManifest | null): BundledNodeRuntimePolicyDecision {
+    return resolveDesktopBundledNodeRuntimePolicyFromEnv(
+      manifest?.defaultEnabledByConsumer ?? this.runtimeConfig.defaultEnabledByConsumer,
+    );
+  }
+
+  async getDesktopActivationPolicy(): Promise<BundledNodeRuntimePolicyDecision> {
+    return this.resolveDesktopActivationPolicy(await this.readToolchainManifest());
+  }
+
   async verify(): Promise<BundledToolchainStatus> {
     const platform = detectNodeRuntimePlatform();
     const toolchainRoot = this.getToolchainRoot();
     const manifestPath = this.getManifestPath();
     const runtimeManifestPath = this.pathManager.getEmbeddedNodeRuntimeManifestPath();
     const manifest = await this.readToolchainManifest();
-    const activationPolicy = resolveDesktopBundledNodeRuntimePolicyFromEnv(
-      manifest?.defaultEnabledByConsumer ?? this.runtimeConfig.defaultEnabledByConsumer,
-    );
+    const activationPolicy = this.resolveDesktopActivationPolicy(manifest);
     const missingEntries: string[] = [];
     const errors: string[] = [];
 

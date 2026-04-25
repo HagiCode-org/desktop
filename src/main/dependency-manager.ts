@@ -350,15 +350,18 @@ export class DependencyManager {
       return null;
     }
 
-    if (componentId === 'node' || componentId === 'npm') {
-      const devRuntimeResult = await this.checkDevNodeRuntimeDependency(dep, componentId);
-      if (devRuntimeResult) {
-        return devRuntimeResult;
-      }
-    }
-
-    const bundledStatus = await this.bundledNodeRuntimeManager.verify();
-    const component = bundledStatus.components[componentId];
+	    if (componentId === 'node' || componentId === 'npm') {
+	      const devRuntimeResult = await this.checkDevNodeRuntimeDependency(dep, componentId);
+	      if (devRuntimeResult) {
+	        return devRuntimeResult;
+	      }
+	    }
+	
+	    const bundledStatus = await this.bundledNodeRuntimeManager.verify();
+	    if ((componentId === 'node' || componentId === 'npm') && !bundledStatus.activeForDesktop) {
+	      return null;
+	    }
+	    const component = bundledStatus.components[componentId];
     const requiredVersion = component.requiredVersion ?? this.formatRequiredVersion(dep.versionConstraints);
 
     if (component.primaryAction === 'manual-install') {

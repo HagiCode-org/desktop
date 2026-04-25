@@ -27,4 +27,12 @@ describe('bundled node runtime manager contract', () => {
     assert.match(source, /readInstalledPackageVersion/);
     assert.match(source, /resolveManagedCommandCandidates/);
   });
+
+  it('uses pinned runtime defaults when the staged toolchain manifest is missing', async () => {
+    const source = await fs.readFile(runtimeManagerPath, 'utf8');
+
+    assert.match(source, /resolveDesktopActivationPolicy\(manifest: BundledToolchainManifest \| null\)/);
+    assert.match(source, /manifest\?\.defaultEnabledByConsumer \?\? this\.runtimeConfig\.defaultEnabledByConsumer/);
+    assert.match(source, /getDesktopActivationPolicy\(\)/);
+  });
 });

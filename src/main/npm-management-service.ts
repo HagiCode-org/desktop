@@ -6,9 +6,12 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import log from 'electron-log';
 import Store from 'electron-store';
 import { PathManager } from './path-manager.js';
-import { getCommandExecutableName, getNpmGlobalModulesRelativePath } from './embedded-node-runtime-config.js';
+import { getCommandExecutableName } from './embedded-node-runtime-config.js';
 import { shouldUseShellForCommand } from './toolchain-launch.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
+import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
+import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
+import { DevNodeRuntimeManager, type DevNodeRuntimeStatus } from './dev-node-runtime-manager.js';
 import { managedNpmPackages, findManagedNpmPackage } from '../shared/npm-managed-packages.js';
 import type {
   ManagedNpmPackageDefinition,
@@ -42,9 +45,15 @@ interface CommandResult {
   stderr: string;
 }
 
+interface ManagedNpmPackagePaths {
+  packageRoot: string;
+  executablePath: string;
+}
+
 type ProgressListener = (event: NpmManagementOperationProgress) => void;
 
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
+export const NPM_DEFAULT_REGISTRY_URL = 'https://registry.npmjs.org/';
 
 const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
@@ -84,6 +93,8 @@ export class NpmManagementService {
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
   private readonly settingsStore: Store<NpmManagementSettingsStoreSchema>;
+  private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
+  private readonly devNodeRuntimeManager: DevNodeRuntimeManager;
   private readonly events = new EventEmitter();
   private activeOperation: NpmManagementOperationProgress | null = null;
 
@@ -92,6 +103,8 @@ export class NpmManagementService {
     this.spawnProcess = options.spawnProcess ?? spawn;
     this.existsSync = options.existsSync ?? fsSync.existsSync;
     this.platform = options.platform ?? process.platform;
+    this.bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
+    this.devNodeRuntimeManager = new DevNodeRuntimeManager();
     this.settingsStore = options.settingsStore ?? new Store<NpmManagementSettingsStoreSchema>({
       name: 'npm-management',
       defaults: {
@@ -107,7 +120,7 @@ export class NpmManagementService {
 
   async getSnapshot(): Promise<NpmManagementSnapshot> {
     const environment = await this.detectEnvironment();
-    const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition)));
+    const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)));
     const mirrorSettings = this.getMirrorSettings();
 
     return {
@@ -150,8 +163,61 @@ export class NpmManagementService {
     return this.runPackageOperation(packageId, 'uninstall');
   }
 
-  private getNpmGlobalPrefix(): string {
+  private getNpmGlobalPrefix(
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): string {
+    if (!activationPolicy?.enabled && devStatus?.available) {
+      return path.join(devStatus.runtimeRoot, 'npm-global');
+    }
+
     return path.join(this.pathManager.getPortableToolchainRoot(), 'npm-global');
+  }
+
+  private getNpmCacheRoot(
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): string {
+    if (!activationPolicy?.enabled && devStatus?.available) {
+      return path.join(devStatus.runtimeRoot, 'npm-cache');
+    }
+
+    return path.join(this.pathManager.getPortableToolchainRoot(), 'npm-cache');
+  }
+
+  private getNpmGlobalBinRoot(npmGlobalPrefix: string): string {
+    return this.platform === 'win32' ? npmGlobalPrefix : path.join(npmGlobalPrefix, 'bin');
+  }
+
+  private getNpmGlobalModulesRoot(npmGlobalPrefix: string): string {
+    return this.platform === 'win32'
+      ? path.join(npmGlobalPrefix, 'node_modules')
+      : path.join(npmGlobalPrefix, 'lib', 'node_modules');
+  }
+
+  private getManagedPackagePaths(
+    definition: ManagedNpmPackageDefinition,
+    environment: NpmManagementEnvironmentStatus,
+  ): ManagedNpmPackagePaths {
+    const packageRoot = path.join(
+      this.getNpmGlobalModulesRoot(environment.npmGlobalPrefix),
+      ...definition.packageName.split('/').filter(Boolean),
+    );
+    const executableName = getCommandExecutableName(this.platform, definition.binName);
+
+    return {
+      packageRoot,
+      executablePath: path.join(environment.npmGlobalBinRoot, executableName),
+    };
+  }
+
+  private async removeManagedPackageInstallTarget(
+    definition: ManagedNpmPackageDefinition,
+    environment: NpmManagementEnvironmentStatus,
+  ): Promise<void> {
+    const paths = this.getManagedPackagePaths(definition, environment);
+    await fs.rm(paths.packageRoot, { recursive: true, force: true });
+    await fs.rm(paths.executablePath, { force: true });
   }
 
   private normalizeMirrorSettings(input?: Partial<NpmMirrorSettingsInput> | null): NpmMirrorSettings {
@@ -166,11 +232,11 @@ export class NpmManagementService {
     operation: NpmManagementOperation,
     environment: NpmManagementEnvironmentStatus,
     definition: ManagedNpmPackageDefinition,
-    mirrorSettings: NpmMirrorSettings,
+    registryUrl?: string | null,
   ): string[] {
     if (operation === 'install') {
-      const registryArgs = mirrorSettings.enabled && mirrorSettings.registryUrl
-        ? ['--registry', mirrorSettings.registryUrl]
+      const registryArgs = registryUrl
+        ? ['--registry', registryUrl]
         : [];
       return ['install', '-g', '--prefix', environment.npmGlobalPrefix, ...registryArgs, definition.installSpec];
     }
@@ -178,37 +244,109 @@ export class NpmManagementService {
     return ['uninstall', '-g', '--prefix', environment.npmGlobalPrefix, definition.packageName];
   }
 
-  private buildCommandEnv(): NodeJS.ProcessEnv {
-    const npmGlobalPrefix = this.getNpmGlobalPrefix();
-    const envResult = injectPortableToolchainEnv(process.env, this.pathManager, {
-      platform: this.platform,
-      existsSync: this.existsSync,
-    });
-    const pathKey = resolvePathEnvKey(envResult.env, this.platform);
+  private shouldRetryWithoutMirror(result: CommandResult, operation: NpmManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
+    return operation === 'install' && Boolean(mirrorSettings.enabled && mirrorSettings.registryUrl) && result.exitCode !== 0;
+  }
 
-    // npm must see Desktop-owned global prefix/cache paths even when the user's PATH contains another Node/npm.
+  private buildOfficialRegistryRetryEnv(environment: NpmManagementEnvironmentStatus, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    const retryCacheRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npm-cache-official');
+
     return {
-      ...envResult.env,
-      [pathKey]: envResult.env[pathKey],
-      npm_config_prefix: npmGlobalPrefix,
-      NPM_CONFIG_PREFIX: npmGlobalPrefix,
-      npm_config_globalconfig: path.join(npmGlobalPrefix, 'etc', 'npmrc'),
-      npm_config_cache: path.join(this.pathManager.getPortableToolchainRoot(), 'npm-cache'),
-      HAGICODE_PORTABLE_TOOLCHAIN_ROOT: this.pathManager.getPortableToolchainRoot(),
+      ...baseEnv,
+      npm_config_cache: retryCacheRoot,
+      npm_config_prefer_online: 'true',
+      npm_config_prefer_offline: 'false',
+      npm_config_offline: 'false',
     };
   }
 
-  private async detectEnvironment(): Promise<NpmManagementEnvironmentStatus> {
+  private buildCommandEnv(
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): NodeJS.ProcessEnv {
+    const npmGlobalPrefix = this.getNpmGlobalPrefix(activationPolicy, devStatus);
+    const envResult = injectPortableToolchainEnv(process.env, this.pathManager, {
+      platform: this.platform,
+      existsSync: this.existsSync,
+      activationPolicy,
+    });
+    const pathKey = resolvePathEnvKey(envResult.env, this.platform);
+    const devNodeBinRoot = !activationPolicy?.enabled && devStatus?.available && devStatus.nodeExecutablePath
+      ? path.dirname(devStatus.nodeExecutablePath)
+      : null;
+    const pathValue = devNodeBinRoot
+      ? [devNodeBinRoot, envResult.env[pathKey]].filter(Boolean).join(this.platform === 'win32' ? ';' : ':')
+      : envResult.env[pathKey];
+    const env: NodeJS.ProcessEnv = {
+      ...envResult.env,
+      [pathKey]: pathValue,
+      npm_config_prefix: npmGlobalPrefix,
+      NPM_CONFIG_PREFIX: npmGlobalPrefix,
+      npm_config_globalconfig: path.join(npmGlobalPrefix, 'etc', 'npmrc'),
+      npm_config_cache: this.getNpmCacheRoot(activationPolicy, devStatus),
+    };
+
+    // npm must see Desktop-owned global prefix/cache paths even when the user's PATH contains another Node/npm.
+    if (envResult.markerInjected) {
+      env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = this.pathManager.getPortableToolchainRoot();
+    } else {
+      delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
+    }
+
+    return env;
+  }
+
+  private async getDesktopActivationPolicy(): Promise<BundledNodeRuntimePolicyDecision> {
+    return this.bundledNodeRuntimeManager.getDesktopActivationPolicy();
+  }
+
+  private getNodeExecutablePath(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): string {
+    if (activationPolicy.enabled) {
+      return this.pathManager.getPortableNodeExecutablePath();
+    }
+
+    if (devStatus?.available && devStatus.nodeExecutablePath) {
+      return devStatus.nodeExecutablePath;
+    }
+
+    return process.env.npm_node_execpath?.trim() || 'node';
+  }
+
+  private getNpmExecutablePath(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    devStatus?: DevNodeRuntimeStatus,
+  ): string {
+    if (activationPolicy.enabled) {
+      return this.pathManager.getPortableNpmExecutablePath();
+    }
+
+    if (devStatus?.available && devStatus.npmExecutablePath) {
+      return devStatus.npmExecutablePath;
+    }
+
+    return 'npm';
+  }
+
+  private async detectEnvironment(
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+  ): Promise<NpmManagementEnvironmentStatus> {
+    const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
+    const devStatus = effectivePolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify();
     const toolchainRoot = this.pathManager.getPortableToolchainRoot();
-    const node = await this.detectExecutableVersion('node', this.pathManager.getPortableNodeExecutablePath(), ['--version']);
-    const npm = await this.detectExecutableVersion('npm', this.pathManager.getPortableNpmExecutablePath(), ['--version']);
+    const npmGlobalPrefix = this.getNpmGlobalPrefix(effectivePolicy, devStatus);
+    const commandEnv = this.buildCommandEnv(effectivePolicy, devStatus);
+    const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy, devStatus), ['--version'], commandEnv);
+    const npm = await this.detectExecutableVersion('npm', this.getNpmExecutablePath(effectivePolicy, devStatus), ['--version'], commandEnv);
     const available = node.status === 'available' && npm.status === 'available';
 
     return {
       available,
       toolchainRoot,
-      npmGlobalPrefix: this.getNpmGlobalPrefix(),
-      npmGlobalBinRoot: this.pathManager.getPortableNpmGlobalBinRoot(),
+      npmGlobalPrefix,
+      npmGlobalBinRoot: this.getNpmGlobalBinRoot(npmGlobalPrefix),
       node,
       npm,
       error: available ? undefined : [node.message, npm.message].filter(Boolean).join('; '),
@@ -219,8 +357,9 @@ export class NpmManagementService {
     label: 'node' | 'npm',
     executablePath: string,
     args: string[],
+    env: NodeJS.ProcessEnv,
   ): Promise<NpmEnvironmentComponent> {
-    if (!this.existsSync(executablePath)) {
+    if (path.isAbsolute(executablePath) && !this.existsSync(executablePath)) {
       return {
         status: 'unavailable',
         executablePath,
@@ -230,7 +369,7 @@ export class NpmManagementService {
     }
 
     try {
-      const result = await this.runCommand(executablePath, args);
+      const result = await this.runCommand(executablePath, args, undefined, env);
       if (result.exitCode !== 0) {
         return {
           status: 'error',
@@ -255,14 +394,11 @@ export class NpmManagementService {
     }
   }
 
-  private async detectPackageStatus(definition: ManagedNpmPackageDefinition): Promise<ManagedNpmPackageStatusSnapshot> {
-    const packageRoot = path.join(
-      this.pathManager.getPortableToolchainRoot(),
-      getNpmGlobalModulesRelativePath(this.platform),
-      ...definition.packageName.split('/').filter(Boolean),
-    );
-    const executableName = getCommandExecutableName(this.platform, definition.binName);
-    const executablePath = path.join(this.pathManager.getPortableNpmGlobalBinRoot(), executableName);
+  private async detectPackageStatus(
+    definition: ManagedNpmPackageDefinition,
+    environment: NpmManagementEnvironmentStatus,
+  ): Promise<ManagedNpmPackageStatusSnapshot> {
+    const { packageRoot, executablePath } = this.getManagedPackagePaths(definition, environment);
 
     try {
       const raw = await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8');
@@ -330,7 +466,8 @@ export class NpmManagementService {
       };
     }
 
-    const environment = await this.detectEnvironment();
+    const activationPolicy = await this.getDesktopActivationPolicy();
+    const environment = await this.detectEnvironment(activationPolicy);
     if (!environment.available) {
       const snapshot = await this.getSnapshot();
       return {
@@ -343,7 +480,7 @@ export class NpmManagementService {
     }
 
     const mirrorSettings = this.getMirrorSettings();
-    const args = this.buildNpmOperationArgs(operation, environment, definition, mirrorSettings);
+    const args = this.buildNpmOperationArgs(operation, environment, definition, mirrorSettings.registryUrl);
 
     const mirrorSuffix = operation === 'install' && mirrorSettings.enabled && mirrorSettings.registryUrl
       ? ` using registry mirror ${mirrorSettings.registryUrl}`
@@ -353,12 +490,32 @@ export class NpmManagementService {
     let success = false;
     let errorMessage: string | undefined;
     try {
-      const result = await this.runCommand(environment.npm.executablePath, args, (chunk) => {
+      const commandEnv = this.buildCommandEnv(activationPolicy, activationPolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify());
+      if (operation === 'install') {
+        await this.removeManagedPackageInstallTarget(definition, environment);
+      }
+      let result = await this.runCommand(environment.npm.executablePath, args, (chunk) => {
         const message = firstMeaningfulLine(chunk);
         if (message) {
           this.emitProgress(definition.id, operation, 'output', message, extractPercent(message));
         }
-      });
+      }, commandEnv);
+
+      if (this.shouldRetryWithoutMirror(result, operation, mirrorSettings)) {
+        this.emitProgress(definition.id, operation, 'output', `Registry mirror failed for ${definition.installSpec}; retrying with ${NPM_DEFAULT_REGISTRY_URL}`, undefined);
+        await this.removeManagedPackageInstallTarget(definition, environment);
+        result = await this.runCommand(
+          environment.npm.executablePath,
+          this.buildNpmOperationArgs(operation, environment, definition, NPM_DEFAULT_REGISTRY_URL),
+          (chunk) => {
+            const message = firstMeaningfulLine(chunk);
+            if (message) {
+              this.emitProgress(definition.id, operation, 'output', message, extractPercent(message));
+            }
+          },
+          this.buildOfficialRegistryRetryEnv(environment, commandEnv),
+        );
+      }
 
       success = result.exitCode === 0;
       if (!success) {
@@ -412,12 +569,13 @@ export class NpmManagementService {
     command: string,
     args: string[],
     onOutput?: (chunk: string) => void,
+    env: NodeJS.ProcessEnv = this.buildCommandEnv(),
   ): Promise<CommandResult> {
     return new Promise((resolve, reject) => {
       let child: ChildProcessWithoutNullStreams;
       try {
         child = this.spawnProcess(command, args, {
-          env: this.buildCommandEnv(),
+          env,
           shell: shouldUseShellForCommand(command, this.platform),
           windowsHide: true,
         });
