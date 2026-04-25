@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
-import { switchView, setViewSwitching, updateWebServiceUrl } from '../slices/viewSlice';
+import { switchView, setViewSwitching, updateWebServiceUrl, type ViewType } from '../slices/viewSlice';
 
 /**
  * Initialize view on app startup
@@ -28,7 +28,7 @@ export const initializeView = createAsyncThunk(
  */
 export const switchViewWithSideEffects = createAsyncThunk(
   'view/switchWithSideEffects',
-  async (targetView: 'system' | 'web' | 'version' | 'diagnostic' | 'settings', { dispatch, getState }) => {
+  async (targetView: ViewType, { dispatch, getState }) => {
     try {
       const state = getState() as RootState;
 

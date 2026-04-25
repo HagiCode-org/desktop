@@ -8,6 +8,7 @@ import SystemManagementView from './components/SystemManagementView';
 import SystemDiagnosticPage from './components/SystemDiagnosticPage';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
+import NpmManagementPage from './components/NpmManagementPage';
 import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
@@ -20,6 +21,7 @@ import { runCriticalStartupInitialization, startBackgroundStartupInitialization 
 import type { RootState, AppDispatch } from './store';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
+import type { NpmManagementBridge } from '../types/npm-management';
 import type {
   DataDirectoryMutationResult,
   DesktopBootstrapSnapshot,
@@ -77,15 +79,16 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'settings') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: () => void) => () => void;
+      npmManagement: NpmManagementBridge;
     };
   }
 }
@@ -122,7 +125,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
   );
 
   useEffect(() => {
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'settings') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'settings') => {
       dispatch(switchView(view));
     });
 
@@ -172,6 +175,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
+          {currentView === 'npm-management' && <NpmManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
         </div>
       </div>
