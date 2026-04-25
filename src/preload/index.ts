@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   AcceptLegalDocumentsPayload,
   LegalDocumentType,
+  OnboardingDependencyInstallResult,
   OnboardingTriggerResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
@@ -374,7 +375,7 @@ interface ElectronAPI {
   skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
   downloadPackage: () => Promise<any>;
   checkOnboardingDependencies: (version: string) => Promise<any>;
-  installDependencies: (version: string) => Promise<any>;
+  installDependencies: (version: string) => Promise<OnboardingDependencyInstallResult>;
   startService: (version: string) => Promise<OnboardingStartServiceResult>;
   recoverServiceStartup: (version: string) => Promise<OnboardingRecoveryResult>;
   completeOnboarding: (version: string) => Promise<{ success: boolean; error?: string }>;

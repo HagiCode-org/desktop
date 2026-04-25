@@ -1294,7 +1294,7 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
   }
 
   try {
-    log.info('[Main] Installing dependencies from manifest for version:', versionId);
+    log.info('[Main] Building manual dependency handoff for version:', versionId);
 
     // Get the installed version
     const installedVersions = await versionManager.getInstalledVersions();
@@ -1324,13 +1324,10 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
     // Set manifest for dependency manager (working directory no longer needed)
     dependencyManager.setManifest(manifest);
 
-    // Check which dependencies are actually missing (now returns all as not installed)
     const checkedDependencies = await dependencyManager.checkFromManifest(allDependencies, null);
 
-    // Filter to only install dependencies that are not installed or have version mismatch
     const missingDependencies = allDependencies.filter((dep) => {
       const checkedDep = checkedDependencies.find(cd => cd.name === dep.name);
-      // Include dependency if it's not installed, has version mismatch, or we couldn't check it
       return !checkedDep || !checkedDep.installed || checkedDep.versionMismatch;
     });
 
@@ -1347,30 +1344,25 @@ ipcMain.handle('dependency:install-from-manifest', async (_, versionId: string) 
       };
     }
 
-    // Install only missing dependencies using dependency manager
-    const result = await dependencyManager.installFromManifest(
-      manifest,
-      missingDependencies,
-      (progress) => {
-        // Send progress update to renderer
-        mainWindow?.webContents.send('dependency:install-progress', progress);
-      }
-    );
-
-    // Refresh version dependency status after installation
-    await versionManager.checkVersionDependencies(versionId);
-
-    // Notify renderer of dependency status change
     const updatedDependencies = await versionManager.checkVersionDependencies(versionId);
     mainWindow?.webContents.send('dependency-status-changed', updatedDependencies);
+    const manualAction = dependencyManager.buildManualActionPlan(checkedDependencies);
+    const error = manualAction?.message ?? dependencyManager.getManualDependencyHandoffMessage();
 
-    // Also notify version updates since dependencies affect version status
-    const allInstalledVersions = await versionManager.getInstalledVersions();
-    mainWindow?.webContents.send('version:installedVersionsChanged', allInstalledVersions);
+    log.info('[Main] Dependency installation request deferred to manual handoff');
 
     return {
-      success: true,
-      result
+      success: false,
+      status: 'manual-action-required',
+      error,
+      manualAction,
+      result: {
+        success: [],
+        failed: missingDependencies.map((dep) => ({
+          dependency: dep.name,
+          error,
+        })),
+      }
     };
   } catch (error) {
     log.error('[Main] Failed to install dependencies from manifest:', error);
@@ -1390,7 +1382,7 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
   }
 
   try {
-    log.info('[Main] Installing single dependency:', dependencyKey, 'for version:', versionId);
+    log.info('[Main] Building manual dependency handoff for single dependency:', dependencyKey, 'for version:', versionId);
 
     // Get the installed version
     const installedVersions = await versionManager.getInstalledVersions();
@@ -1425,42 +1417,27 @@ ipcMain.handle('dependency:install-single', async (_, dependencyKey: string, ver
       };
     }
 
-    // Set manifest for dependency manager (working directory no longer needed)
     dependencyManager.setManifest(manifest);
-
-    // Note: Installation is now handled by AI, installSingleDependency returns false
-    // Send initial progress
     mainWindow?.webContents.send('dependency:command-progress', {
       type: 'command-info',
       checkCommand: targetDep.checkCommand,
       installCommand: targetDep.installCommand,
     });
 
-    // Install using dependency manager (now returns failed - AI handles installation)
-    const installResult = await dependencyManager.installSingleDependency(targetDep, null);
-
-    if (!installResult.success) {
-      const errorMsg = installResult.parsedResult.errorMessage || 'Installation failed';
-      return {
-        success: false,
-        error: errorMsg,
-      };
-    }
-
-    // Refresh version dependency status after installation
-    await versionManager.checkVersionDependencies(versionId);
-
-    // Notify renderer of dependency status change
+    const checkedDependencies = await dependencyManager.checkFromManifest([targetDep], null);
+    const checkedDependency = checkedDependencies[0];
     const updatedDependencies = await versionManager.checkVersionDependencies(versionId);
     mainWindow?.webContents.send('dependency-status-changed', updatedDependencies);
+    const error = checkedDependency?.description ?? dependencyManager.getManualDependencyHandoffMessage();
 
-    // Also notify version updates
-    const allInstalledVersions = await versionManager.getInstalledVersions();
-    mainWindow?.webContents.send('version:installedVersionsChanged', allInstalledVersions);
+    log.info('[Main] Single dependency installation request deferred to manual handoff');
 
     return {
-      success: true,
-      checkCommand: targetDep.checkCommand, // Include check command in response
+      success: false,
+      status: 'manual-action-required',
+      error,
+      manualAction: checkedDependency?.manualAction,
+      checkCommand: targetDep.checkCommand,
     };
   } catch (error) {
     log.error('[Main] Failed to install single dependency:', error);
@@ -1528,27 +1505,11 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
   }
 
   try {
-    log.info('[Main] Executing install commands:', commands.length, 'commands');
-
-    // Determine working directory
-    let workDir = workingDirectory;
-    if (!workDir) {
-      // Use version manager's data directory if no working directory specified
-      const activeVersion = await versionManager?.getActiveVersion();
-      if (activeVersion) {
-        workDir = activeVersion.installedPath;
-      } else {
-        // Fallback to app data directory
-        workDir = app.getPath('userData');
-      }
-    }
-
-    // Note: Command execution has been removed from DependencyManager
-    // Installation is now handled by AI
-    log.info('[Main] Skipping command execution (now handled by AI)');
+    log.info('[Main] Dependency command execution request deferred to manual handoff:', commands.length, 'commands');
     return {
       success: false,
-      error: 'Command execution now handled by AI'
+      status: 'manual-action-required',
+      error: dependencyManager.getManualDependencyHandoffMessage()
     };
   } catch (error) {
     log.error('[Main] Failed to execute install commands:', error);

@@ -92,7 +92,7 @@ export function registerDependencyHandlers(deps: {
     }
 
     try {
-      log.info('[DependencyHandlers] Installing dependencies from manifest for version:', versionId);
+      log.info('[DependencyHandlers] Building manual dependency handoff for version:', versionId);
 
       const installedVersions = await state.versionManager.getInstalledVersions();
       const targetVersion = installedVersions.find(v => v.id === versionId);
@@ -137,25 +137,25 @@ export function registerDependencyHandlers(deps: {
         };
       }
 
-      const result = await state.dependencyManager.installFromManifest(
-        manifest,
-        missingDependencies,
-        (progress) => {
-          state.mainWindow?.webContents.send('dependency:install-progress', progress);
-        }
-      );
-
-      await state.versionManager.checkVersionDependencies(versionId);
-
       const updatedDependencies = await state.versionManager.checkVersionDependencies(versionId);
       state.mainWindow?.webContents.send('dependency-status-changed', updatedDependencies);
+      const manualAction = state.dependencyManager.buildManualActionPlan(checkedDependencies);
+      const error = manualAction?.message ?? state.dependencyManager.getManualDependencyHandoffMessage();
 
-      const allInstalledVersions = await state.versionManager.getInstalledVersions();
-      state.mainWindow?.webContents.send('version:installedVersionsChanged', allInstalledVersions);
+      log.info('[DependencyHandlers] Dependency installation request deferred to manual handoff');
 
       return {
-        success: true,
-        result
+        success: false,
+        status: 'manual-action-required',
+        error,
+        manualAction,
+        result: {
+          success: [],
+          failed: missingDependencies.map((dep) => ({
+            dependency: dep.name,
+            error,
+          })),
+        },
       };
     } catch (error) {
       log.error('[DependencyHandlers] Failed to install dependencies from manifest:', error);
@@ -176,7 +176,7 @@ export function registerDependencyHandlers(deps: {
     }
 
     try {
-      log.info('[DependencyHandlers] Installing single dependency:', dependencyKey, 'for version:', versionId);
+      log.info('[DependencyHandlers] Building manual dependency handoff for single dependency:', dependencyKey, 'for version:', versionId);
 
       const installedVersions = await state.versionManager.getInstalledVersions();
       const targetVersion = installedVersions.find(v => v.id === versionId);
@@ -215,26 +215,19 @@ export function registerDependencyHandlers(deps: {
         installCommand: targetDep.installCommand,
       });
 
-      const installResult = await state.dependencyManager.installSingleDependency(targetDep, null);
-
-      if (!installResult.success) {
-        const errorMsg = installResult.parsedResult.errorMessage || 'Installation failed';
-        return {
-          success: false,
-          error: errorMsg,
-        };
-      }
-
-      await state.versionManager.checkVersionDependencies(versionId);
-
+      const checkedDependencies = await state.dependencyManager.checkFromManifest([targetDep], null);
+      const checkedDependency = checkedDependencies[0];
       const updatedDependencies = await state.versionManager.checkVersionDependencies(versionId);
       state.mainWindow?.webContents.send('dependency-status-changed', updatedDependencies);
+      const error = checkedDependency?.description ?? state.dependencyManager.getManualDependencyHandoffMessage();
 
-      const allInstalledVersions = await state.versionManager.getInstalledVersions();
-      state.mainWindow?.webContents.send('version:installedVersionsChanged', allInstalledVersions);
+      log.info('[DependencyHandlers] Single dependency installation request deferred to manual handoff');
 
       return {
-        success: true,
+        success: false,
+        status: 'manual-action-required',
+        error,
+        manualAction: checkedDependency?.manualAction,
         checkCommand: targetDep.checkCommand,
       };
     } catch (error) {
@@ -304,22 +297,11 @@ export function registerDependencyHandlers(deps: {
     }
 
     try {
-      log.info('[DependencyHandlers] Executing install commands:', commands.length, 'commands');
-
-      let workDir = workingDirectory;
-      if (!workDir) {
-        const activeVersion = await state.versionManager?.getActiveVersion();
-        if (activeVersion) {
-          workDir = activeVersion.installedPath;
-        } else {
-          workDir = app.getPath('userData');
-        }
-      }
-
-      log.info('[DependencyHandlers] Skipping command execution (now handled by AI)');
+      log.info('[DependencyHandlers] Dependency command execution request deferred to manual handoff:', commands.length, 'commands');
       return {
         success: false,
-        error: 'Command execution now handled by AI'
+        status: 'manual-action-required',
+        error: state.dependencyManager.getManualDependencyHandoffMessage(),
       };
     } catch (error) {
       log.error('[DependencyHandlers] Failed to execute install commands:', error);

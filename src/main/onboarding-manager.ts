@@ -20,6 +20,7 @@ import type {
   ServiceLaunchProgress,
   OnboardingStartServiceResult,
   OnboardingRecoveryResult,
+  OnboardingDependencyInstallResult,
   LegalConsentState,
   LegalMetadataCacheState,
   LegalMetadataSource,
@@ -566,7 +567,7 @@ export class OnboardingManager {
   async installDependencies(
     versionId: string,
     onProgress?: (status: DependencyItem[]) => void
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<OnboardingDependencyInstallResult> {
     // Idempotency check: if already installing, ignore duplicate request
     if (this.isInstallingDependencies) {
       log.info('[OnboardingManager] Dependency installation already in progress, ignoring duplicate request');
@@ -574,7 +575,7 @@ export class OnboardingManager {
     }
 
     try {
-      log.info('[OnboardingManager] Installing dependencies for version:', versionId);
+      log.info('[OnboardingManager] Preparing dependency handoff for version:', versionId);
       this.isInstallingDependencies = true;
 
       // Get the installed version
@@ -597,14 +598,17 @@ export class OnboardingManager {
       // Set manifest for dependency manager (working directory no longer needed)
       this.dependencyManager.setManifest(manifest);
 
-      // Get initial status (now all return as not installed)
       const initialStatus = await this.dependencyManager.checkFromManifest(dependencies, null);
 
       // Create dependency items with status
       const dependencyItems: DependencyItem[] = initialStatus.map(dep => ({
         name: dep.name,
         type: dep.type,
-        status: dep.installed ? 'installed' as const : 'pending' as const,
+        status: dep.installed
+          ? 'installed' as const
+          : dep.status === 'manual-install-required'
+            ? 'manual-action-required' as const
+            : 'pending' as const,
         progress: dep.installed ? 100 : 0,
         version: dep.version,
         requiredVersion: dep.requiredVersion,
@@ -613,6 +617,7 @@ export class OnboardingManager {
         resolutionSource: dep.resolutionSource,
         sourcePath: dep.sourcePath,
         primaryAction: dep.primaryAction,
+        manualAction: dep.manualAction,
       }));
 
       // Send initial status
@@ -620,7 +625,6 @@ export class OnboardingManager {
         onProgress(dependencyItems);
       }
 
-      // Filter missing dependencies
       const missingDeps = dependencies.filter(dep => {
         const checkResult = initialStatus.find(r => r.name === dep.name);
         return !checkResult || !checkResult.installed || checkResult.versionMismatch;
@@ -628,81 +632,25 @@ export class OnboardingManager {
 
       log.info('[OnboardingManager] Missing dependencies:', missingDeps.length);
 
-      // Install all missing dependencies in a single batch operation
-      if (missingDeps.length > 0) {
-        // Mark all missing dependencies as installing
-        for (const dep of missingDeps) {
-          const itemIndex = dependencyItems.findIndex(item => item.name === dep.name);
-          if (itemIndex >= 0) {
-            dependencyItems[itemIndex].status = 'installing';
-            dependencyItems[itemIndex].progress = 0;
-          }
-        }
-        if (onProgress) {
-          onProgress([...dependencyItems]);
-        }
-
-        try {
-          // Use batch installation to install all dependencies in one script call
-          const installResult = await this.dependencyManager.installFromManifest(
-            manifest,
-            missingDeps,
-            (progress) => {
-              // Update status based on progress callback
-              const itemIndex = dependencyItems.findIndex(item => item.name === progress.dependency);
-              if (itemIndex >= 0) {
-                if (progress.status === 'installing') {
-                  dependencyItems[itemIndex].status = 'installing';
-                  dependencyItems[itemIndex].progress = 50;
-                } else if (progress.status === 'success') {
-                  dependencyItems[itemIndex].status = 'installed';
-                  dependencyItems[itemIndex].progress = 100;
-                } else if (progress.status === 'error') {
-                  dependencyItems[itemIndex].status = 'error';
-                  dependencyItems[itemIndex].progress = 0;
-                }
-                if (onProgress) {
-                  onProgress([...dependencyItems]);
-                }
-              }
-            }
-          );
-
-          // Handle any failed installations
-          if (installResult.failed.length > 0) {
-            for (const failed of installResult.failed) {
-              const itemIndex = dependencyItems.findIndex(item => item.name === failed.dependency);
-              if (itemIndex >= 0) {
-                dependencyItems[itemIndex].status = 'error';
-                dependencyItems[itemIndex].error = failed.error;
-              }
-              log.error('[OnboardingManager] Failed to install dependency:', failed.dependency, failed.error);
-            }
-            if (onProgress) {
-              onProgress([...dependencyItems]);
-            }
-          }
-
-          log.info('[OnboardingManager] Batch installation completed:', installResult.success.length, 'success,', installResult.failed.length, 'failed');
-        } catch (error) {
-          // Mark all missing dependencies as error on failure
-          for (const dep of missingDeps) {
-            const itemIndex = dependencyItems.findIndex(item => item.name === dep.name);
-            if (itemIndex >= 0) {
-              dependencyItems[itemIndex].status = 'error';
-              dependencyItems[itemIndex].error = error instanceof Error ? error.message : String(error);
-            }
-          }
-          if (onProgress) {
-            onProgress([...dependencyItems]);
-          }
-          log.error('[OnboardingManager] Batch installation failed:', error);
-        }
+      if (missingDeps.length === 0) {
+        log.info('[OnboardingManager] Dependencies already satisfied; no onboarding handoff required');
+        this.isInstallingDependencies = false;
+        return { success: true };
       }
 
-      log.info('[OnboardingManager] Dependencies installation completed');
+      const manualAction = this.dependencyManager.buildManualActionPlan(initialStatus) ?? {
+        status: 'manual-action-required' as const,
+        message: 'Onboarding no longer executes dependency installers automatically. Review the dependency status, complete the required manual steps, and refresh when finished.',
+        packages: [],
+      };
+
+      log.info('[OnboardingManager] Dependency installation deferred to manual handoff');
       this.isInstallingDependencies = false;
-      return { success: true };
+      return {
+        success: false,
+        status: 'manual-action-required',
+        manualAction,
+      };
     } catch (error) {
       log.error('[OnboardingManager] Error installing dependencies:', error);
       this.isInstallingDependencies = false;
@@ -763,7 +711,11 @@ export class OnboardingManager {
       const dependencyItems: DependencyItem[] = status.map(dep => ({
         name: dep.name,
         type: dep.type,
-        status: dep.installed ? 'installed' as const : 'pending' as const,
+        status: dep.installed
+          ? 'installed' as const
+          : dep.status === 'manual-install-required'
+            ? 'manual-action-required' as const
+            : 'pending' as const,
         progress: dep.installed ? 100 : 0,
         version: dep.version,
         requiredVersion: dep.requiredVersion,
@@ -772,6 +724,7 @@ export class OnboardingManager {
         resolutionSource: dep.resolutionSource,
         sourcePath: dep.sourcePath,
         primaryAction: dep.primaryAction,
+        manualAction: dep.manualAction,
       }));
 
       // Send status
