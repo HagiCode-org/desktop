@@ -15,7 +15,7 @@ import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
-import type { ManagedNpmPackageId, NpmManagementBridge } from '../types/npm-management.js';
+import type { ManagedNpmPackageId, NpmManagementBatchSyncRequest, NpmManagementBridge } from '../types/npm-management.js';
 import type { NpmMirrorSettingsInput } from '../types/npm-management.js';
 import { npmManagementChannels } from '../types/npm-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
@@ -749,6 +749,7 @@ const electronAPI: ElectronAPI = {
     setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(npmManagementChannels.setMirrorSettings, settings),
     install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.install, packageId),
     uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.uninstall, packageId),
+    syncPackages: (request: NpmManagementBatchSyncRequest) => ipcRenderer.invoke(npmManagementChannels.syncPackages, request),
     onProgress: (callback) => {
       const listener = (_event, progress) => {
         callback(progress);
