@@ -43,11 +43,13 @@ export default function NpmManagementPage() {
     openspec: undefined,
     skills: undefined,
     omniroute: undefined,
+    'code-server': undefined,
   });
   const [operationError, setOperationError] = useState<Record<ManagedNpmPackageId, string | undefined>>({
     openspec: undefined,
     skills: undefined,
     omniroute: undefined,
+    'code-server': undefined,
   });
   const [isPending, startTransition] = useTransition();
 
@@ -256,7 +258,7 @@ export default function NpmManagementPage() {
                       <Button
                         variant="outline"
                         onClick={() => void runOperation(item.id, 'uninstall')}
-                        disabled={disabled || item.status !== 'installed'}
+                        disabled={disabled || item.status !== 'installed' || item.definition.required === true}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         {t('npmManagement.actions.uninstall')}
@@ -272,4 +274,3 @@ export default function NpmManagementPage() {
     </div>
   );
 }
-
