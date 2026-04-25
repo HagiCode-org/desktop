@@ -7,8 +7,10 @@ import {
   TOOLCHAIN_MANIFEST_FILE,
   detectNodeRuntimePlatform,
   getCommandExecutableName,
+  getGovernedNodeRuntimeMajor,
   getNpmGlobalBinRelativePath,
   getNpmGlobalModulesRelativePath,
+  nodeVersionMatchesGovernedMajor,
   readPinnedNodeRuntimeConfig,
   resolvePinnedNodeRuntimeTarget,
   type EmbeddedNodeRuntimeConsumerDefaultMatrix,
@@ -248,8 +250,8 @@ export class BundledNodeRuntimeManager {
       if (manifest.layoutVersion !== this.runtimeConfig.layoutVersion) {
         errors.push(`layout version expected ${this.runtimeConfig.layoutVersion} but found ${manifest.layoutVersion || 'missing'}`);
       }
-      if (manifest.node?.version !== this.runtimeConfig.releaseVersion) {
-        errors.push(`Node version expected ${this.runtimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
+      if (!nodeVersionMatchesGovernedMajor(manifest.node?.version, this.runtimeConfig)) {
+        errors.push(`Node major version expected ${getGovernedNodeRuntimeMajor(this.runtimeConfig)} but found ${manifest.node?.version || 'missing'}`);
       }
       if (target && manifest.node?.checksumSha256 !== target.checksumSha256) {
         errors.push('Node archive checksum metadata does not match the pinned runtime manifest');
@@ -321,7 +323,7 @@ export class BundledNodeRuntimeManager {
       componentId,
       installed,
       version: manifest?.node?.version,
-      requiredVersion: this.runtimeConfig.releaseVersion,
+      requiredVersion: getGovernedNodeRuntimeMajor(this.runtimeConfig),
       resolutionSource: 'bundled-desktop',
       sourcePath: toolchainRoot,
       executablePath,

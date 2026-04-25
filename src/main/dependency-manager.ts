@@ -14,6 +14,7 @@ import {
   type BundledToolchainComponentId,
   type BundledToolchainComponentStatus,
 } from './bundled-node-runtime-manager.js';
+import { DevNodeRuntimeManager } from './dev-node-runtime-manager.js';
 import { satisfies } from 'semver';
 
 /**
@@ -64,7 +65,7 @@ export interface DependencyCheckResult {
   downloadUrl?: string;
   description?: string;
   isChecking?: boolean;  // True while check is in progress
-  resolutionSource?: 'bundled-desktop' | 'system';
+  resolutionSource?: 'bundled-desktop' | 'bundled-dev' | 'system';
   sourcePath?: string;
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
@@ -78,6 +79,7 @@ export class DependencyManager {
   private currentManifest: Manifest | null = null;
   private readonly pathManager = PathManager.getInstance();
   private readonly bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
+  private readonly devNodeRuntimeManager = new DevNodeRuntimeManager();
   private static readonly DESKTOP_DOWNLOAD_URL = 'https://hagicode.com/desktop/#download';
   private static readonly MANUAL_DEPENDENCY_HANDOFF_MESSAGE =
     'Desktop no longer executes dependency installers automatically. Review the dependency status, run the required manual steps outside Desktop, and refresh when finished.';
@@ -348,6 +350,13 @@ export class DependencyManager {
       return null;
     }
 
+    if (componentId === 'node' || componentId === 'npm') {
+      const devRuntimeResult = await this.checkDevNodeRuntimeDependency(dep, componentId);
+      if (devRuntimeResult) {
+        return devRuntimeResult;
+      }
+    }
+
     const bundledStatus = await this.bundledNodeRuntimeManager.verify();
     const component = bundledStatus.components[componentId];
     const requiredVersion = component.requiredVersion ?? this.formatRequiredVersion(dep.versionConstraints);
@@ -407,6 +416,38 @@ export class DependencyManager {
       sourcePath: component.executablePath ?? component.sourcePath,
       primaryAction: component.primaryAction === 'update-desktop' ? 'update-desktop' : 'reinstall-desktop',
       status: 'missing',
+    };
+  }
+
+  private async checkDevNodeRuntimeDependency(
+    dep: ParsedDependency,
+    componentId: Extract<BundledToolchainComponentId, 'node' | 'npm'>,
+  ): Promise<DependencyCheckResult | null> {
+    const devStatus = await this.devNodeRuntimeManager.verify();
+    if (!devStatus.available) {
+      return null;
+    }
+
+    const version = componentId === 'node' ? devStatus.nodeVersion : devStatus.npmVersion;
+    const sourcePath = componentId === 'node' ? devStatus.nodeExecutablePath : devStatus.npmExecutablePath;
+    const requiredVersion = this.formatRequiredVersion(dep.versionConstraints);
+    const versionMismatch = !this.isBundledToolchainVersionCompatible(componentId, version, dep);
+
+    return {
+      key: dep.key,
+      name: dep.name,
+      type: this.mapDependencyType(dep.key, dep.type),
+      installed: !versionMismatch,
+      version,
+      requiredVersion,
+      versionMismatch,
+      description: versionMismatch
+        ? `Development bundled ${componentId} version does not satisfy ${requiredVersion}. Run npm run install:dev-node-runtime from repos/hagicode-desktop to refresh the managed runtime.`
+        : `Development bundled Node runtime at ${devStatus.installRoot}`,
+      resolutionSource: 'bundled-dev',
+      sourcePath,
+      primaryAction: versionMismatch ? 'update-desktop' : undefined,
+      status: versionMismatch ? 'version-mismatch' : 'installed',
     };
   }
 
