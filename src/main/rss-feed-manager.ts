@@ -1,12 +1,12 @@
 import Parser from 'rss-parser';
 import Store from 'electron-store';
-import axios from 'axios';
 import log from 'electron-log';
 import type {
   RSSFeedItem,
   RSSFeedCache,
   RSSFeedConfig
 } from './types/rss-types.js';
+import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 
 /**
  * RSS Feed Manager
@@ -18,8 +18,9 @@ export class RSSFeedManager {
   private store: Store;
   private config: Required<RSSFeedConfig>;
   private refreshTimer: NodeJS.Timeout | null = null;
+  private httpClient: DesktopHttpClient;
 
-  private constructor(config: RSSFeedConfig, store?: Store) {
+  private constructor(config: RSSFeedConfig, store?: Store, httpClient: DesktopHttpClient = desktopHttpClient) {
     this.config = {
       feedUrl: config.feedUrl,
       refreshInterval: config.refreshInterval ?? 24 * 60 * 60 * 1000, // 24 hours
@@ -37,6 +38,7 @@ export class RSSFeedManager {
 
     // Use provided store or create new one
     this.store = store ?? new Store();
+    this.httpClient = httpClient;
 
     log.info('[RSSFeedManager] Initialized with config:', {
       feedUrl: this.config.feedUrl,
@@ -49,12 +51,12 @@ export class RSSFeedManager {
   /**
    * Get singleton instance
    */
-  static getInstance(config?: RSSFeedConfig, store?: Store): RSSFeedManager {
+  static getInstance(config?: RSSFeedConfig, store?: Store, httpClient?: DesktopHttpClient): RSSFeedManager {
     if (!RSSFeedManager.instance) {
       if (!config) {
         throw new Error('[RSSFeedManager] Config required for first initialization');
       }
-      RSSFeedManager.instance = new RSSFeedManager(config, store);
+      RSSFeedManager.instance = new RSSFeedManager(config, store, httpClient);
     }
     return RSSFeedManager.instance;
   }
@@ -65,8 +67,8 @@ export class RSSFeedManager {
   private async fetchRSSFeed(): Promise<string> {
     log.info('[RSSFeedManager] Fetching RSS feed from:', this.config.feedUrl);
 
-    const response = await axios.get(this.config.feedUrl, {
-      timeout: 15000,
+    const response = await this.httpClient.requestText(this.config.feedUrl, {
+      timeoutMs: 15000,
       headers: {
         'Accept': 'application/rss+xml, application/xml, text/xml',
       },

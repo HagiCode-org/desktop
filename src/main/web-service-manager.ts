@@ -23,6 +23,7 @@ import {
 } from './system-vault-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
+import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 import { resolveDesktopBundledNodeRuntimePolicyFromEnv } from './bundled-node-runtime-policy.js';
 import {
   detectToolchainCommandName,
@@ -108,6 +109,7 @@ interface PreparedServiceEnvironment {
 
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
+  httpClient?: DesktopHttpClient;
 }
 
 export interface StartupFailureInfo {
@@ -140,6 +142,7 @@ export class PCodeWebServiceManager {
   private process: ChildProcess | null = null;
   private config: WebServiceConfig;
   private readonly configManager: ConfigManager | null;
+  private readonly httpClient: DesktopHttpClient;
   private status: ProcessStatus = 'stopped';
   private startTime: number | null = null;
   private restartCount: number = 0;
@@ -171,6 +174,7 @@ export class PCodeWebServiceManager {
       host: coerceListenHost(config.host),
     };
     this.configManager = deps.configManager ?? null;
+    this.httpClient = deps.httpClient ?? desktopHttpClient;
     this.pathManager = PathManager.getInstance();
 
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
@@ -1182,14 +1186,13 @@ export class PCodeWebServiceManager {
    * Perform HTTP health check on the web service
    */
   private async performHealthCheck(port: number = this.config.port): Promise<boolean> {
-    const axios = await import('axios');
     const urls = this.buildHealthCheckUrls(port);
     let lastErrorMessage = 'No health check endpoint responded';
 
     for (const url of urls) {
       try {
-        const response = await axios.default.get(url, {
-          timeout: 5000,
+        const response = await this.httpClient.requestText(url, {
+          timeoutMs: 5000,
           validateStatus: () => true,
         });
         if (response.status >= 200 && response.status < 300) {
@@ -1199,7 +1202,7 @@ export class PCodeWebServiceManager {
         lastErrorMessage = `HTTP ${response.status}`;
         log.debug('[WebService] Health endpoint not ready:', url, 'status:', response.status);
       } catch (error) {
-        if (axios.default.isAxiosError(error)) {
+        if (error instanceof Error) {
           lastErrorMessage = error.message;
           log.debug('[WebService] Health endpoint request failed:', url, 'error:', error.message);
         } else {

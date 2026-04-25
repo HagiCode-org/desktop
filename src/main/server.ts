@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import { desktopHttpClient } from './http-client.js';
 
 export type ServerStatus = 'running' | 'stopped' | 'error';
 
@@ -15,27 +15,28 @@ export interface ServerInfo {
   startTime?: string;
 }
 
+interface ServerStatusResponse {
+  running?: boolean;
+  version?: string;
+  uptime?: number;
+  startTime?: string;
+}
+
 export class HagicoServerClient {
-  private client: AxiosInstance;
   private config: ServerConfig;
 
   constructor(config: ServerConfig) {
     this.config = config;
-    this.client = axios.create({
-      baseURL: `http://${config.host}:${config.port}`,
-      timeout: 5000,
-      headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
-    });
   }
 
   async getStatus(): Promise<ServerInfo> {
     try {
-      const response = await this.client.get('/api/status');
+      const response = await this.get<ServerStatusResponse>('/api/status');
       return {
-        status: response.data.running ? 'running' : 'stopped',
-        version: response.data.version || 'unknown',
-        uptime: response.data.uptime || 0,
-        startTime: response.data.startTime,
+        status: response.running ? 'running' : 'stopped',
+        version: response.version || 'unknown',
+        uptime: response.uptime || 0,
+        startTime: response.startTime,
       };
     } catch (error) {
       return {
@@ -48,7 +49,7 @@ export class HagicoServerClient {
 
   async startServer(): Promise<boolean> {
     try {
-      await this.client.post('/api/server/start');
+      await this.post('/api/server/start');
       return true;
     } catch (error) {
       console.error('Failed to start server:', error);
@@ -58,7 +59,7 @@ export class HagicoServerClient {
 
   async stopServer(): Promise<boolean> {
     try {
-      await this.client.post('/api/server/stop');
+      await this.post('/api/server/stop');
       return true;
     } catch (error) {
       console.error('Failed to stop server:', error);
@@ -68,7 +69,7 @@ export class HagicoServerClient {
 
   async restartServer(): Promise<boolean> {
     try {
-      await this.client.post('/api/server/restart');
+      await this.post('/api/server/restart');
       return true;
     } catch (error) {
       console.error('Failed to restart server:', error);
@@ -78,19 +79,39 @@ export class HagicoServerClient {
 
   updateConfig(config: Partial<ServerConfig>): void {
     this.config = { ...this.config, ...config };
-    this.client = axios.create({
-      baseURL: `http://${this.config.host}:${this.config.port}`,
-      timeout: 5000,
-      headers: this.config.apiKey ? { 'X-API-Key': this.config.apiKey } : {},
-    });
   }
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.client.get('/api/health');
+      await this.get('/api/health');
       return true;
     } catch {
       return false;
     }
   }
+
+  private buildUrl(path: string): string {
+    return `http://${this.config.host}:${this.config.port}${path}`;
+  }
+
+  private buildHeaders(): Record<string, string> {
+    return this.config.apiKey ? { 'X-API-Key': this.config.apiKey } : {};
+  }
+
+  private async get<T>(path: string): Promise<T> {
+    const response = await desktopHttpClient.requestJson<T>(this.buildUrl(path), {
+      timeoutMs: 5000,
+      headers: this.buildHeaders(),
+    });
+    return response.data;
+  }
+
+  private async post(path: string): Promise<void> {
+    await desktopHttpClient.requestText(this.buildUrl(path), {
+      method: 'POST',
+      timeoutMs: 5000,
+      headers: this.buildHeaders(),
+    });
+  }
 }
+

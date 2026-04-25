@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import axios from 'axios';
 import { app, BrowserWindow, shell } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
@@ -12,6 +11,7 @@ import {
 import { PCodeWebServiceManager } from './web-service-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
+import { desktopHttpClient } from './http-client.js';
 import type {
   AcceptLegalDocumentsPayload,
   StoredOnboardingState,
@@ -550,9 +550,8 @@ export class OnboardingManager {
   }
 
   private static async fetchPublishedLegalMetadata(url: string): Promise<PublishedLegalDocumentsPayload> {
-    const response = await axios.get<PublishedLegalDocumentsPayload>(url, {
-      timeout: 5000,
-      responseType: 'json',
+    const response = await desktopHttpClient.requestJson<PublishedLegalDocumentsPayload>(url, {
+      timeoutMs: 5000,
     });
 
     return response.data;
