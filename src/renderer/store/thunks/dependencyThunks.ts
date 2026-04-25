@@ -15,6 +15,24 @@ import {
 } from '../slices/dependencySlice';
 import { setDependencyCheckResults } from '../slices/onboardingSlice';
 
+interface DependencyManualActionPlan {
+  message: string;
+  packages: Array<{
+    command?: string;
+  }>;
+}
+
+interface DependencyInstallRequestResult {
+  success: boolean;
+  status?: 'manual-action-required';
+  error?: string;
+  manualAction?: DependencyManualActionPlan | DependencyItem['manualAction'];
+  result?: {
+    success: string[];
+    failed: Array<{ dependency: string; error: string }>;
+  };
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -105,6 +123,9 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
           requiredVersion: dep.requiredVersion,
           versionMismatch: false,
           description: dep.description,
+          primaryAction: dep.primaryAction,
+          status: dep.status,
+          manualAction: dep.manualAction,
         }))));
       }
 
@@ -134,6 +155,9 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
           versionMismatch: dep.versionMismatch,
           description: dep.description,
           isChecking: false, // Check complete
+          primaryAction: dep.primaryAction,
+          status: dep.status,
+          manualAction: dep.manualAction,
         }))));
       }
 
@@ -174,8 +198,24 @@ export const installFromManifest = createAsyncThunk(
       dispatch(startInstall(depsToInstall.length));
 
       // Execute installation
-      const result: { success: boolean; result?: { success: string[]; failed: Array<{ dependency: string; error: string }> } } =
+      const result: DependencyInstallRequestResult =
         await window.electronAPI.installFromManifest(versionId);
+
+      if (!result.success && result.status === 'manual-action-required') {
+        dispatch(completeInstall({
+          status: 'error',
+          errors: result.result?.failed ?? depsToInstall.map((dep) => ({
+            dependency: dep.name,
+            error: result.error ?? 'Manual action required',
+          })),
+        }));
+
+        toast.error('自动安装已禁用', {
+          description: result.error || '请按提示在 Desktop 外部完成手动安装后再刷新状态。',
+        });
+
+        return false;
+      }
 
       if (result.success) {
         dispatch(completeInstall({
@@ -247,16 +287,16 @@ export const installSingleDependency = createAsyncThunk(
   async (params: { dependencyKey: string; versionId: string }, { dispatch }) => {
     try {
       // Directly call IPC without progress dialog
-      const result: { success: boolean; error?: string } = await window.electronAPI.installSingleDependency(
+      const result: DependencyInstallRequestResult = await window.electronAPI.installSingleDependency(
         params.dependencyKey,
         params.versionId
       );
 
       if (!result.success) {
-        toast.error('依赖安装失败', {
+        toast.error(result.status === 'manual-action-required' ? '自动安装已禁用' : '依赖安装失败', {
           description: result.error || `${params.dependencyKey} 安装失败`,
         });
-        return { success: false };
+        return { success: false, status: result.status };
       }
 
       toast.success('依赖安装成功', {

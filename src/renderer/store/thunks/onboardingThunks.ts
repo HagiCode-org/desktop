@@ -5,6 +5,7 @@ import type {
   OnboardingMode,
   OnboardingTriggerResult,
   OnboardingRecoveryResult,
+  OnboardingDependencyInstallResult,
   OnboardingStartServiceResult,
   ResolvedLegalDocumentsPayload,
 } from '../../../types/onboarding';
@@ -22,7 +23,7 @@ declare global {
       skipOnboarding: () => Promise<{ success: boolean; error?: string }>;
       downloadPackage: () => Promise<{ success: boolean; error?: string; version?: string }>;
       checkOnboardingDependencies: (versionId: string) => Promise<unknown>;
-      installDependencies: (versionId: string) => Promise<unknown>;
+      installDependencies: (versionId: string) => Promise<OnboardingDependencyInstallResult>;
       startService: (versionId: string) => Promise<OnboardingStartServiceResult>;
       recoverServiceStartup: (versionId: string) => Promise<OnboardingRecoveryResult>;
       completeOnboarding: (versionId: string) => Promise<{ success: boolean; error?: string }>;

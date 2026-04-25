@@ -27,7 +27,22 @@ export interface DependencyItem {
   description?: string;
   resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
-  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
+  status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
+  manualAction?: {
+    logicalName: 'openspec' | 'skills' | 'omniroute';
+    packageName: string;
+    version: string;
+    binName: string;
+    aliases: string[];
+    installMode: 'manual' | 'auto';
+    installState: 'pending' | 'installed';
+    installSpec: string;
+    manualActionId: string;
+    toolchainRoot: string;
+    npmExecutablePath?: string;
+    command?: string;
+  };
 }
 
 /**
