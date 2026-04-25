@@ -416,6 +416,18 @@ Validation guidance for packaged Linux artifacts:
 2. Launch the same packaged payload through Steam and confirm the log records `compatibilityEnabled: true` before the first window is created.
 3. If service startup later fails, copy the startup-failure log and verify the `[StartupCompatibility]` line is still present at the top of the captured diagnostics.
 
+Steam-distributed Linux artifacts also ship a dedicated wrapper at `hagicode-steam-wrapper.sh` in the package root. Use that wrapper as the Steamworks `Executable` when possible. The wrapper:
+
+- clears `LD_PRELOAD` before launch so the Steam overlay injection path does not crash Electron during zygote startup
+- launches `hagicode-desktop` with `--disable-setuid-sandbox --no-sandbox`
+
+The package root also includes `hagicode-steam-sandbox.sh`, which opens the sandbox startup help page in the default browser. It currently targets `https://docs.hagicode.com` and can be used as a temporary Steamworks `Executable` when you want the Linux artifact to redirect users to sandbox launch guidance instead of booting the desktop binary directly.
+
+Recommended Steamworks fields for the packaged Linux artifact:
+
+- `Executable`: `hagicode-steam-wrapper.sh`
+- `Arguments`: leave empty unless you need app-specific arguments
+
 ### Dev startup for portable version mode
 
 Use the dedicated dev command when you want Electron dev mode to boot directly into portable version mode with an already-extracted server payload:

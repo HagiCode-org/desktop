@@ -1,9 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const TOOLCHAIN_MANIFEST_FILE = 'toolchain-manifest.json';
 
-const CONFIG_PATH = path.resolve(process.cwd(), 'resources', 'embedded-node-runtime', 'runtime-manifest.json');
+function resolvePinnedNodeRuntimeConfigCandidates(): string[] {
+  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+  return [
+    path.resolve(process.cwd(), 'resources', 'embedded-node-runtime', 'runtime-manifest.json'),
+    path.resolve(moduleDirectory, '../../resources/embedded-node-runtime/runtime-manifest.json'),
+  ];
+}
 
 export type EmbeddedNodeRuntimeConsumer = 'desktop' | 'steam-packer' | string;
 
@@ -47,7 +54,17 @@ export interface EmbeddedNodeRuntimeConfig {
   platforms: Record<string, EmbeddedNodeRuntimePlatformTarget>;
 }
 
-export function readPinnedNodeRuntimeConfig(configPath: string = CONFIG_PATH): EmbeddedNodeRuntimeConfig {
+function findPinnedNodeRuntimeConfigPath(): string {
+  const candidates = resolvePinnedNodeRuntimeConfigCandidates();
+  const match = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!match) {
+    throw new Error(`Pinned embedded Node runtime manifest was not found. Checked: ${candidates.join(', ')}`);
+  }
+
+  return match;
+}
+
+export function readPinnedNodeRuntimeConfig(configPath: string = findPinnedNodeRuntimeConfigPath()): EmbeddedNodeRuntimeConfig {
   return JSON.parse(fs.readFileSync(configPath, 'utf8')) as EmbeddedNodeRuntimeConfig;
 }
 
@@ -161,5 +178,5 @@ export function getNpmGlobalModulesRelativePath(platform: NodeJS.Platform | stri
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {
-  return CONFIG_PATH;
+  return findPinnedNodeRuntimeConfigPath();
 }

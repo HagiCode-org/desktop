@@ -57,6 +57,11 @@ mac:
   signIgnore:
     - Contents/Resources/extra/portable-fixed/toolchain/.*
 linux:
+  extraFiles:
+    - from: resources/linux/hagicode-steam-wrapper.sh
+      to: hagicode-steam-wrapper.sh
+    - from: resources/linux/hagicode-steam-sandbox.sh
+      to: hagicode-steam-sandbox.sh
   target:
     # Keep the currently supported Linux release formats and add ZIP for extractable distribution.
     - AppImage

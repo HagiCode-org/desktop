@@ -127,4 +127,20 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(releaseReadme, /Steam Linux desktop artifact verification/i);
     assert.match(releaseReadme, /direct CLI launch keeps the default graphics path/i);
   });
+
+  it('ships a dedicated Steam wrapper for packaged Linux launches', async () => {
+    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
+    const docs = await fs.readFile(developmentDocPath, 'utf-8');
+
+    assert.match(builder, /extraFiles:/);
+    assert.match(builder, /resources\/linux\/hagicode-steam-wrapper\.sh/);
+    assert.match(builder, /to: hagicode-steam-wrapper\.sh/);
+    assert.match(builder, /resources\/linux\/hagicode-steam-sandbox\.sh/);
+    assert.match(builder, /to: hagicode-steam-sandbox\.sh/);
+    assert.match(docs, /hagicode-steam-wrapper\.sh/);
+    assert.match(docs, /hagicode-steam-sandbox\.sh/);
+    assert.match(docs, /LD_PRELOAD/);
+    assert.match(docs, /--disable-setuid-sandbox --no-sandbox/);
+    assert.match(docs, /https:\/\/docs\.hagicode\.com/);
+  });
 });

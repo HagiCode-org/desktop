@@ -51,3 +51,4 @@ build/portable-version-runtime/*
 !build/portable-version-runtime/current/
 build/portable-version-runtime/current/*
 !build/portable-version-runtime/current/.gitkeep
+resources/portable-fixed

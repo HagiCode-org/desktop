@@ -43,6 +43,8 @@ const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
 const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
+const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
+const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
 
 const colors = {
   reset: '\x1b[0m',
@@ -121,6 +123,22 @@ function resolvePackagedToolchainRoots() {
     ];
   }
   return [];
+}
+
+function resolvePackagedSteamWrapperPath() {
+  if (process.platform === 'linux') {
+    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'hagicode-steam-wrapper.sh');
+  }
+
+  return null;
+}
+
+function resolvePackagedSteamSandboxPath() {
+  if (process.platform === 'linux') {
+    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'hagicode-steam-sandbox.sh');
+  }
+
+  return null;
 }
 
 function isExecutable(targetPath) {
@@ -489,9 +507,12 @@ test('electron-builder configuration is valid', async () => {
   const hasAsar = buildConfig?.asar === true;
   const hasFiles = Array.isArray(buildConfig?.files);
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
+  const linuxExtraFiles = Array.isArray(buildConfig?.linux?.extraFiles) ? buildConfig.linux.extraFiles : [];
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
   const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/portable-fixed/toolchain');
+  const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
+  const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
   const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
@@ -521,6 +542,10 @@ test('electron-builder configuration is valid', async () => {
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
   assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/portable-fixed/toolchain');
+  assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
+  assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
+  assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
+  assert(steamSandboxExtraFile?.to === 'hagicode-steam-sandbox.sh', 'steam Linux sandbox helper is staged at the package root');
   assert(toolchainSkippedByMacSigning, 'bundled Node toolchain is excluded from recursive macOS code signing');
   assert(toolchainStashedDuringMacSigning, 'bundled Node toolchain is stashed outside the macOS app during code signing');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
@@ -685,6 +710,54 @@ test('packaged runtime payload is complete', () => {
       ? 'packaged runtime metadata matches the pinned Microsoft runtime manifest'
       : `packaged runtime metadata mismatch: ${metadataErrors.join('; ')}`,
   );
+});
+
+test('packaged Steam wrapper is available for Linux launches', () => {
+  if (!packagedSteamWrapperPath) {
+    log('  - Skipping: packaged Steam wrapper checks are only defined for Linux', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedSteamWrapperPath)) {
+    log('  - Skipping: packaged Steam wrapper not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!assert(fs.existsSync(packagedSteamWrapperPath), `packaged Steam wrapper exists (${packagedSteamWrapperPath})`)) {
+    return;
+  }
+
+  assert(isExecutable(packagedSteamWrapperPath), 'packaged Steam wrapper is executable');
+
+  const wrapperContent = fs.readFileSync(packagedSteamWrapperPath, 'utf8');
+  assert(wrapperContent.includes('unset LD_PRELOAD'), 'packaged Steam wrapper clears LD_PRELOAD before launch');
+  assert(wrapperContent.includes('--disable-setuid-sandbox --no-sandbox'), 'packaged Steam wrapper applies Linux sandbox compatibility flags');
+});
+
+test('packaged Steam sandbox helper is available for Linux launches', () => {
+  if (!packagedSteamSandboxPath) {
+    log('  - Skipping: packaged Steam sandbox helper checks are only defined for Linux', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedSteamSandboxPath)) {
+    log('  - Skipping: packaged Steam sandbox helper not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!assert(fs.existsSync(packagedSteamSandboxPath), `packaged Steam sandbox helper exists (${packagedSteamSandboxPath})`)) {
+    return;
+  }
+
+  assert(isExecutable(packagedSteamSandboxPath), 'packaged Steam sandbox helper is executable');
+
+  const helperContent = fs.readFileSync(packagedSteamSandboxPath, 'utf8');
+  assert(helperContent.includes('https://docs.hagicode.com'), 'packaged Steam sandbox helper points to the sandbox documentation URL');
+  assert(helperContent.includes('xdg-open') || helperContent.includes('gio open'), 'packaged Steam sandbox helper opens the documentation in a browser');
 });
 
 async function main() {
