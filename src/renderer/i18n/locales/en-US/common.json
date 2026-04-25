@@ -197,6 +197,9 @@
       },
       "omniroute": {
         "description": "OmniRoute local routing and toolchain CLI."
+      },
+      "codeServer": {
+        "description": "code-server browser-based development environment CLI."
       }
     },
     "actions": {

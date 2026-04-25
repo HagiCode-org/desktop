@@ -197,6 +197,9 @@
       },
       "omniroute": {
         "description": "OmniRoute 本地路由与工具链 CLI。"
+      },
+      "codeServer": {
+        "description": "code-server 浏览器开发环境 CLI。"
       }
     },
     "actions": {
