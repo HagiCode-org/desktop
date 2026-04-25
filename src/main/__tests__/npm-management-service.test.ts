@@ -50,14 +50,24 @@ describe('npm management service contract', () => {
     assert.match(source, /snapshot,/);
   });
 
-  it('defines the initial managed catalog for openspec, skills, and omniroute', async () => {
+  it('defines the initial managed catalog for required tools', async () => {
     const source = await fs.readFile(catalogPath, 'utf8');
 
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'omniroute'/);
+    assert.match(source, /id: 'code-server'/);
     assert.match(source, /installSpec: 'openspec@latest'/);
     assert.match(source, /installSpec: 'skills@latest'/);
     assert.match(source, /installSpec: 'omniroute@latest'/);
+    assert.match(source, /installSpec: 'code-server@latest'/);
+    assert.match(source, /required: true/);
+  });
+
+  it('prevents required managed npm packages from being removed', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /definition\?\.required/);
+    assert.match(source, /is a required managed tool and cannot be removed/);
   });
 });
