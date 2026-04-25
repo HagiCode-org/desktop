@@ -57,6 +57,7 @@
     "status": {
       "installed": "Installed",
       "installing": "Installing...",
+      "manualInstallRequired": "Manual install required",
       "pending": "Pending",
       "error": "Failed",
       "notInstalled": "Not Installed",
@@ -69,11 +70,13 @@
       "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
+      "viewManualSteps": "View Manual Steps",
       "visitWebsite": "Visit Official Website"
     },
     "details": {
       "currentVersion": "Current Version",
-      "requiredVersion": "Required Version"
+      "requiredVersion": "Required Version",
+      "manualCommand": "Suggested Command"
     },
     "overallProgress": "Overall Progress",
     "installing": {
@@ -86,6 +89,11 @@
     "checking": "Checking dependencies...",
     "error": {
       "message": "Some dependencies failed to install. Please install them manually and continue."
+    },
+    "manualHandoff": {
+      "title": "Desktop ships Node.js and npm, but the bundled CLI packages now need a manual install step.",
+      "description": "Run the suggested command outside Desktop, then refresh the dependency status here.",
+      "refreshHint": "Refresh after the command finishes to re-check the bundled toolchain."
     }
   },
   "depInstallConfirm": {
@@ -184,6 +192,8 @@
     "status": {
       "installed": "Installed",
       "bundled": "Bundled with Desktop",
+      "desktopManaged": "Desktop managed",
+      "manualInstallRequired": "Manual install required",
       "notInstalled": "Not Installed",
       "versionMismatch": "Version Mismatch",
       "checking": "Checking..."
@@ -193,6 +203,7 @@
       "upgrade": "Upgrade",
       "installing": "Installing...",
       "refresh": "Refresh",
+      "viewManualSteps": "View Manual Steps",
       "visitWebsite": "Visit Official Website",
       "reinstallDesktop": "Reinstall Desktop",
       "updateDesktop": "Update Desktop"
@@ -200,7 +211,15 @@
     "details": {
       "currentVersion": "Current Version",
       "requiredVersion": "Required Version",
-      "source": "Source"
+      "manualCommand": "Suggested Command",
+      "source": "Source",
+      "bundledSource": "Bundled source",
+      "systemSource": "System source"
+    },
+    "manualHandoff": {
+      "title": "Desktop ships Node.js and npm, but this CLI package now requires a manual install step.",
+      "description": "Run the suggested command outside Desktop, then refresh the dependency status here.",
+      "refreshHint": "Refresh after the command finishes to re-check the bundled toolchain."
     },
     "noDependencies": "No dependencies detected"
   },

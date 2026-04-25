@@ -186,6 +186,7 @@
       "installed": "已安装",
       "bundled": "随 Desktop 内置",
       "desktopManaged": "Desktop 托管",
+      "manualInstallRequired": "需要手动安装",
       "notInstalled": "未找到",
       "versionMismatch": "版本不匹配"
     },
@@ -193,14 +194,21 @@
       "refresh": "刷新依赖项",
       "install": "安装",
       "installing": "安装中...",
+      "viewManualSteps": "查看手动步骤",
       "download": "下载",
       "reinstallDesktop": "重新安装 Desktop",
       "updateDesktop": "更新 Desktop"
     },
     "details": {
+      "manualCommand": "建议命令",
       "source": "来源",
       "bundledSource": "内置来源",
       "systemSource": "系统来源"
+    },
+    "manualHandoff": {
+      "title": "Desktop 会分发 Node.js 和 npm，但此 CLI 包现在需要手动安装。",
+      "description": "请在 Desktop 外执行建议命令，然后返回这里刷新依赖状态。",
+      "refreshHint": "命令执行完成后刷新一次，以重新检测内置 toolchain。"
     }
   },
   "versionManagement": {
