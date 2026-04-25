@@ -8,6 +8,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'npmManagement.packages.openspec.description',
     binName: 'openspec',
     installSpec: 'openspec@latest',
+    required: true,
   },
   {
     id: 'skills',
@@ -16,6 +17,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'npmManagement.packages.skills.description',
     binName: 'skills',
     installSpec: 'skills@latest',
+    required: true,
   },
   {
     id: 'omniroute',
@@ -24,6 +26,16 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'npmManagement.packages.omniroute.description',
     binName: 'omniroute',
     installSpec: 'omniroute@latest',
+    required: true,
+  },
+  {
+    id: 'code-server',
+    packageName: 'code-server',
+    displayName: 'code-server',
+    descriptionKey: 'npmManagement.packages.codeServer.description',
+    binName: 'code-server',
+    installSpec: 'code-server@latest',
+    required: true,
   },
 ] as const;
 
@@ -34,4 +46,3 @@ export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition |
 export function isManagedNpmPackageId(id: string): id is ManagedNpmPackageId {
   return findManagedNpmPackage(id) !== null;
 }
-
