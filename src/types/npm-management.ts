@@ -1,4 +1,4 @@
-export type ManagedNpmPackageId = 'openspec' | 'skills' | 'omniroute';
+export type ManagedNpmPackageId = 'openspec' | 'skills' | 'omniroute' | 'code-server';
 
 export type NpmEnvironmentComponentStatus = 'available' | 'unavailable' | 'error';
 export type ManagedNpmPackageStatus = 'installed' | 'not-installed' | 'unknown';
@@ -12,6 +12,7 @@ export interface ManagedNpmPackageDefinition {
   descriptionKey: string;
   binName: string;
   installSpec: string;
+  required?: boolean;
 }
 
 export interface NpmEnvironmentComponent {
@@ -83,4 +84,3 @@ export const npmManagementChannels = {
 } as const;
 
 export type NpmManagementChannelMap = typeof npmManagementChannels;
-
