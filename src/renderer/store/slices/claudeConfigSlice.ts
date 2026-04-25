@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AgentCliType } from '../../../types/agent-cli';
 
 interface ClaudeConfigState {
   isValid: boolean;
