@@ -43,6 +43,7 @@
     "build:local": "npm run prepare:runtime:optional && npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js",
     "build:local:publish": "npm run prepare:runtime:optional && npm run version:bump && npm run build:prod && electron-builder --config electron-builder.local.js --publish always",
     "publish:local": "npm run build:local:publish",
+    "install:dev-node-runtime": "node scripts/install-dev-node-runtime.js",
     "prepare:runtime": "node scripts/prepare-embedded-runtime.js",
     "prepare:bundled-toolchain": "node scripts/prepare-bundled-toolchain.js",
     "prepare:bundled-toolchain:optional": "node scripts/prepare-bundled-toolchain-if-supported.js",

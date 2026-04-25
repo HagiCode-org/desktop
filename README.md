@@ -28,12 +28,33 @@ The desktop app packages the HagiCode experience into a local-first workflow for
 
 ```bash
 npm install
+npm run install:dev-node-runtime
 npm run dev
 npm run build:prod
 ```
 
 - `npm run dev` starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
+- `npm run install:dev-node-runtime` installs the governed embedded Node runtime for source-mode testing
+
+### Development embedded Node runtime
+
+The development runtime command installs the same governed Node version used by packaged Desktop into `.runtime/node-dev/`. The directory is ignored by git and contains three generated areas:
+
+- `.runtime/node-dev/cache/` stores the downloaded pinned Node archive by archive name.
+- `.runtime/node-dev/node/<version>/<platform>/` stores the extracted Node distribution.
+- `.runtime/node-dev/runtime-metadata.json` records `nodeVersion`, `platform`, `arch`, `installRoot`, `nodeExecutablePath`, `installedAt`, archive details, and Node/npm/corepack probe results.
+
+When the app runs from source, dependency detection validates this metadata, probes the referenced Node/npm executables, verifies the governed Node version, and reports a valid runtime as `bundled-dev`. Packaged builds continue to use packaged runtime paths first; `.runtime/node-dev/` is ignored outside source mode.
+
+To clean the development runtime, delete `.runtime/node-dev/` and rerun `npm run install:dev-node-runtime` when needed.
+
+### Development runtime troubleshooting
+
+- Download failures: check network access to the pinned host in `resources/embedded-node-runtime/runtime-manifest.json`, or pre-populate `.runtime/node-dev/cache/` with the expected archive.
+- Stale metadata: delete `.runtime/node-dev/runtime-metadata.json` or the whole `.runtime/node-dev/` directory, then rerun the install command.
+- Unsupported platform/architecture: the command uses the platforms pinned in `resources/embedded-node-runtime/runtime-manifest.json`; add a governed platform entry before expecting detection to succeed.
+- Version mismatch: rerun `npm run install:dev-node-runtime` after governance updates so metadata and the extracted executable match the active Node version.
 
 ## Related guides
 

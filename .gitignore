@@ -45,6 +45,8 @@ obj/
 
 artifacts/azure-index.json
 build/embedded-runtime/
+build/embedded-node-runtime/
+.runtime/node-dev/
 build/portable-version-runtime/*
 !build/portable-version-runtime/current/
 build/portable-version-runtime/current/*
