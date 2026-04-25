@@ -47,6 +47,48 @@ export const DOC_LINKS: Record<string, DocLink> = {
     label: 'GitHub Copilot CLI Setup Guide',
     category: LinkCategory.AgentCli,
   },
+  opencodeSetup: {
+    id: 'opencode-setup',
+    url: 'https://opencode.ai/docs/',
+    label: 'OpenCode Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  qoderSetup: {
+    id: 'qoder-setup',
+    url: 'https://docs.qoder.com/cli/quick-start',
+    label: 'QoderCLI Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  kiroSetup: {
+    id: 'kiro-setup',
+    url: 'https://kiro.dev/docs/cli/installation',
+    label: 'Kiro CLI Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  kimiSetup: {
+    id: 'kimi-setup',
+    url: 'https://www.kimi.com/code/docs/en/kimi-code-cli/getting-started.html',
+    label: 'Kimi CLI Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  geminiSetup: {
+    id: 'gemini-setup',
+    url: 'https://google-gemini.github.io/gemini-cli/docs/get-started/',
+    label: 'Gemini CLI Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  deepagentsSetup: {
+    id: 'deepagents-setup',
+    url: 'https://docs.langchain.com/oss/python/deepagents/overview',
+    label: 'DeepAgents Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
+  hermesSetup: {
+    id: 'hermes-setup',
+    url: 'https://hermes-agent.nousresearch.com/docs/getting-started/installation/',
+    label: 'Hermes Setup Guide',
+    category: LinkCategory.AgentCli,
+  },
 
   // Placeholder for future Agent CLIs
   // aiderSetup: {
