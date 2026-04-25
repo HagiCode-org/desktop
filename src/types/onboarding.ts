@@ -109,7 +109,7 @@ export interface DownloadProgress {
 export interface DependencyItem {
   name: string;
   type: string;
-  status: 'checking' | 'pending' | 'installing' | 'installed' | 'error';
+  status: 'checking' | 'pending' | 'installing' | 'installed' | 'error' | 'manual-action-required';
   progress: number; // 0-100
   version?: string;
   requiredVersion?: string;
@@ -117,7 +117,36 @@ export interface DependencyItem {
   installHint?: string;
   resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
-  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
+  manualAction?: BundledCliManualAction;
+}
+
+export interface BundledCliManualAction {
+  logicalName: 'openspec' | 'skills' | 'omniroute';
+  packageName: string;
+  version: string;
+  binName: string;
+  aliases: string[];
+  installMode: 'manual' | 'auto';
+  installState: 'pending' | 'installed';
+  installSpec: string;
+  manualActionId: string;
+  toolchainRoot: string;
+  npmExecutablePath?: string;
+  command?: string;
+}
+
+export interface DependencyActionPlan {
+  status: 'manual-action-required';
+  message: string;
+  packages: BundledCliManualAction[];
+}
+
+export interface OnboardingDependencyInstallResult {
+  success: boolean;
+  status?: 'manual-action-required';
+  error?: string;
+  manualAction?: DependencyActionPlan;
 }
 
 /**
@@ -230,6 +259,9 @@ export interface DependencyCheckResult {
   versionMismatch?: boolean;
   description?: string;
   isChecking?: boolean;  // True while check is in progress
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
+  status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
+  manualAction?: BundledCliManualAction;
 }
 
 /**
