@@ -1,4 +1,3 @@
-import axios from 'axios';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import type {
@@ -13,6 +12,7 @@ import type {
   PackageSourceValidationResult,
   DownloadProgressCallback,
 } from './package-source.js';
+import { desktopHttpClient, HttpStatusError, HttpTimeoutError, type DesktopHttpClient } from '../http-client.js';
 
 const HYBRID_THRESHOLD_BYTES = 0;
 
@@ -71,10 +71,12 @@ export class HttpIndexPackageSource implements PackageSource {
   private config: HttpIndexConfig;
   private cache: Map<string, VersionCacheEntry>;
   private readonly cacheTtl = 60 * 60 * 1000;
+  private readonly httpClient: DesktopHttpClient;
 
-  constructor(config: HttpIndexConfig) {
+  constructor(config: HttpIndexConfig, httpClient: DesktopHttpClient = desktopHttpClient) {
     this.config = config;
     this.cache = new Map();
+    this.httpClient = httpClient;
   }
 
   async listAvailableVersions(): Promise<Version[]> {
@@ -88,9 +90,9 @@ export class HttpIndexPackageSource implements PackageSource {
         return cached.versions;
       }
 
-      const response = await axios.get<HttpIndexFile>(this.config.indexUrl, {
+      const response = await this.httpClient.requestJson<HttpIndexFile>(this.config.indexUrl, {
         headers: { Accept: 'application/json' },
-        timeout: 30000,
+        timeoutMs: 30000,
       });
 
       if (response.status !== 200) {
@@ -157,17 +159,17 @@ export class HttpIndexPackageSource implements PackageSource {
 
       return versions;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
+      if (error instanceof HttpStatusError) {
+        const status = error.status;
         if (status === 404) {
           throw new Error(`Index file not found at ${this.config.indexUrl}. Please check the URL is correct and accessible.`);
         }
         if (status === 401 || status === 403) {
           throw new Error('Authentication failed. Please check your authentication token.');
         }
-        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-          throw new Error('Failed to connect to the server. Please check your internet connection.');
-        }
+      }
+      if (this.isConnectionError(error)) {
+        throw new Error('Failed to connect to the server. Please check your internet connection.');
       }
 
       log.error('[HttpIndexSource] Failed to fetch index:', error);
@@ -181,8 +183,7 @@ export class HttpIndexPackageSource implements PackageSource {
         throw new Error(`No download URL available for version: ${version.id}`);
       }
 
-      const response = await axios.get<ArrayBuffer>(version.downloadUrl, {
-        responseType: 'arraybuffer',
+      const response = await this.httpClient.requestBinary(version.downloadUrl, {
         onDownloadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
             const current = progressEvent.loaded;
@@ -203,7 +204,7 @@ export class HttpIndexPackageSource implements PackageSource {
         },
       });
 
-      await fs.writeFile(cachePath, Buffer.from(response.data));
+      await fs.writeFile(cachePath, response.data);
     } catch (error) {
       log.error('[HttpIndexSource] Failed to download package:', error);
       throw error;
@@ -227,9 +228,9 @@ export class HttpIndexPackageSource implements PackageSource {
         return { valid: false, error: 'Index URL must use http or https' };
       }
 
-      const response = await axios.get<HttpIndexFile>(this.config.indexUrl, {
+      const response = await this.httpClient.requestJson<HttpIndexFile>(this.config.indexUrl, {
         headers: { Accept: 'application/json' },
-        timeout: 10000,
+        timeoutMs: 10000,
         validateStatus: (status) => status < 500,
       });
 
@@ -246,13 +247,11 @@ export class HttpIndexPackageSource implements PackageSource {
       this.assertIndexShape(response.data);
       return { valid: true };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-          return { valid: false, error: 'Failed to connect to server' };
-        }
-        if (error.code === 'ETIMEDOUT') {
-          return { valid: false, error: 'Connection timed out' };
-        }
+      if (this.isConnectionError(error)) {
+        return { valid: false, error: 'Failed to connect to server' };
+      }
+      if (error instanceof HttpTimeoutError) {
+        return { valid: false, error: 'Connection timed out' };
       }
 
       return {
@@ -268,6 +267,14 @@ export class HttpIndexPackageSource implements PackageSource {
 
   private getCacheKey(): string {
     return this.config.indexUrl;
+  }
+
+  private isConnectionError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === 'ENOTFOUND' || code === 'ECONNREFUSED' || code === 'EAI_AGAIN';
   }
 
   private assertIndexShape(indexData: HttpIndexFile | undefined): asserts indexData is HttpIndexFile {
@@ -389,13 +396,13 @@ export class HttpIndexPackageSource implements PackageSource {
     try {
       const url = new URL(pathValue, this.config.indexUrl);
       const segments = url.pathname.split('/').filter(Boolean);
-      const name = segments.at(-1);
+      const name = segments[segments.length - 1];
       if (name) {
         return name;
       }
     } catch {
       const segments = pathValue.split('/').filter(Boolean);
-      const name = segments.at(-1);
+      const name = segments[segments.length - 1];
       if (name) {
         return name;
       }

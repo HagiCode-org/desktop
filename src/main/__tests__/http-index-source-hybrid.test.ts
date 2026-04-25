@@ -1,7 +1,25 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import axios from 'axios';
 import { HttpIndexPackageSource } from '../package-sources/http-index-source.js';
+import type { DesktopHttpClient, HttpResponse } from '../http-client.js';
+
+function stubHttpClient<T>(data: T, binaryData = Buffer.from('package')): DesktopHttpClient {
+  const jsonResponse: HttpResponse<T> = {
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    data,
+  };
+
+  return {
+    requestJson: async () => jsonResponse as HttpResponse<unknown>,
+    requestText: async () => ({ status: 200, statusText: 'OK', headers: {}, data: 'ok' }),
+    requestBinary: async (_url, options) => {
+      options?.onDownloadProgress?.({ loaded: binaryData.length, total: binaryData.length });
+      return { status: 200, statusText: 'OK', headers: {}, data: binaryData };
+    },
+  } as DesktopHttpClient;
+}
 
 function currentPlatform() {
   if (process.platform === 'linux') {
@@ -26,10 +44,7 @@ describe('http index hybrid metadata support', () => {
     const version = '1.2.3';
     const desktopName = desktopAssetName(version);
     const serverName = serverAssetName(version);
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version,
@@ -71,17 +86,15 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-        channels: {
-          stable: {
-            latest: version,
-            versions: [version],
-          },
+      channels: {
+        stable: {
+          latest: version,
+          versions: [version],
         },
       },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
       const versions = await source.listAvailableVersions();
       const desktop = versions.find((version) => version.assetKind === 'desktop-latest');
       const server = versions.find((version) => version.assetKind === 'web-latest');
@@ -118,18 +131,12 @@ describe('http index hybrid metadata support', () => {
       assert.equal(server.hybrid?.hasTorrentMetadata, true);
       assert.equal(server.hybrid?.serviceScope, 'latest-server');
       assert.equal(server.downloadUrl, `https://example.com/server/${serverName}`);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 
   it('accepts official-style assets that only provide a relative path and omit optional hybrid metadata', async () => {
     const version = '1.2.5';
     const packageName = desktopAssetName(version);
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version,
@@ -142,11 +149,9 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-      },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/server/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/server/index.json' }, httpClient);
       const validation = await source.validateConfig();
       const versions = await source.listAvailableVersions();
 
@@ -157,18 +162,12 @@ describe('http index hybrid metadata support', () => {
       assert.equal(versions[0].hybrid?.legacyHttpFallback, true);
       assert.equal(versions[0].hybrid?.downloadSources, undefined);
       assert.deepEqual(versions[0].hybrid?.webSeeds, [`https://example.com/server/official/${packageName}`]);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 
   it('ignores malformed or unknown structured download sources without breaking legacy downloads', async () => {
     const version = '1.2.6';
     const packageName = desktopAssetName(version);
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version,
@@ -209,11 +208,9 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-      },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
       const validation = await source.validateConfig();
       const versions = await source.listAvailableVersions();
 
@@ -230,18 +227,12 @@ describe('http index hybrid metadata support', () => {
         },
       ]);
       assert.deepEqual(versions[0].hybrid?.webSeeds, [`https://downloads.example.com/${packageName}`]);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 
   it('ignores non-zip assets when building installable versions', async () => {
     const version = '1.2.4';
     const packageName = desktopAssetName(version);
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version,
@@ -264,27 +255,19 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-      },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
       const versions = await source.listAvailableVersions();
 
       assert.equal(versions.length, 1);
       assert.equal(versions[0].packageFilename, packageName);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 
   it('keeps compatibility with legacy files projections when assets are absent', async () => {
     const version = '1.2.2';
     const packageName = desktopAssetName(version);
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version,
@@ -293,27 +276,19 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-      },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
       const versions = await source.listAvailableVersions();
 
       assert.equal(versions.length, 1);
       assert.equal(versions[0].packageFilename, packageName);
       assert.equal(versions[0].hybrid?.eligible, false);
       assert.equal(versions[0].hybrid?.legacyHttpFallback, true);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 
   it('rejects assets that have a name but cannot be resolved to a download target', async () => {
-    const originalGet = axios.get;
-    axios.get = (async () => ({
-      status: 200,
-      data: {
+    const httpClient = stubHttpClient({
         versions: [
           {
             version: '9.9.9',
@@ -325,17 +300,12 @@ describe('http index hybrid metadata support', () => {
             ],
           },
         ],
-      },
-    })) as typeof axios.get;
+    });
 
-    try {
-      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' });
+      const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
       const validation = await source.validateConfig();
 
       assert.equal(validation.valid, false);
       assert.match(validation.error ?? '', /Invalid index file format/);
-    } finally {
-      axios.get = originalGet;
-    }
   });
 });
