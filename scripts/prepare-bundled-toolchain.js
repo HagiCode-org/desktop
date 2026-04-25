@@ -30,7 +30,6 @@ const binRoot = path.join(toolchainRoot, 'bin');
 const envRoot = path.join(toolchainRoot, 'env');
 const npmGlobalRoot = path.join(toolchainRoot, 'npm-global');
 const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'downloads');
-const npmCacheRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'npm-cache');
 const packageEntries = Object.entries(runtimeConfig.corePackages || {});
 const stagingDiagnostics = {
   archiveName: runtimeTarget.archiveName,
@@ -283,20 +282,6 @@ function resolveExtractedNodeRoot(extractRoot) {
   throw new Error(`Extracted Node archive did not produce ${runtimeTarget.extractRoot} under ${extractRoot}.`);
 }
 
-function buildToolchainPath(currentPath = process.env.PATH || '') {
-  const entries = [
-    binRoot,
-    path.join(toolchainRoot, path.dirname(getNodeExecutableRelativePath(runtimePlatform))),
-    path.join(toolchainRoot, getNpmGlobalBinRelativePath(runtimePlatform)),
-    currentPath,
-  ];
-  return entries.filter(Boolean).join(path.delimiter);
-}
-
-function readPackageJson(packageRoot) {
-  return JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
-}
-
 function prunePath(targetPath) {
   if (!pathExistsOrIsSymlink(targetPath)) {
     return;
@@ -304,179 +289,6 @@ function prunePath(targetPath) {
 
   fs.rmSync(targetPath, { recursive: true, force: true });
   prunedToolchainEntries += 1;
-}
-
-function pruneNpmGlobalPackagePayload() {
-  if (!pathExists(npmGlobalRoot)) {
-    return;
-  }
-
-  const removablePackageNames = new Set([
-    'browserslist',
-    'caniuse-lite',
-    'electron-to-chromium',
-    '@mdn/browser-compat-data',
-  ]);
-  const removableDirectoryNames = new Set([
-    '__tests__',
-    'test',
-    'tests',
-    'testing',
-    'example',
-    'examples',
-    'docs',
-    'doc',
-    '.github',
-    '.vscode',
-    'coverage',
-    'fixture',
-    'fixtures',
-    'locale',
-    'locales',
-  ]);
-  const removableFileNames = new Set([
-    'README',
-    'README.md',
-    'CHANGELOG',
-    'CHANGELOG.md',
-    'HISTORY.md',
-    'LICENSE',
-    'LICENSE.md',
-    'NOTICE',
-    '.npmignore',
-  ]);
-  const removableFileExtensions = new Set(['.d.ts', '.d.ts.map', '.map', '.md', '.markdown', '.tsbuildinfo']);
-
-  const npmGlobalModulesRoot = path.join(toolchainRoot, getNpmGlobalModulesRelativePath(runtimePlatform));
-  const packageNameForPath = (currentPath) => {
-    const relativePath = path.relative(npmGlobalModulesRoot, currentPath);
-    const segments = relativePath.split(path.sep).filter(Boolean);
-    if (segments.length === 0) {
-      return null;
-    }
-    if (segments[0].startsWith('@') && segments.length >= 2) {
-      return `${segments[0]}/${segments[1]}`;
-    }
-    return segments[0];
-  };
-
-  const visit = (currentPath) => {
-    let entries;
-    try {
-      entries = fs.readdirSync(currentPath, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
-    for (const entry of entries) {
-      const entryPath = path.join(currentPath, entry.name);
-
-      if (entry.isDirectory()) {
-        const packageName = packageNameForPath(entryPath);
-        if (removablePackageNames.has(packageName) || removableDirectoryNames.has(entry.name)) {
-          prunePath(entryPath);
-        } else {
-          visit(entryPath);
-        }
-        continue;
-      }
-
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      const lowerName = entry.name.toLowerCase();
-      if (
-        removableFileNames.has(entry.name)
-        || removableFileExtensions.has(path.extname(lowerName))
-        || lowerName.endsWith('.d.ts')
-        || lowerName.endsWith('.d.ts.map')
-      ) {
-        prunePath(entryPath);
-      }
-    }
-  };
-
-  visit(npmGlobalRoot);
-}
-
-function getPackageRoot(packageName) {
-  return path.join(toolchainRoot, getNpmGlobalModulesRelativePath(runtimePlatform), ...packageName.split('/').filter(Boolean));
-}
-
-function resolveBinEntry(packageJson, binName) {
-  if (typeof packageJson.bin === 'string') {
-    return packageJson.bin;
-  }
-
-  if (packageJson.bin?.[binName]) {
-    return packageJson.bin[binName];
-  }
-
-  throw new Error(`Unable to resolve bin entry "${binName}" from ${packageJson.name} package metadata.`);
-}
-
-function createPosixShim(commandName, cliScriptRelativePath) {
-  const pathEntries = [
-    'bin',
-    path.dirname(getNodeExecutableRelativePath(runtimePlatform)),
-    getNpmGlobalBinRelativePath(runtimePlatform),
-  ].map(toPosixPath).join(':$TOOLCHAIN_ROOT/');
-
-  return [
-    '#!/usr/bin/env bash',
-    'set -euo pipefail',
-    'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
-    'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"',
-    `NODE_EXEC="$TOOLCHAIN_ROOT/${toPosixPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
-    `CLI_ENTRY="$TOOLCHAIN_ROOT/${toPosixPath(cliScriptRelativePath)}"`,
-    `PATH="$TOOLCHAIN_ROOT/${pathEntries}:$PATH"`,
-    'export PATH',
-    'exec "$NODE_EXEC" "$CLI_ENTRY" "$@"',
-  ].join('\n');
-}
-
-function createWindowsCmdShim(cliScriptRelativePath) {
-  return [
-    '@echo off',
-    'setlocal',
-    'set "SCRIPT_DIR=%~dp0"',
-    'for %%I in ("%SCRIPT_DIR%..") do set "TOOLCHAIN_ROOT=%%~fI"',
-    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%TOOLCHAIN_ROOT%\\npm-global;%PATH%"',
-    `set "NODE_EXEC=%TOOLCHAIN_ROOT%\\${toWindowsPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
-    `set "CLI_ENTRY=%TOOLCHAIN_ROOT%\\${toWindowsPath(cliScriptRelativePath)}"`,
-    '"%NODE_EXEC%" "%CLI_ENTRY%" %*',
-    'exit /b %ERRORLEVEL%',
-  ].join('\r\n');
-}
-
-function createWindowsPowerShellShim(cliScriptRelativePath) {
-  return [
-    '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
-    '$toolchainRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path',
-    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;$toolchainRoot\\npm-global;" + $env:PATH',
-    `$nodeExec = Join-Path $toolchainRoot "${toWindowsPath(getNodeExecutableRelativePath(runtimePlatform))}"`,
-    `$cliEntry = Join-Path $toolchainRoot "${toWindowsPath(cliScriptRelativePath)}"`,
-    '& $nodeExec $cliEntry @args',
-    'exit $LASTEXITCODE',
-  ].join('\r\n');
-}
-
-function writeCommandShims(commandName, cliScriptRelativePath) {
-  fs.mkdirSync(binRoot, { recursive: true });
-
-  if (!isWindowsPlatform(runtimePlatform)) {
-    const commandPath = path.join(binRoot, commandName);
-    fs.writeFileSync(commandPath, `${createPosixShim(commandName, cliScriptRelativePath)}\n`, 'utf8');
-    ensureExecutable(commandPath);
-    return [path.join('bin', commandName)];
-  }
-
-  const cmdPath = path.join(binRoot, `${commandName}.cmd`);
-  const ps1Path = path.join(binRoot, `${commandName}.ps1`);
-  fs.writeFileSync(cmdPath, `${createWindowsCmdShim(cliScriptRelativePath)}\r\n`, 'utf8');
-  fs.writeFileSync(ps1Path, `${createWindowsPowerShellShim(cliScriptRelativePath)}\r\n`, 'utf8');
-  return [path.join('bin', `${commandName}.cmd`), path.join('bin', `${commandName}.ps1`)];
 }
 
 function writeActivationArtifacts() {
@@ -522,6 +334,39 @@ function writeActivationArtifacts() {
   return [path.join('env', 'activate.cmd'), path.join('env', 'activate.ps1')];
 }
 
+function cleanDeferredPackageRoots() {
+  prunePath(binRoot);
+  prunePath(npmGlobalRoot);
+}
+
+function buildRuntimeCommands(nodeLayout) {
+  return {
+    node: nodeLayout?.node || getNodeExecutableRelativePath(runtimePlatform),
+    npm: nodeLayout?.npm || getNpmExecutableRelativePath(runtimePlatform),
+  };
+}
+
+function buildDeferredPackageMetadata() {
+  return Object.fromEntries(packageEntries.map(([logicalName, packageConfig]) => {
+    const installMode = packageConfig.installMode || 'manual';
+    const installState = packageConfig.installState || 'pending';
+    const installSpec = packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`;
+    const manualActionId = packageConfig.manualActionId || 'install-bundled-node-cli';
+
+    return [logicalName, {
+      packageName: packageConfig.packageName,
+      version: packageConfig.version,
+      integrity: packageConfig.integrity,
+      binName: packageConfig.binName,
+      aliases: packageConfig.aliases || [],
+      installMode,
+      installState,
+      installSpec,
+      manualActionId,
+    }];
+  }));
+}
+
 function validateNodeLayout() {
   const nodeRelativePath = findFirstExistingCandidate('node', getNodeRelativePathCandidates(runtimePlatform));
   const npmRelativePath = findFirstExistingCandidate('npm', getNpmExecutableRelativePathCandidates(runtimePlatform));
@@ -547,83 +392,10 @@ function validateNodeLayout() {
   return { node: resolvedNodeCommand, npm: resolvedNpmCommand, archiveNpm: npmRelativePath };
 }
 
-function installCorePackages(npmCommandRelativePath = resolvedNpmCommand) {
-  if (packageEntries.length === 0) {
-    throw new Error('No core CLI packages are configured for the bundled toolchain.');
-  }
-  if (!npmCommandRelativePath) {
-    throw new Error('Cannot install core packages before npm command resolution.');
-  }
-
-  fs.rmSync(npmGlobalRoot, { recursive: true, force: true });
-  fs.mkdirSync(npmGlobalRoot, { recursive: true });
-  fs.mkdirSync(npmCacheRoot, { recursive: true });
-
-  const npmExecutablePath = toAbsoluteToolchainPath(npmCommandRelativePath);
-  const installSpecs = packageEntries.map(([, packageConfig]) => `${packageConfig.packageName}@${packageConfig.version}`);
-  const env = {
-    ...process.env,
-    PATH: buildToolchainPath(),
-    npm_config_cache: npmCacheRoot,
-    npm_config_update_notifier: 'false',
-    npm_config_fund: 'false',
-    npm_config_audit: 'false',
-  };
-
-  execFileSync(
-    npmExecutablePath,
-    ['install', '-g', '--prefix', npmGlobalRoot, '--loglevel=error', ...installSpecs],
-    { cwd: process.cwd(), env, stdio: 'inherit', shell: isWindowsPlatform(runtimePlatform) },
-  );
-}
-
-function stagePackageCommands() {
-  const packages = {};
-  const commands = {
-    node: resolvedNodeCommand || getNodeExecutableRelativePath(runtimePlatform),
-    npm: resolvedNpmCommand || getNpmExecutableRelativePath(runtimePlatform),
-  };
-
-  fs.rmSync(binRoot, { recursive: true, force: true });
-  fs.mkdirSync(binRoot, { recursive: true });
-
-  for (const [logicalName, packageConfig] of packageEntries) {
-    const packageRoot = getPackageRoot(packageConfig.packageName);
-    const packageJson = readPackageJson(packageRoot);
-    if (packageJson.version !== packageConfig.version) {
-      throw new Error(`${packageConfig.packageName} version mismatch. Expected ${packageConfig.version}, got ${packageJson.version}.`);
-    }
-
-    const binEntry = resolveBinEntry(packageJson, packageConfig.binName);
-    const cliScriptRelativePath = path.relative(toolchainRoot, path.join(packageRoot, binEntry));
-    const commandNames = [packageConfig.binName, ...(packageConfig.aliases || [])];
-    const commandArtifacts = [];
-
-    for (const commandName of commandNames) {
-      const artifacts = writeCommandShims(commandName, cliScriptRelativePath);
-      commandArtifacts.push(...artifacts);
-      commands[commandName] = artifacts.find((entry) => entry.endsWith(getCommandExecutableName(runtimePlatform, commandName))) || artifacts[0];
-    }
-
-    packages[logicalName] = {
-      packageName: packageConfig.packageName,
-      version: packageConfig.version,
-      integrity: packageConfig.integrity,
-      binName: packageConfig.binName,
-      aliases: packageConfig.aliases || [],
-      packageRootRelativePath: path.relative(toolchainRoot, packageRoot),
-      cliScriptRelativePath,
-      commandArtifacts,
-    };
-  }
-
-  return { packages, commands };
-}
-
 function writeToolchainManifest({ archivePath, sourceHost, packages, commands, activation, nodeLayout }) {
   const manifest = {
-    schemaVersion: 1,
-    layoutVersion: runtimeConfig.layoutVersion || 1,
+    schemaVersion: runtimeConfig.schemaVersion || 2,
+    layoutVersion: runtimeConfig.layoutVersion || 2,
     owner: 'hagicode-desktop',
     source: 'bundled-desktop',
     platform: runtimePlatform,
@@ -670,16 +442,32 @@ function validateToolchainManifest(manifest) {
     errors.push(`Node version expected ${runtimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
   }
 
-  for (const commandName of ['node', 'npm', 'openspec', 'skills', 'omniroute']) {
+  for (const commandName of ['node', 'npm']) {
     const relativePath = manifest.commands?.[commandName];
     if (!relativePath || !pathExists(path.join(toolchainRoot, relativePath))) {
       errors.push(`command ${commandName} is missing or points to a missing entry`);
     }
   }
 
+  for (const managedCommandName of ['openspec', 'skills', 'omniroute']) {
+    if (manifest.commands?.[managedCommandName]) {
+      errors.push(`managed command ${managedCommandName} must not be declared before manual installation`);
+    }
+  }
+
   for (const [logicalName, packageConfig] of packageEntries) {
-    if (manifest.packages?.[logicalName]?.version !== packageConfig.version) {
+    const packageRecord = manifest.packages?.[logicalName];
+    if (packageRecord?.version !== packageConfig.version) {
       errors.push(`${logicalName} package version expected ${packageConfig.version}`);
+    }
+    if (packageRecord?.installMode !== (packageConfig.installMode || 'manual')) {
+      errors.push(`${logicalName} installMode expected ${packageConfig.installMode || 'manual'}`);
+    }
+    if (packageRecord?.installState !== (packageConfig.installState || 'pending')) {
+      errors.push(`${logicalName} installState expected ${packageConfig.installState || 'pending'}`);
+    }
+    if (packageRecord?.installSpec !== (packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`)) {
+      errors.push(`${logicalName} installSpec expected ${packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`}`);
     }
   }
 
@@ -722,9 +510,11 @@ async function stageNodeRuntime() {
 async function main() {
   console.log(`[bundled-toolchain] Preparing Desktop-owned Node toolchain for ${runtimePlatform}`);
   const stageResult = await stageNodeRuntime();
-  installCorePackages(stageResult.nodeLayout.npm);
-  pruneNpmGlobalPackagePayload();
-  const commandResult = stagePackageCommands();
+  cleanDeferredPackageRoots();
+  const commandResult = {
+    commands: buildRuntimeCommands(stageResult.nodeLayout),
+    packages: buildDeferredPackageMetadata(),
+  };
   const activation = writeActivationArtifacts();
   const manifest = writeToolchainManifest({
     ...stageResult,
@@ -734,7 +524,7 @@ async function main() {
   validateToolchainManifest(manifest);
 
   console.log(`[bundled-toolchain] Staged Node ${runtimeConfig.releaseVersion} at ${nodeRoot}`);
-  console.log(`[bundled-toolchain] Pruned ${prunedToolchainEntries} non-runtime npm package entries`);
+  console.log(`[bundled-toolchain] Removed ${prunedToolchainEntries} stale managed-package entries`);
   console.log(`[bundled-toolchain] Wrote ${path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE)}`);
 }
 

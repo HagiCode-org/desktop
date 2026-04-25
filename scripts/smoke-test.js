@@ -21,11 +21,9 @@ import {
 import {
   TOOLCHAIN_MANIFEST_FILE,
   detectNodeRuntimePlatform,
-  getCommandExecutableName,
   getNodeExecutableRelativePath,
   getNpmExecutableRelativePath,
   getNpmExecutableRelativePathCandidates,
-  getNpmGlobalModulesRelativePath,
   readPinnedNodeRuntimeConfig,
 } from './embedded-node-runtime-config.js';
 
@@ -259,9 +257,6 @@ function validateToolchainPayload(toolchainRoot) {
   const requiredCommands = [
     manifest?.commands?.node || getNodeExecutableRelativePath(nodeRuntimePlatform),
     manifest?.commands?.npm || getNpmExecutableRelativePath(nodeRuntimePlatform),
-    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'openspec')),
-    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'skills')),
-    path.join('bin', getCommandExecutableName(nodeRuntimePlatform, 'omniroute')),
     TOOLCHAIN_MANIFEST_FILE,
   ];
 
@@ -269,7 +264,7 @@ function validateToolchainPayload(toolchainRoot) {
     const absolutePath = path.join(toolchainRoot, relativePath);
     if (!fs.existsSync(absolutePath)) {
       missing.push(relativePath);
-    } else if (process.platform !== 'win32' && (relativePath.endsWith('/node') || relativePath.startsWith('bin/')) && !isExecutable(absolutePath)) {
+    } else if (process.platform !== 'win32' && (relativePath.endsWith('/node') || relativePath.endsWith('/npm')) && !isExecutable(absolutePath)) {
       missing.push(`${relativePath} (not executable)`);
     }
   }
@@ -289,69 +284,7 @@ function validateToolchainPayload(toolchainRoot) {
     }
   }
 
-  const npmGlobalModulesRoot = path.join(toolchainRoot, getNpmGlobalModulesRelativePath(nodeRuntimePlatform));
-  const unexpectedPackageFiles = findUnexpectedNpmGlobalPackageFiles(npmGlobalModulesRoot, 5);
-  if (unexpectedPackageFiles.length > 0) {
-    missing.push(`npm global package payload contains non-runtime files: ${unexpectedPackageFiles.join(', ')}`);
-  }
-
   return missing;
-}
-
-function findUnexpectedNpmGlobalPackageFiles(rootPath, maxResults) {
-  const matches = [];
-  if (!fs.existsSync(rootPath)) {
-    return matches;
-  }
-
-  const forbiddenPackages = [
-    path.join('caniuse-lite'),
-    path.join('browserslist'),
-    path.join('electron-to-chromium'),
-    path.join('@mdn', 'browser-compat-data'),
-  ];
-
-  for (const relativePath of forbiddenPackages) {
-    if (fs.existsSync(path.join(rootPath, relativePath))) {
-      matches.push(relativePath);
-      if (matches.length >= maxResults) {
-        return matches;
-      }
-    }
-  }
-
-  const visit = (currentPath) => {
-    if (matches.length >= maxResults) {
-      return;
-    }
-
-    let entries;
-    try {
-      entries = fs.readdirSync(currentPath, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
-    for (const entry of entries) {
-      if (matches.length >= maxResults) {
-        return;
-      }
-
-      const entryPath = path.join(currentPath, entry.name);
-      if (entry.isDirectory()) {
-        visit(entryPath);
-        continue;
-      }
-
-      const lowerName = entry.name.toLowerCase();
-      if (entry.isFile() && (lowerName.endsWith('.d.ts') || lowerName.endsWith('.d.ts.map') || lowerName.endsWith('.map'))) {
-        matches.push(path.relative(rootPath, entryPath));
-      }
-    }
-  };
-
-  visit(rootPath);
-  return matches;
 }
 
 function validateToolchainManifest(toolchainRoot) {
@@ -374,10 +307,16 @@ function validateToolchainManifest(toolchainRoot) {
     errors.push(`Node version expected ${nodeRuntimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
   }
 
-  for (const commandName of ['node', 'npm', 'openspec', 'skills', 'omniroute']) {
+  for (const commandName of ['node', 'npm']) {
     const relativePath = manifest.commands?.[commandName];
     if (!relativePath || !fs.existsSync(path.join(toolchainRoot, relativePath))) {
       errors.push(`manifest command ${commandName} is missing or points to a missing entry`);
+    }
+  }
+
+  for (const managedCommandName of ['openspec', 'skills', 'omniroute']) {
+    if (manifest.commands?.[managedCommandName]) {
+      errors.push(`manifest command ${managedCommandName} must not be declared before manual installation`);
     }
   }
 
@@ -386,8 +325,18 @@ function validateToolchainManifest(toolchainRoot) {
   }
 
   for (const [name, packageConfig] of Object.entries(nodeRuntimeConfig.corePackages || {})) {
-    if (manifest.packages?.[name]?.version !== packageConfig.version) {
+    const packageRecord = manifest.packages?.[name];
+    if (packageRecord?.version !== packageConfig.version) {
       errors.push(`${name} package version expected ${packageConfig.version} but found ${manifest.packages?.[name]?.version || 'missing'}`);
+    }
+    if (packageRecord?.installMode !== (packageConfig.installMode || 'manual')) {
+      errors.push(`${name} package installMode expected ${packageConfig.installMode || 'manual'}`);
+    }
+    if (packageRecord?.installState !== (packageConfig.installState || 'pending')) {
+      errors.push(`${name} package installState expected ${packageConfig.installState || 'pending'}`);
+    }
+    if (packageRecord?.installSpec !== (packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`)) {
+      errors.push(`${name} package installSpec expected ${packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`}`);
     }
   }
 
@@ -543,6 +492,7 @@ test('electron-builder configuration is valid', async () => {
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
   const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/portable-fixed/toolchain');
+  const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
   const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/portable-fixed/toolchain';
@@ -550,6 +500,7 @@ test('electron-builder configuration is valid', async () => {
     ? buildConfig.mac.signIgnore
     : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
   const toolchainSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/portable-fixed/toolchain'));
+  const toolchainStashedDuringMacSigning = buildConfig?.afterPack === macToolchainSigningHook && buildConfig?.afterSign === macToolchainSigningHook;
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
       .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
@@ -571,6 +522,7 @@ test('electron-builder configuration is valid', async () => {
   assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
   assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/portable-fixed/toolchain');
   assert(toolchainSkippedByMacSigning, 'bundled Node toolchain is excluded from recursive macOS code signing');
+  assert(toolchainStashedDuringMacSigning, 'bundled Node toolchain is stashed outside the macOS app during code signing');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
   assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
   assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');
@@ -612,7 +564,7 @@ test('staged bundled Node toolchain payload is complete', () => {
   assert(
     missingComponents.length === 0,
     missingComponents.length === 0
-      ? 'staged bundled Node toolchain contains node, npm, openspec, skills, omniroute, and manifest'
+      ? 'staged bundled Node toolchain contains node, npm, and the deferred package manifest contract'
       : `staged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
   );
 
@@ -653,7 +605,7 @@ test('packaged bundled Node toolchain payload is complete', () => {
   assert(
     missingComponents.length === 0,
     missingComponents.length === 0
-      ? 'packaged bundled Node toolchain contains node, npm, openspec, skills, omniroute, and manifest'
+      ? 'packaged bundled Node toolchain contains node, npm, and the deferred package manifest contract'
       : `packaged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
   );
 

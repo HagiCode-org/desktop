@@ -55,5 +55,8 @@ assert.match(prepareScript, /fs\.rmSync\(shimPath, \{ force: true \}\)/, 'prepar
 assert.match(prepareScript, /printStagingDiagnostics/, 'prepare script emits staging diagnostics on failure');
 assert.match(prepareScript, /attempted command candidates/, 'diagnostics include attempted command candidates');
 assert.match(prepareScript, /shallow snapshot/, 'diagnostics include a shallow staged directory snapshot');
+assert.match(prepareScript, /buildDeferredPackageMetadata/, 'prepare script writes deferred package metadata');
+assert.equal(prepareScript.includes('installCorePackages('), false, 'prepare script no longer auto-installs bundled CLI packages');
+assert.equal(prepareScript.includes('stagePackageCommands('), false, 'prepare script no longer writes bundled CLI shims during staging');
 
 console.log('embedded-node-runtime-config tests passed');
