@@ -1,4 +1,4 @@
-import type { AgentCliType } from './agent-cli.js';
+import type { AgentCliId } from './agent-cli-catalog.js';
 
 export const systemDiagnosticChannels = {
   run: 'system-diagnostic:run',
@@ -43,7 +43,7 @@ export interface SystemDiagnosticHardwareInfo {
 }
 
 export interface SystemDiagnosticAgentCliProbe {
-  cliType: AgentCliType;
+  cliType: AgentCliId;
   displayName: string;
   status: SystemDiagnosticAgentCliStatus;
   commandCandidates: string[];

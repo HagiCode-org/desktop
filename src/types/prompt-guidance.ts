@@ -1,4 +1,4 @@
-import type { AgentCliType } from './agent-cli.js';
+import type { AgentCliId } from './agent-cli-catalog.js';
 
 export type PromptGuidanceEntryPoint = 'smartConfig' | 'versionDependencies';
 export type PromptGuidanceSource =
@@ -17,7 +17,7 @@ export type PromptGuidanceErrorCode =
   | 'MANIFEST_PATH_NOT_FOUND';
 
 export interface PromptGuidanceTool {
-  cliType: AgentCliType;
+  cliType: AgentCliId;
   displayName: string;
   description: string;
   commandName: string;
