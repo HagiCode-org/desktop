@@ -24,6 +24,11 @@ import {
   applySteamLinuxStartupCompatibility,
   buildStartupCompatibilityLogContext,
 } from './linux-startup-compatibility.js';
+import {
+  applyElectronSandboxOverride,
+  buildElectronSandboxOverrideLogContext,
+  ELECTRON_SANDBOX_OVERRIDE_ENV_KEY,
+} from './electron-sandbox-override.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import {
   openAboutWindow,
@@ -65,6 +70,22 @@ const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 
+const electronSandboxOverrideDecision = applyElectronSandboxOverride(app, {
+  env: process.env,
+});
+
+if (electronSandboxOverrideDecision.enabled) {
+  log.warn(
+    `[ElectronSandboxOverride] ${ELECTRON_SANDBOX_OVERRIDE_ENV_KEY} disabled Electron sandboxing`,
+    buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
+  );
+} else {
+  log.info(
+    '[ElectronSandboxOverride] Electron sandbox override skipped',
+    buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
+  );
+}
+
 const startupCompatibilityDecision = applySteamLinuxStartupCompatibility(app, {
   platform: process.platform,
   isPackaged: app.isPackaged,
@@ -84,6 +105,7 @@ if (startupCompatibilityDecision.enabled) {
 process.on('uncaughtException', (error: Error) => {
   log.error('[App] Uncaught exception during startup/runtime:', {
     error,
+    electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
     startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
   });
 });
@@ -91,6 +113,7 @@ process.on('uncaughtException', (error: Error) => {
 process.on('unhandledRejection', (reason: unknown) => {
   log.error('[App] Unhandled rejection during startup/runtime:', {
     reason,
+    electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
     startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
   });
 });
@@ -2096,6 +2119,7 @@ app.whenReady().then(async () => {
   log.info(`[Config] Recording directory: ${configManager.getRecordingDirectory() || 'Not set'}`);
   log.info(`[Config] Logs directory: ${configManager.getLogsDirectory() || 'Not set'}`);
   log.info(`[Config] Current language: ${configManager.getCurrentLanguage() || 'Not set'}`);
+  log.info('[ElectronSandboxOverride] Active startup context:', buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision));
   log.info('[StartupCompatibility] Active startup context:', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
   log.info('======================================');
 
@@ -2113,6 +2137,9 @@ app.whenReady().then(async () => {
   const distributionModeState = await versionManager.initializeDistributionMode();
   log.info('[App] Distribution mode initialized:', {
     distributionMode: distributionModeState.mode,
+    electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
+    electronSandboxOverrideMode: electronSandboxOverrideDecision.mode,
+    electronSandboxOverrideReason: electronSandboxOverrideDecision.reason,
     startupCompatibilityEnabled: startupCompatibilityDecision.enabled,
     startupCompatibilityLaunchSource: startupCompatibilityDecision.launchSource,
     startupCompatibilityDetectorCategory: startupCompatibilityDecision.detectorCategory,
