@@ -15,6 +15,8 @@ import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
+import type { ManagedNpmPackageId, NpmManagementBridge } from '../types/npm-management.js';
+import { npmManagementChannels } from '../types/npm-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
 import type {
   LogDirectoryBridge,
@@ -314,6 +316,7 @@ interface ElectronAPI {
     writeText: (text: string) => Promise<void>;
   };
   systemDiagnostic: SystemDiagnosticBridge;
+  npmManagement: NpmManagementBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -738,6 +741,19 @@ const electronAPI: ElectronAPI = {
   },
   clipboard: clipboardBridge,
   systemDiagnostic: systemDiagnosticBridge,
+  npmManagement: {
+    getSnapshot: () => ipcRenderer.invoke(npmManagementChannels.snapshot),
+    refresh: () => ipcRenderer.invoke(npmManagementChannels.refresh),
+    install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.install, packageId),
+    uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.uninstall, packageId),
+    onProgress: (callback) => {
+      const listener = (_event, progress) => {
+        callback(progress);
+      };
+      ipcRenderer.on(npmManagementChannels.progress, listener);
+      return () => ipcRenderer.removeListener(npmManagementChannels.progress, listener);
+    },
+  },
 };
 
 ipcRenderer.on('webview-navigate', (_event, direction: 'back' | 'forward' | 'refresh') => {

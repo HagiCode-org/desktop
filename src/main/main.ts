@@ -13,6 +13,7 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
+import NpmManagementService from './npm-management-service.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { VersionUpdateManager } from './version-update-manager.js';
@@ -53,6 +54,7 @@ import {
   registerRegionHandlers,
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
+  registerNpmManagementHandlers,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
@@ -193,6 +195,7 @@ let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
+let npmManagementService: NpmManagementService | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
@@ -2215,6 +2218,13 @@ app.whenReady().then(async () => {
     });
     log.info('[App] System Diagnostic IPC handlers registered');
   }
+
+  npmManagementService = new NpmManagementService();
+  registerNpmManagementHandlers({
+    npmManagementService,
+    mainWindow,
+  });
+  log.info('[App] npm management IPC handlers registered');
 
   ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
   ipcMain.handle('bootstrap:refresh', async () => {
