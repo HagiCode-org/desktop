@@ -12,7 +12,7 @@ interface DependencyCheckResult {
   installCommand?: string;
   downloadUrl?: string;
   description?: string;
-  resolutionSource?: 'bundled-desktop' | 'system';
+  resolutionSource?: 'bundled-desktop' | 'bundled-dev' | 'system';
   sourcePath?: string;
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
