@@ -12,6 +12,7 @@ const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
 const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-builder.js');
+const macToolchainSigningHookPath = path.resolve(process.cwd(), 'scripts/macos-toolchain-signing-hook.cjs');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -81,9 +82,34 @@ describe('embedded runtime packaging configuration', () => {
     const builder = await fs.readFile(electronBuilderPath, 'utf-8');
     const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
 
+    assert.match(builder, /afterPack: scripts\/macos-toolchain-signing-hook\.cjs/);
+    assert.match(builder, /afterSign: scripts\/macos-toolchain-signing-hook\.cjs/);
     assert.match(builder, /signIgnore:/);
     assert.match(builder, /Contents\/Resources\/extra\/portable-fixed\/toolchain\/\.\*/);
+    assert.match(smokeTest, /stashed outside the macOS app during code signing/);
     assert.match(smokeTest, /excluded from recursive macOS code signing/);
+  });
+
+  it('macOS signing hook stashes and restores bundled toolchain resources', async () => {
+    const hook = await import(macToolchainSigningHookPath);
+    const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'macos-toolchain-signing-hook');
+    const appOutDir = path.join(fixtureRoot, 'mac-arm64');
+    const outDir = fixtureRoot;
+    const toolchainRoot = path.join(appOutDir, 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain');
+    const markerPath = path.join(toolchainRoot, 'toolchain-manifest.json');
+
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
+    await fs.mkdir(toolchainRoot, { recursive: true });
+    await fs.writeFile(markerPath, '{}\n', 'utf-8');
+
+    const context = { appOutDir, outDir, electronPlatformName: 'darwin' };
+    await hook.afterPack(context);
+    await assert.rejects(fs.stat(markerPath));
+
+    await hook.afterSign(context);
+    assert.equal(await fs.readFile(markerPath, 'utf-8'), '{}\n');
+
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {

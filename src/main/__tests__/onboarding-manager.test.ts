@@ -52,4 +52,13 @@ describe('onboarding-manager legal consent gating', () => {
     assert.match(source, /reason: this\.versionManager\.isPortableVersionMode\(\)/);
     assert.match(source, /'portable-version-provisioned'/);
   });
+
+  it('returns a manual-action-required handoff instead of auto-installing dependencies during onboarding', async () => {
+    const source = await readSource();
+
+    assert.match(source, /buildManualActionPlan\(initialStatus\)/);
+    assert.match(source, /status: 'manual-action-required'/);
+    assert.match(source, /Onboarding no longer executes dependency installers automatically/);
+    assert.equal(source.includes('installFromManifest('), false);
+  });
 });
