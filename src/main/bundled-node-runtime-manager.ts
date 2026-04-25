@@ -6,6 +6,9 @@ import { PathManager } from './path-manager.js';
 import {
   TOOLCHAIN_MANIFEST_FILE,
   detectNodeRuntimePlatform,
+  getCommandExecutableName,
+  getNpmGlobalBinRelativePath,
+  getNpmGlobalModulesRelativePath,
   readPinnedNodeRuntimeConfig,
   resolvePinnedNodeRuntimeTarget,
   type EmbeddedNodeRuntimeConsumerDefaultMatrix,
@@ -17,8 +20,11 @@ import {
 } from './bundled-node-runtime-policy.js';
 
 export type BundledToolchainComponentId = 'node' | 'npm' | 'openspec' | 'skills' | 'omniroute';
-export type BundledToolchainIntegrity = 'ok' | 'missing' | 'corrupt' | 'incompatible';
+export type BundledToolchainIntegrity = 'ok' | 'missing' | 'corrupt' | 'incompatible' | 'pending';
 export type BundledToolchainRemediation = 'none' | 'reinstall-desktop' | 'update-desktop';
+export type BundledToolchainPrimaryAction = BundledToolchainRemediation | 'manual-install';
+export type BundledToolchainInstallMode = 'manual' | 'auto';
+export type BundledToolchainInstallState = 'pending' | 'installed';
 
 export interface BundledToolchainManifestPackage {
   packageName: string;
@@ -26,9 +32,13 @@ export interface BundledToolchainManifestPackage {
   integrity?: string;
   binName: string;
   aliases?: string[];
-  packageRootRelativePath: string;
-  cliScriptRelativePath: string;
-  commandArtifacts: string[];
+  installMode: BundledToolchainInstallMode;
+  installState: BundledToolchainInstallState;
+  installSpec: string;
+  manualActionId: string;
+  packageRootRelativePath?: string;
+  cliScriptRelativePath?: string;
+  commandArtifacts?: string[];
 }
 
 export interface BundledToolchainManifest {
@@ -57,6 +67,7 @@ export interface BundledToolchainManifest {
     extractRoot: string;
     executableRelativePath: string;
     npmExecutableRelativePath: string;
+    archiveNpmExecutableRelativePath?: string;
   };
   packages: Record<string, BundledToolchainManifestPackage>;
   commands: Partial<Record<BundledToolchainComponentId | string, string>>;
@@ -73,8 +84,13 @@ export interface BundledToolchainComponentStatus {
   executablePath?: string;
   manifestPath: string;
   integrity: BundledToolchainIntegrity;
-  primaryAction: BundledToolchainRemediation;
+  primaryAction: BundledToolchainPrimaryAction;
   message?: string;
+  installMode?: BundledToolchainInstallMode;
+  installState?: BundledToolchainInstallState;
+  installSpec?: string;
+  manualActionId?: string;
+  managedByDesktop?: boolean;
 }
 
 export interface BundledToolchainStatus {
@@ -94,7 +110,7 @@ export interface BundledToolchainStatus {
 }
 
 const COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm', 'openspec', 'skills', 'omniroute'];
-
+const RUNTIME_COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm'];
 function isExecutable(targetPath: string): boolean {
   try {
     fsSync.accessSync(targetPath, fsSync.constants.X_OK);
@@ -119,6 +135,52 @@ function normalizeManifest(raw: unknown): BundledToolchainManifest | null {
   }
 
   return manifest as BundledToolchainManifest;
+}
+
+function resolveManagedPackageRoot(
+  toolchainRoot: string,
+  packageName: string,
+  platform: string,
+): string {
+  return path.join(
+    toolchainRoot,
+    getNpmGlobalModulesRelativePath(platform),
+    ...packageName.split('/').filter(Boolean),
+  );
+}
+
+function resolveManagedCommandCandidates(
+  toolchainRoot: string,
+  packageRecord: BundledToolchainManifestPackage,
+  platform: string,
+): string[] {
+  const npmGlobalBinRoot = path.join(toolchainRoot, getNpmGlobalBinRelativePath(platform));
+  const executableName = getCommandExecutableName(platform, packageRecord.binName);
+  const legacyExecutableName = getCommandExecutableName(platform, packageRecord.binName);
+
+  return [
+    path.join(npmGlobalBinRoot, executableName),
+    path.join(toolchainRoot, 'bin', legacyExecutableName),
+  ];
+}
+
+function describePendingManualInstall(
+  packageRecord: BundledToolchainManifestPackage,
+  toolchainRoot: string,
+): string {
+  return [
+    `Bundled Node.js and npm are ready, but ${packageRecord.binName} is pending manual installation.`,
+    `Install ${packageRecord.installSpec} into ${path.join(toolchainRoot, 'npm-global')} and refresh dependency status.`,
+  ].join(' ');
+}
+
+async function readInstalledPackageVersion(packageRoot: string): Promise<string | null> {
+  try {
+    const packageJson = JSON.parse(await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8')) as { version?: string };
+    return typeof packageJson.version === 'string' ? packageJson.version : null;
+  } catch {
+    return null;
+  }
 }
 
 export class BundledNodeRuntimeManager {
@@ -177,6 +239,9 @@ export class BundledNodeRuntimeManager {
     if (!manifest) {
       errors.push(`${TOOLCHAIN_MANIFEST_FILE} is missing or invalid`);
     } else {
+      if (manifest.schemaVersion !== this.runtimeConfig.schemaVersion) {
+        errors.push(`toolchain schema version expected ${this.runtimeConfig.schemaVersion} but found ${manifest.schemaVersion || 'missing'}`);
+      }
       if (manifest.platform !== platform) {
         errors.push(`toolchain platform expected ${platform} but found ${manifest.platform || 'missing'}`);
       }
@@ -193,14 +258,16 @@ export class BundledNodeRuntimeManager {
 
     const components = {} as Record<BundledToolchainComponentId, BundledToolchainComponentStatus>;
     for (const componentId of COMPONENTS) {
-      const status = this.buildComponentStatus(componentId, manifest, manifestPath, toolchainRoot, platform, errors);
+      const status = componentId === 'node' || componentId === 'npm'
+        ? this.buildRuntimeComponentStatus(componentId, manifest, manifestPath, toolchainRoot, errors)
+        : await this.buildManagedPackageComponentStatus(componentId, manifest, manifestPath, toolchainRoot, platform, errors);
       components[componentId] = status;
-      if (!status.installed) {
+      if (status.integrity !== 'ok' && status.integrity !== 'pending') {
         missingEntries.push(componentId);
       }
     }
 
-    const available = errors.length === 0 && COMPONENTS.every((componentId) => components[componentId].installed);
+    const available = errors.length === 0 && RUNTIME_COMPONENTS.every((componentId) => components[componentId].installed);
     const integrity: BundledToolchainIntegrity = available
       ? 'ok'
       : manifest
@@ -224,18 +291,15 @@ export class BundledNodeRuntimeManager {
     };
   }
 
-  private buildComponentStatus(
-    componentId: BundledToolchainComponentId,
+  private buildRuntimeComponentStatus(
+    componentId: 'node' | 'npm',
     manifest: BundledToolchainManifest | null,
     manifestPath: string,
     toolchainRoot: string,
-    platform: string,
     sharedErrors: string[],
   ): BundledToolchainComponentStatus {
     const commandRelativePath = manifest?.commands?.[componentId];
     const executablePath = commandRelativePath ? path.join(toolchainRoot, commandRelativePath) : undefined;
-    const packageRecord = componentId === 'node' || componentId === 'npm' ? null : manifest?.packages?.[componentId];
-    const configuredPackage = componentId === 'node' || componentId === 'npm' ? null : this.runtimeConfig.corePackages[componentId];
     const componentErrors: string[] = [];
 
     if (!manifest) {
@@ -250,26 +314,14 @@ export class BundledNodeRuntimeManager {
     if (executablePath && requiresExecutableBit(process.platform) && !isExecutable(executablePath)) {
       componentErrors.push(`${componentId} executable is not executable at ${executablePath}`);
     }
-    if (configuredPackage && !packageRecord) {
-      componentErrors.push(`${componentId} package is not declared in ${TOOLCHAIN_MANIFEST_FILE}`);
-    }
-    if (configuredPackage && packageRecord && packageRecord.version !== configuredPackage.version) {
-      componentErrors.push(`${componentId} package expected ${configuredPackage.version} but found ${packageRecord.version || 'missing'}`);
-    }
 
-    const version = componentId === 'node' || componentId === 'npm'
-      ? manifest?.node?.version
-      : packageRecord?.version;
-    const requiredVersion = componentId === 'node' || componentId === 'npm'
-      ? this.runtimeConfig.releaseVersion
-      : configuredPackage?.version;
     const installed = sharedErrors.length === 0 && componentErrors.length === 0;
 
     return {
       componentId,
       installed,
-      version,
-      requiredVersion,
+      version: manifest?.node?.version,
+      requiredVersion: this.runtimeConfig.releaseVersion,
       resolutionSource: 'bundled-desktop',
       sourcePath: toolchainRoot,
       executablePath,
@@ -277,6 +329,122 @@ export class BundledNodeRuntimeManager {
       integrity: installed ? 'ok' : manifest ? 'corrupt' : 'missing',
       primaryAction: installed ? 'none' : 'reinstall-desktop',
       message: componentErrors.join('; ') || undefined,
+      managedByDesktop: true,
     };
   }
+
+  private async buildManagedPackageComponentStatus(
+    componentId: Exclude<BundledToolchainComponentId, 'node' | 'npm'>,
+    manifest: BundledToolchainManifest | null,
+    manifestPath: string,
+    toolchainRoot: string,
+    platform: string,
+    sharedErrors: string[],
+  ): Promise<BundledToolchainComponentStatus> {
+    const configuredPackage = this.runtimeConfig.corePackages[componentId];
+    const packageRecord = manifest?.packages?.[componentId];
+    const componentErrors: string[] = [];
+
+    if (!manifest) {
+      componentErrors.push(`${TOOLCHAIN_MANIFEST_FILE} is missing or invalid`);
+    }
+    if (!packageRecord) {
+      componentErrors.push(`${componentId} package is not declared in ${TOOLCHAIN_MANIFEST_FILE}`);
+    }
+    if (configuredPackage && packageRecord && packageRecord.version !== configuredPackage.version) {
+      componentErrors.push(`${componentId} package expected ${configuredPackage.version} but found ${packageRecord.version || 'missing'}`);
+    }
+    if (packageRecord && packageRecord.installMode !== (configuredPackage.installMode || 'manual')) {
+      componentErrors.push(`${componentId} installMode expected ${configuredPackage.installMode || 'manual'} but found ${packageRecord.installMode || 'missing'}`);
+    }
+    if (packageRecord && !packageRecord.installSpec) {
+      componentErrors.push(`${componentId} installSpec is missing from ${TOOLCHAIN_MANIFEST_FILE}`);
+    }
+    if (packageRecord && !packageRecord.manualActionId) {
+      componentErrors.push(`${componentId} manualActionId is missing from ${TOOLCHAIN_MANIFEST_FILE}`);
+    }
+
+    const packageRoot = packageRecord
+      ? resolveManagedPackageRoot(toolchainRoot, packageRecord.packageName, platform)
+      : undefined;
+    const installedPackageVersion = packageRoot ? await readInstalledPackageVersion(packageRoot) : null;
+    const executablePath = packageRecord
+      ? resolveManagedCommandCandidates(toolchainRoot, packageRecord, platform).find((candidate) => fsSync.existsSync(candidate))
+      : undefined;
+
+    if (packageRoot && fsSync.existsSync(packageRoot) && executablePath && sharedErrors.length === 0 && componentErrors.length === 0) {
+      if (installedPackageVersion && installedPackageVersion !== configuredPackage.version) {
+        componentErrors.push(`${componentId} installed package version expected ${configuredPackage.version} but found ${installedPackageVersion}`);
+      }
+
+      if (componentErrors.length === 0) {
+        return {
+          componentId,
+          installed: true,
+          version: installedPackageVersion ?? packageRecord?.version,
+          requiredVersion: configuredPackage.version,
+          resolutionSource: 'bundled-desktop',
+          sourcePath: toolchainRoot,
+          executablePath,
+          manifestPath,
+          integrity: 'ok',
+          primaryAction: 'none',
+          installMode: packageRecord?.installMode,
+          installState: 'installed',
+          installSpec: packageRecord?.installSpec,
+          manualActionId: packageRecord?.manualActionId,
+          managedByDesktop: true,
+        };
+      }
+    }
+
+    if (sharedErrors.length === 0 && componentErrors.length === 0 && packageRecord) {
+      return {
+        componentId,
+        installed: false,
+        version: packageRecord.version,
+        requiredVersion: configuredPackage.version,
+        resolutionSource: 'bundled-desktop',
+        sourcePath: toolchainRoot,
+        executablePath,
+        manifestPath,
+        integrity: 'pending',
+        primaryAction: 'manual-install',
+        message: describePendingManualInstall(packageRecord, toolchainRoot),
+        installMode: packageRecord.installMode,
+        installState: packageRecord.installState,
+        installSpec: packageRecord.installSpec,
+        manualActionId: packageRecord.manualActionId,
+        managedByDesktop: true,
+      };
+    }
+
+    return {
+      componentId,
+      installed: false,
+      version: installedPackageVersion ?? packageRecord?.version,
+      requiredVersion: configuredPackage?.version,
+      resolutionSource: 'bundled-desktop',
+      sourcePath: toolchainRoot,
+      executablePath,
+      manifestPath,
+      integrity: manifest ? 'corrupt' : 'missing',
+      primaryAction: componentRecordNeedsManualInstall(componentErrors, packageRecord) ? 'manual-install' : 'reinstall-desktop',
+      message: componentErrors.join('; ') || undefined,
+      installMode: packageRecord?.installMode,
+      installState: packageRecord?.installState,
+      installSpec: packageRecord?.installSpec,
+      manualActionId: packageRecord?.manualActionId,
+      managedByDesktop: true,
+    };
+  }
+}
+
+function componentRecordNeedsManualInstall(
+  componentErrors: string[],
+  packageRecord: BundledToolchainManifestPackage | undefined,
+): boolean {
+  return packageRecord !== undefined
+    && componentErrors.every((error) => !error.includes('missing or invalid'))
+    && packageRecord.installMode === 'manual';
 }

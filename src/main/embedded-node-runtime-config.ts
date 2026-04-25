@@ -15,6 +15,10 @@ export interface EmbeddedNodeRuntimePackageConfig {
   binName: string;
   aliases?: string[];
   integrity?: string;
+  installMode?: 'manual' | 'auto';
+  installState?: 'pending' | 'installed';
+  installSpec?: string;
+  manualActionId?: string;
 }
 
 export interface EmbeddedNodeRuntimePlatformTarget {
@@ -129,6 +133,18 @@ export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform
     path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
     path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm'),
   ];
+}
+
+export function getNpmGlobalBinRelativePath(platform: NodeJS.Platform | string): string {
+  return String(platform).startsWith('win')
+    ? 'npm-global'
+    : path.join('npm-global', 'bin');
+}
+
+export function getNpmGlobalModulesRelativePath(platform: NodeJS.Platform | string): string {
+  return String(platform).startsWith('win')
+    ? path.join('npm-global', 'node_modules')
+    : path.join('npm-global', 'lib', 'node_modules');
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {
