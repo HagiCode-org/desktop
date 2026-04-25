@@ -10,6 +10,7 @@ import {
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
+import { getCommandExecutableName } from './embedded-node-runtime-config.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
@@ -999,14 +1000,30 @@ export class PathManager {
     }).npmExecutablePath;
   }
 
-  getPortableOpenspecExecutablePath(): string {
-    return buildPortableToolchainPaths({
+  getPortableManagedCliExecutablePath(commandName: 'openspec' | 'skills' | 'omniroute'): string | null {
+    const paths = buildPortableToolchainPaths({
       cwd: process.cwd(),
       resourcesPath: process.resourcesPath,
       isPackaged: app.isPackaged,
       platform: process.platform,
       overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).openspecExecutablePath;
+    });
+    const executableName = getCommandExecutableName(process.platform, commandName);
+    const npmGlobalCandidate = path.join(paths.npmGlobalBinRoot, executableName);
+    if (fsSync.existsSync(npmGlobalCandidate)) {
+      return npmGlobalCandidate;
+    }
+
+    const legacyToolchainBinCandidate = path.join(paths.toolchainBinRoot, executableName);
+    if (fsSync.existsSync(legacyToolchainBinCandidate)) {
+      return legacyToolchainBinCandidate;
+    }
+
+    return null;
+  }
+
+  getPortableOpenspecExecutablePath(): string | null {
+    return this.getPortableManagedCliExecutablePath('openspec');
   }
 
   getPortableToolchainManifestPath(): string {
@@ -1019,24 +1036,12 @@ export class PathManager {
     }).toolchainManifestPath;
   }
 
-  getPortableSkillsExecutablePath(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).skillsExecutablePath;
+  getPortableSkillsExecutablePath(): string | null {
+    return this.getPortableManagedCliExecutablePath('skills');
   }
 
-  getPortableOmnirouteExecutablePath(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).omnirouteExecutablePath;
+  getPortableOmnirouteExecutablePath(): string | null {
+    return this.getPortableManagedCliExecutablePath('omniroute');
   }
 
   getEmbeddedNodeRuntimeManifestPath(): string {

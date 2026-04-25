@@ -2,13 +2,18 @@ import { manifestReader, ParsedDependency, DependencyTypeName, type Manifest, ty
 import { app } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
+import path from 'node:path';
 import { PathManager } from './path-manager.js';
 import {
   resolveAspNetCoreRuntimeRequirement,
   validateBundledRuntimeForPlatform,
 } from './embedded-runtime.js';
 import { resolvePinnedRuntimeTarget } from './embedded-runtime-config.js';
-import { BundledNodeRuntimeManager, type BundledToolchainComponentId } from './bundled-node-runtime-manager.js';
+import {
+  BundledNodeRuntimeManager,
+  type BundledToolchainComponentId,
+  type BundledToolchainComponentStatus,
+} from './bundled-node-runtime-manager.js';
 import { satisfies } from 'semver';
 
 /**
@@ -20,6 +25,27 @@ export enum DependencyType {
   JavaRuntime = 'java-runtime',
   ClaudeCode = 'claude-code',
   CliTool = 'cli-tool',
+}
+
+export interface BundledCliManualAction {
+  logicalName: Exclude<BundledToolchainComponentId, 'node' | 'npm'>;
+  packageName: string;
+  version: string;
+  binName: string;
+  aliases: string[];
+  installMode: 'manual' | 'auto';
+  installState: 'pending' | 'installed';
+  installSpec: string;
+  manualActionId: string;
+  toolchainRoot: string;
+  npmExecutablePath?: string;
+  command?: string;
+}
+
+export interface DependencyActionPlan {
+  status: 'manual-action-required';
+  message: string;
+  packages: BundledCliManualAction[];
 }
 
 /**
@@ -40,19 +66,21 @@ export interface DependencyCheckResult {
   isChecking?: boolean;  // True while check is in progress
   resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
-  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop';
+  primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
+  status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
+  manualAction?: BundledCliManualAction;
 }
 
 /**
- * DependencyManager handles detection and installation of system dependencies
- * Note: Script execution has been removed. All dependency checking and installation
- * is now handled by AI.
+ * DependencyManager handles dependency detection and manual-install handoff state.
  */
 export class DependencyManager {
   private currentManifest: Manifest | null = null;
   private readonly pathManager = PathManager.getInstance();
   private readonly bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
   private static readonly DESKTOP_DOWNLOAD_URL = 'https://hagicode.com/desktop/#download';
+  private static readonly MANUAL_DEPENDENCY_HANDOFF_MESSAGE =
+    'Desktop no longer executes dependency installers automatically. Review the dependency status, run the required manual steps outside Desktop, and refresh when finished.';
 
   constructor(_store?: Store<Record<string, unknown>>) {
     // Constructor kept for compatibility
@@ -76,31 +104,32 @@ export class DependencyManager {
     log.info('[DependencyManager] Check cache cleared (cache mechanism disabled)');
   }
 
+  getManualDependencyHandoffMessage(): string {
+    return DependencyManager.MANUAL_DEPENDENCY_HANDOFF_MESSAGE;
+  }
+
   /**
-   * Check all dependencies from manifest
-   * Note: Script execution has been removed. Returns empty array.
-   * Actual dependency checking is handled by AI.
+   * Check all global dependencies.
+   * Legacy direct dependency checks remain disabled; version-specific checks use manifest state.
    */
   async checkAllDependencies(): Promise<DependencyCheckResult[]> {
-    log.info('[DependencyManager] checkAllDependencies called (script execution disabled)');
+    log.info('[DependencyManager] checkAllDependencies called (global script execution disabled)');
     return [];
   }
 
   /**
-   * Check dependencies from parsed manifest
-   * Note: Script execution has been removed. All dependencies are returned as "not installed".
-   * Actual dependency installation and checking is handled by AI.
+   * Check dependencies from parsed manifest.
    * @param dependencies - Parsed dependencies from manifest
    * @param entryPoint - EntryPoint object from manifest (kept for compatibility, not used)
    * @param onOutput - Optional callback for real-time output (not used)
-   * @returns Array of dependency check results (all marked as not installed)
+   * @returns Array of dependency check results
    */
   async checkFromManifest(
     dependencies: ParsedDependency[],
     entryPoint: EntryPoint | null,
     onOutput?: (type: 'stdout' | 'stderr', data: string, dependencyName?: string) => void
   ): Promise<DependencyCheckResult[]> {
-    log.info('[DependencyManager] Checking all dependencies from manifest (script execution disabled)');
+    log.info('[DependencyManager] Checking dependencies from manifest');
 
     return Promise.all(dependencies.map(async (dep) => {
       const bundledRuntimeResult = await this.checkBundledDotnetDependency(dep);
@@ -113,8 +142,7 @@ export class DependencyManager {
         return bundledToolchainResult;
       }
 
-      // Return all remaining dependencies as not installed.
-      // Actual dependency checking is handled by AI.
+      // Non-bundled dependencies remain manual/external checks in the current flow.
       return {
         key: dep.key,
         name: dep.name,
@@ -123,6 +151,7 @@ export class DependencyManager {
         requiredVersion: this.formatRequiredVersion(dep.versionConstraints),
         description: dep.description,
         downloadUrl: dep.installHint,
+        status: 'missing',
       };
     }));
   }
@@ -147,6 +176,7 @@ export class DependencyManager {
       versionMismatch: false,
       description: dep.description,
       isChecking: true,
+      status: 'missing',
     }));
   }
 
@@ -167,6 +197,75 @@ export class DependencyManager {
 
     if (parts.length === 0) return 'any';
     return parts.join(', ');
+  }
+
+  private quoteManualCommandSegment(segment: string): string {
+    if (segment.length === 0) {
+      return '""';
+    }
+
+    if (process.platform === 'win32') {
+      return `"${segment.replace(/"/g, '\\"')}"`;
+    }
+
+    return `'${segment.replace(/'/g, `'\\''`)}'`;
+  }
+
+  private buildBundledCliManualAction(
+    componentId: Exclude<BundledToolchainComponentId, 'node' | 'npm'>,
+    component: BundledToolchainComponentStatus,
+    bundledStatus: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>,
+  ): BundledCliManualAction | undefined {
+    const packageRecord = bundledStatus.manifest?.packages?.[componentId];
+    const npmExecutablePath = bundledStatus.components.npm.executablePath;
+    if (!packageRecord) {
+      return undefined;
+    }
+
+    const prefixPath = path.join(bundledStatus.toolchainRoot, 'npm-global');
+    const command = npmExecutablePath
+      ? [
+        this.quoteManualCommandSegment(npmExecutablePath),
+        'install',
+        '-g',
+        '--prefix',
+        this.quoteManualCommandSegment(prefixPath),
+        this.quoteManualCommandSegment(packageRecord.installSpec),
+      ].join(' ')
+      : undefined;
+
+    return {
+      logicalName: componentId,
+      packageName: packageRecord.packageName,
+      version: packageRecord.version,
+      binName: packageRecord.binName,
+      aliases: packageRecord.aliases || [],
+      installMode: packageRecord.installMode,
+      installState: packageRecord.installState,
+      installSpec: packageRecord.installSpec,
+      manualActionId: packageRecord.manualActionId,
+      toolchainRoot: bundledStatus.toolchainRoot,
+      npmExecutablePath,
+      command,
+    };
+  }
+
+  buildManualActionPlan(dependencies: DependencyCheckResult[]): DependencyActionPlan | null {
+    const packages = dependencies
+      .filter((dependency): dependency is DependencyCheckResult & { manualAction: BundledCliManualAction } => (
+        dependency.status === 'manual-install-required' && !!dependency.manualAction
+      ))
+      .map((dependency) => dependency.manualAction);
+
+    if (packages.length === 0) {
+      return null;
+    }
+
+    return {
+      status: 'manual-action-required',
+      message: 'Bundled Node.js and npm are ready, but Desktop-managed CLI packages must be installed manually before they can be used.',
+      packages,
+    };
   }
 
   private async checkBundledDotnetDependency(dep: ParsedDependency): Promise<DependencyCheckResult | null> {
@@ -205,6 +304,7 @@ export class DependencyManager {
         description: `Bundled with Desktop at ${runtimeRoot}`,
         resolutionSource: 'bundled-desktop',
         sourcePath: runtimeRoot,
+        status: 'installed',
       };
     }
 
@@ -227,6 +327,7 @@ export class DependencyManager {
       resolutionSource: 'bundled-desktop',
       sourcePath: runtimeRoot,
       primaryAction,
+      status: 'missing',
     };
   }
 
@@ -251,6 +352,27 @@ export class DependencyManager {
     const component = bundledStatus.components[componentId];
     const requiredVersion = component.requiredVersion ?? this.formatRequiredVersion(dep.versionConstraints);
 
+    if (component.primaryAction === 'manual-install') {
+      const manualAction = componentId === 'node' || componentId === 'npm'
+        ? undefined
+        : this.buildBundledCliManualAction(componentId, component, bundledStatus);
+      return {
+        key: dep.key,
+        name: dep.name,
+        type: this.mapDependencyType(dep.key, dep.type),
+        installed: false,
+        version: component.version,
+        requiredVersion,
+        versionMismatch: false,
+        description: component.message,
+        resolutionSource: 'bundled-desktop',
+        sourcePath: component.executablePath ?? component.sourcePath,
+        primaryAction: 'manual-install',
+        status: 'manual-install-required',
+        manualAction,
+      };
+    }
+
     if (component.installed) {
       const versionMismatch = !this.isBundledToolchainVersionCompatible(componentId, component.version, dep);
       return {
@@ -266,7 +388,8 @@ export class DependencyManager {
           : `Bundled with Desktop at ${component.sourcePath}`,
         resolutionSource: 'bundled-desktop',
         sourcePath: component.executablePath ?? component.sourcePath,
-        primaryAction: versionMismatch ? 'update-desktop' : 'reinstall-desktop',
+        primaryAction: versionMismatch ? 'update-desktop' : undefined,
+        status: versionMismatch ? 'version-mismatch' : 'installed',
       };
     }
 
@@ -277,12 +400,13 @@ export class DependencyManager {
       installed: false,
       version: component.version,
       requiredVersion,
-      versionMismatch: true,
+      versionMismatch: false,
       description: `${component.message ?? (bundledStatus.errors.join('; ') || 'Bundled Desktop toolchain validation failed.')} Reinstall or update Desktop to restore the managed toolchain.`,
       downloadUrl: DependencyManager.DESKTOP_DOWNLOAD_URL,
       resolutionSource: 'bundled-desktop',
       sourcePath: component.executablePath ?? component.sourcePath,
       primaryAction: component.primaryAction === 'update-desktop' ? 'update-desktop' : 'reinstall-desktop',
+      status: 'missing',
     };
   }
 
@@ -354,13 +478,12 @@ export class DependencyManager {
   }
 
   /**
-   * Install dependencies from manifest
-   * Note: Script execution has been removed. All dependencies are marked as failed.
-   * Actual dependency installation is handled by AI.
+   * Install dependencies from manifest.
+   * Automatic execution is intentionally disabled; callers receive manual-handoff failures.
    * @param manifest - Parsed manifest object
    * @param dependencies - List of dependencies to install (optional, will check all if not provided)
    * @param onProgress - Progress callback
-   * @returns Installation result (all marked as failed - AI will handle installation)
+   * @returns Installation result with manual-handoff failures for each dependency
    */
   async installFromManifest(
     manifest: Manifest,
@@ -391,17 +514,16 @@ export class DependencyManager {
       return results;
     }
 
-    log.info('[DependencyManager] Installing dependencies from manifest (script execution disabled)');
-    log.info('[DependencyManager] Dependency installation is now handled by AI');
+    const handoffMessage = this.getManualDependencyHandoffMessage();
+    log.info('[DependencyManager] Dependency installation request deferred to manual handoff');
 
-    // Mark all dependencies as failed - AI will handle installation
-    for (const dep of depsToCheck) {
+    for (const [index, dep] of depsToCheck.entries()) {
       results.failed.push({
         dependency: dep.name,
-        error: 'Installation now handled by AI',
+        error: handoffMessage,
       });
       onProgress?.({
-        current: 1,
+        current: index + 1,
         total: depsToCheck.length,
         dependency: dep.name,
         status: 'error',
@@ -415,39 +537,38 @@ export class DependencyManager {
   }
 
   /**
-   * Install a single dependency
-   * Note: Script execution has been removed. Actual dependency installation is handled by AI.
+   * Install a single dependency.
+   * Automatic execution is intentionally disabled; callers receive a manual-handoff failure.
    * @param dep - Parsed dependency
    * @param entryPoint - EntryPoint object from manifest (kept for compatibility, not used)
    * @param onOutput - Optional callback for real-time output (not used)
-   * @returns Installation result (failed - AI will handle installation)
+   * @returns Installation result with a manual-handoff failure
    */
   async installSingleDependency(
     dep: ParsedDependency,
     entryPoint: EntryPoint | null,
     onOutput?: (type: 'stdout' | 'stderr', data: string) => void
   ): Promise<InstallResult> {
-    log.info('[DependencyManager] Installing single dependency (script execution disabled):', dep.name);
-    log.info('[DependencyManager] Dependency installation is now handled by AI');
+    const handoffMessage = this.getManualDependencyHandoffMessage();
+    log.info('[DependencyManager] Single dependency installation request deferred to manual handoff:', dep.name);
 
     // Clear cache after installation attempt
     this.clearCheckCache();
 
-    // Return failed result - AI will handle installation
     return {
       success: false,
       resultSession: {
         exitCode: -1,
         stdout: '',
-        stderr: 'Installation now handled by AI',
+        stderr: handoffMessage,
         duration: 0,
         timestamp: new Date().toISOString(),
         success: false,
-        errorMessage: 'Installation now handled by AI',
+        errorMessage: handoffMessage,
       },
       parsedResult: {
         success: false,
-        errorMessage: 'Installation now handled by AI',
+        errorMessage: handoffMessage,
         rawOutput: '',
       },
       installHint: dep.installHint,
