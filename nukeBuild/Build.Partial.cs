@@ -8,7 +8,7 @@ public partial class Build
     /// Gets the GitHub token from CI or parameter
     /// Priority: GitHubActions.Instance.Token (CI) > GitHubToken (parameter)
     /// </summary>
-    string EffectiveGitHubToken => GitHubActions?.Token;
+    string EffectiveGitHubToken => GitHubActions?.Token ?? GitHubToken;
 
     string EffectiveGitHubRepository =>
         BuildConfig.NormalizeGitHubRepository(

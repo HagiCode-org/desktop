@@ -1,7 +1,5 @@
 name: Sync Release to Azure Storage
 
-# This reusable workflow is called by build.yml after platform assets are uploaded
-# and the build-summary job marks the tag release as ready for downstream publish.
 on:
   push:
     branches:
@@ -22,6 +20,11 @@ on:
         required: false
         type: string
         default: 'beta'
+      max_parallel:
+        description: 'Maximum concurrent upload shards'
+        required: false
+        type: string
+        default: '3'
     secrets:
       FEISHU_WEBHOOK_URL:
         required: true
@@ -43,16 +46,241 @@ on:
         - stable
         - beta
         - dev
+      max_parallel:
+        description: 'Maximum concurrent upload shards'
+        required: false
+        type: string
+        default: '3'
 
-# GITHUB_TOKEN Permissions
-# - contents: read - Required for accessing Release assets via gh CLI
-# Reference: hagicode-release project for implementation pattern
 permissions:
   contents: read
 
 jobs:
-  sync:
-    name: Sync Release Assets to Azure Storage
+  plan:
+    name: Plan Azure Upload Shards
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.plan.outputs.release_tag }}
+      release_version: ${{ steps.plan.outputs.release_version }}
+      release_channel: ${{ steps.plan.outputs.release_channel }}
+      max_parallel: ${{ steps.plan.outputs.max_parallel }}
+      has_shards: ${{ steps.plan.outputs.has_shards }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Determine workflow inputs
+      id: meta
+      run: |
+        if [ -n "${{ inputs.release_tag }}" ]; then
+          RELEASE_TAG="${{ inputs.release_tag }}"
+        else
+          RELEASE_TAG=$(gh release view --json tagName -q .tagName)
+          echo "No tag specified, using latest release: ${RELEASE_TAG}"
+        fi
+
+        RELEASE_CHANNEL="${{ inputs.release_channel }}"
+        if [ -z "${RELEASE_CHANNEL}" ]; then
+          RELEASE_CHANNEL="beta"
+        fi
+
+        MAX_PARALLEL="${{ inputs.max_parallel }}"
+        if [ -z "${MAX_PARALLEL}" ]; then
+          MAX_PARALLEL="3"
+        fi
+
+        echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+        echo "release_channel=${RELEASE_CHANNEL}" >> "$GITHUB_OUTPUT"
+        echo "max_parallel=${MAX_PARALLEL}" >> "$GITHUB_OUTPUT"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate Azure upload plan
+      run: |
+        ./build.sh \
+          --target GenerateAzureUploadPlan \
+          --release-tag "${{ steps.meta.outputs.release_tag }}" \
+          --release-version "${{ inputs.release_version }}" \
+          --release-channel "${{ steps.meta.outputs.release_channel }}" \
+          --azure-max-parallel "${{ steps.meta.outputs.max_parallel }}" \
+          --azure-upload-plan-output-path "artifacts/azure-upload-plan.json" \
+          --azure-upload-matrix-output-path "artifacts/azure-upload-matrix.json"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Export plan outputs
+      id: plan
+      run: |
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        plan = json.loads(Path("artifacts/azure-upload-plan.json").read_text(encoding="utf-8"))
+        matrix = json.loads(Path("artifacts/azure-upload-matrix.json").read_text(encoding="utf-8"))
+        shard_count = len(matrix.get("shard", []))
+        outputs = {
+            "release_tag": plan["releaseTag"],
+            "release_version": plan["versionPrefix"],
+            "release_channel": plan["releaseChannel"],
+            "max_parallel": str(plan["maxParallel"]),
+            "has_shards": "true" if shard_count > 0 else "false",
+            "shard_count": str(shard_count),
+            "matrix": json.dumps(matrix, separators=(",", ":")),
+        }
+
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+            for key, value in outputs.items():
+                handle.write(f"{key}={value}\n")
+
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+            handle.write("## Azure Sync Plan\n")
+            handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
+            handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
+            handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
+            handle.write(f"- Eligible assets: `{len(plan.get('eligibleAssets', []))}`\n")
+            handle.write(f"- Skipped source archives: `{len(plan.get('skippedAssets', []))}`\n")
+            handle.write(f"- Planned shards: `{shard_count}`\n")
+            handle.write(f"- Max parallel: `{plan['maxParallel']}`\n")
+            if shard_count == 0:
+                handle.write("\nNo Azure-sync-eligible release assets were found. Upload fan-out will be skipped.\n")
+        PY
+
+    - name: Upload plan artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: azure-upload-plan
+        path: |
+          artifacts/azure-upload-plan.json
+          artifacts/azure-upload-matrix.json
+        if-no-files-found: error
+
+  upload:
+    name: Upload Azure Shard ${{ matrix.shard.shardId }}
+    needs: plan
+    if: needs.plan.outputs.has_shards == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.plan.outputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Write shard asset manifest
+      env:
+        SHARD_ID: ${{ matrix.shard.shardId }}
+        ASSETS_JSON: ${{ toJson(matrix.shard.assets) }}
+      run: |
+        mkdir -p artifacts
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        manifest = {
+            "shardId": os.environ["SHARD_ID"],
+            "assets": json.loads(os.environ["ASSETS_JSON"]),
+        }
+        Path("artifacts/release-assets-manifest.json").write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8",
+        )
+        PY
+
+    - name: Publish upload shard
+      id: publish
+      continue-on-error: true
+      run: |
+        ./build.sh \
+          --target PublishToAzureBlob \
+          --release-tag "${{ needs.plan.outputs.release_tag }}" \
+          --release-version "${{ needs.plan.outputs.release_version }}" \
+          --release-channel "${{ needs.plan.outputs.release_channel }}" \
+          --upload-artifacts true \
+          --upload-index false \
+          --release-assets-manifest "artifacts/release-assets-manifest.json" \
+          --publish-result-output-path "artifacts/publish-result-${{ matrix.shard.shardId }}.json" \
+          --publish-shard-id "${{ matrix.shard.shardId }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
+        FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+
+    - name: Upload shard publish result
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: publish-result-${{ matrix.shard.shardId }}
+        path: artifacts/publish-result-${{ matrix.shard.shardId }}.json
+        if-no-files-found: warn
+
+    - name: Append shard summary
+      if: always()
+      env:
+        SHARD_ID: ${{ matrix.shard.shardId }}
+        SHARD_ASSET: ${{ matrix.shard.assetName }}
+        SHARD_OUTCOME: ${{ steps.publish.outcome }}
+      run: |
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        summary_path = Path(f"artifacts/publish-result-{os.environ['SHARD_ID']}.json")
+        lines = [
+            f"### Shard `{os.environ['SHARD_ID']}`",
+            f"- Asset: `{os.environ['SHARD_ASSET']}`",
+            f"- Step outcome: `{os.environ['SHARD_OUTCOME']}`",
+        ]
+
+        if summary_path.exists():
+            data = json.loads(summary_path.read_text(encoding="utf-8"))
+            lines.extend([
+                f"- Eligible assets: `{data.get('eligibleAssetCount', 0)}`",
+                f"- Sidecar success: `{data.get('sidecarSuccessCount', 0)}`",
+                f"- HTTP-only fallback: `{data.get('httpOnlyFallbackCount', 0)}`",
+                f"- Uploaded blobs: `{data.get('uploadedBlobCount', 0)}`",
+                f"- Skipped blobs: `{data.get('skippedBlobCount', 0)}`",
+            ])
+            if data.get("errorMessage"):
+                lines.append(f"- Error: `{data['errorMessage']}`")
+        else:
+            lines.append("- Publish result artifact: `missing`")
+
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        PY
+
+    - name: Fail shard job if publish step failed
+      if: steps.publish.outcome != 'success'
+      run: |
+        echo "::error::Azure shard publication failed for ${{ matrix.shard.shardId }}"
+        exit 1
+
+  finalize:
+    name: Finalize Azure Sync
+    needs:
+    - plan
+    - upload
+    if: always() && needs.plan.result == 'success'
     runs-on: ubuntu-latest
 
     steps:
@@ -64,46 +292,125 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: Determine release tag
-      id: release_info
-      run: |
-        # From workflow_call input, or fetch latest for manual dispatch
-        if [ -n "${{ inputs.release_tag }}" ]; then
-          RELEASE_TAG="${{ inputs.release_tag }}"
-        else
-          RELEASE_TAG=$(gh release view --json tagName -q .tagName)
-          echo "No tag specified, using latest release: ${RELEASE_TAG}"
-        fi
-        echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
-        echo "Release tag: ${RELEASE_TAG}"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Download shard publish results
+      if: needs.plan.outputs.has_shards == 'true'
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        pattern: publish-result-*
+        path: artifacts/shard-results
+        merge-multiple: true
 
-    - name: Run Nuke Sync to Azure
-      run: ./build.sh --target Default
-      # GitHub Token Configuration:
-      # - GITHUB_TOKEN: Used by Nuke GitHubActions integration (EnableGitHubToken=true)
-      # - GH_TOKEN: Used by gh CLI commands for GitHub API access
-      # Both tokens sourced from secrets.GITHUB_TOKEN
+    - name: Write merged publish-results manifest
+      if: needs.plan.outputs.has_shards == 'true'
+      env:
+        MATRIX_JSON: ${{ needs.plan.outputs.matrix }}
+      run: |
+        mkdir -p artifacts
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        matrix = json.loads(os.environ["MATRIX_JSON"])
+        expected_ids = [item["shardId"] for item in matrix.get("shard", [])]
+        result_files = sorted(str(path) for path in Path("artifacts/shard-results").glob("publish-result-*.json"))
+        manifest = {
+            "expectedShardIds": expected_ids,
+            "resultFiles": result_files,
+        }
+        Path("artifacts/merged-publish-results-manifest.json").write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8",
+        )
+        PY
+
+    - name: Finalize Azure index publication
+      id: finalize_sync
+      if: needs.plan.outputs.has_shards == 'true'
+      continue-on-error: true
+      run: |
+        ./build.sh \
+          --target PublishToAzureBlob \
+          --release-tag "${{ needs.plan.outputs.release_tag }}" \
+          --release-version "${{ needs.plan.outputs.release_version }}" \
+          --release-channel "${{ needs.plan.outputs.release_channel }}" \
+          --upload-artifacts false \
+          --upload-index true \
+          --merged-publish-results-manifest "artifacts/merged-publish-results-manifest.json" \
+          --publish-result-output-path "artifacts/finalize-result.json" \
+          --publish-shard-id "finalize"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
-        RELEASE_TAG: ${{ steps.release_info.outputs.tag }}
-        RELEASE_VERSION: ${{ inputs.release_version }}
-        RELEASE_CHANNEL: ${{ inputs.release_channel }}
         FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-        GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        GITHUB_SHA: ${{ github.sha }}
-        GITHUB_ACTOR: ${{ github.actor }}
 
-    - name: Report failure
-      if: failure()
+    - name: Upload finalize result
+      if: always() && needs.plan.outputs.has_shards == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: azure-sync-finalize-result
+        path: artifacts/finalize-result.json
+        if-no-files-found: warn
+
+    - name: Append workflow summary
+      if: always()
+      env:
+        HAS_SHARDS: ${{ needs.plan.outputs.has_shards }}
+        SHARD_COUNT: ${{ needs.plan.outputs.shard_count }}
+        UPLOAD_RESULT: ${{ needs.upload.result }}
+        FINALIZE_OUTCOME: ${{ steps.finalize_sync.outcome }}
       run: |
-        echo "::error::Failed to sync release assets to Azure Storage"
-        echo "Please check:"
-        echo "  1. AZURE_BLOB_SAS_URL secret is correctly configured"
-        echo "  2. SAS token has 'Write' permissions"
-        echo "  3. SAS token has not expired"
-        echo "  4. Container exists in Azure Storage"
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        summary_lines = ["## Azure Sync Finalize"]
+        has_shards = os.environ["HAS_SHARDS"] == "true"
+
+        if not has_shards:
+            summary_lines.append("- Azure sync was skipped because no eligible release assets were found.")
+        else:
+            summary_lines.append(f"- Planned shards: `{os.environ['SHARD_COUNT']}`")
+            summary_lines.append(f"- Upload job result: `{os.environ['UPLOAD_RESULT']}`")
+            summary_lines.append(f"- Finalize step outcome: `{os.environ['FINALIZE_OUTCOME']}`")
+
+            result_path = Path("artifacts/finalize-result.json")
+            if result_path.exists():
+                data = json.loads(result_path.read_text(encoding="utf-8"))
+                summary_lines.extend([
+                    f"- Index uploaded: `{'yes' if data.get('indexUploaded') else 'no'}`",
+                    f"- Published asset count: `{data.get('eligibleAssetCount', 0)}`",
+                    f"- Sidecar success count: `{data.get('sidecarSuccessCount', 0)}`",
+                    f"- HTTP-only fallback count: `{data.get('httpOnlyFallbackCount', 0)}`",
+                    f"- Uploaded blob count: `{data.get('uploadedBlobCount', 0)}`",
+                    f"- Skipped blob count: `{data.get('skippedBlobCount', 0)}`",
+                    f"- Missing blob count: `{data.get('missingBlobCount', 0)}`",
+                ])
+                if data.get("errorMessage"):
+                    summary_lines.append(f"- Error: `{data['errorMessage']}`")
+
+                diagnostics = data.get("diagnostics", [])
+                if diagnostics:
+                    summary_lines.append("")
+                    summary_lines.append("### Diagnostics")
+                    for item in diagnostics:
+                        stage = item.get("stage") or "publish"
+                        artifact = item.get("artifactName", "unknown")
+                        code = item.get("code", "unknown")
+                        message = item.get("message", "")
+                        summary_lines.append(f"- [{stage}] `{artifact}` `{code}` {message}")
+            else:
+                summary_lines.append("- Finalize result artifact: `missing`")
+
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+            handle.write("\n".join(summary_lines) + "\n")
+        PY
+
+    - name: Fail workflow if shard upload or finalize failed
+      if: needs.plan.outputs.has_shards == 'true' && (needs.upload.result != 'success' || steps.finalize_sync.outcome != 'success')
+      run: |
+        echo "::error::Azure sync finalize detected shard or index publication failures"
         exit 1

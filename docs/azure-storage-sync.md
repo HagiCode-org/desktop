@@ -9,6 +9,36 @@ The Hagicode Desktop project uses a reusable GitHub Actions workflow (`sync-azur
 - **Redundant backup**: Files stored in both GitHub Releases and Azure Storage
 - **CDN support**: Azure CDN can be configured for faster downloads
 - **Geographic distribution**: Files available from Azure's global infrastructure
+- **Bounded fan-out**: Eligible release assets are uploaded through a `plan -> upload(matrix) -> finalize` workflow instead of a single serial job
+
+## Workflow Topology
+
+The Azure sync workflow now runs in three stages:
+
+1. **plan**: Enumerates GitHub Release assets, filters out GitHub-generated source archives, writes `azure-upload-plan.json`, and emits the upload matrix.
+2. **upload**: Starts one matrix shard per eligible release asset, downloads only that shard's assets, uploads the asset plus any `.torrent` sidecar, and publishes `publish-result-<shard>.json`.
+3. **finalize**: Downloads every shard result artifact, merges `PublishedArtifactMetadata`, generates the final root `index.json`, uploads it once, and writes the aggregated workflow summary.
+
+This keeps the root `index.json` on a single-writer path while still allowing multiple runners and multiple blob uploads per shard to proceed in parallel.
+
+### Concurrency Controls
+
+Two independent knobs now control throughput:
+
+- **Workflow shard concurrency**: `max_parallel` controls how many upload shards GitHub Actions may run simultaneously. The default is `3`.
+- **Blob upload concurrency**: `AzureUploadConcurrency` controls how many files a single shard may upload to Azure Blob in parallel. The default is `4`.
+
+If Azure throttling or runner network contention appears, reduce `max_parallel` first. If a single shard still takes too long because it contains multiple files or sidecars, lower or raise `AzureUploadConcurrency` as needed.
+
+### Result Artifacts
+
+The workflow now produces these intermediate artifacts:
+
+- `azure-upload-plan`: contains `azure-upload-plan.json` and `azure-upload-matrix.json`
+- `publish-result-<shard>`: one machine-readable shard result JSON per upload shard
+- `azure-sync-finalize-result`: the aggregated finalize result JSON used for the workflow summary
+
+These files are intended for workflow diagnostics and reruns. GitHub Release assets remain the source of truth for binary downloads.
 
 ## Quick Setup (SAS URL Method)
 
@@ -190,7 +220,7 @@ The workflow automatically runs when `build.yml` reaches its summary-gated relea
 3. For tag releases, `build.yml` uses the dedicated `build-windows-release` job to sign and upload the Windows assets, while Linux and macOS upload their release assets
 4. The `build-summary` job normalizes the effective Windows result (`build-windows-release` for tags, `build-windows` for non-tags), resolves the release channel, and emits an explicit overall release status
 5. When the normalized release status is `success`, `build.yml` calls `sync-azure-storage.yml` through `workflow_call` with `release_tag` and `release_channel`
-6. This workflow downloads the final release asset set and syncs it to Azure Storage
+6. `sync-azure-storage.yml` runs the `plan` job, fans out one upload shard per eligible release asset, and then runs a single `finalize` job to publish the root `index.json`
 
 This caller-driven model avoids races where a GitHub Release exists before the signed Windows assets or other platform assets have finished uploading.
 
@@ -201,7 +231,8 @@ You can manually trigger the workflow to sync an existing release:
 1. Go to "Actions" tab in your repository
 2. Select "Sync Release to Azure Storage"
 3. Click "Run workflow"
-4. The workflow will sync the latest release
+4. Optionally override `max_parallel` if you want a more conservative or more aggressive upload fan-out
+5. The workflow will plan shards, upload eligible assets, and then finalize the root index
 
 **Tip**: Manual trigger is useful for:
 - Re-syncing an existing release to Azure Storage
@@ -248,6 +279,20 @@ https://<cdn-endpoint>.azureedge.net/<container-name>/<version>/<filename>
 - Check that the SAS URL has "Write" permission
 - Ensure the SAS token hasn't expired
 - Review the workflow logs for specific error messages
+- Confirm the `plan` job found eligible assets and did not only detect GitHub-generated source archives
+- Check the shard's `publish-result-<shard>.json` artifact to see whether the failure happened during metadata generation, sidecar generation, or blob upload
+
+### Finalize blocks `index.json` publication
+
+- Confirm every expected upload shard produced a `publish-result-<shard>.json` artifact
+- Check the `azure-sync-finalize-result` artifact and workflow summary for the missing shard ID or failed stage
+- If a shard failed after partially uploading blobs, rerun the workflow for the same tag; uploads are hash-aware and should skip unchanged blobs
+
+### Azure throttling or upload is slower than expected
+
+- Lower `max_parallel` to reduce the number of concurrent GitHub Actions shards
+- Lower `AzureUploadConcurrency` if a single shard is overwhelming Azure Blob or runner network resources
+- Raise `AzureUploadConcurrency` only after confirming the bottleneck is inside a single shard rather than across too many shards
 
 ### Authentication error
 

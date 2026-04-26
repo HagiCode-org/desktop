@@ -42,9 +42,35 @@ public sealed class AzureReleasePublishOrchestrator
             .ToList();
 
         var uploadResult = await _azureBlobAdapter.UploadArtifactsAsync(filesToUpload, options);
+        summary.UploadedBlobCount = uploadResult.UploadedBlobNames.Count;
+        summary.SkippedBlobCount = uploadResult.SkippedBlobNames.Count;
+        summary.MissingBlobCount = uploadResult.MissingBlobNames.Count;
+        summary.UploadedBlobNames.AddRange(uploadResult.UploadedBlobNames);
+        summary.SkippedBlobNames.AddRange(uploadResult.SkippedBlobNames);
+        summary.MissingBlobNames.AddRange(uploadResult.MissingBlobNames);
+
+        foreach (var failedBlobName in uploadResult.FailedBlobNames)
+        {
+            summary.Diagnostics.Add(new ArtifactPublishDiagnostic
+            {
+                ArtifactName = Path.GetFileName(failedBlobName),
+                Code = "upload-failed",
+                Message = $"Azure Blob 上传失败：{failedBlobName}",
+                Stage = ArtifactPublishFailureStage.UploadMissing,
+            });
+        }
+
         if (!uploadResult.Success)
         {
-            summary.ErrorMessage = $"Azure Blob 产物上传失败: {uploadResult.ErrorMessage}";
+            if (uploadResult.Errors.Count > 0)
+            {
+                summary.ErrorMessage = $"Azure Blob 产物上传失败: {string.Join("; ", uploadResult.Errors)}";
+            }
+            else
+            {
+                summary.ErrorMessage = $"Azure Blob 产物上传失败: {uploadResult.ErrorMessage}";
+            }
+
             return summary;
         }
 

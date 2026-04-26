@@ -1,6 +1,8 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using AzureStorage;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Security.Cryptography;
@@ -18,16 +20,27 @@ public class AzureBlobAdapter : IAzureBlobAdapter
     private readonly Dictionary<string, string> _customChannelMapping;
     private readonly string _gitHubRepository;
     private readonly string _gitHubRepositoryName;
+    private readonly Func<Uri, IAzureBlobContainerClient> _containerFactory;
 
     public AzureBlobAdapter(
         AbsolutePath rootDirectory,
         string channelMappingJson = "",
         string gitHubRepository = BuildConfig.DefaultGitHubReleaseRepository)
+        : this(rootDirectory, channelMappingJson, gitHubRepository, null)
+    {
+    }
+
+    internal AzureBlobAdapter(
+        AbsolutePath rootDirectory,
+        string channelMappingJson,
+        string gitHubRepository,
+        Func<Uri, IAzureBlobContainerClient>? containerFactory)
     {
         _rootDirectory = rootDirectory;
         _customChannelMapping = ParseChannelMapping(channelMappingJson);
         _gitHubRepository = BuildConfig.NormalizeGitHubRepository(gitHubRepository);
         _gitHubRepositoryName = BuildConfig.ResolveGitHubReleaseRepositoryName(_gitHubRepository);
+        _containerFactory = containerFactory ?? ((sasUri) => new AzureBlobContainerClientAdapter(new BlobContainerClient(sasUri)));
     }
 
     private static Dictionary<string, string> ParseChannelMapping(string channelMappingJson)
@@ -83,62 +96,84 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 return result;
             }
 
-            var containerClient = new BlobContainerClient(new Uri(options.SasUrl));
+            var containerClient = _containerFactory(new Uri(options.SasUrl));
             Log.Information("Container: {Container}", options.ContainerName);
             Log.Information("Version prefix: {Prefix}", options.VersionPrefix ?? "(none)");
+            var distinctFiles = filePaths
+                .Where((path) => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            foreach (var filePath in filePaths.Distinct(StringComparer.OrdinalIgnoreCase))
+            var uploadedBlobs = new ConcurrentBag<string>();
+            var uploadedBlobNames = new ConcurrentBag<string>();
+            var skippedBlobs = new ConcurrentBag<string>();
+            var skippedBlobNames = new ConcurrentBag<string>();
+            var missingBlobNames = new ConcurrentBag<string>();
+            var failedBlobNames = new ConcurrentBag<string>();
+            var warnings = new ConcurrentBag<string>();
+            var errors = new ConcurrentBag<string>();
+            var concurrency = Math.Max(1, options.UploadConcurrency);
+
+            using var semaphore = new SemaphoreSlim(concurrency, concurrency);
+            var uploadTasks = distinctFiles.Select(async (filePath) =>
             {
-                if (!File.Exists(filePath))
+                await semaphore.WaitAsync();
+                try
                 {
-                    Log.Warning("File not found: {Path}", filePath);
-                    result.Warnings.Add($"[upload-missing] {filePath}");
-                    result.MissingBlobNames.Add(AzureBlobPathUtilities.BuildBlobPath(options.VersionPrefix, Path.GetFileName(filePath)));
-                    continue;
-                }
+                    var fileName = Path.GetFileName(filePath);
+                    var blobName = AzureBlobPathUtilities.BuildBlobPath(options.VersionPrefix, fileName);
 
-                var fileName = Path.GetFileName(filePath);
-                var blobName = AzureBlobPathUtilities.BuildBlobPath(options.VersionPrefix, fileName);
-                var blobClient = containerClient.GetBlobClient(blobName);
-
-                var shouldUpload = true;
-                if (await blobClient.ExistsAsync())
-                {
-                    var properties = await blobClient.GetPropertiesAsync();
-                    var remoteHash = properties.Value.ContentHash;
-
-                    byte[] localHash;
-                    await using (var hashStream = File.OpenRead(filePath))
-                    using (var md5 = MD5.Create())
+                    if (!File.Exists(filePath))
                     {
-                        localHash = await md5.ComputeHashAsync(hashStream);
+                        Log.Warning("File not found: {Path}", filePath);
+                        warnings.Add($"[upload-missing] {filePath}");
+                        missingBlobNames.Add(blobName);
+                        return;
                     }
 
-                    if (remoteHash != null && localHash.SequenceEqual(remoteHash))
+                    var blobClient = containerClient.GetBlobClient(blobName);
+                    if (await ShouldSkipUploadAsync(blobClient, filePath, fileName))
                     {
-                        Log.Information("Skipping {File} (unchanged, hash: {Hash})", fileName, Convert.ToHexString(localHash)[..8]);
-                        shouldUpload = false;
-                        result.SkippedBlobs.Add(blobClient.Uri.ToString());
-                        result.SkippedBlobNames.Add(blobName);
+                        skippedBlobs.Add(blobClient.Uri.ToString());
+                        skippedBlobNames.Add(blobName);
+                        return;
                     }
-                }
 
-                if (!shouldUpload)
+                    Log.Information("Uploading: {File} -> {Container}/{Blob}", fileName, options.ContainerName, blobName);
+                    await UploadFileWithRetriesAsync(blobClient, filePath, options.UploadRetries);
+                    var blobUrl = blobClient.Uri.ToString();
+                    uploadedBlobs.Add(blobUrl);
+                    uploadedBlobNames.Add(blobName);
+                    Log.Information("Upload successful: {Url}", blobUrl);
+                }
+                catch (Exception ex)
                 {
-                    continue;
+                    var failedBlobName = AzureBlobPathUtilities.BuildBlobPath(options.VersionPrefix, Path.GetFileName(filePath));
+                    failedBlobNames.Add(failedBlobName);
+                    var error = $"{failedBlobName}: {ex.Message}";
+                    errors.Add(error);
+                    Log.Error(ex, "Azure Blob 上传失败: {Blob}", failedBlobName);
                 }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
 
-                Log.Information("Uploading: {File} -> {Container}/{Blob}", fileName, options.ContainerName, blobName);
+            await Task.WhenAll(uploadTasks);
 
-                await using var stream = File.OpenRead(filePath);
-                await blobClient.UploadAsync(stream, overwrite: true);
-                var blobUrl = blobClient.Uri.ToString();
-                result.UploadedBlobs.Add(blobUrl);
-                result.UploadedBlobNames.Add(blobName);
-                Log.Information("Upload successful: {Url}", blobUrl);
-            }
-
-            result.Success = true;
+            result.UploadedBlobs = uploadedBlobs.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.UploadedBlobNames = uploadedBlobNames.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.SkippedBlobs = skippedBlobs.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.SkippedBlobNames = skippedBlobNames.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.MissingBlobNames = missingBlobNames.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.FailedBlobNames = failedBlobNames.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.Warnings = warnings.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.Errors = errors.OrderBy((item) => item, StringComparer.OrdinalIgnoreCase).ToList();
+            result.Success = result.Errors.Count == 0;
+            result.ErrorMessage = result.Errors.Count == 0
+                ? string.Empty
+                : string.Join("; ", result.Errors);
         }
         catch (Exception ex)
         {
@@ -148,6 +183,59 @@ public class AzureBlobAdapter : IAzureBlobAdapter
         }
 
         return result;
+    }
+
+    private static async Task<bool> ShouldSkipUploadAsync(IAzureBlobClient blobClient, string filePath, string fileName)
+    {
+        if (!await blobClient.ExistsAsync())
+        {
+            return false;
+        }
+
+        var remoteHash = await blobClient.GetContentHashAsync();
+
+        byte[] localHash;
+        await using (var hashStream = File.OpenRead(filePath))
+        using (var md5 = MD5.Create())
+        {
+            localHash = await md5.ComputeHashAsync(hashStream);
+        }
+
+        if (remoteHash == null || !localHash.SequenceEqual(remoteHash))
+        {
+            return false;
+        }
+
+        Log.Information("Skipping {File} (unchanged, hash: {Hash})", fileName, Convert.ToHexString(localHash)[..8]);
+        return true;
+    }
+
+    private static async Task UploadFileWithRetriesAsync(IAzureBlobClient blobClient, string filePath, int retryCount)
+    {
+        var attempts = Math.Max(1, retryCount + 1);
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                await using var stream = File.OpenRead(filePath);
+                await blobClient.UploadAsync(stream);
+                return;
+            }
+            catch (Exception ex) when (attempt < attempts)
+            {
+                lastError = ex;
+                Log.Warning(ex, "Upload attempt {Attempt}/{Attempts} failed for {Blob}", attempt, attempts, blobClient.Name);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                break;
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException($"上传 {blobClient.Name} 失败");
     }
 
     public async Task<string> GenerateIndexJsonAsync(AzureBlobPublishOptions options, bool minify = false)
@@ -272,13 +360,13 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 return false;
             }
 
-            var containerClient = new BlobContainerClient(new Uri(options.SasUrl));
+            var containerClient = _containerFactory(new Uri(options.SasUrl));
             var blobClient = containerClient.GetBlobClient("index.json");
 
             Log.Information("Uploading index.json to Azure Blob Storage...");
 
             await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(indexJson));
-            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.UploadAsync(stream);
 
             Log.Information("index.json uploaded successfully: {Url}", blobClient.Uri);
             return true;
@@ -300,24 +388,19 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 return new List<AzureBlobInfo>();
             }
 
-            var containerClient = new BlobContainerClient(new Uri(options.SasUrl));
+            var containerClient = _containerFactory(new Uri(options.SasUrl));
             var blobs = new List<AzureBlobInfo>();
 
             Log.Information("Listing blobs in container: {Container}", options.ContainerName);
 
-            await foreach (var blobItem in containerClient.GetBlobsAsync())
+            await foreach (var blobItem in containerClient.ListBlobsAsync())
             {
                 if (blobItem.Name == "index.json")
                 {
                     continue;
                 }
 
-                blobs.Add(new AzureBlobInfo
-                {
-                    Name = blobItem.Name,
-                    Size = blobItem.Properties.ContentLength ?? 0,
-                    LastModified = blobItem.Properties.LastModified?.UtcDateTime ?? DateTime.MinValue,
-                });
+                blobs.Add(blobItem);
             }
 
             Log.Information("Found {Count} blobs (excluding index.json)", blobs.Count);
@@ -695,6 +778,84 @@ public class AzureBlobAdapter : IAzureBlobAdapter
         }
 
         return channelsData;
+    }
+}
+
+internal interface IAzureBlobContainerClient
+{
+    IAzureBlobClient GetBlobClient(string blobName);
+    IAsyncEnumerable<AzureBlobInfo> ListBlobsAsync();
+}
+
+internal interface IAzureBlobClient
+{
+    Uri Uri { get; }
+    string Name { get; }
+    Task<bool> ExistsAsync();
+    Task<byte[]?> GetContentHashAsync();
+    Task UploadAsync(Stream content);
+}
+
+internal sealed class AzureBlobContainerClientAdapter : IAzureBlobContainerClient
+{
+    private readonly BlobContainerClient _client;
+
+    public AzureBlobContainerClientAdapter(BlobContainerClient client)
+    {
+        _client = client;
+    }
+
+    public IAzureBlobClient GetBlobClient(string blobName)
+    {
+        return new AzureBlobClientAdapter(_client.GetBlobClient(blobName));
+    }
+
+    public async IAsyncEnumerable<AzureBlobInfo> ListBlobsAsync()
+    {
+        await foreach (var blobItem in _client.GetBlobsAsync())
+        {
+            yield return new AzureBlobInfo
+            {
+                Name = blobItem.Name,
+                Size = blobItem.Properties.ContentLength ?? 0,
+                LastModified = blobItem.Properties.LastModified?.UtcDateTime ?? DateTime.MinValue,
+            };
+        }
+    }
+}
+
+internal sealed class AzureBlobClientAdapter : IAzureBlobClient
+{
+    private readonly BlobClient _client;
+
+    public AzureBlobClientAdapter(BlobClient client)
+    {
+        _client = client;
+    }
+
+    public Uri Uri => _client.Uri;
+
+    public string Name => _client.Name;
+
+    public async Task<bool> ExistsAsync()
+    {
+        return await _client.ExistsAsync();
+    }
+
+    public async Task<byte[]?> GetContentHashAsync()
+    {
+        if (!await _client.ExistsAsync())
+        {
+            return null;
+        }
+
+        var properties = await _client.GetPropertiesAsync();
+        return properties.Value.ContentHash;
+    }
+
+    public async Task UploadAsync(Stream content)
+    {
+        await _client.UploadAsync(content, overwrite: true);
     }
 }
 

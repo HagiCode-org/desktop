@@ -7,6 +7,92 @@ namespace PCode.Build.Tests;
 public sealed class AzureReleasePublishOrchestratorTests
 {
     [Fact]
+    public async Task ReleasePublishSummaryArtifacts_WriteAsync_PersistsShardResultJson()
+    {
+        var tempDirectory = CreateTempDirectory();
+        try
+        {
+            var outputPath = Path.Combine(tempDirectory, "publish-result.json");
+            var summary = CreateShardSummary("shard-001", "artifact-a.zip", "v1.0.0/artifact-a.zip");
+
+            await ReleasePublishSummaryArtifacts.WriteAsync(outputPath, summary);
+            var persisted = await ReleasePublishSummaryArtifacts.ReadAsync<ReleasePublishSummary>(outputPath);
+
+            Assert.NotNull(persisted);
+            Assert.Equal("shard-001", persisted!.ShardId);
+            Assert.Equal(1, persisted.EligibleAssetCount);
+            Assert.Single(persisted.PublishedArtifacts);
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task ReleasePublishSummaryArtifacts_MergeAsync_FailsWhenShardResultIsMissing()
+    {
+        var tempDirectory = CreateTempDirectory();
+        try
+        {
+            var shardOnePath = Path.Combine(tempDirectory, "publish-result-shard-001.json");
+            await ReleasePublishSummaryArtifacts.WriteAsync(
+                shardOnePath,
+                CreateShardSummary("shard-001", "artifact-a.zip", "v1.0.0/artifact-a.zip"));
+
+            var manifest = new MergedPublishResultsManifest
+            {
+                ExpectedShardIds = new List<string> { "shard-001", "shard-002" },
+                ResultFiles = new List<string> { shardOnePath },
+            };
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => ReleasePublishSummaryArtifacts.MergeAsync(manifest));
+            Assert.Contains("shard-002", error.Message);
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task ReleasePublishSummaryArtifacts_MergeAsync_AggregatesShardCountsAndMetadata()
+    {
+        var tempDirectory = CreateTempDirectory();
+        try
+        {
+            var shardOnePath = Path.Combine(tempDirectory, "publish-result-shard-001.json");
+            var shardTwoPath = Path.Combine(tempDirectory, "publish-result-shard-002.json");
+
+            await ReleasePublishSummaryArtifacts.WriteAsync(
+                shardOnePath,
+                CreateShardSummary("shard-001", "artifact-a.zip", "v1.0.0/artifact-a.zip"));
+            await ReleasePublishSummaryArtifacts.WriteAsync(
+                shardTwoPath,
+                CreateShardSummary("shard-002", "artifact-b.zip", "v1.0.0/artifact-b.zip"));
+
+            var merged = await ReleasePublishSummaryArtifacts.MergeAsync(new MergedPublishResultsManifest
+            {
+                ExpectedShardIds = new List<string> { "shard-001", "shard-002" },
+                ResultFiles = new List<string> { shardOnePath, shardTwoPath },
+            });
+
+            Assert.True(merged.Success);
+            Assert.Equal("finalize", merged.ShardId);
+            Assert.Equal(2, merged.EligibleAssetCount);
+            Assert.Equal(2, merged.SidecarSuccessCount);
+            Assert.Equal(2, merged.UploadedBlobCount);
+            Assert.Equal(2, merged.PublishedArtifacts.Count);
+            Assert.Contains(merged.PublishedArtifacts, (artifact) => artifact.Name == "artifact-a.zip");
+            Assert.Contains(merged.PublishedArtifacts, (artifact) => artifact.Name == "artifact-b.zip");
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectory);
+        }
+    }
+
+    [Fact]
     public async Task PublishAsync_UploadsSidecarsBeforeIndex()
     {
         var tempDirectory = CreateTempDirectory();
@@ -112,6 +198,38 @@ public sealed class AzureReleasePublishOrchestratorTests
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    private static ReleasePublishSummary CreateShardSummary(string shardId, string artifactName, string artifactPath)
+    {
+        return new ReleasePublishSummary
+        {
+            ShardId = shardId,
+            Success = true,
+            EligibleAssetCount = 1,
+            SidecarSuccessCount = 1,
+            UploadedBlobCount = 1,
+            PublishedArtifacts = new List<PublishedArtifactMetadata>
+            {
+                new()
+                {
+                    Name = artifactName,
+                    LocalFilePath = Path.Combine(Path.GetTempPath(), artifactName),
+                    Path = artifactPath,
+                    Size = 100,
+                    LastModified = DateTime.UnixEpoch,
+                    DirectUrl = $"https://desktop.dl.hagicode.com/{artifactPath}",
+                    MeetsThreshold = true,
+                    HybridEligible = true,
+                    LegacyHttpFallback = false,
+                    TorrentPath = $"{artifactPath}.torrent",
+                    TorrentUrl = $"https://desktop.dl.hagicode.com/{artifactPath}.torrent",
+                    InfoHash = $"hash-{shardId}",
+                    Sha256 = $"sha-{shardId}",
+                    WebSeeds = { $"https://desktop.dl.hagicode.com/{artifactPath}" },
+                }
+            },
+        };
     }
 
     private sealed class FakeMetadataBuilder : IArtifactHybridMetadataBuilder

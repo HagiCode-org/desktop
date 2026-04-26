@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Adapters;
 using AzureStorage;
 using Nuke.Common.IO;
@@ -9,6 +10,51 @@ namespace PCode.Build.Tests;
 
 public sealed class AzureBlobAdapterTests
 {
+    [Fact]
+    public async Task UploadArtifactsAsync_UsesBoundedParallelUploads()
+    {
+        var tempDirectory = CreateTempDirectory();
+
+        try
+        {
+            var tracker = new UploadConcurrencyTracker();
+            var container = new FakeBlobContainerClient((blobName) => new FakeBlobClient(blobName, tracker.TrackAsync));
+            AbsolutePath root = tempDirectory;
+            var adapter = new AzureBlobAdapter(
+                root,
+                "",
+                BuildConfig.DefaultGitHubReleaseRepository,
+                (_) => container);
+
+            var filePaths = Enumerable.Range(1, 4)
+                .Select((index) =>
+                {
+                    var filePath = Path.Combine(tempDirectory, $"artifact-{index}.zip");
+                    File.WriteAllText(filePath, $"payload-{index}");
+                    return filePath;
+                })
+                .ToList();
+
+            var result = await adapter.UploadArtifactsAsync(
+                filePaths,
+                new AzureBlobPublishOptions
+                {
+                    SasUrl = "https://example.blob.core.windows.net/releases?sig=test",
+                    VersionPrefix = "v1.0.0",
+                    UploadConcurrency = 2,
+                });
+
+            Assert.True(result.Success);
+            Assert.Equal(4, result.UploadedBlobNames.Count);
+            Assert.Equal(2, tracker.MaxObserved);
+            Assert.All(result.UploadedBlobNames, (blobName) => Assert.StartsWith("v1.0.0/artifact-", blobName));
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectory);
+        }
+    }
+
     [Fact]
     public void BuildIndexResult_WritesAssetsAndFilesAndPreservesFallbacks()
     {
@@ -100,6 +146,61 @@ public sealed class AzureBlobAdapterTests
     }
 
     [Fact]
+    public void BuildIndexResult_PreservesMergedShardMetadataForFinalIndexGeneration()
+    {
+        AbsolutePath root = Path.GetTempPath();
+        var adapter = new AzureBlobAdapter(root);
+        var publishedArtifacts = new[]
+        {
+            CreatePublishedArtifactMetadata(
+                "hagicode-1.0.0-win-x64-nort.zip",
+                "v1.0.0/hagicode-1.0.0-win-x64-nort.zip",
+                "https://desktop.dl.hagicode.com/v1.0.0/hagicode-1.0.0-win-x64-nort.zip",
+                "hash-a",
+                "sha-a"),
+            CreatePublishedArtifactMetadata(
+                "hagicode-1.0.0-osx-arm64-nort.zip",
+                "v1.0.0/hagicode-1.0.0-osx-arm64-nort.zip",
+                "https://desktop.dl.hagicode.com/v1.0.0/hagicode-1.0.0-osx-arm64-nort.zip",
+                "hash-b",
+                "sha-b"),
+        };
+        var blobs = new List<AzureBlobInfo>
+        {
+            new() { Name = "v1.0.0/hagicode-1.0.0-win-x64-nort.zip", Size = 2048, LastModified = DateTime.UnixEpoch },
+            new() { Name = "v1.0.0/hagicode-1.0.0-win-x64-nort.zip.torrent", Size = 512, LastModified = DateTime.UnixEpoch },
+            new() { Name = "v1.0.0/hagicode-1.0.0-osx-arm64-nort.zip", Size = 1024, LastModified = DateTime.UnixEpoch },
+            new() { Name = "v1.0.0/hagicode-1.0.0-osx-arm64-nort.zip.torrent", Size = 256, LastModified = DateTime.UnixEpoch },
+        };
+
+        var result = adapter.BuildIndexResult(
+            blobs,
+            "https://example.blob.core.windows.net/releases?sig=test",
+            publishedArtifacts,
+            "https://desktop.dl.hagicode.com");
+        var json = JsonSerializer.Serialize(result.Document, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        });
+
+        using var document = JsonDocument.Parse(json);
+        var assets = document.RootElement
+            .GetProperty("versions")[0]
+            .GetProperty("assets")
+            .EnumerateArray()
+            .OrderBy((item) => item.GetProperty("name").GetString(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.Equal(2, assets.Count);
+        Assert.Equal("hash-b", assets[0].GetProperty("infoHash").GetString());
+        Assert.Equal("sha-b", assets[0].GetProperty("sha256").GetString());
+        Assert.Equal("hash-a", assets[1].GetProperty("infoHash").GetString());
+        Assert.Equal("sha-a", assets[1].GetProperty("sha256").GetString());
+        Assert.Equal(0, result.HttpOnlyFallbackCount);
+    }
+
+    [Fact]
     public async Task GenerateIndexOnlyAsync_WritesEmptyIndexWithoutLinksAndPassesValidation()
     {
         var tempDirectory = CreateTempDirectory();
@@ -145,6 +246,101 @@ public sealed class AzureBlobAdapterTests
         if (Directory.Exists(path))
         {
             Directory.Delete(path, recursive: true);
+        }
+    }
+
+    private static PublishedArtifactMetadata CreatePublishedArtifactMetadata(
+        string name,
+        string path,
+        string directUrl,
+        string infoHash,
+        string sha256)
+    {
+        return new PublishedArtifactMetadata
+        {
+            Name = name,
+            LocalFilePath = $"/tmp/{name}",
+            Path = path,
+            Size = 1024,
+            LastModified = DateTime.UnixEpoch,
+            DirectUrl = directUrl,
+            MeetsThreshold = true,
+            HybridEligible = true,
+            LegacyHttpFallback = false,
+            TorrentPath = $"{path}.torrent",
+            TorrentUrl = $"{directUrl}.torrent",
+            InfoHash = infoHash,
+            Sha256 = sha256,
+            WebSeeds = { directUrl },
+        };
+    }
+
+    private sealed class UploadConcurrencyTracker
+    {
+        private int _current;
+
+        public int MaxObserved { get; private set; }
+
+        public async Task TrackAsync()
+        {
+            var current = Interlocked.Increment(ref _current);
+            MaxObserved = Math.Max(MaxObserved, current);
+            await Task.Delay(75);
+            Interlocked.Decrement(ref _current);
+        }
+    }
+
+    private sealed class FakeBlobContainerClient : IAzureBlobContainerClient
+    {
+        private readonly Func<string, FakeBlobClient> _factory;
+        private readonly Dictionary<string, FakeBlobClient> _clients = new(StringComparer.OrdinalIgnoreCase);
+
+        public FakeBlobContainerClient(Func<string, FakeBlobClient> factory)
+        {
+            _factory = factory;
+        }
+
+        public IAzureBlobClient GetBlobClient(string blobName)
+        {
+            if (!_clients.TryGetValue(blobName, out var client))
+            {
+                client = _factory(blobName);
+                _clients[blobName] = client;
+            }
+
+            return client;
+        }
+
+        public async IAsyncEnumerable<AzureBlobInfo> ListBlobsAsync()
+        {
+            await Task.CompletedTask;
+            yield break;
+        }
+    }
+
+    private sealed class FakeBlobClient : IAzureBlobClient
+    {
+        private readonly Func<Task> _uploadAction;
+
+        public FakeBlobClient(string name, Func<Task> uploadAction)
+        {
+            Name = name;
+            _uploadAction = uploadAction;
+        }
+
+        public Uri Uri => new($"https://example.blob.core.windows.net/releases/{Name}");
+
+        public string Name { get; }
+
+        public Task<bool> ExistsAsync() => Task.FromResult(false);
+
+        public Task<byte[]?> GetContentHashAsync() => Task.FromResult<byte[]?>(null);
+
+        public async Task UploadAsync(Stream content)
+        {
+            await _uploadAction();
+            using var sink = new MemoryStream();
+            await content.CopyToAsync(sink);
         }
     }
 }

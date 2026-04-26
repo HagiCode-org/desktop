@@ -16,8 +16,10 @@ public class AzureBlobPublishResult
     public List<string> SkippedBlobs { get; set; } = new();
     public List<string> SkippedBlobNames { get; set; } = new();
     public List<string> MissingBlobNames { get; set; } = new();
+    public List<string> FailedBlobNames { get; set; } = new();
     public string ErrorMessage { get; set; } = string.Empty;
     public List<string> Warnings { get; set; } = new();
+    public List<string> Errors { get; set; } = new();
 }
 
 /// <summary>
@@ -40,6 +42,11 @@ public class AzureBlobPublishOptions
     /// Upload retry count
     /// </summary>
     public int UploadRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Maximum number of concurrent blob uploads within a shard.
+    /// </summary>
+    public int UploadConcurrency { get; set; } = 1;
 
     /// <summary>
     /// Versioned directory prefix (e.g., "1.0.0/" or "0.1.0-beta.1/")

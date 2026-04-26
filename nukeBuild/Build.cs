@@ -36,17 +36,40 @@ partial class Build : NukeBuild
 
     [Parameter("Azure upload retries")] readonly int AzureUploadRetries = 3;
 
+    [Parameter("Azure upload concurrency within a shard")] readonly int AzureUploadConcurrency = 4;
+
     [Parameter("Minify index.json uploaded to Azure (default: true)")]
     readonly bool MinifyIndexJson = true;
 
     [Parameter("Azure index output path")]
     readonly string AzureIndexOutputPath = "";
 
+    [Parameter("Azure upload plan output path")]
+    readonly string AzureUploadPlanOutputPath = "";
+
+    [Parameter("Azure upload matrix output path")]
+    readonly string AzureUploadMatrixOutputPath = "";
+
     [Parameter("Enable artifacts upload")]
     readonly bool UploadArtifacts = true;
 
     [Parameter("Enable index.json upload (default: true)")]
     readonly bool UploadIndex = true;
+
+    [Parameter("Shard release asset selection manifest path")]
+    readonly string ReleaseAssetsManifest = "";
+
+    [Parameter("Publish result output path")]
+    readonly string PublishResultOutputPath = "";
+
+    [Parameter("Merged publish results manifest path")]
+    readonly string MergedPublishResultsManifest = "";
+
+    [Parameter("Shard identifier for publish result export")]
+    readonly string PublishShardId = "";
+
+    [Parameter("Maximum upload shards to run in parallel at workflow level")]
+    readonly int AzureMaxParallel = 3;
 
     #endregion
 
@@ -92,6 +115,10 @@ partial class Build : NukeBuild
             Log.Information("Setup completed");
         });
 
+    Target GenerateAzureUploadPlan => _ => _
+        .Description("Enumerate release assets and emit Azure upload plan/matrix JSON")
+        .Executes(async () => await ExecuteGenerateAzureUploadPlan());
+
     /// <summary>
     /// Generate Azure Index target
     /// Generates Azure Blob Storage index.json file locally
@@ -104,13 +131,11 @@ partial class Build : NukeBuild
 
     /// <summary>
     /// Publish to Azure Blob target
-    /// Uploads pre-generated index.json to Azure Blob Storage
-    /// Dependencies: GenerateAzureIndex
-    /// Usage: For CI/CD scenarios where index.json is managed independently
+    /// Executes artifact upload and/or index publication based on the provided flags
+    /// Usage: Supports serial publish, shard upload, and finalize-only index publication
     /// </summary>
     Target PublishToAzureBlob => _ => _
-        .Description("Upload pre-generated index.json to Azure Blob Storage")
-        .DependsOn(GenerateAzureIndex)
+        .Description("Publish release artifacts and/or index.json to Azure Blob Storage")
         .Executes(async () => await ExecutePublishToAzureBlob());
 
     Target Default => _ => _

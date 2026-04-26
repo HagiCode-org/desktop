@@ -80,6 +80,7 @@ public sealed class AzureBlobIndexGenerationResult
 
 public sealed class ReleasePublishSummary
 {
+    public string ShardId { get; set; } = string.Empty;
     public bool Success { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public string IndexJson { get; set; } = string.Empty;
@@ -87,6 +88,50 @@ public sealed class ReleasePublishSummary
     public int EligibleAssetCount { get; set; }
     public int SidecarSuccessCount { get; set; }
     public int HttpOnlyFallbackCount { get; set; }
-    public List<PublishedArtifactMetadata> PublishedArtifacts { get; } = new();
-    public List<ArtifactPublishDiagnostic> Diagnostics { get; } = new();
+    public int UploadedBlobCount { get; set; }
+    public int SkippedBlobCount { get; set; }
+    public int MissingBlobCount { get; set; }
+    public List<PublishedArtifactMetadata> PublishedArtifacts { get; set; } = new();
+    public List<ArtifactPublishDiagnostic> Diagnostics { get; set; } = new();
+    public List<string> UploadedBlobNames { get; set; } = new();
+    public List<string> SkippedBlobNames { get; set; } = new();
+    public List<string> MissingBlobNames { get; set; } = new();
+}
+
+public sealed class ReleaseAssetSelection
+{
+    public required string Name { get; init; }
+    public long Size { get; init; }
+}
+
+public sealed class ReleaseAssetSelectionManifest
+{
+    public string ShardId { get; init; } = string.Empty;
+    public List<ReleaseAssetSelection> Assets { get; init; } = new();
+}
+
+public sealed class AzureUploadShardPlan
+{
+    public required string ShardId { get; init; }
+    public List<ReleaseAssetSelection> Assets { get; init; } = new();
+    public int AssetCount { get; init; }
+    public long TotalSizeBytes { get; init; }
+}
+
+public sealed class AzureReleaseUploadPlan
+{
+    public required string ReleaseTag { get; init; }
+    public required string ReleaseChannel { get; init; }
+    public required string VersionPrefix { get; init; }
+    public required string Repository { get; init; }
+    public int MaxParallel { get; init; }
+    public List<ReleaseAssetSelection> EligibleAssets { get; init; } = new();
+    public List<string> SkippedAssets { get; init; } = new();
+    public List<AzureUploadShardPlan> Shards { get; init; } = new();
+}
+
+public sealed class MergedPublishResultsManifest
+{
+    public List<string> ExpectedShardIds { get; init; } = new();
+    public List<string> ResultFiles { get; init; } = new();
 }
