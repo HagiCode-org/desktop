@@ -15,9 +15,9 @@ import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
-import type { ManagedNpmPackageId, NpmManagementBatchSyncRequest, NpmManagementBridge } from '../types/npm-management.js';
-import type { NpmMirrorSettingsInput } from '../types/npm-management.js';
-import { npmManagementChannels } from '../types/npm-management.js';
+import type { ManagedNpmPackageId, DependencyManagementBatchSyncRequest, DependencyManagementBridge } from '../types/dependency-management.js';
+import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
+import { dependencyManagementChannels } from '../types/dependency-management.js';
 import type { OmniRouteBridge, OmniRouteConfigUpdatePayload, OmniRouteLogReadRequest, OmniRoutePathTarget } from '../types/omniroute-management.js';
 import { omniRouteChannels } from '../types/omniroute-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
@@ -312,7 +312,9 @@ interface ElectronAPI {
     writeText: (text: string) => Promise<void>;
   };
   systemDiagnostic: SystemDiagnosticBridge;
-  npmManagement: NpmManagementBridge;
+  /** @deprecated Use dependencyManagement. */
+  npmManagement: DependencyManagementBridge;
+  dependencyManagement: DependencyManagementBridge;
   omniroute: OmniRouteBridge;
 
   // Dependency Management APIs
@@ -396,6 +398,23 @@ const logDirectoryBridge: LogDirectoryBridge = {
 const rendererEventTarget = globalThis as unknown as {
   dispatchEvent: (event: unknown) => void;
   CustomEvent: new <T>(type: string, init?: { detail?: T }) => unknown;
+};
+
+const dependencyManagementBridge: DependencyManagementBridge = {
+  getSnapshot: () => ipcRenderer.invoke(dependencyManagementChannels.snapshot),
+  refresh: () => ipcRenderer.invoke(dependencyManagementChannels.refresh),
+  getMirrorSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getMirrorSettings),
+  setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(dependencyManagementChannels.setMirrorSettings, settings),
+  install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),
+  uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
+  syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
+  onProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on(dependencyManagementChannels.progress, listener);
+    return () => ipcRenderer.removeListener(dependencyManagementChannels.progress, listener);
+  },
 };
 
 const electronAPI: ElectronAPI = {
@@ -591,7 +610,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'npm-management' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -731,22 +750,8 @@ const electronAPI: ElectronAPI = {
   },
   clipboard: clipboardBridge,
   systemDiagnostic: systemDiagnosticBridge,
-  npmManagement: {
-    getSnapshot: () => ipcRenderer.invoke(npmManagementChannels.snapshot),
-    refresh: () => ipcRenderer.invoke(npmManagementChannels.refresh),
-    getMirrorSettings: () => ipcRenderer.invoke(npmManagementChannels.getMirrorSettings),
-    setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(npmManagementChannels.setMirrorSettings, settings),
-    install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.install, packageId),
-    uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(npmManagementChannels.uninstall, packageId),
-    syncPackages: (request: NpmManagementBatchSyncRequest) => ipcRenderer.invoke(npmManagementChannels.syncPackages, request),
-    onProgress: (callback) => {
-      const listener = (_event, progress) => {
-        callback(progress);
-      };
-      ipcRenderer.on(npmManagementChannels.progress, listener);
-      return () => ipcRenderer.removeListener(npmManagementChannels.progress, listener);
-    },
-  },
+  npmManagement: dependencyManagementBridge,
+  dependencyManagement: dependencyManagementBridge,
   omniroute: {
     getStatus: () => ipcRenderer.invoke(omniRouteChannels.status),
     start: () => ipcRenderer.invoke(omniRouteChannels.start),
