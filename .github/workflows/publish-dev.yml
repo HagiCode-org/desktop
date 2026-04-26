@@ -251,7 +251,14 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
           Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_path=$($zipFile.FullName)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
+
+      - name: Verify Windows ZIP toolchain payload
+        if: success() && steps.windows_zip.outputs.zip_path != ''
+        shell: bash
+        run: |
+          node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
 
       - name: Summarize Windows packaging
         if: success()
