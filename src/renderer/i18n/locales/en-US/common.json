@@ -154,6 +154,7 @@
     "versionManagement": "Version Management",
     "diagnostic": "Diagnostic",
     "npmManagement": "npm Management",
+    "omniroute": "OmniRoute",
     "settings": "Settings",
     "desktopVersion": "Desktop version",
     "webVersion": "Web version",
@@ -170,6 +171,7 @@
     "environment": {
       "title": "Node Environment",
       "description": "Desktop uses an isolated Node/npm runtime for managed CLIs instead of reusing the system-wide environment.",
+      "managedNotice": "Packages shown here are installed into HagiCode Desktop's own Node/npm environment. System Node/npm and global CLI installs are not counted as ready for Desktop startup.",
       "rationaleTitle": "Why Desktop ships with a dedicated Node runtime",
       "rationale": {
         "fixedRuntime": "A dedicated Node runtime with a fixed version lets Hagicode and its toolchain run against a known-good version, which improves stability across different host machines.",
@@ -216,6 +218,9 @@
       },
       "skills": {
         "description": "Codex/Agent skill management CLI."
+      },
+      "pm2": {
+        "description": "PM2 process manager used by Desktop to supervise OmniRoute."
       },
       "omniroute": {
         "description": "OmniRoute local routing and toolchain CLI."
@@ -470,6 +475,75 @@
     "themeToggle": {
       "switchToLight": "Switch to light mode",
       "switchToDark": "Switch to dark mode"
+    }
+  },
+  "omniroute": {
+    "title": "OmniRoute",
+    "description": "Manage the Desktop-owned OmniRoute service through PM2, including lifecycle controls, runtime paths, port configuration, and recent logs.",
+    "loading": "Loading OmniRoute status...",
+    "actions": {
+      "refresh": "Refresh",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "working": "Working...",
+      "openUi": "Open UI",
+      "save": "Save",
+      "open": "Open",
+      "refreshLogs": "Refresh Logs"
+    },
+    "status": {
+      "title": "Status",
+      "running": "Running",
+      "stopped": "Stopped",
+      "partial": "Partial",
+      "error": "Error",
+      "baseUrl": "Base URL",
+      "pm2": "PM2 executable",
+      "pm2Missing": "PM2 is not installed"
+    },
+    "config": {
+      "title": "Runtime Configuration",
+      "description": "OmniRoute uses an isolated Desktop-managed port. It cannot match the HagiCode web service port."
+    },
+    "validation": {
+      "numeric": "Enter a numeric port.",
+      "range": "Use a port between 1024 and 65535."
+    },
+    "paths": {
+      "title": "Managed Paths",
+      "description": "Configuration, data, and logs are stored under Electron userData/OmniRoute.",
+      "config": "Config",
+      "data": "Data",
+      "logs": "Logs"
+    },
+    "processes": {
+      "title": "PM2 Processes",
+      "description": "Desktop only manages its own OmniRoute service process and leaves unrelated PM2 processes untouched.",
+      "name": "Name",
+      "status": "Status",
+      "restarts": "Restarts"
+    },
+    "processStatus": {
+      "online": "Online",
+      "stopped": "Stopped",
+      "errored": "Errored",
+      "unknown": "Unknown"
+    },
+    "logs": {
+      "title": "Recent Logs",
+      "description": "Read bounded recent lines from allowlisted Desktop-managed OmniRoute logs.",
+      "empty": "No log output yet.",
+      "targets": {
+        "service-out": "Service Output",
+        "service-error": "Service Error"
+      }
+    },
+    "errors": {
+      "title": "OmniRoute operation failed",
+      "operationFailed": "The operation failed.",
+      "saveFailed": "Failed to save OmniRoute configuration.",
+      "openPathFailed": "Failed to open the managed path."
     }
   }
 }

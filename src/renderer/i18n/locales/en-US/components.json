@@ -114,6 +114,11 @@
       "unknown": "Unknown status"
     },
     "startButton": "Start Service",
+    "npmReadinessButton": "Enter npm Management",
+    "npmReadinessAlert": {
+      "title": "npm tools are not ready",
+      "message": "Install required Desktop-managed npm packages and at least one selected Agent CLI before starting Hagicode."
+    },
     "stoppingButton": "Stopping...",
     "restartButton": "Restart",
     "restartingButton": "Restarting...",

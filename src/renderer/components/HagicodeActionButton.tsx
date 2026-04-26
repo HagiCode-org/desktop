@@ -11,6 +11,7 @@ interface HagicodeActionButtonProps {
   onOpenApp: () => void;
   onOpenBrowser: () => void;
   canLaunchService?: boolean;
+  startLabel?: string;
 }
 
 export default function HagicodeActionButton({
@@ -21,6 +22,7 @@ export default function HagicodeActionButton({
   onOpenApp,
   onOpenBrowser,
   canLaunchService = true,
+  startLabel,
 }: HagicodeActionButtonProps) {
   const { t } = useTranslation(['components', 'tray']);
 
@@ -112,7 +114,7 @@ export default function HagicodeActionButton({
                 >
                   <Play className="w-5 h-5" fill="currentColor" />
                 </motion.div>
-                <span className="text-lg">{t('webServiceStatus.startButton')}</span>
+                <span className="text-lg">{startLabel ?? t('webServiceStatus.startButton')}</span>
               </>
             )}
           </div>

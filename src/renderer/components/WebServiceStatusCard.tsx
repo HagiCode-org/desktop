@@ -17,6 +17,8 @@ import {
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import { writeTextToClipboard } from '../lib/clipboard.js';
+import { evaluateNpmReadiness, npmInstallableAgentCliPackages } from '../../shared/npm-managed-packages.js';
+import type { NpmReadinessSummary } from '../../types/npm-management.js';
 import {
   startWebService,
   stopWebService,
@@ -26,6 +28,7 @@ import {
   updateWebServiceConfig,
 } from '../store/thunks/webServiceThunks';
 import { RootState, AppDispatch } from '../store';
+import { switchViewWithSideEffects } from '../store/thunks/viewThunks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,6 +107,8 @@ const WebServiceStatusCard: React.FC = () => {
       : ''
   );
   const [networkConfigError, setNetworkConfigError] = useState<string | null>(null);
+  const [npmReadiness, setNpmReadiness] = useState<NpmReadinessSummary | null>(null);
+  const [npmReadinessError, setNpmReadinessError] = useState<string | null>(null);
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -138,6 +143,29 @@ const WebServiceStatusCard: React.FC = () => {
       }
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const loadNpmReadiness = async () => {
+      try {
+        const snapshot = await window.electronAPI.npmManagement.getSnapshot();
+        if (!disposed) {
+          setNpmReadiness(evaluateNpmReadiness(snapshot, [npmInstallableAgentCliPackages[0]?.id].filter(Boolean)));
+          setNpmReadinessError(null);
+        }
+      } catch (error) {
+        if (!disposed) {
+          setNpmReadiness(null);
+          setNpmReadinessError(error instanceof Error ? error.message : String(error));
+        }
+      }
+    };
+
+    if (isStopped) {
+      void loadNpmReadiness();
+    }
+  }, [isStopped]);
 
   // Re-sync the stopped-state editor when main-process status changes.
   useEffect(() => {
@@ -193,6 +221,11 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleStart = async () => {
+    if (!npmReadiness?.ready) {
+      dispatch(switchViewWithSideEffects('npm-management'));
+      return;
+    }
+
     const saveSucceeded = await flushPendingNetworkConfig();
     if (!saveSucceeded) {
       return;
@@ -527,12 +560,27 @@ const WebServiceStatusCard: React.FC = () => {
                 isDisabled={isDisabled}
                 status={webServiceInfo.status}
                 canLaunchService={canLaunchService}
+                startLabel={isStopped && (!npmReadiness?.ready || npmReadinessError) ? t('webServiceStatus.npmReadinessButton') : undefined}
                 onStart={handleStart}
                 onOpenApp={handleOpenHagicode}
                 onOpenBrowser={handleOpenInBrowser}
               />
             )}
           </AnimatePresence>
+
+          {isStopped && (npmReadinessError || (npmReadiness && !npmReadiness.ready)) && canLaunchService && (
+            <Alert>
+              <Package className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">{t('webServiceStatus.npmReadinessAlert.title')}</p>
+                  <p className="text-sm">
+                    {npmReadinessError || t('webServiceStatus.npmReadinessAlert.message')}
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {startupFailure && (
             <Button

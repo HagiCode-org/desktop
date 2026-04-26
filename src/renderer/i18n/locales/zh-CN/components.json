@@ -114,6 +114,11 @@
       "unknown": "未知状态"
     },
     "startButton": "启动服务",
+    "npmReadinessButton": "进入 npm 管理",
+    "npmReadinessAlert": {
+      "title": "npm 工具尚未就绪",
+      "message": "请先安装 Desktop 托管 npm 环境中的必需包，并确保至少一个选中的 Agent CLI 可用。"
+    },
     "stoppingButton": "停止中...",
     "restartButton": "重启",
     "restartingButton": "重启中...",

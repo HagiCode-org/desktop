@@ -12,6 +12,7 @@ import {
   Globe as GlobeIcon,
   Info,
   LoaderCircle,
+  Network,
   PackageOpen,
   Settings,
   Stethoscope,
@@ -49,6 +50,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
   { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
   { id: 'npm-management', labelKey: 'sidebar.npmManagement', icon: PackageOpen },
+  { id: 'omniroute', labelKey: 'sidebar.omniroute', icon: Network },
   { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];
 

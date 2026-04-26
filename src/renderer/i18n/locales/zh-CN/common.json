@@ -154,6 +154,7 @@
     "versionManagement": "版本管理",
     "diagnostic": "诊断",
     "npmManagement": "npm 管理",
+    "omniroute": "OmniRoute",
     "settings": "设置",
     "desktopVersion": "Desktop 版本",
     "webVersion": "Web 版本",
@@ -170,6 +171,7 @@
     "environment": {
       "title": "Node 环境",
       "description": "Desktop 使用独立的 Node/npm 运行时来承载托管 CLI，而不是直接复用系统环境。",
+      "managedNotice": "此处显示的包会安装到 HagiCode Desktop 自己的 Node/npm 环境中。系统 Node/npm 和全局 CLI 安装不会被视为 Desktop 启动就绪。",
       "rationaleTitle": "为什么 Desktop 会带一个独立的 Node 运行时",
       "rationale": {
         "fixedRuntime": "独立的 Node 和固定版本号，让我们可以和 Hagicode 的工具链一起按固定版本协同，减少宿主机差异带来的不稳定因素。",
@@ -216,6 +218,9 @@
       },
       "skills": {
         "description": "Codex/Agent 技能管理 CLI。"
+      },
+      "pm2": {
+        "description": "Desktop 用于托管 OmniRoute 的 PM2 进程管理器。"
       },
       "omniroute": {
         "description": "OmniRoute 本地路由与工具链 CLI。"
@@ -470,6 +475,75 @@
     "themeToggle": {
       "switchToLight": "切换到亮色模式",
       "switchToDark": "切换到暗色模式"
+    }
+  },
+  "omniroute": {
+    "title": "OmniRoute",
+    "description": "通过 PM2 管理 Desktop 托管的 OmniRoute 服务，包括启停、运行路径、端口配置和近期日志。",
+    "loading": "正在读取 OmniRoute 状态...",
+    "actions": {
+      "refresh": "刷新",
+      "start": "启动",
+      "stop": "停止",
+      "restart": "重启",
+      "working": "处理中...",
+      "openUi": "打开 UI",
+      "save": "保存",
+      "open": "打开",
+      "refreshLogs": "刷新日志"
+    },
+    "status": {
+      "title": "状态",
+      "running": "运行中",
+      "stopped": "已停止",
+      "partial": "部分运行",
+      "error": "错误",
+      "baseUrl": "访问地址",
+      "pm2": "PM2 可执行文件",
+      "pm2Missing": "PM2 尚未安装"
+    },
+    "config": {
+      "title": "运行配置",
+      "description": "OmniRoute 使用 Desktop 独立托管端口，不能与 HagiCode Web 服务端口相同。"
+    },
+    "validation": {
+      "numeric": "请输入数字端口。",
+      "range": "端口范围必须在 1024 到 65535 之间。"
+    },
+    "paths": {
+      "title": "托管路径",
+      "description": "配置、数据与日志均保存在 Electron userData/OmniRoute 下。",
+      "config": "配置",
+      "data": "数据",
+      "logs": "日志"
+    },
+    "processes": {
+      "title": "PM2 进程",
+      "description": "Desktop 只管理自己的 OmniRoute 服务进程，不影响其他 PM2 进程。",
+      "name": "名称",
+      "status": "状态",
+      "restarts": "重启次数"
+    },
+    "processStatus": {
+      "online": "在线",
+      "stopped": "已停止",
+      "errored": "错误",
+      "unknown": "未知"
+    },
+    "logs": {
+      "title": "近期日志",
+      "description": "从 Desktop 托管的 OmniRoute 日志白名单中读取有限行数。",
+      "empty": "暂无日志输出。",
+      "targets": {
+        "service-out": "服务输出",
+        "service-error": "服务错误"
+      }
+    },
+    "errors": {
+      "title": "OmniRoute 操作失败",
+      "operationFailed": "操作失败。",
+      "saveFailed": "保存 OmniRoute 配置失败。",
+      "openPathFailed": "无法打开托管路径。"
     }
   }
 }
