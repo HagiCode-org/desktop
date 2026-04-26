@@ -124,7 +124,7 @@ export class PromptGuidanceService {
         entryPoint: 'versionDependencies',
         promptContent: prompt.content,
         promptPath: prompt.filePath,
-        promptSource: 'manifest-entry',
+        promptSource: prompt.source,
         attemptedPaths: [manifestPath, prompt.filePath],
         activeVersion: input.versionId,
         suggestedWorkingDirectory: path.dirname(manifestPath),
