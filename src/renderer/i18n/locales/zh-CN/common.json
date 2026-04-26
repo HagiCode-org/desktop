@@ -146,6 +146,10 @@
         "qr": "二维码",
         "image": "图片"
       }
+    },
+    "promotion": {
+      "label": "推广",
+      "defaultCta": "了解更多"
     }
   },
   "sidebar": {
@@ -170,14 +174,11 @@
     "unavailable": "不可用",
     "environment": {
       "title": "Node 环境",
-      "description": "Desktop 使用独立的 Node/npm 运行时来承载托管 CLI，而不是直接复用系统环境。",
-      "managedNotice": "此处显示的包会安装到 HagiCode Desktop 自己的 Node/npm 环境中。系统 Node/npm 和全局 CLI 安装不会被视为 Desktop 启动就绪。",
-      "rationaleTitle": "为什么 Desktop 会带一个独立的 Node 运行时",
-      "rationale": {
-        "fixedRuntime": "独立的 Node 和固定版本号，让我们可以和 Hagicode 的工具链一起按固定版本协同，减少宿主机差异带来的不稳定因素。",
-        "isolatedConfig": "CLI 依赖的配置会单独存储，并与主机范围的全局配置区分开，保证升级、切换和恢复时配置仍然稳定可用。",
-        "nonIntrusive": "这种隔离方式可以避免 Hagicode 污染主机环境；卸载 Desktop 时，也不会影响你原本系统里的 Node、npm 和已有配置。"
-      },
+      "description": "Desktop 使用自己的 Node/npm 运行时来承载托管 CLI 包。",
+      "managedNotice": "关于 Desktop 的 Node/npm 运行时、PATH 隔离、包位置和排障方式，请阅读 FAQ 中的最新说明。",
+      "rationaleTitle": "Desktop 托管的 Node/npm 环境",
+      "faqLinkLabel": "查看 Node 环境 FAQ",
+      "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/",
       "version": "版本",
       "toolchainRoot": "工具链目录",
       "globalPrefix": "全局安装目录",

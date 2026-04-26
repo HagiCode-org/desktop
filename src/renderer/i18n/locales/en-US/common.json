@@ -146,6 +146,10 @@
         "qr": "QR",
         "image": "Image"
       }
+    },
+    "promotion": {
+      "label": "Promotion",
+      "defaultCta": "Learn more"
     }
   },
   "sidebar": {
@@ -170,14 +174,11 @@
     "unavailable": "Unavailable",
     "environment": {
       "title": "Node Environment",
-      "description": "Desktop uses an isolated Node/npm runtime for managed CLIs instead of reusing the system-wide environment.",
-      "managedNotice": "Packages shown here are installed into HagiCode Desktop's own Node/npm environment. System Node/npm and global CLI installs are not counted as ready for Desktop startup.",
-      "rationaleTitle": "Why Desktop ships with a dedicated Node runtime",
-      "rationale": {
-        "fixedRuntime": "A dedicated Node runtime with a fixed version lets Hagicode and its toolchain run against a known-good version, which improves stability across different host machines.",
-        "isolatedConfig": "CLI-related configuration is stored separately from host-wide global configuration so updates, switching, and recovery keep a stable and usable config surface.",
-        "nonIntrusive": "This isolation avoids polluting the host environment, and uninstalling Desktop will not disturb the Node, npm, or config that already existed on the machine."
-      },
+      "description": "Desktop uses its own Node/npm runtime for managed CLI packages.",
+      "managedNotice": "Read the FAQ for current details about Desktop's Node/npm runtime, PATH isolation, package locations, and troubleshooting.",
+      "rationaleTitle": "Desktop-managed Node/npm environment",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
       "version": "Version",
       "toolchainRoot": "Toolchain root",
       "globalPrefix": "Global prefix",
