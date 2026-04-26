@@ -43,6 +43,9 @@ export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from '
 // npm management handlers
 export { registerNpmManagementHandlers, initNpmManagementHandlers } from './npmManagementHandlers.js';
 
+// OmniRoute handlers
+export { registerOmniRouteHandlers, initOmniRouteHandlers } from './omniRouteHandlers.js';
+
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 

@@ -18,6 +18,8 @@ import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type { ManagedNpmPackageId, NpmManagementBatchSyncRequest, NpmManagementBridge } from '../types/npm-management.js';
 import type { NpmMirrorSettingsInput } from '../types/npm-management.js';
 import { npmManagementChannels } from '../types/npm-management.js';
+import type { OmniRouteBridge, OmniRouteConfigUpdatePayload, OmniRouteLogReadRequest, OmniRoutePathTarget } from '../types/omniroute-management.js';
+import { omniRouteChannels } from '../types/omniroute-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
 import type {
   LogDirectoryBridge,
@@ -311,6 +313,7 @@ interface ElectronAPI {
   };
   systemDiagnostic: SystemDiagnosticBridge;
   npmManagement: NpmManagementBridge;
+  omniroute: OmniRouteBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -588,7 +591,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'npm-management' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -742,6 +745,23 @@ const electronAPI: ElectronAPI = {
       };
       ipcRenderer.on(npmManagementChannels.progress, listener);
       return () => ipcRenderer.removeListener(npmManagementChannels.progress, listener);
+    },
+  },
+  omniroute: {
+    getStatus: () => ipcRenderer.invoke(omniRouteChannels.status),
+    start: () => ipcRenderer.invoke(omniRouteChannels.start),
+    stop: () => ipcRenderer.invoke(omniRouteChannels.stop),
+    restart: () => ipcRenderer.invoke(omniRouteChannels.restart),
+    getConfig: () => ipcRenderer.invoke(omniRouteChannels.getConfig),
+    setConfig: (payload: OmniRouteConfigUpdatePayload) => ipcRenderer.invoke(omniRouteChannels.setConfig, payload),
+    readLog: (request: OmniRouteLogReadRequest) => ipcRenderer.invoke(omniRouteChannels.readLog, request),
+    openPath: (target: OmniRoutePathTarget) => ipcRenderer.invoke(omniRouteChannels.openPath, target),
+    onStatusChange: (callback) => {
+      const listener = (_event, status) => {
+        callback(status);
+      };
+      ipcRenderer.on(omniRouteChannels.statusChanged, listener);
+      return () => ipcRenderer.removeListener(omniRouteChannels.statusChanged, listener);
     },
   },
 };

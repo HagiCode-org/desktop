@@ -35,6 +35,11 @@ import {
   validateBundledRuntimeForPlatform,
   validateFrameworkDependentPayload,
 } from './embedded-runtime.js';
+import {
+  PM2_RUNTIME_DIR_NAME,
+  Pm2DotnetManager,
+  type Pm2LifecycleResult,
+} from './pm2-dotnet-manager.js';
 import { evaluateDesktopCompatibility } from './desktop-compatibility.js';
 import {
   buildAccessUrl,
@@ -109,6 +114,7 @@ interface PreparedServiceEnvironment {
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
+  pm2Manager?: Pm2DotnetManager;
 }
 
 export interface StartupFailureInfo {
@@ -142,6 +148,7 @@ export class PCodeWebServiceManager {
   private config: WebServiceConfig;
   private readonly configManager: ConfigManager | null;
   private readonly httpClient: DesktopHttpClient;
+  private readonly pm2Manager: Pm2DotnetManager;
   private status: ProcessStatus = 'stopped';
   private startTime: number | null = null;
   private restartCount: number = 0;
@@ -166,6 +173,7 @@ export class PCodeWebServiceManager {
   private readonly startupLogMaxChars: number = 16 * 1024;
   private startupLogLines: string[] = [];
   private startupLogTruncated: boolean = false;
+  private lastPm2Env: NodeJS.ProcessEnv | null = null;
 
   constructor(config: WebServiceConfig, deps: WebServiceManagerDeps = {}) {
     this.config = {
@@ -174,6 +182,7 @@ export class PCodeWebServiceManager {
     };
     this.configManager = deps.configManager ?? null;
     this.httpClient = deps.httpClient ?? desktopHttpClient;
+    this.pm2Manager = deps.pm2Manager ?? new Pm2DotnetManager();
     this.pathManager = PathManager.getInstance();
 
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
@@ -542,6 +551,36 @@ export class PCodeWebServiceManager {
       DOTNET_ROOT: runtimeRoot,
       DOTNET_MULTILEVEL_LOOKUP: '0',
       [pathKey]: runtimePath,
+    };
+  }
+
+  private getPm2RuntimeFilesDirectory(): string {
+    return path.join(this.pathManager.getPaths().config, PM2_RUNTIME_DIR_NAME);
+  }
+
+  private buildPm2LifecycleFailureResult(result: Pm2LifecycleResult): StartResult {
+    const message = result.success ? 'PM2 command failed unexpectedly' : result.message;
+    const failure = this.buildStartupFailureInfo(message);
+
+    return {
+      success: false,
+      resultSession: {
+        exitCode: -1,
+        stdout: result.stdout,
+        stderr: result.stderr || message,
+        duration: 0,
+        timestamp: failure.timestamp,
+        success: false,
+        errorMessage: message,
+        port: failure.port,
+      },
+      parsedResult: {
+        success: false,
+        errorMessage: message,
+        rawOutput: failure.log,
+        port: failure.port,
+      },
+      port: failure.port,
     };
   }
 
@@ -1613,22 +1652,35 @@ export class PCodeWebServiceManager {
         return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
       }
 
-      // Spawn the process
-      this.emitPhase(StartupPhase.Spawning, 'Starting service with bundled dotnet runtime...');
+      this.emitPhase(StartupPhase.Spawning, 'Starting service through PM2 with bundled dotnet runtime...');
       const spawnArgs = [launchContext.serviceDllPath, ...(this.config.args || [])];
-      this.appendStartupLogLine(`Spawning managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);
+      const pm2RuntimeDirectory = this.getPm2RuntimeFilesDirectory();
+      this.appendStartupLogLine(`PM2 managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);
+      this.appendStartupLogLine(`PM2 runtime files directory: ${pm2RuntimeDirectory}`);
 
-      this.process = spawn(launchContext.dotnetPath, spawnArgs, {
-        cwd: launchContext.serviceWorkingDirectory,
+      const pm2StartResult = await this.pm2Manager.startOrReload({
+        dotnetPath: launchContext.dotnetPath,
+        serviceDllPath: launchContext.serviceDllPath,
+        serviceWorkingDirectory: launchContext.serviceWorkingDirectory,
+        runtimeFilesDirectory: pm2RuntimeDirectory,
+        args: this.config.args || [],
         env: preparedEnv,
-        shell: false,
-        detached: false,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true,
       });
 
-      // Setup process event handlers
-      this.setupProcessHandlers();
+      if (!pm2StartResult.success) {
+        log.error('[WebService] PM2 start failed:', {
+          operation: pm2StartResult.operation,
+          errorCode: pm2StartResult.errorCode,
+          message: pm2StartResult.message,
+        });
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, pm2StartResult.message);
+        this.appendStartupLogLine(`Start failed [${pm2StartResult.errorCode}]: ${pm2StartResult.message}`);
+        await this.invalidateRuntimeIdentity('pm2-start-failed');
+        return this.buildPm2LifecycleFailureResult(pm2StartResult);
+      }
+
+      this.lastPm2Env = preparedEnv;
 
       // Wait for listening
       this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
@@ -1656,8 +1708,8 @@ export class PCodeWebServiceManager {
 
         // Persist successful bind configuration for future restarts and recovery.
         await this.saveLastSuccessfulConfig();
-        if (this.process?.pid) {
-          let runtimePid = this.process.pid;
+        if (pm2StartResult.status?.pid) {
+          let runtimePid = pm2StartResult.status.pid;
           const managedPid = await this.resolveManagedServicePidByPort(this.config.port);
           if (managedPid && managedPid !== runtimePid) {
             log.info('[WebService] Resolved managed runtime PID from listening port:', {
@@ -1684,10 +1736,10 @@ export class PCodeWebServiceManager {
         log.info('[WebService] Environment injection confirmed:', {
           mode: envMode,
           managedVariableCount: this.lastManagedEnvSnapshot.length,
-          pid: this.process?.pid ?? null,
+          pid: pm2StartResult.status?.pid ?? null,
         });
         this.emitPhase(StartupPhase.Running, 'Service is running');
-        log.info('[WebService] Started successfully, PID:', this.process.pid);
+        log.info('[WebService] Started successfully via PM2, PID:', pm2StartResult.status?.pid ?? null);
 
         // Return success result with URL and port
         return {
@@ -1834,6 +1886,15 @@ export class PCodeWebServiceManager {
       log.info('[WebService] Stopping web service...');
       const stopPort = this.recoveredRuntime?.port || this.config.port;
 
+      const pm2Stop = await this.pm2Manager.stop(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
+      if (!pm2Stop.success) {
+        log.error('[WebService] PM2 stop failed:', {
+          operation: pm2Stop.operation,
+          errorCode: pm2Stop.errorCode,
+          message: pm2Stop.message,
+        });
+      }
+
       if (this.process) {
         const pid = this.process.pid;
 
@@ -1871,6 +1932,7 @@ export class PCodeWebServiceManager {
 
       this.status = 'stopped';
       this.process = null;
+      this.lastPm2Env = null;
       this.startTime = null;
       this.recoveredRuntime = null;
       this.recoverySource = 'none';
@@ -1965,32 +2027,8 @@ export class PCodeWebServiceManager {
    */
   async restart(): Promise<StartResult> {
     log.info('[WebService] Restarting web service...');
-
-    const stopped = await this.stop();
-    if (!stopped) {
-      log.error('[WebService] Failed to stop for restart');
-      return {
-        success: false,
-        resultSession: {
-          exitCode: -1,
-          stdout: '',
-          stderr: 'Failed to stop for restart',
-          duration: 0,
-          timestamp: new Date().toISOString(),
-          success: false,
-          errorMessage: 'Failed to stop for restart',
-        },
-        parsedResult: {
-          success: false,
-          errorMessage: 'Failed to stop for restart',
-          rawOutput: 'Failed to stop for restart',
-        },
-      };
-    }
-
-    // Wait a bit before starting again
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
+    this.process = null;
+    this.status = 'stopped';
     return await this.start();
   }
 
@@ -2001,8 +2039,29 @@ export class PCodeWebServiceManager {
     await this.ensureSavedConfigInitialized();
     await this.ensureStartupRecovery();
 
+    const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
+    if (pm2Status.success && pm2Status.status) {
+      if (pm2Status.status.online) {
+        this.status = 'running';
+        this.currentPhase = StartupPhase.Running;
+        this.startTime = this.startTime ?? Date.now() - pm2Status.status.uptime;
+        this.restartCount = pm2Status.status.restartCount;
+      } else if (this.status === 'running') {
+        this.status = 'stopped';
+        this.currentPhase = StartupPhase.Idle;
+        this.startTime = null;
+      }
+    } else if (!pm2Status.success) {
+      log.warn('[WebService] PM2 status unavailable:', {
+        operation: pm2Status.operation,
+        errorCode: pm2Status.errorCode,
+        message: pm2Status.message,
+      });
+    }
+
     const uptime = this.startTime ? Date.now() - this.startTime : 0;
-    const activePid = this.process?.pid || this.recoveredRuntime?.pid || null;
+    const pm2Pid = pm2Status.success ? pm2Status.status?.pid ?? null : null;
+    const activePid = pm2Pid || this.process?.pid || this.recoveredRuntime?.pid || null;
     const runningUrl = this.status === 'running' ? buildAccessUrl(this.config.host, this.config.port) : null;
 
     return {
