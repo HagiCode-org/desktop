@@ -40,8 +40,8 @@ export { registerLlmHandlers, initLlmHandlers } from './llmHandlers.js';
 // System diagnostic handlers
 export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from './systemDiagnosticHandlers.js';
 
-// npm management handlers
-export { registerNpmManagementHandlers, initNpmManagementHandlers } from './npmManagementHandlers.js';
+// Dependency management handlers
+export { registerDependencyManagementHandlers, initDependencyManagementHandlers } from './dependencyManagementHandlers.js';
 
 // OmniRoute handlers
 export { registerOmniRouteHandlers, initOmniRouteHandlers } from './omniRouteHandlers.js';
