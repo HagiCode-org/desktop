@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import type {
   ManagedNpmPackageId,
-  NpmManagementBridge,
-  NpmManagementOperationProgress,
-  NpmManagementSnapshot,
-} from '../../types/npm-management.js';
+  DependencyManagementBridge,
+  DependencyManagementOperationProgress,
+  DependencyManagementSnapshot,
+} from '../../types/dependency-management.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,27 +21,27 @@ import {
   type BatchSyncState,
   updateSelectAllPackageIds,
   updateSelectedPackageIds,
-} from './npm-management/npmManagementPageModel';
-import { BatchSyncLogPanel, NpmPackageBootstrapCard, NpmPackageTable } from './npm-management/NpmPackageGroups';
+} from './dependency-management/dependencyManagementPageModel';
+import { BatchSyncLogPanel, NpmPackageBootstrapCard, NpmPackageTable } from './dependency-management/NpmPackageGroups';
 
 type PageStatus = 'loading' | 'ready' | 'error';
 
 const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 
-function getNpmManagementBridge(): NpmManagementBridge {
+function getDependencyManagementBridge(): DependencyManagementBridge {
   return (window as Window & {
     electronAPI: {
-      npmManagement: NpmManagementBridge;
+      dependencyManagement: DependencyManagementBridge;
     };
-  }).electronAPI.npmManagement;
+  }).electronAPI.dependencyManagement;
 }
 
-export default function NpmManagementPage() {
+export default function DependencyManagementPage() {
   const { t } = useTranslation('common');
-  const [snapshot, setSnapshot] = useState<NpmManagementSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<DependencyManagementSnapshot | null>(null);
   const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [progress, setProgress] = useState<Partial<Record<ManagedNpmPackageId, NpmManagementOperationProgress>>>({});
+  const [progress, setProgress] = useState<Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>>({});
   const [operationError, setOperationError] = useState<Partial<Record<ManagedNpmPackageId, string>>>({});
   const [selectedPackageIds, setSelectedPackageIds] = useState<ManagedNpmPackageId[]>([]);
   const [batchSyncState, setBatchSyncState] = useState<BatchSyncState | null>(null);
@@ -52,7 +52,7 @@ export default function NpmManagementPage() {
   const refreshSnapshot = async () => {
     setErrorMessage(null);
     try {
-      const nextSnapshot = await getNpmManagementBridge().refresh();
+      const nextSnapshot = await getDependencyManagementBridge().refresh();
       startTransition(() => {
         setSnapshot(nextSnapshot);
         setPageStatus('ready');
@@ -68,7 +68,7 @@ export default function NpmManagementPage() {
 
     const loadSnapshot = async () => {
       try {
-        const initial = await getNpmManagementBridge().getSnapshot();
+        const initial = await getDependencyManagementBridge().getSnapshot();
         if (!disposed) {
           setSnapshot(initial);
           setPageStatus('ready');
@@ -81,7 +81,7 @@ export default function NpmManagementPage() {
       }
     };
 
-    const unsubscribe = getNpmManagementBridge().onProgress((event) => {
+    const unsubscribe = getDependencyManagementBridge().onProgress((event) => {
       setProgress((current) => ({ ...current, [event.packageId]: event }));
       setBatchSyncState((current) => {
         if (!isBatchSyncEvent(current, event)) {
@@ -119,11 +119,11 @@ export default function NpmManagementPage() {
     setOperationError((current) => ({ ...current, [packageId]: undefined }));
     try {
       const result = action === 'install'
-        ? await getNpmManagementBridge().install(packageId)
-        : await getNpmManagementBridge().uninstall(packageId);
+        ? await getDependencyManagementBridge().install(packageId)
+        : await getDependencyManagementBridge().uninstall(packageId);
       setSnapshot(result.snapshot);
       if (!result.success) {
-        setOperationError((current) => ({ ...current, [packageId]: result.error ?? t('npmManagement.errors.operationFailed') }));
+        setOperationError((current) => ({ ...current, [packageId]: result.error ?? t('dependencyManagement.errors.operationFailed') }));
       }
     } catch (error) {
       setOperationError((current) => ({
@@ -153,7 +153,7 @@ export default function NpmManagementPage() {
     });
 
     try {
-      const result = await getNpmManagementBridge().syncPackages({ packageIds });
+      const result = await getDependencyManagementBridge().syncPackages({ packageIds });
       setSnapshot(result.snapshot);
       if (result.success) {
         setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
@@ -164,7 +164,7 @@ export default function NpmManagementPage() {
       }
 
       setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
-        ? { ...current, status: 'failed', error: result.error ?? t('npmManagement.errors.operationFailed') }
+        ? { ...current, status: 'failed', error: result.error ?? t('dependencyManagement.errors.operationFailed') }
         : current);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -191,11 +191,11 @@ export default function NpmManagementPage() {
     });
 
     try {
-      const nextSnapshot = await getNpmManagementBridge().setMirrorSettings({ enabled });
+      const nextSnapshot = await getDependencyManagementBridge().setMirrorSettings({ enabled });
       setSnapshot(nextSnapshot);
     } catch (error) {
       setSnapshot(previousSnapshot);
-      setMirrorSaveError(error instanceof Error ? error.message : t('npmManagement.mirror.saveFailed'));
+      setMirrorSaveError(error instanceof Error ? error.message : t('dependencyManagement.mirror.saveFailed'));
     } finally {
       setIsSavingMirrorSettings(false);
     }
@@ -210,8 +210,8 @@ export default function NpmManagementPage() {
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const hagiscriptGateOpen = hagiscript?.status === 'installed' && Boolean(hagiscript.executablePath);
   const dependencyGateMessage = hagiscript?.status === 'unknown'
-    ? t('npmManagement.dependencyGate.unknown')
-    : t('npmManagement.dependencyGate.missing');
+    ? t('dependencyManagement.dependencyGate.unknown')
+    : t('dependencyManagement.dependencyGate.missing');
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { hagiscriptGateOpen, actionsDisabled });
   const selectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, selectablePackageIds);
   const selectAllChecked = getSelectAllChecked(selectedPackageIds, selectablePackageIds);
@@ -246,13 +246,13 @@ export default function NpmManagementPage() {
             <div className="space-y-2">
               <CardTitle className="flex items-center gap-2">
                 <PackageOpen className="h-5 w-5" />
-                {t('npmManagement.title')}
+                {t('dependencyManagement.title')}
               </CardTitle>
-              <CardDescription>{t('npmManagement.description')}</CardDescription>
+              <CardDescription>{t('dependencyManagement.description')}</CardDescription>
             </div>
             <Button variant="outline" onClick={() => void refreshSnapshot()} disabled={pageStatus === 'loading' || isPending}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              {t('npmManagement.actions.refresh')}
+              {t('dependencyManagement.actions.refresh')}
             </Button>
           </div>
         </CardHeader>
@@ -262,7 +262,7 @@ export default function NpmManagementPage() {
         <Card>
           <CardContent className="flex items-center gap-3 py-8 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
-            {t('npmManagement.loading')}
+            {t('dependencyManagement.loading')}
           </CardContent>
         </Card>
       )}
@@ -270,7 +270,7 @@ export default function NpmManagementPage() {
       {pageStatus === 'error' && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('npmManagement.errors.loadFailed')}</AlertTitle>
+          <AlertTitle>{t('dependencyManagement.errors.loadFailed')}</AlertTitle>
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
@@ -306,18 +306,18 @@ export default function NpmManagementPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Gauge className="h-5 w-5" />
-                {t('npmManagement.environment.title')}
+                {t('dependencyManagement.environment.title')}
               </CardTitle>
-              <CardDescription>{t('npmManagement.environment.description')}</CardDescription>
+              <CardDescription>{t('dependencyManagement.environment.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border bg-muted/30 p-4">
-                <p className="text-sm font-medium">{t('npmManagement.environment.rationaleTitle')}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{t('npmManagement.environment.managedNotice')}</p>
+                <p className="text-sm font-medium">{t('dependencyManagement.environment.rationaleTitle')}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('dependencyManagement.environment.managedNotice')}</p>
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  <li>{t('npmManagement.environment.rationale.fixedRuntime')}</li>
-                  <li>{t('npmManagement.environment.rationale.isolatedConfig')}</li>
-                  <li>{t('npmManagement.environment.rationale.nonIntrusive')}</li>
+                  <li>{t('dependencyManagement.environment.rationale.fixedRuntime')}</li>
+                  <li>{t('dependencyManagement.environment.rationale.isolatedConfig')}</li>
+                  <li>{t('dependencyManagement.environment.rationale.nonIntrusive')}</li>
                 </ul>
               </div>
 
@@ -329,19 +329,19 @@ export default function NpmManagementPage() {
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <span className="font-medium uppercase">{component}</span>
                       <Badge variant={item.status === 'available' ? 'default' : 'destructive'}>
-                        {t(`npmManagement.environment.status.${item.status}`)}
+                        {t(`dependencyManagement.environment.status.${item.status}`)}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{t('npmManagement.environment.version')}: {item.version ?? t('npmManagement.unavailable')}</p>
+                    <p className="text-sm text-muted-foreground">{t('dependencyManagement.environment.version')}: {item.version ?? t('dependencyManagement.unavailable')}</p>
                     <p className="break-all text-sm text-muted-foreground">{item.executablePath}</p>
                     {item.message && <p className="mt-2 text-sm text-destructive">{item.message}</p>}
                   </div>
                 );
               })}
               <div className="rounded-lg border p-4 md:col-span-2">
-                <p className="text-sm font-medium">{t('npmManagement.environment.toolchainRoot')}</p>
+                <p className="text-sm font-medium">{t('dependencyManagement.environment.toolchainRoot')}</p>
                 <p className="break-all text-sm text-muted-foreground">{snapshot.environment.toolchainRoot}</p>
-                <p className="mt-3 text-sm font-medium">{t('npmManagement.environment.globalPrefix')}</p>
+                <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.globalPrefix')}</p>
                 <p className="break-all text-sm text-muted-foreground">{snapshot.environment.npmGlobalPrefix}</p>
               </div>
               </div>
@@ -350,43 +350,43 @@ export default function NpmManagementPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">{t('npmManagement.mirror.title')}</CardTitle>
-              <CardDescription>{t('npmManagement.mirror.description')}</CardDescription>
+              <CardTitle className="text-lg">{t('dependencyManagement.mirror.title')}</CardTitle>
+              <CardDescription>{t('dependencyManagement.mirror.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{t('npmManagement.mirror.toggleLabel')}</span>
+                    <span className="font-medium">{t('dependencyManagement.mirror.toggleLabel')}</span>
                     <Badge variant={snapshot.mirrorSettings.enabled ? 'default' : 'secondary'}>
                       {isSavingMirrorSettings
-                        ? t('npmManagement.mirror.saving')
+                        ? t('dependencyManagement.mirror.saving')
                         : snapshot.mirrorSettings.enabled
-                          ? t('npmManagement.mirror.enabled')
-                          : t('npmManagement.mirror.disabled')}
+                          ? t('dependencyManagement.mirror.enabled')
+                          : t('dependencyManagement.mirror.disabled')}
                     </Badge>
                   </div>
                   <p className="break-all text-sm text-muted-foreground">
-                    {t('npmManagement.mirror.registryUrl')}: {mirrorRegistryUrl}
+                    {t('dependencyManagement.mirror.registryUrl')}: {mirrorRegistryUrl}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {snapshot.mirrorSettings.enabled
-                      ? t('npmManagement.mirror.enabledHelp')
-                      : t('npmManagement.mirror.disabledHelp')}
+                      ? t('dependencyManagement.mirror.enabledHelp')
+                      : t('dependencyManagement.mirror.disabledHelp')}
                   </p>
                 </div>
                 <Switch
                   checked={snapshot.mirrorSettings.enabled}
                   onCheckedChange={(enabled) => void updateMirrorSettings(enabled)}
                   disabled={mirrorToggleDisabled}
-                  aria-label={t('npmManagement.mirror.toggleLabel')}
+                  aria-label={t('dependencyManagement.mirror.toggleLabel')}
                 />
               </div>
 
               {mirrorSaveError && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t('npmManagement.mirror.saveFailed')}</AlertTitle>
+                  <AlertTitle>{t('dependencyManagement.mirror.saveFailed')}</AlertTitle>
                   <AlertDescription>{mirrorSaveError}</AlertDescription>
                 </Alert>
               )}
