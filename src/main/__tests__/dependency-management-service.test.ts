@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-const servicePath = path.resolve(process.cwd(), 'src/main/npm-management-service.ts');
+const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
 const catalogPath = path.resolve(process.cwd(), 'src/shared/npm-managed-packages.ts');
 
-describe('npm management service contract', () => {
+describe('dependency management service contract', () => {
   it('uses activation policy to choose local or portable Node/npm for environment detection and operations', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 

@@ -19,28 +19,28 @@ import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  NpmManagementBatchSyncRequest,
-  NpmManagementBatchSyncResult,
+  DependencyManagementBatchSyncRequest,
+  DependencyManagementBatchSyncResult,
   NpmEnvironmentComponent,
-  NpmManagementEnvironmentStatus,
+  DependencyManagementEnvironmentStatus,
   NpmMirrorSettings,
   NpmMirrorSettingsInput,
-  NpmManagementOperation,
-  NpmManagementOperationProgress,
-  NpmManagementOperationResult,
-  NpmManagementSnapshot,
-} from '../types/npm-management.js';
+  DependencyManagementOperation,
+  DependencyManagementOperationProgress,
+  DependencyManagementOperationResult,
+  DependencyManagementSnapshot,
+} from '../types/dependency-management.js';
 
-interface NpmManagementServiceOptions {
+interface DependencyManagementServiceOptions {
   pathManager?: PathManager;
   spawnProcess?: typeof spawn;
   existsSync?: (targetPath: string) => boolean;
   platform?: NodeJS.Platform;
-  settingsStore?: Store<NpmManagementSettingsStoreSchema>;
+  settingsStore?: Store<DependencyManagementSettingsStoreSchema>;
   configManager?: ConfigManager;
 }
 
-interface NpmManagementSettingsStoreSchema {
+interface DependencyManagementSettingsStoreSchema {
   mirrorSettings?: NpmMirrorSettingsInput;
 }
 
@@ -51,7 +51,7 @@ interface CommandResult {
 }
 
 export interface ManagedNpmCommandContext {
-  environment: NpmManagementEnvironmentStatus;
+  environment: DependencyManagementEnvironmentStatus;
   commandEnv: NodeJS.ProcessEnv;
   executablePath: string | null;
   packageStatus: ManagedNpmPackageStatusSnapshot | null;
@@ -71,7 +71,7 @@ interface HagiscriptSyncManifest {
   packages: Record<string, HagiscriptSyncManifestEntry>;
 }
 
-type ProgressListener = (event: NpmManagementOperationProgress) => void;
+type ProgressListener = (event: DependencyManagementOperationProgress) => void;
 
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 export const NPM_DEFAULT_REGISTRY_URL = 'https://registry.npmjs.org/';
@@ -112,19 +112,19 @@ function looksLikeSemverRange(selector: string): boolean {
   return /^[vV0-9*<>=~^xX|.\-\s]+$/.test(selector.trim());
 }
 
-export class NpmManagementService {
+export class DependencyManagementService {
   private readonly pathManager: PathManager;
   private readonly spawnProcess: typeof spawn;
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
-  private readonly settingsStore: Store<NpmManagementSettingsStoreSchema>;
+  private readonly settingsStore: Store<DependencyManagementSettingsStoreSchema>;
   private readonly configManager: ConfigManager;
   private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
   private readonly devNodeRuntimeManager: DevNodeRuntimeManager;
   private readonly events = new EventEmitter();
-  private activeOperation: NpmManagementOperationProgress | null = null;
+  private activeOperation: DependencyManagementOperationProgress | null = null;
 
-  constructor(options: NpmManagementServiceOptions = {}) {
+  constructor(options: DependencyManagementServiceOptions = {}) {
     this.pathManager = options.pathManager ?? PathManager.getInstance();
     this.spawnProcess = options.spawnProcess ?? spawn;
     this.existsSync = options.existsSync ?? fsSync.existsSync;
@@ -132,7 +132,7 @@ export class NpmManagementService {
     this.configManager = options.configManager ?? new ConfigManager();
     this.bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
     this.devNodeRuntimeManager = new DevNodeRuntimeManager();
-    this.settingsStore = options.settingsStore ?? new Store<NpmManagementSettingsStoreSchema>({
+    this.settingsStore = options.settingsStore ?? new Store<DependencyManagementSettingsStoreSchema>({
       name: 'npm-management',
     });
   }
@@ -142,7 +142,7 @@ export class NpmManagementService {
     return () => this.events.off('progress', listener);
   }
 
-  async getSnapshot(): Promise<NpmManagementSnapshot> {
+  async getSnapshot(): Promise<DependencyManagementSnapshot> {
     const environment = await this.detectEnvironment();
     const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)));
     const mirrorSettings = this.getMirrorSettings();
@@ -164,18 +164,18 @@ export class NpmManagementService {
     return this.normalizeMirrorSettings(this.settingsStore.get('mirrorSettings'));
   }
 
-  async setMirrorSettings(input: NpmMirrorSettingsInput): Promise<NpmManagementSnapshot> {
+  async setMirrorSettings(input: NpmMirrorSettingsInput): Promise<DependencyManagementSnapshot> {
     this.settingsStore.set('mirrorSettings', {
       enabled: Boolean(input.enabled),
     });
     return this.getSnapshot();
   }
 
-  async install(packageId: string): Promise<NpmManagementOperationResult> {
+  async install(packageId: string): Promise<DependencyManagementOperationResult> {
     return this.runPackageOperation(packageId, 'install');
   }
 
-  async syncPackages(request: NpmManagementBatchSyncRequest): Promise<NpmManagementBatchSyncResult> {
+  async syncPackages(request: DependencyManagementBatchSyncRequest): Promise<DependencyManagementBatchSyncResult> {
     const validation = this.resolvePackageDefinitions(request.packageIds, 'sync');
     if (!validation.success) {
       const snapshot = await this.getSnapshot();
@@ -204,7 +204,7 @@ export class NpmManagementService {
     return this.runHagiscriptSync(definitions);
   }
 
-  async uninstall(packageId: string): Promise<NpmManagementOperationResult> {
+  async uninstall(packageId: string): Promise<DependencyManagementOperationResult> {
     const definition = findManagedNpmPackage(packageId);
     if (definition?.required) {
       const snapshot = await this.getSnapshot();
@@ -247,7 +247,7 @@ export class NpmManagementService {
 
   private resolvePackageDefinitions(
     packageIds: readonly string[],
-    operation: NpmManagementOperation,
+    operation: DependencyManagementOperation,
   ): { success: true; definitions: ManagedNpmPackageDefinition[] } | { success: false; error: string } {
     const definitions: ManagedNpmPackageDefinition[] = [];
     const seen = new Set<ManagedNpmPackageId>();
@@ -301,14 +301,14 @@ export class NpmManagementService {
 
   private getManagedPackageInstallPrefix(
     _definition: ManagedNpmPackageDefinition,
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
   ): string {
     return environment.nodeRuntimeRoot;
   }
 
   private getManagedPackageBinRoot(
     definition: ManagedNpmPackageDefinition,
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
   ): string {
     const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     return this.platform === 'win32' ? installPrefix : path.join(installPrefix, 'bin');
@@ -316,7 +316,7 @@ export class NpmManagementService {
 
   private getManagedPackagePaths(
     definition: ManagedNpmPackageDefinition,
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
   ): ManagedNpmPackagePaths {
     const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     const packageRoot = path.join(
@@ -333,7 +333,7 @@ export class NpmManagementService {
 
   private async removeManagedPackageInstallTarget(
     definition: ManagedNpmPackageDefinition,
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
   ): Promise<void> {
     const paths = this.getManagedPackagePaths(definition, environment);
     await fs.rm(paths.packageRoot, { recursive: true, force: true });
@@ -356,8 +356,8 @@ export class NpmManagementService {
   }
 
   private buildNpmOperationArgs(
-    operation: NpmManagementOperation,
-    environment: NpmManagementEnvironmentStatus,
+    operation: DependencyManagementOperation,
+    environment: DependencyManagementEnvironmentStatus,
     definition: ManagedNpmPackageDefinition,
     registryUrl?: string | null,
   ): string[] {
@@ -373,7 +373,7 @@ export class NpmManagementService {
   }
 
   private buildHagiscriptSyncArgs(
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
     manifestPath: string,
     registryUrl?: string | null,
   ): string[] {
@@ -432,11 +432,11 @@ export class NpmManagementService {
     return { manifestDirectory, manifestPath };
   }
 
-  private shouldRetryWithoutMirror(result: CommandResult, operation: NpmManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
+  private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
     return operation === 'install' && Boolean(mirrorSettings.enabled && mirrorSettings.registryUrl) && result.exitCode !== 0;
   }
 
-  private buildOfficialRegistryRetryEnv(environment: NpmManagementEnvironmentStatus, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  private buildOfficialRegistryRetryEnv(environment: DependencyManagementEnvironmentStatus, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     const retryCacheRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npm-cache-official');
 
     return {
@@ -533,7 +533,7 @@ export class NpmManagementService {
 
   private async detectEnvironment(
     activationPolicy?: BundledNodeRuntimePolicyDecision,
-  ): Promise<NpmManagementEnvironmentStatus> {
+  ): Promise<DependencyManagementEnvironmentStatus> {
     const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
     const devStatus = effectivePolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify();
     const toolchainRoot = this.pathManager.getPortableToolchainRoot();
@@ -599,7 +599,7 @@ export class NpmManagementService {
 
   private async detectPackageStatus(
     definition: ManagedNpmPackageDefinition,
-    environment: NpmManagementEnvironmentStatus,
+    environment: DependencyManagementEnvironmentStatus,
   ): Promise<ManagedNpmPackageStatusSnapshot> {
     const { packageRoot, executablePath } = this.getManagedPackagePaths(definition, environment);
 
@@ -643,17 +643,17 @@ export class NpmManagementService {
   }
 
   private findPackageStatus(
-    snapshot: NpmManagementSnapshot,
+    snapshot: DependencyManagementSnapshot,
     packageId: ManagedNpmPackageId,
   ): ManagedNpmPackageStatusSnapshot | undefined {
     return snapshot.packages.find((item) => item.id === packageId);
   }
 
-  private getHagiscriptStatus(snapshot: NpmManagementSnapshot): ManagedNpmPackageStatusSnapshot | undefined {
+  private getHagiscriptStatus(snapshot: DependencyManagementSnapshot): ManagedNpmPackageStatusSnapshot | undefined {
     return this.findPackageStatus(snapshot, 'hagiscript');
   }
 
-  private validateHagiscriptDependency(snapshot: NpmManagementSnapshot): string | null {
+  private validateHagiscriptDependency(snapshot: DependencyManagementSnapshot): string | null {
     const hagiscriptStatus = this.getHagiscriptStatus(snapshot);
     if (!hagiscriptStatus || hagiscriptStatus.status === 'unknown') {
       return 'hagiscript status is unknown. Install or refresh hagiscript before managing other npm packages.';
@@ -668,8 +668,8 @@ export class NpmManagementService {
 
   private async runPackageOperation(
     packageId: string,
-    operation: NpmManagementOperation,
-  ): Promise<NpmManagementOperationResult> {
+    operation: DependencyManagementOperation,
+  ): Promise<DependencyManagementOperationResult> {
     const definition = findManagedNpmPackage(packageId);
     if (!definition) {
       const snapshot = await this.getSnapshot();
@@ -787,7 +787,7 @@ export class NpmManagementService {
 
   private async runHagiscriptSync(
     definitions: readonly ManagedNpmPackageDefinition[],
-  ): Promise<NpmManagementBatchSyncResult> {
+  ): Promise<DependencyManagementBatchSyncResult> {
     const packageIds = definitions.map((definition) => definition.id);
 
     if (this.activeOperation) {
@@ -837,7 +837,7 @@ export class NpmManagementService {
         packageIds,
         operation: 'sync',
         statuses: [],
-        error: 'hagiscript executable path is unavailable. Refresh npm management status and retry.',
+        error: 'hagiscript executable path is unavailable. Refresh dependency management status and retry.',
         snapshot: dependencySnapshot,
       };
     }
@@ -906,12 +906,12 @@ export class NpmManagementService {
 
   private emitProgress(
     packageId: ManagedNpmPackageId,
-    operation: NpmManagementOperation,
-    stage: NpmManagementOperationProgress['stage'],
+    operation: DependencyManagementOperation,
+    stage: DependencyManagementOperationProgress['stage'],
     message: string,
     percentage?: number,
   ): void {
-    const event: NpmManagementOperationProgress = {
+    const event: DependencyManagementOperationProgress = {
       packageId,
       operation,
       stage,
@@ -959,7 +959,7 @@ export class NpmManagementService {
       });
 
       child.on('error', (error) => {
-        log.warn('[NpmManagementService] npm command failed to launch:', error);
+        log.warn('[DependencyManagementService] npm command failed to launch:', error);
         reject(error);
       });
 
@@ -970,4 +970,4 @@ export class NpmManagementService {
   }
 }
 
-export default NpmManagementService;
+export default DependencyManagementService;
