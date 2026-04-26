@@ -18,8 +18,8 @@ import {
 function createRuntimeConfig(runtimeFilesDirectory: string) {
   return {
     dotnetPath: '/runtime/dotnet',
-    serviceDllPath: '/apps/current/PCode.Web.dll',
-    serviceWorkingDirectory: '/apps/current',
+    serviceDllPath: '/apps/Hagicode Desktop/current/PCode.Web.dll',
+    serviceWorkingDirectory: '/apps/Hagicode Desktop/current',
     runtimeFilesDirectory,
     args: ['--mode', 'desktop'],
     env: {
@@ -49,8 +49,8 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_ROOT=/runtime\nZ_LAST=tail\n');
       assert.match(ecosystemContent, new RegExp(`name: "${PM2_DOTNET_PROCESS_NAME}"`));
       assert.match(ecosystemContent, /script: "\/runtime\/dotnet"/);
-      assert.match(ecosystemContent, /args: "\/apps\/current\/PCode.Web.dll --mode desktop"/);
-      assert.match(ecosystemContent, /cwd: "\/apps\/current"/);
+      assert.match(ecosystemContent, /args: \["\/apps\/Hagicode Desktop\/current\/PCode.Web.dll","--mode","desktop"\]/);
+      assert.match(ecosystemContent, /cwd: "\/apps\/Hagicode Desktop\/current"/);
       assert.match(ecosystemContent, /env_file:/);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -63,6 +63,7 @@ describe('pm2-dotnet-manager', () => {
 
     assert.match(ecosystem, /module\.exports =/);
     assert.match(ecosystem, /interpreter: "none"/);
+    assert.match(ecosystem, /args: \["\/apps\/Hagicode Desktop\/current\/PCode.Web.dll","--mode","desktop"\]/);
     assert.match(ecosystem, /HAGICODE_PM2_ENV_FILE/);
   });
 
