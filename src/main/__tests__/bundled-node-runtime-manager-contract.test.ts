@@ -5,8 +5,9 @@ import { describe, it } from 'node:test';
 
 const runtimeManagerPath = path.resolve(process.cwd(), 'src/main/bundled-node-runtime-manager.ts');
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-node-runtime/runtime-manifest.json');
-const stagedToolchainManifestPath = path.resolve(process.cwd(), 'resources/portable-fixed/toolchain/toolchain-manifest.json');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
+const bundledToolchainContractPath = path.resolve(process.cwd(), 'scripts/bundled-toolchain-contract.js');
+const prepareBundledToolchainPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
 
 describe('bundled node runtime manager contract', () => {
   it('keeps runtime health focused on node and npm while managed CLI packages stay pending-manual', async () => {
@@ -41,24 +42,31 @@ describe('bundled node runtime manager contract', () => {
   });
 
   it('keeps smoke-test validation aligned with the pinned consumer default matrix', async () => {
-    const [smokeTestSource, manifestRaw] = await Promise.all([
+    const [smokeTestSource, contractSource, manifestRaw] = await Promise.all([
       fs.readFile(smokeTestPath, 'utf8'),
+      fs.readFile(bundledToolchainContractPath, 'utf8'),
       fs.readFile(runtimeManifestPath, 'utf8'),
     ]);
     const manifest = JSON.parse(manifestRaw);
 
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
-    assert.match(smokeTestSource, /defaultEnabledByConsumer\.desktop expected/);
-    assert.match(smokeTestSource, /defaultEnabledByConsumer\.steam-packer expected/);
-    assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.desktop/);
-    assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.\['steam-packer'\]/);
+    assert.match(smokeTestSource, /validateToolchainManifest/);
+    assert.match(contractSource, /defaultEnabledByConsumer\.desktop expected/);
+    assert.match(contractSource, /defaultEnabledByConsumer\.steam-packer expected/);
+    assert.match(contractSource, /runtimeConfig\.defaultEnabledByConsumer\?\.desktop/);
+    assert.match(contractSource, /runtimeConfig\.defaultEnabledByConsumer\?\.\['steam-packer'\]/);
   });
 
-  it('keeps the staged development toolchain enabled for Desktop consumers', async () => {
-    const manifest = JSON.parse(await fs.readFile(stagedToolchainManifestPath, 'utf8'));
+  it('copies the staged development toolchain activation defaults from the pinned runtime manifest', async () => {
+    const [prepareBundledToolchainSource, manifestRaw] = await Promise.all([
+      fs.readFile(prepareBundledToolchainPath, 'utf8'),
+      fs.readFile(runtimeManifestPath, 'utf8'),
+    ]);
+    const manifest = JSON.parse(manifestRaw);
 
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
+    assert.match(prepareBundledToolchainSource, /defaultEnabledByConsumer: \{ \.\.\.\(runtimeConfig\.defaultEnabledByConsumer \|\| {}\) \}/);
   });
 });
