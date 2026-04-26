@@ -41,7 +41,8 @@
     "active-version": "Active installed version",
     "packaged-resource": "Packaged desktop resource",
     "development-root": "Development fallback",
-    "manifest-entry": "Version manifest prompt"
+    "manifest-entry": "Prompt file bundled with the version",
+    "generated-from-manifest": "Generated from the version manifest"
   },
   "errors": {
     "title": "Prompt guidance unavailable",

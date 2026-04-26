@@ -41,7 +41,8 @@
     "active-version": "当前已安装版本",
     "packaged-resource": "打包后的 Desktop 资源",
     "development-root": "开发环境回退路径",
-    "manifest-entry": "版本清单中的提示词"
+    "manifest-entry": "版本包内的提示词文件",
+    "generated-from-manifest": "根据版本清单即时生成"
   },
   "errors": {
     "title": "提示词指引暂不可用",

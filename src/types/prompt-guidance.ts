@@ -6,7 +6,8 @@ export type PromptGuidanceSource =
   | 'active-version'
   | 'packaged-resource'
   | 'development-root'
-  | 'manifest-entry';
+  | 'manifest-entry'
+  | 'generated-from-manifest';
 export type PromptGuidanceErrorCode =
   | 'INVALID_PROMPT_PATH'
   | 'PROMPT_NOT_FOUND'
