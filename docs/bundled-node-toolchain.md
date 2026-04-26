@@ -75,6 +75,11 @@ npm run smoke-test:verbose
 
 Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, and the deferred package metadata contract in `toolchain-manifest.json` for both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
 
+Release archives now have a second gate:
+
+- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/portable-fixed/toolchain` payload before upload.
+- Windows workflows run the same verifier against the staged release ZIP that is built from `win-unpacked`, so the uploaded extractable archive is checked in the same way.
+
 ## Downstream Consumers
 
 - `portable-version` validates the Desktop-authored manifest during Steam release hydration.
