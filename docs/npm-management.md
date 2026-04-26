@@ -13,7 +13,7 @@ To add a future Desktop-managed npm CLI tool:
 - Extend the `ManagedNpmPackageId` union in `src/types/npm-management.ts`.
 - Add or update tests that cover status detection, install/uninstall rejection for invalid ids, and renderer row display.
 
-All install and uninstall operations are executed by `src/main/npm-management-service.ts` with the embedded Desktop Node/npm executable and the Desktop-managed global prefix under the portable toolchain root.
+All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable and the Desktop-managed global prefix under the portable toolchain root.
 
 ## First-Run Preparation
 
@@ -23,7 +23,7 @@ The step requires:
 
 - Every package marked `required: true` in `src/shared/npm-managed-packages.ts` to be installed in the Desktop-managed npm environment.
 - At least one selected npm-installable Agent CLI package to be installed in the Desktop-managed npm environment.
-- The embedded Desktop Node/npm environment to be available.
+- The embedded Desktop-managed Node environment to be available. npm metadata is surfaced from that same governed runtime when it can be resolved, but npm no longer acts as a separate generic readiness gate.
 
 The onboarding install action installs missing `hagiscript` first with the regular npm management `install('hagiscript')` operation. After that, it syncs missing required non-hagiscript packages and selected missing Agent CLI packages through the existing batch sync operation.
 

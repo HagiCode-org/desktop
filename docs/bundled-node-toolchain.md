@@ -5,8 +5,8 @@ HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, port
 ## Contract
 
 - Pinned input manifest: `resources/embedded-node-runtime/runtime-manifest.json`
-- Development output root: `resources/portable-fixed/toolchain/`
-- Packaged output root: `resources/extra/portable-fixed/toolchain/` on Windows/Linux and `Contents/Resources/extra/portable-fixed/toolchain/` on macOS
+- Development output root: `resources/toolchain/`
+- Packaged output root: `resources/extra/toolchain/` on Windows/Linux and `Contents/Resources/extra/toolchain/` on macOS
 - Required runtime: Node.js 22 plus npm
 - Deferred managed CLI packages: `openspec`, `skills`, and `omniroute`
 - Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop`, `source=bundled-desktop`, and `defaultEnabledByConsumer`
@@ -42,7 +42,7 @@ For a specific macOS architecture:
 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 npm run prepare:bundled-toolchain
 ```
 
-The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `portable-fixed/toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `portable-fixed/toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec`, `skills`, and `omniroute`.
+The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec`, `skills`, and `omniroute`.
 
 On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `toolchain/node` directory snapshot before exiting.
 
@@ -63,7 +63,7 @@ npm run build:mac:x64
 npm run build:mac:arm64
 ```
 
-`electron-builder.yml` ships `resources/portable-fixed/toolchain` to the canonical packaged `extra/portable-fixed/toolchain` location outside `app.asar`.
+`electron-builder.yml` ships `resources/toolchain` to the canonical packaged `extra/toolchain` location outside `app.asar`.
 
 ## Verification
 
@@ -77,7 +77,7 @@ Packaged builds call `package:smoke-test`, which requires the bundled .NET runti
 
 Release archives now have a second gate:
 
-- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/portable-fixed/toolchain` payload before upload.
+- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/toolchain` payload before upload.
 - Windows workflows run the same verifier against the staged release ZIP that is built from `win-unpacked`, so the uploaded extractable archive is checked in the same way.
 
 ## Downstream Consumers
