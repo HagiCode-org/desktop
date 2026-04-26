@@ -153,7 +153,7 @@
     "webService": "Web Service",
     "versionManagement": "Version Management",
     "diagnostic": "Diagnostic",
-    "npmManagement": "npm Management",
+    "dependencyManagement": "Dependency Management",
     "omniroute": "OmniRoute",
     "settings": "Settings",
     "desktopVersion": "Desktop version",
@@ -163,10 +163,10 @@
     "collapse": "Collapse",
     "expand": "Expand"
   },
-  "npmManagement": {
-    "title": "npm Management",
-    "description": "Inspect the Desktop embedded Node/npm environment and manage common npm CLI tools.",
-    "loading": "Reading npm environment...",
+  "dependencyManagement": {
+    "title": "Dependency Management",
+    "description": "Manage required and optional command-line dependencies for HagiCode launch readiness, and inspect Desktop's embedded Node/npm environment.",
+    "loading": "Reading dependency status...",
     "unavailable": "Unavailable",
     "environment": {
       "title": "Node Environment",
@@ -211,7 +211,7 @@
     },
     "packages": {
       "hagiscript": {
-        "description": "Required package orchestration CLI used to synchronize Desktop-managed npm tools."
+        "description": "Required dependency orchestration CLI used to synchronize Desktop-managed command-line tools."
       },
       "openspec": {
         "description": "OpenSpec proposal, spec, and task workflow CLI."
@@ -258,12 +258,12 @@
     },
     "dependencyGate": {
       "title": "Install hagiscript first",
-      "missing": "Non-hagiscript package actions are disabled until hagiscript is installed in the Desktop-managed npm environment.",
-      "unknown": "Desktop cannot verify hagiscript right now. Refresh or reinstall hagiscript before changing other npm packages."
+      "missing": "Other dependency actions are disabled until hagiscript is installed.",
+      "unknown": "Desktop cannot verify hagiscript right now. Refresh or reinstall hagiscript before changing other dependencies."
     },
     "packageTable": {
-      "title": "Managed npm packages",
-      "description": "Select Agent CLI and workflow packages to install through hagiscript npm-sync.",
+      "title": "Command-line dependencies",
+      "description": "Select Agent CLI and workflow dependencies to install through hagiscript npm-sync.",
       "tool": "Tool",
       "status": "Status",
       "action": "Action"
@@ -296,8 +296,8 @@
       "uninstall": "Uninstall"
     },
     "errors": {
-      "loadFailed": "Failed to load npm management status",
-      "operationFailed": "npm operation failed"
+      "loadFailed": "Failed to load dependency management status",
+      "operationFailed": "Dependency operation failed"
     }
   },
   "bootstrap": {

@@ -22,7 +22,7 @@
       "welcome": "了解本次引导会完成的准备工作",
       "download": "下载最新的 Hagicode Server 包",
       "launch": "启动服务并确认运行正常",
-      "npmPreparation": "确认 Desktop 托管的 npm 环境和 Agent CLI 包已就绪",
+      "dependencyPreparation": "确认必需依赖项和 Agent CLI 已就绪",
       "sharingAcceleration": "确认是否开启共享加速，默认已为您开启",
       "legalConsent": "确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档"
     },
@@ -251,21 +251,21 @@
       "portable": "portable mode 下此能力强制关闭，不会隐式做种"
     }
   },
-  "npmPreparation": {
-    "title": "准备 npm 工具",
-    "description": "安装 HagiCode Desktop 必需的托管 npm 包，并选择至少一个用于编码会话的 Agent CLI。",
-    "loading": "正在检查 Desktop 托管的 npm 包...",
+  "dependencyPreparation": {
+    "title": "准备依赖项",
+    "description": "安装 HagiCode Desktop 必需的命令行依赖项，并选择至少一个用于编码会话的 Agent CLI。",
+    "loading": "正在检查 Desktop 托管的依赖项...",
     "environment": {
       "title": "Desktop 托管的 Node/npm 环境",
       "description": "此步骤使用 HagiCode Desktop 内置的 Node/npm 环境。系统中已安装的 Node/npm 或全局 CLI 工具不会满足就绪条件，除非它们安装在 Desktop 托管环境中。"
     },
     "required": {
-      "title": "必需包",
-      "description": "这些包必须安装完成后才能继续引导。"
+      "title": "必需依赖项",
+      "description": "这些依赖项必须安装完成后才能继续引导。"
     },
     "optional": {
-      "title": "可选包",
-      "description": "可选包不会阻塞引导。"
+      "title": "可选依赖项",
+      "description": "可选依赖项不会阻塞引导。"
     },
     "agentCli": {
       "title": "Agent CLI 选择",
@@ -277,12 +277,12 @@
         "description": "Desktop 当前无法访问托管的 Node/npm 环境。请在内置工具链可用后刷新。"
       },
       "required-packages-missing": {
-        "title": "缺少必需包",
-        "description": "请先安装缺失的必需 npm 包。"
+        "title": "缺少必需依赖项",
+        "description": "请先安装缺失的必需依赖项。"
       },
       "agent-cli-not-selected": {
         "title": "请选择 Agent CLI",
-        "description": "至少选择一个受支持的 Agent CLI 包。"
+        "description": "至少选择一个受支持的 Agent CLI 依赖项。"
       },
       "agent-cli-not-installed": {
         "title": "选中的 Agent CLI 尚未安装",
@@ -296,11 +296,11 @@
       "recheck": "重新检查"
     },
     "complete": {
-      "title": "npm 工具已就绪",
-      "description": "必需包已安装，并且至少一个选中的 Agent CLI 已可用。"
+      "title": "依赖项已就绪",
+      "description": "必需依赖项已安装，并且至少一个选中的 Agent CLI 已可用。"
     },
     "error": {
-      "title": "npm 准备失败"
+      "title": "依赖项准备失败"
     }
   },
   "legal": {

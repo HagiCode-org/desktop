@@ -153,7 +153,7 @@
     "webService": "Hagicode 服务",
     "versionManagement": "版本管理",
     "diagnostic": "诊断",
-    "npmManagement": "npm 管理",
+    "dependencyManagement": "依赖项管理",
     "omniroute": "OmniRoute",
     "settings": "设置",
     "desktopVersion": "Desktop 版本",
@@ -163,10 +163,10 @@
     "collapse": "收起",
     "expand": "展开"
   },
-  "npmManagement": {
-    "title": "npm 管理",
-    "description": "查看 Desktop 内置 Node/npm 环境，并管理常用 npm CLI 工具。",
-    "loading": "正在读取 npm 环境...",
+  "dependencyManagement": {
+    "title": "依赖项管理",
+    "description": "管理 HagiCode 启动所需与可选的命令行依赖，并查看 Desktop 内置 Node/npm 环境。",
+    "loading": "正在读取依赖项状态...",
     "unavailable": "不可用",
     "environment": {
       "title": "Node 环境",
@@ -211,7 +211,7 @@
     },
     "packages": {
       "hagiscript": {
-        "description": "必需的包编排 CLI，用于同步 Desktop 管理的 npm 工具。"
+        "description": "必需的依赖编排 CLI，用于同步 Desktop 管理的命令行工具。"
       },
       "openspec": {
         "description": "OpenSpec 提案、规范和任务流 CLI。"
@@ -258,12 +258,12 @@
     },
     "dependencyGate": {
       "title": "请先安装 hagiscript",
-      "missing": "安装到 Desktop 管理的 npm 环境之前，非 hagiscript 包操作会保持禁用。",
-      "unknown": "Desktop 当前无法验证 hagiscript。刷新或重新安装 hagiscript 后再修改其他 npm 包。"
+      "missing": "安装 hagiscript 之前，其他依赖项操作会保持禁用。",
+      "unknown": "Desktop 当前无法验证 hagiscript。刷新或重新安装 hagiscript 后再修改其他依赖项。"
     },
     "packageTable": {
-      "title": "托管 npm 包",
-      "description": "选择 Agent CLI 和工作流包，通过 hagiscript npm-sync 安装。",
+      "title": "命令行依赖项",
+      "description": "选择 Agent CLI 与工作流依赖项，通过 hagiscript npm-sync 安装。",
       "tool": "工具",
       "status": "状态",
       "action": "操作"
@@ -296,8 +296,8 @@
       "uninstall": "卸载"
     },
     "errors": {
-      "loadFailed": "无法加载 npm 管理状态",
-      "operationFailed": "npm 操作失败"
+      "loadFailed": "无法加载依赖项管理状态",
+      "operationFailed": "依赖项操作失败"
     }
   },
   "bootstrap": {

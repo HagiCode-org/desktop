@@ -114,10 +114,10 @@
       "unknown": "Unknown status"
     },
     "startButton": "Start Service",
-    "npmReadinessButton": "Enter npm Management",
-    "npmReadinessAlert": {
-      "title": "npm tools are not ready",
-      "message": "Install required Desktop-managed npm packages and at least one selected Agent CLI before starting Hagicode."
+    "dependencyReadinessButton": "Open Dependency Management",
+    "dependencyReadinessAlert": {
+      "title": "Dependencies are not ready",
+      "message": "Install required Desktop-managed dependencies before starting Hagicode; optional dependencies do not block base service launch."
     },
     "stoppingButton": "Stopping...",
     "restartButton": "Restart",

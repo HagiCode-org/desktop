@@ -22,7 +22,7 @@
       "welcome": "Review the setup and what will happen next",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running",
-      "npmPreparation": "Confirm Desktop's managed npm environment and Agent CLI packages are ready",
+      "dependencyPreparation": "Confirm required dependencies and Agent CLI packages are ready",
       "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default",
       "legalConsent": "Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser"
     },
@@ -251,21 +251,21 @@
       "portable": "Portable mode forces this feature off and never seeds implicitly"
     }
   },
-  "npmPreparation": {
-    "title": "Prepare npm Tools",
-    "description": "Install the managed npm packages required by HagiCode Desktop and select at least one Agent CLI to use with coding sessions.",
-    "loading": "Checking Desktop-managed npm packages...",
+  "dependencyPreparation": {
+    "title": "Prepare Dependencies",
+    "description": "Install the command-line dependencies required by HagiCode Desktop and select at least one Agent CLI to use with coding sessions.",
+    "loading": "Checking Desktop-managed dependencies...",
     "environment": {
       "title": "Desktop-managed Node/npm environment",
       "description": "This step uses HagiCode Desktop's bundled Node/npm environment. System-installed Node/npm or globally installed CLI tools do not satisfy readiness unless they are installed into Desktop's managed environment."
     },
     "required": {
-      "title": "Required packages",
-      "description": "These packages must be installed before setup can continue."
+      "title": "Required dependencies",
+      "description": "These dependencies must be installed before setup can continue."
     },
     "optional": {
-      "title": "Optional packages",
-      "description": "Optional packages do not block setup."
+      "title": "Optional dependencies",
+      "description": "Optional dependencies do not block setup."
     },
     "agentCli": {
       "title": "Agent CLI selection",
@@ -277,12 +277,12 @@
         "description": "Desktop cannot access its managed Node/npm environment. Refresh after the bundled toolchain is available."
       },
       "required-packages-missing": {
-        "title": "Required packages are missing",
-        "description": "Install the missing required npm packages before continuing."
+        "title": "Required dependencies are missing",
+        "description": "Install the missing required dependencies before continuing."
       },
       "agent-cli-not-selected": {
         "title": "Select an Agent CLI",
-        "description": "Choose at least one supported Agent CLI package."
+        "description": "Choose at least one supported Agent CLI dependency."
       },
       "agent-cli-not-installed": {
         "title": "Selected Agent CLI is not installed",
@@ -296,11 +296,11 @@
       "recheck": "Recheck"
     },
     "complete": {
-      "title": "npm tools are ready",
-      "description": "Required packages are installed and at least one selected Agent CLI is ready."
+      "title": "Dependencies are ready",
+      "description": "Required dependencies are installed and at least one selected Agent CLI is ready."
     },
     "error": {
-      "title": "npm preparation failed"
+      "title": "Dependency preparation failed"
     }
   },
   "legal": {
