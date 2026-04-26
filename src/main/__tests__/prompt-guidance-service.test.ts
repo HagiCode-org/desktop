@@ -84,6 +84,7 @@ describe('PromptGuidanceService', () => {
           content: 'install dependencies',
           region: 'CN',
           filePath: '/versions/hagicode-1/config/install.llm.txt',
+          source: 'generated-from-manifest',
           detection: {
             region: 'CN',
             detectedAt: new Date(),
@@ -104,7 +105,7 @@ describe('PromptGuidanceService', () => {
 
     assert.equal(result.success, true);
     if (result.success) {
-      assert.equal(result.promptSource, 'manifest-entry');
+      assert.equal(result.promptSource, 'generated-from-manifest');
       assert.equal(result.promptPath, '/versions/hagicode-1/config/install.llm.txt');
       assert.equal(result.suggestedWorkingDirectory, '/versions/hagicode-1');
       assert.deepEqual(result.attemptedPaths, [

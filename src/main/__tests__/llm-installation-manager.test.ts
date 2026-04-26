@@ -61,6 +61,19 @@ async function createManifestFixture() {
         llmPrompt: 'scripts/cn.llm.txt',
         llmPromptIntl: 'scripts/intl.llm.txt',
       },
+      dependencies: {
+        node: {
+          version: { min: '20.11.0', recommended: '24.12.0', description: 'Node.js runtime' },
+          installHint: 'Install from https://nodejs.org/ or use nvm',
+          type: 'system-runtime',
+          description: 'Node.js runtime',
+        },
+        openspec: {
+          version: { min: '1.0.0', max: '2.0.0', description: 'OpenSpec CLI' },
+          type: 'npm',
+          description: 'OpenSpec CLI',
+        },
+      },
     }),
   );
 
@@ -143,6 +156,53 @@ describe('llm-installation-manager prompt selection', () => {
       assert.equal(retriedPrompt.detection.matchedRule, 'manual-override');
     } finally {
       await fs.rm(fixture.tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('llm-installation-manager generated prompt fallback', () => {
+  it('generates a prompt file when the manifest no longer declares packaged prompt paths', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-generated-llm-prompt-'));
+    const manifestPath = path.join(tempDir, 'manifest.json');
+    await fs.writeFile(
+      manifestPath,
+      JSON.stringify({
+        package: { version: '2.0.0' },
+        entryPoint: {
+          start: 'start.sh',
+        },
+        dependencies: {
+          node: {
+            version: { min: '20.11.0', recommended: '24.12.0', description: 'Node.js runtime' },
+            installHint: 'Install from https://nodejs.org/ or use nvm',
+            type: 'system-runtime',
+            description: 'Node.js runtime',
+          },
+          openspec: {
+            version: { min: '1.0.0', max: '2.0.0', description: 'OpenSpec CLI' },
+            type: 'npm',
+            description: 'OpenSpec CLI',
+          },
+        },
+      }),
+    );
+
+    const detector = new RegionDetector(new MemoryStore() as unknown as Store<Record<string, unknown>>, {
+      getLocale: () => 'zh-CN',
+      logger: silentLogger,
+    });
+    const manager = new LlmInstallationManager(detector);
+
+    try {
+      const prompt = await manager.loadPrompt(manifestPath, 'cn');
+      assert.equal(prompt.source, 'generated-from-manifest');
+      assert.match(prompt.filePath, /dependency_install_llm_cn\.generated\.llm\.txt$/);
+      assert.match(prompt.content, /目标版本：2\.0\.0/);
+      assert.match(prompt.content, /node --version/);
+      assert.match(prompt.content, /npm install -g @fission-ai\/openspec@1\.3\.1/);
+      await fs.access(prompt.filePath);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
     }
   });
 });
