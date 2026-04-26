@@ -13,11 +13,12 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
 
 type PageState = 'loading' | 'ready' | 'error';
-type Operation = 'start' | 'stop' | 'restart' | 'refresh' | 'save-port' | 'open-path' | 'load-log' | null;
+type Operation = 'start' | 'stop' | 'restart' | 'refresh' | 'save-port' | 'load-log' | null;
 
 const LOG_TARGETS: OmniRouteLogTarget[] = ['service-out', 'service-error'];
 const PATH_TARGETS: OmniRoutePathTarget[] = ['config', 'data', 'logs'];
@@ -47,6 +48,14 @@ function validatePortInput(value: string): string | null {
   return null;
 }
 
+function validatePasswordInput(value: string): string | null {
+  const password = value.trim();
+  if (password.length < 4 || password.length > 200) {
+    return 'omniroute.validation.passwordLength';
+  }
+  return null;
+}
+
 export default function OmniRouteManagementPage() {
   const { t } = useTranslation('common');
   const [status, setStatus] = useState<OmniRouteStatusSnapshot | null>(null);
@@ -54,18 +63,21 @@ export default function OmniRouteManagementPage() {
   const [operation, setOperation] = useState<Operation>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [portInput, setPortInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [selectedLogTarget, setSelectedLogTarget] = useState<OmniRouteLogTarget>('service-out');
   const [logs, setLogs] = useState<Partial<Record<OmniRouteLogTarget, OmniRouteLogReadResult>>>({});
   const [isPending, startTransition] = useTransition();
 
   const isBusy = operation !== null || isPending;
   const portValidationKey = useMemo(() => validatePortInput(portInput), [portInput]);
+  const passwordValidationKey = useMemo(() => validatePasswordInput(passwordInput), [passwordInput]);
   const isRunning = status?.status === 'running';
 
   const applyStatus = (nextStatus: OmniRouteStatusSnapshot) => {
     startTransition(() => {
       setStatus(nextStatus);
       setPortInput(String(nextStatus.config.port));
+      setPasswordInput(nextStatus.config.password);
       setPageState('ready');
     });
   };
@@ -104,11 +116,18 @@ export default function OmniRouteManagementPage() {
       setErrorMessage(t(portValidationKey));
       return;
     }
+    if (passwordValidationKey) {
+      setErrorMessage(t(passwordValidationKey));
+      return;
+    }
 
     setOperation('save-port');
     setErrorMessage(null);
     try {
-      const result = await getBridge().setConfig({ port: Number.parseInt(portInput, 10) });
+      const result = await getBridge().setConfig({
+        port: Number.parseInt(portInput, 10),
+        password: passwordInput.trim(),
+      });
       applyStatus(result.status);
       if (!result.success) {
         setErrorMessage(result.error ?? t('omniroute.errors.saveFailed'));
@@ -133,19 +152,15 @@ export default function OmniRouteManagementPage() {
     }
   };
 
-  const openPath = async (target: OmniRoutePathTarget) => {
-    setOperation('open-path');
+  const openPath = (target: OmniRoutePathTarget) => {
     setErrorMessage(null);
-    try {
-      const result = await getBridge().openPath(target);
+    void getBridge().openPath(target).then((result) => {
       if (!result.success) {
         setErrorMessage(result.error ?? t('omniroute.errors.openPathFailed'));
       }
-    } catch (error) {
+    }).catch((error) => {
       setErrorMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setOperation(null);
-    }
+    });
   };
 
   useEffect(() => {
@@ -255,14 +270,37 @@ export default function OmniRouteManagementPage() {
                 <CardDescription>{t('omniroute.config.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input value={portInput} onChange={(event) => setPortInput(event.target.value)} disabled={isBusy} inputMode="numeric" />
-                  <Button onClick={() => void savePort()} disabled={isBusy || Boolean(portValidationKey)}>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="omniroute-port">{t('omniroute.config.portLabel')}</Label>
+                    <Input
+                      id="omniroute-port"
+                      value={portInput}
+                      onChange={(event) => setPortInput(event.target.value)}
+                      disabled={isBusy}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="omniroute-password">{t('omniroute.config.passwordLabel')}</Label>
+                    <Input
+                      id="omniroute-password"
+                      className="font-mono"
+                      type="text"
+                      value={passwordInput}
+                      onChange={(event) => setPasswordInput(event.target.value)}
+                      disabled={isBusy}
+                      spellCheck={false}
+                    />
+                    <p className="text-xs text-muted-foreground">{t('omniroute.config.passwordDescription')}</p>
+                  </div>
+                  <Button onClick={() => void savePort()} disabled={isBusy || Boolean(portValidationKey) || Boolean(passwordValidationKey)}>
                     <Save className="mr-2 h-4 w-4" />
                     {operation === 'save-port' ? t('omniroute.actions.working') : t('omniroute.actions.save')}
                   </Button>
                 </div>
                 {portValidationKey ? <p className="text-sm text-destructive">{t(portValidationKey)}</p> : null}
+                {passwordValidationKey ? <p className="text-sm text-destructive">{t(passwordValidationKey)}</p> : null}
               </CardContent>
             </Card>
 
@@ -278,7 +316,7 @@ export default function OmniRouteManagementPage() {
                       <p className="text-sm font-medium">{t(`omniroute.paths.${target}`)}</p>
                       <p className="truncate font-mono text-xs text-muted-foreground">{status?.paths[target]}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => void openPath(target)} disabled={isBusy}>
+                    <Button variant="outline" size="sm" onClick={() => openPath(target)} disabled={isBusy}>
                       <FolderOpen className="mr-2 h-4 w-4" />
                       {t('omniroute.actions.open')}
                     </Button>
