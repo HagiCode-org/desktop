@@ -11,6 +11,8 @@ import {
   type DependencyCheckResult,
   type ScriptOutput,
 } from '../../../types/onboarding';
+import { evaluateNpmReadiness, npmInstallableAgentCliPackages } from '../../../shared/npm-managed-packages.js';
+import type { ManagedNpmPackageId, NpmManagementSnapshot } from '../../../types/npm-management.js';
 import {
   acceptLegalDocuments,
   checkOnboardingTrigger,
@@ -19,10 +21,13 @@ import {
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
   loadLegalDocuments,
+  loadOnboardingNpmSnapshot,
   completeOnboarding,
+  installOnboardingNpmPackages,
   openLegalDocument,
   recoverFromStartupFailure,
   resetOnboarding,
+  refreshOnboardingNpmSnapshot,
   skipOnboarding,
   startService,
 } from '../thunks/onboardingThunks';
@@ -31,6 +36,7 @@ const fullSequence = [
   OnboardingStep.Welcome,
   OnboardingStep.LegalConsent,
   OnboardingStep.SharingAcceleration,
+  OnboardingStep.NpmPreparation,
   OnboardingStep.Download,
 ] as const;
 
@@ -54,6 +60,14 @@ function getPreviousStep(mode: OnboardingMode, step: OnboardingStep) {
   const sequence = getOnboardingSequence(mode);
   const index = sequence.indexOf(step);
   return index > 0 ? sequence[index - 1] : step;
+}
+
+const defaultSelectedAgentCliPackageIds = [npmInstallableAgentCliPackages[0]?.id].filter(Boolean) as ManagedNpmPackageId[];
+
+function applyNpmSnapshot(state: OnboardingState, snapshot: NpmManagementSnapshot) {
+  state.npmSnapshot = snapshot;
+  state.npmReadiness = evaluateNpmReadiness(snapshot, state.selectedAgentCliPackageIds);
+  state.isNpmPreparationComplete = state.npmReadiness.ready;
 }
 
 const initialState: OnboardingState = {
@@ -82,6 +96,14 @@ const initialState: OnboardingState = {
   isStartingService: false,
   isRecoveringFromStartupFailure: false,
   dependencyCheckResults: [],
+  selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds,
+  npmSnapshot: null,
+  npmReadiness: null,
+  npmSnapshotStatus: 'idle',
+  npmOperationProgress: {},
+  npmOperationError: null,
+  isNpmOperationActive: false,
+  isNpmPreparationComplete: false,
   scriptOutputLogs: [],
 };
 
@@ -124,6 +146,23 @@ export const onboardingSlice = createSlice({
     },
     setDependencyCheckResults: (state, action: PayloadAction<DependencyCheckResult[]>) => {
       state.dependencyCheckResults = action.payload;
+    },
+    setSelectedAgentCliPackageIds: (state, action: PayloadAction<ManagedNpmPackageId[]>) => {
+      state.selectedAgentCliPackageIds = action.payload;
+      if (state.npmSnapshot) {
+        applyNpmSnapshot(state, state.npmSnapshot);
+      }
+    },
+    setOnboardingNpmProgress: (state, action: PayloadAction<OnboardingState['npmOperationProgress'][ManagedNpmPackageId]>) => {
+      const progress = action.payload;
+      if (!progress) {
+        return;
+      }
+      state.npmOperationProgress[progress.packageId] = progress;
+      state.isNpmOperationActive = progress.stage === 'started' || progress.stage === 'output';
+      if (progress.stage === 'failed') {
+        state.npmOperationError = progress.message;
+      }
     },
     addScriptOutput: (state, action: PayloadAction<ScriptOutput>) => {
       if (state.scriptOutputLogs.length >= 500) {
@@ -337,7 +376,12 @@ export const onboardingSlice = createSlice({
           case OnboardingStep.LegalConsent:
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = OnboardingStep.Download;
+            state.currentStep = OnboardingStep.NpmPreparation;
+            break;
+          case OnboardingStep.NpmPreparation:
+            if (state.isNpmPreparationComplete) {
+              state.currentStep = OnboardingStep.Download;
+            }
             break;
           case OnboardingStep.Download:
             break;
@@ -346,6 +390,9 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_PREVIOUS_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.Download:
+            state.currentStep = OnboardingStep.NpmPreparation;
+            break;
+          case OnboardingStep.NpmPreparation:
             state.currentStep = OnboardingStep.SharingAcceleration;
             break;
           case OnboardingStep.SharingAcceleration:
@@ -357,6 +404,48 @@ export const onboardingSlice = createSlice({
           default:
             break;
         }
+      });
+
+    builder
+      .addCase(loadOnboardingNpmSnapshot.pending, (state) => {
+        state.npmSnapshotStatus = 'loading';
+        state.npmOperationError = null;
+      })
+      .addCase(loadOnboardingNpmSnapshot.fulfilled, (state, action: PayloadAction<NpmManagementSnapshot>) => {
+        state.npmSnapshotStatus = 'ready';
+        applyNpmSnapshot(state, action.payload);
+      })
+      .addCase(loadOnboardingNpmSnapshot.rejected, (state, action) => {
+        state.npmSnapshotStatus = 'error';
+        state.npmOperationError = action.payload as string || 'Failed to load npm readiness';
+        state.isNpmPreparationComplete = false;
+      })
+      .addCase(refreshOnboardingNpmSnapshot.pending, (state) => {
+        state.npmSnapshotStatus = 'loading';
+        state.npmOperationError = null;
+      })
+      .addCase(refreshOnboardingNpmSnapshot.fulfilled, (state, action: PayloadAction<NpmManagementSnapshot>) => {
+        state.npmSnapshotStatus = 'ready';
+        applyNpmSnapshot(state, action.payload);
+      })
+      .addCase(refreshOnboardingNpmSnapshot.rejected, (state, action) => {
+        state.npmSnapshotStatus = 'error';
+        state.npmOperationError = action.payload as string || 'Failed to refresh npm readiness';
+        state.isNpmPreparationComplete = false;
+      })
+      .addCase(installOnboardingNpmPackages.pending, (state) => {
+        state.isNpmOperationActive = true;
+        state.npmOperationError = null;
+      })
+      .addCase(installOnboardingNpmPackages.fulfilled, (state, action: PayloadAction<NpmManagementSnapshot>) => {
+        state.isNpmOperationActive = false;
+        state.npmSnapshotStatus = 'ready';
+        applyNpmSnapshot(state, action.payload);
+      })
+      .addCase(installOnboardingNpmPackages.rejected, (state, action) => {
+        state.isNpmOperationActive = false;
+        state.npmOperationError = action.payload as string || 'Failed to install npm packages';
+        state.isNpmPreparationComplete = false;
       });
   },
 });
@@ -373,6 +462,8 @@ export const {
   setDownloadProgress,
   setServiceProgress,
   setDependencyCheckResults,
+  setSelectedAgentCliPackageIds,
+  setOnboardingNpmProgress,
   addScriptOutput,
   clearScriptOutput,
   restartOnboardingFlow,
@@ -394,6 +485,10 @@ export const selectIsRecoveringFromStartupFailure = (state: { onboarding: Onboar
   state.onboarding.isRecoveringFromStartupFailure;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
+export const selectOnboardingNpmSnapshot = (state: { onboarding: OnboardingState }) => state.onboarding.npmSnapshot;
+export const selectOnboardingNpmReadiness = (state: { onboarding: OnboardingState }) => state.onboarding.npmReadiness;
+export const selectOnboardingSelectedAgentCliPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedAgentCliPackageIds;
+export const selectIsNpmPreparationComplete = (state: { onboarding: OnboardingState }) => state.onboarding.isNpmPreparationComplete;
 export const selectLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.legalDocuments;
 export const selectLegalMetadataSource = (state: { onboarding: OnboardingState }) => state.onboarding.legalMetadataSource;
 export const selectIsLoadingLegalMetadata = (state: { onboarding: OnboardingState }) => state.onboarding.isLoadingLegalMetadata;
@@ -401,7 +496,7 @@ export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingS
 export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress } = state.onboarding;
+  const { currentStep, downloadProgress, isNpmPreparationComplete } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.Welcome:
@@ -410,6 +505,8 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
       return false;
     case OnboardingStep.SharingAcceleration:
       return true;
+    case OnboardingStep.NpmPreparation:
+      return isNpmPreparationComplete;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100 && Boolean(downloadProgress.version);
     default:

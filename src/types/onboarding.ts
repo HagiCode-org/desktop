@@ -1,6 +1,12 @@
 /**
  * Onboarding wizard types and interfaces
  */
+import type {
+  ManagedNpmPackageId,
+  NpmManagementOperationProgress,
+  NpmManagementSnapshot,
+  NpmReadinessSummary,
+} from './npm-management.js';
 
 /**
  * Onboarding step enumeration
@@ -9,7 +15,8 @@ export enum OnboardingStep {
   Welcome = 0,
   LegalConsent = 1,
   SharingAcceleration = 2,
-  Download = 3,
+  NpmPreparation = 3,
+  Download = 4,
 }
 
 export type LegalDocumentType = 'eula' | 'privacy-policy';
@@ -242,6 +249,14 @@ export interface OnboardingState {
   isRecoveringFromStartupFailure: boolean;
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
+  selectedAgentCliPackageIds: ManagedNpmPackageId[];
+  npmSnapshot: NpmManagementSnapshot | null;
+  npmReadiness: NpmReadinessSummary | null;
+  npmSnapshotStatus: 'idle' | 'loading' | 'ready' | 'error';
+  npmOperationProgress: Partial<Record<ManagedNpmPackageId, NpmManagementOperationProgress>>;
+  npmOperationError: string | null;
+  isNpmOperationActive: boolean;
+  isNpmPreparationComplete: boolean;
   // Real-time script output logs
   scriptOutputLogs: ScriptOutput[];
 }

@@ -10,6 +10,7 @@ import type {
   ResolvedLegalDocumentsPayload,
 } from '../../../types/onboarding';
 import { OnboardingStep } from '../../../types/onboarding';
+import type { ManagedNpmPackageId, NpmManagementBridge } from '../../../types/npm-management.js';
 
 declare global {
   interface Window {
@@ -28,6 +29,7 @@ declare global {
       recoverServiceStartup: (versionId: string) => Promise<OnboardingRecoveryResult>;
       completeOnboarding: (versionId: string) => Promise<{ success: boolean; error?: string }>;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
+      npmManagement: NpmManagementBridge;
       onDownloadProgress: (callback: (progress: unknown) => void) => (() => void) | void;
       onDependencyProgress: (callback: (status: unknown) => void) => (() => void) | void;
       onServiceProgress: (callback: (progress: unknown) => void) => (() => void) | void;
@@ -196,6 +198,55 @@ export const completeOnboarding = createAsyncThunk(
     try {
       await window.electronAPI.completeOnboarding(versionId);
       return { success: true };
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const loadOnboardingNpmSnapshot = createAsyncThunk(
+  'onboarding/loadNpmSnapshot',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await window.electronAPI.npmManagement.getSnapshot();
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const refreshOnboardingNpmSnapshot = createAsyncThunk(
+  'onboarding/refreshNpmSnapshot',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await window.electronAPI.npmManagement.refresh();
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const installOnboardingNpmPackages = createAsyncThunk(
+  'onboarding/installNpmPackages',
+  async (packageIds: ManagedNpmPackageId[], { rejectWithValue }) => {
+    try {
+      if (packageIds.includes('hagiscript')) {
+        const result = await window.electronAPI.npmManagement.install('hagiscript');
+        if (!result.success) {
+          return rejectWithValue(result.error || 'Failed to install hagiscript');
+        }
+      }
+
+      const syncPackageIds = packageIds.filter((id) => id !== 'hagiscript');
+      if (syncPackageIds.length > 0) {
+        const result = await window.electronAPI.npmManagement.syncPackages({ packageIds: syncPackageIds });
+        if (!result.success) {
+          return rejectWithValue(result.error || 'Failed to install npm packages');
+        }
+        return result.snapshot;
+      }
+
+      return await window.electronAPI.npmManagement.refresh();
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }

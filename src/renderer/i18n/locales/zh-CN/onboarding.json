@@ -250,6 +250,58 @@
       "portable": "portable mode 下此能力强制关闭，不会隐式做种"
     }
   },
+  "npmPreparation": {
+    "title": "准备 npm 工具",
+    "description": "安装 HagiCode Desktop 必需的托管 npm 包，并选择至少一个用于编码会话的 Agent CLI。",
+    "loading": "正在检查 Desktop 托管的 npm 包...",
+    "environment": {
+      "title": "Desktop 托管的 Node/npm 环境",
+      "description": "此步骤使用 HagiCode Desktop 内置的 Node/npm 环境。系统中已安装的 Node/npm 或全局 CLI 工具不会满足就绪条件，除非它们安装在 Desktop 托管环境中。"
+    },
+    "required": {
+      "title": "必需包",
+      "description": "这些包必须安装完成后才能继续引导。"
+    },
+    "optional": {
+      "title": "可选包",
+      "description": "可选包不会阻塞引导。"
+    },
+    "agentCli": {
+      "title": "Agent CLI 选择",
+      "description": "请选择至少一个 Agent CLI。被选中的 CLI 必须安装在 Desktop 托管 npm 环境中。"
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "Node/npm 环境不可用",
+        "description": "Desktop 当前无法访问托管的 Node/npm 环境。请在内置工具链可用后刷新。"
+      },
+      "required-packages-missing": {
+        "title": "缺少必需包",
+        "description": "请先安装缺失的必需 npm 包。"
+      },
+      "agent-cli-not-selected": {
+        "title": "请选择 Agent CLI",
+        "description": "至少选择一个受支持的 Agent CLI 包。"
+      },
+      "agent-cli-not-installed": {
+        "title": "选中的 Agent CLI 尚未安装",
+        "description": "请将至少一个选中的 Agent CLI 安装到 Desktop 托管 npm 环境中。"
+      }
+    },
+    "actions": {
+      "install": "确认并安装",
+      "refresh": "刷新",
+      "retry": "重试",
+      "recheck": "重新检查"
+    },
+    "complete": {
+      "title": "npm 工具已就绪",
+      "description": "必需包已安装，并且至少一个选中的 Agent CLI 已可用。"
+    },
+    "error": {
+      "title": "npm 准备失败"
+    }
+  },
   "legal": {
     "title": "终端用户许可协议与隐私政策",
     "descriptionFull": "在继续下载 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。",

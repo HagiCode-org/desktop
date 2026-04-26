@@ -250,6 +250,58 @@
       "portable": "Portable mode forces this feature off and never seeds implicitly"
     }
   },
+  "npmPreparation": {
+    "title": "Prepare npm Tools",
+    "description": "Install the managed npm packages required by HagiCode Desktop and select at least one Agent CLI to use with coding sessions.",
+    "loading": "Checking Desktop-managed npm packages...",
+    "environment": {
+      "title": "Desktop-managed Node/npm environment",
+      "description": "This step uses HagiCode Desktop's bundled Node/npm environment. System-installed Node/npm or globally installed CLI tools do not satisfy readiness unless they are installed into Desktop's managed environment."
+    },
+    "required": {
+      "title": "Required packages",
+      "description": "These packages must be installed before setup can continue."
+    },
+    "optional": {
+      "title": "Optional packages",
+      "description": "Optional packages do not block setup."
+    },
+    "agentCli": {
+      "title": "Agent CLI selection",
+      "description": "Select at least one Agent CLI. The selected CLI must be installed in Desktop's managed npm environment."
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "Node/npm environment unavailable",
+        "description": "Desktop cannot access its managed Node/npm environment. Refresh after the bundled toolchain is available."
+      },
+      "required-packages-missing": {
+        "title": "Required packages are missing",
+        "description": "Install the missing required npm packages before continuing."
+      },
+      "agent-cli-not-selected": {
+        "title": "Select an Agent CLI",
+        "description": "Choose at least one supported Agent CLI package."
+      },
+      "agent-cli-not-installed": {
+        "title": "Selected Agent CLI is not installed",
+        "description": "Install at least one selected Agent CLI package into Desktop's managed npm environment."
+      }
+    },
+    "actions": {
+      "install": "Confirm and Install",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "recheck": "Recheck"
+    },
+    "complete": {
+      "title": "npm tools are ready",
+      "description": "Required packages are installed and at least one selected Agent CLI is ready."
+    },
+    "error": {
+      "title": "npm preparation failed"
+    }
+  },
   "legal": {
     "title": "End User License Agreement and Privacy Policy",
     "descriptionFull": "Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.",
