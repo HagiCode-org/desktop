@@ -13,7 +13,7 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { LlmInstallationManager } from './llm-installation-manager.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
-import NpmManagementService from './npm-management-service.js';
+import DependencyManagementService from './dependency-management-service.js';
 import OmniRouteManager from './omniroute-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
@@ -55,7 +55,7 @@ import {
   registerRegionHandlers,
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
-  registerNpmManagementHandlers,
+  registerDependencyManagementHandlers,
   registerOmniRouteHandlers,
   registerRssHandlers,
   registerViewHandlers,
@@ -197,7 +197,7 @@ let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let llmInstallationManager: LlmInstallationManager | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
-let npmManagementService: NpmManagementService | null = null;
+let dependencyManagementService: DependencyManagementService | null = null;
 let omniRouteManager: OmniRouteManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
@@ -1550,7 +1550,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'dependency' | 'version' | 'diagnostic' | 'settings') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'version' && isPortableVersionMode()) {
@@ -2222,16 +2222,16 @@ app.whenReady().then(async () => {
     log.info('[App] System Diagnostic IPC handlers registered');
   }
 
-  npmManagementService = new NpmManagementService();
-  registerNpmManagementHandlers({
-    npmManagementService,
+  dependencyManagementService = new DependencyManagementService();
+  registerDependencyManagementHandlers({
+    dependencyManagementService,
     mainWindow,
   });
-  log.info('[App] npm management IPC handlers registered');
+  log.info('[App] dependency management IPC handlers registered');
 
   omniRouteManager = new OmniRouteManager({
     configManager,
-    npmManagementService,
+    dependencyManagementService,
   });
   registerOmniRouteHandlers({
     manager: omniRouteManager,

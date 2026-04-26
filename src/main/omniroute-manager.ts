@@ -5,7 +5,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
-import type NpmManagementService from './npm-management-service.js';
+import type DependencyManagementService from './dependency-management-service.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
   OMNIROUTE_PROCESS_NAME,
@@ -44,7 +44,7 @@ interface Pm2ListEntry {
 
 export interface OmniRouteManagerOptions {
   configManager: ConfigManager;
-  npmManagementService: NpmManagementService;
+  dependencyManagementService: DependencyManagementService;
   userDataPath?: string;
   spawnProcess?: typeof spawn;
   openPath?: (targetPath: string) => Promise<string>;
@@ -108,14 +108,14 @@ function quoteEnv(value: string): string {
 
 export class OmniRouteManager {
   private readonly configManager: ConfigManager;
-  private readonly npmManagementService: NpmManagementService;
+  private readonly dependencyManagementService: DependencyManagementService;
   private readonly userDataPath: string;
   private readonly spawnProcess: typeof spawn;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
 
   constructor(options: OmniRouteManagerOptions) {
     this.configManager = options.configManager;
-    this.npmManagementService = options.npmManagementService;
+    this.dependencyManagementService = options.dependencyManagementService;
     this.userDataPath = options.userDataPath ?? app.getPath('userData');
     this.spawnProcess = options.spawnProcess ?? spawn;
     this.openPathImpl = options.openPath ?? ((targetPath) => shell.openPath(targetPath));
@@ -203,7 +203,7 @@ export class OmniRouteManager {
 
   async getStatus(): Promise<OmniRouteStatusSnapshot> {
     const paths = await this.ensureLayout();
-    const pm2Context = await this.npmManagementService.getManagedCommandContext('pm2');
+    const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
     const config = this.getConfig();
     const processSnapshot = await this.getPm2ProcessSnapshot(pm2Context.executablePath, pm2Context.commandEnv);
     const process = processSnapshot ?? this.emptyProcessSnapshot();
@@ -269,9 +269,9 @@ export class OmniRouteManager {
     try {
       const paths = await this.ensureLayout();
       this.validatePort(this.getConfig().port);
-      const pm2Context = await this.npmManagementService.getManagedCommandContext('pm2');
+      const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
       if (pm2Context.packageStatus?.status !== 'installed' || !pm2Context.executablePath) {
-        throw new Error('PM2 is not installed in the Desktop-managed npm environment. Install PM2 from npm Management and retry.');
+        throw new Error('PM2 is not installed in the Desktop-managed npm environment. Install PM2 from Dependency Management and retry.');
       }
 
       await this.renderEnvironment(paths);
