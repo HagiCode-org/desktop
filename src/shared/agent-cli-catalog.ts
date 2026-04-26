@@ -4,7 +4,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'claude-code',
     displayName: 'Claude Code',
-    descriptionKey: 'npmManagement.packages.claudeCode.description',
+    descriptionKey: 'dependencyManagement.packages.claudeCode.description',
     commandName: 'claude',
     commandCandidates: ['claude'],
     providerId: 'claude-code',
@@ -13,7 +13,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'codex',
     displayName: 'Codex',
-    descriptionKey: 'npmManagement.packages.codex.description',
+    descriptionKey: 'dependencyManagement.packages.codex.description',
     commandName: 'codex',
     commandCandidates: ['codex'],
     providerId: 'codex',
@@ -22,7 +22,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'copilot',
     displayName: 'GitHub Copilot',
-    descriptionKey: 'npmManagement.packages.githubCopilot.description',
+    descriptionKey: 'dependencyManagement.packages.githubCopilot.description',
     commandName: 'copilot',
     commandCandidates: ['copilot', 'github-copilot-cli'],
     providerId: 'copilot',
@@ -31,7 +31,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'opencode',
     displayName: 'OpenCode',
-    descriptionKey: 'npmManagement.packages.opencode.description',
+    descriptionKey: 'dependencyManagement.packages.opencode.description',
     commandName: 'opencode',
     commandCandidates: ['opencode'],
     providerId: 'opencode',
@@ -40,7 +40,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'qoder',
     displayName: 'QoderCLI',
-    descriptionKey: 'npmManagement.packages.qoder.description',
+    descriptionKey: 'dependencyManagement.packages.qoder.description',
     commandName: 'qodercli',
     commandCandidates: ['qodercli', 'qoder'],
     providerId: 'qoder',
@@ -67,7 +67,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'gemini',
     displayName: 'Gemini',
-    descriptionKey: 'npmManagement.packages.gemini.description',
+    descriptionKey: 'dependencyManagement.packages.gemini.description',
     commandName: 'gemini',
     commandCandidates: ['gemini'],
     providerId: 'gemini',
@@ -85,7 +85,7 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
   {
     id: 'codebuddy',
     displayName: 'CodeBuddy',
-    descriptionKey: 'npmManagement.packages.codebuddy.description',
+    descriptionKey: 'dependencyManagement.packages.codebuddy.description',
     commandName: 'codebuddy',
     commandCandidates: ['codebuddy', 'cbc'],
     providerId: 'codebuddy',

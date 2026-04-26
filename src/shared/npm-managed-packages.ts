@@ -2,17 +2,17 @@ import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  NpmManagementSnapshot,
-  NpmReadinessPackageSummary,
-  NpmReadinessSummary,
-} from '../types/npm-management.js';
+  DependencyManagementSnapshot,
+  DependencyReadinessPackageSummary,
+  DependencyReadinessSummary,
+} from '../types/dependency-management.js';
 
 export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
   {
     id: 'hagiscript',
     packageName: '@hagicode/hagiscript',
     displayName: 'hagiscript',
-    descriptionKey: 'npmManagement.packages.hagiscript.description',
+    descriptionKey: 'dependencyManagement.packages.hagiscript.description',
     binName: 'hagiscript',
     installSpec: '@hagicode/hagiscript',
     category: 'bootstrap',
@@ -23,7 +23,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'openspec',
     packageName: '@fission-ai/openspec',
     displayName: 'OpenSpec',
-    descriptionKey: 'npmManagement.packages.openspec.description',
+    descriptionKey: 'dependencyManagement.packages.openspec.description',
     binName: 'openspec',
     installSpec: '@fission-ai/openspec@1.3.1',
     category: 'workflow',
@@ -34,7 +34,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'skills',
     packageName: 'skills',
     displayName: 'Skills',
-    descriptionKey: 'npmManagement.packages.skills.description',
+    descriptionKey: 'dependencyManagement.packages.skills.description',
     binName: 'skills',
     installSpec: 'skills@1.5.1',
     category: 'workflow',
@@ -45,7 +45,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'pm2',
     packageName: 'pm2',
     displayName: 'PM2',
-    descriptionKey: 'npmManagement.packages.pm2.description',
+    descriptionKey: 'dependencyManagement.packages.pm2.description',
     binName: 'pm2',
     installSpec: 'pm2',
     category: 'workflow',
@@ -56,7 +56,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'omniroute',
     packageName: 'omniroute',
     displayName: 'OmniRoute',
-    descriptionKey: 'npmManagement.packages.omniroute.description',
+    descriptionKey: 'dependencyManagement.packages.omniroute.description',
     binName: 'omniroute',
     installSpec: 'omniroute@3.6.9',
     category: 'developer-tool',
@@ -67,7 +67,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'claude-code',
     packageName: '@anthropic-ai/claude-code',
     displayName: 'Claude Code',
-    descriptionKey: 'npmManagement.packages.claudeCode.description',
+    descriptionKey: 'dependencyManagement.packages.claudeCode.description',
     binName: 'claude',
     installSpec: '@anthropic-ai/claude-code',
     category: 'agent-cli',
@@ -79,7 +79,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'codex',
     packageName: '@openai/codex',
     displayName: 'Codex',
-    descriptionKey: 'npmManagement.packages.codex.description',
+    descriptionKey: 'dependencyManagement.packages.codex.description',
     binName: 'codex',
     installSpec: '@openai/codex',
     category: 'agent-cli',
@@ -91,7 +91,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'github-copilot',
     packageName: '@github/copilot',
     displayName: 'GitHub Copilot',
-    descriptionKey: 'npmManagement.packages.githubCopilot.description',
+    descriptionKey: 'dependencyManagement.packages.githubCopilot.description',
     binName: 'copilot',
     installSpec: '@github/copilot',
     category: 'agent-cli',
@@ -103,7 +103,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'codebuddy',
     packageName: '@tencent-ai/codebuddy-code',
     displayName: 'CodeBuddy',
-    descriptionKey: 'npmManagement.packages.codebuddy.description',
+    descriptionKey: 'dependencyManagement.packages.codebuddy.description',
     binName: 'codebuddy',
     installSpec: '@tencent-ai/codebuddy-code',
     category: 'agent-cli',
@@ -114,7 +114,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'opencode',
     packageName: 'opencode-ai',
     displayName: 'OpenCode',
-    descriptionKey: 'npmManagement.packages.opencode.description',
+    descriptionKey: 'dependencyManagement.packages.opencode.description',
     binName: 'opencode',
     installSpec: 'opencode-ai',
     category: 'agent-cli',
@@ -126,7 +126,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'qoder',
     packageName: '@qoder-ai/qodercli',
     displayName: 'QoderCLI',
-    descriptionKey: 'npmManagement.packages.qoder.description',
+    descriptionKey: 'dependencyManagement.packages.qoder.description',
     binName: 'qodercli',
     installSpec: '@qoder-ai/qodercli',
     category: 'agent-cli',
@@ -138,7 +138,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     id: 'gemini',
     packageName: '@google/gemini-cli',
     displayName: 'Gemini',
-    descriptionKey: 'npmManagement.packages.gemini.description',
+    descriptionKey: 'dependencyManagement.packages.gemini.description',
     binName: 'gemini',
     installSpec: '@google/gemini-cli',
     category: 'agent-cli',
@@ -173,7 +173,7 @@ export function isManagedNpmPackageId(id: string): id is ManagedNpmPackageId {
 }
 
 export function findManagedPackageStatus(
-  snapshot: NpmManagementSnapshot,
+  snapshot: DependencyManagementSnapshot,
   packageId: ManagedNpmPackageId,
 ): ManagedNpmPackageStatusSnapshot | null {
   return snapshot.packages.find((item) => item.id === packageId) ?? null;
@@ -201,8 +201,8 @@ export function getSupportedSelectedAgentCliPackageIds(selectedIds: readonly str
 
 function toReadinessPackageSummary(
   definition: ManagedNpmPackageDefinition,
-  snapshot: NpmManagementSnapshot,
-): NpmReadinessPackageSummary {
+  snapshot: DependencyManagementSnapshot,
+): DependencyReadinessPackageSummary {
   const statusSnapshot = findManagedPackageStatus(snapshot, definition.id);
 
   return {
@@ -216,10 +216,10 @@ function toReadinessPackageSummary(
   };
 }
 
-export function evaluateNpmReadiness(
-  snapshot: NpmManagementSnapshot,
+export function evaluateDependencyReadiness(
+  snapshot: DependencyManagementSnapshot,
   selectedAgentCliPackageIds: readonly string[],
-): NpmReadinessSummary {
+): DependencyReadinessSummary {
   const requiredPackages = requiredManagedNpmPackages.map((definition) =>
     toReadinessPackageSummary(definition, snapshot),
   );
@@ -246,7 +246,7 @@ export function evaluateNpmReadiness(
   );
   const requiredReady = missingRequiredPackageIds.length === 0;
   const agentCliReady = selectedSupportedIds.length > 0 && installedSelectedAgentCliPackageIds.length > 0;
-  const blockingReasons: NpmReadinessSummary['blockingReasons'] = [];
+  const blockingReasons: DependencyReadinessSummary['blockingReasons'] = [];
 
   if (!snapshot.environment.available) {
     blockingReasons.push({
