@@ -8,19 +8,6 @@ import {
   type RSSFeedItem,
 } from '../slices/rssFeedSlice';
 
-// Types for window electronAPI
-declare global {
-  interface Window {
-    electronAPI: {
-      rss: {
-        getFeedItems: () => Promise<RSSFeedItem[]>;
-        refreshFeed: () => Promise<RSSFeedItem[]>;
-        getLastUpdate: () => Promise<string | null>;
-      };
-    };
-  }
-}
-
 /**
  * Fetch RSS feed items
  * Replaces rssFeedSaga/fetchFeedItemsSaga
@@ -28,29 +15,10 @@ declare global {
 export const fetchFeedItems = createAsyncThunk(
   'rssFeed/fetchItems',
   async (_, { dispatch }) => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(clearError());
-
-      const items: RSSFeedItem[] = await window.electronAPI.rss.getFeedItems();
-
-      dispatch(setItems(items));
-
-      // Also fetch last update time
-      const lastUpdate: string | null = await window.electronAPI.rss.getLastUpdate();
-      if (lastUpdate) {
-        dispatch(setLastUpdate(lastUpdate));
-      }
-
-      return items;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch feed items';
-      console.error('Fetch feed items error:', error);
-      dispatch(setError(errorMessage));
-      throw error;
-    } finally {
-      dispatch(setLoading(false));
-    }
+    return runFeedRequest(dispatch, {
+      loader: () => window.electronAPI.rss.getFeedItems(),
+      errorMessage: 'Failed to fetch feed items',
+    });
   }
 );
 
@@ -61,29 +29,21 @@ export const fetchFeedItems = createAsyncThunk(
 export const refreshFeed = createAsyncThunk(
   'rssFeed/refreshFeed',
   async (_, { dispatch }) => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(clearError());
+    return runFeedRequest(dispatch, {
+      loader: () => window.electronAPI.rss.refreshFeed(),
+      errorMessage: 'Failed to refresh feed',
+    });
+  }
+);
 
-      const items: RSSFeedItem[] = await window.electronAPI.rss.refreshFeed();
-
-      dispatch(setItems(items));
-
-      // Also fetch last update time
-      const lastUpdate: string | null = await window.electronAPI.rss.getLastUpdate();
-      if (lastUpdate) {
-        dispatch(setLastUpdate(lastUpdate));
-      }
-
-      return items;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh feed';
-      console.error('Refresh feed error:', error);
-      dispatch(setError(errorMessage));
-      throw error;
-    } finally {
-      dispatch(setLoading(false));
-    }
+export const refreshFeedForLanguageChange = createAsyncThunk(
+  'rssFeed/refreshFeedForLanguageChange',
+  async (_language: string, { dispatch }) => {
+    return runFeedRequest(dispatch, {
+      loader: () => window.electronAPI.rss.refreshFeed(),
+      errorMessage: 'Failed to refresh feed',
+      resetVisibleState: true,
+    });
   }
 );
 
@@ -117,23 +77,48 @@ export const fetchLastUpdate = createAsyncThunk(
 export const initializeRSSFeed = createAsyncThunk(
   'rssFeed/initialize',
   async (_, { dispatch }) => {
-    dispatch(setLoading(true));
-
     try {
-      const items: RSSFeedItem[] = await window.electronAPI.rss.getFeedItems();
-      dispatch(setItems(items));
-
-      const lastUpdate: string | null = await window.electronAPI.rss.getLastUpdate();
-      if (lastUpdate) {
-        dispatch(setLastUpdate(lastUpdate));
-      }
-
-      return items;
+      return await runFeedRequest(dispatch, {
+        loader: () => window.electronAPI.rss.getFeedItems(),
+        errorMessage: 'Failed to initialize feed',
+      });
     } catch (e) {
       console.log('RSS feed not available yet');
       return [];
-    } finally {
-      dispatch(setLoading(false));
     }
   }
 );
+
+async function runFeedRequest(
+  dispatch: (action: unknown) => void,
+  options: {
+    loader: () => Promise<RSSFeedItem[]>;
+    errorMessage: string;
+    resetVisibleState?: boolean;
+  },
+): Promise<RSSFeedItem[]> {
+  try {
+    dispatch(setLoading(true));
+    dispatch(clearError());
+
+    if (options.resetVisibleState) {
+      dispatch(setItems([]));
+      dispatch(setLastUpdate(null));
+    }
+
+    const items: RSSFeedItem[] = await options.loader();
+    dispatch(setItems(items));
+
+    const lastUpdate: string | null = await window.electronAPI.rss.getLastUpdate();
+    dispatch(setLastUpdate(lastUpdate));
+
+    return items;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : options.errorMessage;
+    console.error(`${options.errorMessage}:`, error);
+    dispatch(setError(message));
+    throw error;
+  } finally {
+    dispatch(setLoading(false));
+  }
+}

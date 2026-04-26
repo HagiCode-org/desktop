@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
@@ -14,6 +14,7 @@ import {
 import {
   fetchFeedItems,
   refreshFeed,
+  refreshFeedForLanguageChange,
 } from '../store/thunks/rssFeedThunks';
 import { RootState, AppDispatch } from '../store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,18 +25,36 @@ import { Loader2, RefreshCw, Newspaper, ExternalLink, Clock } from 'lucide-react
 const BlogFeedCard: React.FC = () => {
   const { t, i18n } = useTranslation(['components', 'common']);
   const dispatch = useDispatch<AppDispatch>();
+  const activeLanguage = i18n.resolvedLanguage ?? i18n.language;
+  const previousLanguageRef = useRef<string | null>(null);
 
   const items = useSelector((state: RootState) => selectRSSFeedItems(state));
   const loading = useSelector(selectRSSFeedLoading);
   const error = useSelector(selectRSSFeedError);
   const lastUpdate = useSelector(selectRSSFeedLastUpdate);
 
-  // Load feed items on mount
+  // Load feed items on first mount.
   useEffect(() => {
     if (items.length === 0) {
       dispatch(fetchFeedItems());
     }
   }, [dispatch, items.length]);
+
+  useEffect(() => {
+    if (!activeLanguage) {
+      return;
+    }
+
+    if (previousLanguageRef.current === null) {
+      previousLanguageRef.current = activeLanguage;
+      return;
+    }
+
+    if (previousLanguageRef.current !== activeLanguage) {
+      previousLanguageRef.current = activeLanguage;
+      dispatch(refreshFeedForLanguageChange(activeLanguage));
+    }
+  }, [activeLanguage, dispatch]);
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -51,7 +70,7 @@ const BlogFeedCard: React.FC = () => {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      const locale = i18n.language === 'zh-CN' ? zhCN : undefined;
+      const locale = activeLanguage.startsWith('zh') ? zhCN : undefined;
       return format(date, 'yyyy-MM-dd', { locale });
     } catch {
       return dateString;
@@ -63,7 +82,7 @@ const BlogFeedCard: React.FC = () => {
     if (!dateString) return null;
     try {
       const date = new Date(dateString);
-      const locale = i18n.language === 'zh-CN' ? zhCN : undefined;
+      const locale = activeLanguage.startsWith('zh') ? zhCN : undefined;
       return format(date, 'yyyy-MM-dd HH:mm', { locale });
     } catch {
       return dateString;

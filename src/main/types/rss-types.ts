@@ -29,6 +29,10 @@ export interface RSSFeedCache {
   items: RSSFeedItem[];
   /** ISO 8601 timestamp of last update */
   lastUpdate: string;
+  /** Canonical language context for this cache entry */
+  language: string;
+  /** Feed URL used to populate this cache entry */
+  feedUrl: string;
 }
 
 /**
@@ -37,6 +41,8 @@ export interface RSSFeedCache {
 export interface RSSFeedConfig {
   /** URL of the RSS feed */
   feedUrl: string;
+  /** Initial application language for feed selection */
+  language?: string;
   /** Auto-refresh interval in milliseconds (default: 24 hours) */
   refreshInterval?: number;
   /** Maximum number of items to store (default: 20) */

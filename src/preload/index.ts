@@ -239,6 +239,7 @@ interface ElectronAPI {
   // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
   openCodeServerWindow: (url: string) => Promise<CodeServerWindowOpenResult>;
   openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
+  languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
 
   // Server Control APIs
@@ -432,6 +433,7 @@ const electronAPI: ElectronAPI = {
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
   openCodeServerWindow: (url: string) => ipcRenderer.invoke('open-code-server-window', url),
   openAboutWindow: (url: string) => ipcRenderer.invoke('open-about-window', url),
+  languageChanged: (language: string) => ipcRenderer.invoke('language-changed', language),
   onServerStatusChange: (callback) => {
     const listener = (_event, status) => {
       callback(status);

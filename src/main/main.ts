@@ -1607,8 +1607,22 @@ ipcMain.handle('get-current-view', async () => {
 
 // Language change handler
 ipcMain.handle('language-changed', async (_, language: string) => {
-  if (menuManager) {
-    menuManager.updateMenuLanguage(language);
+  try {
+    configManager?.setCurrentLanguage(language);
+
+    if (menuManager) {
+      menuManager.updateMenuLanguage(language);
+    }
+
+    rssFeedManager?.switchLanguage(language);
+
+    return { success: true };
+  } catch (error) {
+    log.error('[Main] Failed to handle language change:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 });
 
@@ -2246,8 +2260,10 @@ app.whenReady().then(async () => {
   });
 
   // Initialize RSS Feed Manager
+  const initialLanguage = configManager.getCurrentLanguage() || 'zh-CN';
   rssFeedManager = RSSFeedManager.getInstance({
     feedUrl: DEFAULT_RSS_FEED_URL,
+    language: initialLanguage,
     refreshInterval: 24 * 60 * 60 * 1000, // 24 hours
     maxItems: 20,
     storeKey: 'rssFeed',
@@ -2306,8 +2322,6 @@ app.whenReady().then(async () => {
   // Initialize Menu Manager
   if (mainWindow) {
     menuManager = new MenuManager(mainWindow);
-    // Get initial language from config or default to zh-CN
-    const initialLanguage = configManager.getAll()?.settings?.language || 'zh-CN';
     const initialWebServiceStatus = await webServiceManager.getStatus();
     menuManager.createMenu(initialLanguage, initialWebServiceStatus.status === 'running');
   }

@@ -84,6 +84,7 @@ export class ConfigManager {
 
     this.removeLegacyTelemetryPreference();
     this.removeRetiredRemoteModeConfig();
+    this.migrateLegacyLanguagePreference();
   }
 
   private removeLegacyTelemetryPreference(): void {
@@ -106,6 +107,40 @@ export class ConfigManager {
     if (legacyStore.get('remoteMode') !== undefined) {
       legacyStore.delete('remoteMode');
     }
+  }
+
+  private migrateLegacyLanguagePreference(): void {
+    const mutableStore = this.store as unknown as {
+      get: (key: string) => unknown;
+      set: (key: string, value: unknown) => void;
+      delete: (key: string) => void;
+    };
+    const currentSettings = this.store.get('settings');
+    const currentLanguage = typeof currentSettings?.language === 'string' && currentSettings.language.trim().length > 0
+      ? currentSettings.language
+      : undefined;
+    const legacyLanguage = mutableStore.get('language');
+
+    if (currentLanguage) {
+      if (legacyLanguage !== undefined) {
+        mutableStore.delete('language');
+      }
+      return;
+    }
+
+    if (typeof legacyLanguage === 'string' && legacyLanguage.trim().length > 0) {
+      mutableStore.set('settings', {
+        ...(currentSettings ?? {}),
+        language: legacyLanguage.trim(),
+      });
+      mutableStore.delete('language');
+      return;
+    }
+
+    mutableStore.set('settings', {
+      ...(currentSettings ?? {}),
+      language: defaultConfig.settings.language,
+    });
   }
 
   get<K extends keyof AppConfig>(key: K): AppConfig[K] {
@@ -228,14 +263,19 @@ export class ConfigManager {
    * Get current language
    */
   getCurrentLanguage(): string | undefined {
-    return this.store.get('language') as string | undefined;
+    return this.store.get('settings')?.language ?? defaultConfig.settings.language;
   }
 
   /**
    * Set current language
    */
   setCurrentLanguage(language: string): void {
-    this.store.set('language', language);
+    const currentSettings = this.store.get('settings') ?? defaultConfig.settings;
+    this.store.set('settings', {
+      ...currentSettings,
+      language,
+    });
+    (this.store as unknown as { delete: (key: string) => void }).delete('language');
   }
 
   getVersionAutoUpdateSettings(): VersionAutoUpdateSettings {
