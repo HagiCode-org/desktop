@@ -364,6 +364,19 @@ Desktop startup uses it to distinguish:
 - pinned-version mismatch
 - service payload incompatibility
 
+### PM2-managed .NET service
+
+Desktop starts the validated framework-dependent service payload through PM2 instead of holding the `dotnet` child process directly. The deterministic PM2 process name is `hagicode-dotnet-service`.
+
+Before each start or restart, Desktop regenerates runtime files under `<userData>/config/pm2-dotnet-service/`:
+
+- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, and portable toolchain PATH entries.
+- `ecosystem.config.js`: PM2 app definition with explicit `script`, `args`, `cwd`, process name, and `.env` file reference.
+
+Desktop invokes PM2 with explicit argument arrays. Start and restart use `pm2 startOrReload <ecosystem.config.js> --update-env` so repeated user actions update the same PM2 app instead of creating duplicate entries. Stop uses `pm2 stop hagicode-dotnet-service`, and status uses `pm2 jlist` to map PM2 `online` state back to the existing Desktop service status model.
+
+The `.env` file can contain sensitive runtime values. Desktop logs generated file paths and key counts only; it must not log the generated `.env` contents.
+
 ### Portable version payload contract
 
 Steam-style portable-version builds can optionally bundle a fixed server payload under `resources/portable-fixed/current/` before `electron-builder` runs.
