@@ -92,8 +92,8 @@
     }
   },
   "expectedLayout": {
-    "toolchainRootPattern": "portable-fixed/toolchain",
-    "nodeRootPattern": "portable-fixed/toolchain/node",
+    "toolchainRootPattern": "toolchain",
+    "nodeRootPattern": "toolchain/node",
     "requiredEntries": [
       "node/bin/node|node/node.exe",
       "node/bin/npm|node/npm.cmd|node/lib/node_modules/npm/bin/npm-cli.js",

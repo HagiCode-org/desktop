@@ -26,10 +26,10 @@ export function resolvePortableToolchainRoot(options: PortableToolchainPathOptio
   }
 
   if (!options.isPackaged) {
-    return path.resolve(options.cwd, 'resources', 'portable-fixed', 'toolchain');
+    return path.resolve(options.cwd, 'resources', 'toolchain');
   }
 
-  return path.join(options.resourcesPath, 'extra', 'portable-fixed', 'toolchain');
+  return path.join(options.resourcesPath, 'extra', 'toolchain');
 }
 
 export function buildPortableToolchainPaths(options: PortableToolchainPathOptions): PortableToolchainPaths {
