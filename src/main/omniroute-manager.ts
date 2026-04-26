@@ -318,8 +318,15 @@ export class OmniRouteManager {
       `OMNIROUTE_CONFIG_DIR=${quoteEnv(paths.config)}`,
       `OMNIROUTE_DATA_DIR=${quoteEnv(paths.data)}`,
       `OMNIROUTE_LOG_DIR=${quoteEnv(paths.logs)}`,
+      `OMNIROUTE_ENV_DIR=${quoteEnv(paths.config)}`,
+      `OMNIROUTE_ENV_PATH=${quoteEnv(envPath)}`,
+      `OMNIROUTE_RUNTIME_DIR=${quoteEnv(paths.runtime)}`,
+      `DATA_DIR=${quoteEnv(paths.data)}`,
+      `CLIPROXYAPI_CONFIG_DIR=${quoteEnv(paths.config)}`,
+      `INITIAL_PASSWORD=${quoteEnv(config.password)}`,
       `OMNIROUTE_DESKTOP_MANAGED=true`,
-      `OMNIROUTE_DESKTOP_SECRET=${quoteEnv(secret)}`,
+      `OMNIROUTE_DESKTOP_PASSWORD=${quoteEnv(config.password)}`,
+      `OMNIROUTE_DESKTOP_SECRET=${quoteEnv(config.password)}`,
       `OMNIROUTE_DESKTOP_UPDATED_AT=${quoteEnv(new Date().toISOString())}`,
       '',
     ].join('\n');
@@ -330,7 +337,7 @@ export class OmniRouteManager {
     const config = this.getConfig();
     const outLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-out']);
     const errorLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-error']);
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(OMNIROUTE_PROCESS_NAME)},\n      script: 'omniroute',\n      args: ['serve'],\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(paths.root)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(config.baseUrl)},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(paths.data)},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(paths.logs)},\n        OMNIROUTE_DESKTOP_MANAGED: 'true'\n      }\n    }\n  ]\n};\n`;
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(OMNIROUTE_PROCESS_NAME)},\n      script: 'omniroute',\n      args: ['serve'],\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(paths.root)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(config.baseUrl)},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(paths.data)},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(paths.logs)},\n        OMNIROUTE_ENV_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_ENV_PATH: ${JSON.stringify(paths.envFile)},\n        OMNIROUTE_RUNTIME_DIR: ${JSON.stringify(paths.runtime)},\n        DATA_DIR: ${JSON.stringify(paths.data)},\n        CLIPROXYAPI_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        INITIAL_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_SECRET: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_MANAGED: 'true'\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
   }
 
