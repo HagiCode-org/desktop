@@ -59,8 +59,12 @@ describe('onboarding dependency preparation integration', () => {
     const en = JSON.parse(enRaw);
 
     assert.equal(typeof zh.dependencyPreparation.title, 'string');
-    assert.match(zh.dependencyPreparation.environment.description, /Desktop 托管环境/);
-    assert.match(en.dependencyPreparation.environment.description, /Desktop's managed environment/);
+    assert.match(zh.dependencyPreparation.environment.description, /FAQ/);
+    assert.match(en.dependencyPreparation.environment.description, /FAQ/);
+    assert.equal(zh.dependencyPreparation.environment.faqUrl, 'https://docs.hagicode.com/faq/desktop-node-environment/');
+    assert.equal(en.dependencyPreparation.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
+    assert.equal(zh.dependencyPreparation.environment.faqLinkLabel, '查看 Node 环境 FAQ');
+    assert.equal(en.dependencyPreparation.environment.faqLinkLabel, 'View Node environment FAQ');
     assert.equal(typeof zh.dependencyPreparation.blocking['agent-cli-not-selected'].description, 'string');
     assert.equal(typeof en.dependencyPreparation.complete.description, 'string');
   });

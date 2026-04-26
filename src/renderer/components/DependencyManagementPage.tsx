@@ -1,6 +1,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
+import { AlertCircle, ExternalLink, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import type {
   ManagedNpmPackageId,
   DependencyManagementBridge,
@@ -48,6 +48,10 @@ export default function DependencyManagementPage() {
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const openNodeEnvironmentFaq = () => {
+    void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'));
+  };
 
   const refreshSnapshot = async () => {
     setErrorMessage(null);
@@ -314,11 +318,10 @@ export default function DependencyManagementPage() {
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="text-sm font-medium">{t('dependencyManagement.environment.rationaleTitle')}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{t('dependencyManagement.environment.managedNotice')}</p>
-                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  <li>{t('dependencyManagement.environment.rationale.fixedRuntime')}</li>
-                  <li>{t('dependencyManagement.environment.rationale.isolatedConfig')}</li>
-                  <li>{t('dependencyManagement.environment.rationale.nonIntrusive')}</li>
-                </ul>
+                <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" onClick={openNodeEnvironmentFaq}>
+                  <ExternalLink className="h-4 w-4" />
+                  {t('dependencyManagement.environment.faqLinkLabel')}
+                </Button>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

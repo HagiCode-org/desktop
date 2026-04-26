@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { npmInstallableAgentCliPackages } from '../../../../shared/npm-managed-packages.js';
 import type { ManagedNpmPackageId } from '../../../../types/dependency-management.js';
@@ -46,6 +46,9 @@ export default function DependencyPreparationStep() {
     ])
     : [];
   const confirmDisabled = !environmentAvailable || isDependencyOperationActive || !hasSelectedAgentCli;
+  const openNodeEnvironmentFaq = () => {
+    void window.electronAPI.openExternal(t('onboarding:dependencyPreparation.environment.faqUrl'));
+  };
 
   useEffect(() => {
     if (dependencySnapshotStatus === 'idle') {
@@ -86,7 +89,13 @@ export default function DependencyPreparationStep() {
         <Alert>
           <PackageOpen className="h-4 w-4" />
           <AlertTitle>{t('onboarding:dependencyPreparation.environment.title')}</AlertTitle>
-          <AlertDescription>{t('onboarding:dependencyPreparation.environment.description')}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{t('onboarding:dependencyPreparation.environment.description')}</p>
+            <Button type="button" variant="outline" size="sm" className="gap-2" onClick={openNodeEnvironmentFaq}>
+              <ExternalLink className="h-4 w-4" />
+              {t('onboarding:dependencyPreparation.environment.faqLinkLabel')}
+            </Button>
+          </AlertDescription>
         </Alert>
       </div>
 

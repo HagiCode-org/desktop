@@ -34,9 +34,9 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /getDependencyManagementBridge\(\)\.getSnapshot\(\)/);
     assert.match(pageSource, /environment\.available/);
     assert.match(pageSource, /dependencyManagement\.environment\.rationaleTitle/);
-    assert.match(pageSource, /dependencyManagement\.environment\.rationale\.fixedRuntime/);
-    assert.match(pageSource, /dependencyManagement\.environment\.rationale\.isolatedConfig/);
-    assert.match(pageSource, /dependencyManagement\.environment\.rationale\.nonIntrusive/);
+    assert.match(pageSource, /dependencyManagement\.environment\.faqUrl/);
+    assert.match(pageSource, /dependencyManagement\.environment\.faqLinkLabel/);
+    assert.match(pageSource, /openExternal/);
     assert.match(modelSource, /managedPackageRowClassName/);
     assert.match(packageGroupsSource, /packages\.map/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
@@ -153,9 +153,8 @@ describe('dependency management renderer wiring', () => {
     assert.equal(JSON.parse(en).sidebar.dependencyManagement, 'Dependency Management');
     assert.equal(typeof JSON.parse(zh).dependencyManagement.environment.status.available, 'string');
     assert.equal(typeof JSON.parse(zh).dependencyManagement.environment.rationaleTitle, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.environment.rationale.fixedRuntime, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.environment.rationale.isolatedConfig, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.environment.rationale.nonIntrusive, 'string');
+    assert.equal(JSON.parse(zh).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/faq/desktop-node-environment/');
+    assert.equal(JSON.parse(en).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
     assert.equal(typeof JSON.parse(en).dependencyManagement.actions.install, 'string');
     assert.equal(JSON.parse(en).dependencyManagement.categories['agent-cli'], 'Agent CLI');
     assert.equal(typeof JSON.parse(en).dependencyManagement.packages.claudeCode.description, 'string');

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download, ExternalLink, RefreshCw } from 'lucide-react';
 import {
   fetchDependencies,
   checkDependenciesAfterInstall,
@@ -67,6 +67,9 @@ export function DependencyManagementCard({
     : dependencies;
 
   const manualRequiredDeps = filteredDependencies.filter(isManualInstallRequired);
+  const openNodeEnvironmentFaq = () => {
+    void window.electronAPI.openExternal(t('dependencyManagement.manualHandoff.faqUrl'));
+  };
   const getDependencyStatusText = (dep: DependencyItem) => {
     if (dep.installed && !dep.versionMismatch) {
       return dep.resolutionSource === 'bundled-desktop'
@@ -139,6 +142,14 @@ export function DependencyManagementCard({
           <p className="mt-2 text-sm text-muted-foreground">
             {t('dependencyManagement.manualHandoff.description')}
           </p>
+          <button
+            type="button"
+            onClick={openNodeEnvironmentFaq}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t('dependencyManagement.manualHandoff.faqLinkLabel')}
+          </button>
           <p className="mt-2 text-xs text-muted-foreground">
             {t('dependencyManagement.manualHandoff.refreshHint')}
           </p>
