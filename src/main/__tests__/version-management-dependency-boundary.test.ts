@@ -44,4 +44,19 @@ describe('version management dependency boundary', () => {
     assert.match(mainSource, /resolveVersionInstallPath\(versionId\)/);
     assert.match(mainSource, /getDependencyListFromManifest\(installPath\)/);
   });
+
+  it('stops a running web service before switching the active version', async () => {
+    const [versionHandlersSource, mainSource] = await Promise.all([
+      fs.readFile(versionHandlersPath, 'utf8'),
+      fs.readFile(mainPath, 'utf8'),
+    ]);
+
+    for (const source of [versionHandlersSource, mainSource]) {
+      assert.match(source, /statusBeforeSwitch = await .*webServiceManager\.getStatus\(\)/);
+      assert.match(source, /statusBeforeSwitch\.status === 'running' \|\| statusBeforeSwitch\.status === 'starting'/);
+      assert.match(source, /await .*webServiceManager\.stop\(\)/);
+      assert.match(source, /Failed to stop running web service before switching version/);
+      assert.match(source, /web-service-status-changed/);
+    }
+  });
 });

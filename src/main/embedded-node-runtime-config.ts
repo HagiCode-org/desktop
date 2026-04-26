@@ -167,14 +167,14 @@ export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform
 
 export function getNpmGlobalBinRelativePath(platform: NodeJS.Platform | string): string {
   return String(platform).startsWith('win')
-    ? 'npm-global'
-    : path.join('npm-global', 'bin');
+    ? 'node'
+    : path.join('node', 'bin');
 }
 
 export function getNpmGlobalModulesRelativePath(platform: NodeJS.Platform | string): string {
   return String(platform).startsWith('win')
-    ? path.join('npm-global', 'node_modules')
-    : path.join('npm-global', 'lib', 'node_modules');
+    ? path.join('node', 'node_modules')
+    : path.join('node', 'lib', 'node_modules');
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {

@@ -554,6 +554,37 @@ export class PCodeWebServiceManager {
     };
   }
 
+  private applySelectedNodeNpmEnvironment(
+    baseEnv: NodeJS.ProcessEnv,
+    nodeRuntimeRoot: string | null,
+  ): NodeJS.ProcessEnv {
+    if (!nodeRuntimeRoot) {
+      return baseEnv;
+    }
+
+    const nodeBinRoot = process.platform === 'win32' ? nodeRuntimeRoot : path.join(nodeRuntimeRoot, 'bin');
+    const nodeExecutablePath = path.join(nodeBinRoot, process.platform === 'win32' ? 'node.exe' : 'node');
+    const npmCliPath = process.platform === 'win32'
+      ? path.join(nodeRuntimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js')
+      : path.join(nodeRuntimeRoot, 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+    const env: NodeJS.ProcessEnv = {
+      ...baseEnv,
+      NODE: nodeExecutablePath,
+      npm_node_execpath: nodeExecutablePath,
+      npm_execpath: npmCliPath,
+    };
+
+    delete env.npm_config_prefix;
+    delete env.NPM_CONFIG_PREFIX;
+    delete env.npm_config_global_prefix;
+    delete env.NPM_CONFIG_GLOBAL_PREFIX;
+    delete env.npm_config_globalconfig;
+    delete env.NPM_CONFIG_GLOBALCONFIG;
+    delete env.NPM_CONFIG_GLOBAL_CONFIG;
+
+    return env;
+  }
+
   private getPm2RuntimeFilesDirectory(): string {
     return path.join(this.pathManager.getPaths().config, PM2_RUNTIME_DIR_NAME);
   }
@@ -1540,10 +1571,20 @@ export class PCodeWebServiceManager {
     this.resetStartupLogBuffer();
     this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
+    // PM2 restart_time is diagnostic state from the previous runtime. A manual
+    // Desktop start should always get a fresh attempt, especially after version switches.
+    this.restartCount = 0;
+
     if (this.process || this.status === 'running') {
-      log.warn('[WebService] Process already running');
-      this.appendStartupLogLine('Start aborted: process already running');
-      return this.buildStartupFailureResult('Process already running');
+      log.warn('[WebService] Existing service runtime detected before start; stopping it before launching current version.');
+      this.appendStartupLogLine('Existing service runtime detected; stopping before launching current version');
+      const stopped = await this.stop();
+      if (!stopped) {
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, 'Failed to stop existing service runtime');
+        this.appendStartupLogLine('Start aborted: failed to stop existing service runtime');
+        return this.buildStartupFailureResult('Failed to stop existing service runtime');
+      }
     }
 
     if (this.restartCount >= this.maxRestartAttempts) {
@@ -1611,12 +1652,18 @@ export class PCodeWebServiceManager {
         const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
         const activationPolicy = await new BundledNodeRuntimeManager(this.pathManager).getDesktopActivationPolicy();
         const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, { activationPolicy });
-        preparedEnv = toolchainEnv.env;
+        const selectedNodeRuntimeRoot = toolchainEnv.usedBundledToolchain
+          ? this.pathManager.getPortableNodeRoot()
+          : null;
+        preparedEnv = this.applySelectedNodeNpmEnvironment(toolchainEnv.env, selectedNodeRuntimeRoot);
         envMode = prepared.mode;
         const pathKey = toolchainEnv.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
         this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
+        if (selectedNodeRuntimeRoot) {
+          this.appendStartupLogLine(`Selected Node runtime root=${selectedNodeRuntimeRoot}`);
+        }
         this.appendStartupLogLine(`Bundled portable toolchain policy: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
         if (toolchainEnv.usedBundledToolchain) {
           this.appendStartupLogLine(`HAGICODE_PORTABLE_TOOLCHAIN_ROOT=${toolchainEnv.toolchainRoot}`);
@@ -1652,13 +1699,21 @@ export class PCodeWebServiceManager {
         return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
       }
 
-      this.emitPhase(StartupPhase.Spawning, 'Starting service through PM2 with bundled dotnet runtime...');
+      this.emitPhase(StartupPhase.Spawning, 'Starting service with bundled dotnet runtime through PM2...');
       const spawnArgs = [launchContext.serviceDllPath, ...(this.config.args || [])];
       const pm2RuntimeDirectory = this.getPm2RuntimeFilesDirectory();
       this.appendStartupLogLine(`PM2 managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);
       this.appendStartupLogLine(`PM2 runtime files directory: ${pm2RuntimeDirectory}`);
 
-      const pm2StartResult = await this.pm2Manager.startOrReload({
+      if (await this.isManagedServiceReachable(this.config.port)) {
+        log.warn('[WebService] Target port is reachable before PM2 start; terminating lingering managed service if present:', {
+          port: this.config.port,
+        });
+        this.appendStartupLogLine(`Target port ${this.config.port} is already reachable; checking for lingering managed service`);
+        await this.terminateLingeringServiceByPort(this.config.port);
+      }
+
+      const pm2StartResult = await this.pm2Manager.startFresh({
         dotnetPath: launchContext.dotnetPath,
         serviceDllPath: launchContext.serviceDllPath,
         serviceWorkingDirectory: launchContext.serviceWorkingDirectory,
@@ -1934,6 +1989,7 @@ export class PCodeWebServiceManager {
       this.process = null;
       this.lastPm2Env = null;
       this.startTime = null;
+      this.restartCount = 0;
       this.recoveredRuntime = null;
       this.recoverySource = 'none';
       this.recoveryMessage = null;
@@ -2029,6 +2085,7 @@ export class PCodeWebServiceManager {
     log.info('[WebService] Restarting web service...');
     this.process = null;
     this.status = 'stopped';
+    this.restartCount = 0;
     return await this.start();
   }
 

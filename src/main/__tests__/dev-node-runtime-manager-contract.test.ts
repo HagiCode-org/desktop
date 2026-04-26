@@ -5,42 +5,41 @@ import { describe, it } from 'node:test';
 
 const devRuntimeManagerPath = path.resolve(process.cwd(), 'src/main/dev-node-runtime-manager.ts');
 const dependencyManagerPath = path.resolve(process.cwd(), 'src/main/dependency-manager.ts');
+const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
 const gitignorePath = path.resolve(process.cwd(), '.gitignore');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 
-describe('development node runtime manager contract', () => {
-  it('validates metadata, executable probes, and governed version before reporting bundled-dev', async () => {
-    const source = await fs.readFile(devRuntimeManagerPath, 'utf8');
-
-    assert.match(source, /!app\.isPackaged/, 'development runtime is only considered in source mode');
-    assert.match(source, /readPinnedNodeRuntimeConfig/, 'metadata validation uses governed runtime config');
-    assert.match(source, /nodeVersionMatchesGovernedMajor\(metadata\.nodeVersion, this\.runtimeConfig\)/, 'governed major version mismatch is rejected');
-    assert.match(source, /fsSync\.existsSync\(metadata\.nodeExecutablePath\)/, 'metadata is rejected when the referenced node binary is missing');
-    assert.match(source, /isExecutable\(metadata\.nodeExecutablePath\)/, 'metadata is rejected when node is not executable');
-    assert.match(source, /probeVersion\(metadata\.nodeExecutablePath, \['--version'\]\)/, 'node binary is probed before use');
-    assert.match(source, /Node probe expected major/, 'node probe uses the governed major version');
-    assert.match(source, /probeVersion\(metadata\.npmExecutablePath, \['--version'\]\)/, 'npm binary is probed before use');
-    assert.match(source, /available: errors\.length === 0/, 'only error-free metadata is reported as available');
+describe('source mode bundled node runtime contract', () => {
+  it('removes the source-tree .runtime/node-dev runtime manager', async () => {
+    await assert.rejects(
+      fs.access(devRuntimeManagerPath),
+      /ENOENT/,
+      'source mode no longer has a separate development Node runtime manager',
+    );
   });
 
-  it('prefers bundled-dev node in source mode before packaged/system fallback', async () => {
+  it('uses the portable-fixed bundled toolchain for dependency detection and web service startup', async () => {
     const source = await fs.readFile(dependencyManagerPath, 'utf8');
+    const webServiceSource = await fs.readFile(webServiceManagerPath, 'utf8');
 
-    assert.match(source, /new DevNodeRuntimeManager\(\)/, 'dependency detection constructs the dev runtime locator');
-    assert.match(source, /checkDevNodeRuntimeDependency\(dep, componentId\)/, 'node and npm checks try the dev runtime before packaged lookup');
-    assert.match(source, /resolutionSource: 'bundled-dev'/, 'valid dev runtime is reported as bundled-dev');
-    assert.match(source, /const bundledStatus = await this\.bundledNodeRuntimeManager\.verify\(\)/, 'packaged bundled detection remains as fallback');
+    assert.doesNotMatch(source, /DevNodeRuntimeManager/, 'dependency detection no longer constructs a dev runtime locator');
+    assert.doesNotMatch(source, /checkDevNodeRuntimeDependency/, 'node and npm checks no longer use a source-only runtime');
+    assert.doesNotMatch(source, /bundled-dev/, 'dependency results no longer report bundled-dev');
+    assert.match(source, /const bundledStatus = await this\.bundledNodeRuntimeManager\.verify\(\)/, 'dependency detection uses the bundled portable toolchain');
+    assert.doesNotMatch(webServiceSource, /HAGICODE_DEV_NODE_RUNTIME_ROOT/, 'service startup no longer injects the dev runtime marker');
+    assert.match(webServiceSource, /toolchainEnv\.usedBundledToolchain\s*\?\s*this\.pathManager\.getPortableNodeRoot\(\)/, 'service startup selects the portable Node root when the bundled toolchain is active');
   });
 
-  it('keeps generated runtime files ignored and exposes the package command', async () => {
+  it('removes generated .runtime ignore rules and the dev runtime package command', async () => {
     const [gitignore, packageJsonRaw] = await Promise.all([
       fs.readFile(gitignorePath, 'utf8'),
       fs.readFile(packageJsonPath, 'utf8'),
     ]);
     const packageJson = JSON.parse(packageJsonRaw) as { scripts: Record<string, string> };
 
-    assert.match(gitignore, /^\.runtime\/node-dev\//m);
+    assert.doesNotMatch(gitignore, /^\.runtime\/node-dev\//m);
     assert.match(gitignore, /^build\/embedded-node-runtime\//m);
-    assert.equal(packageJson.scripts['install:dev-node-runtime'], 'node scripts/install-dev-node-runtime.js');
+    assert.equal(packageJson.scripts['install:dev-node-runtime'], undefined);
+    assert.equal(packageJson.scripts.predev, 'npm run prepare:bundled-toolchain:optional');
   });
 });

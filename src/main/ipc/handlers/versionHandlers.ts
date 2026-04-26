@@ -7,6 +7,7 @@ import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { ConfigManager } from '../../config.js';
 import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
 import { installWebServicePackageWithAutoSwitch } from '../../install-web-service-package.js';
+import { setServerStatus, setServiceUrl } from '../../tray.js';
 import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
 
 // Module state
@@ -225,6 +226,28 @@ export function registerVersionHandlers(deps: {
       };
     }
     try {
+      const statusBeforeSwitch = await state.webServiceManager.getStatus();
+      if (statusBeforeSwitch.status === 'running' || statusBeforeSwitch.status === 'starting') {
+        log.info('[VersionHandlers] Stopping running web service before switching active version:', {
+          versionId,
+          currentPid: statusBeforeSwitch.pid,
+          currentUrl: statusBeforeSwitch.url,
+        });
+        const stopped = await state.webServiceManager.stop();
+        const stoppedStatus = await state.webServiceManager.getStatus();
+        state.mainWindow?.webContents.send('web-service-status-changed', stoppedStatus);
+        setServerStatus(stoppedStatus.status, stoppedStatus.url);
+        setServiceUrl(stoppedStatus.url);
+
+        if (!stopped) {
+          return {
+            success: false,
+            error: 'Failed to stop running web service before switching version',
+            errorCode: 'stop-running-service-failed',
+          };
+        }
+      }
+
       const result = await state.versionManager.switchVersion(versionId);
 
       if (result.success) {

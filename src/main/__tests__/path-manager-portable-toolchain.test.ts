@@ -19,7 +19,7 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node');
     assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/bin');
     assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin');
-    assert.equal(paths.npmGlobalBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/npm-global/bin');
+    assert.equal(paths.npmGlobalBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin');
     assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/node');
     assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/npm');
     assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/toolchain-manifest.json');
@@ -61,7 +61,7 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(toolchainRoot, path.resolve('../portable/toolchain'));
     assert.equal(paths.toolchainRoot, toolchainRoot);
     assert.equal(paths.nodeExecutablePath, path.join(toolchainRoot, 'node', 'bin', 'node'));
-    assert.equal(paths.npmGlobalBinRoot, path.join(toolchainRoot, 'npm-global', 'bin'));
+    assert.equal(paths.npmGlobalBinRoot, path.join(toolchainRoot, 'node', 'bin'));
   });
 
   it('keeps macOS packaged root under Contents/Resources via process.resourcesPath', () => {

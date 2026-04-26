@@ -14,8 +14,6 @@ import {
   getNodeExecutableRelativePath,
   getNpmExecutableRelativePath,
   getNpmExecutableRelativePathCandidates,
-  getNpmGlobalBinRelativePath,
-  getNpmGlobalModulesRelativePath,
   readPinnedNodeRuntimeConfig,
   resolvePinnedNodeRuntimeTarget,
 } from './embedded-node-runtime-config.js';
@@ -28,7 +26,7 @@ const toolchainRoot = path.join(resourcesRoot, 'toolchain');
 const nodeRoot = path.join(toolchainRoot, 'node');
 const binRoot = path.join(toolchainRoot, 'bin');
 const envRoot = path.join(toolchainRoot, 'env');
-const npmGlobalRoot = path.join(toolchainRoot, 'npm-global');
+const legacyNpmGlobalRoot = path.join(toolchainRoot, 'npm-global');
 const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-node-runtime', 'downloads');
 const packageEntries = Object.entries(runtimeConfig.corePackages || {});
 const stagingDiagnostics = {
@@ -298,7 +296,6 @@ function writeActivationArtifacts() {
     const pathEntries = [
       'bin',
       path.dirname(getNodeExecutableRelativePath(runtimePlatform)),
-      getNpmGlobalBinRelativePath(runtimePlatform),
     ].map((entry) => `$TOOLCHAIN_ROOT/${toPosixPath(entry)}`).join(':');
     fs.writeFileSync(activationPath, [
       '#!/usr/bin/env bash',
@@ -321,14 +318,14 @@ function writeActivationArtifacts() {
     'set "SCRIPT_DIR=%~dp0"',
     'for %%I in ("%SCRIPT_DIR%..") do set "TOOLCHAIN_ROOT=%%~fI"',
     'set "HAGICODE_PORTABLE_TOOLCHAIN_ROOT=%TOOLCHAIN_ROOT%"',
-    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%TOOLCHAIN_ROOT%\\npm-global;%PATH%"',
+    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%PATH%"',
     'echo HagiCode bundled toolchain activated: %TOOLCHAIN_ROOT%',
   ].join('\r\n') + '\r\n', 'utf8');
   fs.writeFileSync(ps1Path, [
     '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
     '$toolchainRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path',
     '$env:HAGICODE_PORTABLE_TOOLCHAIN_ROOT = $toolchainRoot',
-    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;$toolchainRoot\\npm-global;" + $env:PATH',
+    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;" + $env:PATH',
     'Write-Output "HagiCode bundled toolchain activated: $toolchainRoot"',
   ].join('\r\n') + '\r\n', 'utf8');
   return [path.join('env', 'activate.cmd'), path.join('env', 'activate.ps1')];
@@ -336,7 +333,7 @@ function writeActivationArtifacts() {
 
 function cleanDeferredPackageRoots() {
   prunePath(binRoot);
-  prunePath(npmGlobalRoot);
+  prunePath(legacyNpmGlobalRoot);
 }
 
 function buildRuntimeCommands(nodeLayout) {

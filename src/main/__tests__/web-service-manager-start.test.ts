@@ -25,7 +25,16 @@ describe('web-service startup flow', () => {
     assert.match(source, /waitForHealthCheck\(\)/);
   });
 
-  it('spawns the managed DLL with the pinned dotnet runtime and runtime isolation env', async () => {
+  it('resets stale restart counters for manual start and stop flows', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /A manual\s*\n\s*\/\/ Desktop start should always get a fresh attempt/);
+    assert.match(source, /this\.restartCount = 0;\n\n    if \(this\.process \|\| this\.status === 'running'\)/);
+    assert.match(source, /this\.lastPm2Env = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;/);
+    assert.match(source, /this\.status = 'stopped';\n\s*this\.restartCount = 0;\n\s*return await this\.start\(\);/);
+  });
+
+  it('starts the managed DLL through PM2 with the pinned dotnet runtime and runtime isolation env', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /resolveManagedLaunchContext/);
@@ -33,11 +42,20 @@ describe('web-service startup flow', () => {
     assert.match(source, /Starting service with bundled dotnet runtime/);
     assert.match(source, /getDesktopActivationPolicy\(\)/);
     assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager, \{ activationPolicy \}\)/);
+    assert.doesNotMatch(source, /DevNodeRuntimeManager/);
+    assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
+    assert.doesNotMatch(source, /prepends development Node runtime paths/);
+    assert.match(source, /toolchainEnv\.usedBundledToolchain\s*\?\s*this\.pathManager\.getPortableNodeRoot\(\)/);
+    assert.match(source, /this\.applySelectedNodeNpmEnvironment\(toolchainEnv\.env, selectedNodeRuntimeRoot\)/);
     assert.match(source, /resolveToolchainLaunchPlan\(\{/);
-    assert.match(source, /spawn\(launchContext\.dotnetPath, spawnArgs/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
-    assert.match(source, /cwd: launchContext\.serviceWorkingDirectory/);
+    assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
+    assert.match(source, /isManagedServiceReachable\(this\.config\.port\)/);
+    assert.match(source, /terminateLingeringServiceByPort\(this\.config\.port\)/);
+    assert.match(source, /dotnetPath: launchContext\.dotnetPath/);
+    assert.match(source, /serviceDllPath: launchContext\.serviceDllPath/);
+    assert.match(source, /serviceWorkingDirectory: launchContext\.serviceWorkingDirectory/);
     assert.match(source, /DOTNET_ROOT: runtimeRoot/);
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /includes pinned runtime root/);

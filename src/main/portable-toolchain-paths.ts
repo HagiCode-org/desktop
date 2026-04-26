@@ -38,7 +38,7 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
   const nodeRoot = path.join(toolchainRoot, 'node');
   const toolchainBinRoot = path.join(toolchainRoot, 'bin');
   const nodeBinRoot = platform === 'win32' ? nodeRoot : path.join(nodeRoot, 'bin');
-  const npmGlobalBinRoot = path.join(toolchainRoot, 'npm-global', 'bin');
+  const npmGlobalBinRoot = nodeBinRoot;
   const nodeExecutableName = platform === 'win32' ? 'node.exe' : 'node';
   const npmExecutableName = platform === 'win32' ? 'npm.cmd' : 'npm';
 

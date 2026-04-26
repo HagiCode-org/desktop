@@ -33,8 +33,8 @@ function createSnapshot(statusOverrides: Partial<Record<ManagedNpmPackageId, Man
       available: true,
       toolchainRoot: '/managed',
       nodeRuntimeRoot: '/managed/node',
-      npmGlobalPrefix: '/managed/npm-global',
-      npmGlobalBinRoot: '/managed/npm-global/bin',
+      npmGlobalPrefix: '/managed/node',
+      npmGlobalBinRoot: '/managed/node/bin',
       node: {
         status: 'available',
         executablePath: '/managed/node/bin/node',
@@ -106,6 +106,17 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.agentCliReady, true);
     assert.equal(summary.ready, true);
     assert.equal(summary.optionalPackages.some((item) => item.id === optionalPackageId && item.status === 'not-installed'), true);
+  });
+
+  it('keeps omniroute optional so missing OmniRoute does not block launch readiness', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({ omniroute: 'not-installed' }), ['codex']);
+
+    assert.equal(requiredManagedNpmPackages.some((definition) => definition.id === 'omniroute'), false);
+    assert.equal(optionalManagedNpmPackages.some((definition) => definition.id === 'omniroute'), true);
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
+    assert.deepEqual(summary.missingRequiredPackageIds, []);
+    assert.equal(summary.optionalPackages.some((item) => item.id === 'omniroute' && item.status === 'not-installed'), true);
   });
 
   it('ignores unknown Agent CLI ids and does not let them satisfy readiness', () => {

@@ -172,7 +172,7 @@ function describePendingManualInstall(
 ): string {
   return [
     `Bundled Node.js and npm are ready, but ${packageRecord.binName} is pending manual installation.`,
-    `Install ${packageRecord.installSpec} into ${path.join(toolchainRoot, 'npm-global')} and refresh dependency status.`,
+    `Install ${packageRecord.installSpec} into ${path.join(toolchainRoot, 'node')} and refresh dependency status.`,
   ].join(' ');
 }
 

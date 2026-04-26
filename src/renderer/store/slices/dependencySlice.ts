@@ -25,7 +25,7 @@ export interface DependencyItem {
   checkCommand?: string; // New: command to verify installation
   downloadUrl?: string;
   description?: string;
-  resolutionSource?: 'bundled-desktop' | 'bundled-dev' | 'system';
+  resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';

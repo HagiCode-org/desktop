@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 const runtimeManagerPath = path.resolve(process.cwd(), 'src/main/bundled-node-runtime-manager.ts');
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-node-runtime/runtime-manifest.json');
+const stagedToolchainManifestPath = path.resolve(process.cwd(), 'resources/portable-fixed/toolchain/toolchain-manifest.json');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 
 describe('bundled node runtime manager contract', () => {
@@ -52,5 +53,12 @@ describe('bundled node runtime manager contract', () => {
     assert.match(smokeTestSource, /defaultEnabledByConsumer\.steam-packer expected/);
     assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.desktop/);
     assert.match(smokeTestSource, /nodeRuntimeConfig\.defaultEnabledByConsumer\?\.\['steam-packer'\]/);
+  });
+
+  it('keeps the staged development toolchain enabled for Desktop consumers', async () => {
+    const manifest = JSON.parse(await fs.readFile(stagedToolchainManifestPath, 'utf8'));
+
+    assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
+    assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
   });
 });

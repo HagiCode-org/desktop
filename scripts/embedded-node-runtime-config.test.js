@@ -85,16 +85,7 @@ assert.match(prepareScript, /buildDeferredPackageMetadata/, 'prepare script writ
 assert.equal(prepareScript.includes('installCorePackages('), false, 'prepare script no longer auto-installs bundled CLI packages');
 assert.equal(prepareScript.includes('stagePackageCommands('), false, 'prepare script no longer writes bundled CLI shims during staging');
 
-const devInstallerScript = fs.readFileSync(new URL('./install-dev-node-runtime.js', import.meta.url), 'utf8');
-assert.match(devInstallerScript, /readPinnedNodeRuntimeConfig\(\)/, 'dev installer consumes the governed Node runtime config');
-assert.match(devInstallerScript, /nodeVersionMatchesGovernedMajor/, 'dev installer validates Node by governed major version');
-assert.doesNotMatch(devInstallerScript, /releaseVersion\s*=\s*['\"]/, 'dev installer does not hard-code a separate Node version');
-assert.match(devInstallerScript, /existingRuntimeIsValid/, 'dev installer validates existing runtime before reinstalling');
-assert.match(devInstallerScript, /Cached Node archive checksum mismatch/, 'dev installer rejects stale cached archives');
-assert.match(devInstallerScript, /buildDevNodeRuntimeMetadata/, 'dev installer writes development runtime metadata');
-
-const devConfigScript = fs.readFileSync(new URL('./dev-node-runtime-config.js', import.meta.url), 'utf8');
-assert.match(devConfigScript, /\.runtime.*node-dev/s, 'dev runtime directory is source-tree local and ignored');
-assert.match(devConfigScript, /runtime-metadata\.json/, 'dev runtime metadata file name is stable');
+assert.equal(fs.existsSync(new URL('./install-dev-node-runtime.js', import.meta.url)), false, 'source mode uses the bundled portable toolchain instead of a separate dev installer');
+assert.equal(fs.existsSync(new URL('./dev-node-runtime-config.js', import.meta.url)), false, 'source mode no longer has a .runtime/node-dev config');
 
 console.log('embedded-node-runtime-config tests passed');

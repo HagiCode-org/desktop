@@ -1121,6 +1121,28 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
     };
   }
   try {
+    const statusBeforeSwitch = await webServiceManager.getStatus();
+    if (statusBeforeSwitch.status === 'running' || statusBeforeSwitch.status === 'starting') {
+      log.info('[Main] Stopping running web service before switching active version:', {
+        versionId,
+        currentPid: statusBeforeSwitch.pid,
+        currentUrl: statusBeforeSwitch.url,
+      });
+      const stopped = await webServiceManager.stop();
+      const stoppedStatus = await webServiceManager.getStatus();
+      mainWindow?.webContents.send('web-service-status-changed', stoppedStatus);
+      setServerStatus(stoppedStatus.status, stoppedStatus.url);
+      setServiceUrl(stoppedStatus.url);
+
+      if (!stopped) {
+        return {
+          success: false,
+          error: 'Failed to stop running web service before switching version',
+          errorCode: 'stop-running-service-failed',
+        };
+      }
+    }
+
     const result = await versionManager.switchVersion(versionId);
 
     if (result.success) {

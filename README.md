@@ -28,35 +28,29 @@ The desktop app packages the HagiCode experience into a local-first workflow for
 
 ```bash
 npm install
-npm run install:dev-node-runtime
 npm run dev
 npm run build:prod
 ```
 
-- `npm run dev` starts the renderer, watches Electron processes, and launches the app in development mode
+- `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
-- `npm run install:dev-node-runtime` installs the governed embedded Node runtime for source-mode testing
 
-### Development embedded Node runtime
+### Development bundled Node runtime
 
-The development runtime command installs the same governed Node version used by packaged Desktop into `.runtime/node-dev/`. `npm run dev` runs this preparation step automatically before launching Electron. The directory is ignored by git and contains these generated areas:
+Source-mode development uses the bundled portable toolchain under `resources/portable-fixed/toolchain/`, matching the packaged Desktop layout. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
 
-- `.runtime/node-dev/cache/` stores the downloaded pinned Node archive by archive name.
-- `.runtime/node-dev/node/<version>/<platform>/` stores the extracted Node distribution.
-- `.runtime/node-dev/npm-global/` stores source-mode managed npm package installs.
-- `.runtime/node-dev/npm-cache/` stores the source-mode npm cache.
-- `.runtime/node-dev/runtime-metadata.json` records `nodeVersion`, `platform`, `arch`, `installRoot`, `nodeExecutablePath`, `npmGlobalRoot`, `npmCacheRoot`, `installedAt`, archive details, and Node/npm/corepack probe results.
+`npm run prepare:bundled-toolchain:optional` stages the governed Node runtime when the current platform is supported. `npm run dev` runs that preparation step through `predev`.
 
-When the app runs from source, dependency management validate this metadata, probe the referenced Node/npm executables, use `.runtime/node-dev/npm-global/` as the npm global prefix, verify the governed Node version, and report a valid runtime as `bundled-dev`. Packaged builds continue to use packaged runtime paths first; `.runtime/node-dev/` is ignored outside source mode.
+Managed npm packages are installed beside the selected bundled Node runtime using npm's default global layout:
 
-To clean the development runtime, delete `.runtime/node-dev/` and rerun `npm run install:dev-node-runtime` when needed.
+- Unix-like platforms: `resources/portable-fixed/toolchain/node/bin` and `resources/portable-fixed/toolchain/node/lib/node_modules`
+- Windows: `resources/portable-fixed/toolchain/node` and `resources/portable-fixed/toolchain/node/node_modules`
 
 ### Development runtime troubleshooting
 
-- Download failures: check network access to the pinned host in `resources/embedded-node-runtime/runtime-manifest.json`, or pre-populate `.runtime/node-dev/cache/` with the expected archive.
-- Stale metadata: delete `.runtime/node-dev/runtime-metadata.json` or the whole `.runtime/node-dev/` directory, then rerun the install command.
+- Download failures: check network access to the pinned host in `resources/embedded-node-runtime/runtime-manifest.json`, or pre-populate the staged archive cache used by the bundled toolchain preparation script.
 - Unsupported platform/architecture: the command uses the platforms pinned in `resources/embedded-node-runtime/runtime-manifest.json`; add a governed platform entry before expecting detection to succeed.
-- Version mismatch: rerun `npm run install:dev-node-runtime` after governance updates so metadata and the extracted executable match the active Node version.
+- Version mismatch: rerun `npm run prepare:bundled-toolchain:optional` after governance updates so the staged executable matches the active Node version.
 
 ## Related guides
 

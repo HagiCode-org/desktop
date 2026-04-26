@@ -99,11 +99,11 @@ export function getNpmExecutableRelativePathCandidates(platform) {
 }
 
 export function getNpmGlobalBinRelativePath(platform) {
-  return platform.startsWith('win-') ? 'npm-global' : path.join('npm-global', 'bin');
+  return platform.startsWith('win-') ? 'node' : path.join('node', 'bin');
 }
 
 export function getNpmGlobalModulesRelativePath(platform) {
-  return platform.startsWith('win-') ? path.join('npm-global', 'node_modules') : path.join('npm-global', 'lib', 'node_modules');
+  return platform.startsWith('win-') ? path.join('node', 'node_modules') : path.join('node', 'lib', 'node_modules');
 }
 
 export function getPinnedNodeRuntimeConfigPath() {

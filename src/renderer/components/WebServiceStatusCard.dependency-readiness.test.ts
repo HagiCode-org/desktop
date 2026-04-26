@@ -13,7 +13,8 @@ describe('home launch dependency readiness guard', () => {
     const source = await fs.readFile(cardPath, 'utf8');
 
     assert.match(source, /evaluateDependencyReadiness\(snapshot, \[npmInstallableAgentCliPackages\[0\]\?\.id\]\.filter\(Boolean\)\)/);
-    assert.match(source, /window\.electronAPI\.dependencyManagement\.getSnapshot\(\)/);
+    assert.match(source, /window\.electronAPI\.dependencyManagement\.refresh\(\)/);
+    assert.match(source, /if \(isStopped\) \{\s*void loadDependencyReadiness\(\);\s*\}/);
     assert.match(source, /if \(!dependencyReadiness\?\.environmentAvailable \|\| !dependencyReadiness\?\.requiredReady\) \{\s*dispatch\(switchViewWithSideEffects\('dependency-management'\)\);\s*return;/);
     assert.match(source, /dispatch\(startWebService\(\)\);/);
     assert.match(source, /dependencyReadinessError \|\| t\('webServiceStatus\.dependencyReadinessAlert\.message'\)/);

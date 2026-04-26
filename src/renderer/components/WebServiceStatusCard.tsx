@@ -175,7 +175,7 @@ const WebServiceStatusCard: React.FC = () => {
 
     const loadDependencyReadiness = async () => {
       try {
-        const snapshot = await window.electronAPI.dependencyManagement.getSnapshot();
+        const snapshot = await window.electronAPI.dependencyManagement.refresh();
         if (!disposed) {
           setDependencyReadiness(evaluateDependencyReadiness(snapshot, [npmInstallableAgentCliPackages[0]?.id].filter(Boolean)));
           setDependencyReadinessError(null);

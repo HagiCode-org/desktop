@@ -337,16 +337,16 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => '/portable/toolchain',
       getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
       getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
-      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
-      existsSync: target => target !== '/portable/toolchain/npm-global/bin.missing',
+      existsSync: () => true,
     });
 
     assert.equal(result.pathKey, 'PATH');
     assert.equal(
       result.env.PATH,
-      '/portable/toolchain/bin:/portable/toolchain/node/bin:/portable/toolchain/npm-global/bin:/system/bin',
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/system/bin',
     );
     assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/portable/toolchain');
     assert.equal(baseEnv.PATH, '/system/bin');
@@ -365,7 +365,7 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => '/portable/toolchain',
       getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
       getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
-      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
       existsSync: () => true,
@@ -376,7 +376,7 @@ describe('web-service-env', () => {
     assert.equal(activationPolicy.source, 'manifest-default');
     assert.equal(
       result.env.PATH,
-      '/portable/toolchain/bin:/portable/toolchain/node/bin:/portable/toolchain/npm-global/bin:/system/bin',
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/system/bin',
     );
     assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/portable/toolchain');
     assert.equal(result.usedBundledToolchain, true);
@@ -393,7 +393,7 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => '/portable/toolchain',
       getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
       getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
-      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
       existsSync: () => true,
@@ -417,7 +417,7 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => '/portable/toolchain',
       getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
       getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
-      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
       existsSync: () => false,
@@ -455,7 +455,7 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => 'C:\\Portable\\Toolchain',
       getPortableToolchainBinRoot: () => 'C:\\portable\\toolchain\\bin',
       getPortableNodeBinRoot: () => 'C:\\Portable\\Toolchain\\node',
-      getPortableNpmGlobalBinRoot: () => 'C:\\Portable\\Toolchain\\npm-global\\bin',
+      getPortableNpmGlobalBinRoot: () => 'C:\\Portable\\Toolchain\\node',
     }, {
       platform: 'win32',
       existsSync: () => true,
@@ -464,7 +464,7 @@ describe('web-service-env', () => {
     assert.equal(result.pathKey, 'Path');
     assert.equal(
       result.env.Path,
-      'C:\\portable\\toolchain\\bin;C:\\Portable\\Toolchain\\node;C:\\Portable\\Toolchain\\npm-global\\bin;C:\\Windows\\System32',
+      'C:\\portable\\toolchain\\bin;C:\\Portable\\Toolchain\\node;C:\\Windows\\System32',
     );
   });
 
@@ -480,7 +480,7 @@ describe('web-service-env', () => {
       getPortableToolchainRoot: () => '/portable/toolchain',
       getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
       getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
-      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/npm-global/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
       existsSync: target => target !== '/portable/toolchain/node/bin',
@@ -489,7 +489,6 @@ describe('web-service-env', () => {
     assert.equal(collected.toolchainRoot, '/portable/toolchain');
     assert.deepEqual(collected.injectedPaths, [
       '/portable/toolchain/bin',
-      '/portable/toolchain/npm-global/bin',
     ]);
   });
 

@@ -13,21 +13,19 @@ describe('dependency management service contract', () => {
     assert.match(source, /getDesktopActivationPolicy\(\)/);
     assert.match(source, /injectPortableToolchainEnv\(process\.env, this\.pathManager, \{/);
     assert.match(source, /activationPolicy,/);
-    assert.match(source, /const pathValue = devNodeBinRoot/);
-    assert.match(source, /\[devNodeBinRoot, envResult\.env\[pathKey\]\]\.filter\(Boolean\)\.join/);
     assert.match(source, /process\.env\.npm_node_execpath\?\.trim\(\) \|\| 'node'/);
     assert.match(source, /return 'npm'/);
     assert.match(source, /getPortableNodeExecutablePath\(\)/);
     assert.match(source, /getPortableNpmExecutablePath\(\)/);
     assert.match(source, /getPortableNodeRoot\(\)/);
-    assert.match(source, /devStatus\?\.available && devStatus\.nodeExecutablePath/);
-    assert.match(source, /path\.dirname\(path\.dirname\(devStatus\.nodeExecutablePath\)\)/);
-    assert.match(source, /path\.join\(devStatus\.runtimeRoot, 'npm-cache'\)/);
-    assert.match(source, /return this\.getNodeRuntimeRoot\(activationPolicy, devStatus\)/);
+    assert.doesNotMatch(source, /DevNodeRuntimeManager/);
+    assert.doesNotMatch(source, /devStatus/);
+    assert.match(source, /path\.join\(this\.pathManager\.getPortableToolchainRoot\(\), 'npm-cache'\)/);
+    assert.match(source, /return this\.getNodeRuntimeRoot\(activationPolicy\)/);
     assert.match(source, /getNpmGlobalBinRoot\(npmGlobalPrefix\)/);
     assert.match(source, /return this\.pathManager\.getPortableNodeRoot\(\)/);
-    assert.match(source, /npm_config_prefix: npmGlobalPrefix/);
-    assert.match(source, /NPM_CONFIG_PREFIX: npmGlobalPrefix/);
+    assert.match(source, /delete env\.npm_config_prefix/);
+    assert.match(source, /delete env\.NPM_CONFIG_PREFIX/);
     assert.match(source, /HAGICODE_PORTABLE_TOOLCHAIN_ROOT/);
     assert.match(source, /this\.spawnProcess\(command, args/);
   });
@@ -118,8 +116,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /NPM_DEFAULT_REGISTRY_URL = 'https:\/\/registry\.npmjs\.org\/'/);
     assert.match(source, /shouldRetryWithoutMirror/);
     assert.match(source, /const installPrefix = this\.getManagedPackageInstallPrefix\(definition, environment\)/);
-    assert.match(source, /return \['install', '-g', '--prefix', installPrefix, \.\.\.registryArgs, definition\.installSpec\]/);
-    assert.match(source, /return \['uninstall', '-g', '--prefix', installPrefix, definition\.packageName\]/);
+    assert.match(source, /return \['install', '-g', \.\.\.registryArgs, definition\.installSpec\]/);
+    assert.match(source, /return \['uninstall', '-g', definition\.packageName\]/);
   });
 
   it('reports mirror usage when enabled without changing uninstall registry behavior', async () => {

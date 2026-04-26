@@ -61,7 +61,6 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     installSpec: 'omniroute@3.6.9',
     category: 'developer-tool',
     installMode: 'hagiscript-sync',
-    required: true,
   },
   {
     id: 'claude-code',

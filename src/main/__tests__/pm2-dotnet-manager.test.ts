@@ -49,7 +49,7 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_ROOT=/runtime\nZ_LAST=tail\n');
       assert.match(ecosystemContent, new RegExp(`name: "${PM2_DOTNET_PROCESS_NAME}"`));
       assert.match(ecosystemContent, /script: "\/runtime\/dotnet"/);
-      assert.match(ecosystemContent, /args: \["\/apps\/Hagicode Desktop\/current\/PCode.Web.dll","--mode","desktop"\]/);
+      assert.match(ecosystemContent, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
       assert.match(ecosystemContent, /cwd: "\/apps\/Hagicode Desktop\/current"/);
       assert.match(ecosystemContent, /env_file:/);
     } finally {
@@ -63,7 +63,7 @@ describe('pm2-dotnet-manager', () => {
 
     assert.match(ecosystem, /module\.exports =/);
     assert.match(ecosystem, /interpreter: "none"/);
-    assert.match(ecosystem, /args: \["\/apps\/Hagicode Desktop\/current\/PCode.Web.dll","--mode","desktop"\]/);
+    assert.match(ecosystem, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
     assert.match(ecosystem, /HAGICODE_PM2_ENV_FILE/);
   });
 
@@ -73,12 +73,20 @@ describe('pm2-dotnet-manager', () => {
       '/cfg/ecosystem.config.js',
       '--update-env',
     ]);
+    assert.deepEqual(buildPm2CommandArgs('start', { ecosystemPath: '/cfg/ecosystem.config.js', processName: 'svc' }), [
+      'start',
+      '/cfg/ecosystem.config.js',
+      '--only',
+      'svc',
+      '--update-env',
+    ]);
     assert.deepEqual(buildPm2CommandArgs('restart', { ecosystemPath: '/cfg/ecosystem.config.js', processName: 'svc' }), [
       'reload',
       '/cfg/ecosystem.config.js',
       '--update-env',
     ]);
     assert.deepEqual(buildPm2CommandArgs('stop', { processName: 'svc' }), ['stop', 'svc']);
+    assert.deepEqual(buildPm2CommandArgs('delete', { processName: 'svc' }), ['delete', 'svc']);
     assert.deepEqual(buildPm2CommandArgs('status', { processName: 'svc' }), ['jlist']);
   });
 
@@ -152,7 +160,53 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(stopped.success, true);
       assert.deepEqual(calls.map(call => call.args[0]), ['startOrReload', 'jlist', 'stop']);
       assert.equal(calls.every(call => call.command === 'pm2'), true);
-      assert.equal(calls.every(call => call.cwd === tmpDir), true);
+      assert.equal(calls[0]?.cwd, '/apps/Hagicode Desktop/current');
+      assert.equal(calls[1]?.cwd, '/apps/Hagicode Desktop/current');
+      assert.equal(calls[2]?.cwd, tmpDir);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('deletes an existing PM2 process before starting the current version directory', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-fresh-start-'));
+    const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (command, args, options) => {
+        calls.push({ command, args, cwd: String(options.cwd ?? '') });
+        if (args[0] === 'jlist') {
+          jlistCount++;
+          return {
+            code: 0,
+            stdout: JSON.stringify([
+              {
+                name: PM2_DOTNET_PROCESS_NAME,
+                pid: jlistCount === 1 ? 4321 : 6789,
+                pm2_env: {
+                  status: 'online',
+                  restart_time: jlistCount === 1 ? 4 : 0,
+                  pm_uptime: Date.now() - 5000,
+                },
+              },
+            ]),
+            stderr: '',
+          };
+        }
+        return { code: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+
+    try {
+      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor });
+      const result = await manager.startFresh(createRuntimeConfig(tmpDir));
+
+      assert.equal(result.success, true);
+      if (result.success) {
+        assert.equal(result.status?.pid, 6789);
+      }
+      assert.deepEqual(calls.map(call => call.args[0]), ['jlist', 'delete', 'start', 'jlist']);
+      assert.equal(calls.every(call => call.cwd === '/apps/Hagicode Desktop/current'), true);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }

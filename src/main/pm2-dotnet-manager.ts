@@ -10,7 +10,7 @@ export const PM2_RUNTIME_DIR_NAME = 'pm2-dotnet-service';
 export const PM2_ENV_FILE_NAME = '.env';
 export const PM2_ECOSYSTEM_FILE_NAME = 'ecosystem.config.js';
 
-export type Pm2DotnetOperation = 'startOrReload' | 'restart' | 'stop' | 'status';
+export type Pm2DotnetOperation = 'startOrReload' | 'start' | 'restart' | 'stop' | 'delete' | 'status';
 
 export interface Pm2DotnetRuntimeConfig {
   processName?: string;
@@ -97,8 +97,12 @@ function quoteJs(value: string): string {
   return JSON.stringify(value);
 }
 
-function quoteJsArray(values: string[]): string {
-  return JSON.stringify(values);
+function quotePm2Argument(value: string): string {
+  return `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
+}
+
+function quotePm2Arguments(values: string[]): string {
+  return values.map(quotePm2Argument).join(' ');
 }
 
 function normalizeEnvValue(value: string | undefined): string {
@@ -124,7 +128,7 @@ export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string 
     '    {',
     `      name: ${quoteJs(processName)},`,
     `      script: ${quoteJs(config.dotnetPath)},`,
-    `      args: ${quoteJsArray(args)},`,
+    `      args: ${quoteJs(quotePm2Arguments(args))},`,
     `      cwd: ${quoteJs(config.serviceWorkingDirectory)},`,
     '      interpreter: "none",',
     '      exec_mode: "fork",',
@@ -231,6 +235,12 @@ export function buildPm2CommandArgs(operation: Pm2DotnetOperation, input: { ecos
     }
     return ['startOrReload', input.ecosystemPath, '--update-env'];
   }
+  if (operation === 'start') {
+    if (!input.ecosystemPath) {
+      throw new Error('ecosystemPath is required for start');
+    }
+    return ['start', input.ecosystemPath, '--only', input.processName, '--update-env'];
+  }
   if (operation === 'restart') {
     if (!input.ecosystemPath) {
       throw new Error('ecosystemPath is required for restart');
@@ -239,6 +249,9 @@ export function buildPm2CommandArgs(operation: Pm2DotnetOperation, input: { ecos
   }
   if (operation === 'stop') {
     return ['stop', input.processName];
+  }
+  if (operation === 'delete') {
+    return ['delete', input.processName];
   }
   return ['jlist'];
 }
@@ -290,6 +303,10 @@ export class Pm2DotnetManager {
     return files;
   }
 
+  private getLifecycleCwd(config: Pm2DotnetRuntimeConfig): string {
+    return config.serviceWorkingDirectory || config.runtimeFilesDirectory;
+  }
+
   private async runPm2(operation: Pm2DotnetOperation, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
     try {
       const result = await this.commandExecutor.run(this.pm2Command, args, buildSpawnOptions(cwd, env, this.pm2Command));
@@ -317,36 +334,81 @@ export class Pm2DotnetManager {
 
   async startOrReload(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
     const files = await this.writeRuntimeFiles(config);
+    const cwd = this.getLifecycleCwd(config);
     const result = await this.runPm2(
       'startOrReload',
       buildPm2CommandArgs('startOrReload', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
-      config.runtimeFilesDirectory,
+      cwd,
       config.env,
     );
     if (!result.success) {
       return result;
     }
-    return await this.status(config.runtimeFilesDirectory, config.env);
+    return await this.status(cwd, config.env);
+  }
+
+  async startFresh(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
+    const files = await this.writeRuntimeFiles(config);
+    const cwd = this.getLifecycleCwd(config);
+    const currentStatus = await this.status(cwd, config.env);
+
+    if (!currentStatus.success) {
+      return currentStatus;
+    }
+
+    if (currentStatus.status?.exists) {
+      log.info('[Pm2Dotnet] Existing PM2 dotnet service found; deleting before current-version start:', {
+        processName: this.processName,
+        pid: currentStatus.status.pid,
+        status: currentStatus.status.status,
+        cwd,
+      });
+
+      const deleteResult = await this.delete(cwd, config.env);
+      if (!deleteResult.success) {
+        return deleteResult;
+      }
+    }
+
+    const result = await this.runPm2(
+      'start',
+      buildPm2CommandArgs('start', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
+      cwd,
+      config.env,
+    );
+    if (!result.success) {
+      return result;
+    }
+    return await this.status(cwd, config.env);
   }
 
   async restart(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
     const files = await this.writeRuntimeFiles(config);
+    const cwd = this.getLifecycleCwd(config);
     const result = await this.runPm2(
       'restart',
       buildPm2CommandArgs('restart', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
-      config.runtimeFilesDirectory,
+      cwd,
       config.env,
     );
     if (!result.success) {
       return result;
     }
-    return await this.status(config.runtimeFilesDirectory, config.env);
+    return await this.status(cwd, config.env);
   }
 
   async stop(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
     const result = await this.runPm2('stop', buildPm2CommandArgs('stop', { processName: this.processName }), cwd, env);
     if (!result.success && result.errorCode === 'pm2-command-failed' && /not found|doesn't exist|process or namespace/i.test(`${result.stderr}\n${result.stdout}`)) {
       return { success: true, operation: 'stop', stdout: result.stdout, stderr: result.stderr };
+    }
+    return result;
+  }
+
+  async delete(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
+    const result = await this.runPm2('delete', buildPm2CommandArgs('delete', { processName: this.processName }), cwd, env);
+    if (!result.success && result.errorCode === 'pm2-command-failed' && /not found|doesn't exist|process or namespace/i.test(`${result.stderr}\n${result.stdout}`)) {
+      return { success: true, operation: 'delete', stdout: result.stdout, stderr: result.stderr };
     }
     return result;
   }
