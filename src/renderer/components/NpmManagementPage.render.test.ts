@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
 const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
 const pagePath = path.resolve(process.cwd(), 'src/renderer/components/NpmManagementPage.tsx');
+const modelPath = path.resolve(process.cwd(), 'src/renderer/components/npm-management/npmManagementPageModel.ts');
+const packageGroupsPath = path.resolve(process.cwd(), 'src/renderer/components/npm-management/NpmPackageGroups.tsx');
 const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/common.json');
 const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/common.json');
 
@@ -23,65 +25,106 @@ describe('npm management renderer wiring', () => {
   });
 
   it('keeps page behavior for loading, unavailable states, package rows, progress, batch logs, and inline errors', async () => {
-    const source = await fs.readFile(pagePath, 'utf8');
+    const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
 
-    assert.match(source, /getNpmManagementBridge\(\)\.getSnapshot\(\)/);
-    assert.match(source, /environment\.available/);
-    assert.match(source, /npmManagement\.environment\.rationaleTitle/);
-    assert.match(source, /npmManagement\.environment\.rationale\.fixedRuntime/);
-    assert.match(source, /npmManagement\.environment\.rationale\.isolatedConfig/);
-    assert.match(source, /npmManagement\.environment\.rationale\.nonIntrusive/);
-    assert.match(source, /managedPackages\.map/);
-    assert.match(source, /managedPackageRowClassName/);
-    assert.match(source, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
-    assert.match(source, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
-    assert.match(source, /batchSyncState/);
-    assert.match(source, /BatchSyncLogPanel/);
-    assert.match(source, /usesBatchSyncPanel/);
-    assert.match(source, /operationError\[item\.id\]/);
+    assert.match(pageSource, /getNpmManagementBridge\(\)\.getSnapshot\(\)/);
+    assert.match(pageSource, /environment\.available/);
+    assert.match(pageSource, /npmManagement\.environment\.rationaleTitle/);
+    assert.match(pageSource, /npmManagement\.environment\.rationale\.fixedRuntime/);
+    assert.match(pageSource, /npmManagement\.environment\.rationale\.isolatedConfig/);
+    assert.match(pageSource, /npmManagement\.environment\.rationale\.nonIntrusive/);
+    assert.match(modelSource, /managedPackageRowClassName/);
+    assert.match(packageGroupsSource, /packages\.map/);
+    assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
+    assert.match(packageGroupsSource, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
+    assert.match(pageSource, /batchSyncState/);
+    assert.match(packageGroupsSource, /BatchSyncLogPanel/);
+    assert.match(packageGroupsSource, /usesBatchSyncPanel/);
+    assert.match(packageGroupsSource, /operationErrorByPackageId\[item\.id\]/);
+  });
+
+  it('keeps extracted npm management helpers and package group components wired into the page', async () => {
+    const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /from '\.\/npm-management\/npmManagementPageModel'/);
+    assert.match(pageSource, /from '\.\/npm-management\/NpmPackageGroups'/);
+    assert.match(pageSource, /appendBatchSyncLog\(current, event\)/);
+    assert.match(pageSource, /getSelectablePackageIds\(managedPackages/);
+    assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, selectablePackageIds\)/);
+    assert.match(pageSource, /getSelectAllChecked\(selectedPackageIds, selectablePackageIds\)/);
+    assert.match(pageSource, /<NpmPackageBootstrapCard/);
+    assert.match(pageSource, /<NpmPackageTable/);
+    assert.match(pageSource, /<BatchSyncLogPanel batchSyncState=\{batchSyncState\}/);
+
+    assert.match(modelSource, /export function isOperationActive/);
+    assert.match(modelSource, /export function appendBatchSyncLog/);
+    assert.match(modelSource, /export function getSelectablePackageIds/);
+    assert.match(modelSource, /export function updateSelectedPackageIds/);
+    assert.match(modelSource, /export function managedPackageRowClassName/);
+
+    assert.match(packageGroupsSource, /export function NpmPackageBootstrapCard/);
+    assert.match(packageGroupsSource, /export function NpmPackageTable/);
+    assert.match(packageGroupsSource, /export function BatchSyncLogPanel/);
+    assert.match(packageGroupsSource, /npmManagement\.packageTable\.title/);
+    assert.match(packageGroupsSource, /npmManagement\.selection\.selectPackage/);
+    assert.match(packageGroupsSource, /npmManagement\.batchLog\.title/);
   });
 
   it('renders the hagiscript bootstrap card and gated selectable package table', async () => {
-    const source = await fs.readFile(pagePath, 'utf8');
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
 
-    assert.match(source, /item\.id === 'hagiscript'/);
-    assert.match(source, /npmManagement\.bootstrap\.title/);
-    assert.match(source, /hagiscriptGateOpen/);
-    assert.match(source, /npmManagement\.dependencyGate\.title/);
-    assert.match(source, /npmManagement\.packageTable\.title/);
-    assert.match(source, /Checkbox/);
-    assert.match(source, /selectedPackageIds/);
-    assert.match(source, /toggleSelectAll/);
-    assert.match(source, /shouldPromoteHagiscriptCard/);
-    assert.match(source, /getNpmManagementBridge\(\)\.syncPackages\(\{ packageIds \}\)/);
-    assert.match(source, /npmManagement\.batchLog\.title/);
-    assert.match(source, /npmManagement\.batchLog\.status\./);
-    assert.match(source, /npmManagement\.categories\.\$\{item\.definition\.category\}/);
+    assert.match(pageSource, /item\.id === 'hagiscript'/);
+    assert.match(packageGroupsSource, /npmManagement\.bootstrap\.title/);
+    assert.match(pageSource, /hagiscriptGateOpen/);
+    assert.match(packageGroupsSource, /dependencyGateMessage/);
+    assert.match(packageGroupsSource, /npmManagement\.packageTable\.title/);
+    assert.match(packageGroupsSource, /Checkbox/);
+    assert.match(pageSource, /selectedPackageIds/);
+    assert.match(pageSource, /toggleSelectAll/);
+    assert.match(pageSource, /shouldPromoteHagiscriptCard/);
+    assert.match(pageSource, /getNpmManagementBridge\(\)\.syncPackages\(\{ packageIds \}\)/);
+    assert.match(packageGroupsSource, /npmManagement\.batchLog\.title/);
+    assert.match(packageGroupsSource, /npmManagement\.batchLog\.status\./);
+    assert.match(packageGroupsSource, /npmManagement\.categories\.\$\{item\.definition\.category\}/);
   });
 
   it('places the package table and batch log section before environment details while conditionally promoting the hagiscript card', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
-    assert.match(source, /npmManagement\.packageTable\.title[\s\S]*npmManagement\.environment\.title/);
+    assert.match(source, /<NpmPackageTable[\s\S]*npmManagement\.environment\.title/);
     assert.match(source, /BatchSyncLogPanel batchSyncState=\{batchSyncState\}[\s\S]*npmManagement\.environment\.title/);
     assert.match(source, /\{shouldPromoteHagiscriptCard && hagiscriptCard\}/);
     assert.match(source, /\{!shouldPromoteHagiscriptCard && hagiscriptCard\}/);
   });
 
   it('uses row background colors instead of a dedicated status column for managed packages', async () => {
-    const source = await fs.readFile(pagePath, 'utf8');
+    const [modelSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
 
-    assert.match(source, /status === 'installed'\s*\?\s*'bg-emerald-500\/10 hover:bg-emerald-500\/15'/);
-    assert.match(source, /:\s*'bg-red-500\/10 hover:bg-red-500\/15'/);
-    assert.match(source, /className=\{cn\(managedPackageRowClassName\(item\.status\)/);
-    assert.doesNotMatch(source, /<TableHead>\{t\('npmManagement\.packageTable\.status'\)\}<\/TableHead>/);
+    assert.match(modelSource, /status === 'installed'\s*\?\s*'bg-emerald-500\/10 hover:bg-emerald-500\/15'/);
+    assert.match(modelSource, /:\s*'bg-red-500\/10 hover:bg-red-500\/15'/);
+    assert.match(packageGroupsSource, /className=\{cn\(managedPackageRowClassName\(item\.status\)/);
+    assert.doesNotMatch(packageGroupsSource, /<TableHead>\{t\('npmManagement\.packageTable\.status'\)\}<\/TableHead>/);
   });
 
   it('only renders the uninstall action when a managed package is actually removable', async () => {
-    const source = await fs.readFile(pagePath, 'utf8');
+    const source = await fs.readFile(packageGroupsPath, 'utf8');
 
     assert.match(source, /\{canUninstall && \(/);
-    assert.match(source, /runOperation\(item\.id, 'uninstall'\)/);
+    assert.match(source, /onRunOperation\(item\.id, 'uninstall'\)/);
     assert.doesNotMatch(source, /disabled=\{rowDisabled \|\| item\.status !== 'installed' \|\| item\.definition\.required === true\}/);
   });
 
