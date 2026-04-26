@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DOCS_URL="${HAGICODE_STEAM_SANDBOX_DOCS_URL:-https://docs.hagicode.com}"
+DOCS_URL="${HAGICODE_STEAM_SANDBOX_DOCS_URL:-https://docs.hagicode.com/en/faq/steam-linux-startup/}"
 
 if command -v xdg-open >/dev/null 2>&1; then
   exec xdg-open "$DOCS_URL"
