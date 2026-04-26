@@ -136,6 +136,7 @@ describe('npm management service contract', () => {
     assert.match(source, /id: 'hagiscript'/);
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
+    assert.match(source, /id: 'pm2'/);
     assert.match(source, /id: 'omniroute'/);
     assert.match(source, /id: 'claude-code'/);
     assert.match(source, /id: 'codex'/);
@@ -152,6 +153,9 @@ describe('npm management service contract', () => {
     assert.match(source, /installSpec: '@hagicode\/hagiscript'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
+    assert.match(source, /packageName: 'pm2'/);
+    assert.match(source, /binName: 'pm2'/);
+    assert.match(source, /installSpec: 'pm2'/);
     assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
     assert.match(source, /installSpec: '@anthropic-ai\/claude-code'/);
     assert.match(source, /installSpec: '@openai\/codex'/);
@@ -168,5 +172,14 @@ describe('npm management service contract', () => {
 
     assert.match(source, /definition\?\.required/);
     assert.match(source, /is a required managed tool and cannot be removed/);
+  });
+
+  it('exposes managed command context for PM2 lifecycle integrations', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /export interface ManagedNpmCommandContext/);
+    assert.match(source, /getManagedCommandContext\(packageId: ManagedNpmPackageId\)/);
+    assert.match(source, /detectPackageStatus\(definition, environment\)/);
+    assert.match(source, /executablePath: packageStatus\.executablePath/);
   });
 });

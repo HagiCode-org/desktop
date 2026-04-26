@@ -13,6 +13,9 @@ export interface VersionAutoUpdateSettings {
 
 export interface AppConfig {
   server: ServerConfig;
+  omniroute?: {
+    port?: number;
+  };
   versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;

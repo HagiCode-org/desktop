@@ -4,6 +4,7 @@ export type ManagedNpmPackageId =
   | 'hagiscript'
   | 'openspec'
   | 'skills'
+  | 'pm2'
   | 'omniroute'
   | 'claude-code'
   | 'codex'
@@ -77,6 +78,44 @@ export interface NpmManagementSnapshot {
   mirrorSettings: NpmMirrorSettings;
   activeOperation: NpmManagementOperationProgress | null;
   generatedAt: string;
+}
+
+export type NpmReadinessBlockingReasonCode =
+  | 'environment-unavailable'
+  | 'required-packages-missing'
+  | 'agent-cli-not-selected'
+  | 'agent-cli-not-installed';
+
+export interface NpmReadinessPackageSummary {
+  id: ManagedNpmPackageId;
+  definition: ManagedNpmPackageDefinition;
+  status: ManagedNpmPackageStatus;
+  installedVersion: string | null;
+  installSpec: string;
+  packageName: string;
+  message?: string;
+}
+
+export interface NpmReadinessBlockingReason {
+  code: NpmReadinessBlockingReasonCode;
+  message: string;
+  packageIds?: ManagedNpmPackageId[];
+}
+
+export interface NpmReadinessSummary {
+  environmentAvailable: boolean;
+  requiredReady: boolean;
+  agentCliReady: boolean;
+  ready: boolean;
+  requiredPackages: NpmReadinessPackageSummary[];
+  optionalPackages: NpmReadinessPackageSummary[];
+  agentCliPackages: NpmReadinessPackageSummary[];
+  missingRequiredPackageIds: ManagedNpmPackageId[];
+  missingSelectedAgentCliPackageIds: ManagedNpmPackageId[];
+  selectedAgentCliPackageIds: ManagedNpmPackageId[];
+  installedSelectedAgentCliPackageIds: ManagedNpmPackageId[];
+  ignoredSelectedAgentCliPackageIds: string[];
+  blockingReasons: NpmReadinessBlockingReason[];
 }
 
 export interface NpmManagementOperationProgress {

@@ -50,6 +50,13 @@ interface CommandResult {
   stderr: string;
 }
 
+export interface ManagedNpmCommandContext {
+  environment: NpmManagementEnvironmentStatus;
+  commandEnv: NodeJS.ProcessEnv;
+  executablePath: string | null;
+  packageStatus: ManagedNpmPackageStatusSnapshot | null;
+}
+
 interface ManagedNpmPackagePaths {
   packageRoot: string;
   executablePath: string;
@@ -211,6 +218,31 @@ export class NpmManagementService {
     }
 
     return this.runPackageOperation(packageId, 'uninstall');
+  }
+
+  async getManagedCommandContext(packageId: ManagedNpmPackageId): Promise<ManagedNpmCommandContext> {
+    const activationPolicy = await this.getDesktopActivationPolicy();
+    const devStatus = activationPolicy.enabled ? undefined : await this.devNodeRuntimeManager.verify();
+    const environment = await this.detectEnvironment(activationPolicy);
+    const commandEnv = this.buildCommandEnv(activationPolicy, devStatus);
+    const definition = findManagedNpmPackage(packageId);
+
+    if (!definition) {
+      return {
+        environment,
+        commandEnv,
+        executablePath: null,
+        packageStatus: null,
+      };
+    }
+
+    const packageStatus = await this.detectPackageStatus(definition, environment);
+    return {
+      environment,
+      commandEnv,
+      executablePath: packageStatus.executablePath,
+      packageStatus,
+    };
   }
 
   private resolvePackageDefinitions(
