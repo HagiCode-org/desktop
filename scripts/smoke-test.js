@@ -19,13 +19,12 @@ import {
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
 import {
-  TOOLCHAIN_MANIFEST_FILE,
   detectNodeRuntimePlatform,
-  getNodeExecutableRelativePath,
-  getNpmExecutableRelativePath,
-  getNpmExecutableRelativePathCandidates,
-  readPinnedNodeRuntimeConfig,
 } from './embedded-node-runtime-config.js';
+import {
+  validateToolchainManifest,
+  validateToolchainPayload,
+} from './bundled-toolchain-contract.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -39,7 +38,6 @@ const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
 const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
 const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
@@ -255,117 +253,6 @@ function validatePinnedRuntimeMetadata(runtimeRoot) {
   }
   if (versions.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
     errors.push(`staged host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${versions.hostFxrVersion || 'missing'}`);
-  }
-
-  return errors;
-}
-
-function readToolchainManifest(toolchainRoot) {
-  const manifestPath = path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE);
-  if (!fs.existsSync(manifestPath)) {
-    return null;
-  }
-
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-}
-
-function validateToolchainPayload(toolchainRoot) {
-  const missing = [];
-  const manifest = readToolchainManifest(toolchainRoot);
-  const requiredCommands = [
-    manifest?.commands?.node || getNodeExecutableRelativePath(nodeRuntimePlatform),
-    manifest?.commands?.npm || getNpmExecutableRelativePath(nodeRuntimePlatform),
-    TOOLCHAIN_MANIFEST_FILE,
-  ];
-
-  for (const relativePath of requiredCommands) {
-    const absolutePath = path.join(toolchainRoot, relativePath);
-    if (!fs.existsSync(absolutePath)) {
-      missing.push(relativePath);
-    } else if (process.platform !== 'win32' && (relativePath.endsWith('/node') || relativePath.endsWith('/npm')) && !isExecutable(absolutePath)) {
-      missing.push(`${relativePath} (not executable)`);
-    }
-  }
-
-  const candidateNpmPaths = getNpmExecutableRelativePathCandidates(nodeRuntimePlatform)
-    .map((relativePath) => path.join(toolchainRoot, relativePath));
-  if (!candidateNpmPaths.some((candidatePath) => fs.existsSync(candidatePath))) {
-    missing.push(`${getNpmExecutableRelativePath(nodeRuntimePlatform)} or equivalent npm entrypoint`);
-  }
-
-  const unusedNodeEntrypoints = nodeRuntimePlatform.startsWith('win-')
-    ? [path.join('node', 'corepack.cmd'), path.join('node', 'npx.cmd')]
-    : [path.join('node', 'bin', 'corepack'), path.join('node', 'bin', 'npx')];
-  for (const relativePath of unusedNodeEntrypoints) {
-    if (fs.existsSync(path.join(toolchainRoot, relativePath))) {
-      missing.push(`unused Node entrypoint must be pruned before packaging: ${relativePath}`);
-    }
-  }
-
-  return missing;
-}
-
-function validateToolchainManifest(toolchainRoot) {
-  const manifest = readToolchainManifest(toolchainRoot);
-  if (!manifest) {
-    return [`${TOOLCHAIN_MANIFEST_FILE} is missing`];
-  }
-
-  const errors = [];
-  if (manifest.owner !== 'hagicode-desktop') {
-    errors.push(`owner expected hagicode-desktop but found ${manifest.owner || 'missing'}`);
-  }
-  if (manifest.source !== 'bundled-desktop') {
-    errors.push(`source expected bundled-desktop but found ${manifest.source || 'missing'}`);
-  }
-  if (manifest.platform !== nodeRuntimePlatform) {
-    errors.push(`platform expected ${nodeRuntimePlatform} but found ${manifest.platform || 'missing'}`);
-  }
-  if (manifest.node?.version !== nodeRuntimeConfig.releaseVersion) {
-    errors.push(`Node version expected ${nodeRuntimeConfig.releaseVersion} but found ${manifest.node?.version || 'missing'}`);
-  }
-  if (manifest.defaultEnabledByConsumer?.desktop !== nodeRuntimeConfig.defaultEnabledByConsumer?.desktop) {
-    errors.push(
-      `defaultEnabledByConsumer.desktop expected ${String(nodeRuntimeConfig.defaultEnabledByConsumer?.desktop)} but found ${String(manifest.defaultEnabledByConsumer?.desktop)}`,
-    );
-  }
-  if (manifest.defaultEnabledByConsumer?.['steam-packer'] !== nodeRuntimeConfig.defaultEnabledByConsumer?.['steam-packer']) {
-    errors.push(
-      `defaultEnabledByConsumer.steam-packer expected ${String(nodeRuntimeConfig.defaultEnabledByConsumer?.['steam-packer'])} but found ${String(manifest.defaultEnabledByConsumer?.['steam-packer'])}`,
-    );
-  }
-
-  for (const commandName of ['node', 'npm']) {
-    const relativePath = manifest.commands?.[commandName];
-    if (!relativePath || !fs.existsSync(path.join(toolchainRoot, relativePath))) {
-      errors.push(`manifest command ${commandName} is missing or points to a missing entry`);
-    }
-  }
-
-  for (const managedCommandName of ['openspec', 'skills', 'omniroute']) {
-    if (manifest.commands?.[managedCommandName]) {
-      errors.push(`manifest command ${managedCommandName} must not be declared before manual installation`);
-    }
-  }
-
-  if (manifest.node?.npmExecutableRelativePath !== manifest.commands?.npm) {
-    errors.push('manifest node.npmExecutableRelativePath must match commands.npm');
-  }
-
-  for (const [name, packageConfig] of Object.entries(nodeRuntimeConfig.corePackages || {})) {
-    const packageRecord = manifest.packages?.[name];
-    if (packageRecord?.version !== packageConfig.version) {
-      errors.push(`${name} package version expected ${packageConfig.version} but found ${manifest.packages?.[name]?.version || 'missing'}`);
-    }
-    if (packageRecord?.installMode !== (packageConfig.installMode || 'manual')) {
-      errors.push(`${name} package installMode expected ${packageConfig.installMode || 'manual'}`);
-    }
-    if (packageRecord?.installState !== (packageConfig.installState || 'pending')) {
-      errors.push(`${name} package installState expected ${packageConfig.installState || 'pending'}`);
-    }
-    if (packageRecord?.installSpec !== (packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`)) {
-      errors.push(`${name} package installSpec expected ${packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`}`);
-    }
   }
 
   return errors;
@@ -595,7 +482,7 @@ test('staged bundled Node toolchain payload is complete', () => {
     return;
   }
 
-  const missingComponents = validateToolchainPayload(stagedToolchainRoot);
+  const missingComponents = validateToolchainPayload(stagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(
     missingComponents.length === 0,
     missingComponents.length === 0
@@ -603,7 +490,7 @@ test('staged bundled Node toolchain payload is complete', () => {
       : `staged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
   );
 
-  const manifestErrors = validateToolchainManifest(stagedToolchainRoot);
+  const manifestErrors = validateToolchainManifest(stagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(
     manifestErrors.length === 0,
     manifestErrors.length === 0
@@ -636,7 +523,7 @@ test('packaged bundled Node toolchain payload is complete', () => {
   assert(!packagedToolchainRoot.includes('app.asar'), 'packaged bundled Node toolchain directory resolves outside app.asar');
   assert(packagedToolchainRoot.includes(path.join('extra', 'portable-fixed', 'toolchain')), 'packaged bundled Node toolchain uses canonical extra/portable-fixed/toolchain path');
 
-  const missingComponents = validateToolchainPayload(packagedToolchainRoot);
+  const missingComponents = validateToolchainPayload(packagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(
     missingComponents.length === 0,
     missingComponents.length === 0
@@ -644,7 +531,7 @@ test('packaged bundled Node toolchain payload is complete', () => {
       : `packaged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
   );
 
-  const manifestErrors = validateToolchainManifest(packagedToolchainRoot);
+  const manifestErrors = validateToolchainManifest(packagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(
     manifestErrors.length === 0,
     manifestErrors.length === 0
