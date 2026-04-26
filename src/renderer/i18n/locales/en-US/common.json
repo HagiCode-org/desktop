@@ -411,6 +411,19 @@
       "description": "The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.",
       "startWizard": "Launch Wizard"
     },
+    "activeVersion": {
+      "actions": {
+        "manage": "Manage Versions"
+      },
+      "labels": {
+        "version": "Version",
+        "installedAt": "Installed at",
+        "status": "Status"
+      },
+      "states": {
+        "ready": "Ready"
+      }
+    },
     "updateReminder": {
       "title": "Update Available",
       "labels": {

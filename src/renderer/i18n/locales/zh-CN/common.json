@@ -411,6 +411,19 @@
       "description": "开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。",
       "startWizard": "启动向导"
     },
+    "activeVersion": {
+      "actions": {
+        "manage": "管理版本"
+      },
+      "labels": {
+        "version": "版本",
+        "installedAt": "安装于",
+        "status": "状态"
+      },
+      "states": {
+        "ready": "就绪"
+      }
+    },
     "updateReminder": {
       "title": "检测到可用更新",
       "labels": {

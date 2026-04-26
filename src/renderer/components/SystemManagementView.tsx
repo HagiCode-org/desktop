@@ -88,7 +88,7 @@ const toLogTargetStateMap = (targets: LogDirectoryTargetStatus[]): LogTargetStat
 export default function SystemManagementView({
   distributionMode = 'normal',
 }: SystemManagementViewProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { navigateTo } = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
@@ -104,6 +104,7 @@ export default function SystemManagementView({
   const homepageTourSessionRef = useRef<HomepageTourSession | null>(null);
   const homepageTourFrameRef = useRef<number | null>(null);
   const homepageTourTimeoutRef = useRef<number | null>(null);
+  const currentLocale = i18n.resolvedLanguage ?? i18n.language;
 
   const clearPendingHomepageTourStartup = useCallback(() => {
     if (homepageTourFrameRef.current !== null) {
@@ -691,7 +692,7 @@ export default function SystemManagementView({
                   whileTap={{ scale: 0.95 }}
                   className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
                 >
-                  管理版本
+                  {t('system.activeVersion.actions.manage')}
                   <motion.span
                     animate={{ x: [0, 4, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
@@ -703,11 +704,15 @@ export default function SystemManagementView({
 
               <div className="space-y-3">
                 {[
-                  { label: '版本', value: activeVersion.packageFilename },
+                  { label: t('system.activeVersion.labels.version'), value: activeVersion.packageFilename },
                   { label: t('common.platform'), value: activeVersion.platform },
                   {
-                    label: '安装于',
-                    value: new Date(activeVersion.installedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
+                    label: t('system.activeVersion.labels.installedAt'),
+                    value: new Date(activeVersion.installedAt).toLocaleDateString(currentLocale, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    }),
                   },
                 ].map((item, index) => (
                   <motion.div
@@ -730,7 +735,7 @@ export default function SystemManagementView({
                   whileHover={{ x: 4 }}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-default"
                 >
-                  <span className="text-muted-foreground">状态</span>
+                  <span className="text-muted-foreground">{t('system.activeVersion.labels.status')}</span>
                   <div className="flex items-center gap-2">
                     <motion.div
                       initial={{ scale: 0 }}
@@ -739,7 +744,7 @@ export default function SystemManagementView({
                     >
                       <CheckCircle className="w-5 h-5 text-primary" />
                     </motion.div>
-                    <span className="text-primary">✅ 就绪</span>
+                    <span className="text-primary">✅ {t('system.activeVersion.states.ready')}</span>
                   </div>
                 </motion.div>
               </div>
