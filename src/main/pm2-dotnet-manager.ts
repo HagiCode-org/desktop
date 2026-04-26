@@ -97,6 +97,10 @@ function quoteJs(value: string): string {
   return JSON.stringify(value);
 }
 
+function quoteJsArray(values: string[]): string {
+  return JSON.stringify(values);
+}
+
 function normalizeEnvValue(value: string | undefined): string {
   return value ?? '';
 }
@@ -120,7 +124,7 @@ export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string 
     '    {',
     `      name: ${quoteJs(processName)},`,
     `      script: ${quoteJs(config.dotnetPath)},`,
-    `      args: ${quoteJs(args.join(' '))},`,
+    `      args: ${quoteJsArray(args)},`,
     `      cwd: ${quoteJs(config.serviceWorkingDirectory)},`,
     '      interpreter: "none",',
     '      exec_mode: "fork",',
