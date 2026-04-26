@@ -21,7 +21,8 @@ import {
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const runtimeConfig = readPinnedNodeRuntimeConfig();
 const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeConfig);
-const resourcesRoot = path.join(process.cwd(), 'resources', 'portable-fixed');
+const resourcesRoot = path.join(process.cwd(), 'resources');
+const portableFixedRoot = path.join(resourcesRoot, 'portable-fixed');
 const toolchainRoot = path.join(resourcesRoot, 'toolchain');
 const nodeRoot = path.join(toolchainRoot, 'node');
 const binRoot = path.join(toolchainRoot, 'bin');
@@ -398,7 +399,7 @@ function writeToolchainManifest({ archivePath, sourceHost, packages, commands, a
     platform: runtimePlatform,
     defaultEnabledByConsumer: { ...(runtimeConfig.defaultEnabledByConsumer || {}) },
     stagedAt: new Date().toISOString(),
-    portableFixedRoot: resourcesRoot,
+    portableFixedRoot,
     toolchainRoot,
     node: {
       version: runtimeConfig.releaseVersion,

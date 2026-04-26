@@ -20,8 +20,9 @@ extraResources:
     to: extra/portable-fixed/current
     filter:
       - '**/*'
-  - from: resources/portable-fixed/toolchain
-    to: extra/portable-fixed/toolchain
+      - '!**/.gitkeep'
+  - from: resources/toolchain
+    to: extra/toolchain
     filter:
       - '**/*'
 publish:
@@ -55,7 +56,7 @@ mac:
   icon: resources/icon.icns
   category: public.app-category.utilities
   signIgnore:
-    - Contents/Resources/extra/portable-fixed/toolchain/.*
+    - Contents/Resources/extra/toolchain/.*
 linux:
   extraFiles:
     - from: resources/linux/hagicode-steam-wrapper.sh

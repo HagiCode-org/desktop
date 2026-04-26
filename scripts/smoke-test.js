@@ -38,7 +38,7 @@ const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
 const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
+const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'toolchain');
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
@@ -94,30 +94,30 @@ function resolvePackagedToolchainRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'portable-fixed', 'toolchain')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'toolchain')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'portable-fixed', 'toolchain')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'toolchain')];
   }
   if (process.platform === 'darwin') {
     if (nodeRuntimePlatform === 'osx-x64') {
       return [
-        path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
-        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
       ];
     }
     if (nodeRuntimePlatform === 'osx-arm64') {
       return [
-        path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
-        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
       ];
     }
 
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
     ];
   }
   return [];
@@ -407,17 +407,17 @@ test('electron-builder configuration is valid', async () => {
   const linuxExtraFiles = Array.isArray(buildConfig?.linux?.extraFiles) ? buildConfig.linux.extraFiles : [];
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
-  const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/portable-fixed/toolchain');
+  const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain');
   const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
   const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
   const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
-  const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/portable-fixed/toolchain';
+  const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/toolchain';
   const macSignIgnore = Array.isArray(buildConfig?.mac?.signIgnore)
     ? buildConfig.mac.signIgnore
     : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
-  const toolchainSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/portable-fixed/toolchain'));
+  const toolchainSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/toolchain'));
   const toolchainStashedDuringMacSigning = buildConfig?.afterPack === macToolchainSigningHook && buildConfig?.afterSign === macToolchainSigningHook;
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
@@ -438,7 +438,7 @@ test('electron-builder configuration is valid', async () => {
   assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
-  assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/portable-fixed/toolchain');
+  assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/toolchain');
   assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
   assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
   assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
@@ -521,7 +521,7 @@ test('packaged bundled Node toolchain payload is complete', () => {
   }
 
   assert(!packagedToolchainRoot.includes('app.asar'), 'packaged bundled Node toolchain directory resolves outside app.asar');
-  assert(packagedToolchainRoot.includes(path.join('extra', 'portable-fixed', 'toolchain')), 'packaged bundled Node toolchain uses canonical extra/portable-fixed/toolchain path');
+  assert(packagedToolchainRoot.includes(path.join('extra', 'toolchain')), 'packaged bundled Node toolchain uses canonical extra/toolchain path');
 
   const missingComponents = validateToolchainPayload(packagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(

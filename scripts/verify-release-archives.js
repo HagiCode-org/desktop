@@ -102,7 +102,7 @@ function findToolchainRoots(rootPath) {
       const absolutePath = path.join(currentPath, entry.name);
       const relativePath = path.relative(rootPath, absolutePath);
       const parts = suffixSegments(relativePath);
-      if (parts.length >= 2 && parts.at(-2) === 'portable-fixed' && parts.at(-1) === 'toolchain') {
+      if (parts.length >= 2 && parts.at(-2) === 'extra' && parts.at(-1) === 'toolchain') {
         matches.push(absolutePath);
         continue;
       }

@@ -3,7 +3,7 @@ const path = require('node:path');
 
 function resolvePaths(context) {
   const appPath = path.join(context.appOutDir, 'Hagicode Desktop.app');
-  const toolchainPath = path.join(appPath, 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain');
+  const toolchainPath = path.join(appPath, 'Contents', 'Resources', 'extra', 'toolchain');
   const stashRoot = path.join(context.outDir, '.hagicode-signing-stash', path.basename(context.appOutDir));
   const stashPath = path.join(stashRoot, 'toolchain');
   return { toolchainPath, stashRoot, stashPath };
