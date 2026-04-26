@@ -47,7 +47,7 @@ The development runtime command installs the same governed Node version used by 
 - `.runtime/node-dev/npm-cache/` stores the source-mode npm cache.
 - `.runtime/node-dev/runtime-metadata.json` records `nodeVersion`, `platform`, `arch`, `installRoot`, `nodeExecutablePath`, `npmGlobalRoot`, `npmCacheRoot`, `installedAt`, archive details, and Node/npm/corepack probe results.
 
-When the app runs from source, dependency and npm management validate this metadata, probe the referenced Node/npm executables, use `.runtime/node-dev/npm-global/` as the npm global prefix, verify the governed Node version, and report a valid runtime as `bundled-dev`. Packaged builds continue to use packaged runtime paths first; `.runtime/node-dev/` is ignored outside source mode.
+When the app runs from source, dependency management validate this metadata, probe the referenced Node/npm executables, use `.runtime/node-dev/npm-global/` as the npm global prefix, verify the governed Node version, and report a valid runtime as `bundled-dev`. Packaged builds continue to use packaged runtime paths first; `.runtime/node-dev/` is ignored outside source mode.
 
 To clean the development runtime, delete `.runtime/node-dev/` and rerun `npm run install:dev-node-runtime` when needed.
 
