@@ -31,7 +31,7 @@ describe('onboarding wizard manual handoff integration', () => {
     const enOnboarding = JSON.parse(enRaw);
 
     assert.equal(welcomeSource.includes("welcome.steps.launch"), false);
-    assert.match(welcomeSource, /welcome\.steps\.npmPreparation/);
+    assert.match(welcomeSource, /welcome\.steps\.dependencyPreparation/);
     assert.match(zhOnboarding.welcome.description, /五个步骤/);
     assert.match(enOnboarding.welcome.description, /five steps/i);
     assert.match(String(zhOnboarding.download.complete.message), /返回首页/);

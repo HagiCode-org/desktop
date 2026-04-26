@@ -52,14 +52,14 @@ describe('onboardingSlice flow', () => {
     assert.equal(OnboardingStep.Welcome, 0);
     assert.equal(OnboardingStep.LegalConsent, 1);
     assert.equal(OnboardingStep.SharingAcceleration, 2);
-    assert.equal(OnboardingStep.NpmPreparation, 3);
+    assert.equal(OnboardingStep.DependencyPreparation, 3);
     assert.equal(OnboardingStep.Download, 4);
     assert.equal('Launch' in OnboardingStep, false);
     assert.deepEqual(getOnboardingSequence('full'), [
       OnboardingStep.Welcome,
       OnboardingStep.LegalConsent,
       OnboardingStep.SharingAcceleration,
-      OnboardingStep.NpmPreparation,
+      OnboardingStep.DependencyPreparation,
       OnboardingStep.Download,
     ]);
   });
@@ -243,16 +243,16 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
     assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
 
-    const blockedAtNpmPreparation = reducer(state, goToNextStep());
-    assert.equal(blockedAtNpmPreparation.currentStep, OnboardingStep.NpmPreparation);
+    const blockedAtDependencyPreparation = reducer(state, goToNextStep());
+    assert.equal(blockedAtDependencyPreparation.currentStep, OnboardingStep.DependencyPreparation);
 
     state = reducer(
       {
         ...state,
-        isNpmPreparationComplete: true,
+        isDependencyPreparationComplete: true,
       },
       goToNextStep(),
     );
@@ -316,21 +316,21 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
 
     state = reducer(
       {
         ...state,
-        isNpmPreparationComplete: true,
+        isDependencyPreparationComplete: true,
       },
       goToNextStep(),
     );
     assert.equal(state.currentStep, OnboardingStep.Download);
 
-    const backToNpmPreparation = reducer(state, goToPreviousStep());
-    assert.equal(backToNpmPreparation.currentStep, OnboardingStep.NpmPreparation);
+    const backToDependencyPreparation = reducer(state, goToPreviousStep());
+    assert.equal(backToDependencyPreparation.currentStep, OnboardingStep.DependencyPreparation);
 
-    const backToSharing = reducer(backToNpmPreparation, goToPreviousStep());
+    const backToSharing = reducer(backToDependencyPreparation, goToPreviousStep());
     assert.equal(backToSharing.currentStep, OnboardingStep.SharingAcceleration);
 
     const backToLegal = reducer(backToSharing, goToPreviousStep());
@@ -379,12 +379,12 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
 
     state = reducer(
       {
         ...state,
-        isNpmPreparationComplete: true,
+        isDependencyPreparationComplete: true,
       },
       goToNextStep(),
     );

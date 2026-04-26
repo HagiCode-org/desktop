@@ -10,7 +10,7 @@ import type {
   ResolvedLegalDocumentsPayload,
 } from '../../../types/onboarding';
 import { OnboardingStep } from '../../../types/onboarding';
-import type { ManagedNpmPackageId, NpmManagementBridge } from '../../../types/npm-management.js';
+import type { ManagedNpmPackageId, DependencyManagementBridge } from '../../../types/dependency-management.js';
 
 declare global {
   interface Window {
@@ -29,7 +29,7 @@ declare global {
       recoverServiceStartup: (versionId: string) => Promise<OnboardingRecoveryResult>;
       completeOnboarding: (versionId: string) => Promise<{ success: boolean; error?: string }>;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
-      npmManagement: NpmManagementBridge;
+      dependencyManagement: DependencyManagementBridge;
       onDownloadProgress: (callback: (progress: unknown) => void) => (() => void) | void;
       onDependencyProgress: (callback: (status: unknown) => void) => (() => void) | void;
       onServiceProgress: (callback: (progress: unknown) => void) => (() => void) | void;
@@ -204,34 +204,34 @@ export const completeOnboarding = createAsyncThunk(
   }
 );
 
-export const loadOnboardingNpmSnapshot = createAsyncThunk(
-  'onboarding/loadNpmSnapshot',
+export const loadOnboardingDependencySnapshot = createAsyncThunk(
+  'onboarding/loadDependencySnapshot',
   async (_, { rejectWithValue }) => {
     try {
-      return await window.electronAPI.npmManagement.getSnapshot();
+      return await window.electronAPI.dependencyManagement.getSnapshot();
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
   }
 );
 
-export const refreshOnboardingNpmSnapshot = createAsyncThunk(
-  'onboarding/refreshNpmSnapshot',
+export const refreshOnboardingDependencySnapshot = createAsyncThunk(
+  'onboarding/refreshDependencySnapshot',
   async (_, { rejectWithValue }) => {
     try {
-      return await window.electronAPI.npmManagement.refresh();
+      return await window.electronAPI.dependencyManagement.refresh();
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
   }
 );
 
-export const installOnboardingNpmPackages = createAsyncThunk(
-  'onboarding/installNpmPackages',
+export const installOnboardingDependencyPackages = createAsyncThunk(
+  'onboarding/installDependencyPackages',
   async (packageIds: ManagedNpmPackageId[], { rejectWithValue }) => {
     try {
       if (packageIds.includes('hagiscript')) {
-        const result = await window.electronAPI.npmManagement.install('hagiscript');
+        const result = await window.electronAPI.dependencyManagement.install('hagiscript');
         if (!result.success) {
           return rejectWithValue(result.error || 'Failed to install hagiscript');
         }
@@ -239,14 +239,14 @@ export const installOnboardingNpmPackages = createAsyncThunk(
 
       const syncPackageIds = packageIds.filter((id) => id !== 'hagiscript');
       if (syncPackageIds.length > 0) {
-        const result = await window.electronAPI.npmManagement.syncPackages({ packageIds: syncPackageIds });
+        const result = await window.electronAPI.dependencyManagement.syncPackages({ packageIds: syncPackageIds });
         if (!result.success) {
           return rejectWithValue(result.error || 'Failed to install npm packages');
         }
         return result.snapshot;
       }
 
-      return await window.electronAPI.npmManagement.refresh();
+      return await window.electronAPI.dependencyManagement.refresh();
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
