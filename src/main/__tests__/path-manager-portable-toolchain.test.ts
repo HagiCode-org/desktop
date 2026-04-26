@@ -15,14 +15,14 @@ describe('path-manager portable toolchain paths', () => {
       platform: 'linux',
     });
 
-    assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain');
-    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node');
-    assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/bin');
-    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin');
-    assert.equal(paths.npmGlobalBinRoot, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin');
-    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/node');
-    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/node/bin/npm');
-    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/portable-fixed/toolchain/toolchain-manifest.json');
+    assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/toolchain');
+    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/resources/toolchain/node');
+    assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/toolchain/bin');
+    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/toolchain/node/bin');
+    assert.equal(paths.npmGlobalBinRoot, '/workspace/hagicode-desktop/resources/toolchain/node/bin');
+    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/toolchain/node/bin/node');
+    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/toolchain/node/bin/npm');
+    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/toolchain/toolchain-manifest.json');
     assert.equal('openspecExecutablePath' in paths, false);
   });
 
@@ -34,7 +34,7 @@ describe('path-manager portable toolchain paths', () => {
       platform: 'win32',
     });
 
-    assert.equal(paths.toolchainRoot, path.join('C:/Program Files/HagiCode/resources', 'extra', 'portable-fixed', 'toolchain'));
+    assert.equal(paths.toolchainRoot, path.join('C:/Program Files/HagiCode/resources', 'extra', 'toolchain'));
     assert.equal(paths.nodeRoot, path.join(paths.toolchainRoot, 'node'));
     assert.equal(paths.nodeBinRoot, paths.nodeRoot);
     assert.equal(paths.nodeExecutablePath, path.join(paths.nodeRoot, 'node.exe'));
@@ -74,8 +74,8 @@ describe('path-manager portable toolchain paths', () => {
 
     assert.equal(
       paths.toolchainRoot,
-      '/Applications/HagiCode Desktop.app/Contents/Resources/extra/portable-fixed/toolchain',
+      '/Applications/HagiCode Desktop.app/Contents/Resources/extra/toolchain',
     );
-    assert.equal(paths.nodeExecutablePath, '/Applications/HagiCode Desktop.app/Contents/Resources/extra/portable-fixed/toolchain/node/bin/node');
+    assert.equal(paths.nodeExecutablePath, '/Applications/HagiCode Desktop.app/Contents/Resources/extra/toolchain/node/bin/node');
   });
 });

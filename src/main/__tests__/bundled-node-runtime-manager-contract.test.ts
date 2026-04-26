@@ -21,6 +21,8 @@ describe('bundled node runtime manager contract', () => {
     assert.equal(manifest.layoutVersion, 2);
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
+    assert.equal(manifest.expectedLayout.toolchainRootPattern, 'toolchain');
+    assert.equal(manifest.expectedLayout.nodeRootPattern, 'toolchain/node');
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/openspec[.cmd]'), false);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/skills[.cmd]'), false);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/omniroute[.cmd]'), false);

@@ -103,7 +103,7 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(builder, /afterPack: scripts\/macos-toolchain-signing-hook\.cjs/);
     assert.match(builder, /afterSign: scripts\/macos-toolchain-signing-hook\.cjs/);
     assert.match(builder, /signIgnore:/);
-    assert.match(builder, /Contents\/Resources\/extra\/portable-fixed\/toolchain\/\.\*/);
+    assert.match(builder, /Contents\/Resources\/extra\/toolchain\/\.\*/);
     assert.match(smokeTest, /stashed outside the macOS app during code signing/);
     assert.match(smokeTest, /excluded from recursive macOS code signing/);
   });
@@ -113,7 +113,7 @@ describe('embedded runtime packaging configuration', () => {
     const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'macos-toolchain-signing-hook');
     const appOutDir = path.join(fixtureRoot, 'mac-arm64');
     const outDir = fixtureRoot;
-    const toolchainRoot = path.join(appOutDir, 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'portable-fixed', 'toolchain');
+    const toolchainRoot = path.join(appOutDir, 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain');
     const markerPath = path.join(toolchainRoot, 'toolchain-manifest.json');
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
@@ -141,7 +141,7 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(docs, /resources\/portable-fixed\/current/);
     assert.match(docs, /extra\/portable-fixed\/current/);
     assert.match(toolchainDocs, /Bundled Node Toolchain/);
-    assert.match(toolchainDocs, /extra\/portable-fixed\/toolchain/);
+    assert.match(toolchainDocs, /extra\/toolchain/);
     assert.match(toolchainDocs, /Desktop owns the portable Node\/toolchain contract/);
     assert.match(docs, /Steam Linux startup compatibility/i);
     assert.match(docs, /Direct CLI startup already works/i);

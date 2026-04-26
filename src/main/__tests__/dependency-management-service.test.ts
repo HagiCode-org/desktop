@@ -30,6 +30,14 @@ describe('dependency management service contract', () => {
     assert.match(source, /this\.spawnProcess\(command, args/);
   });
 
+  it('treats bundled Node as the readiness gate and keeps npm failures attached to operation-time diagnostics', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /const available = node\.status === 'available';/);
+    assert.match(source, /error: available \? undefined : node\.message \?\? 'Embedded Node environment is unavailable'/);
+    assert.doesNotMatch(source, /const available = node\.status === 'available' && npm\.status === 'available';/);
+  });
+
   it('models unavailable, error, installed, not-installed, unknown, and version states', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
