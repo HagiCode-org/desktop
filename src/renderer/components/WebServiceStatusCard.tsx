@@ -111,6 +111,32 @@ const WebServiceStatusCard: React.FC = () => {
   const [npmReadinessError, setNpmReadinessError] = useState<string | null>(null);
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const isRunning = webServiceInfo.status === 'running';
+  const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
+  const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
+  const isDisabled = webServiceInfo.isOperating || isTransitioning;
+  const showRuntimeSecondaryControls = isRunning;
+  const showOpenLogsButton = Boolean(activeVersion);
+  const pendingHostValue = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
+  const normalizedPendingHost = normalizeListenHost(pendingHostValue);
+  const pendingPort = Number.parseInt(portInputValue, 10);
+  const portValidationError = Number.isNaN(pendingPort)
+    ? t('webServiceStatus.portError.invalid')
+    : (pendingPort < 1024 || pendingPort > 65535)
+      ? t('webServiceStatus.portError.range')
+      : null;
+  const isCustomListenHostMissing = selectedListenPreset === 'custom' && customListenHost.trim().length === 0;
+  const customListenHostError = selectedListenPreset === 'custom' && customListenHost.trim().length > 0 && !isValidIpv4Address(customListenHost)
+    ? t('webServiceStatus.listenAddress.customError')
+    : null;
+  const effectiveNetworkConfigError = networkConfigError || customListenHostError || portValidationError;
+  const normalizedCurrentHost = normalizeListenHost(webServiceInfo.host) || DEFAULT_WEB_SERVICE_HOST;
+  const isNetworkConfigDirty = (
+    (normalizedPendingHost ?? pendingHostValue) !== normalizedCurrentHost ||
+    (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
+  );
+  const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
+
   useEffect(() => {
     // Fetch version on mount
     dispatch(fetchWebServiceVersion());
@@ -165,6 +191,10 @@ const WebServiceStatusCard: React.FC = () => {
     if (isStopped) {
       void loadNpmReadiness();
     }
+
+    return () => {
+      disposed = true;
+    };
   }, [isStopped]);
 
   // Re-sync the stopped-state editor when main-process status changes.
@@ -371,32 +401,6 @@ const WebServiceStatusCard: React.FC = () => {
       return seconds + 's';
     }
   };
-
-  const isRunning = webServiceInfo.status === 'running';
-  const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
-  const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
-  const isDisabled = webServiceInfo.isOperating || isTransitioning;
-  const showRuntimeSecondaryControls = isRunning;
-  const showOpenLogsButton = Boolean(activeVersion);
-  const pendingHostValue = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
-  const normalizedPendingHost = normalizeListenHost(pendingHostValue);
-  const pendingPort = Number.parseInt(portInputValue, 10);
-  const portValidationError = Number.isNaN(pendingPort)
-    ? t('webServiceStatus.portError.invalid')
-    : (pendingPort < 1024 || pendingPort > 65535)
-      ? t('webServiceStatus.portError.range')
-      : null;
-  const isCustomListenHostMissing = selectedListenPreset === 'custom' && customListenHost.trim().length === 0;
-  const customListenHostError = selectedListenPreset === 'custom' && customListenHost.trim().length > 0 && !isValidIpv4Address(customListenHost)
-    ? t('webServiceStatus.listenAddress.customError')
-    : null;
-  const effectiveNetworkConfigError = networkConfigError || customListenHostError || portValidationError;
-  const normalizedCurrentHost = normalizeListenHost(webServiceInfo.host) || DEFAULT_WEB_SERVICE_HOST;
-  const isNetworkConfigDirty = (
-    (normalizedPendingHost ?? pendingHostValue) !== normalizedCurrentHost ||
-    (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
-  );
-  const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
 
   useEffect(() => {
     if (!isStopped || !isNetworkConfigDirty) {
