@@ -17,8 +17,8 @@ import {
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import { writeTextToClipboard } from '../lib/clipboard.js';
-import { evaluateNpmReadiness, npmInstallableAgentCliPackages } from '../../shared/npm-managed-packages.js';
-import type { NpmReadinessSummary } from '../../types/npm-management.js';
+import { evaluateDependencyReadiness, npmInstallableAgentCliPackages } from '../../shared/npm-managed-packages.js';
+import type { DependencyReadinessSummary } from '../../types/dependency-management.js';
 import {
   startWebService,
   stopWebService,
@@ -107,8 +107,8 @@ const WebServiceStatusCard: React.FC = () => {
       : ''
   );
   const [networkConfigError, setNetworkConfigError] = useState<string | null>(null);
-  const [npmReadiness, setNpmReadiness] = useState<NpmReadinessSummary | null>(null);
-  const [npmReadinessError, setNpmReadinessError] = useState<string | null>(null);
+  const [dependencyReadiness, setDependencyReadiness] = useState<DependencyReadinessSummary | null>(null);
+  const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isRunning = webServiceInfo.status === 'running';
@@ -173,23 +173,23 @@ const WebServiceStatusCard: React.FC = () => {
   useEffect(() => {
     let disposed = false;
 
-    const loadNpmReadiness = async () => {
+    const loadDependencyReadiness = async () => {
       try {
-        const snapshot = await window.electronAPI.npmManagement.getSnapshot();
+        const snapshot = await window.electronAPI.dependencyManagement.getSnapshot();
         if (!disposed) {
-          setNpmReadiness(evaluateNpmReadiness(snapshot, [npmInstallableAgentCliPackages[0]?.id].filter(Boolean)));
-          setNpmReadinessError(null);
+          setDependencyReadiness(evaluateDependencyReadiness(snapshot, [npmInstallableAgentCliPackages[0]?.id].filter(Boolean)));
+          setDependencyReadinessError(null);
         }
       } catch (error) {
         if (!disposed) {
-          setNpmReadiness(null);
-          setNpmReadinessError(error instanceof Error ? error.message : String(error));
+          setDependencyReadiness(null);
+          setDependencyReadinessError(error instanceof Error ? error.message : String(error));
         }
       }
     };
 
     if (isStopped) {
-      void loadNpmReadiness();
+      void loadDependencyReadiness();
     }
 
     return () => {
@@ -251,8 +251,8 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleStart = async () => {
-    if (!npmReadiness?.ready) {
-      dispatch(switchViewWithSideEffects('npm-management'));
+    if (!dependencyReadiness?.environmentAvailable || !dependencyReadiness?.requiredReady) {
+      dispatch(switchViewWithSideEffects('dependency-management'));
       return;
     }
 
@@ -564,7 +564,7 @@ const WebServiceStatusCard: React.FC = () => {
                 isDisabled={isDisabled}
                 status={webServiceInfo.status}
                 canLaunchService={canLaunchService}
-                startLabel={isStopped && (!npmReadiness?.ready || npmReadinessError) ? t('webServiceStatus.npmReadinessButton') : undefined}
+                startLabel={isStopped && (!dependencyReadiness?.environmentAvailable || !dependencyReadiness?.requiredReady || dependencyReadinessError) ? t('webServiceStatus.dependencyReadinessButton') : undefined}
                 onStart={handleStart}
                 onOpenApp={handleOpenHagicode}
                 onOpenBrowser={handleOpenInBrowser}
@@ -572,14 +572,14 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {isStopped && (npmReadinessError || (npmReadiness && !npmReadiness.ready)) && canLaunchService && (
+          {isStopped && (dependencyReadinessError || (dependencyReadiness && !dependencyReadiness.ready)) && canLaunchService && (
             <Alert>
               <Package className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-2">
-                  <p className="font-medium">{t('webServiceStatus.npmReadinessAlert.title')}</p>
+                  <p className="font-medium">{t('webServiceStatus.dependencyReadinessAlert.title')}</p>
                   <p className="text-sm">
-                    {npmReadinessError || t('webServiceStatus.npmReadinessAlert.message')}
+                    {dependencyReadinessError || t('webServiceStatus.dependencyReadinessAlert.message')}
                   </p>
                 </div>
               </AlertDescription>
