@@ -92,9 +92,11 @@
       "message": "Some dependencies failed to install. Please install them manually and continue."
     },
     "manualHandoff": {
-      "title": "Desktop ships Node.js and npm, but the bundled CLI packages now need a manual install step.",
-      "description": "Run the suggested command outside Desktop, then refresh the dependency status here.",
-      "refreshHint": "Refresh after the command finishes to re-check the bundled toolchain."
+      "title": "Manual CLI package install required",
+      "description": "Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Refresh after the command finishes to re-check Desktop-managed dependencies."
     }
   },
   "depInstallConfirm": {
@@ -218,9 +220,11 @@
       "systemSource": "System source"
     },
     "manualHandoff": {
-      "title": "Desktop ships Node.js and npm, but this CLI package now requires a manual install step.",
-      "description": "Run the suggested command outside Desktop, then refresh the dependency status here.",
-      "refreshHint": "Refresh after the command finishes to re-check the bundled toolchain."
+      "title": "Manual CLI package install required",
+      "description": "Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Refresh after the command finishes to re-check Desktop-managed dependencies."
     },
     "noDependencies": "No dependencies detected"
   },
@@ -257,7 +261,9 @@
     "loading": "Checking Desktop-managed dependencies...",
     "environment": {
       "title": "Desktop-managed Node/npm environment",
-      "description": "This step uses HagiCode Desktop's bundled Node/npm environment. System-installed Node/npm or globally installed CLI tools do not satisfy readiness unless they are installed into Desktop's managed environment."
+      "description": "Desktop installs and checks managed CLI packages in its own Node/npm environment. Read the FAQ for current path, package, and troubleshooting details.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/"
     },
     "required": {
       "title": "Required dependencies",
@@ -274,7 +280,7 @@
     "blocking": {
       "environment-unavailable": {
         "title": "Node/npm environment unavailable",
-        "description": "Desktop cannot access its managed Node/npm environment. Refresh after the bundled toolchain is available."
+        "description": "Desktop cannot access its managed Node/npm environment. Refresh after the toolchain is available, or open the Node environment FAQ for troubleshooting details."
       },
       "required-packages-missing": {
         "title": "Required dependencies are missing",

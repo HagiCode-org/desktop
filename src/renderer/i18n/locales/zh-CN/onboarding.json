@@ -92,9 +92,11 @@
       "message": "部分依赖项安装失败，请手动安装后继续。"
     },
     "manualHandoff": {
-      "title": "Desktop 会分发 Node.js 和 npm，但内置 CLI 包现在需要手动安装步骤。",
-      "description": "请在 Desktop 外执行建议命令，然后返回这里刷新依赖状态。",
-      "refreshHint": "命令执行完成后刷新一次，以重新检测内置 toolchain。"
+      "title": "需要手动安装 CLI 包",
+      "description": "请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。",
+      "faqLinkLabel": "查看 Node 环境 FAQ",
+      "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/",
+      "refreshHint": "命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。"
     }
   },
   "depInstallConfirm": {
@@ -218,9 +220,11 @@
       "systemSource": "系统来源"
     },
     "manualHandoff": {
-      "title": "Desktop 会分发 Node.js 和 npm，但此 CLI 包现在需要手动安装。",
-      "description": "请在 Desktop 外执行建议命令，然后返回这里刷新依赖状态。",
-      "refreshHint": "命令执行完成后刷新一次，以重新检测内置 toolchain。"
+      "title": "需要手动安装 CLI 包",
+      "description": "请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。",
+      "faqLinkLabel": "查看 Node 环境 FAQ",
+      "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/",
+      "refreshHint": "命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。"
     },
     "noDependencies": "未检测到依赖"
   },
@@ -257,7 +261,9 @@
     "loading": "正在检查 Desktop 托管的依赖项...",
     "environment": {
       "title": "Desktop 托管的 Node/npm 环境",
-      "description": "此步骤使用 HagiCode Desktop 内置的 Node/npm 环境。系统中已安装的 Node/npm 或全局 CLI 工具不会满足就绪条件，除非它们安装在 Desktop 托管环境中。"
+      "description": "Desktop 会在自己的 Node/npm 环境中安装并检测托管 CLI 包。路径、包管理和排障细节请阅读 FAQ。",
+      "faqLinkLabel": "查看 Node 环境 FAQ",
+      "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/"
     },
     "required": {
       "title": "必需依赖项",
