@@ -102,6 +102,9 @@ export default function OmniRouteManagementPage() {
       const result = await getBridge()[action]();
       applyStatus(result.status);
       if (!result.success) {
+        const errorLog = await getBridge().readLog({ target: 'service-error', maxLines: 200 });
+        setLogs((current) => ({ ...current, 'service-error': errorLog }));
+        setSelectedLogTarget('service-error');
         setErrorMessage(result.error ?? t('omniroute.errors.operationFailed'));
       }
     } catch (error) {

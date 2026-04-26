@@ -133,6 +133,20 @@ describe('pm2-dotnet-manager', () => {
     });
   });
 
+  it('rewrites bare Windows pm2 launches using the discovered portable toolchain when env is unavailable', () => {
+    const plan = resolvePm2LaunchPlan('pm2.cmd', {
+      platform: 'win32',
+      portableToolchainRoots: ['C:\\portable-toolchain'],
+      existsSync: target => target === 'C:\\portable-toolchain\\node\\node.exe' || target === 'C:\\portable-toolchain\\node\\node_modules\\pm2\\bin\\pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: 'C:\\portable-toolchain\\node\\node.exe',
+      argsPrefix: ['C:\\portable-toolchain\\node\\node_modules\\pm2\\bin\\pm2'],
+      shell: false,
+    });
+  });
+
   it('normalizes missing executable and non-zero exit failures', async () => {
     const missingExecutor: Pm2CommandExecutor = {
       run: async () => {

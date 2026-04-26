@@ -37,8 +37,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /INITIAL_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
-    assert.match(source, /script: 'omniroute'/);
-    assert.match(source, /args: \[\s*'serve'\s*\]/);
+    assert.match(source, /resolveManagedCliLaunchSpec/);
+    assert.match(source, /node_modules', packageName, 'bin', `\$\{packageName\}\.mjs`/);
+    assert.match(source, /interpreter: "none"/);
+    assert.match(source, /'serve', '--no-open'/);
     assert.match(source, /autorestart: true/);
     assert.match(source, /restart_delay: 3000/);
     assert.match(source, /omniroute-out\.log/);
@@ -51,10 +53,18 @@ describe('OmniRoute manager contract', () => {
 
     assert.match(source, /resolvePm2LaunchPlan/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
+    assert.match(source, /getManagedCommandContext\('omniroute'\)/);
     assert.match(source, /PM2 is not installed in the Desktop-managed npm environment/);
+    assert.match(source, /OmniRoute is not installed in the Desktop-managed npm environment/);
+    assert.match(source, /startFreshPm2Process/);
+    assert.match(source, /\['delete', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['start', paths\.ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
     assert.match(source, /\['stop', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['restart', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
+    assert.match(source, /process \\\\d\+ not found\|process or namespace \.\* not found\|process or namespace not found\|process name not found/i);
+    assert.match(source, /appendLifecycleFailureLog/);
+    assert.match(source, /stdout:/);
+    assert.match(source, /stderr:/);
     assert.match(source, /item\.name === OMNIROUTE_PROCESS_NAME/);
   });
 

@@ -174,6 +174,50 @@ function resolveWindowsPm2LaunchFromEnvironment(
   );
 }
 
+function resolveWindowsPm2LaunchFromPortableToolchainRoots(
+  pm2Command: string,
+  portableToolchainRoots: readonly string[],
+  existsSync: (targetPath: string) => boolean,
+): { command: string; argsPrefix: string[] } | null {
+  if (!isWindowsPm2Command(pm2Command)) {
+    return null;
+  }
+
+  for (const toolchainRoot of portableToolchainRoots) {
+    const trimmedRoot = toolchainRoot.trim();
+    if (!trimmedRoot) {
+      continue;
+    }
+
+    const resolved = resolveWindowsPm2LaunchFromNodeExecutable(
+      path.join(trimmedRoot, 'node', 'node.exe'),
+      existsSync,
+    );
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+function resolveDefaultPortableToolchainRoots(): string[] {
+  const roots = new Set<string>();
+  const envRoot = process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+  if (envRoot) {
+    roots.add(envRoot);
+  }
+
+  roots.add(path.resolve(process.cwd(), 'resources', 'toolchain'));
+
+  const resourcesPath = typeof process.resourcesPath === 'string' ? process.resourcesPath.trim() : '';
+  if (resourcesPath) {
+    roots.add(path.join(resourcesPath, 'extra', 'toolchain'));
+  }
+
+  return [...roots];
+}
+
 function resolveWindowsPm2NodeLaunch(
   pm2Command: string,
   existsSync: (targetPath: string) => boolean,
@@ -242,6 +286,7 @@ export function resolvePm2LaunchPlan(
     platform?: NodeJS.Platform;
     existsSync?: (targetPath: string) => boolean;
     env?: NodeJS.ProcessEnv;
+    portableToolchainRoots?: string[];
   } = {},
 ): Pm2LaunchPlan {
   const platform = options.platform ?? process.platform;
@@ -254,6 +299,18 @@ export function resolvePm2LaunchPlan(
       return {
         command: envLaunch.command,
         argsPrefix: envLaunch.argsPrefix,
+        shell: false,
+      };
+    }
+    const portableLaunch = resolveWindowsPm2LaunchFromPortableToolchainRoots(
+      normalizedCommand,
+      options.portableToolchainRoots ?? resolveDefaultPortableToolchainRoots(),
+      existsSync,
+    );
+    if (portableLaunch) {
+      return {
+        command: portableLaunch.command,
+        argsPrefix: portableLaunch.argsPrefix,
         shell: false,
       };
     }

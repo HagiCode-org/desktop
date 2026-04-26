@@ -1,3 +1,4 @@
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -33,6 +34,20 @@ interface CommandResult {
   stderr: string;
 }
 
+class OmniRouteLifecycleCommandError extends Error {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number | null;
+
+  constructor(message: string, result: CommandResult) {
+    super(message);
+    this.name = 'OmniRouteLifecycleCommandError';
+    this.stdout = result.stdout;
+    this.stderr = result.stderr;
+    this.exitCode = result.exitCode;
+  }
+}
+
 interface Pm2ListEntry {
   name?: string;
   pm2_env?: {
@@ -40,6 +55,13 @@ interface Pm2ListEntry {
     restart_time?: number;
     pm_uptime?: number;
   };
+}
+
+interface ManagedCliLaunchSpec {
+  script: string;
+  args: string[];
+  interpreterNone: boolean;
+  cwd?: string;
 }
 
 export interface OmniRouteManagerOptions {
@@ -104,6 +126,37 @@ function coerceLogLineLimit(value: unknown): number {
 
 function quoteEnv(value: string): string {
   return JSON.stringify(value);
+}
+
+function stripWrappingQuotes(value: string): string {
+  return value.replace(/^"(.*)"$/, '$1');
+}
+
+function resolveOmniRouteMemoryLimitMb(): number {
+  const rawMemory = Number.parseInt(process.env.OMNIROUTE_MEMORY_MB ?? '512', 10);
+  return Number.isFinite(rawMemory) && rawMemory >= 64 && rawMemory <= 16384 ? rawMemory : 512;
+}
+
+function formatLifecycleFailureDetails(error: unknown): string[] {
+  if (!(error instanceof OmniRouteLifecycleCommandError)) {
+    return [];
+  }
+
+  const details: string[] = [];
+  const stdout = error.stdout.trim();
+  const stderr = error.stderr.trim();
+
+  if (stdout) {
+    details.push('stdout:');
+    details.push(stdout);
+  }
+
+  if (stderr) {
+    details.push('stderr:');
+    details.push(stderr);
+  }
+
+  return details;
 }
 
 export class OmniRouteManager {
@@ -266,27 +319,38 @@ export class OmniRouteManager {
   }
 
   private async runLifecycle(action: OmniRouteLifecycleAction): Promise<OmniRouteLifecycleResult> {
+    const paths = await this.ensureLayout();
     try {
-      const paths = await this.ensureLayout();
       this.validatePort(this.getConfig().port);
       const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
+      const omnirouteContext = await this.dependencyManagementService.getManagedCommandContext('omniroute');
       if (pm2Context.packageStatus?.status !== 'installed' || !pm2Context.executablePath) {
         throw new Error('PM2 is not installed in the Desktop-managed npm environment. Install PM2 from Dependency Management and retry.');
       }
+      if (omnirouteContext.packageStatus?.status !== 'installed' || !omnirouteContext.executablePath) {
+        throw new Error('OmniRoute is not installed in the Desktop-managed npm environment. Install OmniRoute from Dependency Management and retry.');
+      }
 
       await this.renderEnvironment(paths);
-      await this.renderEcosystemConfig(paths);
+      await this.renderEcosystemConfig(paths, this.resolveManagedCliLaunchSpec(omnirouteContext.executablePath, 'omniroute'));
 
       if (action === 'start') {
-        await this.runPm2(pm2Context.executablePath, ['start', paths.ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv);
+        await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
       } else if (action === 'stop') {
-        await this.runPm2(pm2Context.executablePath, ['stop', OMNIROUTE_PROCESS_NAME], pm2Context.commandEnv, true);
+        await this.stopPm2Process(pm2Context.executablePath, pm2Context.commandEnv);
       } else {
         const status = await this.getPm2ProcessSnapshot(pm2Context.executablePath, pm2Context.commandEnv);
         if (status) {
-          await this.runPm2(pm2Context.executablePath, ['restart', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv, true);
+          const restartResult = await this.runPm2(pm2Context.executablePath, ['restart', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv, true);
+          if (restartResult.exitCode !== 0) {
+            if (!this.isMissingPm2ProcessMessage(restartResult.stderr, restartResult.stdout)) {
+              throw this.createPm2CommandError(restartResult);
+            }
+
+            await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
+          }
         } else {
-          await this.runPm2(pm2Context.executablePath, ['start', paths.ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv);
+          await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
         }
       }
 
@@ -296,6 +360,7 @@ export class OmniRouteManager {
         status: await this.getStatus(),
       };
     } catch (error) {
+      await this.appendLifecycleFailureLog(paths, action, error);
       const status = await this.getStatus().catch(() => this.buildFallbackStatus(error));
       const message = error instanceof Error ? error.message : String(error);
       log.warn('[OmniRouteManager] lifecycle operation failed', { action, error: message });
@@ -308,12 +373,60 @@ export class OmniRouteManager {
     }
   }
 
+  private async appendLifecycleFailureLog(paths: OmniRouteManagedPaths, action: OmniRouteLifecycleAction, error: unknown): Promise<void> {
+    const errorLogPath = path.join(paths.logs, LOG_FILE_BY_TARGET['service-error']);
+    const message = error instanceof Error ? error.message : String(error);
+    const detailLines = formatLifecycleFailureDetails(error);
+    const lines = [
+      `[${new Date().toISOString()}] lifecycle ${action} failed`,
+      `message: ${message}`,
+      ...detailLines,
+      '',
+    ];
+
+    await fs.mkdir(paths.logs, { recursive: true });
+    await fs.appendFile(errorLogPath, `${lines.join('\n')}\n`, 'utf8');
+  }
+
+  private isMissingPm2ProcessMessage(stderr: string, stdout: string): boolean {
+    return /process \d+ not found|process or namespace .* not found|process or namespace not found|process name not found/i.test(`${stderr}\n${stdout}`);
+  }
+
+  private async deletePm2Process(command: string, env: NodeJS.ProcessEnv): Promise<void> {
+    const result = await this.runPm2(command, ['delete', OMNIROUTE_PROCESS_NAME], env, true);
+    if (result.exitCode === 0 || this.isMissingPm2ProcessMessage(result.stderr, result.stdout)) {
+      return;
+    }
+
+    throw this.createPm2CommandError(result);
+  }
+
+  private async stopPm2Process(command: string, env: NodeJS.ProcessEnv): Promise<void> {
+    const result = await this.runPm2(command, ['stop', OMNIROUTE_PROCESS_NAME], env, true);
+    if (result.exitCode === 0 || this.isMissingPm2ProcessMessage(result.stderr, result.stdout)) {
+      return;
+    }
+
+    throw this.createPm2CommandError(result);
+  }
+
+  private async startFreshPm2Process(command: string, ecosystemFile: string, env: NodeJS.ProcessEnv): Promise<void> {
+    await this.deletePm2Process(command, env);
+    await this.runPm2(command, ['start', ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'], env);
+  }
+
   private async renderEnvironment(paths: OmniRouteManagedPaths): Promise<void> {
     const config = this.getConfig();
+    const memoryLimitMb = resolveOmniRouteMemoryLimitMb();
     const envPath = paths.envFile;
     const contents = [
       `PORT=${config.port}`,
       `OMNIROUTE_PORT=${config.port}`,
+      `DASHBOARD_PORT=${config.port}`,
+      `API_PORT=${config.port}`,
+      'HOSTNAME=0.0.0.0',
+      'NODE_ENV=production',
+      `NODE_OPTIONS=--max-old-space-size=${memoryLimitMb}`,
       `OMNIROUTE_BASE_URL=${quoteEnv(config.baseUrl)}`,
       `OMNIROUTE_CONFIG_DIR=${quoteEnv(paths.config)}`,
       `OMNIROUTE_DATA_DIR=${quoteEnv(paths.data)}`,
@@ -333,11 +446,43 @@ export class OmniRouteManager {
     await fs.writeFile(envPath, contents, 'utf8');
   }
 
-  private async renderEcosystemConfig(paths: OmniRouteManagedPaths): Promise<void> {
+  private resolveManagedCliLaunchSpec(executablePath: string, packageName: string): ManagedCliLaunchSpec {
+    const normalizedPath = stripWrappingQuotes(executablePath);
+    const binDirectory = path.dirname(normalizedPath);
+    const nodeExecutable = path.join(binDirectory, process.platform === 'win32' ? 'node.exe' : 'node');
+    const cliEntryPoint = path.join(binDirectory, 'node_modules', packageName, 'bin', `${packageName}.mjs`);
+    const appServerPath = path.join(binDirectory, 'node_modules', packageName, 'app', 'server.js');
+
+    if (fsSync.existsSync(nodeExecutable) && fsSync.existsSync(appServerPath)) {
+      return {
+        script: nodeExecutable,
+        args: [appServerPath],
+        interpreterNone: true,
+        cwd: path.dirname(appServerPath),
+      };
+    }
+
+    if (fsSync.existsSync(nodeExecutable) && fsSync.existsSync(cliEntryPoint)) {
+      return {
+        script: nodeExecutable,
+        args: [cliEntryPoint, 'serve', '--no-open'],
+        interpreterNone: true,
+      };
+    }
+
+    return {
+      script: normalizedPath,
+      args: ['serve', '--no-open'],
+      interpreterNone: false,
+    };
+  }
+
+  private async renderEcosystemConfig(paths: OmniRouteManagedPaths, launchSpec: ManagedCliLaunchSpec): Promise<void> {
     const config = this.getConfig();
     const outLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-out']);
     const errorLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-error']);
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(OMNIROUTE_PROCESS_NAME)},\n      script: 'omniroute',\n      args: ['serve'],\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(paths.root)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(config.baseUrl)},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(paths.data)},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(paths.logs)},\n        OMNIROUTE_ENV_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_ENV_PATH: ${JSON.stringify(paths.envFile)},\n        OMNIROUTE_RUNTIME_DIR: ${JSON.stringify(paths.runtime)},\n        DATA_DIR: ${JSON.stringify(paths.data)},\n        CLIPROXYAPI_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        INITIAL_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_SECRET: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_MANAGED: 'true'\n      }\n    }\n  ]\n};\n`;
+    const interpreterLine = launchSpec.interpreterNone ? `,\n      interpreter: "none"` : '';
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(OMNIROUTE_PROCESS_NAME)},\n      script: ${JSON.stringify(launchSpec.script)},\n      args: ${JSON.stringify(launchSpec.args)},\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      windowsHide: true,\n      cwd: ${JSON.stringify(launchSpec.cwd ?? paths.root)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)}${interpreterLine},\n      env: {\n        PORT: ${JSON.stringify(String(config.port))},\n        OMNIROUTE_PORT: ${JSON.stringify(String(config.port))},\n        DASHBOARD_PORT: ${JSON.stringify(String(config.port))},\n        API_PORT: ${JSON.stringify(String(config.port))},\n        HOSTNAME: '0.0.0.0',\n        NODE_ENV: 'production',\n        NODE_OPTIONS: ${JSON.stringify(`--max-old-space-size=${resolveOmniRouteMemoryLimitMb()}`)},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(config.baseUrl)},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(paths.data)},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(paths.logs)},\n        OMNIROUTE_ENV_DIR: ${JSON.stringify(paths.config)},\n        OMNIROUTE_ENV_PATH: ${JSON.stringify(paths.envFile)},\n        OMNIROUTE_RUNTIME_DIR: ${JSON.stringify(paths.runtime)},\n        DATA_DIR: ${JSON.stringify(paths.data)},\n        CLIPROXYAPI_CONFIG_DIR: ${JSON.stringify(paths.config)},\n        INITIAL_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_PASSWORD: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_SECRET: ${JSON.stringify(config.password)},\n        OMNIROUTE_DESKTOP_MANAGED: 'true'\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
   }
 
@@ -392,12 +537,19 @@ export class OmniRouteManager {
       child.on('close', (exitCode) => {
         const result = { exitCode, stdout, stderr };
         if (!allowFailure && exitCode !== 0) {
-          reject(new Error(this.firstLine(stderr || stdout) ?? `pm2 exited with code ${exitCode}`));
+          reject(this.createPm2CommandError(result));
           return;
         }
         resolve(result);
       });
     });
+  }
+
+  private createPm2CommandError(result: CommandResult): OmniRouteLifecycleCommandError {
+    return new OmniRouteLifecycleCommandError(
+      this.firstLine(result.stderr || result.stdout) ?? `pm2 exited with code ${result.exitCode}`,
+      result,
+    );
   }
 
   private normalizePort(value: unknown, fallback: number): number {
