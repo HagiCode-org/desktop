@@ -648,7 +648,7 @@ The desktop app resolves Smart Config, Diagnosis, and version-level dependency p
 
 - `smartConfig` -> `config/config-prompt.llm.txt`
 - `diagnosis` -> `scripts/diagnosis-prompt.llm.txt`
-- `versionDependencies` -> prompt path declared in the installed version's `manifest.json`
+- `versionDependencies` -> packaged prompt path declared in the installed version's `manifest.json`, or a Desktop-generated prompt derived from manifest dependency metadata when the packaged file is absent
 
 ### Resolution Order
 
@@ -664,7 +664,7 @@ When prompt guidance is requested, IPC responses include:
 
 - `promptContent`: resolved prompt text for copy/paste when lookup succeeds
 - `promptPath`: fully resolved prompt file path
-- `promptSource`: where the prompt came from (`active-version`, `packaged-resource`, `development-root`, `manifest-entry`, etc.)
+- `promptSource`: where the prompt came from (`active-version`, `packaged-resource`, `development-root`, `manifest-entry`, `generated-from-manifest`, etc.)
 - `attemptedPaths`: ordered candidate path list that was checked
 - `activeVersion`: active version id at lookup time (if available)
 - `supportedTools`: centrally registered CLI metadata, including docs links for shared renderer chips/buttons
