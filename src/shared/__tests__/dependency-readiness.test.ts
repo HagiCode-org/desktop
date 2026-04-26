@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  evaluateNpmReadiness,
+  evaluateDependencyReadiness,
   managedNpmPackages,
   npmInstallableAgentCliPackages,
   optionalManagedNpmPackages,
@@ -11,10 +11,10 @@ import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatus,
   ManagedNpmPackageStatusSnapshot,
-  NpmManagementSnapshot,
-} from '../../types/npm-management.js';
+  DependencyManagementSnapshot,
+} from '../../types/dependency-management.js';
 
-function createSnapshot(statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>): NpmManagementSnapshot {
+function createSnapshot(statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>): DependencyManagementSnapshot {
   const packages: ManagedNpmPackageStatusSnapshot[] = managedNpmPackages.map((definition) => {
     const status = statusOverrides[definition.id] ?? 'installed';
 
@@ -56,9 +56,9 @@ function createSnapshot(statusOverrides: Partial<Record<ManagedNpmPackageId, Man
   };
 }
 
-describe('npm readiness evaluation', () => {
+describe('dependency readiness evaluation', () => {
   it('groups required, optional, and npm-installable Agent CLI packages from the managed catalog', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({}), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex']);
 
     assert.deepEqual(
       summary.requiredPackages.map((item) => item.id),
@@ -75,7 +75,7 @@ describe('npm readiness evaluation', () => {
   });
 
   it('blocks readiness when a required package is missing', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({ openspec: 'not-installed' }), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({ openspec: 'not-installed' }), ['codex']);
 
     assert.equal(summary.requiredReady, false);
     assert.equal(summary.ready, false);
@@ -84,7 +84,7 @@ describe('npm readiness evaluation', () => {
   });
 
   it('keeps optional package status visible without blocking readiness', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({}), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex']);
 
     assert.equal(summary.optionalPackages.every((item) => item.definition.required !== true), true);
     assert.equal(summary.requiredReady, true);
@@ -92,8 +92,24 @@ describe('npm readiness evaluation', () => {
     assert.equal(summary.ready, true);
   });
 
+  it('does not block base launch readiness when optional dependencies are missing', () => {
+    const optionalPackageId = optionalManagedNpmPackages[0]?.id;
+
+    if (!optionalPackageId) {
+      assert.equal(evaluateDependencyReadiness(createSnapshot({}), ['codex']).optionalPackages.length, 0);
+      return;
+    }
+
+    const summary = evaluateDependencyReadiness(createSnapshot({ [optionalPackageId]: 'not-installed' }), ['codex']);
+
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.agentCliReady, true);
+    assert.equal(summary.ready, true);
+    assert.equal(summary.optionalPackages.some((item) => item.id === optionalPackageId && item.status === 'not-installed'), true);
+  });
+
   it('ignores unknown Agent CLI ids and does not let them satisfy readiness', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({}), ['unknown-cli']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}), ['unknown-cli']);
 
     assert.equal(summary.agentCliReady, false);
     assert.equal(summary.ready, false);
@@ -103,7 +119,7 @@ describe('npm readiness evaluation', () => {
   });
 
   it('satisfies Agent CLI readiness when a selected supported Agent CLI is installed', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({}), ['codex', 'claude-code']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex', 'claude-code']);
 
     assert.equal(summary.agentCliReady, true);
     assert.equal(summary.ready, true);
@@ -112,7 +128,7 @@ describe('npm readiness evaluation', () => {
   });
 
   it('blocks Agent CLI readiness when selected packages are supported but not installed', () => {
-    const summary = evaluateNpmReadiness(createSnapshot({ codex: 'not-installed' }), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({ codex: 'not-installed' }), ['codex']);
 
     assert.equal(summary.agentCliReady, false);
     assert.equal(summary.ready, false);
