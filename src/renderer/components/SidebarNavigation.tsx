@@ -24,6 +24,7 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
+import { SidebarPromotionCard } from './SidebarPromotionCard';
 import type { DistributionMode } from '../../types/distribution-mode';
 import {
   createLoadingSidebarAboutFetchState,
@@ -36,6 +37,11 @@ import {
   type SidebarAboutModel,
   type SidebarAboutSectionId,
 } from '../lib/about-sidebar';
+import {
+  fetchSidebarPromotion,
+  normalizeSidebarPromotionLocale,
+  type SidebarPromotionModel,
+} from '../lib/sidebar-promotion';
 
 interface NavigationItem {
   id: ViewType | 'official-website' | 'cost-calculator';
@@ -176,6 +182,10 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
   );
+  const promotionLocale = useMemo(
+    () => normalizeSidebarPromotionLocale(i18n.resolvedLanguage ?? i18n.language),
+    [i18n.language, i18n.resolvedLanguage],
+  );
   const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -185,6 +195,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   const [aboutFetchState, setAboutFetchState] = useState<SidebarAboutFetchState>(
     createLoadingSidebarAboutFetchState(),
   );
+  const [promotion, setPromotion] = useState<SidebarPromotionModel | null>(null);
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -237,6 +248,22 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
       cancelled = true;
     };
   }, [aboutLocale, bundledAboutModel]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchSidebarPromotion(promotionLocale, t('navigation.promotion.defaultCta')).then((result) => {
+      if (cancelled) {
+        return;
+      }
+
+      setPromotion(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [promotionLocale, t]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -571,7 +598,9 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                   title={t(officialWebsiteItem.descriptionKey ?? '')}
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
-                  className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-left group"
+                  className={collapsed
+                    ? 'relative w-full flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-muted-foreground hover:text-accent-foreground group'
+                    : 'relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-left group'}
                 >
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -580,9 +609,11 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                     className="absolute inset-0 bg-accent/40"
                   />
 
-                  <div className="relative z-10 flex items-start gap-3">
-                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80">
-                      <OfficialWebsiteIcon className="h-5 w-5 text-foreground" />
+                  <div className={collapsed ? 'relative z-10 flex items-center gap-3' : 'relative z-10 flex items-start gap-3'}>
+                    <div className={collapsed
+                      ? 'flex shrink-0 items-center justify-center'
+                      : 'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80'}>
+                      <OfficialWebsiteIcon className={collapsed ? 'h-5 w-5' : 'h-5 w-5 text-foreground'} />
                     </div>
 
                     {!collapsed ? (
@@ -708,6 +739,15 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                     </motion.button>
                   );
                 })}
+
+                {promotion ? (
+                  <SidebarPromotionCard
+                    promotion={promotion}
+                    collapsed={collapsed}
+                    label={t('navigation.promotion.label')}
+                    onActivate={(url) => void openExternalUrl(url)}
+                  />
+                ) : null}
               </div>
             </ScrollArea>
           </motion.div>
