@@ -49,7 +49,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings },
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
   { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
-  { id: 'npm-management', labelKey: 'sidebar.npmManagement', icon: PackageOpen },
+  { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen },
   { id: 'omniroute', labelKey: 'sidebar.omniroute', icon: Network },
   { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];

@@ -7,7 +7,7 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
-  selectIsNpmPreparationComplete,
+  selectIsDependencyPreparationComplete,
   selectIsActive,
   selectOnboardingMode,
   setDownloadProgress,
@@ -24,7 +24,7 @@ import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import LegalConsentStep from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
-import NpmPreparationStep from './steps/NpmPreparationStep';
+import DependencyPreparationStep from './steps/DependencyPreparationStep';
 import PackageDownload from './steps/PackageDownload';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
@@ -44,7 +44,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
-  const isNpmPreparationComplete = useSelector((state: RootState) => selectIsNpmPreparationComplete(state));
+  const isDependencyPreparationComplete = useSelector((state: RootState) => selectIsDependencyPreparationComplete(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
@@ -87,8 +87,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return;
     }
 
-    if (currentStep === OnboardingStep.NpmPreparation) {
-      if (!isNpmPreparationComplete) {
+    if (currentStep === OnboardingStep.DependencyPreparation) {
+      if (!isDependencyPreparationComplete) {
         return;
       }
 
@@ -115,8 +115,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <LegalConsentStep />;
       case OnboardingStep.SharingAcceleration:
         return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
-      case OnboardingStep.NpmPreparation:
-        return <NpmPreparationStep />;
+      case OnboardingStep.DependencyPreparation:
+        return <DependencyPreparationStep />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       default:
@@ -132,8 +132,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return t('legal.title');
       case OnboardingStep.SharingAcceleration:
         return t('sharingAcceleration.title');
-      case OnboardingStep.NpmPreparation:
-        return t('npmPreparation.title');
+      case OnboardingStep.DependencyPreparation:
+        return t('dependencyPreparation.title');
       case OnboardingStep.Download:
         return t('download.title');
       default:
@@ -169,7 +169,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             currentStep !== OnboardingStep.LegalConsent && (
               <div className="flex-shrink-0">
                 <OnboardingActions
-                  canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : currentStep === OnboardingStep.NpmPreparation ? isNpmPreparationComplete : canGoNext}
+                  canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : currentStep === OnboardingStep.DependencyPreparation ? isDependencyPreparationComplete : canGoNext}
                   canGoPrevious={canGoPrevious}
                   onNext={handleNext}
                   onPrevious={handlePrevious}

@@ -32,7 +32,7 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
     { number: 1, text: t('welcome.steps.welcome') },
     { number: 2, text: t('welcome.steps.legalConsent') },
     { number: 3, text: t('welcome.steps.sharingAcceleration') },
-    { number: 4, text: t('welcome.steps.npmPreparation') },
+    { number: 4, text: t('welcome.steps.dependencyPreparation') },
     { number: 5, text: t('welcome.steps.download') },
   ];
 

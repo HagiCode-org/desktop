@@ -8,7 +8,7 @@ import SystemManagementView from './components/SystemManagementView';
 import SystemDiagnosticPage from './components/SystemDiagnosticPage';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
-import NpmManagementPage from './components/NpmManagementPage';
+import DependencyManagementPage from './components/DependencyManagementPage';
 import OmniRouteManagementPage from './components/OmniRouteManagementPage';
 import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
@@ -22,7 +22,7 @@ import { runCriticalStartupInitialization, startBackgroundStartupInitialization 
 import type { RootState, AppDispatch } from './store';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
-import type { NpmManagementBridge } from '../types/npm-management';
+import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { OmniRouteBridge } from '../types/omniroute-management';
 import type {
   DataDirectoryMutationResult,
@@ -81,16 +81,16 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'omniroute' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'omniroute' | 'settings') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => void) => () => void;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       openHagicodeInApp: (url: string) => Promise<{ success: boolean; error?: string }>;
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: () => void) => () => void;
-      npmManagement: NpmManagementBridge;
+      dependencyManagement: DependencyManagementBridge;
       omniroute: OmniRouteBridge;
     };
   }
@@ -128,7 +128,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
   );
 
   useEffect(() => {
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'npm-management' | 'settings') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
       dispatch(switchView(view));
     });
 
@@ -178,7 +178,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
-          {currentView === 'npm-management' && <NpmManagementPage />}
+          {currentView === 'dependency-management' && <DependencyManagementPage />}
           {currentView === 'omniroute' && <OmniRouteManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
         </div>

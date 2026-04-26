@@ -62,6 +62,6 @@ describe('OmniRoute renderer wiring', () => {
     assert.equal(typeof zhJson.omniroute.config.passwordDescription, 'string');
     assert.equal(typeof zhJson.omniroute.logs.targets['service-out'], 'string');
     assert.equal(typeof enJson.omniroute.errors.operationFailed, 'string');
-    assert.equal(typeof enJson.npmManagement.packages.pm2.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.pm2.description, 'string');
   });
 });
