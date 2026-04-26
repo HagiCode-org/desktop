@@ -529,7 +529,7 @@ export class DependencyManagementService {
     const commandEnv = this.buildCommandEnv(effectivePolicy);
     const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy), ['--version'], commandEnv);
     const npm = await this.detectExecutableVersion('npm', this.getNpmExecutablePath(effectivePolicy), ['--version'], commandEnv);
-    const available = node.status === 'available' && npm.status === 'available';
+    const available = node.status === 'available';
 
     return {
       available,
@@ -539,7 +539,7 @@ export class DependencyManagementService {
       npmGlobalBinRoot: this.getNpmGlobalBinRoot(npmGlobalPrefix),
       node,
       npm,
-      error: available ? undefined : [node.message, npm.message].filter(Boolean).join('; '),
+      error: available ? undefined : node.message ?? 'Embedded Node environment is unavailable',
     };
   }
 
