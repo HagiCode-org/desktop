@@ -504,11 +504,15 @@
     },
     "config": {
       "title": "运行配置",
-      "description": "OmniRoute 使用 Desktop 独立托管端口，不能与 HagiCode Web 服务端口相同。"
+      "description": "OmniRoute 使用 Desktop 独立托管端口，不能与 HagiCode Web 服务端口相同。",
+      "portLabel": "端口",
+      "passwordLabel": "登录密码",
+      "passwordDescription": "Desktop 会默认生成随机密码，并以明文显示在这里；启动 OmniRoute 时会作为 INITIAL_PASSWORD 注入。"
     },
     "validation": {
       "numeric": "请输入数字端口。",
-      "range": "端口范围必须在 1024 到 65535 之间。"
+      "range": "端口范围必须在 1024 到 65535 之间。",
+      "passwordLength": "密码长度必须在 4 到 200 个字符之间。"
     },
     "paths": {
       "title": "托管路径",

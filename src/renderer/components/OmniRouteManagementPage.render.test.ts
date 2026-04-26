@@ -24,19 +24,23 @@ describe('OmniRoute renderer wiring', () => {
     assert.match(appSource, /\{currentView === 'omniroute' && <OmniRouteManagementPage \/>\}/);
   });
 
-  it('renders status summary, lifecycle controls, path buttons, port validation, and logs', async () => {
+  it('renders status summary, lifecycle controls, path buttons, config validation, and logs', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
     assert.match(source, /window\.electronAPI\.omniroute/);
     assert.match(source, /getBridge\(\)\.getStatus\(\)/);
     assert.match(source, /getBridge\(\)\[action\]\(\)/);
     assert.match(source, /status\?\.config\.baseUrl/);
+    assert.match(source, /nextStatus\.config\.password/);
     assert.match(source, /disabled=\{isBusy \|\| isRunning\}/);
     assert.match(source, /disabled=\{isBusy \|\| !isRunning\}/);
     assert.match(source, /validatePortInput/);
-    assert.match(source, /getBridge\(\)\.setConfig\(\{ port: Number\.parseInt\(portInput, 10\) \}\)/);
+    assert.match(source, /validatePasswordInput/);
+    assert.match(source, /password: passwordInput\.trim\(\)/);
+    assert.match(source, /omniroute\.config\.passwordLabel/);
     assert.match(source, /PATH_TARGETS\.map/);
     assert.match(source, /getBridge\(\)\.openPath\(target\)/);
+    assert.doesNotMatch(source, /setOperation\('open-path'\)/);
     assert.match(source, /LOG_TARGETS\.map/);
     assert.match(source, /getBridge\(\)\.readLog\(\{ target, maxLines: 200 \}\)/);
     assert.match(source, /omniroute\.logs\.empty/);
@@ -54,6 +58,8 @@ describe('OmniRoute renderer wiring', () => {
     assert.equal(enJson.sidebar.omniroute, 'OmniRoute');
     assert.equal(typeof zhJson.omniroute.actions.start, 'string');
     assert.equal(typeof zhJson.omniroute.validation.range, 'string');
+    assert.equal(typeof zhJson.omniroute.validation.passwordLength, 'string');
+    assert.equal(typeof zhJson.omniroute.config.passwordDescription, 'string');
     assert.equal(typeof zhJson.omniroute.logs.targets['service-out'], 'string');
     assert.equal(typeof enJson.omniroute.errors.operationFailed, 'string');
     assert.equal(typeof enJson.npmManagement.packages.pm2.description, 'string');

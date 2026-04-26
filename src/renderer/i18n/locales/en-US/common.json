@@ -504,11 +504,15 @@
     },
     "config": {
       "title": "Runtime Configuration",
-      "description": "OmniRoute uses an isolated Desktop-managed port. It cannot match the HagiCode web service port."
+      "description": "OmniRoute uses an isolated Desktop-managed port. It cannot match the HagiCode web service port.",
+      "portLabel": "Port",
+      "passwordLabel": "Login password",
+      "passwordDescription": "Desktop generates a random password by default and shows it here in plain text. It is injected as INITIAL_PASSWORD when OmniRoute starts."
     },
     "validation": {
       "numeric": "Enter a numeric port.",
-      "range": "Use a port between 1024 and 65535."
+      "range": "Use a port between 1024 and 65535.",
+      "passwordLength": "Use a password between 4 and 200 characters."
     },
     "paths": {
       "title": "Managed Paths",
