@@ -47,6 +47,45 @@ describe('sidebar promotion model', () => {
     assert.equal(promotion?.cta, '去看看');
   });
 
+  it('accepts the published Index payload shape with promotes, on, zh, and en fields', () => {
+    const flags = normalizePromotionFlags({
+      version: '1.0.0',
+      promotes: [
+        {
+          id: 'main-game-2026-04-29',
+          on: true,
+          endTime: '2026-04-29T00:00:00+08:00',
+        },
+      ],
+    });
+    const contents = normalizePromotionContents({
+      version: '1.0.0',
+      contents: [
+        {
+          id: 'main-game-2026-04-29',
+          title: { zh: '求求加入愿望单', en: 'Wishlist It, Pretty Please' },
+          description: { zh: '快来 steam 加入愿望单吧', en: 'Please add it to your Steam wishlist.' },
+          cta: { zh: '加入愿望单', en: 'Wishlist on Steam' },
+          link: 'https://store.steampowered.com/app/4625540/Hagicode/',
+          targetPlatform: 'steam',
+        },
+      ],
+    });
+
+    assert.ok(flags);
+    assert.ok(contents);
+    const promotion = resolveActiveSidebarPromotion(
+      { flags, contents },
+      'zh-CN',
+      '了解更多',
+      activeNow,
+    );
+
+    assert.equal(promotion?.id, 'main-game-2026-04-29');
+    assert.equal(promotion?.title, '求求加入愿望单');
+    assert.equal(promotion?.cta, '加入愿望单');
+  });
+
   it('filters inactive, disabled, and missing-content campaigns deterministically', () => {
     const promotion = resolveActiveSidebarPromotion(
       {

@@ -104,13 +104,24 @@ function readArrayPayload(value: unknown, fieldName: string): readonly unknown[]
   return null;
 }
 
+function readArrayPayloadByNames(value: unknown, fieldNames: readonly string[]): readonly unknown[] | null {
+  for (const fieldName of fieldNames) {
+    const payload = readArrayPayload(value, fieldName);
+    if (payload) {
+      return payload;
+    }
+  }
+
+  return null;
+}
+
 export function normalizeSidebarPromotionLocale(language: string | undefined | null): SidebarPromotionLocale {
   const normalized = (language ?? '').toLowerCase();
   return normalized.startsWith('zh') ? 'zh-CN' : 'en-US';
 }
 
 export function normalizePromotionFlags(payload: unknown): readonly PromotionFlag[] | null {
-  const rawFlags = readArrayPayload(payload, 'promotions');
+  const rawFlags = readArrayPayloadByNames(payload, ['promotions', 'promotes']);
   if (!rawFlags) {
     return null;
   }
@@ -126,11 +137,12 @@ export function normalizePromotionFlags(payload: unknown): readonly PromotionFla
     const id = readNonEmptyString(rawFlag.id);
     const startsAt = readIsoDate(rawFlag.startsAt ?? rawFlag.startAt ?? rawFlag.startTime);
     const endsAt = readIsoDate(rawFlag.endsAt ?? rawFlag.endAt ?? rawFlag.endTime);
+    const enabled = rawFlag.enabled ?? rawFlag.on;
 
     if (
       !id
       || seenIds.has(id)
-      || typeof rawFlag.enabled !== 'boolean'
+      || typeof enabled !== 'boolean'
       || startsAt === null
       || endsAt === null
       || (startsAt && endsAt && Date.parse(startsAt) > Date.parse(endsAt))
@@ -139,14 +151,14 @@ export function normalizePromotionFlags(payload: unknown): readonly PromotionFla
     }
 
     seenIds.add(id);
-    flags.push({ id, enabled: rawFlag.enabled, startsAt, endsAt });
+    flags.push({ id, enabled, startsAt, endsAt });
   }
 
   return flags;
 }
 
 export function normalizePromotionContents(payload: unknown): readonly PromotionContent[] | null {
-  const rawContents = readArrayPayload(payload, 'contents') ?? readArrayPayload(payload, 'promotions');
+  const rawContents = readArrayPayloadByNames(payload, ['contents', 'promotions', 'promotes']);
   if (!rawContents) {
     return null;
   }
@@ -194,7 +206,14 @@ function isFlagActive(flag: PromotionFlag, now: Date): boolean {
 }
 
 function pickLocalizedText(textMap: Readonly<Record<string, string>>, locale: SidebarPromotionLocale): string | null {
-  return textMap[locale] ?? textMap[locale.split('-')[0] ?? locale] ?? Object.values(textMap)[0] ?? null;
+  const shortLocale = locale.split('-')[0] ?? locale;
+  const legacyShortLocale = shortLocale === 'zh' ? 'zh' : 'en';
+
+  return textMap[locale]
+    ?? textMap[shortLocale]
+    ?? textMap[legacyShortLocale]
+    ?? Object.values(textMap)[0]
+    ?? null;
 }
 
 export function resolveActiveSidebarPromotion(
