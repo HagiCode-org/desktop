@@ -3,10 +3,10 @@
  */
 import type {
   ManagedNpmPackageId,
-  NpmManagementOperationProgress,
-  NpmManagementSnapshot,
-  NpmReadinessSummary,
-} from './npm-management.js';
+  DependencyManagementOperationProgress,
+  DependencyManagementSnapshot,
+  DependencyReadinessSummary,
+} from './dependency-management.js';
 
 /**
  * Onboarding step enumeration
@@ -15,7 +15,7 @@ export enum OnboardingStep {
   Welcome = 0,
   LegalConsent = 1,
   SharingAcceleration = 2,
-  NpmPreparation = 3,
+  DependencyPreparation = 3,
   Download = 4,
 }
 
@@ -250,13 +250,13 @@ export interface OnboardingState {
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
   selectedAgentCliPackageIds: ManagedNpmPackageId[];
-  npmSnapshot: NpmManagementSnapshot | null;
-  npmReadiness: NpmReadinessSummary | null;
-  npmSnapshotStatus: 'idle' | 'loading' | 'ready' | 'error';
-  npmOperationProgress: Partial<Record<ManagedNpmPackageId, NpmManagementOperationProgress>>;
-  npmOperationError: string | null;
-  isNpmOperationActive: boolean;
-  isNpmPreparationComplete: boolean;
+  dependencySnapshot: DependencyManagementSnapshot | null;
+  dependencyReadiness: DependencyReadinessSummary | null;
+  dependencySnapshotStatus: 'idle' | 'loading' | 'ready' | 'error';
+  dependencyOperationProgress: Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>;
+  dependencyOperationError: string | null;
+  isDependencyOperationActive: boolean;
+  isDependencyPreparationComplete: boolean;
   // Real-time script output logs
   scriptOutputLogs: ScriptOutput[];
 }
