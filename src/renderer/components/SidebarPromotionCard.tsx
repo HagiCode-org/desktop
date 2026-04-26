@@ -67,6 +67,18 @@ export function SidebarPromotionCard({
             {label}
           </p>
         </div>
+        {promotion.image ? (
+          <div className="overflow-hidden rounded-lg border border-border/60 bg-background/70 shadow-sm">
+            <img
+              src={promotion.image.src}
+              alt={promotion.image.alt}
+              width={promotion.image.width}
+              height={promotion.image.height}
+              loading="lazy"
+              className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            />
+          </div>
+        ) : null}
         <div className="space-y-1">
           <p className="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
             {promotion.title}

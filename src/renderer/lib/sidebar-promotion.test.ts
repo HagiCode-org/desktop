@@ -68,6 +68,12 @@ describe('sidebar promotion model', () => {
           cta: { zh: '加入愿望单', en: 'Wishlist on Steam' },
           link: 'https://store.steampowered.com/app/4625540/Hagicode/',
           targetPlatform: 'steam',
+          image: {
+            src: '/_astro/1232x706.BrEtrYAu.png',
+            width: 1232,
+            height: 706,
+            alt: 'HagiCode Steam store capsule artwork',
+          },
         },
       ],
     });
@@ -84,6 +90,9 @@ describe('sidebar promotion model', () => {
     assert.equal(promotion?.id, 'main-game-2026-04-29');
     assert.equal(promotion?.title, '求求加入愿望单');
     assert.equal(promotion?.cta, '加入愿望单');
+    assert.equal(promotion?.image?.src, 'https://index.hagicode.com/_astro/1232x706.BrEtrYAu.png');
+    assert.equal(promotion?.image?.alt, 'HagiCode Steam store capsule artwork');
+    assert.equal(promotion?.image?.width, 1232);
   });
 
   it('filters inactive, disabled, and missing-content campaigns deterministically', () => {
@@ -153,6 +162,20 @@ describe('sidebar promotion model', () => {
             title: { 'en-US': 'Bad' },
             description: { 'en-US': 'Bad link' },
             link: 'mailto:support@hagicode.com',
+          },
+        ],
+      }),
+      null,
+    );
+    assert.equal(
+      normalizePromotionContents({
+        contents: [
+          {
+            id: 'bad-image',
+            title: { 'en-US': 'Bad' },
+            description: { 'en-US': 'Bad image' },
+            link: 'https://hagicode.com',
+            image: { src: 'not-a-published-asset', width: 100, height: 100 },
           },
         ],
       }),

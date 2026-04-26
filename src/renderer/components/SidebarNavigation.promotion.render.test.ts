@@ -30,6 +30,9 @@ describe('sidebar promotion renderer integration', () => {
     assert.match(cardSource, /promotion\.title/);
     assert.match(cardSource, /promotion\.description/);
     assert.match(cardSource, /promotion\.cta/);
+    assert.match(cardSource, /promotion\.image/);
+    assert.match(cardSource, /<img/);
+    assert.match(cardSource, /aspect-video w-full object-cover/);
     assert.match(cardSource, /Sparkles/);
   });
 

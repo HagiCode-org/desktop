@@ -1,5 +1,6 @@
 export const SIDEBAR_PROMOTION_FLAGS_URL = 'https://index.hagicode.com/promote.json';
 export const SIDEBAR_PROMOTION_CONTENT_URL = 'https://index.hagicode.com/promote_content.json';
+export const SIDEBAR_PROMOTION_ASSET_ORIGIN = 'https://index.hagicode.com';
 
 export type SidebarPromotionLocale = 'zh-CN' | 'en-US';
 
@@ -16,6 +17,14 @@ export interface PromotionContent {
   readonly description: Readonly<Record<string, string>>;
   readonly cta?: Readonly<Record<string, string>>;
   readonly link: string;
+  readonly image?: SidebarPromotionImage;
+}
+
+export interface SidebarPromotionImage {
+  readonly src: string;
+  readonly alt: string;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 export interface SidebarPromotionModel {
@@ -24,6 +33,7 @@ export interface SidebarPromotionModel {
   readonly description: string;
   readonly cta: string;
   readonly link: string;
+  readonly image?: SidebarPromotionImage;
 }
 
 interface PromotionPayloads {
@@ -90,6 +100,48 @@ function readIsoDate(value: unknown): string | undefined | null {
 
   const parsed = Date.parse(text);
   return Number.isNaN(parsed) ? null : text;
+}
+
+function readOptionalPositiveInteger(value: unknown): number | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return Number.isInteger(value) && Number(value) > 0 ? Number(value) : null;
+}
+
+function resolvePromotionImageSrc(src: string): string | null {
+  if (isHttpUrl(src)) {
+    return src;
+  }
+
+  if (src.startsWith('/')) {
+    return new URL(src, SIDEBAR_PROMOTION_ASSET_ORIGIN).toString();
+  }
+
+  return null;
+}
+
+function readOptionalPromotionImage(value: unknown): SidebarPromotionImage | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const src = readNonEmptyString(value.src ?? value.url);
+  const resolvedSrc = src ? resolvePromotionImageSrc(src) : null;
+  const alt = readNonEmptyString(value.alt) ?? '';
+  const width = readOptionalPositiveInteger(value.width);
+  const height = readOptionalPositiveInteger(value.height);
+
+  if (!resolvedSrc || width === null || height === null) {
+    return null;
+  }
+
+  return { src: resolvedSrc, alt, width, height };
 }
 
 function readArrayPayload(value: unknown, fieldName: string): readonly unknown[] | null {
@@ -176,13 +228,14 @@ export function normalizePromotionContents(payload: unknown): readonly Promotion
     const description = readLocalizedTextMap(rawContent.description);
     const cta = readOptionalLocalizedTextMap(rawContent.cta ?? rawContent.ctaText);
     const link = readNonEmptyString(rawContent.link ?? rawContent.url ?? rawContent.href);
+    const image = readOptionalPromotionImage(rawContent.image);
 
-    if (!id || seenIds.has(id) || !title || !description || cta === null || !link || !isHttpUrl(link)) {
+    if (!id || seenIds.has(id) || !title || !description || cta === null || !link || !isHttpUrl(link) || image === null) {
       return null;
     }
 
     seenIds.add(id);
-    contents.push({ id, title, description, cta, link });
+    contents.push({ id, title, description, cta, link, image });
   }
 
   return contents;
@@ -248,6 +301,7 @@ export function resolveActiveSidebarPromotion(
       description,
       cta: cta ?? defaultCta,
       link: content.link,
+      image: content.image,
     };
   }
 
