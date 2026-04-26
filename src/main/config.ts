@@ -15,6 +15,7 @@ export interface AppConfig {
   server: ServerConfig;
   omniroute?: {
     port?: number;
+    password?: string;
   };
   versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;

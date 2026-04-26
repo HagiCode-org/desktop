@@ -28,6 +28,7 @@ export interface OmniRouteProcessSnapshot {
 export interface OmniRouteConfigSnapshot {
   port: number;
   baseUrl: string;
+  password: string;
 }
 
 export interface OmniRouteStatusSnapshot {
@@ -50,6 +51,7 @@ export interface OmniRouteLifecycleResult {
 
 export interface OmniRouteConfigUpdatePayload {
   port: number;
+  password?: string;
 }
 
 export interface OmniRouteConfigUpdateResult {
