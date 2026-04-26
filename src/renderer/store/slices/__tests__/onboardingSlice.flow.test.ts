@@ -48,16 +48,18 @@ const legalDocumentsPayload: ResolvedLegalDocumentsPayload = {
 };
 
 describe('onboardingSlice flow', () => {
-  it('uses the four-step onboarding sequence in full mode', () => {
+  it('uses the five-step onboarding sequence in full mode', () => {
     assert.equal(OnboardingStep.Welcome, 0);
     assert.equal(OnboardingStep.LegalConsent, 1);
     assert.equal(OnboardingStep.SharingAcceleration, 2);
-    assert.equal(OnboardingStep.Download, 3);
+    assert.equal(OnboardingStep.NpmPreparation, 3);
+    assert.equal(OnboardingStep.Download, 4);
     assert.equal('Launch' in OnboardingStep, false);
     assert.deepEqual(getOnboardingSequence('full'), [
       OnboardingStep.Welcome,
       OnboardingStep.LegalConsent,
       OnboardingStep.SharingAcceleration,
+      OnboardingStep.NpmPreparation,
       OnboardingStep.Download,
     ]);
   });
@@ -241,6 +243,19 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
+    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
+
+    const blockedAtNpmPreparation = reducer(state, goToNextStep());
+    assert.equal(blockedAtNpmPreparation.currentStep, OnboardingStep.NpmPreparation);
+
+    state = reducer(
+      {
+        ...state,
+        isNpmPreparationComplete: true,
+      },
+      goToNextStep(),
+    );
     assert.equal(state.currentStep, OnboardingStep.Download);
 
     const blockedAtDownload = reducer(state, goToNextStep());
@@ -262,7 +277,7 @@ describe('onboardingSlice flow', () => {
     assert.equal(finishedAtDownload.currentStep, OnboardingStep.Download);
   });
 
-  it('navigates back from download to welcome across the inserted legal step', () => {
+  it('navigates back from download to welcome across the inserted legal and npm steps', () => {
     let state = reducer(
       undefined,
       checkOnboardingTrigger.fulfilled(
@@ -301,9 +316,21 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
+    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+
+    state = reducer(
+      {
+        ...state,
+        isNpmPreparationComplete: true,
+      },
+      goToNextStep(),
+    );
     assert.equal(state.currentStep, OnboardingStep.Download);
 
-    const backToSharing = reducer(state, goToPreviousStep());
+    const backToNpmPreparation = reducer(state, goToPreviousStep());
+    assert.equal(backToNpmPreparation.currentStep, OnboardingStep.NpmPreparation);
+
+    const backToSharing = reducer(backToNpmPreparation, goToPreviousStep());
     assert.equal(backToSharing.currentStep, OnboardingStep.SharingAcceleration);
 
     const backToLegal = reducer(backToSharing, goToPreviousStep());
@@ -352,6 +379,15 @@ describe('onboardingSlice flow', () => {
       ),
     );
     state = reducer(state, goToNextStep());
+    assert.equal(state.currentStep, OnboardingStep.NpmPreparation);
+
+    state = reducer(
+      {
+        ...state,
+        isNpmPreparationComplete: true,
+      },
+      goToNextStep(),
+    );
     state = reducer(
       state,
       setDownloadProgress({

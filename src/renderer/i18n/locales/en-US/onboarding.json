@@ -2,7 +2,7 @@
   "title": "First-Time Setup",
   "welcome": {
     "title": "Welcome to Hagicode Desktop",
-    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in four steps.",
+    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in five steps.",
     "features": {
       "manage": {
         "title": "Version Management",
@@ -17,11 +17,12 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The first-time setup has 4 steps:",
+    "processTitle": "The first-time setup has 5 steps:",
     "steps": {
       "welcome": "Review the setup and what will happen next",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running",
+      "npmPreparation": "Confirm Desktop's managed npm environment and Agent CLI packages are ready",
       "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default",
       "legalConsent": "Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser"
     },

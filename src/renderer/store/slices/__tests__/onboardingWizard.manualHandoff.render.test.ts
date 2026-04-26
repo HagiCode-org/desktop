@@ -21,7 +21,7 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /onComplete\?\.\(\);/);
   });
 
-  it('updates welcome and download copy to describe a four-step flow with manual startup after returning home', async () => {
+  it('updates welcome and download copy to describe a five-step flow with manual startup after returning home', async () => {
     const [welcomeSource, zhRaw, enRaw] = await Promise.all([
       fs.readFile(welcomePath, 'utf8'),
       fs.readFile(zhOnboardingPath, 'utf8'),
@@ -31,8 +31,9 @@ describe('onboarding wizard manual handoff integration', () => {
     const enOnboarding = JSON.parse(enRaw);
 
     assert.equal(welcomeSource.includes("welcome.steps.launch"), false);
-    assert.match(zhOnboarding.welcome.description, /四个步骤/);
-    assert.match(enOnboarding.welcome.description, /four steps/i);
+    assert.match(welcomeSource, /welcome\.steps\.npmPreparation/);
+    assert.match(zhOnboarding.welcome.description, /五个步骤/);
+    assert.match(enOnboarding.welcome.description, /five steps/i);
     assert.match(String(zhOnboarding.download.complete.message), /返回首页/);
     assert.match(String(zhOnboarding.download.complete.message), /手动启动服务/);
     assert.match(String(enOnboarding.download.complete.message), /return to the homepage/i);

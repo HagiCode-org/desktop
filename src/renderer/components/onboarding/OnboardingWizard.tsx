@@ -87,11 +87,20 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return;
     }
 
-    dispatch(goToNextStep());
+    if (currentStep === OnboardingStep.NpmPreparation) {
+      if (!isNpmPreparationComplete) {
+        return;
+      }
 
-    if (currentStep === OnboardingStep.SharingAcceleration && !isDownloading && !downloadCompleted) {
-      dispatch(downloadPackage());
+      dispatch(goToNextStep());
+
+      if (!isDownloading && !downloadCompleted) {
+        dispatch(downloadPackage());
+      }
+      return;
     }
+
+    dispatch(goToNextStep());
   };
 
   const handlePrevious = () => {

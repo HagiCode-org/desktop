@@ -26,6 +26,8 @@ describe('onboarding npm preparation integration', () => {
     assert.match(sliceSource, /if \(state\.isNpmPreparationComplete\) \{\s*state\.currentStep = OnboardingStep\.Download;/);
     assert.match(wizardSource, /case OnboardingStep\.NpmPreparation:[\s\S]*<NpmPreparationStep \/>/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.NpmPreparation \? isNpmPreparationComplete : canGoNext/);
+    assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
+    assert.match(wizardSource, /currentStep === OnboardingStep\.NpmPreparation[\s\S]*!isNpmPreparationComplete[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
 
   it('loads snapshots, subscribes to progress, installs hagiscript first, and recomputes shared readiness', async () => {

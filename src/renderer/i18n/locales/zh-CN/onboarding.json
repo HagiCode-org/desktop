@@ -2,7 +2,7 @@
   "title": "首次使用引导",
   "welcome": {
     "title": "欢迎使用 Hagicode Desktop",
-    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用四个步骤完成首次安装与合规确认。",
+    "description": "Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用五个步骤完成首次安装与合规确认。",
     "features": {
       "manage": {
         "title": "版本管理",
@@ -17,11 +17,12 @@
         "description": "查看和管理系统依赖项"
       }
     },
-    "processTitle": "首次安装共分 4 个步骤：",
+    "processTitle": "首次安装共分 5 个步骤：",
     "steps": {
       "welcome": "了解本次引导会完成的准备工作",
       "download": "下载最新的 Hagicode Server 包",
       "launch": "启动服务并确认运行正常",
+      "npmPreparation": "确认 Desktop 托管的 npm 环境和 Agent CLI 包已就绪",
       "sharingAcceleration": "确认是否开启共享加速，默认已为您开启",
       "legalConsent": "确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档"
     },
