@@ -27,8 +27,16 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /OMNIROUTE_CONFIG_DIR/);
     assert.match(source, /OMNIROUTE_DATA_DIR/);
     assert.match(source, /OMNIROUTE_LOG_DIR/);
+    assert.match(source, /OMNIROUTE_ENV_DIR/);
+    assert.match(source, /OMNIROUTE_ENV_PATH/);
+    assert.match(source, /OMNIROUTE_RUNTIME_DIR/);
+    assert.match(source, /DATA_DIR/);
+    assert.match(source, /CLIPROXYAPI_CONFIG_DIR/);
+    assert.match(source, /DATA_DIR: \${JSON\.stringify\(paths\.data\)}/);
+    assert.match(source, /CLIPROXYAPI_CONFIG_DIR: \${JSON\.stringify\(paths\.config\)}/);
+    assert.match(source, /INITIAL_PASSWORD/);
+    assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
-    assert.match(source, /existing\.OMNIROUTE_DESKTOP_SECRET/);
     assert.match(source, /script: 'omniroute'/);
     assert.match(source, /args: \[\s*'serve'\s*\]/);
     assert.match(source, /autorestart: true/);
@@ -55,9 +63,12 @@ describe('OmniRoute manager contract', () => {
       fs.readFile(configPath, 'utf8'),
     ]);
 
-    assert.match(configSource, /omniroute\?: \{\s*port\?: number;/);
+    assert.match(configSource, /omniroute\?: \{\s*port\?: number;\s*password\?: string;/);
     assert.match(managerSource, /MIN_PORT = 1024/);
     assert.match(managerSource, /MAX_PORT = 65535/);
+    assert.match(managerSource, /DEFAULT_PASSWORD_BYTES = 18/);
+    assert.match(managerSource, /generateDefaultPassword/);
+    assert.match(managerSource, /validatePassword/);
     assert.match(managerSource, /this\.configManager\.getServerConfig\(\)\.port/);
     assert.match(managerSource, /conflicts with the configured HagiCode web service port/);
     assert.match(managerSource, /OMNIROUTE_DEFAULT_PORT/);
