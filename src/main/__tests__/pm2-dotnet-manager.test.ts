@@ -12,6 +12,7 @@ import {
   buildPm2EcosystemConfig,
   buildPm2EnvFile,
   resolveDefaultPm2Command,
+  resolvePm2LaunchPlan,
   type Pm2CommandExecutor,
 } from '../pm2-dotnet-manager.js';
 
@@ -102,6 +103,36 @@ describe('pm2-dotnet-manager', () => {
     assert.equal(resolveDefaultPm2Command({ cwd: '/desktop', platform: 'linux', existsSync: () => false }), 'pm2');
   });
 
+  it('rewrites Windows pm2.cmd launches to node plus the PM2 CLI entrypoint when available', () => {
+    const command = 'C:\\toolchain\\node\\pm2.cmd';
+    const plan = resolvePm2LaunchPlan(command, {
+      platform: 'win32',
+      existsSync: target => target === 'C:\\toolchain\\node\\node.exe' || target === 'C:\\toolchain\\node\\node_modules\\pm2\\bin\\pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: 'C:\\toolchain\\node\\node.exe',
+      argsPrefix: ['C:\\toolchain\\node\\node_modules\\pm2\\bin\\pm2'],
+      shell: false,
+    });
+  });
+
+  it('rewrites bare Windows pm2 launches using npm-managed node environment when available', () => {
+    const plan = resolvePm2LaunchPlan('pm2', {
+      platform: 'win32',
+      env: {
+        npm_node_execpath: 'C:\\toolchain\\node\\node.exe',
+      },
+      existsSync: target => target === 'C:\\toolchain\\node\\node.exe' || target === 'C:\\toolchain\\node\\node_modules\\pm2\\bin\\pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: 'C:\\toolchain\\node\\node.exe',
+      argsPrefix: ['C:\\toolchain\\node\\node_modules\\pm2\\bin\\pm2'],
+      shell: false,
+    });
+  });
+
   it('normalizes missing executable and non-zero exit failures', async () => {
     const missingExecutor: Pm2CommandExecutor = {
       run: async () => {
@@ -163,6 +194,82 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(calls[0]?.cwd, '/apps/Hagicode Desktop/current');
       assert.equal(calls[1]?.cwd, '/apps/Hagicode Desktop/current');
       assert.equal(calls[2]?.cwd, tmpDir);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the rewritten Windows PM2 launch plan when the managed pm2.cmd path is provided', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-windows-launch-'));
+    const toolchainDir = path.join(tmpDir, 'toolchain');
+    const pm2Command = path.join(toolchainDir, 'pm2.cmd');
+    const nodeExecutable = path.join(toolchainDir, 'node.exe');
+    const pm2Cli = path.join(toolchainDir, 'node_modules', 'pm2', 'bin', 'pm2');
+    const calls: Array<{ command: string; args: string[]; shell: boolean | string | undefined }> = [];
+    const executor: Pm2CommandExecutor = {
+      run: async (command, args, options) => {
+        calls.push({ command, args, shell: options.shell });
+        return { code: 0, stdout: '[]', stderr: '' };
+      },
+    };
+
+    try {
+      await fs.mkdir(path.dirname(pm2Cli), { recursive: true });
+      await Promise.all([
+        fs.writeFile(pm2Command, '', 'utf8'),
+        fs.writeFile(nodeExecutable, '', 'utf8'),
+        fs.writeFile(pm2Cli, '', 'utf8'),
+      ]);
+
+      const manager = new Pm2DotnetManager({ pm2Command, commandExecutor: executor });
+      const result = await manager.status(tmpDir);
+
+      assert.equal(result.success, true);
+      assert.deepEqual(calls, [
+        {
+          command: nodeExecutable,
+          args: [pm2Cli, 'jlist'],
+          shell: false,
+        },
+      ]);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('uses the rewritten Windows PM2 launch plan when only a bare pm2 command is configured but npm env points to bundled node', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-env-launch-'));
+    const toolchainDir = path.join(tmpDir, 'toolchain');
+    const nodeExecutable = path.join(toolchainDir, 'node.exe');
+    const pm2Cli = path.join(toolchainDir, 'node_modules', 'pm2', 'bin', 'pm2');
+    const calls: Array<{ command: string; args: string[]; shell: boolean | string | undefined }> = [];
+    const executor: Pm2CommandExecutor = {
+      run: async (command, args, options) => {
+        calls.push({ command, args, shell: options.shell });
+        return { code: 0, stdout: '[]', stderr: '' };
+      },
+    };
+
+    try {
+      await fs.mkdir(path.dirname(pm2Cli), { recursive: true });
+      await Promise.all([
+        fs.writeFile(nodeExecutable, '', 'utf8'),
+        fs.writeFile(pm2Cli, '', 'utf8'),
+      ]);
+
+      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor });
+      const result = await manager.status(tmpDir, {
+        npm_node_execpath: nodeExecutable,
+      });
+
+      assert.equal(result.success, true);
+      assert.deepEqual(calls, [
+        {
+          command: nodeExecutable,
+          args: [pm2Cli, 'jlist'],
+          shell: false,
+        },
+      ]);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }

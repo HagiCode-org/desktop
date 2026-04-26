@@ -44,6 +44,12 @@ export interface Pm2DotnetManagerOptions {
   commandExecutor?: Pm2CommandExecutor;
 }
 
+export interface Pm2LaunchPlan {
+  command: string;
+  argsPrefix: string[];
+  shell: boolean;
+}
+
 export interface Pm2ProcessStatus {
   exists: boolean;
   online: boolean;
@@ -97,6 +103,10 @@ function quoteJs(value: string): string {
   return JSON.stringify(value);
 }
 
+function stripWrappingQuotes(value: string): string {
+  return value.replace(/^"(.*)"$/, '$1');
+}
+
 function quotePm2Argument(value: string): string {
   return `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
 }
@@ -107,6 +117,73 @@ function quotePm2Arguments(values: string[]): string {
 
 function normalizeEnvValue(value: string | undefined): string {
   return value ?? '';
+}
+
+function isWindowsPm2Command(pm2Command: string): boolean {
+  const baseName = path.win32.basename(stripWrappingQuotes(pm2Command)).toLowerCase();
+  return baseName === 'pm2' || baseName === 'pm2.cmd';
+}
+
+function resolveWindowsPm2LaunchFromNodeExecutable(
+  nodeExecutablePath: string,
+  existsSync: (targetPath: string) => boolean,
+): { command: string; argsPrefix: string[] } | null {
+  if (!path.isAbsolute(nodeExecutablePath) || !existsSync(nodeExecutablePath)) {
+    return null;
+  }
+
+  const nodeDirectory = path.dirname(nodeExecutablePath);
+  const pm2CliPath = path.join(nodeDirectory, 'node_modules', 'pm2', 'bin', 'pm2');
+  if (!existsSync(pm2CliPath)) {
+    return null;
+  }
+
+  return {
+    command: nodeExecutablePath,
+    argsPrefix: [pm2CliPath],
+  };
+}
+
+function resolveWindowsPm2LaunchFromEnvironment(
+  pm2Command: string,
+  env: NodeJS.ProcessEnv | undefined,
+  existsSync: (targetPath: string) => boolean,
+): { command: string; argsPrefix: string[] } | null {
+  if (!env || !isWindowsPm2Command(pm2Command)) {
+    return null;
+  }
+
+  const preferredNodeExecutable = [env.npm_node_execpath, env.NODE]
+    .map(value => value?.trim())
+    .find((value): value is string => Boolean(value));
+  if (preferredNodeExecutable) {
+    const resolved = resolveWindowsPm2LaunchFromNodeExecutable(preferredNodeExecutable, existsSync);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  const portableToolchainRoot = env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+  if (!portableToolchainRoot) {
+    return null;
+  }
+
+  return resolveWindowsPm2LaunchFromNodeExecutable(
+    path.join(portableToolchainRoot, 'node', 'node.exe'),
+    existsSync,
+  );
+}
+
+function resolveWindowsPm2NodeLaunch(
+  pm2Command: string,
+  existsSync: (targetPath: string) => boolean,
+): { command: string; argsPrefix: string[] } | null {
+  const normalizedCommand = stripWrappingQuotes(pm2Command);
+  if (!path.isAbsolute(normalizedCommand) || !isWindowsPm2Command(normalizedCommand)) {
+    return null;
+  }
+
+  return resolveWindowsPm2LaunchFromNodeExecutable(path.join(path.dirname(normalizedCommand), 'node.exe'), existsSync);
 }
 
 export function buildPm2EnvFile(env: NodeJS.ProcessEnv): string {
@@ -145,12 +222,55 @@ export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string 
   ].join('\n');
 }
 
-function buildSpawnOptions(cwd: string, env: NodeJS.ProcessEnv, command: string): SpawnOptionsWithoutStdio {
+function buildSpawnOptions(
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  command: string,
+  shellOverride?: boolean,
+): SpawnOptionsWithoutStdio {
   return {
     cwd,
     env,
-    shell: shouldUseShellForCommand(command),
+    shell: shellOverride ?? shouldUseShellForCommand(command),
     windowsHide: true,
+  };
+}
+
+export function resolvePm2LaunchPlan(
+  pm2Command: string,
+  options: {
+    platform?: NodeJS.Platform;
+    existsSync?: (targetPath: string) => boolean;
+    env?: NodeJS.ProcessEnv;
+  } = {},
+): Pm2LaunchPlan {
+  const platform = options.platform ?? process.platform;
+  const existsSync = options.existsSync ?? fsSync.existsSync;
+  const normalizedCommand = stripWrappingQuotes(pm2Command);
+
+  if (platform === 'win32') {
+    const envLaunch = resolveWindowsPm2LaunchFromEnvironment(normalizedCommand, options.env, existsSync);
+    if (envLaunch) {
+      return {
+        command: envLaunch.command,
+        argsPrefix: envLaunch.argsPrefix,
+        shell: false,
+      };
+    }
+    const nodeLaunch = resolveWindowsPm2NodeLaunch(normalizedCommand, existsSync);
+    if (nodeLaunch) {
+      return {
+        command: nodeLaunch.command,
+        argsPrefix: nodeLaunch.argsPrefix,
+        shell: false,
+      };
+    }
+  }
+
+  return {
+    command: normalizedCommand,
+    argsPrefix: [],
+    shell: shouldUseShellForCommand(normalizedCommand, platform),
   };
 }
 
@@ -261,7 +381,8 @@ export function resolveDefaultPm2Command(options: { cwd?: string; platform?: Nod
   const platform = options.platform ?? process.platform;
   const exists = options.existsSync ?? fsSync.existsSync;
   const executableName = platform === 'win32' ? 'pm2.cmd' : 'pm2';
-  const localBin = path.join(cwd, 'node_modules', '.bin', executableName);
+  const platformPath = platform === 'win32' ? path.win32 : path.posix;
+  const localBin = platformPath.join(cwd, 'node_modules', '.bin', executableName);
 
   return exists(localBin) ? localBin : executableName;
 }
@@ -308,8 +429,14 @@ export class Pm2DotnetManager {
   }
 
   private async runPm2(operation: Pm2DotnetOperation, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
+    const pm2LaunchPlan = resolvePm2LaunchPlan(this.pm2Command, { env });
+    const spawnArgs = [...pm2LaunchPlan.argsPrefix, ...args];
     try {
-      const result = await this.commandExecutor.run(this.pm2Command, args, buildSpawnOptions(cwd, env, this.pm2Command));
+      const result = await this.commandExecutor.run(
+        pm2LaunchPlan.command,
+        spawnArgs,
+        buildSpawnOptions(cwd, env, pm2LaunchPlan.command, pm2LaunchPlan.shell),
+      );
       if (result.code !== 0) {
         return {
           success: false,

@@ -49,6 +49,7 @@ describe('OmniRoute manager contract', () => {
   it('uses Desktop-managed PM2 and scopes lifecycle commands by process name', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
+    assert.match(source, /resolvePm2LaunchPlan/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /PM2 is not installed in the Desktop-managed npm environment/);
     assert.match(source, /\['start', paths\.ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);

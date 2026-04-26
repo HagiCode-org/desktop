@@ -6,6 +6,7 @@ import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
+import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
   OMNIROUTE_PROCESS_NAME,
@@ -372,12 +373,13 @@ export class OmniRouteManager {
 
   private runPm2(command: string, args: string[], env: NodeJS.ProcessEnv, allowFailure = false): Promise<CommandResult> {
     return new Promise((resolve, reject) => {
+      const pm2LaunchPlan = resolvePm2LaunchPlan(command);
       let child: ChildProcessWithoutNullStreams;
       try {
-        child = this.spawnProcess(command, args, {
+        child = this.spawnProcess(pm2LaunchPlan.command, [...pm2LaunchPlan.argsPrefix, ...args], {
           env,
           windowsHide: true,
-          shell: process.platform === 'win32',
+          shell: pm2LaunchPlan.shell,
         });
       } catch (error) {
         reject(error);

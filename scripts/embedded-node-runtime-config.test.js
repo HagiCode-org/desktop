@@ -75,6 +75,7 @@ assert.equal('linux-arm64' in manifest.platforms, false, 'linux-arm64 is unsuppo
 assert.throws(() => resolvePinnedNodeRuntimeTarget('linux-arm64', manifest), /not configured for linux-arm64/);
 
 const prepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain.js', import.meta.url), 'utf8');
+const optionalPrepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain-if-supported.js', import.meta.url), 'utf8');
 assert.match(prepareScript, /materializeNpmCompatibilityPath/, 'prepare script materializes the Desktop npm compatibility path');
 assert.match(prepareScript, /pathExistsOrIsSymlink/, 'prepare script detects dangling compatibility-path symlinks');
 assert.match(prepareScript, /fs\.rmSync\(shimPath, \{ force: true \}\)/, 'prepare script removes stale npm compatibility entries before writing the shim');
@@ -84,6 +85,10 @@ assert.match(prepareScript, /shallow snapshot/, 'diagnostics include a shallow s
 assert.match(prepareScript, /buildDeferredPackageMetadata/, 'prepare script writes deferred package metadata');
 assert.equal(prepareScript.includes('installCorePackages('), false, 'prepare script no longer auto-installs bundled CLI packages');
 assert.equal(prepareScript.includes('stagePackageCommands('), false, 'prepare script no longer writes bundled CLI shims during staging');
+assert.match(optionalPrepareScript, /canReuseExistingToolchain/, 'optional prepare script can reuse an existing valid staged toolchain');
+assert.match(optionalPrepareScript, /validateToolchainPayload/, 'optional prepare script validates the existing staged toolchain before reuse');
+assert.match(optionalPrepareScript, /Reusing existing staged Node toolchain/, 'optional prepare script logs when it preserves the existing toolchain');
+assert.match(optionalPrepareScript, /HAGICODE_FORCE_BUNDLED_TOOLCHAIN_RESTAGE/, 'optional prepare script supports forcing a restage');
 
 assert.equal(fs.existsSync(new URL('./install-dev-node-runtime.js', import.meta.url)), false, 'source mode uses the bundled portable toolchain instead of a separate dev installer');
 assert.equal(fs.existsSync(new URL('./dev-node-runtime-config.js', import.meta.url)), false, 'source mode no longer has a .runtime/node-dev config');
