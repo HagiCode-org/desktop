@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { app, shell } from 'electron';
 import log from 'electron-log';
@@ -60,6 +60,9 @@ const MIN_PORT = 1024;
 const MAX_PORT = 65535;
 const DEFAULT_LOG_LINES = 200;
 const MAX_LOG_LINES = 1000;
+const DEFAULT_PASSWORD_BYTES = 18;
+const MIN_PASSWORD_LENGTH = 4;
+const MAX_PASSWORD_LENGTH = 200;
 
 function toStatus(value: string | undefined): OmniRouteProcessStatus {
   if (value === 'online') {
@@ -76,6 +79,19 @@ function toStatus(value: string | undefined): OmniRouteProcessStatus {
 
 function buildBaseUrl(port: number): string {
   return `http://localhost:${port}`;
+}
+
+function generateDefaultPassword(): string {
+  return randomBytes(DEFAULT_PASSWORD_BYTES).toString('base64url');
+}
+
+function normalizePassword(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const password = value.trim();
+  return password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH ? password : null;
 }
 
 function coerceLogLineLimit(value: unknown): number {
@@ -131,18 +147,31 @@ export class OmniRouteManager {
   }
 
   getConfig(): OmniRouteConfigSnapshot {
-    const configured = this.configManager.getAll().omniroute?.port;
-    const port = this.normalizePort(configured, OMNIROUTE_DEFAULT_PORT);
+    const configured = this.configManager.getAll().omniroute;
+    const port = this.normalizePort(configured?.port, OMNIROUTE_DEFAULT_PORT);
+    const password = normalizePassword(configured?.password) ?? generateDefaultPassword();
+
+    if (configured?.port !== port || configured?.password !== password) {
+      this.configManager.set('omniroute', {
+        ...(configured ?? {}),
+        port,
+        password,
+      });
+    }
+
     return {
       port,
       baseUrl: buildBaseUrl(port),
+      password,
     };
   }
 
   async setConfig(payload: OmniRouteConfigUpdatePayload): Promise<OmniRouteConfigUpdateResult> {
     try {
       const port = this.validatePort(payload.port);
-      this.configManager.set('omniroute', { port });
+      const current = this.getConfig();
+      const password = payload.password === undefined ? current.password : this.validatePassword(payload.password);
+      this.configManager.set('omniroute', { port, password });
       const status = await this.getStatus();
       return {
         success: true,
@@ -282,8 +311,6 @@ export class OmniRouteManager {
   private async renderEnvironment(paths: OmniRouteManagedPaths): Promise<void> {
     const config = this.getConfig();
     const envPath = paths.envFile;
-    const existing = await this.readExistingEnv(envPath);
-    const secret = existing.OMNIROUTE_DESKTOP_SECRET ?? randomUUID();
     const contents = [
       `PORT=${config.port}`,
       `OMNIROUTE_PORT=${config.port}`,
@@ -366,23 +393,6 @@ export class OmniRouteManager {
     });
   }
 
-  private async readExistingEnv(envPath: string): Promise<Record<string, string>> {
-    try {
-      const raw = await fs.readFile(envPath, 'utf8');
-      return Object.fromEntries(raw.split(/\r?\n/).map((line) => {
-        const index = line.indexOf('=');
-        if (index < 0) {
-          return null;
-        }
-        const key = line.slice(0, index).trim();
-        const value = line.slice(index + 1).trim().replace(/^"|"$/g, '');
-        return key ? [key, value] : null;
-      }).filter((entry): entry is [string, string] => entry !== null));
-    } catch {
-      return {};
-    }
-  }
-
   private normalizePort(value: unknown, fallback: number): number {
     const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
     return Number.isInteger(parsed) ? parsed : fallback;
@@ -400,6 +410,15 @@ export class OmniRouteManager {
     }
 
     return port;
+  }
+
+  private validatePassword(value: unknown): string {
+    const password = normalizePassword(value);
+    if (!password) {
+      throw new Error(`OmniRoute password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`);
+    }
+
+    return password;
   }
 
   private emptyProcessSnapshot(): OmniRouteProcessSnapshot {
