@@ -234,7 +234,7 @@ describe('pm2-dotnet-manager', () => {
         fs.writeFile(pm2Cli, '', 'utf8'),
       ]);
 
-      const manager = new Pm2DotnetManager({ pm2Command, commandExecutor: executor });
+      const manager = new Pm2DotnetManager({ pm2Command, commandExecutor: executor, platform: 'win32' });
       const result = await manager.status(tmpDir);
 
       assert.equal(result.success, true);
@@ -270,7 +270,7 @@ describe('pm2-dotnet-manager', () => {
         fs.writeFile(pm2Cli, '', 'utf8'),
       ]);
 
-      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor });
+      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor, platform: 'win32' });
       const result = await manager.status(tmpDir, {
         npm_node_execpath: nodeExecutable,
       });

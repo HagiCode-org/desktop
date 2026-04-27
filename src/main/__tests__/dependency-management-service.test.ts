@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { resolveCommandLaunch } from '../toolchain-launch.js';
 
 const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
 const catalogPath = path.resolve(process.cwd(), 'src/shared/npm-managed-packages.ts');
@@ -27,7 +28,11 @@ describe('dependency management service contract', () => {
     assert.match(source, /delete env\.npm_config_prefix/);
     assert.match(source, /delete env\.NPM_CONFIG_PREFIX/);
     assert.match(source, /HAGICODE_PORTABLE_TOOLCHAIN_ROOT/);
-    assert.match(source, /this\.spawnProcess\(command, args/);
+    assert.match(source, /const launch = resolveCommandLaunch\(command, this\.platform\);/);
+    assert.match(source, /return executeCliStreaming\(\{/);
+    assert.match(source, /command: launch\.command,/);
+    assert.match(source, /shell: launch\.shell,/);
+    assert.match(source, /onOutput: \(_type, chunk\) => \{/);
   });
 
   it('treats bundled Node as the readiness gate and keeps npm failures attached to operation-time diagnostics', async () => {
@@ -187,5 +192,35 @@ describe('dependency management service contract', () => {
     assert.match(source, /getManagedCommandContext\(packageId: ManagedNpmPackageId\)/);
     assert.match(source, /detectPackageStatus\(definition, environment\)/);
     assert.match(source, /executablePath: packageStatus\.executablePath/);
+  });
+
+  it('keeps npm detection and bootstrap installs on the same wrapper-safe launch contract for Steam-style Program Files roots', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+    const launch = resolveCommandLaunch(
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
+      'win32',
+    );
+
+    assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
+    assert.equal(launch.shell, true);
+    assert.match(source, /const node = await this\.detectExecutableVersion\('node', this\.getNodeExecutablePath\(effectivePolicy\), \['--version'\], commandEnv\);/);
+    assert.match(source, /const npm = await this\.detectExecutableVersion\('npm', this\.getNpmExecutablePath\(effectivePolicy\), \['--version'\], commandEnv\);/);
+    assert.match(source, /const result = await this\.runCommand\(executablePath, args, undefined, env\);/);
+    assert.match(source, /let result = await this\.runCommand\(environment\.npm\.executablePath, args,/);
+    assert.match(source, /shell: launch\.shell,/);
+  });
+
+  it('routes hagiscript npm-sync wrappers and manifest arguments through the same managed command launch path', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+    const launch = resolveCommandLaunch(
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd',
+      'win32',
+    );
+
+    assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
+    assert.equal(launch.shell, true);
+    assert.match(source, /const manifest = await this\.writeHagiscriptSyncManifest\(definitions\);/);
+    assert.match(source, /this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\)/);
+    assert.match(source, /const result = await this\.runCommand\(\s*hagiscriptExecutablePath,\s*this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\),/);
   });
 });

@@ -78,23 +78,21 @@ describe('PromptGuidanceService', () => {
 
   it('builds version prompt guidance from the manifest prompt loader', async () => {
     const service = new PromptGuidanceService({
-      llmInstallationManager: {
-        loadPrompt: async () => ({
-          version: '1.0.0',
-          content: 'install dependencies',
+      loadVersionPrompt: async () => ({
+        version: '1.0.0',
+        content: 'install dependencies',
+        region: 'CN',
+        filePath: '/versions/hagicode-1/config/install.llm.txt',
+        source: 'generated-from-manifest',
+        detection: {
           region: 'CN',
-          filePath: '/versions/hagicode-1/config/install.llm.txt',
-          source: 'generated-from-manifest',
-          detection: {
-            region: 'CN',
-            detectedAt: new Date(),
-            method: 'override',
-            localeSnapshot: null,
-            rawLocale: null,
-            matchedRule: 'manual-override',
-          },
-        }),
-      } as any,
+          detectedAt: new Date(),
+          method: 'override',
+          localeSnapshot: null,
+          rawLocale: null,
+          matchedRule: 'manual-override',
+        },
+      }),
       resolveManifestPath: (versionId) => `/versions/${versionId}/manifest.json`,
     });
 

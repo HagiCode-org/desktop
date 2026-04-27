@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { ConfigManager } from '../config.js';
 
 const pathManagerPath = path.resolve(process.cwd(), 'src/main/path-manager.ts');
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
+const configPath = path.resolve(process.cwd(), 'src/main/config.ts');
 
 describe('desktop first-launch bootstrap', () => {
   it('normalizes Windows-style first-launch data directory paths before validation', async () => {
@@ -31,25 +31,15 @@ describe('desktop first-launch bootstrap', () => {
     assert.match(source, /message: `No write permission for directory \$\{normalizedPath\}:/);
   });
 
-  it('keeps config fallback explicit when the persisted path is missing or invalid', async () => {
+  it('starts from the managed default data directory and ignores legacy persisted paths', async () => {
     const source = await fs.readFile(mainPath, 'utf8');
-    const configManager = new ConfigManager({
-      get: (key: string) => key === 'dataDirectoryPath' ? '  ' : undefined,
-      set: () => undefined,
-      delete: () => undefined,
-      clear: () => undefined,
-      store: {},
-    } as any);
+    const configSource = await fs.readFile(configPath, 'utf8');
 
-    const selection = configManager.resolveDataDirectorySelection('/default/apps/data');
-
-    assert.deepEqual(selection, {
-      source: 'default',
-      requestedPath: '/default/apps/data',
-      configuredPath: null,
-      defaultPath: '/default/apps/data',
-    });
-    assert.match(source, /source: 'fallback-default'/);
-    assert.match(source, /configManager\.setDataDirectoryPath\(fallbackPreparation\.context\.normalizedPath\)/);
+    assert.match(source, /const defaultPath = pathManager\.getDefaultDataDirectory\(\)/);
+    assert.match(source, /prepareDataDirectoryForBootstrap\(defaultPath, \{\s*source: 'default',\s*requestedPath: defaultPath,\s*defaultPath,/s);
+    assert.equal(source.includes('resolveDataDirectorySelection'), false);
+    assert.equal(source.includes("source: 'fallback-default'"), false);
+    assert.equal(source.includes('setDataDirectoryPath'), false);
+    assert.equal(configSource.includes('dataDirectoryPath'), false);
   });
 });

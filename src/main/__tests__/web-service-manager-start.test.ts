@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { buildStartupFailurePayload } from '../startup-failure-payload.js';
 import type { StartResult } from '../manifest-reader.js';
 import {
+  resolveCommandLaunch,
   resolveToolchainLaunchPlan,
   shouldUseShellForCommand,
 } from '../toolchain-launch.js';
@@ -30,9 +31,9 @@ describe('web-service startup flow', () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /A manual\s*\n\s*\/\/ Desktop start should always get a fresh attempt/);
-    assert.match(source, /this\.restartCount = 0;\n\n    if \(this\.process \|\| this\.status === 'running'\)/);
-    assert.match(source, /this\.lastPm2Env = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;/);
-    assert.match(source, /this\.status = 'stopped';\n\s*this\.restartCount = 0;\n\s*return await this\.start\(\);/);
+    assert.match(source, /this\.restartCount = 0;\n\n    if \(this\.status === 'running'\)/);
+    assert.match(source, /this\.lastPm2Env = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;/);
+    assert.match(source, /this\.status = 'stopped';\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;\n\s*return await this\.start\(\);/);
   });
 
   it('starts the managed DLL through PM2 with the pinned dotnet runtime and runtime isolation env', async () => {
@@ -48,7 +49,6 @@ describe('web-service startup flow', () => {
     assert.doesNotMatch(source, /prepends development Node runtime paths/);
     assert.match(source, /toolchainEnv\.usedBundledToolchain\s*\?\s*this\.pathManager\.getPortableNodeRoot\(\)/);
     assert.match(source, /this\.applySelectedNodeNpmEnvironment\(toolchainEnv\.env, selectedNodeRuntimeRoot\)/);
-    assert.match(source, /resolveToolchainLaunchPlan\(\{/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
     assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
@@ -215,5 +215,27 @@ describe('web-service startup flow', () => {
     assert.equal(plan.shell, true);
     assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\node.exe', 'win32'), false);
     assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), true);
+  });
+
+  it('quotes Windows absolute wrapper commands under Program Files roots without moving direct executables onto shell execution', () => {
+    const npmLaunch = resolveCommandLaunch(
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
+      'win32',
+    );
+    const hagiscriptLaunch = resolveCommandLaunch(
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd',
+      'win32',
+    );
+    const nodeLaunch = resolveCommandLaunch(
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe',
+      'win32',
+    );
+
+    assert.equal(npmLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
+    assert.equal(npmLaunch.shell, true);
+    assert.equal(hagiscriptLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
+    assert.equal(hagiscriptLaunch.shell, true);
+    assert.equal(nodeLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
+    assert.equal(nodeLaunch.shell, false);
   });
 });

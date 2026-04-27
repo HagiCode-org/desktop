@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 
 describe('Settings page cleanup regression', () => {
-  it('does not render retired telemetry, debug, or Agent CLI settings entries', async () => {
+  it('does not render retired telemetry, debug, Agent CLI, or data directory settings entries', async () => {
     const source = await fs.readFile(settingsPagePath, 'utf-8');
 
     assert.equal(source.includes('value="telemetry"'), false);
@@ -17,5 +17,9 @@ describe('Settings page cleanup regression', () => {
     assert.equal(source.includes('<DebugSettings />'), false);
     assert.equal(source.includes('AgentCliSettings'), false);
     assert.equal(source.includes('settings.agentCli'), false);
+    assert.equal(source.includes('value="dataDirectory"'), false);
+    assert.equal(source.includes("t('settings.tabs.dataDirectory')"), false);
+    assert.equal(source.includes('DataDirectorySettings'), false);
+    assert.equal(source.includes('settings.dataDirectory'), false);
   });
 });
