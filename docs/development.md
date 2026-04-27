@@ -132,6 +132,12 @@ npm run smoke-test
 npm run smoke-test:verbose
 ```
 
+### CLI Process Execution
+
+Desktop main-process code should use `src/main/utils/cli-executor.ts` for bounded CLI work where the command is expected to finish and return stdout, stderr, an exit code, or a timeout/cancellation result. Use `executeCli` for captured output and `executeCliStreaming` when callers need live stdout/stderr callbacks plus a final normalized result.
+
+Direct `child_process` usage remains acceptable when the desktop application must retain ownership of a process handle or lifecycle. Keep direct process management for long-running services, detached terminal handoffs, restart/stop flows, PM2/service ownership, and interactive development helpers where the child process must stay attached to the parent process.
+
 ### Region-Aware Source Fallback
 
 Desktop now preserves structured `official` and `github-release` download sources from the HTTP index metadata so the main-process installer can route fallback traffic deterministically:
