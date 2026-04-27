@@ -38,8 +38,12 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /dependencyManagement\.environment\.faqLinkLabel/);
     assert.match(pageSource, /openExternal/);
     assert.match(modelSource, /managedPackageRowClassName/);
+    assert.match(modelSource, /prioritizePackagesForRepair/);
+    assert.match(modelSource, /evaluateDependencyRepairIntent/);
     assert.match(packageGroupsSource, /packages\.map/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
+    assert.match(packageGroupsSource, /highlightedPackageIds\?: ManagedNpmPackageId\[];/);
+    assert.match(packageGroupsSource, /dependencyManagement\.omniRouteRepair\.targetBadge/);
     assert.match(packageGroupsSource, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
     assert.match(pageSource, /batchSyncState/);
     assert.match(packageGroupsSource, /BatchSyncLogPanel/);
@@ -60,6 +64,11 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /getSelectablePackageIds\(managedPackages/);
     assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, selectablePackageIds\)/);
     assert.match(pageSource, /getSelectAllChecked\(selectedPackageIds, selectablePackageIds\)/);
+    assert.match(pageSource, /useSelector\(\(state: RootState\) => state\.view\.dependencyManagementIntent\)/);
+    assert.match(pageSource, /runRepairCompletionCheck/);
+    assert.match(pageSource, /dependencyManagement\.omniRouteRepair\.recheckAction/);
+    assert.match(pageSource, /dispatch\(setDependencyManagementIntent\(null\)\)/);
+    assert.match(pageSource, /dispatch\(switchView\(repairIntent\.returnView\)\)/);
     assert.match(pageSource, /<NpmPackageBootstrapCard/);
     assert.match(pageSource, /<NpmPackageTable/);
     assert.match(pageSource, /<BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}/);
@@ -67,6 +76,8 @@ describe('dependency management renderer wiring', () => {
     assert.match(modelSource, /export function isOperationActive/);
     assert.match(modelSource, /export function appendBatchSyncLog/);
     assert.match(modelSource, /export function getSelectablePackageIds/);
+    assert.match(modelSource, /export function prioritizePackagesForRepair/);
+    assert.match(modelSource, /export function evaluateDependencyRepairIntent/);
     assert.match(modelSource, /export function updateSelectedPackageIds/);
     assert.match(modelSource, /export function managedPackageRowClassName/);
 
@@ -102,6 +113,7 @@ describe('dependency management renderer wiring', () => {
   it('places the package table and batch log section before environment details while conditionally promoting the hagiscript card', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
+    assert.match(source, /dependencyManagement\.omniRouteRepair\.title[\s\S]*<NpmPackageTable/);
     assert.match(source, /<NpmPackageTable[\s\S]*dependencyManagement\.environment\.title/);
     assert.match(source, /BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}[\s\S]*dependencyManagement\.environment\.title/);
     assert.match(source, /\{shouldPromoteHagiscriptCard && hagiscriptCard\}/);
@@ -116,7 +128,7 @@ describe('dependency management renderer wiring', () => {
 
     assert.match(modelSource, /status === 'installed'\s*\?\s*'bg-emerald-500\/10 hover:bg-emerald-500\/15'/);
     assert.match(modelSource, /:\s*'bg-red-500\/10 hover:bg-red-500\/15'/);
-    assert.match(packageGroupsSource, /className=\{cn\(managedPackageRowClassName\(item\.status\)/);
+    assert.match(packageGroupsSource, /className=\{cn\(\s*managedPackageRowClassName\(item\.status\)/);
     assert.doesNotMatch(packageGroupsSource, /<TableHead>\{t\('dependencyManagement\.packageTable\.status'\)\}<\/TableHead>/);
   });
 
@@ -197,8 +209,10 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof JSON.parse(zh).dependencyManagement.batchLog.status.running, 'string');
     assert.equal(typeof JSON.parse(zh).dependencyManagement.selection.selectedCount, 'string');
     assert.equal(JSON.parse(zh).dependencyManagement.mirror.title, 'npm 镜像加速');
+    assert.equal(typeof JSON.parse(zh).dependencyManagement.omniRouteRepair.recheckAction, 'string');
     assert.equal(JSON.parse(en).dependencyManagement.mirror.registryUrl, 'Registry URL');
     assert.equal(typeof JSON.parse(zh).dependencyManagement.mirror.saveFailed, 'string');
     assert.equal(typeof JSON.parse(en).dependencyManagement.mirror.enabledHelp, 'string');
+    assert.equal(typeof JSON.parse(en).dependencyManagement.omniRouteRepair.targetBadge, 'string');
   });
 });

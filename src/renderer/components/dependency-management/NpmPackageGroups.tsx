@@ -134,6 +134,7 @@ export function NpmPackageBootstrapCard({
 
 interface NpmPackageTableProps {
   packages: ManagedNpmPackageStatusSnapshot[];
+  highlightedPackageIds?: ManagedNpmPackageId[];
   selectedPackageIds: ManagedNpmPackageId[];
   selectablePackageIds: ManagedNpmPackageId[];
   selectAllChecked: boolean | 'indeterminate';
@@ -154,6 +155,7 @@ interface NpmPackageTableProps {
 
 export function NpmPackageTable({
   packages,
+  highlightedPackageIds = [],
   selectedPackageIds,
   selectablePackageIds,
   selectAllChecked,
@@ -172,6 +174,7 @@ export function NpmPackageTable({
   onRunOperation,
 }: NpmPackageTableProps) {
   const { t } = useTranslation('common');
+  const highlightedPackageIdSet = new Set(highlightedPackageIds);
 
   return (
     <Card>
@@ -223,6 +226,7 @@ export function NpmPackageTable({
                 ? undefined
                 : progressByPackageId[item.id] ?? (activeOperation?.packageId === item.id ? activeOperation : undefined);
               const isActive = isOperationActive(itemProgress);
+              const isHighlighted = highlightedPackageIdSet.has(item.id);
               const rowDisabled = actionsDisabled || !hagiscriptGateOpen || item.status === 'unknown';
               const canUninstall = item.status === 'installed' && item.definition.required !== true;
               const error = usesBatchSyncPanel
@@ -234,7 +238,11 @@ export function NpmPackageTable({
                 <TableRow
                   key={item.id}
                   data-state={selectedPackageIds.includes(item.id) ? 'selected' : undefined}
-                  className={cn(managedPackageRowClassName(item.status), selectedPackageIds.includes(item.id) && 'ring-1 ring-primary/30')}
+                  className={cn(
+                    managedPackageRowClassName(item.status),
+                    isHighlighted && 'ring-1 ring-inset ring-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
+                    selectedPackageIds.includes(item.id) && 'ring-1 ring-primary/30',
+                  )}
                 >
                   <TableCell>
                     <Checkbox
@@ -246,7 +254,10 @@ export function NpmPackageTable({
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{item.definition.displayName}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-medium">{item.definition.displayName}</div>
+                      {isHighlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
+                    </div>
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
                     {disabledReason && <div id={`${item.id}-disabled-reason`} className="sr-only">{disabledReason}</div>}
                   </TableCell>

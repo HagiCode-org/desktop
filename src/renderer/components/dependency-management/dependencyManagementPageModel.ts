@@ -3,6 +3,7 @@ import type {
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementOperationProgress,
 } from '../../../types/dependency-management.js';
+import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
 
 export type BatchSyncStatus = 'running' | 'completed' | 'failed';
 
@@ -73,6 +74,57 @@ export function managedPackageRowClassName(status: ManagedNpmPackageStatusSnapsh
   return status === 'installed'
     ? 'bg-emerald-500/10 hover:bg-emerald-500/15'
     : 'bg-red-500/10 hover:bg-red-500/15';
+}
+
+export function prioritizePackagesForRepair(
+  packages: readonly ManagedNpmPackageStatusSnapshot[],
+  highlightedPackageIds: readonly ManagedNpmPackageId[],
+): ManagedNpmPackageStatusSnapshot[] {
+  if (highlightedPackageIds.length === 0) {
+    return [...packages];
+  }
+
+  const highlighted = new Set(highlightedPackageIds);
+  const sortWeight = (item: ManagedNpmPackageStatusSnapshot): number => {
+    if (!highlighted.has(item.id)) {
+      return 2;
+    }
+    if (item.status === 'installed') {
+      return 1;
+    }
+    return 0;
+  };
+
+  return [...packages].sort((left, right) => sortWeight(left) - sortWeight(right));
+}
+
+export interface DependencyRepairEvaluation {
+  ready: boolean;
+  pendingPackageIds: ManagedNpmPackageId[];
+}
+
+export function evaluateDependencyRepairIntent(
+  packages: readonly ManagedNpmPackageStatusSnapshot[],
+  intent: Pick<DependencyManagementRepairIntent, 'targetPackageIds'> | null,
+): DependencyRepairEvaluation {
+  const targetPackageIds = intent?.targetPackageIds ?? [];
+  if (targetPackageIds.length === 0) {
+    return {
+      ready: false,
+      pendingPackageIds: [],
+    };
+  }
+
+  const packageById = new Map(packages.map((item) => [item.id, item]));
+  const pendingPackageIds = targetPackageIds.filter((packageId) => {
+    const item = packageById.get(packageId);
+    return !item || item.status === 'not-installed' || item.status === 'unknown';
+  });
+
+  return {
+    ready: pendingPackageIds.length === 0,
+    pendingPackageIds,
+  };
 }
 
 export function getSelectablePackageIds(

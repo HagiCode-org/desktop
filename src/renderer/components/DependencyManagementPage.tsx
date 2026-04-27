@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ExternalLink, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
 import type {
   ManagedNpmPackageId,
   DependencyManagementBridge,
@@ -14,17 +15,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import {
   appendBatchSyncLog,
+  evaluateDependencyRepairIntent,
   getSelectablePackageIds,
   getSelectAllChecked,
   getSelectedEligiblePackageIds,
   isBatchSyncEvent,
+  prioritizePackagesForRepair,
   type BatchSyncState,
   updateSelectAllPackageIds,
   updateSelectedPackageIds,
 } from './dependency-management/dependencyManagementPageModel';
 import { BatchSyncLogPanel, NpmPackageBootstrapCard, NpmPackageTable } from './dependency-management/NpmPackageGroups';
+import { setDependencyManagementIntent, switchView } from '@/store/slices/viewSlice';
+import type { AppDispatch, RootState } from '@/store';
 
 type PageStatus = 'loading' | 'ready' | 'error';
+type RepairCompletionState = 'idle' | 'checking' | 'incomplete' | 'failed';
 
 const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 
@@ -38,6 +44,8 @@ function getDependencyManagementBridge(): DependencyManagementBridge {
 
 export default function DependencyManagementPage() {
   const { t } = useTranslation('common');
+  const dispatch = useDispatch<AppDispatch>();
+  const repairIntent = useSelector((state: RootState) => state.view.dependencyManagementIntent);
   const [snapshot, setSnapshot] = useState<DependencyManagementSnapshot | null>(null);
   const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -47,6 +55,7 @@ export default function DependencyManagementPage() {
   const [batchSyncState, setBatchSyncState] = useState<BatchSyncState | null>(null);
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
+  const [repairCompletionState, setRepairCompletionState] = useState<RepairCompletionState>('idle');
   const [isPending, startTransition] = useTransition();
   const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -120,7 +129,12 @@ export default function DependencyManagementPage() {
     setSelectedPackageIds((current) => current.filter((id) => visibleIds.has(id)));
   }, [snapshot]);
 
+  useEffect(() => {
+    setRepairCompletionState('idle');
+  }, [repairIntent?.failureKind, repairIntent?.targetPackageIds.join('|')]);
+
   const isBatchSyncRunning = batchSyncState?.status === 'running';
+  const isRepairCompletionRunning = repairCompletionState === 'checking';
 
   useEffect(() => {
     if (!isBatchSyncRunning) {
@@ -218,9 +232,12 @@ export default function DependencyManagementPage() {
 
   const hagiscript = snapshot?.packages.find((item) => item.id === 'hagiscript');
   const managedPackages = snapshot?.packages.filter((item) => item.id !== 'hagiscript') ?? [];
+  const highlightedPackageIds = repairIntent?.targetPackageIds ?? [];
+  const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
+  const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], repairIntent);
   const activePackageId = snapshot?.activeOperation?.packageId;
   const environmentAvailable = snapshot?.environment.available ?? false;
-  const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId);
+  const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
   const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const hagiscriptGateOpen = hagiscript?.status === 'installed' && Boolean(hagiscript.executablePath);
@@ -239,6 +256,37 @@ export default function DependencyManagementPage() {
 
   const toggleSelectAll = (checked: boolean) => {
     setSelectedPackageIds((current) => updateSelectAllPackageIds(current, selectablePackageIds, checked));
+  };
+
+  const repairTargetNames = repairIntent?.targetPackageIds.map((packageId) =>
+    snapshot?.packages.find((item) => item.id === packageId)?.definition.displayName
+    ?? (packageId === 'pm2' ? 'PM2' : 'OmniRoute'),
+  ) ?? [];
+
+  const runRepairCompletionCheck = async () => {
+    if (!repairIntent) {
+      return;
+    }
+
+    setRepairCompletionState('checking');
+    try {
+      const nextSnapshot = await getDependencyManagementBridge().refresh();
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+        setPageStatus('ready');
+      });
+
+      const nextEvaluation = evaluateDependencyRepairIntent(nextSnapshot.packages, repairIntent);
+      if (nextEvaluation.ready) {
+        dispatch(setDependencyManagementIntent(null));
+        dispatch(switchView(repairIntent.returnView));
+        return;
+      }
+
+      setRepairCompletionState('incomplete');
+    } catch {
+      setRepairCompletionState('failed');
+    }
   };
 
   const hagiscriptCard = hagiscript ? (
@@ -273,6 +321,51 @@ export default function DependencyManagementPage() {
         </CardHeader>
       </Card>
 
+      {repairIntent && (
+        <Alert className="border-amber-500/40 bg-amber-500/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('dependencyManagement.omniRouteRepair.title')}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              {repairIntent.failureKind === 'dependency-unknown'
+                ? t('dependencyManagement.omniRouteRepair.descriptionUnknown')
+                : t('dependencyManagement.omniRouteRepair.descriptionMissing')}
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">
+                {t('dependencyManagement.omniRouteRepair.sourceLabel')}: {t('dependencyManagement.omniRouteRepair.sourceValue')}
+              </Badge>
+              {repairTargetNames.map((name) => (
+                <Badge key={name} variant="outline">{name}</Badge>
+              ))}
+            </div>
+            {repairCompletionState === 'incomplete' ? (
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {t('dependencyManagement.omniRouteRepair.incomplete')}
+              </p>
+            ) : null}
+            {repairCompletionState === 'failed' ? (
+              <p className="text-sm text-destructive">
+                {t('dependencyManagement.omniRouteRepair.refreshFailed')}
+              </p>
+            ) : null}
+            {!repairEvaluation.ready && repairEvaluation.pendingPackageIds.length > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t('dependencyManagement.omniRouteRepair.pendingNotice')}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => void runRepairCompletionCheck()} disabled={pageStatus === 'loading' || isRepairCompletionRunning}>
+                {isRepairCompletionRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {isRepairCompletionRunning
+                  ? t('dependencyManagement.omniRouteRepair.recheckRunning')
+                  : t('dependencyManagement.omniRouteRepair.recheckAction')}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {pageStatus === 'loading' && (
         <Card>
           <CardContent className="flex items-center gap-3 py-8 text-muted-foreground">
@@ -295,7 +388,8 @@ export default function DependencyManagementPage() {
           {shouldPromoteHagiscriptCard && hagiscriptCard}
 
           <NpmPackageTable
-            packages={managedPackages}
+            packages={prioritizedManagedPackages}
+            highlightedPackageIds={highlightedPackageIds}
             selectedPackageIds={selectedPackageIds}
             selectablePackageIds={selectablePackageIds}
             selectAllChecked={selectAllChecked}
