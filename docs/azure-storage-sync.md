@@ -4,7 +4,12 @@ This document describes how to configure Azure Storage for automatic release fil
 
 ## Overview
 
-The Hagicode Desktop project uses a reusable GitHub Actions workflow (`sync-azure-storage.yml`) to synchronize release assets to Azure Storage after `build.yml` finishes uploading the release assets and explicitly calls the sync workflow. This provides:
+The Hagicode Desktop project uses two reusable GitHub Actions workflows to synchronize release assets to Azure Storage after `build.yml` finishes uploading the release assets and explicitly calls the sync pipeline:
+
+- `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs
+- `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json`
+
+This provides:
 
 - **Redundant backup**: Files stored in both GitHub Releases and Azure Storage
 - **CDN support**: Azure CDN can be configured for faster downloads
@@ -13,13 +18,13 @@ The Hagicode Desktop project uses a reusable GitHub Actions workflow (`sync-azur
 
 ## Workflow Topology
 
-The Azure sync workflow now runs in three stages:
+The Azure sync pipeline now runs in three stages:
 
 1. **plan**: Enumerates GitHub Release assets, filters out GitHub-generated source archives, writes `azure-upload-plan.json`, and emits the upload matrix.
 2. **upload**: Starts one matrix shard per eligible release asset, downloads only that shard's assets, uploads the asset plus any `.torrent` sidecar, and publishes `publish-result-<shard>.json`.
-3. **finalize**: Downloads every shard result artifact, merges `PublishedArtifactMetadata`, generates the final root `index.json`, uploads it once, and writes the aggregated workflow summary.
+3. **finalize**: A separate top-level reusable workflow downloads every shard result artifact, merges `PublishedArtifactMetadata`, generates the final root `index.json`, uploads it once, and writes the aggregated workflow summary.
 
-This keeps the root `index.json` on a single-writer path while still allowing multiple runners and multiple blob uploads per shard to proceed in parallel.
+This keeps the root `index.json` on a single-writer path while still allowing multiple runners and multiple blob uploads per shard to proceed in parallel. In the main release callers, `finalize` is surfaced as its own top-level job, so rerunning only the index publication step is explicit and does not repeat shard uploads.
 
 ### Concurrency Controls
 
@@ -32,11 +37,13 @@ If Azure throttling or runner network contention appears, reduce `max_parallel` 
 
 ### Result Artifacts
 
-The workflow now produces these intermediate artifacts:
+The pipeline now produces these intermediate artifacts:
 
 - `azure-upload-plan`: contains `azure-upload-plan.json` and `azure-upload-matrix.json`
 - `publish-result-<shard>`: one machine-readable shard result JSON per upload shard
 - `azure-sync-finalize-result`: the aggregated finalize result JSON used for the workflow summary
+
+The dedicated `finalize` workflow reads `azure-upload-plan.json` from the same run so it uses the exact release metadata that the upload phase planned, instead of recalculating "latest release" at finalize time.
 
 These files are intended for workflow diagnostics and reruns. GitHub Release assets remain the source of truth for binary downloads.
 
@@ -213,33 +220,35 @@ The generated index.json is backward compatible:
 
 The workflow automatically runs when `build.yml` reaches its summary-gated release publish stage for a version tag.
 
-**Important**: `sync-azure-storage.yml` is primarily a `workflow_call` workflow. The main build pipeline decides when it is safe to run, so the typical flow is:
+**Important**: the Azure sync path is primarily caller-driven. The main build pipeline decides when it is safe to run, so the typical flow is:
 
 1. Create and push a version tag (e.g., `git tag v1.0.0 && git push origin v1.0.0`)
 2. The `build.yml` workflow is triggered and builds all platforms (Windows, macOS, Linux)
 3. For tag releases, `build.yml` uses the dedicated `build-windows-release` job to sign and upload the Windows assets, while Linux and macOS upload their release assets
 4. The `build-summary` job normalizes the effective Windows result (`build-windows-release` for tags, `build-windows` for non-tags), resolves the release channel, and emits an explicit overall release status
-5. When the normalized release status is `success`, `build.yml` calls `sync-azure-storage.yml` through `workflow_call` with `release_tag` and `release_channel`
-6. `sync-azure-storage.yml` runs the `plan` job, fans out one upload shard per eligible release asset, and then runs a single `finalize` job to publish the root `index.json`
+5. When the normalized release status is `success`, `build.yml` calls `sync-azure-storage.yml` through `workflow_call` with an explicit `release_tag`, `release_channel`, and `run_finalize=false`
+6. `sync-azure-storage.yml` runs the `plan` job and fans out one upload shard per eligible release asset
+7. After the upload workflow succeeds, `build.yml` calls `finalize-azure-storage.yml`, which reads the plan artifact from the same run and publishes the root `index.json`
 
 This caller-driven model avoids races where a GitHub Release exists before the signed Windows assets or other platform assets have finished uploading.
 
 ### Manual Trigger
 
-You can manually trigger the workflow to sync an existing release:
+You can manually trigger the standalone sync workflow to recover an existing release:
 
 1. Go to "Actions" tab in your repository
 2. Select "Sync Release to Azure Storage"
 3. Click "Run workflow"
-4. Optionally override `max_parallel` if you want a more conservative or more aggressive upload fan-out
-5. The workflow will plan shards, upload eligible assets, and then finalize the root index
+4. Enter the exact `release_tag` you want to sync
+5. Optionally override `max_parallel` if you want a more conservative or more aggressive upload fan-out
+6. The workflow will plan shards, upload eligible assets, and then finalize the root index
 
 **Tip**: Manual trigger is useful for:
 - Re-syncing an existing release to Azure Storage
 - Testing the workflow configuration
 - Syncing a specific release version
 
-Manual recovery behavior is unchanged by the automated caller flow: `workflow_dispatch` can still be used to retry an existing release without re-running the full build pipeline.
+For full automated runs, the caller workflow now exposes `Finalize Azure Storage Sync` as a separate top-level job. If the shard uploads are already correct and only the root index needs another attempt, rerun that finalize job instead of re-running the upload fan-out. For standalone manual recovery, the original `sync-azure-storage.yml` workflow still supports a full end-to-end retry.
 
 ## CDN Configuration (Optional)
 

@@ -1,0 +1,184 @@
+name: Finalize Azure Storage Sync
+
+on:
+  workflow_call:
+    secrets:
+      FEISHU_WEBHOOK_URL:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    name: Finalize Azure Sync
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Download Azure upload plan
+      uses: actions/download-artifact@v4
+      with:
+        name: azure-upload-plan
+        path: artifacts/azure-upload-plan
+
+    - name: Read Azure upload plan metadata
+      id: plan
+      run: |
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        plan = json.loads(Path("artifacts/azure-upload-plan/azure-upload-plan.json").read_text(encoding="utf-8"))
+        matrix = json.loads(Path("artifacts/azure-upload-plan/azure-upload-matrix.json").read_text(encoding="utf-8"))
+        shard_count = len(matrix.get("shard", []))
+
+        outputs = {
+            "release_tag": plan["releaseTag"],
+            "release_version": plan["versionPrefix"],
+            "release_channel": plan["releaseChannel"],
+            "has_shards": "true" if shard_count > 0 else "false",
+            "shard_count": str(shard_count),
+            "matrix": json.dumps(matrix, separators=(",", ":")),
+        }
+
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+            for key, value in outputs.items():
+                handle.write(f"{key}={value}\n")
+
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+            handle.write("## Azure Sync Finalize Plan\n")
+            handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
+            handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
+            handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
+            handle.write(f"- Planned shards: `{shard_count}`\n")
+        PY
+
+    - name: Download shard publish results
+      if: steps.plan.outputs.has_shards == 'true'
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        pattern: publish-result-*
+        path: artifacts/shard-results
+        merge-multiple: true
+
+    - name: Write merged publish-results manifest
+      if: steps.plan.outputs.has_shards == 'true'
+      env:
+        MATRIX_JSON: ${{ steps.plan.outputs.matrix }}
+      run: |
+        mkdir -p artifacts
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        matrix = json.loads(os.environ["MATRIX_JSON"])
+        expected_ids = [item["shardId"] for item in matrix.get("shard", [])]
+        result_files = sorted(str(path) for path in Path("artifacts/shard-results").glob("publish-result-*.json"))
+        manifest = {
+            "expectedShardIds": expected_ids,
+            "resultFiles": result_files,
+        }
+        Path("artifacts/merged-publish-results-manifest.json").write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8",
+        )
+        PY
+
+    - name: Finalize Azure index publication
+      id: finalize_sync
+      if: steps.plan.outputs.has_shards == 'true'
+      continue-on-error: true
+      run: |
+        ./build.sh \
+          --target PublishToAzureBlob \
+          --release-tag "${{ steps.plan.outputs.release_tag }}" \
+          --release-version "${{ steps.plan.outputs.release_version }}" \
+          --release-channel "${{ steps.plan.outputs.release_channel }}" \
+          --upload-artifacts false \
+          --upload-index true \
+          --merged-publish-results-manifest "artifacts/merged-publish-results-manifest.json" \
+          --publish-result-output-path "artifacts/finalize-result.json" \
+          --publish-shard-id "finalize"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
+        FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+
+    - name: Upload finalize result
+      if: always() && steps.plan.outputs.has_shards == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: azure-sync-finalize-result
+        path: artifacts/finalize-result.json
+        if-no-files-found: warn
+
+    - name: Append workflow summary
+      if: always()
+      env:
+        HAS_SHARDS: ${{ steps.plan.outputs.has_shards }}
+        SHARD_COUNT: ${{ steps.plan.outputs.shard_count }}
+        FINALIZE_OUTCOME: ${{ steps.finalize_sync.outcome }}
+      run: |
+        python3 - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        summary_lines = ["## Azure Sync Finalize"]
+        has_shards = os.environ["HAS_SHARDS"] == "true"
+
+        if not has_shards:
+            summary_lines.append("- Azure sync was skipped because no eligible release assets were found.")
+        else:
+            summary_lines.append(f"- Planned shards: `{os.environ['SHARD_COUNT']}`")
+            summary_lines.append(f"- Finalize step outcome: `{os.environ['FINALIZE_OUTCOME']}`")
+
+            result_path = Path("artifacts/finalize-result.json")
+            if result_path.exists():
+                data = json.loads(result_path.read_text(encoding="utf-8"))
+                summary_lines.extend([
+                    f"- Index uploaded: `{'yes' if data.get('indexUploaded') else 'no'}`",
+                    f"- Published asset count: `{data.get('eligibleAssetCount', 0)}`",
+                    f"- Sidecar success count: `{data.get('sidecarSuccessCount', 0)}`",
+                    f"- HTTP-only fallback count: `{data.get('httpOnlyFallbackCount', 0)}`",
+                    f"- Uploaded blob count: `{data.get('uploadedBlobCount', 0)}`",
+                    f"- Skipped blob count: `{data.get('skippedBlobCount', 0)}`",
+                    f"- Missing blob count: `{data.get('missingBlobCount', 0)}`",
+                ])
+                if data.get("errorMessage"):
+                    summary_lines.append(f"- Error: `{data['errorMessage']}`")
+
+                diagnostics = data.get("diagnostics", [])
+                if diagnostics:
+                    summary_lines.append("")
+                    summary_lines.append("### Diagnostics")
+                    for item in diagnostics:
+                        stage = item.get("stage") or "publish"
+                        artifact = item.get("artifactName", "unknown")
+                        code = item.get("code", "unknown")
+                        message = item.get("message", "")
+                        summary_lines.append(f"- [{stage}] `{artifact}` `{code}` {message}")
+            else:
+                summary_lines.append("- Finalize result artifact: `missing`")
+
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+            handle.write("\n".join(summary_lines) + "\n")
+        PY
+
+    - name: Fail workflow if finalize failed
+      if: steps.plan.outputs.has_shards == 'true' && steps.finalize_sync.outcome != 'success'
+      run: |
+        echo "::error::Azure sync finalize detected index publication failures"
+        exit 1

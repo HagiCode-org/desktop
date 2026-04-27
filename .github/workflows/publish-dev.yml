@@ -559,8 +559,8 @@ jobs:
           echo '::error::One or more publish dev platform builds failed. Azure sync is blocked.'
           exit 1
 
-  sync-azure:
-    name: Sync Dev Release to Azure Storage
+  sync-azure-upload:
+    name: Upload Dev Release Shards to Azure Storage
     needs:
       - prepare-release
       - build-summary
@@ -570,4 +570,12 @@ jobs:
       release_tag: ${{ needs.prepare-release.outputs.release_tag }}
       release_version: v${{ needs.prepare-release.outputs.version }}
       release_channel: ${{ needs.prepare-release.outputs.channel }}
+      run_finalize: false
+    secrets: inherit
+
+  sync-azure-finalize:
+    name: Finalize Dev Azure Storage Sync
+    needs: sync-azure-upload
+    if: ${{ always() && needs.sync-azure-upload.result == 'success' }}
+    uses: ./.github/workflows/finalize-azure-storage.yml
     secrets: inherit

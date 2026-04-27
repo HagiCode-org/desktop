@@ -1522,12 +1522,20 @@ jobs:
   ################################################################################
   # Sync to Azure Storage Job
   ################################################################################
-  sync-azure:
-    name: Sync to Azure Storage
+  sync-azure-upload:
+    name: Upload Release Shards to Azure Storage
     needs: build-summary
     if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.build-summary.outputs.release_status == 'success' }}
     uses: ./.github/workflows/sync-azure-storage.yml
     with:
       release_tag: ${{ github.ref_name }}
       release_channel: ${{ needs.build-summary.outputs.channel }}
+      run_finalize: false
+    secrets: inherit
+
+  sync-azure-finalize:
+    name: Finalize Azure Storage Sync
+    needs: sync-azure-upload
+    if: ${{ always() && needs.sync-azure-upload.result == 'success' }}
+    uses: ./.github/workflows/finalize-azure-storage.yml
     secrets: inherit

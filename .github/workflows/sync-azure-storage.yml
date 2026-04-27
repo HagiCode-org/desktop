@@ -25,14 +25,19 @@ on:
         required: false
         type: string
         default: '3'
+      run_finalize:
+        description: 'Whether to execute the internal finalize job in this reusable workflow'
+        required: false
+        type: boolean
+        default: false
     secrets:
       FEISHU_WEBHOOK_URL:
         required: true
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag to sync (empty for latest release)'
-        required: false
+        description: 'Release tag to sync (required to avoid latest-release drift)'
+        required: true
         type: string
       release_version:
         description: 'Version prefix to publish into Azure (defaults to release_tag)'
@@ -84,9 +89,8 @@ jobs:
           RELEASE_TAG="${{ inputs.release_tag }}"
         else
           RELEASE_TAG=$(gh release view --json tagName -q .tagName)
-          echo "No tag specified, using latest release: ${RELEASE_TAG}"
+          echo "No tag specified for ${GITHUB_EVENT_NAME}, using latest release: ${RELEASE_TAG}"
         fi
-
         RELEASE_CHANNEL="${{ inputs.release_channel }}"
         if [ -z "${RELEASE_CHANNEL}" ]; then
           RELEASE_CHANNEL="beta"
@@ -280,7 +284,7 @@ jobs:
     needs:
     - plan
     - upload
-    if: always() && needs.plan.result == 'success'
+    if: always() && needs.plan.result == 'success' && (github.event_name != 'workflow_call' || inputs.run_finalize == true)
     runs-on: ubuntu-latest
 
     steps:
