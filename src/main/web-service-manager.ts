@@ -1,12 +1,10 @@
-import { spawn, ChildProcess } from 'child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { app } from 'electron';
 import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
-import { manifestReader, type EntryPoint, type ResultSessionFile, type ParsedResult, type StartResult } from './manifest-reader.js';
-import { PowerShellExecutor } from './utils/powershell-executor.js';
+import { manifestReader, type EntryPoint, type StartResult } from './manifest-reader.js';
 import {
   buildSnapshotLogLines,
   buildManagedServiceEnv,
@@ -25,11 +23,6 @@ import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 import { executeCli } from './utils/cli-executor.js';
-import {
-  detectToolchainCommandName,
-  resolveToolchainLaunchPlan,
-  shouldUseShellForCommand,
-} from './toolchain-launch.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import {
   evaluateRuntimeCompatibility,
@@ -128,7 +121,6 @@ class ManagedLaunchError extends Error {
 }
 
 export class PCodeWebServiceManager {
-  private process: ChildProcess | null = null;
   private config: WebServiceConfig;
   private readonly configManager: ConfigManager | null;
   private readonly httpClient: DesktopHttpClient;
@@ -268,126 +260,6 @@ export class PCodeWebServiceManager {
     await this.savedConfigInitialization;
   }
 
-  /**
-   * Read result.json file from working directory
-   * Supports multiple result file names and formats for backward compatibility
-   * @param workingDirectory - Directory containing result file
-   * @returns Parsed ResultSessionFile or null if not found
-   */
-  private async readResultFile(workingDirectory: string): Promise<ResultSessionFile | null> {
-    // List of possible result file names (in order of preference)
-    const resultFileNames = ['result.json', 'start-result.json'];
-
-    for (const fileName of resultFileNames) {
-      const resultPath = path.join(workingDirectory, fileName);
-
-      try {
-        log.info('[WebService] Reading result file:', resultPath);
-        const content = await fs.readFile(resultPath, 'utf-8');
-        const rawData = JSON.parse(content);
-
-        // Convert to ResultSessionFile format
-        const result = this.normalizeResultFile(rawData, fileName);
-        log.info('[WebService] Result file read successfully from:', fileName, 'success:', result.success);
-        return result;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          // File doesn't exist, try next file name
-          continue;
-        } else {
-          log.error('[WebService] Failed to read', fileName, ':', error);
-        }
-      }
-    }
-
-    // No result file found
-    log.warn('[WebService] No result file found in:', workingDirectory);
-    return null;
-  }
-
-  /**
-   * Normalize result file data to ResultSessionFile format
-   * Handles different result file formats
-   * @param rawData - Raw JSON data from result file
-   * @param fileName - Source file name
-   * @returns Normalized ResultSessionFile
-   */
-  private normalizeResultFile(rawData: any, fileName: string): ResultSessionFile {
-    // Check if already in ResultSessionFile format
-    if ('exitCode' in rawData && 'success' in rawData && typeof rawData.success === 'boolean') {
-      return rawData as ResultSessionFile;
-    }
-
-    // Handle start-result.json format
-    if (fileName === 'start-result.json') {
-      const success = rawData.success === true || rawData.ready === true;
-      return {
-        exitCode: success ? 0 : 1,
-        stdout: rawData.stdout || JSON.stringify(rawData),
-        stderr: rawData.stderr || '',
-        duration: rawData.duration || 0,
-        timestamp: rawData.timestamp || new Date().toISOString(),
-        success,
-        version: rawData.version,
-        errorMessage: rawData.errorMessage || rawData.error,
-      };
-    }
-
-    // Fallback: treat as unknown format
-    return {
-      exitCode: -1,
-      stdout: JSON.stringify(rawData),
-      stderr: 'Unknown result file format',
-      duration: 0,
-      timestamp: new Date().toISOString(),
-      success: false,
-      errorMessage: 'Unknown result file format',
-    };
-  }
-
-  /**
-   * Parse Result Session file to extract key information
-   * @param result - ResultSessionFile from result.json
-   * @returns ParsedResult with extracted information
-   */
-  private parseResultSession(result: ResultSessionFile | null): ParsedResult {
-    // Fallback if result.json doesn't exist
-    if (!result) {
-      return {
-        success: false,
-        errorMessage: 'result.json file not found',
-        rawOutput: '',
-      };
-    }
-
-    return {
-      success: result.success,
-      version: result.version,
-      errorMessage: result.errorMessage,
-      rawOutput: this.formatRawOutput(result.stdout, result.stderr),
-    };
-  }
-
-  /**
-   * Format raw output for UI display
-   * @param stdout - Standard output
-   * @param stderr - Standard error output
-   * @returns Formatted output string
-   */
-  private formatRawOutput(stdout: string, stderr: string): string {
-    const parts: string[] = [];
-
-    if (stdout && stdout.trim()) {
-      parts.push(stdout.trim());
-    }
-
-    if (stderr && stderr.trim()) {
-      parts.push('Errors: ' + stderr.trim());
-    }
-
-    return parts.length > 0 ? parts.join('\n') : 'No output';
-  }
-
   private resetStartupLogBuffer(): void {
     this.startupLogLines = [];
     this.startupLogTruncated = false;
@@ -405,22 +277,6 @@ export class PCodeWebServiceManager {
       this.startupLogLines = this.startupLogLines.slice(-this.startupLogMaxLines);
       this.startupLogTruncated = true;
     }
-  }
-
-  private captureStartupProcessOutput(output: string, level: 'info' | 'error'): void {
-    output.split('\n').forEach((line) => {
-      const normalized = line.trim();
-      if (!normalized) {
-        return;
-      }
-
-      this.appendStartupLogLine(normalized);
-      if (level === 'error') {
-        log.error('[WebService]', normalized);
-      } else {
-        log.info('[WebService]', normalized);
-      }
-    });
   }
 
   private buildStartupFailureInfo(summary: string): StartupFailureInfo {
@@ -630,280 +486,6 @@ export class PCodeWebServiceManager {
       requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
       runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
     };
-  }
-
-  /**
-   * Execute entryPoint.start script and wait for result.json generation
-   *
-   * On Windows with .ps1 scripts: Uses direct PowerShell invocation via PowerShellExecutor
-   * On Windows with .bat/.cmd: Uses legacy spawn with shell (deprecated)
-   * On Unix/Linux: Uses bash to execute .sh scripts
-   *
-   * @param scriptPath - Full path to the start script
-   * @param workingDirectory - Directory where script should be executed
-   * @returns ResultSessionFile from generated result.json
-   */
-  private async executeStartScript(
-    scriptPath: string,
-    workingDirectory: string
-  ): Promise<ResultSessionFile> {
-    log.info('[WebService] Executing start script:', scriptPath);
-    log.info('[WebService] Working directory:', workingDirectory);
-
-    // Use PowerShellExecutor for .ps1 scripts on Windows
-    if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
-      log.info('[WebService] Using PowerShellExecutor for direct invocation');
-      const executor = new PowerShellExecutor();
-
-      try {
-        const result = await executor.executeAndReadResult(scriptPath, workingDirectory, {
-          cwd: workingDirectory,
-          timeout: this.startTimeout,
-        });
-        return result;
-      } catch (error) {
-        log.error('[WebService] PowerShell execution failed:', error);
-        throw error;
-      }
-    }
-
-    // Legacy execution path for .bat/.cmd on Windows and .sh on Unix
-    // Ensure script has execute permissions on Unix
-    if (process.platform !== 'win32') {
-      try {
-        await fs.chmod(scriptPath, 0o755);
-      } catch (error) {
-        log.warn('[WebService] Failed to set execute permissions:', error);
-      }
-    }
-
-    // Build command and arguments based on platform
-    // For PowerShell scripts: use 'powershell.exe' with script path as argument
-    // For other scripts: use script path directly
-    let command: string;
-    let args: string[];
-
-    if (process.platform === 'win32' && scriptPath.endsWith('.ps1')) {
-      // PowerShell script: explicit PowerShell invocation
-      command = 'powershell.exe';
-      args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath];
-      log.info('[WebService] Using explicit PowerShell invocation');
-    } else {
-      // Other scripts: direct invocation
-      command = scriptPath;
-      args = [];
-    }
-
-    const toolchainCommandName = detectToolchainCommandName(command);
-    if (toolchainCommandName) {
-      const activationPolicy = await new BundledNodeRuntimeManager(this.pathManager).getDesktopActivationPolicy();
-      const launchPlan = resolveToolchainLaunchPlan({
-        commandName: toolchainCommandName,
-        args,
-        pathManager: this.pathManager,
-        activationPolicy,
-      });
-      command = launchPlan.command;
-      args = launchPlan.args;
-      log.info('[WebService] Resolved desktop-owned toolchain launch:', {
-        commandName: toolchainCommandName,
-        command,
-        resolutionSource: launchPlan.resolutionSource,
-        usedBundledToolchain: launchPlan.usedBundledToolchain,
-        fellBackToSystemPath: launchPlan.fellBackToSystemPath,
-        activationPolicy,
-      });
-    }
-
-    // Execute script
-    return new Promise((resolve, reject) => {
-      // On Windows with shell: true, paths with spaces need to be quoted
-      const spawnCommand = (process.platform === 'win32' && !scriptPath.endsWith('.ps1') && command.includes(' '))
-        ? `"${command}"`
-        : command;
-      const useShell = !scriptPath.endsWith('.ps1') && shouldUseShellForCommand(spawnCommand);
-
-      const child = spawn(spawnCommand, args, {
-        cwd: workingDirectory,
-        shell: useShell,
-        stdio: 'ignore',
-        detached: process.platform === 'win32',
-        // Hide console window on Windows to prevent visual disruption
-        ...(process.platform === 'win32' && { windowsHide: true }),
-      });
-
-      let timeout: NodeJS.Timeout | null = null;
-      let isResolved = false;
-
-      // Enhanced process termination helper for Windows detached processes
-      const terminateProcess = (reason: string) => {
-        if (isResolved) return;
-
-        log.warn(`[WebService] Terminating start script (${reason}):`, scriptPath);
-
-        if (process.platform === 'win32') {
-          try {
-            child.kill('SIGKILL');
-          } catch (e) {
-            log.error('[WebService] Failed to kill Windows process:', e);
-          }
-        } else {
-          child.kill('SIGKILL');
-        }
-      };
-
-      // Set timeout (30 seconds for start) with enhanced logging
-      timeout = setTimeout(() => {
-        terminateProcess('timeout');
-        isResolved = true;
-        reject(new Error(`Start script execution timeout after ${this.startTimeout}ms`));
-      }, this.startTimeout);
-
-      child.on('exit', async (code) => {
-        if (timeout) clearTimeout(timeout);
-        if (isResolved) return; // Already resolved via timeout
-        isResolved = true;
-
-        log.info('[WebService] Start script exited normally with code:', code, 'platform:', process.platform);
-
-        // Wait a bit for result.json to be written
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Read result.json
-        const result = await this.readResultFile(workingDirectory);
-
-        if (result) {
-          resolve(result);
-        } else {
-          // Fallback: create a result from exit code
-          resolve({
-            exitCode: code ?? -1,
-            stdout: '',
-            stderr: 'result.json not found',
-            duration: 0,
-            timestamp: new Date().toISOString(),
-            success: false,
-            errorMessage: 'result.json file was not generated',
-          });
-        }
-      });
-
-      child.on('error', async (error) => {
-        if (timeout) clearTimeout(timeout);
-        if (isResolved) return; // Already resolved via timeout
-        isResolved = true;
-
-        log.error('[WebService] Start script execution error:', error.message);
-
-        // Try to read result.json even on error
-        const result = await this.readResultFile(workingDirectory);
-        if (result) {
-          resolve(result);
-        } else {
-          reject(error);
-        }
-      });
-    });
-  }
-
-  /**
-   * Get the startup script path for the current platform
-   *
-   * Uses entryPoint.start if available, otherwise falls back to platform-specific defaults.
-   *
-   * @returns The path to the startup script
-   */
-  private getStartupScriptPath(): string {
-    // Use entryPoint.start if available
-    if (this.entryPoint?.start) {
-      const scriptPath = path.resolve(
-        this.activeVersionPath || '',
-        this.entryPoint.start
-      );
-      log.info('[WebService] Using entryPoint.start script:', scriptPath);
-      return scriptPath;
-    }
-
-    // Fallback to platform-specific default
-    const basePath = this.activeVersionPath || (() => {
-      const currentPlatform = this.pathManager.getCurrentPlatform();
-      return this.pathManager.getInstalledPath(currentPlatform);
-    })();
-
-    // Return platform-specific script path
-    const scriptName = process.platform === 'win32' ? 'start.ps1' : 'start.sh';
-    return path.join(basePath, scriptName);
-  }
-
-  /**
-   * Get platform-specific startup arguments
-   * Note: We don't add --urls parameter.
-   * URL configuration is injected via ASPNETCORE_URLS environment variable at spawn time.
-   */
-  private getPlatformSpecificArgs(): string[] {
-    return this.config.args || [];
-  }
-
-  /**
-   * Get platform-specific spawn options for non-PowerShell scripts
-   *
-   * For Windows with .bat/.cmd: shell=true, detached=true, windowsHide=true (legacy)
-   * For Unix: shell=false, detached=false, stdio=['ignore', 'pipe', 'pipe']
-   *
-   * Note: PowerShell (.ps1) scripts are handled by PowerShellExecutor.spawnService()
-   * This method is only used for .bat/.cmd files on Windows and .sh on Unix.
-   *
-   * When using startup script, the working directory is the script's directory
-   */
-  private getSpawnOptions(mergedEnv: NodeJS.ProcessEnv) {
-    const scriptPath = this.getStartupScriptPath();
-    const options: any = {
-      env: mergedEnv,
-      cwd: path.dirname(scriptPath),
-    };
-
-    // On Unix, ensure script has execute permissions
-    if (process.platform !== 'win32') {
-      fs.chmod(scriptPath, 0o755).catch(error => {
-        log.warn('[WebService] Failed to set execute permissions on script:', error);
-      });
-    }
-
-    // On Windows .bat/.cmd: legacy shell mode for compatibility
-    // On Unix: direct script execution with output capture
-    if (process.platform === 'win32') {
-      // BAT/CMD files: legacy shell mode
-      options.shell = shouldUseShellForCommand(scriptPath);
-      options.detached = true;
-      options.windowsHide = true;
-    } else {
-      // Unix: direct script execution with output capture
-      options.shell = false;
-      options.detached = false;
-      options.stdio = ['ignore', 'pipe', 'pipe'];
-    }
-
-    return options;
-  }
-
-  /**
-   * Get the command and arguments for non-PowerShell scripts
-   *
-   * For Windows .bat/.cmd: Returns script path directly (legacy)
-   * For Unix: Returns script path directly
-   *
-   * Note: PowerShell (.ps1) scripts are handled by PowerShellExecutor.spawnService()
-   */
-  private getSpawnCommand(): { command: string; args: string[] } {
-    const scriptPath = this.getStartupScriptPath();
-    const args = this.getPlatformSpecificArgs();
-
-    // On Windows with shell: true, paths with spaces need to be quoted
-    if (process.platform === 'win32' && scriptPath.includes(' ')) {
-      return { command: `"${scriptPath}"`, args };
-    }
-
-    return { command: scriptPath, args };
   }
 
   /**
@@ -1273,7 +855,7 @@ export class PCodeWebServiceManager {
     // Desktop start should always get a fresh attempt, especially after version switches.
     this.restartCount = 0;
 
-    if (this.process || this.status === 'running') {
+    if (this.status === 'running') {
       log.warn('[WebService] Existing service runtime detected before start; stopping it before launching current version.');
       this.appendStartupLogLine('Existing service runtime detected; stopping before launching current version');
       const stopped = await this.stop();
@@ -1336,6 +918,7 @@ export class PCodeWebServiceManager {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const errorCode = error instanceof ManagedLaunchError ? error.code : 'runtime-incompatible';
         log.error('[WebService] Managed runtime validation failed:', errorCode, errorMessage);
+        log.error('[WebService] Packaged Desktop does not fall back to a machine-wide dotnet installation.');
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, errorMessage);
         this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
@@ -1492,7 +1075,6 @@ export class PCodeWebServiceManager {
     } catch (error) {
       log.error('[WebService] Failed to start:', error);
       this.status = 'error';
-      this.process = null;
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
       this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
@@ -1519,83 +1101,9 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Setup process event handlers
-   */
-  private setupProcessHandlers(): void {
-    if (!this.process) return;
-
-    this.process.stdout?.on('data', (data) => {
-      const output = data.toString().trim();
-      if (output) {
-        this.captureStartupProcessOutput(output, 'info');
-      }
-    });
-
-    this.process.stderr?.on('data', (data) => {
-      const output = data.toString().trim();
-      if (output) {
-        this.captureStartupProcessOutput(output, 'error');
-      }
-    });
-
-    this.process.on('error', (error) => {
-      // Provide more context for dotnet-related errors
-      if (error.message.includes('dotnet') || error.message.includes('ENOENT')) {
-        log.error('[WebService] Bundled dotnet executable or managed payload is not accessible:', error.message);
-        log.error('[WebService] Packaged Desktop does not fall back to a machine-wide dotnet installation.');
-      } else {
-        log.error('[WebService] Process error:', error.message);
-      }
-      this.appendStartupLogLine(`Process error: ${error.message}`);
-      this.status = 'error';
-      this.process = null;
-    });
-
-    this.process.on('exit', (code, signal) => {
-      log.info('[WebService] Process exited, code:', code, 'signal:', signal);
-      this.appendStartupLogLine(`Process exited: code=${String(code)} signal=${String(signal)}`);
-
-      // Enhanced logging for debugging startup failures
-      if (this.currentPhase === StartupPhase.Spawning || this.currentPhase === StartupPhase.WaitingListening) {
-        log.error('[WebService] Process exited during startup phase');
-        log.error('[WebService] Startup phase:', this.currentPhase);
-        log.error('[WebService] Managed entry point:', this.activeVersionPath ? path.join(this.activeVersionPath, 'lib', 'PCode.Web.dll') : 'unknown');
-        log.error('[WebService] Exit code:', code, 'Signal:', signal);
-
-        if (code === 0 && this.currentPhase === StartupPhase.Spawning) {
-          log.error('[WebService] Early exit with code 0 before the managed service became healthy.');
-          log.error('[WebService] Check bundled runtime validation, runtime compatibility, and service startup logs.');
-        }
-      }
-
-      if (this.status === 'running') {
-        // Unexpected exit
-        log.warn('[WebService] Process exited unexpectedly');
-        this.restartCount++;
-        this.status = 'error';
-      }
-
-      this.process = null;
-    });
-
-    this.process.on('close', () => {
-      log.info('[WebService] Process closed');
-      this.process = null;
-      if (this.status === 'running') {
-        this.status = 'stopped';
-      }
-    });
-  }
-
-  /**
    * Stop the web service process
    */
   async stop(): Promise<boolean> {
-    if (!this.process && this.status !== 'running') {
-      log.warn('[WebService] Process not running');
-      return false;
-    }
-
     try {
       this.status = 'stopping';
       log.info('[WebService] Stopping web service...');
@@ -1607,40 +1115,15 @@ export class PCodeWebServiceManager {
           errorCode: pm2Stop.errorCode,
           message: pm2Stop.message,
         });
-      }
-
-      if (this.process) {
-        const pid = this.process.pid;
-
-        // Try graceful shutdown first
-        log.info('[WebService] Sending SIGTERM to process:', pid);
-        this.process.kill('SIGTERM');
-
-        // Wait for graceful shutdown
-        await Promise.race([
-          new Promise<void>((resolve) => {
-            const checkInterval = setInterval(() => {
-              if (!this.process) {
-                clearInterval(checkInterval);
-                resolve();
-              }
-            }, 500);
-          }),
-          new Promise(resolve => setTimeout(resolve, this.stopTimeout))
-        ]);
-
-        // Force kill if still running
-        if (this.process) {
-          log.warn('[WebService] Force killing process:', pid);
-          await this.forceKill();
-        }
+        this.status = 'error';
+        return false;
       }
 
       this.status = 'stopped';
-      this.process = null;
       this.lastPm2Env = null;
       this.startTime = null;
       this.restartCount = 0;
+      this.currentPhase = StartupPhase.Idle;
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
@@ -1651,57 +1134,13 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Force kill the process and its children
-   */
-  private async forceKill(): Promise<void> {
-    if (!this.process) return;
-
-    const platform = process.platform;
-    const pid = this.process.pid;
-
-    if (!pid) {
-      this.process = null;
-      return;
-    }
-
-    try {
-      if (platform === 'win32') {
-        // Windows: use taskkill to terminate process tree
-        const { spawn } = await import('child_process');
-        spawn('taskkill', ['/F', '/T', '/PID', pid.toString()], {
-          stdio: 'ignore',
-          // Hide console window on Windows to prevent visual disruption
-          windowsHide: true,
-        });
-      } else {
-        // Unix: kill process group using negative PID
-        try {
-          process.kill(-pid, 'SIGKILL');
-          log.info('[WebService] Killed process group:', -pid);
-        } catch (groupError) {
-          // Fallback: kill individual process
-          log.warn('[WebService] Group kill failed, trying individual PID:', pid);
-          process.kill(pid, 'SIGKILL');
-        }
-      }
-
-      // Wait a bit for the process to die
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      log.error('[WebService] Force kill failed:', error);
-    }
-
-    this.process = null;
-  }
-
-  /**
    * Restart the web service
    */
   async restart(): Promise<StartResult> {
     log.info('[WebService] Restarting web service...');
-    this.process = null;
     this.status = 'stopped';
     this.restartCount = 0;
+    this.currentPhase = StartupPhase.Idle;
     return await this.start();
   }
 

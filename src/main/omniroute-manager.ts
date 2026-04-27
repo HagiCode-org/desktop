@@ -4,13 +4,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { randomBytes } from 'node:crypto';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
+import { resolveCommandLaunch } from './toolchain-launch.js';
+import { executeCli } from './utils/cli-executor.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
   OMNIROUTE_PROCESS_NAME,
@@ -77,7 +78,6 @@ export interface OmniRouteManagerOptions {
   configManager: ConfigManager;
   dependencyManagementService: DependencyManagementService;
   userDataPath?: string;
-  spawnProcess?: typeof spawn;
   openPath?: (targetPath: string) => Promise<string>;
 }
 
@@ -173,14 +173,12 @@ export class OmniRouteManager {
   private readonly configManager: ConfigManager;
   private readonly dependencyManagementService: DependencyManagementService;
   private readonly userDataPath: string;
-  private readonly spawnProcess: typeof spawn;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
 
   constructor(options: OmniRouteManagerOptions) {
     this.configManager = options.configManager;
     this.dependencyManagementService = options.dependencyManagementService;
     this.userDataPath = options.userDataPath ?? app.getPath('userData');
-    this.spawnProcess = options.spawnProcess ?? spawn;
     this.openPathImpl = options.openPath ?? ((targetPath) => shell.openPath(targetPath));
   }
 
@@ -602,33 +600,30 @@ export class OmniRouteManager {
   }
 
   private runPm2(command: string, args: string[], env: NodeJS.ProcessEnv, allowFailure = false): Promise<CommandResult> {
-    return new Promise((resolve, reject) => {
-      const pm2LaunchPlan = resolvePm2LaunchPlan(command);
-      let child: ChildProcessWithoutNullStreams;
-      try {
-        child = this.spawnProcess(pm2LaunchPlan.command, [...pm2LaunchPlan.argsPrefix, ...args], {
-          env,
-          windowsHide: true,
-          shell: pm2LaunchPlan.shell,
-        });
-      } catch (error) {
-        reject(error);
-        return;
+    const pm2LaunchPlan = resolvePm2LaunchPlan(command);
+    const launch = pm2LaunchPlan.shell
+      ? resolveCommandLaunch(pm2LaunchPlan.command)
+      : { command: pm2LaunchPlan.command, shell: false };
+
+    return executeCli({
+      command: launch.command,
+      args: [...pm2LaunchPlan.argsPrefix, ...args],
+      env,
+      windowsHide: true,
+      shell: launch.shell,
+      metadata: { component: 'OmniRouteManager', command },
+    }).then((result) => {
+      const commandResult = {
+        exitCode: result.exitCode,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
+
+      if (!allowFailure && result.exitCode !== 0) {
+        throw this.createPm2CommandError(commandResult);
       }
 
-      let stdout = '';
-      let stderr = '';
-      child.stdout.on('data', (data: Buffer) => { stdout += data.toString('utf8'); });
-      child.stderr.on('data', (data: Buffer) => { stderr += data.toString('utf8'); });
-      child.on('error', reject);
-      child.on('close', (exitCode) => {
-        const result = { exitCode, stdout, stderr };
-        if (!allowFailure && exitCode !== 0) {
-          reject(this.createPm2CommandError(result));
-          return;
-        }
-        resolve(result);
-      });
+      return commandResult;
     });
   }
 

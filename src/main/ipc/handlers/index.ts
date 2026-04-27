@@ -28,9 +28,6 @@ export { registerPackageSourceHandlers, initPackageSourceHandlers } from './pack
 // Onboarding handlers
 export { registerOnboardingHandlers, initOnboardingHandlers } from './onboardingHandlers.js';
 
-// Data directory handlers
-export { registerDataDirectoryHandlers, initDataDirectoryHandlers } from './dataDirectoryHandlers.js';
-
 // Region handlers
 export { registerRegionHandlers, initRegionHandlers } from './regionHandlers.js';
 

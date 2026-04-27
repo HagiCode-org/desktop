@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { LlmInstallationManager } from './llm-installation-manager.js';
+import type { LlmPromptConfig, LlmPromptRegionOverride } from './llm-prompt-loader.js';
 import type {
   ActiveVersionContext,
   PromptResourceKey,
@@ -19,7 +19,7 @@ import type {
 
 interface PromptGuidanceServiceDeps {
   promptResourceResolver?: PromptResourceResolver | null;
-  llmInstallationManager?: LlmInstallationManager | null;
+  loadVersionPrompt?: ((manifestPath: string, region?: LlmPromptRegionOverride) => Promise<LlmPromptConfig>) | null;
   readFile?: (filePath: string, encoding: BufferEncoding) => Promise<string>;
   resolveManifestPath?: (versionId: string) => string;
 }
@@ -34,7 +34,7 @@ interface ResourceGuidanceInput {
 
 interface VersionGuidanceInput {
   versionId: string;
-  region?: 'cn' | 'international';
+  region?: LlmPromptRegionOverride;
 }
 
 export class PromptGuidanceService {
@@ -105,11 +105,11 @@ export class PromptGuidanceService {
   }
 
   async buildVersionGuidance(input: VersionGuidanceInput): Promise<PromptGuidanceResponse> {
-    if (!this.deps.llmInstallationManager) {
+    if (!this.deps.loadVersionPrompt) {
       return this.createFailure({
         entryPoint: 'versionDependencies',
         errorCode: 'MANAGER_NOT_INITIALIZED',
-        error: 'LLM Installation Manager not initialized',
+        error: 'Version prompt loader not initialized',
         attemptedPaths: [],
         activeVersion: input.versionId,
       });
@@ -119,7 +119,7 @@ export class PromptGuidanceService {
 
     try {
       manifestPath = this.resolveManifestPath(input.versionId);
-      const prompt = await this.deps.llmInstallationManager.loadPrompt(manifestPath, input.region);
+      const prompt = await this.deps.loadVersionPrompt(manifestPath, input.region);
       return this.createSuccess({
         entryPoint: 'versionDependencies',
         promptContent: prompt.content,

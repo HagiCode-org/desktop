@@ -11,7 +11,6 @@ import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebService
 import { DependencyManager, type DependencyCheckResult, DependencyType } from './dependency-manager.js';
 import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
-import { LlmInstallationManager } from './llm-installation-manager.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import DependencyManagementService from './dependency-management-service.js';
 import OmniRouteManager from './omniroute-manager.js';
@@ -46,8 +45,6 @@ import {
   registerDependencyHandlers,
   registerPackageSourceHandlers,
   registerOnboardingHandlers,
-  registerDataDirectoryHandlers,
-  initDataDirectoryHandlers,
   registerRegionHandlers,
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
@@ -173,7 +170,6 @@ let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
-let llmInstallationManager: LlmInstallationManager | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
 let omniRouteManager: OmniRouteManager | null = null;
@@ -204,7 +200,6 @@ function buildBootstrapSnapshot(input: {
     diagnostics: input.diagnostics ?? [],
     recovery: {
       canRetry: true,
-      canRestoreDefault: true,
       canOpenDesktopLogs: true,
     },
     generatedAt: new Date().toISOString(),
@@ -242,33 +237,11 @@ async function resolveBootstrapSnapshot(forceRefresh: boolean = false): Promise<
     }
 
     const defaultPath = pathManager.getDefaultDataDirectory();
-    const selection = configManager.resolveDataDirectorySelection(defaultPath);
-    let preparation = await pathManager.prepareDataDirectoryForBootstrap(selection.requestedPath, {
-      source: selection.source,
-      requestedPath: selection.configuredPath ?? selection.requestedPath,
+    const preparation = await pathManager.prepareDataDirectoryForBootstrap(defaultPath, {
+      source: 'default',
+      requestedPath: defaultPath,
       defaultPath,
     });
-
-    if (!preparation.isReady && selection.source === 'configured') {
-      log.warn('[Bootstrap] Configured data directory failed validation, trying default fallback', {
-        configuredPath: selection.configuredPath,
-        diagnostic: preparation.diagnostic,
-      });
-
-      const fallbackPreparation = await pathManager.prepareDataDirectoryForBootstrap(defaultPath, {
-        source: 'fallback-default',
-        requestedPath: selection.configuredPath,
-        defaultPath,
-      });
-
-      if (fallbackPreparation.isReady) {
-        fallbackPreparation.context.fallbackUsed = true;
-        fallbackPreparation.context.fallbackReason = preparation.validation.message;
-        fallbackPreparation.diagnostic = preparation.diagnostic;
-        configManager.setDataDirectoryPath(fallbackPreparation.context.normalizedPath);
-        preparation = fallbackPreparation;
-      }
-    }
 
     if (!preparation.isReady) {
       return buildBootstrapSnapshot({
@@ -317,9 +290,7 @@ async function resolveBootstrapSnapshot(forceRefresh: boolean = false): Promise<
       status: 'ready',
       stage: 'data-directory-ready',
       summary: 'bootstrap ready',
-      details: preparation.context.fallbackUsed
-        ? `Desktop fell back to the default data directory after validating ${selection.configuredPath}.`
-        : `Desktop data directory ready at ${preparation.context.normalizedPath}.`,
+      details: `Desktop data directory ready at ${preparation.context.normalizedPath}.`,
       dataDirectory: preparation.context,
       diagnostics: preparation.diagnostic ? [preparation.diagnostic] : [],
     });
@@ -402,9 +373,6 @@ function createWindow(): void {
     },
   });
   wireDesktopWindowClipboard(mainWindow);
-  initDataDirectoryHandlers(pathManager, yamlConfigManager, configManager, mainWindow, () => {
-    bootstrapSnapshotCache = null;
-  });
 
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
@@ -2098,7 +2066,7 @@ app.whenReady().then(async () => {
   });
 
   const initialBootstrapSnapshot = await resolveBootstrapSnapshot(true);
-  const dataDirectoryPath = initialBootstrapSnapshot.dataDirectory?.normalizedPath
+  const resolvedDataRootPath = initialBootstrapSnapshot.dataDirectory?.normalizedPath
     ?? pathManager.getDefaultDataDirectory();
   log.info('[Bootstrap] Initial Desktop bootstrap snapshot resolved:', initialBootstrapSnapshot);
 
@@ -2131,7 +2099,7 @@ app.whenReady().then(async () => {
   log.info(`[Config] Server port: ${serverConfig.port}`);
   log.info(`[Config] Web service host: ${DEFAULT_WEB_SERVICE_HOST}`);
   log.info(`[Config] Web service port: ${DEFAULT_WEB_SERVICE_PORT}`);
-  log.info(`[Config] Data directory path: ${dataDirectoryPath || 'Not set (will use default)'}`);
+  log.info(`[Config] Data directory path: ${resolvedDataRootPath || 'Not set (will use default)'}`);
   log.info(`[Config] Shutdown directory: ${configManager.getShutdownDirectory() || 'Not set'}`);
   log.info(`[Config] Recording directory: ${configManager.getRecordingDirectory() || 'Not set'}`);
   log.info(`[Config] Logs directory: ${configManager.getLogsDirectory() || 'Not set'}`);
@@ -2196,23 +2164,16 @@ app.whenReady().then(async () => {
   const presetLoader = getPresetLoader();
   log.info('[App] Claude Config Manager initialized');
 
-  // Initialize LLM Installation Manager (after ClaudeConfigManager)
-  llmInstallationManager = new LlmInstallationManager(
-    regionDetector,
-  );
-  log.info('[App] LLM Installation Manager initialized');
-
   // Shared prompt resolver for retained prompt-guidance entry points
   promptResourceResolver = new PromptResourceResolver();
   log.info('[App] Prompt Resource Resolver initialized');
 
   // Register LLM IPC Handlers
-  if (llmInstallationManager) {
+  if (regionDetector) {
     registerLlmHandlers({
-      llmInstallationManager,
-      mainWindow,
       versionManager,
       promptResourceResolver,
+      regionDetector,
     });
     log.info('[App] LLM IPC handlers registered');
   }
@@ -2284,16 +2245,6 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
-  registerDataDirectoryHandlers({
-    pathManager,
-    yamlConfigManager,
-    configManager,
-    mainWindow,
-    invalidateBootstrapSnapshot: () => {
-      bootstrapSnapshotCache = null;
-    },
-  });
-  log.info('[App] Data directory IPC handlers registered');
   createTray();
   setServerStatus('stopped');
   startStatusPolling();

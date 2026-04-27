@@ -57,16 +57,6 @@ export interface ValidationResult {
   diagnostic?: DataDirectoryDiagnostic;
 }
 
-/**
- * Storage information interface
- */
-export interface StorageInfo {
-  used: number; // bytes
-  total: number; // bytes
-  available: number; // bytes
-  usedPercentage: number; // 0-100
-}
-
 export interface DataDirectoryPreparationResult {
   isReady: boolean;
   validation: ValidationResult;
@@ -256,7 +246,7 @@ export async function prepareDataDirectoryAccess(
   };
   const pathModule = getPathModuleForPlatform(platform);
   const context: BootstrapDataDirectoryContext = {
-    source: options?.source ?? 'configured',
+    source: options?.source ?? 'default',
     requestedPath: options?.requestedPath ?? dirPath,
     normalizedPath,
     defaultPath,
@@ -405,8 +395,6 @@ export class PathManager {
   ] as const;
   private paths: AppPaths;
   private userDataPath: string;
-  private customDataDirectory: string | null = null;
-  private static readonly MIN_DISK_SPACE = 1024 * 1024 * 1024; // 1GB in bytes
 
   private constructor() {
     this.userDataPath = app.getPath('userData');
@@ -575,11 +563,10 @@ export class PathManager {
   }
 
   /**
-   * Get the actual data directory path (supports custom configuration)
-   * @returns The absolute path to the data directory
+   * Get the internally managed default data directory path.
    */
   getDataDirectory(): string {
-    return this.customDataDirectory || this.paths.appsData;
+    return this.paths.appsData;
   }
 
   /**
@@ -593,120 +580,8 @@ export class PathManager {
     );
   }
 
-  /**
-   * Set a custom data directory path
-   * @param customPath - The absolute path to the data directory
-   * @throws Error if the path is invalid
-   */
-  setDataDirectory(customPath: string): void {
-    const validation = this.validatePathSync(customPath);
-    if (!validation.isValid) {
-      throw new Error(`Invalid data directory: ${validation.message}`);
-    }
-    this.applyDataDirectoryPath(validation.normalizedPath ?? customPath);
-    log.info('[PathManager] Data directory updated to:', customPath);
-  }
-
   applyDataDirectoryPath(resolvedPath: string): void {
-    this.customDataDirectory = resolvedPath;
     this.paths.appsData = resolvedPath;
-  }
-
-  /**
-   * Validate a path for use as data directory (synchronous version)
-   * @param dirPath - The path to validate
-   * @returns Validation result with status and messages
-   */
-  validatePathSync(dirPath: string): ValidationResult {
-    const normalizedPath = normalizeDataDirectoryPathForPlatform(dirPath, process.platform);
-
-    if (!isAbsoluteDataDirectoryPath(dirPath, process.platform)) {
-      return {
-        isValid: false,
-        message: 'Only absolute paths are supported. Please provide a full path starting with / or a drive letter (e.g., C:\\ or /).',
-        normalizedPath,
-      };
-    }
-
-    if (hasInvalidDataDirectoryCharacters(dirPath, process.platform)) {
-      return {
-        isValid: false,
-        message: 'Path contains invalid characters: < > : " | ? *',
-        normalizedPath,
-      };
-    }
-
-    let existed = false;
-    try {
-      fsSync.accessSync(normalizedPath);
-      existed = true;
-    } catch {
-      try {
-        fsSync.mkdirSync(normalizedPath, { recursive: true });
-        log.info('[PathManager] Created data directory:', normalizedPath);
-      } catch (error) {
-        return {
-          isValid: false,
-          message: `Cannot create directory at ${normalizedPath}: ${error}`,
-          normalizedPath,
-          diagnostic: buildDataDirectoryDiagnostic({
-            code: 'mkdir-failed',
-            operation: 'mkdir',
-            summary: 'failed to create Desktop data directory',
-            detail: error instanceof Error ? error.message : String(error),
-            requestedPath: dirPath,
-            normalizedPath,
-          }),
-        };
-      }
-    }
-
-    const pathModule = getPathModuleForPlatform(process.platform);
-    const testFile = pathModule.join(normalizedPath, `.hagicode-write-test-${process.pid}`);
-
-    try {
-      fsSync.writeFileSync(testFile, 'test', { flag: 'wx' });
-      fsSync.unlinkSync(testFile);
-    } catch (error) {
-      return {
-        isValid: false,
-        message: `No write permission for directory ${normalizedPath}: ${error}`,
-        normalizedPath,
-        diagnostic: buildDataDirectoryDiagnostic({
-          code: 'write-test-failed',
-          operation: 'write-test',
-          summary: 'data directory is not writable',
-          detail: error instanceof Error ? error.message : String(error),
-          requestedPath: dirPath,
-          normalizedPath,
-        }),
-      };
-    }
-
-    const warnings = existed
-      ? ['Note: Full disk space check requires async validation']
-      : ['Directory was created during validation. Full disk space check requires async validation'];
-
-    return {
-      isValid: true,
-      message: 'Path is valid and writable',
-      warnings,
-      normalizedPath,
-    };
-  }
-
-  /**
-   * Validate a path for use as data directory (asynchronous version)
-   * @param dirPath - The path to validate
-   * @returns Validation result with status and messages
-   */
-  async validatePath(dirPath: string): Promise<ValidationResult> {
-    const preparation = await prepareDataDirectoryAccess(dirPath, {
-      source: 'configured',
-      defaultPath: this.getDefaultDataDirectory(),
-    });
-
-    return preparation.validation;
   }
 
   async prepareDataDirectoryForBootstrap(
@@ -722,67 +597,6 @@ export class PathManager {
       requestedPath: options?.requestedPath,
       defaultPath: options?.defaultPath ?? this.getDefaultDataDirectory(),
     });
-  }
-
-  /**
-   * Get storage information for the data directory
-   * @param dirPath - The directory path to check
-   * @returns Storage information
-   */
-  async getStorageInfo(dirPath: string): Promise<StorageInfo> {
-    let used = 0;
-    let total = 0;
-    let available = 0;
-
-    try {
-      // Calculate directory size
-      used = await this.calculateDirectorySize(dirPath);
-
-      // Get disk space information (using statfs for available space)
-      const stats = await fs.stat(dirPath);
-      // Use size as approximate total
-      total = stats.size || used * 2; // Approximate
-      available = Math.max(0, total - used);
-    } catch (error) {
-      log.error('[PathManager] Failed to get storage info:', error);
-    }
-
-    const usedPercentage = total > 0 ? (used / total) * 100 : 0;
-
-    return {
-      used,
-      total,
-      available,
-      usedPercentage,
-    };
-  }
-
-  /**
-   * Calculate the size of a directory recursively
-   * @param dirPath - The directory path
-   * @returns Total size in bytes
-   */
-  private async calculateDirectorySize(dirPath: string): Promise<number> {
-    let totalSize = 0;
-
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name);
-
-        if (entry.isDirectory()) {
-          totalSize += await this.calculateDirectorySize(fullPath);
-        } else if (entry.isFile()) {
-          const stats = await fs.stat(fullPath);
-          totalSize += stats.size;
-        }
-      }
-    } catch (error) {
-      log.warn('[PathManager] Failed to calculate directory size for', dirPath, error);
-    }
-
-    return totalSize;
   }
 
   getEmbeddedDotnetExecutableName(): string {

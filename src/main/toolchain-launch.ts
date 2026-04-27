@@ -23,16 +23,25 @@ export interface ResolveToolchainLaunchOptions {
   pathManager: Pick<PathManager, 'getPortableNodeExecutablePath' | 'getPortableNpmExecutablePath'>;
 }
 
+export interface CommandLaunchPlan {
+  command: string;
+  shell: boolean;
+}
+
+function stripWrappingQuotes(command: string): string {
+  return command.replace(/^"(.*)"$/, '$1');
+}
+
 export function shouldUseShellForCommand(
   command: string,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  const normalizedCommand = command.replace(/^"(.*)"$/, '$1');
+  const normalizedCommand = stripWrappingQuotes(command);
   return platform === 'win32' && /\.(cmd|bat)$/i.test(normalizedCommand);
 }
 
 export function detectToolchainCommandName(command: string): 'node' | 'npm' | null {
-  const normalizedCommand = command.replace(/^"(.*)"$/, '$1');
+  const normalizedCommand = stripWrappingQuotes(command);
   const baseName = path.basename(normalizedCommand).toLowerCase();
   if (baseName === 'node' || baseName === 'node.exe') {
     return 'node';
@@ -41,6 +50,25 @@ export function detectToolchainCommandName(command: string): 'node' | 'npm' | nu
     return 'npm';
   }
   return null;
+}
+
+export function resolveCommandLaunch(
+  command: string,
+  platform: NodeJS.Platform = process.platform,
+): CommandLaunchPlan {
+  const normalizedCommand = stripWrappingQuotes(command);
+  const shell = shouldUseShellForCommand(normalizedCommand, platform);
+  const needsQuotedWindowsWrapper = (
+    shell &&
+    platform === 'win32' &&
+    path.win32.isAbsolute(normalizedCommand) &&
+    normalizedCommand.includes(' ')
+  );
+
+  return {
+    command: needsQuotedWindowsWrapper ? `"${normalizedCommand}"` : normalizedCommand,
+    shell,
+  };
 }
 
 export function resolveToolchainLaunchPlan(options: ResolveToolchainLaunchOptions): ToolchainLaunchPlan {

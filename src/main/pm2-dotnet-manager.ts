@@ -1,9 +1,9 @@
-import { spawn, type SpawnOptionsWithoutStdio } from 'node:child_process';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import log from 'electron-log';
-import { shouldUseShellForCommand } from './toolchain-launch.js';
+import { executeCli } from './utils/cli-executor.js';
+import { resolveCommandLaunch, shouldUseShellForCommand } from './toolchain-launch.js';
 
 export const PM2_DOTNET_PROCESS_NAME = 'hagicode-dotnet-service';
 export const PM2_RUNTIME_DIR_NAME = 'pm2-dotnet-service';
@@ -34,14 +34,22 @@ export interface Pm2CommandResult {
   stderr: string;
 }
 
+export interface Pm2CommandOptions {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  shell?: boolean;
+  windowsHide?: boolean;
+}
+
 export interface Pm2CommandExecutor {
-  run(command: string, args: string[], options: SpawnOptionsWithoutStdio): Promise<Pm2CommandResult>;
+  run(command: string, args: string[], options: Pm2CommandOptions): Promise<Pm2CommandResult>;
 }
 
 export interface Pm2DotnetManagerOptions {
   pm2Command?: string;
   processName?: string;
   commandExecutor?: Pm2CommandExecutor;
+  platform?: NodeJS.Platform;
 }
 
 export interface Pm2LaunchPlan {
@@ -77,25 +85,29 @@ export type Pm2LifecycleResult =
     };
 
 class DefaultPm2CommandExecutor implements Pm2CommandExecutor {
-  run(command: string, args: string[], options: SpawnOptionsWithoutStdio): Promise<Pm2CommandResult> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(command, args, options);
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout?.on('data', chunk => {
-        stdout += chunk.toString();
-      });
-
-      child.stderr?.on('data', chunk => {
-        stderr += chunk.toString();
-      });
-
-      child.on('error', reject);
-      child.on('close', code => {
-        resolve({ code, stdout, stderr });
-      });
+  async run(command: string, args: string[], options: Pm2CommandOptions): Promise<Pm2CommandResult> {
+    const launch = options.shell ? resolveCommandLaunch(command) : { command, shell: false };
+    const result = await executeCli({
+      command: launch.command,
+      args,
+      cwd: options.cwd,
+      env: options.env,
+      shell: launch.shell,
+      windowsHide: options.windowsHide ?? true,
+      metadata: { component: 'Pm2DotnetManager', command },
     });
+
+    if (result.error?.kind === 'spawn') {
+      const error = new Error(result.error.message) as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    }
+
+    return {
+      code: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    };
   }
 }
 
@@ -105,6 +117,39 @@ function quoteJs(value: string): string {
 
 function stripWrappingQuotes(value: string): string {
   return value.replace(/^"(.*)"$/, '$1');
+}
+
+function isAbsolutePathLike(value: string): boolean {
+  return path.isAbsolute(value) || path.posix.isAbsolute(value) || path.win32.isAbsolute(value);
+}
+
+function buildPathCandidates(basePath: string, ...segments: string[]): string[] {
+  const candidates = new Set<string>();
+  candidates.add(path.join(basePath, ...segments));
+  candidates.add(path.posix.join(basePath, ...segments));
+  candidates.add(path.win32.join(basePath, ...segments));
+  return [...candidates];
+}
+
+function buildDirectoryCandidates(filePath: string): string[] {
+  const candidates = new Set<string>();
+  candidates.add(path.dirname(filePath));
+  candidates.add(path.posix.dirname(filePath));
+  candidates.add(path.win32.dirname(filePath));
+  return [...candidates];
+}
+
+function resolveExistingPath(
+  candidates: Iterable<string>,
+  existsSync: (targetPath: string) => boolean,
+): string | null {
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 function quotePm2Argument(value: string): string {
@@ -128,13 +173,17 @@ function resolveWindowsPm2LaunchFromNodeExecutable(
   nodeExecutablePath: string,
   existsSync: (targetPath: string) => boolean,
 ): { command: string; argsPrefix: string[] } | null {
-  if (!path.isAbsolute(nodeExecutablePath) || !existsSync(nodeExecutablePath)) {
+  if (!isAbsolutePathLike(nodeExecutablePath) || !existsSync(nodeExecutablePath)) {
     return null;
   }
 
-  const nodeDirectory = path.dirname(nodeExecutablePath);
-  const pm2CliPath = path.join(nodeDirectory, 'node_modules', 'pm2', 'bin', 'pm2');
-  if (!existsSync(pm2CliPath)) {
+  const pm2CliPath = resolveExistingPath(
+    buildDirectoryCandidates(nodeExecutablePath).flatMap((nodeDirectory) =>
+      buildPathCandidates(nodeDirectory, 'node_modules', 'pm2', 'bin', 'pm2'),
+    ),
+    existsSync,
+  );
+  if (!pm2CliPath) {
     return null;
   }
 
@@ -168,10 +217,13 @@ function resolveWindowsPm2LaunchFromEnvironment(
     return null;
   }
 
-  return resolveWindowsPm2LaunchFromNodeExecutable(
-    path.join(portableToolchainRoot, 'node', 'node.exe'),
+  const nodeExecutablePath = resolveExistingPath(
+    buildPathCandidates(portableToolchainRoot, 'node', 'node.exe'),
     existsSync,
   );
+  return nodeExecutablePath
+    ? resolveWindowsPm2LaunchFromNodeExecutable(nodeExecutablePath, existsSync)
+    : null;
 }
 
 function resolveWindowsPm2LaunchFromPortableToolchainRoots(
@@ -189,10 +241,13 @@ function resolveWindowsPm2LaunchFromPortableToolchainRoots(
       continue;
     }
 
-    const resolved = resolveWindowsPm2LaunchFromNodeExecutable(
-      path.join(trimmedRoot, 'node', 'node.exe'),
+    const nodeExecutablePath = resolveExistingPath(
+      buildPathCandidates(trimmedRoot, 'node', 'node.exe'),
       existsSync,
     );
+    const resolved = nodeExecutablePath
+      ? resolveWindowsPm2LaunchFromNodeExecutable(nodeExecutablePath, existsSync)
+      : null;
     if (resolved) {
       return resolved;
     }
@@ -223,11 +278,26 @@ function resolveWindowsPm2NodeLaunch(
   existsSync: (targetPath: string) => boolean,
 ): { command: string; argsPrefix: string[] } | null {
   const normalizedCommand = stripWrappingQuotes(pm2Command);
-  if (!path.isAbsolute(normalizedCommand) || !isWindowsPm2Command(normalizedCommand)) {
+  if (!isAbsolutePathLike(normalizedCommand) || !isWindowsPm2Command(normalizedCommand)) {
     return null;
   }
 
-  return resolveWindowsPm2LaunchFromNodeExecutable(path.join(path.dirname(normalizedCommand), 'node.exe'), existsSync);
+  for (const commandDirectory of buildDirectoryCandidates(normalizedCommand)) {
+    const nodeExecutablePath = resolveExistingPath(
+      buildPathCandidates(commandDirectory, 'node.exe'),
+      existsSync,
+    );
+    if (!nodeExecutablePath) {
+      continue;
+    }
+
+    const resolved = resolveWindowsPm2LaunchFromNodeExecutable(nodeExecutablePath, existsSync);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
 }
 
 export function buildPm2EnvFile(env: NodeJS.ProcessEnv): string {
@@ -271,7 +341,7 @@ function buildSpawnOptions(
   env: NodeJS.ProcessEnv,
   command: string,
   shellOverride?: boolean,
-): SpawnOptionsWithoutStdio {
+): Pm2CommandOptions {
   return {
     cwd,
     env,
@@ -438,19 +508,23 @@ export function resolveDefaultPm2Command(options: { cwd?: string; platform?: Nod
   const platform = options.platform ?? process.platform;
   const exists = options.existsSync ?? fsSync.existsSync;
   const executableName = platform === 'win32' ? 'pm2.cmd' : 'pm2';
-  const platformPath = platform === 'win32' ? path.win32 : path.posix;
-  const localBin = platformPath.join(cwd, 'node_modules', '.bin', executableName);
+  const localBin = resolveExistingPath(
+    buildPathCandidates(cwd, 'node_modules', '.bin', executableName),
+    exists,
+  );
 
-  return exists(localBin) ? localBin : executableName;
+  return localBin ?? executableName;
 }
 
 export class Pm2DotnetManager {
   private readonly pm2Command: string;
   private readonly processName: string;
   private readonly commandExecutor: Pm2CommandExecutor;
+  private readonly platform: NodeJS.Platform;
 
   constructor(options: Pm2DotnetManagerOptions = {}) {
-    this.pm2Command = options.pm2Command ?? resolveDefaultPm2Command();
+    this.platform = options.platform ?? process.platform;
+    this.pm2Command = options.pm2Command ?? resolveDefaultPm2Command({ platform: this.platform });
     this.processName = options.processName ?? PM2_DOTNET_PROCESS_NAME;
     this.commandExecutor = options.commandExecutor ?? new DefaultPm2CommandExecutor();
   }
@@ -486,7 +560,10 @@ export class Pm2DotnetManager {
   }
 
   private async runPm2(operation: Pm2DotnetOperation, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
-    const pm2LaunchPlan = resolvePm2LaunchPlan(this.pm2Command, { env });
+    const pm2LaunchPlan = resolvePm2LaunchPlan(this.pm2Command, {
+      env,
+      platform: this.platform,
+    });
     const spawnArgs = [...pm2LaunchPlan.argsPrefix, ...args];
     try {
       const result = await this.commandExecutor.run(

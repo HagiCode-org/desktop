@@ -3,13 +3,13 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import log from 'electron-log';
 import Store from 'electron-store';
 import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
 import { getCommandExecutableName } from './embedded-node-runtime-config.js';
-import { shouldUseShellForCommand } from './toolchain-launch.js';
+import { resolveCommandLaunch } from './toolchain-launch.js';
+import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
@@ -32,7 +32,6 @@ import type {
 
 interface DependencyManagementServiceOptions {
   pathManager?: PathManager;
-  spawnProcess?: typeof spawn;
   existsSync?: (targetPath: string) => boolean;
   platform?: NodeJS.Platform;
   settingsStore?: Store<DependencyManagementSettingsStoreSchema>;
@@ -113,7 +112,6 @@ function looksLikeSemverRange(selector: string): boolean {
 
 export class DependencyManagementService {
   private readonly pathManager: PathManager;
-  private readonly spawnProcess: typeof spawn;
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
   private readonly settingsStore: Store<DependencyManagementSettingsStoreSchema>;
@@ -124,7 +122,6 @@ export class DependencyManagementService {
 
   constructor(options: DependencyManagementServiceOptions = {}) {
     this.pathManager = options.pathManager ?? PathManager.getInstance();
-    this.spawnProcess = options.spawnProcess ?? spawn;
     this.existsSync = options.existsSync ?? fsSync.existsSync;
     this.platform = options.platform ?? process.platform;
     this.configManager = options.configManager ?? new ConfigManager();
@@ -917,42 +914,27 @@ export class DependencyManagementService {
     onOutput?: (chunk: string) => void,
     env: NodeJS.ProcessEnv = this.buildCommandEnv(),
   ): Promise<CommandResult> {
-    return new Promise((resolve, reject) => {
-      let child: ChildProcessWithoutNullStreams;
-      try {
-        child = this.spawnProcess(command, args, {
-          env,
-          shell: shouldUseShellForCommand(command, this.platform),
-          windowsHide: true,
-        });
-      } catch (error) {
-        reject(error);
-        return;
+    const launch = resolveCommandLaunch(command, this.platform);
+    return executeCliStreaming({
+      command: launch.command,
+      args,
+      env,
+      shell: launch.shell,
+      windowsHide: true,
+      metadata: { component: 'DependencyManagementService', command },
+      onOutput: (_type, chunk) => {
+        onOutput?.(chunk);
+      },
+    }).then((result) => {
+      if (result.error?.kind === 'spawn') {
+        log.warn('[DependencyManagementService] npm command failed to launch:', result.error.message);
       }
 
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout.on('data', (data: Buffer) => {
-        const chunk = data.toString('utf8');
-        stdout += chunk;
-        onOutput?.(chunk);
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        const chunk = data.toString('utf8');
-        stderr += chunk;
-        onOutput?.(chunk);
-      });
-
-      child.on('error', (error) => {
-        log.warn('[DependencyManagementService] npm command failed to launch:', error);
-        reject(error);
-      });
-
-      child.on('close', (exitCode) => {
-        resolve({ exitCode, stdout, stderr });
-      });
+      return {
+        exitCode: result.exitCode,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
     });
   }
 }

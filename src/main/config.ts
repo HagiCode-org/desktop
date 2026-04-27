@@ -1,6 +1,5 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
-import type { DataDirectorySource } from '../types/bootstrap.js';
 
 export interface AppSettings {
   language: string;
@@ -22,17 +21,9 @@ export interface AppConfig {
   minimizeToTray: boolean;
   checkForUpdates: boolean;
   settings: AppSettings;
-  dataDirectoryPath?: string;
   shutdownDirectory?: string;
   recordingDirectory?: string;
   logsDirectory?: string;
-}
-
-export interface ResolvedDataDirectorySelection {
-  source: Extract<DataDirectorySource, 'default' | 'configured'>;
-  requestedPath: string;
-  configuredPath: string | null;
-  defaultPath: string;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -174,47 +165,6 @@ export class ConfigManager {
    */
   getStore(): Store<AppConfig> {
     return this.store;
-  }
-
-  /**
-   * Get data directory path
-   */
-  getDataDirectoryPath(): string | undefined {
-    return this.get('dataDirectoryPath');
-  }
-
-  resolveDataDirectorySelection(defaultPath: string): ResolvedDataDirectorySelection {
-    const configuredPath = this.getDataDirectoryPath()?.trim() ?? '';
-
-    if (configuredPath.length > 0) {
-      return {
-        source: 'configured',
-        requestedPath: configuredPath,
-        configuredPath,
-        defaultPath,
-      };
-    }
-
-    return {
-      source: 'default',
-      requestedPath: defaultPath,
-      configuredPath: null,
-      defaultPath,
-    };
-  }
-
-  /**
-   * Set data directory path
-   */
-  setDataDirectoryPath(path: string): void {
-    this.set('dataDirectoryPath', path);
-  }
-
-  /**
-   * Clear data directory path (reset to default)
-   */
-  clearDataDirectoryPath(): void {
-    this.store.delete('dataDirectoryPath');
   }
 
   /**
