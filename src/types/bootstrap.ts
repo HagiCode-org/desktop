@@ -8,7 +8,7 @@ export type DesktopBootstrapStage =
   | 'renderer-shell'
   | 'shell-ready';
 
-export type DataDirectorySource = 'default' | 'configured' | 'fallback-default';
+export type DataDirectorySource = 'default';
 
 export type DataDirectoryDiagnosticCode =
   | 'invalid-path'
@@ -49,7 +49,6 @@ export interface BootstrapDataDirectoryContext {
 
 export interface BootstrapRecoveryActions {
   canRetry: boolean;
-  canRestoreDefault: boolean;
   canOpenDesktopLogs: boolean;
 }
 
@@ -62,19 +61,4 @@ export interface DesktopBootstrapSnapshot {
   diagnostics: DataDirectoryDiagnostic[];
   recovery: BootstrapRecoveryActions;
   generatedAt: string;
-}
-
-export interface DataDirectoryValidationPayload {
-  isValid: boolean;
-  message: string;
-  warnings?: string[];
-  normalizedPath?: string;
-  diagnostic?: DataDirectoryDiagnostic;
-}
-
-export interface DataDirectoryMutationResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-  diagnostic?: DataDirectoryDiagnostic;
 }

@@ -28,15 +28,11 @@ import type {
   LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
 import type {
-  DataDirectoryMutationResult,
-  DataDirectoryValidationPayload,
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 export type {
-  DataDirectoryMutationResult,
-  DataDirectoryValidationPayload,
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
 
@@ -63,14 +59,6 @@ export interface ValidationResult {
   isValid: boolean;
   message: string;
   warnings?: string[];
-}
-
-// Storage information interface
-export interface StorageInfo {
-  used: number;
-  total: number;
-  available: number;
-  usedPercentage: number;
 }
 
 export interface StartWebServiceResult {
@@ -225,7 +213,6 @@ interface ElectronAPI {
     getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
     getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
     refresh: () => Promise<DesktopBootstrapSnapshot>;
-    restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
     openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
   };
   getAppVersion: () => Promise<string>;
@@ -290,16 +277,6 @@ interface ElectronAPI {
   presetGetAllProviders: () => Promise<any[]>;
   presetGetCacheStats: () => Promise<any>;
 
-  // Data Directory Configuration APIs
-  dataDirectory: {
-    get: () => Promise<string>;
-    set: (path: string) => Promise<DataDirectoryMutationResult>;
-    validate: (path: string) => Promise<DataDirectoryValidationPayload>;
-    getStorageInfo: (path?: string) => Promise<StorageInfo>;
-    restoreDefault: () => Promise<DataDirectoryMutationResult>;
-    openPicker: () => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
-  };
-
   sharingAcceleration: {
     get: () => Promise<SharingAccelerationSettings | null>;
     set: (settings: SharingAccelerationSettingsInput & { enabled: boolean }) => Promise<SharingAccelerationSettings | null>;
@@ -342,15 +319,7 @@ interface ElectronAPI {
   onVersionListChanged: (callback: () => void) => () => void;
   onVersionUpdateChanged: (callback: (snapshot: VersionUpdateSnapshotPayload) => void) => () => void;
 
-  // LLM Installation APIs
-  llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => Promise<any>;
-  llmCallApi: (
-    manifestPath: string,
-    region?: 'cn' | 'international'
-  ) => Promise<{ success: boolean; error?: string; errorCode?: string; messageId?: string; providerId?: string }>;
-  llmDetectConfig: () => Promise<any>;
-  llmGetRegion: () => Promise<any>;
-  llmGetManifestPath: (versionId: string) => Promise<any>;
+  // Prompt Guidance APIs
   llmGetPromptGuidance: (
     resourceKey: 'smartConfig',
     customPromptPath?: string
@@ -359,11 +328,6 @@ interface ElectronAPI {
     versionId: string,
     region?: 'cn' | 'international'
   ) => Promise<PromptGuidanceResponse>;
-  llmOpenAICliWithResource: (
-    resourceKey: 'smartConfig',
-    customPromptPath?: string
-  ) => Promise<PromptGuidanceResponse>;
-  llmOpenAICliWithPrompt: (promptPath: string) => Promise<PromptGuidanceResponse>;
 
   // Onboarding APIs
   checkTriggerCondition: () => Promise<OnboardingTriggerResult>;
@@ -420,7 +384,6 @@ const electronAPI: ElectronAPI = {
     getCachedSnapshot: () => initialBootstrapSnapshot,
     getSnapshot: () => ipcRenderer.invoke('bootstrap:get-snapshot'),
     refresh: () => ipcRenderer.invoke('bootstrap:refresh'),
-    restoreDefaultDataDirectory: () => ipcRenderer.invoke('data-directory:restore-default'),
     openDesktopLogs: () => ipcRenderer.invoke('log-directory:open', 'desktop'),
   },
   getAppVersion: () => ipcRenderer.invoke('app-version'),
@@ -623,19 +586,11 @@ const electronAPI: ElectronAPI = {
   getRegionStatus: () => ipcRenderer.invoke('region:get-status'),
   redetectRegion: () => ipcRenderer.invoke('region:redetect'),
 
-  // LLM Installation APIs
-  llmLoadPrompt: (manifestPath: string, region?: 'cn' | 'international') => ipcRenderer.invoke('llm:load-prompt', manifestPath, region),
-  llmCallApi: (manifestPath: string, region?: 'cn' | 'international') => ipcRenderer.invoke('llm:call-api', manifestPath, region),
-  llmDetectConfig: () => ipcRenderer.invoke('llm:detect-config'),
-  llmGetRegion: () => ipcRenderer.invoke('llm:get-region'),
-  llmGetManifestPath: (versionId: string) => ipcRenderer.invoke('llm:get-manifest-path', versionId),
+  // Prompt Guidance APIs
   llmGetPromptGuidance: (resourceKey: 'smartConfig', customPromptPath?: string) =>
     ipcRenderer.invoke('llm:get-prompt-guidance', resourceKey, customPromptPath),
   llmGetVersionPromptGuidance: (versionId: string, region?: 'cn' | 'international') =>
     ipcRenderer.invoke('llm:get-version-prompt-guidance', versionId, region),
-  llmOpenAICliWithResource: (resourceKey: 'smartConfig', customPromptPath?: string) =>
-    ipcRenderer.invoke('llm:open-ai-cli-with-resource', resourceKey, customPromptPath),
-  llmOpenAICliWithPrompt: (promptPath: string) => ipcRenderer.invoke('llm:open-ai-cli-with-prompt', promptPath),
 
   // Tray service control
   onTrayStartService: (callback) => {
@@ -731,16 +686,6 @@ const electronAPI: ElectronAPI = {
   presetGetProvider: (providerId: string) => ipcRenderer.invoke('preset:get-provider', providerId),
   presetGetAllProviders: () => ipcRenderer.invoke('preset:get-all-providers'),
   presetGetCacheStats: () => ipcRenderer.invoke('preset:get-cache-stats'),
-
-  // Data Directory Configuration APIs
-  dataDirectory: {
-    get: () => ipcRenderer.invoke('data-directory:get'),
-    set: (path: string) => ipcRenderer.invoke('data-directory:set', path),
-    validate: (path: string) => ipcRenderer.invoke('data-directory:validate', path),
-    getStorageInfo: (path?: string) => ipcRenderer.invoke('data-directory:get-storage-info', path),
-    restoreDefault: () => ipcRenderer.invoke('data-directory:restore-default'),
-    openPicker: () => ipcRenderer.invoke('data-directory:open-picker'),
-  },
 
   sharingAcceleration: {
     get: () => ipcRenderer.invoke('sharing-acceleration:get'),
