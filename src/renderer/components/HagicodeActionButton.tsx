@@ -12,6 +12,9 @@ interface HagicodeActionButtonProps {
   onOpenBrowser: () => void;
   canLaunchService?: boolean;
   startLabel?: string;
+  isWaitingForPort?: boolean;
+  waitingPort?: number | null;
+  waitingPhaseMessage?: string | null;
 }
 
 export default function HagicodeActionButton({
@@ -23,6 +26,9 @@ export default function HagicodeActionButton({
   onOpenBrowser,
   canLaunchService = true,
   startLabel,
+  isWaitingForPort = false,
+  waitingPort,
+  waitingPhaseMessage,
 }: HagicodeActionButtonProps) {
   const { t } = useTranslation(['components', 'tray']);
 
@@ -145,6 +151,33 @@ export default function HagicodeActionButton({
         {/* Subtle border */}
         <div className="absolute inset-0 rounded-xl border-2 border-primary-foreground/20 pointer-events-none" />
       </motion.button>
+    );
+  }
+
+  if (isWaitingForPort) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.2 }}
+        aria-disabled="true"
+        className="relative flex min-h-16 w-full cursor-not-allowed items-center justify-center gap-4 overflow-hidden rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-muted-foreground"
+      >
+        <div className="absolute inset-0 bg-linear-to-r from-muted/30 via-primary/5 to-muted/30" />
+        <Loader2 className="relative z-10 h-5 w-5 animate-spin text-primary" />
+        <div className="relative z-10 space-y-1 text-center sm:text-left">
+          <div className="font-semibold text-foreground">{t('webServiceStatus.portWaiting.title')}</div>
+          <div className="text-xs">
+            {waitingPort
+              ? t('webServiceStatus.portWaiting.detailWithPort', { port: waitingPort })
+              : t('webServiceStatus.portWaiting.detail')}
+          </div>
+          {waitingPhaseMessage && (
+            <div className="text-xs text-muted-foreground/80">{waitingPhaseMessage}</div>
+          )}
+        </div>
+      </motion.div>
     );
   }
 

@@ -114,6 +114,12 @@ const WebServiceStatusCard: React.FC = () => {
   const isRunning = webServiceInfo.status === 'running';
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
   const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
+  const hasReadyWebUrl = Boolean(webServiceInfo.url?.trim());
+  const isWaitingForPort = (
+    webServiceInfo.status === 'starting' ||
+    webServiceInfo.status === 'running' ||
+    webServiceInfo.phase === 'waiting_listening'
+  ) && !hasReadyWebUrl;
   const isDisabled = webServiceInfo.isOperating || isTransitioning;
   const showRuntimeSecondaryControls = isRunning;
   const showOpenLogsButton = Boolean(activeVersion);
@@ -565,6 +571,9 @@ const WebServiceStatusCard: React.FC = () => {
                 status={webServiceInfo.status}
                 canLaunchService={canLaunchService}
                 startLabel={isStopped && (!dependencyReadiness?.environmentAvailable || !dependencyReadiness?.requiredReady || dependencyReadinessError) ? t('webServiceStatus.dependencyReadinessButton') : undefined}
+                isWaitingForPort={isWaitingForPort}
+                waitingPort={webServiceInfo.port}
+                waitingPhaseMessage={webServiceInfo.phaseMessage}
                 onStart={handleStart}
                 onOpenApp={handleOpenHagicode}
                 onOpenBrowser={handleOpenInBrowser}
