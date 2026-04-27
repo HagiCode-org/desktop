@@ -3,7 +3,6 @@
     "title": "Settings",
     "tabs": {
       "onboarding": "Onboarding",
-      "dataDirectory": "Data Directory",
       "sharingAcceleration": "Download & Sharing",
       "updates": "Background Updates"
     },
@@ -13,9 +12,9 @@
     },
     "onboarding": {
       "title": "Onboarding",
-      "description": "Re-run first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start service.",
+      "description": "Re-run first-time setup wizard to download packages, install dependencies, and start service.",
       "restartWizard": "Restart Wizard",
-      "restartWizardDescription": "Re-run first-time setup wizard to reconfigure data directory, download packages, install dependencies, and start service.",
+      "restartWizardDescription": "Re-run first-time setup wizard to download packages, install dependencies, and start service.",
       "restartButton": "Restart Wizard",
       "resetting": "Resetting...",
       "resetSuccess": "Wizard has been reset",
@@ -27,46 +26,6 @@
         "resetting": "Resetting Tour...",
         "resetSuccess": "Homepage tour has been reset",
         "resetError": "Failed to reset homepage tour: {{error}}"
-      }
-    },
-    "dataDirectory": {
-      "title": "Data Directory",
-      "description": "Configure and manage the data storage location for Hagicode Server.",
-      "path": {
-        "label": "Data Directory Location",
-        "placeholder": "Enter the full path to the data directory"
-      },
-      "errors": {
-        "invalidPath": "Please select a valid data directory path before saving."
-      },
-      "messages": {
-        "saveSuccess": "Data directory saved successfully",
-        "saveFailed": "Failed to save data directory",
-        "restoreSuccess": "Default data directory restored",
-        "restoreFailed": "Failed to restore default data directory"
-      },
-      "actions": {
-        "browse": "Browse...",
-        "scanning": "Scanning...",
-        "refreshing": "Refreshing...",
-        "refresh": "Refresh",
-        "save": "Save Changes",
-        "saving": "Saving...",
-        "restoreDefault": "Restore Default"
-      },
-      "storage": {
-        "title": "Storage Usage",
-        "used": "Used",
-        "usedPercent": "{{percent}}% used",
-        "available": "{{available}} available",
-        "noData": "No data yet"
-      },
-      "validation": {
-        "valid": "Path is valid and writable",
-        "invalid": "Path is invalid. Please check the error message below."
-      },
-      "notes": {
-        "absolutePathOnly": "Note: Only absolute paths are supported. Relative paths are not allowed."
       }
     },
     "sharingAcceleration": {

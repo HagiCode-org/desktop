@@ -79,18 +79,8 @@
       "downloading": "下载中...",
       "extracting": "解压中...",
       "verifying": "验证中...",
-      "configuring": "配置数据目录...",
       "completed": "已完成",
       "error": "错误"
-    },
-    "dataDirectory": {
-      "configuring": "正在配置数据目录...",
-      "configured": "数据目录已配置：{{path}}",
-      "error": {
-        "creationFailed": "无法创建数据目录：{{path}}",
-        "permissionDenied": "无权限访问数据目录",
-        "configWriteFailed": "无法写入配置文件"
-      }
     }
   },
   "webServiceStatus": {

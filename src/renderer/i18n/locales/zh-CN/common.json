@@ -340,13 +340,10 @@
     },
     "actions": {
       "openLogs": "打开日志目录",
-      "restoreDefault": "恢复默认目录",
       "retry": "重新加载应用壳",
       "working": "处理中…"
     },
     "toasts": {
-      "restoreSuccess": "已恢复默认数据目录",
-      "restoreFailed": "恢复默认数据目录失败",
       "logsOpened": "已打开 Desktop 日志目录",
       "logsFailed": "无法打开 Desktop 日志目录"
     }

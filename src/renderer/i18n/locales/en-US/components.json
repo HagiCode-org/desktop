@@ -79,18 +79,8 @@
       "downloading": "Downloading...",
       "extracting": "Extracting...",
       "verifying": "Verifying...",
-      "configuring": "Configuring data directory...",
       "completed": "Completed",
       "error": "Error"
-    },
-    "dataDirectory": {
-      "configuring": "Configuring data directory...",
-      "configured": "Data directory configured: {{path}}",
-      "error": {
-        "creationFailed": "Failed to create data directory: {{path}}",
-        "permissionDenied": "Permission denied accessing data directory",
-        "configWriteFailed": "Failed to write configuration file"
-      }
     }
   },
   "webServiceStatus": {

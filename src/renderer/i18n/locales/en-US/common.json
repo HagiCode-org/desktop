@@ -340,13 +340,10 @@
     },
     "actions": {
       "openLogs": "Open logs folder",
-      "restoreDefault": "Restore default directory",
       "retry": "Reload app shell",
       "working": "Working..."
     },
     "toasts": {
-      "restoreSuccess": "Restored the default data directory",
-      "restoreFailed": "Failed to restore the default data directory",
       "logsOpened": "Opened the Desktop logs folder",
       "logsFailed": "Failed to open the Desktop logs folder"
     }
