@@ -3,7 +3,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
+import { execa } from 'execa';
 import AdmZip from 'adm-zip';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
@@ -141,7 +141,7 @@ async function downloadRuntimeArchive(downloadUrl, destinationPath) {
   fs.writeFileSync(destinationPath, payload);
 }
 
-function extractArchive(archivePath, archiveType, destinationPath) {
+async function extractArchive(archivePath, archiveType, destinationPath) {
   if (archiveType === 'zip') {
     const archive = new AdmZip(archivePath);
     archive.extractAllTo(destinationPath, true);
@@ -149,7 +149,7 @@ function extractArchive(archivePath, archiveType, destinationPath) {
   }
 
   if (archiveType === 'tar.gz') {
-    execFileSync('tar', ['-xzf', archivePath, '-C', destinationPath], { stdio: 'inherit' });
+    await execa('tar', ['-xzf', archivePath, '-C', destinationPath], { stdout: 'inherit', stderr: 'inherit', stdin: 'ignore' });
     return;
   }
 
@@ -262,7 +262,7 @@ async function stageRuntime() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `hagicode-runtime-${runtimePlatform}-`));
 
   try {
-    extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
+    await extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
     const extractedRuntimeRoot = findExtractedRuntimeRoot(tempRoot);
 
     fs.rmSync(stageRoot, { recursive: true, force: true });

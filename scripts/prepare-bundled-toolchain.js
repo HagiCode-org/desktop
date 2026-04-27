@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
+import { execa } from 'execa';
 import AdmZip from 'adm-zip';
 import {
   TOOLCHAIN_MANIFEST_FILE,
@@ -103,7 +103,7 @@ async function downloadArchive(downloadUrl, destinationPath) {
   fs.writeFileSync(destinationPath, Buffer.from(await response.arrayBuffer()));
 }
 
-function extractArchive(archivePath, archiveType, destinationPath) {
+async function extractArchive(archivePath, archiveType, destinationPath) {
   if (archiveType === 'zip') {
     const archive = new AdmZip(archivePath);
     archive.extractAllTo(destinationPath, true);
@@ -111,7 +111,7 @@ function extractArchive(archivePath, archiveType, destinationPath) {
   }
 
   if (archiveType === 'tar.gz' || archiveType === 'tar.xz') {
-    execFileSync('tar', ['-xf', archivePath, '-C', destinationPath], { stdio: 'inherit' });
+    await execa('tar', ['-xf', archivePath, '-C', destinationPath], { stdout: 'inherit', stderr: 'inherit', stdin: 'ignore' });
     return;
   }
 
@@ -491,7 +491,7 @@ async function stageNodeRuntime() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `hagicode-node-${runtimePlatform}-`));
 
   try {
-    extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
+    await extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
     const extractedNodeRoot = resolveExtractedNodeRoot(tempRoot);
     fs.rmSync(nodeRoot, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(nodeRoot), { recursive: true });
