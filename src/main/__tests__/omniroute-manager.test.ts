@@ -39,6 +39,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
     assert.match(source, /resolveManagedCliLaunchSpec/);
     assert.match(source, /node_modules', packageName, 'bin', `\$\{packageName\}\.mjs`/);
+    assert.match(source, /omniroute-shell-wrapper\.mjs/);
+    assert.match(source, /renderWindowsOmniRouteShellWrapper/);
+    assert.match(source, /execa\(executablePath, \['serve', '--no-open'\], \{/);
+    assert.match(source, /shell: true/);
     assert.match(source, /interpreter: "none"/);
     assert.match(source, /'serve', '--no-open'/);
     assert.match(source, /autorestart: true/);
@@ -58,7 +62,7 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /OmniRoute is not installed in the Desktop-managed npm environment/);
     assert.match(source, /startFreshPm2Process/);
     assert.match(source, /\['delete', OMNIROUTE_PROCESS_NAME\]/);
-    assert.match(source, /\['start', paths\.ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
+    assert.match(source, /\['start', ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
     assert.match(source, /\['stop', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['restart', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
     assert.match(source, /process \\\\d\+ not found\|process or namespace \.\* not found\|process or namespace not found\|process name not found/i);

@@ -1,6 +1,8 @@
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 import { randomBytes } from 'node:crypto';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { app, shell } from 'electron';
@@ -64,6 +66,12 @@ interface ManagedCliLaunchSpec {
   cwd?: string;
 }
 
+interface WindowsOmniRouteShellWrapperOptions {
+  wrapperPath: string;
+  execaImportUrl: string;
+  executablePath: string;
+}
+
 export interface OmniRouteManagerOptions {
   configManager: ConfigManager;
   dependencyManagementService: DependencyManagementService;
@@ -85,6 +93,7 @@ const MAX_LOG_LINES = 1000;
 const DEFAULT_PASSWORD_BYTES = 18;
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
+const requireFromModule = createRequire(import.meta.url);
 
 function toStatus(value: string | undefined): OmniRouteProcessStatus {
   if (value === 'online') {
@@ -332,7 +341,8 @@ export class OmniRouteManager {
       }
 
       await this.renderEnvironment(paths);
-      await this.renderEcosystemConfig(paths, this.resolveManagedCliLaunchSpec(omnirouteContext.executablePath, 'omniroute'));
+      const launchSpec = await this.resolveManagedCliLaunchSpec(paths, omnirouteContext.executablePath, 'omniroute');
+      await this.renderEcosystemConfig(paths, launchSpec);
 
       if (action === 'start') {
         await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
@@ -446,19 +456,25 @@ export class OmniRouteManager {
     await fs.writeFile(envPath, contents, 'utf8');
   }
 
-  private resolveManagedCliLaunchSpec(executablePath: string, packageName: string): ManagedCliLaunchSpec {
+  private async resolveManagedCliLaunchSpec(paths: OmniRouteManagedPaths, executablePath: string, packageName: string): Promise<ManagedCliLaunchSpec> {
     const normalizedPath = stripWrappingQuotes(executablePath);
     const binDirectory = path.dirname(normalizedPath);
     const nodeExecutable = path.join(binDirectory, process.platform === 'win32' ? 'node.exe' : 'node');
     const cliEntryPoint = path.join(binDirectory, 'node_modules', packageName, 'bin', `${packageName}.mjs`);
-    const appServerPath = path.join(binDirectory, 'node_modules', packageName, 'app', 'server.js');
 
-    if (process.platform === 'win32' && fsSync.existsSync(nodeExecutable) && fsSync.existsSync(appServerPath)) {
+    if (process.platform === 'win32' && fsSync.existsSync(nodeExecutable)) {
+      const wrapperPath = path.join(paths.runtime, 'omniroute-shell-wrapper.mjs');
+      await this.renderWindowsOmniRouteShellWrapper({
+        wrapperPath,
+        execaImportUrl: pathToFileURL(this.resolveExecaEntrypoint()).href,
+        executablePath: normalizedPath,
+      });
+
       return {
         script: nodeExecutable,
-        args: [appServerPath],
+        args: [wrapperPath],
         interpreterNone: true,
-        cwd: path.dirname(appServerPath),
+        cwd: paths.root,
       };
     }
 
@@ -475,6 +491,41 @@ export class OmniRouteManager {
       args: ['serve', '--no-open'],
       interpreterNone: false,
     };
+  }
+
+  private resolveExecaEntrypoint(): string {
+    return requireFromModule.resolve('execa');
+  }
+
+  private async renderWindowsOmniRouteShellWrapper(options: WindowsOmniRouteShellWrapperOptions): Promise<void> {
+    const contents = [
+      `import { execa } from ${JSON.stringify(options.execaImportUrl)};`,
+      '',
+      `const executablePath = ${JSON.stringify(options.executablePath)};`,
+      `const subprocess = execa(executablePath, ['serve', '--no-open'], {`,
+      `  shell: true,`,
+      `  windowsHide: true,`,
+      `  stdout: 'inherit',`,
+      `  stderr: 'inherit',`,
+      `  stdin: 'ignore',`,
+      `  env: process.env,`,
+      `});`,
+      '',
+      `try {`,
+      `  const result = await subprocess;`,
+      `  process.exit(result.exitCode ?? 0);`,
+      `} catch (error) {`,
+      `  if (error?.shortMessage) {`,
+      `    console.error(error.shortMessage);`,
+      `  } else if (error?.message) {`,
+      `    console.error(error.message);`,
+      `  }`,
+      `  process.exit(error?.exitCode ?? 1);`,
+      `}`,
+      '',
+    ].join('\n');
+
+    await fs.writeFile(options.wrapperPath, contents, 'utf8');
   }
 
   private async renderEcosystemConfig(paths: OmniRouteManagedPaths, launchSpec: ManagedCliLaunchSpec): Promise<void> {
