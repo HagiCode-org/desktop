@@ -126,6 +126,11 @@
     "openInBrowser": "Open in Browser",
     "openAppButton": "Open Application",
     "openBrowserButton": "Open in Browser",
+    "portWaiting": {
+      "title": "Waiting for port to become available",
+      "detail": "The service port is not accessible yet",
+      "detailWithPort": "Port {{port}} is not accessible yet"
+    },
     "details": {
       "serviceUrl": "Service URL",
       "uptime": "Uptime",

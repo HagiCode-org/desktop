@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   AlertCircle,
   Clipboard,
+  Cpu,
   Loader2,
   RefreshCw,
   Stethoscope,
@@ -34,6 +35,19 @@ function formatCompletedAt(timestamp: string): string {
   }
 
   return date.toLocaleString();
+}
+
+function getRuntimeBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (status === 'healthy') {
+    return 'default';
+  }
+  if (status === 'missing' || status === 'invalid') {
+    return 'destructive';
+  }
+  if (status === 'warning' || status === 'unknown') {
+    return 'secondary';
+  }
+  return 'outline';
 }
 
 export default function SystemDiagnosticPage() {
@@ -220,6 +234,62 @@ export default function SystemDiagnosticPage() {
                 })}
               </AlertDescription>
             </Alert>
+          )}
+
+          {showResult && result?.data.builtinRuntimes && (
+            <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium text-foreground">{t('systemDiagnostic.runtimeMatrix.title')}</p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {result.data.builtinRuntimes.rows.map((row) => (
+                  <div key={row.id} className="rounded-lg border border-border/70 bg-background/70 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{row.name}</p>
+                        <p className="text-xs text-muted-foreground">{t(`systemDiagnostic.runtimeMatrix.source.${row.source}`)}</p>
+                      </div>
+                      <Badge variant={getRuntimeBadgeVariant(row.status)}>
+                        {t(`systemDiagnostic.runtimeMatrix.status.${row.status}`)}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      <p>{t('systemDiagnostic.runtimeMatrix.version', { value: row.version ?? t('systemDiagnostic.runtimeMatrix.unknown') })}</p>
+                      <p className="truncate" title={row.executablePath ?? undefined}>
+                        {t('systemDiagnostic.runtimeMatrix.path', { value: row.executablePath ?? t('systemDiagnostic.runtimeMatrix.unresolved') })}
+                      </p>
+                      <p className="text-foreground/80">{row.summary}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <p className="mb-2 text-sm font-medium text-foreground">{t('systemDiagnostic.runtimeMatrix.npmConfig.title')}</p>
+                  <p>{t('systemDiagnostic.runtimeMatrix.npmConfig.registry', { value: result.data.builtinRuntimes.npmConfig.registry ?? t('systemDiagnostic.runtimeMatrix.unknown') })}</p>
+                  <p>{t('systemDiagnostic.runtimeMatrix.npmConfig.cache', { value: result.data.builtinRuntimes.npmConfig.cachePath ?? t('systemDiagnostic.runtimeMatrix.unknown') })}</p>
+                  <p>{t('systemDiagnostic.runtimeMatrix.npmConfig.prefix', { value: result.data.builtinRuntimes.npmConfig.prefixPath ?? result.data.builtinRuntimes.npmConfig.packageRootPath ?? t('systemDiagnostic.runtimeMatrix.unknown') })}</p>
+                  <p>{t('systemDiagnostic.runtimeMatrix.npmConfig.mirror', { value: result.data.builtinRuntimes.npmConfig.mirrorEnabled === null ? t('systemDiagnostic.runtimeMatrix.unknown') : t(`systemDiagnostic.runtimeMatrix.boolean.${String(result.data.builtinRuntimes.npmConfig.mirrorEnabled)}`) })}</p>
+                </div>
+
+                <div className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <p className="mb-2 text-sm font-medium text-foreground">{t('systemDiagnostic.runtimeMatrix.managedCommands.title')}</p>
+                  <div className="space-y-2">
+                    {result.data.builtinRuntimes.managedCommands.length > 0 ? result.data.builtinRuntimes.managedCommands.map((command) => (
+                      <div key={command.id} className="flex items-center justify-between gap-3">
+                        <span className="truncate" title={command.packageName}>{command.binName} ({command.declaredVersion ?? t('systemDiagnostic.runtimeMatrix.unknown')})</span>
+                        <Badge variant="outline">{t(`systemDiagnostic.runtimeMatrix.managedCommands.status.${command.status}`)}</Badge>
+                      </div>
+                    )) : (
+                      <p>{t('systemDiagnostic.runtimeMatrix.managedCommands.empty')}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {pageStatus === 'idle' && !result && (

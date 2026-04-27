@@ -12,6 +12,9 @@ export type SystemDiagnosticIssueKind = 'missing' | 'error';
 export type SystemDiagnosticCommandStatus = 'available' | 'missing' | 'error';
 export type SystemDiagnosticAgentCliStatus = 'available' | 'missing' | 'error';
 export type SystemDiagnosticCommandScope = 'required-by-core-runtime';
+export type SystemDiagnosticRuntimeStatus = 'healthy' | 'warning' | 'missing' | 'invalid' | 'unknown';
+export type SystemDiagnosticRuntimeSource = 'bundled' | 'desktop-managed' | 'host' | 'unknown';
+export type SystemDiagnosticManagedCommandStatus = 'installed' | 'deferred' | 'manual' | 'missing' | 'invalid' | 'unknown';
 
 export interface SystemDiagnosticCoverageMatrix {
   auditedConsumers: string[];
@@ -82,6 +85,47 @@ export interface SystemDiagnosticBundledToolchainInfo {
   errors: string[];
 }
 
+export interface SystemDiagnosticRuntimeRow {
+  id: string;
+  name: string;
+  source: SystemDiagnosticRuntimeSource;
+  status: SystemDiagnosticRuntimeStatus;
+  version: string | null;
+  executablePath: string | null;
+  manifestPath?: string | null;
+  summary: string;
+}
+
+export interface SystemDiagnosticNpmConfigInfo {
+  registry: string | null;
+  cachePath: string | null;
+  prefixPath: string | null;
+  packageRootPath: string | null;
+  mirrorEnabled: boolean | null;
+  source: 'npm-config' | 'desktop-managed' | 'unknown';
+  status: SystemDiagnosticRuntimeStatus;
+  message: string | null;
+}
+
+export interface SystemDiagnosticManagedCommandReadiness {
+  id: string;
+  packageName: string;
+  declaredVersion: string | null;
+  binName: string;
+  installMode: 'manual' | 'auto' | 'unknown';
+  installState: 'pending' | 'installed' | 'unknown';
+  commandPath: string | null;
+  status: SystemDiagnosticManagedCommandStatus;
+  version: string | null;
+  message: string | null;
+}
+
+export interface SystemDiagnosticBuiltinRuntimeInfo {
+  rows: SystemDiagnosticRuntimeRow[];
+  npmConfig: SystemDiagnosticNpmConfigInfo;
+  managedCommands: SystemDiagnosticManagedCommandReadiness[];
+}
+
 export interface SystemDiagnosticWindowsCodePageInfo {
   activeCodePage: string | null;
   outputEncoding: string | null;
@@ -102,6 +146,7 @@ export interface SystemDiagnosticData {
   agentCli: SystemDiagnosticAgentCliInfo;
   toolchain: SystemDiagnosticCommandProbe[];
   bundledToolchain?: SystemDiagnosticBundledToolchainInfo;
+  builtinRuntimes?: SystemDiagnosticBuiltinRuntimeInfo;
   windowsCodePage?: SystemDiagnosticWindowsCodePageInfo;
   issues: SystemDiagnosticIssue[];
 }

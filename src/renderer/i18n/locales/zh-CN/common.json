@@ -360,6 +360,49 @@
       "completedAt": "完成时间：{{value}}",
       "issueCount": "问题条目：{{count}}"
     },
+    "runtimeMatrix": {
+      "title": "内置运行时矩阵",
+      "unknown": "未知",
+      "unresolved": "未解析",
+      "version": "版本：{{value}}",
+      "path": "路径：{{value}}",
+      "boolean": {
+        "true": "已启用",
+        "false": "已停用"
+      },
+      "source": {
+        "bundled": "内置",
+        "desktop-managed": "Desktop 托管",
+        "host": "系统 PATH",
+        "unknown": "来源未知"
+      },
+      "status": {
+        "healthy": "健康",
+        "warning": "警告",
+        "missing": "缺失",
+        "invalid": "无效",
+        "unknown": "未知"
+      },
+      "npmConfig": {
+        "title": "npm 配置",
+        "registry": "Registry：{{value}}",
+        "cache": "缓存：{{value}}",
+        "prefix": "Prefix/包根目录：{{value}}",
+        "mirror": "镜像加速：{{value}}"
+      },
+      "managedCommands": {
+        "title": "托管命令",
+        "empty": "未报告托管命令元数据。",
+        "status": {
+          "installed": "已安装",
+          "deferred": "延后",
+          "manual": "手动",
+          "missing": "缺失",
+          "invalid": "无效",
+          "unknown": "未知"
+        }
+      }
+    },
     "boundary": {
       "title": "这里只提供本机诊断",
       "description": "这个页面会采集当前设备的纯文本环境信息，方便你直接分享给技术支持。"

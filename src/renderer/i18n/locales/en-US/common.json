@@ -360,6 +360,49 @@
       "completedAt": "Completed at: {{value}}",
       "issueCount": "Issues captured: {{count}}"
     },
+    "runtimeMatrix": {
+      "title": "Built-in Runtime Matrix",
+      "unknown": "unknown",
+      "unresolved": "unresolved",
+      "version": "Version: {{value}}",
+      "path": "Path: {{value}}",
+      "boolean": {
+        "true": "enabled",
+        "false": "disabled"
+      },
+      "source": {
+        "bundled": "Bundled",
+        "desktop-managed": "Desktop-managed",
+        "host": "Host PATH",
+        "unknown": "Unknown source"
+      },
+      "status": {
+        "healthy": "Healthy",
+        "warning": "Warning",
+        "missing": "Missing",
+        "invalid": "Invalid",
+        "unknown": "Unknown"
+      },
+      "npmConfig": {
+        "title": "npm Configuration",
+        "registry": "Registry: {{value}}",
+        "cache": "Cache: {{value}}",
+        "prefix": "Prefix/package root: {{value}}",
+        "mirror": "Mirror acceleration: {{value}}"
+      },
+      "managedCommands": {
+        "title": "Managed Commands",
+        "empty": "No managed command metadata was reported.",
+        "status": {
+          "installed": "Installed",
+          "deferred": "Deferred",
+          "manual": "Manual",
+          "missing": "Missing",
+          "invalid": "Invalid",
+          "unknown": "Unknown"
+        }
+      }
+    },
     "boundary": {
       "title": "Local machine diagnostics only",
       "description": "This page collects plain-text environment details from the current device so you can share them with technical support."

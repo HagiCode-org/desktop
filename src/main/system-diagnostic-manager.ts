@@ -8,6 +8,7 @@ import type { AgentCliDefinition, AgentCliId } from '../types/agent-cli-catalog.
 import type {
   SystemDiagnosticAgentCliInfo,
   SystemDiagnosticAgentCliProbe,
+  SystemDiagnosticBuiltinRuntimeInfo,
   SystemDiagnosticBundledToolchainInfo,
   SystemDiagnosticCommandProbe,
   SystemDiagnosticCommandScope,
@@ -15,8 +16,12 @@ import type {
   SystemDiagnosticData,
   SystemDiagnosticHardwareInfo,
   SystemDiagnosticIssue,
+  SystemDiagnosticManagedCommandReadiness,
   SystemDiagnosticMeta,
+  SystemDiagnosticNpmConfigInfo,
   SystemDiagnosticResult,
+  SystemDiagnosticRuntimeRow,
+  SystemDiagnosticRuntimeStatus,
   SystemDiagnosticSystemInfo,
   SystemDiagnosticWindowsCodePageInfo,
 } from '../types/system-diagnostic.js';
@@ -49,6 +54,8 @@ const TOOLCHAIN_PROBES = [
   { command: 'npx', displayName: 'npx', versionArgs: [['--version']] },
   { command: 'git', displayName: 'Git', versionArgs: [['--version']] },
 ] as const;
+
+const RUNTIME_VERSION_ARGS = [['--version']] as const;
 
 const AGENT_CLI_VERSION_ARGS: Partial<Record<AgentCliId, string[][]>> = {
   'claude-code': [['--version'], ['version'], ['-v']],
@@ -169,6 +176,39 @@ function parseChcpOutput(content: string): string | null {
   return match?.[1] ?? null;
 }
 
+export function normalizeRuntimeStatusFromCommandProbe(
+  status: 'available' | 'missing' | 'error' | undefined,
+): SystemDiagnosticRuntimeStatus {
+  if (status === 'available') {
+    return 'healthy';
+  }
+  if (status === 'missing') {
+    return 'missing';
+  }
+  if (status === 'error') {
+    return 'invalid';
+  }
+  return 'unknown';
+}
+
+function normalizeRuntimeStatusFromBundledIntegrity(
+  integrity: BundledToolchainStatus['integrity'] | undefined,
+): SystemDiagnosticRuntimeStatus {
+  if (integrity === 'ok') {
+    return 'healthy';
+  }
+  if (integrity === 'missing') {
+    return 'missing';
+  }
+  if (integrity === 'corrupt' || integrity === 'incompatible') {
+    return 'invalid';
+  }
+  if (integrity === 'pending') {
+    return 'warning';
+  }
+  return 'unknown';
+}
+
 async function defaultRunCommand(
   command: string,
   args: string[],
@@ -261,7 +301,9 @@ export class SystemDiagnosticManager {
     const hardware = await this.collectHardwareInfo(runtimeEnv, issues);
     const agentCli = await this.collectAgentCliInfo(runtimeEnv, issues);
     const toolchain = await this.collectToolchainInfo(runtimeEnv, issues);
-    const bundledToolchain = await this.collectBundledToolchainInfo(issues);
+    const bundledToolchainStatus = await this.safeCollectBundledToolchainStatus(issues);
+    const bundledToolchain = this.collectBundledToolchainInfo(bundledToolchainStatus, issues);
+    const builtinRuntimes = await this.collectBuiltinRuntimeDiagnostics(runtimeEnv, bundledToolchainStatus, issues);
     const windowsCodePage = this.platform === 'win32'
       ? await this.collectWindowsCodePageInfo(runtimeEnv, issues)
       : undefined;
@@ -279,6 +321,7 @@ export class SystemDiagnosticManager {
       agentCli,
       toolchain,
       bundledToolchain,
+      builtinRuntimes,
       issues,
       ...(windowsCodePage ? { windowsCodePage } : {}),
     };
@@ -287,7 +330,7 @@ export class SystemDiagnosticManager {
       status: issues.length > 0 ? 'partial-failure' : 'success',
       completedAt,
       errorCount: issues.length,
-      sectionCount: windowsCodePage ? 6 : 5,
+      sectionCount: windowsCodePage ? 7 : 6,
     } as const;
 
     const result: SystemDiagnosticResult = {
@@ -621,10 +664,25 @@ export class SystemDiagnosticManager {
     return probes;
   }
 
-  private async collectBundledToolchainInfo(
+  private async safeCollectBundledToolchainStatus(
     issues: SystemDiagnosticIssue[],
-  ): Promise<SystemDiagnosticBundledToolchainInfo> {
-    const status = await this.getBundledToolchainStatus();
+  ): Promise<BundledToolchainStatus | null> {
+    try {
+      return await this.getBundledToolchainStatus();
+    } catch (error) {
+      this.pushIssue(issues, 'bundled-runtime', 'node-verify', 'error', this.describeError(error, 'Failed to verify bundled Node.js runtime.'));
+      return null;
+    }
+  }
+
+  private collectBundledToolchainInfo(
+    status: BundledToolchainStatus | null,
+    issues: SystemDiagnosticIssue[],
+  ): SystemDiagnosticBundledToolchainInfo | undefined {
+    if (!status) {
+      return undefined;
+    }
+
     if (!status.available) {
       this.pushIssue(
         issues,
@@ -663,6 +721,281 @@ export class SystemDiagnosticManager {
       packages,
       errors: status.errors,
     };
+  }
+
+  private async collectBuiltinRuntimeDiagnostics(
+    runtimeEnv: NodeJS.ProcessEnv,
+    bundledStatus: BundledToolchainStatus | null,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticBuiltinRuntimeInfo> {
+    const [dotnetRow, nodeProbe, npmProbe, npxProbe, npmConfig] = await Promise.all([
+      this.collectDotnetRuntimeRow(runtimeEnv, issues),
+      this.probeBundledRuntimeCommand('node', bundledStatus, runtimeEnv, issues),
+      this.probeBundledRuntimeCommand('npm', bundledStatus, runtimeEnv, issues),
+      this.probeBundledRuntimeCommand('npx', bundledStatus, runtimeEnv, issues),
+      this.collectNpmConfigInfo(bundledStatus, runtimeEnv, issues),
+    ]);
+
+    const nodeComponent = bundledStatus?.components.node;
+    const npmComponent = bundledStatus?.components.npm;
+    const nodeStatus = nodeProbe.status === 'healthy'
+      ? normalizeRuntimeStatusFromBundledIntegrity(nodeComponent?.integrity)
+      : nodeProbe.status;
+    const npmStatus = npmProbe.status === 'healthy'
+      ? normalizeRuntimeStatusFromBundledIntegrity(npmComponent?.integrity)
+      : npmProbe.status;
+
+    const rows: SystemDiagnosticRuntimeRow[] = [
+      dotnetRow,
+      {
+        id: 'node',
+        name: 'Node.js',
+        source: bundledStatus ? 'bundled' : 'unknown',
+        status: nodeStatus,
+        version: nodeProbe.version ?? nodeComponent?.version ?? bundledStatus?.manifest?.node?.version ?? null,
+        executablePath: nodeProbe.executablePath ?? nodeComponent?.executablePath ?? null,
+        manifestPath: bundledStatus?.manifestPath ?? null,
+        summary: nodeProbe.message ?? nodeComponent?.message ?? (nodeStatus === 'healthy' ? 'Bundled Node.js runtime is valid.' : 'Bundled Node.js runtime could not be validated.'),
+      },
+      {
+        id: 'npm',
+        name: 'npm',
+        source: bundledStatus ? 'bundled' : 'unknown',
+        status: npmConfig.status === 'warning' && npmProbe.status === 'healthy' ? 'warning' : npmStatus,
+        version: npmProbe.version ?? null,
+        executablePath: npmProbe.executablePath ?? npmComponent?.executablePath ?? null,
+        manifestPath: bundledStatus?.manifestPath ?? null,
+        summary: npmConfig.message ?? npmProbe.message ?? npmComponent?.message ?? (npmStatus === 'healthy' ? 'Bundled npm command is valid.' : 'Bundled npm command could not be validated.'),
+      },
+      {
+        id: 'npx',
+        name: 'npx',
+        source: bundledStatus ? 'bundled' : 'unknown',
+        status: npxProbe.status,
+        version: npxProbe.version ?? null,
+        executablePath: npxProbe.executablePath,
+        manifestPath: bundledStatus?.manifestPath ?? null,
+        summary: npxProbe.message ?? (npxProbe.status === 'healthy' ? 'Bundled npx command is available.' : 'Bundled npx command could not be validated.'),
+      },
+    ];
+
+    return {
+      rows,
+      npmConfig,
+      managedCommands: await this.collectManagedCommandReadiness(bundledStatus, runtimeEnv, issues),
+    };
+  }
+
+  private async collectDotnetRuntimeRow(
+    runtimeEnv: NodeJS.ProcessEnv,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticRuntimeRow> {
+    try {
+      const resolvedPath = await this.resolveExecutablePath(['dotnet'], runtimeEnv);
+      if (!resolvedPath) {
+        return {
+          id: 'dotnet',
+          name: '.NET',
+          source: 'unknown',
+          status: 'unknown',
+          version: null,
+          executablePath: null,
+          summary: '.NET runtime metadata was not resolved from the current environment.',
+        };
+      }
+
+      const version = await this.probeVersion(resolvedPath, RUNTIME_VERSION_ARGS, runtimeEnv);
+      return {
+        id: 'dotnet',
+        name: '.NET',
+        source: 'host',
+        status: version ? 'healthy' : 'unknown',
+        version,
+        executablePath: resolvedPath,
+        summary: version ? '.NET runtime responded to version probe.' : '.NET runtime exists, but version metadata is unavailable.',
+      };
+    } catch (error) {
+      const message = this.describeError(error, 'Failed to collect .NET runtime diagnostics.');
+      this.pushIssue(issues, 'builtin-runtime', 'dotnet', 'error', message);
+      return {
+        id: 'dotnet',
+        name: '.NET',
+        source: 'unknown',
+        status: 'unknown',
+        version: null,
+        executablePath: null,
+        summary: message,
+      };
+    }
+  }
+
+  private async probeBundledRuntimeCommand(
+    command: 'node' | 'npm' | 'npx',
+    bundledStatus: BundledToolchainStatus | null,
+    runtimeEnv: NodeJS.ProcessEnv,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<{ status: SystemDiagnosticRuntimeStatus; executablePath: string | null; version: string | null; message: string | null }> {
+    const commandPath = bundledStatus?.manifest?.commands?.[command]
+      ? path.join(bundledStatus.toolchainRoot, bundledStatus.manifest.commands[command] as string)
+      : undefined;
+
+    if (!commandPath) {
+      const message = `${command} command is not declared in the bundled toolchain manifest.`;
+      this.pushIssue(issues, 'builtin-runtime', command, 'missing', message);
+      return { status: 'missing', executablePath: null, version: null, message };
+    }
+
+    try {
+      const version = await this.probeVersion(commandPath, RUNTIME_VERSION_ARGS, runtimeEnv);
+      if (!version) {
+        const message = `${command} command exists, but version output could not be parsed.`;
+        this.pushIssue(issues, 'builtin-runtime', command, 'error', message);
+        return { status: 'invalid', executablePath: commandPath, version: null, message };
+      }
+
+      return { status: 'healthy', executablePath: commandPath, version, message: null };
+    } catch (error) {
+      const message = this.describeError(error, `Failed to probe bundled ${command} command.`);
+      this.pushIssue(issues, 'builtin-runtime', command, 'error', message);
+      return { status: 'invalid', executablePath: commandPath, version: null, message };
+    }
+  }
+
+  private async collectNpmConfigInfo(
+    bundledStatus: BundledToolchainStatus | null,
+    runtimeEnv: NodeJS.ProcessEnv,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticNpmConfigInfo> {
+    const npmCommandPath = bundledStatus?.manifest?.commands?.npm
+      ? path.join(bundledStatus.toolchainRoot, bundledStatus.manifest.commands.npm)
+      : null;
+    const fallbackPackageRoot = bundledStatus ? path.join(bundledStatus.toolchainRoot, 'node') : null;
+    const base: SystemDiagnosticNpmConfigInfo = {
+      registry: null,
+      cachePath: null,
+      prefixPath: null,
+      packageRootPath: fallbackPackageRoot,
+      mirrorEnabled: null,
+      source: bundledStatus ? 'desktop-managed' : 'unknown',
+      status: npmCommandPath ? 'unknown' : 'missing',
+      message: npmCommandPath ? null : 'npm command is not declared in the bundled toolchain manifest.',
+    };
+
+    if (!npmCommandPath) {
+      return base;
+    }
+
+    try {
+      const result = await this.runCommand(npmCommandPath, ['config', 'get', 'registry'], { env: runtimeEnv, timeoutMs: COMMAND_TIMEOUT_MS });
+      base.registry = firstNonEmptyLine(result.stdout) ?? null;
+      base.mirrorEnabled = base.registry ? base.registry.includes('npmmirror.com') : null;
+    } catch (error) {
+      const message = this.describeError(error, 'Failed to read npm registry configuration.');
+      this.pushIssue(issues, 'npm-config', 'registry', 'error', message);
+      base.status = 'warning';
+      base.message = message;
+    }
+
+    for (const key of ['cache', 'prefix'] as const) {
+      try {
+        const result = await this.runCommand(npmCommandPath, ['config', 'get', key], { env: runtimeEnv, timeoutMs: COMMAND_TIMEOUT_MS });
+        const value = firstNonEmptyLine(result.stdout);
+        if (key === 'cache') {
+          base.cachePath = value;
+        } else {
+          base.prefixPath = value;
+        }
+      } catch (error) {
+        const message = this.describeError(error, `Failed to read npm ${key} configuration.`);
+        this.pushIssue(issues, 'npm-config', key, 'error', message);
+        base.status = 'warning';
+        base.message = base.message ?? message;
+      }
+    }
+
+    if (base.status !== 'warning') {
+      base.status = 'healthy';
+    }
+
+    base.source = 'npm-config';
+    return base;
+  }
+
+  private async collectManagedCommandReadiness(
+    bundledStatus: BundledToolchainStatus | null,
+    runtimeEnv: NodeJS.ProcessEnv,
+    issues: SystemDiagnosticIssue[],
+  ): Promise<SystemDiagnosticManagedCommandReadiness[]> {
+    if (!bundledStatus?.manifest) {
+      return [];
+    }
+
+    const entries = Object.entries(bundledStatus.manifest.packages ?? {});
+    return Promise.all(entries.map(async ([id, packageRecord]) => {
+      const component = bundledStatus.components[id as keyof typeof bundledStatus.components];
+      if (packageRecord.installState === 'pending' || packageRecord.installMode === 'manual') {
+        return {
+          id,
+          packageName: packageRecord.packageName,
+          declaredVersion: packageRecord.version ?? null,
+          binName: packageRecord.binName,
+          installMode: packageRecord.installMode ?? 'unknown',
+          installState: packageRecord.installState ?? 'unknown',
+          commandPath: component?.executablePath ?? null,
+          status: packageRecord.installMode === 'manual' ? 'manual' : 'deferred',
+          version: component?.version ?? null,
+          message: component?.message ?? 'Managed package command is deferred by manifest metadata.',
+        } satisfies SystemDiagnosticManagedCommandReadiness;
+      }
+
+      if (!component?.executablePath) {
+        const message = `${packageRecord.binName} command is missing for managed package ${packageRecord.packageName}.`;
+        this.pushIssue(issues, 'managed-command', id, 'missing', message);
+        return {
+          id,
+          packageName: packageRecord.packageName,
+          declaredVersion: packageRecord.version ?? null,
+          binName: packageRecord.binName,
+          installMode: packageRecord.installMode ?? 'unknown',
+          installState: packageRecord.installState ?? 'unknown',
+          commandPath: null,
+          status: 'missing',
+          version: null,
+          message,
+        } satisfies SystemDiagnosticManagedCommandReadiness;
+      }
+
+      try {
+        const version = await this.probeVersion(component.executablePath, AGENT_CLI_VERSION_ARGS[id as AgentCliId] ?? RUNTIME_VERSION_ARGS, runtimeEnv);
+        return {
+          id,
+          packageName: packageRecord.packageName,
+          declaredVersion: packageRecord.version ?? null,
+          binName: packageRecord.binName,
+          installMode: packageRecord.installMode ?? 'unknown',
+          installState: packageRecord.installState ?? 'unknown',
+          commandPath: component.executablePath,
+          status: component.integrity === 'ok' ? 'installed' : 'invalid',
+          version: version ?? component.version ?? null,
+          message: component.message ?? null,
+        } satisfies SystemDiagnosticManagedCommandReadiness;
+      } catch (error) {
+        const message = this.describeError(error, `Failed to probe managed command ${packageRecord.binName}.`);
+        this.pushIssue(issues, 'managed-command', id, 'error', message);
+        return {
+          id,
+          packageName: packageRecord.packageName,
+          declaredVersion: packageRecord.version ?? null,
+          binName: packageRecord.binName,
+          installMode: packageRecord.installMode ?? 'unknown',
+          installState: packageRecord.installState ?? 'unknown',
+          commandPath: component.executablePath,
+          status: 'invalid',
+          version: component.version ?? null,
+          message,
+        } satisfies SystemDiagnosticManagedCommandReadiness;
+      }
+    }));
   }
 
   private async collectWindowsCodePageInfo(
@@ -865,6 +1198,38 @@ export class SystemDiagnosticManager {
           packageRecord.integrity ? `package.${name}.integrity=${packageRecord.integrity}` : null,
         ])),
         ...data.bundledToolchain.errors.map((error, index) => `error.${index + 1}=${error}`),
+      ]);
+    }
+
+    if (data.builtinRuntimes) {
+      pushSection('built-in-runtimes', [
+        ...data.builtinRuntimes.rows.flatMap((row) => ([
+          `${row.id}.name=${row.name}`,
+          `${row.id}.source=${row.source}`,
+          `${row.id}.status=${row.status}`,
+          `${row.id}.version=${row.version ?? 'unknown'}`,
+          `${row.id}.executablePath=${row.executablePath ?? 'unresolved'}`,
+          row.manifestPath ? `${row.id}.manifestPath=${row.manifestPath}` : null,
+          `${row.id}.summary=${row.summary}`,
+        ])),
+        `npm.registry=${data.builtinRuntimes.npmConfig.registry ?? 'unknown'}`,
+        `npm.cachePath=${data.builtinRuntimes.npmConfig.cachePath ?? 'unknown'}`,
+        `npm.prefixPath=${data.builtinRuntimes.npmConfig.prefixPath ?? 'unknown'}`,
+        `npm.packageRootPath=${data.builtinRuntimes.npmConfig.packageRootPath ?? 'unknown'}`,
+        `npm.mirrorEnabled=${data.builtinRuntimes.npmConfig.mirrorEnabled ?? 'unknown'}`,
+        `npm.configStatus=${data.builtinRuntimes.npmConfig.status}`,
+        data.builtinRuntimes.npmConfig.message ? `npm.message=${data.builtinRuntimes.npmConfig.message}` : null,
+        ...data.builtinRuntimes.managedCommands.flatMap((command) => ([
+          `managed.${command.id}.packageName=${command.packageName}`,
+          `managed.${command.id}.declaredVersion=${command.declaredVersion ?? 'unknown'}`,
+          `managed.${command.id}.binName=${command.binName}`,
+          `managed.${command.id}.installMode=${command.installMode}`,
+          `managed.${command.id}.installState=${command.installState}`,
+          `managed.${command.id}.commandPath=${command.commandPath ?? 'unresolved'}`,
+          `managed.${command.id}.status=${command.status}`,
+          `managed.${command.id}.version=${command.version ?? 'unknown'}`,
+          command.message ? `managed.${command.id}.message=${command.message}` : null,
+        ])),
       ]);
     }
 

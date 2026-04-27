@@ -29,4 +29,26 @@ describe('system-diagnostic-manager bundled toolchain reporting', () => {
     assert.match(source, /hermes: \[\['--version'\], \['version'\], \['-v'\]\]/);
     assert.match(source, /const commandCandidates = \[\.\.\.definition\.commandCandidates\]/);
   });
+
+  it('collects built-in Node.js, npm config, and managed command diagnostics', async () => {
+    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
+
+    assert.match(source, /builtinRuntimes = await this\.collectBuiltinRuntimeDiagnostics/);
+    assert.match(source, /probeBundledRuntimeCommand\('node'/);
+    assert.match(source, /probeBundledRuntimeCommand\('npm'/);
+    assert.match(source, /probeBundledRuntimeCommand\('npx'/);
+    assert.match(source, /\['config', 'get', 'registry'\]/);
+    assert.match(source, /managed\.\$\{command\.id\}\.status=\$\{command\.status\}/);
+    assert.match(source, /\[built-in-runtimes\]/);
+  });
+
+  it('keeps runtime diagnostics scoped when bundled Node validation or npm config probes fail', async () => {
+    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
+
+    assert.match(source, /safeCollectBundledToolchainStatus/);
+    assert.match(source, /this\.pushIssue\(issues, 'bundled-runtime', 'node-verify', 'error'/);
+    assert.match(source, /this\.pushIssue\(issues, 'npm-config', 'registry', 'error'/);
+    assert.match(source, /this\.pushIssue\(issues, 'npm-config', key, 'error'/);
+    assert.match(source, /this\.pushIssue\(issues, 'managed-command', id, 'missing'/);
+  });
 });

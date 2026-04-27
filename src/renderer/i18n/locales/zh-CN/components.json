@@ -126,6 +126,11 @@
     "openInBrowser": "在浏览器中打开",
     "openAppButton": "打开应用",
     "openBrowserButton": "在浏览器打开",
+    "portWaiting": {
+      "title": "正在等待端口可用",
+      "detail": "服务端口尚未可以访问",
+      "detailWithPort": "端口 {{port}} 尚未可以访问"
+    },
     "details": {
       "serviceUrl": "服务 URL",
       "uptime": "运行时间",
