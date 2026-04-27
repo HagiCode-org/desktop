@@ -261,10 +261,11 @@ UPDATE_SOURCE_OVERRIDE='{"type":"local-folder","name":"Local","path":"/path/to/p
 npm run dev
 ```
 
-## Web Service Runtime Recovery
+## Web Service Runtime State
 
-Desktop persists web service runtime metadata so it can recover truthful service
-status after app restart when the backend process survives.
+Desktop persists web service bind configuration only. Managed service lifecycle
+state is reconciled through the configured PM2 process name instead of a stored
+process ID.
 
 ### Runtime State File
 
@@ -273,30 +274,17 @@ status after app restart when the backend process survives.
   - `lastSuccessfulHost`
   - `lastSuccessfulPort`
   - `savedAt`
-- Runtime recovery fields:
-  - `runtime.pid`
-  - `runtime.host`
-  - `runtime.port`
-  - `runtime.startedAt`
-  - `runtime.versionId`
-  - `runtime.recoverySource`
-  - `runtime.recoveryMessage`
-  - `runtime.updatedAt`
 
 Desktop treats the persisted listen host as the bind address. The renderer and
 WebView derive a separate client-facing access URL from that host, so wildcard
 binds such as `0.0.0.0` still open through loopback (`127.0.0.1`) locally.
 
-### Recovery Decision Order
+### Lifecycle Decision Order
 
-1. Load persisted runtime identity from `web-service.json`
-2. Primary probe:
-   - PID liveness
-   - Port reachability
-   - `GET /api/health` success
-3. If primary probe fails, run process-signature fallback
-4. Mark `stopped/error` only when both primary and fallback checks fail
-5. Invalidate stale runtime identity on confirmed mismatch
+1. Query PM2 by the configured service process name.
+2. Reuse the named PM2 service when PM2 reports it online and endpoint health checks succeed.
+3. Start or restart through PM2 when the named service is missing, offline, or unhealthy.
+4. Surface PM2/startup errors directly; Desktop does not terminate non-PM2 port conflicts by PID lookup.
 
 ## Embedded Runtime Staging
 
