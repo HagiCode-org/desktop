@@ -1,3 +1,5 @@
+import type { ManagedNpmPackageId } from './dependency-management.js';
+
 export const OMNIROUTE_DEFAULT_PORT = 36988;
 export const OMNIROUTE_PROCESS_NAME = 'desktop-omniroute-service';
 
@@ -6,6 +8,16 @@ export type OmniRouteOverallStatus = 'running' | 'stopped' | 'partial' | 'error'
 export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type OmniRouteLogTarget = 'service-out' | 'service-error';
 export type OmniRoutePathTarget = 'config' | 'data' | 'logs';
+export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'pm2' | 'omniroute'>;
+export type OmniRouteDependencyFailureKind = 'dependency-missing' | 'dependency-unknown';
+
+export interface OmniRouteDependencyRemediation {
+  kind: 'dependency';
+  failureKind: OmniRouteDependencyFailureKind;
+  targetPackageIds: OmniRouteDependencyPackageId[];
+  recommendedAction: 'open-dependency-management';
+  message: string;
+}
 
 export interface OmniRouteManagedPaths {
   root: string;
@@ -38,6 +50,7 @@ export interface OmniRouteStatusSnapshot {
   pm2Available: boolean;
   pm2ExecutablePath: string | null;
   error?: string;
+  remediation?: OmniRouteDependencyRemediation;
   generatedAt: string;
 }
 
@@ -46,6 +59,7 @@ export interface OmniRouteLifecycleResult {
   action: OmniRouteLifecycleAction;
   status: OmniRouteStatusSnapshot;
   error?: string;
+  remediation?: OmniRouteDependencyRemediation;
 }
 
 export interface OmniRouteConfigUpdatePayload {

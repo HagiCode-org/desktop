@@ -9,6 +9,7 @@ import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
+import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
@@ -266,17 +267,34 @@ export class OmniRouteManager {
   async getStatus(): Promise<OmniRouteStatusSnapshot> {
     const paths = await this.ensureLayout();
     const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
+    const omnirouteContext = await this.dependencyManagementService.getManagedCommandContext('omniroute');
     const config = this.getConfig();
+    const remediation = buildOmniRouteDependencyRemediation([
+      {
+        packageId: 'pm2',
+        packageStatus: pm2Context.packageStatus?.status ?? null,
+        executablePath: pm2Context.executablePath,
+      },
+      {
+        packageId: 'omniroute',
+        packageStatus: omnirouteContext.packageStatus?.status ?? null,
+        executablePath: omnirouteContext.executablePath,
+      },
+    ]);
     const processSnapshot = await this.getPm2ProcessSnapshot(pm2Context.executablePath, pm2Context.commandEnv);
     const process = processSnapshot ?? this.emptyProcessSnapshot();
+    const pm2Available = pm2Context.packageStatus?.status === 'installed' && pm2Context.executablePath !== null;
+    const overallStatus = this.resolveOverallStatus(process, pm2Available);
 
     return {
-      status: this.resolveOverallStatus(process, pm2Context.executablePath !== null),
+      status: remediation && process.status !== 'online' ? 'error' : overallStatus,
       config,
       paths,
       processes: [process],
-      pm2Available: pm2Context.packageStatus?.status === 'installed' && pm2Context.executablePath !== null,
+      pm2Available,
       pm2ExecutablePath: pm2Context.executablePath,
+      error: remediation?.message,
+      remediation,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -329,38 +347,53 @@ export class OmniRouteManager {
 
   private async runLifecycle(action: OmniRouteLifecycleAction): Promise<OmniRouteLifecycleResult> {
     const paths = await this.ensureLayout();
+    let remediation = undefined;
     try {
       this.validatePort(this.getConfig().port);
       const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
       const omnirouteContext = await this.dependencyManagementService.getManagedCommandContext('omniroute');
-      if (pm2Context.packageStatus?.status !== 'installed' || !pm2Context.executablePath) {
-        throw new Error('PM2 is not installed in the Desktop-managed npm environment. Install PM2 from Dependency Management and retry.');
+      remediation = buildOmniRouteDependencyRemediation([
+        {
+          packageId: 'pm2',
+          packageStatus: pm2Context.packageStatus?.status ?? null,
+          executablePath: pm2Context.executablePath,
+        },
+        {
+          packageId: 'omniroute',
+          packageStatus: omnirouteContext.packageStatus?.status ?? null,
+          executablePath: omnirouteContext.executablePath,
+        },
+      ]);
+      if (remediation) {
+        throw new Error(remediation.message);
       }
-      if (omnirouteContext.packageStatus?.status !== 'installed' || !omnirouteContext.executablePath) {
-        throw new Error('OmniRoute is not installed in the Desktop-managed npm environment. Install OmniRoute from Dependency Management and retry.');
+      const pm2ExecutablePath = pm2Context.executablePath;
+      const omnirouteExecutablePath = omnirouteContext.executablePath;
+      if (!pm2ExecutablePath || !omnirouteExecutablePath) {
+        throw new Error('Desktop-managed OmniRoute dependencies are unavailable.');
       }
 
       await this.renderEnvironment(paths);
-      const launchSpec = await this.resolveManagedCliLaunchSpec(paths, omnirouteContext.executablePath, 'omniroute');
+      const launchSpec = await this.resolveManagedCliLaunchSpec(paths, omnirouteExecutablePath, 'omniroute');
       await this.renderEcosystemConfig(paths, launchSpec);
 
       if (action === 'start') {
-        await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
+        await this.startFreshPm2Process(pm2ExecutablePath, paths.ecosystemFile, pm2Context.commandEnv);
       } else if (action === 'stop') {
-        await this.stopPm2Process(pm2Context.executablePath, pm2Context.commandEnv);
+        await this.stopPm2Process(pm2ExecutablePath, pm2Context.commandEnv);
       } else {
-        const status = await this.getPm2ProcessSnapshot(pm2Context.executablePath, pm2Context.commandEnv);
+        const status = await this.getPm2ProcessSnapshot(pm2ExecutablePath, pm2Context.commandEnv);
         if (status) {
-          const restartResult = await this.runPm2(pm2Context.executablePath, ['restart', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv, true);
+          const restartResult = await this.runPm2(pm2ExecutablePath, ['restart', OMNIROUTE_PROCESS_NAME, '--update-env'], pm2Context.commandEnv, true);
           if (restartResult.exitCode !== 0) {
             if (!this.isMissingPm2ProcessMessage(restartResult.stderr, restartResult.stdout)) {
               throw this.createPm2CommandError(restartResult);
             }
 
-            await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
+            await this.startFreshPm2Process(pm2ExecutablePath, paths.ecosystemFile, pm2Context.commandEnv);
           }
         } else {
-          await this.startFreshPm2Process(pm2Context.executablePath, paths.ecosystemFile, pm2Context.commandEnv);
+          await this.startFreshPm2Process(pm2ExecutablePath, paths.ecosystemFile, pm2Context.commandEnv);
         }
       }
 
@@ -373,12 +406,14 @@ export class OmniRouteManager {
       await this.appendLifecycleFailureLog(paths, action, error);
       const status = await this.getStatus().catch(() => this.buildFallbackStatus(error));
       const message = error instanceof Error ? error.message : String(error);
+      const resolvedRemediation = remediation ?? status.remediation;
       log.warn('[OmniRouteManager] lifecycle operation failed', { action, error: message });
       return {
         success: false,
         action,
-        status: { ...status, status: 'error', error: message },
+        status: { ...status, status: 'error', error: message, remediation: resolvedRemediation },
         error: message,
+        remediation: resolvedRemediation,
       };
     }
   }

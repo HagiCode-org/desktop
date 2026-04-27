@@ -55,21 +55,35 @@ describe('OmniRoute manager contract', () => {
   it('uses Desktop-managed PM2 and scopes lifecycle commands by process name', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
+    assert.match(source, /buildOmniRouteDependencyRemediation/);
     assert.match(source, /resolvePm2LaunchPlan/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /getManagedCommandContext\('omniroute'\)/);
-    assert.match(source, /PM2 is not installed in the Desktop-managed npm environment/);
-    assert.match(source, /OmniRoute is not installed in the Desktop-managed npm environment/);
+    assert.match(source, /packageId: 'pm2'/);
+    assert.match(source, /packageId: 'omniroute'/);
+    assert.match(source, /if \(remediation\) \{\s*throw new Error\(remediation\.message\);/);
+    assert.match(source, /status: \{ \.\.\.status, status: 'error', error: message, remediation: resolvedRemediation \}/);
+    assert.match(source, /remediation: resolvedRemediation/);
     assert.match(source, /startFreshPm2Process/);
     assert.match(source, /\['delete', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['start', ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
     assert.match(source, /\['stop', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['restart', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
-    assert.match(source, /process \\\\d\+ not found\|process or namespace \.\* not found\|process or namespace not found\|process name not found/i);
+    assert.match(source, /isMissingPm2ProcessMessage/);
+    assert.match(source, /process or namespace \.\* not found/);
     assert.match(source, /appendLifecycleFailureLog/);
     assert.match(source, /stdout:/);
     assert.match(source, /stderr:/);
     assert.match(source, /item\.name === OMNIROUTE_PROCESS_NAME/);
+  });
+
+  it('surfaces remediation metadata from passive status refresh without hiding process inspection', async () => {
+    const source = await fs.readFile(managerPath, 'utf8');
+
+    assert.match(source, /const remediation = buildOmniRouteDependencyRemediation\(\[/);
+    assert.match(source, /error: remediation\?\.message/);
+    assert.match(source, /remediation,/);
+    assert.match(source, /processes: \[process\]/);
   });
 
   it('validates OmniRoute port isolation against the configured web service port', async () => {
