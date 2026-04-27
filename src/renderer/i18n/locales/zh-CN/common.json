@@ -200,6 +200,19 @@
       "disabledHelp": "后续 npm 操作将使用 npm 默认 registry 行为。",
       "saveFailed": "保存镜像设置失败"
     },
+    "omniRouteRepair": {
+      "title": "修复依赖后返回 OmniRoute",
+      "descriptionMissing": "OmniRoute 因一个或多个 Desktop 托管包缺失而无法启动。请先在这里修复高亮依赖，然后重新检测 OmniRoute。",
+      "descriptionUnknown": "Desktop 当前无法确认 OmniRoute 依赖。请先在这里刷新或修复高亮依赖，然后重新检测 OmniRoute。",
+      "sourceLabel": "来源",
+      "sourceValue": "OmniRoute",
+      "targetBadge": "修复目标",
+      "pendingNotice": "请先让高亮依赖保持可用状态，再执行重新检测。",
+      "recheckAction": "修复后重新检测 OmniRoute",
+      "recheckRunning": "正在重新检测 OmniRoute 依赖...",
+      "incomplete": "OmniRoute 仍未准备就绪。请继续安装或刷新高亮依赖后重试。",
+      "refreshFailed": "Desktop 无法刷新依赖状态。请等待当前操作结束后再试一次。"
+    },
     "package": {
       "version": "版本",
       "packageName": "包名",
@@ -600,6 +613,12 @@
         "service-out": "服务输出",
         "service-error": "服务错误"
       }
+    },
+    "dependencyGuidance": {
+      "title": "请先修复 Desktop 托管依赖",
+      "descriptionMissing": "在依赖项管理中安装或修复高亮的 Desktop 托管包之前，OmniRoute 无法启动。",
+      "descriptionUnknown": "Desktop 当前无法确认高亮的 OmniRoute 依赖状态。请先到依赖项管理中刷新或修复后再重试。",
+      "openDependencyManagement": "打开依赖项管理"
     },
     "errors": {
       "title": "OmniRoute 操作失败",
