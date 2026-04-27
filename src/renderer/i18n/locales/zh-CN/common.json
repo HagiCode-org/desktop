@@ -294,6 +294,7 @@
       "installed": "已安装",
       "reinstall": "重新安装",
       "installSelected": "批量安装已选项",
+      "installSelectedRunning": "正在批量安装...",
       "uninstall": "卸载"
     },
     "errors": {

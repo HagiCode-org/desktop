@@ -62,7 +62,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /getSelectAllChecked\(selectedPackageIds, selectablePackageIds\)/);
     assert.match(pageSource, /<NpmPackageBootstrapCard/);
     assert.match(pageSource, /<NpmPackageTable/);
-    assert.match(pageSource, /<BatchSyncLogPanel batchSyncState=\{batchSyncState\}/);
+    assert.match(pageSource, /<BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}/);
 
     assert.match(modelSource, /export function isOperationActive/);
     assert.match(modelSource, /export function appendBatchSyncLog/);
@@ -72,7 +72,7 @@ describe('dependency management renderer wiring', () => {
 
     assert.match(packageGroupsSource, /export function NpmPackageBootstrapCard/);
     assert.match(packageGroupsSource, /export function NpmPackageTable/);
-    assert.match(packageGroupsSource, /export function BatchSyncLogPanel/);
+    assert.match(packageGroupsSource, /export const BatchSyncLogPanel = forwardRef/);
     assert.match(packageGroupsSource, /dependencyManagement\.packageTable\.title/);
     assert.match(packageGroupsSource, /dependencyManagement\.selection\.selectPackage/);
     assert.match(packageGroupsSource, /dependencyManagement\.batchLog\.title/);
@@ -103,7 +103,7 @@ describe('dependency management renderer wiring', () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
     assert.match(source, /<NpmPackageTable[\s\S]*dependencyManagement\.environment\.title/);
-    assert.match(source, /BatchSyncLogPanel batchSyncState=\{batchSyncState\}[\s\S]*dependencyManagement\.environment\.title/);
+    assert.match(source, /BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}[\s\S]*dependencyManagement\.environment\.title/);
     assert.match(source, /\{shouldPromoteHagiscriptCard && hagiscriptCard\}/);
     assert.match(source, /\{!shouldPromoteHagiscriptCard && hagiscriptCard\}/);
   });
@@ -143,6 +143,33 @@ describe('dependency management renderer wiring', () => {
     assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\)/);
   });
 
+  it('disables the batch install action and shows localized loading feedback while batch sync is running', async () => {
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /const isBatchSyncRunning = batchSyncState\?\.status === 'running';/);
+    assert.match(pageSource, /isBatchSyncRunning=\{isBatchSyncRunning\}/);
+    assert.match(packageGroupsSource, /isBatchSyncRunning: boolean;/);
+    assert.match(packageGroupsSource, /disabled=\{!hagiscriptGateOpen \|\| actionsDisabled \|\| isBatchSyncRunning \|\| selectedEligibleCount === 0\}/);
+    assert.match(packageGroupsSource, /isBatchSyncRunning \? <Loader2 className="mr-2 h-4 w-4 animate-spin" \/> : <PackageOpen className="mr-2 h-4 w-4" \/>/);
+    assert.match(packageGroupsSource, /isBatchSyncRunning \? t\('dependencyManagement\.actions\.installSelectedRunning'\) : t\('dependencyManagement\.actions\.installSelected'\)/);
+  });
+
+  it('wires the batch log panel as the scroll target when batch sync starts', async () => {
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /const batchLogPanelRef = useRef<HTMLDivElement \| null>\(null\);/);
+    assert.match(pageSource, /batchLogPanelRef\.current\?\.scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\);/);
+    assert.match(pageSource, /\}, \[isBatchSyncRunning\]\);/);
+    assert.match(packageGroupsSource, /forwardRef<HTMLDivElement, \{ batchSyncState: BatchSyncState \}>/);
+    assert.match(packageGroupsSource, /<Card ref=\{ref\}>/);
+  });
+
   it('adds zh-CN and en-US localization keys', async () => {
     const [zh, en] = await Promise.all([
       fs.readFile(zhLocalePath, 'utf8'),
@@ -156,6 +183,8 @@ describe('dependency management renderer wiring', () => {
     assert.equal(JSON.parse(zh).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/faq/desktop-node-environment/');
     assert.equal(JSON.parse(en).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
     assert.equal(typeof JSON.parse(en).dependencyManagement.actions.install, 'string');
+    assert.equal(JSON.parse(zh).dependencyManagement.actions.installSelectedRunning, '正在批量安装...');
+    assert.equal(JSON.parse(en).dependencyManagement.actions.installSelectedRunning, 'Batch installing...');
     assert.equal(JSON.parse(en).dependencyManagement.categories['agent-cli'], 'Agent CLI');
     assert.equal(typeof JSON.parse(en).dependencyManagement.packages.claudeCode.description, 'string');
     assert.equal(typeof JSON.parse(en).dependencyManagement.packages.codex.description, 'string');

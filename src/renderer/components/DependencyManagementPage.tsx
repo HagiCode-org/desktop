@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ExternalLink, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import type {
@@ -48,6 +48,7 @@ export default function DependencyManagementPage() {
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
 
   const openNodeEnvironmentFaq = () => {
     void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'));
@@ -118,6 +119,16 @@ export default function DependencyManagementPage() {
     const visibleIds = new Set(snapshot.packages.map((item) => item.id));
     setSelectedPackageIds((current) => current.filter((id) => visibleIds.has(id)));
   }, [snapshot]);
+
+  const isBatchSyncRunning = batchSyncState?.status === 'running';
+
+  useEffect(() => {
+    if (!isBatchSyncRunning) {
+      return;
+    }
+
+    batchLogPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isBatchSyncRunning]);
 
   const runOperation = async (packageId: ManagedNpmPackageId, action: 'install' | 'uninstall') => {
     setOperationError((current) => ({ ...current, [packageId]: undefined }));
@@ -290,6 +301,7 @@ export default function DependencyManagementPage() {
             selectAllChecked={selectAllChecked}
             selectedEligibleCount={selectedEligibleIds.length}
             batchSyncPackageIds={batchSyncPackageIds}
+            isBatchSyncRunning={isBatchSyncRunning}
             progressByPackageId={progress}
             activeOperation={snapshot.activeOperation}
             operationErrorByPackageId={operationError}
@@ -303,7 +315,7 @@ export default function DependencyManagementPage() {
           />
 
           {batchSyncState && (
-            <BatchSyncLogPanel batchSyncState={batchSyncState} />
+            <BatchSyncLogPanel ref={batchLogPanelRef} batchSyncState={batchSyncState} />
           )}
 
           <Card>

@@ -294,6 +294,7 @@
       "installed": "Installed",
       "reinstall": "Reinstall",
       "installSelected": "Batch install selected",
+      "installSelectedRunning": "Batch installing...",
       "uninstall": "Uninstall"
     },
     "errors": {

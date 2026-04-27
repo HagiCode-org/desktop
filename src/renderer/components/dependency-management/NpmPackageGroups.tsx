@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle2, Loader2, PackageOpen, Trash2 } from 'lucide-react';
 import type {
@@ -138,6 +139,7 @@ interface NpmPackageTableProps {
   selectAllChecked: boolean | 'indeterminate';
   selectedEligibleCount: number;
   batchSyncPackageIds: Set<ManagedNpmPackageId>;
+  isBatchSyncRunning: boolean;
   progressByPackageId: Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>;
   activeOperation?: DependencyManagementOperationProgress | null;
   operationErrorByPackageId: Partial<Record<ManagedNpmPackageId, string>>;
@@ -157,6 +159,7 @@ export function NpmPackageTable({
   selectAllChecked,
   selectedEligibleCount,
   batchSyncPackageIds,
+  isBatchSyncRunning,
   progressByPackageId,
   activeOperation,
   operationErrorByPackageId,
@@ -178,9 +181,9 @@ export function NpmPackageTable({
             <CardTitle className="text-lg">{t('dependencyManagement.packageTable.title')}</CardTitle>
             <CardDescription>{t('dependencyManagement.packageTable.description')}</CardDescription>
           </div>
-          <Button onClick={onInstallSelected} disabled={!hagiscriptGateOpen || actionsDisabled || selectedEligibleCount === 0}>
-            <PackageOpen className="mr-2 h-4 w-4" />
-            {t('dependencyManagement.actions.installSelected')}
+          <Button onClick={onInstallSelected} disabled={!hagiscriptGateOpen || actionsDisabled || isBatchSyncRunning || selectedEligibleCount === 0}>
+            {isBatchSyncRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
+            {isBatchSyncRunning ? t('dependencyManagement.actions.installSelectedRunning') : t('dependencyManagement.actions.installSelected')}
           </Button>
         </div>
         <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -289,7 +292,7 @@ export function NpmPackageTable({
   );
 }
 
-export function BatchSyncLogPanel({ batchSyncState }: { batchSyncState: BatchSyncState }) {
+export const BatchSyncLogPanel = forwardRef<HTMLDivElement, { batchSyncState: BatchSyncState }>(function BatchSyncLogPanel({ batchSyncState }, ref) {
   const { t } = useTranslation('common');
   const statusVariant = batchSyncState.status === 'failed'
     ? 'destructive'
@@ -298,7 +301,7 @@ export function BatchSyncLogPanel({ batchSyncState }: { batchSyncState: BatchSyn
       : 'secondary';
 
   return (
-    <Card>
+    <Card ref={ref}>
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -339,4 +342,4 @@ export function BatchSyncLogPanel({ batchSyncState }: { batchSyncState: BatchSyn
       </CardContent>
     </Card>
   );
-}
+});
