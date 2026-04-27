@@ -16,11 +16,16 @@ namespace Adapters;
 /// </summary>
 public class AzureBlobAdapter : IAzureBlobAdapter
 {
+    private const int DefaultIndexBlobVisibilityMaxAttempts = 6;
+    private static readonly TimeSpan DefaultIndexBlobVisibilityRetryDelay = TimeSpan.FromSeconds(10);
+
     private readonly AbsolutePath _rootDirectory;
     private readonly Dictionary<string, string> _customChannelMapping;
     private readonly string _gitHubRepository;
     private readonly string _gitHubRepositoryName;
     private readonly Func<Uri, IAzureBlobContainerClient> _containerFactory;
+    private readonly int _indexBlobVisibilityMaxAttempts;
+    private readonly TimeSpan _indexBlobVisibilityRetryDelay;
 
     public AzureBlobAdapter(
         AbsolutePath rootDirectory,
@@ -34,13 +39,17 @@ public class AzureBlobAdapter : IAzureBlobAdapter
         AbsolutePath rootDirectory,
         string channelMappingJson,
         string gitHubRepository,
-        Func<Uri, IAzureBlobContainerClient>? containerFactory)
+        Func<Uri, IAzureBlobContainerClient>? containerFactory,
+        int indexBlobVisibilityMaxAttempts = DefaultIndexBlobVisibilityMaxAttempts,
+        TimeSpan? indexBlobVisibilityRetryDelay = null)
     {
         _rootDirectory = rootDirectory;
         _customChannelMapping = ParseChannelMapping(channelMappingJson);
         _gitHubRepository = BuildConfig.NormalizeGitHubRepository(gitHubRepository);
         _gitHubRepositoryName = BuildConfig.ResolveGitHubReleaseRepositoryName(_gitHubRepository);
         _containerFactory = containerFactory ?? ((sasUri) => new AzureBlobContainerClientAdapter(new BlobContainerClient(sasUri)));
+        _indexBlobVisibilityMaxAttempts = Math.Max(1, indexBlobVisibilityMaxAttempts);
+        _indexBlobVisibilityRetryDelay = indexBlobVisibilityRetryDelay ?? DefaultIndexBlobVisibilityRetryDelay;
     }
 
     private static Dictionary<string, string> ParseChannelMapping(string channelMappingJson)
@@ -435,8 +444,31 @@ public class AzureBlobAdapter : IAzureBlobAdapter
                 Directory.CreateDirectory(outputDir);
             }
 
-            var blobs = await ListBlobsAsync(options);
+            var blobs = await ListBlobsUntilPublishedArtifactsVisibleAsync(options, publishedArtifacts);
             var result = BuildIndexResult(blobs, options.SasUrl, publishedArtifacts, options.PublicBaseUrl);
+            var missingPublishedArtifactPaths = FindMissingPublishedArtifactPaths(blobs, publishedArtifacts);
+            result.MissingPublishedArtifactPaths.AddRange(missingPublishedArtifactPaths);
+
+            if (missingPublishedArtifactPaths.Count > 0)
+            {
+                foreach (var path in missingPublishedArtifactPaths)
+                {
+                    result.Diagnostics.Add(new ArtifactPublishDiagnostic
+                    {
+                        ArtifactName = Path.GetFileName(path),
+                        Code = "published-artifact-not-listed",
+                        Message = $"本次发布的产物未出现在 Azure Blob 列表中，已阻止上传可能过期的 index.json：{path}",
+                        Stage = ArtifactPublishFailureStage.IndexWrite,
+                    });
+                }
+
+                Log.Error(
+                    "Index generation blocked because {Count} published artifacts were not visible in Azure blob listing: {Paths}",
+                    missingPublishedArtifactPaths.Count,
+                    string.Join(", ", missingPublishedArtifactPaths));
+                return result;
+            }
+
             result.IndexJson = SerializeJson(result.Document!, minify);
             await File.WriteAllTextAsync(outputPath, result.IndexJson);
 
@@ -452,6 +484,79 @@ public class AzureBlobAdapter : IAzureBlobAdapter
             Log.Error(ex, "Failed to generate index from blobs");
             return new AzureBlobIndexGenerationResult();
         }
+    }
+
+    private async Task<List<AzureBlobInfo>> ListBlobsUntilPublishedArtifactsVisibleAsync(
+        AzureBlobPublishOptions options,
+        IReadOnlyCollection<PublishedArtifactMetadata> publishedArtifacts)
+    {
+        var requiredPaths = GetRequiredPublishedArtifactPaths(publishedArtifacts);
+        if (requiredPaths.Count == 0)
+        {
+            return await ListBlobsAsync(options);
+        }
+
+        List<AzureBlobInfo> blobs = new();
+        for (var attempt = 1; attempt <= _indexBlobVisibilityMaxAttempts; attempt += 1)
+        {
+            blobs = await ListBlobsAsync(options);
+            var missingPaths = FindMissingPublishedArtifactPaths(blobs, requiredPaths);
+            if (missingPaths.Count == 0)
+            {
+                return blobs;
+            }
+
+            if (attempt == _indexBlobVisibilityMaxAttempts)
+            {
+                Log.Error(
+                    "Azure blob listing still misses {Count} published artifacts after {Attempts} attempts: {Paths}",
+                    missingPaths.Count,
+                    attempt,
+                    string.Join(", ", missingPaths));
+                return blobs;
+            }
+
+            Log.Warning(
+                "Azure blob listing misses {Count} published artifacts on attempt {Attempt}/{Attempts}; retrying in {DelaySeconds}s: {Paths}",
+                missingPaths.Count,
+                attempt,
+                _indexBlobVisibilityMaxAttempts,
+                _indexBlobVisibilityRetryDelay.TotalSeconds,
+                string.Join(", ", missingPaths));
+            await Task.Delay(_indexBlobVisibilityRetryDelay);
+        }
+
+        return blobs;
+    }
+
+    private static List<string> FindMissingPublishedArtifactPaths(
+        IReadOnlyCollection<AzureBlobInfo> blobs,
+        IReadOnlyCollection<PublishedArtifactMetadata> publishedArtifacts)
+    {
+        return FindMissingPublishedArtifactPaths(blobs, GetRequiredPublishedArtifactPaths(publishedArtifacts));
+    }
+
+    private static List<string> FindMissingPublishedArtifactPaths(
+        IReadOnlyCollection<AzureBlobInfo> blobs,
+        IReadOnlyCollection<string> requiredPaths)
+    {
+        var blobNames = blobs
+            .Select((blob) => blob.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return requiredPaths
+            .Where((path) => !blobNames.Contains(path))
+            .OrderBy((path) => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<string> GetRequiredPublishedArtifactPaths(IReadOnlyCollection<PublishedArtifactMetadata> publishedArtifacts)
+    {
+        return (publishedArtifacts ?? Array.Empty<PublishedArtifactMetadata>())
+            .Select((artifact) => artifact.Path)
+            .Where((path) => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public AzureBlobIndexGenerationResult BuildIndexResult(

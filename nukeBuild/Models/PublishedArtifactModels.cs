@@ -75,6 +75,7 @@ public sealed class AzureBlobIndexGenerationResult
     public int VersionCount { get; set; }
     public int AssetCount { get; set; }
     public int HttpOnlyFallbackCount { get; set; }
+    public List<string> MissingPublishedArtifactPaths { get; } = new();
     public List<ArtifactPublishDiagnostic> Diagnostics { get; } = new();
 }
 

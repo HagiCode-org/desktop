@@ -201,6 +201,60 @@ public sealed class AzureBlobAdapterTests
     }
 
     [Fact]
+    public async Task GenerateIndexFromBlobsWithMetadataAsync_BlocksStaleIndexWhenPublishedArtifactIsNotListed()
+    {
+        var tempDirectory = CreateTempDirectory();
+
+        try
+        {
+            AbsolutePath root = tempDirectory;
+            var outputPath = Path.Combine(tempDirectory, "azure-index.json");
+            var container = new FakeBlobContainerClient(
+                (blobName) => new FakeBlobClient(blobName, () => Task.CompletedTask),
+                new[]
+                {
+                    new AzureBlobInfo { Name = "v0.9.0/hagicode-0.9.0-win-x64-nort.zip", Size = 512, LastModified = DateTime.UnixEpoch },
+                });
+            var adapter = new AzureBlobAdapter(
+                root,
+                "",
+                BuildConfig.DefaultGitHubReleaseRepository,
+                (_) => container,
+                indexBlobVisibilityMaxAttempts: 1,
+                indexBlobVisibilityRetryDelay: TimeSpan.Zero);
+            var publishedArtifacts = new[]
+            {
+                CreatePublishedArtifactMetadata(
+                    "hagicode-1.0.0-win-x64-nort.zip",
+                    "v1.0.0/hagicode-1.0.0-win-x64-nort.zip",
+                    "https://desktop.dl.hagicode.com/v1.0.0/hagicode-1.0.0-win-x64-nort.zip",
+                    "hash-a",
+                    "sha-a"),
+            };
+
+            var result = await adapter.GenerateIndexFromBlobsWithMetadataAsync(
+                new AzureBlobPublishOptions
+                {
+                    SasUrl = "https://example.blob.core.windows.net/releases?sig=test",
+                    LocalIndexPath = outputPath,
+                    PublicBaseUrl = BuildConfig.DesktopPublicBaseUrl,
+                },
+                outputPath,
+                publishedArtifacts,
+                minify: true);
+
+            Assert.Equal("v1.0.0/hagicode-1.0.0-win-x64-nort.zip", Assert.Single(result.MissingPublishedArtifactPaths));
+            Assert.Contains(result.Diagnostics, (diagnostic) => diagnostic.Code == "published-artifact-not-listed");
+            Assert.True(string.IsNullOrWhiteSpace(result.IndexJson));
+            Assert.False(File.Exists(outputPath));
+        }
+        finally
+        {
+            DeleteDirectory(tempDirectory);
+        }
+    }
+
+    [Fact]
     public async Task GenerateIndexOnlyAsync_WritesEmptyIndexWithoutLinksAndPassesValidation()
     {
         var tempDirectory = CreateTempDirectory();
@@ -294,10 +348,12 @@ public sealed class AzureBlobAdapterTests
     {
         private readonly Func<string, FakeBlobClient> _factory;
         private readonly Dictionary<string, FakeBlobClient> _clients = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IReadOnlyCollection<AzureBlobInfo> _listedBlobs;
 
-        public FakeBlobContainerClient(Func<string, FakeBlobClient> factory)
+        public FakeBlobContainerClient(Func<string, FakeBlobClient> factory, IReadOnlyCollection<AzureBlobInfo>? listedBlobs = null)
         {
             _factory = factory;
+            _listedBlobs = listedBlobs ?? Array.Empty<AzureBlobInfo>();
         }
 
         public IAzureBlobClient GetBlobClient(string blobName)
@@ -314,7 +370,10 @@ public sealed class AzureBlobAdapterTests
         public async IAsyncEnumerable<AzureBlobInfo> ListBlobsAsync()
         {
             await Task.CompletedTask;
-            yield break;
+            foreach (var blob in _listedBlobs)
+            {
+                yield return blob;
+            }
         }
     }
 
