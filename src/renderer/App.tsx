@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, FileText, FolderSync, LoaderCircle, RefreshCcw } from 'lucide-react';
+import { AlertCircle, FileText, LoaderCircle, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
@@ -25,7 +25,6 @@ import type { DistributionMode } from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { OmniRouteBridge } from '../types/omniroute-management';
 import type {
-  DataDirectoryMutationResult,
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap';
 import type { LogDirectoryOpenResult } from '../types/log-directory';
@@ -70,7 +69,6 @@ declare global {
         getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
         getSnapshot: () => Promise<DesktopBootstrapSnapshot>;
         refresh: () => Promise<DesktopBootstrapSnapshot>;
-        restoreDefaultDataDirectory: () => Promise<DataDirectoryMutationResult>;
         openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
       };
       getAppVersion: () => Promise<string>;
@@ -130,7 +128,6 @@ function buildRendererBootstrapErrorSnapshot(
     diagnostics: [],
     recovery: {
       canRetry: true,
-      canRestoreDefault: false,
       canOpenDesktopLogs: false,
     },
     generatedAt: new Date().toISOString(),
@@ -285,13 +282,11 @@ function BootstrapErrorShell({
   snapshot,
   pendingAction,
   onRetry,
-  onRestoreDefault,
   onOpenLogs,
 }: {
   snapshot: DesktopBootstrapSnapshot;
-  pendingAction: 'retry' | 'restore' | 'logs' | null;
+  pendingAction: 'retry' | 'logs' | null;
   onRetry: () => Promise<void>;
-  onRestoreDefault: () => Promise<void>;
   onOpenLogs: () => Promise<void>;
 }) {
   const { t } = useTranslation('common');
@@ -335,16 +330,6 @@ function BootstrapErrorShell({
               {pendingAction === 'logs' ? t('bootstrap.actions.working') : t('bootstrap.actions.openLogs')}
             </Button>
           )}
-          {snapshot.recovery.canRestoreDefault && (
-            <Button
-              variant="outline"
-              onClick={() => void onRestoreDefault()}
-              disabled={pendingAction !== null}
-            >
-              <FolderSync className="mr-2 h-4 w-4" />
-              {pendingAction === 'restore' ? t('bootstrap.actions.working') : t('bootstrap.actions.restoreDefault')}
-            </Button>
-          )}
           {snapshot.recovery.canRetry && (
             <Button onClick={() => void onRetry()} disabled={pendingAction !== null}>
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -362,7 +347,7 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
   const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('loading');
   const [bootstrapSnapshot, setBootstrapSnapshot] = useState<DesktopBootstrapSnapshot | null>(null);
-  const [pendingAction, setPendingAction] = useState<'retry' | 'restore' | 'logs' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'retry' | 'logs' | null>(null);
   const mountedRef = useRef(true);
   const shellReadyNotifiedRef = useRef(false);
   const postShellInitializationStartedRef = useRef(false);
@@ -520,35 +505,6 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
     }
   };
 
-  const handleRestoreDefault = async () => {
-    const bridge = window.electronAPI?.bootstrap;
-    if (!bridge) {
-      return;
-    }
-
-    setPendingAction('restore');
-    try {
-      const result = await bridge.restoreDefaultDataDirectory();
-      if (!result.success) {
-        const detail = result.error || t('bootstrap.toasts.restoreFailed');
-        setBootstrapSnapshot((current) => current ?? buildRendererBootstrapErrorSnapshot(
-          'failed to restore default data directory',
-          detail,
-        ));
-        setBootstrapPhase('error');
-        toast.error(detail);
-        return;
-      }
-
-      toast.success(t('bootstrap.toasts.restoreSuccess'));
-      await hydrateBootstrap('refresh');
-    } finally {
-      if (mountedRef.current) {
-        setPendingAction(null);
-      }
-    }
-  };
-
   const handleOpenLogs = async () => {
     const bridge = window.electronAPI?.bootstrap;
     if (!bridge) {
@@ -577,7 +533,6 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
           snapshot={bootstrapSnapshot}
           pendingAction={pendingAction}
           onRetry={handleRetry}
-          onRestoreDefault={handleRestoreDefault}
           onOpenLogs={handleOpenLogs}
         />
       );

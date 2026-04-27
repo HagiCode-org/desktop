@@ -7,8 +7,6 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
-import llmInstallationReducer from './slices/llmInstallationSlice';
-import dataDirectoryReducer from './slices/dataDirectorySlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -46,8 +44,6 @@ export const store = configureStore({
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
-    llmInstallation: llmInstallationReducer,
-    dataDirectory: dataDirectoryReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>

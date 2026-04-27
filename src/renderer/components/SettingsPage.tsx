@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  DataDirectorySettings,
   OnboardingSettings,
   SharingAccelerationSettings,
   shouldShowSharingAccelerationSettings,
@@ -35,12 +34,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
               {t('settings.tabs.onboarding')}
             </TabsTrigger>
             <TabsTrigger
-              value="dataDirectory"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              {t('settings.tabs.dataDirectory')}
-            </TabsTrigger>
-            <TabsTrigger
               value="updates"
               className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
@@ -59,10 +52,6 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
           <div className="flex-1 min-w-0">
             <TabsContent value="onboarding" className="mt-0">
               <OnboardingSettings />
-            </TabsContent>
-
-            <TabsContent value="dataDirectory" className="mt-0">
-              <DataDirectorySettings />
             </TabsContent>
 
             <TabsContent value="updates" className="mt-0">
