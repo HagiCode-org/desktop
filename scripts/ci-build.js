@@ -15,7 +15,7 @@
  *   --help                        Show help message
  */
 
-import { spawn } from 'child_process';
+import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 
@@ -165,45 +165,23 @@ function parseArgs() {
 /**
  * Execute a command and return the result
  */
-function executeCommand(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    log(`Executing: ${command} ${args.join(' ')}`, colors.gray);
+async function executeCommand(command, args, options = {}) {
+  log(`Executing: ${command} ${args.join(' ')}`, colors.gray);
 
-    const child = spawn(command, args, {
-      stdio: isCI ? 'pipe' : 'inherit',
-      shell: true,
-      ...options,
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    if (isCI) {
-      child.stdout?.on('data', (data) => {
-        const text = data.toString();
-        stdout += text;
-        process.stdout.write(text);
-      });
-
-      child.stderr?.on('data', (data) => {
-        const text = data.toString();
-        stderr += text;
-        process.stderr.write(text);
-      });
-    }
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr, code });
-      } else {
-        reject(new Error(`Command failed with exit code ${code}`));
-      }
-    });
-
-    child.on('error', (error) => {
-      reject(error);
-    });
+  const result = await execa(command, args, {
+    stdin: 'ignore',
+    stdout: isCI ? ['pipe', 'pipe'] : 'inherit',
+    stderr: isCI ? ['pipe', 'pipe'] : 'inherit',
+    shell: true,
+    reject: false,
+    ...options,
   });
+
+  if (result.exitCode === 0) {
+    return { stdout: result.stdout || '', stderr: result.stderr || '', code: result.exitCode };
+  }
+
+  throw new Error(`Command failed with exit code ${result.exitCode}`);
 }
 
 /**

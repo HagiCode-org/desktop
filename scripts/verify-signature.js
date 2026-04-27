@@ -22,7 +22,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import { execa } from 'execa';
 
 const colors = {
   reset: '\x1b[0m',
@@ -186,41 +186,29 @@ async function verifyWithSignTool(filePath) {
     };
   }
 
-  return new Promise((resolve) => {
-    const args = ['verify', '/pa', filePath];
-    const child = spawn(signToolPath, args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
+  try {
+    const result = await execa(signToolPath, ['verify', '/pa', filePath], {
+      reject: false,
+      stdin: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
+      windowsHide: true,
     });
 
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout?.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    child.on('close', (code) => {
-      resolve({
-        signed: code === 0,
-        method: 'signtool',
-        code,
-        stdout,
-        stderr,
-      });
-    });
-
-    child.on('error', (error) => {
-      resolve({
-        signed: false,
-        method: 'signtool',
-        error: error.message,
-      });
-    });
-  });
+    return {
+      signed: result.exitCode === 0,
+      method: 'signtool',
+      code: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    };
+  } catch (error) {
+    return {
+      signed: false,
+      method: 'signtool',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 function formatResult(filePath, result) {
