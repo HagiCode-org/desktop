@@ -128,7 +128,6 @@
     "openBrowserButton": "在浏览器打开",
     "details": {
       "serviceUrl": "服务 URL",
-      "processId": "进程 ID",
       "uptime": "运行时间",
       "restartCount": "重启次数",
       "port": "端口",

@@ -681,7 +681,6 @@ ipcMain.handle('get-web-service-status', async () => {
   if (!webServiceManager) {
     return {
       status: 'stopped',
-      pid: null,
       uptime: 0,
       startTime: null,
       url: null,
@@ -697,7 +696,6 @@ ipcMain.handle('get-web-service-status', async () => {
     console.error('Failed to get web service status:', error);
     return {
       status: 'error',
-      pid: null,
       uptime: 0,
       startTime: null,
       url: null,
@@ -1103,7 +1101,6 @@ ipcMain.handle('version:switch', async (_, versionId: string) => {
     if (statusBeforeSwitch.status === 'running' || statusBeforeSwitch.status === 'starting') {
       log.info('[Main] Stopping running web service before switching active version:', {
         versionId,
-        currentPid: statusBeforeSwitch.pid,
         currentUrl: statusBeforeSwitch.url,
       });
       const stopped = await webServiceManager.stop();

@@ -17,7 +17,6 @@ import {
   setHost,
   setActiveVersion,
   setUrl,
-  setPid,
   showInstallConfirm,
   hideInstallConfirm,
   hideStartConfirmDialog,
@@ -235,7 +234,6 @@ export const stopWebService = createAsyncThunk(
       if (success) {
         dispatch(setStatus('stopped'));
         dispatch(setUrl(null));
-        dispatch(setPid(null));
       } else {
         dispatch(setError('Failed to stop web service'));
         dispatch(setStatus('error'));
@@ -662,7 +660,6 @@ export const initializeWebService = createAsyncThunk(
       console.error('Initialize web service status error:', error);
       dispatch(setProcessInfo({
         status: 'stopped',
-        pid: null,
         uptime: 0,
         startTime: null,
         url: null,
@@ -670,7 +667,6 @@ export const initializeWebService = createAsyncThunk(
         phase: 'idle' as any,
         host: DEFAULT_WEB_SERVICE_HOST,
         port: DEFAULT_WEB_SERVICE_PORT,
-        recoverySource: 'none',
       }));
     }
   }

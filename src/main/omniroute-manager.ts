@@ -35,7 +35,6 @@ interface CommandResult {
 
 interface Pm2ListEntry {
   name?: string;
-  pid?: number;
   pm2_env?: {
     status?: string;
     restart_time?: number;
@@ -362,7 +361,6 @@ export class OmniRouteManager {
       return {
         name: OMNIROUTE_PROCESS_NAME,
         status: toStatus(entry.pm2_env?.status),
-        pid: typeof entry.pid === 'number' && entry.pid > 0 ? entry.pid : null,
         restartCount: typeof entry.pm2_env?.restart_time === 'number' ? entry.pm2_env.restart_time : null,
         uptime: typeof entry.pm2_env?.pm_uptime === 'number' ? Math.max(0, Date.now() - entry.pm2_env.pm_uptime) : null,
       };
@@ -434,7 +432,6 @@ export class OmniRouteManager {
     return {
       name: OMNIROUTE_PROCESS_NAME,
       status: 'stopped',
-      pid: null,
       restartCount: null,
       uptime: null,
     };

@@ -128,7 +128,6 @@
     "openBrowserButton": "Open in Browser",
     "details": {
       "serviceUrl": "Service URL",
-      "processId": "Process ID",
       "uptime": "Uptime",
       "restartCount": "Restart Count",
       "port": "Port",

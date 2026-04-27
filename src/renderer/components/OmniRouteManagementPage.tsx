@@ -337,7 +337,6 @@ export default function OmniRouteManagementPage() {
                   <tr>
                     <th className="py-2 pr-4">{t('omniroute.processes.name')}</th>
                     <th className="py-2 pr-4">{t('omniroute.processes.status')}</th>
-                    <th className="py-2 pr-4">PID</th>
                     <th className="py-2 pr-4">{t('omniroute.processes.restarts')}</th>
                   </tr>
                 </thead>
@@ -346,7 +345,6 @@ export default function OmniRouteManagementPage() {
                     <tr key={process.name} className="border-t border-border/70">
                       <td className="py-3 pr-4 font-mono">{process.name}</td>
                       <td className="py-3 pr-4">{t(`omniroute.processStatus.${process.status}`)}</td>
-                      <td className="py-3 pr-4">{process.pid ?? '-'}</td>
                       <td className="py-3 pr-4">{process.restartCount ?? '-'}</td>
                     </tr>
                   ))}

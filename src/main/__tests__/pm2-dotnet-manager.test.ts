@@ -185,7 +185,6 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(started.success, true);
       if (started.success) {
         assert.equal(started.status?.online, true);
-        assert.equal(started.status?.pid, 1234);
         assert.equal(started.status?.restartCount, 2);
       }
       assert.equal(stopped.success, true);
@@ -309,9 +308,7 @@ describe('pm2-dotnet-manager', () => {
       const result = await manager.startFresh(createRuntimeConfig(tmpDir));
 
       assert.equal(result.success, true);
-      if (result.success) {
-        assert.equal(result.status?.pid, 6789);
-      }
+      assert.equal(result.success && result.status?.online, true);
       assert.deepEqual(calls.map(call => call.args[0]), ['jlist', 'delete', 'start', 'jlist']);
       assert.equal(calls.every(call => call.cwd === '/apps/Hagicode Desktop/current'), true);
     } finally {

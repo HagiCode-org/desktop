@@ -230,7 +230,6 @@ export function registerVersionHandlers(deps: {
       if (statusBeforeSwitch.status === 'running' || statusBeforeSwitch.status === 'starting') {
         log.info('[VersionHandlers] Stopping running web service before switching active version:', {
           versionId,
-          currentPid: statusBeforeSwitch.pid,
           currentUrl: statusBeforeSwitch.url,
         });
         const stopped = await state.webServiceManager.stop();

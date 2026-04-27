@@ -53,7 +53,8 @@ describe('web-service startup flow', () => {
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
     assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
     assert.match(source, /isManagedServiceReachable\(this\.config\.port\)/);
-    assert.match(source, /terminateLingeringServiceByPort\(this\.config\.port\)/);
+    assert.doesNotMatch(source, /terminateLingeringServiceByPort/);
+    assert.match(source, /PM2 start may fail if this is a non-PM2 port conflict/);
     assert.match(source, /dotnetPath: launchContext\.dotnetPath/);
     assert.match(source, /serviceDllPath: launchContext\.serviceDllPath/);
     assert.match(source, /serviceWorkingDirectory: launchContext\.serviceWorkingDirectory/);

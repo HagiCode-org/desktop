@@ -20,7 +20,6 @@ export interface OmniRouteManagedPaths {
 export interface OmniRouteProcessSnapshot {
   name: string;
   status: OmniRouteProcessStatus;
-  pid: number | null;
   restartCount: number | null;
   uptime: number | null;
 }

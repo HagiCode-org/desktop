@@ -71,7 +71,6 @@ export interface WebServiceConfig {
 
 export interface ProcessInfo {
   status: ProcessStatus;
-  pid: number | null;
   uptime: number;
   startTime: number | null;
   url: string | null;
@@ -80,21 +79,6 @@ export interface ProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
-  recoverySource?: RecoverySource;
-  recoveryMessage?: string;
-}
-
-export type RecoverySource = 'none' | 'pid_file' | 'signature_fallback';
-
-interface RuntimeIdentity {
-  pid: number;
-  host: string;
-  port: number;
-  startedAt: string;
-  versionId?: string;
-  recoverySource?: RecoverySource;
-  recoveryMessage?: string;
-  updatedAt: string;
 }
 
 interface WebServiceStateFile {
@@ -102,7 +86,6 @@ interface WebServiceStateFile {
   lastSuccessfulHost?: string;
   lastSuccessfulPort?: number;
   savedAt?: string;
-  runtime?: RuntimeIdentity | null;
 }
 
 interface PreparedServiceEnvironment {
@@ -161,11 +144,6 @@ export class PCodeWebServiceManager {
   private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
   private activeVersionId: string | null = null;
   private activeRuntime: ActiveRuntimeDescriptor | null = null;
-  private recoveredRuntime: RuntimeIdentity | null = null;
-  private recoverySource: RecoverySource = 'none';
-  private recoveryMessage: string | null = null;
-  private startupRecoveryAttempted: boolean = false;
-  private startupRecoveryPromise: Promise<void> | null = null;
   private readonly savedConfigInitialization: Promise<void>;
   private lastManagedEnvSnapshot: ManagedEnvSnapshotEntry[] = [];
   private readonly healthCheckPaths: readonly string[] = ['/api/health', '/api/health/dual-monitoring', '/api/status'];
@@ -279,60 +257,14 @@ export class PCodeWebServiceManager {
       return {};
     }
 
-    const runtimeHost = normalizeListenHost(state.runtime?.host);
-
     return {
       ...state,
       lastSuccessfulHost: coerceListenHost(state.lastSuccessfulHost),
-      runtime: state.runtime
-        ? {
-            ...state.runtime,
-            host: runtimeHost ?? coerceListenHost(state.lastSuccessfulHost),
-          }
-        : null,
     };
   }
 
   private async ensureSavedConfigInitialized(): Promise<void> {
     await this.savedConfigInitialization;
-  }
-
-  private async persistRuntimeIdentity(identity: RuntimeIdentity): Promise<void> {
-    try {
-      await this.updateStateFile((state) => ({
-        ...state,
-        schemaVersion: 3,
-        lastSuccessfulHost: identity.host,
-        lastSuccessfulPort: identity.port,
-        savedAt: new Date().toISOString(),
-        runtime: identity,
-      }));
-      log.info('[WebService] Persisted runtime identity:', {
-        pid: identity.pid,
-        host: identity.host,
-        port: identity.port,
-        versionId: identity.versionId,
-      });
-    } catch (error) {
-      log.error('[WebService] Failed to persist runtime identity:', error);
-    }
-  }
-
-  private async invalidateRuntimeIdentity(reason: string): Promise<void> {
-    this.recoveredRuntime = null;
-    this.recoverySource = 'none';
-    this.recoveryMessage = null;
-
-    try {
-      await this.updateStateFile((state) => ({
-        ...state,
-        runtime: null,
-        savedAt: new Date().toISOString(),
-      }));
-      log.info('[WebService] Invalidated runtime identity:', reason);
-    } catch (error) {
-      log.warn('[WebService] Failed to invalidate runtime identity:', error);
-    }
   }
 
   /**
@@ -1093,83 +1025,6 @@ export class PCodeWebServiceManager {
     return false;
   }
 
-  private parsePidsFromOutput(output: string): number[] {
-    const matches = output.match(/\b\d+\b/g) || [];
-    const parsed = matches
-      .map(value => Number.parseInt(value, 10))
-      .filter(value => Number.isInteger(value) && value > 0);
-    return [...new Set(parsed)];
-  }
-
-  private async getListeningProcessIdsByPort(port: number): Promise<number[]> {
-    try {
-      if (process.platform === 'win32') {
-        const psCmd = `Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`;
-        const output = await this.runCommand(`powershell -NoProfile -Command "${psCmd}"`);
-        const pids = this.parsePidsFromOutput(output);
-        if (pids.length > 0) {
-          return pids;
-        }
-
-        // Fallback for environments where Get-NetTCPConnection is unavailable.
-        const netstatOutput = await this.runCommand(`netstat -ano | findstr ":${port}"`);
-        return netstatOutput
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(line => line.length > 0 && /LISTENING/i.test(line))
-          .map(line => {
-            const parts = line.split(/\s+/);
-            return Number.parseInt(parts[parts.length - 1] || '', 10);
-          })
-          .filter(pid => Number.isInteger(pid) && pid > 0)
-          .filter((pid, index, arr) => arr.indexOf(pid) === index);
-      }
-
-      const output = await this.runCommand(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`);
-      return this.parsePidsFromOutput(output);
-    } catch (error) {
-      log.debug('[WebService] Failed to resolve listening PID by port:', { port, error });
-      return [];
-    }
-  }
-
-  private async resolveManagedServicePidByPort(port: number): Promise<number | null> {
-    const pids = await this.getListeningProcessIdsByPort(port);
-    if (pids.length === 0) {
-      return null;
-    }
-
-    for (const pid of pids) {
-      const commandLine = await this.getProcessCommandLine(pid);
-      if (commandLine && this.isTargetDotnetSignature(commandLine)) {
-        return pid;
-      }
-    }
-
-    return null;
-  }
-
-  private async terminateLingeringServiceByPort(port: number): Promise<void> {
-    const targetPid = await this.resolveManagedServicePidByPort(port);
-    if (!targetPid) {
-      log.warn('[WebService] Port remains reachable but no managed service PID could be resolved:', { port });
-      return;
-    }
-
-    if (process.platform === 'win32') {
-      try {
-        await this.runCommand(`taskkill /F /T /PID ${targetPid}`);
-        log.warn('[WebService] Terminated lingering managed service by PID/port:', { port, pid: targetPid });
-      } catch (error) {
-        log.error('[WebService] Failed to terminate lingering service by PID/port:', { port, pid: targetPid, error });
-      }
-      return;
-    }
-
-    await this.terminateRecoveredProcess(targetPid);
-    log.warn('[WebService] Terminated lingering managed service by PID/port:', { port, pid: targetPid });
-  }
-
   /**
    * Emit phase update to renderer
    */
@@ -1287,165 +1142,6 @@ export class PCodeWebServiceManager {
       reason: lastErrorMessage,
     });
     return false;
-  }
-
-  private async isProcessAlive(pid: number): Promise<boolean> {
-    if (!Number.isInteger(pid) || pid <= 0) {
-      return false;
-    }
-
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      // EPERM means process exists but we don't have signal permission.
-      return code === 'EPERM';
-    }
-  }
-
-  private runCommand(command: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      exec(command, { timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(`${stdout || ''}\n${stderr || ''}`);
-      });
-    });
-  }
-
-  private async getProcessCommandLine(pid: number): Promise<string | null> {
-    try {
-      if (process.platform === 'win32') {
-        const escaped = `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' | Select-Object -ExpandProperty CommandLine)`;
-        const output = await this.runCommand(`powershell -NoProfile -Command "${escaped}"`);
-        const line = output.trim();
-        return line || null;
-      }
-
-      const output = await this.runCommand(`ps -p ${pid} -o args=`);
-      const line = output.trim();
-      return line || null;
-    } catch (error) {
-      log.warn('[WebService] Failed to read process command line:', { pid, error });
-      return null;
-    }
-  }
-
-  private isTargetDotnetSignature(commandLine: string): boolean {
-    const normalized = commandLine.toLowerCase();
-    const hasDotnet = normalized.includes('dotnet');
-    const hasTargetDll = normalized.includes('pcode.web.dll');
-
-    if (!hasDotnet || !hasTargetDll) {
-      return false;
-    }
-
-    if (!this.activeVersionId) {
-      return true;
-    }
-
-    // Active version may not always be present in command line when script cd's first.
-    return true;
-  }
-
-  private applyRecoveredRunningState(identity: RuntimeIdentity, source: RecoverySource, message: string): void {
-    this.status = 'running';
-    this.currentPhase = StartupPhase.Running;
-    this.config.host = coerceListenHost(identity.host);
-    this.config.port = identity.port;
-    this.startTime = Number.isFinite(Date.parse(identity.startedAt)) ? Date.parse(identity.startedAt) : null;
-    this.recoveredRuntime = {
-      ...identity,
-      recoverySource: source,
-      recoveryMessage: message,
-      updatedAt: new Date().toISOString(),
-    };
-    this.recoverySource = source;
-    this.recoveryMessage = message;
-  }
-
-  private async validatePrimaryRecovery(identity: RuntimeIdentity): Promise<boolean> {
-    const pidAlive = await this.isProcessAlive(identity.pid);
-    if (!pidAlive) {
-      return false;
-    }
-
-    const portReachable = await this.checkPortReachable(this.config.host, identity.port);
-    if (!portReachable) {
-      return false;
-    }
-
-    return await this.performHealthCheck(identity.port);
-  }
-
-  private async validateSignatureFallback(identity: RuntimeIdentity): Promise<boolean> {
-    const pidAlive = await this.isProcessAlive(identity.pid);
-    if (!pidAlive) {
-      return false;
-    }
-
-    const commandLine = await this.getProcessCommandLine(identity.pid);
-    if (!commandLine) {
-      return false;
-    }
-
-    return this.isTargetDotnetSignature(commandLine);
-  }
-
-  private async attemptStartupRecovery(): Promise<void> {
-    const state = await this.readStateFile();
-    if (!state.runtime) {
-      return;
-    }
-
-    const runtime = state.runtime;
-    if (!runtime.pid || !runtime.port) {
-      await this.invalidateRuntimeIdentity('invalid-runtime-shape');
-      return;
-    }
-
-    if (await this.validatePrimaryRecovery(runtime)) {
-      this.applyRecoveredRunningState(runtime, 'pid_file', 'Recovered via persisted pid+port+health');
-      log.info('[WebService] Startup recovery succeeded via PID file:', {
-        pid: runtime.pid,
-        port: runtime.port,
-      });
-      return;
-    }
-
-    if (await this.validateSignatureFallback(runtime)) {
-      this.applyRecoveredRunningState(runtime, 'signature_fallback', 'Recovered via process signature fallback');
-      log.warn('[WebService] Startup recovery used signature fallback:', {
-        pid: runtime.pid,
-        port: runtime.port,
-      });
-      return;
-    }
-
-    await this.invalidateRuntimeIdentity('recovery-failed');
-  }
-
-  private async ensureStartupRecovery(): Promise<void> {
-    if (this.startupRecoveryAttempted) {
-      if (this.startupRecoveryPromise) {
-        await this.startupRecoveryPromise;
-      }
-      return;
-    }
-
-    this.startupRecoveryAttempted = true;
-    this.startupRecoveryPromise = this.attemptStartupRecovery()
-      .catch(error => {
-        log.error('[WebService] Startup recovery failed:', error);
-      })
-      .finally(() => {
-        this.startupRecoveryPromise = null;
-      });
-
-    await this.startupRecoveryPromise;
   }
 
   private getConfigMode(): WebServiceConfigMode {
@@ -1567,7 +1263,6 @@ export class PCodeWebServiceManager {
    */
   async start(): Promise<StartResult> {
     await this.ensureSavedConfigInitialized();
-    await this.ensureStartupRecovery();
     this.resetStartupLogBuffer();
     this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
@@ -1641,7 +1336,6 @@ export class PCodeWebServiceManager {
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, errorMessage);
         this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
-        await this.invalidateRuntimeIdentity('managed-runtime-validation-failed');
         return this.buildStartupFailureResult(errorMessage);
       }
 
@@ -1706,11 +1400,10 @@ export class PCodeWebServiceManager {
       this.appendStartupLogLine(`PM2 runtime files directory: ${pm2RuntimeDirectory}`);
 
       if (await this.isManagedServiceReachable(this.config.port)) {
-        log.warn('[WebService] Target port is reachable before PM2 start; terminating lingering managed service if present:', {
+        log.warn('[WebService] Target port is reachable before PM2 start; PM2 start may fail if this is a non-PM2 port conflict:', {
           port: this.config.port,
         });
-        this.appendStartupLogLine(`Target port ${this.config.port} is already reachable; checking for lingering managed service`);
-        await this.terminateLingeringServiceByPort(this.config.port);
+        this.appendStartupLogLine(`Target port ${this.config.port} is already reachable before PM2 start`);
       }
 
       const pm2StartResult = await this.pm2Manager.startFresh({
@@ -1731,7 +1424,6 @@ export class PCodeWebServiceManager {
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, pm2StartResult.message);
         this.appendStartupLogLine(`Start failed [${pm2StartResult.errorCode}]: ${pm2StartResult.message}`);
-        await this.invalidateRuntimeIdentity('pm2-start-failed');
         return this.buildPm2LifecycleFailureResult(pm2StartResult);
       }
 
@@ -1746,7 +1438,6 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`Start failed: service did not listen on ${this.config.host}:${this.config.port}`);
         await this.stop();
         this.status = 'error';
-        await this.invalidateRuntimeIdentity('listening-timeout');
         return this.buildStartupFailureResult('Service failed to start listening');
       }
 
@@ -1757,44 +1448,17 @@ export class PCodeWebServiceManager {
       if (healthCheckPassed) {
         this.status = 'running';
         this.startTime = Date.now();
-        this.recoveredRuntime = null;
-        this.recoverySource = 'none';
-        this.recoveryMessage = null;
 
-        // Persist successful bind configuration for future restarts and recovery.
+        // Persist successful bind configuration for future starts without storing process identity.
         await this.saveLastSuccessfulConfig();
-        if (pm2StartResult.status?.pid) {
-          let runtimePid = pm2StartResult.status.pid;
-          const managedPid = await this.resolveManagedServicePidByPort(this.config.port);
-          if (managedPid && managedPid !== runtimePid) {
-            log.info('[WebService] Resolved managed runtime PID from listening port:', {
-              spawnPid: runtimePid,
-              managedPid,
-              port: this.config.port,
-            });
-            runtimePid = managedPid;
-          }
-
-          await this.persistRuntimeIdentity({
-            pid: runtimePid,
-            host: this.config.host,
-            port: this.config.port,
-            startedAt: new Date(this.startTime).toISOString(),
-            versionId: this.activeVersionId || undefined,
-            recoverySource: 'none',
-            recoveryMessage: 'started-by-desktop',
-            updatedAt: new Date().toISOString(),
-          });
-        }
 
         log.info('[WebService] Service started successfully on port:', this.config.port);
         log.info('[WebService] Environment injection confirmed:', {
           mode: envMode,
           managedVariableCount: this.lastManagedEnvSnapshot.length,
-          pid: pm2StartResult.status?.pid ?? null,
         });
         this.emitPhase(StartupPhase.Running, 'Service is running');
-        log.info('[WebService] Started successfully via PM2, PID:', pm2StartResult.status?.pid ?? null);
+        log.info('[WebService] Started successfully via PM2 process name');
 
         // Return success result with URL and port
         return {
@@ -1820,7 +1484,6 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine('Start failed: health check did not pass within timeout');
         await this.stop();
         this.status = 'error';
-        await this.invalidateRuntimeIdentity('health-check-failed');
         return this.buildStartupFailureResult('Health check failed');
       }
     } catch (error) {
@@ -1830,7 +1493,6 @@ export class PCodeWebServiceManager {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
       this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
-      await this.invalidateRuntimeIdentity('start-exception');
       return this.buildStartupFailureResult(errorMessage);
     }
   }
@@ -1884,7 +1546,6 @@ export class PCodeWebServiceManager {
       this.appendStartupLogLine(`Process error: ${error.message}`);
       this.status = 'error';
       this.process = null;
-      void this.invalidateRuntimeIdentity('process-error');
     });
 
     this.process.on('exit', (code, signal) => {
@@ -1909,7 +1570,6 @@ export class PCodeWebServiceManager {
         log.warn('[WebService] Process exited unexpectedly');
         this.restartCount++;
         this.status = 'error';
-        void this.invalidateRuntimeIdentity('process-exit');
       }
 
       this.process = null;
@@ -1920,7 +1580,6 @@ export class PCodeWebServiceManager {
       this.process = null;
       if (this.status === 'running') {
         this.status = 'stopped';
-        void this.invalidateRuntimeIdentity('process-close');
       }
     });
   }
@@ -1929,8 +1588,6 @@ export class PCodeWebServiceManager {
    * Stop the web service process
    */
   async stop(): Promise<boolean> {
-    await this.ensureStartupRecovery();
-
     if (!this.process && this.status !== 'running') {
       log.warn('[WebService] Process not running');
       return false;
@@ -1939,7 +1596,6 @@ export class PCodeWebServiceManager {
     try {
       this.status = 'stopping';
       log.info('[WebService] Stopping web service...');
-      const stopPort = this.recoveredRuntime?.port || this.config.port;
 
       const pm2Stop = await this.pm2Manager.stop(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
       if (!pm2Stop.success) {
@@ -1975,14 +1631,6 @@ export class PCodeWebServiceManager {
           log.warn('[WebService] Force killing process:', pid);
           await this.forceKill();
         }
-      } else if (this.recoveredRuntime?.pid) {
-        await this.terminateRecoveredProcess(this.recoveredRuntime.pid);
-      }
-
-      // Safety net: if service still listens on target port, kill the managed runtime by port lookup.
-      if (await this.isManagedServiceReachable(stopPort)) {
-        log.warn('[WebService] Service still reachable after stop attempt, applying port-based termination:', { port: stopPort });
-        await this.terminateLingeringServiceByPort(stopPort);
       }
 
       this.status = 'stopped';
@@ -1990,47 +1638,12 @@ export class PCodeWebServiceManager {
       this.lastPm2Env = null;
       this.startTime = null;
       this.restartCount = 0;
-      this.recoveredRuntime = null;
-      this.recoverySource = 'none';
-      this.recoveryMessage = null;
-      await this.invalidateRuntimeIdentity('stop-confirmed');
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
       log.error('[WebService] Failed to stop:', error);
       this.status = 'error';
       return false;
-    }
-  }
-
-  private async terminateRecoveredProcess(pid: number): Promise<void> {
-    if (process.platform === 'win32') {
-      try {
-        await this.runCommand(`taskkill /F /T /PID ${pid}`);
-      } catch (error) {
-        log.warn('[WebService] taskkill failed for recovered pid, continuing:', { pid, error });
-      }
-      return;
-    }
-
-    try {
-      process.kill(pid, 'SIGTERM');
-    } catch {
-      // Keep going and verify process liveness below.
-    }
-
-    const waitUntil = Date.now() + this.stopTimeout;
-    while (Date.now() < waitUntil) {
-      if (!(await this.isProcessAlive(pid))) {
-        return;
-      }
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-
-    try {
-      process.kill(pid, 'SIGKILL');
-    } catch {
-      // Best effort
     }
   }
 
@@ -2094,7 +1707,6 @@ export class PCodeWebServiceManager {
    */
   async getStatus(): Promise<ProcessInfo> {
     await this.ensureSavedConfigInitialized();
-    await this.ensureStartupRecovery();
 
     const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
     if (pm2Status.success && pm2Status.status) {
@@ -2117,13 +1729,10 @@ export class PCodeWebServiceManager {
     }
 
     const uptime = this.startTime ? Date.now() - this.startTime : 0;
-    const pm2Pid = pm2Status.success ? pm2Status.status?.pid ?? null : null;
-    const activePid = pm2Pid || this.process?.pid || this.recoveredRuntime?.pid || null;
     const runningUrl = this.status === 'running' ? buildAccessUrl(this.config.host, this.config.port) : null;
 
     return {
       status: this.status,
-      pid: activePid,
       uptime,
       startTime: this.startTime,
       url: runningUrl,
@@ -2131,8 +1740,6 @@ export class PCodeWebServiceManager {
       phase: this.currentPhase,
       port: this.config.port,
       host: this.config.host,
-      recoverySource: this.recoverySource,
-      recoveryMessage: this.recoveryMessage || undefined,
     };
   }
 

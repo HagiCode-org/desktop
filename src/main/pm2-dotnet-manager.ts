@@ -486,7 +486,6 @@ export class Pm2DotnetManager {
     if (currentStatus.status?.exists) {
       log.info('[Pm2Dotnet] Existing PM2 dotnet service found; deleting before current-version start:', {
         processName: this.processName,
-        pid: currentStatus.status.pid,
         status: currentStatus.status.status,
         cwd,
       });

@@ -82,7 +82,6 @@ export interface StartWebServiceResult {
 
 export interface WebServiceProcessInfo {
   status: 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
-  pid: number | null;
   uptime: number;
   startTime: number | null;
   url: string | null;
@@ -91,8 +90,6 @@ export interface WebServiceProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
-  recoverySource?: 'none' | 'pid_file' | 'signature_fallback';
-  recoveryMessage?: string;
 }
 
 export interface SetWebServiceConfigResult {

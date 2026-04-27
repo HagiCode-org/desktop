@@ -57,7 +57,6 @@ export enum StartupPhase {
 
 export interface ProcessInfo {
   status: ProcessStatus;
-  pid: number | null;
   uptime: number;
   startTime: number | null;
   url: string | null;
@@ -66,8 +65,6 @@ export interface ProcessInfo {
   phaseMessage?: string;
   host: string;
   port: number;
-  recoverySource?: 'none' | 'pid_file' | 'signature_fallback';
-  recoveryMessage?: string;
 }
 
 export interface PackageInfo {
@@ -108,7 +105,6 @@ export interface DependencyItem {
 export interface WebServiceState {
   // Process management state
   status: ProcessStatus;
-  pid: number | null;
   url: string | null;
   version: string | null;
   lastError: string | null;
@@ -118,8 +114,6 @@ export interface WebServiceState {
   uptime: number;
   host: string;
   port: number;
-  recoverySource: 'none' | 'pid_file' | 'signature_fallback';
-  recoveryMessage: string | null;
   startupFailure: StartupFailurePayload | null;
   showStartupFailureDialog: boolean;
   showStartConfirm: boolean;
@@ -156,7 +150,6 @@ export interface WebServiceState {
 
 const initialState: WebServiceState = {
   status: 'stopped',
-  pid: null,
   url: null,
   version: null,
   lastError: null,
@@ -166,8 +159,6 @@ const initialState: WebServiceState = {
   uptime: 0,
   host: 'localhost',
   port: 36556,
-  recoverySource: 'none',
-  recoveryMessage: null,
   startupFailure: null,
   showStartupFailureDialog: false,
   showStartConfirm: false,
@@ -220,10 +211,6 @@ export const webServiceSlice = createSlice({
       state.lastError = null;
     },
 
-    setPid: (state, action: PayloadAction<number | null>) => {
-      state.pid = action.payload;
-    },
-
     setUrl: (state, action: PayloadAction<string | null>) => {
       state.url = action.payload;
     },
@@ -259,7 +246,6 @@ export const webServiceSlice = createSlice({
     // Update entire process info
     setProcessInfo: (state, action: PayloadAction<ProcessInfo>) => {
       state.status = action.payload.status;
-      state.pid = action.payload.pid;
       state.url = action.payload.url;
       state.startTime = action.payload.startTime;
       state.uptime = action.payload.uptime;
@@ -268,8 +254,6 @@ export const webServiceSlice = createSlice({
       state.phaseMessage = action.payload.phaseMessage || null;
       state.host = action.payload.host;
       state.port = action.payload.port;
-      state.recoverySource = action.payload.recoverySource || 'none';
-      state.recoveryMessage = action.payload.recoveryMessage || null;
     },
 
     setStartupFailure: (state, action: PayloadAction<StartupFailurePayload | null>) => {
@@ -379,7 +363,6 @@ export const {
   setOperating,
   setError,
   clearError,
-  setPid,
   setUrl,
   setVersion,
   setStartTime,
@@ -413,7 +396,6 @@ export const {
 
 // Selectors
 export const selectWebServiceStatus = (state: { webService: WebServiceState }) => state.webService.status;
-export const selectWebServicePid = (state: { webService: WebServiceState }) => state.webService.pid;
 export const selectWebServiceUrl = (state: { webService: WebServiceState }) => state.webService.url;
 export const selectWebServiceVersion = (state: { webService: WebServiceState }) => state.webService.version;
 export const selectWebServiceOperating = (state: { webService: WebServiceState }) => state.webService.isOperating;
@@ -459,7 +441,6 @@ export const selectCanInstall = (state: { webService: WebServiceState }) =>
 // Composite selectors
 export const selectWebServiceInfo = (state: { webService: WebServiceState }) => ({
   status: state.webService.status,
-  pid: state.webService.pid,
   url: state.webService.url,
   version: state.webService.version,
   uptime: state.webService.uptime,
@@ -469,8 +450,6 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   lastError: state.webService.lastError,
   host: state.webService.host,
   port: state.webService.port,
-  recoverySource: state.webService.recoverySource,
-  recoveryMessage: state.webService.recoveryMessage,
 });
 
 export const selectPackageManagementInfo = (state: { webService: WebServiceState }) => ({

@@ -84,7 +84,6 @@ export function registerWebServiceHandlers(deps: {
     if (!state.webServiceManager) {
       return {
         status: 'stopped',
-        pid: null,
         uptime: 0,
         startTime: null,
         url: null,
@@ -100,7 +99,6 @@ export function registerWebServiceHandlers(deps: {
       console.error('Failed to get web service status:', error);
       return {
         status: 'error',
-        pid: null,
         uptime: 0,
         startTime: null,
         url: null,

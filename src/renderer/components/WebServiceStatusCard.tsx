@@ -831,18 +831,10 @@ const WebServiceStatusCard: React.FC = () => {
                 {[
                   { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || 'N/A', mono: true, primary: true },
                   { label: t('webServiceStatus.details.listenAddress'), value: webServiceInfo.host || 'N/A', mono: true },
-                  { label: t('webServiceStatus.details.processId'), value: webServiceInfo.pid || 'N/A', mono: true },
                   { label: t('webServiceStatus.details.uptime'), value: formatUptime(webServiceInfo.uptime), mono: true },
                   { label: t('webServiceStatus.details.restartCount'), value: webServiceInfo.restartCount.toString(), mono: true },
                   { label: t('webServiceStatus.details.port'), value: (webServiceInfo.port || 'N/A').toString(), mono: true },
                   { label: t('webServiceStatus.details.version') || 'Version', value: activeVersion?.version || 'N/A', mono: true },
-                  ...(webServiceInfo.recoverySource && webServiceInfo.recoverySource !== 'none'
-                    ? [{
-                        label: t('webServiceStatus.details.recoverySource', { defaultValue: 'Recovery Source' }),
-                        value: webServiceInfo.recoverySource,
-                        mono: true,
-                      }]
-                    : []),
                 ].map((item, index) => (
                   <motion.div
                     key={item.label}
