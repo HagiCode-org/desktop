@@ -30,10 +30,16 @@ describe('OmniRoute renderer wiring', () => {
     assert.match(source, /window\.electronAPI\.omniroute/);
     assert.match(source, /getBridge\(\)\.getStatus\(\)/);
     assert.match(source, /getBridge\(\)\[action\]\(\)/);
+    assert.match(source, /openOmniRouteDependencyRepair/);
+    assert.match(source, /result\.remediation/);
+    assert.match(source, /status\?\.remediation/);
+    assert.match(source, /omniroute\.dependencyGuidance\.title/);
+    assert.match(source, /omniroute\.dependencyGuidance\.openDependencyManagement/);
     assert.match(source, /status\?\.config\.baseUrl/);
     assert.match(source, /nextStatus\.config\.password/);
-    assert.match(source, /disabled=\{isBusy \|\| isRunning\}/);
+    assert.match(source, /disabled=\{isBusy \|\| isRunning \|\| lifecycleBlockedByDependencies\}/);
     assert.match(source, /disabled=\{isBusy \|\| !isRunning\}/);
+    assert.match(source, /disabled=\{isBusy \|\| lifecycleBlockedByDependencies\}/);
     assert.match(source, /validatePortInput/);
     assert.match(source, /validatePasswordInput/);
     assert.match(source, /password: passwordInput\.trim\(\)/);
@@ -61,7 +67,9 @@ describe('OmniRoute renderer wiring', () => {
     assert.equal(typeof zhJson.omniroute.validation.passwordLength, 'string');
     assert.equal(typeof zhJson.omniroute.config.passwordDescription, 'string');
     assert.equal(typeof zhJson.omniroute.logs.targets['service-out'], 'string');
+    assert.equal(typeof zhJson.omniroute.dependencyGuidance.openDependencyManagement, 'string');
     assert.equal(typeof enJson.omniroute.errors.operationFailed, 'string');
+    assert.equal(typeof enJson.omniroute.dependencyGuidance.descriptionMissing, 'string');
     assert.equal(typeof enJson.dependencyManagement.packages.pm2.description, 'string');
   });
 });

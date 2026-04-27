@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ExternalLink, FolderOpen, Loader2, Play, RefreshCw, RotateCcw, Save, Square } from 'lucide-react';
+import { useDispatch } from 'react-redux';
 import type {
   OmniRouteBridge,
+  OmniRouteDependencyRemediation,
   OmniRouteLogReadResult,
   OmniRouteLogTarget,
   OmniRoutePathTarget,
@@ -16,6 +18,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
+import { openOmniRouteDependencyRepair } from '@/store/thunks/viewThunks';
+import type { AppDispatch } from '@/store';
 
 type PageState = 'loading' | 'ready' | 'error';
 type Operation = 'start' | 'stop' | 'restart' | 'refresh' | 'save-port' | 'load-log' | null;
@@ -25,6 +29,16 @@ const PATH_TARGETS: OmniRoutePathTarget[] = ['config', 'data', 'logs'];
 
 function getBridge(): OmniRouteBridge {
   return window.electronAPI.omniroute;
+}
+
+function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediation): string {
+  return remediation.failureKind === 'dependency-unknown'
+    ? 'omniroute.dependencyGuidance.descriptionUnknown'
+    : 'omniroute.dependencyGuidance.descriptionMissing';
+}
+
+function getDependencyPackageLabel(packageId: OmniRouteDependencyRemediation['targetPackageIds'][number]): string {
+  return packageId === 'pm2' ? 'PM2' : 'OmniRoute';
 }
 
 function statusBadgeVariant(status: OmniRouteStatusSnapshot['status']) {
@@ -58,6 +72,7 @@ function validatePasswordInput(value: string): string | null {
 
 export default function OmniRouteManagementPage() {
   const { t } = useTranslation('common');
+  const dispatch = useDispatch<AppDispatch>();
   const [status, setStatus] = useState<OmniRouteStatusSnapshot | null>(null);
   const [pageState, setPageState] = useState<PageState>('loading');
   const [operation, setOperation] = useState<Operation>(null);
@@ -71,7 +86,10 @@ export default function OmniRouteManagementPage() {
   const isBusy = operation !== null || isPending;
   const portValidationKey = useMemo(() => validatePortInput(portInput), [portInput]);
   const passwordValidationKey = useMemo(() => validatePasswordInput(passwordInput), [passwordInput]);
-  const isRunning = status?.status === 'running';
+  const dependencyRemediation = status?.remediation;
+  const hasOnlineProcess = status?.processes.some((process) => process.status === 'online') ?? false;
+  const isRunning = hasOnlineProcess;
+  const lifecycleBlockedByDependencies = Boolean(dependencyRemediation);
 
   const applyStatus = (nextStatus: OmniRouteStatusSnapshot) => {
     startTransition(() => {
@@ -105,6 +123,10 @@ export default function OmniRouteManagementPage() {
         const errorLog = await getBridge().readLog({ target: 'service-error', maxLines: 200 });
         setLogs((current) => ({ ...current, 'service-error': errorLog }));
         setSelectedLogTarget('service-error');
+        if ((action === 'start' || action === 'restart') && result.remediation) {
+          void dispatch(openOmniRouteDependencyRepair(result.remediation));
+          return;
+        }
         setErrorMessage(result.error ?? t('omniroute.errors.operationFailed'));
       }
     } catch (error) {
@@ -220,6 +242,26 @@ export default function OmniRouteManagementPage() {
         </Alert>
       ) : null}
 
+      {dependencyRemediation ? (
+        <Alert className="border-amber-500/40 bg-amber-500/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('omniroute.dependencyGuidance.title')}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{t(getDependencyGuidanceCopyKey(dependencyRemediation))}</p>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              {dependencyRemediation.targetPackageIds.map((packageId) => (
+                <Badge key={packageId} variant="outline">{getDependencyPackageLabel(packageId)}</Badge>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => void dispatch(openOmniRouteDependencyRepair(dependencyRemediation))} disabled={isBusy}>
+                {t('omniroute.dependencyGuidance.openDependencyManagement')}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {pageState === 'error' && !status ? null : (
         <>
           <Card>
@@ -244,7 +286,7 @@ export default function OmniRouteManagementPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-start gap-2 md:justify-end">
-                <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning}>
+                <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlockedByDependencies}>
                   <Play className="mr-2 h-4 w-4" />
                   {operation === 'start' ? t('omniroute.actions.working') : t('omniroute.actions.start')}
                 </Button>
@@ -252,7 +294,7 @@ export default function OmniRouteManagementPage() {
                   <Square className="mr-2 h-4 w-4" />
                   {operation === 'stop' ? t('omniroute.actions.working') : t('omniroute.actions.stop')}
                 </Button>
-                <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy}>
+                <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlockedByDependencies}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   {operation === 'restart' ? t('omniroute.actions.working') : t('omniroute.actions.restart')}
                 </Button>
