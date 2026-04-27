@@ -17,13 +17,16 @@ describe('dependency management service contract', () => {
     assert.match(source, /process\.env\.npm_node_execpath\?\.trim\(\) \|\| 'node'/);
     assert.match(source, /return 'npm'/);
     assert.match(source, /getPortableNodeExecutablePath\(\)/);
-    assert.match(source, /getPortableNpmExecutablePath\(\)/);
     assert.match(source, /getPortableNodeRoot\(\)/);
     assert.doesNotMatch(source, /DevNodeRuntimeManager/);
     assert.doesNotMatch(source, /devStatus/);
     assert.match(source, /path\.join\(this\.pathManager\.getPortableToolchainRoot\(\), 'npm-cache'\)/);
     assert.match(source, /return this\.getNodeRuntimeRoot\(activationPolicy\)/);
     assert.match(source, /getNpmGlobalBinRoot\(npmGlobalPrefix\)/);
+    assert.match(source, /path\.join\(this\.getNpmGlobalPrefix\(activationPolicy\), 'node_modules', 'npm', 'bin', 'npm-cli\.js'\)/);
+    assert.match(source, /private buildNpmExecution\(/);
+    assert.match(source, /private async detectNpmVersion\(/);
+    assert.match(source, /private runNpmCommand\(/);
     assert.match(source, /return this\.pathManager\.getPortableNodeRoot\(\)/);
     assert.match(source, /delete env\.npm_config_prefix/);
     assert.match(source, /delete env\.NPM_CONFIG_PREFIX/);
@@ -52,6 +55,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /status: 'not-installed'/);
     assert.match(source, /status: 'unknown'/);
     assert.match(source, /typeof packageJson\.version === 'string'/);
+    assert.match(source, /Installed package executable is missing at/);
   });
 
   it('rejects invalid packages and locks conflicting npm operations', async () => {
@@ -72,6 +76,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /extractPercent\(message\)/);
     assert.match(source, /const snapshot = await this\.getSnapshot\(\)/);
     assert.match(source, /snapshot,/);
+    assert.match(source, /const verificationError = success\s*\?\s*this\.validatePackageOperationOutcome\(definition, operation, status\)/);
   });
 
   it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm-sync manifests', async () => {
@@ -99,6 +104,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /hagiscript status is unknown/);
     assert.match(source, /hagiscript executable path is unavailable/);
     assert.match(source, /this\.runCommand\(\s*hagiscriptExecutablePath/);
+    assert.match(source, /const statuses = snapshot\.packages\.filter\(\(item\) => packageIds\.includes\(item\.id\)\)/);
+    assert.match(source, /this\.validatePackageOperationOutcome\(\s*definition,\s*'sync'/);
   });
 
   it('persists npm mirror settings, derives locale-based defaults before manual changes, and includes them in snapshots', async () => {
@@ -125,12 +132,26 @@ describe('dependency management service contract', () => {
 
     assert.match(source, /buildNpmOperationArgs/);
     assert.match(source, /operation === 'install'/);
+    assert.match(source, /const prefixArgs = \['--prefix', environment\.npmGlobalPrefix\];/);
     assert.match(source, /'--registry', registryUrl/);
     assert.match(source, /NPM_DEFAULT_REGISTRY_URL = 'https:\/\/registry\.npmjs\.org\/'/);
     assert.match(source, /shouldRetryWithoutMirror/);
     assert.match(source, /const installPrefix = this\.getManagedPackageInstallPrefix\(definition, environment\)/);
-    assert.match(source, /return \['install', '-g', \.\.\.registryArgs, definition\.installSpec\]/);
-    assert.match(source, /return \['uninstall', '-g', definition\.packageName\]/);
+    assert.match(source, /return \['install', '-g', \.\.\.prefixArgs, \.\.\.registryArgs, definition\.installSpec\]/);
+    assert.match(source, /return \['uninstall', '-g', \.\.\.prefixArgs, definition\.packageName\]/);
+  });
+
+  it('cleans all Windows wrapper artifacts and rejects exit-code-only false positives after install or uninstall', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /private getManagedPackageCommandArtifacts\(/);
+    assert.match(source, /path\.join\(binRoot, baseName\)/);
+    assert.match(source, /path\.join\(binRoot, `\$\{baseName\}\.cmd`\)/);
+    assert.match(source, /path\.join\(binRoot, `\$\{baseName\}\.ps1`\)/);
+    assert.match(source, /await Promise\.all\(paths\.commandArtifacts\.map\(\(artifactPath\) => fs\.rm\(artifactPath, \{ force: true \}\)\)\);/);
+    assert.match(source, /private validatePackageOperationOutcome\(/);
+    assert.match(source, /Desktop could not detect the package in/);
+    assert.match(source, /Desktop still detected the package in/);
   });
 
   it('reports mirror usage when enabled without changing uninstall registry behavior', async () => {
@@ -194,19 +215,21 @@ describe('dependency management service contract', () => {
     assert.match(source, /executablePath: packageStatus\.executablePath/);
   });
 
-  it('keeps npm detection and bootstrap installs on the same wrapper-safe launch contract for Steam-style Program Files roots', async () => {
+  it('keeps npm detection and bootstrap installs on the same direct node+npm-cli launch contract for Steam-style Program Files roots', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
     const launch = resolveCommandLaunch(
-      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
+      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe',
       'win32',
     );
 
-    assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
-    assert.equal(launch.shell, true);
+    assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
+    assert.equal(launch.shell, false);
     assert.match(source, /const node = await this\.detectExecutableVersion\('node', this\.getNodeExecutablePath\(effectivePolicy\), \['--version'\], commandEnv\);/);
-    assert.match(source, /const npm = await this\.detectExecutableVersion\('npm', this\.getNpmExecutablePath\(effectivePolicy\), \['--version'\], commandEnv\);/);
+    assert.match(source, /const npm = await this\.detectNpmVersion\(effectivePolicy, commandEnv\);/);
+    assert.match(source, /command: this\.getNodeExecutablePath\(activationPolicy\),/);
+    assert.match(source, /args: \[executablePath, \.\.\.args\],/);
     assert.match(source, /const result = await this\.runCommand\(executablePath, args, undefined, env\);/);
-    assert.match(source, /let result = await this\.runCommand\(environment\.npm\.executablePath, args,/);
+    assert.match(source, /let result = await this\.runNpmCommand\(activationPolicy, args,/);
     assert.match(source, /shell: launch\.shell,/);
   });
 

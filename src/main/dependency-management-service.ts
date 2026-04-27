@@ -58,6 +58,7 @@ export interface ManagedNpmCommandContext {
 interface ManagedNpmPackagePaths {
   packageRoot: string;
   executablePath: string;
+  commandArtifacts: string[];
 }
 
 interface HagiscriptSyncManifestEntry {
@@ -308,12 +309,32 @@ export class DependencyManagementService {
       this.getNpmGlobalModulesRoot(installPrefix),
       ...definition.packageName.split('/').filter(Boolean),
     );
+    const commandArtifacts = this.getManagedPackageCommandArtifacts(definition, environment);
     const executableName = getCommandExecutableName(this.platform, definition.binName);
 
     return {
       packageRoot,
       executablePath: path.join(this.getManagedPackageBinRoot(definition, environment), executableName),
+      commandArtifacts,
     };
+  }
+
+  private getManagedPackageCommandArtifacts(
+    definition: ManagedNpmPackageDefinition,
+    environment: DependencyManagementEnvironmentStatus,
+  ): string[] {
+    const binRoot = this.getManagedPackageBinRoot(definition, environment);
+    const baseName = definition.binName;
+
+    if (this.platform !== 'win32') {
+      return [path.join(binRoot, baseName)];
+    }
+
+    return [
+      path.join(binRoot, baseName),
+      path.join(binRoot, `${baseName}.cmd`),
+      path.join(binRoot, `${baseName}.ps1`),
+    ];
   }
 
   private async removeManagedPackageInstallTarget(
@@ -322,7 +343,7 @@ export class DependencyManagementService {
   ): Promise<void> {
     const paths = this.getManagedPackagePaths(definition, environment);
     await fs.rm(paths.packageRoot, { recursive: true, force: true });
-    await fs.rm(paths.executablePath, { force: true });
+    await Promise.all(paths.commandArtifacts.map((artifactPath) => fs.rm(artifactPath, { force: true })));
   }
 
   private normalizeMirrorSettings(input?: Partial<NpmMirrorSettingsInput> | null): NpmMirrorSettings {
@@ -346,14 +367,16 @@ export class DependencyManagementService {
     definition: ManagedNpmPackageDefinition,
     registryUrl?: string | null,
   ): string[] {
+    const prefixArgs = ['--prefix', environment.npmGlobalPrefix];
+
     if (operation === 'install') {
       const registryArgs = registryUrl
         ? ['--registry', registryUrl]
         : [];
-      return ['install', '-g', ...registryArgs, definition.installSpec];
+      return ['install', '-g', ...prefixArgs, ...registryArgs, definition.installSpec];
     }
 
-    return ['uninstall', '-g', definition.packageName];
+    return ['uninstall', '-g', ...prefixArgs, definition.packageName];
   }
 
   private buildHagiscriptSyncArgs(
@@ -497,7 +520,9 @@ export class DependencyManagementService {
     activationPolicy: BundledNodeRuntimePolicyDecision,
   ): string {
     if (activationPolicy.enabled) {
-      return this.pathManager.getPortableNpmExecutablePath();
+      return this.platform === 'win32'
+        ? path.join(this.getNpmGlobalPrefix(activationPolicy), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+        : path.join(this.getNpmGlobalPrefix(activationPolicy), 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
     }
 
     return 'npm';
@@ -525,7 +550,7 @@ export class DependencyManagementService {
     const npmGlobalPrefix = this.getNpmGlobalPrefix(effectivePolicy);
     const commandEnv = this.buildCommandEnv(effectivePolicy);
     const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy), ['--version'], commandEnv);
-    const npm = await this.detectExecutableVersion('npm', this.getNpmExecutablePath(effectivePolicy), ['--version'], commandEnv);
+    const npm = await this.detectNpmVersion(effectivePolicy, commandEnv);
     const available = node.status === 'available';
 
     return {
@@ -581,6 +606,77 @@ export class DependencyManagementService {
     }
   }
 
+  private buildNpmExecution(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    args: string[],
+  ): { command: string; args: string[]; executablePath: string } {
+    const executablePath = this.getNpmExecutablePath(activationPolicy);
+    if (activationPolicy.enabled) {
+      return {
+        command: this.getNodeExecutablePath(activationPolicy),
+        args: [executablePath, ...args],
+        executablePath,
+      };
+    }
+
+    return {
+      command: executablePath,
+      args,
+      executablePath,
+    };
+  }
+
+  private async detectNpmVersion(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    env: NodeJS.ProcessEnv,
+  ): Promise<NpmEnvironmentComponent> {
+    const execution = this.buildNpmExecution(activationPolicy, ['--version']);
+
+    if (path.isAbsolute(execution.executablePath) && !this.existsSync(execution.executablePath)) {
+      return {
+        status: 'unavailable',
+        executablePath: execution.executablePath,
+        version: null,
+        message: 'npm executable not found',
+      };
+    }
+
+    try {
+      const result = await this.runCommand(execution.command, execution.args, undefined, env);
+      if (result.exitCode !== 0) {
+        return {
+          status: 'error',
+          executablePath: execution.executablePath,
+          version: null,
+          message: firstMeaningfulLine(result.stderr || result.stdout) ?? `npm exited with code ${result.exitCode}`,
+        };
+      }
+
+      return {
+        status: 'available',
+        executablePath: execution.executablePath,
+        version: normalizeVersionOutput(result.stdout || result.stderr),
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        executablePath: execution.executablePath,
+        version: null,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private runNpmCommand(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    args: string[],
+    onOutput?: (chunk: string) => void,
+    env: NodeJS.ProcessEnv = this.buildCommandEnv(activationPolicy),
+  ): Promise<CommandResult> {
+    const execution = this.buildNpmExecution(activationPolicy, args);
+    return this.runCommand(execution.command, execution.args, onOutput, env);
+  }
+
   private async detectPackageStatus(
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
@@ -599,7 +695,11 @@ export class DependencyManagementService {
         version,
         packageRoot,
         executablePath: this.existsSync(executablePath) ? executablePath : null,
-        message: version ? undefined : 'Installed package has no package.json version',
+        message: !version
+          ? 'Installed package has no package.json version'
+          : this.existsSync(executablePath)
+            ? undefined
+            : `Installed package executable is missing at ${executablePath}`,
       };
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
@@ -645,6 +745,28 @@ export class DependencyManagementService {
 
     if (hagiscriptStatus.status !== 'installed' || !hagiscriptStatus.executablePath) {
       return 'Install hagiscript before managing other npm packages.';
+    }
+
+    return null;
+  }
+
+  private validatePackageOperationOutcome(
+    definition: ManagedNpmPackageDefinition,
+    operation: DependencyManagementOperation,
+    status: ManagedNpmPackageStatusSnapshot | undefined,
+  ): string | null {
+    if (operation === 'uninstall') {
+      return status?.status === 'not-installed'
+        ? null
+        : `uninstall ${definition.displayName} completed with exit code 0, but Desktop still detected the package in ${status?.packageRoot ?? 'the managed npm prefix'}.`;
+    }
+
+    if (status?.status !== 'installed') {
+      return `${operation} ${definition.displayName} completed with exit code 0, but Desktop could not detect the package in ${status?.packageRoot ?? 'the managed npm prefix'}.`;
+    }
+
+    if (!status.executablePath) {
+      return `${operation} ${definition.displayName} completed, but the managed executable is missing. Expected a runnable ${definition.binName} wrapper in Desktop's npm bin directory.`;
     }
 
     return null;
@@ -718,7 +840,7 @@ export class DependencyManagementService {
       if (operation === 'install') {
         await this.removeManagedPackageInstallTarget(definition, environment);
       }
-      let result = await this.runCommand(environment.npm.executablePath, args, (chunk) => {
+      let result = await this.runNpmCommand(activationPolicy, args, (chunk) => {
         const message = firstMeaningfulLine(chunk);
         if (message) {
           this.emitProgress(definition.id, operation, 'output', message, extractPercent(message));
@@ -728,8 +850,8 @@ export class DependencyManagementService {
       if (this.shouldRetryWithoutMirror(result, operation, mirrorSettings)) {
         this.emitProgress(definition.id, operation, 'output', `Registry mirror failed for ${definition.installSpec}; retrying with ${NPM_DEFAULT_REGISTRY_URL}`, undefined);
         await this.removeManagedPackageInstallTarget(definition, environment);
-        result = await this.runCommand(
-          environment.npm.executablePath,
+        result = await this.runNpmCommand(
+          activationPolicy,
           this.buildNpmOperationArgs(operation, environment, definition, NPM_DEFAULT_REGISTRY_URL),
           (chunk) => {
             const message = firstMeaningfulLine(chunk);
@@ -749,6 +871,16 @@ export class DependencyManagementService {
       errorMessage = error instanceof Error ? error.message : String(error);
     }
 
+    const snapshot = await this.getSnapshot();
+    const status = snapshot.packages.find((item) => item.id === definition.id);
+    const verificationError = success
+      ? this.validatePackageOperationOutcome(definition, operation, status)
+      : null;
+    if (verificationError) {
+      success = false;
+      errorMessage = verificationError;
+    }
+
     this.emitProgress(
       definition.id,
       operation,
@@ -757,8 +889,6 @@ export class DependencyManagementService {
       success ? 100 : undefined,
     );
 
-    const snapshot = await this.getSnapshot();
-    const status = snapshot.packages.find((item) => item.id === definition.id);
     return {
       success,
       packageId: definition.id,
@@ -867,6 +997,23 @@ export class DependencyManagementService {
       }
     }
 
+    const snapshot = await this.getSnapshot();
+    const statuses = snapshot.packages.filter((item) => packageIds.includes(item.id));
+    if (success) {
+      const verificationError = definitions
+        .map((definition) => this.validatePackageOperationOutcome(
+          definition,
+          'sync',
+          statuses.find((item) => item.id === definition.id),
+        ))
+        .find((candidate) => candidate !== null);
+
+      if (verificationError) {
+        success = false;
+        errorMessage = verificationError;
+      }
+    }
+
     for (const definition of definitions) {
       this.emitProgress(
         definition.id,
@@ -877,12 +1024,11 @@ export class DependencyManagementService {
       );
     }
 
-    const snapshot = await this.getSnapshot();
     return {
       success,
       packageIds,
       operation: 'sync',
-      statuses: snapshot.packages.filter((item) => packageIds.includes(item.id)),
+      statuses,
       error: errorMessage,
       snapshot,
     };
