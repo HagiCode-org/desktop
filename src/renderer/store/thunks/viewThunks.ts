@@ -1,6 +1,14 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
-import { switchView, setViewSwitching, updateWebServiceUrl, type ViewType } from '../slices/viewSlice';
+import type { OmniRouteDependencyRemediation } from '../../../types/omniroute-management.js';
+import {
+  buildDependencyManagementRepairIntent,
+  setDependencyManagementIntent,
+  switchView,
+  setViewSwitching,
+  updateWebServiceUrl,
+  type ViewType,
+} from '../slices/viewSlice';
 
 /**
  * Initialize view on app startup
@@ -55,5 +63,15 @@ export const switchViewWithSideEffects = createAsyncThunk(
       console.error('[View] Error switching view:', error);
       throw error;
     }
+  }
+);
+
+export const openOmniRouteDependencyRepair = createAsyncThunk(
+  'view/openOmniRouteDependencyRepair',
+  async (remediation: OmniRouteDependencyRemediation, { dispatch }) => {
+    const intent = buildDependencyManagementRepairIntent(remediation);
+    dispatch(setDependencyManagementIntent(intent));
+    dispatch(switchView('dependency-management'));
+    return intent;
   }
 );
