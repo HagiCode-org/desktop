@@ -7,6 +7,7 @@ const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboardi
 const welcomePath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/WelcomeIntro.tsx');
 const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/onboarding.json');
 const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/onboarding.json');
+const onboardingManagerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
 describe('onboarding wizard manual handoff integration', () => {
   it('completes onboarding from the download step without wiring launch-step startup side effects', async () => {
@@ -19,6 +20,19 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /dispatch\(completeOnboarding\(downloadProgress\.version\)\);/);
     assert.match(source, /dispatch\(fetchActiveVersion\(\)\);/);
     assert.match(source, /onComplete\?\.\(\);/);
+  });
+
+  it('does not open Hagicode automatically when onboarding is completed', async () => {
+    const source = await fs.readFile(onboardingManagerPath, 'utf8');
+
+    const completeOnboardingBody = source.slice(
+      source.indexOf('async completeOnboarding'),
+      source.indexOf('/**\n   * Reset onboarding state')
+    );
+
+    assert.match(completeOnboardingBody, /version:activeVersionChanged/);
+    assert.doesNotMatch(completeOnboardingBody, /getStatus\(/);
+    assert.doesNotMatch(completeOnboardingBody, /onboarding:open-hagicode/);
   });
 
   it('updates welcome and download copy to describe a five-step flow with manual startup after returning home', async () => {

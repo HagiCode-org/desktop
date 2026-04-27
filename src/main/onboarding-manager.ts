@@ -884,15 +884,6 @@ export class OnboardingManager {
     const activeVersion = await this.versionManager.getActiveVersion();
     this.sendProgressEvent('version:activeVersionChanged', activeVersion);
 
-    // Get the web service URL to open Hagicode
-    const status = await this.webServiceManager.getStatus();
-    const serviceUrl = status.url;
-
-    if (serviceUrl) {
-      // Send event to open Hagicode
-      this.sendProgressEvent('onboarding:open-hagicode', { url: serviceUrl, versionId });
-    }
-
     log.info('[OnboardingManager] Onboarding completed');
   }
 
