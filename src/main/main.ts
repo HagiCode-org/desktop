@@ -23,10 +23,6 @@ import { OnboardingManager } from './onboarding-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { buildStartupFailurePayload } from './startup-failure-payload.js';
 import {
-  applySteamLinuxStartupCompatibility,
-  buildStartupCompatibilityLogContext,
-} from './linux-startup-compatibility.js';
-import {
   applyElectronSandboxOverride,
   buildElectronSandboxOverrideLogContext,
   ELECTRON_SANDBOX_OVERRIDE_ENV_KEY,
@@ -90,27 +86,10 @@ if (electronSandboxOverrideDecision.enabled) {
   );
 }
 
-const startupCompatibilityDecision = applySteamLinuxStartupCompatibility(app, {
-  platform: process.platform,
-  isPackaged: app.isPackaged,
-  env: process.env,
-  argv: process.argv,
-  execPath: process.execPath,
-  cwd: process.cwd(),
-  resourcesPath: process.resourcesPath,
-});
-
-if (startupCompatibilityDecision.enabled) {
-  log.warn('[StartupCompatibility] Steam Linux compatibility mode enabled', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
-} else {
-  log.info('[StartupCompatibility] Steam Linux compatibility mode skipped', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
-}
-
 process.on('uncaughtException', (error: Error) => {
   log.error('[App] Uncaught exception during startup/runtime:', {
     error,
     electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
-    startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
   });
 });
 
@@ -118,7 +97,6 @@ process.on('unhandledRejection', (reason: unknown) => {
   log.error('[App] Unhandled rejection during startup/runtime:', {
     reason,
     electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
-    startupCompatibility: buildStartupCompatibilityLogContext(startupCompatibilityDecision),
   });
 });
 
@@ -2162,7 +2140,6 @@ app.whenReady().then(async () => {
   log.info(`[Config] Logs directory: ${configManager.getLogsDirectory() || 'Not set'}`);
   log.info(`[Config] Current language: ${configManager.getCurrentLanguage() || 'Not set'}`);
   log.info('[ElectronSandboxOverride] Active startup context:', buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision));
-  log.info('[StartupCompatibility] Active startup context:', buildStartupCompatibilityLogContext(startupCompatibilityDecision));
   log.info('======================================');
 
   // Set webServiceManager reference for tray
@@ -2182,10 +2159,6 @@ app.whenReady().then(async () => {
     electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
     electronSandboxOverrideMode: electronSandboxOverrideDecision.mode,
     electronSandboxOverrideReason: electronSandboxOverrideDecision.reason,
-    startupCompatibilityEnabled: startupCompatibilityDecision.enabled,
-    startupCompatibilityLaunchSource: startupCompatibilityDecision.launchSource,
-    startupCompatibilityDetectorCategory: startupCompatibilityDecision.detectorCategory,
-    portablePayloadDetectedDuringStartup: startupCompatibilityDecision.portablePayloadDetected,
   });
   versionUpdateManager = new VersionUpdateManager({
     versionManager,

@@ -12,6 +12,7 @@ import { resolveBundledNodeRuntimePolicy } from '../bundled-node-runtime-policy.
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
+const retiredCompatibilityPayloadField = 'startup' + 'Compatibility';
 
 describe('web-service startup flow', () => {
   it('does not gate startup on a standalone preflight port-monitoring phase', async () => {
@@ -121,6 +122,7 @@ describe('web-service startup flow', () => {
     assert.equal(payload.port, 36556);
     assert.equal(payload.timestamp, '2026-03-13T09:00:00.000Z');
     assert.equal(payload.truncated, false);
+    assert.equal(retiredCompatibilityPayloadField in payload, false);
   });
 
   it('prefers bundled absolute toolchain executables and falls back to system PATH when missing', () => {

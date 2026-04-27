@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 const pathManagerPath = path.resolve(process.cwd(), 'src/main/path-manager.ts');
 const versionManagerPath = path.resolve(process.cwd(), 'src/main/version-manager.ts');
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
+const retiredSteamCompatibilityApplyCall = 'applySteamLinuxStartup' + 'Compatibility';
 
 describe('portable version payload detection', () => {
   it('defines the packaged extra payload contract and required runtime files', async () => {
@@ -41,10 +42,10 @@ describe('portable version payload detection', () => {
     const source = await fs.readFile(mainPath, 'utf-8');
 
     assert.match(source, /get-distribution-mode/);
-    assert.match(source, /applySteamLinuxStartupCompatibility\(app/);
+    assert.equal(source.includes(retiredSteamCompatibilityApplyCall), false);
     assert.match(source, /initializeDistributionMode\(\)/);
     assert.match(source, /applyActiveRuntimeToWebServiceManager/);
     assert.match(source, /setActiveRuntime\(runtimeDescriptor\)/);
-    assert.match(source, /portablePayloadDetectedDuringStartup/);
+    assert.doesNotMatch(source, /portablePayloadDetectedDuringStartup/);
   });
 });
