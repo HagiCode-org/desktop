@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  executeShellEnvCommandForTest,
   parseNullDelimitedEnv,
   resolveUnixEnvCommand,
   shouldLoadConsoleEnvironment,
@@ -63,5 +64,14 @@ describe('shell-env-loader', () => {
   it('keeps fish and fallback shells on the existing env export flow', () => {
     assert.deepEqual(resolveUnixEnvCommand('fish'), ['-ic', 'env -0']);
     assert.deepEqual(resolveUnixEnvCommand('sh'), ['-lc', 'env -0']);
+  });
+
+  it('loads null-delimited command output through the shared executor path', async () => {
+    const stdout = await executeShellEnvCommandForTest(process.execPath, [
+      '-e',
+      'process.stdout.write("A=1\\u0000B=two\\u0000")',
+    ]);
+
+    assert.deepEqual(parseNullDelimitedEnv(stdout), { A: '1', B: 'two' });
   });
 });

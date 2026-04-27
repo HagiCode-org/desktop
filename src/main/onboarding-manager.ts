@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { app, BrowserWindow, shell } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
@@ -12,6 +11,7 @@ import { PCodeWebServiceManager } from './web-service-manager.js';
 import { manifestReader } from './manifest-reader.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { desktopHttpClient } from './http-client.js';
+import { executeCli } from './utils/cli-executor.js';
 import type {
   AcceptLegalDocumentsPayload,
   StoredOnboardingState,
@@ -953,45 +953,28 @@ export class OnboardingManager {
     };
   }
 
-  private runCommand(
+  private async runCommand(
     command: string,
     args: string[],
     env: NodeJS.ProcessEnv,
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-    return new Promise((resolve) => {
-      const spawnInvocation = OnboardingManager.buildSpawnInvocation(command, args);
-      const child = spawn(spawnInvocation.command, spawnInvocation.args, {
-        env,
-        shell: spawnInvocation.shell,
-        windowsHide: true,
-      });
-
-      const stdoutChunks: Buffer[] = [];
-      const stderrChunks: Buffer[] = [];
-
-      child.stdout?.on('data', (chunk) => {
-        stdoutChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-      });
-      child.stderr?.on('data', (chunk) => {
-        stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-      });
-
-      child.on('error', (error) => {
-        resolve({
-          exitCode: 1,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `${Buffer.concat(stderrChunks).toString('utf-8')}\n${error.message}`,
-        });
-      });
-
-      child.on('close', (code) => {
-        resolve({
-          exitCode: code ?? 1,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: Buffer.concat(stderrChunks).toString('utf-8'),
-        });
-      });
+    const spawnInvocation = OnboardingManager.buildSpawnInvocation(command, args);
+    const result = await executeCli({
+      command: spawnInvocation.command,
+      args: spawnInvocation.args,
+      env,
+      shell: spawnInvocation.shell,
+      windowsHide: true,
+      metadata: { component: 'OnboardingManager' },
     });
+
+    return {
+      exitCode: result.exitCode ?? 1,
+      stdout: result.stdout,
+      stderr: result.error?.kind === 'spawn'
+        ? `${result.stderr}\n${result.error.message}`
+        : result.stderr,
+    };
   }
 
 }

@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'node:child_process';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import type { ResultSessionFile } from '../manifest-reader.js';
+import { executeCliStreaming } from './cli-executor.js';
 
 /**
  * Standard PowerShell arguments for script execution
@@ -156,116 +157,48 @@ export class PowerShellExecutor {
     // Standard args: -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <script-path>
     const args = [...POWERSHELL_ARGS, scriptPath, ...scriptArgs];
 
-    // Spawn options for PowerShell
-    // shell: false - PowerShell.exe is executable, no shell needed
-    // windowsHide: true - Hide console window to prevent flicker
-    // detached: false - Keep process attached for proper lifecycle management
-    const spawnOptions: {
-      cwd?: string;
-      env?: NodeJS.ProcessEnv;
-      shell: boolean;
-      windowsHide?: boolean;
-      stdio: Array<'pipe' | 'ignore' | 'inherit'>;
-    } = {
+    const result = await executeCliStreaming({
+      command: 'powershell.exe',
+      args,
       cwd,
       env: env ? { ...process.env, ...env } : undefined,
       shell: false,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    };
+      windowsHide: process.platform === 'win32',
+      timeoutMs: timeout > 0 ? timeout : undefined,
+      metadata: { component: 'PowerShellExecutor', scriptPath },
+      onOutput: (type, chunk) => {
+        if (type === 'stdout') {
+          log.info('[PowerShellExecutor] STDOUT:', chunk.trim());
+        } else {
+          log.error('[PowerShellExecutor] STDERR:', chunk.trim());
+        }
+        onOutput?.(type, chunk);
+      },
+    });
 
-    // Windows-specific option to hide console window
-    if (process.platform === 'win32') {
-      spawnOptions.windowsHide = true;
+    const exitCode = result.exitCode ?? -1;
+    log.info('[PowerShellExecutor] Script exited with code:', exitCode);
+
+    let errorMessage = result.success ? undefined : `Script exited with code ${exitCode}`;
+    if (result.error?.kind === 'timeout') {
+      log.warn(`[PowerShellExecutor] Script execution timeout after ${timeout}ms:`, scriptPath);
+      errorMessage = `Script execution timeout after ${timeout}ms`;
+    } else if (result.error?.kind === 'spawn') {
+      errorMessage = result.error.message;
+      if (result.error.message.includes('ENOENT')) {
+        errorMessage = 'PowerShell.exe not found. Please ensure PowerShell is installed and in PATH.';
+      } else if (result.error.message.includes('EACCES')) {
+        errorMessage = `Permission denied accessing script: ${scriptPath}`;
+      }
     }
 
-    return new Promise((resolve, reject) => {
-      const child = spawn('powershell.exe', args, spawnOptions);
-
-      let timeoutHandle: NodeJS.Timeout | null = null;
-      let stdoutBuffer = '';
-      let stderrBuffer = '';
-      let isResolved = false;
-
-      // Set timeout
-      if (timeout > 0) {
-        timeoutHandle = setTimeout(() => {
-          if (isResolved) return;
-          isResolved = true;
-
-          log.warn(`[PowerShellExecutor] Script execution timeout after ${timeout}ms:`, scriptPath);
-          child.kill('SIGKILL');
-
-          resolve({
-            exitCode: -1,
-            stdout: stdoutBuffer,
-            stderr: stderrBuffer,
-            success: false,
-            errorMessage: `Script execution timeout after ${timeout}ms`,
-          });
-        }, timeout);
-      }
-
-      // Capture stdout
-      child.stdout?.on('data', (data: Buffer) => {
-        const chunk = data.toString();
-        stdoutBuffer += chunk;
-
-        log.info('[PowerShellExecutor] STDOUT:', chunk.trim());
-        onOutput?.('stdout', chunk);
-      });
-
-      // Capture stderr
-      child.stderr?.on('data', (data: Buffer) => {
-        const chunk = data.toString();
-        stderrBuffer += chunk;
-
-        log.error('[PowerShellExecutor] STDERR:', chunk.trim());
-        onOutput?.('stderr', chunk);
-      });
-
-      // Handle process exit
-      child.on('exit', (code) => {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        if (isResolved) return;
-        isResolved = true;
-
-        const exitCode = code ?? -1;
-        log.info('[PowerShellExecutor] Script exited with code:', exitCode);
-
-        resolve({
-          exitCode,
-          stdout: stdoutBuffer,
-          stderr: stderrBuffer,
-          success: exitCode === 0,
-          errorMessage: exitCode !== 0 ? `Script exited with code ${exitCode}` : undefined,
-        });
-      });
-
-      // Handle process spawn errors
-      child.on('error', (error) => {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        if (isResolved) return;
-        isResolved = true;
-
-        log.error('[PowerShellExecutor] Process spawn error:', error.message);
-
-        // Provide specific error messages for common issues
-        let errorMessage = error.message;
-        if (error.message.includes('ENOENT')) {
-          errorMessage = 'PowerShell.exe not found. Please ensure PowerShell is installed and in PATH.';
-        } else if (error.message.includes('EACCES')) {
-          errorMessage = `Permission denied accessing script: ${scriptPath}`;
-        }
-
-        resolve({
-          exitCode: -1,
-          stdout: stdoutBuffer,
-          stderr: stderrBuffer,
-          success: false,
-          errorMessage,
-        });
-      });
-    });
+    return {
+      exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      success: result.success,
+      errorMessage,
+    };
   }
 
   /**

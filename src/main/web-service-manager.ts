@@ -1,4 +1,4 @@
-import { spawn, exec, ChildProcess } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
@@ -24,6 +24,7 @@ import {
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
+import { executeCli } from './utils/cli-executor.js';
 import {
   detectToolchainCommandName,
   resolveToolchainLaunchPlan,
@@ -912,46 +913,48 @@ export class PCodeWebServiceManager {
   private async checkPortWithSystemCommand(port: number): Promise<boolean | null> {
     const platform = process.platform;
 
-    return new Promise((resolve) => {
-      let command = '';
+    let command = '';
+    let args: string[] = [];
+    let shell = false;
 
-      if (platform === 'linux') {
-        // Use ss command (modern replacement for netstat)
-        // We use || true to ensure the command succeeds even if grep finds nothing
-        command = `ss -tuln | grep ":${port} " || true`;
-      } else if (platform === 'darwin') {
-        // Use lsof on macOS
-        // We use || true to ensure the command succeeds even if lsof finds nothing
-        command = `lsof -i :${port} || true`;
-      } else if (platform === 'win32') {
-        // Use netstat on Windows
-        // findstr returns exit code 1 if not found, but that's expected
-        command = `netstat -an | findstr ":${port} "`;
-      }
+    if (platform === 'linux') {
+      // Use ss command (modern replacement for netstat)
+      command = 'sh';
+      args = ['-c', `ss -tuln | grep ":${port} " || true`];
+    } else if (platform === 'darwin') {
+      // Use lsof on macOS
+      command = 'sh';
+      args = ['-c', `lsof -i :${port} || true`];
+    } else if (platform === 'win32') {
+      // Use netstat on Windows; findstr returns exit code 1 when not found.
+      command = 'netstat';
+      args = ['-an'];
+      shell = true;
+    }
 
-      if (!command) {
-        // Fallback to node check if no system command available
-        resolve(null);
-        return;
-      }
+    if (!command) {
+      // Fallback to node check if no system command available
+      return null;
+    }
 
-      exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout) => {
-        // For Linux/macOS, we used || true so error shouldn't occur
-        // For Windows, findstr returns exit code 1 when no matches found, which is expected
-        // Only treat it as a failure if it's a different type of error
-
-        // Check if this is an expected "not found" result
-        const hasOutput = stdout && stdout.trim().length > 0;
-
-        if (hasOutput) {
-          // Port is in use (output found)
-          resolve(false);
-        } else {
-          // No output means port is available (not in use)
-          resolve(true);
-        }
-      });
+    const result = await executeCli({
+      command,
+      args,
+      shell,
+      windowsHide: true,
+      metadata: { component: 'WebServiceManager', operation: 'checkPortWithSystemCommand', port },
     });
+
+    if (!result.success && platform !== 'win32') {
+      return null;
+    }
+
+    const stdout = platform === 'win32'
+      ? result.stdout.split(/\r?\n/).filter(line => line.includes(`:${port} `)).join('\n')
+      : result.stdout;
+    const hasOutput = stdout.trim().length > 0;
+
+    return !hasOutput;
   }
 
   /**

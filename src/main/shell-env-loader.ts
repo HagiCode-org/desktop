@@ -1,6 +1,6 @@
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import log from 'electron-log';
+import { executeCli } from './utils/cli-executor.js';
 
 const DISABLE_VALUES = new Set(['0', 'false', 'no', 'off']);
 const ENABLE_VALUES = new Set(['1', 'true', 'yes', 'on']);
@@ -153,41 +153,22 @@ function quoteShellPath(profilePath: string): string {
 }
 
 async function executeCommand(command: string, args: string[]): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const child = spawn(command, args, {
-      env: process.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdoutChunks.push(chunk);
-    });
-
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderrChunks.push(chunk);
-    });
-
-    child.on('error', (error) => {
-      reject(error);
-    });
-
-    child.on('close', (code) => {
-      const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
-      const stderr = Buffer.concat(stderrChunks).toString('utf-8');
-
-      if (code !== 0 && !stdout) {
-        reject(new Error(`Command exited with code ${code}. stderr: ${stderr}`));
-        return;
-      }
-
-      resolve(stdout);
-    });
+  const result = await executeCli({
+    command,
+    args,
+    env: process.env,
+    windowsHide: true,
+    metadata: { component: 'ShellEnvLoader' },
   });
+
+  if (!result.success && !result.stdout) {
+    throw new Error(`Command exited with code ${result.exitCode}. stderr: ${result.stderr || result.error?.message || ''}`);
+  }
+
+  return result.stdout;
 }
+
+export const executeShellEnvCommandForTest = executeCommand;
 
 export function parseNullDelimitedEnv(raw: string): Record<string, string> {
   const envMap: Record<string, string> = {};

@@ -2,16 +2,15 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import log from 'electron-log';
+import { executeCli } from './utils/cli-executor.js';
 import { type DetectionResult, Region, RegionDetector } from './region-detector.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { findManagedNpmPackage } from '../shared/npm-managed-packages.js';
 import type { PromptGuidanceSource } from '../types/prompt-guidance.js';
 import type { Dependency, DependencyVersionWithRuntime, Manifest } from './manifest-reader.js';
 
-const execAsync = promisify(exec);
 const CLI_PRECHECK_TIMEOUT_MS = 8_000;
 
 export type CliExecutionErrorCode =
@@ -284,14 +283,22 @@ export class LlmInstallationManager {
         // macOS: Open new Terminal window and run CLI with prompt
         try {
           const escapedPrompt = resolvedShellCommand.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-          const constructedCommand = `osascript -e 'tell application "Terminal" to do script "${escapedPrompt}; read -p \\"Press enter to exit...\\"; exit"'`;
-          log.info('[LlmInstallationManager] macOS command:', constructedCommand);
-          await execAsync(constructedCommand, {
+          const appleScript = `tell application "Terminal" to do script "${escapedPrompt}; read -p \\"Press enter to exit...\\"; exit"`;
+          log.info('[LlmInstallationManager] macOS command:', appleScript);
+          const openTerminalResult = await executeCli({
+            command: 'osascript',
+            args: ['-e', appleScript],
             cwd: promptDir,
             env: runtimeEnv,
+            windowsHide: true,
+            metadata: { component: 'LlmInstallationManager', phase: 'macos_terminal_launch' },
           });
-          terminalFound = true;
-          log.info('[LlmInstallationManager] Opened macOS terminal successfully');
+          terminalFound = openTerminalResult.success;
+          if (terminalFound) {
+            log.info('[LlmInstallationManager] Opened macOS terminal successfully');
+          } else {
+            log.error('[LlmInstallationManager] macOS terminal launch failed:', openTerminalResult.error?.message || openTerminalResult.stderr);
+          }
         } catch (err) {
           log.error('[LlmInstallationManager] Failed to open macOS terminal:', err);
         }
@@ -324,7 +331,16 @@ export class LlmInstallationManager {
         for (const term of prioritizedTerminals) {
           try {
             // Test if the terminal is available
-            await execAsync(`which ${term}`, { env: runtimeEnv });
+            const terminalProbe = await executeCli({
+              command: 'which',
+              args: [term],
+              env: runtimeEnv,
+              windowsHide: true,
+              metadata: { component: 'LlmInstallationManager', phase: 'linux_terminal_probe', terminal: term },
+            });
+            if (!terminalProbe.success) {
+              throw new Error(terminalProbe.error?.message || `Terminal not found: ${term}`);
+            }
             log.info(`[LlmInstallationManager] Using terminal: ${term}`);
 
             const command = resolvedShellCommand;
@@ -630,13 +646,20 @@ export class LlmInstallationManager {
 
     let resolvedCommand: string | null = null;
     for (const candidate of commandCandidates) {
-      const lookupCommand = process.platform === 'win32' ? 'where' : 'command -v';
+      const lookupCommand = process.platform === 'win32' ? 'where' : 'command';
+      const lookupArgs = process.platform === 'win32' ? [candidate] : ['-v', candidate];
       try {
-        const { stdout } = await execAsync(`${lookupCommand} ${candidate}`, {
+        const lookupResult = await executeCli({
+          command: lookupCommand,
+          args: lookupArgs,
           env: runtimeEnv,
           windowsHide: true,
+          metadata: { component: 'LlmInstallationManager', phase: 'precheck_lookup', candidate },
         });
-        const firstLine = stdout
+        if (!lookupResult.success) {
+          continue;
+        }
+        const firstLine = lookupResult.stdout
           .split(/\r?\n/)
           .map(line => line.trim())
           .find(line => line.length > 0);
@@ -698,50 +721,25 @@ export class LlmInstallationManager {
     env: NodeJS.ProcessEnv,
     timeoutMs: number,
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-    return new Promise((resolve) => {
-      const child = spawn(command, args, {
-        env,
-        shell: true,
-        windowsHide: true,
-      });
-
-      const stdoutChunks: Buffer[] = [];
-      const stderrChunks: Buffer[] = [];
-      let settled = false;
-      const timeout = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        child.kill();
-        resolve({
-          exitCode: 124,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `${Buffer.concat(stderrChunks).toString('utf-8')}\nprobe timeout`,
-        });
-      }, timeoutMs);
-
-      child.stdout?.on('data', chunk => stdoutChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk))));
-      child.stderr?.on('data', chunk => stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk))));
-      child.on('error', (error) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        resolve({
-          exitCode: 1,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: `${Buffer.concat(stderrChunks).toString('utf-8')}\n${error.message}`,
-        });
-      });
-      child.on('close', (code) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        resolve({
-          exitCode: code ?? 1,
-          stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
-          stderr: Buffer.concat(stderrChunks).toString('utf-8'),
-        });
-      });
+    const result = await executeCli({
+      command,
+      args,
+      env,
+      shell: true,
+      windowsHide: true,
+      timeoutMs,
+      metadata: { component: 'LlmInstallationManager', phase: 'precheck_probe' },
     });
+
+    return {
+      exitCode: result.error?.kind === 'timeout' ? 124 : result.exitCode ?? 1,
+      stdout: result.stdout,
+      stderr: result.error?.kind === 'timeout'
+        ? `${result.stderr}\nprobe timeout`
+        : result.error?.kind === 'spawn'
+          ? `${result.stderr}\n${result.error.message}`
+          : result.stderr,
+    };
   }
 
   private logCliExecution(
