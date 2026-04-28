@@ -36,8 +36,11 @@ export function shouldUseShellForCommand(
   command: string,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  const normalizedCommand = stripWrappingQuotes(command);
-  return platform === 'win32' && /\.(cmd|bat)$/i.test(normalizedCommand);
+  // Execa's non-shell path delegates Windows wrappers to cross-spawn, which
+  // escapes the command and each argument separately instead of flattening argv.
+  void command;
+  void platform;
+  return false;
 }
 
 export function detectToolchainCommandName(command: string): 'node' | 'npm' | null {
@@ -57,17 +60,10 @@ export function resolveCommandLaunch(
   platform: NodeJS.Platform = process.platform,
 ): CommandLaunchPlan {
   const normalizedCommand = stripWrappingQuotes(command);
-  const shell = shouldUseShellForCommand(normalizedCommand, platform);
-  const needsQuotedWindowsWrapper = (
-    shell &&
-    platform === 'win32' &&
-    path.win32.isAbsolute(normalizedCommand) &&
-    normalizedCommand.includes(' ')
-  );
 
   return {
-    command: needsQuotedWindowsWrapper ? `"${normalizedCommand}"` : normalizedCommand,
-    shell,
+    command: normalizedCommand,
+    shell: false,
   };
 }
 
