@@ -402,7 +402,9 @@ Portable-version builds intentionally skip the first-run download flow and OpenS
 Packaged Linux builds now evaluate Steam runtime hints before the first `BrowserWindow` is created.
 
 - Direct CLI startup already works and stays on the default graphics path.
-- Steam-launched packaged Linux sessions enable an early software-rendering compatibility path only when the startup detector sees Steam-specific runtime evidence.
+- Steam-launched packaged Linux sessions are detected early for diagnostics and host relaunch, but they do not force Electron graphics switches by default.
+- Steam-launched packaged Linux sessions keep the default Electron sandbox path. The `HAGICODE_DISABLE_ELECTRON_SANDBOX` escape hatch remains opt-in and is not set by the Steam wrapper.
+- If Steam wraps the executable in pressure-vessel, Desktop attempts to relaunch the real process on the host through `steam-runtime-launch-client --host` before creating the first renderer. This avoids Steam Runtime GTK/GSettings/VAAPI mismatches on Fedora/KDE while keeping Steam's launcher process waiting for the host process to exit. The host-launched process stays on the host graphics stack instead of forcing X11 software rendering.
 - The detector records `launchSource`, whether compatibility mode was enabled or skipped, and the `detectorCategory` that explains the decision.
 - Later startup-failure payloads preserve the same compatibility snapshot so service-start triage can separate graphics-mode handling from unrelated errors.
 
@@ -411,7 +413,7 @@ Look for structured main-process logs like:
 ```text
 [StartupCompatibility] Steam Linux compatibility mode enabled {
   launchSource: 'steam',
-  compatibilityMode: 'steam-linux-software-rendering',
+  compatibilityMode: 'steam-linux-detected',
   compatibilityEnabled: true,
   detectorCategory: 'steam-runtime-env+portable-payload'
 }
@@ -425,8 +427,12 @@ Validation guidance for packaged Linux artifacts:
 
 Steam-distributed Linux artifacts also ship a dedicated wrapper at `hagicode-steam-wrapper.sh` in the package root. Use that wrapper as the Steamworks `Executable` when possible. The wrapper:
 
+- detects Steam pressure-vessel and relaunches `hagicode-desktop` on the host through `steam-runtime-launch-client --host`
+- sets `HAGICODE_STEAM_HOST_REEXEC=1` on the host-launched process to avoid recursive relaunch attempts
 - clears `LD_PRELOAD` before launch so the Steam overlay injection path does not crash Electron during zygote startup
-- launches `hagicode-desktop` with `--disable-setuid-sandbox --no-sandbox`
+- clears Steam Runtime GTK/GIO/GSettings library overrides (`LD_LIBRARY_PATH`, `GIO_EXTRA_MODULES`, `GSETTINGS_SCHEMA_DIR`, `GTK_*`) so Electron resolves host desktop libraries and schemas
+- sets `HAGICODE_STEAM_LINUX=1` so Desktop enables the Steam-only graphics compatibility path even when Steamworks does not expose a standard `SteamAppId` variable
+- keeps the default Electron sandbox enabled and does not append `--disable-setuid-sandbox` or `--no-sandbox`
 
 The package root also includes `hagicode-steam-sandbox.sh`, which opens the sandbox startup help page in the default browser. It currently targets `https://docs.hagicode.com` and can be used as a temporary Steamworks `Executable` when you want the Linux artifact to redirect users to sandbox launch guidance instead of booting the desktop binary directly.
 

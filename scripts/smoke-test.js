@@ -652,8 +652,17 @@ test('packaged Steam wrapper is available for Linux launches', () => {
   assert(isExecutable(packagedSteamWrapperPath), 'packaged Steam wrapper is executable');
 
   const wrapperContent = fs.readFileSync(packagedSteamWrapperPath, 'utf8');
+  assert(wrapperContent.includes('steam-runtime-launch-client'), 'packaged Steam wrapper can relaunch pressure-vessel sessions on the host');
+  assert(wrapperContent.includes('--host'), 'packaged Steam wrapper uses Steam Runtime host launcher mode');
+  assert(wrapperContent.includes('-- \\\n      /usr/bin/env'), 'packaged Steam wrapper separates host launcher options from Electron options');
+  assert(wrapperContent.includes('HAGICODE_STEAM_HOST_REEXEC=1'), 'packaged Steam wrapper prevents recursive host relaunch attempts');
   assert(wrapperContent.includes('unset LD_PRELOAD'), 'packaged Steam wrapper clears LD_PRELOAD before launch');
-  assert(wrapperContent.includes('--disable-setuid-sandbox --no-sandbox'), 'packaged Steam wrapper applies Linux sandbox compatibility flags');
+  assert(wrapperContent.includes('unset LD_LIBRARY_PATH'), 'packaged Steam wrapper clears Steam Runtime library overrides');
+  assert(wrapperContent.includes('unset GSETTINGS_SCHEMA_DIR'), 'packaged Steam wrapper clears Steam Runtime GSettings overrides');
+  assert(wrapperContent.includes('export HAGICODE_STEAM_LINUX=1'), 'packaged Steam wrapper marks Steam Linux launches');
+  assert(!wrapperContent.includes('HAGICODE_DISABLE_ELECTRON_SANDBOX=1'), 'packaged Steam wrapper keeps Electron sandbox enabled by default');
+  assert(!wrapperContent.includes('--disable-setuid-sandbox'), 'packaged Steam wrapper does not disable the setuid sandbox by default');
+  assert(!wrapperContent.includes('--no-sandbox'), 'packaged Steam wrapper does not disable the Chromium sandbox by default');
 });
 
 test('packaged Steam sandbox helper is available for Linux launches', () => {

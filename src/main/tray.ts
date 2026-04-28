@@ -2,7 +2,7 @@ import { Tray, Menu, nativeImage, app, Notification, shell, ipcMain } from 'elec
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mainWindow } from './main.js';
+import { activateMainWindow, mainWindow } from './main.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 
@@ -142,14 +142,7 @@ export function createTray(): void {
   updateTrayMenu();
 
   tray.on('click', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    }
+    activateMainWindow('tray-click');
   });
 }
 
@@ -167,10 +160,7 @@ export function updateTrayMenu(): void {
     {
       label: getTrayLabel('showWindow'),
       click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
+        activateMainWindow('tray-menu-show-window');
       },
     },
     { type: 'separator' },
@@ -227,10 +217,7 @@ export function updateTrayMenu(): void {
     }, {
       label: getTrayLabel('openInBrowser'),
       click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
+        activateMainWindow('tray-menu-open-in-browser');
       },
     }] : []),
     { type: 'separator' },

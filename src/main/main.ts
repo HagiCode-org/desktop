@@ -27,6 +27,11 @@ import {
   buildElectronSandboxOverrideLogContext,
   ELECTRON_SANDBOX_OVERRIDE_ENV_KEY,
 } from './electron-sandbox-override.js';
+import {
+  applySteamLinuxStartupCompatibility,
+  buildSteamLinuxStartupCompatibilityLogContext,
+  relaunchSteamLinuxOnHostIfNeeded,
+} from './steam-linux-startup-compatibility.js';
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import {
   openAboutWindow,
@@ -130,7 +135,26 @@ if (nonInteractiveParseResult.handled && nonInteractiveUserDataDir) {
   app.setAppLogsPath(path.resolve(nonInteractiveUserDataDir, 'logs'));
 }
 
+const steamLinuxHostRelaunchResult = relaunchSteamLinuxOnHostIfNeeded({
+  argv: process.argv,
+  cwd: process.cwd(),
+  env: process.env,
+  execPath: process.execPath,
+});
+
+if (steamLinuxHostRelaunchResult.handled) {
+  const exitCode = steamLinuxHostRelaunchResult.status ?? 0;
+  console.info('[StartupCompatibility] Steam Linux host relaunch completed', steamLinuxHostRelaunchResult);
+  app.exit(exitCode);
+  process.exit(exitCode);
+} else if (steamLinuxHostRelaunchResult.attempted) {
+  console.warn('[StartupCompatibility] Steam Linux host relaunch failed; continuing in current runtime', steamLinuxHostRelaunchResult);
+}
+
 const electronSandboxOverrideDecision = applyElectronSandboxOverride(app, {
+  env: process.env,
+});
+const steamLinuxStartupCompatibilityDecision = applySteamLinuxStartupCompatibility(app, {
   env: process.env,
 });
 
@@ -146,10 +170,23 @@ if (electronSandboxOverrideDecision.enabled) {
   );
 }
 
+if (steamLinuxStartupCompatibilityDecision.compatibilityEnabled) {
+  log.warn(
+    '[StartupCompatibility] Steam Linux compatibility mode enabled',
+    buildSteamLinuxStartupCompatibilityLogContext(steamLinuxStartupCompatibilityDecision),
+  );
+} else {
+  log.info(
+    '[StartupCompatibility] Steam Linux compatibility mode skipped',
+    buildSteamLinuxStartupCompatibilityLogContext(steamLinuxStartupCompatibilityDecision),
+  );
+}
+
 process.on('uncaughtException', (error: Error) => {
   log.error('[App] Uncaught exception during startup/runtime:', {
     error,
     electronSandboxOverride: buildElectronSandboxOverrideLogContext(electronSandboxOverrideDecision),
+    steamLinuxStartupCompatibility: buildSteamLinuxStartupCompatibilityLogContext(steamLinuxStartupCompatibilityDecision),
   });
 });
 
@@ -250,6 +287,34 @@ let aboutWindow: BrowserWindow | null = null;
 const CODE_SERVER_SESSION_PARTITION = 'persist:hagicode-code-server';
 let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
 let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
+
+export function activateMainWindow(reason: string): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    log.warn('[WindowActivation] Main window is unavailable', { reason });
+    return;
+  }
+
+  try {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+
+    mainWindow.setSkipTaskbar(false);
+    mainWindow.show();
+    mainWindow.moveTop();
+    mainWindow.focus();
+
+    log.info('[WindowActivation] Main window activation requested', {
+      reason,
+      visible: mainWindow.isVisible(),
+      minimized: mainWindow.isMinimized(),
+      focused: mainWindow.isFocused(),
+      bounds: mainWindow.getBounds(),
+    });
+  } catch (error) {
+    log.error('[WindowActivation] Failed to activate main window', { reason, error });
+  }
+}
 
 function buildBootstrapSnapshot(input: {
   status: DesktopBootstrapSnapshot['status'];
@@ -469,8 +534,9 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     console.log('[Hagicode] Window ready to show');
+    activateMainWindow('ready-to-show');
     mainWindow?.maximize();
-    mainWindow?.show();
+    activateMainWindow('ready-to-show-after-maximize');
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -606,13 +672,7 @@ ipcMain.handle('get-distribution-mode', () => {
 });
 
 ipcMain.handle('show-window', () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  activateMainWindow('ipc-show-window');
 });
 
 ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
@@ -2104,13 +2164,7 @@ if (!nonInteractiveParseResult.handled) {
 
     // Restore and focus the main window
     if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-        log.info('[App] Window was minimized, restored');
-      }
-      mainWindow.show();
-      mainWindow.focus();
-      log.info('[App] Main window focused');
+      activateMainWindow('second-instance');
     } else {
       log.warn('[App] No main window found to focus');
     }
