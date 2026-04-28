@@ -34,6 +34,7 @@ import {
 } from '../thunks/onboardingThunks';
 
 const fullSequence = [
+  OnboardingStep.LanguageSelection,
   OnboardingStep.Welcome,
   OnboardingStep.LegalConsent,
   OnboardingStep.SharingAcceleration,
@@ -41,7 +42,7 @@ const fullSequence = [
   OnboardingStep.Download,
 ] as const;
 
-const legalOnlySequence = [OnboardingStep.LegalConsent] as const;
+const legalOnlySequence = [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent] as const;
 
 export function getOnboardingSequence(mode: OnboardingMode) {
   return mode === 'legal-only' ? [...legalOnlySequence] : [...fullSequence];
@@ -84,7 +85,7 @@ function readDependencyOperationRejectedPayload(payload: unknown): OnboardingDep
 const initialState: OnboardingState = {
   isActive: false,
   mode: 'none',
-  currentStep: OnboardingStep.Welcome,
+  currentStep: OnboardingStep.LanguageSelection,
   isSkipped: false,
   isCompleted: false,
   downloadProgress: null,
@@ -188,7 +189,7 @@ export const onboardingSlice = createSlice({
       ...initialState,
       isActive: true,
       mode: 'full' as OnboardingMode,
-      currentStep: OnboardingStep.Welcome,
+      currentStep: OnboardingStep.LanguageSelection,
     }),
   },
   extraReducers: (builder) => {
@@ -197,9 +198,7 @@ export const onboardingSlice = createSlice({
         if (action.payload.shouldShow) {
           state.isActive = true;
           state.mode = action.payload.mode;
-          state.currentStep = action.payload.mode === 'legal-only'
-            ? OnboardingStep.LegalConsent
-            : OnboardingStep.Welcome;
+          state.currentStep = OnboardingStep.LanguageSelection;
           state.legalMetadataSource = action.payload.metadataSource;
           state.error = null;
         } else {
@@ -381,6 +380,9 @@ export const onboardingSlice = createSlice({
     builder
       .addCase(GO_TO_NEXT_STEP, (state) => {
         switch (state.currentStep) {
+          case OnboardingStep.LanguageSelection:
+            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection);
+            break;
           case OnboardingStep.Welcome:
             state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome);
             break;
@@ -411,6 +413,9 @@ export const onboardingSlice = createSlice({
             break;
           case OnboardingStep.LegalConsent:
             state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent);
+            break;
+          case OnboardingStep.Welcome:
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome);
             break;
           default:
             break;
@@ -515,6 +520,8 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
   const { currentStep, downloadProgress, isDependencyPreparationComplete } = state.onboarding;
 
   switch (currentStep) {
+    case OnboardingStep.LanguageSelection:
+      return true;
     case OnboardingStep.Welcome:
       return true;
     case OnboardingStep.LegalConsent:

@@ -21,15 +21,18 @@ import {
   loadLegalDocuments,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
+import { changeLanguage } from '../../store/thunks/i18nThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import LegalConsentStep from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import DependencyPreparationStep from './steps/DependencyPreparationStep';
 import PackageDownload from './steps/PackageDownload';
+import LanguageSelectionStep from './steps/LanguageSelectionStep';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
 import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress } from '../../../types/onboarding';
+import { getDesktopLanguage, resolveDesktopLanguageCode } from '../../../shared/desktop-languages';
 
 interface OnboardingWizardProps {
   onComplete?: () => void;
@@ -49,7 +52,18 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
   const [sharingStepReady, setSharingStepReady] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState(() => resolveDesktopLanguageCode(locale));
+  const [languageStepPending, setLanguageStepPending] = useState(false);
+  const [languageStepError, setLanguageStepError] = useState<string | null>(null);
   const downloadCompleted = downloadProgress?.progress === 100;
+
+  useEffect(() => {
+    if (currentStep !== OnboardingStep.LanguageSelection || languageStepPending) {
+      return;
+    }
+
+    setSelectedLanguage(resolveDesktopLanguageCode(locale));
+  }, [currentStep, locale, languageStepPending]);
 
   useEffect(() => {
     if (!isActive) {
@@ -79,7 +93,26 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (currentStep === OnboardingStep.LanguageSelection) {
+      if (languageStepPending) {
+        return;
+      }
+
+      setLanguageStepPending(true);
+      setLanguageStepError(null);
+
+      try {
+        await dispatch(changeLanguage(selectedLanguage)).unwrap();
+        dispatch(goToNextStep());
+      } catch (error) {
+        setLanguageStepError(error instanceof Error ? error.message : 'Failed to save language');
+      } finally {
+        setLanguageStepPending(false);
+      }
+      return;
+    }
+
     if (currentStep === OnboardingStep.Download && downloadCompleted && downloadProgress?.version) {
       dispatch(completeOnboarding(downloadProgress.version));
       dispatch(fetchActiveVersion());
@@ -109,6 +142,18 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const renderStep = () => {
     switch (currentStep) {
+      case OnboardingStep.LanguageSelection:
+        return (
+          <LanguageSelectionStep
+            selectedLanguage={selectedLanguage}
+            onSelect={(nextLanguage) => {
+              setSelectedLanguage(nextLanguage);
+              setLanguageStepError(null);
+            }}
+            isPending={languageStepPending}
+            error={languageStepError}
+          />
+        );
       case OnboardingStep.Welcome:
         return <WelcomeIntro onNext={handleNext} />;
       case OnboardingStep.LegalConsent:
@@ -126,6 +171,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const title = useMemo(() => {
     switch (currentStep) {
+      case OnboardingStep.LanguageSelection:
+        return t('languageSelection.title');
       case OnboardingStep.Welcome:
         return t('welcome.title');
       case OnboardingStep.LegalConsent:
@@ -141,9 +188,28 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }, [currentStep, t]);
 
-  const nextLabel = currentStep === OnboardingStep.Download && downloadCompleted
-    ? t('actions.finish')
-    : undefined;
+  const nextLabel = useMemo(() => {
+    if (currentStep === OnboardingStep.LanguageSelection) {
+      const nativeLanguageName = getDesktopLanguage(selectedLanguage).nativeName;
+      return languageStepPending
+        ? t('actions.applyingLanguage', { language: nativeLanguageName })
+        : t('actions.continueWithLanguage', { language: nativeLanguageName });
+    }
+
+    if (currentStep === OnboardingStep.Download && downloadCompleted) {
+      return t('actions.finish');
+    }
+
+    return undefined;
+  }, [currentStep, downloadCompleted, languageStepPending, selectedLanguage, t]);
+
+  const effectiveCanGoNext = currentStep === OnboardingStep.LanguageSelection
+    ? !languageStepPending
+    : currentStep === OnboardingStep.SharingAcceleration
+      ? sharingStepReady
+      : currentStep === OnboardingStep.DependencyPreparation
+        ? isDependencyPreparationComplete
+        : canGoNext;
 
   if (!isActive) {
     return null;
@@ -169,7 +235,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             currentStep !== OnboardingStep.LegalConsent && (
               <div className="flex-shrink-0">
                 <OnboardingActions
-                  canGoNext={currentStep === OnboardingStep.SharingAcceleration ? sharingStepReady : currentStep === OnboardingStep.DependencyPreparation ? isDependencyPreparationComplete : canGoNext}
+                  canGoNext={effectiveCanGoNext}
                   canGoPrevious={canGoPrevious}
                   onNext={handleNext}
                   onPrevious={handlePrevious}

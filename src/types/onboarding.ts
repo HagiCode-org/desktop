@@ -12,11 +12,12 @@ import type {
  * Onboarding step enumeration
  */
 export enum OnboardingStep {
-  Welcome = 0,
-  LegalConsent = 1,
-  SharingAcceleration = 2,
-  DependencyPreparation = 3,
-  Download = 4,
+  LanguageSelection = 0,
+  Welcome = 1,
+  LegalConsent = 2,
+  SharingAcceleration = 3,
+  DependencyPreparation = 4,
+  Download = 5,
 }
 
 export type LegalDocumentType = 'eula' | 'privacy-policy';

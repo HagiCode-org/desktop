@@ -29,11 +29,12 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
   ];
 
   const steps = [
-    { number: 1, text: t('welcome.steps.welcome') },
-    { number: 2, text: t('welcome.steps.legalConsent') },
-    { number: 3, text: t('welcome.steps.sharingAcceleration') },
-    { number: 4, text: t('welcome.steps.dependencyPreparation') },
-    { number: 5, text: t('welcome.steps.download') },
+    { number: 1, text: t('welcome.steps.languageSelection') },
+    { number: 2, text: t('welcome.steps.welcome') },
+    { number: 3, text: t('welcome.steps.legalConsent') },
+    { number: 4, text: t('welcome.steps.sharingAcceleration') },
+    { number: 5, text: t('welcome.steps.dependencyPreparation') },
+    { number: 6, text: t('welcome.steps.download') },
   ];
 
   return (
