@@ -181,7 +181,10 @@
       "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
       "version": "Version",
       "toolchainRoot": "Toolchain root",
+      "nodeRuntimeRoot": "Bundled Node runtime root",
+      "nodeMajorVersion": "Node major package tree",
       "globalPrefix": "Global prefix",
+      "globalModulesRoot": "Global modules root",
       "status": {
         "available": "Available",
         "unavailable": "Unavailable",

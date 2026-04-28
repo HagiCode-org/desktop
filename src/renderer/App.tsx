@@ -23,6 +23,7 @@ import type { RootState, AppDispatch } from './store';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
+import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OmniRouteBridge } from '../types/omniroute-management';
 import type {
   DesktopBootstrapSnapshot,
@@ -109,8 +110,10 @@ declare global {
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: () => void) => () => void;
       dependencyManagement: DependencyManagementBridge;
+      hagiNode: HagiNodeRuntimeBridge;
       omniroute: OmniRouteBridge;
     };
+    hagiNode: HagiNodeRuntimeBridge;
   }
 }
 

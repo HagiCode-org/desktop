@@ -455,8 +455,14 @@ export default function DependencyManagementPage() {
               <div className="rounded-lg border p-4 md:col-span-2">
                 <p className="text-sm font-medium">{t('dependencyManagement.environment.toolchainRoot')}</p>
                 <p className="break-all text-sm text-muted-foreground">{snapshot.environment.toolchainRoot}</p>
+                <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.nodeRuntimeRoot')}</p>
+                <p className="break-all text-sm text-muted-foreground">{snapshot.environment.nodeRuntimeRoot}</p>
+                <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.nodeMajorVersion')}</p>
+                <p className="break-all text-sm text-muted-foreground">node{snapshot.environment.nodeMajorVersion}</p>
                 <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.globalPrefix')}</p>
                 <p className="break-all text-sm text-muted-foreground">{snapshot.environment.npmGlobalPrefix}</p>
+                <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.globalModulesRoot')}</p>
+                <p className="break-all text-sm text-muted-foreground">{snapshot.environment.npmGlobalModulesRoot}</p>
               </div>
               </div>
             </CardContent>

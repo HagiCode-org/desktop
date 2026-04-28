@@ -181,7 +181,10 @@
       "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/",
       "version": "版本",
       "toolchainRoot": "工具链目录",
+      "nodeRuntimeRoot": "内置 Node 运行时目录",
+      "nodeMajorVersion": "Node 主版本包目录",
       "globalPrefix": "全局安装目录",
+      "globalModulesRoot": "全局模块目录",
       "status": {
         "available": "可用",
         "unavailable": "不可用",
