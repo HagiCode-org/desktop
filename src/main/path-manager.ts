@@ -5,7 +5,10 @@ import * as fsSync from 'node:fs';
 import yaml from 'js-yaml';
 import log from 'electron-log';
 import {
+  buildNodeMajorNpmGlobalPaths,
   buildPortableToolchainPaths,
+  type NodeMajorNpmGlobalPathOptions,
+  type NodeMajorNpmGlobalPaths,
   resolvePortableToolchainRoot,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
@@ -18,8 +21,11 @@ import type {
 } from '../types/bootstrap.js';
 
 export {
+  buildNodeMajorNpmGlobalPaths,
   buildPortableToolchainPaths,
   resolvePortableToolchainRoot,
+  type NodeMajorNpmGlobalPathOptions,
+  type NodeMajorNpmGlobalPaths,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
@@ -441,6 +447,19 @@ export class PathManager {
     return this.paths;
   }
 
+  getUserDataPath(): string {
+    return this.userDataPath;
+  }
+
+  getNodeMajorNpmGlobalPaths(
+    input: Omit<NodeMajorNpmGlobalPathOptions, 'userDataPath'> = {},
+  ): NodeMajorNpmGlobalPaths {
+    return buildNodeMajorNpmGlobalPaths({
+      ...input,
+      userDataPath: this.userDataPath,
+    });
+  }
+
   /**
    * Get installed package path for a specific platform
    * @param platform - Platform identifier (e.g., 'linux-x64', 'win-x64')
@@ -784,13 +803,7 @@ export class PathManager {
   }
 
   getPortableNpmGlobalBinRoot(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).npmGlobalBinRoot;
+    return this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot;
   }
 
   getPortableNodeExecutablePath(): string {
@@ -822,7 +835,7 @@ export class PathManager {
       overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
     });
     const executableName = getCommandExecutableName(process.platform, commandName);
-    const npmGlobalCandidate = path.join(paths.npmGlobalBinRoot, executableName);
+    const npmGlobalCandidate = path.join(this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot, executableName);
     if (fsSync.existsSync(npmGlobalCandidate)) {
       return npmGlobalCandidate;
     }
