@@ -38,8 +38,12 @@ describe('system-diagnostic-manager bundled toolchain reporting', () => {
     assert.match(source, /probeBundledRuntimeCommand\('npm'/);
     assert.match(source, /probeBundledRuntimeCommand\('npx'/);
     assert.match(source, /\['config', 'get', 'registry'\]/);
+    assert.match(source, /HAGICODE_NPM_GLOBAL_PREFIX/);
+    assert.match(source, /npm\.globalBinRoot/);
+    assert.match(source, /npm\.globalModulesRoot/);
+    assert.match(source, /npm\.bundledRuntimeRoot/);
     assert.match(source, /managed\.\$\{command\.id\}\.status=\$\{command\.status\}/);
-    assert.match(source, /\[built-in-runtimes\]/);
+    assert.match(source, /pushSection\('built-in-runtimes'/);
   });
 
   it('keeps runtime diagnostics scoped when bundled Node validation or npm config probes fail', async () => {

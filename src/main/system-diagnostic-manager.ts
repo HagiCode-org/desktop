@@ -869,12 +869,15 @@ export class SystemDiagnosticManager {
     const npmCommandPath = bundledStatus?.manifest?.commands?.npm
       ? path.join(bundledStatus.toolchainRoot, bundledStatus.manifest.commands.npm)
       : null;
-    const fallbackPackageRoot = bundledStatus ? path.join(bundledStatus.toolchainRoot, 'node') : null;
+    const bundledRuntimeRoot = bundledStatus ? path.join(bundledStatus.toolchainRoot, 'node') : null;
     const base: SystemDiagnosticNpmConfigInfo = {
       registry: null,
-      cachePath: null,
-      prefixPath: null,
-      packageRootPath: fallbackPackageRoot,
+      cachePath: runtimeEnv.HAGICODE_NPM_CACHE_ROOT ?? null,
+      prefixPath: runtimeEnv.HAGICODE_NPM_GLOBAL_PREFIX ?? null,
+      binRootPath: runtimeEnv.HAGICODE_NPM_GLOBAL_BIN_ROOT ?? null,
+      packageRootPath: runtimeEnv.HAGICODE_NPM_GLOBAL_MODULES_ROOT ?? null,
+      nodeMajorVersion: runtimeEnv.HAGICODE_NODE_MAJOR_VERSION ?? null,
+      bundledRuntimeRoot,
       mirrorEnabled: null,
       source: bundledStatus ? 'desktop-managed' : 'unknown',
       status: npmCommandPath ? 'unknown' : 'missing',
@@ -901,9 +904,9 @@ export class SystemDiagnosticManager {
         const result = await this.runCommand(npmCommandPath, ['config', 'get', key], { env: runtimeEnv, timeoutMs: COMMAND_TIMEOUT_MS });
         const value = firstNonEmptyLine(result.stdout);
         if (key === 'cache') {
-          base.cachePath = value;
+          base.cachePath = base.cachePath ?? value;
         } else {
-          base.prefixPath = value;
+          base.prefixPath = base.prefixPath ?? value;
         }
       } catch (error) {
         const message = this.describeError(error, `Failed to read npm ${key} configuration.`);
@@ -917,7 +920,7 @@ export class SystemDiagnosticManager {
       base.status = 'healthy';
     }
 
-    base.source = 'npm-config';
+    base.source = base.prefixPath === runtimeEnv.HAGICODE_NPM_GLOBAL_PREFIX ? 'desktop-managed' : 'npm-config';
     return base;
   }
 
@@ -1215,7 +1218,10 @@ export class SystemDiagnosticManager {
         `npm.registry=${data.builtinRuntimes.npmConfig.registry ?? 'unknown'}`,
         `npm.cachePath=${data.builtinRuntimes.npmConfig.cachePath ?? 'unknown'}`,
         `npm.prefixPath=${data.builtinRuntimes.npmConfig.prefixPath ?? 'unknown'}`,
-        `npm.packageRootPath=${data.builtinRuntimes.npmConfig.packageRootPath ?? 'unknown'}`,
+        `npm.globalBinRoot=${data.builtinRuntimes.npmConfig.binRootPath ?? 'unknown'}`,
+        `npm.globalModulesRoot=${data.builtinRuntimes.npmConfig.packageRootPath ?? 'unknown'}`,
+        `npm.nodeMajorVersion=${data.builtinRuntimes.npmConfig.nodeMajorVersion ?? 'unknown'}`,
+        `npm.bundledRuntimeRoot=${data.builtinRuntimes.npmConfig.bundledRuntimeRoot ?? 'unknown'}`,
         `npm.mirrorEnabled=${data.builtinRuntimes.npmConfig.mirrorEnabled ?? 'unknown'}`,
         `npm.configStatus=${data.builtinRuntimes.npmConfig.status}`,
         data.builtinRuntimes.npmConfig.message ? `npm.message=${data.builtinRuntimes.npmConfig.message}` : null,
