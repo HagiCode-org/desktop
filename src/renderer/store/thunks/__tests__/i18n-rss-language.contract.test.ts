@@ -12,10 +12,12 @@ describe('renderer language and RSS thunk contract', () => {
 
     assert.match(source, /async function syncMainProcessLanguage\(language: string\): Promise<void> \{/);
     assert.match(source, /\.languageChanged\(language\);/);
-    assert.match(source, /await i18n\.changeLanguage\(language\);\s*await syncMainProcessLanguage\(language\);/s);
-    assert.match(source, /const resolvedLanguage = savedLanguage \|\| i18n\.resolvedLanguage \|\| i18n\.language;/);
+    assert.match(source, /const nextLanguage = resolveDesktopLanguageCode\(language\);/);
+    assert.match(source, /await i18n\.changeLanguage\(nextLanguage\);\s*await syncMainProcessLanguage\(nextLanguage\);/s);
+    assert.match(source, /const resolvedLanguage = resolveDesktopLanguageCode\(savedLanguage \|\| i18n\.resolvedLanguage \|\| i18n\.language\);/);
     assert.match(source, /await syncMainProcessLanguage\(resolvedLanguage\);/);
-    assert.match(source, /localStorage\.setItem\('appSettings\.language', language\);/);
+    assert.match(source, /localStorage\.setItem\('appSettings\.language', nextLanguage\);/);
+    assert.match(source, /document\.documentElement\.lang = language;/);
   });
 
   it('adds a dedicated language-change RSS refresh path that clears stale visible state before loading the new feed context', async () => {
