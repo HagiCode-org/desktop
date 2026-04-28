@@ -19,13 +19,15 @@ describe('onboarding dependency preparation integration', () => {
       fs.readFile(wizardPath, 'utf8'),
     ]);
 
-    assert.match(typesSource, /DependencyPreparation = 3/);
-    assert.match(sliceSource, /OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download/);
+    assert.match(typesSource, /DependencyPreparation = 4/);
+    assert.match(sliceSource, /OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download/);
     assert.match(sliceSource, /selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds/);
     assert.match(sliceSource, /state\.currentStep = OnboardingStep\.DependencyPreparation;/);
     assert.match(sliceSource, /if \(state\.isDependencyPreparationComplete\) \{\s*state\.currentStep = OnboardingStep\.Download;/);
     assert.match(wizardSource, /case OnboardingStep\.DependencyPreparation:[\s\S]*<DependencyPreparationStep \/>/);
-    assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation \? isDependencyPreparationComplete : canGoNext/);
+    assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
+    assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
+    assert.match(wizardSource, /canGoNext=\{effectiveCanGoNext\}/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*!isDependencyPreparationComplete[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });

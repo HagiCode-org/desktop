@@ -48,14 +48,16 @@ const legalDocumentsPayload: ResolvedLegalDocumentsPayload = {
 };
 
 describe('onboardingSlice flow', () => {
-  it('uses the five-step onboarding sequence in full mode', () => {
-    assert.equal(OnboardingStep.Welcome, 0);
-    assert.equal(OnboardingStep.LegalConsent, 1);
-    assert.equal(OnboardingStep.SharingAcceleration, 2);
-    assert.equal(OnboardingStep.DependencyPreparation, 3);
-    assert.equal(OnboardingStep.Download, 4);
+  it('uses the six-step onboarding sequence in full mode with language selection first', () => {
+    assert.equal(OnboardingStep.LanguageSelection, 0);
+    assert.equal(OnboardingStep.Welcome, 1);
+    assert.equal(OnboardingStep.LegalConsent, 2);
+    assert.equal(OnboardingStep.SharingAcceleration, 3);
+    assert.equal(OnboardingStep.DependencyPreparation, 4);
+    assert.equal(OnboardingStep.Download, 5);
     assert.equal('Launch' in OnboardingStep, false);
     assert.deepEqual(getOnboardingSequence('full'), [
+      OnboardingStep.LanguageSelection,
       OnboardingStep.Welcome,
       OnboardingStep.LegalConsent,
       OnboardingStep.SharingAcceleration,
@@ -82,11 +84,11 @@ describe('onboardingSlice flow', () => {
 
     assert.equal(state.isActive, true);
     assert.equal(state.mode, 'legal-only');
-    assert.equal(state.currentStep, OnboardingStep.LegalConsent);
-    assert.deepEqual(getOnboardingSequence(state.mode), [OnboardingStep.LegalConsent]);
+    assert.equal(state.currentStep, OnboardingStep.LanguageSelection);
+    assert.deepEqual(getOnboardingSequence(state.mode), [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent]);
   });
 
-  it('advances from welcome to legal consent before sharing acceleration', () => {
+  it('advances from language selection to welcome before legal consent', () => {
     let state = reducer(
       undefined,
       checkOnboardingTrigger.fulfilled(
@@ -101,6 +103,10 @@ describe('onboardingSlice flow', () => {
         undefined,
       ),
     );
+
+    state = reducer(state, goToNextStep());
+    assert.equal(state.currentStep, OnboardingStep.Welcome);
+    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
 
     state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.LegalConsent);
@@ -122,6 +128,7 @@ describe('onboardingSlice flow', () => {
         undefined,
       ),
     );
+    state = reducer(state, goToNextStep());
     state = reducer(state, goToNextStep());
 
     state = reducer(
@@ -176,9 +183,10 @@ describe('onboardingSlice flow', () => {
         undefined,
       ),
     );
+    const legalStep = reducer(initial, goToNextStep());
 
     const accepted = reducer(
-      initial,
+      legalStep,
       acceptLegalDocuments.fulfilled(
         {
           mode: 'legal-only',
@@ -219,6 +227,7 @@ describe('onboardingSlice flow', () => {
         undefined,
       ),
     );
+    state = reducer(state, goToNextStep());
     state = reducer(state, goToNextStep());
     state = reducer(
       state,
