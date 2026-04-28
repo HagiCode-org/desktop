@@ -100,7 +100,10 @@ export interface SystemDiagnosticNpmConfigInfo {
   registry: string | null;
   cachePath: string | null;
   prefixPath: string | null;
+  binRootPath: string | null;
   packageRootPath: string | null;
+  nodeMajorVersion: string | null;
+  bundledRuntimeRoot: string | null;
   mirrorEnabled: boolean | null;
   source: 'npm-config' | 'desktop-managed' | 'unknown';
   status: SystemDiagnosticRuntimeStatus;

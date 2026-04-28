@@ -46,8 +46,12 @@ export interface DependencyManagementEnvironmentStatus {
   available: boolean;
   toolchainRoot: string;
   nodeRuntimeRoot: string;
+  nodeVersion: string | null;
+  nodeMajorVersion: string;
   npmGlobalPrefix: string;
   npmGlobalBinRoot: string;
+  npmGlobalModulesRoot: string;
+  npmCacheRoot: string;
   node: NpmEnvironmentComponent;
   npm: NpmEnvironmentComponent;
   error?: string;
@@ -60,6 +64,8 @@ export interface ManagedNpmPackageStatusSnapshot {
   version: string | null;
   packageRoot: string;
   executablePath: string | null;
+  legacyBundledPackageRoot?: string;
+  legacyBundledExecutablePath?: string | null;
   message?: string;
 }
 
