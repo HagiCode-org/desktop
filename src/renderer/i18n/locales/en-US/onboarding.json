@@ -2,7 +2,7 @@
   "title": "First-Time Setup",
   "welcome": {
     "title": "Welcome to Hagicode Desktop",
-    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in five steps.",
+    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in six steps.",
     "features": {
       "manage": {
         "title": "Version Management",
@@ -17,8 +17,9 @@
         "description": "View and manage system dependencies"
       }
     },
-    "processTitle": "The first-time setup has 5 steps:",
+    "processTitle": "The first-time setup has 6 steps:",
     "steps": {
+      "languageSelection": "Choose the Desktop language used during setup",
       "welcome": "Review the setup and what will happen next",
       "download": "Download the latest Hagicode Server package",
       "launch": "Start the service and confirm it is running",
@@ -31,6 +32,14 @@
   },
   "claude": {
     "title": "Configure Claude Code"
+  },
+  "languageSelection": {
+    "title": "Choose Your Language",
+    "description": "Select the language used by Hagicode Desktop now. The first embedded backend startup will use a matching default.",
+    "recommended": "Recommended",
+    "selected": "Selected",
+    "choose": "Choose",
+    "error": "Desktop could not save the selected language yet. Retry to continue."
   },
   "download": {
     "title": "Download Hagicode Server",
@@ -176,6 +185,8 @@
   },
   "actions": {
     "next": "Next",
+    "continueWithLanguage": "Continue with {{language}}",
+    "applyingLanguage": "Applying {{language}}...",
     "finish": "Enter Hagicode Desktop",
     "previous": "Previous",
     "skip": "Skip Setup"
@@ -313,8 +324,8 @@
     "title": "End User License Agreement and Privacy Policy",
     "descriptionFull": "Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.",
     "descriptionLegalOnly": "The current legal revisions have not been accepted yet. Review the official documents in your default browser, then return to Desktop to confirm.",
-    "progressFull": "Full setup: Welcome -> Legal Consent -> Sharing Acceleration -> Download",
-    "progressLegalOnly": "Compliance gate mode: only the current legal consent step is shown",
+    "progressFull": "Full setup: Language -> Welcome -> Legal Consent -> Sharing Acceleration -> Dependency Preparation -> Download",
+    "progressLegalOnly": "Compliance gate mode: language selection appears before the current legal consent step",
     "browserInstruction": "Open the official documents in your default browser before you accept. Desktop only shows the revision summary, not the full legal text.",
     "cacheHint": "You are currently seeing the most recent successfully cached legal summary. Refresh after network recovery to confirm whether a newer revision exists.",
     "unavailableHint": "The legal revision summary is unavailable and no cached copy is available yet. Check your network and try again; setup cannot continue until valid metadata is loaded.",

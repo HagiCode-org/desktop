@@ -2,7 +2,7 @@
   "title": "Erstmalige Einrichtung",
   "welcome": {
     "title": "Willkommen bei Hagicode Desktop",
-    "description": "Hagicode Desktop ist der lokale Launcher für Hagicode. Wir werden die Ersteinrichtung und die Konformitätsbestätigung in fünf Schritten abschließen.",
+    "description": "Hagicode Desktop ist der lokale Launcher für Hagicode. Wir werden die Ersteinrichtung und die Konformitätsbestätigung in sechs Schritten abschließen.",
     "features": {
       "manage": {
         "title": "Versionsverwaltung",
@@ -17,14 +17,15 @@
         "description": "Systemabhängigkeiten anzeigen und verwalten"
       }
     },
-    "processTitle": "Die Ersteinrichtung besteht aus 5 Schritten:",
+    "processTitle": "Die Ersteinrichtung besteht aus 6 Schritten:",
     "steps": {
       "welcome": "Überprüfen Sie die Einrichtung und was als nächstes passieren wird",
       "download": "Laden Sie das neueste Hagicode Server-Paket herunter",
       "launch": "Starten Sie den Dienst und bestätigen Sie, dass er ausgeführt wird",
       "dependencyPreparation": "Bestätigen Sie, dass die erforderlichen Abhängigkeiten vorhanden sind und die Agent CLI-Pakete bereit sind",
       "sharingAcceleration": "Bestätigen Sie, ob die gemeinsame Beschleunigung standardmäßig aktiviert bleiben soll",
-      "legalConsent": "Bestätigen Sie die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie und überprüfen Sie dann die offiziellen Seiten in Ihrem Browser"
+      "legalConsent": "Bestätigen Sie die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie und überprüfen Sie dann die offiziellen Seiten in Ihrem Browser",
+      "languageSelection": "Zuerst die Desktop-Sprache für die Einrichtung auswählen"
     },
     "skip": "Einrichtung überspringen",
     "start": "Legen Sie los"
@@ -178,7 +179,9 @@
     "next": "Als nächstes",
     "finish": "Geben Sie Hagicode Desktop ein",
     "previous": "Zurück",
-    "skip": "Einrichtung überspringen"
+    "skip": "Einrichtung überspringen",
+    "continueWithLanguage": "Mit {{language}} fortfahren",
+    "applyingLanguage": "{{language}} wird angewendet..."
   },
   "skip": {
     "checkbox": "Diesen Leitfaden nicht mehr anzeigen",
@@ -313,8 +316,8 @@
     "title": "Endbenutzer-Lizenzvereinbarung und Datenschutzrichtlinie",
     "descriptionFull": "Bestätigen Sie vor dem Herunterladen des HagiCode-Servers die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie. Die offiziellen Dokumente werden in Ihrem Standardbrowser geöffnet.",
     "descriptionLegalOnly": "Die aktuellen Gesetzesänderungen wurden noch nicht übernommen. Überprüfen Sie die offiziellen Dokumente in Ihrem Standardbrowser und kehren Sie dann zur Bestätigung zum Desktop zurück.",
-    "progressFull": "Vollständige Einrichtung: Willkommen -> Rechtliche Einwilligung -> Freigabebeschleunigung -> Herunterladen",
-    "progressLegalOnly": "Compliance-Gate-Modus: Es wird nur der aktuelle Schritt der rechtlichen Einwilligung angezeigt",
+    "progressFull": "Vollständige Einrichtung: Sprache -> Willkommen -> Rechtliche Einwilligung -> Freigabebeschleunigung -> Abhängigkeitsvorbereitung -> Herunterladen",
+    "progressLegalOnly": "Compliance-Gate-Modus: Vor der aktuellen rechtlichen Einwilligung wird zuerst die Sprachauswahl angezeigt",
     "browserInstruction": "Öffnen Sie die offiziellen Dokumente in Ihrem Standardbrowser, bevor Sie sie akzeptieren. Desktop zeigt nur die Revisionszusammenfassung an, nicht den vollständigen Gesetzestext.",
     "cacheHint": "Sie sehen derzeit die letzte erfolgreich zwischengespeicherte rechtliche Zusammenfassung. Aktualisieren Sie nach der Netzwerkwiederherstellung, um zu bestätigen, ob eine neuere Revision vorhanden ist.",
     "unavailableHint": "Die Zusammenfassung der Rechtsrevision ist nicht verfügbar und es ist noch keine zwischengespeicherte Kopie verfügbar. Überprüfen Sie Ihr Netzwerk und versuchen Sie es erneut. Das Setup kann erst fortgesetzt werden, wenn gültige Metadaten geladen sind.",
@@ -339,5 +342,13 @@
       "eula": "EULA",
       "privacy-policy": "Datenschutzrichtlinie"
     }
+  },
+  "languageSelection": {
+    "title": "Sprache auswählen",
+    "description": "Wählen Sie zuerst die Sprache für Hagicode Desktop. Beim ersten Start des eingebetteten Backends wird ein passender Standard verwendet.",
+    "recommended": "Empfohlen",
+    "selected": "Ausgewählt",
+    "choose": "Diese Sprache wählen",
+    "error": "Die ausgewählte Sprache konnte noch nicht gespeichert werden. Bitte erneut versuchen."
   }
 }

@@ -2,7 +2,7 @@
   "title": "Configuração inicial",
   "welcome": {
     "title": "Bem-vindo ao Hagicode Desktop",
-    "description": "Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em cinco etapas.",
+    "description": "Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em seis etapas.",
     "features": {
       "manage": {
         "title": "Gerenciamento de versão",
@@ -17,14 +17,15 @@
         "description": "Visualize e gerencie dependências do sistema"
       }
     },
-    "processTitle": "A configuração inicial tem 5 etapas:",
+    "processTitle": "A configuração inicial tem 6 etapas:",
     "steps": {
       "welcome": "Revise a configuração e o que acontecerá a seguir",
       "download": "Baixe o pacote Hagicode Server mais recente",
       "launch": "Inicie o serviço e confirme se ele está em execução",
       "dependencyPreparation": "Confirme se as dependências necessárias e se os pacotes do Agente CLI estão prontos",
       "sharingAcceleration": "Confirme se a aceleração compartilhada deve permanecer habilitada por padrão",
-      "legalConsent": "Confirme as revisões atuais do EULA e da Política de Privacidade e revise as páginas oficiais em seu navegador"
+      "legalConsent": "Confirme as revisões atuais do EULA e da Política de Privacidade e revise as páginas oficiais em seu navegador",
+      "languageSelection": "Primeiro escolha o idioma do Desktop para a configuração"
     },
     "skip": "Ignorar configuração",
     "start": "Comece"
@@ -178,7 +179,9 @@
     "next": "Próximo",
     "finish": "Digite Hagicode Desktop",
     "previous": "Anterior",
-    "skip": "Ignorar configuração"
+    "skip": "Ignorar configuração",
+    "continueWithLanguage": "Continuar com {{language}}",
+    "applyingLanguage": "Aplicando {{language}}..."
   },
   "skip": {
     "checkbox": "Não mostrar este guia novamente",
@@ -313,8 +316,8 @@
     "title": "Contrato de licença de usuário final e política de privacidade",
     "descriptionFull": "Antes de baixar o HagiCode Server, confirme as revisões atuais do EULA e da Política de Privacidade. Os documentos oficiais são abertos no seu navegador padrão.",
     "descriptionLegalOnly": "As revisões legais atuais ainda não foram aceitas. Revise os documentos oficiais em seu navegador padrão e retorne ao Desktop para confirmar.",
-    "progressFull": "Configuração completa: Bem-vindo -> Consentimento Legal -> Aceleração de Compartilhamento -> Download",
-    "progressLegalOnly": "Modo Compliance Gate: apenas a etapa de consentimento legal atual é mostrada",
+    "progressFull": "Configuração completa: Idioma -> Bem-vindo -> Consentimento legal -> Aceleração de compartilhamento -> Preparação de dependências -> Download",
+    "progressLegalOnly": "Modo de compliance: a seleção de idioma aparece antes da etapa legal atual",
     "browserInstruction": "Abra os documentos oficiais em seu navegador padrão antes de aceitar. Desktop mostra apenas o resumo da revisão, não o texto jurídico completo.",
     "cacheHint": "No momento, você está vendo o resumo jurídico mais recente armazenado em cache com sucesso. Atualize após a recuperação da rede para confirmar se existe uma revisão mais recente.",
     "unavailableHint": "O resumo da revisão legal não está disponível e nenhuma cópia em cache está disponível ainda. Verifique sua rede e tente novamente; a configuração não pode continuar até que metadados válidos sejam carregados.",
@@ -339,5 +342,13 @@
       "eula": "EULA",
       "privacy-policy": "Política de Privacidade"
     }
+  },
+  "languageSelection": {
+    "title": "Escolher idioma",
+    "description": "Escolha primeiro o idioma usado pelo Hagicode Desktop. A primeira inicialização do backend embutido também usará um padrão compatível.",
+    "recommended": "Recomendado",
+    "selected": "Selecionado",
+    "choose": "Escolher este idioma",
+    "error": "O Desktop ainda não conseguiu salvar o idioma selecionado. Tente novamente para continuar."
   }
 }

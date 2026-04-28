@@ -2,7 +2,7 @@
   "title": "Configuration initiale",
   "welcome": {
     "title": "Bienvenue à Hagicode Desktop",
-    "description": "Hagicode Desktop est le lanceur local pour Hagicode. Nous terminerons la première configuration et la confirmation de conformité en cinq étapes.",
+    "description": "Hagicode Desktop est le lanceur local pour Hagicode. Nous terminerons la première configuration et la confirmation de conformité en six étapes.",
     "features": {
       "manage": {
         "title": "Gestion des versions",
@@ -17,14 +17,15 @@
         "description": "Afficher et gérer les dépendances du système"
       }
     },
-    "processTitle": "La première configuration comporte 5 étapes:",
+    "processTitle": "La première configuration comporte 6 étapes:",
     "steps": {
       "welcome": "Passez en revue la configuration et ce qui va se passer ensuite",
       "download": "Téléchargez le dernier package Hagicode Server",
       "launch": "Démarrez le service et confirmez qu'il est en cours d'exécution",
       "dependencyPreparation": "Confirmez que les dépendances requises et que les packages Agent CLI sont prêts",
       "sharingAcceleration": "Confirmez si l'accélération partagée doit rester activée par défaut",
-      "legalConsent": "Confirmez les révisions actuelles du CLUF et de la politique de confidentialité, puis consultez les pages officielles dans votre navigateur."
+      "legalConsent": "Confirmez les révisions actuelles du CLUF et de la politique de confidentialité, puis consultez les pages officielles dans votre navigateur.",
+      "languageSelection": "Choisir d'abord la langue du Desktop pour l'installation"
     },
     "skip": "Ignorer la configuration",
     "start": "Commencer"
@@ -178,7 +179,9 @@
     "next": "Suivant",
     "finish": "Entrez Hagicode Desktop",
     "previous": "Précédent",
-    "skip": "Ignorer la configuration"
+    "skip": "Ignorer la configuration",
+    "continueWithLanguage": "Continuer avec {{language}}",
+    "applyingLanguage": "Application de {{language}}..."
   },
   "skip": {
     "checkbox": "Ne plus afficher ce guide",
@@ -313,8 +316,8 @@
     "title": "Contrat de licence utilisateur final et politique de confidentialité",
     "descriptionFull": "Avant de télécharger HagiCode Server, confirmez les révisions actuelles du CLUF et de la politique de confidentialité. Les documents officiels s'ouvrent dans votre navigateur par défaut.",
     "descriptionLegalOnly": "Les révisions juridiques actuelles n’ont pas encore été acceptées. Consultez les documents officiels dans votre navigateur par défaut, puis revenez au bureau pour confirmer.",
-    "progressFull": "Configuration complète: Bienvenue -> Consentement légal -> Accélération du partage -> Télécharger",
-    "progressLegalOnly": "Mode Compliance Gate: seule l'étape de consentement légal en cours est affichée",
+    "progressFull": "Configuration complète: Langue -> Bienvenue -> Consentement légal -> Accélération du partage -> Préparation des dépendances -> Télécharger",
+    "progressLegalOnly": "Mode Compliance Gate: la sélection de langue apparaît avant l'étape actuelle de consentement légal",
     "browserInstruction": "Ouvrez les documents officiels dans votre navigateur par défaut avant d'accepter. Desktop affiche uniquement le résumé de la révision, pas le texte juridique complet.",
     "cacheHint": "Vous voyez actuellement le résumé juridique le plus récent mis en cache avec succès. Actualisez après la récupération du réseau pour confirmer si une révision plus récente existe.",
     "unavailableHint": "Le résumé de la révision légale n'est pas disponible et aucune copie en cache n'est encore disponible. Vérifiez votre réseau et réessayez; l'installation ne peut pas continuer tant que des métadonnées valides n'ont pas été chargées.",
@@ -339,5 +342,13 @@
       "eula": "CLUF",
       "privacy-policy": "Politique de confidentialité"
     }
+  },
+  "languageSelection": {
+    "title": "Choisir la langue",
+    "description": "Choisissez d'abord la langue utilisée par Hagicode Desktop. Le premier démarrage du backend embarqué utilisera une valeur par défaut correspondante.",
+    "recommended": "Recommandé",
+    "selected": "Sélectionné",
+    "choose": "Choisir cette langue",
+    "error": "Desktop n'a pas encore pu enregistrer la langue sélectionnée. Réessayez pour continuer."
   }
 }

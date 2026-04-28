@@ -2,7 +2,7 @@
   "title": "최초 설정",
   "welcome": {
     "title": "Hagicode Desktop에 오신 것을 환영합니다",
-    "description": "Hagicode Desktop은 Hagicode의 로컬 실행 프로그램입니다. 5단계에 걸쳐 최초 설정 및 규정 준수 확인을 완료하겠습니다.",
+    "description": "Hagicode Desktop은 Hagicode의 로컬 실행 프로그램입니다. 6단계에 걸쳐 최초 설정 및 규정 준수 확인을 완료하겠습니다.",
     "features": {
       "manage": {
         "title": "버전 관리",
@@ -17,14 +17,15 @@
         "description": "시스템 종속성 보기 및 관리"
       }
     },
-    "processTitle": "최초 설정에는 5단계가 있습니다.",
+    "processTitle": "최초 설정에는 6단계가 있습니다.",
     "steps": {
       "welcome": "설정과 다음에 일어날 일을 검토하세요.",
       "download": "최신 Hagicode Server 패키지 다운로드",
       "launch": "서비스를 시작하고 실행 중인지 확인하세요.",
       "dependencyPreparation": "필수 종속성을 확인하고 에이전트 패키지가 준비되었는지 확인하세요.",
       "sharingAcceleration": "공유 가속을 기본적으로 활성화해야 하는지 확인하세요.",
-      "legalConsent": "현재 EULA 및 개인정보 보호정책 개정을 확인한 다음 브라우저에서 공식 페이지를 검토하세요."
+      "legalConsent": "현재 EULA 및 개인정보 보호정책 개정을 확인한 다음 브라우저에서 공식 페이지를 검토하세요.",
+      "languageSelection": "설정에 사용할 Desktop 언어를 먼저 선택합니다"
     },
     "skip": "설정 건너뛰기",
     "start": "시작하기"
@@ -178,7 +179,9 @@
     "next": "다음",
     "finish": "Hagicode Desktop를 입력하세요",
     "previous": "이전",
-    "skip": "설정 건너뛰기"
+    "skip": "설정 건너뛰기",
+    "continueWithLanguage": "{{language}}(으)로 계속",
+    "applyingLanguage": "{{language}} 적용 중..."
   },
   "skip": {
     "checkbox": "이 가이드를 다시 표시하지 않음",
@@ -313,8 +316,8 @@
     "title": "최종 사용자 라이센스 계약 및 개인정보 보호정책",
     "descriptionFull": "HagiCode Server를 다운로드하기 전에 현재 EULA 및 개인정보 보호정책 개정을 확인하세요. 공식 문서는 기본 브라우저에서 열립니다.",
     "descriptionLegalOnly": "현재의 법적 개정은 아직 승인되지 않았습니다. 기본 브라우저에서 공식 문서를 검토한 다음 데스크톱으로 돌아가 확인하세요.",
-    "progressFull": "전체 설정: 환영 -> 법적 동의 -> 공유 가속 -> 다운로드",
-    "progressLegalOnly": "규정 준수 게이트 모드: 현재 법적 동의 단계만 표시됩니다.",
+    "progressFull": "전체 설정: 언어 선택 -> 환영 -> 법적 동의 -> 공유 가속 -> 의존성 준비 -> 다운로드",
+    "progressLegalOnly": "컴플라이언스 게이트 모드: 현재 법적 동의 전에 언어 선택 단계가 표시됩니다.",
     "browserInstruction": "수락하기 전에 기본 브라우저에서 공식 문서를 엽니다. 데스크톱에는 전체 법률 텍스트가 아닌 개정 요약만 표시됩니다.",
     "cacheHint": "현재 성공적으로 캐시된 가장 최근의 법적 요약을 보고 계십니다. 네트워크 복구 후 새로 고쳐 최신 버전이 있는지 확인하세요.",
     "unavailableHint": "법률 개정 요약을 사용할 수 없으며 아직 캐시된 사본을 사용할 수 없습니다. 네트워크를 확인하고 다시 시도하세요. 유효한 메타데이터가 로드될 때까지 설치를 계속할 수 없습니다.",
@@ -339,5 +342,13 @@
       "eula": "EULA",
       "privacy-policy": "개인 정보 보호 정책"
     }
+  },
+  "languageSelection": {
+    "title": "언어 선택",
+    "description": "먼저 Hagicode Desktop 에서 사용할 언어를 선택하세요. 내장 백엔드의 첫 시작에도 대응되는 기본 언어가 사용됩니다.",
+    "recommended": "권장",
+    "selected": "선택됨",
+    "choose": "이 언어 선택",
+    "error": "선택한 언어를 아직 저장하지 못했습니다. 다시 시도한 뒤 계속하세요."
   }
 }

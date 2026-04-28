@@ -2,7 +2,7 @@
   "title": "Configuración por primera vez",
   "welcome": {
     "title": "Bienvenido a Hagicode Desktop",
-    "description": "Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en cinco pasos.",
+    "description": "Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en seis pasos.",
     "features": {
       "manage": {
         "title": "Gestión de versiones",
@@ -17,14 +17,15 @@
         "description": "Ver y administrar dependencias del sistema"
       }
     },
-    "processTitle": "La configuración inicial tiene 5 pasos:",
+    "processTitle": "La configuración inicial tiene 6 pasos:",
     "steps": {
       "welcome": "Revise la configuración y lo que sucederá a continuación.",
       "download": "Descargue el último paquete Hagicode Server",
       "launch": "Inicie el servicio y confirme que se está ejecutando.",
       "dependencyPreparation": "Confirme que las dependencias requeridas y los paquetes del Agente CLI estén listos",
       "sharingAcceleration": "Confirme si la aceleración compartida debe permanecer habilitada de forma predeterminada",
-      "legalConsent": "Confirme las revisiones actuales del EULA y la Política de privacidad, luego revise las páginas oficiales en su navegador"
+      "legalConsent": "Confirme las revisiones actuales del EULA y la Política de privacidad, luego revise las páginas oficiales en su navegador",
+      "languageSelection": "Primero elige el idioma de Desktop para la instalación"
     },
     "skip": "Saltar configuración",
     "start": "Empezar"
@@ -178,7 +179,9 @@
     "next": "Siguiente",
     "finish": "Introduzca Hagicode Desktop",
     "previous": "Anterior",
-    "skip": "Saltar configuración"
+    "skip": "Saltar configuración",
+    "continueWithLanguage": "Continuar con {{language}}",
+    "applyingLanguage": "Aplicando {{language}}..."
   },
   "skip": {
     "checkbox": "No volver a mostrar esta guía",
@@ -313,8 +316,8 @@
     "title": "Acuerdo de licencia de usuario final y política de privacidad",
     "descriptionFull": "Antes de descargar HagiCode Server, confirme las revisiones actuales del EULA y la Política de privacidad. Los documentos oficiales se abren en su navegador predeterminado.",
     "descriptionLegalOnly": "Las revisiones legales actuales aún no han sido aceptadas. Revise los documentos oficiales en su navegador predeterminado, luego regrese al Escritorio para confirmar.",
-    "progressFull": "Configuración completa: Bienvenido -> Consentimiento legal -> Aceleración de uso compartido -> Descargar",
-    "progressLegalOnly": "Modo de puerta de cumplimiento: solo se muestra el paso de consentimiento legal actual",
+    "progressFull": "Configuración completa: Idioma -> Bienvenido -> Consentimiento legal -> Aceleración de uso compartido -> Preparación de dependencias -> Descargar",
+    "progressLegalOnly": "Modo de puerta de cumplimiento: la selección de idioma aparece antes del paso legal actual",
     "browserInstruction": "Abra los documentos oficiales en su navegador predeterminado antes de aceptar. Desktop solo muestra el resumen de la revisión, no el texto legal completo.",
     "cacheHint": "Actualmente estás viendo el resumen legal más reciente almacenado en caché con éxito. Actualice después de la recuperación de la red para confirmar si existe una revisión más reciente.",
     "unavailableHint": "El resumen de la revisión legal no está disponible y aún no hay ninguna copia en caché disponible. Verifique su red e inténtelo nuevamente; La instalación no puede continuar hasta que se carguen metadatos válidos.",
@@ -339,5 +342,13 @@
       "eula": "CLUF",
       "privacy-policy": "Política de privacidad"
     }
+  },
+  "languageSelection": {
+    "title": "Elegir idioma",
+    "description": "Primero elige el idioma que usará Hagicode Desktop. El primer arranque del backend integrado también usará un valor predeterminado compatible.",
+    "recommended": "Recomendado",
+    "selected": "Seleccionado",
+    "choose": "Elegir este idioma",
+    "error": "Desktop todavía no pudo guardar el idioma seleccionado. Inténtalo de nuevo para continuar."
   }
 }
