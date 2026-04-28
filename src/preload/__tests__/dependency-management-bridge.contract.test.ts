@@ -20,4 +20,24 @@ describe('dependency management preload contract', () => {
     assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.progress, listener\)/);
     assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.progress, listener\)/);
   });
+
+  it('exposes read-only hagiNode runtime metadata from dependency management snapshots', async () => {
+    const source = await fs.readFile(preloadPath, 'utf8');
+
+    assert.match(source, /import type \{ HagiNodeRuntimeBridge, HagiNodeRuntimeMetadata \} from '\.\.\/types\/node-runtime\.js';/);
+    assert.match(source, /hagiNode: HagiNodeRuntimeBridge;/);
+    assert.match(source, /const hagiNodeBridge: HagiNodeRuntimeBridge = Object\.freeze\(/);
+    assert.match(source, /getMetadata: async \(\): Promise<HagiNodeRuntimeMetadata> =>/);
+    assert.match(source, /nodeVersion: snapshot\.environment\.nodeVersion/);
+    assert.match(source, /nodeMajorVersion: snapshot\.environment\.nodeMajorVersion/);
+    assert.match(source, /npmGlobalPath: snapshot\.environment\.npmGlobalPrefix/);
+    assert.match(source, /npmGlobalBinPath: snapshot\.environment\.npmGlobalBinRoot/);
+    assert.match(source, /npmGlobalModulesPath: snapshot\.environment\.npmGlobalModulesRoot/);
+    assert.match(source, /contextBridge\.exposeInMainWorld\('hagiNode', hagiNodeBridge\)/);
+    const bridgeBody = source.slice(
+      source.indexOf('const hagiNodeBridge'),
+      source.indexOf('const electronAPI'),
+    );
+    assert.doesNotMatch(bridgeBody, /\b(install|uninstall|delete|rm)\b/);
+  });
 });

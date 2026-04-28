@@ -18,6 +18,7 @@ import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type { ManagedNpmPackageId, DependencyManagementBatchSyncRequest, DependencyManagementBridge } from '../types/dependency-management.js';
 import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
 import { dependencyManagementChannels } from '../types/dependency-management.js';
+import type { HagiNodeRuntimeBridge, HagiNodeRuntimeMetadata } from '../types/node-runtime.js';
 import type { OmniRouteBridge, OmniRouteConfigUpdatePayload, OmniRouteLogReadRequest, OmniRoutePathTarget } from '../types/omniroute-management.js';
 import { omniRouteChannels } from '../types/omniroute-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
@@ -287,6 +288,7 @@ interface ElectronAPI {
     writeText: (text: string) => Promise<void>;
   };
   systemDiagnostic: SystemDiagnosticBridge;
+  hagiNode: HagiNodeRuntimeBridge;
   /** @deprecated Use dependencyManagement. */
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
@@ -378,6 +380,19 @@ const dependencyManagementBridge: DependencyManagementBridge = {
     return () => ipcRenderer.removeListener(dependencyManagementChannels.progress, listener);
   },
 };
+
+const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
+  getMetadata: async (): Promise<HagiNodeRuntimeMetadata> => {
+    const snapshot = await ipcRenderer.invoke(dependencyManagementChannels.snapshot);
+    return Object.freeze({
+      nodeVersion: snapshot.environment.nodeVersion,
+      nodeMajorVersion: snapshot.environment.nodeMajorVersion,
+      npmGlobalPath: snapshot.environment.npmGlobalPrefix,
+      npmGlobalBinPath: snapshot.environment.npmGlobalBinRoot,
+      npmGlobalModulesPath: snapshot.environment.npmGlobalModulesRoot,
+    });
+  },
+});
 
 const electronAPI: ElectronAPI = {
   bootstrap: {
@@ -694,6 +709,7 @@ const electronAPI: ElectronAPI = {
   },
   clipboard: clipboardBridge,
   systemDiagnostic: systemDiagnosticBridge,
+  hagiNode: hagiNodeBridge,
   npmManagement: dependencyManagementBridge,
   dependencyManagement: dependencyManagementBridge,
   omniroute: {
@@ -726,3 +742,4 @@ ipcRenderer.on('webview-devtools', () => {
 });
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld('hagiNode', hagiNodeBridge);
