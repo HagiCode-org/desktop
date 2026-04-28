@@ -200,6 +200,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
+        shell: bash
+
       - name: Collect Windows artifacts
         id: windows_artifacts
         shell: pwsh
@@ -714,6 +718,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
+        shell: bash
+
       - name: Collect Windows artifacts
         id: windows_artifacts
         shell: pwsh
@@ -1134,6 +1142,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
+
       - name: Summarize Linux ZIP artifacts
         if: success()
         shell: bash
@@ -1302,6 +1313,9 @@ jobs:
         run: node scripts/ci-build.js --platform mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
 
       # Upload each artifact separately
       - name: Upload DMG
