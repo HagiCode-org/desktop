@@ -1041,6 +1041,14 @@ export class DependencyManagementService {
     return null;
   }
 
+  private finalizeOperationSnapshot(snapshot: DependencyManagementSnapshot): DependencyManagementSnapshot {
+    return {
+      ...snapshot,
+      activeOperation: this.activeOperation,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   private async runPackageOperation(
     packageId: string,
     operation: DependencyManagementOperation,
@@ -1158,13 +1166,16 @@ export class DependencyManagementService {
       success ? 100 : undefined,
     );
 
+    const finalizedSnapshot = this.finalizeOperationSnapshot(snapshot);
+    const finalizedStatus = finalizedSnapshot.packages.find((item) => item.id === definition.id);
+
     return {
       success,
       packageId: definition.id,
       operation,
-      status,
+      status: finalizedStatus,
       error: errorMessage,
-      snapshot,
+      snapshot: finalizedSnapshot,
     };
   }
 
@@ -1293,13 +1304,16 @@ export class DependencyManagementService {
       );
     }
 
+    const finalizedSnapshot = this.finalizeOperationSnapshot(snapshot);
+    const finalizedStatuses = finalizedSnapshot.packages.filter((item) => packageIds.includes(item.id));
+
     return {
       success,
       packageIds,
       operation: 'sync',
-      statuses,
+      statuses: finalizedStatuses,
       error: errorMessage,
-      snapshot,
+      snapshot: finalizedSnapshot,
     };
   }
 

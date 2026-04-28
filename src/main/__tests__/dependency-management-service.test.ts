@@ -81,7 +81,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /success \? 'completed' : 'failed'/);
     assert.match(source, /extractPercent\(message\)/);
     assert.match(source, /const snapshot = await this\.getSnapshot\(\)/);
-    assert.match(source, /snapshot,/);
+    assert.match(source, /const finalizedSnapshot = this\.finalizeOperationSnapshot\(snapshot\);/);
+    assert.match(source, /snapshot: finalizedSnapshot,/);
     assert.match(source, /const verificationError = success\s*\?\s*this\.validatePackageOperationOutcome\(definition, operation, status\)/);
   });
 
@@ -92,7 +93,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /const verificationError = success\s*\?\s*this\.validatePackageOperationOutcome\(definition, operation, status\)\s*:\s*null;/);
     assert.match(source, /if \(verificationError\) \{\s*success = false;\s*errorMessage = verificationError;\s*\}/);
     assert.match(source, /if \(!success\) \{\s*errorMessage = firstMeaningfulLine\(result\.stderr \|\| result\.stdout\) \?\? `npm exited with code \$\{result\.exitCode\}`;\s*\}/);
-    assert.match(source, /return \{\s*success,\s*packageId: definition\.id,\s*operation,\s*status,\s*error: errorMessage,\s*snapshot,/);
+    assert.match(source, /const finalizedStatus = finalizedSnapshot\.packages\.find\(\(item\) => item\.id === definition\.id\);/);
+    assert.match(source, /return \{\s*success,\s*packageId: definition\.id,\s*operation,\s*status: finalizedStatus,\s*error: errorMessage,\s*snapshot: finalizedSnapshot,/);
   });
 
   it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm-sync manifests', async () => {
@@ -138,7 +140,17 @@ describe('dependency management service contract', () => {
     assert.match(source, /if \(success\) \{\s*const verificationError = definitions\s*\.map\(\(definition\) => this\.validatePackageOperationOutcome\(/);
     assert.match(source, /if \(verificationError\) \{\s*success = false;\s*errorMessage = verificationError;\s*\}/);
     assert.match(source, /success \? 'completed' : 'failed'/);
-    assert.match(source, /return \{\s*success,\s*packageIds,\s*operation: 'sync',\s*statuses,\s*error: errorMessage,\s*snapshot,/);
+    assert.match(source, /const finalizedSnapshot = this\.finalizeOperationSnapshot\(snapshot\);/);
+    assert.match(source, /const finalizedStatuses = finalizedSnapshot\.packages\.filter\(\(item\) => packageIds\.includes\(item\.id\)\);/);
+    assert.match(source, /return \{\s*success,\s*packageIds,\s*operation: 'sync',\s*statuses: finalizedStatuses,\s*error: errorMessage,\s*snapshot: finalizedSnapshot,/);
+  });
+
+  it('clears activeOperation from returned terminal snapshots without forcing callers to trigger an extra refresh', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /private finalizeOperationSnapshot\(snapshot: DependencyManagementSnapshot\): DependencyManagementSnapshot \{/);
+    assert.match(source, /activeOperation: this\.activeOperation,/);
+    assert.match(source, /generatedAt: new Date\(\)\.toISOString\(\),/);
   });
 
   it('persists npm mirror settings, derives locale-based defaults before manual changes, and includes them in snapshots', async () => {
