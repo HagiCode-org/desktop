@@ -46,6 +46,14 @@ appx:
   languages:
     - en-US
     - zh-CN
+    - zh-Hant
+    - ja-JP
+    - ko-KR
+    - de-DE
+    - fr-FR
+    - es-ES
+    - pt-BR
+    - ru-RU
   addAutoLaunchExtension: true
 mac:
   target:
