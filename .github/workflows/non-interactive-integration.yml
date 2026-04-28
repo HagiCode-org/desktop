@@ -1,0 +1,117 @@
+name: Desktop Non-Interactive Integration
+
+on:
+  workflow_run:
+    workflows:
+      - Build Hagicode Desktop
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  integration-linux:
+    name: Non-Interactive Integration (Linux)
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Linux ZIP artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/download-workflow-artifact.mjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "${{ github.event.workflow_run.id }}" \
+            --artifact-name "hagicode-linux-zip-${{ github.event.workflow_run.head_sha }}" \
+            --output-dir pkg
+
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
+
+  integration-macos:
+    name: Non-Interactive Integration (macOS)
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: macos-latest
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download macOS ZIP artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/download-workflow-artifact.mjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "${{ github.event.workflow_run.id }}" \
+            --artifact-name "hagicode-macos-zip-${{ github.event.workflow_run.head_sha }}" \
+            --output-dir pkg
+
+      - name: Run non-interactive dependency install integration
+        run: npm run package:non-interactive-integration
+
+  integration-windows:
+    name: Non-Interactive Integration (Windows)
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Windows ZIP artifact
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/download-workflow-artifact.mjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "${{ github.event.workflow_run.id }}" \
+            --artifact-name "hagicode-windows-zip-${{ github.event.workflow_run.head_sha }}" \
+            --output-dir pkg
+
+      - name: Run non-interactive dependency install integration
+        shell: bash
+        run: npm run package:non-interactive-integration
