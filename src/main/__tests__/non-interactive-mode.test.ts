@@ -130,6 +130,7 @@ describe('non-interactive mode parser', () => {
       '/opt/Hagicode Desktop/hagicode',
       '--headless',
       '--disable-gpu',
+      '--disable-setuid-sandbox',
       '--ozone-platform=headless',
       'deps',
       'install',

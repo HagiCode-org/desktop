@@ -73,6 +73,7 @@ export const nonInteractiveUsageText = [
 function isIgnorableLeadingRuntimeFlag(value: string): boolean {
   return value === '--headless'
     || value === '--disable-gpu'
+    || value === '--disable-setuid-sandbox'
     || value === '--no-sandbox'
     || value.startsWith('--ozone-platform=');
 }

@@ -19,6 +19,26 @@ function fail(message) {
   throw new Error(message);
 }
 
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      ...options,
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
+  });
+}
+
 function pathExists(targetPath) {
   return fs.existsSync(targetPath);
 }
@@ -126,6 +146,19 @@ async function restoreExecutablePermissions(root) {
   }));
 }
 
+async function extractZipArtifact(zipArtifact, stagedRoot) {
+  if (process.platform === 'darwin') {
+    const result = await runCommand('ditto', ['-x', '-k', zipArtifact, stagedRoot]);
+    if (result.code !== 0) {
+      fail(`Failed to extract macOS ZIP artifact with ditto.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+    }
+    return;
+  }
+
+  new AdmZip(zipArtifact).extractAllTo(stagedRoot, true);
+  await restoreExecutablePermissions(stagedRoot);
+}
+
 async function copyArtifactToPathWithSpaces() {
   const tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'hagicode cli integration '));
   const stagedRoot = path.join(tempRoot, 'Desktop artifact with spaces');
@@ -140,8 +173,7 @@ async function copyArtifactToPathWithSpaces() {
 
   const zipArtifact = findZipArtifact();
   if (zipArtifact) {
-    new AdmZip(zipArtifact).extractAllTo(stagedRoot, true);
-    await restoreExecutablePermissions(stagedRoot);
+    await extractZipArtifact(zipArtifact, stagedRoot);
     return { tempRoot, artifactRoot: stagedRoot, source: zipArtifact };
   }
 
@@ -225,9 +257,13 @@ function runExecutable(executablePath, userDataDir) {
     && !process.env.DISPLAY
     && !process.env.WAYLAND_DISPLAY;
   const requiresLinuxSandboxOverride = process.platform === 'linux';
-  const launchArgs = requiresLinuxHeadlessSwitches
-    ? ['--headless', '--disable-gpu', '--ozone-platform=headless', ...commandArgs]
-    : commandArgs;
+  const linuxRuntimeArgs = requiresLinuxSandboxOverride
+    ? ['--no-sandbox', '--disable-setuid-sandbox']
+    : [];
+  const headlessRuntimeArgs = requiresLinuxHeadlessSwitches
+    ? ['--headless', '--disable-gpu', '--ozone-platform=headless']
+    : [];
+  const launchArgs = [...linuxRuntimeArgs, ...headlessRuntimeArgs, ...commandArgs];
   const launchEnv = {
     ...process.env,
     HAGICODE_DESKTOP_USER_DATA_DIR: userDataDir,
