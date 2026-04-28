@@ -20,6 +20,18 @@ function fail(message) {
   throw new Error(message);
 }
 
+function readDiagnosticFile(diagnosticLogPath) {
+  if (!diagnosticLogPath || !pathExists(diagnosticLogPath)) {
+    return null;
+  }
+
+  try {
+    return fs.readFileSync(diagnosticLogPath, 'utf8');
+  } catch (error) {
+    return `Failed to read diagnostic log ${diagnosticLogPath}: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -276,6 +288,7 @@ function runExecutable(executablePath, userDataDir) {
     ...process.env,
     HAGICODE_DESKTOP_USER_DATA_DIR: userDataDir,
     HAGICODE_NON_INTERACTIVE_INTEGRATION: '1',
+    HAGICODE_NON_INTERACTIVE_LOG_PATH: path.join(userDataDir, 'non-interactive-startup.log'),
   };
 
   if (requiresLinuxSandboxOverride) {
@@ -363,11 +376,13 @@ async function main() {
 
   const userDataDir = path.join(tempRoot, 'Managed npm user data with spaces');
   await fsp.mkdir(userDataDir, { recursive: true });
+  const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
 
   log(`source artifact: ${source}`);
   log(`staged artifact root: ${artifactRoot}`);
   log(`desktop executable: ${executablePath}`);
   log(`managed userData root: ${userDataDir}`);
+  log(`startup diagnostic log: ${diagnosticLogPath}`);
   log(`command timeout: ${defaultCommandTimeoutMs}ms default`);
   if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
     log('launch mode: headless Linux runtime switches enabled');
@@ -386,11 +401,17 @@ async function main() {
     log(`signal: ${result.signal}`);
   }
   if (result.timedOut) {
-    fail(`Non-interactive command timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+    fail(
+      `Non-interactive command timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
+      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+    );
   }
 
   if (result.code !== 0) {
-    fail(`Non-interactive command failed with exit code ${result.code}.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+    fail(
+      `Non-interactive command failed with exit code ${result.code}.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
+      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+    );
   }
 
   const stdout = result.stdout;

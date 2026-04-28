@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import Store from 'electron-store';
 import log from 'electron-log';
@@ -67,6 +68,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
+const nonInteractiveDiagnosticLogPath = process.env.HAGICODE_NON_INTERACTIVE_LOG_PATH?.trim() || null;
+
+function writeNonInteractiveDiagnostic(message: string, payload?: unknown): void {
+  if (!nonInteractiveDiagnosticLogPath) {
+    return;
+  }
+
+  try {
+    fsSync.mkdirSync(path.dirname(nonInteractiveDiagnosticLogPath), { recursive: true });
+    const suffix = payload === undefined ? '' : ` ${JSON.stringify(payload)}`;
+    fsSync.appendFileSync(
+      nonInteractiveDiagnosticLogPath,
+      `${new Date().toISOString()} ${message}${suffix}\n`,
+      'utf8',
+    );
+  } catch {
+    // Best-effort diagnostics only.
+  }
+}
+
 const nonInteractiveUserArgs = extractNonInteractiveUserArgs(process.argv);
 const nonInteractiveParseResult = parseNonInteractiveCommand(process.argv);
 const nonInteractiveUserDataDir = process.env.HAGICODE_DESKTOP_USER_DATA_DIR?.trim();
@@ -88,6 +109,7 @@ if (process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION === '1') {
       reason: nonInteractiveParseResult.reason,
     };
   console.log('[App] Non-interactive integration argv diagnostic', JSON.stringify(diagnostic));
+  writeNonInteractiveDiagnostic('[App] Non-interactive integration argv diagnostic', diagnostic);
 }
 
 if (nonInteractiveParseResult.handled && nonInteractiveUserDataDir) {
@@ -138,6 +160,7 @@ const gotSingleInstanceLock = nonInteractiveParseResult.handled
 
 if (nonInteractiveParseResult.handled) {
   log.info('[App] Non-interactive command detected before single-instance and UI startup');
+  writeNonInteractiveDiagnostic('[App] Non-interactive command detected before single-instance and UI startup');
 } else if (!gotSingleInstanceLock) {
   log.info('[App] Single instance lock failed - another instance is already running');
   app.quit();
@@ -2082,7 +2105,9 @@ if (!nonInteractiveParseResult.handled) {
 
 app.whenReady().then(async () => {
   if (nonInteractiveParseResult.handled) {
+    writeNonInteractiveDiagnostic('[App] app.whenReady reached for non-interactive command');
     const result = await runNonInteractiveCommand(nonInteractiveParseResult);
+    writeNonInteractiveDiagnostic('[App] Non-interactive command completed', result);
     app.exit(result.exitCode);
     return;
   }
