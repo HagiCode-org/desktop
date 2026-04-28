@@ -113,15 +113,37 @@ function looksLikeAppEntrypoint(value: string): boolean {
     || normalized.endsWith('/package.json');
 }
 
+function shouldSkipLeadingRuntimeFlagValue(value: string): boolean {
+  return value !== 'deps'
+    && !value.startsWith('-')
+    && !looksLikeExecutableArg(value)
+    && !looksLikeAppEntrypoint(value);
+}
+
 export function extractNonInteractiveUserArgs(argv: readonly string[]): string[] {
   const args = [...argv];
 
-  while (args.length > 0 && (
-    looksLikeExecutableArg(args[0])
-    || looksLikeAppEntrypoint(args[0])
-    || isIgnorableLeadingRuntimeFlag(args[0])
-  )) {
-    args.shift();
+  while (args.length > 0) {
+    const current = args[0];
+
+    if (
+      looksLikeExecutableArg(current)
+      || looksLikeAppEntrypoint(current)
+      || isIgnorableLeadingRuntimeFlag(current)
+    ) {
+      args.shift();
+      continue;
+    }
+
+    if (current.startsWith('-')) {
+      args.shift();
+      if (args.length > 0 && shouldSkipLeadingRuntimeFlagValue(args[0])) {
+        args.shift();
+      }
+      continue;
+    }
+
+    break;
   }
 
   return args;
