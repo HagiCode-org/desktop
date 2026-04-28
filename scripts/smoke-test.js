@@ -290,14 +290,37 @@ test('dist directory exists', () => {
   assert(exists, 'dist directory exists');
 
   if (exists) {
+    const bootstrapJs = path.join(distPath, 'main', 'bootstrap.js');
     const mainJs = path.join(distPath, 'main', 'main.js');
     const rendererPath = path.join(distPath, 'renderer');
+    logVerbose(`dist/main/bootstrap.js exists: ${fs.existsSync(bootstrapJs)}`);
     logVerbose(`dist/main/main.js exists: ${fs.existsSync(mainJs)}`);
     logVerbose(`dist/renderer exists: ${fs.existsSync(rendererPath)}`);
   }
 });
 
-test('main process files exist', () => {
+test('main process entry files exist', () => {
+  const bootstrapJs = path.join(process.cwd(), 'dist', 'main', 'bootstrap.js');
+  const mainJs = path.join(process.cwd(), 'dist', 'main', 'main.js');
+  const bootstrapExists = fs.existsSync(bootstrapJs);
+  const mainExists = fs.existsSync(mainJs);
+  assert(bootstrapExists, 'dist/main/bootstrap.js exists');
+  assert(mainExists, 'dist/main/main.js exists');
+
+  if (bootstrapExists) {
+    const stats = fs.statSync(bootstrapJs);
+    logVerbose(`bootstrap.js size: ${stats.size} bytes`);
+    assert(stats.size > 0, 'bootstrap.js is not empty');
+  }
+
+  if (mainExists) {
+    const stats = fs.statSync(mainJs);
+    logVerbose(`main.js size: ${stats.size} bytes`);
+    assert(stats.size > 0, 'main.js is not empty');
+  }
+});
+
+test('legacy main process implementation exists', () => {
   const mainJs = path.join(process.cwd(), 'dist', 'main', 'main.js');
   const exists = fs.existsSync(mainJs);
   assert(exists, 'dist/main/main.js exists');
@@ -343,7 +366,7 @@ test('package.json is valid', () => {
     const content = fs.readFileSync(pkgPath, 'utf8');
     const pkg = JSON.parse(content);
     assert(pkg.name && pkg.version, 'package.json has name and version');
-    assert(pkg.main === 'dist/main/main.js', 'package.json main points to dist/main/main.js');
+    assert(pkg.main === 'dist/main/bootstrap.js', 'package.json main points to dist/main/bootstrap.js');
     logVerbose(`name: ${pkg.name}, version: ${pkg.version}`);
   } catch (error) {
     assert(false, `package.json is valid JSON: ${error.message}`);

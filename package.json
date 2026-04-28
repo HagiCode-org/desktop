@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "npm@10.9.2",
   "description": "Desktop client for Hagicode Server management and monitoring",
-  "main": "dist/main/main.js",
+  "main": "dist/main/bootstrap.js",
   "scripts": {
     "prepare:about-snapshot": "node scripts/generate-about-snapshot.js",
     "prebuild:renderer": "npm run prepare:about-snapshot",
@@ -25,7 +25,7 @@
     "dev:renderer": "vite",
     "dev:main": "tsc --watch",
     "dev:preload": "vite build --config vite.preload.config.ts --watch",
-    "dev:electron": "node scripts/wait-for-dev-ready.js tcp:127.0.0.1:36598 dist/preload/index.mjs dist/main/main.js && cross-env NODE_ENV=development HAGICO_CONFIG_PATH=local_data_root electron .",
+    "dev:electron": "node scripts/wait-for-dev-ready.js tcp:127.0.0.1:36598 dist/preload/index.mjs dist/main/bootstrap.js dist/main/main.js && cross-env NODE_ENV=development HAGICO_CONFIG_PATH=local_data_root electron .",
     "dev": "node -e \"const fs=require('fs');fs.existsSync('dist')&&fs.rmSync('dist',{recursive:true,force:true})\" && concurrently -k \"npm run dev:renderer\" \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:electron\"",
     "start": "npm run build:all && electron .",
     "prebuild": "npm run build:all",

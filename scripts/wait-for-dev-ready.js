@@ -9,7 +9,7 @@ const POLL_INTERVAL_MS = 250;
 const targets = process.argv.slice(2);
 
 if (targets.length === 0) {
-  console.error('Usage: node scripts/wait-for-dev-ready.js tcp:127.0.0.1:36598 dist/preload/index.mjs dist/main/main.js');
+  console.error('Usage: node scripts/wait-for-dev-ready.js tcp:127.0.0.1:36598 dist/preload/index.mjs dist/main/bootstrap.js dist/main/main.js');
   process.exit(1);
 }
 

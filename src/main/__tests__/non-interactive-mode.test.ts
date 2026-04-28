@@ -15,6 +15,7 @@ import type {
 import type { CliDependencyInstallResult } from '../dependency-management-service.js';
 
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
+const bootstrapPath = path.resolve(process.cwd(), 'src/main/bootstrap.ts');
 const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
 
 function createSnapshot(): DependencyManagementSnapshot {
@@ -209,6 +210,24 @@ describe('non-interactive mode parser', () => {
     }
   });
 
+  it('ignores bootstrap entrypoints before the non-interactive command', () => {
+    const result = parseNonInteractiveCommand([
+      '/tmp/Hagicode Desktop/node',
+      '/tmp/Hagicode Desktop/dist/main/bootstrap.js',
+      'deps',
+      'install',
+      '--claude-code',
+      '--codex',
+    ]);
+
+    assert.equal(result.handled, true);
+    assert.equal(result.ok, true);
+    if (result.handled && result.ok) {
+      assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
+      assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
+    }
+  });
+
   it('rejects unsupported command names, unsupported flags, duplicate flags, and empty package selections', () => {
     const unsupportedCommand = parseNonInteractiveCommand(['hagicode', 'sync', 'install']);
     assert.equal(unsupportedCommand.handled, true);
@@ -309,6 +328,20 @@ describe('non-interactive mode dispatch', () => {
     assert.ok(createTrayIndex > runIndex);
     assert.match(source, /const gotSingleInstanceLock = nonInteractiveParseResult\.handled\s*\?\s*true\s*:\s*app\.requestSingleInstanceLock\(\);/);
     assert.match(source, /if \(!nonInteractiveParseResult\.handled\) \{\s*app\.on\('second-instance'/);
+  });
+
+  it('keeps the packaged entrypoint lightweight before GUI startup imports', async () => {
+    const source = await fs.readFile(bootstrapPath, 'utf8');
+    const parseIndex = source.indexOf('parseNonInteractiveCommand(process.argv)');
+    const runIndex = source.indexOf('runNonInteractiveCommand(nonInteractiveParseResult)');
+    const guiImportIndex = source.indexOf("await import('./main.js')");
+
+    assert.ok(parseIndex >= 0);
+    assert.ok(runIndex > parseIndex);
+    assert.ok(guiImportIndex > parseIndex);
+    assert.doesNotMatch(source, /from '\.\/main\.js'/);
+    assert.match(source, /if \(nonInteractiveParseResult\.handled\) \{\s*await runNonInteractiveBootstrap\(\);/);
+    assert.match(source, /Integration mode did not include a supported command/);
   });
 });
 

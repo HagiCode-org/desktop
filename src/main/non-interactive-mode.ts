@@ -112,7 +112,10 @@ function looksLikeAppEntrypoint(value: string): boolean {
   return value === '.'
     || normalized.endsWith('/dist/main/main.js')
     || normalized.endsWith('/dist/main/main.mjs')
+    || normalized.endsWith('/dist/main/bootstrap.js')
+    || normalized.endsWith('/dist/main/bootstrap.mjs')
     || normalized.endsWith('/src/main/main.ts')
+    || normalized.endsWith('/src/main/bootstrap.ts')
     || normalized.endsWith('/package.json');
 }
 
