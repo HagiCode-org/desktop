@@ -810,6 +810,7 @@ export class PCodeWebServiceManager {
       host: this.config.host,
       port: this.config.port,
       dataDir,
+      currentDesktopLanguage: this.configManager?.getCurrentLanguage() ?? null,
       steamIntegrationEnabled: steamIntegration.integrationEnabled,
       steamIntegrationSource: steamIntegration.integrationSource === 'distribution-mode'
         ? 'distribution-mode'

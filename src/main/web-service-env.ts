@@ -1,3 +1,8 @@
+import {
+  DEFAULT_DESKTOP_LANGUAGE,
+  normalizeDesktopLanguageCode,
+} from '../shared/desktop-languages.js';
+
 export type WebServiceConfigMode = 'env' | 'legacy-yaml';
 
 export type EnvSnapshotLogLevel = 'off' | 'summary' | 'detailed';
@@ -27,6 +32,7 @@ export interface BuildManagedEnvInput {
   host: string;
   port: number;
   dataDir?: string | null;
+  currentDesktopLanguage?: string | null;
   steamIntegrationEnabled?: boolean;
   steamIntegrationSource?: SteamManagedEnvSource;
   steamAchievementSyncEnabled?: boolean;
@@ -86,6 +92,12 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     required: true,
     sensitive: false,
     defaultValue: 'plain',
+  },
+  {
+    key: 'HAGICODE_LANGUAGE',
+    sourceConfig: 'desktop language preference',
+    required: true,
+    sensitive: false,
   },
   {
     key: 'HAGICODE_STEAM_INTEGRATION_ENABLED',
@@ -206,6 +218,10 @@ function resolveSnapshotSourceConfig(
         : 'desktop Steam-mode detection (non-Steam launch)';
   }
 
+  if (definition.key === 'HAGICODE_LANGUAGE') {
+    return describeManagedDesktopLanguageSourceConfig(input.currentDesktopLanguage);
+  }
+
   return definition.sourceConfig;
 }
 
@@ -242,6 +258,10 @@ function resolveValue(
     };
   }
 
+  if (definition.key === 'HAGICODE_LANGUAGE') {
+    return resolveManagedDesktopLanguageEnv(input, existingEnv);
+  }
+
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
     return normalizeResolvedValue(definition, existingValue, 'existing-env');
@@ -261,6 +281,62 @@ function resolveValue(
 
 function boolEnvValue(value: boolean | undefined): string {
   return value === true ? 'true' : 'false';
+}
+
+function resolveManagedDesktopLanguageEnv(
+  input: BuildManagedEnvInput,
+  existingEnv: Record<string, string | undefined>,
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  const inheritedLanguage = sanitizeString(existingEnv.HAGICODE_LANGUAGE);
+  const rawDesktopLanguage = sanitizeString(input.currentDesktopLanguage) ?? DEFAULT_DESKTOP_LANGUAGE;
+
+  if (rawDesktopLanguage.length > MAX_ENV_VALUE_LENGTH) {
+    return {
+      value: rawDesktopLanguage,
+      source: 'runtime',
+      warning: inheritedLanguage
+        ? `Ignored inherited HAGICODE_LANGUAGE='${inheritedLanguage}' because Desktop manages this value from the current language preference.`
+        : undefined,
+    };
+  }
+
+  const value = normalizeDesktopLanguageForBackend(rawDesktopLanguage);
+  const warning = inheritedLanguage
+    ? `Ignored inherited HAGICODE_LANGUAGE='${inheritedLanguage}' because Desktop manages this value from the current language preference.`
+    : undefined;
+
+  return {
+    value,
+    source: 'runtime',
+    warning,
+  };
+}
+
+function normalizeDesktopLanguageForBackend(language: string | null | undefined): 'zh-CN' | 'en-US' {
+  const normalizedDesktopLanguage = normalizeDesktopLanguageCode(language) ?? DEFAULT_DESKTOP_LANGUAGE;
+  return normalizedDesktopLanguage === 'zh-CN' || normalizedDesktopLanguage === 'zh-Hant'
+    ? 'zh-CN'
+    : 'en-US';
+}
+
+function describeManagedDesktopLanguageSourceConfig(language: string | null | undefined): string {
+  const rawDesktopLanguage = sanitizeString(language);
+  const normalizedDesktopLanguage = normalizeDesktopLanguageCode(rawDesktopLanguage);
+  const backendLanguage = normalizeDesktopLanguageForBackend(rawDesktopLanguage);
+
+  if (!rawDesktopLanguage || !normalizedDesktopLanguage) {
+    return `desktop language preference (defaulted to ${backendLanguage})`;
+  }
+
+  if (normalizedDesktopLanguage === 'zh-CN' || normalizedDesktopLanguage === 'zh-Hant') {
+    return normalizedDesktopLanguage === 'zh-CN'
+      ? 'desktop language preference (zh-CN)'
+      : `desktop language preference (${normalizedDesktopLanguage} -> zh-CN)`;
+  }
+
+  return normalizedDesktopLanguage === 'en-US'
+    ? 'desktop language preference (en-US)'
+    : `desktop language preference (${normalizedDesktopLanguage} -> en-US)`;
 }
 
 function normalizeResolvedValue(

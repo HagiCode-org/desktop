@@ -34,6 +34,7 @@ describe('web-service-env', () => {
       host: '127.0.0.1',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
     });
@@ -44,6 +45,7 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.DATADIR, '/tmp/hagicode-data');
     assert.equal(result.injectedEnv.Database__Provider, undefined);
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
+    assert.equal(result.injectedEnv.HAGICODE_LANGUAGE, 'zh-CN');
     assert.equal(result.injectedEnv.HAGICODE_LOG_FORMAT, 'plain');
     assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'false');
     assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'false');
@@ -62,6 +64,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'distribution-mode',
       steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
@@ -94,6 +97,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'distribution-mode',
       steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
@@ -118,6 +122,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'disabled-non-steam',
       steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
@@ -153,6 +158,7 @@ describe('web-service-env', () => {
       host: '0.0.0.0',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
     });
@@ -160,6 +166,7 @@ describe('web-service-env', () => {
       host: '192.168.1.24',
       port: 36556,
       dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
     });
@@ -175,6 +182,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
         ConnectionStrings: { Default: 'Data Source=/runtime/data/hagicode.db;Cache=Shared' },
@@ -196,6 +204,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         AI: { Service: { DefaultExecutorType: 'CodexCli' } },
       },
@@ -211,6 +220,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         ConnectionStrings: { Default: 'Data Source=/yaml/hagicode.db' },
       },
@@ -228,6 +238,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
         ConnectionStrings: { Default: 'Host=db;Database=hagicode;Username=postgres;Password=secret' },
@@ -252,6 +263,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/runtime/data',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         GitHub: {
           ClientId: 'legacy-client-id',
@@ -267,6 +279,68 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.GitHub__ClientId, undefined);
     assert.equal(result.injectedEnv.GitHub__ClientSecret, undefined);
     assert.equal(result.snapshot.some(entry => entry.key.startsWith('GitHub__')), false);
+  });
+
+  it('normalizes the Desktop language for backend startup seeding and records Desktop as the source', () => {
+    const chinese = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-Hant',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+    const english = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'en-US',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+    const fallback = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'ja-JP',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(chinese.injectedEnv.HAGICODE_LANGUAGE, 'zh-CN');
+    assert.equal(english.injectedEnv.HAGICODE_LANGUAGE, 'en-US');
+    assert.equal(fallback.injectedEnv.HAGICODE_LANGUAGE, 'en-US');
+    assert.equal(
+      chinese.snapshot.find(entry => entry.key === 'HAGICODE_LANGUAGE')?.sourceConfig,
+      'desktop language preference (zh-Hant -> zh-CN)',
+    );
+    assert.equal(
+      english.snapshot.find(entry => entry.key === 'HAGICODE_LANGUAGE')?.sourceConfig,
+      'desktop language preference (en-US)',
+    );
+    assert.equal(
+      fallback.snapshot.find(entry => entry.key === 'HAGICODE_LANGUAGE')?.sourceConfig,
+      'desktop language preference (ja-JP -> en-US)',
+    );
+  });
+
+  it('ignores inherited or historical HAGICODE_LANGUAGE values and keeps the Desktop-managed value', () => {
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
+      yamlConfig: null,
+      existingEnv: {
+        HAGICODE_LANGUAGE: 'invalid-locale',
+      },
+    });
+
+    assert.equal(result.injectedEnv.HAGICODE_LANGUAGE, 'zh-CN');
+    assert.equal(
+      result.warnings.some((warning) => warning.includes("Ignored inherited HAGICODE_LANGUAGE='invalid-locale'")),
+      true,
+    );
   });
 
   it('masks generic sensitive env values in logs', () => {
@@ -399,6 +473,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 36556,
       dataDir: '/tmp/hagicode-integration',
+      currentDesktopLanguage: 'en-US',
       systemVaultEnvEntries: {
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Name`]: 'Desktop Logs',
@@ -420,6 +495,7 @@ describe('web-service-env', () => {
         process.env.ASPNETCORE_URLS,
         process.env.Urls,
         process.env.DATADIR,
+        process.env.HAGICODE_LANGUAGE,
         process.env.AI__Providers__DefaultProvider,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath
@@ -429,7 +505,7 @@ describe('web-service-env', () => {
     assert.equal(child.status, 0);
     assert.equal(
       child.stdout,
-      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
+      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
     );
   });
 
@@ -641,6 +717,7 @@ describe('web-service-env', () => {
       host: 'localhost',
       port: 5000,
       dataDir: '/tmp/hagicode-migrate',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
         ConnectionStrings: { Default: 'Data Source=/tmp/hagicode-migrate/hagicode.db' },
@@ -660,6 +737,7 @@ describe('web-service-env', () => {
       host: '',
       port: 0,
       dataDir: '',
+      currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {
         HAGICODE_LOG_FORMAT: 'x'.repeat(40000),
