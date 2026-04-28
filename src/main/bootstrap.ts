@@ -7,11 +7,30 @@ import {
   parseNonInteractiveCommand,
   runNonInteractiveCommand,
 } from './non-interactive-mode.js';
+import {
+  applyHagicodeEnvFile,
+  collectBootstrapRuntimeEnvOverrides,
+  formatHagicodeEnvDiagnostics,
+} from './startup/hagicode-env.js';
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));
   const value = match?.slice(prefix.length).trim();
   return value ? value : null;
+}
+
+const hagicodeEnvResult = await applyHagicodeEnvFile({
+  argv: process.argv,
+  cliOverrides: collectBootstrapRuntimeEnvOverrides(process.argv),
+  cwd: process.cwd(),
+  env: process.env,
+  execPath: process.execPath,
+  platform: process.platform,
+  resourcesPath: process.resourcesPath,
+});
+
+for (const message of formatHagicodeEnvDiagnostics(hagicodeEnvResult)) {
+  console.warn(message);
 }
 
 const nonInteractiveIntegrationMode = process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION === '1'
