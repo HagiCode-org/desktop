@@ -14,6 +14,7 @@ import {
 import { evaluateDependencyReadiness, npmInstallableAgentCliPackages } from '../../../shared/npm-managed-packages.js';
 import type { ManagedNpmPackageId, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
 import {
+  type OnboardingDependencyOperationRejectedPayload,
   acceptLegalDocuments,
   checkOnboardingTrigger,
   declineLegalDocuments,
@@ -68,6 +69,16 @@ function applyDependencySnapshot(state: OnboardingState, snapshot: DependencyMan
   state.dependencySnapshot = snapshot;
   state.dependencyReadiness = evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds);
   state.isDependencyPreparationComplete = state.dependencyReadiness.ready;
+}
+
+function readDependencyOperationRejectedPayload(payload: unknown): OnboardingDependencyOperationRejectedPayload {
+  if (typeof payload === 'object' && payload !== null && 'message' in payload) {
+    return payload as OnboardingDependencyOperationRejectedPayload;
+  }
+
+  return {
+    message: typeof payload === 'string' ? payload : 'Failed to install npm packages',
+  };
 }
 
 const initialState: OnboardingState = {
@@ -444,7 +455,12 @@ export const onboardingSlice = createSlice({
       })
       .addCase(installOnboardingDependencyPackages.rejected, (state, action) => {
         state.isDependencyOperationActive = false;
-        state.dependencyOperationError = action.payload as string || 'Failed to install npm packages';
+        const payload = readDependencyOperationRejectedPayload(action.payload);
+        if (payload.snapshot) {
+          state.dependencySnapshotStatus = 'ready';
+          applyDependencySnapshot(state, payload.snapshot);
+        }
+        state.dependencyOperationError = payload.message;
         state.isDependencyPreparationComplete = false;
       });
   },

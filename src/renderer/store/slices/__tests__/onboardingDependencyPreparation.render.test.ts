@@ -45,9 +45,26 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(thunksSource, /packageIds\.includes\('hagiscript'\)/);
     assert.match(thunksSource, /dependencyManagement\.install\('hagiscript'\)/);
     assert.match(thunksSource, /dependencyManagement\.syncPackages\(\{ packageIds: syncPackageIds \}\)/);
+    assert.match(thunksSource, /latestSnapshot = result\.snapshot/);
+    assert.match(thunksSource, /return latestSnapshot \?\? await window\.electronAPI\.dependencyManagement\.refresh\(\)/);
     assert.match(stepSource, /dependencyManagement\.onProgress/);
     assert.match(stepSource, /setOnboardingDependencyProgress\(event\)/);
     assert.match(stepSource, /confirmDisabled = !environmentAvailable \|\| isDependencyOperationActive \|\| !hasSelectedAgentCli/);
+  });
+
+  it('keeps failed dependency operation snapshots and error text for readiness reevaluation', async () => {
+    const [sliceSource, thunksSource] = await Promise.all([
+      fs.readFile(slicePath, 'utf8'),
+      fs.readFile(thunksPath, 'utf8'),
+    ]);
+
+    assert.match(thunksSource, /rejectWithValue\(\{\s*message: result\.error \|\| 'Failed to install hagiscript',\s*snapshot: result\.snapshot,/);
+    assert.match(thunksSource, /rejectWithValue\(\{\s*message: result\.error \|\| 'Failed to install npm packages',\s*snapshot: result\.snapshot,/);
+    assert.match(sliceSource, /readDependencyOperationRejectedPayload\(action\.payload\)/);
+    assert.match(sliceSource, /if \(payload\.snapshot\) \{/);
+    assert.match(sliceSource, /applyDependencySnapshot\(state, payload\.snapshot\)/);
+    assert.match(sliceSource, /state\.dependencyOperationError = payload\.message/);
+    assert.match(sliceSource, /state\.isDependencyPreparationComplete = false/);
   });
 
   it('adds localized Desktop-managed npm environment and readiness copy', async () => {
