@@ -10,6 +10,7 @@ import AdmZip from 'adm-zip';
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, 'pkg');
 const commandArgs = ['deps', 'install', '--claude-code', '--codex'];
+const defaultCommandTimeoutMs = 240_000;
 
 function log(message) {
   console.log(`[non-interactive-integration] ${message}`);
@@ -257,6 +258,13 @@ function runExecutable(executablePath, userDataDir) {
     && !process.env.DISPLAY
     && !process.env.WAYLAND_DISPLAY;
   const requiresLinuxSandboxOverride = process.platform === 'linux';
+  const configuredTimeoutMs = Number.parseInt(
+    process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS ?? '',
+    10,
+  );
+  const commandTimeoutMs = Number.isFinite(configuredTimeoutMs) && configuredTimeoutMs > 0
+    ? configuredTimeoutMs
+    : defaultCommandTimeoutMs;
   const linuxRuntimeArgs = requiresLinuxSandboxOverride
     ? ['--no-sandbox', '--disable-setuid-sandbox']
     : [];
@@ -289,6 +297,20 @@ function runExecutable(executablePath, userDataDir) {
 
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
+    let forceKillTimer = null;
+    const timeoutTimer = setTimeout(() => {
+      timedOut = true;
+      log(`command timeout exceeded after ${commandTimeoutMs}ms, sending SIGTERM`);
+      child.kill('SIGTERM');
+      forceKillTimer = setTimeout(() => {
+        log('process still running 10s after SIGTERM, sending SIGKILL');
+        child.kill('SIGKILL');
+      }, 10_000);
+      forceKillTimer.unref?.();
+    }, commandTimeoutMs);
+    timeoutTimer.unref?.();
+
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
       process.stdout.write(chunk);
@@ -297,7 +319,20 @@ function runExecutable(executablePath, userDataDir) {
       stderr += chunk.toString();
       process.stderr.write(chunk);
     });
-    child.on('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
+    child.on('close', (code, signal) => {
+      clearTimeout(timeoutTimer);
+      if (forceKillTimer) {
+        clearTimeout(forceKillTimer);
+      }
+      resolve({
+        code,
+        signal,
+        stdout,
+        stderr,
+        timedOut,
+        timeoutMs: commandTimeoutMs,
+      });
+    });
   });
 }
 
@@ -333,6 +368,7 @@ async function main() {
   log(`staged artifact root: ${artifactRoot}`);
   log(`desktop executable: ${executablePath}`);
   log(`managed userData root: ${userDataDir}`);
+  log(`command timeout: ${defaultCommandTimeoutMs}ms default`);
   if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
     log('launch mode: headless Linux runtime switches enabled');
   }
@@ -348,6 +384,9 @@ async function main() {
   log(`exit code: ${result.code}`);
   if (result.signal) {
     log(`signal: ${result.signal}`);
+  }
+  if (result.timedOut) {
+    fail(`Non-interactive command timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
   }
 
   if (result.code !== 0) {

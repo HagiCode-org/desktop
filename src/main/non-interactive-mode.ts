@@ -75,6 +75,7 @@ function isIgnorableLeadingRuntimeFlag(value: string): boolean {
     || value === '--disable-gpu'
     || value === '--disable-setuid-sandbox'
     || value === '--no-sandbox'
+    || value.startsWith('-psn_')
     || value.startsWith('--ozone-platform=');
 }
 

@@ -35,7 +35,7 @@ import {
 } from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
-import { parseNonInteractiveCommand, runNonInteractiveCommand } from './non-interactive-mode.js';
+import { extractNonInteractiveUserArgs, parseNonInteractiveCommand, runNonInteractiveCommand } from './non-interactive-mode.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
   registerWindowHandlers,
@@ -67,8 +67,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
+const nonInteractiveUserArgs = extractNonInteractiveUserArgs(process.argv);
 const nonInteractiveParseResult = parseNonInteractiveCommand(process.argv);
 const nonInteractiveUserDataDir = process.env.HAGICODE_DESKTOP_USER_DATA_DIR?.trim();
+
+if (process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION === '1') {
+  const diagnostic = nonInteractiveParseResult.handled
+    ? {
+      argv: process.argv,
+      extractedUserArgs: nonInteractiveUserArgs,
+      handled: true,
+      ok: nonInteractiveParseResult.ok,
+      userArgs: nonInteractiveParseResult.userArgs,
+      error: nonInteractiveParseResult.ok ? null : nonInteractiveParseResult.error,
+    }
+    : {
+      argv: process.argv,
+      extractedUserArgs: nonInteractiveUserArgs,
+      handled: false,
+      reason: nonInteractiveParseResult.reason,
+    };
+  console.log('[App] Non-interactive integration argv diagnostic', JSON.stringify(diagnostic));
+}
 
 if (nonInteractiveParseResult.handled && nonInteractiveUserDataDir) {
   app.setPath('userData', path.resolve(nonInteractiveUserDataDir));

@@ -146,6 +146,24 @@ describe('non-interactive mode parser', () => {
     }
   });
 
+  it('ignores the macOS LaunchServices psn prefix before the non-interactive command', () => {
+    const result = parseNonInteractiveCommand([
+      '/Applications/Hagicode Desktop.app/Contents/MacOS/Hagicode Desktop',
+      '-psn_0_12345',
+      'deps',
+      'install',
+      '--claude-code',
+      '--codex',
+    ]);
+
+    assert.equal(result.handled, true);
+    assert.equal(result.ok, true);
+    if (result.handled && result.ok) {
+      assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
+      assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
+    }
+  });
+
   it('strips repeated executable and runtime argv prefixes before parsing the command', () => {
     const result = parseNonInteractiveCommand([
       '/tmp/Hagicode Desktop/hagicode-desktop',
