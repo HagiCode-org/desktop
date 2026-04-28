@@ -68,7 +68,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
-const nonInteractiveDiagnosticLogPath = process.env.HAGICODE_NON_INTERACTIVE_LOG_PATH?.trim() || null;
+
+function findRuntimeArgValue(prefix: string): string | null {
+  const match = process.argv.find((arg) => arg.startsWith(prefix));
+  const value = match?.slice(prefix.length).trim();
+  return value ? value : null;
+}
+
+const nonInteractiveIntegrationMode = process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION === '1'
+  || process.argv.includes('--hagicode-non-interactive-integration');
+const nonInteractiveDiagnosticLogPath = findRuntimeArgValue('--hagicode-non-interactive-log-path=')
+  ?? process.env.HAGICODE_NON_INTERACTIVE_LOG_PATH?.trim()
+  ?? null;
 
 function writeNonInteractiveDiagnostic(message: string, payload?: unknown): void {
   if (!nonInteractiveDiagnosticLogPath) {
@@ -90,9 +101,11 @@ function writeNonInteractiveDiagnostic(message: string, payload?: unknown): void
 
 const nonInteractiveUserArgs = extractNonInteractiveUserArgs(process.argv);
 const nonInteractiveParseResult = parseNonInteractiveCommand(process.argv);
-const nonInteractiveUserDataDir = process.env.HAGICODE_DESKTOP_USER_DATA_DIR?.trim();
+const nonInteractiveUserDataDir = findRuntimeArgValue('--hagicode-user-data-dir=')
+  ?? process.env.HAGICODE_DESKTOP_USER_DATA_DIR?.trim()
+  ?? null;
 
-if (process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION === '1') {
+if (nonInteractiveIntegrationMode) {
   const diagnostic = nonInteractiveParseResult.handled
     ? {
       argv: process.argv,

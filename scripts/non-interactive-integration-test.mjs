@@ -270,6 +270,7 @@ function runExecutable(executablePath, userDataDir) {
     && !process.env.DISPLAY
     && !process.env.WAYLAND_DISPLAY;
   const requiresLinuxSandboxOverride = process.platform === 'linux';
+  const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
   const configuredTimeoutMs = Number.parseInt(
     process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS ?? '',
     10,
@@ -283,12 +284,17 @@ function runExecutable(executablePath, userDataDir) {
   const headlessRuntimeArgs = requiresLinuxHeadlessSwitches
     ? ['--headless', '--disable-gpu', '--ozone-platform=headless']
     : [];
-  const launchArgs = [...linuxRuntimeArgs, ...headlessRuntimeArgs, ...commandArgs];
+  const harnessRuntimeArgs = [
+    '--hagicode-non-interactive-integration',
+    `--hagicode-user-data-dir=${userDataDir}`,
+    `--hagicode-non-interactive-log-path=${diagnosticLogPath}`,
+  ];
+  const launchArgs = [...linuxRuntimeArgs, ...headlessRuntimeArgs, ...harnessRuntimeArgs, ...commandArgs];
   const launchEnv = {
     ...process.env,
     HAGICODE_DESKTOP_USER_DATA_DIR: userDataDir,
     HAGICODE_NON_INTERACTIVE_INTEGRATION: '1',
-    HAGICODE_NON_INTERACTIVE_LOG_PATH: path.join(userDataDir, 'non-interactive-startup.log'),
+    HAGICODE_NON_INTERACTIVE_LOG_PATH: diagnosticLogPath,
   };
 
   if (requiresLinuxSandboxOverride) {

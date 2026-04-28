@@ -75,6 +75,9 @@ function isIgnorableLeadingRuntimeFlag(value: string): boolean {
     || value === '--disable-gpu'
     || value === '--disable-setuid-sandbox'
     || value === '--no-sandbox'
+    || value === '--hagicode-non-interactive-integration'
+    || value.startsWith('--hagicode-user-data-dir=')
+    || value.startsWith('--hagicode-non-interactive-log-path=')
     || value.startsWith('-psn_')
     || value.startsWith('--ozone-platform=');
 }
