@@ -64,14 +64,19 @@ export default function DependencyManagementPage() {
     void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'));
   };
 
+  const applySnapshot = (nextSnapshot: DependencyManagementSnapshot) => {
+    startTransition(() => {
+      setSnapshot(nextSnapshot);
+      setPageStatus('ready');
+      setErrorMessage(null);
+    });
+  };
+
   const refreshSnapshot = async () => {
     setErrorMessage(null);
     try {
       const nextSnapshot = await getDependencyManagementBridge().refresh();
-      startTransition(() => {
-        setSnapshot(nextSnapshot);
-        setPageStatus('ready');
-      });
+      applySnapshot(nextSnapshot);
     } catch (error) {
       setPageStatus('error');
       setErrorMessage(error instanceof Error ? error.message : String(error));
@@ -155,7 +160,7 @@ export default function DependencyManagementPage() {
       const result = action === 'install'
         ? await getDependencyManagementBridge().install(packageId)
         : await getDependencyManagementBridge().uninstall(packageId);
-      setSnapshot(result.snapshot);
+      applySnapshot(result.snapshot);
       if (!result.success) {
         setOperationError((current) => ({ ...current, [packageId]: result.error ?? t('dependencyManagement.errors.operationFailed') }));
       }
@@ -188,7 +193,7 @@ export default function DependencyManagementPage() {
 
     try {
       const result = await getDependencyManagementBridge().syncPackages({ packageIds });
-      setSnapshot(result.snapshot);
+      applySnapshot(result.snapshot);
       if (result.success) {
         setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
           ? { ...current, status: 'completed', error: undefined }
@@ -276,10 +281,7 @@ export default function DependencyManagementPage() {
     setRepairCompletionState('checking');
     try {
       const nextSnapshot = await getDependencyManagementBridge().refresh();
-      startTransition(() => {
-        setSnapshot(nextSnapshot);
-        setPageStatus('ready');
-      });
+      applySnapshot(nextSnapshot);
 
       const nextEvaluation = evaluateDependencyRepairIntent(nextSnapshot.packages, repairIntent);
       if (nextEvaluation.ready) {

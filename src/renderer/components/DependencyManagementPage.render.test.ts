@@ -176,7 +176,7 @@ describe('dependency management renderer wiring', () => {
       fs.readFile(packageGroupsPath, 'utf8'),
     ]);
 
-    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /applySnapshot\(result\.snapshot\);/);
     assert.match(pageSource, /if \(!result\.success\) \{/);
     assert.match(pageSource, /setOperationError\(\(current\) => \(\{ \.\.\.current, \[packageId\]: undefined \}\)\);/);
     assert.match(pageSource, /hagiscript\?\.status === 'installed' && Boolean\(hagiscript\.executablePath\)/);
@@ -192,7 +192,7 @@ describe('dependency management renderer wiring', () => {
       fs.readFile(packageGroupsPath, 'utf8'),
     ]);
 
-    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /applySnapshot\(result\.snapshot\);/);
     assert.match(pageSource, /\[packageId\]: result\.error \?\? t\('dependencyManagement\.errors\.operationFailed'\)/);
     assert.match(pageSource, /status: 'failed', error: result\.error \?\? t\('dependencyManagement\.errors\.operationFailed'\)/);
     assert.match(packageGroupsSource, /!hagiscriptGateOpen && \(/);
@@ -207,7 +207,7 @@ describe('dependency management renderer wiring', () => {
     ]);
 
     assert.match(pageSource, /const packageIds = selectedEligibleIds;/);
-    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /applySnapshot\(result\.snapshot\);/);
     assert.match(pageSource, /status: 'completed', error: undefined/);
     assert.match(pageSource, /setSelectedPackageIds\(\[\]\);/);
     assert.match(pageSource, /pruneSelectedPackageIds\(current, nextManagedPackages/);
