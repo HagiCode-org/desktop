@@ -35,6 +35,7 @@ import {
 } from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
+import { parseNonInteractiveCommand, runNonInteractiveCommand } from './non-interactive-mode.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
   registerWindowHandlers,
@@ -66,6 +67,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
+const nonInteractiveParseResult = parseNonInteractiveCommand(process.argv);
+const nonInteractiveUserDataDir = process.env.HAGICODE_DESKTOP_USER_DATA_DIR?.trim();
+
+if (nonInteractiveParseResult.handled && nonInteractiveUserDataDir) {
+  app.setPath('userData', path.resolve(nonInteractiveUserDataDir));
+  app.setAppLogsPath(path.resolve(nonInteractiveUserDataDir, 'logs'));
+}
 
 const electronSandboxOverrideDecision = applyElectronSandboxOverride(app, {
   env: process.env,
@@ -104,9 +112,13 @@ process.on('unhandledRejection', (reason: unknown) => {
  * When a second instance is launched, it exits immediately and focuses the
  * existing instance's main window.
  */
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
+const gotSingleInstanceLock = nonInteractiveParseResult.handled
+  ? true
+  : app.requestSingleInstanceLock();
 
-if (!gotSingleInstanceLock) {
+if (nonInteractiveParseResult.handled) {
+  log.info('[App] Non-interactive command detected before single-instance and UI startup');
+} else if (!gotSingleInstanceLock) {
   log.info('[App] Single instance lock failed - another instance is already running');
   app.quit();
 } else {
@@ -2029,24 +2041,32 @@ function startWebServiceStatusPolling(): void {
  * When a user tries to launch a second instance, this event is fired in the
  * primary instance. We focus the existing main window instead of creating a new one.
  */
-app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
-  log.info('[App] Second instance launch detected, focusing existing window');
+if (!nonInteractiveParseResult.handled) {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+    log.info('[App] Second instance launch detected, focusing existing window');
 
-  // Restore and focus the main window
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-      log.info('[App] Window was minimized, restored');
+    // Restore and focus the main window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+        log.info('[App] Window was minimized, restored');
+      }
+      mainWindow.show();
+      mainWindow.focus();
+      log.info('[App] Main window focused');
+    } else {
+      log.warn('[App] No main window found to focus');
     }
-    mainWindow.show();
-    mainWindow.focus();
-    log.info('[App] Main window focused');
-  } else {
-    log.warn('[App] No main window found to focus');
-  }
-});
+  });
+}
 
 app.whenReady().then(async () => {
+  if (nonInteractiveParseResult.handled) {
+    const result = await runNonInteractiveCommand(nonInteractiveParseResult);
+    app.exit(result.exitCode);
+    return;
+  }
+
   configManager = new ConfigManager();
   (configManager.getStore() as unknown as Store<Record<string, unknown>>).delete('debugMode');
   const serverConfig = configManager.getServerConfig();

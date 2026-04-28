@@ -110,6 +110,11 @@ describe('dependency management service contract', () => {
     assert.match(source, /environment\.npmGlobalPrefix/);
     assert.match(source, /'--manifest'/);
     assert.match(source, /'--registry-mirror'/);
+    assert.match(source, /private buildHagiscriptCommandEnv\(/);
+    assert.match(source, /env\.npm_config_prefix = environment\.npmGlobalPrefix;/);
+    assert.match(source, /env\.NPM_CONFIG_PREFIX = environment\.npmGlobalPrefix;/);
+    assert.match(source, /env\.npm_config_global_prefix = environment\.npmGlobalPrefix;/);
+    assert.match(source, /env\.NPM_CONFIG_GLOBAL_PREFIX = environment\.npmGlobalPrefix;/);
   });
 
   it('gates non-hagiscript mutations and validates batch sync package ids before spawning', async () => {
@@ -208,7 +213,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /installMode: 'embedded-npm'/);
     assert.match(source, /installMode: 'hagiscript-sync'/);
     assert.match(source, /packageName: '@hagicode\/hagiscript'/);
-    assert.match(source, /installSpec: '@hagicode\/hagiscript'/);
+    assert.match(source, /installSpec: '@hagicode\/hagiscript@>=0\.1\.5'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /packageName: 'pm2'/);
@@ -296,6 +301,7 @@ describe('dependency management service contract', () => {
     ]);
     assert.match(source, /const manifest = await this\.writeHagiscriptSyncManifest\(definitions\);/);
     assert.match(source, /this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\)/);
+    assert.match(source, /const commandEnv = this\.buildHagiscriptCommandEnv\(activationPolicy, environment\);/);
     assert.match(source, /const result = await this\.runCommand\(\s*hagiscriptExecutablePath,\s*this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\),/);
   });
 
