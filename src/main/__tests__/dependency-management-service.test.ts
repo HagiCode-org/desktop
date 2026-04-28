@@ -26,10 +26,10 @@ describe('dependency management service contract', () => {
     assert.match(source, /getPortableNodeRoot\(\)/);
     assert.doesNotMatch(source, /DevNodeRuntimeManager/);
     assert.doesNotMatch(source, /devStatus/);
-    assert.match(source, /path\.join\(this\.pathManager\.getPortableToolchainRoot\(\), 'npm-cache'\)/);
-    assert.match(source, /return this\.getNodeRuntimeRoot\(activationPolicy\)/);
-    assert.match(source, /getNpmGlobalBinRoot\(npmGlobalPrefix\)/);
-    assert.match(source, /path\.join\(this\.getNpmGlobalPrefix\(activationPolicy\), 'node_modules', 'npm', 'bin', 'npm-cli\.js'\)/);
+    assert.match(source, /this\.pathManager\.getNodeMajorNpmGlobalPaths\(\{/);
+    assert.match(source, /nodeVersion: nodeVersion \?\? process\.versions\.node/);
+    assert.match(source, /npmGlobalPaths,/);
+    assert.match(source, /env\.npm_execpath = this\.getBundledNpmCliPath\(nodeRuntimeRoot\);/);
     assert.match(source, /private buildNpmExecution\(/);
     assert.match(source, /private async detectNpmVersion\(/);
     assert.match(source, /private runNpmCommand\(/);
@@ -106,6 +106,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /'npm-sync'/);
     assert.match(source, /'--runtime'/);
     assert.match(source, /environment\.nodeRuntimeRoot/);
+    assert.match(source, /'--prefix'/);
+    assert.match(source, /environment\.npmGlobalPrefix/);
     assert.match(source, /'--manifest'/);
     assert.match(source, /'--registry-mirror'/);
   });
@@ -171,9 +173,7 @@ describe('dependency management service contract', () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /private getManagedPackageCommandArtifacts\(/);
-    assert.match(source, /path\.join\(binRoot, baseName\)/);
-    assert.match(source, /path\.join\(binRoot, `\$\{baseName\}\.cmd`\)/);
-    assert.match(source, /path\.join\(binRoot, `\$\{baseName\}\.ps1`\)/);
+    assert.match(source, /buildNpmGlobalCommandArtifactPaths\(/);
     assert.match(source, /await Promise\.all\(paths\.commandArtifacts\.map\(\(artifactPath\) => fs\.rm\(artifactPath, \{ force: true \}\)\)\);/);
     assert.match(source, /private validatePackageOperationOutcome\(/);
     assert.match(source, /Desktop could not detect the package in/);
@@ -250,7 +250,7 @@ describe('dependency management service contract', () => {
 
     assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
     assert.equal(launch.shell, false);
-    assert.match(source, /const node = await this\.detectExecutableVersion\('node', this\.getNodeExecutablePath\(effectivePolicy\), \['--version'\], commandEnv\);/);
+    assert.match(source, /const node = await this\.detectExecutableVersion\('node', this\.getNodeExecutablePath\(effectivePolicy\), \['--version'\], initialCommandEnv\);/);
     assert.match(source, /const npm = await this\.detectNpmVersion\(effectivePolicy, commandEnv\);/);
     assert.match(source, /command: this\.getNodeExecutablePath\(activationPolicy\),/);
     assert.match(source, /args: \[executablePath, \.\.\.args\],/);
@@ -273,8 +273,12 @@ describe('dependency management service contract', () => {
       npm: { status: 'available', version: '10.9.2', executablePath: path.join(runtimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js') },
       toolchainRoot: path.dirname(runtimeRoot),
       nodeRuntimeRoot: runtimeRoot,
+      nodeVersion: '24.12.0',
+      nodeMajorVersion: '24',
       npmGlobalPrefix: path.join(runtimeRoot, 'global'),
       npmGlobalBinRoot: path.join(runtimeRoot, 'global'),
+      npmGlobalModulesRoot: path.join(runtimeRoot, 'global', 'node_modules'),
+      npmCacheRoot: path.join(runtimeRoot, 'npmCache'),
     }, manifestPath, 'https://registry.npmmirror.com/');
 
     assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
@@ -283,6 +287,8 @@ describe('dependency management service contract', () => {
       'npm-sync',
       '--runtime',
       runtimeRoot,
+      '--prefix',
+      path.join(runtimeRoot, 'global'),
       '--manifest',
       manifestPath,
       '--registry-mirror',
@@ -307,8 +313,12 @@ describe('dependency management service contract', () => {
       npm: { status: 'available', version: '10.9.2', executablePath: 'C:\\Program Files\\HagiCode\\npm-cli.js' },
       toolchainRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain',
       nodeRuntimeRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node',
+      nodeVersion: '24.12.0',
+      nodeMajorVersion: '24',
       npmGlobalPrefix: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global',
       npmGlobalBinRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global',
+      npmGlobalModulesRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global\\node_modules',
+      npmCacheRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\npmCache',
     }, 'C:\\Users\\Test User\\AppData\\Local\\Temp\\hagicode npm sync\\manifest.json');
 
     assert.deepEqual(manifest.packages.skills, { version: '1.5.1', target: '1.5.1' });
@@ -316,10 +326,12 @@ describe('dependency management service contract', () => {
     assert.deepEqual(manifest.packages.pm2, { version: '*', target: 'latest' });
     assert.deepEqual(manifest.packages['@anthropic-ai/claude-code'], { version: '*', target: 'latest' });
     assert.equal(Object.keys(manifest.packages).length, 4);
-    assert.deepEqual(args.slice(0, 5), [
+    assert.deepEqual(args.slice(0, 7), [
       'npm-sync',
       '--runtime',
       'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node',
+      '--prefix',
+      'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global',
       '--manifest',
       'C:\\Users\\Test User\\AppData\\Local\\Temp\\hagicode npm sync\\manifest.json',
     ]);

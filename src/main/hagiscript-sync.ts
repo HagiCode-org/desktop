@@ -52,6 +52,8 @@ export function buildHagiscriptSyncArgs(
     'npm-sync',
     '--runtime',
     environment.nodeRuntimeRoot,
+    '--prefix',
+    environment.npmGlobalPrefix,
     '--manifest',
     manifestPath,
   ];

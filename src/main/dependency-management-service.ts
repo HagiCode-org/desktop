@@ -13,6 +13,10 @@ import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import {
+  buildNpmGlobalCommandArtifactPaths,
+  type NodeMajorNpmGlobalPaths,
+} from './portable-toolchain-paths.js';
+import {
   buildHagiscriptSyncArgs,
   buildHagiscriptSyncManifest,
   getHagiscriptInstallTarget,
@@ -211,7 +215,7 @@ export class DependencyManagementService {
   async getManagedCommandContext(packageId: ManagedNpmPackageId): Promise<ManagedNpmCommandContext> {
     const activationPolicy = await this.getDesktopActivationPolicy();
     const environment = await this.detectEnvironment(activationPolicy);
-    const commandEnv = this.buildCommandEnv(activationPolicy);
+    const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
     const definition = findManagedNpmPackage(packageId);
 
     if (!definition) {
@@ -258,31 +262,42 @@ export class DependencyManagementService {
     return { success: true, definitions };
   }
 
-  private getNpmGlobalPrefix(
-    activationPolicy?: BundledNodeRuntimePolicyDecision,
-  ): string {
-    return this.getNodeRuntimeRoot(activationPolicy);
+  private getNodeMajorNpmGlobalPaths(
+    nodeVersion?: string | null,
+  ): NodeMajorNpmGlobalPaths {
+    return this.pathManager.getNodeMajorNpmGlobalPaths({
+      nodeVersion: nodeVersion ?? process.versions.node,
+      platform: this.platform,
+    });
   }
 
-  private getNpmCacheRoot(): string {
-    return path.join(this.pathManager.getPortableToolchainRoot(), 'npm-cache');
+  private getNpmGlobalPrefix(nodeVersion?: string | null): string {
+    return this.getNodeMajorNpmGlobalPaths(nodeVersion).npmGlobalPrefix;
   }
 
-  private getNpmGlobalBinRoot(npmGlobalPrefix: string): string {
-    return this.platform === 'win32' ? npmGlobalPrefix : path.join(npmGlobalPrefix, 'bin');
+  private getNpmCacheRoot(nodeVersion?: string | null): string {
+    return this.getNodeMajorNpmGlobalPaths(nodeVersion).npmCacheRoot;
   }
 
-  private getNpmGlobalModulesRoot(npmGlobalPrefix: string): string {
-    return this.platform === 'win32'
-      ? path.join(npmGlobalPrefix, 'node_modules')
-      : path.join(npmGlobalPrefix, 'lib', 'node_modules');
+  private getNpmGlobalBinRoot(npmGlobalPrefix: string, nodeVersion?: string | null): string {
+    return this.getNodeMajorNpmGlobalPaths(nodeVersion).npmGlobalPrefix === npmGlobalPrefix
+      ? this.getNodeMajorNpmGlobalPaths(nodeVersion).npmGlobalBinRoot
+      : this.platform === 'win32' ? npmGlobalPrefix : path.join(npmGlobalPrefix, 'bin');
+  }
+
+  private getNpmGlobalModulesRoot(npmGlobalPrefix: string, nodeVersion?: string | null): string {
+    return this.getNodeMajorNpmGlobalPaths(nodeVersion).npmGlobalPrefix === npmGlobalPrefix
+      ? this.getNodeMajorNpmGlobalPaths(nodeVersion).npmGlobalModulesRoot
+      : this.platform === 'win32'
+        ? path.join(npmGlobalPrefix, 'node_modules')
+        : path.join(npmGlobalPrefix, 'lib', 'node_modules');
   }
 
   private getManagedPackageInstallPrefix(
     _definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
   ): string {
-    return environment.nodeRuntimeRoot;
+    return environment.npmGlobalPrefix;
   }
 
   private getManagedPackageBinRoot(
@@ -299,7 +314,7 @@ export class DependencyManagementService {
   ): ManagedNpmPackagePaths {
     const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     const packageRoot = path.join(
-      this.getNpmGlobalModulesRoot(installPrefix),
+      this.getNpmGlobalModulesRoot(installPrefix, environment.nodeVersion),
       ...definition.packageName.split('/').filter(Boolean),
     );
     const commandArtifacts = this.getManagedPackageCommandArtifacts(definition, environment);
@@ -312,22 +327,32 @@ export class DependencyManagementService {
     };
   }
 
+  private getLegacyBundledPackagePaths(
+    definition: ManagedNpmPackageDefinition,
+    environment: DependencyManagementEnvironmentStatus,
+  ): ManagedNpmPackagePaths {
+    const legacyEnvironment: DependencyManagementEnvironmentStatus = {
+      ...environment,
+      npmGlobalPrefix: environment.nodeRuntimeRoot,
+      npmGlobalBinRoot: this.platform === 'win32'
+        ? environment.nodeRuntimeRoot
+        : path.join(environment.nodeRuntimeRoot, 'bin'),
+      npmGlobalModulesRoot: this.platform === 'win32'
+        ? path.join(environment.nodeRuntimeRoot, 'node_modules')
+        : path.join(environment.nodeRuntimeRoot, 'lib', 'node_modules'),
+    };
+    return this.getManagedPackagePaths(definition, legacyEnvironment);
+  }
+
   private getManagedPackageCommandArtifacts(
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
   ): string[] {
-    const binRoot = this.getManagedPackageBinRoot(definition, environment);
-    const baseName = definition.binName;
-
-    if (this.platform !== 'win32') {
-      return [path.join(binRoot, baseName)];
-    }
-
-    return [
-      path.join(binRoot, baseName),
-      path.join(binRoot, `${baseName}.cmd`),
-      path.join(binRoot, `${baseName}.ps1`),
-    ];
+    return buildNpmGlobalCommandArtifactPaths(
+      this.getManagedPackageBinRoot(definition, environment),
+      definition.binName,
+      this.platform,
+    );
   }
 
   private async removeManagedPackageInstallTarget(
@@ -408,7 +433,7 @@ export class DependencyManagementService {
   }
 
   private buildOfficialRegistryRetryEnv(environment: DependencyManagementEnvironmentStatus, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-    const retryCacheRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npm-cache-official');
+    const retryCacheRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npmCache-official');
 
     return {
       ...baseEnv,
@@ -421,31 +446,32 @@ export class DependencyManagementService {
 
   private buildCommandEnv(
     activationPolicy?: BundledNodeRuntimePolicyDecision,
+    nodeVersion?: string | null,
   ): NodeJS.ProcessEnv {
-    const npmGlobalPrefix = this.getNpmGlobalPrefix(activationPolicy);
+    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
+    const nodeRuntimeRoot = this.getNodeRuntimeRoot(activationPolicy);
     const envResult = injectPortableToolchainEnv(process.env, this.pathManager, {
       platform: this.platform,
       existsSync: this.existsSync,
       activationPolicy,
+      npmGlobalPaths,
     });
     const pathKey = resolvePathEnvKey(envResult.env, this.platform);
     const pathValue = envResult.env[pathKey];
     const nodeExecutablePath = path.join(
-      this.platform === 'win32' ? npmGlobalPrefix : path.join(npmGlobalPrefix, 'bin'),
+      this.platform === 'win32' ? nodeRuntimeRoot : path.join(nodeRuntimeRoot, 'bin'),
       this.platform === 'win32' ? 'node.exe' : 'node',
     );
     const env: NodeJS.ProcessEnv = {
       ...envResult.env,
       [pathKey]: pathValue,
-      npm_config_cache: this.getNpmCacheRoot(),
+      npm_config_cache: this.getNpmCacheRoot(nodeVersion),
     };
 
     if (activationPolicy?.enabled !== false) {
       env.NODE = nodeExecutablePath;
       env.npm_node_execpath = nodeExecutablePath;
-      env.npm_execpath = this.platform === 'win32'
-        ? path.join(npmGlobalPrefix, 'node_modules', 'npm', 'bin', 'npm-cli.js')
-        : path.join(npmGlobalPrefix, 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+      env.npm_execpath = this.getBundledNpmCliPath(nodeRuntimeRoot);
     }
 
     delete env.npm_config_prefix;
@@ -484,12 +510,16 @@ export class DependencyManagementService {
     activationPolicy: BundledNodeRuntimePolicyDecision,
   ): string {
     if (activationPolicy.enabled) {
-      return this.platform === 'win32'
-        ? path.join(this.getNpmGlobalPrefix(activationPolicy), 'node_modules', 'npm', 'bin', 'npm-cli.js')
-        : path.join(this.getNpmGlobalPrefix(activationPolicy), 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+      return this.getBundledNpmCliPath(this.getNodeRuntimeRoot(activationPolicy));
     }
 
     return 'npm';
+  }
+
+  private getBundledNpmCliPath(nodeRuntimeRoot: string): string {
+    return this.platform === 'win32'
+      ? path.join(nodeRuntimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js')
+      : path.join(nodeRuntimeRoot, 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
   }
 
   private getNodeRuntimeRoot(
@@ -511,9 +541,11 @@ export class DependencyManagementService {
     const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
     const toolchainRoot = this.pathManager.getPortableToolchainRoot();
     const nodeRuntimeRoot = this.getNodeRuntimeRoot(effectivePolicy);
-    const npmGlobalPrefix = this.getNpmGlobalPrefix(effectivePolicy);
-    const commandEnv = this.buildCommandEnv(effectivePolicy);
-    const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy), ['--version'], commandEnv);
+    const initialCommandEnv = this.buildCommandEnv(effectivePolicy);
+    const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy), ['--version'], initialCommandEnv);
+    const nodeVersion = node.version ?? process.versions.node;
+    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
+    const commandEnv = this.buildCommandEnv(effectivePolicy, nodeVersion);
     const npm = await this.detectNpmVersion(effectivePolicy, commandEnv);
     const available = node.status === 'available';
 
@@ -521,8 +553,12 @@ export class DependencyManagementService {
       available,
       toolchainRoot,
       nodeRuntimeRoot,
-      npmGlobalPrefix,
-      npmGlobalBinRoot: this.getNpmGlobalBinRoot(npmGlobalPrefix),
+      nodeVersion,
+      nodeMajorVersion: npmGlobalPaths.nodeMajorVersion,
+      npmGlobalPrefix: npmGlobalPaths.npmGlobalPrefix,
+      npmGlobalBinRoot: npmGlobalPaths.npmGlobalBinRoot,
+      npmGlobalModulesRoot: npmGlobalPaths.npmGlobalModulesRoot,
+      npmCacheRoot: npmGlobalPaths.npmCacheRoot,
       node,
       npm,
       error: available ? undefined : node.message ?? 'Embedded Node environment is unavailable',
@@ -668,6 +704,11 @@ export class DependencyManagementService {
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'ENOENT') {
+        const legacyPaths = this.getLegacyBundledPackagePaths(definition, environment);
+        const legacyPackageExists = legacyPaths.packageRoot !== packageRoot
+          && this.existsSync(path.join(legacyPaths.packageRoot, 'package.json'));
+        const legacyExecutablePath = legacyPaths.commandArtifacts.find((artifactPath) => this.existsSync(artifactPath)) ?? null;
+
         return {
           id: definition.id,
           definition,
@@ -675,6 +716,11 @@ export class DependencyManagementService {
           version: null,
           packageRoot,
           executablePath: null,
+          legacyBundledPackageRoot: legacyPackageExists ? legacyPaths.packageRoot : undefined,
+          legacyBundledExecutablePath: legacyExecutablePath,
+          message: legacyPackageExists
+            ? `Legacy install detected under bundled runtime resources at ${legacyPaths.packageRoot}. Reinstall this package to move it into ${environment.npmGlobalPrefix}.`
+            : undefined,
         };
       }
 
@@ -800,7 +846,7 @@ export class DependencyManagementService {
     let success = false;
     let errorMessage: string | undefined;
     try {
-      const commandEnv = this.buildCommandEnv(activationPolicy);
+      const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
       if (operation === 'install') {
         await this.removeManagedPackageInstallTarget(definition, environment);
       }
@@ -934,7 +980,7 @@ export class DependencyManagementService {
     try {
       const manifest = await this.writeHagiscriptSyncManifest(definitions);
       manifestDirectory = manifest.manifestDirectory;
-      const commandEnv = this.buildCommandEnv(activationPolicy);
+      const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
       const result = await this.runCommand(
         hagiscriptExecutablePath,
         this.buildHagiscriptSyncArgs(environment, manifest.manifestPath, mirrorSettings.registryUrl),
