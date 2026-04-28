@@ -224,18 +224,29 @@ function runExecutable(executablePath, userDataDir) {
   const requiresLinuxHeadlessSwitches = process.platform === 'linux'
     && !process.env.DISPLAY
     && !process.env.WAYLAND_DISPLAY;
+  const requiresLinuxSandboxOverride = process.platform === 'linux';
   const launchArgs = requiresLinuxHeadlessSwitches
     ? ['--headless', '--disable-gpu', '--ozone-platform=headless', ...commandArgs]
     : commandArgs;
+  const launchEnv = {
+    ...process.env,
+    HAGICODE_DESKTOP_USER_DATA_DIR: userDataDir,
+    HAGICODE_NON_INTERACTIVE_INTEGRATION: '1',
+  };
+
+  if (requiresLinuxSandboxOverride) {
+    // The staged integration artifact runs from a user-owned temp directory, so
+    // chrome-sandbox cannot keep the root-owned 4755 contract required by the
+    // Linux setuid sandbox helper. Reuse the existing Desktop startup override
+    // so CI validates non-interactive dependency installation instead of the
+    // kernel sandbox packaging path.
+    launchEnv.HAGICODE_DISABLE_ELECTRON_SANDBOX = '1';
+  }
 
   return new Promise((resolve) => {
     const child = spawn(executablePath, launchArgs, {
       cwd: path.dirname(executablePath),
-      env: {
-        ...process.env,
-        HAGICODE_DESKTOP_USER_DATA_DIR: userDataDir,
-        HAGICODE_NON_INTERACTIVE_INTEGRATION: '1',
-      },
+      env: launchEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
@@ -288,6 +299,9 @@ async function main() {
   log(`managed userData root: ${userDataDir}`);
   if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
     log('launch mode: headless Linux runtime switches enabled');
+  }
+  if (process.platform === 'linux') {
+    log('launch mode: Linux sandbox override enabled for staged artifact execution');
   }
 
   if (!artifactRoot.includes(' ') || !executablePath.includes(' ') || !userDataDir.includes(' ')) {
