@@ -12,6 +12,12 @@ import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
+import {
+  buildHagiscriptSyncArgs,
+  buildHagiscriptSyncManifest,
+  getHagiscriptInstallTarget,
+  type HagiscriptSyncManifest,
+} from './hagiscript-sync.js';
 import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
 import { managedNpmPackages, findManagedNpmPackage } from '../shared/npm-managed-packages.js';
 import type {
@@ -61,15 +67,6 @@ interface ManagedNpmPackagePaths {
   commandArtifacts: string[];
 }
 
-interface HagiscriptSyncManifestEntry {
-  version: string;
-  target?: string;
-}
-
-interface HagiscriptSyncManifest {
-  packages: Record<string, HagiscriptSyncManifestEntry>;
-}
-
 type ProgressListener = (event: DependencyManagementOperationProgress) => void;
 
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
@@ -105,10 +102,6 @@ function extractPercent(message: string): number | undefined {
 function normalizeVersionOutput(value: string): string | null {
   const line = firstMeaningfulLine(value);
   return line ? line.replace(/^v/, '') : null;
-}
-
-function looksLikeSemverRange(selector: string): boolean {
-  return /^[vV0-9*<>=~^xX|.\-\s]+$/.test(selector.trim());
 }
 
 export class DependencyManagementService {
@@ -384,46 +377,17 @@ export class DependencyManagementService {
     manifestPath: string,
     registryUrl?: string | null,
   ): string[] {
-    const args = [
-      'npm-sync',
-      '--runtime',
-      environment.nodeRuntimeRoot,
-      '--manifest',
-      manifestPath,
-    ];
-
-    if (registryUrl) {
-      args.push('--registry-mirror', registryUrl);
-    }
-
-    return args;
+    return buildHagiscriptSyncArgs(environment, manifestPath, registryUrl);
   }
 
   private getHagiscriptInstallTarget(definition: ManagedNpmPackageDefinition): string {
-    const installSpec = definition.installSpec.trim();
-    const scopedTargetPrefix = `${definition.packageName}@`;
-    if (installSpec === definition.packageName) {
-      return 'latest';
-    }
-
-    if (installSpec.startsWith(scopedTargetPrefix)) {
-      const selector = installSpec.slice(scopedTargetPrefix.length).trim();
-      return selector || 'latest';
-    }
-
-    return 'latest';
+    return getHagiscriptInstallTarget(definition);
   }
 
   private buildHagiscriptSyncManifest(
     definitions: readonly ManagedNpmPackageDefinition[],
   ): HagiscriptSyncManifest {
-    const packages = Object.fromEntries(definitions.map((definition) => {
-      const target = this.getHagiscriptInstallTarget(definition);
-      const version = looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*';
-      return [definition.packageName, { version, target }];
-    }));
-
-    return { packages };
+    return buildHagiscriptSyncManifest(definitions);
   }
 
   private async writeHagiscriptSyncManifest(

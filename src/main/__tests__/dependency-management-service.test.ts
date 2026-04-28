@@ -2,9 +2,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import {
+  buildHagiscriptSyncArgs,
+  buildHagiscriptSyncManifest,
+} from '../hagiscript-sync.js';
+import { managedNpmPackages } from '../../shared/npm-managed-packages.js';
 import { resolveCommandLaunch } from '../toolchain-launch.js';
 
 const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
+const hagiscriptSyncPath = path.resolve(process.cwd(), 'src/main/hagiscript-sync.ts');
 const catalogPath = path.resolve(process.cwd(), 'src/shared/npm-managed-packages.ts');
 
 describe('dependency management service contract', () => {
@@ -79,8 +85,18 @@ describe('dependency management service contract', () => {
     assert.match(source, /const verificationError = success\s*\?\s*this\.validatePackageOperationOutcome\(definition, operation, status\)/);
   });
 
-  it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm-sync manifests', async () => {
+  it('returns post-operation snapshots for successful verification, verification failure, and npm failure paths', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /const snapshot = await this\.getSnapshot\(\);\s*const status = snapshot\.packages\.find\(\(item\) => item\.id === definition\.id\);/);
+    assert.match(source, /const verificationError = success\s*\?\s*this\.validatePackageOperationOutcome\(definition, operation, status\)\s*:\s*null;/);
+    assert.match(source, /if \(verificationError\) \{\s*success = false;\s*errorMessage = verificationError;\s*\}/);
+    assert.match(source, /if \(!success\) \{\s*errorMessage = firstMeaningfulLine\(result\.stderr \|\| result\.stdout\) \?\? `npm exited with code \$\{result\.exitCode\}`;\s*\}/);
+    assert.match(source, /return \{\s*success,\s*packageId: definition\.id,\s*operation,\s*status,\s*error: errorMessage,\s*snapshot,/);
+  });
+
+  it('keeps hagiscript on embedded npm and routes other installs through hagiscript npm-sync manifests', async () => {
+    const source = `${await fs.readFile(servicePath, 'utf8')}\n${await fs.readFile(hagiscriptSyncPath, 'utf8')}`;
 
     assert.match(source, /definition\.installMode === 'hagiscript-sync'/);
     assert.match(source, /runHagiscriptSync\(\[definition\]\)/);
@@ -106,6 +122,16 @@ describe('dependency management service contract', () => {
     assert.match(source, /this\.runCommand\(\s*hagiscriptExecutablePath/);
     assert.match(source, /const statuses = snapshot\.packages\.filter\(\(item\) => packageIds\.includes\(item\.id\)\)/);
     assert.match(source, /this\.validatePackageOperationOutcome\(\s*definition,\s*'sync'/);
+  });
+
+  it('validates hagiscript sync success against refreshed package statuses before emitting completion', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /const snapshot = await this\.getSnapshot\(\);\s*const statuses = snapshot\.packages\.filter\(\(item\) => packageIds\.includes\(item\.id\)\);/);
+    assert.match(source, /if \(success\) \{\s*const verificationError = definitions\s*\.map\(\(definition\) => this\.validatePackageOperationOutcome\(/);
+    assert.match(source, /if \(verificationError\) \{\s*success = false;\s*errorMessage = verificationError;\s*\}/);
+    assert.match(source, /success \? 'completed' : 'failed'/);
+    assert.match(source, /return \{\s*success,\s*packageIds,\s*operation: 'sync',\s*statuses,\s*error: errorMessage,\s*snapshot,/);
   });
 
   it('persists npm mirror settings, derives locale-based defaults before manual changes, and includes them in snapshots', async () => {
@@ -239,11 +265,67 @@ describe('dependency management service contract', () => {
       'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd',
       'win32',
     );
+    const runtimeRoot = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node';
+    const manifestPath = 'C:\\Users\\Test User\\AppData\\Local\\Temp\\hagicode npm sync\\manifest.json';
+    const args = buildHagiscriptSyncArgs({
+      available: true,
+      node: { status: 'available', version: '24.12.0', executablePath: path.join(runtimeRoot, 'node.exe') },
+      npm: { status: 'available', version: '10.9.2', executablePath: path.join(runtimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js') },
+      toolchainRoot: path.dirname(runtimeRoot),
+      nodeRuntimeRoot: runtimeRoot,
+      npmGlobalPrefix: path.join(runtimeRoot, 'global'),
+      npmGlobalBinRoot: path.join(runtimeRoot, 'global'),
+    }, manifestPath, 'https://registry.npmmirror.com/');
 
-    assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
-    assert.equal(launch.shell, true);
+    assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
+    assert.equal(launch.shell, false);
+    assert.deepEqual(args, [
+      'npm-sync',
+      '--runtime',
+      runtimeRoot,
+      '--manifest',
+      manifestPath,
+      '--registry-mirror',
+      'https://registry.npmmirror.com/',
+    ]);
     assert.match(source, /const manifest = await this\.writeHagiscriptSyncManifest\(definitions\);/);
     assert.match(source, /this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\)/);
     assert.match(source, /const result = await this\.runCommand\(\s*hagiscriptExecutablePath,\s*this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\),/);
+  });
+
+  it('keeps batch sync package selectors in the manifest instead of npm-sync positional arguments', () => {
+    const selectedDefinitions = managedNpmPackages.filter((definition) => (
+      definition.id === 'skills' ||
+      definition.id === 'openspec' ||
+      definition.id === 'pm2' ||
+      definition.id === 'claude-code'
+    ));
+    const manifest = buildHagiscriptSyncManifest(selectedDefinitions);
+    const args = buildHagiscriptSyncArgs({
+      available: true,
+      node: { status: 'available', version: '24.12.0', executablePath: 'C:\\Program Files\\HagiCode\\node.exe' },
+      npm: { status: 'available', version: '10.9.2', executablePath: 'C:\\Program Files\\HagiCode\\npm-cli.js' },
+      toolchainRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain',
+      nodeRuntimeRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node',
+      npmGlobalPrefix: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global',
+      npmGlobalBinRoot: 'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node\\global',
+    }, 'C:\\Users\\Test User\\AppData\\Local\\Temp\\hagicode npm sync\\manifest.json');
+
+    assert.deepEqual(manifest.packages.skills, { version: '1.5.1', target: '1.5.1' });
+    assert.deepEqual(manifest.packages['@fission-ai/openspec'], { version: '1.3.1', target: '1.3.1' });
+    assert.deepEqual(manifest.packages.pm2, { version: '*', target: 'latest' });
+    assert.deepEqual(manifest.packages['@anthropic-ai/claude-code'], { version: '*', target: 'latest' });
+    assert.equal(Object.keys(manifest.packages).length, 4);
+    assert.deepEqual(args.slice(0, 5), [
+      'npm-sync',
+      '--runtime',
+      'C:\\Program Files\\HagiCode\\resources\\extra\\toolchain\\node',
+      '--manifest',
+      'C:\\Users\\Test User\\AppData\\Local\\Temp\\hagicode npm sync\\manifest.json',
+    ]);
+    assert.equal(args.includes('skills@1.5.1'), false);
+    assert.equal(args.includes('@fission-ai/openspec@1.3.1'), false);
+    assert.equal(args.includes('pm2'), false);
+    assert.equal(args.includes('@anthropic-ai/claude-code'), false);
   });
 });
