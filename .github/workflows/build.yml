@@ -1530,7 +1530,6 @@ jobs:
     with:
       release_tag: ${{ github.ref_name }}
       release_channel: ${{ needs.build-summary.outputs.channel }}
-      run_finalize: false
     secrets: inherit
 
   sync-azure-finalize:
