@@ -36,7 +36,7 @@ describe('system-diagnostic-manager bundled toolchain reporting', () => {
     assert.match(source, /builtinRuntimes = await this\.collectBuiltinRuntimeDiagnostics/);
     assert.match(source, /probeBundledRuntimeCommand\('node'/);
     assert.match(source, /probeBundledRuntimeCommand\('npm'/);
-    assert.match(source, /probeBundledRuntimeCommand\('npx'/);
+    assert.doesNotMatch(source, /probeBundledRuntimeCommand\('npx'/);
     assert.match(source, /\['config', 'get', 'registry'\]/);
     assert.match(source, /HAGICODE_NPM_GLOBAL_PREFIX/);
     assert.match(source, /npm\.globalBinRoot/);
@@ -44,6 +44,7 @@ describe('system-diagnostic-manager bundled toolchain reporting', () => {
     assert.match(source, /npm\.bundledRuntimeRoot/);
     assert.match(source, /managed\.\$\{command\.id\}\.status=\$\{command\.status\}/);
     assert.match(source, /pushSection\('built-in-runtimes'/);
+    assert.doesNotMatch(source, /id: 'npx'/);
   });
 
   it('keeps runtime diagnostics scoped when bundled Node validation or npm config probes fail', async () => {

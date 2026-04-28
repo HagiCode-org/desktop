@@ -39,10 +39,10 @@ export const AUDITED_CORE_DEPENDENCY_COVERAGE_MATRIX: SystemDiagnosticCoverageMa
     'SkillInstallService',
     'WizardComponentDetectionAppService',
   ],
-  requiredCommands: ['node', 'npm', 'npx', 'git'],
+  requiredCommands: ['node', 'npm', 'git'],
   notes: [
     'Static Agent CLI registry probing follows the same command-candidate and version-lookup shape used by hagicode-core provider version checks.',
-    'node, npm, npx, and git are the first-pass commands because hagicode-core currently consumes them in runtime detection, install prerequisites, or managed skill flows.',
+    'node, npm, and git are the first-pass commands because hagicode-core currently consumes them in runtime detection, install prerequisites, or managed skill flows.',
   ],
 });
 
@@ -51,7 +51,6 @@ const REQUIRED_TOOLCHAIN_SCOPE: SystemDiagnosticCommandScope = 'required-by-core
 const TOOLCHAIN_PROBES = [
   { command: 'node', displayName: 'Node.js', versionArgs: [['--version']] },
   { command: 'npm', displayName: 'npm', versionArgs: [['--version']] },
-  { command: 'npx', displayName: 'npx', versionArgs: [['--version']] },
   { command: 'git', displayName: 'Git', versionArgs: [['--version']] },
 ] as const;
 
@@ -728,11 +727,10 @@ export class SystemDiagnosticManager {
     bundledStatus: BundledToolchainStatus | null,
     issues: SystemDiagnosticIssue[],
   ): Promise<SystemDiagnosticBuiltinRuntimeInfo> {
-    const [dotnetRow, nodeProbe, npmProbe, npxProbe, npmConfig] = await Promise.all([
+    const [dotnetRow, nodeProbe, npmProbe, npmConfig] = await Promise.all([
       this.collectDotnetRuntimeRow(runtimeEnv, issues),
       this.probeBundledRuntimeCommand('node', bundledStatus, runtimeEnv, issues),
       this.probeBundledRuntimeCommand('npm', bundledStatus, runtimeEnv, issues),
-      this.probeBundledRuntimeCommand('npx', bundledStatus, runtimeEnv, issues),
       this.collectNpmConfigInfo(bundledStatus, runtimeEnv, issues),
     ]);
 
@@ -766,16 +764,6 @@ export class SystemDiagnosticManager {
         executablePath: npmProbe.executablePath ?? npmComponent?.executablePath ?? null,
         manifestPath: bundledStatus?.manifestPath ?? null,
         summary: npmConfig.message ?? npmProbe.message ?? npmComponent?.message ?? (npmStatus === 'healthy' ? 'Bundled npm command is valid.' : 'Bundled npm command could not be validated.'),
-      },
-      {
-        id: 'npx',
-        name: 'npx',
-        source: bundledStatus ? 'bundled' : 'unknown',
-        status: npxProbe.status,
-        version: npxProbe.version ?? null,
-        executablePath: npxProbe.executablePath,
-        manifestPath: bundledStatus?.manifestPath ?? null,
-        summary: npxProbe.message ?? (npxProbe.status === 'healthy' ? 'Bundled npx command is available.' : 'Bundled npx command could not be validated.'),
       },
     ];
 
@@ -830,7 +818,7 @@ export class SystemDiagnosticManager {
   }
 
   private async probeBundledRuntimeCommand(
-    command: 'node' | 'npm' | 'npx',
+    command: 'node' | 'npm',
     bundledStatus: BundledToolchainStatus | null,
     runtimeEnv: NodeJS.ProcessEnv,
     issues: SystemDiagnosticIssue[],
