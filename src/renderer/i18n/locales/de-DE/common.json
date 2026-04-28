@@ -1,0 +1,630 @@
+{
+  "button": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "refresh": "Aktualisieren",
+    "install": "Installieren",
+    "uninstall": "Deinstallieren",
+    "start": "Starten",
+    "stop": "Stoppen",
+    "restart": "Neu starten",
+    "open": "Öffnen",
+    "download": "Herunterladen"
+  },
+  "status": {
+    "loading": "Laden...",
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "info": "Infos",
+    "running": "Laufen",
+    "stopped": "Angehalten",
+    "installed": "Installiert",
+    "notInstalled": "Nicht installiert",
+    "pending": "Ausstehend",
+    "failed": "Fehlgeschlagen"
+  },
+  "form": {
+    "required": "Erforderlich",
+    "optional": "Optional",
+    "selectPlaceholder": "Bitte wählen Sie...",
+    "inputPlaceholder": "Bitte geben Sie ein...",
+    "validation": {
+      "required": "Dieses Feld ist erforderlich",
+      "invalidFormat": "Ungültiges Format",
+      "minLength": "Muss mindestens {{min}} Zeichen lang sein",
+      "maxLength": "Darf {{max}} Zeichen nicht überschreiten"
+    }
+  },
+  "common": {
+    "version": "Version",
+    "platform": "Plattform",
+    "language": "Sprache",
+    "settings": "Einstellungen",
+    "noData": "Keine Daten verfügbar",
+    "operationSuccess": "Operation erfolgreich",
+    "operationFailed": "Der Vorgang ist fehlgeschlagen",
+    "confirmDelete": "Möchten Sie wirklich löschen?",
+    "confirmAction": "Sind Sie sicher, dass Sie fortfahren möchten?"
+  },
+  "header": {
+    "title": "Einstellungen",
+    "runningSuccessfully": "Läuft erfolgreich",
+    "language": {
+      "label": "Sprache",
+      "description": "Wählen Sie die Sprache der Anwendungsoberfläche aus"
+    },
+    "embeddedWebServicePort": "Eingebetteter Webdienst-Port"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": {
+      "label": "Sprache",
+      "description": "Wählen Sie die Sprache der Anwendungsoberfläche aus"
+    },
+    "embeddedWebServicePort": "Eingebetteter Webdienst-Port"
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.",
+    "testBuild": "Testanwendung – Entwicklungsbuild"
+  },
+  "menu": {
+    "systemManagement": "Systemmanagement",
+    "hagicoWeb": "Hagicode Web",
+    "dependencies": "Abhängigkeiten",
+    "webService": "Webdienst",
+    "packages": "Pakete",
+    "settings": "Einstellungen",
+    "openWebUI": "Öffnen Sie Web UI",
+    "navigate": "Navigation",
+    "back": "Zurück",
+    "forward": "Vorwärts",
+    "refresh": "Aktualisieren",
+    "devTools": "Entwicklertools",
+    "help": "Hilfe",
+    "about": "Über",
+    "quit": "Hör auf"
+  },
+  "webView": {
+    "back": "Zurück",
+    "forward": "Vorwärts",
+    "refresh": "Aktualisieren",
+    "openInBrowser": "Im Browser öffnen",
+    "serviceNotRunning": "Webdienst wird nicht ausgeführt",
+    "serviceNotRunningDesc": "Bitte starten Sie den Webdienst, bevor Sie auf die Weboberfläche zugreifen.",
+    "backToSystem": "Zurück zur Systemverwaltung",
+    "error": "Laden fehlgeschlagen",
+    "loadFailed": "Laden fehlgeschlagen: {{reason}}",
+    "crashed": "Der Renderer-Prozess ist abgestürzt",
+    "retry": "Versuchen Sie es noch einmal"
+  },
+  "mirror": {
+    "title": "NPM Spiegelkonfiguration",
+    "region": "Erkannte Region",
+    "currentMirror": "Aktueller Spiegel",
+    "mirrorUrl": "Spiegel URL",
+    "detectedAt": "Erkannt bei",
+    "official": "Offiziell npm",
+    "taobao": "Taobao NPM Mirror",
+    "redetect": "Neu erkennen",
+    "info": "NPM-Tools verwenden diesen Spiegel automatisch für schnellere Downloads",
+    "regions": {
+      "CN": "China",
+      "INTERNATIONAL": "International"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "webService": "Webdienst",
+    "versionManagement": "Versionsverwaltung",
+    "webServiceNotRunning": "Der Webdienst wird nicht ausgeführt",
+    "officialWebsite": "Offizielle Website",
+    "officialWebsiteDesc": "Besuchen Sie die offizielle Website für Hagicode, um die neuesten Nachrichten und Dokumentationen zu erhalten",
+    "costCalculator": "AI Ersatzrechner",
+    "about": {
+      "sectionDescription": "Rendern Sie zuerst den gebündelten Schnappschuss und aktualisieren Sie dann die neuesten offiziellen Ziele.",
+      "snapshotLabel": "Gebündelter Schnappschuss",
+      "runtimeLabel": "Live-Daten",
+      "updatedAt": "Aktualisiert {{value}}",
+      "loading": "Aktualisierung der neuesten offiziellen Informationen zu Daten...",
+      "refreshFailed": "Die neuesten offiziellen Daten konnten nicht geladen werden. Stattdessen wird der gebündelte Snapshot angezeigt.",
+      "loadFailed": "Offizielle Daten sind vorübergehend nicht verfügbar, der Website-Eintrag funktioniert jedoch weiterhin.",
+      "snapshotMissing": "Dieser Build enthält keinen gebündelten Snapshot. Direkter Versuch mit dem Live-Endpunkt.",
+      "empty": "Derzeit sind keine offiziellen Einträge verfügbar.",
+      "sections": {
+        "store": "Speichern",
+        "community": "Gemeinschaft",
+        "content": "Inhalt"
+      },
+      "types": {
+        "link": "Link",
+        "contact": "Kontakt",
+        "qr": "QR",
+        "image": "Bild"
+      }
+    },
+    "promotion": {
+      "label": "Beförderung",
+      "defaultCta": "Erfahren Sie mehr"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "webService": "Webdienst",
+    "versionManagement": "Versionsverwaltung",
+    "diagnostic": "Diagnose",
+    "dependencyManagement": "Abhängigkeitsmanagement",
+    "omniroute": "OmniRoute",
+    "settings": "Einstellungen",
+    "desktopVersion": "Desktop-Version",
+    "webVersion": "Webversion",
+    "unknownVersion": "Nicht verfügbar",
+    "toggle": "Seitenleiste umschalten",
+    "collapse": "Zusammenbruch",
+    "expand": "Erweitern"
+  },
+  "dependencyManagement": {
+    "title": "Abhängigkeitsmanagement",
+    "description": "Verwalten Sie erforderliche und optionale Befehlszeilenabhängigkeiten für die Startbereitschaft von HagiCode und überprüfen Sie die eingebettete Node/npm-Umgebung von Desktop.",
+    "loading": "Abhängigkeitsstatus wird gelesen...",
+    "unavailable": "Nicht verfügbar",
+    "environment": {
+      "title": "Knotenumgebung",
+      "description": "Desktop verwendet seine eigene Node/npm-Laufzeit für verwaltete CLI-Pakete.",
+      "managedNotice": "Lesen Sie die FAQ für aktuelle Details zur Node/npm-Laufzeit von Desktop, zur PATH-Isolation, zu Paketspeicherorten und zur Fehlerbehebung.",
+      "rationaleTitle": "Desktop-verwaltete Node/npm-Umgebung",
+      "faqLinkLabel": "Häufig gestellte Fragen zur Knotenumgebung anzeigen",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "version": "Version",
+      "toolchainRoot": "Toolchain-Stamm",
+      "nodeRuntimeRoot": "Laufzeitstamm des gebündelten Knotens",
+      "nodeMajorVersion": "Knoten-Hauptpaketbaum",
+      "globalPrefix": "Globales Präfix",
+      "globalModulesRoot": "Stammverzeichnis globaler Module",
+      "status": {
+        "available": "Verfügbar",
+        "unavailable": "Nicht verfügbar",
+        "error": "Fehler"
+      }
+    },
+    "mirror": {
+      "title": "npm Spiegelbeschleunigung",
+      "description": "Aktivieren Sie npmmirror.com für verwaltete npm-Paketsynchronisierungs- und Installationsvorgänge.",
+      "toggleLabel": "Verwenden Sie die npmmirror.com-Beschleunigung",
+      "registryUrl": "Registrierung URL",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "saving": "Sparen",
+      "enabledHelp": "Zukünftige Synchronisierungs-/Installationsvorgänge werden den Registrierungsspiegel von npmmirror.com verwenden.",
+      "disabledHelp": "Kommende npm-Vorgänge verwenden das standardmäßige npm-Registrierungsverhalten.",
+      "saveFailed": "Spiegeleinstellung konnte nicht gespeichert werden"
+    },
+    "omniRouteRepair": {
+      "title": "Kehren Sie nach der Reparatur von Abhängigkeiten zu OmniRoute zurück",
+      "descriptionMissing": "OmniRoute konnte nicht gestartet werden, da ein oder mehrere vom Desktop verwaltete Pakete fehlen. Reparieren Sie hier die hervorgehobenen Pakete und prüfen Sie dann erneut OmniRoute.",
+      "descriptionUnknown": "Desktop konnte die OmniRoute-Abhängigkeiten nicht bestätigen. Aktualisieren oder reparieren Sie die markierten Pakete hier und überprüfen Sie dann erneut OmniRoute.",
+      "sourceLabel": "Quelle",
+      "sourceValue": "OmniRoute",
+      "targetBadge": "Ziel reparieren",
+      "pendingNotice": "Halten Sie die hervorgehobenen Pakete in dieser Tabelle verfügbar und führen Sie dann die Aktion „Erneute Überprüfung“ aus, wenn die Reparatur abgeschlossen ist.",
+      "recheckAction": "Reparatur abgeschlossen: OmniRoute erneut prüfen",
+      "recheckRunning": "OmniRoute Abhängigkeiten werden erneut überprüft...",
+      "incomplete": "OmniRoute ist noch nicht fertig. Installieren oder aktualisieren Sie die hervorgehobenen Pakete und versuchen Sie es dann erneut.",
+      "refreshFailed": "Desktop konnte den Abhängigkeitsstatus nicht aktualisieren. Wiederholen Sie die erneute Prüfung, nachdem der aktuelle Vorgang abgeschlossen ist."
+    },
+    "package": {
+      "version": "Version",
+      "packageName": "Paket",
+      "category": "Kategorie"
+    },
+    "packageStatus": {
+      "installed": "Installiert",
+      "not-installed": "Nicht installiert",
+      "unknown": "Unbekannt"
+    },
+    "packages": {
+      "hagiscript": {
+        "description": "Erforderliche Abhängigkeitsorchestrierung CLI, die zum Synchronisieren von Desktop-verwalteten Befehlszeilentools verwendet wird."
+      },
+      "openspec": {
+        "description": "OpenSpec Angebots-, Spezifikations- und Aufgaben-Workflow CLI."
+      },
+      "skills": {
+        "description": "Codex/Agent-Skill-Management CLI."
+      },
+      "pm2": {
+        "description": "PM2 Prozessmanager, der von Desktop zur Überwachung von OmniRoute verwendet wird."
+      },
+      "omniroute": {
+        "description": "OmniRoute lokales Routing und Toolchain CLI."
+      },
+      "claudeCode": {
+        "description": "Claude Code Agent CLI für AI-unterstützte Codierungssitzungen."
+      },
+      "codex": {
+        "description": "OpenAI Codex Agent CLI für Codierungsworkflows."
+      },
+      "githubCopilot": {
+        "description": "GitHub Copilot CLI, verteilt über das offizielle @github/copilot npm-Paket."
+      },
+      "codebuddy": {
+        "description": "CodeBuddy CLI wird über das offizielle @tencent-ai/codebuddy-code npm-Paket vertrieben."
+      },
+      "opencode": {
+        "description": "OpenCode Agent CLI, verteilt über das Paket opencode-ai npm."
+      },
+      "qoder": {
+        "description": "QoderCLI wird über das offizielle @qoder-ai/qodercli npm-Paket vertrieben."
+      },
+      "gemini": {
+        "description": "Google Gemini CLI wird über das offizielle @google/gemini-cli npm-Paket vertrieben."
+      }
+    },
+    "categories": {
+      "bootstrap": "Bootstrap",
+      "workflow": "Arbeitsablauf",
+      "agent-cli": "Agent CLI",
+      "developer-tool": "Entwicklertool"
+    },
+    "bootstrap": {
+      "title": "Erforderlich"
+    },
+    "dependencyGate": {
+      "title": "Installieren Sie zuerst Hagiscript",
+      "missing": "Andere Abhängigkeitsaktionen sind deaktiviert, bis Hagiscript installiert ist.",
+      "unknown": "Desktop kann Hagiscript derzeit nicht überprüfen. Aktualisieren oder installieren Sie Hagiscript neu, bevor Sie andere Abhängigkeiten ändern."
+    },
+    "packageTable": {
+      "title": "Befehlszeilenabhängigkeiten",
+      "description": "Wählen Sie Agent CLI und Workflow-Abhängigkeiten aus, die über hagiscript npm-sync installiert werden sollen.",
+      "tool": "Werkzeug",
+      "status": "Status",
+      "action": "Aktion"
+    },
+    "batchLog": {
+      "title": "Batch-Installationsprotokoll",
+      "description": "Kombinierte Ausgabe für {{count}} ausgewählte Pakete.",
+      "empty": "Nach dem Start der Batch-Installation werden hier Protokolle angezeigt.",
+      "completed": "Batch-Installation abgeschlossen.",
+      "status": {
+        "running": "Laufen",
+        "completed": "Abgeschlossen",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "selection": {
+      "selectAll": "Wählen Sie alle berechtigten Pakete aus",
+      "selectPackage": "Wählen Sie {{name}}",
+      "selectedCount": "{{count}} ausgewählt"
+    },
+    "disabled": {
+      "unknown": "Dieser Paketstatus ist unbekannt. Aktualisieren Sie es, bevor Sie es auswählen oder installieren."
+    },
+    "actions": {
+      "refresh": "Aktualisieren",
+      "install": "Installieren",
+      "installed": "Installiert",
+      "reinstall": "Neu installieren",
+      "installSelected": "Batch-Installation ausgewählt",
+      "installSelectedRunning": "Batch-Installation...",
+      "uninstall": "Deinstallieren"
+    },
+    "errors": {
+      "loadFailed": "Der Abhängigkeitsverwaltungsstatus konnte nicht geladen werden",
+      "operationFailed": "Der Abhängigkeitsvorgang ist fehlgeschlagen"
+    }
+  },
+  "bootstrap": {
+    "loading": {
+      "title": "Die Initialisierung des ersten Starts wird abgeschlossen...",
+      "summary": "Vorbereiten der Desktop Bridge, der lokalen Konfiguration und des Datenverzeichnisses.",
+      "description": "Die App-Shell bleibt sichtbar, bis die kritischen Startabhängigkeiten bereit sind, sodass beim ersten Start des Pakets nie ein leeres Fenster angezeigt wird.",
+      "stepActive": "In Bearbeitung",
+      "stepPending": "Ausstehend",
+      "stage": "Aktueller Stand: {{stage}}"
+    },
+    "steps": {
+      "shell": "App-Shell initialisieren",
+      "config": "Lokale Konfiguration laden",
+      "dataDirectory": "Datenverzeichnis vorbereiten",
+      "render": "Montieren Sie die Hauptschnittstelle"
+    },
+    "error": {
+      "title": "Der erste Start wurde nicht abgeschlossen",
+      "description": "Desktop konnte die für den ersten Bildschirm erforderlichen lokalen Ressourcen nicht vorbereiten.",
+      "diagnosticTitle": "Diagnosezusammenfassung",
+      "stage": "Stufe: {{stage}}",
+      "summary": "Zusammenfassung: {{summary}}",
+      "path": "Pfad: {{path}}"
+    },
+    "actions": {
+      "openLogs": "Öffnen Sie den Protokollordner",
+      "retry": "App-Shell neu laden",
+      "working": "Arbeiten..."
+    },
+    "toasts": {
+      "logsOpened": "Öffnete den Ordner „Desktop-Protokolle“.",
+      "logsFailed": "Der Desktop-Protokollordner konnte nicht geöffnet werden"
+    }
+  },
+  "systemDiagnostic": {
+    "title": "Systemdiagnose",
+    "description": "Erfassen Sie die lokalen Umgebungsdetails dieses Geräts und geben Sie den Klartextbericht an den technischen Support weiter.",
+    "reportTitle": "Nur-Text-Bericht",
+    "reportDescription": "Bei jeder Wiederholung wird der vorherige Bericht ersetzt, sodass der kopierte Inhalt immer den neuesten Diagnose-Snapshot widerspiegelt.",
+    "empty": "Führen Sie eine Systemdiagnose durch, um Betriebssystem-, Hardware-, Agent CLI-Registrierungsprüfungen und Kern-Toolchain-Details zu erfassen.",
+    "loading": "Details zur lokalen Umgebung werden erfasst...",
+    "actions": {
+      "run": "Starten Sie die Diagnose",
+      "running": "Ausführen der Diagnose",
+      "rerun": "Laufen Sie noch einmal",
+      "copy": "Ergebnis kopieren",
+      "copying": "Kopieren"
+    },
+    "status": {
+      "success": "Abgeschlossen",
+      "partialFailure": "Teilweiser Misserfolg"
+    },
+    "summary": {
+      "completedAt": "Abgeschlossen am: {{value}}",
+      "issueCount": "Erfasste Probleme: {{count}}"
+    },
+    "runtimeMatrix": {
+      "title": "Integrierte Laufzeitmatrix",
+      "unknown": "unbekannt",
+      "unresolved": "ungelöst",
+      "version": "Version: {{value}}",
+      "path": "Pfad: {{value}}",
+      "boolean": {
+        "true": "aktiviert",
+        "false": "deaktiviert"
+      },
+      "source": {
+        "bundled": "Gebündelt",
+        "desktop-managed": "Desktop-verwaltet",
+        "host": "Host-PFAD",
+        "unknown": "Unbekannte Quelle"
+      },
+      "status": {
+        "healthy": "Gesund",
+        "warning": "Warnung",
+        "missing": "Fehlt",
+        "invalid": "Ungültig",
+        "unknown": "Unbekannt"
+      },
+      "npmConfig": {
+        "title": "npm Konfiguration",
+        "registry": "Registrierung: {{value}}",
+        "cache": "Cache: {{value}}",
+        "prefix": "Präfix/Paketstamm: {{value}}",
+        "mirror": "Spiegelbeschleunigung: {{value}}"
+      },
+      "managedCommands": {
+        "title": "Verwaltete Befehle",
+        "empty": "Es wurden keine verwalteten Befehlsmetadaten gemeldet.",
+        "status": {
+          "installed": "Installiert",
+          "deferred": "Aufgeschoben",
+          "manual": "Handbuch",
+          "missing": "Fehlt",
+          "invalid": "Ungültig",
+          "unknown": "Unbekannt"
+        }
+      }
+    },
+    "boundary": {
+      "title": "Nur lokale Maschinendiagnose",
+      "description": "Auf dieser Seite werden Klartext-Umgebungsdetails vom aktuellen Gerät erfasst, damit Sie diese dem technischen Support mitteilen können."
+    },
+    "partialFailure": {
+      "title": "Einige Kontrollen wurden nicht sauber abgeschlossen",
+      "description": "Der Bericht ist weiterhin verwendbar. {{count}} Elemente wurden als fehlend oder fehlgeschlagen markiert und ihre Gründe wurden dem Bericht beigefügt."
+    },
+    "error": {
+      "title": "Der Diagnoselauf ist fehlgeschlagen",
+      "description": "Desktop konnte diesen Diagnoselauf nicht abschließen: {{error}}"
+    },
+    "toast": {
+      "success": "Systemdiagnose abgeschlossen",
+      "partialFailure": "Systemdiagnose mit {{count}} Problemen abgeschlossen",
+      "runFailed": "Systemdiagnose fehlgeschlagen: {{error}}",
+      "copySuccess": "Diagnosebericht kopiert",
+      "copyFailed": "Fehler beim Kopieren des Diagnoseberichts: {{error}}"
+    }
+  },
+  "system": {
+    "logQuickAccess": {
+      "title": "Schnellzugriff protokollieren",
+      "description": "Öffnen Sie die Desktop- und Web-App-Protokollordner direkt, um die Diagnosezeit zu verkürzen.",
+      "loading": "Protokollordner werden überprüft...",
+      "hint": "Schaltflächenzustände werden automatisch mit der aktiven Version aktualisiert",
+      "status": {
+        "available": "Verfügbar",
+        "unavailable": "Nicht verfügbar"
+      },
+      "desktop": {
+        "label": "Desktop-Protokollordner",
+        "description": "Öffnen Sie das aktuelle Desktop-Protokollverzeichnis auf diesem Gerät.",
+        "openSuccess": "Desktop-Protokollordner geöffnet"
+      },
+      "webApp": {
+        "label": "Ordner „Web-App-Protokolle“.",
+        "description": "Öffnen Sie das Web-App-Protokollverzeichnis für die aktive Version.",
+        "openSuccess": "Der Ordner „Web-App-Protokolle“ wurde geöffnet"
+      },
+      "errors": {
+        "load_failed": "Der Status des Protokollordners konnte nicht geladen werden",
+        "logs_not_found": "Protokollordner nicht gefunden",
+        "no_active_version": "Es ist keine aktive Version ausgewählt",
+        "open_failed": "Der Protokollordner konnte nicht geöffnet werden"
+      }
+    },
+    "noVersionInstalled": {
+      "title": "Noch keine Versionen installiert",
+      "description": "Der einfachste Weg, mit Hagicode Desktop zu beginnen, ist unser geführter Einrichtungsassistent. Komplette Installation und Konfiguration in nur wenigen Schritten.",
+      "startWizard": "Assistent starten"
+    },
+    "activeVersion": {
+      "actions": {
+        "manage": "Versionen verwalten"
+      },
+      "labels": {
+        "version": "Version",
+        "installedAt": "Installiert bei",
+        "status": "Status"
+      },
+      "states": {
+        "ready": "Bereit"
+      }
+    },
+    "updateReminder": {
+      "title": "Update verfügbar",
+      "labels": {
+        "current": "Aktuell",
+        "latest": "Neueste",
+        "state": "Staat"
+      },
+      "states": {
+        "checking": "Überprüfen",
+        "downloading": "Herunterladen",
+        "ready": "Bereit",
+        "failed": "Fehlgeschlagen",
+        "disabled": "Angehalten"
+      },
+      "descriptions": {
+        "checking": "Überprüfen Sie die aktive Paketquelle auf eine kompatible neuere Version.",
+        "downloading": "Es wurde eine neuere Version gefunden und das Archiv wird im Hintergrund vorab heruntergeladen.",
+        "ready": "Das neueste Archiv ist überprüft und bereit für den vorhandenen Versionsverwaltungs-Installationsablauf.",
+        "failed": "Hintergrundaktualisierung fehlgeschlagen: {{error}}",
+        "settings-disabled": "Hintergrund-Predownloads sind deaktiviert. Sie können sie in den Einstellungen wieder aktivieren.",
+        "portable-mode": "Im tragbaren Modus werden Hintergrundaktualisierungen übersprungen und die aktuelle Laufzeit bleibt schreibgeschützt.",
+        "no-package-source": "Es ist keine aktive Paketquelle konfiguriert, daher können Hintergrundaktualisierungen nicht gestartet werden."
+      },
+      "actions": {
+        "openVersionPage": "Öffnen Sie die Versionsverwaltung",
+        "installLatest": "Neueste installieren",
+        "openSettings": "Öffnen Sie Einstellungen"
+      }
+    },
+    "homepageTour": {
+      "buttons": {
+        "next": "Als nächstes",
+        "previous": "Zurück",
+        "done": "Fertig"
+      },
+      "steps": {
+        "hero": {
+          "title": "Willkommen auf der Homepage",
+          "description": "Dieser obere Abschnitt fasst den Dienstzustand zusammen und hilft Ihnen zu verstehen, wo Sie im Desktop-Dashboard beginnen sollten."
+        },
+        "updateReminder": {
+          "title": "Verfolgen Sie verfügbare Updates",
+          "description": "Wenn ein kompatibles neueres Paket entdeckt wird, zeigt diese Erinnerungskarte seinen Status an und verweist auf die nächste Aktion."
+        },
+        "serviceCard": {
+          "title": "Überwachen Sie den Servicestatus",
+          "description": "Überprüfen Sie hier den Status des eingebetteten Dienstes und starten, stoppen, starten oder öffnen Sie dann Hagicode, wenn die Laufzeit bereit ist."
+        },
+        "logAccess": {
+          "title": "Wechseln Sie zu den Protokollordnern",
+          "description": "Diese Schnellaktionen öffnen Desktop- und Web-App-Protokollordner, sodass Sie während der Diagnose schneller Beweise sammeln können."
+        },
+        "activeVersion": {
+          "title": "Überprüfen Sie die aktive Version",
+          "description": "Dieser Abschnitt zeigt, welches Paket gerade installiert ist und bietet Ihnen einen schnellen Einstieg in die Versionsverwaltung."
+        },
+        "noVersionInstalled": {
+          "title": "Installieren Sie Ihre erste Version",
+          "description": "Wenn noch kein Paket installiert ist, verwenden Sie diesen Call-to-Action, um den Setup-Assistenten zu starten und die erste Laufzeitinstallation abzuschließen."
+        }
+      }
+    },
+    "themeToggle": {
+      "switchToLight": "Wechseln Sie in den Lichtmodus",
+      "switchToDark": "Wechseln Sie in den Dunkelmodus"
+    }
+  },
+  "omniroute": {
+    "title": "OmniRoute",
+    "description": "Verwalten Sie den Desktop-eigenen OmniRoute-Dienst bis PM2, einschließlich Lebenszykluskontrollen, Laufzeitpfaden, Portkonfiguration und aktuellen Protokollen.",
+    "loading": "Lade OmniRoute Status...",
+    "actions": {
+      "refresh": "Aktualisieren",
+      "start": "Starten",
+      "stop": "Stopp",
+      "restart": "Neustart",
+      "working": "Arbeiten...",
+      "openUi": "Öffnen Sie UI",
+      "save": "Speichern",
+      "open": "Offen",
+      "refreshLogs": "Protokolle aktualisieren"
+    },
+    "status": {
+      "title": "Status",
+      "running": "Laufen",
+      "stopped": "Angehalten",
+      "partial": "Teilweise",
+      "error": "Fehler",
+      "baseUrl": "Basis URL",
+      "pm2": "PM2 ausführbare Datei",
+      "pm2Missing": "PM2 ist nicht installiert"
+    },
+    "config": {
+      "title": "Laufzeitkonfiguration",
+      "description": "OmniRoute verwendet einen isolierten Desktop-verwalteten Port. Er kann nicht mit dem Webdienst-Port HagiCode übereinstimmen.",
+      "portLabel": "Hafen",
+      "passwordLabel": "Login-Passwort",
+      "passwordDescription": "Desktop generiert standardmäßig ein zufälliges Passwort und zeigt es hier im Klartext an. Es wird als INITIAL_PASSWORD eingefügt, wenn OmniRoute startet."
+    },
+    "validation": {
+      "numeric": "Geben Sie einen numerischen Port ein.",
+      "range": "Verwenden Sie einen Port zwischen 1024 und 65535.",
+      "passwordLength": "Verwenden Sie ein Passwort mit 4 bis 200 Zeichen."
+    },
+    "paths": {
+      "title": "Verwaltete Pfade",
+      "description": "Konfiguration, Daten und Protokolle werden unter Electron userData/OmniRoute gespeichert.",
+      "config": "Konfig",
+      "data": "Daten",
+      "logs": "Protokolle"
+    },
+    "processes": {
+      "title": "PM2 Prozesse",
+      "description": "Desktop verwaltet nur seinen eigenen OmniRoute-Dienstprozess und lässt nicht verwandte PM2-Prozesse unberührt.",
+      "name": "Name",
+      "status": "Status",
+      "restarts": "Neustarts"
+    },
+    "processStatus": {
+      "online": "Online",
+      "stopped": "Angehalten",
+      "errored": "Fehlerhaft",
+      "unknown": "Unbekannt"
+    },
+    "logs": {
+      "title": "Aktuelle Protokolle",
+      "description": "Lesen Sie begrenzte aktuelle Zeilen aus vom Desktop verwalteten OmniRoute-Protokollen auf der Zulassungsliste.",
+      "empty": "Noch keine Protokollausgabe.",
+      "targets": {
+        "service-out": "Serviceausgabe",
+        "service-error": "Dienstfehler"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "Reparieren Sie zuerst vom Desktop verwaltete Abhängigkeiten",
+      "descriptionMissing": "OmniRoute kann erst gestartet werden, wenn die hervorgehobenen Desktop-verwalteten Pakete in der Abhängigkeitsverwaltung installiert oder repariert wurden.",
+      "descriptionUnknown": "Desktop konnte die hervorgehobenen OmniRoute-Abhängigkeiten nicht überprüfen. Aktualisieren oder reparieren Sie sie im Dependency Management, bevor Sie es erneut versuchen.",
+      "openDependencyManagement": "Öffnen Sie das Abhängigkeitsmanagement"
+    },
+    "errors": {
+      "title": "OmniRoute Vorgang fehlgeschlagen",
+      "operationFailed": "Der Vorgang ist fehlgeschlagen.",
+      "saveFailed": "Die Konfiguration von OmniRoute konnte nicht gespeichert werden.",
+      "openPathFailed": "Der verwaltete Pfad konnte nicht geöffnet werden."
+    }
+  }
+}

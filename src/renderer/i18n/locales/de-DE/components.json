@@ -1,0 +1,324 @@
+{
+  "status": {
+    "installed": "Installiert",
+    "notInstalled": "Nicht installiert",
+    "installing": "Installieren",
+    "failed": "Fehlgeschlagen"
+  },
+  "installConfirm": {
+    "title": "Dienstbestätigung stoppen",
+    "description": "Der Dienst Hagicode läuft derzeit. Für die Installation oder Neuinstallation ist das Beenden des Dienstes erforderlich.",
+    "continueWill": "Weiterhin wird:",
+    "warnings": {
+      "stopService": "Stoppen Sie den aktuell ausgeführten Hagicode-Dienst",
+      "interruptRequests": "Unterbrechen Sie alle laufenden Anfragen",
+      "installOperation": "Führen Sie den Installations-/Neuinstallationsvorgang durch"
+    },
+    "manualRestart": "Nach Abschluss der Installation müssen Sie den Dienst manuell neu starten.",
+    "shouldContinue": "Möchten Sie fortfahren?",
+    "cancel": "Abbrechen",
+    "confirm": "Anhalten und weitermachen",
+    "stopping": "Dienst wird eingestellt..."
+  },
+  "dependencyStartConfirm": {
+    "title": "Starten Sie die Servicebestätigung",
+    "description": "In der aktuellen Version fehlen die folgenden erforderlichen Abhängigkeiten:",
+    "missingDependencies": "Fehlende Abhängigkeiten",
+    "currentVersion": "Aktuelle Version",
+    "required": "Erforderlich",
+    "risksTitle": "Das Starten des Dienstes ohne diese Abhängigkeiten kann zu Folgendem führen:",
+    "risks": {
+      "startupFailure": "Der Dienst startet nicht ordnungsgemäß",
+      "featureUnavailable": "Einige Funktionen sind nicht verfügbar",
+      "runtimeErrors": "Laufzeitfehler"
+    },
+    "confirmation": "Möchten Sie den Dienst trotzdem starten?",
+    "cancel": "Abbrechen",
+    "confirm": "Fangen Sie trotzdem an",
+    "starting": "Beginnt..."
+  },
+  "dependencyWarningBanner": {
+    "title": "Warnung: Dienstabhängigkeiten nicht vollständig erfüllt",
+    "description": "Derzeit fehlen {{count}} erforderliche Abhängigkeiten. Einige Funktionen funktionieren möglicherweise nicht ordnungsgemäß.",
+    "viewDetails": "Details anzeigen",
+    "fixLater": "Später reparieren"
+  },
+  "packageManagement": {
+    "cardTitle": "Paketverwaltung",
+    "cardDescription": "Verwalten Sie die Installation von Webdienstpaketen",
+    "platformLabel": "Plattform",
+    "detecting": "Erkennen...",
+    "installationStatusLabel": "Installationsstatus",
+    "installedVersionLabel": "Installierte Version",
+    "selectVersionLabel": "Wählen Sie die zu installierende Version aus",
+    "versionPlaceholder": "-- Wählen Sie eine Version --",
+    "installingProgress": "Installieren...",
+    "reinstallingProgress": "Neuinstallation...",
+    "reinstallButton": "Neu installieren",
+    "reinstallConfirmTitle": "Bestätigen Sie die Neuinstallation",
+    "reinstallConfirmMessage": "Sie sind dabei, Version {{version}} neu zu installieren. Dieser Vorgang wird:",
+    "reinstallConfirmClearCache": "Zwischengespeicherte Paketdateien löschen",
+    "reinstallConfirmRemoveInstalled": "Entfernen Sie die aktuell installierte Version",
+    "reinstallConfirmDownloadInstall": "Laden Sie das Paket herunter und installieren Sie es erneut",
+    "reinstallCancel": "Abbrechen",
+    "reinstallConfirmButton": "Neu installieren",
+    "reinstallProgress": {
+      "clearingCache": "Cache leeren...",
+      "removingOld": "Alte Version wird entfernt...",
+      "downloading": "Herunterladen...",
+      "installing": "Installieren..."
+    },
+    "reinstallSuccess": "Neuinstallation erfolgreich",
+    "reinstallFailed": "Die Neuinstallation ist fehlgeschlagen",
+    "noPackagesMessage": "Keine Pakete verfügbar. Stellen Sie sicher, dass das Paketquellverzeichnis unter folgender Adresse vorhanden ist:",
+    "availableVersionsCount": "Verfügbare Versionen: {{count}} gefunden",
+    "filteredByPlatform": "(gefiltert nach Plattform: {{platform}})",
+    "downloadButton": "Paket installieren",
+    "refreshButton": "Versionen aktualisieren",
+    "progress": {
+      "downloading": "Herunterladen...",
+      "extracting": "Extrahieren...",
+      "verifying": "Überprüfung...",
+      "completed": "Abgeschlossen",
+      "error": "Fehler"
+    }
+  },
+  "webServiceStatus": {
+    "cardTitle": "Eingebetteter Webdienst",
+    "cardDescription": "Anzeigen und Verwalten des Webdienst-Ausführungsstatus",
+    "status": {
+      "running": "Laufen",
+      "stopped": "Angehalten",
+      "error": "Fehler",
+      "starting": "Beginnt...",
+      "stopping": "Stoppen...",
+      "unknown": "Unbekannt",
+      "connected": "Verbunden mit Remote"
+    },
+    "statusDescription": {
+      "running": "Der Webdienst ist betriebsbereit",
+      "stopped": "Der Webdienst wird nicht ausgeführt",
+      "error": "Der Webdienst konnte nicht ausgeführt werden",
+      "starting": "Der Webdienst wird gestartet",
+      "stopping": "Der Webdienst wird heruntergefahren",
+      "unknown": "Unbekannter Status"
+    },
+    "startButton": "Dienst starten",
+    "dependencyReadinessButton": "Öffnen Sie das Abhängigkeitsmanagement",
+    "dependencyReadinessAlert": {
+      "title": "Abhängigkeiten sind noch nicht bereit",
+      "message": "Installieren Sie die erforderlichen vom Desktop verwalteten Abhängigkeiten, bevor Sie mit Hagicode beginnen. Optionale Abhängigkeiten blockieren den Start des Basisdienstes nicht."
+    },
+    "stoppingButton": "Stoppen...",
+    "restartButton": "Neustart",
+    "restartingButton": "Neustart...",
+    "stopButton": "Stoppen Sie den Dienst",
+    "openInBrowser": "Im Browser öffnen",
+    "openAppButton": "Anwendung öffnen",
+    "openBrowserButton": "Im Browser öffnen",
+    "portWaiting": {
+      "title": "Warten darauf, dass der Port verfügbar wird",
+      "detail": "Der Service-Port ist noch nicht zugänglich",
+      "detailWithPort": "Port {{port}} ist noch nicht erreichbar"
+    },
+    "details": {
+      "serviceUrl": "Service URL",
+      "uptime": "Betriebszeit",
+      "restartCount": "Zählung neu starten",
+      "port": "Hafen",
+      "version": "Version",
+      "remoteUrl": "Fernbedienung URL",
+      "listenAddress": "Adresse anhören"
+    },
+    "notInstalledAlert": {
+      "title": "Paket nicht installiert",
+      "message": "Das Webservice-Paket ist noch nicht installiert. Bitte installieren Sie das Paket zuerst über den Abschnitt „Paketverwaltung“ und kehren Sie dann hierher zurück, um den Dienst zu starten."
+    },
+    "noVersionAlert": {
+      "title": "Keine aktive Version",
+      "message": "Keine aktive Version gefunden. Bitte installieren und aktivieren Sie zunächst eine Version über die Seite „Versionsverwaltung“."
+    },
+    "versionNotReadyAlert": {
+      "title": "Version nicht bereit",
+      "message": "In der aktiven Version fehlen erforderliche Abhängigkeiten. Weitere Informationen finden Sie auf der Seite „Abhängigkeitsmanagement“."
+    },
+    "portError": {
+      "invalid": "Ungültige Portnummer",
+      "range": "Der Port muss zwischen 1024 und 65535 liegen"
+    },
+    "openLogsButton": "Öffnen Sie Webprotokolle",
+    "startupFailureDialog": {
+      "title": "Startfehlerprotokoll",
+      "viewButton": "Fehlerprotokoll anzeigen",
+      "copyButton": "Protokoll kopieren",
+      "closeButton": "Schließen",
+      "emptySummary": "Die Zusammenfassung der Startfehler ist nicht verfügbar",
+      "emptyLog": "Es ist keine Startprotokollausgabe verfügbar",
+      "meta": "Hafen: {{port}} | Zeit: {{timestamp}}",
+      "truncatedHint": "Die Ausgabe wird auf den neuesten Protokollinhalt gekürzt.",
+      "copySuccess": "Startprotokoll kopiert",
+      "copyError": "Das Startprotokoll konnte nicht kopiert werden",
+      "copyEmpty": "Kein Protokollinhalt zum Kopieren"
+    },
+    "toast": {
+      "noActiveVersion": "Für Webprotokolle ist keine aktive Version ausgewählt",
+      "openLogsSuccess": "Der Webprotokollordner der aktiven Version wurde geöffnet",
+      "logsNotFound": "Der Webprotokollordner der aktiven Version wurde nicht gefunden",
+      "openLogsError": "Der Webprotokollordner der aktiven Version konnte nicht geöffnet werden"
+    },
+    "listenAddress": {
+      "label": "Höradresse",
+      "description": "Wählen Sie aus, wie Desktop den eingebetteten Webdienst bindet, während er gestoppt ist.",
+      "customInputLabel": "Benutzerdefiniertes IPv4",
+      "customPlaceholder": "192.168.1.24",
+      "customError": "Geben Sie eine gültige IPv4-Adresse ein",
+      "accessUrlPreviewLabel": "Greifen Sie auf die URL-Vorschau zu",
+      "wildcardHint": "`0.0.0.0` bindet jede Schnittstelle. Desktop öffnet weiterhin den lokalen Client über `127.0.0.1`.",
+      "localOnlyHint": "Änderungen werden beim nächsten Start des lokalen Dienstes wirksam.",
+      "presets": {
+        "localhost": {
+          "label": "localhost",
+          "description": "Am besten für das integrierte WebView und den Browser auf diesem Computer."
+        },
+        "loopback": {
+          "label": "127.0.0.1",
+          "description": "Verwenden Sie eine explizite IPv4-Loopback-Adresse für den ausschließlich lokalen Zugriff."
+        },
+        "wildcard": {
+          "label": "0.0.0.0",
+          "description": "Binden Sie jede lokale Schnittstelle, damit andere Geräte im LAN eine Verbindung herstellen können."
+        },
+        "custom": {
+          "label": "Benutzerdefinierte IP",
+          "description": "Binden Sie eine bestimmte IPv4-Schnittstelle, beispielsweise einen dedizierten LAN-Adapter."
+        }
+      }
+    }
+  },
+  "languageSelector": {
+    "currentLanguage": "Aktuelle Sprache",
+    "selectLanguage": "Wählen Sie Sprache aus"
+  },
+  "dependencyManagement": {
+    "title": "Systemabhängigkeiten",
+    "description": "Überprüfen und verwalten Sie die vom Webdienst benötigten Systemlaufzeitabhängigkeiten",
+    "status": {
+      "installed": "Installiert",
+      "bundled": "Im Lieferumfang des Desktops enthalten",
+      "desktopManaged": "Desktop-verwaltet",
+      "manualInstallRequired": "Manuelle Installation erforderlich",
+      "notInstalled": "Nicht installiert",
+      "versionMismatch": "Versionskonflikt",
+      "checking": "Überprüfen...",
+      "ready": "Gebrauchsfertig"
+    },
+    "actions": {
+      "install": "Installieren",
+      "installing": "Installieren...",
+      "refresh": "Aktualisieren",
+      "viewManualSteps": "Manuelle Schritte anzeigen",
+      "visitWebsite": "Besuchen Sie die offizielle Website",
+      "reinstallDesktop": "Desktop neu installieren",
+      "updateDesktop": "Desktop aktualisieren"
+    },
+    "details": {
+      "currentVersion": "Aktuelle Version",
+      "requiredVersion": "Erforderliche Version",
+      "manualCommand": "Vorgeschlagener Befehl",
+      "source": "Quelle",
+      "bundledSource": "Gebündelte Quelle",
+      "systemSource": "Systemquelle"
+    },
+    "manualHandoff": {
+      "title": "Manuelle CLI-Paketinstallation erforderlich",
+      "description": "Führen Sie den vorgeschlagenen Befehl außerhalb des Desktops aus. Aktuelle Details zur gebündelten Node/npm-Umgebung und zum PATH-Verhalten von Desktop finden Sie in den FAQ.",
+      "faqLinkLabel": "Häufig gestellte Fragen zur Knotenumgebung anzeigen",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Aktualisieren Sie nach Abschluss des Befehls, um die vom Desktop verwalteten Abhängigkeiten erneut zu überprüfen."
+    },
+    "noDependencies": "Keine Abhängigkeiten erkannt"
+  },
+  "packageSource": {
+    "cardTitle": "Paketquellenkonfiguration",
+    "cardDescription": "Konfigurieren und verwalten Sie Paketquellen für die Installation",
+    "sourceType": {
+      "label": "Paketquellentyp",
+      "folder": "Lokaler Ordner",
+      "httpIndex": "HTTP Index",
+      "http": "HTTP URL"
+    },
+    "folder": {
+      "path": {
+        "label": "Ordnerpfad",
+        "placeholder": "Geben Sie den Pfad zum Paketverzeichnis ein"
+      },
+      "browseButton": "Durchsuchen...",
+      "scanButton": "Verfügbare Versionen scannen",
+      "scanning": "Scannen...",
+      "notFound": "Der Ordner existiert nicht oder ist nicht zugänglich"
+    },
+    "http": {
+      "url": {
+        "label": "Paket URL",
+        "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "httpIndex": {
+      "indexUrl": {
+        "label": "Index URL",
+        "placeholder": "https://index.hagicode.com/server/index.json",
+        "hint": "Die Indexdatei muss ein Versionsarray und Assets für jede Version enthalten"
+      }
+    },
+    "validateButton": "Konfiguration validieren",
+    "applyButton": "Konfiguration anwenden",
+    "fetchVersionsButton": "Verfügbare Versionen abrufen",
+    "validating": "Konfiguration wird validiert...",
+    "valid": "Die Konfiguration ist gültig",
+    "fetchingVersions": "Versionen werden abgerufen...",
+    "nortOnlyNotice": "Es werden nur NORT-Pakete (hagicode-*) unterstützt",
+    "switchSource": "Paketquelle wechseln",
+    "addSource": "Paketquelle hinzufügen",
+    "removeSource": "Paketquelle entfernen",
+    "editSource": "Paketquelle bearbeiten",
+    "currentSource": "Aktuelle Paketquelle",
+    "availableSources": "Verfügbare Paketquellen",
+    "noSources": "Keine Paketquellen konfiguriert",
+    "sourceName": "Quellname",
+    "actions": "Aktionen",
+    "scanSuccess": "Scan abgeschlossen, {{count}} Versionen gefunden",
+    "fetchSuccess": "Abruf abgeschlossen, {{count}} Versionen gefunden",
+    "saveSuccess": "Konfiguration der Paketquelle gespeichert",
+    "switchSuccess": "Paketquelle gewechselt",
+    "removeSuccess": "Paketquelle entfernt",
+    "confirmRemove": "Entfernen dieser Paketquelle bestätigen?",
+    "error": {
+      "loadFailed": "Die Konfiguration der Paketquelle konnte nicht geladen werden",
+      "saveFailed": "Die Konfiguration der Paketquelle konnte nicht gespeichert werden",
+      "switchFailed": "Fehler beim Wechseln der Paketquelle",
+      "removeFailed": "Paketquelle konnte nicht entfernt werden",
+      "scanFailed": "Der Ordner konnte nicht gescannt werden",
+      "fetchFailed": "Es konnten GitHub Veröffentlichungen nicht abgerufen werden",
+      "validateFailed": "Die Konfiguration konnte nicht validiert werden"
+    }
+  },
+  "tray": {
+    "status": {
+      "running": "Laufen",
+      "stopped": "Angehalten",
+      "error": "Fehler"
+    },
+    "openInApp": "Öffnen Sie Hagicode",
+    "openInBrowser": "Im Browser öffnen",
+    "startService": "Dienst starten",
+    "stopService": "Stoppen Sie den Dienst"
+  },
+  "blogFeed": {
+    "title": "Hagicode Blog",
+    "refresh": "Aktualisieren",
+    "loading": "Laden...",
+    "error": "Das Laden ist fehlgeschlagen. Bitte versuchen Sie es später noch einmal",
+    "noArticles": "Keine Artikel verfügbar",
+    "lastUpdate": "Letzte Aktualisierung: {{date}}"
+  }
+}

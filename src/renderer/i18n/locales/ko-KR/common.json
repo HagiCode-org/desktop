@@ -1,0 +1,630 @@
+{
+  "button": {
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "edit": "편집",
+    "close": "닫기",
+    "refresh": "새로 고침",
+    "install": "설치",
+    "uninstall": "제거",
+    "start": "시작",
+    "stop": "중지",
+    "restart": "다시 시작",
+    "open": "열기",
+    "download": "다운로드"
+  },
+  "status": {
+    "loading": "로드 중...",
+    "success": "성공",
+    "error": "오류",
+    "warning": "경고",
+    "info": "정보",
+    "running": "달리기",
+    "stopped": "중지됨",
+    "installed": "설치됨",
+    "notInstalled": "설치되지 않음",
+    "pending": "보류 중",
+    "failed": "실패"
+  },
+  "form": {
+    "required": "필수",
+    "optional": "선택사항",
+    "selectPlaceholder": "선택하세요...",
+    "inputPlaceholder": "입력해주세요...",
+    "validation": {
+      "required": "이 필드는 필수입니다",
+      "invalidFormat": "잘못된 형식",
+      "minLength": "{{min}}자 이상이어야 합니다.",
+      "maxLength": "{{max}}자를 초과할 수 없습니다."
+    }
+  },
+  "common": {
+    "version": "버전",
+    "platform": "플랫폼",
+    "language": "언어",
+    "settings": "설정",
+    "noData": "사용 가능한 데이터가 없습니다.",
+    "operationSuccess": "작업 성공",
+    "operationFailed": "작업 실패",
+    "confirmDelete": "삭제하시겠습니까?",
+    "confirmAction": "계속하시겠습니까?"
+  },
+  "header": {
+    "title": "설정",
+    "runningSuccessfully": "성공적으로 실행 중",
+    "language": {
+      "label": "언어",
+      "description": "애플리케이션 인터페이스 언어 선택"
+    },
+    "embeddedWebServicePort": "내장형 웹 서비스 포트"
+  },
+  "settings": {
+    "title": "설정",
+    "language": {
+      "label": "언어",
+      "description": "애플리케이션 인터페이스 언어 선택"
+    },
+    "embeddedWebServicePort": "내장형 웹 서비스 포트"
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Electron + React + TypeScript를 사용하여 ❤️으로 제작되었습니다.",
+    "testBuild": "테스트 애플리케이션 - 개발 빌드"
+  },
+  "menu": {
+    "systemManagement": "시스템 관리",
+    "hagicoWeb": "Hagicode Web",
+    "dependencies": "종속성",
+    "webService": "웹 서비스",
+    "packages": "패키지",
+    "settings": "설정",
+    "openWebUI": "Web UI 열기",
+    "navigate": "네비게이션",
+    "back": "뒤로",
+    "forward": "앞으로",
+    "refresh": "새로고침",
+    "devTools": "개발자 도구",
+    "help": "도움말",
+    "about": "소개",
+    "quit": "종료"
+  },
+  "webView": {
+    "back": "뒤로",
+    "forward": "앞으로",
+    "refresh": "새로고침",
+    "openInBrowser": "브라우저에서 열기",
+    "serviceNotRunning": "웹 서비스가 실행되지 않음",
+    "serviceNotRunningDesc": "웹 인터페이스에 액세스하기 전에 웹 서비스를 시작하십시오.",
+    "backToSystem": "시스템 관리로 돌아가기",
+    "error": "로드 실패",
+    "loadFailed": "로드 실패: {{reason}}",
+    "crashed": "렌더러 프로세스가 충돌했습니다.",
+    "retry": "재시도"
+  },
+  "mirror": {
+    "title": "NPM 미러 구성",
+    "region": "감지된 지역",
+    "currentMirror": "현재 미러",
+    "mirrorUrl": "거울 URL",
+    "detectedAt": "감지된 시간",
+    "official": "공식 npm",
+    "taobao": "Taobao NPM Mirror",
+    "redetect": "재감지",
+    "info": "NPM 도구는 더 빠른 다운로드를 위해 자동으로 이 미러를 사용합니다.",
+    "regions": {
+      "CN": "중국",
+      "INTERNATIONAL": "국제"
+    }
+  },
+  "navigation": {
+    "dashboard": "대시보드",
+    "webService": "웹 서비스",
+    "versionManagement": "버전 관리",
+    "webServiceNotRunning": "웹 서비스가 실행되고 있지 않습니다.",
+    "officialWebsite": "공식 홈페이지",
+    "officialWebsiteDesc": "최신 뉴스와 문서를 보려면 Hagicode 공식 웹사이트를 방문하세요.",
+    "costCalculator": "AI 대체 계산기",
+    "about": {
+      "sectionDescription": "번들 스냅샷을 먼저 렌더링한 다음 최신 공식 대상을 제자리에 새로 고칩니다.",
+      "snapshotLabel": "번들 스냅샷",
+      "runtimeLabel": "실시간 데이터",
+      "updatedAt": "{{value}} 업데이트됨",
+      "loading": "데이터에 관한 최신 공식을 갱신 중입니다...",
+      "refreshFailed": "데이터에 관한 최신 공식을 로드하지 못했습니다. 대신 번들 스냅샷을 표시합니다.",
+      "loadFailed": "데이터 관련 공식 기능을 일시적으로 사용할 수 없지만 웹사이트 항목은 계속 작동합니다.",
+      "snapshotMissing": "이 빌드에는 번들에 대한 스냅샷이 포함되어 있지 않습니다. 라이브 엔드포인트를 직접 시도합니다.",
+      "empty": "현재 출품작에 대한 공식적인 정보는 없습니다.",
+      "sections": {
+        "store": "매장",
+        "community": "커뮤니티",
+        "content": "내용"
+      },
+      "types": {
+        "link": "링크",
+        "contact": "연락처",
+        "qr": "QR",
+        "image": "이미지"
+      }
+    },
+    "promotion": {
+      "label": "프로모션",
+      "defaultCta": "자세히 알아보기"
+    }
+  },
+  "sidebar": {
+    "dashboard": "대시보드",
+    "webService": "웹 서비스",
+    "versionManagement": "버전 관리",
+    "diagnostic": "진단",
+    "dependencyManagement": "종속성 관리",
+    "omniroute": "OmniRoute",
+    "settings": "설정",
+    "desktopVersion": "데스크톱 버전",
+    "webVersion": "웹 버전",
+    "unknownVersion": "이용 불가",
+    "toggle": "사이드바 전환",
+    "collapse": "접기",
+    "expand": "펼치기"
+  },
+  "dependencyManagement": {
+    "title": "종속성 관리",
+    "description": "출시 준비를 위한 필수 및 선택적 명령줄 종속성을 관리하고 Desktop의 내장 Node/1 환경을 검사합니다.",
+    "loading": "종속성 상태를 읽는 중...",
+    "unavailable": "이용 불가",
+    "environment": {
+      "title": "노드 환경",
+      "description": "Desktop은 관리되는 1개 패키지에 대해 자체 Node/00 런타임을 사용합니다.",
+      "managedNotice": "Desktop의 Node/npm 런타임, PATH 격리, 패키지 위치 및 문제 해결에 대한 최신 세부 정보를 보려면 FAQ를 읽어보세요.",
+      "rationaleTitle": "데스크탑 관리 노드/npm 환경",
+      "faqLinkLabel": "노드 환경 FAQ 보기",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "version": "버전",
+      "toolchainRoot": "툴체인 루트",
+      "nodeRuntimeRoot": "번들 노드 런타임 루트",
+      "nodeMajorVersion": "노드 주요 패키지 트리",
+      "globalPrefix": "전역 접두사",
+      "globalModulesRoot": "전역 모듈 루트",
+      "status": {
+        "available": "가능",
+        "unavailable": "이용 불가",
+        "error": "오류"
+      }
+    },
+    "mirror": {
+      "title": "npm 미러 가속",
+      "description": "관리형 npm 패키지 동기화 및 설치 작업을 위해 npmmirror.com을 활성화합니다.",
+      "toggleLabel": "npmmirror.com 가속 사용",
+      "registryUrl": "레지스트리 URL",
+      "enabled": "활성화됨",
+      "disabled": "장애인",
+      "saving": "저장 중",
+      "enabledHelp": "향후 동기화/설치 작업에서는 npmmirror.com 레지스트리 미러를 사용합니다.",
+      "disabledHelp": "다가오는 npm 작업은 기본 npm 레지스트리 동작을 사용합니다.",
+      "saveFailed": "미러 설정을 저장하지 못했습니다."
+    },
+    "omniRouteRepair": {
+      "title": "종속성을 복구한 후 OmniRoute로 돌아갑니다.",
+      "descriptionMissing": "하나 이상의 데스크톱 관리 패키지가 없기 때문에 OmniRoute을 시작할 수 없습니다. 여기에서 강조 표시된 패키지를 수리한 후 OmniRoute을 다시 확인하세요.",
+      "descriptionUnknown": "데스크톱에서 OmniRoute 종속성을 확인할 수 없습니다. 여기에서 강조 표시된 패키지를 새로 고치거나 복구한 후 OmniRoute를 다시 확인하세요.",
+      "sourceLabel": "소스",
+      "sourceValue": "OmniRoute",
+      "targetBadge": "수리대상",
+      "pendingNotice": "이 표에서 강조 표시된 패키지를 사용 가능한 상태로 유지한 다음 복구가 완료되면 재확인 작업을 실행하십시오.",
+      "recheckAction": "수리 완료: OmniRoute 재확인",
+      "recheckRunning": "OmniRoute 종속성을 다시 확인하는 중...",
+      "incomplete": "OmniRoute은 아직 준비되지 않았습니다. 강조 표시된 패키지를 설치하거나 새로 고친 후 다시 시도하세요.",
+      "refreshFailed": "데스크톱에서 종속성 상태를 새로 고칠 수 없습니다. 현재 작업이 완료된 후 다시 확인을 다시 시도하세요."
+    },
+    "package": {
+      "version": "버전",
+      "packageName": "패키지",
+      "category": "카테고리"
+    },
+    "packageStatus": {
+      "installed": "설치됨",
+      "not-installed": "설치되지 않음",
+      "unknown": "알 수 없음"
+    },
+    "packages": {
+      "hagiscript": {
+        "description": "데스크톱 관리 명령줄 도구를 동기화하는 데 사용되는 필수 종속성 오케스트레이션 CLI."
+      },
+      "openspec": {
+        "description": "OpenSpec 제안서, 사양, 작업 흐름 CLI."
+      },
+      "skills": {
+        "description": "Codex/상담원 스킬 관리 CLI."
+      },
+      "pm2": {
+        "description": "PM2 프로세스 관리자는 Desktop에서 OmniRoute을 감독하는 데 사용됩니다."
+      },
+      "omniroute": {
+        "description": "OmniRoute 로컬 라우팅 및 툴체인 CLI."
+      },
+      "claudeCode": {
+        "description": "Claude Code 에이전트 CLI는 AI 지원 코딩 세션을 위한 것입니다."
+      },
+      "codex": {
+        "description": "OpenAI Codex 코딩 작업흐름을 위한 에이전트 CLI."
+      },
+      "githubCopilot": {
+        "description": "GitHub Copilot CLI 공식 @github/copilot npm 패키지를 통해 배포됩니다."
+      },
+      "codebuddy": {
+        "description": "CodeBuddy CLI는 공식 @tencent-ai/codebuddy-code npm 패키지를 통해 배포됩니다."
+      },
+      "opencode": {
+        "description": "OpenCode Agent CLI는 opencode-ai npm 패키지를 통해 배포됩니다."
+      },
+      "qoder": {
+        "description": "QoderCLI 공식 @qoder-ai/qodercli npm 패키지를 통해 배포됩니다."
+      },
+      "gemini": {
+        "description": "Google Gemini CLI 공식 @google/gemini-cli npm 패키지를 통해 배포됩니다."
+      }
+    },
+    "categories": {
+      "bootstrap": "부트스트랩",
+      "workflow": "작업흐름",
+      "agent-cli": "에이전트 CLI",
+      "developer-tool": "개발자 도구"
+    },
+    "bootstrap": {
+      "title": "필수"
+    },
+    "dependencyGate": {
+      "title": "하기스크립트를 먼저 설치하세요",
+      "missing": "다른 종속성 작업은 hagiscript가 설치될 때까지 비활성화됩니다.",
+      "unknown": "현재 데스크톱에서는 hagiscript를 확인할 수 없습니다. 다른 종속성을 변경하기 전에 hagiscript를 새로 고치거나 다시 설치하세요."
+    },
+    "packageTable": {
+      "title": "명령줄 종속성",
+      "description": "hagiscript npm-sync를 통해 설치할 에이전트 CLI 및 워크플로 종속성을 선택합니다.",
+      "tool": "도구",
+      "status": "상태",
+      "action": "액션"
+    },
+    "batchLog": {
+      "title": "일괄 설치 로그",
+      "description": "선택한 {{count}} 패키지에 대한 결합된 출력입니다.",
+      "empty": "일괄 설치가 시작되면 여기에 로그가 표시됩니다.",
+      "completed": "일괄 설치가 완료되었습니다.",
+      "status": {
+        "running": "달리기",
+        "completed": "완료됨",
+        "failed": "실패"
+      }
+    },
+    "selection": {
+      "selectAll": "적합한 패키지를 모두 선택하세요.",
+      "selectPackage": "{{name}}를 선택하세요",
+      "selectedCount": "{{count}} 선택됨"
+    },
+    "disabled": {
+      "unknown": "이 패키지 상태를 알 수 없습니다. 선택하거나 설치하기 전에 새로 고침하세요."
+    },
+    "actions": {
+      "refresh": "새로고침",
+      "install": "설치",
+      "installed": "설치됨",
+      "reinstall": "재설치",
+      "installSelected": "일괄 설치가 선택됨",
+      "installSelectedRunning": "일괄 설치 중...",
+      "uninstall": "제거"
+    },
+    "errors": {
+      "loadFailed": "종속성 관리 상태를 로드하지 못했습니다.",
+      "operationFailed": "종속성 작업이 실패했습니다."
+    }
+  },
+  "bootstrap": {
+    "loading": {
+      "title": "첫 실행 초기화를 완료하는 중...",
+      "summary": "데스크탑 브리지, 로컬 구성 및 데이터 디렉터리를 준비합니다.",
+      "description": "앱 셸은 중요한 시작 종속성이 준비될 때까지 계속 표시되므로 패키지된 첫 번째 실행이 빈 창으로 사라지는 일이 없습니다.",
+      "stepActive": "진행중",
+      "stepPending": "보류 중",
+      "stage": "현재 단계: {{stage}}"
+    },
+    "steps": {
+      "shell": "앱 셸 초기화",
+      "config": "로컬 구성 로드",
+      "dataDirectory": "데이터 디렉터리 준비",
+      "render": "마운트 메인 인터페이스"
+    },
+    "error": {
+      "title": "첫 번째 실행이 완료되지 않았습니다.",
+      "description": "데스크톱에서 첫 번째 화면에 필요한 로컬 리소스를 준비할 수 없습니다.",
+      "diagnosticTitle": "진단 요약",
+      "stage": "단계: {{stage}}",
+      "summary": "요약: {{summary}}",
+      "path": "경로: {{path}}"
+    },
+    "actions": {
+      "openLogs": "로그 폴더 열기",
+      "retry": "앱 셸 다시 로드",
+      "working": "일하는 중..."
+    },
+    "toasts": {
+      "logsOpened": "데스크톱 로그 폴더를 열었습니다.",
+      "logsFailed": "데스크톱 로그 폴더를 열지 못했습니다."
+    }
+  },
+  "systemDiagnostic": {
+    "title": "시스템 진단",
+    "description": "이 장치의 로컬 환경 세부정보를 수집하고 일반 텍스트 보고서를 기술 지원과 공유하세요.",
+    "reportTitle": "일반 텍스트 보고서",
+    "reportDescription": "재실행할 때마다 이전 보고서가 대체되므로 복사된 콘텐츠에는 항상 최신 진단 스냅샷이 반영됩니다.",
+    "empty": "시스템 진단을 실행하여 운영 체제, 하드웨어, 에이전트 레지스트리 프로브 및 핵심 도구 체인 세부 정보를 캡처합니다.",
+    "loading": "로컬 환경 세부정보를 수집하는 중...",
+    "actions": {
+      "run": "진단 시작",
+      "running": "진단 실행",
+      "rerun": "다시 실행",
+      "copy": "결과 복사",
+      "copying": "복사 중"
+    },
+    "status": {
+      "success": "완료됨",
+      "partialFailure": "부분적인 실패"
+    },
+    "summary": {
+      "completedAt": "완료 시간: {{value}}",
+      "issueCount": "포착된 문제: {{count}}"
+    },
+    "runtimeMatrix": {
+      "title": "내장 런타임 매트릭스",
+      "unknown": "알 수 없음",
+      "unresolved": "해결되지 않은",
+      "version": "버전: {{value}}",
+      "path": "경로: {{value}}",
+      "boolean": {
+        "true": "활성화됨",
+        "false": "장애인"
+      },
+      "source": {
+        "bundled": "번들로 제공",
+        "desktop-managed": "데스크탑 관리",
+        "host": "호스트 경로",
+        "unknown": "알 수 없는 출처"
+      },
+      "status": {
+        "healthy": "건강하다",
+        "warning": "경고",
+        "missing": "누락",
+        "invalid": "유효하지 않음",
+        "unknown": "알 수 없음"
+      },
+      "npmConfig": {
+        "title": "npm 구성",
+        "registry": "레지스트리: {{value}}",
+        "cache": "캐시: {{value}}",
+        "prefix": "접두사/패키지 루트: {{value}}",
+        "mirror": "미러 가속도: {{value}}"
+      },
+      "managedCommands": {
+        "title": "관리 명령",
+        "empty": "관리되는 명령 메타데이터가 보고되지 않았습니다.",
+        "status": {
+          "installed": "설치됨",
+          "deferred": "연기됨",
+          "manual": "매뉴얼",
+          "missing": "누락",
+          "invalid": "유효하지 않음",
+          "unknown": "알 수 없음"
+        }
+      }
+    },
+    "boundary": {
+      "title": "로컬 기계 진단만 가능",
+      "description": "이 페이지는 기술 지원과 공유할 수 있도록 현재 장치에서 일반 텍스트 환경 세부 정보를 수집합니다."
+    },
+    "partialFailure": {
+      "title": "일부 수표가 깔끔하게 완료되지 않았습니다.",
+      "description": "보고서는 계속 사용할 수 있습니다. {{count}}개의 항목이 누락 또는 실패로 표시되었으며 해당 이유가 보고서에 추가되었습니다."
+    },
+    "error": {
+      "title": "진단 실행 실패",
+      "description": "데스크톱에서 이 진단 실행을 완료할 수 없습니다: {{error}}"
+    },
+    "toast": {
+      "success": "시스템 진단 완료",
+      "partialFailure": "{{count}}개의 문제가 있는 시스템 진단이 완료되었습니다.",
+      "runFailed": "시스템 진단 실패: {{error}}",
+      "copySuccess": "진단 보고서가 복사되었습니다.",
+      "copyFailed": "진단 보고서 복사 실패: {{error}}"
+    }
+  },
+  "system": {
+    "logQuickAccess": {
+      "title": "로그 빠른 액세스",
+      "description": "진단 시간을 단축하려면 데스크탑 및 웹 앱 로그 폴더를 직접 엽니다.",
+      "loading": "로그 폴더를 확인하는 중...",
+      "hint": "버튼 상태는 활성 버전으로 자동 새로 고쳐집니다.",
+      "status": {
+        "available": "가능",
+        "unavailable": "이용 불가"
+      },
+      "desktop": {
+        "label": "데스크탑 로그 폴더",
+        "description": "이 장치에서 현재 데스크톱 로그 디렉터리를 엽니다.",
+        "openSuccess": "데스크톱 로그 폴더가 열렸습니다."
+      },
+      "webApp": {
+        "label": "웹 앱 로그 폴더",
+        "description": "활성 버전에 대한 웹앱 로그 디렉터리를 엽니다.",
+        "openSuccess": "웹 앱 로그 폴더가 열렸습니다."
+      },
+      "errors": {
+        "load_failed": "로그 폴더 상태를 로드하지 못했습니다.",
+        "logs_not_found": "로그 폴더를 찾을 수 없습니다",
+        "no_active_version": "활성 버전이 선택되지 않았습니다.",
+        "open_failed": "로그 폴더를 열지 못했습니다."
+      }
+    },
+    "noVersionInstalled": {
+      "title": "아직 설치된 버전이 없습니다.",
+      "description": "Hagicode Desktop을 시작하는 가장 쉬운 방법은 안내 설정 마법사를 이용하는 것입니다. 몇 단계만으로 설치 및 구성을 완료할 수 있습니다.",
+      "startWizard": "마법사 시작"
+    },
+    "activeVersion": {
+      "actions": {
+        "manage": "버전 관리"
+      },
+      "labels": {
+        "version": "버전",
+        "installedAt": "설치 위치",
+        "status": "상태"
+      },
+      "states": {
+        "ready": "준비"
+      }
+    },
+    "updateReminder": {
+      "title": "업데이트 가능",
+      "labels": {
+        "current": "현재",
+        "latest": "최신",
+        "state": "상태"
+      },
+      "states": {
+        "checking": "확인 중",
+        "downloading": "다운로드 중",
+        "ready": "준비",
+        "failed": "실패",
+        "disabled": "일시중지됨"
+      },
+      "descriptions": {
+        "checking": "호환되는 최신 버전에 대한 활성 패키지 소스를 확인합니다.",
+        "downloading": "최신 버전이 발견되었으며 아카이브가 백그라운드에서 사전 다운로드되고 있습니다.",
+        "ready": "최신 아카이브가 확인되었으며 기존 버전 관리 설치 흐름을 위한 준비가 되었습니다.",
+        "failed": "백그라운드 업데이트 실패: {{error}}",
+        "settings-disabled": "백그라운드 사전 다운로드가 비활성화되었습니다. 설정에서 다시 켤 수 있습니다.",
+        "portable-mode": "휴대용 모드는 백그라운드 업데이트를 건너뛰고 현재 런타임을 읽기 전용으로 유지합니다.",
+        "no-package-source": "활성 패키지 소스가 구성되어 있지 않으므로 백그라운드 업데이트를 시작할 수 없습니다."
+      },
+      "actions": {
+        "openVersionPage": "공개 버전 관리",
+        "installLatest": "최신 설치",
+        "openSettings": "설정 열기"
+      }
+    },
+    "homepageTour": {
+      "buttons": {
+        "next": "다음",
+        "previous": "뒤로",
+        "done": "완료"
+      },
+      "steps": {
+        "hero": {
+          "title": "홈페이지에 오신 것을 환영합니다",
+          "description": "이 상단 섹션에는 서비스 상태가 요약되어 있으며 데스크톱 대시보드에서 시작할 위치를 이해하는 데 도움이 됩니다."
+        },
+        "updateReminder": {
+          "title": "사용 가능한 업데이트 추적",
+          "description": "호환되는 최신 패키지가 발견되면 이 알림 카드에는 해당 패키지의 상태와 다음 작업에 대한 링크가 표시됩니다."
+        },
+        "serviceCard": {
+          "title": "서비스 상태 모니터링",
+          "description": "여기에서 포함된 서비스 상태를 검토한 다음 런타임이 준비되면 시작, 중지, 다시 시작하거나 Hagicode를 엽니다."
+        },
+        "logAccess": {
+          "title": "로그 폴더로 이동",
+          "description": "이러한 빠른 작업을 통해 데스크톱 및 웹 앱 로그 폴더가 열리므로 진단 중에 증거를 더 빠르게 수집할 수 있습니다."
+        },
+        "activeVersion": {
+          "title": "활성 버전 검토",
+          "description": "이 섹션에서는 현재 어떤 패키지가 설치되어 있는지 보여주고 버전 관리에 대한 빠른 경로를 제공합니다."
+        },
+        "noVersionInstalled": {
+          "title": "첫 번째 버전 설치",
+          "description": "아직 패키지가 설치되지 않은 경우 이 클릭 유도 문구를 사용하여 설정 마법사를 시작하고 첫 번째 런타임 설치를 완료하세요."
+        }
+      }
+    },
+    "themeToggle": {
+      "switchToLight": "조명 모드로 전환",
+      "switchToDark": "어두운 모드로 전환"
+    }
+  },
+  "omniroute": {
+    "title": "OmniRoute",
+    "description": "수명 주기 제어, 런타임 경로, 포트 구성 및 최근 로그를 포함하여 PM2을 통해 데스크탑 소유 OmniRoute 서비스를 관리합니다.",
+    "loading": "OmniRoute 상태 로드 중...",
+    "actions": {
+      "refresh": "새로고침",
+      "start": "시작",
+      "stop": "중지",
+      "restart": "다시 시작",
+      "working": "일하는 중...",
+      "openUi": "UI 열기",
+      "save": "저장",
+      "open": "열기",
+      "refreshLogs": "로그 새로 고침"
+    },
+    "status": {
+      "title": "상태",
+      "running": "달리기",
+      "stopped": "중지됨",
+      "partial": "부분",
+      "error": "오류",
+      "baseUrl": "베이스 URL",
+      "pm2": "PM2 실행 가능",
+      "pm2Missing": "PM2이(가) 설치되지 않았습니다"
+    },
+    "config": {
+      "title": "런타임 구성",
+      "description": "OmniRoute은 격리된 데스크톱 관리 포트를 사용합니다. HagiCode 웹 서비스 포트와 일치할 수 없습니다.",
+      "portLabel": "항구",
+      "passwordLabel": "로그인 비밀번호",
+      "passwordDescription": "데스크톱은 기본적으로 임의의 비밀번호를 생성하고 여기에 일반 텍스트로 표시합니다. OmniRoute이 시작되면 INITIAL_PASSWORD로 주입됩니다."
+    },
+    "validation": {
+      "numeric": "숫자 포트를 입력하세요.",
+      "range": "1024~65535 사이의 포트를 사용하세요.",
+      "passwordLength": "4~200자 사이의 비밀번호를 사용하세요."
+    },
+    "paths": {
+      "title": "관리 경로",
+      "description": "구성, 데이터 및 로그는 Electron userData/OmniRoute에 저장됩니다.",
+      "config": "구성",
+      "data": "데이터",
+      "logs": "로그"
+    },
+    "processes": {
+      "title": "PM2 프로세스",
+      "description": "Desktop은 자체 서비스 프로세스만 관리하고 관련 없는 1개 프로세스는 그대로 둡니다.",
+      "name": "이름",
+      "status": "상태",
+      "restarts": "다시 시작"
+    },
+    "processStatus": {
+      "online": "온라인",
+      "stopped": "중지됨",
+      "errored": "오류 발생",
+      "unknown": "알 수 없음"
+    },
+    "logs": {
+      "title": "최근 로그",
+      "description": "허용 목록에 있는 데스크톱 관리 OmniRoute 로그에서 제한된 최근 행을 읽습니다.",
+      "empty": "아직 로그 출력이 없습니다.",
+      "targets": {
+        "service-out": "서비스 출력",
+        "service-error": "서비스 오류"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "먼저 데스크톱 관리 종속성을 복구하세요.",
+      "descriptionMissing": "강조 표시된 데스크톱 관리 패키지가 종속성 관리에서 설치되거나 복구될 때까지 OmniRoute을 시작할 수 없습니다.",
+      "descriptionUnknown": "데스크톱에서 강조 표시된 OmniRoute 종속성을 확인할 수 없습니다. 다시 시도하기 전에 종속성 관리에서 새로 고치거나 복구하세요.",
+      "openDependencyManagement": "개방형 종속성 관리"
+    },
+    "errors": {
+      "title": "OmniRoute 작업이 실패했습니다.",
+      "operationFailed": "작업이 실패했습니다.",
+      "saveFailed": "OmniRoute 구성을 저장하지 못했습니다.",
+      "openPathFailed": "관리 경로를 열지 못했습니다."
+    }
+  }
+}

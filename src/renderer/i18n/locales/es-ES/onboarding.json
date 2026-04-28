@@ -1,0 +1,343 @@
+{
+  "title": "Configuración por primera vez",
+  "welcome": {
+    "title": "Bienvenido a Hagicode Desktop",
+    "description": "Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en cinco pasos.",
+    "features": {
+      "manage": {
+        "title": "Gestión de versiones",
+        "description": "Administrar Hagicode Server instalación y actualizaciones"
+      },
+      "monitor": {
+        "title": "Monitoreo de servicio",
+        "description": "Iniciar, detener y monitorear el estado del servicio"
+      },
+      "dependencies": {
+        "title": "Gestión de dependencias",
+        "description": "Ver y administrar dependencias del sistema"
+      }
+    },
+    "processTitle": "La configuración inicial tiene 5 pasos:",
+    "steps": {
+      "welcome": "Revise la configuración y lo que sucederá a continuación.",
+      "download": "Descargue el último paquete Hagicode Server",
+      "launch": "Inicie el servicio y confirme que se está ejecutando.",
+      "dependencyPreparation": "Confirme que las dependencias requeridas y los paquetes del Agente CLI estén listos",
+      "sharingAcceleration": "Confirme si la aceleración compartida debe permanecer habilitada de forma predeterminada",
+      "legalConsent": "Confirme las revisiones actuales del EULA y la Política de privacidad, luego revise las páginas oficiales en su navegador"
+    },
+    "skip": "Saltar configuración",
+    "start": "Empezar"
+  },
+  "claude": {
+    "title": "Configurar Claude Code"
+  },
+  "download": {
+    "title": "Descargar Hagicode Server",
+    "version": "Versión",
+    "progress": "Descargar Progreso",
+    "fileSize": "Tamaño de archivo",
+    "downloading": {
+      "title": "Descargando Hagicode Server..."
+    },
+    "complete": {
+      "title": "¡Descarga completa!",
+      "message": "El paquete fue verificado exitosamente. Ahora puede regresar a la página de inicio e iniciar el servicio manualmente cuando esté listo.",
+      "fileSize": "Tamaño de archivo"
+    },
+    "downloaded": "Descargado",
+    "speed": "Velocidad",
+    "remaining": "restante",
+    "pleaseWait": "Espere mientras descargamos..."
+  },
+  "dependencies": {
+    "title": "Instalar dependencias del sistema",
+    "subtitle": "Hagicode requiere ciertas dependencias del sistema para funcionar correctamente.",
+    "description": "Verifique el estado de instalación de las dependencias del sistema.",
+    "installButton": "Instalar dependencias",
+    "status": {
+      "installed": "Instalado",
+      "installing": "Instalando...",
+      "manualInstallRequired": "Se requiere instalación manual",
+      "pending": "Pendiente",
+      "error": "Fallido",
+      "notInstalled": "No instalado",
+      "versionMismatch": "La versión no coincide",
+      "checking": "Comprobando...",
+      "ready": "Listo"
+    },
+    "actions": {
+      "install": "Instalar",
+      "upgrade": "Actualizar",
+      "installing": "Instalando...",
+      "refresh": "Actualizar",
+      "viewManualSteps": "Ver pasos manuales",
+      "visitWebsite": "Visite el sitio web oficial"
+    },
+    "details": {
+      "currentVersion": "Versión actual",
+      "requiredVersion": "Versión requerida",
+      "manualCommand": "Comando sugerido"
+    },
+    "overallProgress": "Progreso general",
+    "installing": {
+      "title": "Instalando dependencias..."
+    },
+    "complete": {
+      "title": "Dependencias instaladas",
+      "message": "Todas las dependencias se han instalado correctamente."
+    },
+    "checking": "Comprobando dependencias...",
+    "error": {
+      "message": "Algunas dependencias no se pudieron instalar. Instálelos manualmente y continúe."
+    },
+    "manualHandoff": {
+      "title": "Se requiere instalación manual del paquete CLI",
+      "description": "Ejecute el comando sugerido fuera del escritorio. Para obtener detalles actualizados sobre el entorno Node/npm incluido en Desktop y el comportamiento de PATH, lea las preguntas frecuentes.",
+      "faqLinkLabel": "Ver preguntas frecuentes sobre el entorno de nodo",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio."
+    }
+  },
+  "depInstallConfirm": {
+    "title": "Instalar dependencias faltantes",
+    "installingTitle": "Instalación de dependencias",
+    "description": "Detectada {{count}} dependencia faltante",
+    "description_other": "Se detectaron {{count}} dependencias faltantes",
+    "versionMismatchNote": "Algunas dependencias tienen versiones incorrectas y deben actualizarse.",
+    "mixedMissingMessage": "Se detectó que falta {{missing}} y la versión {{mismatch}} no coincide",
+    "mixedMissingMessage_other": "Se detectaron {{missing}} dependencias faltantes y {{mismatch}} versiones no coincidentes",
+    "versionMismatchOnlyMessage": "Se detectó una dependencia no coincidente de la versión {{count}}",
+    "versionMismatchOnlyMessage_other": "Se detectaron dependencias no coincidentes de la versión {{count}}",
+    "upgradeNote": "Las dependencias de versiones que no coincidan se actualizarán a la versión requerida.",
+    "requiredVersion": "Versión requerida",
+    "permissionWarning": "La instalación de estas dependencias puede requerir privilegios de administrador.",
+    "preparing": "Preparando la instalación...",
+    "cancel": "Cancelar",
+    "confirm": "Instalar dependencias",
+    "installing": "Instalando...",
+    "installButton": "Instalar {{count}} {{count, plural, =1 {dependencia} otras {dependencias}}}",
+    "errorsOccurred": "las dependencias no se pudieron instalar",
+    "success": "Todas las dependencias se instalaron correctamente.",
+    "partialSuccess": "{{success}} dependencias se instalaron correctamente, {{failed}} falló",
+    "error": "La instalación de la dependencia falló"
+  },
+  "launch": {
+    "title": "Iniciar servicio",
+    "starting": {
+      "title": "A partir de Hagicode Server...",
+      "subtitle": "Inicializando componentes de servicio..."
+    },
+    "complete": {
+      "title": "¡Configuración completa!",
+      "subtitle": "Hagicode Desktop se ha instalado e iniciado correctamente.",
+      "success": "¡Felicitaciones! Hagicode Desktop se ha instalado e iniciado correctamente.",
+      "ready": "Ahora puede comenzar a utilizar todas las funciones.",
+      "button": "Ingrese a la interfaz principal"
+    },
+    "progress": "Progreso de inicio",
+    "installInfo": {
+      "title": "Información de instalación",
+      "version": "Versión instalada",
+      "port": "Puerto de servicio",
+      "url": "Servicio URL"
+    },
+    "whatsNext": {
+      "title": "Ahora puedes:",
+      "manage": "Gestiona Hagicode Server desde la interfaz principal",
+      "webUI": "Acceder a la interfaz de gestión web",
+      "logs": "Ver registros y estados del servicio",
+      "config": "Configurar los parámetros y ajustes del servidor"
+    },
+    "support": {
+      "title": "Soporte",
+      "docs": "Documentación",
+      "issues": "Informar problemas"
+    },
+    "failure": {
+      "title": "Error de inicio",
+      "subtitle": "Hagicode Server no pudo terminar de comenzar. Revise los diagnósticos y reinstale antes de continuar con la instalación.",
+      "guidance": "Abra el registro completo, luego reinstale la versión actual y reinicie el flujo de configuración.",
+      "viewLog": "Ver registro completo",
+      "retryButton": "Reintentar inicio",
+      "reinstallButton": "Reinstalar y reiniciar la configuración",
+      "reinstallingButton": "Reinstalando...",
+      "dialogTitle": "Registro de errores de inicio de incorporación",
+      "emptySummary": "No se capturó ningún resumen de fallas de inicio",
+      "emptyLog": "No se capturó ningún registro de errores de inicio",
+      "meta": "Puerto: {{port}} · Hora: {{timestamp}}",
+      "truncatedHint": "El registro de inicio se truncó al resultado más reciente.",
+      "recoveryHint": "Recomendamos reinstalar la versión actual y restablecer la incorporación antes de intentar la configuración nuevamente.",
+      "copyButton": "Copiar registro",
+      "copySuccess": "Registro de errores de inicio copiado",
+      "copyError": "No se pudo copiar el registro de errores de inicio",
+      "copyEmpty": "No hay ningún registro de errores de inicio para copiar"
+    }
+  },
+  "actions": {
+    "next": "Siguiente",
+    "finish": "Introduzca Hagicode Desktop",
+    "previous": "Anterior",
+    "skip": "Saltar configuración"
+  },
+  "skip": {
+    "checkbox": "No volver a mostrar esta guía",
+    "title": "Confirmar omitir configuración",
+    "description": "¿Está seguro de que desea omitir la configuración inicial?",
+    "manualInstallNote": "Después de saltar, puedes:\n• Instale Hagicode Server manualmente a través de \"Administración de paquetes\" en la interfaz principal\n• Vuelva a habilitar el proceso de configuración en la configuración",
+    "reenableNote": "Si es la primera vez que utiliza Hagicode Desktop, le recomendamos completar el proceso de configuración.",
+    "cancel": "Cancelar",
+    "confirm": "Saltar configuración"
+  },
+  "dependencyManagement": {
+    "title": "Gestión de dependencias",
+    "description": "Ver y administrar dependencias del sistema",
+    "status": {
+      "installed": "Instalado",
+      "bundled": "Incluido con el escritorio",
+      "desktopManaged": "Escritorio administrado",
+      "manualInstallRequired": "Se requiere instalación manual",
+      "notInstalled": "No instalado",
+      "versionMismatch": "La versión no coincide",
+      "checking": "Comprobando..."
+    },
+    "actions": {
+      "install": "Instalar",
+      "upgrade": "Actualizar",
+      "installing": "Instalando...",
+      "refresh": "Actualizar",
+      "viewManualSteps": "Ver pasos manuales",
+      "visitWebsite": "Visite el sitio web oficial",
+      "reinstallDesktop": "Reinstalar el escritorio",
+      "updateDesktop": "Actualizar escritorio"
+    },
+    "details": {
+      "currentVersion": "Versión actual",
+      "requiredVersion": "Versión requerida",
+      "manualCommand": "Comando sugerido",
+      "source": "Fuente",
+      "bundledSource": "fuente incluida",
+      "systemSource": "Fuente del sistema"
+    },
+    "manualHandoff": {
+      "title": "Se requiere instalación manual del paquete CLI",
+      "description": "Ejecute el comando sugerido fuera del escritorio. Para obtener detalles actualizados sobre el entorno Node/npm incluido en Desktop y el comportamiento de PATH, lea las preguntas frecuentes.",
+      "faqLinkLabel": "Ver preguntas frecuentes sobre el entorno de nodo",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Actualice después de que finalice el comando para volver a verificar las dependencias administradas por el escritorio."
+    },
+    "noDependencies": "No se detectaron dependencias"
+  },
+  "dependencyCheck": {
+    "title": "Resultados de la verificación de dependencia",
+    "summary": "Marcado {{total}} {{total, plural, =1 {dependencia} otras {dependencias}}}, {{passed}} {{aprobado, plural, =1 {aprobado} otro {aprobado}}}, {{failed}} {{fallido, plural, =1 {necesita atención} otro {necesita atención}}}",
+    "checking": "Comprobando dependencias...",
+    "status": {
+      "allPassed": "Todas las dependencias están instaladas.",
+      "hasIssues": "Algunas dependencias necesitan atención"
+    },
+    "details": {
+      "expand": "Mostrar detalles",
+      "collapse": "Ocultar detalles",
+      "currentVersion": "Versión actual",
+      "requiredVersion": "Versión requerida"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "Aceleración de descarga y uso compartido",
+    "description": "Habilitado de forma predeterminada. Los recursos de escritorio/servidor más recientes con metadatos de torrent comienzan primero desde torrent y retroceden automáticamente.",
+    "toggleTitle": "Habilitar aceleración para compartir LAN/Internet (predeterminado)",
+    "toggleDescription": "Puede desactivarlo aquí primero y ajustarlo más tarde en Configuración.",
+    "bullets": {
+      "latest": "La siembra externa se mantiene centrada en los últimos activos de escritorio y servidor más recientes",
+      "fallback": "Si falta el sidecar de torrent o falla el protocolo de enlace, el relleno alternativo se inicia automáticamente",
+      "disable": "Desactívala ahora si tu red está restringida o no quieres compartir",
+      "portable": "El modo portátil desactiva esta función y nunca genera implícitamente"
+    }
+  },
+  "dependencyPreparation": {
+    "title": "Preparar dependencias",
+    "description": "Instale las dependencias de la línea de comandos requeridas por HagiCode Desktop y seleccione al menos un Agente CLI para usar con sesiones de codificación.",
+    "loading": "Comprobando dependencias administradas por escritorio...",
+    "environment": {
+      "title": "Nodo/entorno npm administrado por escritorio",
+      "description": "Desktop instala y verifica los paquetes CLI administrados en su propio entorno Nodo/npm. Lea las preguntas frecuentes para conocer la ruta actual, el paquete y los detalles de solución de problemas.",
+      "faqLinkLabel": "Ver preguntas frecuentes sobre el entorno de nodo",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/"
+    },
+    "required": {
+      "title": "Dependencias requeridas",
+      "description": "Estas dependencias deben instalarse antes de que pueda continuar la instalación."
+    },
+    "optional": {
+      "title": "Dependencias opcionales",
+      "description": "Las dependencias opcionales no bloquean la configuración."
+    },
+    "agentCli": {
+      "title": "Selección del agente CLI",
+      "description": "Seleccione al menos un Agente CLI. El CLI seleccionado debe instalarse en el entorno npm administrado del escritorio."
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "Nodo/entorno npm no disponible",
+        "description": "El escritorio no puede acceder a su entorno Nodo/npm administrado. Actualice después de que la cadena de herramientas esté disponible o abra las preguntas frecuentes sobre el entorno de nodo para obtener detalles sobre la solución de problemas."
+      },
+      "required-packages-missing": {
+        "title": "Faltan dependencias requeridas",
+        "description": "Instale las dependencias requeridas que faltan antes de continuar."
+      },
+      "agent-cli-not-selected": {
+        "title": "Seleccione un Agente CLI",
+        "description": "Elija al menos una dependencia del Agente CLI compatible."
+      },
+      "agent-cli-not-installed": {
+        "title": "El agente seleccionado CLI no está instalado",
+        "description": "Instale al menos un paquete del Agente CLI seleccionado en el entorno npm administrado del escritorio."
+      }
+    },
+    "actions": {
+      "install": "Confirmar e instalar",
+      "refresh": "Actualizar",
+      "retry": "Reintentar",
+      "recheck": "Vuelva a comprobar"
+    },
+    "complete": {
+      "title": "Las dependencias están listas",
+      "description": "Las dependencias necesarias están instaladas y al menos un Agente CLI seleccionado está listo."
+    },
+    "error": {
+      "title": "La preparación de la dependencia falló"
+    }
+  },
+  "legal": {
+    "title": "Acuerdo de licencia de usuario final y política de privacidad",
+    "descriptionFull": "Antes de descargar HagiCode Server, confirme las revisiones actuales del EULA y la Política de privacidad. Los documentos oficiales se abren en su navegador predeterminado.",
+    "descriptionLegalOnly": "Las revisiones legales actuales aún no han sido aceptadas. Revise los documentos oficiales en su navegador predeterminado, luego regrese al Escritorio para confirmar.",
+    "progressFull": "Configuración completa: Bienvenido -> Consentimiento legal -> Aceleración de uso compartido -> Descargar",
+    "progressLegalOnly": "Modo de puerta de cumplimiento: solo se muestra el paso de consentimiento legal actual",
+    "browserInstruction": "Abra los documentos oficiales en su navegador predeterminado antes de aceptar. Desktop solo muestra el resumen de la revisión, no el texto legal completo.",
+    "cacheHint": "Actualmente estás viendo el resumen legal más reciente almacenado en caché con éxito. Actualice después de la recuperación de la red para confirmar si existe una revisión más reciente.",
+    "unavailableHint": "El resumen de la revisión legal no está disponible y aún no hay ninguna copia en caché disponible. Verifique su red e inténtelo nuevamente; La instalación no puede continuar hasta que se carguen metadatos válidos.",
+    "reviewPrompt": "Luego de revisar la página oficial, regresa al Escritorio y confirma tu aceptación.",
+    "effectiveDate": "Fecha de vigencia",
+    "revision": "Revisión",
+    "openInBrowser": "Abra {{title}} en el navegador",
+    "checkbox": "He revisado el CLUF y la Política de privacidad actuales en el navegador y los acepto.",
+    "modeHintFull": "Después de la aceptación, la configuración continúa compartiendo aceleración y descarga.",
+    "modeHintLegalOnly": "Después de la aceptación, la puerta se cierra y se reanuda la interfaz principal; Rechazar sale de la sesión actual de la aplicación.",
+    "accept": "Aceptar y continuar",
+    "accepting": "Aceptación de grabación...",
+    "decline": "Rechazar y salir",
+    "declining": "Saliendo...",
+    "refresh": "Actualizar metadatos legales",
+    "metadata": {
+      "remote": "Últimos metadatos legales cargados",
+      "cache": "Usando los últimos metadatos legales almacenados en caché exitosos",
+      "unavailable": "Los metadatos legales no están disponibles actualmente"
+    },
+    "types": {
+      "eula": "CLUF",
+      "privacy-policy": "Política de privacidad"
+    }
+  }
+}

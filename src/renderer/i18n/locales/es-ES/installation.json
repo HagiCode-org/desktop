@@ -1,0 +1,53 @@
+{
+  "title": "Asistente de instalación de dependencias",
+  "steps": {
+    "preparing": "preparando",
+    "callingApi": "Llamando Claude API",
+    "confirmation": "Confirmar estado",
+    "completed": "Completado"
+  },
+  "apiKey": {
+    "title": "Introduzca la clave Claude API",
+    "description": "Para utilizar la función de instalación con alimentación AI, debe proporcionar una clave Claude API. Puede obtener uno en Anthropic Console.",
+    "placeholder": "sk-hormiga-...",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "continue": "Continuar",
+    "cancel": "Cancelar",
+    "validating": "Validando...",
+    "invalid": "Tecla API no válida. Por favor verifique e intente nuevamente.",
+    "change": "Cambiar"
+  },
+  "status": {
+    "region": "Región",
+    "cn": "China",
+    "international": "Internacional"
+  },
+  "callingApi": {
+    "message": "Llamando al Claude API...",
+    "hint": "Claude está analizando su sistema y ejecutando comandos de instalación."
+  },
+  "confirmation": {
+    "title": "Confirmación",
+    "message": "Claude ha completado la verificación de instalación. Por favor confirme los resultados.",
+    "retry": "Vuelva a comprobar",
+    "complete": "completo",
+    "cancel": "Cancelar"
+  },
+  "completed": {
+    "title": "Instalación completa",
+    "message": "Todas las dependencias han sido verificadas e instaladas.",
+    "return": "Regreso a casa"
+  },
+  "error": {
+    "title": "error",
+    "dismiss": "Descartar",
+    "loadPromptFailed": "No se pudo cargar el mensaje de instalación",
+    "apiCallFailed": "API llamada fallida",
+    "apiKeyRequired": "Se requiere la tecla API"
+  },
+  "actions": {
+    "startCheck": "Iniciar verificación de instalación",
+    "calling": "Llamando..."
+  }
+}

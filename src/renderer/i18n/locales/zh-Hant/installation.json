@@ -1,0 +1,53 @@
+{
+  "title": "依賴項安裝精靈",
+  "steps": {
+    "preparing": "準備中",
+    "callingApi": "正在呼叫 Claude API",
+    "confirmation": "確認狀態",
+    "completed": "已完成"
+  },
+  "apiKey": {
+    "title": "輸入 Claude API 金鑰",
+    "description": "若要使用 AI 驅動的安裝功能，您需要提供 Claude API 金鑰。您可以從 Anthropic Console 取得。",
+    "placeholder": "sk-ant-...",
+    "show": "顯示",
+    "hide": "隱藏",
+    "continue": "繼續",
+    "cancel": "取消",
+    "validating": "驗證中...",
+    "invalid": "API 金鑰無效，請檢查後重試。",
+    "change": "變更"
+  },
+  "status": {
+    "region": "區域",
+    "cn": "中國",
+    "international": "國際"
+  },
+  "callingApi": {
+    "message": "正在呼叫 Claude API...",
+    "hint": "Claude 正在分析您的系統並執行安裝指令。"
+  },
+  "confirmation": {
+    "title": "確認",
+    "message": "Claude 已完成安裝檢查，請確認結果。",
+    "retry": "重新檢查",
+    "complete": "完成",
+    "cancel": "取消"
+  },
+  "completed": {
+    "title": "安裝完成",
+    "message": "所有相依性已檢查並安裝完成。",
+    "return": "返回首頁"
+  },
+  "error": {
+    "title": "錯誤",
+    "dismiss": "關閉",
+    "loadPromptFailed": "載入安裝提示詞失敗",
+    "apiCallFailed": "API 呼叫失敗",
+    "apiKeyRequired": "需要 API 金鑰"
+  },
+  "actions": {
+    "startCheck": "開始安裝檢查",
+    "calling": "調用中..."
+  }
+}

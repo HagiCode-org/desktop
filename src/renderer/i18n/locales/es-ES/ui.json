@@ -1,0 +1,12 @@
+{
+  "dialog": {
+    "close": "Cerrar"
+  },
+  "button": {
+    "submit": "Enviar",
+    "cancel": "Cancelar"
+  },
+  "alert": {
+    "dismiss": "Descartar"
+  }
+}

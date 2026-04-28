@@ -1,0 +1,53 @@
+{
+  "title": "Assistente de instalação de dependências",
+  "steps": {
+    "preparing": "Preparando",
+    "callingApi": "Chamando Claude API",
+    "confirmation": "Confirmar status",
+    "completed": "Concluído"
+  },
+  "apiKey": {
+    "title": "Digite a tecla Claude API",
+    "description": "Para usar o recurso de instalação alimentado por AI, você precisa fornecer uma chave Claude API. Você pode obter um no Anthropic Console.",
+    "placeholder": "sk-formiga-...",
+    "show": "Mostrar",
+    "hide": "Esconder",
+    "continue": "Continuar",
+    "cancel": "Cancelar",
+    "validating": "Validando...",
+    "invalid": "Chave API inválida. Verifique e tente novamente.",
+    "change": "Mudança"
+  },
+  "status": {
+    "region": "Região",
+    "cn": "China",
+    "international": "Internacional"
+  },
+  "callingApi": {
+    "message": "Chamando Claude API...",
+    "hint": "Claude está analisando seu sistema e executando comandos de instalação."
+  },
+  "confirmation": {
+    "title": "Confirmação",
+    "message": "Claude concluiu a verificação da instalação. Por favor, confirme os resultados.",
+    "retry": "Verifique novamente",
+    "complete": "Completo",
+    "cancel": "Cancelar"
+  },
+  "completed": {
+    "title": "Instalação concluída",
+    "message": "Todas as dependências foram verificadas e instaladas.",
+    "return": "Voltar para casa"
+  },
+  "error": {
+    "title": "Erro",
+    "dismiss": "Dispensar",
+    "loadPromptFailed": "Falha ao carregar o prompt de instalação",
+    "apiCallFailed": "API chamada falhou",
+    "apiKeyRequired": "A tecla API é necessária"
+  },
+  "actions": {
+    "startCheck": "Iniciar verificação de instalação",
+    "calling": "Chamando..."
+  }
+}

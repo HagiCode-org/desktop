@@ -1,0 +1,57 @@
+{
+  "loading": "Cargando guía rápida...",
+  "emptyState": "Desktop puede resolver el mensaje, mostrarle de dónde viene y mantener el texto exacto listo para copiar y pegar.",
+  "availableTools": "Herramientas disponibles",
+  "promptTitle": "rápido",
+  "promptDescription": "Copie el mensaje completo exactamente como se muestra antes de pegarlo en su AI CLI.",
+  "tipTitle": "Cómo utilizar este mensaje",
+  "tipDescription": "Abra cualquier CLI compatible en el directorio sugerido, pegue el mensaje y regrese después de aplicar los cambios recomendados.",
+  "actions": {
+    "refresh": "Recargar guía",
+    "loading": "Cargando"
+  },
+  "steps": {
+    "openTool": "Abra la herramienta AI CLI que desee utilizar.",
+    "copyPrompt": "Copie el mensaje a continuación.",
+    "runFromDirectory": "Ejecútelo desde el directorio de trabajo sugerido: {{path}}",
+    "runFromCurrentDirectory": "Ejecútelo desde el directorio de trabajo más relevante para esta tarea.",
+    "returnToDesktop": "Siga las instrucciones generadas y regrese al Escritorio cuando haya terminado."
+  },
+  "copy": {
+    "button": "Copiar mensaje",
+    "copying": "Copiando...",
+    "success": "Mensaje copiado al portapapeles",
+    "failed": "No se pudo copiar el mensaje",
+    "failedWithReason": "No se pudo copiar el mensaje: {{error}}"
+  },
+  "docs": {
+    "button": "Abrir {{tool}} documentos",
+    "failed": "No se pudo abrir el enlace de la documentación"
+  },
+  "metadata": {
+    "source": "Fuente:",
+    "promptPath": "Ruta rápida:",
+    "activeVersion": "Versión activa:",
+    "workingDirectory": "Directorio de trabajo sugerido:",
+    "attemptedPaths": "Caminos intentados",
+    "unavailable": "No disponible"
+  },
+  "sources": {
+    "custom": "Ruta de aviso personalizada",
+    "active-version": "Versión instalada activa",
+    "packaged-resource": "Recurso de escritorio empaquetado",
+    "development-root": "Retroceso del desarrollo",
+    "manifest-entry": "Archivo de aviso incluido con la versión",
+    "generated-from-manifest": "Generado a partir del manifiesto de versión."
+  },
+  "errors": {
+    "title": "Orientación inmediata no disponible",
+    "defaultMessage": "Desktop no pudo resolver la guía rápida solicitada.",
+    "promptNotFound": "Desktop no pudo encontrar el archivo de solicitud para este flujo de trabajo.",
+    "resolverUnavailable": "La resolución del mensaje de escritorio aún no está lista.",
+    "managerUnavailable": "El escritorio no puede cargar la guía de solicitud de versión en este momento.",
+    "promptLoadFailed": "El escritorio no pudo cargar el mensaje de versión.",
+    "promptReadFailed": "Desktop encontró el archivo de solicitud pero no pudo leerlo.",
+    "diagnosticPrefix": "Caminos intentados:"
+  }
+}

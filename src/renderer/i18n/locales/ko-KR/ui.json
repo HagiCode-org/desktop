@@ -1,0 +1,12 @@
+{
+  "dialog": {
+    "close": "닫기"
+  },
+  "button": {
+    "submit": "제출",
+    "cancel": "취소"
+  },
+  "alert": {
+    "dismiss": "닫기"
+  }
+}

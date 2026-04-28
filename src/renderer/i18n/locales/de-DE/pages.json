@@ -1,0 +1,281 @@
+{
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "onboarding": "Onboarding",
+      "sharingAcceleration": "Herunterladen und Teilen",
+      "updates": "Hintergrundaktualisierungen"
+    },
+    "smartConfig": {
+      "title": "Smart Config-Eingabeaufforderung",
+      "description": "Überprüfen Sie die gelöste Eingabeaufforderung, kopieren Sie sie in ein beliebiges unterstütztes AI CLI und schließen Sie den Konfigurationsablauf manuell ab."
+    },
+    "onboarding": {
+      "title": "Onboarding",
+      "description": "Führen Sie den Ersteinrichtungsassistenten erneut aus, um Pakete herunterzuladen, Abhängigkeiten zu installieren und den Dienst zu starten.",
+      "restartWizard": "Neustart-Assistent",
+      "restartWizardDescription": "Führen Sie den Ersteinrichtungsassistenten erneut aus, um Pakete herunterzuladen, Abhängigkeiten zu installieren und den Dienst zu starten.",
+      "restartButton": "Neustart-Assistent",
+      "resetting": "Zurücksetzen...",
+      "resetSuccess": "Der Assistent wurde zurückgesetzt",
+      "resetError": "Zurücksetzen fehlgeschlagen: {{error}}",
+      "homepageTour": {
+        "title": "Homepage-Tour zurücksetzen",
+        "description": "Löschen Sie den Abschlussstatus der Homepage-Tour, damit die geführte Komplettlösung beim nächsten Öffnen der Systemverwaltung erneut automatisch abgespielt werden kann.",
+        "resetButton": "Homepage-Tour zurücksetzen",
+        "resetting": "Tour wird zurückgesetzt...",
+        "resetSuccess": "Homepage-Tour wurde zurückgesetzt",
+        "resetError": "Homepage-Tour konnte nicht zurückgesetzt werden: {{error}}"
+      }
+    },
+    "sharingAcceleration": {
+      "title": "Download- und Sharing-Beschleunigung",
+      "description": "Verwalten Sie Torrent-First-Downloads, vertrauenswürdige Cache-Wiederverwendung und automatisches Fallback-Verhalten.",
+      "enabledTitle": "Aktivieren Sie die LAN-/Internet-Sharing-Beschleunigung",
+      "enabledDescription": "Jedes Asset mit Torrent-Metadaten startet zuerst beim Torrent und greift bei Bedarf automatisch zurück.",
+      "uploadLimit": "Upload-Limit (Mbps)",
+      "cacheLimit": "Cache-Limit (GiB)",
+      "retentionDays": "Aufbewahrungstage",
+      "thresholdHint": "Assets mit Torrent-Metadaten unterliegen nicht mehr dem alten Schwellenwert von 100 MB.",
+      "networkHint": "Deaktivieren Sie die Freigabebeschleunigung in eingeschränkten Netzwerken. Der tragbare Modus erzwingt immer die Deaktivierung.",
+      "portableModeHint": "Der tragbare Modus deaktiviert die Freigabebeschleunigung und das externe Seeding und hält die Downloads dann auf HTTP/WebSeed Fallback.",
+      "save": "Einstellungen speichern",
+      "saving": "Sparen...",
+      "saveSuccess": "Freigabebeschleunigungseinstellungen gespeichert",
+      "saveError": "Die Einstellungen für die Freigabebeschleunigung konnten nicht gespeichert werden",
+      "loadError": "Die Einstellungen für die Freigabebeschleunigung konnten nicht geladen werden",
+      "modeHint": "Modus: Torrent zuerst, automatischer Fallback bei Fehler.",
+      "scopeHint": "Das externe Seeding konzentriert sich weiterhin auf den neuesten Desktop und den neuesten Server. Standard-Cache-Limit: 5 GiB."
+    },
+    "updates": {
+      "title": "Hintergrundaktualisierungen",
+      "description": "Verwalten Sie automatische Prüfungen, Vorab-Downloads im Hintergrund und überprüfte Archivaufbewahrung.",
+      "enabled": {
+        "label": "Aktivieren Sie Hintergrund-Predownloads",
+        "description": "Wenn eine kompatible neuere Version gefunden wird, laden Sie das Archiv im Hintergrund herunter, ohne die aktuelle Laufzeit zu wechseln."
+      },
+      "retainedArchiveCount": {
+        "label": "Anzahl der beibehaltenen Archive",
+        "description": "Es werden nur verifizierte automatisch heruntergeladene Archive aufbewahrt. Bei Überschreitung des Limits werden ältere Einträge entfernt."
+      },
+      "actions": {
+        "save": "Einstellungen speichern",
+        "saving": "Sparen...",
+        "cancel": "Abbrechen"
+      },
+      "messages": {
+        "saveSuccess": "Hintergrundaktualisierungseinstellungen gespeichert",
+        "saveFailed": "Die Einstellungen für die Hintergrundaktualisierung konnten nicht gespeichert werden"
+      },
+      "errors": {
+        "retainedArchiveCountPositive": "Die Anzahl der beibehaltenen Archive muss eine positive Ganzzahl sein.",
+        "saveErrorDetail": "Speichern fehlgeschlagen: {{error}}"
+      },
+      "notes": {
+        "snapshotModel": "Die Dashboard-Erinnerung wird durch einen persistenten Hauptprozess-Snapshot gesteuert, sodass der letzte bekannte Aktualisierungsstatus auch nach dem Neuladen des Desktops erhalten bleibt.",
+        "retentionPolicy": "Bei der Aufbewahrungsbereinigung werden nur zwischengespeicherte Archive und Metadaten entfernt. Installierte Versionsverzeichnisse bleiben unberührt."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.",
+    "testBuild": "Testanwendung – Entwicklungsbuild"
+  },
+  "quickStart": {
+    "title": "Schnellstart",
+    "description": "Installieren Sie das eingebettete Webdienstpaket und beginnen Sie mit der Verwaltung Ihrer lokalen PCode-Instanz."
+  },
+  "secure": {
+    "title": "Sicher",
+    "description": "Gebaut mit Blick auf Sicherheit. Ihre Daten bleiben auf Ihrem Rechner."
+  },
+  "header": {
+    "runningSuccessfully": "Läuft erfolgreich"
+  },
+  "dependencyManagement": {
+    "title": "Abhängigkeitsmanagement",
+    "backToDashboard": "Zurück zum Dashboard",
+    "description": "Verwalten Sie eingebettete Webdienstpakete und Systemabhängigkeiten",
+    "tips": {
+      "title": "Tipps",
+      "description": "Halten Sie Ihre Abhängigkeiten auf dem neuesten Stand, um optimale Leistung und Sicherheit zu gewährleisten."
+    },
+    "noPackageInstalled": "Kein Paket installiert",
+    "installedVersion": "Installierte Version",
+    "requiredVersion": "Erforderliche Version",
+    "status": {
+      "installed": "Installiert",
+      "bundled": "Im Lieferumfang des Desktops enthalten",
+      "desktopManaged": "Desktop-verwaltet",
+      "manualInstallRequired": "Manuelle Installation erforderlich",
+      "notInstalled": "Nicht gefunden",
+      "versionMismatch": "Versionskonflikt"
+    },
+    "actions": {
+      "refresh": "Abhängigkeiten aktualisieren",
+      "install": "Installieren",
+      "installing": "Installieren...",
+      "viewManualSteps": "Manuelle Schritte anzeigen",
+      "download": "Herunterladen",
+      "reinstallDesktop": "Desktop neu installieren",
+      "updateDesktop": "Desktop aktualisieren"
+    },
+    "details": {
+      "manualCommand": "Vorgeschlagener Befehl",
+      "source": "Quelle",
+      "bundledSource": "Gebündelte Quelle",
+      "systemSource": "Systemquelle"
+    },
+    "manualHandoff": {
+      "title": "Manuelle CLI-Paketinstallation erforderlich",
+      "description": "Führen Sie den vorgeschlagenen Befehl außerhalb des Desktops aus. Aktuelle Details zur gebündelten Node/npm-Umgebung und zum PATH-Verhalten von Desktop finden Sie in den FAQ.",
+      "faqLinkLabel": "Häufig gestellte Fragen zur Knotenumgebung anzeigen",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Aktualisieren Sie nach Abschluss des Befehls, um die vom Desktop verwalteten Abhängigkeiten erneut zu überprüfen."
+    }
+  },
+  "versionManagement": {
+    "title": "Versionsverwaltung",
+    "description": "Installieren, wechseln und verwalten Sie Hagicode Server-Versionen",
+    "availableVersions": "Verfügbare Versionen",
+    "installedVersions": "Installierte Versionen",
+    "installed": "Installiert",
+    "installing": "Installieren...",
+    "downloading": "Herunterladen",
+    "extracting": "Extrahieren",
+    "verifying": "Verifizieren",
+    "completed": "Abgeschlossen",
+    "switching": "Wechsel...",
+    "reinstalling": "Neuinstallation...",
+    "installedAt": "Installiert bei",
+    "notInstalled": "Nicht installiert",
+    "confirmUninstall": "Sind Sie sicher, dass Sie diese Version deinstallieren möchten?",
+    "confirmReinstall": "Sind Sie sicher, dass Sie dieses Paket erneut installieren möchten? Dadurch werden der Cache und die installierte Version gelöscht, dann erneut heruntergeladen und installiert.",
+    "reinstall": "Neu installieren",
+    "noVersionsAvailable": "Keine Versionen verfügbar",
+    "noVersionsInstalled": {
+      "title": "Noch keine Versionen installiert",
+      "description": "Der einfachste Weg, mit Hagicode Desktop zu beginnen, ist unser geführter Einrichtungsassistent. Komplette Installation und Konfiguration in nur wenigen Schritten.",
+      "startButton": "Starten Sie den Setup-Assistenten"
+    },
+    "status": {
+      "active": "Aktiv",
+      "ready": "Bereit",
+      "incomplete": "Fehlende Abhängigkeiten",
+      "installed": "Installiert",
+      "payloadInvalid": "Nutzlast ungültig",
+      "runtimeIncompatible": "Gebündelte Laufzeit inkompatibel",
+      "desktopIncompatible": "Desktop nicht kompatibel"
+    },
+    "actions": {
+      "refresh": "Aktualisieren",
+      "install": "Version installieren",
+      "switch": "Wechseln",
+      "uninstall": "Deinstallieren",
+      "reinstall": "Neu installieren",
+      "reinstallPackage": "Installieren Sie dieses Paket neu",
+      "openLogs": "Protokolle öffnen",
+      "showMoreVersions": "Weitere Versionen anzeigen ({{count}} übrig)",
+      "showLessVersions": "Weniger anzeigen",
+      "switchDisabledDesktop": "Aktualisieren Sie Desktop vor dem Wechsel"
+    },
+    "progressBar": "Fortschrittsbalken",
+    "progressText": "Fortschrittstext",
+    "info": {
+      "title": "Informationen zur Versionsverwaltung",
+      "description": "Mit der Versionsverwaltung können Sie mehrere Hagicode Server-Versionen installieren, zwischen ihnen wechseln und die Desktop-Kompatibilität vor der Aktivierung überprüfen."
+    },
+    "toast": {
+      "installSuccess": "Installation erfolgreich",
+      "installSuccessDescription": "Die Version wurde erfolgreich installiert. Starten Sie den Dienst manuell, wenn Sie bereit sind.",
+      "installSuccessAutoSwitchedDescription": "Die Version wurde erfolgreich installiert und ist nun die aktive Version.",
+      "installSuccessNoAutoSwitchDescription": "Die Version wurde erfolgreich installiert, aber die aktive Version hat sich nicht geändert.",
+      "installFailed": "Die Installation ist fehlgeschlagen",
+      "installFailedDescription": "Bei der Installation ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+      "reinstallSuccess": "Neuinstallation erfolgreich",
+      "reinstallFailed": "Die Neuinstallation ist fehlgeschlagen",
+      "uninstallSuccess": "Erfolgreich deinstalliert",
+      "uninstallFailed": "Die Deinstallation ist fehlgeschlagen",
+      "openLogsSuccess": "Protokollordner geöffnet",
+      "logsNotFound": "Protokollordner nicht gefunden",
+      "openLogsError": "Der Protokollordner konnte nicht geöffnet werden",
+      "onboardingStarted": "Der Setup-Assistent wurde gestartet",
+      "onboardingFailed": "Der Setup-Assistent konnte nicht gestartet werden",
+      "switchBlocked": "Dieses Paket erfordert eine neuere Desktop-Version.",
+      "switchFailed": "Versionswechsel fehlgeschlagen"
+    },
+    "dialog": {
+      "reinstallTitle": "Bestätigen Sie die Neuinstallation",
+      "reinstallDescription": "Dadurch werden der Cache und die installierte Version gelöscht, dann erneut heruntergeladen und installiert. Möchten Sie fortfahren?",
+      "uninstallTitle": "Bestätigen Sie die Deinstallation",
+      "uninstallDescription": "Sind Sie sicher, dass Sie diese Version deinstallieren möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Bestätigen"
+    },
+    "desktopCompatibility": {
+      "blockedTitle": "Aktualisieren Sie Desktop, um dieses Paket zu aktivieren",
+      "requiredVersion": "Erforderlicher Desktop:",
+      "currentVersion": "Aktueller Desktop:",
+      "upgradeGuidance": "Aktualisieren Sie Hagicode Desktop und versuchen Sie dann erneut, dieses Paket zu wechseln oder zu starten."
+    },
+    "portableMode": {
+      "title": "Tragbarer Versionsmodus",
+      "description": "Versionsinstallation, Wechsel und Paketquellenverwaltung sind ausgeblendet, da dieser Build mit einer gepackten festen Nutzlast ausgeführt wird.",
+      "activeRuntime": "Aktive Paketlaufzeit: {{version}}",
+      "updates": "Updates für diesen Build werden von der Paketverteilung und nicht von In-App-Versionsaktionen verwaltet."
+    },
+    "downloadStage": {
+      "queued": "In der Warteschlange",
+      "backfilling": "Ersatzverfüllung",
+      "fetchingTorrent": "Torrent abrufen",
+      "sharedDownloading": "Zuerst Torrent herunterladen"
+    },
+    "downloadMode": {
+      "shared": "Zuerst Torrent",
+      "fallback": "Fallback-Backfill",
+      "direct": "HTTP/WebSeed"
+    },
+    "installTelemetry": {
+      "mode": "Modus",
+      "stage": "Bühne",
+      "peers": "Kollegen",
+      "sharedBytes": "Geteilte Bytes",
+      "fallbackBytes": "Fallback-Bytes",
+      "verified": "Verifiziert",
+      "flow": "Ablauf: Torrent abrufen -> Erster Torrent-Download -> Fallback-Backfill (falls erforderlich) -> Überprüfen -> Extrahieren -> Abschließen",
+      "flowActive": "Aktueller Durchfluss: {{stage}}"
+    },
+    "progressMessage": {
+      "direct-http": "Download über HTTP/WebSeed",
+      "fetching-torrent-metadata": "Torrent-Metadaten abrufen",
+      "torrent-metadata-ready": "Torrent bereit, gemeinsame Beschleunigung wird gestartet",
+      "torrent-first-started": "Torrent-First-Download gestartet",
+      "shared-acceleration-active": "Gemeinsame Beschleunigung aktiv",
+      "source-fallback-active": "Fallback-Backfill aktiv",
+      "torrent-unavailable-fallback": "Torrent nicht verfügbar, automatisch auf Fallback umgeschaltet",
+      "portable-mode-http-fallback": "Der tragbare Modus erzwingt einen Fallback-Download",
+      "legacy-http-fallback": "Keine Torrent-Metadaten, nur HTTP/WebSeed verwenden",
+      "no-sha256-required": "Keine zusätzliche Verifizierung erforderlich",
+      "sha256-verifying": "Überprüfung der Paketintegrität",
+      "sha256-verified": "Verifizierung abgeschlossen",
+      "extracting-package": "Paket extrahieren",
+      "installation-complete": "Installation abgeschlossen"
+    }
+  },
+  "installProgressDialog": {
+    "title": "Abhängigkeiten installieren",
+    "executing": "Installieren...",
+    "executingCommand": "Befehl {{current}} von {{total}} wird ausgeführt",
+    "currentCommand": "Aktueller Befehl",
+    "logs": "Installationsprotokolle",
+    "status": {
+      "executing": "Installieren...",
+      "success": "Installation abgeschlossen",
+      "error": "Installation fehlgeschlagen"
+    },
+    "buttons": {
+      "close": "Schließen",
+      "retry": "Versuchen Sie es noch einmal"
+    }
+  }
+}
