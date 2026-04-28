@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { Terminal } from 'lucide-react';
 import { selectScriptOutputLogs } from '../../../store/slices/onboardingSlice';
 import type { RootState } from '../../../store';
 import type { ScriptOutput } from '../../../../types/onboarding';
+import { resolveDesktopLanguageCode } from '../../../../shared/desktop-languages';
 
 interface ScriptOutputConsoleProps {
   maxHeight?: string;
@@ -11,6 +13,7 @@ interface ScriptOutputConsoleProps {
 }
 
 export function ScriptOutputConsole({ maxHeight = '200px', title = 'Console Output' }: ScriptOutputConsoleProps) {
+  const { i18n } = useTranslation();
   const logs = useSelector((state: RootState) => selectScriptOutputLogs(state));
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +31,7 @@ export function ScriptOutputConsole({ maxHeight = '200px', title = 'Console Outp
   const formatTimestamp = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      return date.toLocaleTimeString('zh-CN', {
+      return date.toLocaleTimeString(resolveDesktopLanguageCode(i18n.resolvedLanguage ?? i18n.language), {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',

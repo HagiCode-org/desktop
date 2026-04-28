@@ -31,6 +31,7 @@ import type {
   LogDirectoryTargetStatus,
 } from '@types/log-directory';
 import type { DistributionMode } from '../../types/distribution-mode';
+import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 import hagicodeIcon from '../assets/hagicode-icon.png';
 
 interface InstalledVersion {
@@ -104,7 +105,7 @@ export default function SystemManagementView({
   const homepageTourSessionRef = useRef<HomepageTourSession | null>(null);
   const homepageTourFrameRef = useRef<number | null>(null);
   const homepageTourTimeoutRef = useRef<number | null>(null);
-  const currentLocale = i18n.resolvedLanguage ?? i18n.language;
+  const currentLocale = resolveDesktopLanguageCode(i18n.resolvedLanguage ?? i18n.language);
 
   const clearPendingHomepageTourStartup = useCallback(() => {
     if (homepageTourFrameRef.current !== null) {

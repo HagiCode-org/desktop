@@ -36,6 +36,7 @@ import {
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
 import type { DistributionMode } from '../../types/distribution-mode';
+import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 
 
 interface Version {
@@ -119,7 +120,7 @@ interface VersionManagementPageProps {
 }
 
 export default function VersionManagementPage({ distributionMode }: VersionManagementPageProps) {
-  const { t } = useTranslation('pages');
+  const { t, i18n } = useTranslation('pages');
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
@@ -438,7 +439,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
+    return new Date(dateString).toLocaleDateString(resolveDesktopLanguageCode(i18n.resolvedLanguage ?? i18n.language), {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

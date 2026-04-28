@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
-import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import {
   selectRSSFeedItems,
   selectRSSFeedLoading,
@@ -21,11 +19,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, Newspaper, ExternalLink, Clock } from 'lucide-react';
+import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 
 const BlogFeedCard: React.FC = () => {
   const { t, i18n } = useTranslation(['components', 'common']);
   const dispatch = useDispatch<AppDispatch>();
-  const activeLanguage = i18n.resolvedLanguage ?? i18n.language;
+  const activeLanguage = resolveDesktopLanguageCode(i18n.resolvedLanguage ?? i18n.language);
   const previousLanguageRef = useRef<string | null>(null);
 
   const items = useSelector((state: RootState) => selectRSSFeedItems(state));
@@ -70,8 +69,11 @@ const BlogFeedCard: React.FC = () => {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      const locale = activeLanguage.startsWith('zh') ? zhCN : undefined;
-      return format(date, 'yyyy-MM-dd', { locale });
+      return date.toLocaleDateString(activeLanguage, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
     } catch {
       return dateString;
     }
@@ -82,8 +84,13 @@ const BlogFeedCard: React.FC = () => {
     if (!dateString) return null;
     try {
       const date = new Date(dateString);
-      const locale = activeLanguage.startsWith('zh') ? zhCN : undefined;
-      return format(date, 'yyyy-MM-dd HH:mm', { locale });
+      return date.toLocaleString(activeLanguage, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return dateString;
     }

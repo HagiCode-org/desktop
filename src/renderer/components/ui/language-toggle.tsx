@@ -1,18 +1,16 @@
-import { Languages } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentLanguage, selectAvailableLanguages } from '@/store/slices/i18nSlice';
 import { changeLanguage } from '@/store/thunks/i18nThunks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getDesktopLanguageShortLabel } from '../../../shared/desktop-languages';
 
 export function LanguageToggle() {
-  const { i18n } = useTranslation('common');
   const dispatch = useDispatch();
   const currentLanguage = useSelector(selectCurrentLanguage);
   const availableLanguages = useSelector(selectAvailableLanguages);
@@ -21,16 +19,11 @@ export function LanguageToggle() {
   // Get current language info
   const currentLangInfo = availableLanguages.find(lang => lang.code === currentLanguage);
 
-  // Simplified language label mapping
-  const getSimplifiedLabel = (code: string) => {
-    return code === 'zh-CN' ? '中' : 'EN';
-  };
+  const currentLabel = getDesktopLanguageShortLabel(currentLanguage);
 
-  const currentLabel = getSimplifiedLabel(currentLanguage);
-
-  useState(() => {
+  useEffect(() => {
     setMounted(true);
-  });
+  }, []);
 
   if (!mounted || !currentLangInfo) {
     return (

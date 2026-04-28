@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { RootState, AppDispatch } from '@/store';
 import { selectCurrentLanguage, selectAvailableLanguages } from '@/store/slices/i18nSlice';
 import { changeLanguage } from '@/store/thunks/i18nThunks';
+import { getDesktopLanguageShortLabel } from '../../../shared/desktop-languages';
 
 export const LanguageSelector: React.FC = () => {
   const { t, i18n } = useTranslation('common');
@@ -23,12 +24,7 @@ export const LanguageSelector: React.FC = () => {
     dispatch(changeLanguage(languageCode));
   };
 
-  // Simplified language label mapping for display
-  const getSimplifiedLabel = (code: string) => {
-    return code === 'zh-CN' ? '中' : 'EN';
-  };
-
-  const currentLabel = getSimplifiedLabel(currentLanguage);
+  const currentLabel = getDesktopLanguageShortLabel(currentLanguage);
 
   return (
     <div className="space-y-2">
