@@ -930,8 +930,18 @@ export class PCodeWebServiceManager {
       try {
         const prepared = await this.prepareServiceEnvironment();
         const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
-        const activationPolicy = await new BundledNodeRuntimeManager(this.pathManager).getDesktopActivationPolicy();
-        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, { activationPolicy });
+        const bundledRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
+        const bundledToolchainStatus = await bundledRuntimeManager.verify();
+        const activationPolicy = bundledToolchainStatus.activationPolicy;
+        const npmGlobalPaths = activationPolicy.enabled
+          ? this.pathManager.getNodeMajorNpmGlobalPaths({
+            nodeVersion: bundledToolchainStatus.manifest?.node?.version ?? bundledToolchainStatus.components.node.version ?? process.versions.node,
+          })
+          : null;
+        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, {
+          activationPolicy,
+          npmGlobalPaths,
+        });
         const selectedNodeRuntimeRoot = toolchainEnv.usedBundledToolchain
           ? this.pathManager.getPortableNodeRoot()
           : null;
@@ -943,6 +953,12 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
         if (selectedNodeRuntimeRoot) {
           this.appendStartupLogLine(`Selected Node runtime root=${selectedNodeRuntimeRoot}`);
+        }
+        if (toolchainEnv.npmGlobalPaths) {
+          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PREFIX=${toolchainEnv.npmGlobalPaths.npmGlobalPrefix}`);
+          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_BIN_ROOT=${toolchainEnv.npmGlobalPaths.npmGlobalBinRoot}`);
+          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_MODULES_ROOT=${toolchainEnv.npmGlobalPaths.npmGlobalModulesRoot}`);
+          this.appendStartupLogLine(`HAGICODE_NODE_MAJOR_VERSION=${toolchainEnv.npmGlobalPaths.nodeMajorVersion}`);
         }
         this.appendStartupLogLine(`Bundled portable toolchain policy: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
         if (toolchainEnv.usedBundledToolchain) {
