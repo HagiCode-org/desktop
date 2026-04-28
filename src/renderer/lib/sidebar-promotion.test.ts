@@ -15,7 +15,9 @@ const activeNow = new Date('2026-04-26T08:00:00.000Z');
 describe('sidebar promotion model', () => {
   it('normalizes locales and resolves localized active content', () => {
     assert.equal(normalizeSidebarPromotionLocale('zh-Hans-CN'), 'zh-CN');
+    assert.equal(normalizeSidebarPromotionLocale('zh-TW'), 'zh-Hant');
     assert.equal(normalizeSidebarPromotionLocale('en-US'), 'en-US');
+    assert.equal(normalizeSidebarPromotionLocale('ja'), 'ja-JP');
 
     const promotion = resolveActiveSidebarPromotion(
       {
@@ -45,6 +47,46 @@ describe('sidebar promotion model', () => {
     assert.equal(promotion?.title, '愿望单 Hagicode');
     assert.equal(promotion?.description, '在 Steam 上关注我们。');
     assert.equal(promotion?.cta, '去看看');
+  });
+
+  it('uses the configured locale fallback chain when promotion content is partial', () => {
+    const traditionalPromotion = resolveActiveSidebarPromotion(
+      {
+        flags: [{ id: 'localized', enabled: true }],
+        contents: [
+          {
+            id: 'localized',
+            title: { 'zh-CN': '简体标题', 'en-US': 'English title' },
+            description: { 'zh-CN': '简体描述', 'en-US': 'English description' },
+            link: 'https://hagicode.com',
+          },
+        ],
+      },
+      'zh-Hant',
+      '了解更多',
+      activeNow,
+    );
+
+    assert.equal(traditionalPromotion?.title, '简体标题');
+
+    const japanesePromotion = resolveActiveSidebarPromotion(
+      {
+        flags: [{ id: 'localized', enabled: true }],
+        contents: [
+          {
+            id: 'localized',
+            title: { 'en-US': 'English title' },
+            description: { 'en-US': 'English description' },
+            link: 'https://hagicode.com',
+          },
+        ],
+      },
+      'ja-JP',
+      'Learn more',
+      activeNow,
+    );
+
+    assert.equal(japanesePromotion?.title, 'English title');
   });
 
   it('accepts the published Index payload shape with promotes, on, zh, and en fields', () => {

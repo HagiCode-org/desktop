@@ -13,7 +13,9 @@ describe('about sidebar model', () => {
   it('matches the site ordering semantics for English and Chinese locales', () => {
     const snapshot = normalizeAboutSnapshotData(bundledAboutSnapshotPayload);
     const englishModel = buildSidebarAboutModel('en-US', snapshot, 'snapshot');
+    const japaneseModel = buildSidebarAboutModel('ja-JP', snapshot, 'snapshot');
     const chineseModel = buildSidebarAboutModel('zh-CN', snapshot, 'snapshot');
+    const traditionalChineseModel = buildSidebarAboutModel('zh-Hant', snapshot, 'snapshot');
 
     assert.deepEqual(englishModel.sections.map((section) => section.id), ['store', 'community', 'content']);
     assert.deepEqual(englishModel.sections[0]?.entries.map((entry) => entry.id), ['steam']);
@@ -25,9 +27,11 @@ describe('about sidebar model', () => {
       'x',
       'linkedin',
     ]);
+    assert.deepEqual(japaneseModel.sections[1]?.entries.map((entry) => entry.id), ['discord', 'feishu-group', 'qq-group']);
 
     assert.deepEqual(chineseModel.sections.map((section) => section.id), ['store', 'community', 'content']);
     assert.deepEqual(chineseModel.sections[1]?.entries.map((entry) => entry.id), ['feishu-group', 'qq-group', 'discord']);
+    assert.deepEqual(traditionalChineseModel.sections[1]?.entries.map((entry) => entry.id), ['feishu-group', 'qq-group', 'discord']);
     assert.deepEqual(chineseModel.sections[2]?.entries.slice(0, 5).map((entry) => entry.id), [
       'bilibili',
       'xiaohongshu',

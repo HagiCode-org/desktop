@@ -1,4 +1,9 @@
 import { bundledAboutSnapshotPayload } from './generated/aboutSnapshot.js';
+import {
+  type DesktopLanguageCode,
+  isChineseDesktopLanguage,
+  resolveDesktopLanguageCode,
+} from '../../shared/desktop-languages.js';
 
 export const ABOUT_SNAPSHOT_URL = 'https://index.hagicode.com/about.json';
 export const ABOUT_SNAPSHOT_ORIGIN = 'https://index.hagicode.com';
@@ -48,7 +53,7 @@ const ENTRY_ORDER = [
 ] as const;
 const ENTRY_PRIORITY = new Map(ENTRY_ORDER.map((id, index) => [id, index]));
 
-export type SidebarAboutLocale = 'zh-CN' | 'en-US';
+export type SidebarAboutLocale = DesktopLanguageCode;
 export type AboutSnapshotRequiredEntryId = (typeof REQUIRED_ABOUT_ENTRY_IDS)[number];
 export type AboutSnapshotEntryType = 'link' | 'contact' | 'qr' | 'image';
 export type AboutSnapshotRegionPriority = (typeof ABOUT_SNAPSHOT_REGION_PRIORITIES)[number];
@@ -257,11 +262,11 @@ function normalizeAboutEntry(
 }
 
 export function normalizeSidebarAboutLocale(locale: string | undefined | null): SidebarAboutLocale {
-  return locale?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+  return resolveDesktopLanguageCode(locale);
 }
 
 export function getLocaleRegionPriority(locale: SidebarAboutLocale): AboutSnapshotRegionPriority {
-  return locale === 'zh-CN' ? 'china-first' : 'international-first';
+  return isChineseDesktopLanguage(locale) ? 'china-first' : 'international-first';
 }
 
 export function normalizeAboutSnapshotData(payload: unknown): AboutSnapshotData {
@@ -310,7 +315,7 @@ function sortEntries(locale: SidebarAboutLocale, entries: readonly AboutSnapshot
       return leftPriority - rightPriority;
     }
 
-    return left.label.localeCompare(right.label, locale === 'zh-CN' ? 'zh-CN' : 'en');
+    return left.label.localeCompare(right.label, locale);
   });
 }
 

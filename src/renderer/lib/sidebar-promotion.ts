@@ -1,8 +1,14 @@
+import {
+  type DesktopLanguageCode,
+  getDesktopLanguage,
+  resolveDesktopLanguageCode,
+} from '../../shared/desktop-languages.js';
+
 export const SIDEBAR_PROMOTION_FLAGS_URL = 'https://index.hagicode.com/promote.json';
 export const SIDEBAR_PROMOTION_CONTENT_URL = 'https://index.hagicode.com/promote_content.json';
 export const SIDEBAR_PROMOTION_ASSET_ORIGIN = 'https://index.hagicode.com';
 
-export type SidebarPromotionLocale = 'zh-CN' | 'en-US';
+export type SidebarPromotionLocale = DesktopLanguageCode;
 
 export interface PromotionFlag {
   readonly id: string;
@@ -168,8 +174,7 @@ function readArrayPayloadByNames(value: unknown, fieldNames: readonly string[]):
 }
 
 export function normalizeSidebarPromotionLocale(language: string | undefined | null): SidebarPromotionLocale {
-  const normalized = (language ?? '').toLowerCase();
-  return normalized.startsWith('zh') ? 'zh-CN' : 'en-US';
+  return resolveDesktopLanguageCode(language);
 }
 
 export function normalizePromotionFlags(payload: unknown): readonly PromotionFlag[] | null {
@@ -260,13 +265,23 @@ function isFlagActive(flag: PromotionFlag, now: Date): boolean {
 
 function pickLocalizedText(textMap: Readonly<Record<string, string>>, locale: SidebarPromotionLocale): string | null {
   const shortLocale = locale.split('-')[0] ?? locale;
-  const legacyShortLocale = shortLocale === 'zh' ? 'zh' : 'en';
+  const fallbackCodes = getDesktopLanguage(locale).fallbackCodes;
+  const fallbackShortLocales = fallbackCodes.map((code) => code.split('-')[0] ?? code);
+  const candidates = [
+    locale,
+    shortLocale,
+    ...fallbackCodes,
+    ...fallbackShortLocales,
+  ];
 
-  return textMap[locale]
-    ?? textMap[shortLocale]
-    ?? textMap[legacyShortLocale]
-    ?? Object.values(textMap)[0]
-    ?? null;
+  for (const candidate of candidates) {
+    const value = textMap[candidate];
+    if (value) {
+      return value;
+    }
+  }
+
+  return Object.values(textMap)[0] ?? null;
 }
 
 export function resolveActiveSidebarPromotion(
