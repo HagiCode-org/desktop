@@ -1,3 +1,5 @@
+import { DESKTOP_LANGUAGES } from '../../shared/desktop-languages';
+
 /**
  * i18next Configuration
  *
@@ -12,15 +14,23 @@ export const i18nConfig = {
   // Fallback language chain
   fallbackLng: {
     default: ['en-US'],
-    'zh-HK': ['zh-CN', 'en-US'],
-    'zh-TW': ['zh-CN', 'en-US'],
+    'zh-Hant': ['zh-CN', 'en-US'],
+    'zh-HK': ['zh-Hant', 'zh-CN', 'en-US'],
+    'zh-TW': ['zh-Hant', 'zh-CN', 'en-US'],
+    'ja-JP': ['en-US'],
+    'ko-KR': ['en-US'],
+    'de-DE': ['en-US'],
+    'fr-FR': ['en-US'],
+    'es-ES': ['en-US'],
+    'pt-BR': ['en-US'],
+    'ru-RU': ['en-US'],
   },
 
   // Default namespace
   defaultNS: 'common',
 
   // Available namespaces
-  ns: ['common', 'components', 'pages', 'ui', 'onboarding', 'claude', 'prompt-guidance'],
+  ns: ['common', 'components', 'pages', 'ui', 'onboarding', 'installation', 'prompt-guidance'],
 
   // Namespace separator
   nsSeparator: ':',
@@ -63,19 +73,6 @@ export const i18nConfig = {
 /**
  * Available languages configuration
  */
-export const availableLanguages = [
-  {
-    code: 'zh-CN',
-    name: 'Simplified Chinese',
-    nativeName: '简体中文',
-    flag: '🇨🇳',
-  },
-  {
-    code: 'en-US',
-    name: 'English',
-    nativeName: 'English',
-    flag: '🇺🇸',
-  },
-] as const;
+export const availableLanguages = DESKTOP_LANGUAGES;
 
 export type AvailableLanguageCode = typeof availableLanguages[number]['code'];

@@ -8,20 +8,25 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { i18nConfig } from './config';
 
-// Import translation resources
-import zhCNCommon from './locales/zh-CN/common.json';
-import zhCNComponents from './locales/zh-CN/components.json';
-import zhCNPages from './locales/zh-CN/pages.json';
-import zhCNUi from './locales/zh-CN/ui.json';
-import zhCNOnboarding from './locales/zh-CN/onboarding.json';
-import zhCNPromptGuidance from './locales/zh-CN/prompt-guidance.json';
+const localeModules = import.meta.glob('./locales/*/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, Record<string, unknown>>;
 
-import enUSCommon from './locales/en-US/common.json';
-import enUSComponents from './locales/en-US/components.json';
-import enUSPages from './locales/en-US/pages.json';
-import enUSUi from './locales/en-US/ui.json';
-import enUSOnboarding from './locales/en-US/onboarding.json';
-import enUSPromptGuidance from './locales/en-US/prompt-guidance.json';
+const resources = Object.entries(localeModules).reduce<Record<string, Record<string, Record<string, unknown>>>>(
+  (acc, [modulePath, namespaceResources]) => {
+    const match = modulePath.match(/^\.\/locales\/([^/]+)\/([^/]+)\.json$/);
+    if (!match) {
+      return acc;
+    }
+
+    const [, language, namespace] = match;
+    acc[language] ??= {};
+    acc[language][namespace] = namespaceResources;
+    return acc;
+  },
+  {},
+);
 
 // Initialize i18next
 i18n
@@ -30,24 +35,7 @@ i18n
     ...i18nConfig,
 
     // Translation resources
-    resources: {
-      'zh-CN': {
-        common: zhCNCommon,
-        components: zhCNComponents,
-        pages: zhCNPages,
-        ui: zhCNUi,
-        onboarding: zhCNOnboarding,
-        'prompt-guidance': zhCNPromptGuidance,
-      },
-      'en-US': {
-        common: enUSCommon,
-        components: enUSComponents,
-        pages: enUSPages,
-        ui: enUSUi,
-        onboarding: enUSOnboarding,
-        'prompt-guidance': enUSPromptGuidance,
-      },
-    },
+    resources,
   })
   .then(() => {
     // Log successful initialization for debugging
