@@ -19,7 +19,7 @@ The bundled portable toolchain root remains the immutable runtime source for `no
 
 ## First-Run Preparation
 
-The onboarding wizard includes an npm preparation step before the final package download step. It evaluates readiness with the shared catalog and the current `NpmManagementSnapshot`.
+The onboarding wizard now starts with an explicit language-selection step, then reaches the npm preparation step before the final package download step. The npm preparation step evaluates readiness with the shared catalog and the current `NpmManagementSnapshot`.
 
 The step requires:
 
