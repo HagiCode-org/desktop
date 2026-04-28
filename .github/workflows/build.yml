@@ -200,10 +200,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
-      - name: Run non-interactive dependency install integration
-        run: npm run package:non-interactive-integration
-        shell: bash
-
       - name: Collect Windows artifacts
         id: windows_artifacts
         shell: pwsh
@@ -501,7 +497,7 @@ jobs:
 
       - name: Upload Windows ZIP
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        if: success() && steps.windows_zip.outputs.zip_files != ''
         with:
           name: hagicode-windows-zip-${{ github.sha }}
           path: ${{ steps.windows_zip.outputs.zip_files }}
@@ -717,10 +713,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
-
-      - name: Run non-interactive dependency install integration
-        run: npm run package:non-interactive-integration
-        shell: bash
 
       - name: Collect Windows artifacts
         id: windows_artifacts
@@ -1012,7 +1004,7 @@ jobs:
 
       - name: Upload Windows ZIP
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_zip.outputs.zip_files != ''
+        if: success() && steps.windows_zip.outputs.zip_files != ''
         with:
           name: hagicode-windows-zip-${{ github.sha }}
           path: ${{ steps.windows_zip.outputs.zip_files }}
@@ -1142,9 +1134,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
-      - name: Run non-interactive dependency install integration
-        run: npm run package:non-interactive-integration
-
       - name: Summarize Linux ZIP artifacts
         if: success()
         shell: bash
@@ -1226,7 +1215,7 @@ jobs:
 
       - name: Upload Linux ZIP
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success()
         with:
           name: hagicode-linux-zip-${{ github.sha }}
           path: pkg/*.zip
@@ -1314,9 +1303,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run non-interactive dependency install integration
-        run: npm run package:non-interactive-integration
-
       # Upload each artifact separately
       - name: Upload DMG
         uses: actions/upload-artifact@v4
@@ -1337,12 +1323,12 @@ jobs:
 
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success()
         with:
           name: hagicode-macos-zip-${{ github.sha }}
           path: pkg/*.zip
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Upload ZIP to Release
         uses: softprops/action-gh-release@v2

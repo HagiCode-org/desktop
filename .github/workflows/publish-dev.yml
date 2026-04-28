@@ -570,7 +570,6 @@ jobs:
       release_tag: ${{ needs.prepare-release.outputs.release_tag }}
       release_version: v${{ needs.prepare-release.outputs.version }}
       release_channel: ${{ needs.prepare-release.outputs.channel }}
-      run_finalize: false
     secrets: inherit
 
   sync-azure-finalize:
