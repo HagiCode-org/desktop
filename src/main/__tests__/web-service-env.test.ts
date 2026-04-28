@@ -22,6 +22,11 @@ import {
   injectPortableToolchainEnv,
   resolvePathEnvKey,
 } from '../portable-toolchain-env.js';
+import {
+  HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY,
+  normalizeSteamAchievementSyncEnvValue,
+  resolveSteamIntegration,
+} from '../steam-integration-env.js';
 
 describe('web-service-env', () => {
   it('builds managed env vars with runtime and defaults', () => {
@@ -40,7 +45,107 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.Database__Provider, undefined);
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
     assert.equal(result.injectedEnv.HAGICODE_LOG_FORMAT, 'plain');
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'false');
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'false');
     assert.equal(result.snapshot.some(entry => entry.key === 'Database__Provider'), false);
+  });
+
+  it('resolves Steam integration from distribution mode and hagicode env sync option', () => {
+    const resolution = resolveSteamIntegration({
+      distributionMode: 'steam',
+      env: {
+        [HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY]: 'TRUE',
+      },
+    });
+
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      steamIntegrationEnabled: resolution.integrationEnabled,
+      steamIntegrationSource: 'distribution-mode',
+      steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
+      steamAchievementSyncSource: resolution.achievementSyncSource,
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'true');
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'true');
+    assert.equal(
+      result.snapshot.find(entry => entry.key === 'HAGICODE_STEAM_INTEGRATION_ENABLED')?.sourceConfig,
+      'desktop Steam-mode detection (distributionMode=steam)',
+    );
+    assert.equal(
+      result.snapshot.find(entry => entry.key === 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED')?.sourceConfig,
+      'Steam Mod hagicode.env HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED',
+    );
+  });
+
+  it('passes through disabled Steam Mod achievement sync option in Steam mode', () => {
+    const resolution = resolveSteamIntegration({
+      distributionMode: 'steam',
+      env: {
+        [HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY]: 'false',
+      },
+    });
+
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      steamIntegrationEnabled: resolution.integrationEnabled,
+      steamIntegrationSource: 'distribution-mode',
+      steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
+      steamAchievementSyncSource: resolution.achievementSyncSource,
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'true');
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'false');
+  });
+
+  it('forces Steam flags disabled for non-Steam launches and ignores legacy external values', () => {
+    const resolution = resolveSteamIntegration({
+      distributionMode: 'normal',
+      env: {
+        [HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY]: 'true',
+      },
+    });
+
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      steamIntegrationEnabled: resolution.integrationEnabled,
+      steamIntegrationSource: 'disabled-non-steam',
+      steamAchievementSyncEnabled: resolution.achievementSyncEnabled,
+      steamAchievementSyncSource: resolution.achievementSyncSource,
+      yamlConfig: null,
+      existingEnv: {
+        HAGICODE_STEAM_INTEGRATION_ENABLED: 'true',
+        HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED: 'true',
+      },
+    });
+
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'false');
+    assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'false');
+  });
+
+  it('normalizes invalid Steam Mod achievement sync values to disabled', () => {
+    assert.equal(normalizeSteamAchievementSyncEnvValue('yes'), null);
+
+    const resolution = resolveSteamIntegration({
+      distributionMode: 'steam',
+      env: {
+        [HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY]: 'yes',
+      },
+    });
+
+    assert.equal(resolution.integrationEnabled, true);
+    assert.equal(resolution.achievementSyncEnabled, false);
+    assert.equal(resolution.achievementSyncSource, 'invalid-hagicode-env');
   });
 
   it('injects wildcard and custom IPv4 bind hosts without rewriting them', () => {

@@ -3,6 +3,7 @@ export type WebServiceConfigMode = 'env' | 'legacy-yaml';
 export type EnvSnapshotLogLevel = 'off' | 'summary' | 'detailed';
 
 export type ManagedEnvSource = 'runtime' | 'yaml' | 'existing-env' | 'default';
+export type SteamManagedEnvSource = 'distribution-mode' | 'hagicode-env' | 'disabled-non-steam' | 'invalid-hagicode-env';
 
 export interface ManagedEnvVarDefinition {
   key: string;
@@ -26,6 +27,10 @@ export interface BuildManagedEnvInput {
   host: string;
   port: number;
   dataDir?: string | null;
+  steamIntegrationEnabled?: boolean;
+  steamIntegrationSource?: SteamManagedEnvSource;
+  steamAchievementSyncEnabled?: boolean;
+  steamAchievementSyncSource?: SteamManagedEnvSource;
   systemVaultEnvEntries?: Record<string, string> | null;
   yamlConfig?: Record<string, unknown> | null;
   existingEnv?: Record<string, string | undefined>;
@@ -82,6 +87,18 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     sensitive: false,
     defaultValue: 'plain',
   },
+  {
+    key: 'HAGICODE_STEAM_INTEGRATION_ENABLED',
+    sourceConfig: 'desktop Steam-mode detection',
+    required: true,
+    sensitive: false,
+  },
+  {
+    key: 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED',
+    sourceConfig: 'Steam Mod hagicode.env achievement sync option',
+    required: true,
+    sensitive: false,
+  },
 ] as const;
 
 export function resolveWebServiceConfigMode(value?: string | null): WebServiceConfigMode {
@@ -134,7 +151,7 @@ export function buildManagedServiceEnv(input: BuildManagedEnvInput): BuildManage
       key: definition.key,
       value: resolved.value,
       source: resolved.source,
-      sourceConfig: definition.sourceConfig,
+      sourceConfig: resolveSnapshotSourceConfig(definition, input),
       sensitive: definition.sensitive || isSensitiveEnvKey(definition.key),
       defaultApplied: resolved.source === 'default',
     });
@@ -171,6 +188,27 @@ export function buildManagedServiceEnv(input: BuildManagedEnvInput): BuildManage
   return { injectedEnv, snapshot, errors, warnings };
 }
 
+function resolveSnapshotSourceConfig(
+  definition: ManagedEnvVarDefinition,
+  input: BuildManagedEnvInput,
+): string {
+  if (definition.key === 'HAGICODE_STEAM_INTEGRATION_ENABLED') {
+    return input.steamIntegrationSource === 'distribution-mode'
+      ? 'desktop Steam-mode detection (distributionMode=steam)'
+      : 'desktop Steam-mode detection (non-Steam launch)';
+  }
+
+  if (definition.key === 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED') {
+    return input.steamAchievementSyncSource === 'hagicode-env'
+      ? 'Steam Mod hagicode.env HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED'
+      : input.steamAchievementSyncSource === 'invalid-hagicode-env'
+        ? 'invalid Steam Mod hagicode.env HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED (normalized false)'
+        : 'desktop Steam-mode detection (non-Steam launch)';
+  }
+
+  return definition.sourceConfig;
+}
+
 function resolveValue(
   definition: ManagedEnvVarDefinition,
   input: BuildManagedEnvInput,
@@ -190,6 +228,20 @@ function resolveValue(
     }
   }
 
+  if (definition.key === 'HAGICODE_STEAM_INTEGRATION_ENABLED') {
+    return {
+      value: boolEnvValue(input.steamIntegrationEnabled),
+      source: 'runtime',
+    };
+  }
+
+  if (definition.key === 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED') {
+    return {
+      value: boolEnvValue(input.steamAchievementSyncEnabled),
+      source: 'runtime',
+    };
+  }
+
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
     return normalizeResolvedValue(definition, existingValue, 'existing-env');
@@ -205,6 +257,10 @@ function resolveValue(
   }
 
   return { source: 'default' };
+}
+
+function boolEnvValue(value: boolean | undefined): string {
+  return value === true ? 'true' : 'false';
 }
 
 function normalizeResolvedValue(

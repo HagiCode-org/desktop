@@ -42,7 +42,11 @@ import {
   normalizeListenHost,
   resolveProbeHostsForListenHost,
 } from '../types/web-service-network.js';
-import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
+import type { ActiveRuntimeDescriptor, DistributionMode } from '../types/distribution-mode.js';
+import {
+  resolveSteamIntegration,
+  HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY,
+} from './steam-integration-env.js';
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -145,6 +149,7 @@ export class PCodeWebServiceManager {
   private startupLogLines: string[] = [];
   private startupLogTruncated: boolean = false;
   private lastPm2Env: NodeJS.ProcessEnv | null = null;
+  private distributionMode: DistributionMode = 'normal';
 
   constructor(config: WebServiceConfig, deps: WebServiceManagerDeps = {}) {
     this.config = {
@@ -168,6 +173,11 @@ export class PCodeWebServiceManager {
   setEntryPoint(entryPoint: EntryPoint | null): void {
     this.entryPoint = entryPoint;
     log.info('[WebService] EntryPoint set:', entryPoint);
+  }
+
+  setDistributionMode(distributionMode: DistributionMode): void {
+    this.distributionMode = distributionMode;
+    log.info('[WebService] Distribution mode set:', { distributionMode });
   }
 
   /**
@@ -787,6 +797,10 @@ export class PCodeWebServiceManager {
     const systemVaultEnv = await buildDesktopSystemVaultEnv({
       pathResolver: createDesktopSystemVaultPathResolver(this.pathManager),
     });
+    const steamIntegration = resolveSteamIntegration({
+      distributionMode: this.distributionMode,
+      env: process.env,
+    });
 
     for (const warning of systemVaultEnv.warnings) {
       log.warn('[WebService][SystemVaultEnv]', warning);
@@ -796,9 +810,24 @@ export class PCodeWebServiceManager {
       host: this.config.host,
       port: this.config.port,
       dataDir,
+      steamIntegrationEnabled: steamIntegration.integrationEnabled,
+      steamIntegrationSource: steamIntegration.integrationSource === 'distribution-mode'
+        ? 'distribution-mode'
+        : 'disabled-non-steam',
+      steamAchievementSyncEnabled: steamIntegration.achievementSyncEnabled,
+      steamAchievementSyncSource: steamIntegration.achievementSyncSource,
       systemVaultEnvEntries: systemVaultEnv.envEntries,
       yamlConfig: existingConfig,
       existingEnv,
+    });
+
+    log.info('[WebService][SteamEnv] Resolved Steam backend flags:', {
+      distributionMode: this.distributionMode,
+      integrationEnabled: steamIntegration.integrationEnabled,
+      integrationSource: steamIntegration.integrationSource,
+      achievementSyncEnabled: steamIntegration.achievementSyncEnabled,
+      achievementSyncSource: steamIntegration.achievementSyncSource,
+      hasHagicodeEnvAchievementSyncValue: typeof process.env[HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY] === 'string',
     });
 
     if (buildResult.errors.length > 0) {
