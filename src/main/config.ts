@@ -1,5 +1,6 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
+import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 
 export interface AppSettings {
   language: string;
@@ -213,7 +214,7 @@ export class ConfigManager {
    * Get current language
    */
   getCurrentLanguage(): string | undefined {
-    return this.store.get('settings')?.language ?? defaultConfig.settings.language;
+    return resolveDesktopLanguageCode(this.store.get('settings')?.language ?? defaultConfig.settings.language);
   }
 
   /**
@@ -223,7 +224,7 @@ export class ConfigManager {
     const currentSettings = this.store.get('settings') ?? defaultConfig.settings;
     this.store.set('settings', {
       ...currentSettings,
-      language,
+      language: resolveDesktopLanguageCode(language),
     });
     (this.store as unknown as { delete: (key: string) => void }).delete('language');
   }

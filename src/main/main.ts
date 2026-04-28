@@ -5,7 +5,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { createTray, destroyTray, setServerStatus, setServiceUrl, updateTrayMenu, setWebServiceManagerRef } from './tray.js';
+import { createTray, destroyTray, setServerStatus, setServiceUrl, updateTrayMenu, setWebServiceManagerRef, setTrayLanguage } from './tray.js';
 import { HagicoServerClient, type ServerStatus } from './server.js';
 import { ConfigManager } from './config.js';
 import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebServiceConfig } from './web-service-manager.js';
@@ -1647,6 +1647,7 @@ ipcMain.handle('language-changed', async (_, language: string) => {
       menuManager.updateMenuLanguage(language);
     }
 
+    setTrayLanguage(language);
     rssFeedManager?.switchLanguage(language);
 
     return { success: true };
@@ -2197,6 +2198,7 @@ app.whenReady().then(async () => {
   // Initialize Version Manager with package source config manager
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
+  webServiceManager.setDistributionMode(distributionModeState.mode);
   log.info('[App] Distribution mode initialized:', {
     distributionMode: distributionModeState.mode,
     electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
@@ -2292,6 +2294,7 @@ app.whenReady().then(async () => {
 
   // Initialize RSS Feed Manager
   const initialLanguage = configManager.getCurrentLanguage() || 'zh-CN';
+  setTrayLanguage(initialLanguage);
   rssFeedManager = RSSFeedManager.getInstance({
     feedUrl: DEFAULT_RSS_FEED_URL,
     language: initialLanguage,

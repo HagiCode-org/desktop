@@ -12,6 +12,7 @@ import { manifestReader } from './manifest-reader.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
 import { desktopHttpClient } from './http-client.js';
 import { executeCli } from './utils/cli-executor.js';
+import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 import type {
   AcceptLegalDocumentsPayload,
   StoredOnboardingState,
@@ -537,16 +538,7 @@ export class OnboardingManager {
   }
 
   private static normalizeLocale(locale: string | undefined): string {
-    if (!locale) {
-      return 'zh-CN';
-    }
-
-    const normalized = locale.toLowerCase();
-    if (normalized.startsWith('en')) {
-      return 'en-US';
-    }
-
-    return 'zh-CN';
+    return resolveDesktopLanguageCode(locale);
   }
 
   private static async fetchPublishedLegalMetadata(url: string): Promise<PublishedLegalDocumentsPayload> {

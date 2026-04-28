@@ -7,6 +7,7 @@ import type {
   RSSFeedConfig
 } from './types/rss-types.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
+import { isChineseDesktopLanguage } from '../shared/desktop-languages.js';
 
 export const DEFAULT_RSS_LANGUAGE = 'zh-CN';
 export const CHINESE_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.zh-CN.xml';
@@ -20,7 +21,7 @@ function normalizeLanguage(language?: string): string {
 }
 
 export function resolveRSSFeedLanguage(language?: string): SupportedRSSLanguage {
-  return normalizeLanguage(language).toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+  return isChineseDesktopLanguage(normalizeLanguage(language)) ? 'zh-CN' : 'en-US';
 }
 
 export function resolveRSSFeedUrl(language?: string): string {

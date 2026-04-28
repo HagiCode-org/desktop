@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mainWindow } from './main.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
+import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 
 // Reference to webServiceManager - will be set from main.ts
 let webServiceManagerRef: any = null;
@@ -37,6 +38,7 @@ function loadTrayIcon(): Electron.NativeImage {
 let tray: Tray | null = null;
 let serverStatus: 'running' | 'stopped' | 'error' = 'stopped';
 let currentServiceUrl: string | null = null;
+let currentTrayLanguage: string | null = null;
 
 // Translation helper - supports multiple languages
 const getTrayLabel = (key: string): string => {
@@ -45,46 +47,92 @@ const getTrayLabel = (key: string): string => {
       'en': 'Show Window',
       'zh': '显示窗口',
       'zh-CN': '显示窗口',
-      'zh-TW': '顯示視窗'
+      'zh-Hant': '顯示視窗',
+      'ja-JP': 'ウィンドウを表示',
+      'ko-KR': '창 표시',
+      'de-DE': 'Fenster anzeigen',
+      'fr-FR': 'Afficher la fenêtre',
+      'es-ES': 'Mostrar ventana',
+      'pt-BR': 'Mostrar janela',
+      'ru-RU': 'Показать окно',
     },
     'startService': {
       'en': 'Start Service',
       'zh': '启动服务',
       'zh-CN': '启动服务',
-      'zh-TW': '啟動服務'
+      'zh-Hant': '啟動服務',
+      'ja-JP': 'サービスを開始',
+      'ko-KR': '서비스 시작',
+      'de-DE': 'Dienst starten',
+      'fr-FR': 'Démarrer le service',
+      'es-ES': 'Iniciar servicio',
+      'pt-BR': 'Iniciar serviço',
+      'ru-RU': 'Запустить службу',
     },
     'stopService': {
       'en': 'Stop Service',
       'zh': '停止服务',
       'zh-CN': '停止服务',
-      'zh-TW': '停止服務'
+      'zh-Hant': '停止服務',
+      'ja-JP': 'サービスを停止',
+      'ko-KR': '서비스 중지',
+      'de-DE': 'Dienst stoppen',
+      'fr-FR': 'Arrêter le service',
+      'es-ES': 'Detener servicio',
+      'pt-BR': 'Parar serviço',
+      'ru-RU': 'Остановить службу',
     },
     'openHagicode': {
       'en': 'Open Hagicode',
       'zh': '打开 Hagicode',
       'zh-CN': '打开 Hagicode',
-      'zh-TW': '打開 Hagicode'
+      'zh-Hant': '打開 Hagicode',
+      'ja-JP': 'Hagicode を開く',
+      'ko-KR': 'Hagicode 열기',
+      'de-DE': 'Hagicode öffnen',
+      'fr-FR': 'Ouvrir Hagicode',
+      'es-ES': 'Abrir Hagicode',
+      'pt-BR': 'Abrir Hagicode',
+      'ru-RU': 'Открыть Hagicode',
     },
     'openInBrowser': {
       'en': 'Open in Browser',
       'zh': '浏览器打开',
       'zh-CN': '浏览器打开',
-      'zh-TW': '瀏覽器打開'
+      'zh-Hant': '在瀏覽器開啟',
+      'ja-JP': 'ブラウザーで開く',
+      'ko-KR': '브라우저에서 열기',
+      'de-DE': 'Im Browser öffnen',
+      'fr-FR': 'Ouvrir dans le navigateur',
+      'es-ES': 'Abrir en navegador',
+      'pt-BR': 'Abrir no navegador',
+      'ru-RU': 'Открыть в браузере',
     },
     'quit': {
       'en': 'Quit',
       'zh': '退出',
       'zh-CN': '退出',
-      'zh-TW': '退出'
+      'zh-Hant': '結束',
+      'ja-JP': '終了',
+      'ko-KR': '종료',
+      'de-DE': 'Beenden',
+      'fr-FR': 'Quitter',
+      'es-ES': 'Salir',
+      'pt-BR': 'Sair',
+      'ru-RU': 'Выход',
     }
   };
 
-  // Get app locale
-  const locale = app.getLocale?.() || 'en';
-  const lang = locale.startsWith('zh') ? locale : 'en';
+  const locale = currentTrayLanguage ?? app.getLocale?.() ?? 'en';
+  const lang = resolveDesktopLanguageCode(locale, 'en-US');
 
   return labels[key]?.[lang] || labels[key]?.['en'] || key;
 };
+
+export function setTrayLanguage(language: string): void {
+  currentTrayLanguage = language;
+  updateTrayMenu();
+}
 
 export function createTray(): void {
   const icon = loadTrayIcon();
