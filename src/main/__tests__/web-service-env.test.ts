@@ -354,6 +354,43 @@ describe('web-service-env', () => {
     assert.equal(result.fellBackToSystemPath, false);
   });
 
+  it('injects Node-major npm global PATH, NODE_PATH, and diagnostic markers for child processes only', () => {
+    const baseEnv = {
+      PATH: '/system/bin',
+      NODE_PATH: '/system/node_modules',
+    };
+    const npmGlobalPaths = {
+      nodeVersion: '22.12.0',
+      nodeMajorVersion: '22',
+      npmGlobalPrefix: '/userData/node22/npmGlobal',
+      npmGlobalBinRoot: '/userData/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/userData/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/userData/node22/npmCache',
+    };
+    const result = injectPortableToolchainEnv(baseEnv, {
+      getPortableToolchainRoot: () => '/portable/toolchain',
+      getPortableToolchainBinRoot: () => '/portable/toolchain/bin',
+      getPortableNodeBinRoot: () => '/portable/toolchain/node/bin',
+      getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
+    }, {
+      platform: 'linux',
+      existsSync: target => target !== '/userData/node22/npmGlobal/bin',
+      npmGlobalPaths,
+    });
+
+    assert.equal(
+      result.env.PATH,
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/userData/node22/npmGlobal/bin:/system/bin',
+    );
+    assert.equal(result.env.NODE_PATH, '/userData/node22/npmGlobal/lib/node_modules:/system/node_modules');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PREFIX, '/userData/node22/npmGlobal');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_BIN_ROOT, '/userData/node22/npmGlobal/bin');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_MODULES_ROOT, '/userData/node22/npmGlobal/lib/node_modules');
+    assert.equal(result.env.HAGICODE_NODE_MAJOR_VERSION, '22');
+    assert.equal(baseEnv.PATH, '/system/bin');
+    assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
+  });
+
   it('uses bundled toolchain paths when the desktop manifest default is enabled', () => {
     const activationPolicy = resolveBundledNodeRuntimePolicy({
       defaultEnabledByConsumer: {
@@ -403,6 +440,7 @@ describe('web-service-env', () => {
     assert.equal(explicitDisable.enabled, false);
     assert.equal(explicitDisable.source, 'override');
     assert.equal(disabledEnv.env.PATH, '/system/bin');
+    assert.equal(disabledEnv.env.HAGICODE_NPM_GLOBAL_PREFIX, undefined);
     assert.equal(disabledEnv.usedBundledToolchain, false);
     assert.equal(disabledEnv.fellBackToSystemPath, true);
     assert.equal(legacyFallback.enabled, true);

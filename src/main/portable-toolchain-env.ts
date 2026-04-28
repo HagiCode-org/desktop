@@ -1,6 +1,7 @@
 import fsSync from 'node:fs';
 import path from 'node:path';
 import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
+import type { NodeMajorNpmGlobalPaths } from './portable-toolchain-paths.js';
 
 export interface PortableToolchainPathAccessor {
   getPortableToolchainRoot(): string;
@@ -13,6 +14,7 @@ export interface InjectPortableToolchainEnvOptions {
   platform?: NodeJS.Platform;
   existsSync?: (path: string) => boolean;
   activationPolicy?: BundledNodeRuntimePolicyDecision;
+  npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
 export interface PortableToolchainEnvResult {
@@ -26,6 +28,7 @@ export interface PortableToolchainEnvResult {
   resolutionSource: 'bundled-desktop' | 'system';
   missingInjectedPaths: string[];
   activationPolicy?: BundledNodeRuntimePolicyDecision;
+  npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
 function normalizePathForComparison(entry: string, platform: NodeJS.Platform): string {
@@ -94,13 +97,17 @@ export function collectPortableToolchainPathEntries(
   const candidates = [
     pathAccessor.getPortableToolchainBinRoot(),
     pathAccessor.getPortableNodeBinRoot(),
-    pathAccessor.getPortableNpmGlobalBinRoot(),
+    options.npmGlobalPaths?.npmGlobalBinRoot ?? pathAccessor.getPortableNpmGlobalBinRoot(),
   ];
 
   return {
     toolchainRoot: pathAccessor.getPortableToolchainRoot(),
-    injectedPaths: dedupePathEntries(candidates.filter(candidate => existsSync(candidate)), platform),
-    missingInjectedPaths: candidates.filter(candidate => !existsSync(candidate)),
+    injectedPaths: dedupePathEntries(candidates.filter(candidate => (
+      candidate === options.npmGlobalPaths?.npmGlobalBinRoot || existsSync(candidate)
+    )), platform),
+    missingInjectedPaths: candidates.filter(candidate => (
+      candidate !== options.npmGlobalPaths?.npmGlobalBinRoot && !existsSync(candidate)
+    )),
   };
 }
 
@@ -128,8 +135,25 @@ export function injectPortableToolchainEnv(
   const markerInjected = activeInjectedPaths.length > 0;
   if (markerInjected) {
     env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = toolchainEntries.toolchainRoot;
+    if (options.npmGlobalPaths) {
+      const inheritedNodePathEntries = splitPathEntries(baseEnv.NODE_PATH, platform);
+      env.NODE_PATH = dedupePathEntries([
+        options.npmGlobalPaths.npmGlobalModulesRoot,
+        ...inheritedNodePathEntries,
+      ], platform).join(getPathDelimiter(platform));
+      env.HAGICODE_NPM_GLOBAL_PREFIX = options.npmGlobalPaths.npmGlobalPrefix;
+      env.HAGICODE_NPM_GLOBAL_BIN_ROOT = options.npmGlobalPaths.npmGlobalBinRoot;
+      env.HAGICODE_NPM_GLOBAL_MODULES_ROOT = options.npmGlobalPaths.npmGlobalModulesRoot;
+      env.HAGICODE_NPM_CACHE_ROOT = options.npmGlobalPaths.npmCacheRoot;
+      env.HAGICODE_NODE_MAJOR_VERSION = options.npmGlobalPaths.nodeMajorVersion;
+    }
   } else {
     delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
+    delete env.HAGICODE_NPM_GLOBAL_PREFIX;
+    delete env.HAGICODE_NPM_GLOBAL_BIN_ROOT;
+    delete env.HAGICODE_NPM_GLOBAL_MODULES_ROOT;
+    delete env.HAGICODE_NPM_CACHE_ROOT;
+    delete env.HAGICODE_NODE_MAJOR_VERSION;
   }
 
   return {
@@ -143,5 +167,6 @@ export function injectPortableToolchainEnv(
     resolutionSource: markerInjected ? 'bundled-desktop' : 'system',
     missingInjectedPaths: toolchainEntries.missingInjectedPaths,
     activationPolicy,
+    npmGlobalPaths: options.npmGlobalPaths ?? null,
   };
 }
