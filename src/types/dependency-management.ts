@@ -64,8 +64,6 @@ export interface ManagedNpmPackageStatusSnapshot {
   version: string | null;
   packageRoot: string;
   executablePath: string | null;
-  legacyBundledPackageRoot?: string;
-  legacyBundledExecutablePath?: string | null;
   message?: string;
 }
 
