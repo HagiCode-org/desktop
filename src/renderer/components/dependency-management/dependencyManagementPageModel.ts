@@ -134,8 +134,21 @@ export function getSelectablePackageIds(
     actionsDisabled: boolean;
   },
 ): ManagedNpmPackageId[] {
+  if (options.actionsDisabled) {
+    return [];
+  }
+
+  return getInstallEligiblePackageIds(packages, options);
+}
+
+export function getInstallEligiblePackageIds(
+  packages: readonly ManagedNpmPackageStatusSnapshot[],
+  options: {
+    hagiscriptGateOpen: boolean;
+  },
+): ManagedNpmPackageId[] {
   return packages
-    .filter((item) => options.hagiscriptGateOpen && !options.actionsDisabled && item.status !== 'unknown')
+    .filter((item) => options.hagiscriptGateOpen && item.status !== 'unknown')
     .map((item) => item.id);
 }
 
@@ -144,6 +157,17 @@ export function getSelectedEligiblePackageIds(
   selectablePackageIds: readonly ManagedNpmPackageId[],
 ): ManagedNpmPackageId[] {
   return selectedPackageIds.filter((id) => selectablePackageIds.includes(id));
+}
+
+export function pruneSelectedPackageIds(
+  selectedPackageIds: readonly ManagedNpmPackageId[],
+  packages: readonly ManagedNpmPackageStatusSnapshot[],
+  options: {
+    hagiscriptGateOpen: boolean;
+  },
+): ManagedNpmPackageId[] {
+  const eligibleIds = new Set(getInstallEligiblePackageIds(packages, options));
+  return selectedPackageIds.filter((id) => eligibleIds.has(id));
 }
 
 export function getSelectAllChecked(

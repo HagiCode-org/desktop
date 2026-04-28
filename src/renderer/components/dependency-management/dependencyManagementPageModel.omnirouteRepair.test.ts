@@ -3,7 +3,12 @@ import { describe, it } from 'node:test';
 import type { ManagedNpmPackageStatusSnapshot } from '../../../types/dependency-management.js';
 import {
   evaluateDependencyRepairIntent,
+  getSelectablePackageIds,
+  getSelectedEligiblePackageIds,
+  getSelectAllChecked,
+  pruneSelectedPackageIds,
   prioritizePackagesForRepair,
+  updateSelectAllPackageIds,
 } from './dependencyManagementPageModel.js';
 
 function createPackage(
@@ -75,5 +80,53 @@ describe('dependency-management OmniRoute repair helpers', () => {
 
     assert.equal(evaluation.ready, true);
     assert.deepEqual(evaluation.pendingPackageIds, []);
+  });
+
+  it('recomputes selectable package ids when the hagiscript gate opens from the latest snapshot', () => {
+    const packages = [
+      createPackage('openspec', 'OpenSpec', 'not-installed'),
+      createPackage('skills', 'Skills', 'unknown'),
+      createPackage('codex', 'Codex', 'installed'),
+    ];
+
+    assert.deepEqual(getSelectablePackageIds(packages, {
+      hagiscriptGateOpen: false,
+      actionsDisabled: false,
+    }), []);
+
+    assert.deepEqual(getSelectablePackageIds(packages, {
+      hagiscriptGateOpen: true,
+      actionsDisabled: false,
+    }), ['openspec', 'codex']);
+
+    assert.deepEqual(getSelectablePackageIds(packages, {
+      hagiscriptGateOpen: true,
+      actionsDisabled: true,
+    }), []);
+  });
+
+  it('keeps select-all and selected eligibility derived from the latest selectable ids', () => {
+    const selectablePackageIds = ['openspec', 'codex'] as const;
+
+    assert.deepEqual(getSelectedEligiblePackageIds(['skills', 'codex'], selectablePackageIds), ['codex']);
+    assert.equal(getSelectAllChecked(['codex'], selectablePackageIds), 'indeterminate');
+    assert.equal(getSelectAllChecked(['openspec', 'codex'], selectablePackageIds), true);
+    assert.deepEqual(updateSelectAllPackageIds(['skills'], selectablePackageIds, true), ['skills', 'openspec', 'codex']);
+    assert.deepEqual(updateSelectAllPackageIds(['skills', 'openspec'], selectablePackageIds, false), ['skills']);
+  });
+
+  it('removes selected package ids that are hidden or no longer install-eligible after a snapshot change', () => {
+    const packages = [
+      createPackage('openspec', 'OpenSpec', 'installed'),
+      createPackage('skills', 'Skills', 'unknown'),
+    ];
+
+    assert.deepEqual(pruneSelectedPackageIds(['openspec', 'skills', 'codex'], packages, {
+      hagiscriptGateOpen: true,
+    }), ['openspec']);
+
+    assert.deepEqual(pruneSelectedPackageIds(['openspec'], packages, {
+      hagiscriptGateOpen: false,
+    }), []);
   });
 });

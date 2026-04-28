@@ -169,6 +169,52 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /isBatchSyncRunning \? t\('dependencyManagement\.actions\.installSelectedRunning'\) : t\('dependencyManagement\.actions\.installSelected'\)/);
   });
 
+  it('reconciles install results from returned snapshots so hagiscript unlocks dependent package actions without refresh', async () => {
+    const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /if \(!result\.success\) \{/);
+    assert.match(pageSource, /setOperationError\(\(current\) => \(\{ \.\.\.current, \[packageId\]: undefined \}\)\);/);
+    assert.match(pageSource, /hagiscript\?\.status === 'installed' && Boolean\(hagiscript\.executablePath\)/);
+    assert.match(pageSource, /getSelectablePackageIds\(managedPackages, \{ hagiscriptGateOpen, actionsDisabled \}\)/);
+    assert.match(modelSource, /export function getInstallEligiblePackageIds/);
+    assert.match(modelSource, /options\.hagiscriptGateOpen && item\.status !== 'unknown'/);
+    assert.match(packageGroupsSource, /disabled=\{rowDisabled\}/);
+  });
+
+  it('keeps failed install and sync results visible while preserving disabled dependent actions', async () => {
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /\[packageId\]: result\.error \?\? t\('dependencyManagement\.errors\.operationFailed'\)/);
+    assert.match(pageSource, /status: 'failed', error: result\.error \?\? t\('dependencyManagement\.errors\.operationFailed'\)/);
+    assert.match(packageGroupsSource, /!hagiscriptGateOpen && \(/);
+    assert.match(packageGroupsSource, /dependencyGateMessage/);
+    assert.match(packageGroupsSource, /\{batchSyncState\.error && \(/);
+  });
+
+  it('uses refreshed batch sync rows to complete the batch and prunes stale selected package ids', async () => {
+    const [pageSource, modelSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(modelPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /const packageIds = selectedEligibleIds;/);
+    assert.match(pageSource, /setSnapshot\(result\.snapshot\);/);
+    assert.match(pageSource, /status: 'completed', error: undefined/);
+    assert.match(pageSource, /setSelectedPackageIds\(\[\]\);/);
+    assert.match(pageSource, /pruneSelectedPackageIds\(current, nextManagedPackages/);
+    assert.match(modelSource, /export function pruneSelectedPackageIds/);
+    assert.match(modelSource, /const eligibleIds = new Set\(getInstallEligiblePackageIds\(packages, options\)\);/);
+  });
+
   it('wires the batch log panel as the scroll target when batch sync starts', async () => {
     const [pageSource, packageGroupsSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),

@@ -20,6 +20,7 @@ import {
   getSelectAllChecked,
   getSelectedEligiblePackageIds,
   isBatchSyncEvent,
+  pruneSelectedPackageIds,
   prioritizePackagesForRepair,
   type BatchSyncState,
   updateSelectAllPackageIds,
@@ -125,8 +126,12 @@ export default function DependencyManagementPage() {
       return;
     }
 
-    const visibleIds = new Set(snapshot.packages.map((item) => item.id));
-    setSelectedPackageIds((current) => current.filter((id) => visibleIds.has(id)));
+    const nextHagiscript = snapshot.packages.find((item) => item.id === 'hagiscript');
+    const nextManagedPackages = snapshot.packages.filter((item) => item.id !== 'hagiscript');
+    const nextHagiscriptGateOpen = nextHagiscript?.status === 'installed' && Boolean(nextHagiscript.executablePath);
+    setSelectedPackageIds((current) => pruneSelectedPackageIds(current, nextManagedPackages, {
+      hagiscriptGateOpen: nextHagiscriptGateOpen,
+    }));
   }, [snapshot]);
 
   useEffect(() => {
@@ -163,7 +168,7 @@ export default function DependencyManagementPage() {
   };
 
   const runBatchInstall = async () => {
-    const packageIds = selectedPackageIds;
+    const packageIds = selectedEligibleIds;
     if (packageIds.length === 0) {
       return;
     }
