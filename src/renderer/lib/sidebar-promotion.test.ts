@@ -11,6 +11,18 @@ import {
 } from './sidebar-promotion.node.js';
 
 const activeNow = new Date('2026-04-26T08:00:00.000Z');
+const allDesktopLocales = [
+  'zh-CN',
+  'zh-Hant',
+  'en-US',
+  'ja-JP',
+  'ko-KR',
+  'de-DE',
+  'fr-FR',
+  'es-ES',
+  'pt-BR',
+  'ru-RU',
+] as const;
 
 describe('sidebar promotion model', () => {
   it('normalizes locales and resolves localized active content', () => {
@@ -87,6 +99,66 @@ describe('sidebar promotion model', () => {
     );
 
     assert.equal(japanesePromotion?.title, 'English title');
+  });
+
+  it('resolves all 10 supported locales and falls back to en-US for unsupported locales', () => {
+    const localizedContent = Object.fromEntries(
+      allDesktopLocales.map((locale) => [locale, `${locale} title`]),
+    );
+    const localizedDescription = Object.fromEntries(
+      allDesktopLocales.map((locale) => [locale, `${locale} description`]),
+    );
+    const localizedCta = Object.fromEntries(
+      allDesktopLocales.map((locale) => [locale, `${locale} cta`]),
+    );
+
+    for (const locale of allDesktopLocales) {
+      const promotion = resolveActiveSidebarPromotion(
+        {
+          flags: [{ id: locale, enabled: true }],
+          contents: [
+            {
+              id: locale,
+              title: localizedContent,
+              description: localizedDescription,
+              cta: localizedCta,
+              link: `https://example.invalid/${locale}`,
+            },
+          ],
+        },
+        normalizeSidebarPromotionLocale(locale),
+        'Learn more',
+        activeNow,
+      );
+
+      assert.equal(promotion?.title, `${locale} title`);
+      assert.equal(promotion?.description, `${locale} description`);
+      assert.equal(promotion?.cta, `${locale} cta`);
+    }
+
+    assert.equal(normalizeSidebarPromotionLocale('unsupported-locale'), 'en-US');
+
+    const unsupportedPromotion = resolveActiveSidebarPromotion(
+      {
+        flags: [{ id: 'unsupported', enabled: true }],
+        contents: [
+          {
+            id: 'unsupported',
+            title: { 'zh-CN': '中文标题', 'en-US': 'English title' },
+            description: { 'zh-CN': '中文描述', 'en-US': 'English description' },
+            cta: { 'zh-CN': '立即前往', 'en-US': 'Go now' },
+            link: 'https://example.invalid/unsupported',
+          },
+        ],
+      },
+      normalizeSidebarPromotionLocale('unsupported-locale'),
+      'Learn more',
+      activeNow,
+    );
+
+    assert.equal(unsupportedPromotion?.title, 'English title');
+    assert.equal(unsupportedPromotion?.description, 'English description');
+    assert.equal(unsupportedPromotion?.cta, 'Go now');
   });
 
   it('accepts the published Index payload shape with promotes, on, zh, and en fields', () => {

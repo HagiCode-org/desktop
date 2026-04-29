@@ -1,6 +1,7 @@
 import {
   type DesktopLanguageCode,
   getDesktopLanguage,
+  normalizeDesktopLanguageCode,
   resolveDesktopLanguageCode,
 } from '../../shared/desktop-languages.js';
 
@@ -174,7 +175,11 @@ function readArrayPayloadByNames(value: unknown, fieldNames: readonly string[]):
 }
 
 export function normalizeSidebarPromotionLocale(language: string | undefined | null): SidebarPromotionLocale {
-  return resolveDesktopLanguageCode(language);
+  if (language === undefined || language === null || language.trim().length === 0) {
+    return resolveDesktopLanguageCode(language);
+  }
+
+  return normalizeDesktopLanguageCode(language) ?? 'en-US';
 }
 
 export function normalizePromotionFlags(payload: unknown): readonly PromotionFlag[] | null {
