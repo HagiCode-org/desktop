@@ -7,7 +7,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
+import { SidebarPromotionCard } from './SidebarPromotionCard';
 import { Button } from '@/components/ui/button';
+import { useSidebarPromotion } from '../hooks/useSidebarPromotion';
 import {
   buildHomepageTourSteps,
   HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE,
@@ -97,6 +99,7 @@ export default function SystemManagementView({
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
   const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean(versionUpdateReminder);
+  const promotion = useSidebarPromotion();
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
@@ -351,6 +354,17 @@ export default function SystemManagementView({
     navigateTo('version');
   };
 
+  const handleOpenPromotion = useCallback(async (url: string) => {
+    try {
+      const result = await window.electronAPI.openExternal(url);
+      if (!result.success) {
+        console.error('Failed to open external link:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to open external link:', error);
+    }
+  }, []);
+
   const handleOpenUpdateSettings = () => {
     navigateTo('settings');
   };
@@ -564,10 +578,26 @@ export default function SystemManagementView({
         <WebServiceStatusCard />
       </motion.div>
 
+      {promotion ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+          className="mt-6"
+        >
+          <SidebarPromotionCard
+            promotion={promotion}
+            collapsed={false}
+            label={t('navigation.promotion.label')}
+            onActivate={(url) => void handleOpenPromotion(url)}
+          />
+        </motion.div>
+      ) : null}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.5 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
         className="mt-6"
       >
         <BlogFeedCard />
@@ -576,7 +606,7 @@ export default function SystemManagementView({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
+        transition={{ delay: 0.45, duration: 0.5 }}
         className="mt-6 bg-card rounded-xl p-6 border border-border relative overflow-hidden group"
         {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
       >

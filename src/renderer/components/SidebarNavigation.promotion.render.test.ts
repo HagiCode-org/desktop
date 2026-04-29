@@ -4,26 +4,31 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
+const homepagePath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 const cardPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarPromotionCard.tsx');
+const hookPath = path.resolve(process.cwd(), 'src/renderer/hooks/useSidebarPromotion.ts');
 
-describe('sidebar promotion renderer integration', () => {
-  it('loads active promotion data on locale changes and hides null/error states', async () => {
-    const source = await fs.readFile(sidebarPath, 'utf8');
+describe('homepage promotion renderer integration', () => {
+  it('loads active promotion data on locale changes through the shared hook', async () => {
+    const source = await fs.readFile(hookPath, 'utf8');
 
     assert.match(source, /fetchSidebarPromotion\(promotionLocale, t\('navigation\.promotion\.defaultCta'\)\)/);
     assert.match(source, /setPromotion\(result\)/);
     assert.match(source, /\[promotionLocale, t\]/);
-    assert.match(source, /\{promotion \? \(/);
-    assert.match(source, /: null\}/);
   });
 
-  it('renders expanded and collapsed card affordances wired to openExternal without changing selected view', async () => {
+  it('renders the promotion card above the blog feed on the homepage instead of the sidebar', async () => {
     const sidebarSource = await fs.readFile(sidebarPath, 'utf8');
+    const homepageSource = await fs.readFile(homepagePath, 'utf8');
     const cardSource = await fs.readFile(cardPath, 'utf8');
 
-    assert.match(sidebarSource, /<SidebarPromotionCard/);
-    assert.match(sidebarSource, /onActivate=\{\(url\) => void openExternalUrl\(url\)\}/);
-    assert.doesNotMatch(sidebarSource, /switchView\([^)]*promotion/);
+    assert.doesNotMatch(sidebarSource, /<SidebarPromotionCard/);
+    assert.doesNotMatch(sidebarSource, /fetchSidebarPromotion\(/);
+    assert.match(homepageSource, /const promotion = useSidebarPromotion\(\);/);
+    assert.match(homepageSource, /<SidebarPromotionCard/);
+    assert.match(homepageSource, /collapsed=\{false\}/);
+    assert.match(homepageSource, /onActivate=\{\(url\) => void handleOpenPromotion\(url\)\}/);
+    assert.match(homepageSource, /<BlogFeedCard \/>/);
     assert.match(cardSource, /collapsed/);
     assert.match(cardSource, /title=\{title\}/);
     assert.match(cardSource, /aria-label=\{title\}/);

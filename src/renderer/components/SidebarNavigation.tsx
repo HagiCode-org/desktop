@@ -24,7 +24,6 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
-import { SidebarPromotionCard } from './SidebarPromotionCard';
 import type { DistributionMode } from '../../types/distribution-mode';
 import {
   createLoadingSidebarAboutFetchState,
@@ -37,12 +36,6 @@ import {
   type SidebarAboutModel,
   type SidebarAboutSectionId,
 } from '../lib/about-sidebar';
-import {
-  fetchSidebarPromotion,
-  normalizeSidebarPromotionLocale,
-  type SidebarPromotionModel,
-} from '../lib/sidebar-promotion';
-
 interface NavigationItem {
   id: ViewType | 'official-website' | 'cost-calculator';
   labelKey: string;
@@ -182,10 +175,6 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
   );
-  const promotionLocale = useMemo(
-    () => normalizeSidebarPromotionLocale(i18n.resolvedLanguage ?? i18n.language),
-    [i18n.language, i18n.resolvedLanguage],
-  );
   const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -195,8 +184,6 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   const [aboutFetchState, setAboutFetchState] = useState<SidebarAboutFetchState>(
     createLoadingSidebarAboutFetchState(),
   );
-  const [promotion, setPromotion] = useState<SidebarPromotionModel | null>(null);
-
   useEffect(() => {
     const fetchVersion = async () => {
       try {
@@ -248,22 +235,6 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
       cancelled = true;
     };
   }, [aboutLocale, bundledAboutModel]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void fetchSidebarPromotion(promotionLocale, t('navigation.promotion.defaultCta')).then((result) => {
-      if (cancelled) {
-        return;
-      }
-
-      setPromotion(result);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [promotionLocale, t]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -739,15 +710,6 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                     </motion.button>
                   );
                 })}
-
-                {promotion ? (
-                  <SidebarPromotionCard
-                    promotion={promotion}
-                    collapsed={collapsed}
-                    label={t('navigation.promotion.label')}
-                    onActivate={(url) => void openExternalUrl(url)}
-                  />
-                ) : null}
               </div>
             </ScrollArea>
           </motion.div>
