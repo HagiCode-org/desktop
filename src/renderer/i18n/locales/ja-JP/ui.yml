@@ -1,0 +1,7 @@
+dialog:
+  close: 閉じる
+button:
+  submit: 送信する
+  cancel: キャンセル
+alert:
+  dismiss: 解雇する

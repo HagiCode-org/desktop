@@ -1,0 +1,519 @@
+button:
+  save: Salvar
+  cancel: Cancelar
+  confirm: Confirmar
+  delete: Excluir
+  edit: Editar
+  close: Fechar
+  refresh: Atualizar
+  install: Instalar
+  uninstall: Desinstalar
+  start: Iniciar
+  stop: Parar
+  restart: Reiniciar
+  open: Abrir
+  download: Baixar
+status:
+  loading: Carregando...
+  success: Sucesso
+  error: Erro
+  warning: Aviso
+  info: Informações
+  running: Correndo
+  stopped: Parado
+  installed: Instalado
+  notInstalled: Não instalado
+  pending: Pendente
+  failed: Falha
+form:
+  required: Obrigatório
+  optional: Opcional
+  selectPlaceholder: Por favor selecione...
+  inputPlaceholder: Por favor insira...
+  validation:
+    required: Este campo é obrigatório
+    invalidFormat: Formato inválido
+    minLength: Deve ter pelo menos {{min}} caracteres
+    maxLength: Não deve exceder {{max}} caracteres
+common:
+  version: Versão
+  platform: Plataforma
+  language: Idioma
+  settings: Configurações
+  noData: Não há dados disponíveis
+  operationSuccess: Operação bem-sucedida
+  operationFailed: Falha na operação
+  confirmDelete: Tem certeza de que deseja excluir?
+  confirmAction: Tem certeza de que deseja prosseguir?
+header:
+  title: Configurações
+  runningSuccessfully: Executando com sucesso
+  language:
+    label: Idioma
+    description: Selecione o idioma da interface do aplicativo
+  embeddedWebServicePort: Porta de serviço Web incorporada
+settings:
+  title: Configurações
+  language:
+    label: Idioma
+    description: Selecione o idioma da interface do aplicativo
+  embeddedWebServicePort: Porta de serviço Web incorporada
+footer:
+  copyright: © 2025 Hagicode Desktop. Construído com ❤️ usando Electron + React + TypeScript.
+  testBuild: Aplicativo de teste – build de desenvolvimento
+menu:
+  systemManagement: Gerenciamento do sistema
+  hagicoWeb: Hagicode Web
+  dependencies: Dependências
+  webService: Serviço Web
+  packages: Pacotes
+  settings: Configurações
+  openWebUI: Abra Web UI
+  navigate: Navegação
+  back: Voltar
+  forward: Avançar
+  refresh: Atualizar
+  devTools: Ferramentas para desenvolvedores
+  help: Ajuda
+  about: Sobre
+  quit: Sair
+webView:
+  back: Voltar
+  forward: Avançar
+  refresh: Atualizar
+  openInBrowser: Abrir no navegador
+  serviceNotRunning: Serviço da Web não está em execução
+  serviceNotRunningDesc: Inicie o serviço web antes de acessar a interface web.
+  backToSystem: Voltar ao gerenciamento do sistema
+  error: Falha no carregamento
+  loadFailed: 'Falha no carregamento: {{reason}}'
+  crashed: Processo de renderização falhou
+  retry: Tentar novamente
+mirror:
+  title: NPM Configuração do espelho
+  region: Região detectada
+  currentMirror: Espelho Atual
+  mirrorUrl: Espelho URL
+  detectedAt: Detectado em
+  official: Oficial npm
+  taobao: Taobao NPM Mirror
+  redetect: Detectar novamente
+  info: NPM ferramentas usarão automaticamente este espelho para downloads mais rápidos
+  regions:
+    CN: China
+    INTERNATIONAL: Internacional
+navigation:
+  dashboard: Painel
+  webService: Serviço Web
+  versionManagement: Gerenciamento de versão
+  webServiceNotRunning: O serviço da Web não está em execução
+  officialWebsite: Site oficial
+  officialWebsiteDesc: Visite o site oficial Hagicode para obter as últimas notícias e documentação
+  costCalculator: AI Calculadora de substituição
+  about:
+    sectionDescription: Renderize primeiro o snapshot incluído e, em seguida, atualize os destinos oficiais mais recentes.
+    snapshotLabel: Instantâneo empacotado
+    runtimeLabel: Dados ao vivo
+    updatedAt: Atualizado {{value}}
+    loading: Atualizando o último relatório oficial sobre dados...
+    refreshFailed: O último oficial sobre os dados não foi carregado. Em vez disso, mostra o instantâneo agrupado.
+    loadFailed: Os dados oficiais estão temporariamente indisponíveis, mas a entrada do site ainda funciona.
+    snapshotMissing: Esta compilação não inclui um pacote about snapshot. Tentando o endpoint ativo diretamente.
+    empty: Nenhum oficial sobre as inscrições está disponível no momento.
+    sections:
+      store: Loja
+      community: Comunidade
+      content: Conteúdo
+    types:
+      link: Ligação
+      contact: Contato
+      qr: QR
+      image: Imagem
+  promotion:
+    label: Promoção
+    defaultCta: Saiba mais
+sidebar:
+  dashboard: Painel
+  webService: Serviço Web
+  versionManagement: Gerenciamento de versão
+  diagnostic: Diagnóstico
+  dependencyManagement: Gerenciamento de Dependências
+  omniroute: OmniRoute
+  settings: Configurações
+  desktopVersion: Versão para desktop
+  webVersion: Versão web
+  unknownVersion: Indisponível
+  toggle: Alternar barra lateral
+  collapse: Recolher
+  expand: Expandir
+dependencyManagement:
+  title: Gerenciamento de Dependências
+  description: Gerencie dependências de linha de comando obrigatórias e opcionais para preparação de inicialização do HagiCode e inspecione o ambiente Node/npm incorporado do Desktop.
+  loading: Lendo status de dependência...
+  unavailable: Indisponível
+  environment:
+    title: Ambiente de nó
+    description: Desktop usa seu próprio tempo de execução Node/npm para pacotes CLI gerenciados.
+    managedNotice: Leia o FAQ para obter detalhes atuais sobre o tempo de execução Node/npm do Desktop, isolamento PATH, localização de pacotes e solução de problemas.
+    rationaleTitle: Ambiente Node/npm gerenciado por desktop
+    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    version: Versão
+    toolchainRoot: Raiz do conjunto de ferramentas
+    nodeRuntimeRoot: Raiz de tempo de execução do nó empacotado
+    nodeMajorVersion: Árvore de pacotes principais do nó
+    globalPrefix: Prefixo global
+    globalModulesRoot: Raiz de módulos globais
+    status:
+      available: Disponível
+      unavailable: Indisponível
+      error: Erro
+  mirror:
+    title: npm Aceleração do espelho
+    description: Habilite npmmirror.com para operações gerenciadas de sincronização e instalação de pacotes npm.
+    toggleLabel: Use a aceleração npmmirror.com
+    registryUrl: Registro URL
+    enabled: Habilitado
+    disabled: Desativado
+    saving: Salvando
+    enabledHelp: As próximas operações de sincronização/instalação usarão o espelho de registro npmmirror.com.
+    disabledHelp: As próximas operações npm usarão o comportamento padrão do registro npm.
+    saveFailed: Falha ao salvar a configuração do espelho
+  omniRouteRepair:
+    title: Volte para OmniRoute após reparar dependências
+    descriptionMissing: OmniRoute não pôde ser iniciado porque um ou mais pacotes gerenciados por Desktop estão faltando. Repare os pacotes destacados aqui e verifique novamente OmniRoute.
+    descriptionUnknown: O desktop não pôde confirmar as dependências OmniRoute. Atualize ou repare os pacotes destacados aqui e verifique novamente OmniRoute.
+    sourceLabel: Fonte
+    sourceValue: OmniRoute
+    targetBadge: Alvo de reparo
+    pendingNotice: Mantenha os pacotes destacados disponíveis nesta tabela e execute a ação de nova verificação quando o reparo for concluído.
+    recheckAction: 'Reparo concluído: Verifique novamente OmniRoute'
+    recheckRunning: Verificando novamente OmniRoute dependências...
+    incomplete: OmniRoute ainda não está pronto. Instale ou atualize os pacotes destacados e tente novamente.
+    refreshFailed: A área de trabalho não pôde atualizar o status de dependência. Tente novamente a verificação após a conclusão da operação atual.
+  package:
+    version: Versão
+    packageName: Pacote
+    category: Categoria
+  packageStatus:
+    installed: Instalado
+    not-installed: Não instalado
+    unknown: Desconhecido
+  packages:
+    hagiscript:
+      description: Orquestração de dependência necessária CLI usada para sincronizar ferramentas de linha de comando gerenciadas pelo Desktop.
+    openspec:
+      description: OpenSpec proposta, especificações e fluxo de trabalho de tarefas CLI.
+    skills:
+      description: Codex/Gerenciamento de habilidades do agente CLI.
+    pm2:
+      description: PM2 gerenciador de processos usado pelo Desktop para supervisionar OmniRoute.
+    omniroute:
+      description: OmniRoute roteamento local e conjunto de ferramentas CLI.
+    claudeCode:
+      description: Claude Code Agente CLI para sessões de codificação assistidas por AI.
+    codex:
+      description: OpenAI Codex Agente CLI para fluxos de trabalho de codificação.
+    githubCopilot:
+      description: GitHub Copilot CLI distribuído através do pacote oficial @github/copilot npm.
+    codebuddy:
+      description: CodeBuddy CLI distribuído através do pacote oficial @tencent-ai/codebuddy-code npm.
+    opencode:
+      description: OpenCode Agent CLI distribuído através do pacote opencode-ai npm.
+    qoder:
+      description: QoderCLI distribuído através do pacote oficial @qoder-ai/qodercli npm.
+    gemini:
+      description: Google Gemini CLI distribuído através do pacote oficial @google/gemini-cli npm.
+  categories:
+    bootstrap: Inicialização
+    workflow: Fluxo de trabalho
+    agent-cli: Agente CLI
+    developer-tool: Ferramenta de desenvolvedor
+  bootstrap:
+    title: Obrigatório
+  dependencyGate:
+    title: Instale o hagiscript primeiro
+    missing: Outras ações de dependência são desativadas até que o hagiscript seja instalado.
+    unknown: O Desktop não pode verificar o hagiscript no momento. Atualize ou reinstale o hagiscript antes de alterar outras dependências.
+  packageTable:
+    title: Dependências de linha de comando
+    description: Selecione Agente CLI e dependências de fluxo de trabalho para instalar através do hagiscript npm-sync.
+    tool: Ferramenta
+    status: Estado
+    action: Ação
+  batchLog:
+    title: Registro de instalação em lote
+    description: Saída combinada para {{count}} pacotes selecionados.
+    empty: Os logs aparecerão aqui após o início da instalação em lote.
+    completed: Instalação em lote concluída.
+    status:
+      running: Correndo
+      completed: Concluído
+      failed: Falha
+  selection:
+    selectAll: Selecione todos os pacotes elegíveis
+    selectPackage: Selecione {{name}}
+    selectedCount: '{{count}} selecionado'
+  disabled:
+    unknown: O status deste pacote é desconhecido. Atualize antes de selecioná-lo ou instalá-lo.
+  actions:
+    refresh: Atualizar
+    install: Instalar
+    installed: Instalado
+    reinstall: Reinstale
+    installSelected: Instalação em lote selecionada
+    installSelectedRunning: Instalação em lote...
+    uninstall: Desinstalar
+  errors:
+    loadFailed: Falha ao carregar o status do gerenciamento de dependências
+    operationFailed: Falha na operação de dependência
+bootstrap:
+  loading:
+    title: Concluindo a inicialização do primeiro lançamento...
+    summary: Preparando a ponte do desktop, a configuração local e o diretório de dados.
+    description: O shell do aplicativo permanece visível até que as dependências críticas de inicialização estejam prontas, para que a primeira inicialização do pacote nunca caia em uma janela em branco.
+    stepActive: Em andamento
+    stepPending: Pendente
+    stage: 'Estágio atual: {{stage}}'
+  steps:
+    shell: Inicializar shell do aplicativo
+    config: Carregar configuração local
+    dataDirectory: Preparar diretório de dados
+    render: Montar interface principal
+  error:
+    title: O primeiro lançamento não terminou
+    description: O Desktop não conseguiu preparar os recursos locais necessários para a primeira tela.
+    diagnosticTitle: Resumo de diagnóstico
+    stage: 'Estágio: {{stage}}'
+    summary: 'Resumo: {{summary}}'
+    path: 'Caminho: {{path}}'
+  actions:
+    openLogs: Abrir pasta de registros
+    retry: Recarregar shell do aplicativo
+    working: Trabalhando...
+  toasts:
+    logsOpened: Abriu a pasta de logs da área de trabalho
+    logsFailed: Falha ao abrir a pasta de logs da área de trabalho
+systemDiagnostic:
+  title: Diagnóstico do sistema
+  description: Colete os detalhes do ambiente local deste dispositivo e compartilhe o relatório em texto simples com o suporte técnico.
+  reportTitle: Relatório de texto simples
+  reportDescription: Cada nova execução substitui o relatório anterior para que o conteúdo copiado sempre reflita o instantâneo de diagnóstico mais recente.
+  empty: Execute um diagnóstico do sistema para capturar o sistema operacional, o hardware, as sondagens de registro do Agente CLI e os detalhes do conjunto de ferramentas principal.
+  loading: Coletando detalhes do ambiente local...
+  actions:
+    run: Iniciar diagnóstico
+    running: Executando diagnóstico
+    rerun: Executar novamente
+    copy: Copiar resultado
+    copying: Copiando
+  status:
+    success: Concluído
+    partialFailure: Falha Parcial
+  summary:
+    completedAt: 'Concluído em: {{value}}'
+    issueCount: 'Problemas capturados: {{count}}'
+  runtimeMatrix:
+    title: Matriz de tempo de execução integrada
+    unknown: desconhecido
+    unresolved: não resolvido
+    version: 'Versão: {{value}}'
+    path: 'Caminho: {{value}}'
+    boolean:
+      'true': habilitado
+      'false': desativado
+    source:
+      bundled: Empacotado
+      desktop-managed: Gerenciado por desktop
+      host: Host PATH
+      unknown: Fonte desconhecida
+    status:
+      healthy: Saudável
+      warning: Aviso
+      missing: Desaparecido
+      invalid: Inválido
+      unknown: Desconhecido
+    npmConfig:
+      title: npm Configuração
+      registry: 'Registro: {{value}}'
+      cache: 'Cache: {{value}}'
+      prefix: 'Prefixo/raiz do pacote: {{value}}'
+      mirror: 'Aceleração do espelho: {{value}}'
+    managedCommands:
+      title: Comandos gerenciados
+      empty: Nenhum metadado de comando gerenciado foi relatado.
+      status:
+        installed: Instalado
+        deferred: Adiado
+        manual: Manuais
+        missing: Desaparecido
+        invalid: Inválido
+        unknown: Desconhecido
+  boundary:
+    title: Somente diagnóstico local da máquina
+    description: Esta página coleta detalhes do ambiente em texto simples do dispositivo atual para que você possa compartilhá-los com o suporte técnico.
+  partialFailure:
+    title: Algumas verificações não terminaram corretamente
+    description: O relatório ainda pode ser usado. {{count}} item(s) foram marcados como faltantes ou com falha e seus motivos foram anexados ao relatório.
+  error:
+    title: Falha na execução do diagnóstico
+    description: 'O desktop não pôde concluir esta execução de diagnóstico: {{error}}'
+  toast:
+    success: Diagnóstico do sistema concluído
+    partialFailure: Diagnóstico do sistema concluído com {{count}} problema(s)
+    runFailed: 'Falha no diagnóstico do sistema: {{error}}'
+    copySuccess: Relatório de diagnóstico copiado
+    copyFailed: 'Falha ao copiar o relatório de diagnóstico: {{error}}'
+system:
+  logQuickAccess:
+    title: Registrar acesso rápido
+    description: Abra as pastas de log do Desktop e do Web App diretamente para reduzir o tempo de diagnóstico.
+    loading: Verificando pastas de registro...
+    hint: Os estados dos botões são atualizados automaticamente com a versão ativa
+    status:
+      available: Disponível
+      unavailable: Indisponível
+    desktop:
+      label: Pasta de registros da área de trabalho
+      description: Abra o diretório de logs da área de trabalho atual neste dispositivo.
+      openSuccess: Pasta de registros da área de trabalho aberta
+    webApp:
+      label: Pasta de registros de aplicativos da Web
+      description: Abra o diretório de logs do Web App para a versão ativa.
+      openSuccess: Pasta de registros do Web App aberta
+    errors:
+      load_failed: Falha ao carregar o status da pasta de log
+      logs_not_found: Pasta de registros não encontrada
+      no_active_version: Nenhuma versão ativa está selecionada
+      open_failed: Falha ao abrir a pasta de registros
+  noVersionInstalled:
+    title: Nenhuma versão instalada ainda
+    description: A maneira mais fácil de começar a usar Hagicode Desktop é através do nosso assistente de configuração guiado. Conclua a instalação e configuração em apenas algumas etapas.
+    startWizard: Assistente de inicialização
+  activeVersion:
+    actions:
+      manage: Gerenciar versões
+    labels:
+      version: Versão
+      installedAt: Instalado em
+      status: Estado
+    states:
+      ready: Pronto
+  updateReminder:
+    title: Atualização disponível
+    labels:
+      current: Atual
+      latest: Mais recente
+      state: Estado
+    states:
+      checking: Verificando
+      downloading: Baixando
+      ready: Pronto
+      failed: Falha
+      disabled: Pausado
+    descriptions:
+      checking: Verificando a fonte do pacote ativo para uma versão mais recente compatível.
+      downloading: Uma versão mais recente foi encontrada e o arquivo está sendo pré-baixado em segundo plano.
+      ready: O arquivo mais recente é verificado e está pronto para o fluxo de instalação de gerenciamento de versão existente.
+      failed: 'Falha na atualização em segundo plano: {{error}}'
+      settings-disabled: Os pré-downloads em segundo plano estão desativados. Você pode ativá-los novamente em Configurações.
+      portable-mode: O modo portátil ignora atualizações em segundo plano e mantém o tempo de execução atual somente leitura.
+      no-package-source: Nenhuma fonte de pacote ativa está configurada, portanto, as atualizações em segundo plano não podem ser iniciadas.
+    actions:
+      openVersionPage: Gerenciamento de versão aberta
+      installLatest: Instalar mais recente
+      openSettings: Abra Configurações
+  homepageTour:
+    buttons:
+      next: Próximo
+      previous: Voltar
+      done: Concluído
+    steps:
+      hero:
+        title: Bem-vindo à página inicial
+        description: Esta seção superior resume a integridade do serviço e ajuda você a entender por onde começar no painel do Desktop.
+      updateReminder:
+        title: Acompanhe as atualizações disponíveis
+        description: Quando um pacote compatível mais recente é descoberto, este cartão de lembrete mostra seu estado e links para a próxima ação.
+      serviceCard:
+        title: Monitore o status do serviço
+        description: Revise o estado do serviço incorporado aqui e, em seguida, inicie, pare, reinicie ou abra Hagicode quando o tempo de execução estiver pronto.
+      logAccess:
+        title: Ir para pastas de registro
+        description: Essas ações rápidas abrem pastas de log de aplicativos da Web e da área de trabalho para que você possa coletar evidências mais rapidamente durante o diagnóstico.
+      activeVersion:
+        title: Revise a versão ativa
+        description: Esta seção mostra qual pacote está instalado no momento e fornece um caminho rápido para o gerenciamento de versões.
+      noVersionInstalled:
+        title: Instale sua primeira versão
+        description: Quando nenhum pacote estiver instalado ainda, use esta chamada para ação para iniciar o assistente de configuração e concluir a primeira instalação em tempo de execução.
+  themeToggle:
+    switchToLight: Mudar para o modo claro
+    switchToDark: Mudar para o modo escuro
+omniroute:
+  title: OmniRoute
+  description: Gerencie o serviço OmniRoute de propriedade do Desktop por meio de PM2, incluindo controles de ciclo de vida, caminhos de tempo de execução, configuração de porta e registros recentes.
+  loading: Carregando status OmniRoute...
+  actions:
+    refresh: Atualizar
+    start: Começar
+    stop: Pare
+    restart: Reiniciar
+    working: Trabalhando...
+    openUi: Abra UI
+    save: Salvar
+    open: Abrir
+    refreshLogs: Atualizar registros
+  status:
+    title: Estado
+    running: Correndo
+    stopped: Parado
+    partial: Parcial
+    error: Erro
+    baseUrl: Base URL
+    pm2: PM2 executável
+    pm2Missing: PM2 não está instalado
+  config:
+    title: Configuração de tempo de execução
+    description: OmniRoute usa uma porta isolada gerenciada por desktop. Não pode corresponder à porta de serviço web HagiCode.
+    portLabel: Porto
+    passwordLabel: Senha de login
+    passwordDescription: O Desktop gera uma senha aleatória por padrão e a mostra aqui em texto simples. É injetado como INITIAL_PASSWORD quando OmniRoute inicia.
+  validation:
+    numeric: Insira uma porta numérica.
+    range: Use uma porta entre 1024 e 65535.
+    passwordLength: Use uma senha entre 4 e 200 caracteres.
+  paths:
+    title: Caminhos Gerenciados
+    description: Configuração, dados e logs são armazenados em Electron userData/OmniRoute.
+    config: Configuração
+    data: Dados
+    logs: Registros
+  processes:
+    title: PM2 Processos
+    description: O Desktop gerencia apenas seu próprio processo de serviço OmniRoute e deixa processos PM2 não relacionados intocados.
+    name: Nome
+    status: Estado
+    restarts: Reinicia
+  processStatus:
+    online: On-line
+    stopped: Parado
+    errored: Erro
+    unknown: Desconhecido
+  logs:
+    title: Registros recentes
+    description: Leia linhas recentes limitadas de registros OmniRoute gerenciados por desktop na lista de permissões.
+    empty: Nenhuma saída de log ainda.
+    targets:
+      service-out: Saída de serviço
+      service-error: Erro de serviço
+  dependencyGuidance:
+    title: Repare primeiro as dependências gerenciadas pelo Desktop
+    descriptionMissing: OmniRoute não pode ser iniciado até que os pacotes gerenciados por Desktop destacados sejam instalados ou reparados no Gerenciamento de Dependências.
+    descriptionUnknown: O Desktop não pôde verificar as dependências OmniRoute destacadas. Atualize ou repare-os no Gerenciamento de Dependências antes de tentar novamente.
+    openDependencyManagement: Gerenciamento de Dependências Abertas
+  errors:
+    title: OmniRoute operação falhou
+    operationFailed: A operação falhou.
+    saveFailed: Falha ao salvar a configuração OmniRoute.
+    openPathFailed: Falha ao abrir o caminho gerenciado.

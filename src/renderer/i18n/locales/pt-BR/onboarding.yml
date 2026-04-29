@@ -1,0 +1,300 @@
+title: Configuração inicial
+welcome:
+  title: Bem-vindo ao Hagicode Desktop
+  description: Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em seis etapas.
+  features:
+    manage:
+      title: Gerenciamento de versão
+      description: Gerenciar instalação e atualizações Hagicode Server
+    monitor:
+      title: Monitoramento de serviço
+      description: Iniciar, parar e monitorar o status do serviço
+    dependencies:
+      title: Gerenciamento de Dependências
+      description: Visualize e gerencie dependências do sistema
+  processTitle: 'A configuração inicial tem 6 etapas:'
+  steps:
+    welcome: Revise a configuração e o que acontecerá a seguir
+    download: Baixe o pacote Hagicode Server mais recente
+    launch: Inicie o serviço e confirme se ele está em execução
+    dependencyPreparation: Confirme se as dependências necessárias e se os pacotes do Agente CLI estão prontos
+    sharingAcceleration: Confirme se a aceleração compartilhada deve permanecer habilitada por padrão
+    legalConsent: Confirme as revisões atuais do EULA e da Política de Privacidade e revise as páginas oficiais em seu navegador
+    languageSelection: Primeiro escolha o idioma do Desktop para a configuração
+  skip: Ignorar configuração
+  start: Comece
+claude:
+  title: Configurar Claude Code
+download:
+  title: Baixar Hagicode Server
+  version: Versão
+  progress: Baixar progresso
+  fileSize: Tamanho do arquivo
+  downloading:
+    title: Baixando Hagicode Server...
+  complete:
+    title: Download completo!
+    message: O pacote foi verificado com sucesso. Agora você pode retornar à página inicial e iniciar o serviço manualmente quando estiver pronto.
+    fileSize: Tamanho do arquivo
+  downloaded: Baixado
+  speed: Velocidade
+  remaining: Restante
+  pleaseWait: Aguarde enquanto baixamos...
+dependencies:
+  title: Instalar dependências do sistema
+  subtitle: Hagicode requer certas dependências do sistema para funcionar corretamente.
+  description: Verifique o status de instalação das dependências do sistema
+  installButton: Instalar dependências
+  status:
+    installed: Instalado
+    installing: Instalando...
+    manualInstallRequired: Instalação manual necessária
+    pending: Pendente
+    error: Falha
+    notInstalled: Não instalado
+    versionMismatch: Incompatibilidade de versão
+    checking: Verificando...
+    ready: Pronto
+  actions:
+    install: Instalar
+    upgrade: Atualizar
+    installing: Instalando...
+    refresh: Atualizar
+    viewManualSteps: Ver etapas manuais
+    visitWebsite: Visite o site oficial
+  details:
+    currentVersion: Versão Atual
+    requiredVersion: Versão necessária
+    manualCommand: Comando sugerido
+  overallProgress: Progresso geral
+  installing:
+    title: Instalando dependências...
+  complete:
+    title: Dependências instaladas
+    message: Todas as dependências foram instaladas com sucesso.
+  checking: Verificando dependências...
+  error:
+    message: Algumas dependências não foram instaladas. Instale-os manualmente e continue.
+  manualHandoff:
+    title: Instalação manual do pacote CLI necessária
+    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
+    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
+depInstallConfirm:
+  title: Instalar dependências ausentes
+  installingTitle: Instalando Dependências
+  description: Detectada {{count}} dependência ausente
+  description_other: Detectadas {{count}} dependências ausentes
+  versionMismatchNote: Algumas dependências possuem versões incorretas e precisam ser atualizadas.
+  mixedMissingMessage: Detectada dependência de {{missing}} ausente e {{mismatch}} versão incompatível
+  mixedMissingMessage_other: Foram detectadas {{missing}} dependências ausentes e {{mismatch}} versões incompatíveis
+  versionMismatchOnlyMessage: Dependência incompatível de versão {{count}} detectada
+  versionMismatchOnlyMessage_other: Dependências incompatíveis de versão {{count}} detectadas
+  upgradeNote: As dependências incompatíveis de versão serão atualizadas para a versão necessária.
+  requiredVersion: Versão necessária
+  permissionWarning: A instalação dessas dependências pode exigir privilégios de administrador.
+  preparing: Preparando a instalação...
+  cancel: Cancelar
+  confirm: Instalar dependências
+  installing: Instalando...
+  installButton: Instale {{count}} {{contagem, plural, =1 {dependência} other {dependências}}}
+  errorsOccurred: dependências não foram instaladas
+  success: Todas as dependências instaladas com sucesso
+  partialSuccess: '{{success}} dependências instaladas com sucesso, {{failed}} falhou'
+  error: Falha na instalação da dependência
+launch:
+  title: Iniciar serviço
+  starting:
+    title: Começando Hagicode Server...
+    subtitle: Inicializando componentes de serviço...
+  complete:
+    title: Configuração concluída!
+    subtitle: Hagicode Desktop foi instalado e iniciado com sucesso.
+    success: Parabéns! Hagicode Desktop foi instalado e iniciado com sucesso.
+    ready: Agora você pode começar a usar todos os recursos.
+    button: Entre na interface principal
+  progress: Progresso de inicialização
+  installInfo:
+    title: Informações de instalação
+    version: Versão instalada
+    port: Porta de serviço
+    url: Serviço URL
+  whatsNext:
+    title: 'Agora você pode:'
+    manage: Gerencie Hagicode Server na interface principal
+    webUI: Acesse a interface de gerenciamento da Web
+    logs: Ver registros e status de serviço
+    config: Configurar parâmetros e configurações do servidor
+  support:
+    title: Suporte
+    docs: Documentação
+    issues: Relatar problemas
+  failure:
+    title: Falha na inicialização
+    subtitle: Hagicode Server não foi possível terminar a inicialização. Revise os diagnósticos e reinstale antes de continuar a configuração.
+    guidance: Abra o log completo, reinstale a versão atual e reinicie o fluxo de configuração.
+    viewLog: Ver registro completo
+    retryButton: Tentar novamente a inicialização
+    reinstallButton: Reinstale e reinicie a configuração
+    reinstallingButton: Reinstalando...
+    dialogTitle: Log de falha de inicialização de integração
+    emptySummary: Nenhum resumo de falha de inicialização foi capturado
+    emptyLog: Nenhum log de falha de inicialização foi capturado
+    meta: 'Porto: {{port}} · Tempo: {{timestamp}}'
+    truncatedHint: O log de inicialização foi truncado para a saída mais recente.
+    recoveryHint: Recomendamos reinstalar a versão atual e redefinir a integração antes de tentar a configuração novamente.
+    copyButton: Copiar registro
+    copySuccess: Log de falha de inicialização copiado
+    copyError: Falha ao copiar o log de falha de inicialização
+    copyEmpty: Não há log de falha de inicialização para copiar
+actions:
+  next: Próximo
+  finish: Digite Hagicode Desktop
+  previous: Anterior
+  skip: Ignorar configuração
+  continueWithLanguage: Continuar com {{language}}
+  applyingLanguage: Aplicando {{language}}...
+skip:
+  checkbox: Não mostrar este guia novamente
+  title: Confirmar ignorar configuração
+  description: Tem certeza de que deseja pular a configuração inicial?
+  manualInstallNote: |-
+    Depois de pular, você pode:
+    • Instale manualmente Hagicode Server através de "Gerenciamento de Pacotes" na interface principal
+    • Reative o processo de configuração nas configurações
+  reenableNote: Se esta é a primeira vez que usa Hagicode Desktop, recomendamos concluir o processo de configuração.
+  cancel: Cancelar
+  confirm: Ignorar configuração
+dependencyManagement:
+  title: Gerenciamento de Dependências
+  description: Visualize e gerencie dependências do sistema
+  status:
+    installed: Instalado
+    bundled: Incluído no Desktop
+    desktopManaged: Desktop gerenciado
+    manualInstallRequired: Instalação manual necessária
+    notInstalled: Não instalado
+    versionMismatch: Incompatibilidade de versão
+    checking: Verificando...
+  actions:
+    install: Instalar
+    upgrade: Atualizar
+    installing: Instalando...
+    refresh: Atualizar
+    viewManualSteps: Ver etapas manuais
+    visitWebsite: Visite o site oficial
+    reinstallDesktop: Reinstale a área de trabalho
+    updateDesktop: Atualizar área de trabalho
+  details:
+    currentVersion: Versão Atual
+    requiredVersion: Versão necessária
+    manualCommand: Comando sugerido
+    source: Fonte
+    bundledSource: Fonte agrupada
+    systemSource: Fonte do sistema
+  manualHandoff:
+    title: Instalação manual do pacote CLI necessária
+    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
+    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
+  noDependencies: Nenhuma dependência detectada
+dependencyCheck:
+  title: Resultados da verificação de dependência
+  summary: Verificado {{total}} {{total, plural, =1 {dependência} other {dependências}}}, {{passed}} {{aprovado, plural, =1 {aprovado} other {aprovado}}}, {{failed}} {{falhou, plural, =1 {precisa de atenção} other {precisa de atenção}}}
+  checking: Verificando dependências...
+  status:
+    allPassed: Todas as dependências estão instaladas
+    hasIssues: Algumas dependências precisam de atenção
+  details:
+    expand: Mostrar detalhes
+    collapse: Ocultar detalhes
+    currentVersion: Versão Atual
+    requiredVersion: Versão necessária
+sharingAcceleration:
+  title: Aceleração de download e compartilhamento
+  description: Habilitado por padrão. Os ativos de desktop/servidor mais recentes com metadados de torrent começam primeiro no torrent e retornam automaticamente.
+  toggleTitle: Habilitar aceleração de compartilhamento de LAN/Internet (padrão)
+  toggleDescription: Você pode desativá-lo aqui primeiro e ajustá-lo posteriormente em Configurações.
+  bullets:
+    latest: A propagação externa permanece focada nos ativos de desktop e de servidor mais recentes
+    fallback: Se o sidecar do torrent estiver faltando ou o handshake falhar, o preenchimento substituto será iniciado automaticamente
+    disable: Desative-o agora se sua rede estiver restrita ou você não quiser compartilhar
+    portable: O modo portátil desativa esse recurso e nunca propaga implicitamente
+dependencyPreparation:
+  title: Preparar Dependências
+  description: Instale as dependências de linha de comando exigidas pelo HagiCode Desktop e selecione pelo menos um Agente CLI para usar com sessões de codificação.
+  loading: Verificando dependências gerenciadas pelo Desktop...
+  environment:
+    title: Ambiente Node/npm gerenciado por desktop
+    description: O Desktop instala e verifica pacotes CLI gerenciados em seu próprio ambiente Node/npm. Leia o FAQ para obter detalhes sobre o caminho atual, o pacote e a solução de problemas.
+    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+  required:
+    title: Dependências necessárias
+    description: Essas dependências devem ser instaladas antes que a instalação possa continuar.
+  optional:
+    title: Dependências opcionais
+    description: Dependências opcionais não bloqueiam a configuração.
+  agentCli:
+    title: Seleção de agente CLI
+    description: Selecione pelo menos um Agente CLI. O CLI selecionado deve ser instalado no ambiente npm gerenciado do Desktop.
+  blocking:
+    environment-unavailable:
+      title: Ambiente Node/npm indisponível
+      description: O desktop não pode acessar seu ambiente Node/npm gerenciado. Atualize depois que a cadeia de ferramentas estiver disponível ou abra as Perguntas frequentes sobre o ambiente Node para obter detalhes de solução de problemas.
+    required-packages-missing:
+      title: As dependências necessárias estão faltando
+      description: Instale as dependências necessárias ausentes antes de continuar.
+    agent-cli-not-selected:
+      title: Selecione um agente CLI
+      description: Escolha pelo menos uma dependência do Agente CLI compatível.
+    agent-cli-not-installed:
+      title: O agente selecionado CLI não está instalado
+      description: Instale pelo menos um pacote do Agente CLI selecionado no ambiente npm gerenciado do Desktop.
+  actions:
+    install: Confirme e instale
+    refresh: Atualizar
+    retry: Tentar novamente
+    recheck: Verifique novamente
+  complete:
+    title: As dependências estão prontas
+    description: As dependências necessárias estão instaladas e pelo menos um Agente CLI selecionado está pronto.
+  error:
+    title: Falha na preparação da dependência
+legal:
+  title: Contrato de licença de usuário final e política de privacidade
+  descriptionFull: Antes de baixar o HagiCode Server, confirme as revisões atuais do EULA e da Política de Privacidade. Os documentos oficiais são abertos no seu navegador padrão.
+  descriptionLegalOnly: As revisões legais atuais ainda não foram aceitas. Revise os documentos oficiais em seu navegador padrão e retorne ao Desktop para confirmar.
+  progressFull: 'Configuração completa: Idioma -> Bem-vindo -> Consentimento legal -> Aceleração de compartilhamento -> Preparação de dependências -> Download'
+  progressLegalOnly: 'Modo de compliance: a seleção de idioma aparece antes da etapa legal atual'
+  browserInstruction: Abra os documentos oficiais em seu navegador padrão antes de aceitar. Desktop mostra apenas o resumo da revisão, não o texto jurídico completo.
+  cacheHint: No momento, você está vendo o resumo jurídico mais recente armazenado em cache com sucesso. Atualize após a recuperação da rede para confirmar se existe uma revisão mais recente.
+  unavailableHint: O resumo da revisão legal não está disponível e nenhuma cópia em cache está disponível ainda. Verifique sua rede e tente novamente; a configuração não pode continuar até que metadados válidos sejam carregados.
+  reviewPrompt: Após revisar a página oficial, retorne ao Desktop e confirme sua aceitação.
+  effectiveDate: Data Efetiva
+  revision: Revisão
+  openInBrowser: Abra {{title}} no navegador
+  checkbox: Analisei o EULA e a Política de Privacidade atuais no navegador e concordo com eles.
+  modeHintFull: Após a aceitação, a configuração continua compartilhando aceleração e download.
+  modeHintLegalOnly: Após a aceitação, o portão fecha e a interface principal é reiniciada; recusar sai da sessão atual do aplicativo.
+  accept: Aceitar e continuar
+  accepting: Gravando aceitação...
+  decline: Recusar e sair
+  declining: Saindo...
+  refresh: Atualizar metadados jurídicos
+  metadata:
+    remote: Últimos metadados legais carregados
+    cache: Usando os últimos metadados legais armazenados em cache com êxito
+    unavailable: Os metadados legais estão indisponíveis no momento
+  types:
+    eula: EULA
+    privacy-policy: Política de Privacidade
+languageSelection:
+  title: Escolher idioma
+  description: Escolha primeiro o idioma usado pelo Hagicode Desktop. A primeira inicialização do backend embutido também usará um padrão compatível.
+  recommended: Recomendado
+  selected: Selecionado
+  choose: Escolher este idioma
+  error: O Desktop ainda não conseguiu salvar o idioma selecionado. Tente novamente para continuar.

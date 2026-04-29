@@ -1,0 +1,277 @@
+status:
+  installed: インストール済み
+  notInstalled: インストールされていません
+  installing: インストール中
+  failed: 失敗しました
+installConfirm:
+  title: サービス停止の確認
+  description: Hagicode サービスは現在実行中です。インストールまたは再インストールにはサービスを停止する必要があります。
+  continueWill: 継続することは：
+  warnings:
+    stopService: 現在実行中の Hagicode サービスを停止します
+    interruptRequests: 進行中のすべてのリクエストを中断します
+    installOperation: インストール/再インストール操作を実行する
+  manualRestart: インストールが完了したら、サービスを手動で再起動する必要があります。
+  shouldContinue: 続けますか?
+  cancel: キャンセル
+  confirm: 停止して続行
+  stopping: サービスを停止しています...
+dependencyStartConfirm:
+  title: サービス開始の確認
+  description: 現在のバージョンには、次の必要な依存関係が欠落しています。
+  missingDependencies: 不足している依存関係
+  currentVersion: 現在のバージョン
+  required: 必須
+  risksTitle: これらの依存関係を持たずにサービスを開始すると、次のような結果が生じる可能性があります。
+  risks:
+    startupFailure: サービスが正しく開始されない
+    featureUnavailable: 一部の機能が利用できなくなります
+    runtimeErrors: 実行時エラー
+  confirmation: まだサービスを開始しますか?
+  cancel: キャンセル
+  confirm: とにかく始める
+  starting: 開始中...
+dependencyWarningBanner:
+  title: '警告: サービスの依存関係が完全には満たされていません'
+  description: 現在、必要な依存関係 {{count}} が欠落しています。一部の機能が正しく動作しない可能性があります。
+  viewDetails: 詳細を見る
+  fixLater: 後で修正する
+packageManagement:
+  cardTitle: パッケージ管理
+  cardDescription: Web サービス パッケージのインストールを管理する
+  platformLabel: プラットフォーム
+  detecting: 検出中...
+  installationStatusLabel: 設置状況
+  installedVersionLabel: インストールされているバージョン
+  selectVersionLabel: インストールするバージョンの選択
+  versionPlaceholder: '-- バージョンを選択 --'
+  installingProgress: インストール中...
+  reinstallingProgress: 再インストール中...
+  reinstallButton: 再インストール
+  reinstallConfirmTitle: 再インストールの確認
+  reinstallConfirmMessage: バージョン {{version}} を再インストールしようとしています。この操作により次のことが行われます。
+  reinstallConfirmClearCache: キャッシュされたパッケージ ファイルをクリアする
+  reinstallConfirmRemoveInstalled: 現在インストールされているバージョンを削除します
+  reinstallConfirmDownloadInstall: パッケージを再度ダウンロードしてインストールします
+  reinstallCancel: キャンセル
+  reinstallConfirmButton: 再インストール
+  reinstallProgress:
+    clearingCache: キャッシュをクリアしています...
+    removingOld: 古いバージョンを削除しています...
+    downloading: ダウンロード中...
+    installing: インストール中...
+  reinstallSuccess: 正常に再インストールされました
+  reinstallFailed: 再インストールに失敗しました
+  noPackagesMessage: 利用可能なパッケージはありません。パッケージのソース ディレクトリが次の場所に存在することを確認してください。
+  availableVersionsCount: '利用可能なバージョン: {{count}} が見つかりました'
+  filteredByPlatform: '(プラットフォームでフィルタリング: {{platform}})'
+  downloadButton: パッケージのインストール
+  refreshButton: バージョンを更新する
+  progress:
+    downloading: ダウンロード中...
+    extracting: 抽出中...
+    verifying: 確認中...
+    completed: 完了
+    error: エラー
+webServiceStatus:
+  cardTitle: 組み込み Web サービス
+  cardDescription: Webサービスの実行ステータスの表示と管理
+  status:
+    running: ランニング
+    stopped: 停止しました
+    error: エラー
+    starting: 開始中...
+    stopping: 停止中...
+    unknown: 不明
+    connected: リモートに接続しました
+  statusDescription:
+    running: Webサービスは稼働中です
+    stopped: Webサービスが実行されていません
+    error: Webサービスの操作に失敗しました
+    starting: Webサービスを起動しています
+    stopping: Webサービスが停止中です
+    unknown: 不明なステータス
+  startButton: サービスを開始する
+  dependencyReadinessButton: オープンな依存関係管理
+  dependencyReadinessAlert:
+    title: 依存関係の準備ができていません
+    message: Hagicode を開始する前に、必要なデスクトップ管理の依存関係をインストールしてください。オプションの依存関係によって基本サービスの起動がブロックされることはありません。
+  stoppingButton: 停止中...
+  restartButton: 再起動
+  restartingButton: 再起動中...
+  stopButton: サービスの停止
+  openInBrowser: ブラウザで開く
+  openAppButton: アプリケーションを開く
+  openBrowserButton: ブラウザで開く
+  portWaiting:
+    title: ポートが使用可能になるのを待っています
+    detail: サービスポートにはまだアクセスできません
+    detailWithPort: ポート {{port}} にはまだアクセスできません
+  details:
+    serviceUrl: サービス URL
+    uptime: 稼働時間
+    restartCount: 再起動回数
+    port: 港
+    version: バージョン
+    remoteUrl: リモート URL
+    listenAddress: リッスンアドレス
+  notInstalledAlert:
+    title: パッケージがインストールされていません
+    message: Web サービス パッケージはまだインストールされていません。まずパッケージ管理セクションからパッケージをインストールしてから、ここに戻ってサービスを開始してください。
+  noVersionAlert:
+    title: アクティブなバージョンがありません
+    message: アクティブなバージョンが見つかりません。まず、バージョン管理ページからバージョンをインストールしてアクティブ化してください。
+  versionNotReadyAlert:
+    title: バージョンの準備ができていません
+    message: アクティブなバージョンには必要な依存関係がありません。詳細については、依存関係管理ページを確認してください。
+  portError:
+    invalid: 無効なポート番号です
+    range: ポートは 1024 ～ 65535 でなければなりません
+  openLogsButton: ウェブログを開く
+  startupFailureDialog:
+    title: 起動失敗ログ
+    viewButton: 失敗ログの表示
+    copyButton: ログのコピー
+    closeButton: 閉じる
+    emptySummary: 起動失敗の概要は利用できません
+    emptyLog: 起動ログ出力は利用できません
+    meta: 'ポート: {{port}} |時間: {{timestamp}}'
+    truncatedHint: 出力は最新のログの内容に切り詰められます。
+    copySuccess: 起動ログをコピーしました
+    copyError: 起動ログのコピーに失敗しました
+    copyEmpty: コピーするログ内容がありません
+  toast:
+    noActiveVersion: Web ログに対してアクティブなバージョンが選択されていません
+    openLogsSuccess: アクティブなバージョンの Web ログ フォルダーが開かれました
+    logsNotFound: アクティブなバージョンの Web ログ フォルダーが見つかりません
+    openLogsError: アクティブなバージョンの Web ログ フォルダーを開けませんでした
+  listenAddress:
+    label: リスニングアドレス
+    description: Desktop が停止中に埋め込み Web サービスをバインドする方法を選択します。
+    customInputLabel: カスタムIPv4
+    customPlaceholder: 192.168.1.24
+    customError: 有効な IPv4 アドレスを入力してください
+    accessUrlPreviewLabel: URL プレビューにアクセスする
+    wildcardHint: '`0.0.0.0` はすべてのインターフェイスをバインドします。デスクトップは引き続き `127.0.0.1` を通じてローカル クライアントを開きます。'
+    localOnlyHint: 変更は、次回ローカル サービスが開始されるときに有効になります。
+    presets:
+      localhost:
+        label: ローカルホスト
+        description: このマシンの組み込み WebView およびブラウザに最適です。
+      loopback:
+        label: 127.0.0.1
+        description: ローカルのみのアクセスには明示的な IPv4 ループバック アドレスを使用します。
+      wildcard:
+        label: 0.0.0.0
+        description: LAN 上の他のデバイスが接続できるように、すべてのローカル インターフェイスをバインドします。
+      custom:
+        label: カスタムIP
+        description: 専用の LAN アダプターなど、1 つの特定の IPv4 インターフェイスをバインドします。
+languageSelector:
+  currentLanguage: 現在の言語
+  selectLanguage: 言語の選択
+dependencyManagement:
+  title: システムの依存関係
+  description: Web サービスに必要なシステム実行時の依存関係を確認および管理する
+  status:
+    installed: インストール済み
+    bundled: デスクトップにバンドルされている
+    desktopManaged: デスクトップ管理
+    manualInstallRequired: 手動インストールが必要です
+    notInstalled: インストールされていません
+    versionMismatch: バージョンの不一致
+    checking: 確認中...
+    ready: すぐに使用できます
+  actions:
+    install: インストール
+    installing: インストール中...
+    refresh: リフレッシュ
+    viewManualSteps: 手動手順を表示
+    visitWebsite: 公式ウェブサイトにアクセス
+    reinstallDesktop: デスクトップを再インストールする
+    updateDesktop: デスクトップを更新する
+  details:
+    currentVersion: 現在のバージョン
+    requiredVersion: 必要なバージョン
+    manualCommand: 推奨されるコマンド
+    source: ソース
+    bundledSource: バンドルされたソース
+    systemSource: システムソース
+  manualHandoff:
+    title: 手動 CLI パッケージのインストールが必要
+    description: 推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。
+    faqLinkLabel: ノード環境のよくある質問を見る
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    refreshHint: コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。
+  noDependencies: 依存関係が検出されませんでした
+packageSource:
+  cardTitle: パッケージソース構成
+  cardDescription: インストール用のパッケージ ソースを構成および管理する
+  sourceType:
+    label: パッケージソースタイプ
+    folder: ローカルフォルダー
+    httpIndex: HTTP インデックス
+    http: HTTP URL
+  folder:
+    path:
+      label: フォルダーのパス
+      placeholder: パッケージディレクトリへのパスを入力してください
+    browseButton: 閲覧...
+    scanButton: 利用可能なバージョンをスキャンする
+    scanning: スキャン中...
+    notFound: フォルダーが存在しないか、アクセスできません
+  http:
+    url:
+      label: パッケージ URL
+      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+  httpIndex:
+    indexUrl:
+      label: インデックス URL
+      placeholder: https://index.hagicode.com/server/index.json
+      hint: インデックス ファイルには、バージョン配列と各バージョンのアセットが含まれている必要があります
+  validateButton: 構成の検証
+  applyButton: 構成の適用
+  fetchVersionsButton: 利用可能なバージョンを取得する
+  validating: 構成を検証しています...
+  valid: 構成は有効です
+  fetchingVersions: バージョンを取得しています...
+  nortOnlyNotice: Nort パッケージ (hagicode-*) のみがサポートされています
+  switchSource: スイッチパッケージソース
+  addSource: パッケージソースの追加
+  removeSource: パッケージソースの削除
+  editSource: パッケージソースの編集
+  currentSource: 現在のパッケージソース
+  availableSources: 利用可能なパッケージソース
+  noSources: パッケージソースが設定されていません
+  sourceName: ソース名
+  actions: アクション
+  scanSuccess: スキャンが完了し、{{count}} バージョンが見つかりました
+  fetchSuccess: フェッチが完了し、{{count}} バージョンが見つかりました
+  saveSuccess: パッケージソース構成が保存されました
+  switchSuccess: パッケージソースの切り替え
+  removeSuccess: パッケージソースが削除されました
+  confirmRemove: このパッケージソースの削除を確認しますか?
+  error:
+    loadFailed: パッケージソース構成のロードに失敗しました
+    saveFailed: パッケージソース構成の保存に失敗しました
+    switchFailed: パッケージソースの切り替えに失敗しました
+    removeFailed: パッケージソースの削除に失敗しました
+    scanFailed: フォルダーのスキャンに失敗しました
+    fetchFailed: GitHub リリースのフェッチに失敗しました
+    validateFailed: 構成の検証に失敗しました
+tray:
+  status:
+    running: ランニング
+    stopped: 停止しました
+    error: エラー
+  openInApp: 開く Hagicode
+  openInBrowser: ブラウザで開く
+  startService: サービスを開始する
+  stopService: サービスの停止
+blogFeed:
+  title: Hagicode ブログ
+  refresh: リフレッシュ
+  loading: 読み込み中...
+  error: ロードに失敗しました。後でもう一度お試しください
+  noArticles: 利用できる記事はありません
+  lastUpdate: '最終更新日: {{date}}'

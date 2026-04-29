@@ -1,0 +1,519 @@
+button:
+  save: 儲存
+  cancel: 取消
+  confirm: 確認
+  delete: 刪除
+  edit: 編輯
+  close: 關閉
+  refresh: 重新整理
+  install: 安裝
+  uninstall: 解除安裝
+  start: 啟動
+  stop: 停止
+  restart: 重新啟動
+  open: 開啟
+  download: 下載
+status:
+  loading: 加載中...
+  success: 成功
+  error: 錯誤
+  warning: 警告
+  info: 資訊
+  running: 運作中
+  stopped: 已停止
+  installed: 已安裝
+  notInstalled: 未安裝
+  pending: 等待中
+  failed: 失敗
+form:
+  required: 必填
+  optional: 可選
+  selectPlaceholder: 請選擇...
+  inputPlaceholder: 請輸入...
+  validation:
+    required: 此欄位為必填項
+    invalidFormat: 格式無效
+    minLength: 至少需要 {{min}} 個字符
+    maxLength: 不能超過 {{max}} 個字符
+common:
+  version: 版本
+  platform: 平台
+  language: 語言
+  settings: 設定
+  noData: 暫無數據
+  operationSuccess: 操作成功
+  operationFailed: 操作失敗
+  confirmDelete: 確定要刪除嗎？
+  confirmAction: 確定要繼續嗎？
+header:
+  title: 設定
+  runningSuccessfully: 運行成功
+  language:
+    label: 語言
+    description: 選擇應用程式介面語言
+  embeddedWebServicePort: Hagicode 服務端口
+settings:
+  title: 設定
+  language:
+    label: 語言
+    description: 選擇應用程式介面語言
+  embeddedWebServicePort: Hagicode 服務端口
+footer:
+  copyright: © 2025 Hagicode Desktop。使用 Electron + React + TypeScript 建造 ❤️
+  testBuild: 測試應用程式 - 開發版本
+menu:
+  systemManagement: 系統管理
+  hagicoWeb: Hagicode Web
+  dependencies: 依賴項
+  webService: Hagicode 服務
+  packages: 套件管理
+  settings: 設定
+  openWebUI: 開啟 Web 介面
+  navigate: 導航
+  back: 後退
+  forward: 前進
+  refresh: 重新整理
+  devTools: 開發者工具
+  help: 幫助
+  about: 關於
+  quit: 退出
+webView:
+  back: 後退
+  forward: 前進
+  refresh: 重新整理
+  openInBrowser: 在瀏覽器中開啟
+  serviceNotRunning: Hagicode 服務未運作
+  serviceNotRunningDesc: 請先啟動 Hagicode 服務，然後再存取 Web 介面。
+  backToSystem: 返回系統管理
+  error: 載入失敗
+  loadFailed: '載入失敗: {{reason}}'
+  crashed: 渲染進程崩潰
+  retry: 重試
+mirror:
+  title: NPM 鏡像配置
+  region: 檢測地區
+  currentMirror: 目前鏡像來源
+  mirrorUrl: 鏡像位址
+  detectedAt: 檢測時間
+  official: 官方 npm 源
+  taobao: 淘寶 npm 鏡像
+  redetect: 重新偵測
+  info: NPM 工具將自動使用此鏡像以加快下載速度
+  regions:
+    CN: 中國
+    INTERNATIONAL: 國際
+navigation:
+  dashboard: 控制台
+  webService: Hagicode 服務
+  versionManagement: 版本管理
+  webServiceNotRunning: Hagicode 服務未運行，無法存取
+  officialWebsite: 官方網站
+  officialWebsiteDesc: 造訪 Hagicode 官方網站以取得最新資訊和文檔
+  costCalculator: 算一算，AI會不會淘汰我
+  about:
+    sectionDescription: 首頁使用打包 snapshot，隨後自動刷新最新官方入口。
+    snapshotLabel: 打包 snapshot
+    runtimeLabel: 最新數據
+    updatedAt: 更新於 {{value}}
+    loading: 正在刷新最新官方 about 資訊…
+    refreshFailed: 最新官方 about 載入失敗，目前繼續顯示打包 snapshot。
+    loadFailed: 官方 about 暫時無法使用，但官網入口仍可正常開啟。
+    snapshotMissing: 目前建置未攜帶 about snapshot，正在嘗試直接拉取最新官方資料。
+    empty: 暫時沒有可展示的官方 about 條目。
+    sections:
+      store: 商店
+      community: 社群
+      content: 內容
+    types:
+      link: 連結
+      contact: 聯繫
+      qr: QR 圖碼
+      image: 圖片
+  promotion:
+    label: 推廣
+    defaultCta: 了解更多
+sidebar:
+  dashboard: 控制台
+  webService: Hagicode 服務
+  versionManagement: 版本管理
+  diagnostic: 診斷
+  dependencyManagement: 依賴項管理
+  omniroute: OmniRoute
+  settings: 設定
+  desktopVersion: Desktop 版本
+  webVersion: Web 版本
+  unknownVersion: 不可用
+  toggle: 切換側邊欄
+  collapse: 收起
+  expand: 展開
+dependencyManagement:
+  title: 依賴項管理
+  description: 管理 HagiCode 啟動所需與可選的命令列依賴，並查看 Desktop 內建 Node/npm 環境。
+  loading: 正在讀取依賴項狀態...
+  unavailable: 不可用
+  environment:
+    title: Node 環境
+    description: Desktop 使用自己的 Node/npm 執行階段來承載託管 CLI 套件。
+    managedNotice: 關於 Desktop 的 Node/npm 運行時、PATH 隔離、包位置和排障方式，請閱讀 FAQ 中的最新說明。
+    rationaleTitle: Desktop 託管的 Node/npm 環境
+    faqLinkLabel: 查看 Node 環境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+    version: 版本
+    toolchainRoot: 工具鏈目錄
+    nodeRuntimeRoot: 內建 Node 執行階段目錄
+    nodeMajorVersion: Node 主版本包目錄
+    globalPrefix: 全域安裝目錄
+    globalModulesRoot: 全域模組目錄
+    status:
+      available: 可用
+      unavailable: 不可用
+      error: 錯誤
+  mirror:
+    title: npm 鏡像加速
+    description: 啟用託管 npm 套件同步和安裝作業 npmmirror.com。
+    toggleLabel: 使用 npmmirror.com 加速
+    registryUrl: Registry 地址
+    enabled: 已啟用
+    disabled: 未啟用
+    saving: 儲存中
+    enabledHelp: 後續同步/安裝操作將使用 npmmirror.com registry 映像。
+    disabledHelp: 後續 npm 操作將使用 npm 預設 registry 行為。
+    saveFailed: 儲存鏡像設定失敗
+  omniRouteRepair:
+    title: 修復依賴後返回 OmniRoute
+    descriptionMissing: OmniRoute 因一個或多個 Desktop 託管包缺失而無法啟動。請先在這裡修復高亮依賴，然後重新偵測 OmniRoute。
+    descriptionUnknown: Desktop 目前無法確認 OmniRoute 依賴。請先在這裡刷新或修復高亮依賴，然後重新偵測 OmniRoute。
+    sourceLabel: 來源
+    sourceValue: OmniRoute
+    targetBadge: 修復目標
+    pendingNotice: 請先讓高亮依賴保持可用狀態，再執行重新偵測。
+    recheckAction: 修補後重新偵測 OmniRoute
+    recheckRunning: 正在重新偵測 OmniRoute 依賴...
+    incomplete: OmniRoute 仍未準備好。請繼續安裝或刷新高亮依賴後重試。
+    refreshFailed: Desktop 無法刷新依賴狀態。請等待目前操作結束後再試一次。
+  package:
+    version: 版本
+    packageName: 包名
+    category: 分類
+  packageStatus:
+    installed: 已安裝
+    not-installed: 未安裝
+    unknown: 未知
+  packages:
+    hagiscript:
+      description: 必要的依賴編排 CLI，用於同步 Desktop 管理的命令列工具。
+    openspec:
+      description: OpenSpec 提案、規格與任務流程 CLI。
+    skills:
+      description: Codex/Agent 技能管理 CLI。
+    pm2:
+      description: Desktop 用於託管 OmniRoute 的 PM2 進程管理器。
+    omniroute:
+      description: OmniRoute 本地路由與工具鏈 CLI。
+    claudeCode:
+      description: 用於 AI 輔助編碼會話的 Claude Code Agent CLI。
+    codex:
+      description: 用於編碼工作流程的 OpenAI Codex Agent CLI。
+    githubCopilot:
+      description: 透過官方 @github/copilot npm 包分發的 GitHub Copilot CLI。
+    codebuddy:
+      description: 透過官方 @tencent-ai/codebuddy-code npm 套件分發的 CodeBuddy CLI。
+    opencode:
+      description: 透過 opencode-ai npm 套件分發的 OpenCode Agent CLI。
+    qoder:
+      description: 透過官方 @qoder-ai/qodercli npm 包分發的 QoderCLI。
+    gemini:
+      description: 透過官方 @google/gemini-cli npm 包分發的 Gemini CLI。
+  categories:
+    bootstrap: 引導依賴
+    workflow: 工作流程
+    agent-cli: Agent CLI
+    developer-tool: 開發工具
+  bootstrap:
+    title: 必要
+  dependencyGate:
+    title: 請先安裝 hagiscript
+    missing: 安裝 hagiscript 之前，其他依賴項操作會保持停用。
+    unknown: Desktop 目前無法驗證 hagiscript。刷新或重新安裝 hagiscript 後再修改其他依賴項。
+  packageTable:
+    title: 命令列依賴項
+    description: 選擇 Agent CLI 與工作流程依賴項，透過 hagiscript npm-sync 安裝。
+    tool: 工具
+    status: 狀態
+    action: 操作
+  batchLog:
+    title: 批量安裝日誌
+    description: '{{count}} 個已選包的合併輸出。'
+    empty: 批量安裝開始後，日誌會顯示在這裡。
+    completed: 批量安裝已完成。
+    status:
+      running: 進行中
+      completed: 已完成
+      failed: 失敗
+  selection:
+    selectAll: 選擇全部可操作包
+    selectPackage: 選擇 {{name}}
+    selectedCount: 已選擇 {{count}} 個
+  disabled:
+    unknown: 此包狀態未知。請先刷新，再選擇或安裝。
+  actions:
+    refresh: 重新整理
+    install: 安裝
+    installed: 已安裝
+    reinstall: 重新安裝
+    installSelected: 批量安裝已選項
+    installSelectedRunning: 正在批量安裝...
+    uninstall: 解除安裝
+  errors:
+    loadFailed: 無法載入依賴項管理狀態
+    operationFailed: 依賴項操作失敗
+bootstrap:
+  loading:
+    title: 正在完成首次啟動初始化…
+    summary: 正在準備 Desktop bridge、本機設定和資料目錄。
+    description: 應用殼會在關鍵啟動依賴就緒後繼續掛載，避免首次啟動時出現空白視窗。
+    stepActive: 進行中
+    stepPending: 等待中
+    stage: 當前階段：{{stage}}
+  steps:
+    shell: 初始化應用殼
+    config: 讀取本地配置
+    dataDirectory: 準備資料目錄
+    render: 掛載主介面
+  error:
+    title: 首次啟動未完成
+    description: 無法準備 Desktop 首屏所需的本機資源。
+    diagnosticTitle: 診斷摘要
+    stage: 階段：{{stage}}
+    summary: 摘要：{{summary}}
+    path: 路徑：{{path}}
+  actions:
+    openLogs: 開啟日誌目錄
+    retry: 重新載入應用殼
+    working: 處理中…
+  toasts:
+    logsOpened: 已開啟 Desktop 日誌目錄
+    logsFailed: 無法開啟 Desktop 日誌目錄
+systemDiagnostic:
+  title: 系統診斷
+  description: 收集當前設備的本地環境信息，並將純文字報告直接發給技術支援。
+  reportTitle: 純文字報告
+  reportDescription: 每次重新診斷都會取代舊報告，因此複製結果始終對應最新一次診斷。
+  empty: 執行系統診斷後，這裡會顯示作業系統、硬體、Agent CLI 註冊表探測結果與核心工具鏈的環境資訊。
+  loading: 正在收集本機環境資訊...
+  actions:
+    run: 開始診斷
+    running: 診斷中
+    rerun: 重新診斷
+    copy: 複製結果
+    copying: 複製中
+  status:
+    success: 已完成
+    partialFailure: 部分失敗
+  summary:
+    completedAt: 完成時間：{{value}}
+    issueCount: 題目：{{count}}
+  runtimeMatrix:
+    title: 內建運行時矩陣
+    unknown: 未知
+    unresolved: 未解析
+    version: 版本：{{value}}
+    path: 路徑：{{value}}
+    boolean:
+      'true': 已啟用
+      'false': 已停用
+    source:
+      bundled: 內建
+      desktop-managed: Desktop 託管
+      host: 系統 PATH
+      unknown: 來源未知
+    status:
+      healthy: 健康
+      warning: 警告
+      missing: 缺失
+      invalid: 無效
+      unknown: 未知
+    npmConfig:
+      title: npm 配置
+      registry: Registry：{{value}}
+      cache: 快取：{{value}}
+      prefix: Prefix/包根目錄：{{value}}
+      mirror: 鏡像加速：{{value}}
+    managedCommands:
+      title: 託管命令
+      empty: 未報告託管命令元資料。
+      status:
+        installed: 已安裝
+        deferred: 延遲
+        manual: 手動
+        missing: 缺失
+        invalid: 無效
+        unknown: 未知
+  boundary:
+    title: 這裡只提供本機診斷
+    description: 這個頁面會採集目前設備的純文字環境訊息，方便你直接分享給技術支援。
+  partialFailure:
+    title: 部分檢查未能完整完成
+    description: 這份報告仍然可用。共有 {{count}} 個檢查項目被標記為缺失或失敗，原因已追加到報告最後。
+  error:
+    title: 診斷運作失敗
+    description: Desktop 本次未能完成系統診斷：{{error}}
+  toast:
+    success: 系統診斷已完成
+    partialFailure: 系統診斷已完成，但有 {{count}} 個問題條目
+    runFailed: 系統診斷失敗：{{error}}
+    copySuccess: 診斷報告已複製
+    copyFailed: 複製診斷報告失敗：{{error}}
+system:
+  logQuickAccess:
+    title: 日誌快捷訪問
+    description: 直接開啟 Desktop 與 Web App 的日誌目錄，減少排障時的路徑尋找成本。
+    loading: 正在檢查日誌目錄...
+    hint: 按鈕狀態會隨活動版本自動刷新
+    status:
+      available: 可用
+      unavailable: 不可用
+    desktop:
+      label: Desktop 日誌資料夾
+      description: 開啟目前裝置上的 Desktop 日誌目錄。
+      openSuccess: Desktop 日誌資料夾已打開
+    webApp:
+      label: Web App 日誌資料夾
+      description: 開啟目前活動版本的 Web App 日誌目錄。
+      openSuccess: Web App 日誌資料夾已打開
+    errors:
+      load_failed: 無法取得日誌目錄狀態
+      logs_not_found: 日誌資料夾不存在
+      no_active_version: 目前沒有活動版本
+      open_failed: 無法打開日誌資料夾
+  noVersionInstalled:
+    title: 未安裝任何版本
+    description: 開始使用 Hagicode Desktop 最簡單的方法是透過我們的引導精靈。只需幾個步驟即可完成安裝和配置。
+    startWizard: 啟動精靈
+  activeVersion:
+    actions:
+      manage: 管理版本
+    labels:
+      version: 版本
+      installedAt: 安裝於
+      status: 狀態
+    states:
+      ready: 就緒
+  updateReminder:
+    title: 偵測到可用更新
+    labels:
+      current: 目前版本
+      latest: 最新版本
+      state: 更新狀態
+    states:
+      checking: 檢查中
+      downloading: 下載中
+      ready: 已就緒
+      failed: 失敗
+      disabled: 已暫停
+    descriptions:
+      checking: 正在檢查目前套件來源中的相容新版本。
+      downloading: 已偵測到新版本，正在後台預下載歸檔。
+      ready: 新版本歸檔已驗證完成，可前往版本管理頁面繼續安裝流程。
+      failed: 背景更新失敗：{{error}}
+      settings-disabled: 你已關閉背景自動下載，可在設定頁重新啟用。
+      portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
+      no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
+    actions:
+      openVersionPage: 開啟版本管理
+      installLatest: 安裝最新版本
+      openSettings: 開啟設定
+  homepageTour:
+    buttons:
+      next: 下一步
+      previous: 上一步
+      done: 完成
+    steps:
+      hero:
+        title: 這是你的首頁總覽
+        description: 這裡會先告訴你服務目前是否在線，並幫助你快速理解 Desktop 首頁的核心入口。
+      updateReminder:
+        title: 查看可用更新提醒
+        description: 發現相容新版本後，這張卡片會顯示後台更新狀態，並提供繼續安裝或查看詳情的入口。
+      serviceCard:
+        title: 專注於服務運作狀態
+        description: 在這裡查看嵌入式服務目前狀態，並執行啟動、停止、重新啟動或開啟 Hagicode 等操作。
+      logAccess:
+        title: 快速開啟日誌目錄
+        description: 需要排查問題時，可以直接從這裡開啟 Desktop 與 Web App 的日誌資料夾，減少手動尋找路徑。
+      activeVersion:
+        title: 查看目前活動版本
+        description: 這裡展示目前已安裝並可運行的版本訊息，同時也能快速進入版本管理頁面。
+      noVersionInstalled:
+        title: 先安裝第一個版本
+        description: 如果目前還沒有安裝任何版本，可以從這裡啟動精靈，完成首次下載、依賴安裝與服務啟動。
+  themeToggle:
+    switchToLight: 切換到亮色模式
+    switchToDark: 切換到暗色模式
+omniroute:
+  title: OmniRoute
+  description: 透過 PM2 管理 Desktop 託管的 OmniRoute 服務，包括啟動停止、運行路徑、連接埠配置和近期日誌。
+  loading: 正在讀取 OmniRoute 狀態...
+  actions:
+    refresh: 重新整理
+    start: 啟動
+    stop: 停止
+    restart: 重啟
+    working: 處理中...
+    openUi: 開啟 UI
+    save: 儲存
+    open: 打開
+    refreshLogs: 刷新日誌
+  status:
+    title: 狀態
+    running: 運作中
+    stopped: 已停止
+    partial: 部分運行
+    error: 錯誤
+    baseUrl: 訪問地址
+    pm2: PM2 執行檔
+    pm2Missing: PM2 尚未安裝
+  config:
+    title: 運行配置
+    description: OmniRoute 使用 Desktop 獨立託管端口，不能與 HagiCode Web 服務端口相同。
+    portLabel: 連接埠
+    passwordLabel: 登入密碼
+    passwordDescription: Desktop 會預設產生隨機密碼，並以明文顯示在這裡；啟動 OmniRoute 時會作為 INITIAL_PASSWORD 注入。
+  validation:
+    numeric: 請輸入數字端口。
+    range: 連接埠範圍必須在 1024 到 65535 之間。
+    passwordLength: 密碼長度必須在 4 到 200 個字元之間。
+  paths:
+    title: 託管路徑
+    description: 設定、資料與日誌皆保存在 Electron userData/OmniRoute 下。
+    config: 配置
+    data: 數據
+    logs: 紀錄
+  processes:
+    title: PM2 進程
+    description: Desktop 只管理自己的 OmniRoute 服務進程，不影響其他 PM2 進程。
+    name: 名稱
+    status: 狀態
+    restarts: 重啟次數
+  processStatus:
+    online: 網路
+    stopped: 已停止
+    errored: 錯誤
+    unknown: 未知
+  logs:
+    title: 近期日誌
+    description: 從 Desktop 託管的 OmniRoute 日誌白名單中讀取有限行數。
+    empty: 暫無日誌輸出。
+    targets:
+      service-out: 服務輸出
+      service-error: 服務錯誤
+  dependencyGuidance:
+    title: 請先修復 Desktop 託管依賴
+    descriptionMissing: 在依賴項管理中安裝或修復高亮的 Desktop 託管套件之前，OmniRoute 無法啟動。
+    descriptionUnknown: Desktop 目前無法確認高亮的 OmniRoute 依賴狀態。請先到依賴項管理刷新或修復後再重試。
+    openDependencyManagement: 開啟相依性管理
+  errors:
+    title: OmniRoute 操作失敗
+    operationFailed: 操作失敗。
+    saveFailed: 儲存 OmniRoute 配置失敗。
+    openPathFailed: 無法開啟託管路徑。

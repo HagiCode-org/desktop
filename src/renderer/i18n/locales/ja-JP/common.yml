@@ -1,0 +1,519 @@
+button:
+  save: 保存
+  cancel: キャンセル
+  confirm: 確認
+  delete: 削除
+  edit: 編集
+  close: 閉じる
+  refresh: 更新
+  install: インストール
+  uninstall: アンインストール
+  start: 開始
+  stop: 停止
+  restart: 再起動
+  open: 開く
+  download: ダウンロード
+status:
+  loading: 読み込み中...
+  success: 成功
+  error: エラー
+  warning: 警告
+  info: 情報
+  running: ランニング
+  stopped: 停止しました
+  installed: インストール済み
+  notInstalled: インストールされていません
+  pending: 保留中
+  failed: 失敗しました
+form:
+  required: 必須
+  optional: オプション
+  selectPlaceholder: 選択してください...
+  inputPlaceholder: 入力してください...
+  validation:
+    required: このフィールドは必須です
+    invalidFormat: 無効な形式
+    minLength: 少なくとも {{min}} 文字である必要があります
+    maxLength: '{{max}} 文字を超えてはなりません'
+common:
+  version: バージョン
+  platform: プラットフォーム
+  language: 言語
+  settings: 設定
+  noData: 利用可能なデータがありません
+  operationSuccess: 操作は成功しました
+  operationFailed: 操作が失敗しました
+  confirmDelete: 削除してもよろしいですか?
+  confirmAction: 続行してもよろしいですか?
+header:
+  title: 設定
+  runningSuccessfully: 正常に実行されました
+  language:
+    label: 言語
+    description: アプリケーションインターフェース言語の選択
+  embeddedWebServicePort: 組み込み Web サービス ポート
+settings:
+  title: 設定
+  language:
+    label: 言語
+    description: アプリケーションインターフェース言語の選択
+  embeddedWebServicePort: 組み込み Web サービス ポート
+footer:
+  copyright: © 2025 Hagicode Desktop. Electron + React + TypeScript を使用して ❤️ で構築されています。
+  testBuild: テスト アプリケーション - 開発ビルド
+menu:
+  systemManagement: システム管理
+  hagicoWeb: Hagicode Web
+  dependencies: 依存関係
+  webService: ウェブサービス
+  packages: パッケージ
+  settings: 設定
+  openWebUI: 開く Web UI
+  navigate: ナビゲーション
+  back: 戻る
+  forward: 進む
+  refresh: リフレッシュ
+  devTools: 開発者ツール
+  help: ヘルプ
+  about: について
+  quit: やめる
+webView:
+  back: 戻る
+  forward: 進む
+  refresh: リフレッシュ
+  openInBrowser: ブラウザで開く
+  serviceNotRunning: Web サービスが実行されていない
+  serviceNotRunningDesc: Web インターフェースにアクセスする前に、Web サービスを開始してください。
+  backToSystem: システム管理に戻る
+  error: ロードに失敗しました
+  loadFailed: 'ロード失敗: {{reason}}'
+  crashed: レンダラプロセスがクラッシュしました
+  retry: 再試行
+mirror:
+  title: NPM ミラー構成
+  region: 検出領域
+  currentMirror: カレントミラー
+  mirrorUrl: ミラー URL
+  detectedAt: 検出場所
+  official: 公式npm
+  taobao: Taobao NPM Mirror
+  redetect: 再検出
+  info: NPM ツールは、ダウンロードを高速化するためにこのミラーを自動的に使用します。
+  regions:
+    CN: 中国
+    INTERNATIONAL: インターナショナル
+navigation:
+  dashboard: ダッシュボード
+  webService: ウェブサービス
+  versionManagement: バージョン管理
+  webServiceNotRunning: Webサービスが実行されていません
+  officialWebsite: 公式ウェブサイト
+  officialWebsiteDesc: 最新ニュースとドキュメントについては、Hagicode 公式 Web サイトにアクセスしてください。
+  costCalculator: AI 交換用計算機
+  about:
+    sectionDescription: まずバンドルされたスナップショットをレンダリングしてから、最新の公式デスティネーションを適切な場所に更新します。
+    snapshotLabel: バンドルされたスナップショット
+    runtimeLabel: ライブデータ
+    updatedAt: '{{value}}を更新しました'
+    loading: データに関する最新の公式情報を更新しています...
+    refreshFailed: データに関する最新の公式情報のロードに失敗しました。代わりにバンドルされたスナップショットを表示します。
+    loadFailed: データに関する公式情報は一時的に利用できなくなりましたが、ウェブサイトのエントリは引き続き機能します。
+    snapshotMissing: このビルドにはバンドルされたスナップショットについては含まれていません。ライブエンドポイントを直接試してみます。
+    empty: 現在、公式のエントリーはありません。
+    sections:
+      store: ストア
+      community: コミュニティ
+      content: 内容
+    types:
+      link: リンク
+      contact: お問い合わせ
+      qr: QR
+      image: 画像
+  promotion:
+    label: プロモーション
+    defaultCta: さらに詳しく
+sidebar:
+  dashboard: ダッシュボード
+  webService: ウェブサービス
+  versionManagement: バージョン管理
+  diagnostic: 診断
+  dependencyManagement: 依存関係の管理
+  omniroute: OmniRoute
+  settings: 設定
+  desktopVersion: デスクトップ版
+  webVersion: ウェブ版
+  unknownVersion: 利用不可
+  toggle: サイドバーの切り替え
+  collapse: 崩壊する
+  expand: 展開する
+dependencyManagement:
+  title: 依存関係の管理
+  description: HagiCode の起動準備のために必須およびオプションのコマンドライン依存関係を管理し、デスクトップの組み込み Node/npm 環境を検査します。
+  loading: 依存関係ステータスを読み取り中...
+  unavailable: 利用不可
+  environment:
+    title: ノード環境
+    description: Desktop は、管理対象 CLI パッケージに独自の Node/npm ランタイムを使用します。
+    managedNotice: Desktop の Node/npm ランタイム、PATH 分離、パッケージの場所、トラブルシューティングに関する最新の詳細については、FAQ を参照してください。
+    rationaleTitle: デスクトップ管理型ノード/npm環境
+    faqLinkLabel: ノード環境のよくある質問を見る
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    version: バージョン
+    toolchainRoot: ツールチェーンのルート
+    nodeRuntimeRoot: バンドルされたノードのランタイム ルート
+    nodeMajorVersion: ノードのメジャーパッケージツリー
+    globalPrefix: グローバルプレフィックス
+    globalModulesRoot: グローバルモジュールのルート
+    status:
+      available: 利用可能
+      unavailable: 利用不可
+      error: エラー
+  mirror:
+    title: npm ミラー加速度
+    description: 管理対象 npm パッケージの同期およびインストール操作に対して npmmirror.com を有効にします。
+    toggleLabel: npmmirror.com アクセラレーションを使用する
+    registryUrl: レジストリ URL
+    enabled: 有効
+    disabled: 無効
+    saving: 保存
+    enabledHelp: 今後の同期/インストール操作では、npmmirror.com レジストリ ミラーが使用されます。
+    disabledHelp: 今後の npm 操作では、デフォルトの npm レジストリ動作が使用されます。
+    saveFailed: ミラー設定の保存に失敗しました
+  omniRouteRepair:
+    title: 依存関係を修復した後に OmniRoute に戻る
+    descriptionMissing: 1 つ以上のデスクトップ管理パッケージが欠落しているため、OmniRoute を開始できませんでした。ここで強調表示されたパッケージを修復し、OmniRoute を再確認します。
+    descriptionUnknown: デスクトップは OmniRoute 依存関係を確認できませんでした。ここで強調表示されたパッケージを更新または修復し、OmniRoute を再確認します。
+    sourceLabel: ソース
+    sourceValue: OmniRoute
+    targetBadge: 修理対象
+    pendingNotice: この表で強調表示されたパッケージを使用可能な状態にしておき、修復が完了したら再チェック アクションを実行します。
+    recheckAction: '修理完了: 再チェック OmniRoute'
+    recheckRunning: OmniRoute 依存関係を再確認しています...
+    incomplete: OmniRoute はまだ準備ができていません。強調表示されたパッケージをインストールまたは更新して、再試行してください。
+    refreshFailed: デスクトップは依存関係ステータスを更新できませんでした。現在の操作が終了した後、再チェックを再試行してください。
+  package:
+    version: バージョン
+    packageName: パッケージ
+    category: カテゴリ
+  packageStatus:
+    installed: インストール済み
+    not-installed: インストールされていません
+    unknown: 不明
+  packages:
+    hagiscript:
+      description: デスクトップ管理のコマンドライン ツールを同期するために使用される必須の依存関係オーケストレーション CLI。
+    openspec:
+      description: OpenSpec 提案書、仕様書、およびタスクのワークフロー CLI。
+    skills:
+      description: Codex/エージェントのスキル管理 CLI。
+    pm2:
+      description: PM2 プロセス マネージャは Desktop が OmniRoute を監視するために使用します。
+    omniroute:
+      description: OmniRoute ローカル ルーティングおよびツールチェーン CLI。
+    claudeCode:
+      description: Claude Code エージェント CLI（AI 支援コーディング セッション用）。
+    codex:
+      description: ワークフローのコーディング用のエージェント OpenAI Codex。
+    githubCopilot:
+      description: GitHub Copilot CLI は公式 @github/copilot npm パッケージを通じて配布されます。
+    codebuddy:
+      description: CodeBuddy CLI は、公式 @tencent-ai/codebuddy-code npm パッケージを通じて配布されます。
+    opencode:
+      description: OpenCode Agent CLI は、opencode-ai npm パッケージを通じて配布されます。
+    qoder:
+      description: QoderCLI は公式 @qoder-ai/qoderclinpm パッケージを通じて配布されます。
+    gemini:
+      description: Google Gemini CLI 公式 @google/gemini-cli npm パッケージを通じて配布されます。
+  categories:
+    bootstrap: ブートストラップ
+    workflow: ワークフロー
+    agent-cli: エージェント CLI
+    developer-tool: 開発者ツール
+  bootstrap:
+    title: 必須
+  dependencyGate:
+    title: まずハギスクリプトをインストールしてください
+    missing: hagiscript がインストールされるまで、他の依存関係アクションは無効になります。
+    unknown: 現在、デスクトップは hagiscript を検証できません。他の依存関係を変更する前に、hagiscript を更新または再インストールしてください。
+  packageTable:
+    title: コマンドラインの依存関係
+    description: hagiscript npm-sync を通じてインストールするエージェント CLI とワークフローの依存関係を選択します。
+    tool: ツール
+    status: ステータス
+    action: アクション
+  batchLog:
+    title: バッチインストールログ
+    description: '{{count}} 選択したパッケージの結合出力。'
+    empty: バッチインストールが開始されると、ここにログが表示されます。
+    completed: 一括インストールが完了しました。
+    status:
+      running: ランニング
+      completed: 完了
+      failed: 失敗しました
+  selection:
+    selectAll: 対象となるパッケージをすべて選択してください
+    selectPackage: '{{name}}を選択してください'
+    selectedCount: '{{count}}が選択されました'
+  disabled:
+    unknown: このパッケージのステータスは不明です。選択またはインストールする前に更新してください。
+  actions:
+    refresh: リフレッシュ
+    install: インストール
+    installed: インストール済み
+    reinstall: 再インストール
+    installSelected: バッチインストールが選択されました
+    installSelectedRunning: 一括インストール中...
+    uninstall: アンインストール
+  errors:
+    loadFailed: 依存関係管理ステータスのロードに失敗しました
+    operationFailed: 依存関係の操作が失敗しました
+bootstrap:
+  loading:
+    title: 初回起動時の初期化を終了しています...
+    summary: デスクトップ ブリッジ、ローカル構成、およびデータ ディレクトリを準備します。
+    description: アプリ シェルは、重要な起動依存関係の準備が整うまで表示されたままになるため、パッケージ化された最初の起動が空白のウィンドウにドロップされることはありません。
+    stepActive: 進行中
+    stepPending: 保留中
+    stage: '現在のステージ: {{stage}}'
+  steps:
+    shell: アプリシェルを初期化する
+    config: ローカル設定をロードする
+    dataDirectory: データディレクトリの準備
+    render: メインインターフェイスをマウントする
+  error:
+    title: 最初の起動が完了しませんでした
+    description: デスクトップは、最初の画面に必要なローカル リソースを準備できませんでした。
+    diagnosticTitle: 診断の概要
+    stage: 'ステージ: {{stage}}'
+    summary: '概要: {{summary}}'
+    path: 'パス: {{path}}'
+  actions:
+    openLogs: ログフォルダーを開く
+    retry: アプリシェルをリロードする
+    working: 働いています...
+  toasts:
+    logsOpened: デスクトップログフォルダーを開いた
+    logsFailed: デスクトップ ログ フォルダーを開けませんでした
+systemDiagnostic:
+  title: システム診断
+  description: このデバイスのローカル環境の詳細を収集し、プレーン テキストのレポートをテクニカル サポートと共有します。
+  reportTitle: プレーンテキストレポート
+  reportDescription: 再実行するたびに前のレポートが置き換えられるため、コピーされたコンテンツには常に最新の診断スナップショットが反映されます。
+  empty: システム診断を実行して、オペレーティング システム、ハードウェア、エージェント CLI レジストリ プローブ、およびコア ツールチェーンの詳細をキャプチャします。
+  loading: ローカル環境の詳細を収集しています...
+  actions:
+    run: 診断の開始
+    running: 診断の実行中
+    rerun: もう一度実行する
+    copy: コピー結果
+    copying: コピーする
+  status:
+    success: 完了
+    partialFailure: 部分的な故障
+  summary:
+    completedAt: '完了日: {{value}}'
+    issueCount: '捕捉された問題: {{count}}'
+  runtimeMatrix:
+    title: 組み込みのランタイム マトリックス
+    unknown: 不明
+    unresolved: 未解決
+    version: 'バージョン: {{value}}'
+    path: 'パス: {{value}}'
+    boolean:
+      'true': 有効化
+      'false': 無効化された
+    source:
+      bundled: 同梱
+      desktop-managed: デスクトップ管理
+      host: ホストパス
+      unknown: 出典不明
+    status:
+      healthy: 健康
+      warning: 警告
+      missing: 行方不明
+      invalid: 無効です
+      unknown: 不明
+    npmConfig:
+      title: npm 構成
+      registry: 'レジストリ: {{value}}'
+      cache: 'キャッシュ: {{value}}'
+      prefix: 'プレフィックス/パッケージルート: {{value}}'
+      mirror: ミラー加速度：{{value}}
+    managedCommands:
+      title: 管理対象コマンド
+      empty: 管理対象コマンドのメタデータは報告されませんでした。
+      status:
+        installed: インストール済み
+        deferred: 延期
+        manual: マニュアル
+        missing: 行方不明
+        invalid: 無効です
+        unknown: 不明
+  boundary:
+    title: ローカルマシン診断のみ
+    description: このページでは、現在のデバイスからプレーンテキストの環境詳細を収集して、テクニカル サポートと共有できるようにします。
+  partialFailure:
+    title: 一部のチェックが正常に完了しませんでした
+    description: レポートは引き続き使用できます。 {{count}} 項目は欠落または失敗としてマークされ、その理由がレポートに追加されました。
+  error:
+    title: 診断の実行に失敗しました
+    description: 'デスクトップはこの診断実行を完了できませんでした: {{error}}'
+  toast:
+    success: システム診断が完了しました
+    partialFailure: システム診断は {{count}} の問題で完了しました
+    runFailed: 'システム診断に失敗しました: {{error}}'
+    copySuccess: 診断レポートがコピーされました
+    copyFailed: '診断レポートのコピーに失敗しました: {{error}}'
+system:
+  logQuickAccess:
+    title: ログのクイックアクセス
+    description: 診断時間を短縮するには、デスクトップおよび Web アプリのログ フォルダーを直接開きます。
+    loading: ログフォルダーを確認しています...
+    hint: ボタンの状態はアクティブなバージョンで自動的に更新されます
+    status:
+      available: 利用可能
+      unavailable: 利用不可
+    desktop:
+      label: デスクトップログフォルダー
+      description: このデバイス上の現在のデスクトップ ログ ディレクトリを開きます。
+      openSuccess: デスクトップログフォルダーが開かれました
+    webApp:
+      label: Web アプリのログ フォルダー
+      description: アクティブなバージョンの Web アプリ ログ ディレクトリを開きます。
+      openSuccess: Web アプリのログ フォルダーが開かれました
+    errors:
+      load_failed: ログフォルダーのステータスの読み込みに失敗しました
+      logs_not_found: ログフォルダーが見つかりません
+      no_active_version: アクティブなバージョンが選択されていません
+      open_failed: ログフォルダーを開けませんでした
+  noVersionInstalled:
+    title: まだバージョンがインストールされていません
+    description: Hagicode Desktop を開始する最も簡単な方法は、ガイド付きセットアップ ウィザードを使用することです。わずか数ステップでインストールと構成を完了します。
+    startWizard: 起動ウィザード
+  activeVersion:
+    actions:
+      manage: バージョンの管理
+    labels:
+      version: バージョン
+      installedAt: 設置場所
+      status: ステータス
+    states:
+      ready: 準備完了
+  updateReminder:
+    title: 利用可能なアップデート
+    labels:
+      current: 現在
+      latest: 最新の
+      state: 州
+    states:
+      checking: チェック中
+      downloading: ダウンロード中
+      ready: 準備完了
+      failed: 失敗しました
+      disabled: 一時停止中
+    descriptions:
+      checking: アクティブなパッケージ ソースに互換性のある新しいバージョンがあるかどうかを確認します。
+      downloading: 新しいバージョンが見つかり、アーカイブがバックグラウンドで事前ダウンロードされています。
+      ready: 最新のアーカイブが検証され、既存のバージョン管理インストール フローの準備が整いました。
+      failed: 'バックグラウンド更新に失敗しました: {{error}}'
+      settings-disabled: バックグラウンドのプリダウンロードは無効になっています。設定で再度オンにできます。
+      portable-mode: ポータブル モードでは、バックグラウンド更新がスキップされ、現在のランタイムが読み取り専用に保たれます。
+      no-package-source: アクティブなパッケージ ソースが構成されていないため、バックグラウンド更新を開始できません。
+    actions:
+      openVersionPage: オープンなバージョン管理
+      installLatest: 最新のインストール
+      openSettings: 設定を開く
+  homepageTour:
+    buttons:
+      next: 次へ
+      previous: 戻る
+      done: 完了
+    steps:
+      hero:
+        title: ホームページへようこそ
+        description: この上部のセクションではサービスの健全性が要約されており、デスクトップ ダッシュボードのどこから始めればよいかを理解するのに役立ちます。
+      updateReminder:
+        title: 利用可能なアップデートを追跡する
+        description: 互換性のある新しいパッケージが検出されると、このリマインダー カードにその状態が表示され、次のアクションへのリンクが表示されます。
+      serviceCard:
+        title: サービスステータスの監視
+        description: ここで組み込みサービスの状態を確認し、ランタイムの準備ができたら開始、停止、再起動、または Hagicode を開きます。
+      logAccess:
+        title: ログフォルダへジャンプ
+        description: これらのクイック アクションにより、デスクトップおよび Web アプリのログ フォルダーが開かれるため、診断中に証拠をより迅速に収集できます。
+      activeVersion:
+        title: アクティブなバージョンを確認する
+        description: このセクションでは、現在インストールされているパッケージを示し、バージョン管理への簡単なルートを提供します。
+      noVersionInstalled:
+        title: 最初のバージョンをインストールする
+        description: パッケージがまだインストールされていない場合は、このアクション呼び出しを使用してセットアップ ウィザードを起動し、最初のランタイム インストールを完了します。
+  themeToggle:
+    switchToLight: ライトモードに切り替える
+    switchToDark: ダークモードに切り替える
+omniroute:
+  title: OmniRoute
+  description: ライフサイクル制御、ランタイム パス、ポート構成、最近のログなど、デスクトップ所有の OmniRoute サービスを PM2 を通じて管理します。
+  loading: OmniRoute ステータスを読み込んでいます...
+  actions:
+    refresh: リフレッシュ
+    start: スタート
+    stop: 停止
+    restart: 再起動
+    working: 働いています...
+    openUi: 開く UI
+    save: 保存
+    open: 開く
+    refreshLogs: ログを更新する
+  status:
+    title: ステータス
+    running: ランニング
+    stopped: 停止しました
+    partial: 部分的
+    error: エラー
+    baseUrl: ベース URL
+    pm2: PM2 実行可能ファイル
+    pm2Missing: PM2はインストールされていません
+  config:
+    title: ランタイム構成
+    description: OmniRoute は、分離されたデスクトップ管理ポートを使用します。 HagiCode Web サービス ポートと一致することはできません。
+    portLabel: 港
+    passwordLabel: ログインパスワード
+    passwordDescription: Desktop はデフォルトでランダムなパスワードを生成し、それをプレーンテキストで表示します。 OmniRoute の開始時に INITIAL_PASSWORD として挿入されます。
+  validation:
+    numeric: 数値ポートを入力します。
+    range: 1024 ～ 65535 のポートを使用します。
+    passwordLength: 4 ～ 200 文字のパスワードを使用してください。
+  paths:
+    title: 管理されたパス
+    description: 構成、データ、ログは Electron userData/OmniRoute に保存されます。
+    config: 構成
+    data: データ
+    logs: ログ
+  processes:
+    title: PM2 プロセス
+    description: Desktop は独自の OmniRoute サービス プロセスのみを管理し、関係のない PM2 プロセスはそのまま残します。
+    name: 名前
+    status: ステータス
+    restarts: 再起動
+  processStatus:
+    online: オンライン
+    stopped: 停止しました
+    errored: エラーが発生しました
+    unknown: 不明
+  logs:
+    title: 最近のログ
+    description: ホワイトリストに登録されたデスクトップ管理の OmniRoute ログから、制限された最近の行を読み取ります。
+    empty: まだログは出力されていません。
+    targets:
+      service-out: サービスの出力
+      service-error: サービスエラー
+  dependencyGuidance:
+    title: 最初にデスクトップ管理の依存関係を修復します
+    descriptionMissing: OmniRoute は、強調表示されたデスクトップ管理パッケージが依存関係管理でインストールまたは修復されるまで起動できません。
+    descriptionUnknown: デスクトップは、強調表示された OmniRoute 依存関係を確認できませんでした。再試行する前に、依存関係管理でそれらを更新または修復してください。
+    openDependencyManagement: オープンな依存関係管理
+  errors:
+    title: OmniRoute 操作が失敗しました
+    operationFailed: 操作は失敗しました。
+    saveFailed: OmniRoute 構成を保存できませんでした。
+    openPathFailed: 管理パスのオープンに失敗しました。

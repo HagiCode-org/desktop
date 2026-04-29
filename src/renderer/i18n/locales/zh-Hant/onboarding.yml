@@ -1,0 +1,300 @@
+title: 首次使用引導
+welcome:
+  title: 歡迎使用 Hagicode Desktop
+  description: Hagicode Desktop 是 Hagicode 的本地啟動器，接下來會用六個步驟完成首次安裝與合規確認。
+  features:
+    manage:
+      title: 版本管理
+      description: 管理 Hagicode Server 的安裝與更新
+    monitor:
+      title: 服務監控
+      description: 啟動、停止和監控服務狀態
+    dependencies:
+      title: 依賴管理
+      description: 檢視和管理系統相依性
+  processTitle: 首次安裝共 6 個步驟：
+  steps:
+    welcome: 了解本次引導會完成的準備工作
+    download: 下載最新的 Hagicode Server 包
+    launch: 啟動服務並確認運作正常
+    dependencyPreparation: 確認必需依賴項和 Agent CLI 已就緒
+    sharingAcceleration: 確認是否開啟共用加速，預設已為您開啟
+    legalConsent: 確認當前 EULA 與隱私權政策版本並在瀏覽器中閱讀正式文檔
+    languageSelection: 先選擇引導與介面使用的語言
+  skip: 跳過引導
+  start: 開始安裝
+claude:
+  title: 配置 Claude Code
+download:
+  title: 下載 Hagicode Server
+  version: 版本
+  progress: 下載進度
+  fileSize: 文件大小
+  downloading:
+    title: 正在下載 Hagicode Server...
+  complete:
+    title: 下載完成！
+    message: 包文件已驗證完整。現在可以返回首頁，並在需要時手動啟動服務。
+    fileSize: 文件大小
+  downloaded: 已下載
+  speed: 速度
+  remaining: 剩餘時間
+  pleaseWait: 請稍候，正在下載...
+dependencies:
+  title: 安裝系統依賴項
+  subtitle: Hagicode 需要某些系統相依性才能正常運作。
+  description: 檢查以下系統相依性的安裝狀態
+  installButton: 安裝依賴項
+  status:
+    installed: 已安裝
+    installing: 安裝中...
+    manualInstallRequired: 需要手動安裝
+    pending: 待安裝
+    error: 安裝失敗
+    notInstalled: 未安裝
+    versionMismatch: 版本不匹配
+    checking: 檢測中...
+    ready: 可以使用
+  actions:
+    install: 安裝
+    upgrade: 升級
+    installing: 安裝中...
+    refresh: 重新整理
+    viewManualSteps: 查看手動步驟
+    visitWebsite: 訪問官網
+  details:
+    currentVersion: 目前版本
+    requiredVersion: 要求版本
+    manualCommand: 建議命令
+  overallProgress: 整體進度
+  installing:
+    title: 正在安裝依賴項...
+  complete:
+    title: 依賴安裝完成
+    message: 所有相依性已成功安裝。
+  checking: 正在檢查依賴項...
+  error:
+    message: 部分依賴項安裝失敗，請手動安裝後繼續。
+  manualHandoff:
+    title: 需手動安裝 CLI 套件
+    description: 請在 Desktop 外執行建議指令。關於 Desktop 內建 Node/npm 環境和 PATH 行為的最新說明，請閱讀 FAQ。
+    faqLinkLabel: 查看 Node 環境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+    refreshHint: 命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。
+depInstallConfirm:
+  title: 安裝缺失依賴
+  installingTitle: 正在安裝依賴
+  description: 偵測到 {{count}} 個缺失的依賴項
+  description_other: 偵測到 {{count}} 個缺失的依賴項
+  versionMismatchNote: 部分依賴版本不正確，需要升級。
+  mixedMissingMessage: 偵測到 {{missing}} 個缺失和 {{mismatch}} 個版本不符的依賴
+  mixedMissingMessage_other: 偵測到 {{missing}} 個缺失和 {{mismatch}} 個版本不符的依賴
+  versionMismatchOnlyMessage: 偵測到 {{count}} 個版本不符的依賴
+  versionMismatchOnlyMessage_other: 偵測到 {{count}} 個版本不符的依賴
+  upgradeNote: 版本不匹配的依賴將自動升級到要求的版本。
+  requiredVersion: 要求版本
+  permissionWarning: 安裝這些依賴可能需要管理員權限。
+  preparing: 準備安裝...
+  cancel: 取消
+  confirm: 安裝依賴
+  installing: 正在安裝...
+  installButton: 安裝 {{count}} 個依賴
+  errorsOccurred: 個依賴安裝失敗
+  success: 所有依賴安裝成功
+  partialSuccess: '{{success}} 個依賴安裝成功，{{failed}} 個失敗'
+  error: 依賴安裝失敗
+launch:
+  title: 啟動服務
+  starting:
+    title: 正在啟動 Hagicode Server...
+    subtitle: 正在初始化服務組件...
+  complete:
+    title: 安裝完成！
+    subtitle: Hagicode Desktop 已成功安裝並啟動。
+    success: 恭喜！ Hagicode Desktop 已成功安裝並啟動。
+    ready: 現在您可以開始使用所有功能。
+    button: 開啟 Hagicode
+  progress: 啟動進度
+  installInfo:
+    title: 安裝訊息
+    version: 安裝版本
+    port: 服務連接埠
+    url: 服務地址
+  whatsNext:
+    title: 您現在可以：
+    manage: 透過主介面管理 Hagicode Server
+    webUI: 存取 Web 管理介面
+    logs: 查看服務日誌和狀態
+    config: 配置伺服器參數和設定
+  support:
+    title: 技術支援
+    docs: 使用者文件
+    issues: 問題回饋
+  failure:
+    title: 啟動失敗
+    subtitle: Hagicode Server 未能完成啟動。請查看診斷日誌並重新安裝後再繼續初始化。
+    guidance: 您可以先查看完整日誌，然後重新安裝目前版本並重新開始引導流程。
+    viewLog: 查看完整日誌
+    retryButton: 重試啟動
+    reinstallButton: 重新安裝並重置引導
+    reinstallingButton: 重新安裝中...
+    dialogTitle: 引導啟動失敗日誌
+    emptySummary: 未取得到啟動失敗摘要
+    emptyLog: 未取得到啟動失敗日誌
+    meta: 連接埠：{{port}} · 時間：{{timestamp}}
+    truncatedHint: 日誌已截斷，僅顯示最近的輸出內容。
+    recoveryHint: 建議先重新安裝目前版本並重設開機狀態，然後重新完成首次初始化流程。
+    copyButton: 複製日誌
+    copySuccess: 啟動失敗日誌已複製
+    copyError: 複製啟動失敗日誌失敗
+    copyEmpty: 沒有可複製的啟動失敗日誌
+actions:
+  next: 下一步
+  finish: 進入 Hagicode Desktop
+  previous: 上一步
+  skip: 跳過引導
+  continueWithLanguage: 使用 {{language}} 繼續
+  applyingLanguage: 正在套用 {{language}}...
+skip:
+  checkbox: 不再顯示此引導
+  title: 確認跳過引導
+  description: 您確定要跳過首次使用引導嗎？
+  manualInstallNote: |-
+    跳過後，您可以：
+    • 透過主介面的"套件管理"功能手動安裝 Hagicode Server
+    • 在設定中重新啟用開機流程
+  reenableNote: 如果您是第一次使用 Hagicode Desktop，建議完成引導流程。
+  cancel: 取消
+  confirm: 跳過引導
+dependencyManagement:
+  title: 依賴項管理
+  description: 檢視和管理系統相依性
+  status:
+    installed: 已安裝
+    bundled: 隨 Desktop 內置
+    desktopManaged: Desktop 託管
+    manualInstallRequired: 需要手動安裝
+    notInstalled: 未安裝
+    versionMismatch: 版本不匹配
+    checking: 檢測中...
+  actions:
+    install: 安裝
+    upgrade: 升級
+    installing: 安裝中...
+    refresh: 重新整理
+    viewManualSteps: 查看手動步驟
+    visitWebsite: 訪問官網
+    reinstallDesktop: 重新安裝 Desktop
+    updateDesktop: 更新 Desktop
+  details:
+    currentVersion: 目前版本
+    requiredVersion: 要求版本
+    manualCommand: 建議命令
+    source: 來源
+    bundledSource: 內建來源
+    systemSource: 系統來源
+  manualHandoff:
+    title: 需手動安裝 CLI 套件
+    description: 請在 Desktop 外執行建議指令。關於 Desktop 內建 Node/npm 環境和 PATH 行為的最新說明，請閱讀 FAQ。
+    faqLinkLabel: 查看 Node 環境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+    refreshHint: 命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。
+  noDependencies: 未檢測到依賴
+dependencyCheck:
+  title: 依賴檢查結果
+  summary: 檢查了 {{total}} 個依賴項，{{passed}} 個通過，{{failed}} 個需要處理
+  checking: 正在檢查依賴項...
+  status:
+    allPassed: 所有相依性已安裝
+    hasIssues: 部分依賴項需要處理
+  details:
+    expand: 顯示詳情
+    collapse: 隱藏詳情
+    currentVersion: 目前版本
+    requiredVersion: 要求版本
+sharingAcceleration:
+  title: 下載與分享加速
+  description: 預設開啟。凡提供種子元資料之 latest desktop/server，先走種子；失敗自動回源。
+  toggleTitle: 開啟區域網路/網際網路共享加速（預設）
+  toggleDescription: 此處可先關閉，後續仍可在設定頁調整。
+  bullets:
+    latest: 對外共享主範圍僅 latest desktop 與 latest server
+    fallback: 種子 sidecar 不可用或握手失敗時，會自動回源補塊
+    disable: 若網路受限或不願共享，可現在關閉
+    portable: portable mode 下此能力強制關閉，不會隱式做種
+dependencyPreparation:
+  title: 準備依賴項
+  description: 安裝 HagiCode Desktop 必要的命令列依賴項，並選擇至少一個用於編碼會話的 Agent CLI。
+  loading: 正在檢查 Desktop 託管的依賴項...
+  environment:
+    title: Desktop 託管的 Node/npm 環境
+    description: Desktop 會在自己的 Node/npm 環境中安裝並偵測託管 CLI 套件。路徑、套件管理和排障細節請閱讀 FAQ。
+    faqLinkLabel: 查看 Node 環境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+  required:
+    title: 必需依賴項
+    description: 這些依賴項必須安裝完成後才能繼續引導。
+  optional:
+    title: 可選依賴項
+    description: 可選依賴項不會阻塞引導。
+  agentCli:
+    title: Agent CLI 選擇
+    description: 請選擇至少一個 Agent CLI。選取的 CLI 必須安裝在 Desktop 託管 npm 環境中。
+  blocking:
+    environment-unavailable:
+      title: Node/npm 環境不可用
+      description: Desktop 目前無法存取託管的 Node/npm 環境。請在內建工具鏈可用後刷新。
+    required-packages-missing:
+      title: 缺少必需依賴項
+      description: 請先安裝缺失的必需依賴項。
+    agent-cli-not-selected:
+      title: 請選擇 Agent CLI
+      description: 至少選擇一個受支援的 Agent CLI 依賴項。
+    agent-cli-not-installed:
+      title: 選取的 Agent CLI 尚未安裝
+      description: 請將至少一個選取的 Agent CLI 安裝到 Desktop 託管 npm 環境中。
+  actions:
+    install: 確認並安裝
+    refresh: 重新整理
+    retry: 重試
+    recheck: 重新檢查
+  complete:
+    title: 依賴項已就緒
+    description: 必需相依性已安裝，且至少一個選取的 Agent CLI 已可用。
+  error:
+    title: 依賴項準備失敗
+legal:
+  title: 終端使用者許可協議與隱私權政策
+  descriptionFull: 在繼續下載 HagiCode Server 之前，請先確認目前 EULA 與隱私權政策版本。正式文件會在預設瀏覽器中開啟。
+  descriptionLegalOnly: 偵測到目前協議版本尚未確認。請先在預設瀏覽器中查看正式文檔，然後返回 Desktop 完成確認。
+  progressFull: 完整引導：語言選擇 -> 歡迎 -> 協議確認 -> 共享加速 -> 依賴準備 -> 下載
+  progressLegalOnly: 合規攔截模式：會先顯示語言選擇，再進入目前協定確認步驟
+  browserInstruction: 請先點選下方按鈕在預設瀏覽器中查看正式文件。 Desktop 只展示版本摘要，不內嵌協定全文。
+  cacheHint: 目前顯示的是最近一次成功取得的協定版本摘要。建議在網路恢復後刷新並再次確認是否有更新。
+  unavailableHint: 暫時無法取得協議版本摘要，也沒有可用快取。請檢查網路後重試；在取得有效版本資訊前，無法繼續。
+  reviewPrompt: 閱讀完成後，再返回 Desktop 勾選同意並繼續。
+  effectiveDate: 生效日期
+  revision: 修訂版本
+  openInBrowser: 在瀏覽器中開啟 {{title}}
+  checkbox: 我已在瀏覽器中閱讀並同意當前 EULA 與隱私權政策。
+  modeHintFull: 確認後將繼續進入共享加速和下載步驟。
+  modeHintLegalOnly: 確認後將關閉攔截並返回主介面；拒絕則會退出目前應用。
+  accept: 同意並繼續
+  accepting: 正在記錄同意...
+  decline: 拒絕並退出
+  declining: 正在退出...
+  refresh: 刷新協議訊息
+  metadata:
+    remote: 已載入最新協定版本
+    cache: 正在使用最近快取的協定版本
+    unavailable: 協定版本資訊暫不可用
+  types:
+    eula: EULA
+    privacy-policy: 隱私權政策
+languageSelection:
+  title: 選擇語言
+  description: 先選擇 Hagicode Desktop 使用的語言。首次啟動內建後端時，也會使用對應的預設語言。
+  recommended: 推薦
+  selected: 已選擇
+  choose: 選擇此語言
+  error: Desktop 暫時無法儲存所選語言，請重試後再繼續。

@@ -1,0 +1,300 @@
+title: 首次使用引导
+welcome:
+  title: 欢迎使用 Hagicode Desktop
+  description: Hagicode Desktop 是 Hagicode 的本地启动器，接下来会用六个步骤完成首次安装与合规确认。
+  features:
+    manage:
+      title: 版本管理
+      description: 管理 Hagicode Server 的安装和更新
+    monitor:
+      title: 服务监控
+      description: 启动、停止和监控服务状态
+    dependencies:
+      title: 依赖管理
+      description: 查看和管理系统依赖项
+  processTitle: 首次安装共分 6 个步骤：
+  steps:
+    languageSelection: 先选择引导与界面使用的语言
+    welcome: 了解本次引导会完成的准备工作
+    download: 下载最新的 Hagicode Server 包
+    launch: 启动服务并确认运行正常
+    dependencyPreparation: 确认必需依赖项和 Agent CLI 已就绪
+    sharingAcceleration: 确认是否开启共享加速，默认已为您开启
+    legalConsent: 确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档
+  skip: 跳过引导
+  start: 开始安装
+claude:
+  title: 配置 Claude Code
+languageSelection:
+  title: 选择语言
+  description: 先选择 Hagicode Desktop 使用的语言。首次启动内置后端时，也会使用对应的默认语言。
+  recommended: 推荐
+  selected: 已选择
+  choose: 选择此语言
+  error: Desktop 暂时未能保存所选语言，请重试后继续。
+download:
+  title: 下载 Hagicode Server
+  version: 版本
+  progress: 下载进度
+  fileSize: 文件大小
+  downloading:
+    title: 正在下载 Hagicode Server...
+  complete:
+    title: 下载完成！
+    message: 包文件已验证完整。现在可以返回首页，并在需要时手动启动服务。
+    fileSize: 文件大小
+  downloaded: 已下载
+  speed: 速度
+  remaining: 剩余时间
+  pleaseWait: 请稍候，正在下载...
+dependencies:
+  title: 安装系统依赖项
+  subtitle: Hagicode 需要某些系统依赖项才能正常运行。
+  description: 检查以下系统依赖项的安装状态
+  installButton: 安装依赖项
+  status:
+    installed: 已安装
+    installing: 安装中...
+    manualInstallRequired: 需要手动安装
+    pending: 待安装
+    error: 安装失败
+    notInstalled: 未安装
+    versionMismatch: 版本不匹配
+    checking: 检测中...
+    ready: 可以使用
+  actions:
+    install: 安装
+    upgrade: 升级
+    installing: 安装中...
+    refresh: 刷新
+    viewManualSteps: 查看手动步骤
+    visitWebsite: 访问官网
+  details:
+    currentVersion: 当前版本
+    requiredVersion: 要求版本
+    manualCommand: 建议命令
+  overallProgress: 总体进度
+  installing:
+    title: 正在安装依赖项...
+  complete:
+    title: 依赖安装完成
+    message: 所有依赖项已成功安装。
+  checking: 正在检查依赖项...
+  error:
+    message: 部分依赖项安装失败，请手动安装后继续。
+  manualHandoff:
+    title: 需要手动安装 CLI 包
+    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    faqLinkLabel: 查看 Node 环境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+    refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
+depInstallConfirm:
+  title: 安装缺失依赖
+  installingTitle: 正在安装依赖
+  description: 检测到 {{count}} 个缺失的依赖项
+  description_other: 检测到 {{count}} 个缺失的依赖项
+  versionMismatchNote: 部分依赖版本不正确，需要升级。
+  mixedMissingMessage: 检测到 {{missing}} 个缺失和 {{mismatch}} 个版本不匹配的依赖
+  mixedMissingMessage_other: 检测到 {{missing}} 个缺失和 {{mismatch}} 个版本不匹配的依赖
+  versionMismatchOnlyMessage: 检测到 {{count}} 个版本不匹配的依赖
+  versionMismatchOnlyMessage_other: 检测到 {{count}} 个版本不匹配的依赖
+  upgradeNote: 版本不匹配的依赖将自动升级到要求的版本。
+  requiredVersion: 要求版本
+  permissionWarning: 安装这些依赖可能需要管理员权限。
+  preparing: 准备安装...
+  cancel: 取消
+  confirm: 安装依赖
+  installing: 正在安装...
+  installButton: 安装 {{count}} 个依赖
+  errorsOccurred: 个依赖安装失败
+  success: 所有依赖安装成功
+  partialSuccess: '{{success}} 个依赖安装成功，{{failed}} 个失败'
+  error: 依赖安装失败
+launch:
+  title: 启动服务
+  starting:
+    title: 正在启动 Hagicode Server...
+    subtitle: 正在初始化服务组件...
+  complete:
+    title: 安装完成！
+    subtitle: Hagicode Desktop 已成功安装并启动。
+    success: 恭喜！Hagicode Desktop 已成功安装并启动。
+    ready: 您现在可以开始使用所有功能。
+    button: 打开 Hagicode
+  progress: 启动进度
+  installInfo:
+    title: 安装信息
+    version: 安装版本
+    port: 服务端口
+    url: 服务地址
+  whatsNext:
+    title: 您现在可以：
+    manage: 通过主界面管理 Hagicode Server
+    webUI: 访问 Web 管理界面
+    logs: 查看服务日志和状态
+    config: 配置服务器参数和设置
+  support:
+    title: 技术支持
+    docs: 用户文档
+    issues: 问题反馈
+  failure:
+    title: 启动失败
+    subtitle: Hagicode Server 未能完成启动。请查看诊断日志并重新安装后再继续初始化。
+    guidance: 您可以先查看完整日志，然后重新安装当前版本并重新开始引导流程。
+    viewLog: 查看完整日志
+    retryButton: 重试启动
+    reinstallButton: 重新安装并重置引导
+    reinstallingButton: 重新安装中...
+    dialogTitle: 引导启动失败日志
+    emptySummary: 未获取到启动失败摘要
+    emptyLog: 未获取到启动失败日志
+    meta: 端口：{{port}} · 时间：{{timestamp}}
+    truncatedHint: 日志已截断，仅显示最近的输出内容。
+    recoveryHint: 建议先重新安装当前版本并重置引导状态，然后重新完成首次初始化流程。
+    copyButton: 复制日志
+    copySuccess: 启动失败日志已复制
+    copyError: 复制启动失败日志失败
+    copyEmpty: 没有可复制的启动失败日志
+actions:
+  next: 下一步
+  continueWithLanguage: 使用 {{language}} 继续
+  applyingLanguage: 正在应用 {{language}}...
+  finish: 进入 Hagicode Desktop
+  previous: 上一步
+  skip: 跳过引导
+skip:
+  checkbox: 不再显示此引导
+  title: 确认跳过引导
+  description: 您确定要跳过首次使用引导吗？
+  manualInstallNote: |-
+    跳过后，您可以：
+    • 通过主界面的"包管理"功能手动安装 Hagicode Server
+    • 在设置中重新启用引导流程
+  reenableNote: 如果您是第一次使用 Hagicode Desktop，建议完成引导流程。
+  cancel: 取消
+  confirm: 跳过引导
+dependencyManagement:
+  title: 依赖项管理
+  description: 查看和管理系统依赖项
+  status:
+    installed: 已安装
+    bundled: 随 Desktop 内置
+    desktopManaged: Desktop 托管
+    manualInstallRequired: 需要手动安装
+    notInstalled: 未安装
+    versionMismatch: 版本不匹配
+    checking: 检测中...
+  actions:
+    install: 安装
+    upgrade: 升级
+    installing: 安装中...
+    refresh: 刷新
+    viewManualSteps: 查看手动步骤
+    visitWebsite: 访问官网
+    reinstallDesktop: 重新安装 Desktop
+    updateDesktop: 更新 Desktop
+  details:
+    currentVersion: 当前版本
+    requiredVersion: 要求版本
+    manualCommand: 建议命令
+    source: 来源
+    bundledSource: 内置来源
+    systemSource: 系统来源
+  manualHandoff:
+    title: 需要手动安装 CLI 包
+    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    faqLinkLabel: 查看 Node 环境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+    refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
+  noDependencies: 未检测到依赖
+dependencyCheck:
+  title: 依赖检查结果
+  summary: 检查了 {{total}} 个依赖项，{{passed}} 个通过，{{failed}} 个需要处理
+  checking: 正在检查依赖项...
+  status:
+    allPassed: 所有依赖项已安装
+    hasIssues: 部分依赖项需要处理
+  details:
+    expand: 显示详情
+    collapse: 隐藏详情
+    currentVersion: 当前版本
+    requiredVersion: 要求版本
+sharingAcceleration:
+  title: 下载与共享加速
+  description: 默认开启。凡提供种子元数据之 latest desktop/server，先走种子；失败自动回源。
+  toggleTitle: 开启局域网/互联网共享加速（默认）
+  toggleDescription: 此处可先关闭，后续仍可在设置页调整。
+  bullets:
+    latest: 对外共享主范围仅 latest desktop 与 latest server
+    fallback: 种子 sidecar 不可用或握手失败时，会自动回源补块
+    disable: 若网络受限或不愿共享，可现在关闭
+    portable: portable mode 下此能力强制关闭，不会隐式做种
+dependencyPreparation:
+  title: 准备依赖项
+  description: 安装 HagiCode Desktop 必需的命令行依赖项，并选择至少一个用于编码会话的 Agent CLI。
+  loading: 正在检查 Desktop 托管的依赖项...
+  environment:
+    title: Desktop 托管的 Node/npm 环境
+    description: Desktop 会在自己的 Node/npm 环境中安装并检测托管 CLI 包。路径、包管理和排障细节请阅读 FAQ。
+    faqLinkLabel: 查看 Node 环境 FAQ
+    faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
+  required:
+    title: 必需依赖项
+    description: 这些依赖项必须安装完成后才能继续引导。
+  optional:
+    title: 可选依赖项
+    description: 可选依赖项不会阻塞引导。
+  agentCli:
+    title: Agent CLI 选择
+    description: 请选择至少一个 Agent CLI。被选中的 CLI 必须安装在 Desktop 托管 npm 环境中。
+  blocking:
+    environment-unavailable:
+      title: Node/npm 环境不可用
+      description: Desktop 当前无法访问托管的 Node/npm 环境。请在内置工具链可用后刷新。
+    required-packages-missing:
+      title: 缺少必需依赖项
+      description: 请先安装缺失的必需依赖项。
+    agent-cli-not-selected:
+      title: 请选择 Agent CLI
+      description: 至少选择一个受支持的 Agent CLI 依赖项。
+    agent-cli-not-installed:
+      title: 选中的 Agent CLI 尚未安装
+      description: 请将至少一个选中的 Agent CLI 安装到 Desktop 托管 npm 环境中。
+  actions:
+    install: 确认并安装
+    refresh: 刷新
+    retry: 重试
+    recheck: 重新检查
+  complete:
+    title: 依赖项已就绪
+    description: 必需依赖项已安装，并且至少一个选中的 Agent CLI 已可用。
+  error:
+    title: 依赖项准备失败
+legal:
+  title: 终端用户许可协议与隐私政策
+  descriptionFull: 在继续下载 HagiCode Server 之前，请先确认当前 EULA 与隐私政策版本。正式文档会在默认浏览器中打开。
+  descriptionLegalOnly: 检测到当前协议版本尚未确认。请先在默认浏览器中查看正式文档，然后返回 Desktop 完成确认。
+  progressFull: 完整引导：语言选择 -> 欢迎 -> 协议确认 -> 共享加速 -> 依赖准备 -> 下载
+  progressLegalOnly: 合规拦截模式：会先显示语言选择，再进入当前协议确认步骤
+  browserInstruction: 请先点击下方按钮在默认浏览器中查看正式文档。Desktop 只展示版本摘要，不内嵌协议全文。
+  cacheHint: 当前显示的是最近一次成功获取的协议版本摘要。建议在网络恢复后刷新并再次确认是否有更新。
+  unavailableHint: 暂时无法获取协议版本摘要，也没有可用缓存。请检查网络后重试；在获取到有效版本信息前，无法继续。
+  reviewPrompt: 阅读完成后，再返回 Desktop 勾选同意并继续。
+  effectiveDate: 生效日期
+  revision: 修订版本
+  openInBrowser: 在浏览器中打开 {{title}}
+  checkbox: 我已在浏览器中阅读并同意当前 EULA 与隐私政策。
+  modeHintFull: 确认后将继续进入共享加速和下载步骤。
+  modeHintLegalOnly: 确认后将关闭拦截并返回主界面；拒绝则会退出当前应用。
+  accept: 同意并继续
+  accepting: 正在记录同意...
+  decline: 拒绝并退出
+  declining: 正在退出...
+  refresh: 刷新协议信息
+  metadata:
+    remote: 已加载最新协议版本
+    cache: 正在使用最近缓存的协议版本
+    unavailable: 协议版本信息暂不可用
+  types:
+    eula: EULA
+    privacy-policy: 隐私政策

@@ -1,0 +1,7 @@
+dialog:
+  close: Schließen
+button:
+  submit: Senden
+  cancel: Abbrechen
+alert:
+  dismiss: Entlassen

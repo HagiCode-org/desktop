@@ -1,0 +1,519 @@
+button:
+  save: Сохранить
+  cancel: Отмена
+  confirm: Подтвердить
+  delete: Удалить
+  edit: Редактировать
+  close: Закрыть
+  refresh: Обновить
+  install: Установить
+  uninstall: Удалить
+  start: Запустить
+  stop: Остановить
+  restart: Перезапустить
+  open: Открыть
+  download: Скачать
+status:
+  loading: Загрузка...
+  success: Успех
+  error: Ошибка
+  warning: Предупреждение
+  info: Информация
+  running: Бег
+  stopped: Остановлено
+  installed: Установлено
+  notInstalled: Не установлено
+  pending: Ожидается
+  failed: Не удалось
+form:
+  required: Требуется
+  optional: Необязательно
+  selectPlaceholder: Пожалуйста, выберите...
+  inputPlaceholder: Пожалуйста, введите...
+  validation:
+    required: Это поле обязательно для заполнения
+    invalidFormat: Неверный формат
+    minLength: Должно быть не менее {{min}} символов.
+    maxLength: Не должно превышать {{max}} символов.
+common:
+  version: Версия
+  platform: Платформа
+  language: Язык
+  settings: Настройки
+  noData: Нет доступных данных
+  operationSuccess: Операция прошла успешно
+  operationFailed: Операция не удалась
+  confirmDelete: Вы уверены, что хотите удалить?
+  confirmAction: Вы уверены, что хотите продолжить?
+header:
+  title: Настройки
+  runningSuccessfully: Успешно работает
+  language:
+    label: Язык
+    description: Выбор языка интерфейса приложения
+  embeddedWebServicePort: Встроенный порт веб-службы
+settings:
+  title: Настройки
+  language:
+    label: Язык
+    description: Выбор языка интерфейса приложения
+  embeddedWebServicePort: Встроенный порт веб-службы
+footer:
+  copyright: © 2025 Hagicode Desktop. Создано с помощью ❤️ с использованием Electron + React + TypeScript.
+  testBuild: Тестовое приложение — сборка для разработки
+menu:
+  systemManagement: Управление системой
+  hagicoWeb: Hagicode Web
+  dependencies: Зависимости
+  webService: Веб-сервис
+  packages: Пакеты
+  settings: Настройки
+  openWebUI: Открыть Web UI
+  navigate: Навигация
+  back: Назад
+  forward: Вперед
+  refresh: Обновить
+  devTools: Инструменты разработчика
+  help: Помощь
+  about: О
+  quit: Выйти
+webView:
+  back: Назад
+  forward: Вперед
+  refresh: Обновить
+  openInBrowser: Открыть в браузере
+  serviceNotRunning: Веб-служба не работает
+  serviceNotRunningDesc: Пожалуйста, запустите веб-службу перед доступом к веб-интерфейсу.
+  backToSystem: Вернуться к управлению системой
+  error: Загрузка не удалась
+  loadFailed: 'Загрузка не удалась: {{reason}}'
+  crashed: Процесс рендеринга завершился сбоем
+  retry: Повторить попытку
+mirror:
+  title: NPM Конфигурация зеркала
+  region: Обнаруженный регион
+  currentMirror: Текущее зеркало
+  mirrorUrl: Зеркало URL
+  detectedAt: Обнаружено в
+  official: Официальный npm
+  taobao: Taobao NPM Mirror
+  redetect: Повторное обнаружение
+  info: NPM инструменты будут автоматически использовать это зеркало для более быстрой загрузки.
+  regions:
+    CN: Китай
+    INTERNATIONAL: Международный
+navigation:
+  dashboard: Панель управления
+  webService: Веб-сервис
+  versionManagement: Управление версиями
+  webServiceNotRunning: Веб-сервис не запущен
+  officialWebsite: Официальный сайт
+  officialWebsiteDesc: Посетите официальный сайт Hagicode для получения последних новостей и документации.
+  costCalculator: AI Калькулятор замены
+  about:
+    sectionDescription: Сначала визуализируйте связанный снимок, а затем обновите последние официальные места назначения.
+    snapshotLabel: Пакетный снимок
+    runtimeLabel: Живые данные
+    updatedAt: Обновлено {{value}}
+    loading: Обновление последних официальных данных о...
+    refreshFailed: Не удалось загрузить последнюю официальную информацию о данных. Вместо этого показывается связанный снимок.
+    loadFailed: Официальные данные временно недоступны, но запись на сайте все еще работает.
+    snapshotMissing: Эта сборка не включает в себя снимок состояния. Попытка использовать действующую конечную точку напрямую.
+    empty: Официальной информации о записях на данный момент нет.
+    sections:
+      store: Магазин
+      community: Сообщество
+      content: Содержание
+    types:
+      link: Ссылка
+      contact: Контакт
+      qr: QR
+      image: Изображение
+  promotion:
+    label: Продвижение
+    defaultCta: Узнать больше
+sidebar:
+  dashboard: Панель управления
+  webService: Веб-сервис
+  versionManagement: Управление версиями
+  diagnostic: Диагностика
+  dependencyManagement: Управление зависимостями
+  omniroute: OmniRoute
+  settings: Настройки
+  desktopVersion: Настольная версия
+  webVersion: Веб-версия
+  unknownVersion: Недоступно
+  toggle: Переключить боковую панель
+  collapse: Свернуть
+  expand: Развернуть
+dependencyManagement:
+  title: Управление зависимостями
+  description: Управляйте необходимыми и дополнительными зависимостями командной строки для готовности к запуску HagiCode и проверяйте встроенную среду Node/npm рабочего стола.
+  loading: Чтение статуса зависимости...
+  unavailable: Недоступно
+  environment:
+    title: Среда узла
+    description: Desktop использует собственную среду выполнения Node/npm для управляемых пакетов CLI.
+    managedNotice: Прочтите FAQ, чтобы получить актуальную информацию о среде выполнения Desktop Node/npm, изоляции PATH, расположении пакетов и устранении неполадок.
+    rationaleTitle: Управляемая настольным компьютером среда Node/npm
+    faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    version: Версия
+    toolchainRoot: Корень цепочки инструментов
+    nodeRuntimeRoot: Корень среды выполнения связанного узла
+    nodeMajorVersion: Основное дерево пакетов узла
+    globalPrefix: Глобальный префикс
+    globalModulesRoot: Глобальный корень модулей
+    status:
+      available: Доступно
+      unavailable: Недоступно
+      error: Ошибка
+  mirror:
+    title: npm Зеркальное ускорение
+    description: Включите npmmirror.com для управляемых операций синхронизации и установки npm пакета.
+    toggleLabel: Используйте ускорение npmmirror.com.
+    registryUrl: Реестр URL
+    enabled: Включено
+    disabled: Отключено
+    saving: Сохранение
+    enabledHelp: Предстоящие операции синхронизации/установки будут использовать зеркало реестра npmmirror.com.
+    disabledHelp: Предстоящие операции npm будут использовать поведение реестра по умолчанию npm.
+    saveFailed: Не удалось сохранить настройки зеркала.
+  omniRouteRepair:
+    title: Вернитесь к OmniRoute после восстановления зависимостей.
+    descriptionMissing: OmniRoute не удалось запустить, поскольку отсутствует один или несколько пакетов, управляемых с рабочего стола. Восстановите выделенные пакеты здесь, затем еще раз проверьте OmniRoute.
+    descriptionUnknown: Desktop не удалось подтвердить зависимости OmniRoute. Обновите или исправьте выделенные пакеты здесь, затем еще раз проверьте OmniRoute.
+    sourceLabel: Источник
+    sourceValue: OmniRoute
+    targetBadge: Ремонтная цель
+    pendingNotice: Сохраните выделенные пакеты доступными в этой таблице, а затем запустите повторную проверку после завершения восстановления.
+    recheckAction: 'Ремонт завершен: перепроверьте OmniRoute'
+    recheckRunning: Перепроверка OmniRoute зависимостей...
+    incomplete: OmniRoute все еще не готов. Установите или обновите выделенные пакеты, затем повторите попытку.
+    refreshFailed: Desktop не удалось обновить статус зависимости. Повторите повторную проверку после завершения текущей операции.
+  package:
+    version: Версия
+    packageName: Пакет
+    category: Категория
+  packageStatus:
+    installed: Установлено
+    not-installed: Не установлено
+    unknown: Неизвестно
+  packages:
+    hagiscript:
+      description: Требуемая оркестрация зависимостей CLI, используемая для синхронизации инструментов командной строки, управляемых с рабочего стола.
+    openspec:
+      description: OpenSpec Рабочий процесс предложений, спецификаций и задач CLI.
+    skills:
+      description: Codex/Управление навыками агента CLI.
+    pm2:
+      description: PM2 менеджер процессов, используемый Desktop для контроля OmniRoute.
+    omniroute:
+      description: OmniRoute локальная маршрутизация и цепочка инструментов CLI.
+    claudeCode:
+      description: Claude Code Агент CLI для сеансов кодирования с поддержкой AI.
+    codex:
+      description: OpenAI Codex Агент CLI для рабочих процессов кодирования.
+    githubCopilot:
+      description: GitHub Copilot CLI распространяется через официальный пакет @github/copilot npm.
+    codebuddy:
+      description: CodeBuddy CLI распространяется через официальный пакет @tencent-ai/codebuddy-code npm.
+    opencode:
+      description: Агент OpenCode CLI распространяется через пакет opencode-ai npm.
+    qoder:
+      description: QoderCLI распространяется через официальный пакет @qder-ai/qodercli npm.
+    gemini:
+      description: Google Gemini CLI распространяется через официальный пакет @google/gemini-cli npm.
+  categories:
+    bootstrap: Бутстрап
+    workflow: Рабочий процесс
+    agent-cli: Агент CLI
+    developer-tool: Инструмент разработчика
+  bootstrap:
+    title: Требуется
+  dependencyGate:
+    title: Сначала установите Hagiscript
+    missing: Другие действия с зависимостями отключены до тех пор, пока не будет установлен hagiscript.
+    unknown: Desktop не может проверить hagiscript прямо сейчас. Обновите или переустановите hagiscript перед изменением других зависимостей.
+  packageTable:
+    title: Зависимости командной строки
+    description: Выберите агент CLI и зависимости рабочего процесса для установки через hagiscript npm-sync.
+    tool: Инструмент
+    status: Статус
+    action: Действие
+  batchLog:
+    title: Журнал пакетной установки
+    description: Комбинированный вывод для {{count}} выбранных пакетов.
+    empty: Журналы появятся здесь после начала пакетной установки.
+    completed: Пакетная установка завершена.
+    status:
+      running: Бег
+      completed: Завершено
+      failed: Не удалось
+  selection:
+    selectAll: Выберите все подходящие пакеты
+    selectPackage: Выберите {{name}}
+    selectedCount: '{{count}} выбрано'
+  disabled:
+    unknown: Статус этого пакета неизвестен. Обновите перед выбором или установкой.
+  actions:
+    refresh: Обновить
+    install: Установить
+    installed: Установлено
+    reinstall: Переустановить
+    installSelected: Выбрана пакетная установка
+    installSelectedRunning: Пакетная установка...
+    uninstall: Удалить
+  errors:
+    loadFailed: Не удалось загрузить статус управления зависимостями.
+    operationFailed: Операция зависимости не удалась
+bootstrap:
+  loading:
+    title: Завершение инициализации при первом запуске...
+    summary: Подготовка моста рабочего стола, локальной конфигурации и каталога данных.
+    description: Оболочка приложения остается видимой до тех пор, пока не будут готовы критически важные зависимости запуска, поэтому первый запуск пакета никогда не превращается в пустое окно.
+    stepActive: В процессе
+    stepPending: Ожидается
+    stage: 'Текущая стадия: {{stage}}'
+  steps:
+    shell: Инициализировать оболочку приложения
+    config: Загрузить локальную конфигурацию
+    dataDirectory: Подготовьте каталог данных
+    render: Установить основной интерфейс
+  error:
+    title: Первый запуск не завершился
+    description: Desktop не удалось подготовить локальные ресурсы, необходимые для первого экрана.
+    diagnosticTitle: Диагностическое резюме
+    stage: 'Этап: {{stage}}'
+    summary: 'Краткое описание: {{summary}}'
+    path: 'Путь: {{path}}'
+  actions:
+    openLogs: Открыть папку журналов
+    retry: Перезагрузить оболочку приложения
+    working: Работаю...
+  toasts:
+    logsOpened: Открыл папку журналов рабочего стола.
+    logsFailed: Не удалось открыть папку журналов рабочего стола.
+systemDiagnostic:
+  title: Диагностика системы
+  description: Соберите сведения о локальной среде этого устройства и отправьте текстовый отчет службе технической поддержки.
+  reportTitle: Простой текстовый отчет
+  reportDescription: Каждый повторный запуск заменяет предыдущий отчет, поэтому скопированное содержимое всегда отражает новейший диагностический снимок.
+  empty: Запустите диагностику системы, чтобы получить информацию об операционной системе, оборудовании, проверках реестра Агента CLI и основных инструментах.
+  loading: Сбор сведений о местной среде...
+  actions:
+    run: Запустить диагностику
+    running: Запуск диагностики
+    rerun: Беги снова
+    copy: Копировать результат
+    copying: Копирование
+  status:
+    success: Завершено
+    partialFailure: Частичный отказ
+  summary:
+    completedAt: 'Завершено: {{value}}'
+    issueCount: 'Обнаружено проблем: {{count}}'
+  runtimeMatrix:
+    title: Встроенная матрица времени выполнения
+    unknown: неизвестно
+    unresolved: нерешенный
+    version: 'Версия: {{value}}'
+    path: 'Путь: {{value}}'
+    boolean:
+      'true': включен
+      'false': отключен
+    source:
+      bundled: В комплекте
+      desktop-managed: Управляемый настольным компьютером
+      host: ПУТЬ хоста
+      unknown: Неизвестный источник
+    status:
+      healthy: Здоровый
+      warning: Предупреждение
+      missing: Отсутствует
+      invalid: Недействительный
+      unknown: Неизвестно
+    npmConfig:
+      title: npm Конфигурация
+      registry: 'Реестр: {{value}}'
+      cache: 'Кэш: {{value}}'
+      prefix: 'Префикс/корень пакета: {{value}}'
+      mirror: 'Зеркальное ускорение: {{value}}'
+    managedCommands:
+      title: Управляемые команды
+      empty: Метаданные управляемой команды не сообщались.
+      status:
+        installed: Установлено
+        deferred: Отложенный
+        manual: Руководство
+        missing: Отсутствует
+        invalid: Недействительный
+        unknown: Неизвестно
+  boundary:
+    title: Только локальная диагностика машины
+    description: На этой странице собраны сведения о среде в виде обычного текста с текущего устройства, чтобы вы могли поделиться ими со службой технической поддержки.
+  partialFailure:
+    title: Некоторые проверки не завершились корректно
+    description: Отчет по-прежнему можно использовать. {{count}} элементы были помечены как отсутствующие или неудавшиеся, а их причины были добавлены к отчету.
+  error:
+    title: Диагностический запуск не удался
+    description: 'Desktop не удалось завершить диагностический запуск: {{error}}'
+  toast:
+    success: Диагностика системы завершена
+    partialFailure: Диагностика системы завершена с {{count}} проблемами
+    runFailed: 'Диагностика системы не удалась: {{error}}'
+    copySuccess: Отчет о диагностике скопирован.
+    copyFailed: 'Не удалось скопировать диагностический отчет: {{error}}'
+system:
+  logQuickAccess:
+    title: Быстрый доступ к журналу
+    description: Откройте папки журналов рабочего стола и веб-приложения напрямую, чтобы сократить время диагностики.
+    loading: Проверка папок журналов...
+    hint: Состояния кнопок автоматически обновляются с использованием активной версии.
+    status:
+      available: Доступно
+      unavailable: Недоступно
+    desktop:
+      label: Папка журналов рабочего стола
+      description: Откройте текущий каталог журналов рабочего стола на этом устройстве.
+      openSuccess: Папка журналов рабочего стола открыта
+    webApp:
+      label: Папка журналов веб-приложений
+      description: Откройте каталог журналов веб-приложения для активной версии.
+      openSuccess: Папка журналов веб-приложений открыта
+    errors:
+      load_failed: Не удалось загрузить состояние папки журнала.
+      logs_not_found: Папка журналов не найдена
+      no_active_version: Активная версия не выбрана
+      open_failed: Не удалось открыть папку журналов
+  noVersionInstalled:
+    title: Версии еще не установлены
+    description: Самый простой способ начать работу с Hagicode Desktop — воспользоваться нашим мастером пошаговой настройки. Полная установка и настройка всего за несколько шагов.
+    startWizard: Мастер запуска
+  activeVersion:
+    actions:
+      manage: Управление версиями
+    labels:
+      version: Версия
+      installedAt: Установлено в
+      status: Статус
+    states:
+      ready: Готово
+  updateReminder:
+    title: Доступно обновление
+    labels:
+      current: Текущий
+      latest: Последние
+      state: Государство
+    states:
+      checking: Проверка
+      downloading: Загрузка
+      ready: Готово
+      failed: Не удалось
+      disabled: Приостановлено
+    descriptions:
+      checking: Проверка активного источника пакета на наличие совместимой новой версии.
+      downloading: Была найдена более новая версия и архив предварительно загружается в фоновом режиме.
+      ready: Последний архив проверен и готов к существующему процессу установки с управлением версиями.
+      failed: 'Фоновое обновление не удалось: {{error}}'
+      settings-disabled: Фоновая предварительная загрузка отключена. Вы можете снова включить их в настройках.
+      portable-mode: Портативный режим пропускает фоновые обновления и сохраняет текущую среду выполнения только для чтения.
+      no-package-source: Активный источник пакета не настроен, поэтому запуск фоновых обновлений невозможен.
+    actions:
+      openVersionPage: Открытое управление версиями
+      installLatest: Установить последнюю версию
+      openSettings: Открыть настройки
+  homepageTour:
+    buttons:
+      next: Далее
+      previous: Назад
+      done: Готово
+    steps:
+      hero:
+        title: Добро пожаловать на домашнюю страницу
+        description: В этом верхнем разделе представлена сводная информация о состоянии службы и поможет вам понять, с чего начать на панели мониторинга рабочего стола.
+      updateReminder:
+        title: Отслеживайте доступные обновления
+        description: Когда обнаруживается новый совместимый пакет, на этой карточке с напоминанием отображается его состояние и ссылка на следующее действие.
+      serviceCard:
+        title: Мониторинг статуса услуги
+        description: Здесь вы можете просмотреть состояние встроенной службы, а затем запустить, остановить, перезапустить или открыть Hagicode, когда среда выполнения будет готова.
+      logAccess:
+        title: Перейти к папкам журналов
+        description: Эти быстрые действия открывают папки журналов рабочего стола и веб-приложений, что позволяет быстрее собирать доказательства во время диагностики.
+      activeVersion:
+        title: Просмотрите активную версию
+        description: В этом разделе показано, какой пакет установлен прямо сейчас, и вы можете быстро перейти к управлению версиями.
+      noVersionInstalled:
+        title: Установите свою первую версию
+        description: Если пакет еще не установлен, используйте этот призыв к действию, чтобы запустить мастер установки и завершить первую установку во время выполнения.
+  themeToggle:
+    switchToLight: Переключиться в светлый режим
+    switchToDark: Переключиться в темный режим
+omniroute:
+  title: OmniRoute
+  description: Управляйте службой OmniRoute, принадлежащей Desktop, через PM2, включая элементы управления жизненным циклом, пути выполнения, конфигурацию портов и последние журналы.
+  loading: Загрузка статуса OmniRoute...
+  actions:
+    refresh: Обновить
+    start: Старт
+    stop: Стоп
+    restart: Перезагрузить
+    working: Работаю...
+    openUi: Открыть UI
+    save: Сохранить
+    open: Открыть
+    refreshLogs: Обновить журналы
+  status:
+    title: Статус
+    running: Бег
+    stopped: Остановлено
+    partial: Частичный
+    error: Ошибка
+    baseUrl: База URL
+    pm2: PM2 исполняемый файл
+    pm2Missing: PM2 не установлено
+  config:
+    title: Конфигурация времени выполнения
+    description: OmniRoute использует изолированный порт, управляемый настольным компьютером. Он не может соответствовать порту веб-службы HagiCode.
+    portLabel: Порт
+    passwordLabel: Пароль для входа
+    passwordDescription: Desktop по умолчанию генерирует случайный пароль и отображает его здесь в виде обычного текста. Он вводится как INITIAL_PASSWORD при запуске OmniRoute.
+  validation:
+    numeric: Введите числовой порт.
+    range: Используйте порт между 1024 и 65535.
+    passwordLength: Используйте пароль длиной от 4 до 200 символов.
+  paths:
+    title: Управляемые пути
+    description: Конфигурация, данные и журналы хранятся в папке Electron userData/OmniRoute.
+    config: Конфигурация
+    data: Данные
+    logs: Журналы
+  processes:
+    title: PM2 Процессы
+    description: Desktop управляет только собственным процессом службы OmniRoute и оставляет несвязанные процессы PM2 нетронутыми.
+    name: Имя
+    status: Статус
+    restarts: Перезапускает
+  processStatus:
+    online: Онлайн
+    stopped: Остановлено
+    errored: Ошибка
+    unknown: Неизвестно
+  logs:
+    title: Последние журналы
+    description: Чтение ограниченных последних строк из разрешенных журналов OmniRoute, управляемых настольным компьютером.
+    empty: Журнал еще не выведен.
+    targets:
+      service-out: Вывод услуги
+      service-error: Ошибка сервиса
+  dependencyGuidance:
+    title: Сначала восстановите зависимости, управляемые настольным компьютером.
+    descriptionMissing: OmniRoute не может запуститься, пока выделенные пакеты, управляемые рабочим столом, не будут установлены или исправлены в Dependency Management.
+    descriptionUnknown: Desktop не удалось проверить выделенные OmniRoute зависимости. Перед повторной попыткой обновите или исправьте их в разделе «Управление зависимостями».
+    openDependencyManagement: Открытое управление зависимостями
+  errors:
+    title: OmniRoute операция не удалась
+    operationFailed: Операция провалилась.
+    saveFailed: Не удалось сохранить конфигурацию OmniRoute.
+    openPathFailed: Не удалось открыть управляемый путь.

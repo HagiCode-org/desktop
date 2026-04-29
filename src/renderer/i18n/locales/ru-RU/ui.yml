@@ -1,0 +1,7 @@
+dialog:
+  close: Закрыть
+button:
+  submit: Отправить
+  cancel: Отмена
+alert:
+  dismiss: Уволить

@@ -1,0 +1,48 @@
+loading: Prompt-Anleitung wird geladen...
+emptyState: Desktop kann die Eingabeaufforderung auflösen, Ihnen zeigen, woher sie kommt, und den genauen Text zum Kopieren/Einfügen bereithalten.
+availableTools: Verfügbare Werkzeuge
+promptTitle: Prompt
+promptDescription: Kopieren Sie die vollständige Eingabeaufforderung genau wie gezeigt, bevor Sie sie in Ihr AI CLI einfügen.
+tipTitle: So verwenden Sie diese Eingabeaufforderung
+tipDescription: Öffnen Sie alle unterstützten CLI im vorgeschlagenen Verzeichnis, fügen Sie die Eingabeaufforderung ein und kehren Sie zurück, nachdem Sie die empfohlenen Änderungen übernommen haben.
+actions:
+  refresh: Anleitung neu laden
+  loading: Laden
+steps:
+  openTool: Öffnen Sie das AI CLI Werkzeug, das Sie verwenden möchten.
+  copyPrompt: Kopieren Sie die Eingabeaufforderung unten.
+  runFromDirectory: 'Führen Sie es aus dem vorgeschlagenen Arbeitsverzeichnis aus: {{path}}'
+  runFromCurrentDirectory: Führen Sie es aus dem für diese Aufgabe relevantesten Arbeitsverzeichnis aus.
+  returnToDesktop: Befolgen Sie die generierten Anweisungen und kehren Sie zum Desktop zurück, wenn Sie fertig sind.
+copy:
+  button: Eingabeaufforderung kopieren
+  copying: Kopieren...
+  success: Eingabeaufforderung in die Zwischenablage kopiert
+  failed: Die Eingabeaufforderung konnte nicht kopiert werden
+  failedWithReason: 'Die Eingabeaufforderung konnte nicht kopiert werden: {{error}}'
+docs:
+  button: Öffnen Sie {{tool}} Dokumente
+  failed: Dokumentationslink konnte nicht geöffnet werden
+metadata:
+  source: 'Quelle:'
+  promptPath: 'Eingabeaufforderungspfad:'
+  activeVersion: 'Aktive Version:'
+  workingDirectory: 'Vorgeschlagenes Arbeitsverzeichnis:'
+  attemptedPaths: Versuchte Wege
+  unavailable: Nicht verfügbar
+sources:
+  custom: Benutzerdefinierter Eingabeaufforderungspfad
+  active-version: Aktiv installierte Version
+  packaged-resource: Verpackte Desktop-Ressource
+  development-root: Entwicklungs-Fallback
+  manifest-entry: Mit der Version gebündelte Eingabeaufforderungsdatei
+  generated-from-manifest: Wird aus dem Versionsmanifest generiert
+errors:
+  title: Sofortige Anleitung nicht verfügbar
+  defaultMessage: Desktop konnte die angeforderte Eingabeaufforderung nicht lösen.
+  promptNotFound: Desktop konnte die Eingabeaufforderungsdatei für diesen Workflow nicht finden.
+  resolverUnavailable: Die Auflösung der Desktop-Eingabeaufforderung ist noch nicht fertig.
+  managerUnavailable: Der Desktop kann derzeit keine Anleitung zur Versionsaufforderung laden.
+  promptLoadFailed: Desktop konnte die Versionsaufforderung nicht laden.
+  promptReadFailed: Desktop hat die Eingabeaufforderungsdatei gefunden, konnte sie jedoch nicht lesen.
+  diagnosticPrefix: 'Versuchte Wege:'

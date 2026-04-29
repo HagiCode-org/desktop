@@ -1,0 +1,277 @@
+status:
+  installed: Установлено
+  notInstalled: Не установлено
+  installing: Установка
+  failed: Не удалось
+installConfirm:
+  title: Подтверждение остановки службы
+  description: Служба Hagicode в данный момент работает. Установка или переустановка требует остановки службы.
+  continueWill: 'В дальнейшем будет:'
+  warnings:
+    stopService: Остановить текущую службу Hagicode.
+    interruptRequests: Прерывать все текущие запросы
+    installOperation: Выполните операцию установки/переустановки
+  manualRestart: После завершения установки вам нужно будет вручную перезапустить службу.
+  shouldContinue: Хотите продолжить?
+  cancel: Отмена
+  confirm: Остановиться и продолжить
+  stopping: Остановка службы...
+dependencyStartConfirm:
+  title: Подтверждение запуска услуги
+  description: 'В текущей версии отсутствуют следующие необходимые зависимости:'
+  missingDependencies: Отсутствующие зависимости
+  currentVersion: Текущая версия
+  required: Требуется
+  risksTitle: 'Запуск службы без этих зависимостей может привести к:'
+  risks:
+    startupFailure: Служба не запускается должным образом
+    featureUnavailable: Некоторые функции недоступны
+    runtimeErrors: Ошибки выполнения
+  confirmation: Вы все еще хотите запустить службу?
+  cancel: Отмена
+  confirm: Все равно начать
+  starting: Начало...
+dependencyWarningBanner:
+  title: 'Предупреждение: зависимости служб не полностью удовлетворены.'
+  description: На данный момент отсутствуют {{count}} необходимые зависимости. Некоторые функции могут работать некорректно.
+  viewDetails: Посмотреть детали
+  fixLater: Исправить позже
+packageManagement:
+  cardTitle: Управление пакетами
+  cardDescription: Управление установкой пакетов веб-сервисов
+  platformLabel: Платформа
+  detecting: Обнаружение...
+  installationStatusLabel: Статус установки
+  installedVersionLabel: Установленная версия
+  selectVersionLabel: Выберите версию для установки
+  versionPlaceholder: '-- Выберите версию --'
+  installingProgress: Установка...
+  reinstallingProgress: Переустановка...
+  reinstallButton: Переустановить
+  reinstallConfirmTitle: Подтвердить переустановку
+  reinstallConfirmMessage: 'Вы собираетесь переустановить версию {{version}}. Эта операция будет:'
+  reinstallConfirmClearCache: Очистить кэшированные файлы пакетов
+  reinstallConfirmRemoveInstalled: Удалить текущую установленную версию
+  reinstallConfirmDownloadInstall: Загрузите и установите пакет еще раз.
+  reinstallCancel: Отмена
+  reinstallConfirmButton: Переустановить
+  reinstallProgress:
+    clearingCache: Очистка кэша...
+    removingOld: Удаление старой версии...
+    downloading: Загрузка...
+    installing: Установка...
+  reinstallSuccess: Переустановлен успешно
+  reinstallFailed: Переустановка не удалась
+  noPackagesMessage: 'Нет доступных пакетов. Убедитесь, что исходный каталог пакета существует по адресу:'
+  availableVersionsCount: 'Доступные версии: {{count}} найдено'
+  filteredByPlatform: '(отфильтровано по платформе: {{platform}})'
+  downloadButton: Установить пакет
+  refreshButton: Обновить версии
+  progress:
+    downloading: Загрузка...
+    extracting: Извлечение...
+    verifying: Проверка...
+    completed: Завершено
+    error: Ошибка
+webServiceStatus:
+  cardTitle: Встроенный веб-сервис
+  cardDescription: Просмотр и управление состоянием работы веб-службы
+  status:
+    running: Бег
+    stopped: Остановлено
+    error: Ошибка
+    starting: Начало...
+    stopping: Остановка...
+    unknown: Неизвестно
+    connected: Подключено к удаленному
+  statusDescription:
+    running: Веб-сервис работает
+    stopped: Веб-сервис не запущен
+    error: Не удалось запустить веб-сервис
+    starting: Веб-сервис запускается
+    stopping: Веб-сервис закрывается
+    unknown: Неизвестный статус
+  startButton: Запустить службу
+  dependencyReadinessButton: Открытое управление зависимостями
+  dependencyReadinessAlert:
+    title: Зависимости не готовы
+    message: Перед запуском Hagicode установите необходимые зависимости, управляемые рабочим столом; дополнительные зависимости не блокируют запуск базовой службы.
+  stoppingButton: Остановка...
+  restartButton: Перезагрузить
+  restartingButton: Перезапуск...
+  stopButton: Остановить службу
+  openInBrowser: Открыть в браузере
+  openAppButton: Открыть приложение
+  openBrowserButton: Открыть в браузере
+  portWaiting:
+    title: Ждем, пока порт станет доступен
+    detail: Сервисный порт пока недоступен
+    detailWithPort: Порт {{port}} пока недоступен
+  details:
+    serviceUrl: Сервис URL
+    uptime: Время работы
+    restartCount: Количество перезапусков
+    port: Порт
+    version: Версия
+    remoteUrl: Дистанционное URL
+    listenAddress: Прослушать адрес
+  notInstalledAlert:
+    title: Пакет не установлен
+    message: Пакет веб-службы еще не установлен. Сначала установите пакет из раздела «Управление пакетами», а затем вернитесь сюда, чтобы запустить службу.
+  noVersionAlert:
+    title: Нет активной версии
+    message: Активная версия не найдена. Сначала установите и активируйте версию на странице управления версиями.
+  versionNotReadyAlert:
+    title: Версия не готова
+    message: В активной версии отсутствуют необходимые зависимости. Подробную информацию можно найти на странице «Управление зависимостями».
+  portError:
+    invalid: Неверный номер порта
+    range: Порт должен быть между 1024 и 65535.
+  openLogsButton: Открыть веб-журналы
+  startupFailureDialog:
+    title: Журнал ошибок при запуске
+    viewButton: Просмотр журнала ошибок
+    copyButton: Копировать журнал
+    closeButton: Закрыть
+    emptySummary: Сводка ошибок при запуске недоступна.
+    emptyLog: Вывод журнала запуска недоступен
+    meta: 'Порт: {{port}} | Время: {{timestamp}}'
+    truncatedHint: Вывод усекается до самого последнего содержимого журнала.
+    copySuccess: Журнал запуска скопирован.
+    copyError: Не удалось скопировать журнал запуска.
+    copyEmpty: Нет содержимого журнала для копирования
+  toast:
+    noActiveVersion: Для веб-журналов не выбрана активная версия.
+    openLogsSuccess: Открыта папка веб-журналов активной версии
+    logsNotFound: Папка веб-журналов активной версии не найдена
+    openLogsError: Не удалось открыть папку веб-журналов активной версии.
+  listenAddress:
+    label: Адрес прослушивания
+    description: Выберите, как Desktop привязывает встроенную веб-службу, пока она остановлена.
+    customInputLabel: Пользовательский IPv4
+    customPlaceholder: 192.168.1.24
+    customError: Введите действительный адрес IPv4
+    accessUrlPreviewLabel: Доступ к предварительному просмотру URL
+    wildcardHint: '`0.0.0.0` связывает каждый интерфейс. Рабочий стол по-прежнему открывает локальный клиент через `127.0.0.1`.'
+    localOnlyHint: Изменения вступят в силу при следующем запуске локальной службы.
+    presets:
+      localhost:
+        label: локальный хост
+        description: Лучше всего подходит для встроенного WebView и браузера на этом компьютере.
+      loopback:
+        label: 127.0.0.1
+        description: Используйте явный адрес обратной связи IPv4 для локального доступа.
+      wildcard:
+        label: 0.0.0.0
+        description: Привяжите каждый локальный интерфейс, чтобы другие устройства в локальной сети могли подключаться.
+      custom:
+        label: Пользовательский IP-адрес
+        description: Привяжите один конкретный интерфейс IPv4, например выделенный адаптер локальной сети.
+languageSelector:
+  currentLanguage: Текущий язык
+  selectLanguage: Выберите язык
+dependencyManagement:
+  title: Системные зависимости
+  description: Проверяйте и управляйте зависимостями времени выполнения системы, необходимыми веб-службой.
+  status:
+    installed: Установлено
+    bundled: В комплекте с рабочим столом
+    desktopManaged: Управление настольным компьютером
+    manualInstallRequired: Требуется ручная установка
+    notInstalled: Не установлено
+    versionMismatch: Несоответствие версий
+    checking: Проверка...
+    ready: Готов к использованию
+  actions:
+    install: Установить
+    installing: Установка...
+    refresh: Обновить
+    viewManualSteps: Просмотр шагов, выполняемых вручную
+    visitWebsite: Посетите официальный сайт
+    reinstallDesktop: Переустановить рабочий стол
+    updateDesktop: Обновить рабочий стол
+  details:
+    currentVersion: Текущая версия
+    requiredVersion: Требуемая версия
+    manualCommand: Предлагаемая команда
+    source: Источник
+    bundledSource: Связанный исходный код
+    systemSource: Системный источник
+  manualHandoff:
+    title: Требуется установка пакета вручную CLI
+    description: Запустите предложенную команду за пределами рабочего стола. Текущую информацию о среде Node/npm и поведении PATH, входящей в состав Desktop, можно найти в FAQ.
+    faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    refreshHint: Обновите после завершения команды, чтобы повторно проверить зависимости, управляемые рабочим столом.
+  noDependencies: Зависимости не обнаружены
+packageSource:
+  cardTitle: Конфигурация исходного кода пакета
+  cardDescription: Настройка источников пакетов для установки и управление ими
+  sourceType:
+    label: Тип источника пакета
+    folder: Локальная папка
+    httpIndex: HTTP Индекс
+    http: HTTP URL
+  folder:
+    path:
+      label: Путь к папке
+      placeholder: Введите путь к каталогу пакета
+    browseButton: Обзор...
+    scanButton: Сканировать доступные версии
+    scanning: Сканирование...
+    notFound: Папка не существует или недоступна
+  http:
+    url:
+      label: Пакет URL
+      placeholder: https://example.com/hagicode-0.1.0-linux-x64.zip
+  httpIndex:
+    indexUrl:
+      label: Индекс URL
+      placeholder: https://index.hagicode.com/server/index.json
+      hint: Индексный файл должен содержать массив версий и ресурсы для каждой версии.
+  validateButton: Проверка конфигурации
+  applyButton: Применить конфигурацию
+  fetchVersionsButton: Получить доступные версии
+  validating: Проверка конфигурации...
+  valid: Конфигурация действительна
+  fetchingVersions: Получение версий...
+  nortOnlyNotice: Поддерживаются только пакеты nort (hagicode-*).
+  switchSource: Переключить источник пакета
+  addSource: Добавить источник пакета
+  removeSource: Удалить источник пакета
+  editSource: Изменить источник пакета
+  currentSource: Текущий источник пакета
+  availableSources: Доступные источники пакетов
+  noSources: Источники пакетов не настроены
+  sourceName: Имя источника
+  actions: Действия
+  scanSuccess: Сканирование завершено, найдено {{count}} версий
+  fetchSuccess: Получение завершено, найдено {{count}} версий
+  saveSuccess: Конфигурация источника пакета сохранена.
+  switchSuccess: Источник пакета переключен
+  removeSuccess: Источник пакета удален.
+  confirmRemove: Подтвердить удаление источника этого пакета?
+  error:
+    loadFailed: Не удалось загрузить исходную конфигурацию пакета.
+    saveFailed: Не удалось сохранить конфигурацию источника пакета.
+    switchFailed: Не удалось переключить источник пакета.
+    removeFailed: Не удалось удалить источник пакета.
+    scanFailed: Не удалось просканировать папку
+    fetchFailed: Не удалось получить GitHub выпусков.
+    validateFailed: Не удалось проверить конфигурацию
+tray:
+  status:
+    running: Бег
+    stopped: Остановлено
+    error: Ошибка
+  openInApp: Открыть Hagicode
+  openInBrowser: Открыть в браузере
+  startService: Запустить службу
+  stopService: Остановить службу
+blogFeed:
+  title: Hagicode Блог
+  refresh: Обновить
+  loading: Загрузка...
+  error: Не удалось загрузить, повторите попытку позже.
+  noArticles: Нет доступных статей
+  lastUpdate: 'Последнее обновление: {{date}}'

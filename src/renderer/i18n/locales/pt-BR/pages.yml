@@ -1,0 +1,240 @@
+settings:
+  title: Configurações
+  tabs:
+    onboarding: Integração
+    sharingAcceleration: Baixar e compartilhar
+    updates: Atualizações em segundo plano
+  smartConfig:
+    title: Orientação imediata do Smart Config
+    description: Revise o prompt resolvido, copie-o em qualquer AI CLI compatível e conclua o fluxo de configuração manualmente.
+  onboarding:
+    title: Integração
+    description: Execute novamente o assistente de configuração inicial para baixar pacotes, instalar dependências e iniciar o serviço.
+    restartWizard: Assistente de reinicialização
+    restartWizardDescription: Execute novamente o assistente de configuração inicial para baixar pacotes, instalar dependências e iniciar o serviço.
+    restartButton: Assistente de reinicialização
+    resetting: Redefinindo...
+    resetSuccess: O assistente foi redefinido
+    resetError: 'Falha na reinicialização: {{error}}'
+    homepageTour:
+      title: Redefinir tour pela página inicial
+      description: Limpe o estado de conclusão do tour da página inicial para que o passo a passo guiado possa ser reproduzido automaticamente na próxima vez que você abrir o Gerenciamento do Sistema.
+      resetButton: Redefinir tour pela página inicial
+      resetting: Redefinindo passeio...
+      resetSuccess: O tour pela página inicial foi redefinido
+      resetError: 'Falha ao redefinir o tour da página inicial: {{error}}'
+  sharingAcceleration:
+    title: Aceleração de download e compartilhamento
+    description: Gerencie downloads de torrents, reutilização de cache confiável e comportamento de fallback automático.
+    enabledTitle: Ativar aceleração de compartilhamento de LAN/Internet
+    enabledDescription: Qualquer ativo com metadados de torrent começa primeiro no torrent e retorna automaticamente quando necessário.
+    uploadLimit: Limite de upload (Mbps)
+    cacheLimit: Limite de cache (GiB)
+    retentionDays: Dias de retenção
+    thresholdHint: Ativos com metadados de torrent não são mais limitados pelo antigo limite de 100 MB.
+    networkHint: Desative a aceleração de compartilhamento em redes restritas; o modo portátil sempre força o desligamento.
+    portableModeHint: O modo portátil desativa a aceleração de compartilhamento e propagação externa e, em seguida, mantém os downloads em HTTP/WebSeed substituto.
+    save: Salvar configurações
+    saving: Salvando...
+    saveSuccess: Compartilhando configurações de aceleração salvas
+    saveError: Falha ao salvar as configurações de aceleração de compartilhamento
+    loadError: Falha ao carregar as configurações de aceleração de compartilhamento
+    modeHint: 'Modo: torrent primeiro, fallback automático em caso de falha.'
+    scopeHint: 'A propagação externa permanece focada no desktop e no servidor mais recentes. Limite de cache padrão: 5 GiB.'
+  updates:
+    title: Atualizações em segundo plano
+    description: Gerencie verificações automáticas, pré-downloads em segundo plano e retenção de arquivos verificados.
+    enabled:
+      label: Ativar pré-downloads em segundo plano
+      description: Quando uma versão mais recente compatível for encontrada, baixe o arquivo em segundo plano sem alterar o tempo de execução atual.
+    retainedArchiveCount:
+      label: Contagem de arquivos retidos
+      description: Apenas arquivos baixados automaticamente verificados são mantidos. As entradas mais antigas são removidas quando o limite é excedido.
+    actions:
+      save: Salvar configurações
+      saving: Salvando...
+      cancel: Cancelar
+    messages:
+      saveSuccess: Configurações de atualização em segundo plano salvas
+      saveFailed: Falha ao salvar as configurações de atualização em segundo plano
+    errors:
+      retainedArchiveCountPositive: A contagem de arquivos retidos deve ser um número inteiro positivo.
+      saveErrorDetail: 'Falha ao salvar: {{error}}'
+    notes:
+      snapshotModel: O lembrete do painel é acionado por um instantâneo persistente do processo principal, de modo que o último estado de atualização conhecido sobrevive às recargas do Desktop.
+      retentionPolicy: A limpeza de retenção remove apenas arquivos e metadados armazenados em cache. Os diretórios de versões instaladas permanecem intactos.
+footer:
+  copyright: © 2025 Hagicode Desktop. Construído com ❤️ usando Electron + React + TypeScript.
+  testBuild: Aplicativo de teste – build de desenvolvimento
+quickStart:
+  title: Início rápido
+  description: Instale o pacote de serviços web incorporados e comece a gerenciar sua instância PCode local.
+secure:
+  title: Seguro
+  description: Construído com segurança em mente. Seus dados permanecem em sua máquina.
+header:
+  runningSuccessfully: Executando com sucesso
+dependencyManagement:
+  title: Gerenciamento de Dependências
+  backToDashboard: Voltar ao painel
+  description: Gerencie pacotes de serviços da Web incorporados e dependências do sistema
+  tips:
+    title: Dicas
+    description: Mantenha suas dependências atualizadas para melhor desempenho e segurança.
+  noPackageInstalled: Nenhum pacote instalado
+  installedVersion: Versão instalada
+  requiredVersion: Versão necessária
+  status:
+    installed: Instalado
+    bundled: Incluído no Desktop
+    desktopManaged: Desktop gerenciado
+    manualInstallRequired: Instalação manual necessária
+    notInstalled: Não encontrado
+    versionMismatch: Incompatibilidade de versão
+  actions:
+    refresh: Atualizar dependências
+    install: Instalar
+    installing: Instalando...
+    viewManualSteps: Ver etapas manuais
+    download: Baixar
+    reinstallDesktop: Reinstale a área de trabalho
+    updateDesktop: Atualizar área de trabalho
+  details:
+    manualCommand: Comando sugerido
+    source: Fonte
+    bundledSource: Fonte agrupada
+    systemSource: Fonte do sistema
+  manualHandoff:
+    title: Instalação manual do pacote CLI necessária
+    description: Execute o comando sugerido fora do Desktop. Para obter detalhes atuais sobre o ambiente Node/npm incluído no Desktop e o comportamento do PATH, leia o FAQ.
+    faqLinkLabel: Ver perguntas frequentes sobre o ambiente Node
+    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
+    refreshHint: Atualize após a conclusão do comando para verificar novamente as dependências gerenciadas pelo Desktop.
+versionManagement:
+  title: Gerenciamento de versão
+  description: Instalar, trocar e gerenciar versões Hagicode Server
+  availableVersions: Versões disponíveis
+  installedVersions: Versões instaladas
+  installed: Instalado
+  installing: Instalando...
+  downloading: Baixando
+  extracting: Extraindo
+  verifying: Verificando
+  completed: Concluído
+  switching: Trocando...
+  reinstalling: Reinstalando...
+  installedAt: Instalado em
+  notInstalled: Não instalado
+  confirmUninstall: Tem certeza de que deseja desinstalar esta versão?
+  confirmReinstall: Tem certeza de que deseja reinstalar este pacote? Isso excluirá o cache e a versão instalada e, em seguida, fará o download e instalará novamente.
+  reinstall: Reinstale
+  noVersionsAvailable: Nenhuma versão disponível
+  noVersionsInstalled:
+    title: Nenhuma versão instalada ainda
+    description: A maneira mais fácil de começar a usar Hagicode Desktop é através do nosso assistente de configuração guiado. Conclua a instalação e configuração em apenas algumas etapas.
+    startButton: Iniciar assistente de configuração
+  status:
+    active: Ativo
+    ready: Pronto
+    incomplete: Dependências ausentes
+    installed: Instalado
+    payloadInvalid: Carga útil inválida
+    runtimeIncompatible: Tempo de execução empacotado incompatível
+    desktopIncompatible: Área de trabalho incompatível
+  actions:
+    refresh: Atualizar
+    install: Instalar versão
+    switch: Mudar
+    uninstall: Desinstalar
+    reinstall: Reinstale
+    reinstallPackage: Reinstale este pacote
+    openLogs: Abrir registros
+    showMoreVersions: Mostrar mais versões ({{count}} restantes)
+    showLessVersions: Mostrar menos
+    switchDisabledDesktop: Atualize o Desktop antes de mudar
+  progressBar: Barra de progresso
+  progressText: Texto de progresso
+  info:
+    title: Sobre o gerenciamento de versões
+    description: O gerenciamento de versões permite instalar várias versões Hagicode Server, alternar entre elas e revisar a compatibilidade do desktop antes da ativação.
+  toast:
+    installSuccess: Instalação bem-sucedida
+    installSuccessDescription: A versão foi instalada com sucesso. Inicie o serviço manualmente quando estiver pronto.
+    installSuccessAutoSwitchedDescription: A versão foi instalada com sucesso e agora é a versão ativa.
+    installSuccessNoAutoSwitchDescription: A versão foi instalada com sucesso, mas a versão ativa não foi alterada.
+    installFailed: Falha na instalação
+    installFailedDescription: Ocorreu um erro durante a instalação. Por favor, tente novamente.
+    reinstallSuccess: Reinstalado com sucesso
+    reinstallFailed: Falha na reinstalação
+    uninstallSuccess: Desinstalado com sucesso
+    uninstallFailed: Falha na desinstalação
+    openLogsSuccess: Pasta de registros aberta
+    logsNotFound: Pasta de registros não encontrada
+    openLogsError: Falha ao abrir a pasta de registros
+    onboardingStarted: Assistente de configuração iniciado
+    onboardingFailed: Falha ao iniciar o assistente de configuração
+    switchBlocked: Este pacote requer uma versão mais recente do Desktop.
+    switchFailed: Falha ao mudar de versão
+  dialog:
+    reinstallTitle: Confirme a reinstalação
+    reinstallDescription: Isso excluirá o cache e a versão instalada e, em seguida, fará o download e instalará novamente. Você quer continuar?
+    uninstallTitle: Confirme a desinstalação
+    uninstallDescription: Tem certeza de que deseja desinstalar esta versão? Esta ação não pode ser desfeita.
+    cancel: Cancelar
+    confirm: Confirmar
+  desktopCompatibility:
+    blockedTitle: Atualize o Desktop para ativar este pacote
+    requiredVersion: 'Área de trabalho necessária:'
+    currentVersion: 'Área de trabalho atual:'
+    upgradeGuidance: Atualize Hagicode Desktop e tente trocar ou iniciar novamente este pacote.
+  portableMode:
+    title: Modo de versão portátil
+    description: A instalação de versões, a comutação e o gerenciamento de fontes de pacotes ficam ocultos porque esta compilação é executada a partir de uma carga útil fixa empacotada.
+    activeRuntime: 'Tempo de execução empacotado ativo: {{version}}'
+    updates: As atualizações para esta compilação são gerenciadas pela distribuição em pacote, em vez de ações de versão no aplicativo.
+  downloadStage:
+    queued: Na fila
+    backfilling: Preenchimento substituto
+    fetchingTorrent: Buscando torrent
+    sharedDownloading: Download do torrent primeiro
+  downloadMode:
+    shared: Torrent primeiro
+    fallback: Preenchimento substituto
+    direct: HTTP/WebSeed
+  installTelemetry:
+    mode: Modo
+    stage: Palco
+    peers: Pares
+    sharedBytes: Bytes compartilhados
+    fallbackBytes: Bytes substitutos
+    verified: Verificado
+    flow: 'Fluxo: Buscar torrent -> Download do primeiro torrent -> Preenchimento substituto (se necessário) -> Verificar -> Extrair -> Concluir'
+    flowActive: 'Fluxo atual: {{stage}}'
+  progressMessage:
+    direct-http: Baixando mais de HTTP/WebSeed
+    fetching-torrent-metadata: Buscando metadados de torrent
+    torrent-metadata-ready: Torrent pronto, iniciando aceleração compartilhada
+    torrent-first-started: O primeiro download do torrent foi iniciado
+    shared-acceleration-active: Aceleração compartilhada ativa
+    source-fallback-active: Preenchimento substituto ativo
+    torrent-unavailable-fallback: Torrent indisponível, alterado para fallback automaticamente
+    portable-mode-http-fallback: O modo portátil força o download alternativo
+    legacy-http-fallback: Sem metadados de torrent, usando apenas HTTP/WebSeed
+    no-sha256-required: Nenhuma verificação extra necessária
+    sha256-verifying: Verificando a integridade do pacote
+    sha256-verified: Verificação concluída
+    extracting-package: Extraindo pacote
+    installation-complete: Instalação concluída
+installProgressDialog:
+  title: Instalando Dependências
+  executing: Instalando...
+  executingCommand: Executando o comando {{current}} de {{total}}
+  currentCommand: Comando Atual
+  logs: Registros de instalação
+  status:
+    executing: Instalando...
+    success: Instalação concluída
+    error: Falha na instalação
+  buttons:
+    close: Fechar
+    retry: Tentar novamente
