@@ -8,14 +8,14 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { i18nConfig } from './config';
 
-const localeModules = import.meta.glob('./locales/*/*.json', {
+const localeModules = import.meta.glob('./generated-locales/*/*.json', {
   eager: true,
   import: 'default',
 }) as Record<string, Record<string, unknown>>;
 
 const resources = Object.entries(localeModules).reduce<Record<string, Record<string, Record<string, unknown>>>>(
   (acc, [modulePath, namespaceResources]) => {
-    const match = modulePath.match(/^\.\/locales\/([^/]+)\/([^/]+)\.json$/);
+    const match = modulePath.match(/^\.\/generated-locales\/([^/]+)\/([^/]+)\.json$/);
     if (!match) {
       return acc;
     }
