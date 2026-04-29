@@ -6,6 +6,7 @@ client/node_modules/
 dist/
 pkg/
 *.log
+src/renderer/i18n/generated-locales/
 
 # Environment files
 .env

@@ -23,7 +23,8 @@ Desktop scripts call the globally installed `hagi18n` CLI directly.
 - YAML files in `src/renderer/i18n/locales/<locale>/<namespace>.yml` are the source of truth.
 - Generated JSON files in `src/renderer/i18n/generated-locales/<locale>/<namespace>.json` are runtime artifacts consumed by the renderer.
 - `scripts/generate-i18n-resources.mjs` validates locale directories against `src/shared/desktop-languages.ts` and namespace files against `src/renderer/i18n/config.ts`.
-- Do not hand-edit `generated-locales`; regenerate them from YAML.
+- `generated-locales` is not committed. Dev, build, and check flows generate it automatically before the renderer consumes locale resources.
+- Do not hand-edit `generated-locales`; regenerate it from YAML.
 
 ## Project-local commands
 
