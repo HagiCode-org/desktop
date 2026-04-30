@@ -12,6 +12,7 @@ describe('portable version dev startup', () => {
     const pkg = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
 
     assert.equal(pkg.scripts['dev:portable-version'], 'node scripts/dev-with-portable-runtime.js');
+    assert.equal(pkg.scripts['dev:steam-mode'], 'node scripts/dev-with-portable-runtime.js');
   });
 
   it('defaults the portable runtime root to workspace extracted outputs and allows env or .env overrides', async () => {
@@ -33,6 +34,7 @@ describe('portable version dev startup', () => {
     const docs = await fs.readFile(docsPath, 'utf-8');
 
     assert.match(docs, /npm run dev:portable-version/);
+    assert.match(docs, /npm run dev:steam-mode/);
     assert.match(docs, /HAGICODE_PORTABLE_RUNTIME_ROOT/);
     assert.match(docs, /local_deployment\/linux-x64/);
     assert.match(docs, /local_publishment\/\.local-publishment\/linux-x64-nort/);

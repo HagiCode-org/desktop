@@ -33,6 +33,7 @@ npm run build:prod
 ```
 
 - `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
+- `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
 
 ### Development bundled Node runtime

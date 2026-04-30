@@ -66,6 +66,7 @@
     "package:verify-release-archives:mac:arm64": "cross-env HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 node scripts/verify-release-archives.js",
     "dev:embedded-runtime": "node scripts/dev-with-embedded-runtime.js",
     "dev:portable-version": "node scripts/dev-with-portable-runtime.js",
+    "dev:steam-mode": "node scripts/dev-with-portable-runtime.js",
     "prepare:runtime:optional": "node scripts/prepare-runtime-if-supported.js"
   },
   "keywords": [

@@ -447,7 +447,10 @@ Use the dedicated dev command when you want Electron dev mode to boot directly i
 
 ```bash
 npm run dev:portable-version
+npm run dev:steam-mode
 ```
+
+`npm run dev:steam-mode` is an alias of `npm run dev:portable-version`. Use it when you want the command name to reflect that you are verifying Steam mode startup behavior in development.
 
 Behavior:
 
@@ -464,7 +467,7 @@ Behavior:
 Override the extracted runtime directory explicitly when needed:
 
 ```bash
-HAGICODE_PORTABLE_RUNTIME_ROOT=/absolute/path/to/extracted/runtime npm run dev:portable-version
+HAGICODE_PORTABLE_RUNTIME_ROOT=/absolute/path/to/extracted/runtime npm run dev:steam-mode
 ```
 
 You can also put the override into `repos/hagicode-desktop/.env.local`:
