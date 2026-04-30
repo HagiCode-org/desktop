@@ -27,6 +27,8 @@ describe('portable version renderer integration', () => {
 
     assert.match(source, /const isPortableMode = distributionMode === 'steam';/);
     assert.match(source, /navigationItems\.filter\(\(item\) => item\.id !== 'version'\)/);
+    assert.match(source, /t\('sidebar\.desktopVersion'\)/);
+    assert.match(source, /t\('sidebar\.webVersion'\)/);
   });
 
   it('shows both desktop and web version fields in the portable sidebar footer', async () => {
