@@ -1236,10 +1236,8 @@ export class PCodeWebServiceManager {
    */
   async getVersion(): Promise<string> {
     try {
-      // Use active version path if available
-      if (this.activeVersionPath) {
-        // Try reading manifest.json from active version
-        const manifestPath = path.join(this.activeVersionPath, 'manifest.json');
+      if (this.activeRuntime?.rootPath) {
+        const manifestPath = path.join(this.activeRuntime.rootPath, 'manifest.json');
         try {
           const manifestContent = await fs.readFile(manifestPath, 'utf-8');
           const manifest = JSON.parse(manifestContent);
@@ -1247,10 +1245,18 @@ export class PCodeWebServiceManager {
             return manifest.package.version;
           }
         } catch {
-          log.warn('[WebService] Failed to read manifest from:', this.activeVersionPath);
+          log.warn('[WebService] Failed to read manifest from active runtime:', {
+            runtimeKind: this.activeRuntime.kind,
+            runtimeRoot: this.activeRuntime.rootPath,
+            distributionMode: this.distributionMode,
+          });
         }
       }
 
+      log.info('[WebService] Falling back to unknown version because runtime metadata is unavailable', {
+        activeRuntimeRoot: this.activeRuntime?.rootPath ?? null,
+        distributionMode: this.distributionMode,
+      });
       return 'unknown';
     } catch (error) {
       log.error('[WebService] Failed to get version:', error);

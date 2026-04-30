@@ -6,22 +6,20 @@ import { describe, it } from 'node:test';
 const pathManagerPath = path.resolve(process.cwd(), 'src/main/path-manager.ts');
 const versionManagerPath = path.resolve(process.cwd(), 'src/main/version-manager.ts');
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
-const retiredSteamCompatibilityApplyCall = 'applySteamLinuxStartup' + 'Compatibility';
 
 describe('portable version payload detection', () => {
   it('defines the packaged extra payload contract and required runtime files', async () => {
     const source = await fs.readFile(pathManagerPath, 'utf-8');
 
     assert.match(source, /portable-fixed/);
-    assert.match(source, /bundle-manifest\.json/);
-    assert.match(source, /portable-fixed\/current\/\{osx-x64,osx-arm64\}/);
     assert.match(source, /PCode\.Web\.dll/);
     assert.match(source, /PCode\.Web\.runtimeconfig\.json/);
     assert.match(source, /PCode\.Web\.deps\.json/);
     assert.match(source, /validatePortableRuntimePayload/);
-    assert.match(source, /mapProcessArchToMacosPlatform/);
     assert.match(source, /getPortableRuntimeSelection/);
-    assert.match(source, /selectedPlatform/);
+    assert.match(source, /resolvePackagedPortableRuntimeSelection/);
+    assert.match(source, /resolvePackagedPortableToolchainRoot/);
+    assert.match(source, /compatibility-flat-extra-root/);
   });
 
   it('switches into steam mode only when the packaged payload validates and otherwise falls back safely', async () => {
@@ -42,9 +40,9 @@ describe('portable version payload detection', () => {
     const source = await fs.readFile(mainPath, 'utf-8');
 
     assert.match(source, /get-distribution-mode/);
-    assert.equal(source.includes(retiredSteamCompatibilityApplyCall), false);
     assert.match(source, /initializeDistributionMode\(\)/);
     assert.match(source, /applyActiveRuntimeToWebServiceManager/);
+    assert.match(source, /webServiceManager\.setActiveRuntime\(distributionModeState\.activeRuntime\)/);
     assert.match(source, /setActiveRuntime\(runtimeDescriptor\)/);
     assert.doesNotMatch(source, /portablePayloadDetectedDuringStartup/);
   });

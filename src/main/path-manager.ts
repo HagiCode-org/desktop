@@ -9,10 +9,19 @@ import {
   buildPortableToolchainPaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
-  resolvePortableToolchainRoot,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
+import {
+  buildPortableRuntimeSelection,
+  resolvePackagedPortableRuntimeSelection,
+  resolvePackagedPortableToolchainRoot,
+  type PackagedPortableToolchainResolution,
+  type PortableBundleManifest,
+  type PortableBundleManifestMember,
+  type PortableRuntimeSelection,
+  type PortableRuntimeMacosPlatform,
+} from './portable-runtime-layout.js';
 import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
 import type {
   BootstrapDataDirectoryContext,
@@ -23,12 +32,21 @@ import type {
 export {
   buildNodeMajorNpmGlobalPaths,
   buildPortableToolchainPaths,
-  resolvePortableToolchainRoot,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
+export {
+  buildPortableRuntimeSelection,
+  resolvePackagedPortableRuntimeSelection,
+  resolvePackagedPortableToolchainRoot,
+  type PackagedPortableToolchainResolution,
+  type PortableBundleManifest,
+  type PortableBundleManifestMember,
+  type PortableRuntimeMacosPlatform,
+  type PortableRuntimeSelection,
+} from './portable-runtime-layout.js';
 
 /**
  * Path types for different platforms
@@ -82,85 +100,6 @@ export interface PortablePayloadValidationResult {
   isValid: boolean;
   runtimeRoot: string;
   missingFiles: string[];
-}
-
-export interface PortableBundleManifestMember {
-  platform: 'osx-x64' | 'osx-arm64';
-  relativePath: string;
-  requiredPaths: string[];
-}
-
-export interface PortableBundleManifest {
-  schemaVersion: number;
-  kind: 'macos-universal';
-  publicationPlatform: 'osx-universal';
-  currentLayout: string;
-  fallbackRule: string;
-  manifestPath: string;
-  includedPlatforms: Array<'osx-x64' | 'osx-arm64'>;
-  members: PortableBundleManifestMember[];
-}
-
-export interface PortableRuntimeSelection {
-  bundleRoot: string;
-  runtimeRoot: string;
-  manifestPath: string | null;
-  selectedPlatform: Platform | null;
-  selectionSource: 'legacy-current-root' | 'bundle-member';
-}
-
-export function mapProcessArchToMacosPlatform(
-  runtimePlatform: NodeJS.Platform = process.platform,
-  runtimeArch: string = process.arch,
-): 'osx-x64' | 'osx-arm64' | null {
-  if (runtimePlatform !== 'darwin') {
-    return null;
-  }
-
-  return runtimeArch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-}
-
-export function parsePortableBundleManifest(raw: unknown): PortableBundleManifest | null {
-  if (!raw || typeof raw !== 'object') {
-    return null;
-  }
-
-  const manifest = raw as Partial<PortableBundleManifest>;
-  if (manifest.kind !== 'macos-universal' || !Array.isArray(manifest.members)) {
-    return null;
-  }
-
-  const members = manifest.members.filter((member): member is PortableBundleManifestMember => (
-    !!member &&
-    typeof member === 'object' &&
-    (member.platform === 'osx-x64' || member.platform === 'osx-arm64') &&
-    typeof member.relativePath === 'string' &&
-    Array.isArray(member.requiredPaths)
-  ));
-  if (members.length === 0) {
-    return null;
-  }
-
-  const includedPlatforms = Array.isArray(manifest.includedPlatforms)
-    ? manifest.includedPlatforms.filter((entry): entry is 'osx-x64' | 'osx-arm64' => (
-      entry === 'osx-x64' || entry === 'osx-arm64'
-    ))
-    : members.map((member) => member.platform);
-
-  return {
-    schemaVersion: typeof manifest.schemaVersion === 'number' ? manifest.schemaVersion : 1,
-    kind: 'macos-universal',
-    publicationPlatform: 'osx-universal',
-    currentLayout: typeof manifest.currentLayout === 'string'
-      ? manifest.currentLayout
-      : 'portable-fixed/current/{osx-x64,osx-arm64}',
-    fallbackRule: typeof manifest.fallbackRule === 'string'
-      ? manifest.fallbackRule
-      : 'When this manifest is absent, Desktop must use portable-fixed/current as the legacy single-root payload.',
-    manifestPath: typeof manifest.manifestPath === 'string' ? manifest.manifestPath : 'bundle-manifest.json',
-    includedPlatforms,
-    members,
-  };
 }
 
 function getPathModuleForPlatform(platform: NodeJS.Platform): typeof path.posix | typeof path.win32 {
@@ -392,7 +331,6 @@ export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
   private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
-  private static readonly PORTABLE_BUNDLE_MANIFEST_FILE = 'bundle-manifest.json';
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -651,7 +589,17 @@ export class PathManager {
   }
 
   getDevelopmentPortableToolchainRoot(): string {
-    return path.resolve(process.cwd(), 'resources', 'portable-fixed', 'toolchain');
+    return path.resolve(process.cwd(), 'resources', 'toolchain');
+  }
+
+  private buildPortableToolchainRuntimePaths(): PortableToolchainPaths {
+    return buildPortableToolchainPaths({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      overrideRoot: this.getPortableToolchainRoot(),
+    });
   }
 
   getPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -690,72 +638,24 @@ export class PathManager {
     return this.getExpectedPackagedPortableRuntimeRoot();
   }
 
-  private readPortableBundleManifest(bundleRoot: string): PortableBundleManifest | null {
-    const manifestPath = path.join(bundleRoot, PathManager.PORTABLE_BUNDLE_MANIFEST_FILE);
-    if (!fsSync.existsSync(manifestPath)) {
-      return null;
-    }
+  getPortableRuntimeSelection(): PortableRuntimeSelection {
+    if (app.isPackaged && !process.env.HAGICODE_PORTABLE_RUNTIME_ROOT?.trim()) {
+      const selection = resolvePackagedPortableRuntimeSelection(
+        process.resourcesPath,
+        PathManager.PORTABLE_FIXED_REQUIRED_FILES,
+      );
 
-    try {
-      const manifest = parsePortableBundleManifest(JSON.parse(fsSync.readFileSync(manifestPath, 'utf8')));
-      if (!manifest) {
-        log.warn('[PathManager] Ignoring invalid portable bundle manifest:', manifestPath);
-        return null;
+      if (selection.selectionSource === 'compatibility-flat-extra-root') {
+        log.warn('[PathManager] Falling back to compatibility Steam runtime layout under extra/current:', {
+          bundleRoot: selection.bundleRoot,
+          runtimeRoot: selection.runtimeRoot,
+        });
       }
 
-      return manifest;
-    } catch (error) {
-      log.warn('[PathManager] Failed to read portable bundle manifest:', manifestPath, error);
-      return null;
-    }
-  }
-
-  getPortableRuntimeSelection(): PortableRuntimeSelection {
-    const bundleRoot = this.getPortableRuntimeBundleRoot();
-    const manifestPath = path.join(bundleRoot, PathManager.PORTABLE_BUNDLE_MANIFEST_FILE);
-    const bundleManifest = this.readPortableBundleManifest(bundleRoot);
-    if (!bundleManifest) {
-      return {
-        bundleRoot,
-        runtimeRoot: bundleRoot,
-        manifestPath: fsSync.existsSync(manifestPath) ? manifestPath : null,
-        selectedPlatform: null,
-        selectionSource: 'legacy-current-root',
-      };
+      return selection;
     }
 
-    const selectedPlatform = mapProcessArchToMacosPlatform();
-    if (!selectedPlatform) {
-      log.warn('[PathManager] Portable bundle manifest is present but current platform is not a supported macOS member:', {
-        manifestPath,
-        currentPlatform: process.platform,
-        currentArch: process.arch,
-      });
-      return {
-        bundleRoot,
-        runtimeRoot: bundleRoot,
-        manifestPath,
-        selectedPlatform: null,
-        selectionSource: 'legacy-current-root',
-      };
-    }
-
-    const selectedMember = bundleManifest.members.find((member) => member.platform === selectedPlatform);
-    if (!selectedMember) {
-      log.warn('[PathManager] Portable bundle manifest does not contain the selected macOS architecture member:', {
-        manifestPath,
-        selectedPlatform,
-        includedPlatforms: bundleManifest.includedPlatforms,
-      });
-    }
-
-    return {
-      bundleRoot,
-      runtimeRoot: path.join(bundleRoot, selectedMember?.relativePath ?? selectedPlatform),
-      manifestPath,
-      selectedPlatform,
-      selectionSource: 'bundle-member',
-    };
+    return buildPortableRuntimeSelection(this.getPortableRuntimeBundleRoot());
   }
 
   getPortableRuntimeRoot(): string {
@@ -763,43 +663,35 @@ export class PathManager {
   }
 
   getPortableToolchainRoot(): string {
-    return resolvePortableToolchainRoot({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    });
+    const overrideRoot = process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+    if (overrideRoot) {
+      return path.resolve(overrideRoot);
+    }
+
+    if (!app.isPackaged) {
+      return path.resolve(process.cwd(), 'resources', 'toolchain');
+    }
+
+    const resolution = resolvePackagedPortableToolchainRoot(process.resourcesPath);
+    if (resolution.selectionSource === 'compatibility-flat-extra-root') {
+      log.warn('[PathManager] Falling back to compatibility Steam toolchain layout under extra/toolchain:', {
+        toolchainRoot: resolution.toolchainRoot,
+      });
+    }
+
+    return resolution.toolchainRoot;
   }
 
   getPortableNodeRoot(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).nodeRoot;
+    return this.buildPortableToolchainRuntimePaths().nodeRoot;
   }
 
   getPortableToolchainBinRoot(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).toolchainBinRoot;
+    return this.buildPortableToolchainRuntimePaths().toolchainBinRoot;
   }
 
   getPortableNodeBinRoot(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).nodeBinRoot;
+    return this.buildPortableToolchainRuntimePaths().nodeBinRoot;
   }
 
   getPortableNpmGlobalBinRoot(): string {
@@ -807,33 +699,15 @@ export class PathManager {
   }
 
   getPortableNodeExecutablePath(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).nodeExecutablePath;
+    return this.buildPortableToolchainRuntimePaths().nodeExecutablePath;
   }
 
   getPortableNpmExecutablePath(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).npmExecutablePath;
+    return this.buildPortableToolchainRuntimePaths().npmExecutablePath;
   }
 
   getPortableManagedCliExecutablePath(commandName: 'openspec' | 'skills' | 'omniroute'): string | null {
-    const paths = buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    });
+    const paths = this.buildPortableToolchainRuntimePaths();
     const executableName = getCommandExecutableName(process.platform, commandName);
     const npmGlobalCandidate = path.join(this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot, executableName);
     if (fsSync.existsSync(npmGlobalCandidate)) {
@@ -853,13 +727,7 @@ export class PathManager {
   }
 
   getPortableToolchainManifestPath(): string {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    }).toolchainManifestPath;
+    return this.buildPortableToolchainRuntimePaths().toolchainManifestPath;
   }
 
   getPortableSkillsExecutablePath(): string | null {

@@ -2253,8 +2253,11 @@ app.whenReady().then(async () => {
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
   webServiceManager.setDistributionMode(distributionModeState.mode);
+  webServiceManager.setActiveRuntime(distributionModeState.activeRuntime);
   log.info('[App] Distribution mode initialized:', {
     distributionMode: distributionModeState.mode,
+    portableRuntimeSource: distributionModeState.activeRuntime?.kind ?? null,
+    portableRuntimeRoot: distributionModeState.activeRuntime?.rootPath ?? null,
     electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
     electronSandboxOverrideMode: electronSandboxOverrideDecision.mode,
     electronSandboxOverrideReason: electronSandboxOverrideDecision.reason,
