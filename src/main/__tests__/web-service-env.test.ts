@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import {
@@ -19,7 +21,9 @@ import {
 import {
   collectPortableToolchainPathEntries,
   dedupePathEntries,
+  injectManagedCliPathEnv,
   injectPortableToolchainEnv,
+  resolveManagedCliCommandDirectory,
   resolvePathEnvKey,
 } from '../portable-toolchain-env.js';
 import {
@@ -509,6 +513,44 @@ describe('web-service-env', () => {
     );
   });
 
+  it('keeps the inherited PATH untouched for managed server startup while preserving explicit dotnet vars', async () => {
+    const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+    const runtimeEnv = {
+      PATH: '/system/bin',
+      HOME: '/tmp/home',
+      DOTNET_ROOT: '/portable/dotnet',
+      DOTNET_MULTILEVEL_LOOKUP: '0',
+      HAGICODE_DOTNET_EXE: '/portable/dotnet/dotnet',
+      NODE_PATH: '/system/node_modules',
+      NODE: '/portable/toolchain/node/bin/node',
+      npm_node_execpath: '/portable/toolchain/node/bin/node',
+      npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
+      HAGICODE_PORTABLE_TOOLCHAIN_ROOT: '/portable/toolchain',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/node22/npmGlobal',
+    };
+    const result = injectManagedCliPathEnv(runtimeEnv, {
+      platform: 'linux',
+    });
+
+    assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
+    assert.match(source, /preserves inherited order; Desktop does not prepend bundled Node\/npm paths for the managed server/);
+    assert.match(source, /HAGICODE_AGENT_CLI_PATH=/);
+    assert.doesNotMatch(source, /HAGICODE_NPM_GLOBAL_BIN_ROOT=/);
+    assert.doesNotMatch(source, /npm_execpath=/);
+    assert.equal(runtimeEnv.PATH, '/system/bin');
+    assert.equal(runtimeEnv.DOTNET_ROOT, '/portable/dotnet');
+    assert.equal(runtimeEnv.DOTNET_MULTILEVEL_LOOKUP, '0');
+    assert.equal(runtimeEnv.HAGICODE_DOTNET_EXE, '/portable/dotnet/dotnet');
+    assert.equal(result.env.PATH, '/system/bin');
+    assert.equal(result.env.HAGICODE_DOTNET_EXE, '/portable/dotnet/dotnet');
+    assert.equal(result.env.NODE_PATH, undefined);
+    assert.equal(result.env.NODE, undefined);
+    assert.equal(result.env.npm_execpath, undefined);
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
+    assert.equal(runtimeEnv.PATH, '/system/bin');
+  });
+
   it('prepends portable toolchain paths in deterministic order and injects the marker env', () => {
     const baseEnv = {
       PATH: '/system/bin',
@@ -570,6 +612,90 @@ describe('web-service-env', () => {
     assert.equal(result.env.HAGICODE_NODE_MAJOR_VERSION, '22');
     assert.equal(baseEnv.PATH, '/system/bin');
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
+  });
+
+  it('injects HAGICODE_AGENT_CLI_PATH and removes Node/npm marker vars for managed server startup', () => {
+    const baseEnv = {
+      PATH: '/system/bin',
+      NODE_PATH: '/system/node_modules',
+      NODE: '/portable/toolchain/node/bin/node',
+      npm_node_execpath: '/portable/toolchain/node/bin/node',
+      npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
+      HAGICODE_PORTABLE_TOOLCHAIN_ROOT: '/portable/toolchain',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/node22/npmGlobal',
+      HAGICODE_NPM_GLOBAL_BIN_ROOT: '/userData/node22/npmGlobal/bin',
+      HAGICODE_NPM_GLOBAL_MODULES_ROOT: '/userData/node22/npmGlobal/lib/node_modules',
+      HAGICODE_NPM_CACHE_ROOT: '/userData/node22/npmCache',
+      HAGICODE_NODE_MAJOR_VERSION: '22',
+    };
+    const npmGlobalPaths = {
+      nodeVersion: '22.12.0',
+      nodeMajorVersion: '22',
+      npmGlobalPrefix: '/userData/node22/npmGlobal',
+      npmGlobalBinRoot: '/userData/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/userData/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/userData/node22/npmCache',
+    };
+
+    const result = injectManagedCliPathEnv(baseEnv, {
+      platform: 'linux',
+      npmGlobalPaths,
+    });
+
+    assert.equal(result.pathKey, 'PATH');
+    assert.equal(result.managedCliPath, '/userData/node22/npmGlobal/bin');
+    assert.equal(result.env.PATH, '/system/bin');
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, '/userData/node22/npmGlobal/bin');
+    assert.equal(result.env.NODE_PATH, undefined);
+    assert.equal(result.env.NODE, undefined);
+    assert.equal(result.env.npm_execpath, undefined);
+    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
+    assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
+  });
+
+  it('derives managed CLI command directories from the effective platform-specific wrapper roots', () => {
+    assert.equal(resolveManagedCliCommandDirectory({
+      nodeVersion: '22.12.0',
+      nodeMajorVersion: '22',
+      npmGlobalPrefix: '/userData/node22/npmGlobal',
+      npmGlobalBinRoot: '/userData/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/userData/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/userData/node22/npmCache',
+    }, 'linux'), '/userData/node22/npmGlobal/bin');
+
+    assert.equal(resolveManagedCliCommandDirectory({
+      nodeVersion: '22.12.0',
+      nodeMajorVersion: '22',
+      npmGlobalPrefix: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
+      npmGlobalBinRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
+      npmGlobalModulesRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\node_modules',
+      npmCacheRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmCache',
+    }, 'win32'), 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+
+    assert.equal(resolveManagedCliCommandDirectory(null, 'linux'), null);
+  });
+
+  it('uses the effective managed command wrapper root for Windows server startup', () => {
+    const result = injectManagedCliPathEnv({
+      Path: 'C:\\Windows\\System32',
+      NODE: 'C:\\portable\\toolchain\\node\\node.exe',
+    }, {
+      platform: 'win32',
+      npmGlobalPaths: {
+        nodeVersion: '22.12.0',
+        nodeMajorVersion: '22',
+        npmGlobalPrefix: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
+        npmGlobalBinRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
+        npmGlobalModulesRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\node_modules',
+        npmCacheRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmCache',
+      },
+    });
+
+    assert.equal(result.pathKey, 'Path');
+    assert.equal(result.managedCliPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+    assert.equal(result.env.Path, 'C:\\Windows\\System32');
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+    assert.equal(result.env.NODE, undefined);
   });
 
   it('uses bundled toolchain paths when the desktop manifest default is enabled', () => {

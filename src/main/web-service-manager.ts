@@ -20,7 +20,7 @@ import {
   SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX,
 } from './system-vault-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
-import { injectPortableToolchainEnv } from './portable-toolchain-env.js';
+import { injectManagedCliPathEnv } from './portable-toolchain-env.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 import { executeCli } from './utils/cli-executor.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
@@ -340,49 +340,16 @@ export class PCodeWebServiceManager {
   private buildManagedRuntimeEnvironment(
     mergedEnv: NodeJS.ProcessEnv,
     runtimeRoot: string,
+    dotnetPath: string,
   ): NodeJS.ProcessEnv {
-    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
-    const existingPath = mergedEnv[pathKey] ?? mergedEnv.PATH ?? mergedEnv.Path ?? '';
-    const runtimePath = existingPath ? `${runtimeRoot}${path.delimiter}${existingPath}` : runtimeRoot;
-
     return {
       ...mergedEnv,
       DOTNET_ROOT: runtimeRoot,
       DOTNET_MULTILEVEL_LOOKUP: '0',
-      [pathKey]: runtimePath,
+      HAGICODE_DOTNET_EXE: dotnetPath,
     };
   }
 
-  private applySelectedNodeNpmEnvironment(
-    baseEnv: NodeJS.ProcessEnv,
-    nodeRuntimeRoot: string | null,
-  ): NodeJS.ProcessEnv {
-    if (!nodeRuntimeRoot) {
-      return baseEnv;
-    }
-
-    const nodeBinRoot = process.platform === 'win32' ? nodeRuntimeRoot : path.join(nodeRuntimeRoot, 'bin');
-    const nodeExecutablePath = path.join(nodeBinRoot, process.platform === 'win32' ? 'node.exe' : 'node');
-    const npmCliPath = process.platform === 'win32'
-      ? path.join(nodeRuntimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js')
-      : path.join(nodeRuntimeRoot, 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
-    const env: NodeJS.ProcessEnv = {
-      ...baseEnv,
-      NODE: nodeExecutablePath,
-      npm_node_execpath: nodeExecutablePath,
-      npm_execpath: npmCliPath,
-    };
-
-    delete env.npm_config_prefix;
-    delete env.NPM_CONFIG_PREFIX;
-    delete env.npm_config_global_prefix;
-    delete env.NPM_CONFIG_GLOBAL_PREFIX;
-    delete env.npm_config_globalconfig;
-    delete env.NPM_CONFIG_GLOBALCONFIG;
-    delete env.NPM_CONFIG_GLOBAL_CONFIG;
-
-    return env;
-  }
 
   private getPm2RuntimeFilesDirectory(): string {
     return path.join(this.pathManager.getPaths().config, PM2_RUNTIME_DIR_NAME);
@@ -873,7 +840,7 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Start the web service process with the bundled dotnet host
+   * Start the web service process with the pinned dotnet host
    * @returns StartResult with service URL and port information
    */
   async start(): Promise<StartResult> {
@@ -959,60 +926,40 @@ export class PCodeWebServiceManager {
       let envMode: WebServiceConfigMode = 'env';
       try {
         const prepared = await this.prepareServiceEnvironment();
-        const runtimeEnv = this.buildManagedRuntimeEnvironment(prepared.mergedEnv, launchContext.runtimeRoot);
+        const runtimeEnv = this.buildManagedRuntimeEnvironment(
+          prepared.mergedEnv,
+          launchContext.runtimeRoot,
+          launchContext.dotnetPath,
+        );
         const bundledRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
         const bundledToolchainStatus = await bundledRuntimeManager.verify();
         const activationPolicy = bundledToolchainStatus.activationPolicy;
-        const npmGlobalPaths = activationPolicy.enabled
-          ? this.pathManager.getNodeMajorNpmGlobalPaths({
-            nodeVersion: bundledToolchainStatus.manifest?.node?.version ?? bundledToolchainStatus.components.node.version ?? process.versions.node,
-          })
-          : null;
-        const toolchainEnv = injectPortableToolchainEnv(runtimeEnv, this.pathManager, {
-          activationPolicy,
+        const npmGlobalPaths = this.pathManager.getNodeMajorNpmGlobalPaths({
+          nodeVersion: bundledToolchainStatus.manifest?.node?.version ?? bundledToolchainStatus.components.node.version ?? process.versions.node,
+        });
+        const managedCliEnv = injectManagedCliPathEnv(runtimeEnv, {
           npmGlobalPaths,
         });
-        const selectedNodeRuntimeRoot = toolchainEnv.usedBundledToolchain
-          ? this.pathManager.getPortableNodeRoot()
-          : null;
-        preparedEnv = this.applySelectedNodeNpmEnvironment(toolchainEnv.env, selectedNodeRuntimeRoot);
+        preparedEnv = managedCliEnv.env;
         envMode = prepared.mode;
-        const pathKey = toolchainEnv.pathKey;
+        const pathKey = managedCliEnv.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
-        this.appendStartupLogLine(`${pathKey} includes pinned runtime root`);
-        if (selectedNodeRuntimeRoot) {
-          this.appendStartupLogLine(`Selected Node runtime root=${selectedNodeRuntimeRoot}`);
-        }
-        if (toolchainEnv.npmGlobalPaths) {
-          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PREFIX=${toolchainEnv.npmGlobalPaths.npmGlobalPrefix}`);
-          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_BIN_ROOT=${toolchainEnv.npmGlobalPaths.npmGlobalBinRoot}`);
-          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_MODULES_ROOT=${toolchainEnv.npmGlobalPaths.npmGlobalModulesRoot}`);
-          this.appendStartupLogLine(`HAGICODE_NODE_MAJOR_VERSION=${toolchainEnv.npmGlobalPaths.nodeMajorVersion}`);
-        }
-        this.appendStartupLogLine(`Bundled portable toolchain policy: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
-        if (toolchainEnv.usedBundledToolchain) {
-          this.appendStartupLogLine(`HAGICODE_PORTABLE_TOOLCHAIN_ROOT=${toolchainEnv.toolchainRoot}`);
-          this.appendStartupLogLine('Bundled portable toolchain activated for desktop-managed startup');
-          this.appendStartupLogLine(`${pathKey} prepends bundled toolchain paths: ${toolchainEnv.injectedPaths.join(', ')}`);
-          log.info('[WebService] Portable toolchain injection enabled:', {
+        this.appendStartupLogLine(`HAGICODE_DOTNET_EXE=${launchContext.dotnetPath}`);
+        this.appendStartupLogLine(`${pathKey} preserves inherited order; Desktop does not prepend bundled Node/npm paths for the managed server`);
+        this.appendStartupLogLine('Bundled dotnet is exposed explicitly through HAGICODE_DOTNET_EXE instead of PATH');
+        this.appendStartupLogLine(`Bundled Node toolchain policy for Desktop-managed package operations: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
+        if (managedCliEnv.managedCliPath) {
+          this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedCliEnv.managedCliPath}`);
+          this.appendStartupLogLine('Desktop-managed server startup preserves inherited PATH and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH');
+          log.info('[WebService] Managed server startup preserving inherited PATH with explicit Agent CLI path:', {
             pathKey,
-            toolchainRoot: toolchainEnv.toolchainRoot,
-            injectedPaths: toolchainEnv.injectedPaths,
+            managedCliPath: managedCliEnv.managedCliPath,
             activationPolicy,
           });
         } else {
-          if (activationPolicy.enabled === false) {
-            this.appendStartupLogLine(`Bundled portable toolchain explicitly disabled for desktop startup; keeping inherited system PATH (${activationPolicy.source})`);
-          } else {
-            this.appendStartupLogLine('Bundled portable toolchain unavailable for desktop startup; keeping inherited system PATH');
-            if (toolchainEnv.missingInjectedPaths.length > 0) {
-              this.appendStartupLogLine(`Missing bundled PATH entries: ${toolchainEnv.missingInjectedPaths.join(', ')}`);
-            }
-          }
-          log.info('[WebService] Portable toolchain injection skipped, falling back to inherited PATH:', {
-            toolchainRoot: toolchainEnv.toolchainRoot,
-            missingInjectedPaths: toolchainEnv.missingInjectedPaths,
+          this.appendStartupLogLine('Desktop-managed server startup preserves inherited PATH with no managed Agent CLI path hint');
+          log.info('[WebService] Managed Agent CLI path injection unavailable; preserving inherited PATH:', {
             activationPolicy,
           });
         }
@@ -1025,7 +972,7 @@ export class PCodeWebServiceManager {
         return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
       }
 
-      this.emitPhase(StartupPhase.Spawning, 'Starting service with bundled dotnet runtime through PM2...');
+      this.emitPhase(StartupPhase.Spawning, 'Starting service with pinned dotnet executable through PM2...');
       const spawnArgs = [launchContext.serviceDllPath, ...(this.config.args || [])];
       const pm2RuntimeDirectory = this.getPm2RuntimeFilesDirectory();
       this.appendStartupLogLine(`PM2 managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);

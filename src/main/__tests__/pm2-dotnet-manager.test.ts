@@ -26,7 +26,9 @@ function createRuntimeConfig(runtimeFilesDirectory: string) {
     env: {
       Z_LAST: 'tail',
       ASPNETCORE_URLS: 'http://127.0.0.1:36556',
+      DOTNET_MULTILEVEL_LOOKUP: '0',
       DOTNET_ROOT: '/runtime',
+      HAGICODE_DOTNET_EXE: '/runtime/dotnet',
     },
   };
 }
@@ -47,7 +49,7 @@ describe('pm2-dotnet-manager', () => {
 
       assert.equal(path.basename(files.envPath), PM2_ENV_FILE_NAME);
       assert.equal(path.basename(files.ecosystemPath), PM2_ECOSYSTEM_FILE_NAME);
-      assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_ROOT=/runtime\nZ_LAST=tail\n');
+      assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_MULTILEVEL_LOOKUP=0\nDOTNET_ROOT=/runtime\nHAGICODE_DOTNET_EXE=/runtime/dotnet\nZ_LAST=tail\n');
       assert.match(ecosystemContent, new RegExp(`name: "${PM2_DOTNET_PROCESS_NAME}"`));
       assert.match(ecosystemContent, /script: "\/runtime\/dotnet"/);
       assert.match(ecosystemContent, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
@@ -66,6 +68,39 @@ describe('pm2-dotnet-manager', () => {
     assert.match(ecosystem, /interpreter: "none"/);
     assert.match(ecosystem, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
     assert.match(ecosystem, /HAGICODE_PM2_ENV_FILE/);
+  });
+
+  it('keeps explicit absolute dotnet paths intact for Windows runtime files', () => {
+    const ecosystem = buildPm2EcosystemConfig({
+      ...createRuntimeConfig('C:\\pm2-runtime'),
+      dotnetPath: 'C:\\runtime\\dotnet.exe',
+      serviceDllPath: 'C:\\apps\\Hagicode Desktop\\current\\PCode.Web.dll',
+      serviceWorkingDirectory: 'C:\\apps\\Hagicode Desktop\\current',
+      runtimeFilesDirectory: 'C:\\pm2-runtime',
+      env: {
+        ASPNETCORE_URLS: 'http://127.0.0.1:36556',
+        DOTNET_MULTILEVEL_LOOKUP: '0',
+        DOTNET_ROOT: 'C:\\runtime',
+        HAGICODE_DOTNET_EXE: 'C:\\runtime\\dotnet.exe',
+      },
+    });
+
+    assert.equal(ecosystem.includes('script: "C:\\\\runtime\\\\dotnet.exe"'), true);
+    assert.equal(ecosystem.includes('cwd: "C:\\\\apps\\\\Hagicode Desktop\\\\current"'), true);
+    assert.equal(ecosystem.includes('env_file: "C:\\\\pm2-runtime/.env"'), true);
+    assert.match(ecosystem, /PCode\.Web\.dll/);
+    assert.match(ecosystem, /--mode/);
+    assert.match(ecosystem, /desktop/);
+  });
+
+  it('rejects non-absolute dotnet paths for PM2-managed startup', () => {
+    assert.throws(
+      () => buildPm2EcosystemConfig({
+        ...createRuntimeConfig('/runtime-files'),
+        dotnetPath: 'dotnet',
+      }),
+      /absolute dotnetPath/,
+    );
   });
 
   it('constructs explicit pm2 command argument arrays', () => {

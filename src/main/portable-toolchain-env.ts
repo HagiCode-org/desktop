@@ -31,6 +31,33 @@ export interface PortableToolchainEnvResult {
   npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
+export interface ManagedCliPathEnvResult {
+  env: NodeJS.ProcessEnv;
+  pathKey: string;
+  managedCliPath: string | null;
+  npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
+}
+
+const SERVER_NODE_ENV_KEYS = [
+  'NODE_PATH',
+  'NODE',
+  'npm_node_execpath',
+  'npm_execpath',
+  'HAGICODE_NPM_GLOBAL_PREFIX',
+  'HAGICODE_NPM_GLOBAL_BIN_ROOT',
+  'HAGICODE_NPM_GLOBAL_MODULES_ROOT',
+  'HAGICODE_NPM_CACHE_ROOT',
+  'HAGICODE_NODE_MAJOR_VERSION',
+  'HAGICODE_PORTABLE_TOOLCHAIN_ROOT',
+  'npm_config_prefix',
+  'NPM_CONFIG_PREFIX',
+  'npm_config_global_prefix',
+  'NPM_CONFIG_GLOBAL_PREFIX',
+  'npm_config_globalconfig',
+  'NPM_CONFIG_GLOBALCONFIG',
+  'NPM_CONFIG_GLOBAL_CONFIG',
+] as const;
+
 function normalizePathForComparison(entry: string, platform: NodeJS.Platform): string {
   const resolved = path.resolve(entry);
   return platform === 'win32' ? resolved.toLowerCase() : resolved;
@@ -169,4 +196,49 @@ export function injectPortableToolchainEnv(
     activationPolicy,
     npmGlobalPaths: options.npmGlobalPaths ?? null,
   };
+}
+
+export function injectManagedCliPathEnv(
+  baseEnv: NodeJS.ProcessEnv,
+  options: { platform?: NodeJS.Platform; npmGlobalPaths?: NodeMajorNpmGlobalPaths | null } = {},
+): ManagedCliPathEnvResult {
+  const platform = options.platform ?? process.platform;
+  const pathKey = resolvePathEnvKey(baseEnv, platform);
+  const env: NodeJS.ProcessEnv = {
+    ...baseEnv,
+  };
+
+  for (const key of SERVER_NODE_ENV_KEYS) {
+    delete env[key];
+  }
+
+  const managedCliPath = resolveManagedCliCommandDirectory(options.npmGlobalPaths ?? null, platform);
+  if (managedCliPath) {
+    env.HAGICODE_AGENT_CLI_PATH = managedCliPath;
+  } else {
+    delete env.HAGICODE_AGENT_CLI_PATH;
+  }
+
+  return {
+    env,
+    pathKey,
+    managedCliPath,
+    npmGlobalPaths: options.npmGlobalPaths ?? null,
+  };
+}
+
+export function resolveManagedCliCommandDirectory(
+  npmGlobalPaths: NodeMajorNpmGlobalPaths | null | undefined,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  if (!npmGlobalPaths) {
+    return null;
+  }
+
+  const commandDirectory = platform === 'win32'
+    ? npmGlobalPaths.npmGlobalPrefix
+    : npmGlobalPaths.npmGlobalBinRoot;
+
+  const trimmedCommandDirectory = commandDirectory.trim();
+  return trimmedCommandDirectory.length > 0 ? trimmedCommandDirectory : null;
 }

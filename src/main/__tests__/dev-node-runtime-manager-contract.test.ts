@@ -27,7 +27,8 @@ describe('source mode bundled node runtime contract', () => {
     assert.doesNotMatch(source, /bundled-dev/, 'dependency results no longer report bundled-dev');
     assert.match(source, /const bundledStatus = await this\.bundledNodeRuntimeManager\.verify\(\)/, 'dependency detection uses the bundled portable toolchain');
     assert.doesNotMatch(webServiceSource, /HAGICODE_DEV_NODE_RUNTIME_ROOT/, 'service startup no longer injects the dev runtime marker');
-    assert.match(webServiceSource, /toolchainEnv\.usedBundledToolchain\s*\?\s*this\.pathManager\.getPortableNodeRoot\(\)/, 'service startup selects the portable Node root when the bundled toolchain is active');
+    assert.match(webServiceSource, /injectManagedCliPathEnv\(runtimeEnv, \{/, 'service startup derives an explicit managed Agent CLI path for the server environment');
+    assert.match(webServiceSource, /HAGICODE_AGENT_CLI_PATH/, 'service startup exposes the managed Agent CLI path instead of mutating PATH with Node runtime roots');
   });
 
   it('removes generated .runtime ignore rules and the dev runtime package command', async () => {

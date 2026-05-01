@@ -41,31 +41,32 @@ describe('web-service startup flow', () => {
 
     assert.match(source, /resolveManagedLaunchContext/);
     assert.match(source, /validateBundledRuntimeForPlatform/);
-    assert.match(source, /Starting service with bundled dotnet runtime/);
-    assert.match(source, /getDesktopActivationPolicy\(\)/);
-    assert.match(source, /injectPortableToolchainEnv\(runtimeEnv, this\.pathManager, \{ activationPolicy \}\)/);
+    assert.match(source, /Starting service with pinned dotnet executable through PM2/);
+    assert.match(source, /const activationPolicy = bundledToolchainStatus\.activationPolicy;/);
+    assert.match(source, /injectManagedCliPathEnv\(runtimeEnv, \{/);
     assert.doesNotMatch(source, /DevNodeRuntimeManager/);
     assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
     assert.doesNotMatch(source, /prepends development Node runtime paths/);
-    assert.match(source, /toolchainEnv\.usedBundledToolchain\s*\?\s*this\.pathManager\.getPortableNodeRoot\(\)/);
-    assert.match(source, /this\.applySelectedNodeNpmEnvironment\(toolchainEnv\.env, selectedNodeRuntimeRoot\)/);
+    assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
     assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
     assert.match(source, /isManagedServiceReachable\(this\.config\.port\)/);
     assert.doesNotMatch(source, /terminateLingeringServiceByPort/);
     assert.match(source, /PM2 start may fail if this is a non-PM2 port conflict/);
+    assert.match(source, /buildManagedRuntimeEnvironment\(\s*prepared\.mergedEnv,\s*launchContext\.runtimeRoot,\s*launchContext\.dotnetPath,\s*\)/);
     assert.match(source, /dotnetPath: launchContext\.dotnetPath/);
     assert.match(source, /serviceDllPath: launchContext\.serviceDllPath/);
     assert.match(source, /serviceWorkingDirectory: launchContext\.serviceWorkingDirectory/);
     assert.match(source, /DOTNET_ROOT: runtimeRoot/);
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
-    assert.match(source, /includes pinned runtime root/);
-    assert.match(source, /Bundled portable toolchain activated for desktop-managed startup/);
-    assert.match(source, /prepends bundled toolchain paths/);
-    assert.match(source, /explicitly disabled for desktop startup; keeping inherited system PATH/);
-    assert.match(source, /unavailable for desktop startup; keeping inherited system PATH/);
-    assert.match(source, /Missing bundled PATH entries:/);
+    assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
+    assert.match(source, /appendStartupLogLine\(`HAGICODE_DOTNET_EXE=\$\{launchContext\.dotnetPath\}`\)/);
+    assert.match(source, /preserves inherited order; bundled dotnet is exposed via HAGICODE_DOTNET_EXE instead of PATH/);
+    assert.doesNotMatch(source, /includes pinned runtime root/);
+    assert.match(source, /Managed Agent CLI path injection enabled/);
+    assert.match(source, /Desktop-managed server startup exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH only/);
+    assert.match(source, /Managed Agent CLI path injection unavailable, keeping inherited PATH/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {

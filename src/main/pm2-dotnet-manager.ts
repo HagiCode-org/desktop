@@ -309,6 +309,10 @@ export function buildPm2EnvFile(env: NodeJS.ProcessEnv): string {
 }
 
 export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string {
+  if (!isAbsolutePathLike(config.dotnetPath)) {
+    throw new Error(`PM2-managed .NET services require an absolute dotnetPath. Received: ${config.dotnetPath}`);
+  }
+
   const processName = config.processName ?? PM2_DOTNET_PROCESS_NAME;
   const args = [config.serviceDllPath, ...(config.args ?? [])];
   const envPath = path.join(config.runtimeFilesDirectory, PM2_ENV_FILE_NAME);
