@@ -364,8 +364,10 @@ Desktop starts the validated framework-dependent service payload through PM2 ins
 
 Before each start or restart, Desktop regenerates runtime files under `<userData>/config/pm2-dotnet-service/`:
 
-- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, and portable toolchain PATH entries.
-- `ecosystem.config.js`: PM2 app definition with explicit `script`, `args`, `cwd`, process name, and `.env` file reference.
+- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, `DOTNET_MULTILEVEL_LOOKUP=0`, explicit `HAGICODE_DOTNET_EXE`, and optional `HAGICODE_AGENT_CLI_PATH` when Desktop can resolve a managed CLI command directory. `HAGICODE_AGENT_CLI_PATH` is a command-search directory hint only: on POSIX it points at `npmGlobalBinRoot`, and on Windows it points at the npm global prefix that contains `.cmd` / `.ps1` wrappers. Desktop no longer prepends bundled dotnet or bundled Node/npm runtime roots to `PATH` / `Path` for the managed server.
+- `ecosystem.config.js`: PM2 app definition with explicit absolute `script` (`dotnetPath`), `args`, `cwd`, process name, and `.env` file reference.
+
+If a managed service descendant or maintenance script needs the Desktop-pinned .NET runtime, read `HAGICODE_DOTNET_EXE` or `DOTNET_ROOT` from `.env`. Do not assume Desktop has exposed the bundled runtime through `PATH`.
 
 Desktop invokes PM2 with explicit argument arrays. Start and restart use `pm2 startOrReload <ecosystem.config.js> --update-env` so repeated user actions update the same PM2 app instead of creating duplicate entries. Stop uses `pm2 stop hagicode-dotnet-service`, and status uses `pm2 jlist` to map PM2 `online` state back to the existing Desktop service status model.
 
