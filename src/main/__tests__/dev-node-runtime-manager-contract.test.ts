@@ -29,6 +29,7 @@ describe('source mode bundled node runtime contract', () => {
     assert.doesNotMatch(webServiceSource, /HAGICODE_DEV_NODE_RUNTIME_ROOT/, 'service startup no longer injects the dev runtime marker');
     assert.match(webServiceSource, /injectManagedCliPathEnv\(runtimeEnv, \{/, 'service startup derives an explicit managed Agent CLI path for the server environment');
     assert.match(webServiceSource, /HAGICODE_AGENT_CLI_PATH/, 'service startup exposes the managed Agent CLI path instead of mutating PATH with Node runtime roots');
+    assert.match(webServiceSource, /HAGICODE_NPM_GLOBAL_PATH/, 'service startup also exposes the Desktop-managed npm global prefix for runtime package resolution');
   });
 
   it('removes generated .runtime ignore rules and the dev runtime package command', async () => {

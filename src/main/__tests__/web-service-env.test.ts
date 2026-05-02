@@ -536,6 +536,7 @@ describe('web-service-env', () => {
     assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
     assert.match(source, /preserves inherited order; Desktop does not prepend bundled Node\/npm paths for the managed server/);
     assert.match(source, /HAGICODE_AGENT_CLI_PATH=/);
+    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH=/);
     assert.doesNotMatch(source, /HAGICODE_NPM_GLOBAL_BIN_ROOT=/);
     assert.doesNotMatch(source, /npm_execpath=/);
     assert.equal(runtimeEnv.PATH, '/system/bin');
@@ -614,7 +615,7 @@ describe('web-service-env', () => {
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
   });
 
-  it('injects HAGICODE_AGENT_CLI_PATH and removes Node/npm marker vars for managed server startup', () => {
+  it('injects managed npm metadata and removes Node/npm marker vars for managed server startup', () => {
     const baseEnv = {
       PATH: '/system/bin',
       NODE_PATH: '/system/node_modules',
@@ -644,8 +645,10 @@ describe('web-service-env', () => {
 
     assert.equal(result.pathKey, 'PATH');
     assert.equal(result.managedCliPath, '/userData/node22/npmGlobal/bin');
+    assert.equal(result.managedNpmGlobalPath, '/userData/node22/npmGlobal');
     assert.equal(result.env.PATH, '/system/bin');
     assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, '/userData/node22/npmGlobal/bin');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, '/userData/node22/npmGlobal');
     assert.equal(result.env.NODE_PATH, undefined);
     assert.equal(result.env.NODE, undefined);
     assert.equal(result.env.npm_execpath, undefined);
@@ -693,8 +696,10 @@ describe('web-service-env', () => {
 
     assert.equal(result.pathKey, 'Path');
     assert.equal(result.managedCliPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+    assert.equal(result.managedNpmGlobalPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
     assert.equal(result.env.Path, 'C:\\Windows\\System32');
     assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
     assert.equal(result.env.NODE, undefined);
   });
 

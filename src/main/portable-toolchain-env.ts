@@ -35,6 +35,7 @@ export interface ManagedCliPathEnvResult {
   env: NodeJS.ProcessEnv;
   pathKey: string;
   managedCliPath: string | null;
+  managedNpmGlobalPath: string | null;
   npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
@@ -49,6 +50,8 @@ const SERVER_NODE_ENV_KEYS = [
   'HAGICODE_NPM_CACHE_ROOT',
   'HAGICODE_NODE_MAJOR_VERSION',
   'HAGICODE_PORTABLE_TOOLCHAIN_ROOT',
+  'HAGICODE_AGENT_CLI_PATH',
+  'HAGICODE_NPM_GLOBAL_PATH',
   'npm_config_prefix',
   'NPM_CONFIG_PREFIX',
   'npm_config_global_prefix',
@@ -213,18 +216,36 @@ export function injectManagedCliPathEnv(
   }
 
   const managedCliPath = resolveManagedCliCommandDirectory(options.npmGlobalPaths ?? null, platform);
+  const managedNpmGlobalPath = resolveManagedNpmGlobalPath(options.npmGlobalPaths ?? null);
   if (managedCliPath) {
     env.HAGICODE_AGENT_CLI_PATH = managedCliPath;
   } else {
     delete env.HAGICODE_AGENT_CLI_PATH;
+  }
+  if (managedNpmGlobalPath) {
+    env.HAGICODE_NPM_GLOBAL_PATH = managedNpmGlobalPath;
+  } else {
+    delete env.HAGICODE_NPM_GLOBAL_PATH;
   }
 
   return {
     env,
     pathKey,
     managedCliPath,
+    managedNpmGlobalPath,
     npmGlobalPaths: options.npmGlobalPaths ?? null,
   };
+}
+
+function resolveManagedNpmGlobalPath(
+  npmGlobalPaths: NodeMajorNpmGlobalPaths | null | undefined,
+): string | null {
+  if (!npmGlobalPaths) {
+    return null;
+  }
+
+  const trimmedPrefix = npmGlobalPaths.npmGlobalPrefix.trim();
+  return trimmedPrefix.length > 0 ? trimmedPrefix : null;
 }
 
 export function resolveManagedCliCommandDirectory(

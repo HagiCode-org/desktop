@@ -152,6 +152,28 @@ function resolveExistingPath(
   return null;
 }
 
+function resolveWindowsNodeExecutableFromPortableToolchainRoots(
+  portableToolchainRoots: readonly string[],
+  existsSync: (targetPath: string) => boolean,
+): string | null {
+  for (const toolchainRoot of portableToolchainRoots) {
+    const trimmedRoot = toolchainRoot.trim();
+    if (!trimmedRoot) {
+      continue;
+    }
+
+    const nodeExecutablePath = resolveExistingPath(
+      buildPathCandidates(trimmedRoot, 'node', 'node.exe'),
+      existsSync,
+    );
+    if (nodeExecutablePath) {
+      return nodeExecutablePath;
+    }
+  }
+
+  return null;
+}
+
 function quotePm2Argument(value: string): string {
   return `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
 }
@@ -197,14 +219,54 @@ function resolveWindowsPm2LaunchFromEnvironment(
   pm2Command: string,
   env: NodeJS.ProcessEnv | undefined,
   existsSync: (targetPath: string) => boolean,
+  portableToolchainRoots: readonly string[] = [],
 ): { command: string; argsPrefix: string[] } | null {
   if (!env || !isWindowsPm2Command(pm2Command)) {
     return null;
   }
 
+  const mergedPortableToolchainRoots = new Set<string>();
+  const envPortableToolchainRoot = env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+  if (envPortableToolchainRoot) {
+    mergedPortableToolchainRoots.add(envPortableToolchainRoot);
+  }
+  for (const toolchainRoot of portableToolchainRoots) {
+    const trimmedRoot = toolchainRoot.trim();
+    if (trimmedRoot) {
+      mergedPortableToolchainRoots.add(trimmedRoot);
+    }
+  }
+
   const preferredNodeExecutable = [env.npm_node_execpath, env.NODE]
     .map(value => value?.trim())
     .find((value): value is string => Boolean(value));
+  const managedNpmGlobalPath = env.HAGICODE_NPM_GLOBAL_PATH?.trim();
+  if (managedNpmGlobalPath) {
+    const pm2CliPath = resolveExistingPath(
+      buildPathCandidates(managedNpmGlobalPath, 'node_modules', 'pm2', 'bin', 'pm2'),
+      existsSync,
+    );
+    if (pm2CliPath) {
+      if (preferredNodeExecutable && isAbsolutePathLike(preferredNodeExecutable) && existsSync(preferredNodeExecutable)) {
+        return {
+          command: preferredNodeExecutable,
+          argsPrefix: [pm2CliPath],
+        };
+      }
+
+      const bundledNodeExecutable = resolveWindowsNodeExecutableFromPortableToolchainRoots(
+        [...mergedPortableToolchainRoots],
+        existsSync,
+      );
+      if (bundledNodeExecutable) {
+        return {
+          command: bundledNodeExecutable,
+          argsPrefix: [pm2CliPath],
+        };
+      }
+    }
+  }
+
   if (preferredNodeExecutable) {
     const resolved = resolveWindowsPm2LaunchFromNodeExecutable(preferredNodeExecutable, existsSync);
     if (resolved) {
@@ -212,7 +274,7 @@ function resolveWindowsPm2LaunchFromEnvironment(
     }
   }
 
-  const portableToolchainRoot = env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+  const portableToolchainRoot = envPortableToolchainRoot;
   if (!portableToolchainRoot) {
     return null;
   }
@@ -368,23 +430,17 @@ export function resolvePm2LaunchPlan(
   const normalizedCommand = stripWrappingQuotes(pm2Command);
 
   if (platform === 'win32') {
-    const envLaunch = resolveWindowsPm2LaunchFromEnvironment(normalizedCommand, options.env, existsSync);
+    const candidatePortableToolchainRoots = options.portableToolchainRoots ?? resolveDefaultPortableToolchainRoots();
+    const envLaunch = resolveWindowsPm2LaunchFromEnvironment(
+      normalizedCommand,
+      options.env,
+      existsSync,
+      candidatePortableToolchainRoots,
+    );
     if (envLaunch) {
       return {
         command: envLaunch.command,
         argsPrefix: envLaunch.argsPrefix,
-        shell: false,
-      };
-    }
-    const portableLaunch = resolveWindowsPm2LaunchFromPortableToolchainRoots(
-      normalizedCommand,
-      options.portableToolchainRoots ?? resolveDefaultPortableToolchainRoots(),
-      existsSync,
-    );
-    if (portableLaunch) {
-      return {
-        command: portableLaunch.command,
-        argsPrefix: portableLaunch.argsPrefix,
         shell: false,
       };
     }
@@ -393,6 +449,18 @@ export function resolvePm2LaunchPlan(
       return {
         command: nodeLaunch.command,
         argsPrefix: nodeLaunch.argsPrefix,
+        shell: false,
+      };
+    }
+    const portableLaunch = resolveWindowsPm2LaunchFromPortableToolchainRoots(
+      normalizedCommand,
+      candidatePortableToolchainRoots,
+      existsSync,
+    );
+    if (portableLaunch) {
+      return {
+        command: portableLaunch.command,
+        argsPrefix: portableLaunch.argsPrefix,
         shell: false,
       };
     }

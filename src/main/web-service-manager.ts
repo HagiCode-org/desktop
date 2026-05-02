@@ -949,12 +949,18 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`${pathKey} preserves inherited order; Desktop does not prepend bundled Node/npm paths for the managed server`);
         this.appendStartupLogLine('Bundled dotnet is exposed explicitly through HAGICODE_DOTNET_EXE instead of PATH');
         this.appendStartupLogLine(`Bundled Node toolchain policy for Desktop-managed package operations: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
+        if (managedCliEnv.managedNpmGlobalPath) {
+          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PATH=${managedCliEnv.managedNpmGlobalPath}`);
+        }
         if (managedCliEnv.managedCliPath) {
           this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedCliEnv.managedCliPath}`);
           this.appendStartupLogLine('Desktop-managed server startup preserves inherited PATH and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH');
-          log.info('[WebService] Managed server startup preserving inherited PATH with explicit Agent CLI path:', {
+        }
+        if (managedCliEnv.managedNpmGlobalPath || managedCliEnv.managedCliPath) {
+          log.info('[WebService] Managed server startup preserving inherited PATH with managed npm metadata:', {
             pathKey,
             managedCliPath: managedCliEnv.managedCliPath,
+            managedNpmGlobalPath: managedCliEnv.managedNpmGlobalPath,
             activationPolicy,
           });
         } else {

@@ -87,7 +87,7 @@ describe('pm2-dotnet-manager', () => {
 
     assert.equal(ecosystem.includes('script: "C:\\\\runtime\\\\dotnet.exe"'), true);
     assert.equal(ecosystem.includes('cwd: "C:\\\\apps\\\\Hagicode Desktop\\\\current"'), true);
-    assert.equal(ecosystem.includes('env_file: "C:\\\\pm2-runtime/.env"'), true);
+    assert.match(ecosystem, /env_file: "C:\\\\pm2-runtime(?:\/|\\\\)\.env"/);
     assert.match(ecosystem, /PCode\.Web\.dll/);
     assert.match(ecosystem, /--mode/);
     assert.match(ecosystem, /desktop/);
@@ -182,6 +182,24 @@ describe('pm2-dotnet-manager', () => {
     });
   });
 
+  it('rewrites bare Windows pm2 launches using the managed npm global prefix and bundled node runtime', () => {
+    const plan = resolvePm2LaunchPlan('pm2.cmd', {
+      platform: 'win32',
+      env: {
+        HAGICODE_NPM_GLOBAL_PATH: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
+      },
+      portableToolchainRoots: ['C:\\portable-toolchain'],
+      existsSync: target => target === 'C:\\portable-toolchain\\node\\node.exe'
+        || target === 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\node_modules\\pm2\\bin\\pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: 'C:\\portable-toolchain\\node\\node.exe',
+      argsPrefix: ['C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\node_modules\\pm2\\bin\\pm2'],
+      shell: false,
+    });
+  });
+
   it('normalizes missing executable and non-zero exit failures', async () => {
     const missingExecutor: Pm2CommandExecutor = {
       run: async () => {
@@ -227,7 +245,7 @@ describe('pm2-dotnet-manager', () => {
     };
 
     try {
-      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor });
+      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor, platform: 'linux' });
       const started = await manager.startOrReload(createRuntimeConfig(tmpDir));
       const stopped = await manager.stop(tmpDir);
 
@@ -353,7 +371,7 @@ describe('pm2-dotnet-manager', () => {
     };
 
     try {
-      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor });
+      const manager = new Pm2DotnetManager({ pm2Command: 'pm2', commandExecutor: executor, platform: 'linux' });
       const result = await manager.startFresh(createRuntimeConfig(tmpDir));
 
       assert.equal(result.success, true);

@@ -48,6 +48,7 @@ describe('web-service startup flow', () => {
     assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
     assert.doesNotMatch(source, /prepends development Node runtime paths/);
     assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
+    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
     assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
@@ -62,11 +63,11 @@ describe('web-service startup flow', () => {
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
     assert.match(source, /appendStartupLogLine\(`HAGICODE_DOTNET_EXE=\$\{launchContext\.dotnetPath\}`\)/);
-    assert.match(source, /preserves inherited order; bundled dotnet is exposed via HAGICODE_DOTNET_EXE instead of PATH/);
+    assert.match(source, /preserves inherited order; Desktop does not prepend bundled Node\/npm paths for the managed server/);
     assert.doesNotMatch(source, /includes pinned runtime root/);
-    assert.match(source, /Managed Agent CLI path injection enabled/);
-    assert.match(source, /Desktop-managed server startup exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH only/);
-    assert.match(source, /Managed Agent CLI path injection unavailable, keeping inherited PATH/);
+    assert.match(source, /Managed server startup preserving inherited PATH with managed npm metadata/);
+    assert.match(source, /Desktop-managed server startup preserves inherited PATH and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH/);
+    assert.match(source, /Desktop-managed server startup preserves inherited PATH with no managed Agent CLI path hint/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
