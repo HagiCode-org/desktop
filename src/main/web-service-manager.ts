@@ -149,6 +149,8 @@ export class PCodeWebServiceManager {
   private startupLogLines: string[] = [];
   private startupLogTruncated: boolean = false;
   private lastPm2Env: NodeJS.ProcessEnv | null = null;
+  private lastPm2StatusWarningKey: string | null = null;
+  private repeatedPm2StatusWarningSuppressed: boolean = false;
   private distributionMode: DistributionMode = 'normal';
 
   constructor(config: WebServiceConfig, deps: WebServiceManagerDeps = {}) {
@@ -289,6 +291,46 @@ export class PCodeWebServiceManager {
     }
   }
 
+  private appendDiagnosticOutput(label: string, content: string): void {
+    const lines = content
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .slice(-5);
+
+    for (const line of lines) {
+      this.appendStartupLogLine(`${label}: ${line}`);
+    }
+  }
+
+  private resetPm2StatusWarningState(): void {
+    this.lastPm2StatusWarningKey = null;
+    this.repeatedPm2StatusWarningSuppressed = false;
+  }
+
+  private logPm2StatusFailure(result: Extract<Pm2LifecycleResult, { success: false }>): void {
+    const warningKey = `${result.operation}:${result.errorCode}:${result.message}`;
+    if (this.lastPm2StatusWarningKey === warningKey) {
+      if (!this.repeatedPm2StatusWarningSuppressed) {
+        log.info('[WebService] Suppressing repeated PM2 status warnings after the initial failure:', {
+          operation: result.operation,
+          errorCode: result.errorCode,
+          message: result.message,
+        });
+        this.repeatedPm2StatusWarningSuppressed = true;
+      }
+      return;
+    }
+
+    this.lastPm2StatusWarningKey = warningKey;
+    this.repeatedPm2StatusWarningSuppressed = false;
+    log.warn('[WebService] PM2 status unavailable:', {
+      operation: result.operation,
+      errorCode: result.errorCode,
+      message: result.message,
+    });
+  }
+
   private buildStartupFailureInfo(summary: string): StartupFailureInfo {
     const timestamp = new Date().toISOString();
     const fallbackLog = summary || 'Service startup failed without additional output.';
@@ -357,6 +399,9 @@ export class PCodeWebServiceManager {
 
   private buildPm2LifecycleFailureResult(result: Pm2LifecycleResult): StartResult {
     const message = result.success ? 'PM2 command failed unexpectedly' : result.message;
+    this.appendStartupLogLine(`PM2 ${result.operation} failure summary: ${message}`);
+    this.appendDiagnosticOutput('PM2 stdout', result.stdout);
+    this.appendDiagnosticOutput('PM2 stderr', result.stderr);
     const failure = this.buildStartupFailureInfo(message);
 
     return {
@@ -845,6 +890,7 @@ export class PCodeWebServiceManager {
    */
   async start(): Promise<StartResult> {
     await this.ensureSavedConfigInitialized();
+    this.resetPm2StatusWarningState();
     this.resetStartupLogBuffer();
     this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
@@ -1033,6 +1079,7 @@ export class PCodeWebServiceManager {
       if (healthCheckPassed) {
         this.status = 'running';
         this.startTime = Date.now();
+        this.resetPm2StatusWarningState();
 
         // Persist successful bind configuration for future starts without storing process identity.
         await this.saveLastSuccessfulConfig();
@@ -1123,6 +1170,7 @@ export class PCodeWebServiceManager {
       this.startTime = null;
       this.restartCount = 0;
       this.currentPhase = StartupPhase.Idle;
+      this.resetPm2StatusWarningState();
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
@@ -1151,6 +1199,7 @@ export class PCodeWebServiceManager {
 
     const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
     if (pm2Status.success && pm2Status.status) {
+      this.resetPm2StatusWarningState();
       if (pm2Status.status.online) {
         this.status = 'running';
         this.currentPhase = StartupPhase.Running;
@@ -1162,11 +1211,7 @@ export class PCodeWebServiceManager {
         this.startTime = null;
       }
     } else if (!pm2Status.success) {
-      log.warn('[WebService] PM2 status unavailable:', {
-        operation: pm2Status.operation,
-        errorCode: pm2Status.errorCode,
-        message: pm2Status.message,
-      });
+      this.logPm2StatusFailure(pm2Status);
     }
 
     const uptime = this.startTime ? Date.now() - this.startTime : 0;

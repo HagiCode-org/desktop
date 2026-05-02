@@ -227,6 +227,124 @@ describe('pm2-dotnet-manager', () => {
     }
   });
 
+  it('retries PM2 bootstrap text until a valid JSON status result is available', async () => {
+    const delays: number[] = [];
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args) => {
+        if (args[0] !== 'jlist') {
+          return { code: 0, stdout: 'ok', stderr: '' };
+        }
+
+        jlistCount += 1;
+        if (jlistCount === 1) {
+          return {
+            code: 0,
+            stdout: '[PM2] Spawning PM2 daemon with pm2_home=/tmp/.pm2',
+            stderr: '',
+          };
+        }
+
+        return {
+          code: 0,
+          stdout: JSON.stringify([{ name: PM2_DOTNET_PROCESS_NAME, pid: 3210, pm2_env: { status: 'online', restart_time: 1, pm_uptime: Date.now() - 3000 } }]),
+          stderr: '',
+        };
+      },
+    };
+
+    const manager = new Pm2DotnetManager({
+      pm2Command: 'pm2',
+      commandExecutor: executor,
+      platform: 'win32',
+      statusRetryDelayMs: 7,
+      statusRetryMaxRetries: 2,
+      sleep: async (ms) => { delays.push(ms); },
+    });
+
+    const result = await manager.status(process.cwd());
+
+    assert.equal(result.success, true);
+    if (result.success) {
+      assert.equal(result.status?.online, true);
+      assert.equal(result.status?.restartCount, 1);
+    }
+    assert.equal(jlistCount, 2);
+    assert.deepEqual(delays, [7]);
+  });
+
+  it('fails with malformed output after PM2 bootstrap retries are exhausted', async () => {
+    const delays: number[] = [];
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args) => {
+        assert.equal(args[0], 'jlist');
+        jlistCount += 1;
+        return {
+          code: 0,
+          stdout: '[PM2] Spawning PM2 daemon with pm2_home=/tmp/.pm2',
+          stderr: '',
+        };
+      },
+    };
+
+    const manager = new Pm2DotnetManager({
+      pm2Command: 'pm2',
+      commandExecutor: executor,
+      platform: 'win32',
+      statusRetryDelayMs: 9,
+      statusRetryMaxRetries: 2,
+      sleep: async (ms) => { delays.push(ms); },
+    });
+
+    const result = await manager.status(process.cwd());
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.errorCode, 'pm2-malformed-output');
+      assert.match(result.message, /could not be normalized after 3 attempts during PM2 bootstrap/i);
+      assert.match(result.message, /\[PM2\] Spawning PM2 daemon/i);
+    }
+    assert.equal(jlistCount, 3);
+    assert.deepEqual(delays, [9, 9]);
+  });
+
+  it('does not hide ordinary PM2 command failures behind bootstrap retries', async () => {
+    const delays: number[] = [];
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args) => {
+        assert.equal(args[0], 'jlist');
+        jlistCount += 1;
+        return {
+          code: 1,
+          stdout: '',
+          stderr: 'pm2.cmd returned an unreadable localized error',
+        };
+      },
+    };
+
+    const manager = new Pm2DotnetManager({
+      pm2Command: 'pm2',
+      commandExecutor: executor,
+      platform: 'win32',
+      statusRetryDelayMs: 11,
+      statusRetryMaxRetries: 3,
+      sleep: async (ms) => { delays.push(ms); },
+    });
+
+    const result = await manager.status(process.cwd());
+
+    assert.equal(result.success, false);
+    if (!result.success) {
+      assert.equal(result.errorCode, 'pm2-command-failed');
+      assert.match(result.message, /status failed while querying the PM2 process list/i);
+      assert.match(result.message, /unreadable localized error/i);
+    }
+    assert.equal(jlistCount, 1);
+    assert.deepEqual(delays, []);
+  });
+
   it('runs lifecycle through mocked pm2 and maps jlist status', async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-lifecycle-'));
     const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
@@ -378,6 +496,72 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(result.success && result.status?.online, true);
       assert.deepEqual(calls.map(call => call.args[0]), ['jlist', 'delete', 'start', 'jlist']);
       assert.equal(calls.every(call => call.cwd === '/apps/Hagicode Desktop/current'), true);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reuses the same runtime files and environment when bootstrap retries are needed before and after startFresh', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-bootstrap-start-'));
+    const runtimeConfig = createRuntimeConfig(tmpDir);
+    const delays: number[] = [];
+    const calls: Array<{ args: string[]; cwd: string; env: NodeJS.ProcessEnv | undefined }> = [];
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args, options) => {
+        calls.push({
+          args,
+          cwd: String(options.cwd ?? ''),
+          env: options.env,
+        });
+
+        if (args[0] === 'jlist') {
+          jlistCount += 1;
+          if (jlistCount === 1 || jlistCount === 3) {
+            return {
+              code: 0,
+              stdout: '[PM2] PM2 Successfully daemonized',
+              stderr: '',
+            };
+          }
+
+          if (jlistCount === 2) {
+            return { code: 0, stdout: '[]', stderr: '' };
+          }
+
+          return {
+            code: 0,
+            stdout: JSON.stringify([{ name: PM2_DOTNET_PROCESS_NAME, pid: 8765, pm2_env: { status: 'online', restart_time: 0, pm_uptime: Date.now() - 4000 } }]),
+            stderr: '',
+          };
+        }
+
+        return { code: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+
+    try {
+      const manager = new Pm2DotnetManager({
+        pm2Command: 'pm2',
+        commandExecutor: executor,
+        platform: 'win32',
+        statusRetryDelayMs: 5,
+        statusRetryMaxRetries: 2,
+        sleep: async (ms) => { delays.push(ms); },
+      });
+      const result = await manager.startFresh(runtimeConfig);
+      const envContent = await fs.readFile(path.join(tmpDir, PM2_ENV_FILE_NAME), 'utf-8');
+      const ecosystemContent = await fs.readFile(path.join(tmpDir, PM2_ECOSYSTEM_FILE_NAME), 'utf-8');
+
+      assert.equal(result.success, true);
+      assert.equal(result.success && result.status?.online, true);
+      assert.deepEqual(calls.map(call => call.args[0]), ['jlist', 'jlist', 'start', 'jlist', 'jlist']);
+      assert.equal(calls.every(call => call.cwd === runtimeConfig.serviceWorkingDirectory), true);
+      assert.equal(calls.every(call => call.env?.HAGICODE_DOTNET_EXE === runtimeConfig.env.HAGICODE_DOTNET_EXE), true);
+      assert.equal(calls[2]?.args[1], path.join(tmpDir, PM2_ECOSYSTEM_FILE_NAME));
+      assert.match(envContent, /HAGICODE_DOTNET_EXE=\/runtime\/dotnet/);
+      assert.match(ecosystemContent, /PCode\.Web\.dll/);
+      assert.deepEqual(delays, [5, 5]);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }

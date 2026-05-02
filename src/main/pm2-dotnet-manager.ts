@@ -50,6 +50,9 @@ export interface Pm2DotnetManagerOptions {
   processName?: string;
   commandExecutor?: Pm2CommandExecutor;
   platform?: NodeJS.Platform;
+  statusRetryDelayMs?: number;
+  statusRetryMaxRetries?: number;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface Pm2LaunchPlan {
@@ -82,6 +85,23 @@ export type Pm2LifecycleResult =
       message: string;
       stdout: string;
       stderr: string;
+    };
+
+const DEFAULT_PM2_STATUS_RETRY_DELAY_MS = 500;
+const DEFAULT_PM2_STATUS_MAX_RETRIES = 3;
+
+type Pm2StatusNormalizationResult =
+  | {
+      kind: 'status';
+      status: Pm2ProcessStatus;
+    }
+  | {
+      kind: 'bootstrap';
+      summary: string;
+    }
+  | {
+      kind: 'failure';
+      failure: Pm2LifecycleResult;
     };
 
 class DefaultPm2CommandExecutor implements Pm2CommandExecutor {
@@ -473,8 +493,19 @@ export function resolvePm2LaunchPlan(
   };
 }
 
+function summarizeOutput(primary: string, secondary = '', fallback = 'PM2 command failed without output.'): string {
+  return [primary, secondary]
+    .flatMap(value => value.trim().split(/\r?\n/))
+    .map(line => line.trim())
+    .find(Boolean)
+    ?? fallback;
+}
+
 function summarizeFailure(operation: Pm2DotnetOperation, result: Pm2CommandResult): string {
-  const detail = (result.stderr || result.stdout || '').trim().split(/\r?\n/).find(Boolean) ?? 'PM2 command failed without output.';
+  const detail = summarizeOutput(result.stderr, result.stdout);
+  if (operation === 'status') {
+    return `PM2 status failed while querying the PM2 process list: ${detail}`;
+  }
   return `PM2 ${operation} failed: ${detail}`;
 }
 
@@ -494,29 +525,97 @@ function normalizeMissingExecutable(operation: Pm2DotnetOperation, error: unknow
   };
 }
 
-function parsePm2Jlist(stdout: string, processName: string): Pm2ProcessStatus | Pm2LifecycleResult {
+function buildPm2MalformedStatusResult(message: string, stdout: string, stderr: string): Pm2LifecycleResult {
+  return {
+    success: false,
+    operation: 'status',
+    errorCode: 'pm2-malformed-output',
+    message,
+    stdout,
+    stderr,
+  };
+}
+
+function isRetryablePm2BootstrapOutput(stdout: string, stderr: string): boolean {
+  const combined = `${stdout}\n${stderr}`.trim().toLowerCase();
+  if (!combined) {
+    return false;
+  }
+
+  return [
+    '[pm2] spawning',
+    '[pm2] launching',
+    '[pm2] starting',
+    '[pm2] pm2 successfully daemonized',
+    'spawning pm2 daemon',
+    'pm2 home',
+    'rpc socket',
+    'pub socket',
+    'daemon launched',
+  ].some(marker => combined.includes(marker));
+}
+
+function parsePm2Jlist(stdout: string, stderr: string, processName: string): Pm2StatusNormalizationResult {
+  const trimmedStdout = stdout.trim();
+  const trimmedStderr = stderr.trim();
+
+  if (!trimmedStdout) {
+    if (!trimmedStderr) {
+      return {
+        kind: 'status',
+        status: {
+          exists: false,
+          online: false,
+          pid: null,
+          status: null,
+          restartCount: 0,
+          uptime: 0,
+        },
+      };
+    }
+
+    if (isRetryablePm2BootstrapOutput(stdout, stderr)) {
+      return {
+        kind: 'bootstrap',
+        summary: summarizeOutput(stdout, stderr, 'PM2 reported bootstrap output before JSON status was available.'),
+      };
+    }
+
+    return {
+      kind: 'failure',
+      failure: buildPm2MalformedStatusResult(
+        'PM2 status output was empty on stdout and could not be normalized from stderr.',
+        stdout,
+        stderr,
+      ),
+    };
+  }
+
   try {
-    const parsed = JSON.parse(stdout || '[]');
+    const parsed = JSON.parse(trimmedStdout);
     if (!Array.isArray(parsed)) {
       return {
-        success: false,
-        operation: 'status',
-        errorCode: 'pm2-malformed-output',
-        message: 'PM2 status output was not a JSON array.',
-        stdout,
-        stderr: '',
+        kind: 'failure',
+        failure: buildPm2MalformedStatusResult(
+          'PM2 status output was not a JSON array.',
+          stdout,
+          stderr,
+        ),
       };
     }
 
     const entry = parsed.find(item => item?.name === processName);
     if (!entry) {
       return {
-        exists: false,
-        online: false,
-        pid: null,
-        status: null,
-        restartCount: 0,
-        uptime: 0,
+        kind: 'status',
+        status: {
+          exists: false,
+          online: false,
+          pid: null,
+          status: null,
+          restartCount: 0,
+          uptime: 0,
+        },
       };
     }
 
@@ -528,21 +627,31 @@ function parsePm2Jlist(stdout: string, processName: string): Pm2ProcessStatus | 
     const uptime = createdAt > 0 ? Math.max(0, Date.now() - createdAt) : 0;
 
     return {
-      exists: true,
-      online: status === 'online',
-      pid,
-      status,
-      restartCount,
-      uptime,
+      kind: 'status',
+      status: {
+        exists: true,
+        online: status === 'online',
+        pid,
+        status,
+        restartCount,
+        uptime,
+      },
     };
   } catch (error) {
+    if (isRetryablePm2BootstrapOutput(stdout, stderr)) {
+      return {
+        kind: 'bootstrap',
+        summary: summarizeOutput(stdout, stderr, 'PM2 reported bootstrap output before JSON status was available.'),
+      };
+    }
+
     return {
-      success: false,
-      operation: 'status',
-      errorCode: 'pm2-malformed-output',
-      message: `PM2 status output could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
-      stdout,
-      stderr: '',
+      kind: 'failure',
+      failure: buildPm2MalformedStatusResult(
+        `PM2 status output could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
+        stdout,
+        stderr,
+      ),
     };
   }
 }
@@ -593,12 +702,18 @@ export class Pm2DotnetManager {
   private readonly processName: string;
   private readonly commandExecutor: Pm2CommandExecutor;
   private readonly platform: NodeJS.Platform;
+  private readonly statusRetryDelayMs: number;
+  private readonly statusRetryMaxRetries: number;
+  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: Pm2DotnetManagerOptions = {}) {
     this.platform = options.platform ?? process.platform;
     this.pm2Command = options.pm2Command ?? resolveDefaultPm2Command({ platform: this.platform });
     this.processName = options.processName ?? PM2_DOTNET_PROCESS_NAME;
     this.commandExecutor = options.commandExecutor ?? new DefaultPm2CommandExecutor();
+    this.statusRetryDelayMs = options.statusRetryDelayMs ?? DEFAULT_PM2_STATUS_RETRY_DELAY_MS;
+    this.statusRetryMaxRetries = options.statusRetryMaxRetries ?? DEFAULT_PM2_STATUS_MAX_RETRIES;
+    this.sleep = options.sleep ?? (async (ms: number) => { await new Promise(resolve => setTimeout(resolve, ms)); });
   }
 
   resolveRuntimeFiles(runtimeFilesDirectory: string): Pm2DotnetRuntimeFiles {
@@ -746,19 +861,50 @@ export class Pm2DotnetManager {
   }
 
   async status(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
-    const result = await this.runPm2('status', buildPm2CommandArgs('status', { processName: this.processName }), cwd, env);
-    if (!result.success) {
-      return result;
+    const statusArgs = buildPm2CommandArgs('status', { processName: this.processName });
+
+    for (let attempt = 0; attempt <= this.statusRetryMaxRetries; attempt++) {
+      const result = await this.runPm2('status', statusArgs, cwd, env);
+      if (!result.success) {
+        return result;
+      }
+
+      const parsed = parsePm2Jlist(result.stdout, result.stderr, this.processName);
+      if (parsed.kind === 'status') {
+        return {
+          ...result,
+          status: parsed.status,
+        };
+      }
+
+      if (parsed.kind === 'failure') {
+        return parsed.failure;
+      }
+
+      const retriesRemaining = this.statusRetryMaxRetries - attempt;
+      if (retriesRemaining <= 0) {
+        return buildPm2MalformedStatusResult(
+          `PM2 status output could not be normalized after ${attempt + 1} attempt${attempt === 0 ? '' : 's'} during PM2 bootstrap. Last PM2 output: ${parsed.summary}`,
+          result.stdout,
+          result.stderr,
+        );
+      }
+
+      log.info('[Pm2Dotnet] PM2 status returned bootstrap output; retrying status query:', {
+        processName: this.processName,
+        cwd,
+        attempt: attempt + 1,
+        retriesRemaining,
+        delayMs: this.statusRetryDelayMs,
+        summary: parsed.summary,
+      });
+      await this.sleep(this.statusRetryDelayMs);
     }
 
-    const parsed = parsePm2Jlist(result.stdout, this.processName);
-    if ('success' in parsed) {
-      return parsed;
-    }
-
-    return {
-      ...result,
-      status: parsed,
-    };
+    return buildPm2MalformedStatusResult(
+      'PM2 status output could not be normalized after exhausting retries.',
+      '',
+      '',
+    );
   }
 }
