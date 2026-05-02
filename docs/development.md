@@ -369,7 +369,17 @@ Before each start or restart, Desktop regenerates runtime files under `<userData
 
 If a managed service descendant or maintenance script needs the Desktop-pinned .NET runtime, read `HAGICODE_DOTNET_EXE` or `DOTNET_ROOT` from `.env`. Do not assume Desktop has exposed the bundled runtime through `PATH`.
 
-Desktop invokes PM2 with explicit argument arrays. Start and restart use `pm2 startOrReload <ecosystem.config.js> --update-env` so repeated user actions update the same PM2 app instead of creating duplicate entries. Stop uses `pm2 stop hagicode-dotnet-service`, and status uses `pm2 jlist` to map PM2 `online` state back to the existing Desktop service status model.
+Desktop invokes PM2 with explicit argument arrays. Fresh starts use `pm2 start <ecosystem.config.js> --only hagicode-dotnet-service --update-env`, restart uses `pm2 reload <ecosystem.config.js> --update-env`, stop uses `pm2 stop hagicode-dotnet-service`, and status uses `pm2 jlist` to map PM2 `online` state back to the existing Desktop service status model.
+
+On Windows packaged cold starts, the first `pm2 jlist` call can emit daemon bootstrap text such as `[PM2] Spawning...` before JSON status is available. Desktop now treats that bootstrap-only output as a bounded internal retry condition instead of an immediate startup failure. If a later retry returns valid PM2 JSON, startup continues without surfacing the bootstrap text to the renderer.
+
+Persistent PM2 invocation failures remain distinct from bootstrap recovery. Non-zero `pm2` / `pm2.cmd` status failures, localized command errors, or garbled command output still fail startup once the retry budget is exhausted, and the retained startup log should include:
+
+- the normalized PM2 failure summary
+- recent PM2 stdout/stderr lines
+- the pinned runtime root, managed entry point, PM2 runtime files directory, and injected environment hints already recorded earlier in startup
+
+Follow-up status polling should warn once for a repeated PM2 failure signature and then suppress duplicate low-signal warnings until PM2 status changes again or startup succeeds.
 
 The `.env` file can contain sensitive runtime values. Desktop logs generated file paths and key counts only; it must not log the generated `.env` contents.
 
