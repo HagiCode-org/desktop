@@ -41,7 +41,7 @@ export interface ActiveVersionInfo {
 }
 
 export type VersionUpdateSnapshotStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed' | 'disabled';
-export type VersionUpdateDisabledReason = 'settings-disabled' | 'portable-mode' | 'no-package-source' | null;
+export type VersionUpdateDisabledReason = 'settings-disabled' | 'portable-mode' | 'steam-mode' | 'no-package-source' | null;
 
 export interface VersionUpdateVersionInfo {
   id: string;

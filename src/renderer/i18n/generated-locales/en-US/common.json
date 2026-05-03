@@ -502,6 +502,7 @@
         "failed": "Background update failed: {{error}}",
         "settings-disabled": "Background predownloads are disabled. You can turn them back on in Settings.",
         "portable-mode": "Portable mode skips background updates and keeps the current runtime read-only.",
+        "steam-mode": "Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.",
         "no-package-source": "No active package source is configured, so background updates cannot start."
       },
       "actions": {

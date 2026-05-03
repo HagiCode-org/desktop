@@ -10,6 +10,7 @@ import {
   StateManager,
   createEmptyVersionUpdateSnapshot,
   type VersionUpdateCachedArchive,
+  type VersionUpdateDisabledReason,
   type VersionUpdateSnapshot,
   type VersionUpdateVersionInfo,
 } from './state-manager.js';
@@ -23,7 +24,7 @@ type VersionUpdateManagerEventMap = {
 
 type VersionUpdateManagerLike = Pick<
   VersionManager,
-  'getActiveVersion' | 'getCurrentSourceConfig' | 'isPortableVersionMode' | 'listVersions' | 'predownloadVersion'
+  'getActiveVersion' | 'getCurrentSourceConfig' | 'getDistributionMode' | 'isPortableVersionMode' | 'listVersions' | 'predownloadVersion'
 >;
 
 type StateManagerLike = Pick<StateManager, 'getVersionUpdateSnapshot' | 'setVersionUpdateSnapshot'>;
@@ -144,14 +145,15 @@ export class VersionUpdateManager {
       });
     }
 
-    if (this.versionManager.isPortableVersionMode()) {
+    const disabledReason = this.resolveManagedUpdatesDisabledReason();
+    if (disabledReason) {
       return this.persistSnapshot({
         ...currentSnapshot,
         status: 'disabled',
         currentVersion,
         latestVersion: null,
         downloadedVersionId: null,
-        disabledReason: 'portable-mode',
+        disabledReason,
         lastCheckedAt: now,
         lastUpdatedAt: now,
         failure: null,
@@ -316,6 +318,18 @@ export class VersionUpdateManager {
     await this.stateManager.setVersionUpdateSnapshot(snapshot);
     this.events.emit('changed', snapshot);
     return snapshot;
+  }
+
+  private resolveManagedUpdatesDisabledReason(): Exclude<VersionUpdateDisabledReason, 'settings-disabled' | 'no-package-source' | null> | null {
+    if (this.versionManager.getDistributionMode() === 'steam') {
+      return 'steam-mode';
+    }
+
+    if (this.versionManager.isPortableVersionMode()) {
+      return 'portable-mode';
+    }
+
+    return null;
   }
 
   private toVersionInfo(version: Pick<InstalledVersion, 'id' | 'version' | 'packageFilename' | 'platform'> | Pick<Version, 'id' | 'version' | 'packageFilename' | 'platform' | 'sourceType'> | null): VersionUpdateVersionInfo | null {

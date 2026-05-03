@@ -7,6 +7,7 @@ const settingsPath = path.resolve(process.cwd(), 'src/renderer/components/settin
 const dashboardPath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/versionUpdateSlice.ts');
 const storePath = path.resolve(process.cwd(), 'src/renderer/store/index.ts');
+const preloadPath = path.resolve(process.cwd(), 'src/preload/index.ts');
 
 
 describe('version update renderer integration', () => {
@@ -19,13 +20,16 @@ describe('version update renderer integration', () => {
   });
 
   it('hydrates the store from the main-process snapshot and subscribes to live update events', async () => {
-    const [sliceSource, storeSource] = await Promise.all([
+    const [sliceSource, storeSource, preloadSource] = await Promise.all([
       fs.readFile(slicePath, 'utf8'),
       fs.readFile(storePath, 'utf8'),
+      fs.readFile(preloadPath, 'utf8'),
     ]);
 
     assert.match(sliceSource, /fetchVersionUpdateSnapshot/);
     assert.match(sliceSource, /setVersionUpdateSnapshotFromEvent/);
+    assert.match(sliceSource, /'settings-disabled' \| 'portable-mode' \| 'steam-mode' \| 'no-package-source' \| null/);
+    assert.match(preloadSource, /'settings-disabled' \| 'portable-mode' \| 'steam-mode' \| 'no-package-source' \| null/);
     assert.match(storeSource, /fetchVersionUpdateSnapshot\(\)/);
     assert.match(storeSource, /fetchVersionAutoUpdateSettings\(\)/);
     assert.match(storeSource, /onVersionUpdateChanged/);
@@ -45,5 +49,15 @@ describe('version update renderer integration', () => {
     assert.match(dashboardSource, /handleOpenVersionManagement/);
     assert.match(dashboardSource, /installWebServicePackage/);
     assert.match(dashboardSource, /navigateTo\('settings'\)/);
+  });
+
+  it('replaces editable background update controls with a Steam-managed notice in Steam mode', async () => {
+    const source = await fs.readFile(settingsPath, 'utf8');
+
+    assert.match(source, /distributionMode: DistributionMode/);
+    assert.match(source, /const isSteamMode = distributionMode === 'steam';/);
+    assert.match(source, /if \(isSteamMode\)/);
+    assert.match(source, /settings\.updates\.steamMode\.title/);
+    assert.match(source, /settings\.updates\.steamMode\.description/);
   });
 });

@@ -44,6 +44,9 @@ settings:
   updates:
     title: Background Updates
     description: Manage automatic checks, background predownloads, and verified archive retention.
+    steamMode:
+      title: Updates are managed by Steam
+      description: This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime.
     enabled:
       label: Enable background predownloads
       description: When a compatible newer version is found, download the archive in the background without switching the current runtime.

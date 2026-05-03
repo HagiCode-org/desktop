@@ -31,7 +31,7 @@ export interface VersionUpdateSnapshot {
   downloadedVersionId: string | null;
   lastCheckedAt: string | null;
   lastUpdatedAt: string | null;
-  disabledReason: 'settings-disabled' | 'portable-mode' | 'no-package-source' | null;
+  disabledReason: 'settings-disabled' | 'portable-mode' | 'steam-mode' | 'no-package-source' | null;
   cachedArchives: VersionUpdateCachedArchive[];
   failure: { message: string; at: string } | null;
 }

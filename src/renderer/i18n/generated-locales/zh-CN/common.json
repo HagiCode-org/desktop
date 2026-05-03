@@ -502,6 +502,7 @@
         "failed": "后台更新失败：{{error}}",
         "settings-disabled": "你已关闭后台自动下载，可在设置页重新启用。",
         "portable-mode": "portable mode 下已跳过后台更新，当前运行环境保持只读。",
+        "steam-mode": "Steam 模式下不会执行应用内后台更新，因为该运行时的更新由 Steam 平台负责分发。",
         "no-package-source": "尚未配置有效的软件包源，无法执行后台更新。"
       },
       "actions": {

@@ -18,20 +18,30 @@ import {
   selectVersionUpdateSaving,
   selectVersionUpdateSettingsLoading,
 } from '@/store/slices/versionUpdateSlice';
+import type { DistributionMode } from '../../../types/distribution-mode';
 
-export function VersionUpdateSettings() {
+interface VersionUpdateSettingsProps {
+  distributionMode: DistributionMode;
+}
+
+export function VersionUpdateSettings({ distributionMode }: VersionUpdateSettingsProps) {
   const { t } = useTranslation('pages');
   const dispatch = useDispatch<AppDispatch>();
   const settings = useSelector((state: RootState) => selectVersionAutoUpdateSettings(state));
   const isLoading = useSelector((state: RootState) => selectVersionUpdateSettingsLoading(state));
   const isSaving = useSelector((state: RootState) => selectVersionUpdateSaving(state));
   const saveError = useSelector((state: RootState) => selectVersionUpdateSaveError(state));
+  const isSteamMode = distributionMode === 'steam';
   const [localEnabled, setLocalEnabled] = useState(settings.enabled);
   const [localRetainedArchiveCount, setLocalRetainedArchiveCount] = useState(String(settings.retainedArchiveCount));
 
   useEffect(() => {
+    if (isSteamMode) {
+      return;
+    }
+
     void dispatch(fetchVersionAutoUpdateSettings());
-  }, [dispatch]);
+  }, [dispatch, isSteamMode]);
 
   useEffect(() => {
     setLocalEnabled(settings.enabled);
@@ -70,6 +80,26 @@ export function VersionUpdateSettings() {
     setLocalEnabled(settings.enabled);
     setLocalRetainedArchiveCount(String(settings.retainedArchiveCount));
   };
+
+  if (isSteamMode) {
+    return (
+      <Card className="max-w-3xl">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <BellRing className="h-5 w-5" />
+            <CardTitle>{t('settings.updates.title')}</CardTitle>
+          </div>
+          <CardDescription>{t('settings.updates.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <h3 className="font-medium text-foreground">{t('settings.updates.steamMode.title')}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{t('settings.updates.steamMode.description')}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="max-w-3xl">

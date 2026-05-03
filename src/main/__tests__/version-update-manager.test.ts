@@ -2,16 +2,35 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, it } from 'node:test';
-import { type VersionAutoUpdateSettings } from '../config.js';
-import {
-  createEmptyVersionUpdateSnapshot,
-  type VersionUpdateSnapshot,
-} from '../state-manager.js';
-import { VersionUpdateManager, selectLatestCompatibleVersion } from '../version-update-manager.js';
+import { after, afterEach, before, describe, it, mock } from 'node:test';
+import type { VersionAutoUpdateSettings } from '../config.js';
 import type { Version } from '../version-manager.js';
 
+type VersionUpdateSnapshot = import('../state-manager.js').VersionUpdateSnapshot;
+
+let createEmptyVersionUpdateSnapshot: typeof import('../state-manager.js').createEmptyVersionUpdateSnapshot;
+let VersionUpdateManager: typeof import('../version-update-manager.js').VersionUpdateManager;
+let selectLatestCompatibleVersion: typeof import('../version-update-manager.js').selectLatestCompatibleVersion;
+let electronMock: { restore(): void } | undefined;
+
 const tempDirectories: string[] = [];
+
+before(async () => {
+  electronMock = mock.module('electron', {
+    namedExports: {
+      app: {
+        getPath: () => os.tmpdir(),
+      },
+    },
+  });
+
+  ({ createEmptyVersionUpdateSnapshot } = await import('../state-manager.js'));
+  ({ VersionUpdateManager, selectLatestCompatibleVersion } = await import('../version-update-manager.js'));
+});
+
+after(() => {
+  electronMock?.restore();
+});
 
 afterEach(async () => {
   await Promise.all(tempDirectories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
@@ -69,9 +88,10 @@ describe('version update manager', () => {
     assert.equal(selected?.version, '1.2.0');
   });
 
-  it('skips predownloads in portable mode and returns a disabled snapshot', async () => {
+  it('skips predownloads in Steam mode and returns a disabled snapshot', async () => {
     const stateManager = new MemoryStateManager();
     const configManager = new MemoryConfigManager();
+    let listCalls = 0;
     let predownloadCalls = 0;
     const manager = new VersionUpdateManager({
       stateManager,
@@ -84,8 +104,12 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
+        getDistributionMode: () => 'steam',
         isPortableVersionMode: () => true,
-        listVersions: async () => [],
+        listVersions: async () => {
+          listCalls += 1;
+          return [];
+        },
         predownloadVersion: async () => {
           predownloadCalls += 1;
           return { success: false } as any;
@@ -96,7 +120,8 @@ describe('version update manager', () => {
     const snapshot = await manager.refreshSnapshot('test-portable');
 
     assert.equal(snapshot.status, 'disabled');
-    assert.equal(snapshot.disabledReason, 'portable-mode');
+    assert.equal(snapshot.disabledReason, 'steam-mode');
+    assert.equal(listCalls, 0);
     assert.equal(predownloadCalls, 0);
   });
 
@@ -120,6 +145,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
+        getDistributionMode: () => 'normal',
         isPortableVersionMode: () => false,
         listVersions: async () => [createVersion('1.1.0')],
         predownloadVersion: async () => {
@@ -161,6 +187,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
+        getDistributionMode: () => 'normal',
         isPortableVersionMode: () => false,
         listVersions: async () => {
           listCalls += 1;
@@ -236,6 +263,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
+        getDistributionMode: () => 'normal',
         isPortableVersionMode: () => false,
         listVersions: async () => [createVersion('1.0.3')],
         predownloadVersion: async () => ({

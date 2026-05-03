@@ -44,6 +44,9 @@ settings:
   updates:
     title: 后台更新
     description: 管理自动检查、后台预下载与已验证归档保留策略。
+    steamMode:
+      title: 更新由 Steam 托管
+      description: 当前构建运行在 Steam 模式下，因此这里不会展示应用内后台预下载和自动更新相关控件。该运行时的更新由 Steam 平台负责分发。
     enabled:
       label: 启用后台自动预下载
       description: 检测到兼容新版本时，先在后台下载归档并保持当前运行版本不变。

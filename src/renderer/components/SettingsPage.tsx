@@ -55,7 +55,7 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             </TabsContent>
 
             <TabsContent value="updates" className="mt-0">
-              <VersionUpdateSettings />
+              <VersionUpdateSettings distributionMode={distributionMode} />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (

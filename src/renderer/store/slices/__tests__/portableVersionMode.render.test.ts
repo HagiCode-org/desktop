@@ -9,6 +9,7 @@ const dashboardPath = path.resolve(process.cwd(), 'src/renderer/components/Syste
 const versionPagePath = path.resolve(process.cwd(), 'src/renderer/components/VersionManagementPage.tsx');
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const settingsIndexPath = path.resolve(process.cwd(), 'src/renderer/components/settings/index.ts');
+const updateSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/VersionUpdateSettings.tsx');
 const sharingSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/SharingAccelerationSettings.tsx');
 
 describe('portable version renderer integration', () => {
@@ -78,6 +79,17 @@ describe('portable version renderer integration', () => {
     assert.match(settingsPageSource, /const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings\(distributionMode\)/);
     assert.match(settingsPageSource, /showSharingAccelerationSettings \? \(/);
     assert.match(settingsPageSource, /<TabsTrigger\s+value="sharingAcceleration"/s);
+  });
+
+  it('passes Steam distribution mode into background update settings and keeps Steam-managed update copy there', async () => {
+    const [settingsPageSource, updateSettingsSource] = await Promise.all([
+      fs.readFile(settingsPagePath, 'utf-8'),
+      fs.readFile(updateSettingsPath, 'utf-8'),
+    ]);
+
+    assert.match(settingsPageSource, /<VersionUpdateSettings distributionMode=\{distributionMode\} \/>/);
+    assert.match(updateSettingsSource, /const isSteamMode = distributionMode === 'steam';/);
+    assert.match(updateSettingsSource, /settings\.updates\.steamMode\.title/);
   });
 
   it('passes distribution mode into settings and keeps a portable-mode fallback notice inside the sharing card', async () => {
