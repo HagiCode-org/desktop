@@ -23,6 +23,9 @@ export enum OnboardingStep {
 export type LegalDocumentType = 'eula' | 'privacy-policy';
 export type LegalMetadataSource = 'remote' | 'cache' | 'unavailable';
 export type OnboardingMode = 'full' | 'legal-only' | 'none';
+export interface OnboardingShowPayload {
+  mode: Exclude<OnboardingMode, 'none'>;
+}
 
 export interface PublishedLegalDocumentLocale {
   title: string;

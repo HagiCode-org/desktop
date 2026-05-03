@@ -280,7 +280,9 @@ export function registerOnboardingHandlers(deps: {
     }
     try {
       await state.onboardingManager.resetOnboarding();
-      state.mainWindow?.webContents.send('onboarding:show');
+      state.mainWindow?.webContents.send('onboarding:show', {
+        mode: state.onboardingManager.getResetOnboardingMode(),
+      });
       return { success: true };
     } catch (error) {
       console.error('Failed to reset onboarding:', error);

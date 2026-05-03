@@ -45,7 +45,7 @@ export async function recoverOnboardingStartupFailure<TInstalledVersion = unknow
   deps.sendProgressEvent('version:activeVersionChanged', activeVersion);
 
   await deps.resetOnboarding();
-  deps.sendProgressEvent('onboarding:show');
+  deps.sendProgressEvent('onboarding:show', { mode: 'full' });
 
   return { success: true };
 }

@@ -3,6 +3,7 @@ import type {
   AcceptLegalDocumentsPayload,
   LegalDocumentType,
   OnboardingMode,
+  OnboardingShowPayload,
   OnboardingTriggerResult,
   OnboardingRecoveryResult,
   OnboardingDependencyInstallResult,
@@ -34,7 +35,7 @@ declare global {
       onDependencyProgress: (callback: (status: unknown) => void) => (() => void) | void;
       onServiceProgress: (callback: (progress: unknown) => void) => (() => void) | void;
       onScriptOutput: (callback: (output: unknown) => void) => (() => void) | void;
-      onOnboardingShow: (callback: () => void) => (() => void) | void;
+      onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => (() => void) | void;
     };
   }
 }

@@ -25,6 +25,7 @@ import type { DistributionMode } from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OmniRouteBridge } from '../types/omniroute-management';
+import type { OnboardingShowPayload } from '../types/onboarding';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap';
@@ -108,7 +109,7 @@ declare global {
       onOnboardingSwitchToWeb: (callback: (data: { versionId: string }) => void) => () => void;
       onOnboardingOpenHagicode: (callback: (data: { url: string; versionId: string }) => void) => () => void;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
-      onOnboardingShow: (callback: () => void) => () => void;
+      onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => () => void;
       dependencyManagement: DependencyManagementBridge;
       hagiNode: HagiNodeRuntimeBridge;
       omniroute: OmniRouteBridge;
@@ -152,8 +153,8 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
       dispatch(switchView(view));
     });
 
-    const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow(() => {
-      dispatch(restartOnboardingFlow());
+    const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow((payload) => {
+      dispatch(restartOnboardingFlow(payload?.mode));
     });
 
     const unsubscribeOnboardingOpenHagicode = window.electronAPI.onOnboardingOpenHagicode(async (data) => {

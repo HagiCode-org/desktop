@@ -62,7 +62,7 @@ describe('onboarding startup recovery helpers', () => {
       { channel: 'version:installedVersionsChanged', data: [{ id: 'v1.0.0' }] },
       { channel: 'version:activeVersionChanged', data: { id: 'v1.0.0', isActive: true } },
       { channel: 'reset' },
-      { channel: 'onboarding:show', data: undefined },
+      { channel: 'onboarding:show', data: { mode: 'full' } },
     ]);
   });
 

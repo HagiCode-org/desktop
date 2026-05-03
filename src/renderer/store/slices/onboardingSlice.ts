@@ -185,10 +185,10 @@ export const onboardingSlice = createSlice({
     clearScriptOutput: (state) => {
       state.scriptOutputLogs = [];
     },
-    restartOnboardingFlow: () => ({
+    restartOnboardingFlow: (_state, action: PayloadAction<Exclude<OnboardingMode, 'none'> | undefined>) => ({
       ...initialState,
       isActive: true,
-      mode: 'full' as OnboardingMode,
+      mode: action.payload ?? 'full',
       currentStep: OnboardingStep.LanguageSelection,
     }),
   },

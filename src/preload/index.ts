@@ -3,6 +3,7 @@ import type {
   AcceptLegalDocumentsPayload,
   LegalDocumentType,
   OnboardingDependencyInstallResult,
+  OnboardingShowPayload,
   OnboardingTriggerResult,
   OnboardingRecoveryResult,
   OnboardingStartServiceResult,
@@ -157,7 +158,7 @@ export interface VersionUpdateSnapshotPayload {
   downloadedVersionId: string | null;
   lastCheckedAt: string | null;
   lastUpdatedAt: string | null;
-  disabledReason: 'settings-disabled' | 'portable-mode' | 'no-package-source' | null;
+  disabledReason: 'settings-disabled' | 'portable-mode' | 'steam-mode' | 'no-package-source' | null;
   cachedArchives: VersionUpdateCachedArchivePayload[];
   failure: { message: string; at: string } | null;
 }
@@ -350,7 +351,7 @@ interface ElectronAPI {
   onDependencyProgress: (callback: (status: any) => void) => () => void;
   onServiceProgress: (callback: (progress: any) => void) => () => void;
   onScriptOutput: (callback: (output: any) => void) => () => void;
-  onOnboardingShow: (callback: () => void) => () => void;
+  onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => () => void;
 }
 
 const clipboardBridge = createClipboardBridge(ipcRenderer, clipboardChannels);
@@ -669,8 +670,8 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('onboarding:script-output', listener);
   },
   onOnboardingShow: (callback) => {
-    const listener = (_event) => {
-      callback();
+    const listener = (_event, payload) => {
+      callback(payload);
     };
     ipcRenderer.on('onboarding:show', listener);
     return () => ipcRenderer.removeListener('onboarding:show', listener);

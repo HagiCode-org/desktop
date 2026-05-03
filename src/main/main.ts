@@ -2045,11 +2045,9 @@ ipcMain.handle('onboarding:reset', async () => {
   }
   try {
     await onboardingManager.resetOnboarding();
-    if (!isPortableVersionMode()) {
-      mainWindow?.webContents.send('onboarding:show');
-    } else {
-      log.info('[Main] Onboarding reset completed without auto-open because portable version mode is active');
-    }
+    mainWindow?.webContents.send('onboarding:show', {
+      mode: onboardingManager.getResetOnboardingMode(),
+    });
     return { success: true };
   } catch (error) {
     console.error('Failed to reset onboarding:', error);

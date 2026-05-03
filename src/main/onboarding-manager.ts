@@ -25,6 +25,7 @@ import type {
   LegalConsentState,
   LegalMetadataCacheState,
   LegalMetadataSource,
+  OnboardingMode,
   OnboardingTriggerResult,
   PublishedLegalDocument,
   PublishedLegalDocumentsPayload,
@@ -885,6 +886,10 @@ export class OnboardingManager {
   async resetOnboarding(): Promise<void> {
     log.info('[OnboardingManager] Resetting onboarding state');
     this.store.delete(OnboardingManager.STORE_KEY);
+  }
+
+  getResetOnboardingMode(): Exclude<OnboardingMode, 'none'> {
+    return this.versionManager.isPortableVersionMode() ? 'legal-only' : 'full';
   }
 
   /**

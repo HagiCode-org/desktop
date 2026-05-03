@@ -7,6 +7,7 @@ import {
 } from '../../../../types/onboarding.js';
 import reducer, {
   getOnboardingSequence,
+  restartOnboardingFlow,
   selectCanGoNext,
   selectLegalDocuments,
   selectLegalMetadataSource,
@@ -81,6 +82,15 @@ describe('onboardingSlice flow', () => {
         undefined,
       ),
     );
+
+    assert.equal(state.isActive, true);
+    assert.equal(state.mode, 'legal-only');
+    assert.equal(state.currentStep, OnboardingStep.LanguageSelection);
+    assert.deepEqual(getOnboardingSequence(state.mode), [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent]);
+  });
+
+  it('restarts into the portable legal-only flow when requested explicitly', () => {
+    const state = reducer(undefined, restartOnboardingFlow('legal-only'));
 
     assert.equal(state.isActive, true);
     assert.equal(state.mode, 'legal-only');
