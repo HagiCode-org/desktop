@@ -11,7 +11,7 @@ import { isChineseDesktopLanguage } from '../shared/desktop-languages.js';
 
 export const DEFAULT_RSS_LANGUAGE = 'zh-CN';
 export const CHINESE_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.zh-CN.xml';
-export const ENGLISH_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.en.xml';
+export const ENGLISH_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.en-US.xml';
 export const DEFAULT_RSS_FEED_URL = CHINESE_RSS_FEED_URL;
 
 type SupportedRSSLanguage = 'zh-CN' | 'en-US';
