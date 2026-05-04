@@ -24,11 +24,15 @@ function createRuntimeConfig(runtimeFilesDirectory: string) {
     runtimeFilesDirectory,
     args: ['--mode', 'desktop'],
     env: {
+      PATH: '/managed/npm-global/bin:/usr/local/bin',
       Z_LAST: 'tail',
       ASPNETCORE_URLS: 'http://127.0.0.1:36556',
       DOTNET_MULTILEVEL_LOOKUP: '0',
       DOTNET_ROOT: '/runtime',
       HAGICODE_DOTNET_EXE: '/runtime/dotnet',
+      HAGICODE_AGENT_CLI_PATH: '/managed/npm-global/bin',
+      HAGICODE_NPM_GLOBAL_PATH: '/managed/npm-global',
+      PM2_HOME: '/managed/user-data/pm2/22',
     },
   };
 }
@@ -49,12 +53,17 @@ describe('pm2-dotnet-manager', () => {
 
       assert.equal(path.basename(files.envPath), PM2_ENV_FILE_NAME);
       assert.equal(path.basename(files.ecosystemPath), PM2_ECOSYSTEM_FILE_NAME);
-      assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_MULTILEVEL_LOOKUP=0\nDOTNET_ROOT=/runtime\nHAGICODE_DOTNET_EXE=/runtime/dotnet\nZ_LAST=tail\n');
+      assert.equal(envContent, 'ASPNETCORE_URLS=http://127.0.0.1:36556\nDOTNET_MULTILEVEL_LOOKUP=0\nDOTNET_ROOT=/runtime\nHAGICODE_AGENT_CLI_PATH=/managed/npm-global/bin\nHAGICODE_DOTNET_EXE=/runtime/dotnet\nHAGICODE_NPM_GLOBAL_PATH=/managed/npm-global\nPATH=/managed/npm-global/bin:/usr/local/bin\nPM2_HOME=/managed/user-data/pm2/22\nZ_LAST=tail\n');
       assert.match(ecosystemContent, new RegExp(`name: "${PM2_DOTNET_PROCESS_NAME}"`));
       assert.match(ecosystemContent, /script: "\/runtime\/dotnet"/);
       assert.match(ecosystemContent, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
       assert.match(ecosystemContent, /cwd: "\/apps\/Hagicode Desktop\/current"/);
       assert.match(ecosystemContent, /env_file:/);
+      assert.match(ecosystemContent, /"PATH": "\/managed\/npm-global\/bin:\/usr\/local\/bin"/);
+      assert.match(ecosystemContent, /"PM2_HOME": "\/managed\/user-data\/pm2\/22"/);
+      assert.match(ecosystemContent, /"HAGICODE_AGENT_CLI_PATH": "\/managed\/npm-global\/bin"/);
+      assert.match(ecosystemContent, /"HAGICODE_NPM_GLOBAL_PATH": "\/managed\/npm-global"/);
+      assert.doesNotMatch(envContent, /PATH=.*\/runtime/);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
@@ -68,6 +77,9 @@ describe('pm2-dotnet-manager', () => {
     assert.match(ecosystem, /interpreter: "none"/);
     assert.match(ecosystem, /args: "\\"\/apps\/Hagicode Desktop\/current\/PCode.Web.dll\\" \\"--mode\\" \\"desktop\\""/);
     assert.match(ecosystem, /HAGICODE_PM2_ENV_FILE/);
+    assert.match(ecosystem, /"PATH": "\/managed\/npm-global\/bin:\/usr\/local\/bin"/);
+    assert.match(ecosystem, /"HAGICODE_DOTNET_EXE": "\/runtime\/dotnet"/);
+    assert.match(ecosystem, /"PM2_HOME": "\/managed\/user-data\/pm2\/22"/);
   });
 
   it('keeps explicit absolute dotnet paths intact for Windows runtime files', () => {
@@ -347,10 +359,10 @@ describe('pm2-dotnet-manager', () => {
 
   it('runs lifecycle through mocked pm2 and maps jlist status', async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-pm2-lifecycle-'));
-    const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
+    const calls: Array<{ command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv | undefined }> = [];
     const executor: Pm2CommandExecutor = {
       run: async (command, args, options) => {
-        calls.push({ command, args, cwd: String(options.cwd ?? '') });
+        calls.push({ command, args, cwd: String(options.cwd ?? ''), env: options.env });
         if (args[0] === 'jlist') {
           return {
             code: 0,
@@ -378,6 +390,7 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(calls[0]?.cwd, '/apps/Hagicode Desktop/current');
       assert.equal(calls[1]?.cwd, '/apps/Hagicode Desktop/current');
       assert.equal(calls[2]?.cwd, tmpDir);
+      assert.equal(calls.every(call => call.env?.PM2_HOME === '/managed/user-data/pm2/22'), true);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
@@ -558,8 +571,15 @@ describe('pm2-dotnet-manager', () => {
       assert.deepEqual(calls.map(call => call.args[0]), ['jlist', 'jlist', 'start', 'jlist', 'jlist']);
       assert.equal(calls.every(call => call.cwd === runtimeConfig.serviceWorkingDirectory), true);
       assert.equal(calls.every(call => call.env?.HAGICODE_DOTNET_EXE === runtimeConfig.env.HAGICODE_DOTNET_EXE), true);
+      assert.equal(calls.every(call => call.env?.PATH === runtimeConfig.env.PATH), true);
+      assert.equal(calls.every(call => call.env?.HAGICODE_AGENT_CLI_PATH === runtimeConfig.env.HAGICODE_AGENT_CLI_PATH), true);
+      assert.equal(calls.every(call => call.env?.PM2_HOME === runtimeConfig.env.PM2_HOME), true);
       assert.equal(calls[2]?.args[1], path.join(tmpDir, PM2_ECOSYSTEM_FILE_NAME));
       assert.match(envContent, /HAGICODE_DOTNET_EXE=\/runtime\/dotnet/);
+      assert.match(envContent, /PATH=\/managed\/npm-global\/bin:\/usr\/local\/bin/);
+      assert.match(envContent, /PM2_HOME=\/managed\/user-data\/pm2\/22/);
+      assert.match(ecosystemContent, /"PATH": "\/managed\/npm-global\/bin:\/usr\/local\/bin"/);
+      assert.match(ecosystemContent, /"PM2_HOME": "\/managed\/user-data\/pm2\/22"/);
       assert.match(ecosystemContent, /PCode\.Web\.dll/);
       assert.deepEqual(delays, [5, 5]);
     } finally {

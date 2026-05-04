@@ -2,6 +2,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import log from 'electron-log';
+import { resolvePathEnvKey } from './portable-toolchain-env.js';
 import { executeCli } from './utils/cli-executor.js';
 import { resolveCommandLaunch, shouldUseShellForCommand } from './toolchain-launch.js';
 
@@ -206,6 +207,22 @@ function normalizeEnvValue(value: string | undefined): string {
   return value ?? '';
 }
 
+function collectPersistedPm2InlineEnv(env: NodeJS.ProcessEnv): Array<[string, string]> {
+  const pathKey = resolvePathEnvKey(env);
+  const pathValue = env[pathKey] ?? env.PATH ?? env.Path;
+  const entries: Array<[string, string | undefined]> = [
+    [pathKey, pathValue],
+    ['DOTNET_ROOT', env.DOTNET_ROOT],
+    ['DOTNET_MULTILEVEL_LOOKUP', env.DOTNET_MULTILEVEL_LOOKUP],
+    ['HAGICODE_DOTNET_EXE', env.HAGICODE_DOTNET_EXE],
+    ['HAGICODE_AGENT_CLI_PATH', env.HAGICODE_AGENT_CLI_PATH],
+    ['HAGICODE_NPM_GLOBAL_PATH', env.HAGICODE_NPM_GLOBAL_PATH],
+    ['PM2_HOME', env.PM2_HOME],
+  ];
+
+  return entries.filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0);
+}
+
 function isWindowsPm2Command(pm2Command: string): boolean {
   const baseName = path.win32.basename(stripWrappingQuotes(pm2Command)).toLowerCase();
   return baseName === 'pm2' || baseName === 'pm2.cmd';
@@ -398,6 +415,13 @@ export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string 
   const processName = config.processName ?? PM2_DOTNET_PROCESS_NAME;
   const args = [config.serviceDllPath, ...(config.args ?? [])];
   const envPath = path.join(config.runtimeFilesDirectory, PM2_ENV_FILE_NAME);
+  const inlineEnvEntries: Array<[string, string]> = [
+    ['HAGICODE_PM2_ENV_FILE', envPath],
+    ...collectPersistedPm2InlineEnv(config.env),
+  ];
+  const inlineEnvLines = inlineEnvEntries.map(([key, value], index) => (
+    `        ${quoteJs(key)}: ${quoteJs(value)}${index === inlineEnvEntries.length - 1 ? '' : ','}`
+  ));
 
   return [
     'module.exports = {',
@@ -413,7 +437,7 @@ export function buildPm2EcosystemConfig(config: Pm2DotnetRuntimeConfig): string 
     '      watch: false,',
     `      env_file: ${quoteJs(envPath)},`,
     '      env: {',
-    `        HAGICODE_PM2_ENV_FILE: ${quoteJs(envPath)}`,
+    ...inlineEnvLines,
     '      }',
     '    }',
     '  ]',
@@ -705,6 +729,7 @@ export class Pm2DotnetManager {
   private readonly statusRetryDelayMs: number;
   private readonly statusRetryMaxRetries: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private lastLifecycleEnv: NodeJS.ProcessEnv | null = null;
 
   constructor(options: Pm2DotnetManagerOptions = {}) {
     this.platform = options.platform ?? process.platform;
@@ -746,6 +771,19 @@ export class Pm2DotnetManager {
     return config.serviceWorkingDirectory || config.runtimeFilesDirectory;
   }
 
+  private rememberLifecycleEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    this.lastLifecycleEnv = env;
+    return env;
+  }
+
+  private resolveLifecycleEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    if (env) {
+      return this.rememberLifecycleEnv(env);
+    }
+
+    return this.lastLifecycleEnv ?? process.env;
+  }
+
   private async runPm2(operation: Pm2DotnetOperation, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
     const pm2LaunchPlan = resolvePm2LaunchPlan(this.pm2Command, {
       env,
@@ -783,22 +821,24 @@ export class Pm2DotnetManager {
   async startOrReload(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
     const files = await this.writeRuntimeFiles(config);
     const cwd = this.getLifecycleCwd(config);
+    const env = this.rememberLifecycleEnv(config.env);
     const result = await this.runPm2(
       'startOrReload',
       buildPm2CommandArgs('startOrReload', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
       cwd,
-      config.env,
+      env,
     );
     if (!result.success) {
       return result;
     }
-    return await this.status(cwd, config.env);
+    return await this.status(cwd, env);
   }
 
   async startFresh(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
     const files = await this.writeRuntimeFiles(config);
     const cwd = this.getLifecycleCwd(config);
-    const currentStatus = await this.status(cwd, config.env);
+    const env = this.rememberLifecycleEnv(config.env);
+    const currentStatus = await this.status(cwd, env);
 
     if (!currentStatus.success) {
       return currentStatus;
@@ -811,7 +851,7 @@ export class Pm2DotnetManager {
         cwd,
       });
 
-      const deleteResult = await this.delete(cwd, config.env);
+      const deleteResult = await this.delete(cwd, env);
       if (!deleteResult.success) {
         return deleteResult;
       }
@@ -821,50 +861,54 @@ export class Pm2DotnetManager {
       'start',
       buildPm2CommandArgs('start', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
       cwd,
-      config.env,
+      env,
     );
     if (!result.success) {
       return result;
     }
-    return await this.status(cwd, config.env);
+    return await this.status(cwd, env);
   }
 
   async restart(config: Pm2DotnetRuntimeConfig): Promise<Pm2LifecycleResult> {
     const files = await this.writeRuntimeFiles(config);
     const cwd = this.getLifecycleCwd(config);
+    const env = this.rememberLifecycleEnv(config.env);
     const result = await this.runPm2(
       'restart',
       buildPm2CommandArgs('restart', { ecosystemPath: files.ecosystemPath, processName: this.processName }),
       cwd,
-      config.env,
+      env,
     );
     if (!result.success) {
       return result;
     }
-    return await this.status(cwd, config.env);
+    return await this.status(cwd, env);
   }
 
-  async stop(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
-    const result = await this.runPm2('stop', buildPm2CommandArgs('stop', { processName: this.processName }), cwd, env);
+  async stop(cwd: string, env?: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
+    const resolvedEnv = this.resolveLifecycleEnv(env);
+    const result = await this.runPm2('stop', buildPm2CommandArgs('stop', { processName: this.processName }), cwd, resolvedEnv);
     if (!result.success && result.errorCode === 'pm2-command-failed' && /not found|doesn't exist|process or namespace/i.test(`${result.stderr}\n${result.stdout}`)) {
       return { success: true, operation: 'stop', stdout: result.stdout, stderr: result.stderr };
     }
     return result;
   }
 
-  async delete(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
-    const result = await this.runPm2('delete', buildPm2CommandArgs('delete', { processName: this.processName }), cwd, env);
+  async delete(cwd: string, env?: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
+    const resolvedEnv = this.resolveLifecycleEnv(env);
+    const result = await this.runPm2('delete', buildPm2CommandArgs('delete', { processName: this.processName }), cwd, resolvedEnv);
     if (!result.success && result.errorCode === 'pm2-command-failed' && /not found|doesn't exist|process or namespace/i.test(`${result.stderr}\n${result.stdout}`)) {
       return { success: true, operation: 'delete', stdout: result.stdout, stderr: result.stderr };
     }
     return result;
   }
 
-  async status(cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<Pm2LifecycleResult> {
+  async status(cwd: string, env?: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
+    const resolvedEnv = this.resolveLifecycleEnv(env);
     const statusArgs = buildPm2CommandArgs('status', { processName: this.processName });
 
     for (let attempt = 0; attempt <= this.statusRetryMaxRetries; attempt++) {
-      const result = await this.runPm2('status', statusArgs, cwd, env);
+      const result = await this.runPm2('status', statusArgs, cwd, resolvedEnv);
       if (!result.success) {
         return result;
       }
