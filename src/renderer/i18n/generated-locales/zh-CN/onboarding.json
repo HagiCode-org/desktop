@@ -294,16 +294,16 @@
         "description": "Desktop 当前无法访问托管的 Node/npm 环境。请在内置工具链可用后刷新。"
       },
       "required-packages-missing": {
-        "title": "缺少必需依赖项",
-        "description": "请先安装缺失的必需依赖项。"
+        "title": "必需依赖项需要修复",
+        "description": "请先安装或升级必需依赖项。"
       },
       "agent-cli-not-selected": {
         "title": "请选择 Agent CLI",
         "description": "至少选择一个受支持的 Agent CLI 依赖项。"
       },
       "agent-cli-not-installed": {
-        "title": "选中的 Agent CLI 尚未安装",
-        "description": "请将至少一个选中的 Agent CLI 安装到 Desktop 托管 npm 环境中。"
+        "title": "选中的 Agent CLI 需要修复",
+        "description": "请将至少一个选中的 Agent CLI 安装或升级到 Desktop 托管 npm 环境中。"
       }
     },
     "actions": {

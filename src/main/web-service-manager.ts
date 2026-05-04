@@ -152,6 +152,7 @@ export class PCodeWebServiceManager {
   private lastPm2StatusWarningKey: string | null = null;
   private repeatedPm2StatusWarningSuppressed: boolean = false;
   private distributionMode: DistributionMode = 'normal';
+  private statusRequestPromise: Promise<ProcessInfo> | null = null;
 
   constructor(config: WebServiceConfig, deps: WebServiceManagerDeps = {}) {
     this.config = {
@@ -402,6 +403,7 @@ export class PCodeWebServiceManager {
     pathKey: string;
     managedCliPath: string | null;
     managedNpmGlobalPath: string | null;
+    managedNodeExecutablePath: string | null;
     activationPolicy: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>['activationPolicy'];
     pm2Home: string;
   }> {
@@ -418,19 +420,47 @@ export class PCodeWebServiceManager {
       activationPolicy,
       npmGlobalPaths,
     });
-    const pm2HomePaths = await this.pathManager.ensureNodeMajorPm2HomeDirectory({ nodeVersion });
+    const pm2Version = await this.resolveManagedPm2Version(npmGlobalPaths?.npmGlobalModulesRoot ?? null);
+    const pm2HomePaths = await this.pathManager.ensurePm2MajorHomeDirectory({ pm2Version });
+    const managedNodeExecutablePath = activationPolicy.enabled === false
+      ? null
+      : this.pathManager.getPortableNodeExecutablePath();
+
+    const env: NodeJS.ProcessEnv = {
+      ...managedCliEnv.env,
+      PM2_HOME: pm2HomePaths.pm2Home,
+    };
+    if (managedNodeExecutablePath) {
+      env.NODE = managedNodeExecutablePath;
+      env.npm_node_execpath = managedNodeExecutablePath;
+      env.HAGICODE_PM2_NODE_EXECUTABLE = managedNodeExecutablePath;
+      env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = this.pathManager.getPortableToolchainRoot();
+    }
 
     return {
-      env: {
-        ...managedCliEnv.env,
-        PM2_HOME: pm2HomePaths.pm2Home,
-      },
+      env,
       pathKey: managedCliEnv.pathKey,
       managedCliPath: managedCliEnv.managedCliPath,
       managedNpmGlobalPath: managedCliEnv.managedNpmGlobalPath,
+      managedNodeExecutablePath,
       activationPolicy,
       pm2Home: pm2HomePaths.pm2Home,
     };
+  }
+
+  private async resolveManagedPm2Version(npmGlobalModulesRoot: string | null): Promise<string | null> {
+    if (!npmGlobalModulesRoot) {
+      return null;
+    }
+
+    const packageJsonPath = path.join(npmGlobalModulesRoot, 'pm2', 'package.json');
+    try {
+      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonContent) as { version?: unknown };
+      return typeof packageJson.version === 'string' ? packageJson.version : null;
+    } catch {
+      return null;
+    }
   }
 
   private buildPm2LifecycleFailureResult(result: Pm2LifecycleResult): StartResult {
@@ -1032,11 +1062,16 @@ export class PCodeWebServiceManager {
           this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedPm2Env.managedCliPath}`);
           this.appendStartupLogLine(`Desktop-managed server startup prepends ${pathKey} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH`);
         }
+        if (managedPm2Env.managedNodeExecutablePath) {
+          this.appendStartupLogLine(`HAGICODE_PM2_NODE_EXECUTABLE=${managedPm2Env.managedNodeExecutablePath}`);
+          this.appendStartupLogLine(`PM2 CLI is launched through the managed Node executable ${managedPm2Env.managedNodeExecutablePath}`);
+        }
         if (managedPm2Env.managedNpmGlobalPath || managedPm2Env.managedCliPath) {
           log.info('[WebService] Managed server startup prepending managed CLI PATH with scoped npm metadata:', {
             pathKey,
             managedCliPath: managedPm2Env.managedCliPath,
             managedNpmGlobalPath: managedPm2Env.managedNpmGlobalPath,
+            managedNodeExecutablePath: managedPm2Env.managedNodeExecutablePath,
             activationPolicy: managedPm2Env.activationPolicy,
             pm2Home: managedPm2Env.pm2Home,
             managedCliPathPrepended: managedPm2Env.managedCliPath !== null,
@@ -1231,6 +1266,19 @@ export class PCodeWebServiceManager {
    * Get current process status
    */
   async getStatus(): Promise<ProcessInfo> {
+    if (this.statusRequestPromise) {
+      return await this.statusRequestPromise;
+    }
+
+    this.statusRequestPromise = this.getStatusInternal()
+      .finally(() => {
+        this.statusRequestPromise = null;
+      });
+
+    return await this.statusRequestPromise;
+  }
+
+  private async getStatusInternal(): Promise<ProcessInfo> {
     await this.ensureSavedConfigInitialized();
 
     const pm2Env = await this.resolveManagedPm2CommandEnvironment(this.lastPm2Env ?? process.env);

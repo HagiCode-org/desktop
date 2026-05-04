@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { minVersion } from 'semver';
 import {
   evaluateDependencyReadiness,
+  getManagedPackageRequiredVersionRange,
   managedNpmPackages,
   npmInstallableAgentCliPackages,
   optionalManagedNpmPackages,
@@ -14,15 +16,26 @@ import type {
   DependencyManagementSnapshot,
 } from '../../types/dependency-management.js';
 
-function createSnapshot(statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>): DependencyManagementSnapshot {
+function createSnapshot(
+  statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>,
+  versionOverrides: Partial<Record<ManagedNpmPackageId, string | null>> = {},
+): DependencyManagementSnapshot {
   const packages: ManagedNpmPackageStatusSnapshot[] = managedNpmPackages.map((definition) => {
     const status = statusOverrides[definition.id] ?? 'installed';
+    const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
+    const version = status === 'installed'
+      ? (
+        versionOverrides[definition.id]
+        ?? minVersion(requiredVersionRange ?? '')?.version
+        ?? '1.0.0'
+      )
+      : null;
 
     return {
       id: definition.id,
       definition,
       status,
-      version: status === 'installed' ? '1.0.0' : null,
+      version,
       packageRoot: `/managed/${definition.id}`,
       executablePath: status === 'installed' ? `/managed/bin/${definition.binName}` : null,
     };
@@ -80,6 +93,18 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.requiredReady, false);
     assert.equal(summary.ready, false);
     assert.deepEqual(summary.missingRequiredPackageIds, ['openspec']);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, []);
+    assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
+  });
+
+  it('blocks readiness when a required package is installed below the declared minimum version', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { pm2: '6.0.14' }), ['codex']);
+
+    assert.equal(summary.requiredReady, false);
+    assert.equal(summary.ready, false);
+    assert.deepEqual(summary.missingRequiredPackageIds, []);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, ['pm2']);
+    assert.equal(summary.requiredPackages.some((item) => item.id === 'pm2' && item.versionSatisfied === false), true);
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
   });
 
@@ -144,6 +169,7 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.agentCliReady, false);
     assert.equal(summary.ready, false);
     assert.deepEqual(summary.missingSelectedAgentCliPackageIds, ['codex']);
+    assert.deepEqual(summary.versionMismatchSelectedAgentCliPackageIds, []);
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'agent-cli-not-installed'), true);
   });
 });

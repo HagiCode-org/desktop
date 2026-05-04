@@ -58,7 +58,7 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /buildOmniRouteDependencyRemediation/);
     assert.match(source, /resolvePm2LaunchPlan/);
     assert.match(source, /injectManagedCliPathEnv/);
-    assert.match(source, /buildNodeMajorPm2HomePaths/);
+    assert.match(source, /buildPm2MajorHomePaths/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /getManagedCommandContext\('omniroute'\)/);
     assert.match(source, /buildManagedPm2CommandEnv/);

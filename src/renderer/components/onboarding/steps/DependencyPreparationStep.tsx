@@ -42,7 +42,9 @@ export default function DependencyPreparationStep() {
   const packagesToInstall = readiness
     ? uniquePackageIds([
       ...readiness.missingRequiredPackageIds,
+      ...readiness.versionMismatchRequiredPackageIds,
       ...readiness.missingSelectedAgentCliPackageIds,
+      ...readiness.versionMismatchSelectedAgentCliPackageIds,
     ])
     : [];
   const confirmDisabled = !environmentAvailable || isDependencyOperationActive || !hasSelectedAgentCli;

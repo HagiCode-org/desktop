@@ -212,6 +212,24 @@ describe('pm2-dotnet-manager', () => {
     });
   });
 
+  it('rewrites bare POSIX pm2 launches using the managed npm global prefix and managed node executable', () => {
+    const plan = resolvePm2LaunchPlan('pm2', {
+      platform: 'linux',
+      env: {
+        HAGICODE_NPM_GLOBAL_PATH: '/home/user/.config/HagiCode Desktop/node22/npmGlobal',
+        HAGICODE_PM2_NODE_EXECUTABLE: '/portable/toolchain/node/bin/node',
+      },
+      existsSync: target => target === '/portable/toolchain/node/bin/node'
+        || target === '/home/user/.config/HagiCode Desktop/node22/npmGlobal/lib/node_modules/pm2/bin/pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: '/portable/toolchain/node/bin/node',
+      argsPrefix: ['/home/user/.config/HagiCode Desktop/node22/npmGlobal/lib/node_modules/pm2/bin/pm2'],
+      shell: false,
+    });
+  });
+
   it('normalizes missing executable and non-zero exit failures', async () => {
     const missingExecutor: Pm2CommandExecutor = {
       run: async () => {
@@ -394,6 +412,35 @@ describe('pm2-dotnet-manager', () => {
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
+  });
+
+  it('passes shorter status timeouts and longer lifecycle timeouts to the command executor', async () => {
+    const calls: Array<{ operation: string; timeoutMs: number | undefined }> = [];
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args, options) => {
+        calls.push({ operation: args[0], timeoutMs: options.timeoutMs });
+        if (args[0] === 'jlist') {
+          return { code: 0, stdout: '[]', stderr: '' };
+        }
+        return { code: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+
+    const manager = new Pm2DotnetManager({
+      pm2Command: 'pm2',
+      commandExecutor: executor,
+      platform: 'linux',
+      statusCommandTimeoutMs: 3210,
+      lifecycleCommandTimeoutMs: 9876,
+    });
+
+    await manager.status(process.cwd());
+    await manager.stop(process.cwd());
+
+    assert.deepEqual(calls, [
+      { operation: 'jlist', timeoutMs: 3210 },
+      { operation: 'stop', timeoutMs: 9876 },
+    ]);
   });
 
   it('uses the rewritten Windows PM2 launch plan when the managed pm2.cmd path is provided', async () => {

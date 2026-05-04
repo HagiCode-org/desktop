@@ -1,9 +1,27 @@
+import {
+  getManagedPackageRequiredVersionRange,
+  isManagedPackageVersionSatisfied,
+} from '../../../shared/npm-managed-packages.js';
 import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementOperationProgress,
 } from '../../../types/dependency-management.js';
 import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
+
+export type ManagedPackageDisplayStatus = ManagedNpmPackageStatusSnapshot['status'] | 'outdated';
+
+export function isManagedPackageOutdated(item: ManagedNpmPackageStatusSnapshot): boolean {
+  return item.status === 'installed' && !isManagedPackageVersionSatisfied(item.definition, item.version);
+}
+
+export function getManagedPackageDisplayStatus(item: ManagedNpmPackageStatusSnapshot): ManagedPackageDisplayStatus {
+  return isManagedPackageOutdated(item) ? 'outdated' : item.status;
+}
+
+export function getManagedPackageRequiredVersion(item: ManagedNpmPackageStatusSnapshot): string | null {
+  return getManagedPackageRequiredVersionRange(item.definition);
+}
 
 export type BatchSyncStatus = 'running' | 'completed' | 'failed';
 
@@ -21,11 +39,16 @@ export interface BatchSyncState {
   error?: string;
 }
 
-export function packageBadgeVariant(status: ManagedNpmPackageStatusSnapshot['status']) {
-  if (status === 'installed') {
+export function packageBadgeVariant(item: ManagedNpmPackageStatusSnapshot) {
+  const displayStatus = getManagedPackageDisplayStatus(item);
+
+  if (displayStatus === 'installed') {
     return 'default' as const;
   }
-  if (status === 'unknown') {
+  if (displayStatus === 'outdated') {
+    return 'secondary' as const;
+  }
+  if (displayStatus === 'unknown') {
     return 'destructive' as const;
   }
   return 'secondary' as const;
@@ -70,10 +93,28 @@ export function appendBatchSyncLog(
   };
 }
 
-export function managedPackageRowClassName(status: ManagedNpmPackageStatusSnapshot['status']): string {
-  return status === 'installed'
-    ? 'bg-emerald-500/10 hover:bg-emerald-500/15'
-    : 'bg-red-500/10 hover:bg-red-500/15';
+export function managedPackageRowClassName(item: ManagedNpmPackageStatusSnapshot): string {
+  const displayStatus = getManagedPackageDisplayStatus(item);
+
+  if (displayStatus === 'installed') {
+    return 'bg-emerald-500/10 hover:bg-emerald-500/15';
+  }
+
+  if (displayStatus === 'outdated') {
+    return 'bg-amber-500/10 hover:bg-amber-500/15';
+  }
+
+  return 'bg-red-500/10 hover:bg-red-500/15';
+}
+
+export function getManagedPackageActionKey(item: ManagedNpmPackageStatusSnapshot): 'install' | 'reinstall' | 'upgrade' {
+  const displayStatus = getManagedPackageDisplayStatus(item);
+
+  if (displayStatus === 'outdated') {
+    return 'upgrade';
+  }
+
+  return item.status === 'installed' ? 'reinstall' : 'install';
 }
 
 export function prioritizePackagesForRepair(
@@ -89,7 +130,7 @@ export function prioritizePackagesForRepair(
     if (!highlighted.has(item.id)) {
       return 2;
     }
-    if (item.status === 'installed') {
+    if (item.status === 'installed' && !isManagedPackageOutdated(item)) {
       return 1;
     }
     return 0;
@@ -118,7 +159,7 @@ export function evaluateDependencyRepairIntent(
   const packageById = new Map(packages.map((item) => [item.id, item]));
   const pendingPackageIds = targetPackageIds.filter((packageId) => {
     const item = packageById.get(packageId);
-    return !item || item.status === 'not-installed' || item.status === 'unknown';
+    return !item || item.status === 'not-installed' || item.status === 'unknown' || isManagedPackageOutdated(item);
   });
 
   return {

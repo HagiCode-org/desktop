@@ -9,7 +9,7 @@ describe('omniroute remediation classification', () => {
   it('classifies missing PM2 as a dependency remediation failure', () => {
     const remediation = buildOmniRouteDependencyRemediation([
       { packageId: 'pm2', packageStatus: 'not-installed', executablePath: null },
-      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute' },
+      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute', installedVersion: '3.6.9' },
     ]);
 
     assert.equal(remediation?.kind, 'dependency');
@@ -21,7 +21,7 @@ describe('omniroute remediation classification', () => {
 
   it('classifies missing OmniRoute as a dependency remediation failure with an actionable message', () => {
     const remediation = buildOmniRouteDependencyRemediation([
-      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2' },
+      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
       { packageId: 'omniroute', packageStatus: 'not-installed', executablePath: null },
     ]);
 
@@ -48,10 +48,28 @@ describe('omniroute remediation classification', () => {
     assert.deepEqual(remediation?.targetPackageIds, ['pm2', 'omniroute']);
   });
 
+  it('treats installed but unsupported package versions as dependency-version-mismatch guidance', () => {
+    const problems = classifyOmniRouteDependencyProblems([
+      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '6.0.14' },
+      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute', installedVersion: '3.6.9' },
+    ]);
+    const remediation = buildOmniRouteDependencyRemediation([
+      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '6.0.14' },
+      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute', installedVersion: '3.6.9' },
+    ]);
+
+    assert.deepEqual(problems, [
+      { packageId: 'pm2', issue: 'version-mismatch' },
+    ]);
+    assert.equal(remediation?.failureKind, 'dependency-version-mismatch');
+    assert.deepEqual(remediation?.targetPackageIds, ['pm2']);
+    assert.match(remediation?.message ?? '', /unsupported version/i);
+  });
+
   it('does not classify healthy managed dependencies as dependency guidance', () => {
     const remediation = buildOmniRouteDependencyRemediation([
-      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2' },
-      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute' },
+      { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
+      { packageId: 'omniroute', packageStatus: 'installed', executablePath: '/toolchain/omniroute', installedVersion: '3.6.9' },
     ]);
 
     assert.equal(remediation, undefined);

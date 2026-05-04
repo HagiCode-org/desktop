@@ -32,9 +32,15 @@ function getBridge(): OmniRouteBridge {
 }
 
 function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediation): string {
-  return remediation.failureKind === 'dependency-unknown'
-    ? 'omniroute.dependencyGuidance.descriptionUnknown'
-    : 'omniroute.dependencyGuidance.descriptionMissing';
+  if (remediation.failureKind === 'dependency-unknown') {
+    return 'omniroute.dependencyGuidance.descriptionUnknown';
+  }
+
+  if (remediation.failureKind === 'dependency-version-mismatch') {
+    return 'omniroute.dependencyGuidance.descriptionVersionMismatch';
+  }
+
+  return 'omniroute.dependencyGuidance.descriptionMissing';
 }
 
 function getDependencyPackageLabel(packageId: OmniRouteDependencyRemediation['targetPackageIds'][number]): string {

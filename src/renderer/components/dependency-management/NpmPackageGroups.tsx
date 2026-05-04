@@ -15,7 +15,11 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
+  getManagedPackageActionKey,
+  getManagedPackageDisplayStatus,
+  getManagedPackageRequiredVersion,
   isOperationActive,
+  isManagedPackageOutdated,
   managedPackageRowClassName,
   packageBadgeVariant,
   type BatchSyncState,
@@ -27,12 +31,23 @@ interface PackageDetailsProps {
 
 export function PackageDetails({ item }: PackageDetailsProps) {
   const { t } = useTranslation('common');
+  const requiredVersion = getManagedPackageRequiredVersion(item);
+  const outdated = isManagedPackageOutdated(item);
 
   return (
     <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
       <p>{t('dependencyManagement.package.version')}: {item.version ?? t('dependencyManagement.unavailable')}</p>
+      {requiredVersion ? <p>{t('dependencyManagement.package.requiredVersion')}: {requiredVersion}</p> : null}
       <p>{t('dependencyManagement.package.category')}: {t(`dependencyManagement.categories.${item.definition.category}`)}</p>
       <p className="break-all sm:col-span-2">{t('dependencyManagement.package.packageName')}: {item.definition.packageName}</p>
+      {outdated ? (
+        <p className="text-amber-700 dark:text-amber-300 sm:col-span-2">
+          {t('dependencyManagement.package.versionMismatch', {
+            current: item.version ?? t('dependencyManagement.unavailable'),
+            required: requiredVersion ?? item.definition.installSpec,
+          })}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -101,6 +116,8 @@ export function NpmPackageBootstrapCard({
   onRefresh,
 }: NpmPackageBootstrapCardProps) {
   const { t } = useTranslation('common');
+  const displayStatus = getManagedPackageDisplayStatus(item);
+  const actionKey = getManagedPackageActionKey(item);
 
   return (
     <Card className="border-primary/40">
@@ -110,8 +127,8 @@ export function NpmPackageBootstrapCard({
             <CardTitle className="text-lg">{t('dependencyManagement.bootstrap.title')}: {item.definition.displayName}</CardTitle>
             <CardDescription>{t(item.definition.descriptionKey)}</CardDescription>
           </div>
-          <Badge variant={packageBadgeVariant(item.status)}>
-            {t(`dependencyManagement.packageStatus.${item.status}`)}
+          <Badge variant={packageBadgeVariant(item)}>
+            {t(`dependencyManagement.packageStatus.${displayStatus}`)}
           </Badge>
         </div>
       </CardHeader>
@@ -121,7 +138,7 @@ export function NpmPackageBootstrapCard({
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => onInstall(item.id)} disabled={actionsDisabled}>
             {isOperationActive(progress) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
-            {item.status === 'installed' ? t('dependencyManagement.actions.reinstall') : t('dependencyManagement.actions.install')}
+            {t(`dependencyManagement.actions.${actionKey}`)}
           </Button>
           <Button variant="outline" onClick={onRefresh} disabled={refreshDisabled}>
             {t('dependencyManagement.actions.refresh')}
@@ -227,6 +244,9 @@ export function NpmPackageTable({
                 : progressByPackageId[item.id] ?? (activeOperation?.packageId === item.id ? activeOperation : undefined);
               const isActive = isOperationActive(itemProgress);
               const isHighlighted = highlightedPackageIdSet.has(item.id);
+              const displayStatus = getManagedPackageDisplayStatus(item);
+              const actionKey = getManagedPackageActionKey(item);
+              const requiredVersion = getManagedPackageRequiredVersion(item);
               const rowDisabled = actionsDisabled || !hagiscriptGateOpen || item.status === 'unknown';
               const canUninstall = item.status === 'installed' && item.definition.required !== true;
               const error = usesBatchSyncPanel
@@ -239,7 +259,7 @@ export function NpmPackageTable({
                   key={item.id}
                   data-state={selectedPackageIds.includes(item.id) ? 'selected' : undefined}
                   className={cn(
-                    managedPackageRowClassName(item.status),
+                    managedPackageRowClassName(item),
                     isHighlighted && 'ring-1 ring-inset ring-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
                     selectedPackageIds.includes(item.id) && 'ring-1 ring-primary/30',
                   )}
@@ -256,6 +276,9 @@ export function NpmPackageTable({
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-medium">{item.definition.displayName}</div>
+                      <Badge variant={packageBadgeVariant(item)}>
+                        {t(`dependencyManagement.packageStatus.${displayStatus}`)}
+                      </Badge>
                       {isHighlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
                     </div>
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
@@ -264,13 +287,23 @@ export function NpmPackageTable({
                   <TableCell>
                     <Badge variant="secondary">{t(`dependencyManagement.categories.${item.definition.category}`)}</Badge>
                   </TableCell>
-                  <TableCell>{item.version ?? t('dependencyManagement.unavailable')}</TableCell>
+                  <TableCell>
+                    <div>{item.version ?? t('dependencyManagement.unavailable')}</div>
+                    {displayStatus === 'outdated' ? (
+                      <div className="text-xs text-amber-700 dark:text-amber-300">
+                        {t('dependencyManagement.package.versionMismatch', {
+                          current: item.version ?? t('dependencyManagement.unavailable'),
+                          required: requiredVersion ?? item.definition.installSpec,
+                        })}
+                      </div>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="max-w-[220px] break-all text-muted-foreground">{item.definition.packageName}</TableCell>
                   <TableCell className="space-y-2 text-right">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" onClick={() => onRunOperation(item.id, 'install')} disabled={rowDisabled}>
                         {isActive ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
-                        {item.status === 'installed' ? t('dependencyManagement.actions.reinstall') : t('dependencyManagement.actions.install')}
+                        {t(`dependencyManagement.actions.${actionKey}`)}
                       </Button>
                       {canUninstall && (
                         <Button size="sm" variant="outline" onClick={() => onRunOperation(item.id, 'uninstall')} disabled={rowDisabled}>

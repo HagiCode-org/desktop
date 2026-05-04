@@ -1,3 +1,4 @@
+import { coerce, satisfies, validRange } from 'semver';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
@@ -47,7 +48,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'PM2',
     descriptionKey: 'dependencyManagement.packages.pm2.description',
     binName: 'pm2',
-    installSpec: 'pm2',
+    installSpec: 'pm2@7.0.1',
     category: 'workflow',
     installMode: 'hagiscript-sync',
     required: true,
@@ -198,18 +199,62 @@ export function getSupportedSelectedAgentCliPackageIds(selectedIds: readonly str
   return supportedIds;
 }
 
+export function getManagedPackageRequiredVersionRange(
+  definition: ManagedNpmPackageDefinition,
+): string | null {
+  const installSpec = definition.installSpec.trim();
+  const scopedTargetPrefix = `${definition.packageName}@`;
+
+  if (installSpec === definition.packageName || !installSpec.startsWith(scopedTargetPrefix)) {
+    return null;
+  }
+
+  const selector = installSpec.slice(scopedTargetPrefix.length).trim();
+  if (!selector) {
+    return null;
+  }
+
+  return validRange(selector, { includePrerelease: true }) ?? null;
+}
+
+export function isManagedPackageVersionSatisfied(
+  definition: ManagedNpmPackageDefinition,
+  installedVersion: string | null | undefined,
+): boolean {
+  const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
+  if (!requiredVersionRange) {
+    return true;
+  }
+
+  if (!installedVersion) {
+    return false;
+  }
+
+  const normalizedVersion = coerce(installedVersion)?.version;
+  if (!normalizedVersion) {
+    return false;
+  }
+
+  return satisfies(normalizedVersion, requiredVersionRange, { includePrerelease: true });
+}
+
 function toReadinessPackageSummary(
   definition: ManagedNpmPackageDefinition,
   snapshot: DependencyManagementSnapshot,
 ): DependencyReadinessPackageSummary {
   const statusSnapshot = findManagedPackageStatus(snapshot, definition.id);
+  const installedVersion = statusSnapshot?.version ?? null;
+  const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
+  const versionSatisfied = isManagedPackageVersionSatisfied(definition, installedVersion);
 
   return {
     id: definition.id,
     definition,
     status: statusSnapshot?.status ?? 'unknown',
-    installedVersion: statusSnapshot?.version ?? null,
+    installedVersion,
     installSpec: definition.installSpec,
+    requiredVersionRange,
+    versionSatisfied,
     packageName: definition.packageName,
     message: statusSnapshot?.message,
   };
@@ -234,17 +279,35 @@ export function evaluateDependencyReadiness(
   const installedSelectedAgentCliPackageIds = selectedSupportedIds.filter(
     (id) => agentCliPackageById.get(id)?.status === 'installed',
   );
+  const satisfiedSelectedAgentCliPackageIds = selectedSupportedIds.filter((id) => {
+    const item = agentCliPackageById.get(id);
+    return item?.status === 'installed' && item.versionSatisfied;
+  });
   const missingRequiredPackageIds = requiredPackages
     .filter((item) => item.status !== 'installed')
     .map((item) => item.id);
+  const versionMismatchRequiredPackageIds = requiredPackages
+    .filter((item) => item.status === 'installed' && !item.versionSatisfied)
+    .map((item) => item.id);
+  const unsatisfiedRequiredPackageIds = Array.from(new Set([
+    ...missingRequiredPackageIds,
+    ...versionMismatchRequiredPackageIds,
+  ]));
   const missingSelectedAgentCliPackageIds = agentCliPackages
     .filter((item) => selectedSupportedSet.has(item.id) && item.status !== 'installed')
     .map((item) => item.id);
+  const versionMismatchSelectedAgentCliPackageIds = agentCliPackages
+    .filter((item) => selectedSupportedSet.has(item.id) && item.status === 'installed' && !item.versionSatisfied)
+    .map((item) => item.id);
+  const unsatisfiedSelectedAgentCliPackageIds = Array.from(new Set([
+    ...missingSelectedAgentCliPackageIds,
+    ...versionMismatchSelectedAgentCliPackageIds,
+  ]));
   const ignoredSelectedAgentCliPackageIds = selectedAgentCliPackageIds.filter(
     (id) => !isNpmInstallableAgentCliPackageId(id),
   );
-  const requiredReady = missingRequiredPackageIds.length === 0;
-  const agentCliReady = selectedSupportedIds.length > 0 && installedSelectedAgentCliPackageIds.length > 0;
+  const requiredReady = unsatisfiedRequiredPackageIds.length === 0;
+  const agentCliReady = selectedSupportedIds.length > 0 && satisfiedSelectedAgentCliPackageIds.length > 0;
   const blockingReasons: DependencyReadinessSummary['blockingReasons'] = [];
 
   if (!snapshot.environment.available) {
@@ -257,8 +320,8 @@ export function evaluateDependencyReadiness(
   if (!requiredReady) {
     blockingReasons.push({
       code: 'required-packages-missing',
-      message: 'Required managed npm packages are missing or unknown.',
-      packageIds: missingRequiredPackageIds,
+      message: 'Required managed npm packages are missing, outdated, or unknown.',
+      packageIds: unsatisfiedRequiredPackageIds,
     });
   }
 
@@ -270,8 +333,8 @@ export function evaluateDependencyReadiness(
   } else if (!agentCliReady) {
     blockingReasons.push({
       code: 'agent-cli-not-installed',
-      message: 'At least one selected Agent CLI package must be installed in the Desktop managed npm environment.',
-      packageIds: missingSelectedAgentCliPackageIds,
+      message: 'At least one selected Agent CLI package must be installed at a supported version in the Desktop managed npm environment.',
+      packageIds: unsatisfiedSelectedAgentCliPackageIds,
     });
   }
 
@@ -284,7 +347,9 @@ export function evaluateDependencyReadiness(
     optionalPackages,
     agentCliPackages,
     missingRequiredPackageIds,
+    versionMismatchRequiredPackageIds,
     missingSelectedAgentCliPackageIds,
+    versionMismatchSelectedAgentCliPackageIds,
     selectedAgentCliPackageIds: selectedSupportedIds,
     installedSelectedAgentCliPackageIds,
     ignoredSelectedAgentCliPackageIds,

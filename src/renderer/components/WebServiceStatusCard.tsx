@@ -13,7 +13,6 @@ import {
   selectLaunchBlockingReason,
   hideStartupFailureDialog,
   showStartupFailureDialog,
-  setProcessInfo,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import { writeTextToClipboard } from '../lib/clipboard.js';
@@ -76,9 +75,6 @@ declare global {
   interface Window {
     electronAPI: {
       getWebServiceVersion: () => Promise<string>;
-      onWebServiceStatusChange: (callback: (status: any) => void) => (() => void) | void;
-      onTrayStartService: (callback: () => void) => (() => void) | void;
-      onTrayStopService: (callback: () => void) => (() => void) | void;
       logDirectory: LogDirectoryBridge;
     };
   }
@@ -148,32 +144,6 @@ const WebServiceStatusCard: React.FC = () => {
     dispatch(fetchWebServiceVersion());
     // Fetch active version on mount
     dispatch(fetchActiveVersion());
-
-    // Listen for web service status changes from main process
-    const unsubscribe = window.electronAPI.onWebServiceStatusChange((status: any) => {
-      dispatch(setProcessInfo(status));
-    });
-
-    // Listen for tray start/stop service commands
-    const unsubscribeTrayStart = window.electronAPI.onTrayStartService(() => {
-      dispatch(startWebService());
-    });
-
-    const unsubscribeTrayStop = window.electronAPI.onTrayStopService(() => {
-      dispatch(stopWebService());
-    });
-
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-      if (typeof unsubscribeTrayStart === 'function') {
-        unsubscribeTrayStart();
-      }
-      if (typeof unsubscribeTrayStop === 'function') {
-        unsubscribeTrayStop();
-      }
-    };
   }, [dispatch]);
 
   useEffect(() => {

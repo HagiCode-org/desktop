@@ -183,6 +183,7 @@ dependencyManagement:
     title: Return to OmniRoute after repairing dependencies
     descriptionMissing: OmniRoute could not start because one or more Desktop-managed packages are missing. Repair the highlighted packages here, then recheck OmniRoute.
     descriptionUnknown: Desktop could not confirm the OmniRoute dependencies. Refresh or repair the highlighted packages here, then recheck OmniRoute.
+    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
     sourceLabel: Source
     sourceValue: OmniRoute
     targetBadge: Repair target
@@ -193,10 +194,13 @@ dependencyManagement:
     refreshFailed: Desktop could not refresh dependency status. Retry the recheck after the current operation finishes.
   package:
     version: Version
+    requiredVersion: Required version
+    versionMismatch: Current version {{current}} does not satisfy {{required}}.
     packageName: Package
     category: Category
   packageStatus:
     installed: Installed
+    outdated: Upgrade required
     not-installed: Not installed
     unknown: Unknown
   packages:
@@ -260,6 +264,7 @@ dependencyManagement:
     refresh: Refresh
     install: Install
     installed: Installed
+    upgrade: Upgrade
     reinstall: Reinstall
     installSelected: Batch install selected
     installSelectedRunning: Batch installing...
@@ -512,6 +517,7 @@ omniroute:
     title: Repair Desktop-managed dependencies first
     descriptionMissing: OmniRoute cannot start until the highlighted Desktop-managed packages are installed or repaired in Dependency Management.
     descriptionUnknown: Desktop could not verify the highlighted OmniRoute dependencies. Refresh or repair them in Dependency Management before retrying.
+    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: Open Dependency Management
   errors:
     title: OmniRoute operation failed

@@ -68,6 +68,7 @@ import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
+import { evaluateDependencyReadiness } from '../shared/npm-managed-packages.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
@@ -273,6 +274,7 @@ let versionManager: VersionManager | null = null;
 let versionUpdateManager: VersionUpdateManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
+let webServicePollingInFlight = false;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
@@ -470,6 +472,56 @@ async function applyActiveRuntimeToWebServiceManager(): Promise<InstalledVersion
   }
 
   return activeVersion;
+}
+
+function buildDependencyReadinessFailureMessage(): string {
+  return 'Desktop managed dependencies are not ready. Open Dependency Management and repair the required packages before starting the service.';
+}
+
+async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<{
+  ok: boolean;
+  details?: string;
+}> {
+  if (!dependencyManagementService) {
+    return {
+      ok: false,
+      details: 'Desktop managed dependency service is not initialized yet. Restart Desktop and try again.',
+    };
+  }
+
+  const snapshot = await dependencyManagementService.getSnapshot();
+  const readiness = evaluateDependencyReadiness(snapshot, []);
+
+  if (!readiness.environmentAvailable) {
+    return {
+      ok: false,
+      details: snapshot.environment.error ?? buildDependencyReadinessFailureMessage(),
+    };
+  }
+
+  if (readiness.requiredReady) {
+    return { ok: true };
+  }
+
+  const unsatisfiedRequiredPackages = readiness.requiredPackages.filter((item) => (
+    item.status !== 'installed' || !item.versionSatisfied
+  ));
+  const packageDetails = unsatisfiedRequiredPackages.map((item) => {
+    if (item.status !== 'installed') {
+      return `${item.definition.displayName} is ${item.status}`;
+    }
+
+    const installedVersion = item.installedVersion ?? 'unknown';
+    const requiredVersionRange = item.requiredVersionRange ?? item.installSpec;
+    return `${item.definition.displayName} ${installedVersion} does not satisfy ${requiredVersionRange}`;
+  });
+
+  return {
+    ok: false,
+    details: packageDetails.length > 0
+      ? `${buildDependencyReadinessFailureMessage()} ${packageDetails.join('; ')}.`
+      : buildDependencyReadinessFailureMessage(),
+  };
 }
 
 function createWindow(): void {
@@ -829,9 +881,19 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
       };
     }
 
-    // No blocking principle: don't check dependency status before starting
-    // Users confirm via dialog, not via status check
-    // The service will handle missing dependencies at runtime
+    const dependencyValidation = await validateRequiredManagedDependenciesForWebServiceStart();
+    if (!dependencyValidation.ok) {
+      log.warn('[Main] Required managed dependencies are not ready for web service start', {
+        details: dependencyValidation.details,
+      });
+      return {
+        success: false,
+        error: {
+          type: 'dependency-requirements-not-met',
+          details: dependencyValidation.details ?? buildDependencyReadinessFailureMessage(),
+        },
+      };
+    }
 
     log.info('[Main] Starting web service with version:', activeVersion.id, 'at path:', activeVersion.installedPath);
 
@@ -2130,8 +2192,10 @@ function startWebServiceStatusPolling(): void {
 
   webServicePollingInterval = setInterval(async () => {
     if (!webServiceManager || !mainWindow) return;
+    if (webServicePollingInFlight) return;
 
     try {
+      webServicePollingInFlight = true;
       const status = await webServiceManager.getStatus();
       mainWindow?.webContents.send('web-service-status-changed', status);
 
@@ -2146,6 +2210,8 @@ function startWebServiceStatusPolling(): void {
       setServiceUrl(status.url);
     } catch (error) {
       console.error('Failed to poll web service status:', error);
+    } finally {
+      webServicePollingInFlight = false;
     }
   }, 5000); // Poll every 5 seconds
 }

@@ -294,16 +294,16 @@
         "description": "Desktop cannot access its managed Node/npm environment. Refresh after the toolchain is available, or open the Node environment FAQ for troubleshooting details."
       },
       "required-packages-missing": {
-        "title": "Required dependencies are missing",
-        "description": "Install the missing required dependencies before continuing."
+        "title": "Required dependencies need repair",
+        "description": "Install or upgrade the required dependencies before continuing."
       },
       "agent-cli-not-selected": {
         "title": "Select an Agent CLI",
         "description": "Choose at least one supported Agent CLI dependency."
       },
       "agent-cli-not-installed": {
-        "title": "Selected Agent CLI is not installed",
-        "description": "Install at least one selected Agent CLI package into Desktop's managed npm environment."
+        "title": "Selected Agent CLI needs repair",
+        "description": "Install or upgrade at least one selected Agent CLI package into Desktop's managed npm environment."
       }
     },
     "actions": {

@@ -230,7 +230,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /packageName: 'pm2'/);
     assert.match(source, /binName: 'pm2'/);
-    assert.match(source, /installSpec: 'pm2'/);
+    assert.match(source, /installSpec: 'pm2@7\.0\.1'/);
     assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
     assert.match(source, /installSpec: '@anthropic-ai\/claude-code'/);
     assert.match(source, /installSpec: '@openai\/codex'/);
@@ -341,7 +341,7 @@ describe('dependency management service contract', () => {
 
     assert.deepEqual(manifest.packages.skills, { version: '1.5.1', target: '1.5.1' });
     assert.deepEqual(manifest.packages['@fission-ai/openspec'], { version: '1.3.1', target: '1.3.1' });
-    assert.deepEqual(manifest.packages.pm2, { version: '*', target: 'latest' });
+    assert.deepEqual(manifest.packages.pm2, { version: '7.0.1', target: '7.0.1' });
     assert.deepEqual(manifest.packages['@anthropic-ai/claude-code'], { version: '*', target: 'latest' });
     assert.equal(Object.keys(manifest.packages).length, 4);
     assert.deepEqual(args.slice(0, 7), [

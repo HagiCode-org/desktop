@@ -9,7 +9,7 @@ export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown
 export type OmniRouteLogTarget = 'service-out' | 'service-error';
 export type OmniRoutePathTarget = 'config' | 'data' | 'logs';
 export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'pm2' | 'omniroute'>;
-export type OmniRouteDependencyFailureKind = 'dependency-missing' | 'dependency-unknown';
+export type OmniRouteDependencyFailureKind = 'dependency-missing' | 'dependency-unknown' | 'dependency-version-mismatch';
 
 export interface OmniRouteDependencyRemediation {
   kind: 'dependency';

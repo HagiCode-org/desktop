@@ -11,7 +11,7 @@ import type DependencyManagementService from './dependency-management-service.js
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
-import { buildNodeMajorPm2HomePaths } from './portable-toolchain-paths.js';
+import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCli } from './utils/cli-executor.js';
 import {
@@ -275,11 +275,13 @@ export class OmniRouteManager {
         packageId: 'pm2',
         packageStatus: pm2Context.packageStatus?.status ?? null,
         executablePath: pm2Context.executablePath,
+        installedVersion: pm2Context.packageStatus?.version ?? null,
       },
       {
         packageId: 'omniroute',
         packageStatus: omnirouteContext.packageStatus?.status ?? null,
         executablePath: omnirouteContext.executablePath,
+        installedVersion: omnirouteContext.packageStatus?.version ?? null,
       },
     ]);
     const processSnapshot = await this.getPm2ProcessSnapshot(pm2Context.executablePath, managedPm2Env);
@@ -359,11 +361,13 @@ export class OmniRouteManager {
           packageId: 'pm2',
           packageStatus: pm2Context.packageStatus?.status ?? null,
           executablePath: pm2Context.executablePath,
+          installedVersion: pm2Context.packageStatus?.version ?? null,
         },
         {
           packageId: 'omniroute',
           packageStatus: omnirouteContext.packageStatus?.status ?? null,
           executablePath: omnirouteContext.executablePath,
+          installedVersion: omnirouteContext.packageStatus?.version ?? null,
         },
       ]);
       if (remediation) {
@@ -517,10 +521,10 @@ export class OmniRouteManager {
         npmCacheRoot: environment.npmCacheRoot,
       } : null,
     }).env;
-    const pm2HomePaths = buildNodeMajorPm2HomePaths({
+    const pm2Version = await this.resolveManagedPm2Version(environment.npmGlobalModulesRoot);
+    const pm2HomePaths = buildPm2MajorHomePaths({
       userDataPath: this.userDataPath,
-      nodeVersion: environment.nodeVersion ?? process.versions.node,
-      nodeMajorVersion: environment.nodeMajorVersion,
+      pm2Version,
       platform: process.platform,
     });
     await fs.mkdir(pm2HomePaths.pm2Home, { recursive: true });
@@ -529,6 +533,17 @@ export class OmniRouteManager {
       ...managedCliEnv,
       PM2_HOME: pm2HomePaths.pm2Home,
     };
+  }
+
+  private async resolveManagedPm2Version(npmGlobalModulesRoot: string): Promise<string | null> {
+    const packageJsonPath = path.join(npmGlobalModulesRoot, 'pm2', 'package.json');
+    try {
+      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonContent) as { version?: unknown };
+      return typeof packageJson.version === 'string' ? packageJson.version : null;
+    } catch {
+      return null;
+    }
   }
 
   private async resolveManagedCliLaunchSpec(paths: OmniRouteManagedPaths, executablePath: string, packageName: string): Promise<ManagedCliLaunchSpec> {

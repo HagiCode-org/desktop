@@ -44,12 +44,13 @@ describe('web-service startup flow', () => {
     assert.match(source, /Starting service with pinned dotnet executable through PM2/);
     assert.match(source, /resolveManagedPm2CommandEnvironment/);
     assert.match(source, /injectManagedCliPathEnv\(baseEnv, \{/);
-    assert.match(source, /ensureNodeMajorPm2HomeDirectory/);
+    assert.match(source, /ensurePm2MajorHomeDirectory/);
     assert.doesNotMatch(source, /DevNodeRuntimeManager/);
     assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
     assert.doesNotMatch(source, /prepends development Node runtime paths/);
     assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
     assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
+    assert.match(source, /HAGICODE_PM2_NODE_EXECUTABLE/);
     assert.match(source, /PM2_HOME=/);
     assert.match(source, /Desktop-managed PM2 home keeps PM2 metadata under/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
@@ -73,6 +74,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /managedCliPathPrepended: managedPm2Env\.managedCliPath !== null/);
     assert.match(source, /bundledNodePathPrepended: false/);
     assert.match(source, /Desktop-managed server startup prepends \$\{pathKey\} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH/);
+    assert.match(source, /PM2 CLI is launched through the managed Node executable/);
     assert.match(source, /Desktop-managed server startup preserves inherited \$\{pathKey\} because no managed Agent CLI path hint is available; Desktop still does not prepend bundled Node\/npm paths/);
     assert.match(source, /const pm2Env = await this\.resolveManagedPm2CommandEnvironment\(this\.lastPm2Env \?\? process\.env\);/);
     assert.match(source, /this\.pm2Manager\.stop\(this\.getPm2RuntimeFilesDirectory\(\), pm2Env\.env\)/);

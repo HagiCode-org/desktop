@@ -13,14 +13,14 @@ import versionUpdateReducer, {
   setVersionUpdateSnapshotFromEvent,
 } from './slices/versionUpdateSlice';
 import listenerMiddleware from './listenerMiddleware';
-import { setProcessInfo } from './slices/webServiceSlice';
+import { setProcessInfo, setStartupPhase } from './slices/webServiceSlice';
 import { updateWebServiceUrl } from './slices/viewSlice';
 
 // Import thunks for initialization
 import { initializeI18n } from './thunks/i18nThunks';
 import { initializeView } from './thunks/viewThunks';
 import { initializePackageSource } from './thunks/packageSourceThunks';
-import { initializeWebService } from './thunks/webServiceThunks';
+import { initializeWebService, startWebService, stopWebService } from './thunks/webServiceThunks';
 import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
@@ -59,7 +59,6 @@ export const store = configureStore({
 let criticalInitializationPromise: Promise<void> | null = null;
 let backgroundInitializationStarted = false;
 let realtimeListenersRegistered = false;
-let webServicePollingHandle: ReturnType<typeof setInterval> | null = null;
 
 // Set up listener middleware for state change monitoring
 // This replaces the saga event watching capabilities
@@ -70,10 +69,11 @@ listenerMiddleware.startListening({
   effect: (action, listenerApi) => {
     const state = listenerApi.getState();
     const currentView = state.view.currentView;
+    const currentWebServiceUrl = state.view.webServiceUrl;
     const payload = action.payload as any;
 
     // If currently on web view, update the URL when service status changes
-    if (currentView === 'web' && payload.url) {
+    if (currentView === 'web' && payload.url && payload.url !== currentWebServiceUrl) {
       listenerApi.dispatch(updateWebServiceUrl(payload.url));
     }
   },
@@ -101,22 +101,48 @@ function registerRealtimeListeners(): void {
   }
 
   realtimeListenersRegistered = true;
+  const electronAPI = window.electronAPI as typeof window.electronAPI & {
+    onTrayStartService?: (callback: () => void) => (() => void) | void;
+    onTrayStopService?: (callback: () => void) => (() => void) | void;
+    onWebServiceStartupPhaseChange?: (
+      callback: (payload: {
+        phase: 'idle' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
+        message?: string;
+        timestamp: number;
+      }) => void,
+    ) => (() => void) | void;
+  };
 
-  window.electronAPI.onActiveVersionChanged?.((version: any) => {
+  electronAPI.onActiveVersionChanged?.((version: any) => {
     store.dispatch({ type: 'webService/setActiveVersion', payload: version });
     console.log('Active version changed:', version);
   });
 
-  window.electronAPI.onWebServiceStatusChange?.((status: any) => {
+  electronAPI.onWebServiceStatusChange?.((status: any) => {
     store.dispatch(setProcessInfo(status));
     console.log('Web service status changed:', status);
   });
 
-  window.electronAPI.onVersionUpdateChanged?.((snapshot: any) => {
+  electronAPI.onWebServiceStartupPhaseChange?.((payload) => {
+    store.dispatch(setStartupPhase({
+      phase: payload.phase,
+      message: payload.message,
+    }));
+  });
+
+  electronAPI.onTrayStartService?.(() => {
+    void store.dispatch(startWebService());
+  });
+
+  electronAPI.onTrayStopService?.(() => {
+    void store.dispatch(stopWebService());
+  });
+
+  electronAPI.onVersionUpdateChanged?.((snapshot: any) => {
     store.dispatch(setVersionUpdateSnapshotFromEvent(snapshot));
   });
 
-  window.electronAPI.onPackageInstallProgress?.((progress: any) => {
+  electronAPI.onPackageInstallProgress?.((progress: any) => {
     console.log('Package install progress:', progress);
     store.dispatch({
       type: 'webService/setInstallProgress',
@@ -127,17 +153,6 @@ function registerRealtimeListeners(): void {
       },
     });
   });
-
-  if (!webServicePollingHandle) {
-    webServicePollingHandle = setInterval(async () => {
-      try {
-        const status = await window.electronAPI.getWebServiceStatus();
-        store.dispatch(setProcessInfo(status));
-      } catch (error) {
-        console.error('Watch web service status error:', error);
-      }
-    }, 5000);
-  }
 }
 
 export async function runCriticalStartupInitialization(): Promise<void> {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import {
   buildNodeMajorNpmGlobalPaths,
-  buildNodeMajorPm2HomePaths,
+  buildPm2MajorHomePaths,
   buildNpmGlobalCommandArtifactPaths,
   buildPortableToolchainPaths,
   resolvePortableToolchainRoot,
@@ -123,33 +123,33 @@ describe('path-manager portable toolchain paths', () => {
     ]);
   });
 
-  it('derives Desktop-managed PM2 homes under userData by Node major version', () => {
-    const linuxPaths = buildNodeMajorPm2HomePaths({
+  it('derives Desktop-managed PM2 homes under userData by PM2 major version', () => {
+    const linuxPaths = buildPm2MajorHomePaths({
       userDataPath: '/home/user/.config/HagiCode Desktop',
-      nodeVersion: 'v22.12.0',
+      pm2Version: '6.0.14',
       platform: 'linux',
     });
-    const windowsPaths = buildNodeMajorPm2HomePaths({
+    const windowsPaths = buildPm2MajorHomePaths({
       userDataPath: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop',
-      nodeVersion: '24.1.0',
+      pm2Version: '7.0.1',
       platform: 'win32',
     });
 
-    assert.equal(linuxPaths.pm2Home, '/home/user/.config/HagiCode Desktop/pm2/22');
-    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\pm2\\24');
+    assert.equal(linuxPaths.pm2Home, '/home/user/.config/HagiCode Desktop/pm2/6');
+    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\pm2\\7');
   });
 
-  it('falls back to a deterministic PM2 home when the Node version is invalid', () => {
-    const paths = buildNodeMajorPm2HomePaths({
+  it('falls back to a deterministic PM2 home when the PM2 version is invalid', () => {
+    const paths = buildPm2MajorHomePaths({
       userDataPath: '/home/user/.config/HagiCode Desktop',
-      nodeVersion: 'not-a-version',
-      nodeMajorVersion: 'bad-input',
+      pm2Version: 'not-a-version',
+      pm2MajorVersion: 'bad-input',
       platform: 'linux',
     });
 
     assert.equal(
       paths.pm2Home,
-      `/home/user/.config/HagiCode Desktop/pm2/${process.versions.node.split('.')[0]}`,
+      '/home/user/.config/HagiCode Desktop/pm2/7',
     );
   });
 });

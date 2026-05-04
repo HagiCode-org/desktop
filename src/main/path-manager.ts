@@ -6,12 +6,12 @@ import yaml from 'js-yaml';
 import log from 'electron-log';
 import {
   buildNodeMajorNpmGlobalPaths,
-  buildNodeMajorPm2HomePaths,
+  buildPm2MajorHomePaths,
   buildPortableToolchainPaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
-  type NodeMajorPm2HomePathOptions,
-  type NodeMajorPm2HomePaths,
+  type Pm2MajorHomePathOptions,
+  type Pm2MajorHomePaths,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
@@ -34,12 +34,12 @@ import type {
 
 export {
   buildNodeMajorNpmGlobalPaths,
-  buildNodeMajorPm2HomePaths,
+  buildPm2MajorHomePaths,
   buildPortableToolchainPaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
-  type NodeMajorPm2HomePathOptions,
-  type NodeMajorPm2HomePaths,
+  type Pm2MajorHomePathOptions,
+  type Pm2MajorHomePaths,
   type PortableToolchainPathOptions,
   type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
@@ -404,19 +404,19 @@ export class PathManager {
     });
   }
 
-  getNodeMajorPm2HomePaths(
-    input: Omit<NodeMajorPm2HomePathOptions, 'userDataPath'> = {},
-  ): NodeMajorPm2HomePaths {
-    return buildNodeMajorPm2HomePaths({
+  getPm2MajorHomePaths(
+    input: Omit<Pm2MajorHomePathOptions, 'userDataPath'> = {},
+  ): Pm2MajorHomePaths {
+    return buildPm2MajorHomePaths({
       ...input,
       userDataPath: this.userDataPath,
     });
   }
 
-  async ensureNodeMajorPm2HomeDirectory(
-    input: Omit<NodeMajorPm2HomePathOptions, 'userDataPath'> = {},
-  ): Promise<NodeMajorPm2HomePaths> {
-    const pm2HomePaths = this.getNodeMajorPm2HomePaths(input);
+  async ensurePm2MajorHomeDirectory(
+    input: Omit<Pm2MajorHomePathOptions, 'userDataPath'> = {},
+  ): Promise<Pm2MajorHomePaths> {
+    const pm2HomePaths = this.getPm2MajorHomePaths(input);
     await fs.mkdir(pm2HomePaths.pm2Home, { recursive: true });
     return pm2HomePaths;
   }

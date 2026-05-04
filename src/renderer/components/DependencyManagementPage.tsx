@@ -43,6 +43,18 @@ function getDependencyManagementBridge(): DependencyManagementBridge {
   }).electronAPI.dependencyManagement;
 }
 
+function getRepairDescriptionKey(failureKind: NonNullable<RootState['view']['dependencyManagementIntent']>['failureKind']): string {
+  if (failureKind === 'dependency-unknown') {
+    return 'dependencyManagement.omniRouteRepair.descriptionUnknown';
+  }
+
+  if (failureKind === 'dependency-version-mismatch') {
+    return 'dependencyManagement.omniRouteRepair.descriptionVersionMismatch';
+  }
+
+  return 'dependencyManagement.omniRouteRepair.descriptionMissing';
+}
+
 export default function DependencyManagementPage() {
   const { t } = useTranslation('common');
   const dispatch = useDispatch<AppDispatch>();
@@ -334,9 +346,7 @@ export default function DependencyManagementPage() {
           <AlertTitle>{t('dependencyManagement.omniRouteRepair.title')}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>
-              {repairIntent.failureKind === 'dependency-unknown'
-                ? t('dependencyManagement.omniRouteRepair.descriptionUnknown')
-                : t('dependencyManagement.omniRouteRepair.descriptionMissing')}
+              {t(getRepairDescriptionKey(repairIntent.failureKind))}
             </p>
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="secondary">

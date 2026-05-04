@@ -142,6 +142,9 @@ export const startWebService = createAsyncThunk(
             case 'version-not-ready':
               dispatch(setError('Active version is not ready. Dependencies may be missing.'));
               break;
+            case 'dependency-requirements-not-met':
+              dispatch(setError(result.error.details || 'Required managed dependencies must be repaired before starting the web service.'));
+              break;
             default:
               dispatch(setError(result.error.details || 'Failed to start web service'));
           }

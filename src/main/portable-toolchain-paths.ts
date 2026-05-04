@@ -34,16 +34,16 @@ export interface NodeMajorNpmGlobalPaths {
   npmCacheRoot: string;
 }
 
-export interface NodeMajorPm2HomePathOptions {
+export interface Pm2MajorHomePathOptions {
   userDataPath: string;
-  nodeVersion?: string | null;
-  nodeMajorVersion?: string | number | null;
+  pm2Version?: string | null;
+  pm2MajorVersion?: string | number | null;
   platform?: NodeJS.Platform;
 }
 
-export interface NodeMajorPm2HomePaths {
-  nodeVersion: string | null;
-  nodeMajorVersion: string;
+export interface Pm2MajorHomePaths {
+  pm2Version: string | null;
+  pm2MajorVersion: string;
   pm2Home: string;
 }
 
@@ -99,6 +99,21 @@ export function extractNodeMajorVersion(
   return /^\d+$/.test(fallbackMajorValue) ? fallbackMajorValue : '0';
 }
 
+export function extractPm2MajorVersion(
+  pm2Version?: string | number | null,
+  fallbackMajor: string | number = 7,
+): string {
+  const candidate = String(pm2Version ?? '').trim().replace(/^v/i, '');
+  const candidateMajor = candidate.split('.')[0];
+  if (/^\d+$/.test(candidateMajor)) {
+    return candidateMajor;
+  }
+
+  const fallback = String(fallbackMajor).trim().replace(/^v/i, '');
+  const fallbackMajorValue = fallback.split('.')[0];
+  return /^\d+$/.test(fallbackMajorValue) ? fallbackMajorValue : '7';
+}
+
 export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOptions): NodeMajorNpmGlobalPaths {
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
@@ -117,15 +132,15 @@ export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOpti
   };
 }
 
-export function buildNodeMajorPm2HomePaths(options: NodeMajorPm2HomePathOptions): NodeMajorPm2HomePaths {
+export function buildPm2MajorHomePaths(options: Pm2MajorHomePathOptions): Pm2MajorHomePaths {
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
-  const nodeMajorVersion = extractNodeMajorVersion(options.nodeMajorVersion ?? options.nodeVersion);
+  const pm2MajorVersion = extractPm2MajorVersion(options.pm2MajorVersion ?? options.pm2Version);
 
   return {
-    nodeVersion: options.nodeVersion?.trim() || null,
-    nodeMajorVersion,
-    pm2Home: pathModule.join(options.userDataPath, 'pm2', nodeMajorVersion),
+    pm2Version: options.pm2Version?.trim() || null,
+    pm2MajorVersion,
+    pm2Home: pathModule.join(options.userDataPath, 'pm2', pm2MajorVersion),
   };
 }
 

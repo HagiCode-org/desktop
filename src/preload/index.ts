@@ -82,6 +82,12 @@ export interface WebServiceProcessInfo {
   port: number;
 }
 
+export interface WebServiceStartupPhaseEvent {
+  phase: WebServiceProcessInfo['phase'];
+  message?: string;
+  timestamp: number;
+}
+
 export interface SetWebServiceConfigResult {
   success: boolean;
   error: string | null;
@@ -242,6 +248,7 @@ interface ElectronAPI {
   getWebServiceUrl: () => Promise<string | null>;
   setWebServiceConfig: (config: { host?: string; port?: number }) => Promise<SetWebServiceConfigResult>;
   onWebServiceStatusChange: (callback: (status: WebServiceProcessInfo) => void) => () => void;
+  onWebServiceStartupPhaseChange: (callback: (payload: WebServiceStartupPhaseEvent) => void) => () => void;
 
   // Package Management APIs
   checkPackageInstallation: () => Promise<void>;
@@ -435,6 +442,13 @@ const electronAPI: ElectronAPI = {
     };
     ipcRenderer.on('web-service-status-changed', listener);
     return () => ipcRenderer.removeListener('web-service-status-changed', listener);
+  },
+  onWebServiceStartupPhaseChange: (callback) => {
+    const listener = (_event, payload) => {
+      callback(payload);
+    };
+    ipcRenderer.on('web-service-startup-phase', listener);
+    return () => ipcRenderer.removeListener('web-service-startup-phase', listener);
   },
 
   // Package Management APIs

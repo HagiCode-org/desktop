@@ -96,6 +96,8 @@ export interface DependencyReadinessPackageSummary {
   status: ManagedNpmPackageStatus;
   installedVersion: string | null;
   installSpec: string;
+  requiredVersionRange: string | null;
+  versionSatisfied: boolean;
   packageName: string;
   message?: string;
 }
@@ -115,7 +117,9 @@ export interface DependencyReadinessSummary {
   optionalPackages: DependencyReadinessPackageSummary[];
   agentCliPackages: DependencyReadinessPackageSummary[];
   missingRequiredPackageIds: ManagedNpmPackageId[];
+  versionMismatchRequiredPackageIds: ManagedNpmPackageId[];
   missingSelectedAgentCliPackageIds: ManagedNpmPackageId[];
+  versionMismatchSelectedAgentCliPackageIds: ManagedNpmPackageId[];
   selectedAgentCliPackageIds: ManagedNpmPackageId[];
   installedSelectedAgentCliPackageIds: ManagedNpmPackageId[];
   ignoredSelectedAgentCliPackageIds: string[];

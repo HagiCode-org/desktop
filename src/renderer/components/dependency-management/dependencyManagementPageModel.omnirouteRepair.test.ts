@@ -15,6 +15,7 @@ function createPackage(
   id: ManagedNpmPackageStatusSnapshot['id'],
   displayName: string,
   status: ManagedNpmPackageStatusSnapshot['status'],
+  version?: string | null,
 ): ManagedNpmPackageStatusSnapshot {
   return {
     id,
@@ -24,12 +25,12 @@ function createPackage(
       displayName,
       descriptionKey: `dependencyManagement.packages.${id}.description`,
       binName: displayName.toLowerCase(),
-      installSpec: displayName.toLowerCase(),
+      installSpec: id === 'pm2' ? 'pm2@7.0.1' : displayName.toLowerCase(),
       category: id === 'omniroute' ? 'developer-tool' : 'workflow',
       installMode: 'hagiscript-sync',
     },
     status,
-    version: status === 'installed' ? '1.0.0' : null,
+    version: status === 'installed' ? (version ?? '1.0.0') : null,
     packageRoot: `/tmp/${id}`,
     executablePath: status === 'installed' ? `/tmp/${id}/bin` : null,
   };
@@ -65,6 +66,20 @@ describe('dependency-management OmniRoute repair helpers', () => {
 
     assert.equal(evaluation.ready, false);
     assert.deepEqual(evaluation.pendingPackageIds, ['omniroute']);
+  });
+
+  it('keeps repair completion blocked when a targeted package is installed at an unsupported version', () => {
+    const packages = [
+      createPackage('pm2', 'PM2', 'installed', '6.0.14'),
+      createPackage('omniroute', 'OmniRoute', 'installed'),
+    ];
+
+    const evaluation = evaluateDependencyRepairIntent(packages, {
+      targetPackageIds: ['pm2'],
+    });
+
+    assert.equal(evaluation.ready, false);
+    assert.deepEqual(evaluation.pendingPackageIds, ['pm2']);
   });
 
   it('allows return to OmniRoute only after every targeted package is available', () => {

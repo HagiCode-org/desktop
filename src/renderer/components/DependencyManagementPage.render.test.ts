@@ -38,12 +38,16 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /dependencyManagement\.environment\.faqLinkLabel/);
     assert.match(pageSource, /openExternal/);
     assert.match(modelSource, /managedPackageRowClassName/);
+    assert.match(modelSource, /isManagedPackageOutdated/);
+    assert.match(modelSource, /getManagedPackageDisplayStatus/);
     assert.match(modelSource, /prioritizePackagesForRepair/);
     assert.match(modelSource, /evaluateDependencyRepairIntent/);
     assert.match(packageGroupsSource, /packages\.map/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
     assert.match(packageGroupsSource, /highlightedPackageIds\?: ManagedNpmPackageId\[];/);
     assert.match(packageGroupsSource, /dependencyManagement\.omniRouteRepair\.targetBadge/);
+    assert.match(packageGroupsSource, /dependencyManagement\.packageStatus\.\$\{displayStatus\}/);
+    assert.match(packageGroupsSource, /dependencyManagement\.package\.versionMismatch/);
     assert.match(packageGroupsSource, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
     assert.match(pageSource, /batchSyncState/);
     assert.match(packageGroupsSource, /BatchSyncLogPanel/);
@@ -78,6 +82,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(modelSource, /export function getSelectablePackageIds/);
     assert.match(modelSource, /export function prioritizePackagesForRepair/);
     assert.match(modelSource, /export function evaluateDependencyRepairIntent/);
+    assert.match(modelSource, /export function getManagedPackageActionKey/);
     assert.match(modelSource, /export function updateSelectedPackageIds/);
     assert.match(modelSource, /export function managedPackageRowClassName/);
 
@@ -86,6 +91,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /export const BatchSyncLogPanel = forwardRef/);
     assert.match(packageGroupsSource, /dependencyManagement\.packageTable\.title/);
     assert.match(packageGroupsSource, /dependencyManagement\.selection\.selectPackage/);
+    assert.match(packageGroupsSource, /dependencyManagement\.actions\.\$\{actionKey\}/);
     assert.match(packageGroupsSource, /dependencyManagement\.batchLog\.title/);
   });
 
@@ -126,9 +132,10 @@ describe('dependency management renderer wiring', () => {
       fs.readFile(packageGroupsPath, 'utf8'),
     ]);
 
-    assert.match(modelSource, /status === 'installed'\s*\?\s*'bg-emerald-500\/10 hover:bg-emerald-500\/15'/);
-    assert.match(modelSource, /:\s*'bg-red-500\/10 hover:bg-red-500\/15'/);
-    assert.match(packageGroupsSource, /className=\{cn\(\s*managedPackageRowClassName\(item\.status\)/);
+    assert.match(modelSource, /displayStatus === 'installed'\s*\)\s*\{\s*return 'bg-emerald-500\/10 hover:bg-emerald-500\/15';/);
+    assert.match(modelSource, /displayStatus === 'outdated'\s*\)\s*\{\s*return 'bg-amber-500\/10 hover:bg-amber-500\/15';/);
+    assert.match(modelSource, /return 'bg-red-500\/10 hover:bg-red-500\/15';/);
+    assert.match(packageGroupsSource, /className=\{cn\(\s*managedPackageRowClassName\(item\)/);
     assert.doesNotMatch(packageGroupsSource, /<TableHead>\{t\('dependencyManagement\.packageTable\.status'\)\}<\/TableHead>/);
   });
 

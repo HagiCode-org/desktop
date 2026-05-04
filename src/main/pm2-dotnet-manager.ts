@@ -40,6 +40,7 @@ export interface Pm2CommandOptions {
   env?: NodeJS.ProcessEnv;
   shell?: boolean;
   windowsHide?: boolean;
+  timeoutMs?: number;
 }
 
 export interface Pm2CommandExecutor {
@@ -53,6 +54,8 @@ export interface Pm2DotnetManagerOptions {
   platform?: NodeJS.Platform;
   statusRetryDelayMs?: number;
   statusRetryMaxRetries?: number;
+  statusCommandTimeoutMs?: number;
+  lifecycleCommandTimeoutMs?: number;
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -90,6 +93,8 @@ export type Pm2LifecycleResult =
 
 const DEFAULT_PM2_STATUS_RETRY_DELAY_MS = 500;
 const DEFAULT_PM2_STATUS_MAX_RETRIES = 3;
+const DEFAULT_PM2_STATUS_COMMAND_TIMEOUT_MS = 5000;
+const DEFAULT_PM2_LIFECYCLE_COMMAND_TIMEOUT_MS = 10000;
 
 type Pm2StatusNormalizationResult =
   | {
@@ -115,6 +120,7 @@ class DefaultPm2CommandExecutor implements Pm2CommandExecutor {
       env: options.env,
       shell: launch.shell,
       windowsHide: options.windowsHide ?? true,
+      timeoutMs: options.timeoutMs,
       metadata: { component: 'Pm2DotnetManager', command },
     });
 
@@ -226,6 +232,11 @@ function collectPersistedPm2InlineEnv(env: NodeJS.ProcessEnv): Array<[string, st
 function isWindowsPm2Command(pm2Command: string): boolean {
   const baseName = path.win32.basename(stripWrappingQuotes(pm2Command)).toLowerCase();
   return baseName === 'pm2' || baseName === 'pm2.cmd';
+}
+
+function isPosixPm2Command(pm2Command: string): boolean {
+  const baseName = path.posix.basename(stripWrappingQuotes(pm2Command)).toLowerCase();
+  return baseName === 'pm2';
 }
 
 function resolveWindowsPm2LaunchFromNodeExecutable(
@@ -355,6 +366,88 @@ function resolveWindowsPm2LaunchFromPortableToolchainRoots(
   return null;
 }
 
+function resolvePosixNodeExecutableFromEnvironment(
+  env: NodeJS.ProcessEnv | undefined,
+  existsSync: (targetPath: string) => boolean,
+  portableToolchainRoots: readonly string[] = [],
+): string | null {
+  if (!env) {
+    return null;
+  }
+
+  const preferredCandidates = [
+    env.HAGICODE_PM2_NODE_EXECUTABLE,
+    env.npm_node_execpath,
+    env.NODE,
+  ]
+    .map(value => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  for (const candidate of preferredCandidates) {
+    if (isAbsolutePathLike(candidate) && existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  const candidateRoots = new Set<string>();
+  const envPortableToolchainRoot = env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
+  if (envPortableToolchainRoot) {
+    candidateRoots.add(envPortableToolchainRoot);
+  }
+  for (const toolchainRoot of portableToolchainRoots) {
+    const trimmedRoot = toolchainRoot.trim();
+    if (trimmedRoot) {
+      candidateRoots.add(trimmedRoot);
+    }
+  }
+
+  for (const toolchainRoot of candidateRoots) {
+    const nodeExecutablePath = resolveExistingPath(
+      buildPathCandidates(toolchainRoot, 'node', 'bin', 'node'),
+      existsSync,
+    );
+    if (nodeExecutablePath) {
+      return nodeExecutablePath;
+    }
+  }
+
+  return null;
+}
+
+function resolvePosixPm2LaunchFromEnvironment(
+  pm2Command: string,
+  env: NodeJS.ProcessEnv | undefined,
+  existsSync: (targetPath: string) => boolean,
+  portableToolchainRoots: readonly string[] = [],
+): { command: string; argsPrefix: string[] } | null {
+  if (!env || !isPosixPm2Command(pm2Command)) {
+    return null;
+  }
+
+  const managedNpmGlobalPath = env.HAGICODE_NPM_GLOBAL_PATH?.trim();
+  if (!managedNpmGlobalPath) {
+    return null;
+  }
+
+  const pm2CliPath = resolveExistingPath(
+    buildPathCandidates(managedNpmGlobalPath, 'lib', 'node_modules', 'pm2', 'bin', 'pm2'),
+    existsSync,
+  );
+  if (!pm2CliPath) {
+    return null;
+  }
+
+  const nodeExecutablePath = resolvePosixNodeExecutableFromEnvironment(env, existsSync, portableToolchainRoots);
+  if (!nodeExecutablePath) {
+    return null;
+  }
+
+  return {
+    command: nodeExecutablePath,
+    argsPrefix: [pm2CliPath],
+  };
+}
+
 function resolveDefaultPortableToolchainRoots(): string[] {
   const roots = new Set<string>();
   const envRoot = process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
@@ -451,12 +544,14 @@ function buildSpawnOptions(
   env: NodeJS.ProcessEnv,
   command: string,
   shellOverride?: boolean,
+  timeoutMs?: number,
 ): Pm2CommandOptions {
   return {
     cwd,
     env,
     shell: shellOverride ?? shouldUseShellForCommand(command),
     windowsHide: true,
+    timeoutMs,
   };
 }
 
@@ -472,9 +567,9 @@ export function resolvePm2LaunchPlan(
   const platform = options.platform ?? process.platform;
   const existsSync = options.existsSync ?? fsSync.existsSync;
   const normalizedCommand = stripWrappingQuotes(pm2Command);
+  const candidatePortableToolchainRoots = options.portableToolchainRoots ?? resolveDefaultPortableToolchainRoots();
 
   if (platform === 'win32') {
-    const candidatePortableToolchainRoots = options.portableToolchainRoots ?? resolveDefaultPortableToolchainRoots();
     const envLaunch = resolveWindowsPm2LaunchFromEnvironment(
       normalizedCommand,
       options.env,
@@ -508,6 +603,20 @@ export function resolvePm2LaunchPlan(
         shell: false,
       };
     }
+  }
+
+  const posixEnvLaunch = resolvePosixPm2LaunchFromEnvironment(
+    normalizedCommand,
+    options.env,
+    existsSync,
+    candidatePortableToolchainRoots,
+  );
+  if (posixEnvLaunch) {
+    return {
+      command: posixEnvLaunch.command,
+      argsPrefix: posixEnvLaunch.argsPrefix,
+      shell: false,
+    };
   }
 
   return {
@@ -728,6 +837,8 @@ export class Pm2DotnetManager {
   private readonly platform: NodeJS.Platform;
   private readonly statusRetryDelayMs: number;
   private readonly statusRetryMaxRetries: number;
+  private readonly statusCommandTimeoutMs: number;
+  private readonly lifecycleCommandTimeoutMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private lastLifecycleEnv: NodeJS.ProcessEnv | null = null;
 
@@ -738,6 +849,8 @@ export class Pm2DotnetManager {
     this.commandExecutor = options.commandExecutor ?? new DefaultPm2CommandExecutor();
     this.statusRetryDelayMs = options.statusRetryDelayMs ?? DEFAULT_PM2_STATUS_RETRY_DELAY_MS;
     this.statusRetryMaxRetries = options.statusRetryMaxRetries ?? DEFAULT_PM2_STATUS_MAX_RETRIES;
+    this.statusCommandTimeoutMs = options.statusCommandTimeoutMs ?? DEFAULT_PM2_STATUS_COMMAND_TIMEOUT_MS;
+    this.lifecycleCommandTimeoutMs = options.lifecycleCommandTimeoutMs ?? DEFAULT_PM2_LIFECYCLE_COMMAND_TIMEOUT_MS;
     this.sleep = options.sleep ?? (async (ms: number) => { await new Promise(resolve => setTimeout(resolve, ms)); });
   }
 
@@ -784,6 +897,10 @@ export class Pm2DotnetManager {
     return this.lastLifecycleEnv ?? process.env;
   }
 
+  private resolveCommandTimeoutMs(operation: Pm2DotnetOperation): number {
+    return operation === 'status' ? this.statusCommandTimeoutMs : this.lifecycleCommandTimeoutMs;
+  }
+
   private async runPm2(operation: Pm2DotnetOperation, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
     const pm2LaunchPlan = resolvePm2LaunchPlan(this.pm2Command, {
       env,
@@ -794,7 +911,13 @@ export class Pm2DotnetManager {
       const result = await this.commandExecutor.run(
         pm2LaunchPlan.command,
         spawnArgs,
-        buildSpawnOptions(cwd, env, pm2LaunchPlan.command, pm2LaunchPlan.shell),
+        buildSpawnOptions(
+          cwd,
+          env,
+          pm2LaunchPlan.command,
+          pm2LaunchPlan.shell,
+          this.resolveCommandTimeoutMs(operation),
+        ),
       );
       if (result.code !== 0) {
         return {

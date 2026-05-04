@@ -1,3 +1,8 @@
+import {
+  findManagedNpmPackage,
+  getManagedPackageRequiredVersionRange,
+  isManagedPackageVersionSatisfied,
+} from '../shared/npm-managed-packages.js';
 import type { ManagedNpmPackageStatus } from '../types/dependency-management.js';
 import type {
   OmniRouteDependencyFailureKind,
@@ -9,11 +14,12 @@ export interface OmniRouteDependencyCheck {
   packageId: OmniRouteDependencyPackageId;
   packageStatus: ManagedNpmPackageStatus | null;
   executablePath: string | null;
+  installedVersion?: string | null;
 }
 
 interface OmniRouteDependencyProblem {
   packageId: OmniRouteDependencyPackageId;
-  issue: 'missing' | 'unknown';
+  issue: 'missing' | 'unknown' | 'version-mismatch';
 }
 
 const PACKAGE_LABELS: Record<OmniRouteDependencyPackageId, string> = {
@@ -35,9 +41,27 @@ function formatPackageLabelList(packageIds: readonly OmniRouteDependencyPackageI
 export function classifyOmniRouteDependencyProblems(
   checks: readonly OmniRouteDependencyCheck[],
 ): OmniRouteDependencyProblem[] {
-  return checks.flatMap((check) => {
+  return checks.flatMap<OmniRouteDependencyProblem>((check) => {
+    const definition = findManagedNpmPackage(check.packageId);
     if (check.packageStatus === 'installed' && check.executablePath) {
-      return [];
+      const versionSatisfied = definition
+        ? isManagedPackageVersionSatisfied(definition, check.installedVersion ?? null)
+        : true;
+      if (versionSatisfied) {
+        return [];
+      }
+
+      return [{
+        packageId: check.packageId,
+        issue: 'version-mismatch',
+      }];
+    }
+
+    if (check.packageStatus === 'installed' && !check.executablePath) {
+      return [{
+        packageId: check.packageId,
+        issue: 'unknown',
+      }];
     }
 
     return [{
@@ -58,12 +82,21 @@ export function buildOmniRouteDependencyRemediation(
   const targetPackageIds = Array.from(new Set(problems.map((problem) => problem.packageId)));
   const failureKind: OmniRouteDependencyFailureKind = problems.every((problem) => problem.issue === 'missing')
     ? 'dependency-missing'
-    : 'dependency-unknown';
+    : problems.every((problem) => problem.issue === 'version-mismatch')
+      ? 'dependency-version-mismatch'
+      : 'dependency-unknown';
   const packageList = formatPackageLabelList(targetPackageIds);
   const singular = targetPackageIds.length === 1;
+  const versionGuidance = targetPackageIds.map((packageId) => {
+    const definition = findManagedNpmPackage(packageId);
+    const requiredVersionRange = definition ? getManagedPackageRequiredVersionRange(definition) : null;
+    return requiredVersionRange ? `${PACKAGE_LABELS[packageId]} must satisfy ${requiredVersionRange}` : PACKAGE_LABELS[packageId];
+  }).join('; ');
   const message = failureKind === 'dependency-missing'
     ? `Desktop-managed ${packageList} ${singular ? 'is' : 'are'} not installed. Repair ${singular ? 'it' : 'them'} from Dependency Management and retry.`
-    : `Desktop-managed ${packageList} ${singular ? 'is' : 'are'} unavailable or not recognized. Repair ${singular ? 'it' : 'them'} from Dependency Management and retry.`;
+    : failureKind === 'dependency-version-mismatch'
+      ? `Desktop-managed ${packageList} ${singular ? 'is' : 'are'} installed at an unsupported version. Upgrade ${singular ? 'it' : 'them'} from Dependency Management and retry. ${versionGuidance}.`
+      : `Desktop-managed ${packageList} ${singular ? 'is' : 'are'} unavailable or not recognized. Repair ${singular ? 'it' : 'them'} from Dependency Management and retry.`;
 
   return {
     kind: 'dependency',
