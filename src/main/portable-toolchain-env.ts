@@ -34,8 +34,10 @@ export interface PortableToolchainEnvResult {
 export interface ManagedCliPathEnvResult {
   env: NodeJS.ProcessEnv;
   pathKey: string;
+  pathEntries: string[];
   managedCliPath: string | null;
   managedNpmGlobalPath: string | null;
+  inheritedPathValue?: string;
   npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
@@ -79,6 +81,36 @@ function splitPathEntries(value: string | undefined, platform: NodeJS.Platform):
     .split(getPathDelimiter(platform))
     .map(entry => entry.trim())
     .filter(entry => entry.length > 0);
+}
+
+function buildResolvedPathEntries(
+  baseEnv: NodeJS.ProcessEnv,
+  prependedEntries: readonly string[],
+  platform: NodeJS.Platform,
+): {
+  pathKey: string;
+  inheritedPathValue?: string;
+  pathEntries: string[];
+} {
+  const pathKey = resolvePathEnvKey(baseEnv, platform);
+  const inheritedPathValue = baseEnv[pathKey] ?? baseEnv.PATH ?? baseEnv.Path;
+  const inheritedEntries = splitPathEntries(inheritedPathValue, platform);
+
+  return {
+    pathKey,
+    inheritedPathValue,
+    pathEntries: dedupePathEntries([...prependedEntries, ...inheritedEntries], platform),
+  };
+}
+
+function applyResolvedPathEntries(
+  env: NodeJS.ProcessEnv,
+  resolvedPathEntries: { pathKey: string; inheritedPathValue?: string; pathEntries: readonly string[] },
+  platform: NodeJS.Platform,
+): void {
+  if (resolvedPathEntries.pathEntries.length > 0 || resolvedPathEntries.inheritedPathValue !== undefined) {
+    env[resolvedPathEntries.pathKey] = resolvedPathEntries.pathEntries.join(getPathDelimiter(platform));
+  }
 }
 
 export function resolvePathEnvKey(
@@ -147,20 +179,15 @@ export function injectPortableToolchainEnv(
   options: InjectPortableToolchainEnvOptions = {},
 ): PortableToolchainEnvResult {
   const platform = options.platform ?? process.platform;
-  const pathKey = resolvePathEnvKey(baseEnv, platform);
-  const inheritedPathValue = baseEnv[pathKey] ?? baseEnv.PATH ?? baseEnv.Path;
-  const inheritedEntries = splitPathEntries(inheritedPathValue, platform);
   const toolchainEntries = collectPortableToolchainPathEntries(pathAccessor, options);
   const activationPolicy = options.activationPolicy;
   const activeInjectedPaths = activationPolicy?.enabled === false ? [] : toolchainEntries.injectedPaths;
-  const nextEntries = dedupePathEntries([...activeInjectedPaths, ...inheritedEntries], platform);
+  const resolvedPathEntries = buildResolvedPathEntries(baseEnv, activeInjectedPaths, platform);
   const env: NodeJS.ProcessEnv = {
     ...baseEnv,
   };
 
-  if (nextEntries.length > 0 || inheritedPathValue !== undefined) {
-    env[pathKey] = nextEntries.join(getPathDelimiter(platform));
-  }
+  applyResolvedPathEntries(env, resolvedPathEntries, platform);
 
   const markerInjected = activeInjectedPaths.length > 0;
   if (markerInjected) {
@@ -188,7 +215,7 @@ export function injectPortableToolchainEnv(
 
   return {
     env,
-    pathKey,
+    pathKey: resolvedPathEntries.pathKey,
     injectedPaths: activeInjectedPaths,
     toolchainRoot: toolchainEntries.toolchainRoot,
     markerInjected,
@@ -203,10 +230,16 @@ export function injectPortableToolchainEnv(
 
 export function injectManagedCliPathEnv(
   baseEnv: NodeJS.ProcessEnv,
-  options: { platform?: NodeJS.Platform; npmGlobalPaths?: NodeMajorNpmGlobalPaths | null } = {},
+  options: {
+    platform?: NodeJS.Platform;
+    activationPolicy?: BundledNodeRuntimePolicyDecision;
+    npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
+  } = {},
 ): ManagedCliPathEnvResult {
   const platform = options.platform ?? process.platform;
-  const pathKey = resolvePathEnvKey(baseEnv, platform);
+  const activeNpmGlobalPaths = options.activationPolicy?.enabled === false
+    ? null
+    : (options.npmGlobalPaths ?? null);
   const env: NodeJS.ProcessEnv = {
     ...baseEnv,
   };
@@ -215,8 +248,14 @@ export function injectManagedCliPathEnv(
     delete env[key];
   }
 
-  const managedCliPath = resolveManagedCliCommandDirectory(options.npmGlobalPaths ?? null, platform);
-  const managedNpmGlobalPath = resolveManagedNpmGlobalPath(options.npmGlobalPaths ?? null);
+  const managedCliPath = resolveManagedCliCommandDirectory(activeNpmGlobalPaths, platform);
+  const managedNpmGlobalPath = resolveManagedNpmGlobalPath(activeNpmGlobalPaths);
+  const resolvedPathEntries = buildResolvedPathEntries(
+    baseEnv,
+    managedCliPath ? [managedCliPath] : [],
+    platform,
+  );
+  applyResolvedPathEntries(env, resolvedPathEntries, platform);
   if (managedCliPath) {
     env.HAGICODE_AGENT_CLI_PATH = managedCliPath;
   } else {
@@ -230,10 +269,12 @@ export function injectManagedCliPathEnv(
 
   return {
     env,
-    pathKey,
+    pathKey: resolvedPathEntries.pathKey,
+    pathEntries: resolvedPathEntries.pathEntries,
     managedCliPath,
     managedNpmGlobalPath,
-    npmGlobalPaths: options.npmGlobalPaths ?? null,
+    inheritedPathValue: resolvedPathEntries.inheritedPathValue,
+    npmGlobalPaths: activeNpmGlobalPaths,
   };
 }
 

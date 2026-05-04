@@ -513,9 +513,7 @@ describe('web-service-env', () => {
     );
   });
 
-  it('keeps the inherited PATH untouched for managed server startup while preserving explicit dotnet vars', async () => {
-    const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
-    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+  it('keeps the inherited PATH untouched when no managed CLI command directory is available for managed server startup', () => {
     const runtimeEnv = {
       PATH: '/system/bin',
       HOME: '/tmp/home',
@@ -533,18 +531,14 @@ describe('web-service-env', () => {
       platform: 'linux',
     });
 
-    assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
-    assert.match(source, /preserves inherited order; Desktop does not prepend bundled Node\/npm paths for the managed server/);
-    assert.match(source, /HAGICODE_AGENT_CLI_PATH=/);
-    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH=/);
-    assert.doesNotMatch(source, /HAGICODE_NPM_GLOBAL_BIN_ROOT=/);
-    assert.doesNotMatch(source, /npm_execpath=/);
     assert.equal(runtimeEnv.PATH, '/system/bin');
     assert.equal(runtimeEnv.DOTNET_ROOT, '/portable/dotnet');
     assert.equal(runtimeEnv.DOTNET_MULTILEVEL_LOOKUP, '0');
     assert.equal(runtimeEnv.HAGICODE_DOTNET_EXE, '/portable/dotnet/dotnet');
     assert.equal(result.env.PATH, '/system/bin');
     assert.equal(result.env.HAGICODE_DOTNET_EXE, '/portable/dotnet/dotnet');
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, undefined);
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, undefined);
     assert.equal(result.env.NODE_PATH, undefined);
     assert.equal(result.env.NODE, undefined);
     assert.equal(result.env.npm_execpath, undefined);
@@ -615,9 +609,9 @@ describe('web-service-env', () => {
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
   });
 
-  it('injects managed npm metadata and removes Node/npm marker vars for managed server startup', () => {
+  it('prepends the managed POSIX CLI command directory and removes Node/npm marker vars for managed server startup', () => {
     const baseEnv = {
-      PATH: '/system/bin',
+      PATH: '/system/bin:/userData/node22/npmGlobal/bin:/usr/local/bin',
       NODE_PATH: '/system/node_modules',
       NODE: '/portable/toolchain/node/bin/node',
       npm_node_execpath: '/portable/toolchain/node/bin/node',
@@ -646,13 +640,14 @@ describe('web-service-env', () => {
     assert.equal(result.pathKey, 'PATH');
     assert.equal(result.managedCliPath, '/userData/node22/npmGlobal/bin');
     assert.equal(result.managedNpmGlobalPath, '/userData/node22/npmGlobal');
-    assert.equal(result.env.PATH, '/system/bin');
+    assert.equal(result.env.PATH, '/userData/node22/npmGlobal/bin:/system/bin:/usr/local/bin');
     assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, '/userData/node22/npmGlobal/bin');
     assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, '/userData/node22/npmGlobal');
     assert.equal(result.env.NODE_PATH, undefined);
     assert.equal(result.env.NODE, undefined);
     assert.equal(result.env.npm_execpath, undefined);
     assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
+    assert.equal(baseEnv.PATH, '/system/bin:/userData/node22/npmGlobal/bin:/usr/local/bin');
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
   });
 
@@ -680,7 +675,7 @@ describe('web-service-env', () => {
 
   it('uses the effective managed command wrapper root for Windows server startup', () => {
     const result = injectManagedCliPathEnv({
-      Path: 'C:\\Windows\\System32',
+      Path: 'C:\\Windows\\System32;C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal;C:\\Windows',
       NODE: 'C:\\portable\\toolchain\\node\\node.exe',
     }, {
       platform: 'win32',
@@ -697,10 +692,44 @@ describe('web-service-env', () => {
     assert.equal(result.pathKey, 'Path');
     assert.equal(result.managedCliPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
     assert.equal(result.managedNpmGlobalPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
-    assert.equal(result.env.Path, 'C:\\Windows\\System32');
+    assert.equal(result.env.Path, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal;C:\\Windows\\System32;C:\\Windows');
     assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
     assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
     assert.equal(result.env.NODE, undefined);
+  });
+
+  it('preserves inherited PATH and skips managed npmGlobal injection when the bundled runtime policy is disabled', () => {
+    const activationPolicy = resolveBundledNodeRuntimePolicy({
+      defaultEnabledByConsumer: { desktop: true },
+      explicitEnabled: false,
+    });
+    const result = injectManagedCliPathEnv({
+      PATH: '/system/bin:/usr/local/bin',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/node22/npmGlobal',
+      NODE: '/portable/toolchain/node/bin/node',
+      npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
+    }, {
+      platform: 'linux',
+      activationPolicy,
+      npmGlobalPaths: {
+        nodeVersion: '22.12.0',
+        nodeMajorVersion: '22',
+        npmGlobalPrefix: '/userData/node22/npmGlobal',
+        npmGlobalBinRoot: '/userData/node22/npmGlobal/bin',
+        npmGlobalModulesRoot: '/userData/node22/npmGlobal/lib/node_modules',
+        npmCacheRoot: '/userData/node22/npmCache',
+      },
+    });
+
+    assert.equal(result.pathKey, 'PATH');
+    assert.deepEqual(result.pathEntries, ['/system/bin', '/usr/local/bin']);
+    assert.equal(result.env.PATH, '/system/bin:/usr/local/bin');
+    assert.equal(result.managedCliPath, null);
+    assert.equal(result.managedNpmGlobalPath, null);
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, undefined);
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, undefined);
+    assert.equal(result.env.NODE, undefined);
+    assert.equal(result.env.npm_execpath, undefined);
   });
 
   it('uses bundled toolchain paths when the desktop manifest default is enabled', () => {

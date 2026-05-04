@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import {
   buildNodeMajorNpmGlobalPaths,
+  buildNodeMajorPm2HomePaths,
   buildNpmGlobalCommandArtifactPaths,
   buildPortableToolchainPaths,
   resolvePortableToolchainRoot,
@@ -120,5 +121,35 @@ describe('path-manager portable toolchain paths', () => {
       'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\hagiscript.cmd',
       'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\hagiscript.ps1',
     ]);
+  });
+
+  it('derives Desktop-managed PM2 homes under userData by Node major version', () => {
+    const linuxPaths = buildNodeMajorPm2HomePaths({
+      userDataPath: '/home/user/.config/HagiCode Desktop',
+      nodeVersion: 'v22.12.0',
+      platform: 'linux',
+    });
+    const windowsPaths = buildNodeMajorPm2HomePaths({
+      userDataPath: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop',
+      nodeVersion: '24.1.0',
+      platform: 'win32',
+    });
+
+    assert.equal(linuxPaths.pm2Home, '/home/user/.config/HagiCode Desktop/pm2/22');
+    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\pm2\\24');
+  });
+
+  it('falls back to a deterministic PM2 home when the Node version is invalid', () => {
+    const paths = buildNodeMajorPm2HomePaths({
+      userDataPath: '/home/user/.config/HagiCode Desktop',
+      nodeVersion: 'not-a-version',
+      nodeMajorVersion: 'bad-input',
+      platform: 'linux',
+    });
+
+    assert.equal(
+      paths.pm2Home,
+      `/home/user/.config/HagiCode Desktop/pm2/${process.versions.node.split('.')[0]}`,
+    );
   });
 });

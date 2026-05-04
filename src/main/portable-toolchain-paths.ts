@@ -34,6 +34,19 @@ export interface NodeMajorNpmGlobalPaths {
   npmCacheRoot: string;
 }
 
+export interface NodeMajorPm2HomePathOptions {
+  userDataPath: string;
+  nodeVersion?: string | null;
+  nodeMajorVersion?: string | number | null;
+  platform?: NodeJS.Platform;
+}
+
+export interface NodeMajorPm2HomePaths {
+  nodeVersion: string | null;
+  nodeMajorVersion: string;
+  pm2Home: string;
+}
+
 export function resolvePortableToolchainRoot(options: PortableToolchainPathOptions): string {
   const override = options.overrideRoot?.trim();
   if (override) {
@@ -101,6 +114,18 @@ export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOpti
       ? pathModule.join(npmGlobalPrefix, 'node_modules')
       : pathModule.join(npmGlobalPrefix, 'lib', 'node_modules'),
     npmCacheRoot: pathModule.join(options.userDataPath, `node${nodeMajorVersion}`, 'npmCache'),
+  };
+}
+
+export function buildNodeMajorPm2HomePaths(options: NodeMajorPm2HomePathOptions): NodeMajorPm2HomePaths {
+  const platform = options.platform ?? process.platform;
+  const pathModule = getPathModuleForPlatform(platform);
+  const nodeMajorVersion = extractNodeMajorVersion(options.nodeMajorVersion ?? options.nodeVersion);
+
+  return {
+    nodeVersion: options.nodeVersion?.trim() || null,
+    nodeMajorVersion,
+    pm2Home: pathModule.join(options.userDataPath, 'pm2', nodeMajorVersion),
   };
 }
 
