@@ -57,8 +57,12 @@ describe('OmniRoute manager contract', () => {
 
     assert.match(source, /buildOmniRouteDependencyRemediation/);
     assert.match(source, /resolvePm2LaunchPlan/);
+    assert.match(source, /injectManagedCliPathEnv/);
+    assert.match(source, /buildNodeMajorPm2HomePaths/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /getManagedCommandContext\('omniroute'\)/);
+    assert.match(source, /buildManagedPm2CommandEnv/);
+    assert.match(source, /await this\.buildManagedPm2CommandEnv\(pm2Context\.commandEnv, pm2Context\.environment\)/);
     assert.match(source, /packageId: 'pm2'/);
     assert.match(source, /packageId: 'omniroute'/);
     assert.match(source, /if \(remediation\) \{\s*throw new Error\(remediation\.message\);/);
@@ -70,6 +74,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /\['stop', OMNIROUTE_PROCESS_NAME\]/);
     assert.match(source, /\['restart', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
     assert.match(source, /isMissingPm2ProcessMessage/);
+    assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
+    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
+    assert.match(source, /PM2_HOME/);
+    assert.match(source, /fs\.mkdir\(pm2HomePaths\.pm2Home, \{ recursive: true \}\)/);
     assert.match(source, /process or namespace \.\* not found/);
     assert.match(source, /appendLifecycleFailureLog/);
     assert.match(source, /stdout:/);

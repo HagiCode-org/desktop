@@ -397,6 +397,42 @@ export class PCodeWebServiceManager {
     return path.join(this.pathManager.getPaths().config, PM2_RUNTIME_DIR_NAME);
   }
 
+  private async resolveManagedPm2CommandEnvironment(baseEnv: NodeJS.ProcessEnv): Promise<{
+    env: NodeJS.ProcessEnv;
+    pathKey: string;
+    managedCliPath: string | null;
+    managedNpmGlobalPath: string | null;
+    activationPolicy: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>['activationPolicy'];
+    pm2Home: string;
+  }> {
+    const bundledRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
+    const bundledToolchainStatus = await bundledRuntimeManager.verify();
+    const activationPolicy = bundledToolchainStatus.activationPolicy;
+    const nodeVersion = bundledToolchainStatus.manifest?.node?.version
+      ?? bundledToolchainStatus.components.node.version
+      ?? process.versions.node;
+    const npmGlobalPaths = activationPolicy.enabled === false
+      ? null
+      : this.pathManager.getNodeMajorNpmGlobalPaths({ nodeVersion });
+    const managedCliEnv = injectManagedCliPathEnv(baseEnv, {
+      activationPolicy,
+      npmGlobalPaths,
+    });
+    const pm2HomePaths = await this.pathManager.ensureNodeMajorPm2HomeDirectory({ nodeVersion });
+
+    return {
+      env: {
+        ...managedCliEnv.env,
+        PM2_HOME: pm2HomePaths.pm2Home,
+      },
+      pathKey: managedCliEnv.pathKey,
+      managedCliPath: managedCliEnv.managedCliPath,
+      managedNpmGlobalPath: managedCliEnv.managedNpmGlobalPath,
+      activationPolicy,
+      pm2Home: pm2HomePaths.pm2Home,
+    };
+  }
+
   private buildPm2LifecycleFailureResult(result: Pm2LifecycleResult): StartResult {
     const message = result.success ? 'PM2 command failed unexpectedly' : result.message;
     this.appendStartupLogLine(`PM2 ${result.operation} failure summary: ${message}`);
@@ -977,42 +1013,41 @@ export class PCodeWebServiceManager {
           launchContext.runtimeRoot,
           launchContext.dotnetPath,
         );
-        const bundledRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
-        const bundledToolchainStatus = await bundledRuntimeManager.verify();
-        const activationPolicy = bundledToolchainStatus.activationPolicy;
-        const npmGlobalPaths = this.pathManager.getNodeMajorNpmGlobalPaths({
-          nodeVersion: bundledToolchainStatus.manifest?.node?.version ?? bundledToolchainStatus.components.node.version ?? process.versions.node,
-        });
-        const managedCliEnv = injectManagedCliPathEnv(runtimeEnv, {
-          npmGlobalPaths,
-        });
-        preparedEnv = managedCliEnv.env;
+        const managedPm2Env = await this.resolveManagedPm2CommandEnvironment(runtimeEnv);
+        preparedEnv = managedPm2Env.env;
         envMode = prepared.mode;
-        const pathKey = managedCliEnv.pathKey;
+        const pathKey = managedPm2Env.pathKey;
         this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
         this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
         this.appendStartupLogLine(`HAGICODE_DOTNET_EXE=${launchContext.dotnetPath}`);
-        this.appendStartupLogLine(`${pathKey} preserves inherited order; Desktop does not prepend bundled Node/npm paths for the managed server`);
+        this.appendStartupLogLine(`PM2_HOME=${managedPm2Env.pm2Home}`);
+        this.appendStartupLogLine(`Desktop-managed PM2 home keeps PM2 metadata under ${managedPm2Env.pm2Home}`);
+        this.appendStartupLogLine(`${pathKey} prepends only the managed npm-global CLI command directory when available; Desktop does not prepend bundled Node/npm paths for the managed server`);
         this.appendStartupLogLine('Bundled dotnet is exposed explicitly through HAGICODE_DOTNET_EXE instead of PATH');
-        this.appendStartupLogLine(`Bundled Node toolchain policy for Desktop-managed package operations: enabled=${activationPolicy.enabled}, source=${activationPolicy.source}`);
-        if (managedCliEnv.managedNpmGlobalPath) {
-          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PATH=${managedCliEnv.managedNpmGlobalPath}`);
+        this.appendStartupLogLine(`Bundled Node toolchain policy for Desktop-managed package operations: enabled=${managedPm2Env.activationPolicy.enabled}, source=${managedPm2Env.activationPolicy.source}`);
+        if (managedPm2Env.managedNpmGlobalPath) {
+          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PATH=${managedPm2Env.managedNpmGlobalPath}`);
         }
-        if (managedCliEnv.managedCliPath) {
-          this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedCliEnv.managedCliPath}`);
-          this.appendStartupLogLine('Desktop-managed server startup preserves inherited PATH and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH');
+        if (managedPm2Env.managedCliPath) {
+          this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedPm2Env.managedCliPath}`);
+          this.appendStartupLogLine(`Desktop-managed server startup prepends ${pathKey} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH`);
         }
-        if (managedCliEnv.managedNpmGlobalPath || managedCliEnv.managedCliPath) {
-          log.info('[WebService] Managed server startup preserving inherited PATH with managed npm metadata:', {
+        if (managedPm2Env.managedNpmGlobalPath || managedPm2Env.managedCliPath) {
+          log.info('[WebService] Managed server startup prepending managed CLI PATH with scoped npm metadata:', {
             pathKey,
-            managedCliPath: managedCliEnv.managedCliPath,
-            managedNpmGlobalPath: managedCliEnv.managedNpmGlobalPath,
-            activationPolicy,
+            managedCliPath: managedPm2Env.managedCliPath,
+            managedNpmGlobalPath: managedPm2Env.managedNpmGlobalPath,
+            activationPolicy: managedPm2Env.activationPolicy,
+            pm2Home: managedPm2Env.pm2Home,
+            managedCliPathPrepended: managedPm2Env.managedCliPath !== null,
+            bundledNodePathPrepended: false,
           });
         } else {
-          this.appendStartupLogLine('Desktop-managed server startup preserves inherited PATH with no managed Agent CLI path hint');
-          log.info('[WebService] Managed Agent CLI path injection unavailable; preserving inherited PATH:', {
-            activationPolicy,
+          this.appendStartupLogLine(`Desktop-managed server startup preserves inherited ${pathKey} because no managed Agent CLI path hint is available; Desktop still does not prepend bundled Node/npm paths`);
+          log.info('[WebService] Managed Agent CLI path injection unavailable; preserving inherited PATH without bundled Node/npm path prepends:', {
+            activationPolicy: managedPm2Env.activationPolicy,
+            pm2Home: managedPm2Env.pm2Home,
+            bundledNodePathPrepended: false,
           });
         }
       } catch (error) {
@@ -1154,7 +1189,8 @@ export class PCodeWebServiceManager {
       this.status = 'stopping';
       log.info('[WebService] Stopping web service...');
 
-      const pm2Stop = await this.pm2Manager.stop(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
+      const pm2Env = await this.resolveManagedPm2CommandEnvironment(this.lastPm2Env ?? process.env);
+      const pm2Stop = await this.pm2Manager.stop(this.getPm2RuntimeFilesDirectory(), pm2Env.env);
       if (!pm2Stop.success) {
         log.error('[WebService] PM2 stop failed:', {
           operation: pm2Stop.operation,
@@ -1197,8 +1233,10 @@ export class PCodeWebServiceManager {
   async getStatus(): Promise<ProcessInfo> {
     await this.ensureSavedConfigInitialized();
 
-    const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), this.lastPm2Env ?? process.env);
+    const pm2Env = await this.resolveManagedPm2CommandEnvironment(this.lastPm2Env ?? process.env);
+    const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), pm2Env.env);
     if (pm2Status.success && pm2Status.status) {
+      this.lastPm2Env = pm2Env.env;
       this.resetPm2StatusWarningState();
       if (pm2Status.status.online) {
         this.status = 'running';

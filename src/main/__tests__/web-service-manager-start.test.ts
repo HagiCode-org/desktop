@@ -42,16 +42,20 @@ describe('web-service startup flow', () => {
     assert.match(source, /resolveManagedLaunchContext/);
     assert.match(source, /validateBundledRuntimeForPlatform/);
     assert.match(source, /Starting service with pinned dotnet executable through PM2/);
-    assert.match(source, /const activationPolicy = bundledToolchainStatus\.activationPolicy;/);
-    assert.match(source, /injectManagedCliPathEnv\(runtimeEnv, \{/);
+    assert.match(source, /resolveManagedPm2CommandEnvironment/);
+    assert.match(source, /injectManagedCliPathEnv\(baseEnv, \{/);
+    assert.match(source, /ensureNodeMajorPm2HomeDirectory/);
     assert.doesNotMatch(source, /DevNodeRuntimeManager/);
     assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
     assert.doesNotMatch(source, /prepends development Node runtime paths/);
     assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
     assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
+    assert.match(source, /PM2_HOME=/);
+    assert.match(source, /Desktop-managed PM2 home keeps PM2 metadata under/);
     assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
     assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
     assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
+    assert.match(source, /env: preparedEnv,/);
     assert.match(source, /isManagedServiceReachable\(this\.config\.port\)/);
     assert.doesNotMatch(source, /terminateLingeringServiceByPort/);
     assert.match(source, /PM2 start may fail if this is a non-PM2 port conflict/);
@@ -63,11 +67,16 @@ describe('web-service startup flow', () => {
     assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
     assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
     assert.match(source, /appendStartupLogLine\(`HAGICODE_DOTNET_EXE=\$\{launchContext\.dotnetPath\}`\)/);
-    assert.match(source, /preserves inherited order; Desktop does not prepend bundled Node\/npm paths for the managed server/);
+    assert.match(source, /prepends only the managed npm-global CLI command directory when available; Desktop does not prepend bundled Node\/npm paths for the managed server/);
     assert.doesNotMatch(source, /includes pinned runtime root/);
-    assert.match(source, /Managed server startup preserving inherited PATH with managed npm metadata/);
-    assert.match(source, /Desktop-managed server startup preserves inherited PATH and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH/);
-    assert.match(source, /Desktop-managed server startup preserves inherited PATH with no managed Agent CLI path hint/);
+    assert.match(source, /Managed server startup prepending managed CLI PATH with scoped npm metadata/);
+    assert.match(source, /managedCliPathPrepended: managedPm2Env\.managedCliPath !== null/);
+    assert.match(source, /bundledNodePathPrepended: false/);
+    assert.match(source, /Desktop-managed server startup prepends \$\{pathKey\} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH/);
+    assert.match(source, /Desktop-managed server startup preserves inherited \$\{pathKey\} because no managed Agent CLI path hint is available; Desktop still does not prepend bundled Node\/npm paths/);
+    assert.match(source, /const pm2Env = await this\.resolveManagedPm2CommandEnvironment\(this\.lastPm2Env \?\? process\.env\);/);
+    assert.match(source, /this\.pm2Manager\.stop\(this\.getPm2RuntimeFilesDirectory\(\), pm2Env\.env\)/);
+    assert.match(source, /this\.pm2Manager\.status\(this\.getPm2RuntimeFilesDirectory\(\), pm2Env\.env\)/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
