@@ -3,8 +3,17 @@ import { afterEach, describe, it } from 'node:test';
 import type Store from 'electron-store';
 import {
   CHINESE_RSS_FEED_URL,
+  DEFAULT_RSS_LANGUAGE,
   DEFAULT_RSS_FEED_URL,
   ENGLISH_RSS_FEED_URL,
+  FRENCH_RSS_FEED_URL,
+  GERMAN_RSS_FEED_URL,
+  JAPANESE_RSS_FEED_URL,
+  KOREAN_RSS_FEED_URL,
+  PORTUGUESE_RSS_FEED_URL,
+  RUSSIAN_RSS_FEED_URL,
+  SPANISH_RSS_FEED_URL,
+  TRADITIONAL_CHINESE_RSS_FEED_URL,
   RSSFeedManager,
   resolveRSSFeedLanguage,
   resolveRSSFeedUrl,
@@ -68,19 +77,36 @@ afterEach(() => {
 });
 
 describe('localized RSS manager behavior', () => {
-  it('maps Chinese and English application languages to localized docs RSS URLs', () => {
+  it('maps each desktop language to its localized docs RSS URL', () => {
     assert.equal(resolveRSSFeedLanguage('zh-CN'), 'zh-CN');
-    assert.equal(resolveRSSFeedLanguage('zh-TW'), 'zh-CN');
+    assert.equal(resolveRSSFeedLanguage('zh-TW'), 'zh-Hant');
     assert.equal(resolveRSSFeedLanguage('en-US'), 'en-US');
-    assert.equal(resolveRSSFeedUrl('zh-HK'), CHINESE_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedLanguage('ja'), 'ja-JP');
+    assert.equal(resolveRSSFeedLanguage('ko'), 'ko-KR');
+    assert.equal(resolveRSSFeedLanguage('de'), 'de-DE');
+    assert.equal(resolveRSSFeedLanguage('fr'), 'fr-FR');
+    assert.equal(resolveRSSFeedLanguage('es'), 'es-ES');
+    assert.equal(resolveRSSFeedLanguage('pt'), 'pt-BR');
+    assert.equal(resolveRSSFeedLanguage('ru'), 'ru-RU');
+    assert.equal(resolveRSSFeedLanguage('unsupported-locale'), DEFAULT_RSS_LANGUAGE);
+
+    assert.equal(resolveRSSFeedUrl('zh-CN'), CHINESE_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('zh-HK'), TRADITIONAL_CHINESE_RSS_FEED_URL);
     assert.equal(resolveRSSFeedUrl('en-US'), ENGLISH_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('ja-JP'), JAPANESE_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('ko-KR'), KOREAN_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('de-DE'), GERMAN_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('fr-FR'), FRENCH_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('es-ES'), SPANISH_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('pt-BR'), PORTUGUESE_RSS_FEED_URL);
+    assert.equal(resolveRSSFeedUrl('ru-RU'), RUSSIAN_RSS_FEED_URL);
   });
 
   it('updates the RSS context on language switches and only falls back to same-language cache entries', async () => {
     const requests: string[] = [];
     const payloads = new Map<string, Array<string | Error>>([
-      [CHINESE_RSS_FEED_URL, [createFeedXml('中文文章', 'https://docs.hagicode.com/blog/zh')]],
-      [ENGLISH_RSS_FEED_URL, [new Error('english feed offline')]],
+      [TRADITIONAL_CHINESE_RSS_FEED_URL, [createFeedXml('繁體文章', 'https://docs.hagicode.com/zh-Hant/blog/post')]],
+      [JAPANESE_RSS_FEED_URL, [new Error('japanese feed offline')]],
     ]);
 
     const httpClient: DesktopHttpClient = {
@@ -101,29 +127,29 @@ describe('localized RSS manager behavior', () => {
 
     const manager = RSSFeedManager.getInstance({
       feedUrl: DEFAULT_RSS_FEED_URL,
-      language: 'zh-CN',
+      language: 'zh-Hant',
       refreshInterval: 24 * 60 * 60 * 1000,
       maxItems: 20,
       storeKey: 'rssFeed',
     }, createMemoryStore(), httpClient);
 
-    const chineseItems = await manager.refreshFeed();
-    assert.equal(chineseItems[0]?.title, '中文文章');
-    assert.equal(manager.getCurrentFeedUrl(), CHINESE_RSS_FEED_URL);
+    const traditionalChineseItems = await manager.refreshFeed();
+    assert.equal(traditionalChineseItems[0]?.title, '繁體文章');
+    assert.equal(manager.getCurrentFeedUrl(), TRADITIONAL_CHINESE_RSS_FEED_URL);
 
-    manager.switchLanguage('en-US');
-    assert.equal(manager.getCurrentFeedUrl(), ENGLISH_RSS_FEED_URL);
-    await assert.rejects(() => manager.refreshFeed(), /english feed offline/);
+    manager.switchLanguage('ja-JP');
+    assert.equal(manager.getCurrentFeedUrl(), JAPANESE_RSS_FEED_URL);
+    await assert.rejects(() => manager.refreshFeed(), /japanese feed offline/);
 
-    payloads.set(CHINESE_RSS_FEED_URL, [new Error('chinese feed offline')]);
-    manager.switchLanguage('zh-CN');
+    payloads.set(TRADITIONAL_CHINESE_RSS_FEED_URL, [new Error('traditional chinese feed offline')]);
+    manager.switchLanguage('zh-Hant');
     const fallbackItems = await manager.refreshFeed();
 
-    assert.equal(fallbackItems[0]?.title, '中文文章');
+    assert.equal(fallbackItems[0]?.title, '繁體文章');
     assert.deepEqual(requests, [
-      CHINESE_RSS_FEED_URL,
-      ENGLISH_RSS_FEED_URL,
-      CHINESE_RSS_FEED_URL,
+      TRADITIONAL_CHINESE_RSS_FEED_URL,
+      JAPANESE_RSS_FEED_URL,
+      TRADITIONAL_CHINESE_RSS_FEED_URL,
     ]);
   });
 });

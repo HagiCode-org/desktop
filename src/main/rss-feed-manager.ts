@@ -7,27 +7,33 @@ import type {
   RSSFeedConfig
 } from './types/rss-types.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
-import { isChineseDesktopLanguage } from '../shared/desktop-languages.js';
+import {
+  DEFAULT_RSS_LANGUAGE,
+  DEFAULT_RSS_FEED_URL,
+  resolveRSSFeedLanguage,
+  resolveRSSFeedUrl,
+  type SupportedRSSLanguage,
+} from '../shared/rss-feed-url.js';
 
-export const DEFAULT_RSS_LANGUAGE = 'zh-CN';
-export const CHINESE_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.zh-CN.xml';
-export const ENGLISH_RSS_FEED_URL = 'https://docs.hagicode.com/blog/rss.en-US.xml';
-export const DEFAULT_RSS_FEED_URL = CHINESE_RSS_FEED_URL;
-
-type SupportedRSSLanguage = 'zh-CN' | 'en-US';
+export {
+  CHINESE_RSS_FEED_URL,
+  DEFAULT_RSS_LANGUAGE,
+  DEFAULT_RSS_FEED_URL,
+  ENGLISH_RSS_FEED_URL,
+  FRENCH_RSS_FEED_URL,
+  GERMAN_RSS_FEED_URL,
+  JAPANESE_RSS_FEED_URL,
+  KOREAN_RSS_FEED_URL,
+  PORTUGUESE_RSS_FEED_URL,
+  resolveRSSFeedLanguage,
+  resolveRSSFeedUrl,
+  RUSSIAN_RSS_FEED_URL,
+  SPANISH_RSS_FEED_URL,
+  TRADITIONAL_CHINESE_RSS_FEED_URL,
+} from '../shared/rss-feed-url.js';
 
 function normalizeLanguage(language?: string): string {
   return language?.trim() || DEFAULT_RSS_LANGUAGE;
-}
-
-export function resolveRSSFeedLanguage(language?: string): SupportedRSSLanguage {
-  return isChineseDesktopLanguage(normalizeLanguage(language)) ? 'zh-CN' : 'en-US';
-}
-
-export function resolveRSSFeedUrl(language?: string): string {
-  return resolveRSSFeedLanguage(language) === 'zh-CN'
-    ? CHINESE_RSS_FEED_URL
-    : ENGLISH_RSS_FEED_URL;
 }
 
 /**
