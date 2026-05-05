@@ -339,6 +339,42 @@ describe('pm2-dotnet-manager', () => {
     assert.deepEqual(delays, [9, 9]);
   });
 
+  it('accepts PM2 version mismatch warnings before the JSON payload', async () => {
+    let jlistCount = 0;
+    const executor: Pm2CommandExecutor = {
+      run: async (_command, args) => {
+        assert.equal(args[0], 'jlist');
+        jlistCount += 1;
+        return {
+          code: 0,
+          stdout: '\u001b[31m\u001b[1m>>>> In-memory PM2 is out-of-date, do:\u001b[22m\u001b[39m\n'
+            + '\u001b[31m\u001b[1m>>>> $ pm2 update\u001b[22m\u001b[39m\n'
+            + 'In memory PM2 version: \u001b[34m\u001b[1m6.0.14\u001b[22m\u001b[39m\n'
+            + 'Local PM2 version: \u001b[34m\u001b[1m7.0.1\u001b[22m\u001b[39m\n'
+            + JSON.stringify([{ name: PM2_DOTNET_PROCESS_NAME, pid: 4321, pm2_env: { status: 'online', restart_time: 2, pm_uptime: Date.now() - 5000 } }], null, 2),
+          stderr: '',
+        };
+      },
+    };
+
+    const manager = new Pm2DotnetManager({
+      pm2Command: 'pm2',
+      commandExecutor: executor,
+      platform: 'win32',
+    });
+
+    const result = await manager.status(process.cwd());
+
+    assert.equal(result.success, true);
+    if (result.success) {
+      assert.equal(result.status?.exists, true);
+      assert.equal(result.status?.online, true);
+      assert.equal(result.status?.pid, 4321);
+      assert.equal(result.status?.restartCount, 2);
+    }
+    assert.equal(jlistCount, 1);
+  });
+
   it('does not hide ordinary PM2 command failures behind bootstrap retries', async () => {
     const delays: number[] = [];
     let jlistCount = 0;

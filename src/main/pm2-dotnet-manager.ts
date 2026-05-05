@@ -74,6 +74,16 @@ export interface Pm2ProcessStatus {
   uptime: number;
 }
 
+interface Pm2ListEntry {
+  name?: string;
+  pid?: number;
+  pm2_env?: {
+    status?: string;
+    restart_time?: number;
+    pm_uptime?: number;
+  };
+}
+
 export type Pm2LifecycleResult =
   | {
       success: true;
@@ -95,6 +105,7 @@ const DEFAULT_PM2_STATUS_RETRY_DELAY_MS = 500;
 const DEFAULT_PM2_STATUS_MAX_RETRIES = 3;
 const DEFAULT_PM2_STATUS_COMMAND_TIMEOUT_MS = 5000;
 const DEFAULT_PM2_LIFECYCLE_COMMAND_TIMEOUT_MS = 10000;
+const ANSI_ESCAPE_PATTERN = /\u001b\[[0-?]*[ -/]*[@-~]/g;
 
 type Pm2StatusNormalizationResult =
   | {
@@ -634,6 +645,38 @@ function summarizeOutput(primary: string, secondary = '', fallback = 'PM2 comman
     ?? fallback;
 }
 
+function stripAnsi(input: string): string {
+  return input.replace(ANSI_ESCAPE_PATTERN, '');
+}
+
+function extractPm2JsonArray(output: string): Pm2ListEntry[] | null {
+  const normalizedOutput = stripAnsi(output).trim();
+  if (!normalizedOutput) {
+    return null;
+  }
+
+  const candidateStartIndexes: number[] = [];
+  for (let index = 0; index < normalizedOutput.length; index += 1) {
+    if (normalizedOutput[index] === '[') {
+      candidateStartIndexes.push(index);
+    }
+  }
+
+  for (let index = candidateStartIndexes.length - 1; index >= 0; index -= 1) {
+    const candidate = normalizedOutput.slice(candidateStartIndexes[index]).trim();
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed)) {
+        return parsed as Pm2ListEntry[];
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 function summarizeFailure(operation: Pm2DotnetOperation, result: Pm2CommandResult): string {
   const detail = summarizeOutput(result.stderr, result.stdout);
   if (operation === 'status') {
@@ -725,16 +768,9 @@ function parsePm2Jlist(stdout: string, stderr: string, processName: string): Pm2
   }
 
   try {
-    const parsed = JSON.parse(trimmedStdout);
-    if (!Array.isArray(parsed)) {
-      return {
-        kind: 'failure',
-        failure: buildPm2MalformedStatusResult(
-          'PM2 status output was not a JSON array.',
-          stdout,
-          stderr,
-        ),
-      };
+    const parsed = extractPm2JsonArray(trimmedStdout);
+    if (!parsed) {
+      throw new Error('No JSON array payload was found in PM2 stdout.');
     }
 
     const entry = parsed.find(item => item?.name === processName);
@@ -754,8 +790,8 @@ function parsePm2Jlist(stdout: string, stderr: string, processName: string): Pm2
 
     const pm2Env = entry.pm2_env ?? {};
     const status = typeof pm2Env.status === 'string' ? pm2Env.status : null;
-    const pid = Number.isInteger(entry.pid) && entry.pid > 0 ? entry.pid : null;
-    const restartCount = Number.isInteger(pm2Env.restart_time) ? pm2Env.restart_time : 0;
+    const pid = typeof entry.pid === 'number' && Number.isInteger(entry.pid) && entry.pid > 0 ? entry.pid : null;
+    const restartCount = typeof pm2Env.restart_time === 'number' && Number.isInteger(pm2Env.restart_time) ? pm2Env.restart_time : 0;
     const createdAt = typeof pm2Env.pm_uptime === 'number' ? pm2Env.pm_uptime : 0;
     const uptime = createdAt > 0 ? Math.max(0, Date.now() - createdAt) : 0;
 
