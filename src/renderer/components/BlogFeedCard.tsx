@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import {
   selectRSSFeedItems,
   selectRSSFeedLoading,
@@ -18,8 +19,9 @@ import { RootState, AppDispatch } from '../store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCw, Newspaper, ExternalLink, Clock } from 'lucide-react';
+import { Loader2, RefreshCw, Newspaper, ExternalLink, Clock, Rss } from 'lucide-react';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
+import { resolveRSSFeedUrl } from '../../shared/rss-feed-url';
 
 const BlogFeedCard: React.FC = () => {
   const { t, i18n } = useTranslation(['components', 'common']);
@@ -58,6 +60,13 @@ const BlogFeedCard: React.FC = () => {
   // Handle refresh button click
   const handleRefresh = () => {
     dispatch(refreshFeed());
+  };
+
+  const handleOpenRss = async () => {
+    const result = await window.electronAPI.openExternal(resolveRSSFeedUrl(activeLanguage));
+    if (!result.success) {
+      toast.error(result.error || t('blogFeed.openRssFailed', '无法打开 RSS 链接'));
+    }
   };
 
   // Handle article click - open in browser
@@ -120,7 +129,7 @@ const BlogFeedCard: React.FC = () => {
     >
       <Card className="overflow-hidden">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <motion.div
                 animate={{ rotate: [0, 5, -5, 0] }}
@@ -132,22 +141,35 @@ const BlogFeedCard: React.FC = () => {
                 {t('blogFeed.title', 'Hagicode 博客')}
               </CardTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="h-8 gap-1"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline">
-                {t('blogFeed.refresh', '刷新')}
-              </span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleOpenRss()}
+                className="h-8 gap-1"
+              >
+                <Rss className="w-4 h-4" />
+                <span>{t('blogFeed.openRss', 'RSS')}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loading}
+                className="h-8 gap-1"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {t('blogFeed.refresh', '刷新')}
+                </span>
+              </Button>
+            </div>
           </div>
           {lastUpdate && (
             <CardDescription className="flex items-center gap-1 text-xs">
