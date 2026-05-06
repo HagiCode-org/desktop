@@ -2422,10 +2422,19 @@ app.whenReady().then(async () => {
     configManager,
     pathManager: pathManager ?? PathManager.getInstance(),
   });
-  dependencyManagementService.setVendoredRuntimeInspector(() => codeServerManager!.getRuntimeSnapshots());
+  omniRouteManager = new OmniRouteManager({
+    configManager,
+    dependencyManagementService,
+    pathManager: pathManager ?? PathManager.getInstance(),
+  });
+  dependencyManagementService.setVendoredRuntimeInspector(async () => [
+    ...(await codeServerManager!.getRuntimeSnapshots()),
+    ...(await omniRouteManager!.getRuntimeSnapshots()),
+  ]);
   registerDependencyManagementHandlers({
     dependencyManagementService,
     codeServerManager,
+    omniRouteManager,
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
@@ -2436,10 +2445,6 @@ app.whenReady().then(async () => {
   });
   log.info('[App] Code Server IPC handlers registered');
 
-  omniRouteManager = new OmniRouteManager({
-    configManager,
-    dependencyManagementService,
-  });
   registerOmniRouteHandlers({
     manager: omniRouteManager,
     mainWindow,

@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import type { CodeServerManager } from '../../code-server-manager.js';
 import type DependencyManagementService from '../../dependency-management-service.js';
+import type OmniRouteManager from '../../omniroute-manager.js';
 import {
   type DependencyManagementBatchSyncRequest,
   type VendoredRuntimeId,
@@ -12,6 +13,7 @@ import {
 interface DependencyManagementHandlerState {
   dependencyManagementService: DependencyManagementService | null;
   codeServerManager: CodeServerManager | null;
+  omniRouteManager: OmniRouteManager | null;
   mainWindow: BrowserWindow | null;
   unsubscribeProgress: (() => void) | null;
 }
@@ -19,6 +21,7 @@ interface DependencyManagementHandlerState {
 const state: DependencyManagementHandlerState = {
   dependencyManagementService: null,
   codeServerManager: null,
+  omniRouteManager: null,
   mainWindow: null,
   unsubscribeProgress: null,
 };
@@ -26,20 +29,24 @@ const state: DependencyManagementHandlerState = {
 export function initDependencyManagementHandlers(
   dependencyManagementService: DependencyManagementService | null,
   codeServerManager: CodeServerManager | null,
+  omniRouteManager: OmniRouteManager | null,
   mainWindow: BrowserWindow | null,
 ): void {
   state.dependencyManagementService = dependencyManagementService;
   state.codeServerManager = codeServerManager;
+  state.omniRouteManager = omniRouteManager;
   state.mainWindow = mainWindow;
 }
 
 export function registerDependencyManagementHandlers(deps: {
   dependencyManagementService: DependencyManagementService | null;
   codeServerManager: CodeServerManager | null;
+  omniRouteManager: OmniRouteManager | null;
   mainWindow: BrowserWindow | null;
 }): void {
   state.dependencyManagementService = deps.dependencyManagementService;
   state.codeServerManager = deps.codeServerManager;
+  state.omniRouteManager = deps.omniRouteManager;
   state.mainWindow = deps.mainWindow;
 
   if (state.unsubscribeProgress) {
@@ -120,30 +127,51 @@ export function registerDependencyManagementHandlers(deps: {
     return state.codeServerManager;
   };
 
-  const assertCodeServerId = (runtimeId: VendoredRuntimeId): void => {
-    if (runtimeId !== 'code-server') {
-      throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
+  const requireOmniRouteManager = (): OmniRouteManager => {
+    if (!state.omniRouteManager) {
+      throw new Error('OmniRouteManager is not initialized');
     }
+    return state.omniRouteManager;
   };
 
   const handleStartVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    assertCodeServerId(runtimeId);
-    return requireCodeServerManager().start();
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().start();
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().startVendoredRuntime();
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
   const handleStopVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    assertCodeServerId(runtimeId);
-    return requireCodeServerManager().stop();
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().stop();
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().stopVendoredRuntime();
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
   const handleRestartVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    assertCodeServerId(runtimeId);
-    return requireCodeServerManager().restart();
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().restart();
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().restartVendoredRuntime();
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
   const handleRepairVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    assertCodeServerId(runtimeId);
-    return requireCodeServerManager().repair();
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().repair();
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().repairVendoredRuntime();
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
   const handleOpenVendoredRuntimePath = async (
@@ -151,8 +179,13 @@ export function registerDependencyManagementHandlers(deps: {
     runtimeId: VendoredRuntimeId,
     target: 'logs' | 'runtime-root',
   ) => {
-    assertCodeServerId(runtimeId);
-    return requireCodeServerManager().openPath(target);
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().openPath(target);
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().openVendoredRuntimePath(target);
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
   ipcMain.handle(dependencyManagementChannels.snapshot, handleSnapshot);

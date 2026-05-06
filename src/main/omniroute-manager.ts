@@ -1,19 +1,19 @@
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
 import { randomBytes } from 'node:crypto';
 import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
+import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCli } from './utils/cli-executor.js';
+import { PathManager } from './path-manager.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
   OMNIROUTE_PROCESS_NAME,
@@ -33,6 +33,12 @@ import {
   type OmniRouteProcessStatus,
   type OmniRouteStatusSnapshot,
 } from '../types/omniroute-management.js';
+import type {
+  VendoredRuntimeLifecycleResult,
+  VendoredRuntimePathOpenResult,
+  VendoredRuntimeHealthSnapshot,
+  VendoredRuntimeStatusSnapshot,
+} from '../types/dependency-management.js';
 
 interface CommandResult {
   exitCode: number | null;
@@ -70,15 +76,10 @@ interface ManagedCliLaunchSpec {
   cwd?: string;
 }
 
-interface WindowsOmniRouteShellWrapperOptions {
-  wrapperPath: string;
-  execaImportUrl: string;
-  executablePath: string;
-}
-
 export interface OmniRouteManagerOptions {
   configManager: ConfigManager;
   dependencyManagementService: DependencyManagementService;
+  pathManager?: PathManager;
   userDataPath?: string;
   openPath?: (targetPath: string) => Promise<string>;
 }
@@ -96,7 +97,6 @@ const MAX_LOG_LINES = 1000;
 const DEFAULT_PASSWORD_BYTES = 18;
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
-const requireFromModule = createRequire(import.meta.url);
 
 function toStatus(value: string | undefined): OmniRouteProcessStatus {
   if (value === 'online') {
@@ -174,14 +174,39 @@ function formatLifecycleFailureDetails(error: unknown): string[] {
 export class OmniRouteManager {
   private readonly configManager: ConfigManager;
   private readonly dependencyManagementService: DependencyManagementService;
+  private readonly pathManager: PathManager;
   private readonly userDataPath: string;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
 
   constructor(options: OmniRouteManagerOptions) {
     this.configManager = options.configManager;
     this.dependencyManagementService = options.dependencyManagementService;
+    this.pathManager = options.pathManager ?? PathManager.getInstance();
     this.userDataPath = options.userDataPath ?? app.getPath('userData');
     this.openPathImpl = options.openPath ?? ((targetPath) => shell.openPath(targetPath));
+  }
+
+  async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
+    return [await this.getRuntimeSnapshot()];
+  }
+
+  async getRuntimeSnapshot(): Promise<VendoredRuntimeStatusSnapshot> {
+    const config = this.getConfig();
+    const process = await this.getPm2ProcessSnapshot(
+      (await this.dependencyManagementService.getManagedCommandContext('pm2')).executablePath,
+      await this.buildManagedPm2CommandEnv(
+        (await this.dependencyManagementService.getManagedCommandContext('pm2')).commandEnv,
+        (await this.dependencyManagementService.getManagedCommandContext('pm2')).environment,
+      ),
+    ).catch(() => null);
+    const processStatus = process?.status ?? 'stopped';
+    const health: VendoredRuntimeHealthSnapshot = {
+      reachable: processStatus === 'online',
+      url: buildBaseUrl(config.port),
+      lastCheckedAt: new Date().toISOString(),
+      message: processStatus === 'online' ? undefined : 'Desktop-managed OmniRoute process is not running.',
+    };
+    return inspectVendoredOmniRouteRuntime(this.pathManager, { health });
   }
 
   getPaths(): OmniRouteManagedPaths {
@@ -264,30 +289,118 @@ export class OmniRouteManager {
     return this.runLifecycle('restart');
   }
 
+  async startVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
+    const result = await this.start();
+    return {
+      success: result.success,
+      runtimeId: 'omniroute',
+      action: 'start',
+      status: await this.getRuntimeSnapshot(),
+      error: result.error,
+    };
+  }
+
+  async stopVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
+    const result = await this.stop();
+    return {
+      success: result.success,
+      runtimeId: 'omniroute',
+      action: 'stop',
+      status: await this.getRuntimeSnapshot(),
+      error: result.error,
+    };
+  }
+
+  async restartVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
+    const result = await this.restart();
+    return {
+      success: result.success,
+      runtimeId: 'omniroute',
+      action: 'restart',
+      status: await this.getRuntimeSnapshot(),
+      error: result.error,
+    };
+  }
+
+  async repairVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
+    if (process.env.NODE_ENV !== 'development') {
+      return {
+        success: false,
+        runtimeId: 'omniroute',
+        action: 'repair',
+        status: await this.getRuntimeSnapshot(),
+        error: 'Vendored OmniRoute repair is only available in development builds. Reinstall Desktop to restore the packaged runtime.',
+      };
+    }
+
+    const result = await executeCli({
+      command: process.execPath,
+      args: [path.join(process.cwd(), 'scripts', 'prepare-vendored-omniroute-runtime.js')],
+      cwd: process.cwd(),
+      env: process.env,
+      shell: false,
+      windowsHide: true,
+      metadata: { component: 'OmniRouteManager', command: 'prepare-vendored-omniroute-runtime' },
+    });
+
+    if (result.exitCode !== 0) {
+      return {
+        success: false,
+        runtimeId: 'omniroute',
+        action: 'repair',
+        status: await this.getRuntimeSnapshot(),
+        error: (result.stderr || result.stdout || 'Vendored OmniRoute repair failed.').trim(),
+      };
+    }
+
+    return {
+      success: true,
+      runtimeId: 'omniroute',
+      action: 'repair',
+      status: await this.getRuntimeSnapshot(),
+    };
+  }
+
+  async openVendoredRuntimePath(target: 'logs' | 'runtime-root'): Promise<VendoredRuntimePathOpenResult> {
+    const resolvedPath = target === 'runtime-root'
+      ? this.pathManager.getOmniRouteRuntimeRoot()
+      : (await this.ensureLayout()).logs;
+    const result = await this.openPathImpl(resolvedPath);
+    return {
+      success: result.length === 0,
+      runtimeId: 'omniroute',
+      target,
+      path: resolvedPath,
+      error: result.length > 0 ? result : undefined,
+    };
+  }
+
   async getStatus(): Promise<OmniRouteStatusSnapshot> {
     const paths = await this.ensureLayout();
     const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
-    const omnirouteContext = await this.dependencyManagementService.getManagedCommandContext('omniroute');
     const managedPm2Env = await this.buildManagedPm2CommandEnv(pm2Context.commandEnv, pm2Context.environment);
     const config = this.getConfig();
-    const remediation = buildOmniRouteDependencyRemediation([
-      {
-        packageId: 'pm2',
-        packageStatus: pm2Context.packageStatus?.status ?? null,
-        executablePath: pm2Context.executablePath,
-        installedVersion: pm2Context.packageStatus?.version ?? null,
+    const runtime = await this.getRuntimeSnapshot();
+    const remediation = buildOmniRouteDependencyRemediation({
+      runtime: {
+        runtimeId: 'omniroute',
+        runtimeStatus: runtime.status,
       },
-      {
-        packageId: 'omniroute',
-        packageStatus: omnirouteContext.packageStatus?.status ?? null,
-        executablePath: omnirouteContext.executablePath,
-        installedVersion: omnirouteContext.packageStatus?.version ?? null,
-      },
-    ]);
+      packages: [
+        {
+          packageId: 'pm2',
+          packageStatus: pm2Context.packageStatus?.status ?? null,
+          executablePath: pm2Context.executablePath,
+          installedVersion: pm2Context.packageStatus?.version ?? null,
+        },
+      ],
+    });
     const processSnapshot = await this.getPm2ProcessSnapshot(pm2Context.executablePath, managedPm2Env);
     const process = processSnapshot ?? this.emptyProcessSnapshot();
     const pm2Available = pm2Context.packageStatus?.status === 'installed' && pm2Context.executablePath !== null;
-    const overallStatus = this.resolveOverallStatus(process, pm2Available);
+    const overallStatus = runtime.status === 'missing' || runtime.status === 'damaged'
+      ? 'error'
+      : this.resolveOverallStatus(process, pm2Available);
 
     return {
       status: remediation && process.status !== 'online' ? 'error' : overallStatus,
@@ -354,33 +467,33 @@ export class OmniRouteManager {
     try {
       this.validatePort(this.getConfig().port);
       const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
-      const omnirouteContext = await this.dependencyManagementService.getManagedCommandContext('omniroute');
       const managedPm2Env = await this.buildManagedPm2CommandEnv(pm2Context.commandEnv, pm2Context.environment);
-      remediation = buildOmniRouteDependencyRemediation([
-        {
-          packageId: 'pm2',
-          packageStatus: pm2Context.packageStatus?.status ?? null,
-          executablePath: pm2Context.executablePath,
-          installedVersion: pm2Context.packageStatus?.version ?? null,
+      const runtime = await this.getRuntimeSnapshot();
+      remediation = buildOmniRouteDependencyRemediation({
+        runtime: {
+          runtimeId: 'omniroute',
+          runtimeStatus: runtime.status,
         },
-        {
-          packageId: 'omniroute',
-          packageStatus: omnirouteContext.packageStatus?.status ?? null,
-          executablePath: omnirouteContext.executablePath,
-          installedVersion: omnirouteContext.packageStatus?.version ?? null,
-        },
-      ]);
+        packages: [
+          {
+            packageId: 'pm2',
+            packageStatus: pm2Context.packageStatus?.status ?? null,
+            executablePath: pm2Context.executablePath,
+            installedVersion: pm2Context.packageStatus?.version ?? null,
+          },
+        ],
+      });
       if (remediation) {
         throw new Error(remediation.message);
       }
       const pm2ExecutablePath = pm2Context.executablePath;
-      const omnirouteExecutablePath = omnirouteContext.executablePath;
-      if (!pm2ExecutablePath || !omnirouteExecutablePath) {
+      const nodeExecutablePath = pm2Context.environment.node.executablePath;
+      if (!pm2ExecutablePath || !nodeExecutablePath || !runtime.entryScriptPath) {
         throw new Error('Desktop-managed OmniRoute dependencies are unavailable.');
       }
 
       await this.renderEnvironment(paths);
-      const launchSpec = await this.resolveManagedCliLaunchSpec(paths, omnirouteExecutablePath, 'omniroute');
+      const launchSpec = this.resolveVendoredRuntimeLaunchSpec(paths, nodeExecutablePath, runtime.entryScriptPath);
       await this.renderEcosystemConfig(paths, launchSpec, managedPm2Env);
 
       if (action === 'start') {
@@ -546,76 +659,17 @@ export class OmniRouteManager {
     }
   }
 
-  private async resolveManagedCliLaunchSpec(paths: OmniRouteManagedPaths, executablePath: string, packageName: string): Promise<ManagedCliLaunchSpec> {
-    const normalizedPath = stripWrappingQuotes(executablePath);
-    const binDirectory = path.dirname(normalizedPath);
-    const nodeExecutable = path.join(binDirectory, process.platform === 'win32' ? 'node.exe' : 'node');
-    const cliEntryPoint = path.join(binDirectory, 'node_modules', packageName, 'bin', `${packageName}.mjs`);
-
-    if (process.platform === 'win32' && fsSync.existsSync(nodeExecutable)) {
-      const wrapperPath = path.join(paths.runtime, 'omniroute-shell-wrapper.mjs');
-      await this.renderWindowsOmniRouteShellWrapper({
-        wrapperPath,
-        execaImportUrl: pathToFileURL(this.resolveExecaEntrypoint()).href,
-        executablePath: normalizedPath,
-      });
-
-      return {
-        script: nodeExecutable,
-        args: [wrapperPath],
-        interpreterNone: true,
-        cwd: paths.root,
-      };
-    }
-
-    if (fsSync.existsSync(nodeExecutable) && fsSync.existsSync(cliEntryPoint)) {
-      return {
-        script: nodeExecutable,
-        args: [cliEntryPoint, 'serve', '--no-open'],
-        interpreterNone: true,
-      };
-    }
-
+  private resolveVendoredRuntimeLaunchSpec(
+    paths: OmniRouteManagedPaths,
+    nodeExecutablePath: string,
+    entryScriptPath: string,
+  ): ManagedCliLaunchSpec {
     return {
-      script: normalizedPath,
-      args: ['serve', '--no-open'],
-      interpreterNone: false,
+      script: stripWrappingQuotes(nodeExecutablePath),
+      args: [entryScriptPath, 'serve', '--no-open'],
+      interpreterNone: true,
+      cwd: paths.root,
     };
-  }
-
-  private resolveExecaEntrypoint(): string {
-    return requireFromModule.resolve('execa');
-  }
-
-  private async renderWindowsOmniRouteShellWrapper(options: WindowsOmniRouteShellWrapperOptions): Promise<void> {
-    const contents = [
-      `import { execa } from ${JSON.stringify(options.execaImportUrl)};`,
-      '',
-      `const executablePath = ${JSON.stringify(options.executablePath)};`,
-      `const subprocess = execa(executablePath, ['serve', '--no-open'], {`,
-      `  shell: true,`,
-      `  windowsHide: true,`,
-      `  stdout: 'inherit',`,
-      `  stderr: 'inherit',`,
-      `  stdin: 'ignore',`,
-      `  env: process.env,`,
-      `});`,
-      '',
-      `try {`,
-      `  const result = await subprocess;`,
-      `  process.exit(result.exitCode ?? 0);`,
-      `} catch (error) {`,
-      `  if (error?.shortMessage) {`,
-      `    console.error(error.shortMessage);`,
-      `  } else if (error?.message) {`,
-      `    console.error(error.message);`,
-      `  }`,
-      `  process.exit(error?.exitCode ?? 1);`,
-      `}`,
-      '',
-    ].join('\n');
-
-    await fs.writeFile(options.wrapperPath, contents, 'utf8');
   }
 
   private async renderEcosystemConfig(

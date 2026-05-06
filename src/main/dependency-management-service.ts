@@ -13,6 +13,7 @@ import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
+import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import {
   buildNpmGlobalCommandArtifactPaths,
   type NodeMajorNpmGlobalPaths,
@@ -180,7 +181,10 @@ export class DependencyManagementService {
     const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)));
     const vendoredRuntimes = this.vendoredRuntimeInspector
       ? await this.vendoredRuntimeInspector()
-      : [await inspectVendoredCodeServerRuntime(this.pathManager)];
+      : [
+        await inspectVendoredCodeServerRuntime(this.pathManager),
+        await inspectVendoredOmniRouteRuntime(this.pathManager),
+      ];
     const mirrorSettings = this.getMirrorSettings();
 
     return {
