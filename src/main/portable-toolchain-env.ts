@@ -41,6 +41,10 @@ export interface ManagedCliPathEnvResult {
   npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
+export interface CodeServerRuntimeEnvResult extends PortableToolchainEnvResult {
+  runtimeRoot: string;
+}
+
 const SERVER_NODE_ENV_KEYS = [
   'NODE_PATH',
   'NODE',
@@ -275,6 +279,24 @@ export function injectManagedCliPathEnv(
     managedNpmGlobalPath,
     inheritedPathValue: resolvedPathEntries.inheritedPathValue,
     npmGlobalPaths: activeNpmGlobalPaths,
+  };
+}
+
+export function injectCodeServerRuntimeEnv(
+  baseEnv: NodeJS.ProcessEnv,
+  pathAccessor: PortableToolchainPathAccessor & { getCodeServerRuntimeRoot(): string },
+  options: InjectPortableToolchainEnvOptions = {},
+): CodeServerRuntimeEnvResult {
+  const portableEnv = injectPortableToolchainEnv(baseEnv, pathAccessor, options);
+  const env: NodeJS.ProcessEnv = {
+    ...portableEnv.env,
+    HAGICODE_CODE_SERVER_RUNTIME_ROOT: pathAccessor.getCodeServerRuntimeRoot(),
+  };
+
+  return {
+    ...portableEnv,
+    env,
+    runtimeRoot: pathAccessor.getCodeServerRuntimeRoot(),
   };
 }
 

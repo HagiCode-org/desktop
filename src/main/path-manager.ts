@@ -337,6 +337,7 @@ export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
   private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
+  private static readonly CODE_SERVER_ROOT_SEGMENTS = ['extra', 'code-server', 'current'] as const;
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -703,6 +704,23 @@ export class PathManager {
     }
 
     return resolution.toolchainRoot;
+  }
+
+  getCodeServerRuntimeRoot(): string {
+    const overrideRoot = process.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT?.trim();
+    if (overrideRoot) {
+      return path.resolve(overrideRoot);
+    }
+
+    if (!app.isPackaged) {
+      return path.resolve(process.cwd(), 'resources', 'code-server', 'current');
+    }
+
+    return path.join(process.resourcesPath, ...PathManager.CODE_SERVER_ROOT_SEGMENTS);
+  }
+
+  getCodeServerRuntimeConfigPath(): string {
+    return path.resolve(process.cwd(), 'resources', 'code-server-runtime', 'runtime-manifest.json');
   }
 
   getPortableNodeRoot(): string {
