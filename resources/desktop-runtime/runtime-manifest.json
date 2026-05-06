@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "runtimeVersion": "0.1.7",
+  "programHomes": {
+    "development": "build/desktop-runtime/current",
+    "packaged": "extra/runtime"
+  },
+  "env": {
+    "programHome": "HAGICODE_RUNTIME_HOME",
+    "dataHome": "HAGICODE_RUNTIME_DATA_HOME"
+  },
+  "dataHome": {
+    "defaultRelativePath": "runtimeData",
+    "shared": {
+      "config": "config",
+      "logs": "logs",
+      "data": "data",
+      "state": "state.json"
+    }
+  },
+  "components": {
+    "dotnet": {
+      "relativePath": "components/dotnet/runtime/{platform}"
+    },
+    "node": {
+      "relativePath": "components/node/runtime"
+    },
+    "code-server": {
+      "relativePath": "components/bundled/code-server"
+    },
+    "omniroute": {
+      "relativePath": "components/bundled/omniroute"
+    }
+  },
+  "services": {
+    "code-server": {
+      "dataRelativePath": "components/services/code-server"
+    },
+    "omniroute": {
+      "dataRelativePath": "components/services/omniroute"
+    }
+  }
+}

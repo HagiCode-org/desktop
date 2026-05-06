@@ -11,10 +11,11 @@ import {
   resolveRequestedOmniRouteRuntimeVersion,
   validateOmniRouteRuntimePayload,
 } from './omniroute-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
-const runtimeRoot = path.join(process.cwd(), 'resources', 'omniroute', 'current');
+const runtimeRoot = resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
 const forceRestage = process.env.HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE === '1';
 
 function hasConfiguredSource() {

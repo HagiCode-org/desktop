@@ -17,12 +17,14 @@ import {
   resolveOmniRouteRuntimeTarget,
   validateOmniRouteRuntimePayload,
 } from './omniroute-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
 const target = resolveOmniRouteRuntimeTarget(platformKey, config);
 const runtimeVersionOverride = resolveRequestedOmniRouteRuntimeVersion(platformKey, config);
-const runtimeRoot = path.join(process.cwd(), 'resources', 'omniroute', 'current');
+const runtimeRoot = resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
 const buildRoot = resolveOmniRouteGeneratedRoot(config) ?? path.join(process.cwd(), 'build', 'omniroute-runtime');
 const downloadsRoot = path.join(buildRoot, 'downloads');
 const extractRoot = path.join(buildRoot, 'extract');
@@ -33,6 +35,7 @@ main().catch((error) => {
 });
 
 async function main() {
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable();
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
@@ -72,6 +75,7 @@ async function main() {
 
   console.log(`[omniroute-runtime] Prepared ${validation.metadata?.packageId || 'omniroute'} ${validation.metadata?.version || selectedArtifact.metadata.version} for ${platformKey}`);
   console.log(`[omniroute-runtime] Staged runtime root: ${runtimeRoot}`);
+  console.log(`[omniroute-runtime] Using global hagiscript ${hagiscriptVersion} for runtime preparation`);
 }
 
 async function resolveArtifact() {

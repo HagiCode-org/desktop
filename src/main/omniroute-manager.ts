@@ -210,7 +210,7 @@ export class OmniRouteManager {
   }
 
   getPaths(): OmniRouteManagedPaths {
-    const root = path.join(this.userDataPath, 'OmniRoute');
+    const root = this.pathManager.getOmniRouteRuntimeDataHome();
     const runtime = path.join(root, 'runtime');
     return {
       root,
@@ -640,11 +640,14 @@ export class OmniRouteManager {
       pm2Version,
       platform: process.platform,
     });
-    await fs.mkdir(pm2HomePaths.pm2Home, { recursive: true });
+    const pm2Home = path.join(this.pathManager.getOmniRouteRuntimeDataHome(), 'pm2', pm2HomePaths.pm2MajorVersion);
+    await fs.mkdir(pm2Home, { recursive: true });
 
     return {
       ...managedCliEnv,
-      PM2_HOME: pm2HomePaths.pm2Home,
+      HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
+      HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getOmniRouteRuntimeDataHome(),
+      PM2_HOME: pm2Home,
     };
   }
 
@@ -686,6 +689,8 @@ export class OmniRouteManager {
     const pathValue = managedPm2Env[pathKey] ?? managedPm2Env.PATH ?? managedPm2Env.Path;
     const managedEnvLines = [
       pathValue ? `        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n` : '',
+      `        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n`,
+      `        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getOmniRouteRuntimeDataHome())},\n`,
       managedPm2Env.HAGICODE_AGENT_CLI_PATH
         ? `        HAGICODE_AGENT_CLI_PATH: ${JSON.stringify(managedPm2Env.HAGICODE_AGENT_CLI_PATH)},\n`
         : '',

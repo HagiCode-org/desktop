@@ -457,12 +457,12 @@ export class CodeServerManager {
   }
 
   getPaths(): CodeServerManagedPaths {
-    const root = path.join(this.userDataPath, 'CodeServer');
+    const root = this.pathManager.getCodeServerRuntimeDataHome();
     const runtime = path.join(root, 'runtime');
     return {
       root,
       data: path.join(root, 'data'),
-      extensions: path.join(root, 'extensions'),
+      extensions: path.join(root, 'data', 'extensions'),
       logs: path.join(root, 'logs'),
       runtime,
       ecosystemFile: path.join(runtime, 'ecosystem.config.cjs'),
@@ -537,11 +537,14 @@ export class CodeServerManager {
       pm2Version,
       platform: process.platform,
     });
-    await fs.mkdir(pm2HomePaths.pm2Home, { recursive: true });
+    const pm2Home = path.join(this.pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2HomePaths.pm2MajorVersion);
+    await fs.mkdir(pm2Home, { recursive: true });
 
     return {
       ...managedCliEnv,
-      PM2_HOME: pm2HomePaths.pm2Home,
+      HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
+      HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getCodeServerRuntimeDataHome(),
+      PM2_HOME: pm2Home,
     };
   }
 
@@ -574,7 +577,7 @@ export class CodeServerManager {
       '--disable-telemetry',
     ];
 
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(wrapperPath)},\n      args: ${JSON.stringify(args)},\n      interpreter: 'none',\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(wrapperPath)},\n      args: ${JSON.stringify(args)},\n      interpreter: 'none',\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
   }
 

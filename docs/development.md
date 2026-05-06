@@ -112,7 +112,7 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` also reuses or stages `resources/code-server/current` through `prepare:code-server-runtime:optional` before Electron launches. By default, Desktop first checks the monorepo-root cache at `.generated/code-server-runtime/artifacts`, then falls back to public release downloads when the cache is empty.
+`npm run dev` also reuses or stages `build/desktop-runtime/current/components/bundled/code-server` through `prepare:code-server-runtime:optional` before Electron launches. By default, Desktop first checks the monorepo-root cache at `.generated/code-server-runtime/artifacts`, then falls back to public release downloads when the cache is empty.
 
 ### Building for Production
 
@@ -528,17 +528,17 @@ Behavior:
 1. Reads `resources/embedded-runtime/runtime-manifest.json`
 2. Verifies the target download URL is HTTPS and uses an allowed Microsoft host
 3. Downloads the pinned archive into `build/embedded-runtime/downloads/`
-4. Extracts the runtime into `build/embedded-runtime/current/dotnet/<rid>/`
+4. Extracts the runtime into `build/desktop-runtime/current/components/dotnet/runtime/<rid>/`
 5. Writes `.hagicode-runtime.json` and `.runtime-stage.json`
 6. Verifies the staged payload exposes the pinned `host/fxr`, `Microsoft.NETCore.App`, and `Microsoft.AspNetCore.App` versions
 
 ### Packaged runtime location
 
-`electron-builder.yml` ships `build/embedded-runtime/current/dotnet` through `extraResources`, so the packaged runtime remains outside `app.asar`:
+`electron-builder.yml` ships `build/desktop-runtime/current` through `extraResources`, so the packaged runtime remains outside `app.asar`:
 
-- Packaged Linux: `pkg/linux-unpacked/resources/dotnet/<rid>`
-- Packaged Windows: `pkg/win-unpacked/resources/dotnet/<rid>`
-- Runtime resolution in production: `process.resourcesPath/dotnet/<rid>`
+- Packaged Linux: `pkg/linux-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
+- Packaged Windows: `pkg/win-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
+- Runtime resolution in production: `process.resourcesPath/extra/runtime/components/dotnet/runtime/<rid>`
 
 The same `extraResources` block also copies `resources/portable-fixed` to `resources/extra/portable-fixed/` when a portable-version payload has been staged.
 
@@ -557,20 +557,20 @@ Notes:
 - Windows and Linux are supported in this helper flow.
 - The helper stages the pinned runtime first, then launches `npm run dev` with:
   - `HAGICODE_EMBEDDED_DOTNET_PLATFORM=<rid>`
-  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/build/embedded-runtime/current/dotnet/<rid>`
+  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/build/desktop-runtime/current/components/dotnet/runtime/<rid>`
 - Development runtime resolution reuses the staged runtime directly instead of relying on global `dotnet`.
 
 Manual override remains available:
 
 ```bash
-export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/build/embedded-runtime/current/dotnet/linux-x64"
+export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/build/desktop-runtime/current/components/dotnet/runtime/linux-x64"
 npm run dev
 ```
 
 Windows PowerShell example:
 
 ```powershell
-$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/build/embedded-runtime/current/dotnet/win-x64"
+$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/build/desktop-runtime/current/components/dotnet/runtime/win-x64"
 npm run dev
 ```
 
@@ -591,8 +591,8 @@ npm run package:smoke-test
 
 `package:smoke-test` validates both:
 
-- staged runtime payload under `build/embedded-runtime/current/dotnet/<rid>`
-- packaged runtime payload under `pkg/<platform>-unpacked/resources/dotnet/<rid>`
+- staged runtime payload under `build/desktop-runtime/current/components/dotnet/runtime/<rid>`
+- packaged runtime payload under `pkg/<platform>-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
 
 ### Release archive outputs
@@ -635,7 +635,7 @@ Symptoms:
 Actions:
 
 1. Re-run `npm run prepare:runtime`
-2. Confirm `build/embedded-runtime/current/dotnet/<rid>` exists
+2. Confirm `build/desktop-runtime/current/components/dotnet/runtime/<rid>` exists
 3. Rebuild the package and rerun `npm run package:smoke-test`
 
 #### Unofficial runtime source

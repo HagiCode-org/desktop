@@ -11,10 +11,11 @@ import {
   resolveRequestedCodeServerRuntimeVersion,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 
 const config = readCodeServerRuntimeConfig();
 const platformKey = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
-const runtimeRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
+const runtimeRoot = resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
 const forceRestage = process.env.HAGICODE_FORCE_CODE_SERVER_RUNTIME_RESTAGE === '1';
 
 function hasConfiguredSource() {

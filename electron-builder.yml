@@ -14,24 +14,10 @@ asarUnpack:
 extraResources:
   - from: resources/icon.png
     to: icon.png
-  - from: build/embedded-runtime/current/dotnet
-    to: dotnet
+  - from: build/desktop-runtime/current
+    to: extra/runtime
   - from: resources/portable-fixed/current
     to: extra/portable-fixed/current
-    filter:
-      - '**/*'
-      - '!**/.gitkeep'
-  - from: resources/toolchain
-    to: extra/toolchain
-    filter:
-      - '**/*'
-  - from: resources/code-server/current
-    to: extra/code-server/current
-    filter:
-      - '**/*'
-      - '!**/.gitkeep'
-  - from: resources/omniroute/current
-    to: extra/omniroute/current
     filter:
       - '**/*'
       - '!**/.gitkeep'
@@ -74,7 +60,7 @@ mac:
   icon: resources/icon.icns
   category: public.app-category.utilities
   signIgnore:
-    - Contents/Resources/extra/toolchain/.*
+    - Contents/Resources/extra/runtime/.*
 linux:
   extraFiles:
     - from: resources/linux/hagicode-steam-wrapper.sh

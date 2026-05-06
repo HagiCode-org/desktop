@@ -7,8 +7,8 @@ Desktop also uses this bundled Node toolchain to launch the vendored `code-serve
 ## Contract
 
 - Pinned input manifest: `resources/embedded-node-runtime/runtime-manifest.json`
-- Development output root: `resources/toolchain/`
-- Packaged output root: `resources/extra/toolchain/` on Windows/Linux and `Contents/Resources/extra/toolchain/` on macOS
+- Development output root: `build/desktop-runtime/current/components/node/runtime/`
+- Packaged output root: `resources/extra/runtime/components/node/runtime/` on Windows/Linux and `Contents/Resources/extra/runtime/components/node/runtime/` on macOS
 - Required runtime: Node.js 22 plus npm
 - Deferred managed CLI packages: `openspec` and `skills`
 - Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop`, `source=bundled-desktop`, and `defaultEnabledByConsumer`
@@ -44,9 +44,9 @@ For a specific macOS architecture:
 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 npm run prepare:bundled-toolchain
 ```
 
-The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec` and `skills`.
+The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `components/node/runtime/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `components/node/runtime/toolchain-manifest.json` with deferred manual-install metadata for `openspec` and `skills`.
 
-On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `toolchain/node` directory snapshot before exiting.
+On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `components/node/runtime/node` directory snapshot before exiting.
 
 Desktop no longer guarantees that the managed CLI packages are preinstalled when the app ships. In this release:
 
@@ -65,12 +65,12 @@ npm run build:mac:x64
 npm run build:mac:arm64
 ```
 
-`electron-builder.yml` ships `resources/toolchain` to the canonical packaged `extra/toolchain` location outside `app.asar`.
+`electron-builder.yml` ships `build/desktop-runtime/current` to the canonical packaged `extra/runtime` location outside `app.asar`.
 
-When vendored runtimes are staged, `electron-builder.yml` also ships:
+When vendored runtimes are staged, they live inside that same packaged runtime tree:
 
-- `resources/code-server/current` to `extra/code-server/current`
-- `resources/omniroute/current` to `extra/omniroute/current`
+- `extra/runtime/components/bundled/code-server`
+- `extra/runtime/components/bundled/omniroute`
 
 ## Verification
 
@@ -86,7 +86,7 @@ The same smoke test now validates the staged and packaged vendored `code-server`
 
 Release archives now have a second gate:
 
-- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/toolchain`, `extra/code-server/current`, and `extra/omniroute/current` payloads before upload.
+- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/runtime/components/node/runtime`, `extra/runtime/components/bundled/code-server`, and `extra/runtime/components/bundled/omniroute` payloads before upload.
 - Windows workflows run the same verifier against the staged release ZIP that is built from `win-unpacked`, so the uploaded extractable archive is checked in the same way.
 
 ## Downstream Consumers

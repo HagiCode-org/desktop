@@ -1,0 +1,25 @@
+import path from 'path';
+
+export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
+  return path.join(cwd, 'build', 'desktop-runtime', 'current');
+}
+
+export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {
+  const cwd = options.cwd ?? process.cwd();
+  const programHome = resolveStagedDesktopRuntimeProgramHome(cwd);
+
+  if (componentId === 'dotnet') {
+    return path.join(programHome, 'components', 'dotnet', 'runtime', options.platform);
+  }
+  if (componentId === 'node') {
+    return path.join(programHome, 'components', 'node', 'runtime');
+  }
+  if (componentId === 'code-server') {
+    return path.join(programHome, 'components', 'bundled', 'code-server');
+  }
+  if (componentId === 'omniroute') {
+    return path.join(programHome, 'components', 'bundled', 'omniroute');
+  }
+
+  throw new Error(`Unsupported Desktop runtime component: ${componentId}`);
+}

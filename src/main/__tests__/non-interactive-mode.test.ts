@@ -7,6 +7,7 @@ import {
   parseNonInteractiveCommand,
   runNonInteractiveCommand,
 } from '../non-interactive-mode.js';
+import type { NonInteractiveRuntimeVerificationReport } from '../non-interactive-runtime-verify.js';
 import type {
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
@@ -26,10 +27,10 @@ function createSnapshot(): DependencyManagementSnapshot {
       nodeRuntimeRoot: '/tmp/Hagi Code/toolchain/node',
       nodeVersion: '22.0.0',
       nodeMajorVersion: '22',
-      npmGlobalPrefix: '/tmp/Hagi Code/userData/node22/npmGlobal',
-      npmGlobalBinRoot: '/tmp/Hagi Code/userData/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/tmp/Hagi Code/userData/node22/npmGlobal/lib/node_modules',
-      npmCacheRoot: '/tmp/Hagi Code/userData/node22/npmCache',
+      npmGlobalPrefix: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal',
+      npmGlobalBinRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmCache',
       node: {
         status: 'available',
         executablePath: '/tmp/Hagi Code/toolchain/node/bin/node',
@@ -109,6 +110,71 @@ function createService(result: CliDependencyInstallResult) {
   };
 }
 
+function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVerificationReport {
+  return {
+    ok,
+    mode: 'packaged',
+    manifestPath: '/artifact/resources/app.asar/resources/desktop-runtime/runtime-manifest.json',
+    programHome: '/artifact/resources/extra/runtime',
+    programHomeExists: true,
+    dataHome: '/tmp/Hagi Code/userData/runtimeData',
+    dataHomeExists: false,
+    sharedPaths: {
+      config: '/tmp/Hagi Code/userData/runtimeData/config',
+      logs: '/tmp/Hagi Code/userData/runtimeData/logs',
+      data: '/tmp/Hagi Code/userData/runtimeData/data',
+      state: '/tmp/Hagi Code/userData/runtimeData/state',
+    },
+    serviceDataHomes: {
+      codeServer: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
+      omniRoute: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute',
+    },
+    components: {
+      dotnet: {
+        ok,
+        status: ok ? 'ok' : 'error',
+        root: '/artifact/resources/extra/runtime/components/dotnet/runtime/linux-x64',
+        executablePath: '/artifact/resources/extra/runtime/components/dotnet/runtime/linux-x64/dotnet',
+        aspNetCoreVersion: '10.0.0',
+        netCoreVersion: '10.0.0',
+        hostFxrVersion: '10.0.0',
+        runtimeSource: 'https://download.visualstudio.microsoft.com/runtime.tar.gz',
+        issues: ok ? [] : ['dotnet runtime missing metadata'],
+      },
+      node: {
+        ok,
+        status: ok ? 'ok' : 'error',
+        root: '/artifact/resources/extra/runtime/components/node/runtime',
+        manifestPath: '/artifact/resources/extra/runtime/components/node/runtime/toolchain-manifest.json',
+        activeForDesktop: true,
+        nodeExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/node/bin/node',
+        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/node/bin/npm',
+        governedNodeVersion: '22.0.0',
+        issues: ok ? [] : ['toolchain manifest is missing or invalid'],
+      },
+      codeServer: {
+        ok,
+        status: ok ? 'ok' : 'damaged',
+        root: '/artifact/resources/extra/runtime/components/bundled/code-server',
+        wrapperPath: '/artifact/resources/extra/runtime/components/bundled/code-server/bin/code-server',
+        entryScriptPath: '/artifact/resources/extra/runtime/components/bundled/code-server/out/node/entry.js',
+        version: '4.99.0',
+        issues: ok ? [] : ['code-server wrapper missing'],
+      },
+      omniRoute: {
+        ok,
+        status: ok ? 'ok' : 'damaged',
+        root: '/artifact/resources/extra/runtime/components/bundled/omniroute',
+        wrapperPath: '/artifact/resources/extra/runtime/components/bundled/omniroute/bin/omniroute',
+        entryScriptPath: '/artifact/resources/extra/runtime/components/bundled/omniroute/dist/index.js',
+        version: '0.1.0',
+        issues: ok ? [] : ['omniroute wrapper missing'],
+      },
+    },
+    issues: ok ? [] : ['dotnet runtime missing metadata', 'toolchain manifest is missing or invalid'],
+  };
+}
+
 describe('non-interactive mode parser', () => {
   it('parses deps install --claude-code --codex into managed package IDs', () => {
     const result = parseNonInteractiveCommand([
@@ -121,9 +187,24 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.equal(result.command.kind, 'deps-install');
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
+    }
+  });
+
+  it('parses runtime verify without extra arguments', () => {
+    const result = parseNonInteractiveCommand([
+      '/opt/Hagicode Desktop/hagicode',
+      'runtime',
+      'verify',
+    ]);
+
+    assert.equal(result.handled, true);
+    assert.equal(result.ok, true);
+    if (result.handled && result.ok) {
+      assert.equal(result.command.kind, 'runtime-verify');
+      assert.deepEqual(result.userArgs, ['runtime', 'verify']);
     }
   });
 
@@ -145,7 +226,7 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
@@ -163,7 +244,7 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
@@ -184,7 +265,7 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
@@ -205,7 +286,7 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
@@ -223,13 +304,13 @@ describe('non-interactive mode parser', () => {
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok) {
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
       assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
       assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
   });
 
-  it('rejects unsupported command names, unsupported flags, duplicate flags, and empty package selections', () => {
+  it('rejects unsupported command names, unsupported flags, duplicate flags, invalid runtime subcommands, and empty package selections', () => {
     const unsupportedCommand = parseNonInteractiveCommand(['hagicode', 'sync', 'install']);
     assert.equal(unsupportedCommand.handled, true);
     assert.equal(unsupportedCommand.ok, false);
@@ -248,6 +329,16 @@ describe('non-interactive mode parser', () => {
     assert.equal(emptySelection.handled, true);
     assert.equal(emptySelection.ok, false);
     assert.match(emptySelection.handled && !emptySelection.ok ? emptySelection.error : '', /requires at least one/);
+
+    const badRuntimeSubcommand = parseNonInteractiveCommand(['hagicode', 'runtime', 'inspect']);
+    assert.equal(badRuntimeSubcommand.handled, true);
+    assert.equal(badRuntimeSubcommand.ok, false);
+    assert.match(badRuntimeSubcommand.handled && !badRuntimeSubcommand.ok ? badRuntimeSubcommand.error : '', /Unsupported runtime command/);
+
+    const extraRuntimeArgs = parseNonInteractiveCommand(['hagicode', 'runtime', 'verify', '--verbose']);
+    assert.equal(extraRuntimeArgs.handled, true);
+    assert.equal(extraRuntimeArgs.ok, false);
+    assert.match(extraRuntimeArgs.handled && !extraRuntimeArgs.ok ? extraRuntimeArgs.error : '', /does not accept extra arguments/);
   });
 
   it('preserves normal startup when no supported non-interactive command is present', () => {
@@ -281,6 +372,26 @@ describe('non-interactive mode dispatch', () => {
     assert.match(stdout.join('\n'), /result: success/);
   });
 
+  it('maps successful runtime verification to stdout and exit code 0', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const parseResult = parseNonInteractiveCommand(['hagicode', 'runtime', 'verify']);
+    const result = await runNonInteractiveCommand(parseResult, {
+      runtimeVerifier: async () => createRuntimeVerificationReport(true),
+      output: {
+        stdout: (line) => stdout.push(line),
+        stderr: (line) => stderr.push(line),
+      },
+    });
+
+    assert.equal(result.exitCode, nonInteractiveExitCodes.success);
+    assert.equal(stderr.length, 0);
+    assert.match(stdout.join('\n'), /runtime component dotnet status: ok/);
+    assert.match(stdout.join('\n'), /runtime component node manifest: \/artifact\/resources\/extra\/runtime\/components\/node\/runtime\/toolchain-manifest.json/);
+    assert.match(stdout.join('\n'), /runtime service code-server data: \/tmp\/Hagi Code\/userData\/runtimeData\/components\/services\/code-server/);
+    assert.match(stdout.join('\n'), /result: success/);
+  });
+
   it('maps usage, bootstrap, install, and verification failures to stderr and deterministic exit codes', async () => {
     const usageStderr: string[] = [];
     const usage = await runNonInteractiveCommand(parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--bad']), {
@@ -310,6 +421,24 @@ describe('non-interactive mode dispatch', () => {
       assert.match(stderr.join('\n'), new RegExp(`stage: ${stage}`));
       assert.match(stderr.join('\n'), new RegExp(`${stage} failed`));
     }
+  });
+
+  it('maps failed runtime verification to stderr and exit code 72', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const parseResult = parseNonInteractiveCommand(['hagicode', 'runtime', 'verify']);
+    const result = await runNonInteractiveCommand(parseResult, {
+      runtimeVerifier: async () => createRuntimeVerificationReport(false),
+      output: {
+        stdout: (line) => stdout.push(line),
+        stderr: (line) => stderr.push(line),
+      },
+    });
+
+    assert.equal(result.exitCode, nonInteractiveExitCodes.verification);
+    assert.match(stdout.join('\n'), /runtime component dotnet issues: dotnet runtime missing metadata/);
+    assert.match(stderr.join('\n'), /stage: verification/);
+    assert.match(stderr.join('\n'), /issue: dotnet runtime missing metadata/);
   });
 
   it('keeps main-process UI startup hooks behind non-interactive detection', async () => {

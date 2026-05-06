@@ -45,7 +45,7 @@ jobs:
             --artifact-name "hagicode-linux-zip-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive dependency install integration
+      - name: Run non-interactive runtime verification and dependency install integration
         run: npm run package:non-interactive-integration
 
   integration-macos:
@@ -78,7 +78,7 @@ jobs:
             --artifact-name "hagicode-macos-zip-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive dependency install integration
+      - name: Run non-interactive runtime verification and dependency install integration
         run: npm run package:non-interactive-integration
 
   integration-windows:
@@ -112,6 +112,6 @@ jobs:
             --artifact-name "hagicode-windows-zip-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive dependency install integration
+      - name: Run non-interactive runtime verification and dependency install integration
         shell: bash
         run: npm run package:non-interactive-integration

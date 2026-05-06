@@ -17,13 +17,14 @@ import {
   readPinnedNodeRuntimeConfig,
   resolvePinnedNodeRuntimeTarget,
 } from './embedded-node-runtime-config.js';
+import { resolveStagedDesktopRuntimeComponentRoot, resolveStagedDesktopRuntimeProgramHome } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const runtimeConfig = readPinnedNodeRuntimeConfig();
 const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeConfig);
-const resourcesRoot = path.join(process.cwd(), 'resources');
-const portableFixedRoot = path.join(resourcesRoot, 'portable-fixed');
-const toolchainRoot = path.join(resourcesRoot, 'toolchain');
+const portableFixedRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
+const toolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
 const nodeRoot = path.join(toolchainRoot, 'node');
 const binRoot = path.join(toolchainRoot, 'bin');
 const envRoot = path.join(toolchainRoot, 'env');
@@ -506,6 +507,7 @@ async function stageNodeRuntime() {
 }
 
 async function main() {
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable();
   console.log(`[bundled-toolchain] Preparing Desktop-owned Node toolchain for ${runtimePlatform}`);
   const stageResult = await stageNodeRuntime();
   cleanDeferredPackageRoots();
@@ -522,6 +524,7 @@ async function main() {
   validateToolchainManifest(manifest);
 
   console.log(`[bundled-toolchain] Staged Node ${runtimeConfig.releaseVersion} at ${nodeRoot}`);
+  console.log(`[bundled-toolchain] Using global hagiscript ${hagiscriptVersion} for runtime preparation`);
   console.log(`[bundled-toolchain] Removed ${prunedToolchainEntries} stale managed-package entries`);
   console.log(`[bundled-toolchain] Wrote ${path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE)}`);
 }

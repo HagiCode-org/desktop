@@ -13,14 +13,19 @@ import {
   readPinnedRuntimeConfig,
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
+import { resolveStagedDesktopRuntimeComponentRoot, resolveStagedDesktopRuntimeProgramHome } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
-const stageRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current');
+const stageRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
 const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'downloads');
-const stagedRuntimeRoot = path.join(stageRoot, 'dotnet', runtimePlatform);
+const stagedRuntimeRoot = resolveStagedDesktopRuntimeComponentRoot('dotnet', {
+  cwd: process.cwd(),
+  platform: runtimePlatform,
+});
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 
 function listVersionDirectories(targetPath) {
@@ -246,6 +251,7 @@ function validateWrittenRuntimeMetadata(metadata) {
 }
 
 async function stageRuntime() {
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable();
   fs.mkdirSync(downloadsRoot, { recursive: true });
   ensureOfficialMicrosoftDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
 
@@ -265,7 +271,7 @@ async function stageRuntime() {
     await extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
     const extractedRuntimeRoot = findExtractedRuntimeRoot(tempRoot);
 
-    fs.rmSync(stageRoot, { recursive: true, force: true });
+    fs.rmSync(stagedRuntimeRoot, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(stagedRuntimeRoot), { recursive: true });
     fs.cpSync(extractedRuntimeRoot, stagedRuntimeRoot, { recursive: true, force: true });
     ensureBundledDotnetHost(stagedRuntimeRoot);
@@ -277,6 +283,7 @@ async function stageRuntime() {
 
     console.log(`[embedded-runtime] Staged ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
     console.log(`[embedded-runtime] ASP.NET Core ${validation.aspNetCoreVersion} -> ${stagedRuntimeRoot}`);
+    console.log(`[embedded-runtime] Using global hagiscript ${hagiscriptVersion} for runtime preparation`);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

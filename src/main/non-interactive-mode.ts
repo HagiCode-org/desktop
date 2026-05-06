@@ -3,18 +3,25 @@ import type {
   CliDependencyInstallResult,
 } from './dependency-management-service.js';
 import type {
+  NonInteractiveRuntimeVerificationReport,
+} from './non-interactive-runtime-verify.js';
+import type {
   DependencyManagementOperationProgress,
   ManagedNpmPackageId,
 } from '../types/dependency-management.js';
 
-export type NonInteractiveCommandKind = 'deps-install';
+export type NonInteractiveCommandKind = 'deps-install' | 'runtime-verify';
 
 export interface NonInteractiveDepsInstallCommand {
   kind: 'deps-install';
   packageIds: ManagedNpmPackageId[];
 }
 
-export type NonInteractiveCommand = NonInteractiveDepsInstallCommand;
+export interface NonInteractiveRuntimeVerifyCommand {
+  kind: 'runtime-verify';
+}
+
+export type NonInteractiveCommand = NonInteractiveDepsInstallCommand | NonInteractiveRuntimeVerifyCommand;
 
 export type NonInteractiveParseResult =
   | { handled: false; reason: 'no-command' }
@@ -35,6 +42,7 @@ export interface NonInteractiveOutput {
 export interface NonInteractiveRunOptions {
   service?: Pick<DependencyManagementService, 'onProgress' | 'installManagedPackagesForCli'>;
   output?: NonInteractiveOutput;
+  runtimeVerifier?: () => Promise<NonInteractiveRuntimeVerificationReport>;
 }
 
 export const nonInteractiveExitCodes = {
@@ -55,8 +63,12 @@ const flagToPackageId = new Map<string, ManagedNpmPackageId>([
 export const nonInteractiveUsageText = [
   'Usage:',
   '  Hagicode Desktop deps install --claude-code --codex',
+  '  Hagicode Desktop runtime verify',
   '',
-  'Supported flags:',
+  'Supported commands:',
+  '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
+  '',
+  'Supported deps install flags:',
   '  --claude-code   Install the Desktop-managed Claude Code package.',
   '  --codex         Install the Desktop-managed Codex package.',
   '',
@@ -163,6 +175,35 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
   }
 
   if (userArgs[0] !== 'deps') {
+    if (userArgs[0] === 'runtime') {
+      if (userArgs[1] !== 'verify') {
+        return {
+          handled: true,
+          ok: false,
+          error: `Unsupported runtime command: ${userArgs.slice(0, 2).join(' ') || 'runtime'}`,
+          userArgs,
+        };
+      }
+
+      if (userArgs.length > 2) {
+        return {
+          handled: true,
+          ok: false,
+          error: `runtime verify does not accept extra arguments: ${userArgs.slice(2).join(' ')}`,
+          userArgs,
+        };
+      }
+
+      return {
+        handled: true,
+        ok: true,
+        command: {
+          kind: 'runtime-verify',
+        },
+        userArgs,
+      };
+    }
+
     return {
       handled: true,
       ok: false,
@@ -282,6 +323,101 @@ function printFailure(output: NonInteractiveOutput, result: CliDependencyInstall
   }
 }
 
+function formatRuntimeVerificationIssues(issues: string[]): string {
+  return issues.length > 0 ? issues.join(' | ') : '<none>';
+}
+
+function printRuntimeVerificationReport(output: NonInteractiveOutput, report: NonInteractiveRuntimeVerificationReport): void {
+  output.stdout('HagiCode Desktop non-interactive runtime verification');
+  output.stdout('command: runtime verify');
+  output.stdout(`runtime mode: ${report.mode}`);
+  output.stdout(`runtime manifest: ${report.manifestPath}`);
+  output.stdout(`runtime program home: ${report.programHome}`);
+  output.stdout(`runtime program home exists: ${report.programHomeExists}`);
+  output.stdout(`runtime data home: ${report.dataHome}`);
+  output.stdout(`runtime data home exists: ${report.dataHomeExists}`);
+  output.stdout(`runtime shared config: ${report.sharedPaths.config}`);
+  output.stdout(`runtime shared logs: ${report.sharedPaths.logs}`);
+  output.stdout(`runtime shared data: ${report.sharedPaths.data}`);
+  output.stdout(`runtime shared state: ${report.sharedPaths.state}`);
+  output.stdout(`runtime service code-server data: ${report.serviceDataHomes.codeServer}`);
+  output.stdout(`runtime service omniroute data: ${report.serviceDataHomes.omniRoute}`);
+  output.stdout(`runtime component dotnet root: ${report.components.dotnet.root}`);
+  output.stdout(`runtime component dotnet status: ${report.components.dotnet.status}`);
+  output.stdout(`runtime component dotnet executable: ${report.components.dotnet.executablePath}`);
+  output.stdout(`runtime component dotnet aspnet: ${report.components.dotnet.aspNetCoreVersion ?? '<missing>'}`);
+  output.stdout(`runtime component dotnet netcore: ${report.components.dotnet.netCoreVersion ?? '<missing>'}`);
+  output.stdout(`runtime component dotnet hostfxr: ${report.components.dotnet.hostFxrVersion ?? '<missing>'}`);
+  output.stdout(`runtime component dotnet source: ${report.components.dotnet.runtimeSource ?? '<missing>'}`);
+  output.stdout(`runtime component dotnet issues: ${formatRuntimeVerificationIssues(report.components.dotnet.issues)}`);
+  output.stdout(`runtime component node root: ${report.components.node.root}`);
+  output.stdout(`runtime component node status: ${report.components.node.status}`);
+  output.stdout(`runtime component node manifest: ${report.components.node.manifestPath}`);
+  output.stdout(`runtime component node active: ${report.components.node.activeForDesktop}`);
+  output.stdout(`runtime component node executable: ${report.components.node.nodeExecutablePath ?? '<missing>'}`);
+  output.stdout(`runtime component npm executable: ${report.components.node.npmExecutablePath ?? '<missing>'}`);
+  output.stdout(`runtime component node version: ${report.components.node.governedNodeVersion ?? '<missing>'}`);
+  output.stdout(`runtime component node issues: ${formatRuntimeVerificationIssues(report.components.node.issues)}`);
+  output.stdout(`runtime component code-server root: ${report.components.codeServer.root}`);
+  output.stdout(`runtime component code-server status: ${report.components.codeServer.status}`);
+  output.stdout(`runtime component code-server wrapper: ${report.components.codeServer.wrapperPath ?? '<missing>'}`);
+  output.stdout(`runtime component code-server entry: ${report.components.codeServer.entryScriptPath ?? '<missing>'}`);
+  output.stdout(`runtime component code-server version: ${report.components.codeServer.version ?? '<missing>'}`);
+  output.stdout(`runtime component code-server issues: ${formatRuntimeVerificationIssues(report.components.codeServer.issues)}`);
+  output.stdout(`runtime component omniroute root: ${report.components.omniRoute.root}`);
+  output.stdout(`runtime component omniroute status: ${report.components.omniRoute.status}`);
+  output.stdout(`runtime component omniroute wrapper: ${report.components.omniRoute.wrapperPath ?? '<missing>'}`);
+  output.stdout(`runtime component omniroute entry: ${report.components.omniRoute.entryScriptPath ?? '<missing>'}`);
+  output.stdout(`runtime component omniroute version: ${report.components.omniRoute.version ?? '<missing>'}`);
+  output.stdout(`runtime component omniroute issues: ${formatRuntimeVerificationIssues(report.components.omniRoute.issues)}`);
+}
+
+function printRuntimeVerificationFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeVerificationReport): void {
+  output.stderr('result: failure');
+  output.stderr('stage: verification');
+  output.stderr('error: runtime verification failed');
+  for (const issue of report.issues) {
+    output.stderr(`issue: ${issue}`);
+  }
+}
+
+async function runRuntimeVerificationCommand(
+  output: NonInteractiveOutput,
+  runtimeVerifier?: () => Promise<NonInteractiveRuntimeVerificationReport>,
+): Promise<NonInteractiveRunResult> {
+  try {
+    const verifier = runtimeVerifier ?? (async () => {
+      const { verifyDesktopRuntimeStructure } = await import('./non-interactive-runtime-verify.js');
+      return verifyDesktopRuntimeStructure();
+    });
+    const report = await verifier();
+    printRuntimeVerificationReport(output, report);
+    if (!report.ok) {
+      printRuntimeVerificationFailure(output, report);
+      return {
+        exitCode: nonInteractiveExitCodes.verification,
+        stage: 'verification',
+        error: report.issues.join('; ') || 'runtime verification failed',
+      };
+    }
+    output.stdout('result: success');
+    return {
+      exitCode: nonInteractiveExitCodes.success,
+      stage: 'success',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    output.stderr('result: failure');
+    output.stderr('stage: verification');
+    output.stderr(`error: ${message}`);
+    return {
+      exitCode: nonInteractiveExitCodes.verification,
+      stage: 'verification',
+      error: message,
+    };
+  }
+}
+
 export async function runNonInteractiveCommand(
   parseResult: NonInteractiveParseResult,
   options: NonInteractiveRunOptions = {},
@@ -300,6 +436,10 @@ export async function runNonInteractiveCommand(
       stage: 'usage',
       error: parseResult.error,
     };
+  }
+
+  if (parseResult.command.kind === 'runtime-verify') {
+    return runRuntimeVerificationCommand(output, options.runtimeVerifier);
   }
 
   const service = options.service ?? new (await import('./dependency-management-service.js')).default();

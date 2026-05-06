@@ -7,12 +7,16 @@ import {
   readOmniRouteRuntimeConfig,
   validateOmniRouteRuntimePayload,
 } from './omniroute-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
 const runtimeRoot = process.argv[2]
   ? path.resolve(process.cwd(), process.argv[2])
-  : path.join(process.cwd(), 'resources', 'omniroute', 'current');
+  : resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
+
+assertGlobalHagiscriptAvailable();
 
 if (!fs.existsSync(runtimeRoot)) {
   throw new Error(`Vendored OmniRoute runtime root does not exist: ${runtimeRoot}`);

@@ -9,7 +9,8 @@ import AdmZip from 'adm-zip';
 
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, 'pkg');
-const commandArgs = ['deps', 'install', '--claude-code', '--codex'];
+const runtimeVerifyArgs = ['runtime', 'verify'];
+const dependencyInstallArgs = ['deps', 'install', '--claude-code', '--codex'];
 const defaultCommandTimeoutMs = 240_000;
 
 function log(message) {
@@ -265,7 +266,7 @@ function isRunnableArtifactRoot(root) {
   return Boolean(executablePath) && resourceCandidates.length > 0;
 }
 
-function runExecutable(executablePath, userDataDir) {
+function runExecutable(executablePath, userDataDir, commandArgs) {
   const requiresLinuxHeadlessSwitches = process.platform === 'linux'
     && !process.env.DISPLAY
     && !process.env.WAYLAND_DISPLAY;
@@ -360,6 +361,13 @@ function parseOutputValue(output, label) {
   return match?.[1]?.trim() ?? null;
 }
 
+function assertOutputValue(output, label, expected) {
+  const value = parseOutputValue(output, label);
+  if (value !== expected) {
+    fail(`Expected "${label}" to equal "${expected}" but found "${value ?? '<missing>'}".`);
+  }
+}
+
 function assertOutputContainsPackage(output, packageId) {
   const line = output.split(/\r?\n/).find((entry) => entry.startsWith(`[${packageId}] status=installed `));
   if (!line) {
@@ -371,6 +379,76 @@ function assertOutputContainsPackage(output, packageId) {
   if (line.includes('<missing>')) {
     fail(`Package output for ${packageId} contains a missing path: ${line}`);
   }
+}
+
+function assertPathWithinRoot(candidatePath, rootPath, label) {
+  if (!candidatePath || !candidatePath.startsWith(rootPath)) {
+    fail(`Expected ${label} to stay under ${rootPath}.\nPath: ${candidatePath ?? '<missing>'}`);
+  }
+}
+
+function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir }) {
+  const programHome = parseOutputValue(output, 'runtime program home');
+  const dataHome = parseOutputValue(output, 'runtime data home');
+  const dotnetRoot = parseOutputValue(output, 'runtime component dotnet root');
+  const nodeRoot = parseOutputValue(output, 'runtime component node root');
+  const codeServerRoot = parseOutputValue(output, 'runtime component code-server root');
+  const omniRouteRoot = parseOutputValue(output, 'runtime component omniroute root');
+  const codeServerDataHome = parseOutputValue(output, 'runtime service code-server data');
+  const omniRouteDataHome = parseOutputValue(output, 'runtime service omniroute data');
+
+  if (!programHome || !dataHome || !dotnetRoot || !nodeRoot || !codeServerRoot || !omniRouteRoot || !codeServerDataHome || !omniRouteDataHome) {
+    fail('Runtime verification output did not include all required runtime structure diagnostics.');
+  }
+
+  assertOutputValue(output, 'runtime component dotnet status', 'ok');
+  assertOutputValue(output, 'runtime component node status', 'ok');
+  assertOutputValue(output, 'runtime component code-server status', 'ok');
+  assertOutputValue(output, 'runtime component omniroute status', 'ok');
+  assertOutputValue(output, 'result', 'success');
+
+  assertPathWithinRoot(programHome, artifactRoot, 'runtime program home');
+  assertPathWithinRoot(dotnetRoot, programHome, 'dotnet runtime root');
+  assertPathWithinRoot(nodeRoot, programHome, 'node runtime root');
+  assertPathWithinRoot(codeServerRoot, programHome, 'code-server runtime root');
+  assertPathWithinRoot(omniRouteRoot, programHome, 'omniroute runtime root');
+
+  const expectedDataHome = path.join(userDataDir, 'runtimeData');
+  if (dataHome !== expectedDataHome) {
+    fail(`Expected runtime data home to use the migrated userData/runtimeData contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
+  }
+  assertPathWithinRoot(codeServerDataHome, expectedDataHome, 'code-server runtime data home');
+  assertPathWithinRoot(omniRouteDataHome, expectedDataHome, 'omniroute runtime data home');
+}
+
+async function runScenario({
+  name,
+  executablePath,
+  userDataDir,
+  commandArgs,
+  onSuccess,
+}) {
+  const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
+  log(`running ${name}: ${commandArgs.join(' ')}`);
+  const result = await runExecutable(executablePath, userDataDir, commandArgs);
+  log(`${name} exit code: ${result.code}`);
+  if (result.signal) {
+    log(`${name} signal: ${result.signal}`);
+  }
+  if (result.timedOut) {
+    fail(
+      `${name} timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
+      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+    );
+  }
+  if (result.code !== 0) {
+    fail(
+      `${name} failed with exit code ${result.code}.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
+      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+    );
+  }
+
+  await onSuccess(result);
 }
 
 async function main() {
@@ -401,49 +479,48 @@ async function main() {
     fail('Integration harness must run with artifact and managed paths containing spaces.');
   }
 
-  const result = await runExecutable(executablePath, userDataDir);
-  log(`exit code: ${result.code}`);
-  if (result.signal) {
-    log(`signal: ${result.signal}`);
-  }
-  if (result.timedOut) {
-    fail(
-      `Non-interactive command timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
-      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
-    );
-  }
+  await runScenario({
+    name: 'runtime verification',
+    executablePath,
+    userDataDir,
+    commandArgs: runtimeVerifyArgs,
+    onSuccess: async (result) => {
+      assertRuntimeVerificationOutput(result.stdout, { artifactRoot, userDataDir });
+    },
+  });
 
-  if (result.code !== 0) {
-    fail(
-      `Non-interactive command failed with exit code ${result.code}.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
-      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
-    );
-  }
+  await runScenario({
+    name: 'dependency install',
+    executablePath,
+    userDataDir,
+    commandArgs: dependencyInstallArgs,
+    onSuccess: async (result) => {
+      const stdout = result.stdout;
+      const installRoot = parseOutputValue(stdout, 'install root');
+      const managedModules = parseOutputValue(stdout, 'managed modules');
+      const managedBin = parseOutputValue(stdout, 'managed bin');
 
-  const stdout = result.stdout;
-  const installRoot = parseOutputValue(stdout, 'install root');
-  const managedModules = parseOutputValue(stdout, 'managed modules');
-  const managedBin = parseOutputValue(stdout, 'managed bin');
+      if (!installRoot || !managedModules || !managedBin) {
+        fail('CLI output did not include install root, managed modules, and managed bin diagnostics.');
+      }
 
-  if (!installRoot || !managedModules || !managedBin) {
-    fail('CLI output did not include install root, managed modules, and managed bin diagnostics.');
-  }
+      for (const expectedPath of [installRoot, managedModules, managedBin]) {
+        if (!expectedPath.startsWith(userDataDir)) {
+          fail(`Expected managed path to be under clean integration userData root.\nPath: ${expectedPath}\nUserData: ${userDataDir}`);
+        }
+      }
 
-  for (const expectedPath of [installRoot, managedModules, managedBin]) {
-    if (!expectedPath.startsWith(userDataDir)) {
-      fail(`Expected managed path to be under clean integration userData root.\nPath: ${expectedPath}\nUserData: ${userDataDir}`);
-    }
-  }
+      for (const packageId of ['hagiscript', 'claude-code', 'codex']) {
+        assertOutputContainsPackage(stdout, packageId);
+      }
 
-  for (const packageId of ['hagiscript', 'claude-code', 'codex']) {
-    assertOutputContainsPackage(stdout, packageId);
-  }
-
-  for (const expectedPath of [installRoot, managedModules, managedBin]) {
-    if (!pathExists(expectedPath)) {
-      fail(`Expected managed path to exist after install: ${expectedPath}`);
-    }
-  }
+      for (const expectedPath of [installRoot, managedModules, managedBin]) {
+        if (!pathExists(expectedPath)) {
+          fail(`Expected managed path to exist after install: ${expectedPath}`);
+        }
+      }
+    },
+  });
 
   log('non-interactive integration test passed');
 }

@@ -38,14 +38,14 @@ npm run build:prod
 
 ### Development bundled Node runtime
 
-Source-mode development uses the bundled portable toolchain under `resources/toolchain/`, matching the packaged Desktop layout under `resources/extra/toolchain/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
+Source-mode development uses the shared Desktop runtime tree under `build/desktop-runtime/current/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
 
 `npm run prepare:bundled-toolchain:optional` stages the governed Node runtime when the current platform is supported. `npm run dev` runs that preparation step through `predev`.
 
-Managed npm packages are installed beside the selected bundled Node runtime using npm's default global layout:
+Managed npm packages are installed into Desktop-owned writable runtime data under `userData/runtimeData/node/`:
 
-- Unix-like platforms: `resources/toolchain/node/bin` and `resources/toolchain/node/lib/node_modules`
-- Windows: `resources/toolchain/node` and `resources/toolchain/node/node_modules`
+- Unix-like platforms: `userData/runtimeData/node/node<major>/npmGlobal/bin` and `userData/runtimeData/node/node<major>/npmGlobal/lib/node_modules`
+- Windows: `userData/runtimeData/node/node<major>/npmGlobal` and `userData/runtimeData/node/node<major>/npmGlobal/node_modules`
 
 ### Development runtime troubleshooting
 

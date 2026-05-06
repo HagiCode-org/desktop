@@ -27,6 +27,15 @@ import {
 } from './portable-runtime-layout.js';
 import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
 import { getCodeServerRuntimeConfigPath as resolveCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
+import {
+  getDesktopRuntimeManifestPath,
+  readDesktopRuntimeManifest,
+  resolveDesktopRuntimeComponentProgramRoot,
+  resolveDesktopRuntimeDataHome,
+  resolveDesktopRuntimeProgramHome,
+  resolveDesktopRuntimeServiceDataHome,
+  resolveDesktopRuntimeSharedDataPaths,
+} from './desktop-runtime-paths.js';
 import { getOmniRouteRuntimeConfigPath as resolveOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
 import type {
   BootstrapDataDirectoryContext,
@@ -399,6 +408,38 @@ export class PathManager {
     return this.userDataPath;
   }
 
+  getDesktopRuntimeManifestPath(): string {
+    return getDesktopRuntimeManifestPath();
+  }
+
+  getRuntimeProgramHome(): string {
+    return resolveDesktopRuntimeProgramHome({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+      overrideRoot: process.env.HAGICODE_RUNTIME_HOME,
+    });
+  }
+
+  getRuntimeDataHome(): string {
+    return resolveDesktopRuntimeDataHome({
+      userDataPath: this.userDataPath,
+      overrideRoot: process.env.HAGICODE_RUNTIME_DATA_HOME,
+    });
+  }
+
+  getRuntimeSharedPaths(): ReturnType<typeof resolveDesktopRuntimeSharedDataPaths> {
+    return resolveDesktopRuntimeSharedDataPaths(this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
+  getCodeServerRuntimeDataHome(): string {
+    return resolveDesktopRuntimeServiceDataHome('code-server', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
+  getOmniRouteRuntimeDataHome(): string {
+    return resolveDesktopRuntimeServiceDataHome('omniroute', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
   getNodeMajorNpmGlobalPaths(
     input: Omit<NodeMajorNpmGlobalPathOptions, 'userDataPath'> = {},
   ): NodeMajorNpmGlobalPaths {
@@ -588,7 +629,7 @@ export class PathManager {
   }
 
   getExpectedPackagedPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
-    return path.join(process.resourcesPath, 'dotnet', platform);
+    return resolveDesktopRuntimeComponentProgramRoot('dotnet', this.getRuntimeProgramHome(), platform);
   }
 
   getExpectedPackagedEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -604,7 +645,7 @@ export class PathManager {
   }
 
   getDevelopmentPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
-    return path.resolve(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', platform);
+    return resolveDesktopRuntimeComponentProgramRoot('dotnet', this.getRuntimeProgramHome(), platform);
   }
 
   getDevelopmentEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -616,7 +657,7 @@ export class PathManager {
   }
 
   getDevelopmentPortableToolchainRoot(): string {
-    return path.resolve(process.cwd(), 'resources', 'toolchain');
+    return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
   }
 
   private buildPortableToolchainRuntimePaths(): PortableToolchainPaths {
@@ -625,7 +666,7 @@ export class PathManager {
       resourcesPath: process.resourcesPath,
       isPackaged: app.isPackaged,
       platform: process.platform,
-      overrideRoot: this.getPortableToolchainRoot(),
+      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
     });
   }
 
@@ -642,10 +683,10 @@ export class PathManager {
         return resolvedOverride;
       }
 
-      return this.getDevelopmentPinnedRuntimeRoot(platform);
+      return resolveDesktopRuntimeComponentProgramRoot('dotnet', this.getRuntimeProgramHome(), platform);
     }
 
-    return this.getExpectedPackagedPinnedRuntimeRoot(platform);
+    return resolveDesktopRuntimeComponentProgramRoot('dotnet', this.getRuntimeProgramHome(), platform);
   }
 
   getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -695,18 +736,7 @@ export class PathManager {
       return path.resolve(overrideRoot);
     }
 
-    if (!app.isPackaged) {
-      return path.resolve(process.cwd(), 'resources', 'toolchain');
-    }
-
-    const resolution = resolvePackagedPortableToolchainRoot(process.resourcesPath);
-    if (resolution.selectionSource === 'compatibility-flat-extra-root') {
-      log.warn('[PathManager] Falling back to compatibility Steam toolchain layout under extra/toolchain:', {
-        toolchainRoot: resolution.toolchainRoot,
-      });
-    }
-
-    return resolution.toolchainRoot;
+    return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
   }
 
   getCodeServerRuntimeRoot(): string {
@@ -715,11 +745,7 @@ export class PathManager {
       return path.resolve(overrideRoot);
     }
 
-    if (!app.isPackaged) {
-      return path.resolve(process.cwd(), 'resources', 'code-server', 'current');
-    }
-
-    return path.join(process.resourcesPath, ...PathManager.CODE_SERVER_ROOT_SEGMENTS);
+    return resolveDesktopRuntimeComponentProgramRoot('code-server', this.getRuntimeProgramHome(), this.getCurrentPlatform());
   }
 
   getCodeServerRuntimeConfigPath(): string {
@@ -732,11 +758,7 @@ export class PathManager {
       return path.resolve(overrideRoot);
     }
 
-    if (!app.isPackaged) {
-      return path.resolve(process.cwd(), 'resources', 'omniroute', 'current');
-    }
-
-    return path.join(process.resourcesPath, ...PathManager.OMNIROUTE_ROOT_SEGMENTS);
+    return resolveDesktopRuntimeComponentProgramRoot('omniroute', this.getRuntimeProgramHome(), this.getCurrentPlatform());
   }
 
   getOmniRouteRuntimeConfigPath(): string {

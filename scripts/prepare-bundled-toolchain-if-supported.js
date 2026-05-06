@@ -12,9 +12,10 @@ import {
   readToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const toolchainRoot = path.join(process.cwd(), 'resources', 'toolchain');
+const toolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
 const forceRestage = process.env.HAGICODE_FORCE_BUNDLED_TOOLCHAIN_RESTAGE === '1';
 
 function canReuseExistingToolchain() {

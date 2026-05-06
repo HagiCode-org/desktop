@@ -1,4 +1,8 @@
 import path from 'node:path';
+import {
+  resolveDesktopRuntimeComponentProgramRoot,
+  resolveDesktopRuntimeProgramHome,
+} from './desktop-runtime-paths.js';
 
 export interface PortableToolchainPathOptions {
   cwd: string;
@@ -48,16 +52,13 @@ export interface Pm2MajorHomePaths {
 }
 
 export function resolvePortableToolchainRoot(options: PortableToolchainPathOptions): string {
-  const override = options.overrideRoot?.trim();
-  if (override) {
-    return path.resolve(override);
-  }
-
-  if (!options.isPackaged) {
-    return path.resolve(options.cwd, 'resources', 'toolchain');
-  }
-
-  return path.join(options.resourcesPath, 'extra', 'toolchain');
+  const programHome = resolveDesktopRuntimeProgramHome({
+    cwd: options.cwd,
+    resourcesPath: options.resourcesPath,
+    isPackaged: options.isPackaged,
+    overrideRoot: options.overrideRoot,
+  });
+  return resolveDesktopRuntimeComponentProgramRoot('node', programHome, 'unused');
 }
 
 export function buildPortableToolchainPaths(options: PortableToolchainPathOptions): PortableToolchainPaths {
@@ -82,6 +83,11 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
 
 function getPathModuleForPlatform(platform: NodeJS.Platform): typeof path.posix | typeof path.win32 {
   return platform === 'win32' ? path.win32 : path.posix;
+}
+
+function getRuntimeDataRoot(userDataPath: string, platform: NodeJS.Platform): string {
+  const pathModule = getPathModuleForPlatform(platform);
+  return pathModule.join(userDataPath, 'runtimeData');
 }
 
 export function extractNodeMajorVersion(
@@ -118,7 +124,8 @@ export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOpti
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
   const nodeMajorVersion = extractNodeMajorVersion(options.nodeMajorVersion ?? options.nodeVersion);
-  const npmGlobalPrefix = pathModule.join(options.userDataPath, `node${nodeMajorVersion}`, 'npmGlobal');
+  const runtimeDataRoot = getRuntimeDataRoot(options.userDataPath, platform);
+  const npmGlobalPrefix = pathModule.join(runtimeDataRoot, 'node', `node${nodeMajorVersion}`, 'npmGlobal');
 
   return {
     nodeVersion: options.nodeVersion?.trim() || null,
@@ -128,7 +135,7 @@ export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOpti
     npmGlobalModulesRoot: platform === 'win32'
       ? pathModule.join(npmGlobalPrefix, 'node_modules')
       : pathModule.join(npmGlobalPrefix, 'lib', 'node_modules'),
-    npmCacheRoot: pathModule.join(options.userDataPath, `node${nodeMajorVersion}`, 'npmCache'),
+    npmCacheRoot: pathModule.join(runtimeDataRoot, 'node', `node${nodeMajorVersion}`, 'npmCache'),
   };
 }
 
@@ -136,11 +143,12 @@ export function buildPm2MajorHomePaths(options: Pm2MajorHomePathOptions): Pm2Maj
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
   const pm2MajorVersion = extractPm2MajorVersion(options.pm2MajorVersion ?? options.pm2Version);
+  const runtimeDataRoot = getRuntimeDataRoot(options.userDataPath, platform);
 
   return {
     pm2Version: options.pm2Version?.trim() || null,
     pm2MajorVersion,
-    pm2Home: pathModule.join(options.userDataPath, 'pm2', pm2MajorVersion),
+    pm2Home: pathModule.join(runtimeDataRoot, 'pm2', pm2MajorVersion),
   };
 }
 

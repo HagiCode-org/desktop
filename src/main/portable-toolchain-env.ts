@@ -4,6 +4,8 @@ import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-po
 import type { NodeMajorNpmGlobalPaths } from './portable-toolchain-paths.js';
 
 export interface PortableToolchainPathAccessor {
+  getRuntimeProgramHome?(): string;
+  getRuntimeDataHome?(): string;
   getPortableToolchainRoot(): string;
   getPortableToolchainBinRoot(): string;
   getPortableNodeBinRoot(): string;
@@ -42,7 +44,23 @@ export interface ManagedCliPathEnvResult {
 }
 
 export interface CodeServerRuntimeEnvResult extends PortableToolchainEnvResult {
+  runtimeProgramHome: string;
+  runtimeDataHome: string;
   runtimeRoot: string;
+}
+
+function resolveRuntimeProgramHome(pathAccessor: PortableToolchainPathAccessor): string {
+  return pathAccessor.getRuntimeProgramHome?.() ?? process.env.HAGICODE_RUNTIME_HOME ?? '';
+}
+
+function resolveRuntimeDataHome(pathAccessor: PortableToolchainPathAccessor): string {
+  return pathAccessor.getRuntimeDataHome?.() ?? process.env.HAGICODE_RUNTIME_DATA_HOME ?? '';
+}
+
+function resolveCodeServerRuntimeDataHome(
+  pathAccessor: PortableToolchainPathAccessor & { getCodeServerRuntimeDataHome?(): string },
+): string {
+  return pathAccessor.getCodeServerRuntimeDataHome?.() ?? resolveRuntimeDataHome(pathAccessor);
 }
 
 const SERVER_NODE_ENV_KEYS = [
@@ -196,6 +214,14 @@ export function injectPortableToolchainEnv(
   const markerInjected = activeInjectedPaths.length > 0;
   if (markerInjected) {
     env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = toolchainEntries.toolchainRoot;
+    const runtimeProgramHome = resolveRuntimeProgramHome(pathAccessor);
+    const runtimeDataHome = resolveRuntimeDataHome(pathAccessor);
+    if (runtimeProgramHome) {
+      env.HAGICODE_RUNTIME_HOME = runtimeProgramHome;
+    }
+    if (runtimeDataHome) {
+      env.HAGICODE_RUNTIME_DATA_HOME = runtimeDataHome;
+    }
     if (options.npmGlobalPaths) {
       const inheritedNodePathEntries = splitPathEntries(baseEnv.NODE_PATH, platform);
       env.NODE_PATH = dedupePathEntries([
@@ -210,6 +236,8 @@ export function injectPortableToolchainEnv(
     }
   } else {
     delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
+    delete env.HAGICODE_RUNTIME_HOME;
+    delete env.HAGICODE_RUNTIME_DATA_HOME;
     delete env.HAGICODE_NPM_GLOBAL_PREFIX;
     delete env.HAGICODE_NPM_GLOBAL_BIN_ROOT;
     delete env.HAGICODE_NPM_GLOBAL_MODULES_ROOT;
@@ -284,18 +312,25 @@ export function injectManagedCliPathEnv(
 
 export function injectCodeServerRuntimeEnv(
   baseEnv: NodeJS.ProcessEnv,
-  pathAccessor: PortableToolchainPathAccessor & { getCodeServerRuntimeRoot(): string },
+  pathAccessor: PortableToolchainPathAccessor & {
+    getCodeServerRuntimeRoot(): string;
+    getCodeServerRuntimeDataHome?(): string;
+  },
   options: InjectPortableToolchainEnvOptions = {},
 ): CodeServerRuntimeEnvResult {
   const portableEnv = injectPortableToolchainEnv(baseEnv, pathAccessor, options);
   const env: NodeJS.ProcessEnv = {
     ...portableEnv.env,
+    HAGICODE_RUNTIME_HOME: resolveRuntimeProgramHome(pathAccessor),
+    HAGICODE_RUNTIME_DATA_HOME: resolveCodeServerRuntimeDataHome(pathAccessor),
     HAGICODE_CODE_SERVER_RUNTIME_ROOT: pathAccessor.getCodeServerRuntimeRoot(),
   };
 
   return {
     ...portableEnv,
     env,
+    runtimeProgramHome: resolveRuntimeProgramHome(pathAccessor),
+    runtimeDataHome: resolveCodeServerRuntimeDataHome(pathAccessor),
     runtimeRoot: pathAccessor.getCodeServerRuntimeRoot(),
   };
 }

@@ -35,6 +35,8 @@ import {
   readOmniRouteRuntimeConfig,
   validateOmniRouteRuntimePayload,
 } from './omniroute-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -43,26 +45,33 @@ const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectR
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
-const stagedRuntimeRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'current', 'dotnet', runtimePlatform);
+const stagedRuntimeRoot = resolveStagedDesktopRuntimeComponentRoot('dotnet', { cwd: process.cwd(), platform: runtimePlatform });
 const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
 const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'toolchain');
+const stagedToolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
 const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const codeServerConfig = readCodeServerRuntimeConfig();
-const stagedCodeServerRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
+const stagedCodeServerRoot = resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
 const packagedCodeServerCandidates = resolvePackagedCodeServerRoots();
 const packagedCodeServerRoot = resolveExistingPackagedRuntimeRoot(packagedCodeServerCandidates);
 const omniroutePlatform = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
 const omnirouteConfig = readOmniRouteRuntimeConfig();
-const stagedOmniRouteRoot = path.join(process.cwd(), 'resources', 'omniroute', 'current');
+const stagedOmniRouteRoot = resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
 const packagedOmniRouteCandidates = resolvePackagedOmniRouteRoots();
 const packagedOmniRouteRoot = resolveExistingPackagedRuntimeRoot(packagedOmniRouteCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
 const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
+const globalHagiscriptVersion = (() => {
+  try {
+    return assertGlobalHagiscriptAvailable();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+})();
 
 const colors = {
   reset: '\x1b[0m',
@@ -87,17 +96,17 @@ function resolvePackagedRuntimeRoots(platform) {
   }
 
   if (platform.startsWith('win-')) {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'dotnet', platform)];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform)];
   }
   if (platform.startsWith('linux-')) {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'dotnet', platform)];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform)];
   }
   if (platform.startsWith('osx-')) {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'dotnet', platform),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
     ];
   }
   return [];
@@ -114,30 +123,30 @@ function resolvePackagedToolchainRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'toolchain')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'toolchain')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
   }
   if (process.platform === 'darwin') {
     if (nodeRuntimePlatform === 'osx-x64') {
       return [
-        path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
-        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+          path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
+          path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
       ];
     }
     if (nodeRuntimePlatform === 'osx-arm64') {
       return [
-        path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
-        path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+          path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
+          path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
       ];
     }
 
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
     ];
   }
   return [];
@@ -150,17 +159,17 @@ function resolvePackagedCodeServerRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'code-server', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'code-server', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
     ];
   }
   return [];
@@ -173,17 +182,17 @@ function resolvePackagedOmniRouteRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'omniroute', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'omniroute', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
     ];
   }
   return [];
@@ -511,20 +520,21 @@ test('electron-builder configuration is valid', async () => {
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
   const linuxExtraFiles = Array.isArray(buildConfig?.linux?.extraFiles) ? buildConfig.linux.extraFiles : [];
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
-  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
-  const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain');
-  const codeServerExtraResource = extraResources.find((entry) => entry.from === 'resources/code-server/current');
+  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/desktop-runtime/current');
   const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
   const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
   const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
-  const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/toolchain';
-  const codeServerCanonicalPath = codeServerExtraResource?.to === 'extra/code-server/current';
+  const runtimeCanonicalPath = runtimeExtraResource?.to === 'extra/runtime';
+  const legacyToolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain' || entry.to === 'extra/toolchain');
+  const legacyCodeServerExtraResource = extraResources.find((entry) => entry.from === 'resources/code-server/current' || entry.to === 'extra/code-server/current');
+  const legacyOmniRouteExtraResource = extraResources.find((entry) => entry.from === 'resources/omniroute/current' || entry.to === 'extra/omniroute/current');
   const macSignIgnore = Array.isArray(buildConfig?.mac?.signIgnore)
     ? buildConfig.mac.signIgnore
     : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
-  const toolchainSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/toolchain'));
+  const runtimeSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/runtime'));
+  const legacyRuntimeSigningPattern = macSignIgnore.some((pattern) => String(pattern).includes('extra/toolchain') || String(pattern).includes('extra/code-server/current') || String(pattern).includes('extra/omniroute/current'));
   const toolchainStashedDuringMacSigning = buildConfig?.afterPack === macToolchainSigningHook && buildConfig?.afterSign === macToolchainSigningHook;
   const linuxTargets = Array.isArray(buildConfig?.linux?.target)
     ? buildConfig.linux.target
@@ -542,21 +552,18 @@ test('electron-builder configuration is valid', async () => {
   assert(hasFiles, 'files to include are specified');
   assert(Boolean(windowIconExtraResource), 'window icon is shipped via extraResources');
   assert(windowIconOutsideAsar, 'window icon is staged outside app.asar');
-  assert(Boolean(runtimeExtraResource), 'embedded runtime is shipped via extraResources');
+  assert(Boolean(runtimeExtraResource), 'desktop runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
-  assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
-  assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/toolchain');
-  assert(Boolean(codeServerExtraResource), 'vendored code-server runtime is shipped via extraResources');
-  assert(codeServerCanonicalPath, 'vendored code-server runtime is staged at extra/code-server/current');
-  const omnirouteExtraResource = extraResources.find((entry) => entry.from === 'resources/omniroute/current');
-  const omnirouteCanonicalPath = omnirouteExtraResource?.to === 'extra/omniroute/current';
-  assert(Boolean(omnirouteExtraResource), 'vendored OmniRoute runtime is shipped via extraResources');
-  assert(omnirouteCanonicalPath, 'vendored OmniRoute runtime is staged at extra/omniroute/current');
+  assert(runtimeCanonicalPath, 'desktop runtime is staged at extra/runtime');
+  assert(!legacyToolchainExtraResource, 'legacy split packaged toolchain root is no longer shipped');
+  assert(!legacyCodeServerExtraResource, 'legacy split packaged code-server root is no longer shipped');
+  assert(!legacyOmniRouteExtraResource, 'legacy split packaged OmniRoute root is no longer shipped');
   assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
   assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
   assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
   assert(steamSandboxExtraFile?.to === 'hagicode-steam-sandbox.sh', 'steam Linux sandbox helper is staged at the package root');
-  assert(toolchainSkippedByMacSigning, 'bundled Node toolchain is excluded from recursive macOS code signing');
+  assert(runtimeSkippedByMacSigning, 'desktop runtime is excluded from recursive macOS code signing');
+  assert(!legacyRuntimeSigningPattern, 'macOS signing ignore no longer targets legacy split runtime roots');
   assert(toolchainStashedDuringMacSigning, 'bundled Node toolchain is stashed outside the macOS app during code signing');
   assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
   assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
@@ -581,6 +588,10 @@ test('desktop build workflow includes ZIP publication steps', () => {
   assert(content.includes('Summarize Linux ZIP artifacts'), 'workflow reports Linux ZIP diagnostics');
   assert(content.includes('Upload Linux ZIP'), 'workflow uploads Linux ZIP CI artifacts');
   assert(content.includes('Upload Linux ZIP to Release'), 'workflow uploads Linux ZIP release assets');
+});
+
+test('global hagiscript prerequisite is available', () => {
+  assert(!globalHagiscriptVersion.includes('required') && !globalHagiscriptVersion.includes('missing'), `global hagiscript prerequisite resolved (${globalHagiscriptVersion})`);
 });
 
 test('staged bundled Node toolchain payload is complete', () => {
@@ -634,7 +645,8 @@ test('packaged bundled Node toolchain payload is complete', () => {
   }
 
   assert(!packagedToolchainRoot.includes('app.asar'), 'packaged bundled Node toolchain directory resolves outside app.asar');
-  assert(packagedToolchainRoot.includes(path.join('extra', 'toolchain')), 'packaged bundled Node toolchain uses canonical extra/toolchain path');
+  assert(packagedToolchainRoot.includes(path.join('extra', 'runtime', 'components', 'node', 'runtime')), 'packaged bundled Node toolchain uses canonical extra/runtime/components/node/runtime path');
+  assert(!packagedToolchainRoot.includes(path.join('extra', 'toolchain')), 'packaged bundled Node toolchain does not use the legacy extra/toolchain path');
 
   const missingComponents = validateToolchainPayload(packagedToolchainRoot, { platform: nodeRuntimePlatform });
   assert(
@@ -717,7 +729,8 @@ test('packaged vendored code-server payload is complete', () => {
   }
 
   assert(!packagedCodeServerRoot.includes('app.asar'), 'packaged vendored code-server runtime resolves outside app.asar');
-  assert(packagedCodeServerRoot.includes(path.join('extra', 'code-server', 'current')), 'packaged vendored code-server runtime uses canonical extra/code-server/current path');
+  assert(packagedCodeServerRoot.includes(path.join('extra', 'runtime', 'components', 'bundled', 'code-server')), 'packaged vendored code-server runtime uses canonical extra/runtime/components/bundled/code-server path');
+  assert(!packagedCodeServerRoot.includes(path.join('extra', 'code-server', 'current')), 'packaged vendored code-server runtime does not use the legacy extra/code-server/current path');
 
   const errors = validateVendoredCodeServerRuntime(packagedCodeServerRoot);
   assert(
@@ -750,7 +763,8 @@ test('packaged vendored OmniRoute payload is complete', () => {
   }
 
   assert(!packagedOmniRouteRoot.includes('app.asar'), 'packaged vendored OmniRoute runtime resolves outside app.asar');
-  assert(packagedOmniRouteRoot.includes(path.join('extra', 'omniroute', 'current')), 'packaged vendored OmniRoute runtime uses canonical extra/omniroute/current path');
+  assert(packagedOmniRouteRoot.includes(path.join('extra', 'runtime', 'components', 'bundled', 'omniroute')), 'packaged vendored OmniRoute runtime uses canonical extra/runtime/components/bundled/omniroute path');
+  assert(!packagedOmniRouteRoot.includes(path.join('extra', 'omniroute', 'current')), 'packaged vendored OmniRoute runtime does not use the legacy extra/omniroute/current path');
 
   const errors = validateVendoredOmniRouteRuntime(packagedOmniRouteRoot);
   assert(

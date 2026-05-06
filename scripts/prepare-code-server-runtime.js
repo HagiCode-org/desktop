@@ -16,12 +16,14 @@ import {
   resolveCodeServerRuntimeTarget,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
+import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const config = readCodeServerRuntimeConfig();
 const platformKey = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const target = resolveCodeServerRuntimeTarget(platformKey, config);
 const runtimeVersionOverride = resolveRequestedCodeServerRuntimeVersion(platformKey, config);
-const runtimeRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
+const runtimeRoot = resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
 const buildRoot = resolveCodeServerGeneratedRoot(config) ?? path.join(process.cwd(), 'build', 'code-server-runtime');
 const downloadsRoot = path.join(buildRoot, 'downloads');
 const extractRoot = path.join(buildRoot, 'extract');
@@ -32,6 +34,7 @@ main().catch((error) => {
 });
 
 async function main() {
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable();
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
@@ -70,6 +73,7 @@ async function main() {
 
   console.log(`[code-server-runtime] Prepared ${validation.metadata?.packageId || 'code-server'} ${validation.metadata?.version || selectedArtifact.metadata.version} for ${platformKey}`);
   console.log(`[code-server-runtime] Staged runtime root: ${runtimeRoot}`);
+  console.log(`[code-server-runtime] Using global hagiscript ${hagiscriptVersion} for runtime preparation`);
 }
 
 async function resolveArtifact() {
