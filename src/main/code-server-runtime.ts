@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import type { PathManager } from './path-manager.js';
+import { getCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
 import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   VendoredRuntimeHealthSnapshot,
@@ -10,8 +11,6 @@ import type {
   VendoredRuntimeStatus,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
-
-const CONFIG_PATH = path.resolve(process.cwd(), 'resources', 'code-server-runtime', 'runtime-manifest.json');
 
 interface CodeServerRuntimePlatformTarget {
   platform: string;
@@ -62,11 +61,7 @@ export interface ValidatedCodeServerRuntime {
 }
 
 export function readCodeServerRuntimeConfig(): CodeServerRuntimeConfig {
-  return JSON.parse(fsSync.readFileSync(CONFIG_PATH, 'utf8')) as CodeServerRuntimeConfig;
-}
-
-export function getCodeServerRuntimeConfigPath(): string {
-  return CONFIG_PATH;
+  return JSON.parse(fsSync.readFileSync(getCodeServerRuntimeConfigPath(), 'utf8')) as CodeServerRuntimeConfig;
 }
 
 export function detectCodeServerRuntimePlatform(

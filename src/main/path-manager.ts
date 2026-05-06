@@ -26,6 +26,7 @@ import {
   type PortableRuntimeMacosPlatform,
 } from './portable-runtime-layout.js';
 import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
+import { getCodeServerRuntimeConfigPath as resolveCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
@@ -720,7 +721,7 @@ export class PathManager {
   }
 
   getCodeServerRuntimeConfigPath(): string {
-    return path.resolve(process.cwd(), 'resources', 'code-server-runtime', 'runtime-manifest.json');
+    return resolveCodeServerRuntimeConfigPath();
   }
 
   getPortableNodeRoot(): string {
