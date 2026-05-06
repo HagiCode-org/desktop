@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "runtime": "omniroute",
+  "packageId": "omniroute",
+  "releaseVersionByPlatform": {
+    "linux-x64": "2026.0506.0026",
+    "osx-x64": "2026.0506.0026",
+    "osx-arm64": "2026.0506.0026",
+    "win-x64": "2026.0506.0026"
+  },
+  "source": {
+    "generatedRootSubdir": "omniroute-runtime",
+    "localArtifactDir": null,
+    "indexUrl": null,
+    "releaseUrlsByPlatform": {
+      "linux-x64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "osx-x64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "osx-arm64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "win-x64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ]
+    },
+    "allowedDownloadHosts": [
+      "github.com",
+      "release-assets.githubusercontent.com",
+      "objects.githubusercontent.com",
+      "githubusercontent.com",
+      "index.hagicode.com"
+    ]
+  },
+  "platforms": {
+    "linux-x64": {
+      "platform": "linux",
+      "arch": "amd64",
+      "archiveExtension": ".tar.gz"
+    },
+    "osx-x64": {
+      "platform": "macos",
+      "arch": "amd64",
+      "archiveExtension": ".tar.gz"
+    },
+    "osx-arm64": {
+      "platform": "macos",
+      "arch": "arm64",
+      "archiveExtension": ".tar.gz"
+    },
+    "win-x64": {
+      "platform": "windows",
+      "arch": "amd64",
+      "archiveExtension": ".zip"
+    }
+  },
+  "expectedLayout": {
+    "requiredEntries": [
+      "metadata.json",
+      "bin/omniroute.mjs",
+      "bin/omniroute|bin/omniroute.cmd|bin/omniroute.ps1"
+    ],
+    "wrapperCandidates": [
+      "bin/omniroute",
+      "bin/omniroute.cmd",
+      "bin/omniroute.ps1"
+    ],
+    "entryScript": "bin/omniroute.mjs"
+  }
+}
