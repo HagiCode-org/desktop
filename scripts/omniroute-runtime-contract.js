@@ -176,8 +176,8 @@ export function validateOmniRouteRuntimePayload(
     if (metadata.arch !== target.arch) {
       diagnostics.push(`metadata arch expected ${target.arch} but found ${metadata.arch ?? 'missing'}`);
     }
-    if (metadata.extra?.bundledNodeRuntime !== false) {
-      diagnostics.push('metadata extra.bundledNodeRuntime must be false');
+    if (metadata.extra?.bundledNodeRuntime !== true) {
+      diagnostics.push('metadata extra.bundledNodeRuntime must be true');
     }
   }
 

@@ -212,8 +212,8 @@ export async function validateOmniRouteRuntime(
     if (expectedVersion && metadata.version !== expectedVersion) {
       diagnostics.push(`Metadata version expected ${expectedVersion} but found ${metadata.version ?? 'missing'}`);
     }
-    if (metadata.extra?.bundledNodeRuntime !== false) {
-      diagnostics.push('Vendored OmniRoute metadata must declare extra.bundledNodeRuntime=false');
+    if (metadata.extra?.bundledNodeRuntime !== true) {
+      diagnostics.push('Vendored OmniRoute metadata must declare extra.bundledNodeRuntime=true');
     }
   }
 

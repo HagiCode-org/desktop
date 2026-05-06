@@ -30,8 +30,8 @@ describe('vendored OmniRoute runtime contract', () => {
     assert.match(source, /readOmniRouteRuntimeConfig/);
     assert.match(source, /resolveOmniRouteWrapperPath/);
     assert.match(source, /metadata\.json/);
-    assert.match(source, /extra\.bundledNodeRuntime=false/);
-    assert.match(source, /pathManager\.getOmniRouteRuntimeConfigPath\(\)/);
+    assert.match(source, /extra\.bundledNodeRuntime=true/);
+    assert.match(source, /getOmniRouteRuntimeConfigPath\(\)/);
     assert.match(source, /pathManager\.getOmniRouteRuntimeRoot\(\)/);
     assert.doesNotMatch(source, /node_modules', packageName/);
   });

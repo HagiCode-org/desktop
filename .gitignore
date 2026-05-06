@@ -54,3 +54,4 @@ build/portable-version-runtime/current/*
 resources/portable-fixed
 resources/toolchain
 resources/code-server
+resources/omniroute

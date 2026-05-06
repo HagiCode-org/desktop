@@ -2,10 +2,11 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
-import { copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { execa } from 'execa';
+import { getNodeExecutableRelativePath } from './embedded-node-runtime-config.js';
 import {
   detectOmniRouteRuntimePlatform,
   readOmniRouteRuntimeConfig,
@@ -45,6 +46,7 @@ async function main() {
   await rm(runtimeRoot, { recursive: true, force: true });
   await mkdir(path.dirname(runtimeRoot), { recursive: true });
   await cp(extractedRoot, runtimeRoot, { recursive: true });
+  await ensureRuntimeWrapper(runtimeRoot);
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
 
   const validation = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey, config });
@@ -343,10 +345,64 @@ function createRuntimeMetadata({
     sourceRevision,
     extra: {
       ...extra,
-      bundledNodeRuntime: false,
+      bundledNodeRuntime: true,
     },
     artifacts,
   };
+}
+
+async function ensureRuntimeWrapper(targetRuntimeRoot) {
+  const binRoot = path.join(targetRuntimeRoot, 'bin');
+  await mkdir(binRoot, { recursive: true });
+  const entryScriptPath = path.join(binRoot, 'omniroute.mjs');
+  if (!fs.existsSync(entryScriptPath)) {
+    return;
+  }
+
+  const relativeNodeExecutablePath = toPortablePath(getNodeExecutableRelativePath(platformKey));
+  const portableNodeExecutablePath = `../../../toolchain/${relativeNodeExecutablePath}`;
+
+  if (platformKey.startsWith('win-')) {
+    const cmdWrapperPath = path.join(binRoot, 'omniroute.cmd');
+    const ps1WrapperPath = path.join(binRoot, 'omniroute.ps1');
+    await writeFile(cmdWrapperPath, [
+      '@echo off',
+      'setlocal',
+      'set "SCRIPT_DIR=%~dp0"',
+      `set "NODE_EXE=%SCRIPT_DIR%${toWindowsPath(portableNodeExecutablePath)}"`,
+      'set "ENTRY_SCRIPT=%SCRIPT_DIR%omniroute.mjs"',
+      '"%NODE_EXE%" "%ENTRY_SCRIPT%" %*',
+      '',
+    ].join('\r\n'), 'utf8');
+    await writeFile(ps1WrapperPath, [
+      '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
+      `$nodeExe = Join-Path $scriptDir '${toWindowsPath(portableNodeExecutablePath)}'`,
+      "$entryScript = Join-Path $scriptDir 'omniroute.mjs'",
+      '& $nodeExe $entryScript @args',
+      '',
+    ].join('\r\n'), 'utf8');
+    return;
+  }
+
+  const wrapperPath = path.join(binRoot, 'omniroute');
+  await writeFile(wrapperPath, [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
+    `NODE_EXE="$SCRIPT_DIR/${portableNodeExecutablePath}"`,
+    'ENTRY_SCRIPT="$SCRIPT_DIR/omniroute.mjs"',
+    'exec "$NODE_EXE" "$ENTRY_SCRIPT" "$@"',
+    '',
+  ].join('\n'), 'utf8');
+  await chmod(wrapperPath, 0o755);
+}
+
+function toPortablePath(relativePath) {
+  return relativePath.split(path.sep).join('/');
+}
+
+function toWindowsPath(relativePath) {
+  return relativePath.split('/').join('\\');
 }
 
 async function writeRuntimeMetadata(targetRuntimeRoot, metadata) {
