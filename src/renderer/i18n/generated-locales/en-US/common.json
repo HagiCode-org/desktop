@@ -158,6 +158,7 @@
     "versionManagement": "Version Management",
     "diagnostic": "Diagnostic",
     "dependencyManagement": "Dependency Management",
+    "codeServer": "Code Server",
     "omniroute": "OmniRoute",
     "settings": "Settings",
     "desktopVersion": "Desktop version",
@@ -671,6 +672,80 @@
       "operationFailed": "The operation failed.",
       "saveFailed": "Failed to save OmniRoute configuration.",
       "openPathFailed": "Failed to open the managed path."
+    }
+  },
+  "codeServer": {
+    "title": "Code Server",
+    "description": "Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.",
+    "loading": "Loading Code Server status...",
+    "actions": {
+      "refresh": "Refresh",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "repair": "Repair runtime",
+      "working": "Working...",
+      "openDesktop": "Open in Desktop",
+      "openBrowser": "Open in Browser",
+      "save": "Save",
+      "open": "Open",
+      "refreshLogs": "Refresh Logs"
+    },
+    "status": {
+      "title": "Status",
+      "running": "Running",
+      "stopped": "Stopped",
+      "missing": "Missing",
+      "damaged": "Damaged",
+      "error": "Error",
+      "baseUrl": "Base URL",
+      "pm2": "PM2 executable",
+      "pm2Missing": "PM2 is not installed",
+      "runtimeStatus": "Runtime status",
+      "passwordMode": "Authentication",
+      "passwordModeValue": "Password required",
+      "diagnostics": "Diagnostics"
+    },
+    "config": {
+      "title": "Runtime Configuration",
+      "description": "Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.",
+      "portLabel": "Port",
+      "passwordLabel": "Login password",
+      "passwordDescription": "Desktop stores a local password for code-server and injects it as PASSWORD when the service starts."
+    },
+    "validation": {
+      "numeric": "Enter a numeric port.",
+      "range": "Use a port between 1024 and 65535.",
+      "passwordLength": "Use a password between 4 and 200 characters."
+    },
+    "paths": {
+      "title": "Managed Paths",
+      "description": "Runtime data, extensions, and logs are stored under Electron userData/CodeServer.",
+      "runtime-root": "Runtime root",
+      "data": "Data",
+      "extensions": "Extensions",
+      "logs": "Logs"
+    },
+    "logs": {
+      "title": "Recent Logs",
+      "description": "Read bounded recent lines from Desktop-managed code-server logs.",
+      "empty": "No log output yet.",
+      "targets": {
+        "service-out": "Service Output",
+        "service-error": "Service Error"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "Install Desktop-managed PM2 first",
+      "description": "Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.",
+      "openDependencyManagement": "Open Dependency Management"
+    },
+    "errors": {
+      "title": "Code Server operation failed",
+      "operationFailed": "The operation failed.",
+      "saveFailed": "Failed to save Code Server configuration.",
+      "openPathFailed": "Failed to open the managed path.",
+      "openWindowFailed": "Failed to open the Desktop-managed Code Server window."
     }
   }
 }

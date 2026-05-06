@@ -158,6 +158,7 @@
     "versionManagement": "版本管理",
     "diagnostic": "诊断",
     "dependencyManagement": "依赖项管理",
+    "codeServer": "Code Server",
     "omniroute": "OmniRoute",
     "settings": "设置",
     "desktopVersion": "Desktop 版本",
@@ -671,6 +672,80 @@
       "operationFailed": "操作失败。",
       "saveFailed": "保存 OmniRoute 配置失败。",
       "openPathFailed": "无法打开托管路径。"
+    }
+  },
+  "codeServer": {
+    "title": "Code Server",
+    "description": "管理 Desktop 托管的 code-server 运行时，包括启停、本地访问地址、密码访问、托管路径和近期日志。",
+    "loading": "正在读取 Code Server 状态...",
+    "actions": {
+      "refresh": "刷新",
+      "start": "启动",
+      "stop": "停止",
+      "restart": "重启",
+      "repair": "修复运行时",
+      "working": "处理中...",
+      "openDesktop": "在 Desktop 中打开",
+      "openBrowser": "在浏览器中打开",
+      "save": "保存",
+      "open": "打开",
+      "refreshLogs": "刷新日志"
+    },
+    "status": {
+      "title": "状态",
+      "running": "运行中",
+      "stopped": "已停止",
+      "missing": "缺失",
+      "damaged": "已损坏",
+      "error": "错误",
+      "baseUrl": "访问地址",
+      "pm2": "PM2 可执行文件",
+      "pm2Missing": "PM2 尚未安装",
+      "runtimeStatus": "运行时状态",
+      "passwordMode": "鉴权方式",
+      "passwordModeValue": "需要密码",
+      "diagnostics": "诊断信息"
+    },
+    "config": {
+      "title": "运行配置",
+      "description": "Code Server 使用 Desktop 托管的本地端口。保存配置后，如服务正在运行会自动重启以应用修改。",
+      "portLabel": "端口",
+      "passwordLabel": "登录密码",
+      "passwordDescription": "Desktop 会为 code-server 保存本地密码，并在启动服务时通过 PASSWORD 环境变量注入。"
+    },
+    "validation": {
+      "numeric": "请输入数字端口。",
+      "range": "端口范围必须在 1024 到 65535 之间。",
+      "passwordLength": "密码长度必须在 4 到 200 个字符之间。"
+    },
+    "paths": {
+      "title": "托管路径",
+      "description": "运行数据、扩展和日志均保存在 Electron userData/CodeServer 下。",
+      "runtime-root": "运行时目录",
+      "data": "数据",
+      "extensions": "扩展",
+      "logs": "日志"
+    },
+    "logs": {
+      "title": "近期日志",
+      "description": "从 Desktop 托管的 code-server 日志中读取有限行数。",
+      "empty": "暂无日志输出。",
+      "targets": {
+        "service-out": "服务输出",
+        "service-error": "服务错误"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "请先安装 Desktop 托管 PM2",
+      "description": "Code Server 依赖 Desktop 托管的 PM2 进程管理器。请先在依赖项管理中安装或修复 PM2，再启动 Code Server。",
+      "openDependencyManagement": "打开依赖项管理"
+    },
+    "errors": {
+      "title": "Code Server 操作失败",
+      "operationFailed": "操作失败。",
+      "saveFailed": "保存 Code Server 配置失败。",
+      "openPathFailed": "无法打开托管路径。",
+      "openWindowFailed": "无法打开 Desktop 托管的 Code Server 窗口。"
     }
   }
 }

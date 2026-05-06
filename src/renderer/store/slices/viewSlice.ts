@@ -5,7 +5,7 @@ import type {
   OmniRouteDependencyRemediation,
 } from '../../../types/omniroute-management.js';
 
-export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings';
+export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings';
 
 export interface DependencyManagementRepairIntent {
   sourceView: 'omniroute';

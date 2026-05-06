@@ -9,6 +9,7 @@ import SystemDiagnosticPage from './components/SystemDiagnosticPage';
 import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
 import DependencyManagementPage from './components/DependencyManagementPage';
+import CodeServerManagementPage from './components/CodeServerManagementPage';
 import OmniRouteManagementPage from './components/OmniRouteManagementPage';
 import SettingsPage from './components/SettingsPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
@@ -23,6 +24,7 @@ import type { RootState, AppDispatch } from './store';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
 import type { DistributionMode } from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
+import type { CodeServerBridge } from '../types/code-server-management.js';
 import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OmniRouteBridge } from '../types/omniroute-management';
 import type { OnboardingShowPayload } from '../types/onboarding';
@@ -81,9 +83,9 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings') => void) => () => void;
       languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       rss: {
@@ -111,6 +113,7 @@ declare global {
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => () => void;
       dependencyManagement: DependencyManagementBridge;
+      codeServer: CodeServerBridge;
       hagiNode: HagiNodeRuntimeBridge;
       omniroute: OmniRouteBridge;
     };
@@ -149,7 +152,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
   );
 
   useEffect(() => {
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings') => {
       dispatch(switchView(view));
     });
 
@@ -200,6 +203,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
           {currentView === 'dependency-management' && <DependencyManagementPage />}
+          {currentView === 'code-server' && <CodeServerManagementPage />}
           {currentView === 'omniroute' && <OmniRouteManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
         </div>
