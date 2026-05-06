@@ -110,10 +110,36 @@ function findZipArtifact() {
     return null;
   }
 
+  const scoreZipArtifact = (zipPath) => {
+    const name = path.basename(zipPath).toLowerCase();
+    if (process.platform === 'darwin') {
+      if (process.arch === 'arm64') {
+        if (name.includes('universal')) return 300;
+        if (name.includes('arm64')) return 200;
+        if (name.includes('-mac.zip') || name.endsWith('mac.zip')) return 100;
+        if (name.includes('x64')) return 0;
+      } else {
+        if (name.includes('universal')) return 300;
+        if (name.includes('x64')) return 200;
+        if (name.includes('-mac.zip') || name.endsWith('mac.zip')) return 100;
+        if (name.includes('arm64')) return 0;
+      }
+    }
+
+    return 0;
+  };
+
   const zips = fs.readdirSync(pkgRoot)
     .filter((entry) => entry.toLowerCase().endsWith('.zip'))
     .map((entry) => path.join(pkgRoot, entry))
-    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    .sort((a, b) => {
+      const scoreDelta = scoreZipArtifact(b) - scoreZipArtifact(a);
+      if (scoreDelta !== 0) {
+        return scoreDelta;
+      }
+
+      return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
+    });
 
   return zips[0] ?? null;
 }
