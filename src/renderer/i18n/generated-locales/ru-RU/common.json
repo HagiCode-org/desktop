@@ -158,6 +158,7 @@
     "versionManagement": "Управление версиями",
     "diagnostic": "Диагностика",
     "dependencyManagement": "Управление зависимостями",
+    "codeServer": "Code Server",
     "omniroute": "OmniRoute",
     "settings": "Настройки",
     "desktopVersion": "Настольная версия",
@@ -206,7 +207,11 @@
     "omniRouteRepair": {
       "title": "Вернитесь к OmniRoute после восстановления зависимостей.",
       "descriptionMissing": "OmniRoute не удалось запустить, поскольку отсутствует один или несколько пакетов, управляемых с рабочего стола. Восстановите выделенные пакеты здесь, затем еще раз проверьте OmniRoute.",
+      "descriptionRuntimeMissing": "OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeDamaged": "OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeAndPackage": "OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.",
       "descriptionUnknown": "Desktop не удалось подтвердить зависимости OmniRoute. Обновите или исправьте выделенные пакеты здесь, затем еще раз проверьте OmniRoute.",
+      "descriptionVersionMismatch": "OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.",
       "sourceLabel": "Источник",
       "sourceValue": "OmniRoute",
       "targetBadge": "Ремонтная цель",
@@ -216,13 +221,58 @@
       "incomplete": "OmniRoute все еще не готов. Установите или обновите выделенные пакеты, затем повторите попытку.",
       "refreshFailed": "Desktop не удалось обновить статус зависимости. Повторите повторную проверку после завершения текущей операции."
     },
+    "vendoredRuntime": {
+      "title": "Desktop-managed runtimes",
+      "description": "Vendored runtimes are staged and supervised by Desktop instead of npm package management.",
+      "managedByDesktop": "Managed directly by Desktop",
+      "runtimeRoot": "Runtime root",
+      "metadataPath": "Metadata path",
+      "healthUrl": "Local URL",
+      "diagnostics": "Diagnostics",
+      "reinstallHint": "This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.",
+      "primaryDescriptions": {
+        "ready": "Runtime files are staged and ready for Desktop-managed startup.",
+        "running": "Runtime is responding on its local Desktop-managed endpoint.",
+        "stopped": "Runtime files are present, but the Desktop-managed process is not currently running.",
+        "missing": "Runtime files are missing from the Desktop-managed location.",
+        "damaged": "Runtime files are incomplete or failed validation."
+      },
+      "status": {
+        "ready": "Ready",
+        "running": "Running",
+        "stopped": "Stopped",
+        "missing": "Missing",
+        "damaged": "Damaged"
+      },
+      "actions": {
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "repair": "Repair staged runtime",
+        "openLogs": "Open logs",
+        "openRuntimeRoot": "Open runtime root",
+        "openUrl": "Open local URL",
+        "reinstallDesktop": "Reinstall Desktop"
+      }
+    },
+    "vendoredRuntimes": {
+      "omniroute": {
+        "description": "Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      },
+      "codeServer": {
+        "description": "Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      }
+    },
     "package": {
       "version": "Версия",
+      "requiredVersion": "Required version",
+      "versionMismatch": "Current version {{current}} does not satisfy {{required}}.",
       "packageName": "Пакет",
       "category": "Категория"
     },
     "packageStatus": {
       "installed": "Установлено",
+      "outdated": "Upgrade required",
       "not-installed": "Не установлено",
       "unknown": "Неизвестно"
     },
@@ -308,6 +358,7 @@
       "refresh": "Обновить",
       "install": "Установить",
       "installed": "Установлено",
+      "upgrade": "Upgrade",
       "reinstall": "Переустановить",
       "installSelected": "Выбрана пакетная установка",
       "installSelectedRunning": "Пакетная установка...",
@@ -502,6 +553,7 @@
         "failed": "Фоновое обновление не удалось: {{error}}",
         "settings-disabled": "Фоновая предварительная загрузка отключена. Вы можете снова включить их в настройках.",
         "portable-mode": "Портативный режим пропускает фоновые обновления и сохраняет текущую среду выполнения только для чтения.",
+        "steam-mode": "Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.",
         "no-package-source": "Активный источник пакета не настроен, поэтому запуск фоновых обновлений невозможен."
       },
       "actions": {
@@ -617,7 +669,11 @@
     "dependencyGuidance": {
       "title": "Сначала восстановите зависимости, управляемые настольным компьютером.",
       "descriptionMissing": "OmniRoute не может запуститься, пока выделенные пакеты, управляемые рабочим столом, не будут установлены или исправлены в Dependency Management.",
+      "descriptionRuntimeMissing": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.",
+      "descriptionRuntimeDamaged": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.",
+      "descriptionRuntimeAndPackage": "OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.",
       "descriptionUnknown": "Desktop не удалось проверить выделенные OmniRoute зависимости. Перед повторной попыткой обновите или исправьте их в разделе «Управление зависимостями».",
+      "descriptionVersionMismatch": "OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.",
       "openDependencyManagement": "Открытое управление зависимостями"
     },
     "errors": {
@@ -625,6 +681,80 @@
       "operationFailed": "Операция провалилась.",
       "saveFailed": "Не удалось сохранить конфигурацию OmniRoute.",
       "openPathFailed": "Не удалось открыть управляемый путь."
+    }
+  },
+  "codeServer": {
+    "title": "Code Server",
+    "description": "Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.",
+    "loading": "Loading Code Server status...",
+    "actions": {
+      "refresh": "Refresh",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "repair": "Repair runtime",
+      "working": "Working...",
+      "openDesktop": "Open in Desktop",
+      "openBrowser": "Open in Browser",
+      "save": "Save",
+      "open": "Open",
+      "refreshLogs": "Refresh Logs"
+    },
+    "status": {
+      "title": "Status",
+      "running": "Running",
+      "stopped": "Stopped",
+      "missing": "Missing",
+      "damaged": "Damaged",
+      "error": "Error",
+      "baseUrl": "Base URL",
+      "pm2": "PM2 executable",
+      "pm2Missing": "PM2 is not installed",
+      "runtimeStatus": "Runtime status",
+      "passwordMode": "Authentication",
+      "passwordModeValue": "Password required",
+      "diagnostics": "Diagnostics"
+    },
+    "config": {
+      "title": "Runtime Configuration",
+      "description": "Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.",
+      "portLabel": "Port",
+      "passwordLabel": "Login password",
+      "passwordDescription": "Desktop stores a local password for code-server and injects it as PASSWORD when the service starts."
+    },
+    "validation": {
+      "numeric": "Enter a numeric port.",
+      "range": "Use a port between 1024 and 65535.",
+      "passwordLength": "Use a password between 4 and 200 characters."
+    },
+    "paths": {
+      "title": "Managed Paths",
+      "description": "Runtime data, extensions, and logs are stored under Electron userData/CodeServer.",
+      "runtime-root": "Runtime root",
+      "data": "Data",
+      "extensions": "Extensions",
+      "logs": "Logs"
+    },
+    "logs": {
+      "title": "Recent Logs",
+      "description": "Read bounded recent lines from Desktop-managed code-server logs.",
+      "empty": "No log output yet.",
+      "targets": {
+        "service-out": "Service Output",
+        "service-error": "Service Error"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "Install Desktop-managed PM2 first",
+      "description": "Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.",
+      "openDependencyManagement": "Open Dependency Management"
+    },
+    "errors": {
+      "title": "Code Server operation failed",
+      "operationFailed": "The operation failed.",
+      "saveFailed": "Failed to save Code Server configuration.",
+      "openPathFailed": "Failed to open the managed path.",
+      "openWindowFailed": "Failed to open the Desktop-managed Code Server window."
     }
   }
 }

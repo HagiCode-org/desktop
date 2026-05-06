@@ -44,6 +44,9 @@ settings:
   updates:
     title: バックグラウンドアップデート
     description: 自動チェック、バックグラウンドでの事前ダウンロード、検証されたアーカイブの保存を管理します。
+    steamMode:
+      title: Updates are managed by Steam
+      description: This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime.
     enabled:
       label: バックグラウンドでのプリダウンロードを有効にする
       description: 互換性のある新しいバージョンが見つかった場合は、現在のランタイムを切り替えることなく、バックグラウンドでアーカイブをダウンロードします。

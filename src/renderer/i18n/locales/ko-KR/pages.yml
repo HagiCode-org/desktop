@@ -44,6 +44,9 @@ settings:
   updates:
     title: 배경 업데이트
     description: 자동 검사, 백그라운드 사전 다운로드, 확인된 아카이브 보존을 관리합니다.
+    steamMode:
+      title: Updates are managed by Steam
+      description: This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime.
     enabled:
       label: 백그라운드 사전 다운로드 활성화
       description: 호환되는 최신 버전이 발견되면 현재 런타임을 전환하지 않고 백그라운드에서 아카이브를 다운로드하세요.

@@ -50,6 +50,10 @@
     "updates": {
       "title": "Фоновые обновления",
       "description": "Управляйте автоматическими проверками, фоновыми предварительными загрузками и хранением проверенных архивов.",
+      "steamMode": {
+        "title": "Updates are managed by Steam",
+        "description": "This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime."
+      },
       "enabled": {
         "label": "Включить фоновую предварительную загрузку",
         "description": "Когда будет найдена более новая совместимая версия, загрузите архив в фоновом режиме, не переключая текущую среду выполнения."

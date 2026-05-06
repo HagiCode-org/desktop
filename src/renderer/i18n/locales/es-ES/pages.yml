@@ -44,6 +44,9 @@ settings:
   updates:
     title: Actualizaciones de fondo
     description: Administre comprobaciones automáticas, descargas previas en segundo plano y retención de archivos verificados.
+    steamMode:
+      title: Updates are managed by Steam
+      description: This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime.
     enabled:
       label: Habilitar descargas previas en segundo plano
       description: Cuando encuentre una versión más nueva compatible, descargue el archivo en segundo plano sin cambiar el tiempo de ejecución actual.

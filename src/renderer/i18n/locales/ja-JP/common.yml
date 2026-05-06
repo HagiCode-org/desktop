@@ -138,6 +138,7 @@ sidebar:
   versionManagement: バージョン管理
   diagnostic: 診断
   dependencyManagement: 依存関係の管理
+  codeServer: Code Server
   omniroute: OmniRoute
   settings: 設定
   desktopVersion: デスクトップ版
@@ -182,7 +183,11 @@ dependencyManagement:
   omniRouteRepair:
     title: 依存関係を修復した後に OmniRoute に戻る
     descriptionMissing: 1 つ以上のデスクトップ管理パッケージが欠落しているため、OmniRoute を開始できませんでした。ここで強調表示されたパッケージを修復し、OmniRoute を再確認します。
+    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
     descriptionUnknown: デスクトップは OmniRoute 依存関係を確認できませんでした。ここで強調表示されたパッケージを更新または修復し、OmniRoute を再確認します。
+    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
     sourceLabel: ソース
     sourceValue: OmniRoute
     targetBadge: 修理対象
@@ -191,12 +196,50 @@ dependencyManagement:
     recheckRunning: OmniRoute 依存関係を再確認しています...
     incomplete: OmniRoute はまだ準備ができていません。強調表示されたパッケージをインストールまたは更新して、再試行してください。
     refreshFailed: デスクトップは依存関係ステータスを更新できませんでした。現在の操作が終了した後、再チェックを再試行してください。
+  vendoredRuntime:
+    title: Desktop-managed runtimes
+    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
+    managedByDesktop: Managed directly by Desktop
+    runtimeRoot: Runtime root
+    metadataPath: Metadata path
+    healthUrl: Local URL
+    diagnostics: Diagnostics
+    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    primaryDescriptions:
+      ready: Runtime files are staged and ready for Desktop-managed startup.
+      running: Runtime is responding on its local Desktop-managed endpoint.
+      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
+      missing: Runtime files are missing from the Desktop-managed location.
+      damaged: Runtime files are incomplete or failed validation.
+    status:
+      ready: Ready
+      running: Running
+      stopped: Stopped
+      missing: Missing
+      damaged: Damaged
+    actions:
+      start: Start
+      stop: Stop
+      restart: Restart
+      repair: Repair staged runtime
+      openLogs: Open logs
+      openRuntimeRoot: Open runtime root
+      openUrl: Open local URL
+      reinstallDesktop: Reinstall Desktop
+  vendoredRuntimes:
+    omniroute:
+      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
+    codeServer:
+      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: バージョン
+    requiredVersion: Required version
+    versionMismatch: Current version {{current}} does not satisfy {{required}}.
     packageName: パッケージ
     category: カテゴリ
   packageStatus:
     installed: インストール済み
+    outdated: Upgrade required
     not-installed: インストールされていません
     unknown: 不明
   packages:
@@ -260,6 +303,7 @@ dependencyManagement:
     refresh: リフレッシュ
     install: インストール
     installed: インストール済み
+    upgrade: Upgrade
     reinstall: 再インストール
     installSelected: バッチインストールが選択されました
     installSelectedRunning: 一括インストール中...
@@ -418,6 +462,7 @@ system:
       failed: 'バックグラウンド更新に失敗しました: {{error}}'
       settings-disabled: バックグラウンドのプリダウンロードは無効になっています。設定で再度オンにできます。
       portable-mode: ポータブル モードでは、バックグラウンド更新がスキップされ、現在のランタイムが読み取り専用に保たれます。
+      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: アクティブなパッケージ ソースが構成されていないため、バックグラウンド更新を開始できません。
     actions:
       openVersionPage: オープンなバージョン管理
@@ -510,10 +555,78 @@ omniroute:
   dependencyGuidance:
     title: 最初にデスクトップ管理の依存関係を修復します
     descriptionMissing: OmniRoute は、強調表示されたデスクトップ管理パッケージが依存関係管理でインストールまたは修復されるまで起動できません。
+    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
+    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
+    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
     descriptionUnknown: デスクトップは、強調表示された OmniRoute 依存関係を確認できませんでした。再試行する前に、依存関係管理でそれらを更新または修復してください。
+    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: オープンな依存関係管理
   errors:
     title: OmniRoute 操作が失敗しました
     operationFailed: 操作は失敗しました。
     saveFailed: OmniRoute 構成を保存できませんでした。
     openPathFailed: 管理パスのオープンに失敗しました。
+codeServer:
+  title: Code Server
+  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
+  loading: Loading Code Server status...
+  actions:
+    refresh: Refresh
+    start: Start
+    stop: Stop
+    restart: Restart
+    repair: Repair runtime
+    working: Working...
+    openDesktop: Open in Desktop
+    openBrowser: Open in Browser
+    save: Save
+    open: Open
+    refreshLogs: Refresh Logs
+  status:
+    title: Status
+    running: Running
+    stopped: Stopped
+    missing: Missing
+    damaged: Damaged
+    error: Error
+    baseUrl: Base URL
+    pm2: PM2 executable
+    pm2Missing: PM2 is not installed
+    runtimeStatus: Runtime status
+    passwordMode: Authentication
+    passwordModeValue: Password required
+    diagnostics: Diagnostics
+  config:
+    title: Runtime Configuration
+    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
+    portLabel: Port
+    passwordLabel: Login password
+    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+  validation:
+    numeric: Enter a numeric port.
+    range: Use a port between 1024 and 65535.
+    passwordLength: Use a password between 4 and 200 characters.
+  paths:
+    title: Managed Paths
+    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
+    runtime-root: Runtime root
+    data: Data
+    extensions: Extensions
+    logs: Logs
+  logs:
+    title: Recent Logs
+    description: Read bounded recent lines from Desktop-managed code-server logs.
+    empty: No log output yet.
+    targets:
+      service-out: Service Output
+      service-error: Service Error
+  dependencyGuidance:
+    title: Install Desktop-managed PM2 first
+    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
+    openDependencyManagement: Open Dependency Management
+  errors:
+    title: Code Server operation failed
+    operationFailed: The operation failed.
+    saveFailed: Failed to save Code Server configuration.
+    openPathFailed: Failed to open the managed path.
+    openWindowFailed: Failed to open the Desktop-managed Code Server window.

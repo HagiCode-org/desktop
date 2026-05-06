@@ -138,6 +138,7 @@ sidebar:
   versionManagement: 版本管理
   diagnostic: 診斷
   dependencyManagement: 依賴項管理
+  codeServer: Code Server
   omniroute: OmniRoute
   settings: 設定
   desktopVersion: Desktop 版本
@@ -182,7 +183,11 @@ dependencyManagement:
   omniRouteRepair:
     title: 修復依賴後返回 OmniRoute
     descriptionMissing: OmniRoute 因一個或多個 Desktop 託管包缺失而無法啟動。請先在這裡修復高亮依賴，然後重新偵測 OmniRoute。
+    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
     descriptionUnknown: Desktop 目前無法確認 OmniRoute 依賴。請先在這裡刷新或修復高亮依賴，然後重新偵測 OmniRoute。
+    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
     sourceLabel: 來源
     sourceValue: OmniRoute
     targetBadge: 修復目標
@@ -191,12 +196,50 @@ dependencyManagement:
     recheckRunning: 正在重新偵測 OmniRoute 依賴...
     incomplete: OmniRoute 仍未準備好。請繼續安裝或刷新高亮依賴後重試。
     refreshFailed: Desktop 無法刷新依賴狀態。請等待目前操作結束後再試一次。
+  vendoredRuntime:
+    title: Desktop-managed runtimes
+    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
+    managedByDesktop: Managed directly by Desktop
+    runtimeRoot: Runtime root
+    metadataPath: Metadata path
+    healthUrl: Local URL
+    diagnostics: Diagnostics
+    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    primaryDescriptions:
+      ready: Runtime files are staged and ready for Desktop-managed startup.
+      running: Runtime is responding on its local Desktop-managed endpoint.
+      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
+      missing: Runtime files are missing from the Desktop-managed location.
+      damaged: Runtime files are incomplete or failed validation.
+    status:
+      ready: Ready
+      running: Running
+      stopped: Stopped
+      missing: Missing
+      damaged: Damaged
+    actions:
+      start: Start
+      stop: Stop
+      restart: Restart
+      repair: Repair staged runtime
+      openLogs: Open logs
+      openRuntimeRoot: Open runtime root
+      openUrl: Open local URL
+      reinstallDesktop: Reinstall Desktop
+  vendoredRuntimes:
+    omniroute:
+      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
+    codeServer:
+      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: 版本
+    requiredVersion: Required version
+    versionMismatch: Current version {{current}} does not satisfy {{required}}.
     packageName: 包名
     category: 分類
   packageStatus:
     installed: 已安裝
+    outdated: Upgrade required
     not-installed: 未安裝
     unknown: 未知
   packages:
@@ -260,6 +303,7 @@ dependencyManagement:
     refresh: 重新整理
     install: 安裝
     installed: 已安裝
+    upgrade: Upgrade
     reinstall: 重新安裝
     installSelected: 批量安裝已選項
     installSelectedRunning: 正在批量安裝...
@@ -418,6 +462,7 @@ system:
       failed: 背景更新失敗：{{error}}
       settings-disabled: 你已關閉背景自動下載，可在設定頁重新啟用。
       portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
+      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
     actions:
       openVersionPage: 開啟版本管理
@@ -510,10 +555,78 @@ omniroute:
   dependencyGuidance:
     title: 請先修復 Desktop 託管依賴
     descriptionMissing: 在依賴項管理中安裝或修復高亮的 Desktop 託管套件之前，OmniRoute 無法啟動。
+    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
+    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
+    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
     descriptionUnknown: Desktop 目前無法確認高亮的 OmniRoute 依賴狀態。請先到依賴項管理刷新或修復後再重試。
+    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: 開啟相依性管理
   errors:
     title: OmniRoute 操作失敗
     operationFailed: 操作失敗。
     saveFailed: 儲存 OmniRoute 配置失敗。
     openPathFailed: 無法開啟託管路徑。
+codeServer:
+  title: Code Server
+  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
+  loading: Loading Code Server status...
+  actions:
+    refresh: Refresh
+    start: Start
+    stop: Stop
+    restart: Restart
+    repair: Repair runtime
+    working: Working...
+    openDesktop: Open in Desktop
+    openBrowser: Open in Browser
+    save: Save
+    open: Open
+    refreshLogs: Refresh Logs
+  status:
+    title: Status
+    running: Running
+    stopped: Stopped
+    missing: Missing
+    damaged: Damaged
+    error: Error
+    baseUrl: Base URL
+    pm2: PM2 executable
+    pm2Missing: PM2 is not installed
+    runtimeStatus: Runtime status
+    passwordMode: Authentication
+    passwordModeValue: Password required
+    diagnostics: Diagnostics
+  config:
+    title: Runtime Configuration
+    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
+    portLabel: Port
+    passwordLabel: Login password
+    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+  validation:
+    numeric: Enter a numeric port.
+    range: Use a port between 1024 and 65535.
+    passwordLength: Use a password between 4 and 200 characters.
+  paths:
+    title: Managed Paths
+    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
+    runtime-root: Runtime root
+    data: Data
+    extensions: Extensions
+    logs: Logs
+  logs:
+    title: Recent Logs
+    description: Read bounded recent lines from Desktop-managed code-server logs.
+    empty: No log output yet.
+    targets:
+      service-out: Service Output
+      service-error: Service Error
+  dependencyGuidance:
+    title: Install Desktop-managed PM2 first
+    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
+    openDependencyManagement: Open Dependency Management
+  errors:
+    title: Code Server operation failed
+    operationFailed: The operation failed.
+    saveFailed: Failed to save Code Server configuration.
+    openPathFailed: Failed to open the managed path.
+    openWindowFailed: Failed to open the Desktop-managed Code Server window.

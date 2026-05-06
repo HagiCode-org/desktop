@@ -207,12 +207,15 @@
     "omniRouteRepair": {
       "title": "Return to OmniRoute after repairing dependencies",
       "descriptionMissing": "OmniRoute could not start because one or more Desktop-managed packages are missing. Repair the highlighted packages here, then recheck OmniRoute.",
+      "descriptionRuntimeMissing": "OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeDamaged": "OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeAndPackage": "OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.",
       "descriptionUnknown": "Desktop could not confirm the OmniRoute dependencies. Refresh or repair the highlighted packages here, then recheck OmniRoute.",
       "descriptionVersionMismatch": "OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.",
       "sourceLabel": "Source",
       "sourceValue": "OmniRoute",
       "targetBadge": "Repair target",
-      "pendingNotice": "Keep the highlighted packages available in this table, then run the recheck action when the repair is complete.",
+      "pendingNotice": "Keep the highlighted runtime and packages available in this table, then run the recheck action when the repair is complete.",
       "recheckAction": "Repair complete: Recheck OmniRoute",
       "recheckRunning": "Rechecking OmniRoute dependencies...",
       "incomplete": "OmniRoute is still not ready. Install or refresh the highlighted packages, then try again.",
@@ -253,6 +256,9 @@
       }
     },
     "vendoredRuntimes": {
+      "omniroute": {
+        "description": "Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      },
       "codeServer": {
         "description": "Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain."
       }
@@ -663,6 +669,9 @@
     "dependencyGuidance": {
       "title": "Repair Desktop-managed dependencies first",
       "descriptionMissing": "OmniRoute cannot start until the highlighted Desktop-managed packages are installed or repaired in Dependency Management.",
+      "descriptionRuntimeMissing": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.",
+      "descriptionRuntimeDamaged": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.",
+      "descriptionRuntimeAndPackage": "OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.",
       "descriptionUnknown": "Desktop could not verify the highlighted OmniRoute dependencies. Refresh or repair them in Dependency Management before retrying.",
       "descriptionVersionMismatch": "OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.",
       "openDependencyManagement": "Open Dependency Management"

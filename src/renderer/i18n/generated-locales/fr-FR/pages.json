@@ -50,6 +50,10 @@
     "updates": {
       "title": "Mises à jour en arrière-plan",
       "description": "Gérez les vérifications automatiques, les prétéléchargements en arrière-plan et la conservation vérifiée des archives.",
+      "steamMode": {
+        "title": "Updates are managed by Steam",
+        "description": "This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime."
+      },
       "enabled": {
         "label": "Activer les prétéléchargements en arrière-plan",
         "description": "Lorsqu'une version plus récente compatible est trouvée, téléchargez l'archive en arrière-plan sans changer le runtime actuel."

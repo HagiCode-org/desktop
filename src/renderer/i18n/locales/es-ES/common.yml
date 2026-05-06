@@ -138,6 +138,7 @@ sidebar:
   versionManagement: Gestión de versiones
   diagnostic: Diagnóstico
   dependencyManagement: Gestión de dependencias
+  codeServer: Code Server
   omniroute: OmniRoute
   settings: Configuración
   desktopVersion: Versión de escritorio
@@ -182,7 +183,11 @@ dependencyManagement:
   omniRouteRepair:
     title: Regresar a OmniRoute después de reparar las dependencias
     descriptionMissing: OmniRoute no se pudo iniciar porque faltan uno o más paquetes administrados por el escritorio. Repare los paquetes resaltados aquí y luego vuelva a verificar OmniRoute.
+    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
+    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
     descriptionUnknown: El escritorio no pudo confirmar las OmniRoute dependencias. Actualice o repare los paquetes resaltados aquí y luego vuelva a verificar OmniRoute.
+    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
     sourceLabel: Fuente
     sourceValue: OmniRoute
     targetBadge: Objetivo de reparación
@@ -191,12 +196,50 @@ dependencyManagement:
     recheckRunning: Volviendo a comprobar OmniRoute dependencias...
     incomplete: OmniRoute todavía no está listo. Instale o actualice los paquetes resaltados y vuelva a intentarlo.
     refreshFailed: El escritorio no pudo actualizar el estado de dependencia. Vuelva a intentar la nueva verificación después de que finalice la operación actual.
+  vendoredRuntime:
+    title: Desktop-managed runtimes
+    description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
+    managedByDesktop: Managed directly by Desktop
+    runtimeRoot: Runtime root
+    metadataPath: Metadata path
+    healthUrl: Local URL
+    diagnostics: Diagnostics
+    reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
+    primaryDescriptions:
+      ready: Runtime files are staged and ready for Desktop-managed startup.
+      running: Runtime is responding on its local Desktop-managed endpoint.
+      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
+      missing: Runtime files are missing from the Desktop-managed location.
+      damaged: Runtime files are incomplete or failed validation.
+    status:
+      ready: Ready
+      running: Running
+      stopped: Stopped
+      missing: Missing
+      damaged: Damaged
+    actions:
+      start: Start
+      stop: Stop
+      restart: Restart
+      repair: Repair staged runtime
+      openLogs: Open logs
+      openRuntimeRoot: Open runtime root
+      openUrl: Open local URL
+      reinstallDesktop: Reinstall Desktop
+  vendoredRuntimes:
+    omniroute:
+      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
+    codeServer:
+      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: Versión
+    requiredVersion: Required version
+    versionMismatch: Current version {{current}} does not satisfy {{required}}.
     packageName: Paquete
     category: categoría
   packageStatus:
     installed: Instalado
+    outdated: Upgrade required
     not-installed: No instalado
     unknown: Desconocido
   packages:
@@ -260,6 +303,7 @@ dependencyManagement:
     refresh: Actualizar
     install: Instalar
     installed: Instalado
+    upgrade: Upgrade
     reinstall: Reinstalar
     installSelected: Instalación por lotes seleccionada
     installSelectedRunning: Instalación por lotes...
@@ -418,6 +462,7 @@ system:
       failed: 'Error en la actualización en segundo plano: {{error}}'
       settings-disabled: Las descargas previas en segundo plano están deshabilitadas. Puedes volver a activarlos en Configuración.
       portable-mode: El modo portátil omite las actualizaciones en segundo plano y mantiene el tiempo de ejecución actual como de solo lectura.
+      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: No hay ninguna fuente de paquete activa configurada, por lo que las actualizaciones en segundo plano no pueden iniciarse.
     actions:
       openVersionPage: Gestión de versiones abiertas
@@ -510,10 +555,78 @@ omniroute:
   dependencyGuidance:
     title: Repare primero las dependencias administradas por el escritorio
     descriptionMissing: OmniRoute no puede iniciarse hasta que los paquetes resaltados administrados por el escritorio estén instalados o reparados en Dependency Management.
+    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
+    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
+    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
     descriptionUnknown: Desktop no pudo verificar las OmniRoute dependencias resaltadas. Actualícelos o repárelos en Gestión de dependencias antes de volver a intentarlo.
+    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: Gestión de dependencia abierta
   errors:
     title: OmniRoute operación fallida
     operationFailed: La operación fracasó.
     saveFailed: No se pudo guardar la configuración OmniRoute.
     openPathFailed: No se pudo abrir la ruta administrada.
+codeServer:
+  title: Code Server
+  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
+  loading: Loading Code Server status...
+  actions:
+    refresh: Refresh
+    start: Start
+    stop: Stop
+    restart: Restart
+    repair: Repair runtime
+    working: Working...
+    openDesktop: Open in Desktop
+    openBrowser: Open in Browser
+    save: Save
+    open: Open
+    refreshLogs: Refresh Logs
+  status:
+    title: Status
+    running: Running
+    stopped: Stopped
+    missing: Missing
+    damaged: Damaged
+    error: Error
+    baseUrl: Base URL
+    pm2: PM2 executable
+    pm2Missing: PM2 is not installed
+    runtimeStatus: Runtime status
+    passwordMode: Authentication
+    passwordModeValue: Password required
+    diagnostics: Diagnostics
+  config:
+    title: Runtime Configuration
+    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
+    portLabel: Port
+    passwordLabel: Login password
+    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+  validation:
+    numeric: Enter a numeric port.
+    range: Use a port between 1024 and 65535.
+    passwordLength: Use a password between 4 and 200 characters.
+  paths:
+    title: Managed Paths
+    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
+    runtime-root: Runtime root
+    data: Data
+    extensions: Extensions
+    logs: Logs
+  logs:
+    title: Recent Logs
+    description: Read bounded recent lines from Desktop-managed code-server logs.
+    empty: No log output yet.
+    targets:
+      service-out: Service Output
+      service-error: Service Error
+  dependencyGuidance:
+    title: Install Desktop-managed PM2 first
+    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
+    openDependencyManagement: Open Dependency Management
+  errors:
+    title: Code Server operation failed
+    operationFailed: The operation failed.
+    saveFailed: Failed to save Code Server configuration.
+    openPathFailed: Failed to open the managed path.
+    openWindowFailed: Failed to open the Desktop-managed Code Server window.
