@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { app, shell } from 'electron';
@@ -6,6 +7,7 @@ import {
   readCodeServerRuntimeConfig,
 } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
+import type { ConfigManager } from './config.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import {
   injectCodeServerRuntimeEnv,
@@ -23,24 +25,31 @@ import type {
   VendoredRuntimePathOpenResult,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
+import type {
+  CodeServerConfigSnapshot,
+  CodeServerConfigUpdatePayload,
+  CodeServerConfigUpdateResult,
+  CodeServerLogReadRequest,
+  CodeServerLogReadResult,
+  CodeServerManagedPaths,
+  CodeServerOverallStatus,
+  CodeServerPathOpenResult,
+  CodeServerPathTarget,
+  CodeServerProcessStatus,
+  CodeServerStatusSnapshot,
+} from '../types/code-server-management.js';
 
 const PROCESS_NAME = 'hagicode-code-server';
 const OUT_LOG_FILE = 'code-server-out.log';
 const ERROR_LOG_FILE = 'code-server-error.log';
+const MIN_PASSWORD_LENGTH = 4;
+const MAX_PASSWORD_LENGTH = 200;
+const DEFAULT_LOG_LINE_LIMIT = 200;
 
 interface CommandResult {
   exitCode: number | null;
   stdout: string;
   stderr: string;
-}
-
-interface CodeServerManagedPaths {
-  root: string;
-  data: string;
-  extensions: string;
-  logs: string;
-  runtime: string;
-  ecosystemFile: string;
 }
 
 interface Pm2ListEntry {
@@ -57,10 +66,34 @@ interface Pm2ContextSnapshot {
   error?: string;
 }
 
-type Pm2ProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
+function buildBaseUrl(port: number): string {
+  return `http://127.0.0.1:${port}`;
+}
+
+function normalizePassword(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const password = value.trim();
+  return password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH ? password : null;
+}
+
+function generateDefaultPassword(): string {
+  return crypto.randomBytes(18).toString('base64url');
+}
+
+function coerceLogLineLimit(value: number | undefined): number {
+  if (!Number.isInteger(value) || !value || value <= 0) {
+    return DEFAULT_LOG_LINE_LIMIT;
+  }
+
+  return Math.min(value, 1000);
+}
 
 export class CodeServerManager {
   private readonly dependencyManagementService: DependencyManagementService;
+  private readonly configManager: ConfigManager;
   private readonly pathManager: PathManager;
   private readonly userDataPath: string;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
@@ -68,11 +101,13 @@ export class CodeServerManager {
 
   constructor(options: {
     dependencyManagementService: DependencyManagementService;
+    configManager: ConfigManager;
     pathManager?: PathManager;
     userDataPath?: string;
     openPath?: (targetPath: string) => Promise<string>;
   }) {
     this.dependencyManagementService = options.dependencyManagementService;
+    this.configManager = options.configManager;
     this.pathManager = options.pathManager ?? PathManager.getInstance();
     this.userDataPath = options.userDataPath ?? app.getPath('userData');
     this.openPathImpl = options.openPath ?? ((targetPath) => shell.openPath(targetPath));
@@ -111,6 +146,146 @@ export class CodeServerManager {
     };
   }
 
+  getConfig(): CodeServerConfigSnapshot {
+    const configured = this.configManager.getAll().codeServer;
+    const port = this.normalizePort(configured?.port, this.runtimeConfig.defaultPort);
+    const password = normalizePassword(configured?.password) ?? generateDefaultPassword();
+
+    if (configured?.port !== port || configured?.password !== password) {
+      this.configManager.set('codeServer', {
+        ...(configured ?? {}),
+        port,
+        password,
+      });
+    }
+
+    return {
+      port,
+      baseUrl: buildBaseUrl(port),
+      password,
+    };
+  }
+
+  async setConfig(payload: CodeServerConfigUpdatePayload): Promise<CodeServerConfigUpdateResult> {
+    let currentStatus: CodeServerStatusSnapshot | null = null;
+
+    try {
+      currentStatus = await this.getStatus();
+      const port = this.validatePort(payload.port);
+      const currentConfig = this.getConfig();
+      const password = payload.password === undefined ? currentConfig.password : this.validatePassword(payload.password);
+      const changed = currentConfig.port !== port || currentConfig.password !== password;
+
+      this.configManager.set('codeServer', { port, password });
+
+      if (changed && currentStatus.process.status === 'online') {
+        const restartResult = await this.restart();
+        if (!restartResult.success) {
+          const status = await this.getStatus();
+          return {
+            success: false,
+            config: status.config,
+            status,
+            error: restartResult.error ?? 'Failed to restart Code Server after saving configuration.',
+          };
+        }
+      }
+
+      const status = await this.getStatus();
+      return {
+        success: true,
+        config: status.config,
+        status,
+      };
+    } catch (error) {
+      const status = await this.getStatus().catch(async () => currentStatus ?? await this.buildFallbackStatus(error));
+      return {
+        success: false,
+        config: status.config,
+        status,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async getStatus(): Promise<CodeServerStatusSnapshot> {
+    const paths = await this.ensureLayout();
+    const config = this.getConfig();
+    const pm2 = await this.resolvePm2Context();
+    const processStatus = await this.getPm2ProcessStatus(pm2);
+    const runtime = await this.getRuntimeSnapshot();
+    const status = this.resolveOverallStatus(runtime.status, pm2.available, processStatus);
+
+    return {
+      status,
+      config,
+      runtime,
+      paths,
+      pm2Available: pm2.available,
+      pm2ExecutablePath: pm2.executablePath,
+      process: {
+        name: PROCESS_NAME,
+        status: processStatus,
+        restartCount: null,
+      },
+      error: this.resolveStatusError(runtime, pm2, processStatus),
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async readLog(request: CodeServerLogReadRequest): Promise<CodeServerLogReadResult> {
+    const paths = await this.ensureLayout();
+    const fileName = request.target === 'service-out'
+      ? OUT_LOG_FILE
+      : request.target === 'service-error'
+        ? ERROR_LOG_FILE
+        : null;
+    if (!fileName) {
+      throw new Error(`Unsupported Code Server log target: ${request.target}`);
+    }
+
+    const logPath = path.join(paths.logs, fileName);
+    try {
+      const raw = await fs.readFile(logPath, 'utf8');
+      return {
+        target: request.target,
+        path: logPath,
+        exists: true,
+        lines: raw.split(/\r?\n/).slice(-coerceLogLineLimit(request.maxLines)),
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return {
+          target: request.target,
+          path: logPath,
+          exists: false,
+          lines: [],
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  async openManagedPath(target: CodeServerPathTarget): Promise<CodeServerPathOpenResult> {
+    const paths = await this.ensureLayout();
+    const resolvedPath = target === 'logs'
+      ? paths.logs
+      : target === 'runtime-root'
+        ? this.pathManager.getCodeServerRuntimeRoot()
+        : target === 'data'
+          ? paths.data
+          : paths.extensions;
+    const result = await this.openPathImpl(resolvedPath);
+
+    return {
+      success: result.length === 0,
+      target,
+      path: resolvedPath,
+      error: result.length > 0 ? result : undefined,
+    };
+  }
+
   async start(): Promise<VendoredRuntimeLifecycleResult> {
     return this.runLifecycle('start');
   }
@@ -128,16 +303,14 @@ export class CodeServerManager {
   }
 
   async openPath(target: 'logs' | 'runtime-root'): Promise<VendoredRuntimePathOpenResult> {
-    const paths = await this.ensureLayout();
-    const resolvedPath = target === 'logs' ? paths.logs : this.pathManager.getCodeServerRuntimeRoot();
-    const result = await this.openPathImpl(resolvedPath);
+    const result = await this.openManagedPath(target);
 
     return {
-      success: result.length === 0,
+      success: result.success,
       runtimeId: 'code-server',
       target,
-      path: resolvedPath,
-      error: result.length > 0 ? result : undefined,
+      path: result.path,
+      error: result.error,
     };
   }
 
@@ -250,16 +423,41 @@ export class CodeServerManager {
     return inspectVendoredCodeServerRuntime(this.pathManager, { health });
   }
 
+  private async buildFallbackStatus(error: unknown): Promise<CodeServerStatusSnapshot> {
+    const config = this.getConfig();
+    const runtime = await this.fallbackSnapshot(error);
+    const paths = this.getPaths();
+
+    return {
+      status: runtime.status === 'missing'
+        ? 'missing'
+        : runtime.status === 'damaged'
+          ? 'damaged'
+          : 'error',
+      config,
+      runtime,
+      paths,
+      pm2Available: false,
+      pm2ExecutablePath: null,
+      process: {
+        name: PROCESS_NAME,
+        status: 'unknown',
+        restartCount: null,
+      },
+      error: error instanceof Error ? error.message : String(error),
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   private getBaseUrl(): string {
-    const port = Number.parseInt(process.env.HAGICODE_CODE_SERVER_PORT ?? String(this.runtimeConfig.defaultPort), 10);
-    return `http://127.0.0.1:${port}`;
+    return this.getConfig().baseUrl;
   }
 
   private getPort(): string {
-    return new URL(this.getBaseUrl()).port;
+    return String(this.getConfig().port);
   }
 
-  private async probeHealth(baseUrl: string, pm2Status: Pm2ProcessStatus): Promise<VendoredRuntimeHealthSnapshot> {
+  private async probeHealth(baseUrl: string, pm2Status: CodeServerProcessStatus): Promise<VendoredRuntimeHealthSnapshot> {
     try {
       const response = await fetch(baseUrl, {
         redirect: 'manual',
@@ -285,7 +483,7 @@ export class CodeServerManager {
     }
   }
 
-  private getPaths(): CodeServerManagedPaths {
+  getPaths(): CodeServerManagedPaths {
     const root = path.join(this.userDataPath, 'CodeServer');
     const runtime = path.join(root, 'runtime');
     return {
@@ -388,14 +586,14 @@ export class CodeServerManager {
   private async renderEcosystem(paths: CodeServerManagedPaths, wrapperPath: string, runtimeEnv: NodeJS.ProcessEnv): Promise<void> {
     const pathKey = resolvePathEnvKey(runtimeEnv, process.platform);
     const pathValue = runtimeEnv[pathKey] ?? runtimeEnv.PATH ?? runtimeEnv.Path ?? '';
-    const port = this.getPort();
+    const config = this.getConfig();
     const outLog = path.join(paths.logs, OUT_LOG_FILE);
     const errorLog = path.join(paths.logs, ERROR_LOG_FILE);
     const args = [
       '--bind-addr',
-      `127.0.0.1:${port}`,
+      `127.0.0.1:${config.port}`,
       '--auth',
-      'none',
+      'password',
       '--user-data-dir',
       paths.data,
       '--extensions-dir',
@@ -403,11 +601,11 @@ export class CodeServerManager {
       '--disable-telemetry',
     ];
 
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(wrapperPath)},\n      args: ${JSON.stringify(args)},\n      interpreter: 'none',\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(port)}\n      }\n    }\n  ]\n};\n`;
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(wrapperPath)},\n      args: ${JSON.stringify(args)},\n      interpreter: 'none',\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
   }
 
-  private async getPm2ProcessStatus(pm2: Pm2ContextSnapshot): Promise<Pm2ProcessStatus> {
+  private async getPm2ProcessStatus(pm2: Pm2ContextSnapshot): Promise<CodeServerProcessStatus> {
     if (!pm2.available || !pm2.executablePath || !pm2.env) {
       return 'stopped';
     }
@@ -438,6 +636,63 @@ export class CodeServerManager {
     } catch {
       return 'unknown';
     }
+  }
+
+  private resolveOverallStatus(
+    runtimeStatus: VendoredRuntimeStatusSnapshot['status'],
+    pm2Available: boolean,
+    processStatus: CodeServerProcessStatus,
+  ): CodeServerOverallStatus {
+    if (runtimeStatus === 'missing') {
+      return 'missing';
+    }
+    if (runtimeStatus === 'damaged') {
+      return 'damaged';
+    }
+    if (processStatus === 'online' || runtimeStatus === 'running') {
+      return 'running';
+    }
+    if (!pm2Available || processStatus === 'errored') {
+      return 'error';
+    }
+    return 'stopped';
+  }
+
+  private resolveStatusError(
+    runtime: VendoredRuntimeStatusSnapshot,
+    pm2: Pm2ContextSnapshot,
+    processStatus: CodeServerProcessStatus,
+  ): string | undefined {
+    if (runtime.diagnostics[0]) {
+      return runtime.diagnostics[0];
+    }
+    if (!pm2.available) {
+      return pm2.error ?? 'Desktop-managed PM2 is unavailable.';
+    }
+    if (processStatus === 'errored') {
+      return 'PM2 reports the Desktop-managed Code Server process as errored.';
+    }
+    return undefined;
+  }
+
+  private normalizePort(value: unknown, fallback: number): number {
+    const port = Number.parseInt(String(value ?? ''), 10);
+    return Number.isInteger(port) && port >= 1024 && port <= 65535 ? port : fallback;
+  }
+
+  private validatePort(value: number): number {
+    if (!Number.isInteger(value) || value < 1024 || value > 65535) {
+      throw new Error('Code Server port must be between 1024 and 65535.');
+    }
+    return value;
+  }
+
+  private validatePassword(value: string): string {
+    const password = normalizePassword(value);
+    if (!password) {
+      throw new Error(`Code Server password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`);
+    }
+    return password;
   }
 
   private async deletePm2Process(command: string, env: NodeJS.ProcessEnv): Promise<void> {

@@ -13,6 +13,10 @@ export interface VersionAutoUpdateSettings {
 
 export interface AppConfig {
   server: ServerConfig;
+  codeServer?: {
+    port?: number;
+    password?: string;
+  };
   omniroute?: {
     port?: number;
     password?: string;
