@@ -101,7 +101,38 @@ function suffixSegments(relativePath) {
 }
 
 function findToolchainRoots(rootPath) {
-  return findExtraRoots(rootPath, ['toolchain']);
+  const matches = [];
+  const stack = [rootPath];
+  const seen = new Set();
+
+  while (stack.length > 0) {
+    const currentPath = stack.pop();
+    const manifestPath = path.join(currentPath, 'toolchain-manifest.json');
+    if (fs.existsSync(manifestPath) && !seen.has(currentPath)) {
+      matches.push(currentPath);
+      seen.add(currentPath);
+    }
+
+    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const absolutePath = path.join(currentPath, entry.name);
+      const relativePath = path.relative(rootPath, absolutePath);
+      const parts = suffixSegments(relativePath);
+      if (parts.length >= 2 && parts.at(-2) === 'extra' && parts.at(-1) === 'toolchain' && !seen.has(absolutePath)) {
+        matches.push(absolutePath);
+        seen.add(absolutePath);
+        continue;
+      }
+
+      stack.push(absolutePath);
+    }
+  }
+
+  return matches.sort();
 }
 
 function findExtraRoots(rootPath, suffixParts) {
