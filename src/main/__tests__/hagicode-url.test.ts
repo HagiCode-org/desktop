@@ -362,21 +362,23 @@ describe('hagicode URL helpers', () => {
 
   it('wraps authenticated Code Server windows in an auto-login launcher page', async () => {
     const mockWindow = createMockWindow();
+    let writtenHtml = '';
 
     const result = await openCodeServerWindow({
       url: 'https://code.example.test/?folder=/workspace/project-1',
       password: 'desktop-pass-123',
       logScope: 'Test',
       createWindow: () => mockWindow.window,
+      writeLauncherFile: async (contents) => {
+        writtenHtml = contents;
+        return '/tmp/code-server-desktop-auto-login.html';
+      },
     });
 
     assert.equal(result.success, true);
-    const loadedUrl = mockWindow.getLoadedUrl();
-    assert.ok(loadedUrl?.startsWith('data:text/html;charset=utf-8,'));
-    assert.ok(loadedUrl);
-    const launcherHtml = decodeURIComponent(loadedUrl.slice('data:text/html;charset=utf-8,'.length));
-    assert.match(launcherHtml, /desktop-pass-123/);
-    assert.match(launcherHtml, /https:\/\/code\.example\.test\/login\?to=%2F%3Ffolder%3D%2Fworkspace%2Fproject-1/);
+    assert.equal(mockWindow.getLoadedUrl(), 'file:///tmp/code-server-desktop-auto-login.html');
+    assert.match(writtenHtml, /desktop-pass-123/);
+    assert.match(writtenHtml, /https:\/\/code\.example\.test\/login\?to=%2F%3Ffolder%3D%2Fworkspace%2Fproject-1/);
   });
 
   it('reports render-failed when the managed Code Server window stays blank past the probe timeout', async () => {

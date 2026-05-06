@@ -88,6 +88,7 @@ export interface OpenCodeServerWindowOptions {
   password?: string;
   logScope: string;
   createWindow: () => HagicodeWindowLike;
+  writeLauncherFile?: (contents: string) => Promise<string>;
   renderProbeTimeoutMs?: number;
   renderProbeIntervalMs?: number;
 }
@@ -296,10 +297,6 @@ function buildCodeServerAutoLoginHtml(rawUrl: string, password: string): string 
 </html>`;
 }
 
-function buildCodeServerAutoLoginDataUrl(rawUrl: string, password: string): string {
-  return `data:text/html;charset=utf-8,${encodeURIComponent(buildCodeServerAutoLoginHtml(rawUrl, password))}`;
-}
-
 function buildCodeServerLauncherFileUrl(launcherPath: string): string {
   return pathToFileURL(path.resolve(launcherPath)).toString();
 }
@@ -447,6 +444,7 @@ export async function openCodeServerWindow({
   password,
   logScope,
   createWindow,
+  writeLauncherFile,
   renderProbeTimeoutMs = CODE_SERVER_RENDER_PROBE_TIMEOUT_MS,
   renderProbeIntervalMs = CODE_SERVER_RENDER_PROBE_INTERVAL_MS,
 }: OpenCodeServerWindowOptions): Promise<CodeServerWindowOpenResult> {
@@ -473,7 +471,6 @@ export async function openCodeServerWindow({
   }
 
   const loadUrl = validation.loadUrl;
-  const launcherUrl = password ? buildCodeServerAutoLoginDataUrl(loadUrl, password) : loadUrl;
   const diagnostics: CodeServerWindowDiagnostics = {
     lastUrl: loadUrl,
     lastConsoleErrors: [],
@@ -483,6 +480,10 @@ export async function openCodeServerWindow({
   };
 
   try {
+    const launcherUrl = password && writeLauncherFile
+      ? buildCodeServerLauncherFileUrl(await writeLauncherFile(buildCodeServerAutoLoginHtml(loadUrl, password)))
+      : loadUrl;
+
     console.log(`[${logScope}] Opening dedicated Code Server window:`, loadUrl);
     const managedWindow = createWindow();
     console.log(`[${logScope}] Dedicated Code Server window created`);

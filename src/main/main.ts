@@ -753,6 +753,7 @@ ipcMain.handle('open-code-server-window', async (_, url: string, password?: stri
     password,
     logScope: 'Main',
     createWindow: createCodeServerWindow,
+    writeLauncherFile: writeCodeServerLauncherFile,
   });
 });
 
