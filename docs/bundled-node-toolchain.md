@@ -2,6 +2,8 @@
 
 HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, portable-version, and steam_packer.
 
+Desktop also uses this bundled Node toolchain to launch the vendored `code-server` runtime. That PATH injection stays scoped to Desktop-owned `code-server` startup and does not change the general web-service startup contract.
+
 ## Contract
 
 - Pinned input manifest: `resources/embedded-node-runtime/runtime-manifest.json`
@@ -65,6 +67,8 @@ npm run build:mac:arm64
 
 `electron-builder.yml` ships `resources/toolchain` to the canonical packaged `extra/toolchain` location outside `app.asar`.
 
+When vendored `code-server` is staged, `electron-builder.yml` also ships `resources/code-server/current` to `extra/code-server/current` outside `app.asar`.
+
 ## Verification
 
 Run the desktop smoke test after staging or packaging:
@@ -74,6 +78,8 @@ npm run smoke-test:verbose
 ```
 
 Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, and the deferred package metadata contract in `toolchain-manifest.json` for both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
+
+The same smoke test now validates the staged and packaged vendored `code-server` layout when that runtime is present.
 
 Release archives now have a second gate:
 

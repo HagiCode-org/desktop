@@ -112,6 +112,8 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
+`npm run dev` also reuses or stages `resources/code-server/current` through `prepare:code-server-runtime:optional` before Electron launches. By default, Desktop first checks the monorepo-root cache at `.generated/code-server-runtime/artifacts`, then falls back to public release downloads when the cache is empty.
+
 ### Building for Production
 
 ```bash
@@ -122,6 +124,8 @@ npm run build:all
 npm run build:prod
 ```
 
+Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) now stage three Desktop-owned runtime inputs before `electron-builder`: the embedded .NET runtime, the bundled Node toolchain, and the vendored `code-server` runtime.
+
 ### Running Smoke Tests
 
 ```bash
@@ -131,6 +135,27 @@ npm run smoke-test
 # Verbose output
 npm run smoke-test:verbose
 ```
+
+When staged or packaged vendored `code-server` payloads are present, the smoke test validates their metadata and expected entrypoints in addition to the .NET runtime and bundled toolchain contracts.
+
+### Vendored code-server staging
+
+From `repos/hagicode-desktop`:
+
+```bash
+npm run prepare:code-server-runtime
+```
+
+Useful overrides:
+
+```bash
+HAGICODE_CODE_SERVER_RUNTIME_ARTIFACTS_DIR=../custom-code-server-cache npm run prepare:code-server-runtime
+HAGICODE_CODE_SERVER_RUNTIME_INDEX_URL=https://example.invalid/index.json npm run prepare:code-server-runtime
+HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL=https://github.com/coder/code-server/releases/latest npm run prepare:code-server-runtime
+HAGICODE_CODE_SERVER_RUNTIME_VERSION=4.103.2 npm run prepare:code-server-runtime
+```
+
+With zero extra configuration, downloaded archives are cached under the monorepo-root `.generated/code-server-runtime/` directory so later `npm run dev` runs can reuse them without depending on `repos/vendered`. `prepare:code-server-runtime:optional` reuses an already valid staged runtime when possible. In development builds, the Dependency Management page can also trigger a repair run for the staged vendored runtime. Packaged builds do not self-modify the vendored runtime; remediation falls back to reinstalling Desktop.
 
 ### CLI Process Execution
 

@@ -17,6 +17,17 @@ All install and uninstall operations are executed by `src/main/dependency-manage
 
 The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands. It is not the active npm global package prefix. Dependency snapshots only inspect the active Node-major `userData` prefix for managed package state.
 
+## Vendored Runtime Ownership
+
+`code-server` is no longer part of the npm-managed catalog.
+
+- Vendored runtime metadata and layout validation live under `resources/code-server-runtime/` and `src/main/code-server-runtime.ts`.
+- Development staging targets `resources/code-server/current`.
+- Packaged Desktop builds ship the runtime at `extra/code-server/current`.
+- Dependency Management renders vendored runtimes separately from npm-managed packages and rejects npm install/uninstall/sync mutations for vendored runtime identifiers.
+
+Desktop owns the `code-server` lifecycle through PM2, health probes, log directories, and repair guidance. The Dependency Management page is the supported place to inspect or remediate that runtime.
+
 ## First-Run Preparation
 
 The onboarding wizard now starts with an explicit language-selection step, then reaches the npm preparation step before the final package download step. The npm preparation step evaluates readiness with the shared catalog and the current `NpmManagementSnapshot`.
