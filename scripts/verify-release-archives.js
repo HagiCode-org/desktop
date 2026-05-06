@@ -138,6 +138,9 @@ function findToolchainRoots(rootPath) {
 function findExtraRoots(rootPath, suffixParts) {
   const matches = [];
   const stack = [rootPath];
+  const alternateSuffixParts = suffixParts.at(-1) === 'current'
+    ? suffixParts.slice(0, -1)
+    : null;
 
   while (stack.length > 0) {
     const currentPath = stack.pop();
@@ -151,14 +154,17 @@ function findExtraRoots(rootPath, suffixParts) {
       const absolutePath = path.join(currentPath, entry.name);
       const relativePath = path.relative(rootPath, absolutePath);
       const parts = suffixSegments(relativePath);
-      if (parts.length >= suffixParts.length + 1 && parts.at(-(suffixParts.length + 1)) === 'extra') {
-        const tail = parts.slice(-(suffixParts.length));
-        if (tail.every((value, index) => value === suffixParts[index])) {
-          matches.push(absolutePath);
-          continue;
+
+      const matchesSuffix = (expectedParts) => {
+        if (!expectedParts || parts.length < expectedParts.length) {
+          return false;
         }
-      }
-      if (parts.length >= suffixParts.length && suffixParts.length === 1 && parts.at(-1) === suffixParts[0]) {
+
+        const tail = parts.slice(-(expectedParts.length));
+        return tail.every((value, index) => value === expectedParts[index]);
+      };
+
+      if (parts.includes('extra') && (matchesSuffix(suffixParts) || matchesSuffix(alternateSuffixParts))) {
         matches.push(absolutePath);
         continue;
       }
