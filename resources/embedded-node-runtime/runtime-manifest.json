@@ -42,19 +42,6 @@
       "installState": "pending",
       "installSpec": "skills@1.5.1",
       "manualActionId": "install-bundled-node-cli"
-    },
-    "omniroute": {
-      "packageName": "omniroute",
-      "version": "3.6.9",
-      "binName": "omniroute",
-      "aliases": [
-        "omniroute-reset-password"
-      ],
-      "integrity": "sha512-Oy1ty9Wy3+djnsy26/5ckVKgk2Bt35XahauBjn3yuzX3gQiPyxztC9LcDCZv8sjo73DE0ZyZsDVD3R7KRzcIJg==",
-      "installMode": "manual",
-      "installState": "pending",
-      "installSpec": "omniroute@3.6.9",
-      "manualActionId": "install-bundled-node-cli"
     }
   },
   "platforms": {

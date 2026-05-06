@@ -55,16 +55,6 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     required: true,
   },
   {
-    id: 'omniroute',
-    packageName: 'omniroute',
-    displayName: 'OmniRoute',
-    descriptionKey: 'dependencyManagement.packages.omniroute.description',
-    binName: 'omniroute',
-    installSpec: 'omniroute@3.6.9',
-    category: 'developer-tool',
-    installMode: 'hagiscript-sync',
-  },
-  {
     id: 'claude-code',
     packageName: '@anthropic-ai/claude-code',
     displayName: 'Claude Code',

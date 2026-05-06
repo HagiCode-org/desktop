@@ -2,7 +2,7 @@
 
 HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, portable-version, and steam_packer.
 
-Desktop also uses this bundled Node toolchain to launch the vendored `code-server` runtime. That PATH injection stays scoped to Desktop-owned `code-server` startup and does not change the general web-service startup contract.
+Desktop also uses this bundled Node toolchain to launch the vendored `code-server` and `omniroute` runtimes. That PATH injection stays scoped to Desktop-owned runtime startup and does not change the general web-service startup contract.
 
 ## Contract
 
@@ -10,7 +10,7 @@ Desktop also uses this bundled Node toolchain to launch the vendored `code-serve
 - Development output root: `resources/toolchain/`
 - Packaged output root: `resources/extra/toolchain/` on Windows/Linux and `Contents/Resources/extra/toolchain/` on macOS
 - Required runtime: Node.js 22 plus npm
-- Deferred managed CLI packages: `openspec`, `skills`, and `omniroute`
+- Deferred managed CLI packages: `openspec` and `skills`
 - Required output manifest: `toolchain-manifest.json` with `owner=hagicode-desktop`, `source=bundled-desktop`, and `defaultEnabledByConsumer`
 
 ## Default Activation Policy
@@ -44,7 +44,7 @@ For a specific macOS architecture:
 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64 npm run prepare:bundled-toolchain
 ```
 
-The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec`, `skills`, and `omniroute`.
+The script downloads or reuses the pinned Node archive, verifies its SHA-256 checksum, stages `toolchain/node`, discovers the archive-provided `node` and `npm` entrypoints, removes any stale managed-package payload from earlier builds, and writes `toolchain/toolchain-manifest.json` with deferred manual-install metadata for `openspec` and `skills`.
 
 On Linux and macOS the staged runtime keeps the Desktop compatibility npm path at `node/bin/npm`. If the official archive exposes npm through an equivalent entry such as `node/lib/node_modules/npm/bin/npm-cli.js`, staging creates a small compatibility shim at `node/bin/npm` and records the resolved command in the manifest. The prepare step is non-interactive; when command discovery fails, the log includes the archive name, target platform, attempted candidate paths, and a shallow `toolchain/node` directory snapshot before exiting.
 
@@ -67,7 +67,10 @@ npm run build:mac:arm64
 
 `electron-builder.yml` ships `resources/toolchain` to the canonical packaged `extra/toolchain` location outside `app.asar`.
 
-When vendored `code-server` is staged, `electron-builder.yml` also ships `resources/code-server/current` to `extra/code-server/current` outside `app.asar`.
+When vendored runtimes are staged, `electron-builder.yml` also ships:
+
+- `resources/code-server/current` to `extra/code-server/current`
+- `resources/omniroute/current` to `extra/omniroute/current`
 
 ## Verification
 
@@ -79,11 +82,11 @@ npm run smoke-test:verbose
 
 Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, and the deferred package metadata contract in `toolchain-manifest.json` for both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
 
-The same smoke test now validates the staged and packaged vendored `code-server` layout when that runtime is present.
+The same smoke test now validates the staged and packaged vendored `code-server` and `omniroute` layouts when those runtimes are present.
 
 Release archives now have a second gate:
 
-- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/toolchain` payload before upload.
+- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/toolchain`, `extra/code-server/current`, and `extra/omniroute/current` payloads before upload.
 - Windows workflows run the same verifier against the staged release ZIP that is built from `win-unpacked`, so the uploaded extractable archive is checked in the same way.
 
 ## Downstream Consumers
