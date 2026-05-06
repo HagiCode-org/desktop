@@ -6,6 +6,8 @@ import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementOperationProgress,
+  VendoredRuntimeId,
+  VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
 import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
 
@@ -139,32 +141,64 @@ export function prioritizePackagesForRepair(
   return [...packages].sort((left, right) => sortWeight(left) - sortWeight(right));
 }
 
+export function prioritizeVendoredRuntimesForRepair(
+  runtimes: readonly VendoredRuntimeStatusSnapshot[],
+  highlightedRuntimeIds: readonly VendoredRuntimeId[],
+): VendoredRuntimeStatusSnapshot[] {
+  if (highlightedRuntimeIds.length === 0) {
+    return [...runtimes];
+  }
+
+  const highlighted = new Set(highlightedRuntimeIds);
+  const sortWeight = (item: VendoredRuntimeStatusSnapshot): number => {
+    if (!highlighted.has(item.id)) {
+      return 2;
+    }
+    if (item.status === 'missing' || item.status === 'damaged') {
+      return 0;
+    }
+    return 1;
+  };
+
+  return [...runtimes].sort((left, right) => sortWeight(left) - sortWeight(right));
+}
+
 export interface DependencyRepairEvaluation {
   ready: boolean;
   pendingPackageIds: ManagedNpmPackageId[];
+  pendingRuntimeIds: VendoredRuntimeId[];
 }
 
 export function evaluateDependencyRepairIntent(
   packages: readonly ManagedNpmPackageStatusSnapshot[],
-  intent: Pick<DependencyManagementRepairIntent, 'targetPackageIds'> | null,
+  vendoredRuntimes: readonly VendoredRuntimeStatusSnapshot[],
+  intent: Pick<DependencyManagementRepairIntent, 'targetPackageIds' | 'targetRuntimeIds'> | null,
 ): DependencyRepairEvaluation {
   const targetPackageIds = intent?.targetPackageIds ?? [];
-  if (targetPackageIds.length === 0) {
+  const targetRuntimeIds = intent?.targetRuntimeIds ?? [];
+  if (targetPackageIds.length === 0 && targetRuntimeIds.length === 0) {
     return {
       ready: false,
       pendingPackageIds: [],
+      pendingRuntimeIds: [],
     };
   }
 
   const packageById = new Map(packages.map((item) => [item.id, item]));
+  const runtimeById = new Map(vendoredRuntimes.map((item) => [item.id, item]));
   const pendingPackageIds = targetPackageIds.filter((packageId) => {
     const item = packageById.get(packageId);
     return !item || item.status === 'not-installed' || item.status === 'unknown' || isManagedPackageOutdated(item);
   });
+  const pendingRuntimeIds = targetRuntimeIds.filter((runtimeId) => {
+    const item = runtimeById.get(runtimeId);
+    return !item || item.status === 'missing' || item.status === 'damaged';
+  });
 
   return {
-    ready: pendingPackageIds.length === 0,
+    ready: pendingPackageIds.length === 0 && pendingRuntimeIds.length === 0,
     pendingPackageIds,
+    pendingRuntimeIds,
   };
 }
 

@@ -3,6 +3,7 @@ import type {
   OmniRouteDependencyFailureKind,
   OmniRouteDependencyPackageId,
   OmniRouteDependencyRemediation,
+  OmniRouteDependencyRuntimeId,
 } from '../../../types/omniroute-management.js';
 
 export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings';
@@ -11,6 +12,7 @@ export interface DependencyManagementRepairIntent {
   sourceView: 'omniroute';
   returnView: 'omniroute';
   failureKind: OmniRouteDependencyFailureKind;
+  targetRuntimeIds: OmniRouteDependencyRuntimeId[];
   targetPackageIds: OmniRouteDependencyPackageId[];
 }
 
@@ -70,6 +72,7 @@ export function buildDependencyManagementRepairIntent(
     sourceView: 'omniroute',
     returnView: 'omniroute',
     failureKind: remediation.failureKind,
+    targetRuntimeIds: remediation.targetRuntimeIds,
     targetPackageIds: remediation.targetPackageIds,
   };
 }

@@ -134,15 +134,15 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.optionalPackages.some((item) => item.id === optionalPackageId && item.status === 'not-installed'), true);
   });
 
-  it('keeps omniroute optional so missing OmniRoute does not block launch readiness', () => {
+  it('does not treat omniroute as a managed npm dependency anymore', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({ omniroute: 'not-installed' }), ['codex']);
 
     assert.equal(requiredManagedNpmPackages.some((definition) => definition.id === 'omniroute'), false);
-    assert.equal(optionalManagedNpmPackages.some((definition) => definition.id === 'omniroute'), true);
+    assert.equal(optionalManagedNpmPackages.some((definition) => definition.id === 'omniroute'), false);
     assert.equal(summary.requiredReady, true);
     assert.equal(summary.ready, true);
     assert.deepEqual(summary.missingRequiredPackageIds, []);
-    assert.equal(summary.optionalPackages.some((item) => item.id === 'omniroute' && item.status === 'not-installed'), true);
+    assert.equal(summary.optionalPackages.some((item) => item.id === 'omniroute'), false);
   });
 
   it('ignores unknown Agent CLI ids and does not let them satisfy readiness', () => {

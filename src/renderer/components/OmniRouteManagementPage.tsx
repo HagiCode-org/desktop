@@ -32,6 +32,18 @@ function getBridge(): OmniRouteBridge {
 }
 
 function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediation): string {
+  if (remediation.failureKind === 'runtime-missing') {
+    return 'omniroute.dependencyGuidance.descriptionRuntimeMissing';
+  }
+
+  if (remediation.failureKind === 'runtime-damaged') {
+    return 'omniroute.dependencyGuidance.descriptionRuntimeDamaged';
+  }
+
+  if (remediation.failureKind === 'runtime-and-package') {
+    return 'omniroute.dependencyGuidance.descriptionRuntimeAndPackage';
+  }
+
   if (remediation.failureKind === 'dependency-unknown') {
     return 'omniroute.dependencyGuidance.descriptionUnknown';
   }
@@ -43,8 +55,8 @@ function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediatio
   return 'omniroute.dependencyGuidance.descriptionMissing';
 }
 
-function getDependencyPackageLabel(packageId: OmniRouteDependencyRemediation['targetPackageIds'][number]): string {
-  return packageId === 'pm2' ? 'PM2' : 'OmniRoute';
+function getDependencyTargetLabel(target: OmniRouteDependencyRemediation['targetRuntimeIds'][number] | OmniRouteDependencyRemediation['targetPackageIds'][number]): string {
+  return target === 'pm2' ? 'PM2' : 'OmniRoute runtime';
 }
 
 function statusBadgeVariant(status: OmniRouteStatusSnapshot['status']) {
@@ -254,11 +266,14 @@ export default function OmniRouteManagementPage() {
           <AlertTitle>{t('omniroute.dependencyGuidance.title')}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{t(getDependencyGuidanceCopyKey(dependencyRemediation))}</p>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              {dependencyRemediation.targetPackageIds.map((packageId) => (
-                <Badge key={packageId} variant="outline">{getDependencyPackageLabel(packageId)}</Badge>
-              ))}
-            </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {dependencyRemediation.targetRuntimeIds.map((runtimeId) => (
+                  <Badge key={runtimeId} variant="outline">{getDependencyTargetLabel(runtimeId)}</Badge>
+                ))}
+                {dependencyRemediation.targetPackageIds.map((packageId) => (
+                  <Badge key={packageId} variant="outline">{getDependencyTargetLabel(packageId)}</Badge>
+                ))}
+              </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => void dispatch(openOmniRouteDependencyRepair(dependencyRemediation))} disabled={isBusy}>
                 {t('omniroute.dependencyGuidance.openDependencyManagement')}

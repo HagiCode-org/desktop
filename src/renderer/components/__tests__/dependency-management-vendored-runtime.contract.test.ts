@@ -32,6 +32,7 @@ describe('dependency management vendored runtime renderer contract', () => {
 
     assert.match(source, /vendoredRuntime:/);
     assert.match(source, /title: Desktop-managed runtimes/);
+    assert.match(source, /Desktop-managed OmniRoute runtime staged from vendored artifacts/);
     assert.match(source, /code-server runtime staged from vendored artifacts/);
   });
 });

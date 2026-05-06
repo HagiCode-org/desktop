@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { ManagedNpmPackageStatusSnapshot } from '../../../types/dependency-management.js';
+import type {
+  ManagedNpmPackageStatusSnapshot,
+  VendoredRuntimeStatusSnapshot,
+} from '../../../types/dependency-management.js';
 import {
   evaluateDependencyRepairIntent,
   getSelectablePackageIds,
@@ -26,7 +29,7 @@ function createPackage(
       descriptionKey: `dependencyManagement.packages.${id}.description`,
       binName: displayName.toLowerCase(),
       installSpec: id === 'pm2' ? 'pm2@7.0.1' : displayName.toLowerCase(),
-      category: id === 'omniroute' ? 'developer-tool' : 'workflow',
+      category: 'workflow',
       installMode: 'hagiscript-sync',
     },
     status,
@@ -36,46 +39,86 @@ function createPackage(
   };
 }
 
+function createRuntime(
+  id: VendoredRuntimeStatusSnapshot['id'],
+  status: VendoredRuntimeStatusSnapshot['status'],
+): VendoredRuntimeStatusSnapshot {
+  return {
+    id,
+    definition: {
+      id,
+      displayName: id === 'omniroute' ? 'OmniRoute' : 'Code Server',
+      descriptionKey: `dependencyManagement.vendoredRuntimes.${id}.description`,
+      packageId: id,
+      managedByDesktop: true,
+      bundledNodeRuntime: id === 'omniroute',
+      supportsStartStop: true,
+      supportsRepair: true,
+    },
+    status,
+    version: status === 'ready' ? '1.0.0' : null,
+    runtimeRoot: `/tmp/${id}`,
+    metadataPath: status === 'missing' ? null : `/tmp/${id}/metadata.json`,
+    wrapperPath: status === 'missing' ? null : `/tmp/${id}/bin/${id}`,
+    entryScriptPath: status === 'missing' ? null : `/tmp/${id}/bin/${id}.mjs`,
+    packageId: id,
+    schemaVersion: status === 'missing' ? null : 1,
+    bundledNodeRuntime: id === 'omniroute',
+    managedByDesktop: true,
+    primaryAction: status === 'ready' ? 'start' : 'repair',
+    diagnostics: [],
+    health: {
+      metadataValid: status === 'ready',
+      wrapperPresent: status === 'ready',
+      entryScriptPresent: status === 'ready',
+      nodeRuntimePresent: id === 'omniroute' ? status === 'ready' : null,
+    },
+  };
+}
+
 describe('dependency-management OmniRoute repair helpers', () => {
   it('prioritizes highlighted repair targets before unrelated packages', () => {
     const packages = [
       createPackage('openspec', 'OpenSpec', 'installed'),
-      createPackage('omniroute', 'OmniRoute', 'not-installed'),
       createPackage('pm2', 'PM2', 'unknown'),
       createPackage('skills', 'Skills', 'installed'),
     ];
 
-    const prioritized = prioritizePackagesForRepair(packages, ['pm2', 'omniroute']);
+    const prioritized = prioritizePackagesForRepair(packages, ['pm2']);
 
     assert.deepEqual(
       prioritized.map((item) => item.id),
-      ['omniroute', 'pm2', 'openspec', 'skills'],
+      ['pm2', 'openspec', 'skills'],
     );
   });
 
-  it('marks repair completion as blocked until every targeted package is installed', () => {
+  it('marks repair completion as blocked until every targeted runtime and package is ready', () => {
     const packages = [
       createPackage('pm2', 'PM2', 'installed'),
-      createPackage('omniroute', 'OmniRoute', 'unknown'),
       createPackage('openspec', 'OpenSpec', 'installed'),
     ];
+    const runtimes = [
+      createRuntime('omniroute', 'damaged'),
+    ];
 
-    const evaluation = evaluateDependencyRepairIntent(packages, {
-      targetPackageIds: ['pm2', 'omniroute'],
+    const evaluation = evaluateDependencyRepairIntent(packages, runtimes, {
+      targetRuntimeIds: ['omniroute'],
+      targetPackageIds: ['pm2'],
     });
 
     assert.equal(evaluation.ready, false);
-    assert.deepEqual(evaluation.pendingPackageIds, ['omniroute']);
+    assert.deepEqual(evaluation.pendingPackageIds, []);
+    assert.deepEqual(evaluation.pendingRuntimeIds, ['omniroute']);
   });
 
   it('keeps repair completion blocked when a targeted package is installed at an unsupported version', () => {
     const packages = [
       createPackage('pm2', 'PM2', 'installed', '6.0.14'),
-      createPackage('omniroute', 'OmniRoute', 'installed'),
     ];
 
-    const evaluation = evaluateDependencyRepairIntent(packages, {
+    const evaluation = evaluateDependencyRepairIntent(packages, [], {
       targetPackageIds: ['pm2'],
+      targetRuntimeIds: [],
     });
 
     assert.equal(evaluation.ready, false);
@@ -85,16 +128,20 @@ describe('dependency-management OmniRoute repair helpers', () => {
   it('allows return to OmniRoute only after every targeted package is available', () => {
     const packages = [
       createPackage('pm2', 'PM2', 'installed'),
-      createPackage('omniroute', 'OmniRoute', 'installed'),
       createPackage('openspec', 'OpenSpec', 'installed'),
     ];
+    const runtimes = [
+      createRuntime('omniroute', 'ready'),
+    ];
 
-    const evaluation = evaluateDependencyRepairIntent(packages, {
-      targetPackageIds: ['pm2', 'omniroute'],
+    const evaluation = evaluateDependencyRepairIntent(packages, runtimes, {
+      targetRuntimeIds: ['omniroute'],
+      targetPackageIds: ['pm2'],
     });
 
     assert.equal(evaluation.ready, true);
     assert.deepEqual(evaluation.pendingPackageIds, []);
+    assert.deepEqual(evaluation.pendingRuntimeIds, []);
   });
 
   it('recomputes selectable package ids when the hagiscript gate opens from the latest snapshot', () => {

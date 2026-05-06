@@ -22,6 +22,7 @@ import {
   getSelectAllChecked,
   getSelectedEligiblePackageIds,
   isBatchSyncEvent,
+  prioritizeVendoredRuntimesForRepair,
   pruneSelectedPackageIds,
   prioritizePackagesForRepair,
   type BatchSyncState,
@@ -51,6 +52,18 @@ function getDependencyManagementBridge(): DependencyManagementBridge {
 }
 
 function getRepairDescriptionKey(failureKind: NonNullable<RootState['view']['dependencyManagementIntent']>['failureKind']): string {
+  if (failureKind === 'runtime-missing') {
+    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeMissing';
+  }
+
+  if (failureKind === 'runtime-damaged') {
+    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeDamaged';
+  }
+
+  if (failureKind === 'runtime-and-package') {
+    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeAndPackage';
+  }
+
   if (failureKind === 'dependency-unknown') {
     return 'dependencyManagement.omniRouteRepair.descriptionUnknown';
   }
@@ -329,9 +342,11 @@ export default function DependencyManagementPage() {
   const hagiscript = snapshot?.packages.find((item) => item.id === 'hagiscript');
   const managedPackages = snapshot?.packages.filter((item) => item.id !== 'hagiscript') ?? [];
   const vendoredRuntimes = snapshot?.vendoredRuntimes ?? [];
+  const highlightedRuntimeIds = repairIntent?.targetRuntimeIds ?? [];
   const highlightedPackageIds = repairIntent?.targetPackageIds ?? [];
+  const prioritizedVendoredRuntimes = prioritizeVendoredRuntimesForRepair(vendoredRuntimes, highlightedRuntimeIds);
   const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
-  const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], repairIntent);
+  const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], snapshot?.vendoredRuntimes ?? [], repairIntent);
   const activePackageId = snapshot?.activeOperation?.packageId;
   const environmentAvailable = snapshot?.environment.available ?? false;
   const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
@@ -355,10 +370,15 @@ export default function DependencyManagementPage() {
     setSelectedPackageIds((current) => updateSelectAllPackageIds(current, selectablePackageIds, checked));
   };
 
-  const repairTargetNames = repairIntent?.targetPackageIds.map((packageId) =>
+  const repairTargetNames = [
+    ...(repairIntent?.targetRuntimeIds.map((runtimeId) =>
+      snapshot?.vendoredRuntimes.find((item) => item.id === runtimeId)?.definition.displayName ?? 'OmniRoute runtime',
+    ) ?? []),
+    ...(repairIntent?.targetPackageIds.map((packageId) =>
     snapshot?.packages.find((item) => item.id === packageId)?.definition.displayName
-    ?? (packageId === 'pm2' ? 'PM2' : 'OmniRoute'),
-  ) ?? [];
+    ?? 'PM2',
+    ) ?? []),
+  ];
 
   const runRepairCompletionCheck = async () => {
     if (!repairIntent) {
@@ -441,7 +461,7 @@ export default function DependencyManagementPage() {
                 {t('dependencyManagement.omniRouteRepair.refreshFailed')}
               </p>
             ) : null}
-            {!repairEvaluation.ready && repairEvaluation.pendingPackageIds.length > 0 ? (
+            {!repairEvaluation.ready && (repairEvaluation.pendingPackageIds.length > 0 || repairEvaluation.pendingRuntimeIds.length > 0) ? (
               <p className="text-sm text-muted-foreground">
                 {t('dependencyManagement.omniRouteRepair.pendingNotice')}
               </p>
@@ -486,10 +506,11 @@ export default function DependencyManagementPage() {
                 <CardDescription>{t('dependencyManagement.vendoredRuntime.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {vendoredRuntimes.map((runtime) => (
+                {prioritizedVendoredRuntimes.map((runtime) => (
                   <VendoredRuntimeCard
                     key={runtime.id}
                     item={runtime}
+                    highlighted={highlightedRuntimeIds.includes(runtime.id)}
                     pendingAction={vendoredRuntimeAction?.runtimeId === runtime.id ? vendoredRuntimeAction.action : null}
                     error={vendoredRuntimeError[runtime.id] ?? null}
                     refreshDisabled={pageStatus === 'loading' || isPending || Boolean(activePackageId)}

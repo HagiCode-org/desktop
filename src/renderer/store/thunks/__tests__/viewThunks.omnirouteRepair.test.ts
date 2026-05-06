@@ -20,10 +20,11 @@ describe('OmniRoute repair navigation thunk', () => {
 
     await store.dispatch(openOmniRouteDependencyRepair({
       kind: 'dependency',
-      failureKind: 'dependency-missing',
-      targetPackageIds: ['pm2', 'omniroute'],
+      failureKind: 'runtime-and-package',
+      targetRuntimeIds: ['omniroute'],
+      targetPackageIds: ['pm2'],
       recommendedAction: 'open-dependency-management',
-      message: 'Repair PM2 and OmniRoute from Dependency Management and retry.',
+      message: 'Restore the OmniRoute runtime and PM2 from Dependency Management and retry.',
     }));
 
     const state = store.getState().view;
@@ -32,8 +33,9 @@ describe('OmniRoute repair navigation thunk', () => {
     assert.deepEqual(state.dependencyManagementIntent, {
       sourceView: 'omniroute',
       returnView: 'omniroute',
-      failureKind: 'dependency-missing',
-      targetPackageIds: ['pm2', 'omniroute'],
+      failureKind: 'runtime-and-package',
+      targetRuntimeIds: ['omniroute'],
+      targetPackageIds: ['pm2'],
     });
   });
 
@@ -44,6 +46,7 @@ describe('OmniRoute repair navigation thunk', () => {
       sourceView: 'omniroute',
       returnView: 'omniroute',
       failureKind: 'dependency-unknown',
+      targetRuntimeIds: [],
       targetPackageIds: ['pm2'],
     }));
     store.dispatch(switchView('dependency-management'));

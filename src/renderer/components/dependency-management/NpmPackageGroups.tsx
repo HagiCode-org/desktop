@@ -80,6 +80,7 @@ function getVendoredRuntimePrimaryIcon(item: VendoredRuntimeStatusSnapshot) {
 
 interface VendoredRuntimeCardProps {
   item: VendoredRuntimeStatusSnapshot;
+  highlighted?: boolean;
   pendingAction: VendoredRuntimeLifecycleAction | null;
   error?: string | null;
   refreshDisabled: boolean;
@@ -93,6 +94,7 @@ interface VendoredRuntimeCardProps {
 
 export function VendoredRuntimeCard({
   item,
+  highlighted = false,
   pendingAction,
   error,
   refreshDisabled,
@@ -110,16 +112,19 @@ export function VendoredRuntimeCard({
   const diagnostics = error ? [error, ...item.diagnostics] : item.diagnostics;
 
   return (
-    <Card className="border-border/80">
+    <Card className={cn('border-border/80', highlighted && 'ring-1 ring-inset ring-amber-500/50 bg-amber-500/5')}>
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <CardTitle className="text-lg">{item.definition.displayName}</CardTitle>
             <CardDescription>{t(item.definition.descriptionKey)}</CardDescription>
           </div>
-          <Badge variant={vendoredRuntimeBadgeVariant(item)}>
-            {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {highlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
+            <Badge variant={vendoredRuntimeBadgeVariant(item)}>
+              {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
