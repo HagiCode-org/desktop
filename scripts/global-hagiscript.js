@@ -26,6 +26,14 @@ function runHagiscriptVersion(command) {
   });
 }
 
+function resolveDirectHagiscriptCommands() {
+  if (process.platform === 'win32') {
+    return ['hagiscript.cmd', 'hagiscript.exe', 'hagiscript'];
+  }
+
+  return ['hagiscript'];
+}
+
 function resolveFallbackHagiscriptCommand() {
   const prefixResult = spawnSync('npm', ['config', 'get', 'prefix'], {
     cwd: process.cwd(),
@@ -58,8 +66,15 @@ function resolveFallbackHagiscriptCommand() {
 }
 
 export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.7') {
-  let result = runHagiscriptVersion('hagiscript');
-  if (result.error?.code === 'ENOENT') {
+  let result = null;
+  for (const command of resolveDirectHagiscriptCommands()) {
+    result = runHagiscriptVersion(command);
+    if (!result.error || result.error.code !== 'ENOENT') {
+      break;
+    }
+  }
+
+  if (result?.error?.code === 'ENOENT') {
     const fallbackCommand = resolveFallbackHagiscriptCommand();
     if (fallbackCommand) {
       result = runHagiscriptVersion(fallbackCommand);
