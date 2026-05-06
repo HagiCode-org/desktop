@@ -14,6 +14,13 @@ import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import type {
+  CodeServerBridge,
+  CodeServerConfigUpdatePayload,
+  CodeServerLogReadRequest,
+  CodeServerPathTarget,
+} from '../types/code-server-management.js';
+import { codeServerChannels } from '../types/code-server-management.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type { ManagedNpmPackageId, DependencyManagementBatchSyncRequest, DependencyManagementBridge } from '../types/dependency-management.js';
@@ -301,6 +308,7 @@ interface ElectronAPI {
   /** @deprecated Use dependencyManagement. */
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
+  codeServer: CodeServerBridge;
   omniroute: OmniRouteBridge;
 
   // Dependency Management APIs
@@ -405,6 +413,25 @@ const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
       npmGlobalBinPath: snapshot.environment.npmGlobalBinRoot,
       npmGlobalModulesPath: snapshot.environment.npmGlobalModulesRoot,
     });
+  },
+});
+
+const codeServerBridge: CodeServerBridge = Object.freeze({
+  getStatus: () => ipcRenderer.invoke(codeServerChannels.status),
+  start: () => ipcRenderer.invoke(codeServerChannels.start),
+  stop: () => ipcRenderer.invoke(codeServerChannels.stop),
+  restart: () => ipcRenderer.invoke(codeServerChannels.restart),
+  repair: () => ipcRenderer.invoke(codeServerChannels.repair),
+  getConfig: () => ipcRenderer.invoke(codeServerChannels.getConfig),
+  setConfig: (payload: CodeServerConfigUpdatePayload) => ipcRenderer.invoke(codeServerChannels.setConfig, payload),
+  readLog: (request: CodeServerLogReadRequest) => ipcRenderer.invoke(codeServerChannels.readLog, request),
+  openPath: (target: CodeServerPathTarget) => ipcRenderer.invoke(codeServerChannels.openPath, target),
+  onStatusChange: (callback) => {
+    const listener = (_event, status) => {
+      callback(status);
+    };
+    ipcRenderer.on(codeServerChannels.statusChanged, listener);
+    return () => ipcRenderer.removeListener(codeServerChannels.statusChanged, listener);
   },
 });
 
@@ -557,6 +584,7 @@ const electronAPI: ElectronAPI = {
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   logDirectory: logDirectoryBridge,
+  codeServer: codeServerBridge,
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
@@ -608,7 +636,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {

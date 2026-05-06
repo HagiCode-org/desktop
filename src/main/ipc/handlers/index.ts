@@ -40,6 +40,9 @@ export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from '
 // Dependency management handlers
 export { registerDependencyManagementHandlers, initDependencyManagementHandlers } from './dependencyManagementHandlers.js';
 
+// Code Server handlers
+export { registerCodeServerHandlers, initCodeServerHandlers } from './codeServerHandlers.js';
+
 // OmniRoute handlers
 export { registerOmniRouteHandlers, initOmniRouteHandlers } from './omniRouteHandlers.js';
 

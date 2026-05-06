@@ -57,6 +57,7 @@ import {
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
+  registerCodeServerHandlers,
   registerOmniRouteHandlers,
   registerRssHandlers,
   registerViewHandlers,
@@ -2395,6 +2396,7 @@ app.whenReady().then(async () => {
   dependencyManagementService = new DependencyManagementService();
   codeServerManager = new CodeServerManager({
     dependencyManagementService,
+    configManager,
     pathManager: pathManager ?? PathManager.getInstance(),
   });
   dependencyManagementService.setVendoredRuntimeInspector(() => codeServerManager!.getRuntimeSnapshots());
@@ -2404,6 +2406,12 @@ app.whenReady().then(async () => {
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
+
+  registerCodeServerHandlers({
+    manager: codeServerManager,
+    mainWindow,
+  });
+  log.info('[App] Code Server IPC handlers registered');
 
   omniRouteManager = new OmniRouteManager({
     configManager,
