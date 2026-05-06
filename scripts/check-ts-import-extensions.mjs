@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const rootDir = process.cwd();
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts']);
-const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'dist', 'pkg', 'coverage']);
+const IGNORED_DIRECTORIES = new Set(['.git', '.generated', 'node_modules', 'dist', 'pkg', 'coverage', 'build']);
 const importPattern = /(?:from\s*['"]([^'"]+\.(?:[cm]?ts|tsx))['"]|import\(\s*['"]([^'"]+\.(?:[cm]?ts|tsx))['"]\s*\))/g;
 
 function walk(directoryPath, collectedFiles) {
