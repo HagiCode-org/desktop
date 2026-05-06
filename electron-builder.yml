@@ -25,6 +25,11 @@ extraResources:
     to: extra/toolchain
     filter:
       - '**/*'
+  - from: resources/code-server/current
+    to: extra/code-server/current
+    filter:
+      - '**/*'
+      - '!**/.gitkeep'
 publish:
   provider: github
   owner: HagiCode-org

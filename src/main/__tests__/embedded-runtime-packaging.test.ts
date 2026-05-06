@@ -44,10 +44,14 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:smoke-test:mac:arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
+    assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
+    assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/run-electron-builder\.js --mac --x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/run-electron-builder\.js --mac --arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
+    assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
+    assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /package:verify-release-archives:mac:x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:verify-release-archives:mac:arm64/);
     assert.equal(pkg.scripts['package:verify-release-archives'], 'node scripts/verify-release-archives.js');

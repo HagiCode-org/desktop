@@ -25,6 +25,11 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
+import {
+  detectCodeServerRuntimePlatform,
+  readCodeServerRuntimeConfig,
+  validateCodeServerRuntimePayload,
+} from './code-server-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -41,6 +46,11 @@ const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detec
 const stagedToolchainRoot = path.join(process.cwd(), 'resources', 'toolchain');
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
+const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
+const codeServerConfig = readCodeServerRuntimeConfig();
+const stagedCodeServerRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
+const packagedCodeServerCandidates = resolvePackagedCodeServerRoots();
+const packagedCodeServerRoot = resolveExistingPackagedRuntimeRoot(packagedCodeServerCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
 const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
 
@@ -118,6 +128,29 @@ function resolvePackagedToolchainRoots() {
       path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
       path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
       path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain'),
+    ];
+  }
+  return [];
+}
+
+function resolvePackagedCodeServerRoots() {
+  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_CODE_SERVER_ROOT?.trim();
+  if (override) {
+    return [path.resolve(process.cwd(), override)];
+  }
+
+  if (process.platform === 'win32') {
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'code-server', 'current')];
+  }
+  if (process.platform === 'linux') {
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'code-server', 'current')];
+  }
+  if (process.platform === 'darwin') {
+    return [
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
     ];
   }
   return [];
@@ -256,6 +289,14 @@ function validatePinnedRuntimeMetadata(runtimeRoot) {
   }
 
   return errors;
+}
+
+function validateVendoredCodeServerRuntime(runtimeRoot) {
+  const result = validateCodeServerRuntimePayload(runtimeRoot, {
+    platformKey: codeServerPlatform,
+    config: codeServerConfig,
+  });
+  return [...result.missingEntries, ...result.diagnostics];
 }
 
 function log(message, color = colors.reset) {
@@ -431,12 +472,14 @@ test('electron-builder configuration is valid', async () => {
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
   const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/embedded-runtime/current/dotnet');
   const toolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain');
+  const codeServerExtraResource = extraResources.find((entry) => entry.from === 'resources/code-server/current');
   const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
   const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
   const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
   const toolchainCanonicalPath = toolchainExtraResource?.to === 'extra/toolchain';
+  const codeServerCanonicalPath = codeServerExtraResource?.to === 'extra/code-server/current';
   const macSignIgnore = Array.isArray(buildConfig?.mac?.signIgnore)
     ? buildConfig.mac.signIgnore
     : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
@@ -462,6 +505,8 @@ test('electron-builder configuration is valid', async () => {
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(Boolean(toolchainExtraResource), 'bundled Node toolchain is shipped via extraResources');
   assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/toolchain');
+  assert(Boolean(codeServerExtraResource), 'vendored code-server runtime is shipped via extraResources');
+  assert(codeServerCanonicalPath, 'vendored code-server runtime is staged at extra/code-server/current');
   assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
   assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
   assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
@@ -560,6 +605,60 @@ test('packaged bundled Node toolchain payload is complete', () => {
     manifestErrors.length === 0
       ? 'packaged bundled Node toolchain manifest matches the pinned Desktop contract'
       : `packaged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
+  );
+});
+
+test('staged vendored code-server payload is complete', () => {
+  if (!requireRuntimePayload && !fs.existsSync(stagedCodeServerRoot)) {
+    log('  - Skipping: staged vendored code-server runtime not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(stagedCodeServerRoot);
+  if (!assert(exists, `staged vendored code-server runtime exists (${stagedCodeServerRoot})`)) {
+    return;
+  }
+
+  const errors = validateVendoredCodeServerRuntime(stagedCodeServerRoot);
+  assert(
+    errors.length === 0,
+    errors.length === 0
+      ? 'staged vendored code-server runtime matches the Desktop layout contract'
+      : `staged vendored code-server runtime mismatch: ${errors.join('; ')}`,
+  );
+});
+
+test('packaged vendored code-server payload is complete', () => {
+  if (!packagedCodeServerRoot) {
+    log('  - Skipping: packaged vendored code-server checks are not defined for this platform', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedCodeServerRoot)) {
+    log('  - Skipping: packaged vendored code-server runtime not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(packagedCodeServerRoot);
+  if (!assert(exists, `packaged vendored code-server runtime exists (${packagedCodeServerRoot})`)) {
+    if (packagedCodeServerCandidates.length > 1) {
+      logVerbose(`checked packaged code-server candidates: ${packagedCodeServerCandidates.join(', ')}`);
+    }
+    return;
+  }
+
+  assert(!packagedCodeServerRoot.includes('app.asar'), 'packaged vendored code-server runtime resolves outside app.asar');
+  assert(packagedCodeServerRoot.includes(path.join('extra', 'code-server', 'current')), 'packaged vendored code-server runtime uses canonical extra/code-server/current path');
+
+  const errors = validateVendoredCodeServerRuntime(packagedCodeServerRoot);
+  assert(
+    errors.length === 0,
+    errors.length === 0
+      ? 'packaged vendored code-server runtime matches the Desktop layout contract'
+      : `packaged vendored code-server runtime mismatch: ${errors.join('; ')}`,
   );
 });
 
