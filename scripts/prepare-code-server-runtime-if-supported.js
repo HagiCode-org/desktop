@@ -6,7 +6,9 @@ import path from 'path';
 import {
   detectCodeServerRuntimePlatform,
   readCodeServerRuntimeConfig,
+  resolveConfiguredCodeServerReleaseUrls,
   resolveCodeServerArtifactsDir,
+  resolveRequestedCodeServerRuntimeVersion,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
 
@@ -22,10 +24,7 @@ function hasConfiguredSource() {
   if (process.env.HAGICODE_CODE_SERVER_RUNTIME_INDEX_URL?.trim() || config.source?.indexUrl?.trim()) {
     return true;
   }
-  if (process.env.HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL?.trim()) {
-    return true;
-  }
-  if (Array.isArray(config.source?.releaseUrls) && config.source.releaseUrls.some((value) => typeof value === 'string' && value.trim().length > 0)) {
+  if (resolveConfiguredCodeServerReleaseUrls(platformKey, config).length > 0) {
     return true;
   }
   const artifactsDir = resolveCodeServerArtifactsDir(config);
@@ -43,7 +42,7 @@ function canReuseExistingRuntime() {
     return { reusable: false, reason: errors.join('; ') };
   }
 
-  const requestedVersion = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION?.trim();
+  const requestedVersion = resolveRequestedCodeServerRuntimeVersion(platformKey, config);
   if (requestedVersion && validation.metadata?.version !== requestedVersion) {
     return {
       reusable: false,

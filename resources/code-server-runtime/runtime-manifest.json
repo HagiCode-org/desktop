@@ -2,15 +2,30 @@
   "schemaVersion": 1,
   "runtime": "code-server",
   "packageId": "code-server",
+  "releaseVersionByPlatform": {
+    "linux-x64": "2026.0506.0026",
+    "osx-arm64": "2026.0506.0026",
+    "win-x64": "2026.0506.0026"
+  },
   "defaultPort": 37667,
   "source": {
     "generatedRootSubdir": "code-server-runtime",
     "localArtifactDir": null,
     "indexUrl": null,
-    "releaseUrls": [
-      "https://github.com/HagiCode-org/vendered/releases/latest",
-      "https://github.com/coder/code-server/releases/latest"
-    ],
+    "releaseUrlsByPlatform": {
+      "linux-x64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "osx-arm64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "win-x64": [
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026"
+      ],
+      "osx-x64": [
+        "https://github.com/coder/code-server/releases/latest"
+      ]
+    },
     "allowedDownloadHosts": [
       "github.com",
       "release-assets.githubusercontent.com",

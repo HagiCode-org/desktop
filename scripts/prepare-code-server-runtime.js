@@ -9,8 +9,10 @@ import { execa } from 'execa';
 import {
   detectCodeServerRuntimePlatform,
   readCodeServerRuntimeConfig,
+  resolveConfiguredCodeServerReleaseUrls,
   resolveCodeServerArtifactsDir,
   resolveCodeServerGeneratedRoot,
+  resolveRequestedCodeServerRuntimeVersion,
   resolveCodeServerRuntimeTarget,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
@@ -18,7 +20,7 @@ import {
 const config = readCodeServerRuntimeConfig();
 const platformKey = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const target = resolveCodeServerRuntimeTarget(platformKey, config);
-const runtimeVersionOverride = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION?.trim() || null;
+const runtimeVersionOverride = resolveRequestedCodeServerRuntimeVersion(platformKey, config);
 const runtimeRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
 const buildRoot = resolveCodeServerGeneratedRoot(config) ?? path.join(process.cwd(), 'build', 'code-server-runtime');
 const downloadsRoot = path.join(buildRoot, 'downloads');
@@ -89,7 +91,7 @@ async function resolveArtifact() {
     return resolveRemoteArtifactFromIndex(indexUrl);
   }
 
-  const releaseUrls = resolveConfiguredReleaseUrls();
+  const releaseUrls = resolveConfiguredCodeServerReleaseUrls(platformKey, config);
   const releaseErrors = [];
   for (const releaseUrl of releaseUrls) {
     try {
@@ -324,18 +326,6 @@ function compareVersions(left, right) {
     }
   }
   return 0;
-}
-
-function resolveConfiguredReleaseUrls() {
-  const envReleaseUrl = process.env.HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL?.trim();
-  if (envReleaseUrl) {
-    return [envReleaseUrl];
-  }
-
-  const configured = Array.isArray(config.source?.releaseUrls)
-    ? config.source.releaseUrls.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)
-    : [];
-  return configured;
 }
 
 function createRuntimeMetadata({

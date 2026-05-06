@@ -23,10 +23,15 @@ interface CodeServerRuntimeConfig {
   schemaVersion: number;
   runtime: 'code-server';
   packageId: 'code-server';
+  releaseVersion?: string;
+  releaseVersionByPlatform?: Record<string, string>;
   defaultPort: number;
   source: {
+    generatedRootSubdir?: string | null;
     localArtifactDir?: string | null;
     indexUrl?: string | null;
+    releaseUrls?: string[];
+    releaseUrlsByPlatform?: Record<string, string[]>;
     allowedDownloadHosts?: string[];
   };
   platforms: Record<string, CodeServerRuntimePlatformTarget>;
@@ -89,6 +94,27 @@ export function resolveCodeServerRuntimeTarget(
     throw new Error(`Vendored code-server runtime is not configured for ${platform}`);
   }
   return target;
+}
+
+function resolveExpectedCodeServerRuntimeVersion(
+  platform = detectCodeServerRuntimePlatform(),
+  config = readCodeServerRuntimeConfig(),
+): string | null {
+  const override = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION?.trim();
+  if (override) {
+    return override;
+  }
+
+  const perPlatform = config.releaseVersionByPlatform?.[platform];
+  if (typeof perPlatform === 'string' && perPlatform.trim().length > 0) {
+    return perPlatform.trim();
+  }
+
+  if (typeof config.releaseVersion === 'string' && config.releaseVersion.trim().length > 0) {
+    return config.releaseVersion.trim();
+  }
+
+  return null;
 }
 
 export async function readCodeServerRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
@@ -184,6 +210,13 @@ export async function validateCodeServerRuntime(
     }
     if (metadata.packageId !== config.packageId) {
       diagnostics.push(`Metadata packageId expected ${config.packageId} but found ${metadata.packageId ?? 'missing'}`);
+    }
+    const expectedVersion = resolveExpectedCodeServerRuntimeVersion(
+      detectCodeServerRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch),
+      config,
+    );
+    if (expectedVersion && metadata.version !== expectedVersion) {
+      diagnostics.push(`Metadata version expected ${expectedVersion} but found ${metadata.version ?? 'missing'}`);
     }
     if (metadata.extra?.bundledNodeRuntime !== false) {
       diagnostics.push('Vendored code-server metadata must declare extra.bundledNodeRuntime=false');

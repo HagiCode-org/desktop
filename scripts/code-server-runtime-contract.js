@@ -32,6 +32,49 @@ export function resolveCodeServerRuntimeTarget(platformKey = detectCodeServerRun
   return target;
 }
 
+export function resolveRequestedCodeServerRuntimeVersion(
+  platformKey = detectCodeServerRuntimePlatform(),
+  config = readCodeServerRuntimeConfig(),
+) {
+  const override = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION?.trim();
+  if (override) {
+    return override;
+  }
+
+  const perPlatform = config.releaseVersionByPlatform?.[platformKey];
+  if (typeof perPlatform === 'string' && perPlatform.trim().length > 0) {
+    return perPlatform.trim();
+  }
+
+  const globalVersion = config.releaseVersion;
+  if (typeof globalVersion === 'string' && globalVersion.trim().length > 0) {
+    return globalVersion.trim();
+  }
+
+  return null;
+}
+
+export function resolveConfiguredCodeServerReleaseUrls(
+  platformKey = detectCodeServerRuntimePlatform(),
+  config = readCodeServerRuntimeConfig(),
+) {
+  const envReleaseUrl = process.env.HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL?.trim();
+  if (envReleaseUrl) {
+    return [envReleaseUrl];
+  }
+
+  const perPlatform = Array.isArray(config.source?.releaseUrlsByPlatform?.[platformKey])
+    ? config.source.releaseUrlsByPlatform[platformKey]
+    : [];
+  if (perPlatform.length > 0) {
+    return perPlatform.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean);
+  }
+
+  return Array.isArray(config.source?.releaseUrls)
+    ? config.source.releaseUrls.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)
+    : [];
+}
+
 export function resolveCodeServerArtifactsDir(config = readCodeServerRuntimeConfig()) {
   const override = process.env.HAGICODE_CODE_SERVER_RUNTIME_ARTIFACTS_DIR?.trim();
   if (override) {
@@ -131,6 +174,10 @@ export function validateCodeServerRuntimePayload(
     }
     if (!metadata.version || typeof metadata.version !== 'string') {
       diagnostics.push('metadata version is missing');
+    }
+    const requestedVersion = resolveRequestedCodeServerRuntimeVersion(platformKey, config);
+    if (requestedVersion && metadata.version !== requestedVersion) {
+      diagnostics.push(`metadata version expected ${requestedVersion} but found ${metadata.version ?? 'missing'}`);
     }
     if (metadata.platform !== target.platform) {
       diagnostics.push(`metadata platform expected ${target.platform} but found ${metadata.platform ?? 'missing'}`);
