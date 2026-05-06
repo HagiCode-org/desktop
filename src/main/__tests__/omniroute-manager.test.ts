@@ -37,12 +37,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /INITIAL_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
-    assert.match(source, /resolveManagedCliLaunchSpec/);
-    assert.match(source, /node_modules', packageName, 'bin', `\$\{packageName\}\.mjs`/);
-    assert.match(source, /omniroute-shell-wrapper\.mjs/);
-    assert.match(source, /renderWindowsOmniRouteShellWrapper/);
-    assert.match(source, /execa\(executablePath, \['serve', '--no-open'\], \{/);
-    assert.match(source, /shell: true/);
+    assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
+    assert.match(source, /this\.pathManager\.getOmniRouteRuntimeRoot\(\)/);
+    assert.match(source, /this\.pathManager\.getEmbeddedNodeCommand\(\)/);
+    assert.match(source, /args: \[entryScriptPath, 'serve', '--no-open'\]/);
     assert.match(source, /interpreter: "none"/);
     assert.match(source, /'serve', '--no-open'/);
     assert.match(source, /autorestart: true/);
@@ -60,11 +58,9 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /injectManagedCliPathEnv/);
     assert.match(source, /buildPm2MajorHomePaths/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
-    assert.match(source, /getManagedCommandContext\('omniroute'\)/);
     assert.match(source, /buildManagedPm2CommandEnv/);
     assert.match(source, /await this\.buildManagedPm2CommandEnv\(pm2Context\.commandEnv, pm2Context\.environment\)/);
     assert.match(source, /packageId: 'pm2'/);
-    assert.match(source, /packageId: 'omniroute'/);
     assert.match(source, /if \(remediation\) \{\s*throw new Error\(remediation\.message\);/);
     assert.match(source, /status: \{ \.\.\.status, status: 'error', error: message, remediation: resolvedRemediation \}/);
     assert.match(source, /remediation: resolvedRemediation/);
@@ -88,7 +84,7 @@ describe('OmniRoute manager contract', () => {
   it('surfaces remediation metadata from passive status refresh without hiding process inspection', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /const remediation = buildOmniRouteDependencyRemediation\(\[/);
+    assert.match(source, /const remediation = buildOmniRouteDependencyRemediation\(\{/);
     assert.match(source, /error: remediation\?\.message/);
     assert.match(source, /remediation,/);
     assert.match(source, /processes: \[process\]/);

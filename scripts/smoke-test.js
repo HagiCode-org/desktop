@@ -30,6 +30,11 @@ import {
   readCodeServerRuntimeConfig,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
+import {
+  detectOmniRouteRuntimePlatform,
+  readOmniRouteRuntimeConfig,
+  validateOmniRouteRuntimePayload,
+} from './omniroute-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -51,6 +56,11 @@ const codeServerConfig = readCodeServerRuntimeConfig();
 const stagedCodeServerRoot = path.join(process.cwd(), 'resources', 'code-server', 'current');
 const packagedCodeServerCandidates = resolvePackagedCodeServerRoots();
 const packagedCodeServerRoot = resolveExistingPackagedRuntimeRoot(packagedCodeServerCandidates);
+const omniroutePlatform = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
+const omnirouteConfig = readOmniRouteRuntimeConfig();
+const stagedOmniRouteRoot = path.join(process.cwd(), 'resources', 'omniroute', 'current');
+const packagedOmniRouteCandidates = resolvePackagedOmniRouteRoots();
+const packagedOmniRouteRoot = resolveExistingPackagedRuntimeRoot(packagedOmniRouteCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
 const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
 
@@ -151,6 +161,29 @@ function resolvePackagedCodeServerRoots() {
       path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
       path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
       path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'code-server', 'current'),
+    ];
+  }
+  return [];
+}
+
+function resolvePackagedOmniRouteRoots() {
+  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_OMNIROUTE_ROOT?.trim();
+  if (override) {
+    return [path.resolve(process.cwd(), override)];
+  }
+
+  if (process.platform === 'win32') {
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'omniroute', 'current')];
+  }
+  if (process.platform === 'linux') {
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'omniroute', 'current')];
+  }
+  if (process.platform === 'darwin') {
+    return [
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'omniroute', 'current'),
     ];
   }
   return [];
@@ -295,6 +328,14 @@ function validateVendoredCodeServerRuntime(runtimeRoot) {
   const result = validateCodeServerRuntimePayload(runtimeRoot, {
     platformKey: codeServerPlatform,
     config: codeServerConfig,
+  });
+  return [...result.missingEntries, ...result.diagnostics];
+}
+
+function validateVendoredOmniRouteRuntime(runtimeRoot) {
+  const result = validateOmniRouteRuntimePayload(runtimeRoot, {
+    platformKey: omniroutePlatform,
+    config: omnirouteConfig,
   });
   return [...result.missingEntries, ...result.diagnostics];
 }
@@ -507,6 +548,10 @@ test('electron-builder configuration is valid', async () => {
   assert(toolchainCanonicalPath, 'bundled Node toolchain is staged at extra/toolchain');
   assert(Boolean(codeServerExtraResource), 'vendored code-server runtime is shipped via extraResources');
   assert(codeServerCanonicalPath, 'vendored code-server runtime is staged at extra/code-server/current');
+  const omnirouteExtraResource = extraResources.find((entry) => entry.from === 'resources/omniroute/current');
+  const omnirouteCanonicalPath = omnirouteExtraResource?.to === 'extra/omniroute/current';
+  assert(Boolean(omnirouteExtraResource), 'vendored OmniRoute runtime is shipped via extraResources');
+  assert(omnirouteCanonicalPath, 'vendored OmniRoute runtime is staged at extra/omniroute/current');
   assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
   assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
   assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
@@ -629,6 +674,27 @@ test('staged vendored code-server payload is complete', () => {
   );
 });
 
+test('staged vendored OmniRoute payload is complete', () => {
+  if (!requireRuntimePayload && !fs.existsSync(stagedOmniRouteRoot)) {
+    log('  - Skipping: staged vendored OmniRoute runtime not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(stagedOmniRouteRoot);
+  if (!assert(exists, `staged vendored OmniRoute runtime exists (${stagedOmniRouteRoot})`)) {
+    return;
+  }
+
+  const errors = validateVendoredOmniRouteRuntime(stagedOmniRouteRoot);
+  assert(
+    errors.length === 0,
+    errors.length === 0
+      ? 'staged vendored OmniRoute runtime matches the Desktop layout contract'
+      : `staged vendored OmniRoute runtime mismatch: ${errors.join('; ')}`,
+  );
+});
+
 test('packaged vendored code-server payload is complete', () => {
   if (!packagedCodeServerRoot) {
     log('  - Skipping: packaged vendored code-server checks are not defined for this platform', colors.yellow);
@@ -659,6 +725,39 @@ test('packaged vendored code-server payload is complete', () => {
     errors.length === 0
       ? 'packaged vendored code-server runtime matches the Desktop layout contract'
       : `packaged vendored code-server runtime mismatch: ${errors.join('; ')}`,
+  );
+});
+
+test('packaged vendored OmniRoute payload is complete', () => {
+  if (!packagedOmniRouteRoot) {
+    log('  - Skipping: packaged vendored OmniRoute checks are not defined for this platform', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  if (!requireRuntimePayload && !fs.existsSync(packagedOmniRouteRoot)) {
+    log('  - Skipping: packaged vendored OmniRoute runtime not required for this smoke-test run', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const exists = fs.existsSync(packagedOmniRouteRoot);
+  if (!assert(exists, `packaged vendored OmniRoute runtime exists (${packagedOmniRouteRoot})`)) {
+    if (packagedOmniRouteCandidates.length > 1) {
+      logVerbose(`checked packaged OmniRoute candidates: ${packagedOmniRouteCandidates.join(', ')}`);
+    }
+    return;
+  }
+
+  assert(!packagedOmniRouteRoot.includes('app.asar'), 'packaged vendored OmniRoute runtime resolves outside app.asar');
+  assert(packagedOmniRouteRoot.includes(path.join('extra', 'omniroute', 'current')), 'packaged vendored OmniRoute runtime uses canonical extra/omniroute/current path');
+
+  const errors = validateVendoredOmniRouteRuntime(packagedOmniRouteRoot);
+  assert(
+    errors.length === 0,
+    errors.length === 0
+      ? 'packaged vendored OmniRoute runtime matches the Desktop layout contract'
+      : `packaged vendored OmniRoute runtime mismatch: ${errors.join('; ')}`,
   );
 });
 

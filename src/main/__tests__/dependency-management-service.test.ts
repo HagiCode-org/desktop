@@ -214,7 +214,6 @@ describe('dependency management service contract', () => {
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'pm2'/);
-    assert.match(source, /id: 'omniroute'/);
     assert.match(source, /id: 'claude-code'/);
     assert.match(source, /id: 'codex'/);
     assert.match(source, /id: 'github-copilot'/);
@@ -233,7 +232,6 @@ describe('dependency management service contract', () => {
     assert.match(source, /packageName: 'pm2'/);
     assert.match(source, /binName: 'pm2'/);
     assert.match(source, /installSpec: 'pm2@7\.0\.1'/);
-    assert.match(source, /installSpec: 'omniroute@3\.6\.9'/);
     assert.match(source, /installSpec: '@anthropic-ai\/claude-code'/);
     assert.match(source, /installSpec: '@openai\/codex'/);
     assert.match(source, /installSpec: '@github\/copilot'/);

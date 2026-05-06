@@ -11,10 +11,24 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
+import {
+  detectCodeServerRuntimePlatform,
+  readCodeServerRuntimeConfig,
+  validateCodeServerRuntimePayload,
+} from './code-server-runtime-contract.js';
+import {
+  detectOmniRouteRuntimePlatform,
+  readOmniRouteRuntimeConfig,
+  validateOmniRouteRuntimePayload,
+} from './omniroute-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const archives = [];
 const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
+const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
+const codeServerConfig = readCodeServerRuntimeConfig();
+const omniroutePlatform = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
+const omnirouteConfig = readOmniRouteRuntimeConfig();
 
 function parseArgs() {
   for (let index = 0; index < args.length; index += 1) {
@@ -87,6 +101,10 @@ function suffixSegments(relativePath) {
 }
 
 function findToolchainRoots(rootPath) {
+  return findExtraRoots(rootPath, ['toolchain']);
+}
+
+function findExtraRoots(rootPath, suffixParts) {
   const matches = [];
   const stack = [rootPath];
 
@@ -102,7 +120,14 @@ function findToolchainRoots(rootPath) {
       const absolutePath = path.join(currentPath, entry.name);
       const relativePath = path.relative(rootPath, absolutePath);
       const parts = suffixSegments(relativePath);
-      if (parts.length >= 2 && parts.at(-2) === 'extra' && parts.at(-1) === 'toolchain') {
+      if (parts.length >= suffixParts.length + 1 && parts.at(-(suffixParts.length + 1)) === 'extra') {
+        const tail = parts.slice(-(suffixParts.length));
+        if (tail.every((value, index) => value === suffixParts[index])) {
+          matches.push(absolutePath);
+          continue;
+        }
+      }
+      if (parts.length >= suffixParts.length && suffixParts.length === 1 && parts.at(-1) === suffixParts[0]) {
         matches.push(absolutePath);
         continue;
       }
@@ -118,6 +143,26 @@ function describeToolchainRoots(rootPath) {
   return findToolchainRoots(rootPath)
     .map((candidate) => path.relative(rootPath, candidate) || '.')
     .join(', ');
+}
+
+function validateVendoredRuntimeRoots(archivePath, extractionRoot, options) {
+  const runtimeRoots = findExtraRoots(extractionRoot, options.suffixParts);
+  if (runtimeRoots.length === 0) {
+    throw new Error(`No packaged ${options.label} roots were found in ${archivePath}.`);
+  }
+
+  const failures = [];
+  for (const runtimeRoot of runtimeRoots) {
+    const errors = options.validate(runtimeRoot);
+    if (errors.length === 0) {
+      console.log(`[archive-verify] ${path.basename(archivePath)} -> ${path.relative(extractionRoot, runtimeRoot)} (${options.platform}) OK`);
+      return;
+    }
+
+    failures.push(`${path.relative(extractionRoot, runtimeRoot)}: ${errors.join('; ')}`);
+  }
+
+  throw new Error(`Archive ${archivePath} failed ${options.label} validation: ${failures.join(' | ')}`);
 }
 
 function validateExtractedToolchain(archivePath, extractionRoot, options = {}) {
@@ -157,11 +202,47 @@ function extractZip(archivePath, destinationRoot) {
   const archive = new AdmZip(archivePath);
   archive.extractAllTo(destinationRoot, true);
   validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: true });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'vendored code-server runtime',
+    suffixParts: ['code-server', 'current'],
+    platform: codeServerPlatform,
+    validate: (runtimeRoot) => {
+      const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
+      return [...result.missingEntries, ...result.diagnostics];
+    },
+  });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'vendored OmniRoute runtime',
+    suffixParts: ['omniroute', 'current'],
+    platform: omniroutePlatform,
+    validate: (runtimeRoot) => {
+      const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });
+      return [...result.missingEntries, ...result.diagnostics];
+    },
+  });
 }
 
 function extractTarGz(archivePath, destinationRoot) {
   execFileSync('tar', ['-xzf', archivePath, '-C', destinationRoot], { stdio: 'inherit' });
   validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: false });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'vendored code-server runtime',
+    suffixParts: ['code-server', 'current'],
+    platform: codeServerPlatform,
+    validate: (runtimeRoot) => {
+      const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
+      return [...result.missingEntries, ...result.diagnostics];
+    },
+  });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'vendored OmniRoute runtime',
+    suffixParts: ['omniroute', 'current'],
+    platform: omniroutePlatform,
+    validate: (runtimeRoot) => {
+      const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });
+      return [...result.missingEntries, ...result.diagnostics];
+    },
+  });
 }
 
 function verifyArchive(archivePath) {
