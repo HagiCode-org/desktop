@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 function parseVersion(raw) {
   const match = String(raw).match(/(\d+)\.(\d+)\.(\d+)/);
@@ -15,13 +17,54 @@ function compareVersions(left, right) {
   return 0;
 }
 
-export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.7') {
-  const result = spawnSync('hagiscript', ['--version'], {
+function runHagiscriptVersion(command) {
+  return spawnSync(command, ['--version'], {
     cwd: process.cwd(),
     env: process.env,
     encoding: 'utf8',
     shell: false,
   });
+}
+
+function resolveFallbackHagiscriptCommand() {
+  const prefixResult = spawnSync('npm', ['config', 'get', 'prefix'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+    shell: false,
+  });
+
+  if (prefixResult.error || (prefixResult.status ?? 1) !== 0) {
+    return null;
+  }
+
+  const prefix = String(prefixResult.stdout ?? '').trim();
+  if (!prefix) {
+    return null;
+  }
+
+  const candidates = process.platform === 'win32'
+    ? [
+        path.join(prefix, 'hagiscript.cmd'),
+        path.join(prefix, 'hagiscript.exe'),
+        path.join(prefix, 'hagiscript'),
+      ]
+    : [
+        path.join(prefix, 'bin', 'hagiscript'),
+        path.join(prefix, 'hagiscript'),
+      ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.7') {
+  let result = runHagiscriptVersion('hagiscript');
+  if (result.error?.code === 'ENOENT') {
+    const fallbackCommand = resolveFallbackHagiscriptCommand();
+    if (fallbackCommand) {
+      result = runHagiscriptVersion(fallbackCommand);
+    }
+  }
 
   if (result.error) {
     throw new Error(`Global hagiscript prerequisite is missing: ${result.error.message}`);
