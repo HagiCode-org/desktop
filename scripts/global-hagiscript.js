@@ -18,11 +18,13 @@ function compareVersions(left, right) {
 }
 
 function runHagiscriptVersion(command) {
+  const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+
   return spawnSync(command, ['--version'], {
     cwd: process.cwd(),
     env: process.env,
     encoding: 'utf8',
-    shell: false,
+    shell: useShell,
   });
 }
 
