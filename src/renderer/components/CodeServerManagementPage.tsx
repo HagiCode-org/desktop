@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, Play, RefreshCw, RotateCcw, Save, Square } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type {
   CodeServerBridge,
@@ -323,10 +323,6 @@ export default function CodeServerManagementPage() {
                 <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlocked}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   {operation === 'restart' ? t('codeServer.actions.working') : t('codeServer.actions.restart')}
-                </Button>
-                <Button variant="outline" onClick={() => void runLifecycle('repair')} disabled={isBusy}>
-                  <Wrench className="mr-2 h-4 w-4" />
-                  {operation === 'repair' ? t('codeServer.actions.working') : t('codeServer.actions.repair')}
                 </Button>
                 {status?.config.baseUrl ? (
                   <>

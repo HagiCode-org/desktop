@@ -42,6 +42,7 @@ describe('Code Server renderer wiring', () => {
     assert.match(source, /getBridge\(\)\.readLog\(\{ target, maxLines: 200 \}\)/);
     assert.match(source, /codeServer\.config\.passwordLabel/);
     assert.match(source, /codeServer\.logs\.empty/);
+    assert.equal(source.includes("codeServer.actions.repair"), false);
   });
 
   it('adds zh-CN and en-US localization keys', async () => {
