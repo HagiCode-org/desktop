@@ -181,6 +181,15 @@ async function executeCommand(command, args, options = {}) {
     return { stdout: result.stdout || '', stderr: result.stderr || '', code: result.exitCode };
   }
 
+  const stdout = `${result.stdout || ''}`.trim();
+  const stderr = `${result.stderr || ''}`.trim();
+  if (stdout) {
+    logCI(`Command stdout:\n${stdout}`, 'notice');
+  }
+  if (stderr) {
+    logCI(`Command stderr:\n${stderr}`, 'error');
+  }
+
   throw new Error(`Command failed with exit code ${result.exitCode}`);
 }
 

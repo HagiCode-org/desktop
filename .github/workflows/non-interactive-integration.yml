@@ -13,6 +13,7 @@ permissions:
 
 env:
   NODE_VERSION: "22"
+  HAGISCRIPT_VERSION: "0.1.7"
 
 jobs:
   integration-linux:
@@ -31,6 +32,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: package-lock.json
+
+      - name: Install global hagiscript
+        shell: bash
+        run: |
+          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          hagiscript --version
 
       - name: Install dependencies
         run: npm ci
@@ -65,6 +72,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      - name: Install global hagiscript
+        shell: bash
+        run: |
+          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          hagiscript --version
+
       - name: Install dependencies
         run: npm ci
 
@@ -97,6 +110,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: package-lock.json
+
+      - name: Install global hagiscript
+        shell: bash
+        run: |
+          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          hagiscript --version
 
       - name: Install dependencies
         run: npm ci
