@@ -21,7 +21,7 @@ import { switchView } from '@/store/slices/viewSlice';
 import type { AppDispatch } from '@/store';
 
 type PageState = 'loading' | 'ready' | 'error';
-type Operation = 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-config' | 'load-log' | 'open-window' | null;
+type Operation = 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-config' | 'load-log' | 'open-window' | 'open-browser' | null;
 
 const LOG_TARGETS: CodeServerLogTarget[] = ['service-out', 'service-error'];
 const PATH_TARGETS: CodeServerPathTarget[] = ['runtime-root', 'data', 'extensions', 'logs'];
@@ -179,9 +179,28 @@ export default function CodeServerManagementPage() {
     setOperation('open-window');
     setErrorMessage(null);
     try {
-      const result = await window.electronAPI.openCodeServerWindow(status.config.baseUrl);
+      const result = await window.electronAPI.openCodeServerWindow(status.config.baseUrl, status.config.password);
       if (!result.success) {
         setErrorMessage(result.error || result.diagnosticsSummary || t('codeServer.errors.openWindowFailed'));
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOperation(null);
+    }
+  };
+
+  const openBrowserWindow = async () => {
+    if (!status?.config.baseUrl) {
+      return;
+    }
+
+    setOperation('open-browser');
+    setErrorMessage(null);
+    try {
+      const result = await window.electronAPI.openCodeServerExternal(status.config.baseUrl, status.config.password);
+      if (!result.success) {
+        setErrorMessage(result.error ?? t('codeServer.errors.openWindowFailed'));
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
@@ -271,7 +290,7 @@ export default function CodeServerManagementPage() {
                 {status ? <Badge variant={statusBadgeVariant(status.status)}>{t(`codeServer.status.${status.status}`)}</Badge> : null}
               </div>
             </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-[1fr_auto]">
+            <CardContent>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t('codeServer.status.baseUrl')}</p>
@@ -290,7 +309,9 @@ export default function CodeServerManagementPage() {
                   <p className="mt-2 text-sm">{t('codeServer.status.passwordModeValue')}</p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-start gap-2 md:justify-end">
+            </CardContent>
+            <CardContent className="pt-0">
+              <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
                 <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlocked}>
                   <Play className="mr-2 h-4 w-4" />
                   {operation === 'start' ? t('codeServer.actions.working') : t('codeServer.actions.start')}
@@ -313,7 +334,7 @@ export default function CodeServerManagementPage() {
                       <Monitor className="mr-2 h-4 w-4" />
                       {t('codeServer.actions.openDesktop')}
                     </Button>
-                    <Button variant="secondary" onClick={() => void window.electronAPI.openExternal(status.config.baseUrl)} disabled={isBusy}>
+                    <Button variant="secondary" onClick={() => void openBrowserWindow()} disabled={isBusy}>
                       <ExternalLink className="mr-2 h-4 w-4" />
                       {t('codeServer.actions.openBrowser')}
                     </Button>

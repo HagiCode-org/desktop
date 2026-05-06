@@ -6,6 +6,7 @@ import {
   CODE_SERVER_WINDOW_PROTOCOLS,
   HAGICODE_CACHE_BYPASS_PARAM,
   openAboutWindow,
+  openCodeServerExternal,
   openCodeServerWindow,
   openHagicodeInAppWindow,
   type HagicodeWindowLike,
@@ -359,6 +360,25 @@ describe('hagicode URL helpers', () => {
     });
   });
 
+  it('wraps authenticated Code Server windows in an auto-login launcher page', async () => {
+    const mockWindow = createMockWindow();
+
+    const result = await openCodeServerWindow({
+      url: 'https://code.example.test/?folder=/workspace/project-1',
+      password: 'desktop-pass-123',
+      logScope: 'Test',
+      createWindow: () => mockWindow.window,
+    });
+
+    assert.equal(result.success, true);
+    const loadedUrl = mockWindow.getLoadedUrl();
+    assert.ok(loadedUrl?.startsWith('data:text/html;charset=utf-8,'));
+    assert.ok(loadedUrl);
+    const launcherHtml = decodeURIComponent(loadedUrl.slice('data:text/html;charset=utf-8,'.length));
+    assert.match(launcherHtml, /desktop-pass-123/);
+    assert.match(launcherHtml, /https:\/\/code\.example\.test\/login\?to=%2F%3Ffolder%3D%2Fworkspace%2Fproject-1/);
+  });
+
   it('reports render-failed when the managed Code Server window stays blank past the probe timeout', async () => {
     const result = await openCodeServerWindow({
       url: 'https://code.example.test/?folder=/workspace/project-1&tkn=token-123',
@@ -413,6 +433,29 @@ describe('hagicode URL helpers', () => {
     ]);
     assert.match(result.diagnosticsSummary, /console error: app\.js:42 Failed to load module chunk workbench\.js/);
     assert.match(result.diagnosticsSummary, /renderer exit: crashed \(101\)/);
+  });
+
+  it('opens the default browser through an auto-login launcher file when a password is provided', async () => {
+    let writtenHtml = '';
+    let openedUrl = '';
+
+    const result = await openCodeServerExternal({
+      url: 'http://127.0.0.1:37667/?folder=/workspace/demo',
+      password: 'browser-pass-123',
+      logScope: 'Test',
+      writeLauncherFile: async (contents) => {
+        writtenHtml = contents;
+        return '/tmp/code-server-auto-login.html';
+      },
+      openExternal: async (url) => {
+        openedUrl = url;
+      },
+    });
+
+    assert.deepEqual(result, { success: true });
+    assert.equal(openedUrl, 'file:///tmp/code-server-auto-login.html');
+    assert.match(writtenHtml, /browser-pass-123/);
+    assert.match(writtenHtml, /http:\/\/127\.0\.0\.1:37667\/login\?to=%2F%3Ffolder%3D%2Fworkspace%2Fdemo/);
   });
 
   it('creates the About popup, persists the device marker after show, and clears the ref on close', async () => {

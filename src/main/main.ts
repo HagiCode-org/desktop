@@ -36,6 +36,7 @@ import {
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import {
   openAboutWindow,
+  openCodeServerExternal,
   openCodeServerWindow,
   openHagicodeInAppWindow,
   WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY,
@@ -730,6 +731,14 @@ ipcMain.handle('show-window', () => {
   activateMainWindow('ipc-show-window');
 });
 
+async function writeCodeServerLauncherFile(contents: string): Promise<string> {
+  const launcherDirectory = path.join(app.getPath('userData'), '.generated', 'code-server');
+  const launcherPath = path.join(launcherDirectory, 'auto-login.html');
+  await fs.mkdir(launcherDirectory, { recursive: true });
+  await fs.writeFile(launcherPath, contents, { encoding: 'utf8', mode: 0o600 });
+  return launcherPath;
+}
+
 ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   return await openHagicodeInAppWindow({
     url,
@@ -738,11 +747,24 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   });
 });
 
-ipcMain.handle('open-code-server-window', async (_, url: string) => {
+ipcMain.handle('open-code-server-window', async (_, url: string, password?: string) => {
   return await openCodeServerWindow({
     url,
+    password,
     logScope: 'Main',
     createWindow: createCodeServerWindow,
+  });
+});
+
+ipcMain.handle('open-code-server-external', async (_, url: string, password?: string) => {
+  return await openCodeServerExternal({
+    url,
+    password,
+    logScope: 'Main',
+    writeLauncherFile: writeCodeServerLauncherFile,
+    openExternal: async (targetUrl) => {
+      await shell.openExternal(targetUrl, { activate: true });
+    },
   });
 });
 

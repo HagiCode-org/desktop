@@ -237,7 +237,8 @@ interface ElectronAPI {
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
   // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
-  openCodeServerWindow: (url: string) => Promise<CodeServerWindowOpenResult>;
+  openCodeServerWindow: (url: string, password?: string) => Promise<CodeServerWindowOpenResult>;
+  openCodeServerExternal: (url: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
   languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
@@ -447,7 +448,8 @@ const electronAPI: ElectronAPI = {
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
-  openCodeServerWindow: (url: string) => ipcRenderer.invoke('open-code-server-window', url),
+  openCodeServerWindow: (url: string, password?: string) => ipcRenderer.invoke('open-code-server-window', url, password),
+  openCodeServerExternal: (url: string, password?: string) => ipcRenderer.invoke('open-code-server-external', url, password),
   openAboutWindow: (url: string) => ipcRenderer.invoke('open-about-window', url),
   languageChanged: (language: string) => ipcRenderer.invoke('language-changed', language),
   onServerStatusChange: (callback) => {

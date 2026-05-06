@@ -85,10 +85,19 @@ export interface OpenHagicodeInAppWindowOptions {
 
 export interface OpenCodeServerWindowOptions {
   url: string;
+  password?: string;
   logScope: string;
   createWindow: () => HagicodeWindowLike;
   renderProbeTimeoutMs?: number;
   renderProbeIntervalMs?: number;
+}
+
+export interface OpenCodeServerExternalOptions {
+  url: string;
+  password?: string;
+  logScope: string;
+  openExternal: (url: string) => Promise<void>;
+  writeLauncherFile: (contents: string) => Promise<string>;
 }
 
 export interface OpenAboutWindowOptions {
@@ -117,6 +126,13 @@ type CodeServerRenderProbeSnapshot = {
   textLength: number;
   visibleNodeCount: number;
   title: string;
+};
+
+type CodeServerAutoLoginPayload = {
+  loginUrl: string;
+  destinationUrl: string;
+  basePath: string;
+  password: string;
 };
 
 const CODE_SERVER_RENDER_PROBE_SCRIPT = `(() => {
@@ -222,6 +238,70 @@ function buildCodeServerDiagnosticsSummary(
   }
 
   return segments.join(' | ');
+}
+
+function buildCodeServerAutoLoginPayload(rawUrl: string, password: string): CodeServerAutoLoginPayload {
+  const destinationUrl = new URL(rawUrl);
+  const normalizedPassword = password.trim();
+  if (!normalizedPassword) {
+    throw new Error('Code Server password is required to open an authenticated session.');
+  }
+
+  const basePath = destinationUrl.pathname.endsWith('/') ? destinationUrl.pathname : `${destinationUrl.pathname}/`;
+  const loginPath = basePath === '/' ? '/login' : `${basePath}login`;
+  const loginUrl = new URL(loginPath, destinationUrl.origin).toString();
+  const redirectTarget = `${destinationUrl.pathname}${destinationUrl.search}${destinationUrl.hash}` || '/';
+
+  return {
+    loginUrl: `${loginUrl}?to=${encodeURIComponent(redirectTarget)}`,
+    destinationUrl: destinationUrl.toString(),
+    basePath,
+    password: normalizedPassword,
+  };
+}
+
+function buildCodeServerAutoLoginHtml(rawUrl: string, password: string): string {
+  const payload = JSON.stringify(buildCodeServerAutoLoginPayload(rawUrl, password)).replace(/</g, '\\u003c');
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Opening Code Server...</title>
+  </head>
+  <body>
+    <form id="code-server-login" method="post">
+      <input id="base" type="hidden" name="base" />
+      <input id="href" type="hidden" name="href" />
+      <input id="password" type="hidden" name="password" />
+      <noscript>
+        <p>JavaScript is required to open the managed Code Server session automatically.</p>
+        <button type="submit">Continue</button>
+      </noscript>
+    </form>
+    <script>
+      const payload = ${payload};
+      const form = document.getElementById('code-server-login');
+      const baseInput = document.getElementById('base');
+      const hrefInput = document.getElementById('href');
+      const passwordInput = document.getElementById('password');
+      form.action = payload.loginUrl;
+      baseInput.value = payload.basePath;
+      hrefInput.value = payload.destinationUrl;
+      passwordInput.value = payload.password;
+      form.submit();
+    </script>
+  </body>
+</html>`;
+}
+
+function buildCodeServerAutoLoginDataUrl(rawUrl: string, password: string): string {
+  return `data:text/html;charset=utf-8,${encodeURIComponent(buildCodeServerAutoLoginHtml(rawUrl, password))}`;
+}
+
+function buildCodeServerLauncherFileUrl(launcherPath: string): string {
+  return pathToFileURL(path.resolve(launcherPath)).toString();
 }
 
 function buildCodeServerFailureResult(
@@ -364,6 +444,7 @@ export async function openHagicodeInAppWindow({
 
 export async function openCodeServerWindow({
   url,
+  password,
   logScope,
   createWindow,
   renderProbeTimeoutMs = CODE_SERVER_RENDER_PROBE_TIMEOUT_MS,
@@ -392,6 +473,7 @@ export async function openCodeServerWindow({
   }
 
   const loadUrl = validation.loadUrl;
+  const launcherUrl = password ? buildCodeServerAutoLoginDataUrl(loadUrl, password) : loadUrl;
   const diagnostics: CodeServerWindowDiagnostics = {
     lastUrl: loadUrl,
     lastConsoleErrors: [],
@@ -558,7 +640,7 @@ export async function openCodeServerWindow({
       managedWindow.webContents.on('console-message', handleConsoleMessage);
       managedWindow.webContents.on('render-process-gone', handleRenderProcessGone);
 
-      void managedWindow.loadURL(loadUrl).catch((error) => {
+      void managedWindow.loadURL(launcherUrl).catch((error) => {
         const message = error instanceof Error ? error.message : 'Failed to open Code Server';
         settleFailure('load-url', message);
       });
@@ -568,6 +650,37 @@ export async function openCodeServerWindow({
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to open Code Server';
     return buildCodeServerFailureResult(logScope, loadUrl, diagnostics, 'load-url', message, true);
+  }
+}
+
+export async function openCodeServerExternal({
+  url,
+  password,
+  logScope,
+  openExternal,
+  writeLauncherFile,
+}: OpenCodeServerExternalOptions): Promise<ManagedWindowOpenResult> {
+  const actionName = 'open-code-server-external';
+  const validation = validateManagedWindowUrl(actionName, url, CODE_SERVER_WINDOW_PROTOCOLS);
+  if (!validation.success || !validation.loadUrl) {
+    console.error(`[${logScope}] ${validation.error}`);
+    return validation;
+  }
+
+  try {
+    const launcherUrl = password
+      ? buildCodeServerLauncherFileUrl(await writeLauncherFile(buildCodeServerAutoLoginHtml(validation.loadUrl, password)))
+      : validation.loadUrl;
+
+    await openExternal(launcherUrl);
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to open Code Server in the browser.';
+    console.error(`[${logScope}] Failed to open external Code Server URL:`, error);
+    return {
+      success: false,
+      error: message,
+    };
   }
 }
 
@@ -642,3 +755,5 @@ export async function openAboutWindow({
     };
   }
 }
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
