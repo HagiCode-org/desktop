@@ -1,4 +1,7 @@
-import type { ManagedNpmPackageId } from './dependency-management.js';
+import type {
+  ManagedNpmPackageId,
+  VendoredRuntimeId,
+} from './dependency-management.js';
 
 export const OMNIROUTE_DEFAULT_PORT = 36988;
 export const OMNIROUTE_PROCESS_NAME = 'desktop-omniroute-service';
@@ -8,12 +11,20 @@ export type OmniRouteOverallStatus = 'running' | 'stopped' | 'partial' | 'error'
 export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type OmniRouteLogTarget = 'service-out' | 'service-error';
 export type OmniRoutePathTarget = 'config' | 'data' | 'logs';
-export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'pm2' | 'omniroute'>;
-export type OmniRouteDependencyFailureKind = 'dependency-missing' | 'dependency-unknown' | 'dependency-version-mismatch';
+export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'pm2'>;
+export type OmniRouteDependencyRuntimeId = Extract<VendoredRuntimeId, 'omniroute'>;
+export type OmniRouteDependencyFailureKind =
+  | 'runtime-missing'
+  | 'runtime-damaged'
+  | 'runtime-and-package'
+  | 'dependency-missing'
+  | 'dependency-unknown'
+  | 'dependency-version-mismatch';
 
 export interface OmniRouteDependencyRemediation {
   kind: 'dependency';
   failureKind: OmniRouteDependencyFailureKind;
+  targetRuntimeIds: OmniRouteDependencyRuntimeId[];
   targetPackageIds: OmniRouteDependencyPackageId[];
   recommendedAction: 'open-dependency-management';
   message: string;

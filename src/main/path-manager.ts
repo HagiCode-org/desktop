@@ -27,6 +27,7 @@ import {
 } from './portable-runtime-layout.js';
 import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
 import { getCodeServerRuntimeConfigPath as resolveCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
+import { getOmniRouteRuntimeConfigPath as resolveOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
@@ -339,6 +340,7 @@ export class PathManager {
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
   private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
   private static readonly CODE_SERVER_ROOT_SEGMENTS = ['extra', 'code-server', 'current'] as const;
+  private static readonly OMNIROUTE_ROOT_SEGMENTS = ['extra', 'omniroute', 'current'] as const;
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -722,6 +724,23 @@ export class PathManager {
 
   getCodeServerRuntimeConfigPath(): string {
     return resolveCodeServerRuntimeConfigPath();
+  }
+
+  getOmniRouteRuntimeRoot(): string {
+    const overrideRoot = process.env.HAGICODE_OMNIROUTE_RUNTIME_ROOT?.trim();
+    if (overrideRoot) {
+      return path.resolve(overrideRoot);
+    }
+
+    if (!app.isPackaged) {
+      return path.resolve(process.cwd(), 'resources', 'omniroute', 'current');
+    }
+
+    return path.join(process.resourcesPath, ...PathManager.OMNIROUTE_ROOT_SEGMENTS);
+  }
+
+  getOmniRouteRuntimeConfigPath(): string {
+    return resolveOmniRouteRuntimeConfigPath();
   }
 
   getPortableNodeRoot(): string {
