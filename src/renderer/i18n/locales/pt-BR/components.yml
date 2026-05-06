@@ -270,6 +270,8 @@ tray:
   stopService: Parar serviço
 blogFeed:
   title: HagicodeBlog
+  openRss: Abrir RSS
+  openRssFailed: Não foi possível abrir o link RSS
   refresh: Atualizar
   loading: Carregando...
   error: Falha ao carregar, tente novamente mais tarde

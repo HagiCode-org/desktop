@@ -542,11 +542,11 @@
           "description": "如果目前還沒有安裝任何版本，可以從這裡啟動精靈，完成首次下載、依賴安裝與服務啟動。"
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "切換到亮色模式",
-      "switchToDark": "切換到暗色模式"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "切換到亮色模式",
+    "switchToDark": "切換到暗色模式"
   },
   "omniroute": {
     "title": "OmniRoute",

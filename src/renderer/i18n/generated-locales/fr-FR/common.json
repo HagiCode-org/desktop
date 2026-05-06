@@ -542,11 +542,11 @@
           "description": "Lorsqu'aucun package n'est encore installé, utilisez cet appel à l'action pour lancer l'assistant de configuration et terminer la première installation du runtime."
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "Passer en mode lumière",
-      "switchToDark": "Passer en mode sombre"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "Passer en mode lumière",
+    "switchToDark": "Passer en mode sombre"
   },
   "omniroute": {
     "title": "OmniRoute",

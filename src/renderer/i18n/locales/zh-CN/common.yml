@@ -487,9 +487,9 @@ system:
       noVersionInstalled:
         title: 先安装第一个版本
         description: 如果当前还没有安装任何版本，可以从这里启动向导，完成首次下载、依赖安装与服务启动。
-  themeToggle:
-    switchToLight: 切换到亮色模式
-    switchToDark: 切换到暗色模式
+themeToggle:
+  switchToLight: 切换到亮色模式
+  switchToDark: 切换到暗色模式
 omniroute:
   title: OmniRoute
   description: 通过 PM2 管理 Desktop 托管的 OmniRoute 服务，包括启停、运行路径、端口配置和近期日志。

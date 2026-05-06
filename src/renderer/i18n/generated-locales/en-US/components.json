@@ -315,6 +315,8 @@
   },
   "blogFeed": {
     "title": "Hagicode Blog",
+    "openRss": "Open RSS",
+    "openRssFailed": "Failed to open RSS link",
     "refresh": "Refresh",
     "loading": "Loading...",
     "error": "Failed to load, please try again later",

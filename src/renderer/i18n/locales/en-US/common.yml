@@ -487,9 +487,9 @@ system:
       noVersionInstalled:
         title: Install your first version
         description: When no package is installed yet, use this call to action to launch the setup wizard and complete the first runtime install.
-  themeToggle:
-    switchToLight: Switch to light mode
-    switchToDark: Switch to dark mode
+themeToggle:
+  switchToLight: Switch to light mode
+  switchToDark: Switch to dark mode
 omniroute:
   title: OmniRoute
   description: Manage the Desktop-owned OmniRoute service through PM2, including lifecycle controls, runtime paths, port configuration, and recent logs.

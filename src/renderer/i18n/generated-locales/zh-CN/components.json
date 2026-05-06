@@ -315,6 +315,8 @@
   },
   "blogFeed": {
     "title": "Hagicode 博客",
+    "openRss": "打开 RSS",
+    "openRssFailed": "无法打开 RSS 链接",
     "refresh": "刷新",
     "loading": "加载中...",
     "error": "加载失败，请稍后重试",

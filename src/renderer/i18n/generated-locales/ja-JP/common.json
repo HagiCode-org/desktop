@@ -542,11 +542,11 @@
           "description": "パッケージがまだインストールされていない場合は、このアクション呼び出しを使用してセットアップ ウィザードを起動し、最初のランタイム インストールを完了します。"
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "ライトモードに切り替える",
-      "switchToDark": "ダークモードに切り替える"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "ライトモードに切り替える",
+    "switchToDark": "ダークモードに切り替える"
   },
   "omniroute": {
     "title": "OmniRoute",

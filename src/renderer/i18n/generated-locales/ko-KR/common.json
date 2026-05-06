@@ -542,11 +542,11 @@
           "description": "아직 패키지가 설치되지 않은 경우 이 클릭 유도 문구를 사용하여 설정 마법사를 시작하고 첫 번째 런타임 설치를 완료하세요."
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "조명 모드로 전환",
-      "switchToDark": "어두운 모드로 전환"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "조명 모드로 전환",
+    "switchToDark": "어두운 모드로 전환"
   },
   "omniroute": {
     "title": "OmniRoute",

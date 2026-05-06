@@ -270,6 +270,8 @@ tray:
   stopService: 停止服務
 blogFeed:
   title: Hagicode 博客
+  openRss: 開啟 RSS
+  openRssFailed: 無法開啟 RSS 連結
   refresh: 重新整理
   loading: 加載中...
   error: 載入失敗，請稍後重試

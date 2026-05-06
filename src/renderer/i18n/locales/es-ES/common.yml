@@ -447,9 +447,9 @@ system:
       noVersionInstalled:
         title: Instala tu primera versión
         description: Cuando aún no haya ningún paquete instalado, utilice esta llamada a la acción para iniciar el asistente de instalación y completar la primera instalación en tiempo de ejecución.
-  themeToggle:
-    switchToLight: Cambiar al modo de luz
-    switchToDark: Cambiar al modo oscuro
+themeToggle:
+  switchToLight: Cambiar al modo de luz
+  switchToDark: Cambiar al modo oscuro
 omniroute:
   title: OmniRoute
   description: Administre el servicio OmniRoute propiedad del escritorio a través de PM2, incluidos controles del ciclo de vida, rutas de ejecución, configuración de puertos y registros recientes.

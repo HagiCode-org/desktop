@@ -542,11 +542,11 @@
           "description": "Quando nenhum pacote estiver instalado ainda, use esta chamada para ação para iniciar o assistente de configuração e concluir a primeira instalação em tempo de execução."
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "Mudar para o modo claro",
-      "switchToDark": "Mudar para o modo escuro"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "Mudar para o modo claro",
+    "switchToDark": "Mudar para o modo escuro"
   },
   "omniroute": {
     "title": "OmniRoute",

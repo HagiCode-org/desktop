@@ -542,11 +542,11 @@
           "description": "Wenn noch kein Paket installiert ist, verwenden Sie diesen Call-to-Action, um den Setup-Assistenten zu starten und die erste Laufzeitinstallation abzuschließen."
         }
       }
-    },
-    "themeToggle": {
-      "switchToLight": "Wechseln Sie in den Lichtmodus",
-      "switchToDark": "Wechseln Sie in den Dunkelmodus"
     }
+  },
+  "themeToggle": {
+    "switchToLight": "Wechseln Sie in den Lichtmodus",
+    "switchToDark": "Wechseln Sie in den Dunkelmodus"
   },
   "omniroute": {
     "title": "OmniRoute",
