@@ -37,6 +37,11 @@ export interface BuildManagedEnvInput {
   steamIntegrationSource?: SteamManagedEnvSource;
   steamAchievementSyncEnabled?: boolean;
   steamAchievementSyncSource?: SteamManagedEnvSource;
+  codeServer?: {
+    host: string;
+    port: number;
+    password: string;
+  } | null;
   systemVaultEnvEntries?: Record<string, string> | null;
   yamlConfig?: Record<string, unknown> | null;
   existingEnv?: Record<string, string | undefined>;
@@ -109,6 +114,48 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     key: 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED',
     sourceConfig: 'Steam Mod hagicode.env achievement sync option',
     required: true,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__Host',
+    sourceConfig: 'desktop-managed code-server host',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__Port',
+    sourceConfig: 'desktop-managed code-server port',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__AuthMode',
+    sourceConfig: 'desktop-managed code-server auth mode',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__Secret',
+    sourceConfig: 'desktop-managed code-server password',
+    required: false,
+    sensitive: true,
+  },
+  {
+    key: 'VsCodeServer__SecretSource',
+    sourceConfig: 'desktop-managed code-server secret source',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__Source',
+    sourceConfig: 'desktop-managed code-server source',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'VsCodeServer__SourceLocked',
+    sourceConfig: 'desktop-managed code-server source lock',
+    required: false,
     sensitive: false,
   },
 ] as const;
@@ -262,6 +309,10 @@ function resolveValue(
     return resolveManagedDesktopLanguageEnv(input, existingEnv);
   }
 
+  if (definition.key.startsWith('VsCodeServer__')) {
+    return resolveManagedCodeServerEnv(definition.key, input.codeServer);
+  }
+
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
     return normalizeResolvedValue(definition, existingValue, 'existing-env');
@@ -281,6 +332,44 @@ function resolveValue(
 
 function boolEnvValue(value: boolean | undefined): string {
   return value === true ? 'true' : 'false';
+}
+
+function resolveManagedCodeServerEnv(
+  key: string,
+  codeServer: BuildManagedEnvInput['codeServer'],
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  if (!codeServer) {
+    return { source: 'default' };
+  }
+
+  const host = sanitizeString(codeServer.host);
+  const password = sanitizeString(codeServer.password);
+  const port = Number.isInteger(codeServer.port) && codeServer.port > 0
+    ? String(codeServer.port)
+    : undefined;
+
+  return {
+    value: key === 'VsCodeServer__Host'
+      ? host
+      : key === 'VsCodeServer__Port'
+        ? port
+        : key === 'VsCodeServer__AuthMode'
+          ? password
+            ? 'password'
+            : undefined
+          : key === 'VsCodeServer__Secret'
+            ? password
+            : key === 'VsCodeServer__SecretSource'
+              ? password
+                ? 'bootstrap'
+                : undefined
+              : key === 'VsCodeServer__Source'
+                ? 'desktop-managed'
+                : key === 'VsCodeServer__SourceLocked'
+                  ? 'true'
+                  : undefined,
+    source: 'runtime',
+  };
 }
 
 function resolveManagedDesktopLanguageEnv(
