@@ -7,6 +7,7 @@ import type {
   DependencyReadinessPackageSummary,
   DependencyReadinessSummary,
 } from '../types/dependency-management.js';
+import { isVendoredRuntimeId } from './vendored-runtimes.js';
 
 export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
   {
@@ -170,6 +171,10 @@ export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition |
 
 export function isManagedNpmPackageId(id: string): id is ManagedNpmPackageId {
   return findManagedNpmPackage(id) !== null;
+}
+
+export function isVendoredRuntimeMutationId(id: string): boolean {
+  return isVendoredRuntimeId(id);
 }
 
 export function findManagedPackageStatus(

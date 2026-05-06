@@ -17,6 +17,11 @@ describe('dependency management preload contract', () => {
     assert.match(source, /install: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.install, packageId\)/);
     assert.match(source, /uninstall: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.uninstall, packageId\)/);
     assert.match(source, /syncPackages: \(request: DependencyManagementBatchSyncRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.syncPackages, request\)/);
+    assert.match(source, /startVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.startVendoredRuntime, runtimeId\)/);
+    assert.match(source, /stopVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.stopVendoredRuntime, runtimeId\)/);
+    assert.match(source, /restartVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.restartVendoredRuntime, runtimeId\)/);
+    assert.match(source, /repairVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.repairVendoredRuntime, runtimeId\)/);
+    assert.match(source, /openVendoredRuntimePath: \(runtimeId: VendoredRuntimeId, target: 'logs' \| 'runtime-root'\) => ipcRenderer\.invoke\(dependencyManagementChannels\.openVendoredRuntimePath, runtimeId, target\)/);
     assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.progress, listener\)/);
     assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.progress, listener\)/);
   });

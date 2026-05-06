@@ -14,6 +14,7 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import DependencyManagementService from './dependency-management-service.js';
+import { CodeServerManager } from './code-server-manager.js';
 import OmniRouteManager from './omniroute-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
@@ -279,6 +280,7 @@ let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
+let codeServerManager: CodeServerManager | null = null;
 let omniRouteManager: OmniRouteManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
@@ -2391,8 +2393,14 @@ app.whenReady().then(async () => {
   }
 
   dependencyManagementService = new DependencyManagementService();
+  codeServerManager = new CodeServerManager({
+    dependencyManagementService,
+    pathManager: pathManager ?? PathManager.getInstance(),
+  });
+  dependencyManagementService.setVendoredRuntimeInspector(() => codeServerManager!.getRuntimeSnapshots());
   registerDependencyManagementHandlers({
     dependencyManagementService,
+    codeServerManager,
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');

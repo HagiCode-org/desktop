@@ -217,6 +217,45 @@
       "incomplete": "OmniRoute 仍未准备就绪。请继续安装或刷新高亮依赖后重试。",
       "refreshFailed": "Desktop 无法刷新依赖状态。请等待当前操作结束后再试一次。"
     },
+    "vendoredRuntime": {
+      "title": "Desktop 托管运行时",
+      "description": "Vendored 运行时由 Desktop 负责预置与托管，不通过 npm 包管理进行安装。",
+      "managedByDesktop": "由 Desktop 直接管理",
+      "runtimeRoot": "运行时目录",
+      "metadataPath": "元数据路径",
+      "healthUrl": "本地地址",
+      "diagnostics": "诊断信息",
+      "reinstallHint": "该 vendored 运行时随 Desktop 安装包分发。若打包副本损坏，请重新安装 Desktop 以恢复。",
+      "primaryDescriptions": {
+        "ready": "运行时文件已预置完成，可由 Desktop 直接启动。",
+        "running": "运行时正在本地 Desktop 托管地址上响应请求。",
+        "stopped": "运行时文件已存在，但 Desktop 托管进程当前未运行。",
+        "missing": "Desktop 托管位置中缺少运行时文件。",
+        "damaged": "运行时文件不完整，或未通过校验。"
+      },
+      "status": {
+        "ready": "就绪",
+        "running": "运行中",
+        "stopped": "已停止",
+        "missing": "缺失",
+        "damaged": "已损坏"
+      },
+      "actions": {
+        "start": "启动",
+        "stop": "停止",
+        "restart": "重启",
+        "repair": "修复预置运行时",
+        "openLogs": "打开日志目录",
+        "openRuntimeRoot": "打开运行时目录",
+        "openUrl": "打开本地地址",
+        "reinstallDesktop": "重新安装 Desktop"
+      }
+    },
+    "vendoredRuntimes": {
+      "codeServer": {
+        "description": "由 Desktop 从 vendored 制品预置的 code-server 运行时，并通过内置 Node 工具链启动。"
+      }
+    },
     "package": {
       "version": "版本",
       "requiredVersion": "要求版本",

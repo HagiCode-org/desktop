@@ -17,6 +17,7 @@ import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, Ver
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type { ManagedNpmPackageId, DependencyManagementBatchSyncRequest, DependencyManagementBridge } from '../types/dependency-management.js';
+import type { VendoredRuntimeId } from '../types/dependency-management.js';
 import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
 import { dependencyManagementChannels } from '../types/dependency-management.js';
 import type { HagiNodeRuntimeBridge, HagiNodeRuntimeMetadata } from '../types/node-runtime.js';
@@ -380,6 +381,11 @@ const dependencyManagementBridge: DependencyManagementBridge = {
   install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),
   uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
   syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
+  startVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.startVendoredRuntime, runtimeId),
+  stopVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.stopVendoredRuntime, runtimeId),
+  restartVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.restartVendoredRuntime, runtimeId),
+  repairVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.repairVendoredRuntime, runtimeId),
+  openVendoredRuntimePath: (runtimeId: VendoredRuntimeId, target: 'logs' | 'runtime-root') => ipcRenderer.invoke(dependencyManagementChannels.openVendoredRuntimePath, runtimeId, target),
   onProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);

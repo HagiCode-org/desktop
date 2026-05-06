@@ -42,6 +42,7 @@ function createSnapshot(): DependencyManagementSnapshot {
       },
     },
     packages: [],
+    vendoredRuntimes: [],
     mirrorSettings: {
       enabled: false,
       registryUrl: null,

@@ -7,6 +7,8 @@ import type {
   DependencyManagementBridge,
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
+  VendoredRuntimeLifecycleAction,
+  VendoredRuntimeStatusSnapshot,
 } from '../../types/dependency-management.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +28,12 @@ import {
   updateSelectAllPackageIds,
   updateSelectedPackageIds,
 } from './dependency-management/dependencyManagementPageModel';
-import { BatchSyncLogPanel, NpmPackageBootstrapCard, NpmPackageTable } from './dependency-management/NpmPackageGroups';
+import {
+  BatchSyncLogPanel,
+  NpmPackageBootstrapCard,
+  NpmPackageTable,
+  VendoredRuntimeCard,
+} from './dependency-management/NpmPackageGroups';
 import { setDependencyManagementIntent, switchView } from '@/store/slices/viewSlice';
 import type { AppDispatch, RootState } from '@/store';
 
@@ -69,6 +76,11 @@ export default function DependencyManagementPage() {
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [repairCompletionState, setRepairCompletionState] = useState<RepairCompletionState>('idle');
+  const [vendoredRuntimeAction, setVendoredRuntimeAction] = useState<{
+    runtimeId: VendoredRuntimeStatusSnapshot['id'];
+    action: VendoredRuntimeLifecycleAction;
+  } | null>(null);
+  const [vendoredRuntimeError, setVendoredRuntimeError] = useState<Partial<Record<VendoredRuntimeStatusSnapshot['id'], string>>>({});
   const [isPending, startTransition] = useTransition();
   const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -252,8 +264,71 @@ export default function DependencyManagementPage() {
     }
   };
 
+  const applyVendoredRuntimeSnapshot = (nextRuntime: VendoredRuntimeStatusSnapshot) => {
+    setSnapshot((current) => current
+      ? {
+        ...current,
+        vendoredRuntimes: current.vendoredRuntimes.map((item) => item.id === nextRuntime.id ? nextRuntime : item),
+      }
+      : current);
+  };
+
+  const runVendoredRuntimeAction = async (
+    runtime: VendoredRuntimeStatusSnapshot,
+    action: VendoredRuntimeLifecycleAction,
+  ) => {
+    setVendoredRuntimeAction({ runtimeId: runtime.id, action });
+    setVendoredRuntimeError((current) => ({ ...current, [runtime.id]: undefined }));
+
+    try {
+      const bridge = getDependencyManagementBridge();
+      const result = action === 'start'
+        ? await bridge.startVendoredRuntime(runtime.id)
+        : action === 'stop'
+          ? await bridge.stopVendoredRuntime(runtime.id)
+          : action === 'restart'
+            ? await bridge.restartVendoredRuntime(runtime.id)
+            : await bridge.repairVendoredRuntime(runtime.id);
+      applyVendoredRuntimeSnapshot(result.status);
+      if (!result.success) {
+        setVendoredRuntimeError((current) => ({
+          ...current,
+          [runtime.id]: result.error ?? t('dependencyManagement.errors.operationFailed'),
+        }));
+      }
+    } catch (error) {
+      setVendoredRuntimeError((current) => ({
+        ...current,
+        [runtime.id]: error instanceof Error ? error.message : String(error),
+      }));
+    } finally {
+      setVendoredRuntimeAction(null);
+    }
+  };
+
+  const openVendoredRuntimePath = async (
+    runtime: VendoredRuntimeStatusSnapshot,
+    target: 'logs' | 'runtime-root',
+  ) => {
+    try {
+      const result = await getDependencyManagementBridge().openVendoredRuntimePath(runtime.id, target);
+      if (!result.success) {
+        setVendoredRuntimeError((current) => ({
+          ...current,
+          [runtime.id]: result.error ?? t('dependencyManagement.errors.operationFailed'),
+        }));
+      }
+    } catch (error) {
+      setVendoredRuntimeError((current) => ({
+        ...current,
+        [runtime.id]: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  };
+
   const hagiscript = snapshot?.packages.find((item) => item.id === 'hagiscript');
   const managedPackages = snapshot?.packages.filter((item) => item.id !== 'hagiscript') ?? [];
+  const vendoredRuntimes = snapshot?.vendoredRuntimes ?? [];
   const highlightedPackageIds = repairIntent?.targetPackageIds ?? [];
   const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
   const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], repairIntent);
@@ -403,6 +478,54 @@ export default function DependencyManagementPage() {
       {pageStatus === 'ready' && snapshot && (
         <>
           {shouldPromoteHagiscriptCard && hagiscriptCard}
+
+          {vendoredRuntimes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('dependencyManagement.vendoredRuntime.title')}</CardTitle>
+                <CardDescription>{t('dependencyManagement.vendoredRuntime.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {vendoredRuntimes.map((runtime) => (
+                  <VendoredRuntimeCard
+                    key={runtime.id}
+                    item={runtime}
+                    pendingAction={vendoredRuntimeAction?.runtimeId === runtime.id ? vendoredRuntimeAction.action : null}
+                    error={vendoredRuntimeError[runtime.id] ?? null}
+                    refreshDisabled={pageStatus === 'loading' || isPending || Boolean(activePackageId)}
+                    onPrimaryAction={(item) => void runVendoredRuntimeAction(
+                      item,
+                      item.primaryAction === 'stop'
+                        ? 'stop'
+                        : item.primaryAction === 'repair'
+                          ? 'repair'
+                          : 'start',
+                    )}
+                    onRestart={(runtimeId) => {
+                      const selectedRuntime = vendoredRuntimes.find((item) => item.id === runtimeId);
+                      if (selectedRuntime) {
+                        void runVendoredRuntimeAction(selectedRuntime, 'restart');
+                      }
+                    }}
+                    onRefresh={() => void refreshSnapshot()}
+                    onOpenLogs={(runtimeId) => {
+                      const selectedRuntime = vendoredRuntimes.find((item) => item.id === runtimeId);
+                      if (selectedRuntime) {
+                        void openVendoredRuntimePath(selectedRuntime, 'logs');
+                      }
+                    }}
+                    onOpenRuntimeRoot={(runtimeId) => {
+                      const selectedRuntime = vendoredRuntimes.find((item) => item.id === runtimeId);
+                      if (selectedRuntime) {
+                        void openVendoredRuntimePath(selectedRuntime, 'runtime-root');
+                      }
+                    }}
+                    onOpenUrl={(url) => { void window.electronAPI.openExternal(url); }}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <NpmPackageTable
             packages={prioritizedManagedPackages}

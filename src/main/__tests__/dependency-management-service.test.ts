@@ -69,6 +69,8 @@ describe('dependency management service contract', () => {
 
     assert.match(source, /findManagedNpmPackage\(packageId\)/);
     assert.match(source, /Unknown managed npm package/);
+    assert.match(source, /isVendoredRuntimeMutationId\(packageId\)/);
+    assert.match(source, /Desktop-managed vendored runtime and cannot be mutated through npm package operations/);
     assert.match(source, /if \(this\.activeOperation\)/);
     assert.match(source, /Another npm operation is already active/);
   });

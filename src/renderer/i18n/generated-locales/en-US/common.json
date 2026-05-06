@@ -217,6 +217,45 @@
       "incomplete": "OmniRoute is still not ready. Install or refresh the highlighted packages, then try again.",
       "refreshFailed": "Desktop could not refresh dependency status. Retry the recheck after the current operation finishes."
     },
+    "vendoredRuntime": {
+      "title": "Desktop-managed runtimes",
+      "description": "Vendored runtimes are staged and supervised by Desktop instead of npm package management.",
+      "managedByDesktop": "Managed directly by Desktop",
+      "runtimeRoot": "Runtime root",
+      "metadataPath": "Metadata path",
+      "healthUrl": "Local URL",
+      "diagnostics": "Diagnostics",
+      "reinstallHint": "This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.",
+      "primaryDescriptions": {
+        "ready": "Runtime files are staged and ready for Desktop-managed startup.",
+        "running": "Runtime is responding on its local Desktop-managed endpoint.",
+        "stopped": "Runtime files are present, but the Desktop-managed process is not currently running.",
+        "missing": "Runtime files are missing from the Desktop-managed location.",
+        "damaged": "Runtime files are incomplete or failed validation."
+      },
+      "status": {
+        "ready": "Ready",
+        "running": "Running",
+        "stopped": "Stopped",
+        "missing": "Missing",
+        "damaged": "Damaged"
+      },
+      "actions": {
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "repair": "Repair staged runtime",
+        "openLogs": "Open logs",
+        "openRuntimeRoot": "Open runtime root",
+        "openUrl": "Open local URL",
+        "reinstallDesktop": "Reinstall Desktop"
+      }
+    },
+    "vendoredRuntimes": {
+      "codeServer": {
+        "description": "Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      }
+    },
     "package": {
       "version": "Version",
       "requiredVersion": "Required version",

@@ -20,6 +20,10 @@ export type ManagedNpmPackageCategory = 'bootstrap' | 'workflow' | 'agent-cli' |
 export type ManagedNpmPackageInstallMode = 'embedded-npm' | 'hagiscript-sync';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
+export type VendoredRuntimeId = 'code-server';
+export type VendoredRuntimeStatus = 'ready' | 'running' | 'stopped' | 'missing' | 'damaged';
+export type VendoredRuntimePrimaryAction = 'none' | 'repair' | 'reinstall-desktop' | 'start' | 'stop';
+export type VendoredRuntimeLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
 
 export interface ManagedNpmPackageDefinition {
   id: ManagedNpmPackageId;
@@ -33,6 +37,76 @@ export interface ManagedNpmPackageDefinition {
   agentCliId?: AgentCliId;
   docsLinkId?: string;
   required?: boolean;
+}
+
+export interface VendoredRuntimeDefinition {
+  id: VendoredRuntimeId;
+  displayName: string;
+  descriptionKey: string;
+}
+
+export interface VendoredRuntimeMetadata {
+  schemaVersion: number;
+  packageId: string;
+  version: string;
+  platform: string;
+  arch: string;
+  sourceRevision: string;
+  extra?: {
+    slimArtifact?: boolean;
+    bundledNodeRuntime?: boolean;
+  };
+  artifacts?: Array<{
+    kind: string;
+    fileName: string;
+    blobKey: string;
+    sizeBytes?: number;
+    sha256?: string;
+    platform?: string;
+    arch?: string;
+  }>;
+}
+
+export interface VendoredRuntimeHealthSnapshot {
+  reachable: boolean;
+  url: string | null;
+  lastCheckedAt: string | null;
+  message?: string;
+}
+
+export interface VendoredRuntimeStatusSnapshot {
+  id: VendoredRuntimeId;
+  definition: VendoredRuntimeDefinition;
+  status: VendoredRuntimeStatus;
+  version: string | null;
+  runtimeRoot: string;
+  metadataPath: string | null;
+  wrapperPath: string | null;
+  entryScriptPath: string | null;
+  packageId: string;
+  schemaVersion: number | null;
+  bundledNodeRuntime: boolean;
+  managedByDesktop: boolean;
+  primaryAction: VendoredRuntimePrimaryAction;
+  diagnostics: string[];
+  health: VendoredRuntimeHealthSnapshot;
+  message?: string;
+}
+
+export interface VendoredRuntimeLifecycleResult {
+  success: boolean;
+  runtimeId: VendoredRuntimeId;
+  action: VendoredRuntimeLifecycleAction;
+  status: VendoredRuntimeStatusSnapshot;
+  error?: string;
+}
+
+export interface VendoredRuntimePathOpenResult {
+  success: boolean;
+  runtimeId: VendoredRuntimeId;
+  target: 'logs' | 'runtime-root';
+  path: string;
+  error?: string;
 }
 
 export interface NpmEnvironmentComponent {
@@ -79,6 +153,7 @@ export interface NpmMirrorSettingsInput {
 export interface DependencyManagementSnapshot {
   environment: DependencyManagementEnvironmentStatus;
   packages: ManagedNpmPackageStatusSnapshot[];
+  vendoredRuntimes: VendoredRuntimeStatusSnapshot[];
   mirrorSettings: NpmMirrorSettings;
   activeOperation: DependencyManagementOperationProgress | null;
   generatedAt: string;
@@ -165,6 +240,11 @@ export interface DependencyManagementBridge {
   install: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   uninstall: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   syncPackages: (request: DependencyManagementBatchSyncRequest) => Promise<DependencyManagementBatchSyncResult>;
+  startVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
+  stopVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
+  restartVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
+  repairVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
+  openVendoredRuntimePath: (runtimeId: VendoredRuntimeId, target: 'logs' | 'runtime-root') => Promise<VendoredRuntimePathOpenResult>;
   onProgress: (callback: (event: DependencyManagementOperationProgress) => void) => () => void;
 }
 
@@ -176,6 +256,11 @@ export const dependencyManagementChannels = {
   install: 'dependency-management:install',
   uninstall: 'dependency-management:uninstall',
   syncPackages: 'dependency-management:sync-packages',
+  startVendoredRuntime: 'dependency-management:start-vendored-runtime',
+  stopVendoredRuntime: 'dependency-management:stop-vendored-runtime',
+  restartVendoredRuntime: 'dependency-management:restart-vendored-runtime',
+  repairVendoredRuntime: 'dependency-management:repair-vendored-runtime',
+  openVendoredRuntimePath: 'dependency-management:open-vendored-runtime-path',
   progress: 'dependency-management:progress',
 } as const;
 
@@ -189,6 +274,11 @@ export const legacyDependencyManagementChannels = {
   install: 'npm-management:install',
   uninstall: 'npm-management:uninstall',
   syncPackages: 'npm-management:sync-packages',
+  startVendoredRuntime: 'npm-management:start-vendored-runtime',
+  stopVendoredRuntime: 'npm-management:stop-vendored-runtime',
+  restartVendoredRuntime: 'npm-management:restart-vendored-runtime',
+  repairVendoredRuntime: 'npm-management:repair-vendored-runtime',
+  openVendoredRuntimePath: 'npm-management:open-vendored-runtime-path',
   progress: 'npm-management:progress',
 } as const;
 

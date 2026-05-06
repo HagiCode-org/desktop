@@ -12,6 +12,7 @@ import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
+import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import {
   buildNpmGlobalCommandArtifactPaths,
   type NodeMajorNpmGlobalPaths,
@@ -23,7 +24,11 @@ import {
   type HagiscriptSyncManifest,
 } from './hagiscript-sync.js';
 import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
-import { managedNpmPackages, findManagedNpmPackage } from '../shared/npm-managed-packages.js';
+import {
+  managedNpmPackages,
+  findManagedNpmPackage,
+  isVendoredRuntimeMutationId,
+} from '../shared/npm-managed-packages.js';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
@@ -38,6 +43,7 @@ import type {
   DependencyManagementOperationProgress,
   DependencyManagementOperationResult,
   DependencyManagementSnapshot,
+  VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
 interface DependencyManagementServiceOptions {
@@ -147,6 +153,7 @@ export class DependencyManagementService {
   private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
   private readonly events = new EventEmitter();
   private activeOperation: DependencyManagementOperationProgress | null = null;
+  private vendoredRuntimeInspector: (() => Promise<VendoredRuntimeStatusSnapshot[]>) | null = null;
 
   constructor(options: DependencyManagementServiceOptions = {}) {
     this.pathManager = options.pathManager ?? PathManager.getInstance();
@@ -164,14 +171,22 @@ export class DependencyManagementService {
     return () => this.events.off('progress', listener);
   }
 
+  setVendoredRuntimeInspector(inspector: (() => Promise<VendoredRuntimeStatusSnapshot[]>) | null): void {
+    this.vendoredRuntimeInspector = inspector;
+  }
+
   async getSnapshot(): Promise<DependencyManagementSnapshot> {
     const environment = await this.detectEnvironment();
     const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)));
+    const vendoredRuntimes = this.vendoredRuntimeInspector
+      ? await this.vendoredRuntimeInspector()
+      : [await inspectVendoredCodeServerRuntime(this.pathManager)];
     const mirrorSettings = this.getMirrorSettings();
 
     return {
       environment,
       packages,
+      vendoredRuntimes,
       mirrorSettings,
       activeOperation: this.activeOperation,
       generatedAt: new Date().toISOString(),
@@ -516,6 +531,13 @@ export class DependencyManagementService {
     const seen = new Set<ManagedNpmPackageId>();
 
     for (const packageId of packageIds) {
+      if (isVendoredRuntimeMutationId(packageId)) {
+        return {
+          success: false,
+          error: `${packageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
+        };
+      }
+
       const definition = findManagedNpmPackage(packageId);
       if (!definition) {
         return { success: false, error: `Unknown managed npm package: ${packageId}` };
@@ -1053,6 +1075,17 @@ export class DependencyManagementService {
     packageId: string,
     operation: DependencyManagementOperation,
   ): Promise<DependencyManagementOperationResult> {
+    if (isVendoredRuntimeMutationId(packageId)) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageId: packageId as ManagedNpmPackageId,
+        operation,
+        error: `${packageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
+        snapshot,
+      };
+    }
+
     const definition = findManagedNpmPackage(packageId);
     if (!definition) {
       const snapshot = await this.getSnapshot();

@@ -1,12 +1,26 @@
 import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, Loader2, PackageOpen, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  FolderOpen,
+  Loader2,
+  PackageOpen,
+  Play,
+  RefreshCw,
+  Square,
+  Trash2,
+  Wrench,
+} from 'lucide-react';
 import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementOperationProgress,
+  VendoredRuntimeLifecycleAction,
+  VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +38,157 @@ import {
   packageBadgeVariant,
   type BatchSyncState,
 } from './dependencyManagementPageModel';
+
+function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (item.status === 'running') {
+    return 'default';
+  }
+  if (item.status === 'ready') {
+    return 'secondary';
+  }
+  if (item.status === 'stopped') {
+    return 'outline';
+  }
+  return 'destructive';
+}
+
+function getVendoredRuntimePrimaryLabel(item: VendoredRuntimeStatusSnapshot): string {
+  if (item.primaryAction === 'start') {
+    return 'dependencyManagement.vendoredRuntime.actions.start';
+  }
+  if (item.primaryAction === 'stop') {
+    return 'dependencyManagement.vendoredRuntime.actions.stop';
+  }
+  if (item.primaryAction === 'repair') {
+    return 'dependencyManagement.vendoredRuntime.actions.repair';
+  }
+  return 'dependencyManagement.vendoredRuntime.actions.reinstallDesktop';
+}
+
+function getVendoredRuntimePrimaryIcon(item: VendoredRuntimeStatusSnapshot) {
+  if (item.primaryAction === 'start') {
+    return Play;
+  }
+  if (item.primaryAction === 'stop') {
+    return Square;
+  }
+  if (item.primaryAction === 'repair') {
+    return Wrench;
+  }
+  return RefreshCw;
+}
+
+interface VendoredRuntimeCardProps {
+  item: VendoredRuntimeStatusSnapshot;
+  pendingAction: VendoredRuntimeLifecycleAction | null;
+  error?: string | null;
+  refreshDisabled: boolean;
+  onPrimaryAction: (item: VendoredRuntimeStatusSnapshot) => void;
+  onRestart: (runtimeId: VendoredRuntimeStatusSnapshot['id']) => void;
+  onRefresh: () => void;
+  onOpenLogs: (runtimeId: VendoredRuntimeStatusSnapshot['id']) => void;
+  onOpenRuntimeRoot: (runtimeId: VendoredRuntimeStatusSnapshot['id']) => void;
+  onOpenUrl?: (url: string) => void;
+}
+
+export function VendoredRuntimeCard({
+  item,
+  pendingAction,
+  error,
+  refreshDisabled,
+  onPrimaryAction,
+  onRestart,
+  onRefresh,
+  onOpenLogs,
+  onOpenRuntimeRoot,
+  onOpenUrl,
+}: VendoredRuntimeCardProps) {
+  const { t } = useTranslation('common');
+  const PrimaryIcon = getVendoredRuntimePrimaryIcon(item);
+  const isActionRunning = pendingAction !== null;
+  const primaryActionDisabled = item.primaryAction === 'reinstall-desktop';
+  const diagnostics = error ? [error, ...item.diagnostics] : item.diagnostics;
+
+  return (
+    <Card className="border-border/80">
+      <CardHeader className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-lg">{item.definition.displayName}</CardTitle>
+            <CardDescription>{t(item.definition.descriptionKey)}</CardDescription>
+          </div>
+          <Badge variant={vendoredRuntimeBadgeVariant(item)}>
+            {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+          <p>{t('dependencyManagement.package.version')}: {item.version ?? t('dependencyManagement.unavailable')}</p>
+          <p>{t('dependencyManagement.vendoredRuntime.managedByDesktop')}</p>
+          <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.runtimeRoot')}: {item.runtimeRoot}</p>
+          {item.metadataPath ? (
+            <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.metadataPath')}: {item.metadataPath}</p>
+          ) : null}
+          <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.healthUrl')}: {item.health.url ?? t('dependencyManagement.unavailable')}</p>
+        </div>
+
+        <Alert className={item.status === 'running' ? 'border-emerald-500/30 bg-emerald-500/5' : undefined}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}</AlertTitle>
+          <AlertDescription>{t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${item.status}`)}</AlertDescription>
+        </Alert>
+
+        {diagnostics.length > 0 ? (
+          <Alert variant={item.status === 'running' ? 'default' : 'destructive'}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('dependencyManagement.vendoredRuntime.diagnostics')}</AlertTitle>
+            <AlertDescription>
+              <div className="space-y-1">
+                {diagnostics.slice(0, 4).map((diagnostic) => (
+                  <p key={diagnostic}>{diagnostic}</p>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {item.primaryAction === 'reinstall-desktop' ? (
+          <p className="text-sm text-muted-foreground">{t('dependencyManagement.vendoredRuntime.reinstallHint')}</p>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => onPrimaryAction(item)} disabled={refreshDisabled || isActionRunning || primaryActionDisabled}>
+            {isActionRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PrimaryIcon className="mr-2 h-4 w-4" />}
+            {t(getVendoredRuntimePrimaryLabel(item))}
+          </Button>
+          <Button variant="outline" onClick={() => onRestart(item.id)} disabled={refreshDisabled || isActionRunning}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {t('dependencyManagement.vendoredRuntime.actions.restart')}
+          </Button>
+          <Button variant="outline" onClick={() => onOpenLogs(item.id)} disabled={isActionRunning}>
+            <FolderOpen className="mr-2 h-4 w-4" />
+            {t('dependencyManagement.vendoredRuntime.actions.openLogs')}
+          </Button>
+          <Button variant="outline" onClick={() => onOpenRuntimeRoot(item.id)} disabled={isActionRunning}>
+            <FolderOpen className="mr-2 h-4 w-4" />
+            {t('dependencyManagement.vendoredRuntime.actions.openRuntimeRoot')}
+          </Button>
+          {item.health.url ? (
+            <Button variant="outline" onClick={() => onOpenUrl?.(item.health.url)} disabled={!onOpenUrl || isActionRunning}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {t('dependencyManagement.vendoredRuntime.actions.openUrl')}
+            </Button>
+          ) : null}
+          <Button variant="outline" onClick={onRefresh} disabled={refreshDisabled || isActionRunning}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {t('dependencyManagement.actions.refresh')}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 interface PackageDetailsProps {
   item: ManagedNpmPackageStatusSnapshot;
