@@ -47,7 +47,7 @@ async function main() {
   const extractedRoot = await resolveExtractedRoot(extractRoot);
   await rm(runtimeRoot, { recursive: true, force: true });
   await mkdir(path.dirname(runtimeRoot), { recursive: true });
-  await cp(extractedRoot, runtimeRoot, { recursive: true });
+  await cp(extractedRoot, runtimeRoot, { recursive: true, dereference: true });
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
 
   const validation = validateCodeServerRuntimePayload(runtimeRoot, { platformKey, config });

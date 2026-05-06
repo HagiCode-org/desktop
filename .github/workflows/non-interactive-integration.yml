@@ -37,6 +37,12 @@ jobs:
         shell: bash
         run: |
           npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          prefix="$(npm config get prefix)"
+          echo "$prefix" >> "$GITHUB_PATH"
+          if [ -d "$prefix/bin" ]; then
+            echo "$prefix/bin" >> "$GITHUB_PATH"
+          fi
+          hash -r
           hagiscript --version
 
       - name: Install dependencies
@@ -76,6 +82,12 @@ jobs:
         shell: bash
         run: |
           npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          prefix="$(npm config get prefix)"
+          echo "$prefix" >> "$GITHUB_PATH"
+          if [ -d "$prefix/bin" ]; then
+            echo "$prefix/bin" >> "$GITHUB_PATH"
+          fi
+          hash -r
           hagiscript --version
 
       - name: Install dependencies
@@ -115,6 +127,12 @@ jobs:
         shell: bash
         run: |
           npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          prefix="$(npm config get prefix)"
+          echo "$prefix" >> "$GITHUB_PATH"
+          if [ -d "$prefix/bin" ]; then
+            echo "$prefix/bin" >> "$GITHUB_PATH"
+          fi
+          hash -r
           hagiscript --version
 
       - name: Install dependencies
