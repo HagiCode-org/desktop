@@ -408,7 +408,21 @@ function assertOutputContainsPackage(output, packageId) {
 }
 
 function assertPathWithinRoot(candidatePath, rootPath, label) {
-  if (!candidatePath || !candidatePath.startsWith(rootPath)) {
+  const resolveComparablePath = (targetPath) => {
+    if (!targetPath) {
+      return null;
+    }
+
+    try {
+      return fs.realpathSync.native?.(targetPath) ?? fs.realpathSync(targetPath);
+    } catch {
+      return path.resolve(targetPath);
+    }
+  };
+
+  const comparableCandidatePath = resolveComparablePath(candidatePath);
+  const comparableRootPath = resolveComparablePath(rootPath);
+  if (!comparableCandidatePath || !comparableRootPath || !comparableCandidatePath.startsWith(comparableRootPath)) {
     fail(`Expected ${label} to stay under ${rootPath}.\nPath: ${candidatePath ?? '<missing>'}`);
   }
 }
