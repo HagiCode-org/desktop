@@ -1,10 +1,8 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { app, shell } from 'electron';
 import {
   inspectVendoredCodeServerRuntime,
-  readCodeServerRuntimeConfig,
 } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import type { ConfigManager } from './config.js';
@@ -66,10 +64,6 @@ interface Pm2ContextSnapshot {
   error?: string;
 }
 
-function buildBaseUrl(port: number): string {
-  return `http://127.0.0.1:${port}`;
-}
-
 function normalizePassword(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
@@ -77,10 +71,6 @@ function normalizePassword(value: unknown): string | null {
 
   const password = value.trim();
   return password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH ? password : null;
-}
-
-function generateDefaultPassword(): string {
-  return crypto.randomBytes(18).toString('base64url');
 }
 
 function coerceLogLineLimit(value: number | undefined): number {
@@ -97,7 +87,6 @@ export class CodeServerManager {
   private readonly pathManager: PathManager;
   private readonly userDataPath: string;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
-  private readonly runtimeConfig = readCodeServerRuntimeConfig();
 
   constructor(options: {
     dependencyManagementService: DependencyManagementService;
@@ -147,23 +136,7 @@ export class CodeServerManager {
   }
 
   getConfig(): CodeServerConfigSnapshot {
-    const configured = this.configManager.getAll().codeServer;
-    const port = this.normalizePort(configured?.port, this.runtimeConfig.defaultPort);
-    const password = normalizePassword(configured?.password) ?? generateDefaultPassword();
-
-    if (configured?.port !== port || configured?.password !== password) {
-      this.configManager.set('codeServer', {
-        ...(configured ?? {}),
-        port,
-        password,
-      });
-    }
-
-    return {
-      port,
-      baseUrl: buildBaseUrl(port),
-      password,
-    };
+    return this.configManager.getCodeServerConfig();
   }
 
   async setConfig(payload: CodeServerConfigUpdatePayload): Promise<CodeServerConfigUpdateResult> {
