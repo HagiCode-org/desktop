@@ -51,6 +51,7 @@ build/portable-version-runtime/*
 !build/portable-version-runtime/current/
 build/portable-version-runtime/current/*
 !build/portable-version-runtime/current/.gitkeep
+.generated-hagiscript-runtime-manifest.json
 resources/portable-fixed
 resources/toolchain
 resources/code-server
