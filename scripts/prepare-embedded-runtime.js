@@ -23,7 +23,7 @@ import {
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.1.10';
+const MINIMUM_HAGISCRIPT_VERSION = '0.1.9';
 
 if (!isManagedDesktopRuntimeComponentExecution()) {
   await installDesktopRuntimeComponents(['dotnet']);

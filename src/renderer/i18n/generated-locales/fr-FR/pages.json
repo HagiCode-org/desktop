@@ -1,0 +1,285 @@
+{
+  "settings": {
+    "title": "Paramètres",
+    "tabs": {
+      "onboarding": "Intégration",
+      "sharingAcceleration": "Télécharger et partager",
+      "updates": "Mises à jour en arrière-plan"
+    },
+    "smartConfig": {
+      "title": "Conseils d’invite Smart Config",
+      "description": "Examinez l'invite résolue, copiez-la dans n'importe quel AI CLI pris en charge et terminez le flux de configuration manuellement."
+    },
+    "onboarding": {
+      "title": "Intégration",
+      "description": "Réexécutez l'assistant de configuration initiale pour télécharger les packages, installer les dépendances et démarrer le service.",
+      "restartWizard": "Assistant de redémarrage",
+      "restartWizardDescription": "Réexécutez l'assistant de configuration initiale pour télécharger les packages, installer les dépendances et démarrer le service.",
+      "restartButton": "Assistant de redémarrage",
+      "resetting": "Réinitialisation...",
+      "resetSuccess": "L'assistant a été réinitialisé",
+      "resetError": "Échec de la réinitialisation: {{error}}",
+      "homepageTour": {
+        "title": "Réinitialiser la visite guidée de la page d'accueil",
+        "description": "Effacez l’état d’achèvement de la visite guidée de la page d’accueil afin que la visite guidée puisse être relue automatiquement la prochaine fois que vous ouvrirez la gestion du système.",
+        "resetButton": "Réinitialiser la visite guidée de la page d'accueil",
+        "resetting": "Réinitialisation de la visite...",
+        "resetSuccess": "La visite de la page d'accueil a été réinitialisée",
+        "resetError": "Échec de la réinitialisation de la visite guidée de la page d'accueil: {{error}}"
+      }
+    },
+    "sharingAcceleration": {
+      "title": "Accélération du téléchargement et du partage",
+      "description": "Gérez les téléchargements torrent d'abord, la réutilisation du cache fiable et le comportement de secours automatique.",
+      "enabledTitle": "Activer l'accélération du partage LAN/Internet",
+      "enabledDescription": "Tout actif contenant des métadonnées torrent démarre d'abord à partir du torrent et revient automatiquement en cas de besoin.",
+      "uploadLimit": "Limite de téléchargement (Mbps)",
+      "cacheLimit": "Limite de cache (Gio)",
+      "retentionDays": "Jours de rétention",
+      "thresholdHint": "Les ressources contenant des métadonnées torrent ne sont plus limitées par l'ancien seuil de 100 MB.",
+      "networkHint": "Désactivez l'accélération du partage sur les réseaux restreints; le mode portable le force toujours à le désactiver.",
+      "portableModeHint": "Le mode portable désactive l'accélération du partage et l'amorçage externe, puis conserve les téléchargements en mode de repli.",
+      "save": "Enregistrer les paramètres",
+      "saving": "Sauvegarde...",
+      "saveSuccess": "Paramètres d'accélération de partage enregistrés",
+      "saveError": "Échec de l'enregistrement des paramètres d'accélération du partage",
+      "loadError": "Échec du chargement des paramètres d'accélération du partage",
+      "modeHint": "Mode: torrent en premier, repli automatique en cas d'échec.",
+      "scopeHint": "L'amorçage externe reste concentré sur le dernier ordinateur de bureau et le dernier serveur. Limite de cache par défaut: 5 Gio."
+    },
+    "updates": {
+      "title": "Mises à jour en arrière-plan",
+      "description": "Gérez les vérifications automatiques, les prétéléchargements en arrière-plan et la conservation vérifiée des archives.",
+      "steamMode": {
+        "title": "Updates are managed by Steam",
+        "description": "This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime."
+      },
+      "enabled": {
+        "label": "Activer les prétéléchargements en arrière-plan",
+        "description": "Lorsqu'une version plus récente compatible est trouvée, téléchargez l'archive en arrière-plan sans changer le runtime actuel."
+      },
+      "retainedArchiveCount": {
+        "label": "Nombre d'archives conservées",
+        "description": "Seules les archives vérifiées téléchargées automatiquement sont conservées. Les entrées plus anciennes sont supprimées lorsque la limite est dépassée."
+      },
+      "actions": {
+        "save": "Enregistrer les paramètres",
+        "saving": "Sauvegarde...",
+        "cancel": "Annuler"
+      },
+      "messages": {
+        "saveSuccess": "Paramètres de mise à jour en arrière-plan enregistrés",
+        "saveFailed": "Échec de l'enregistrement des paramètres de mise à jour en arrière-plan"
+      },
+      "errors": {
+        "retainedArchiveCountPositive": "Le nombre d’archives conservées doit être un entier positif.",
+        "saveErrorDetail": "Échec de l'enregistrement: {{error}}"
+      },
+      "notes": {
+        "snapshotModel": "Le rappel du tableau de bord est piloté par un instantané persistant du processus principal, de sorte que le dernier état de mise à jour connu survit aux rechargements du bureau.",
+        "retentionPolicy": "Le nettoyage de rétention supprime uniquement les archives et les métadonnées mises en cache. Les répertoires des versions installées restent intacts."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Construit avec ❤️ en utilisant Electron + React + TypeScript.",
+    "testBuild": "Application de test - Version de développement"
+  },
+  "quickStart": {
+    "title": "Démarrage rapide",
+    "description": "Installez le package de services Web intégré et commencez à gérer votre instance PCode locale."
+  },
+  "secure": {
+    "title": "Sécurisé",
+    "description": "Construit dans un souci de sécurité. Vos données restent sur votre machine."
+  },
+  "header": {
+    "runningSuccessfully": "Exécution réussie"
+  },
+  "dependencyManagement": {
+    "title": "Gestion des dépendances",
+    "backToDashboard": "Retour au tableau de bord",
+    "description": "Gérer les packages de services Web intégrés et les dépendances du système",
+    "tips": {
+      "title": "Conseils",
+      "description": "Gardez vos dépendances à jour pour des performances et une sécurité optimales."
+    },
+    "noPackageInstalled": "Aucun paquet installé",
+    "installedVersion": "Version installée",
+    "requiredVersion": "Version requise",
+    "status": {
+      "installed": "Installé",
+      "bundled": "Livré avec le bureau",
+      "desktopManaged": "Bureau géré",
+      "manualInstallRequired": "Installation manuelle requise",
+      "notInstalled": "Introuvable",
+      "versionMismatch": "Incompatibilité de version"
+    },
+    "actions": {
+      "refresh": "Actualiser les dépendances",
+      "install": "Installer",
+      "installing": "Installation...",
+      "viewManualSteps": "Afficher les étapes manuelles",
+      "download": "Télécharger",
+      "reinstallDesktop": "Réinstaller le bureau",
+      "updateDesktop": "Mettre à jour le bureau"
+    },
+    "details": {
+      "manualCommand": "Commande suggérée",
+      "source": "Source",
+      "bundledSource": "Source groupée",
+      "systemSource": "Source système"
+    },
+    "manualHandoff": {
+      "title": "Installation manuelle du package CLI requise",
+      "description": "Exécutez la commande suggérée en dehors du bureau. Pour plus de détails actuels sur l'environnement Node/npm fourni avec Desktop et le comportement de PATH, lisez la FAQ.",
+      "faqLinkLabel": "Afficher la FAQ sur l'environnement de nœud",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Actualisez une fois la commande terminée pour revérifier les dépendances gérées par Desktop."
+    }
+  },
+  "versionManagement": {
+    "title": "Gestion des versions",
+    "description": "Installer, changer et gérer Hagicode Server versions",
+    "availableVersions": "Versions disponibles",
+    "installedVersions": "Versions installées",
+    "installed": "Installé",
+    "installing": "Installation...",
+    "downloading": "Téléchargement",
+    "extracting": "Extraction",
+    "verifying": "Vérification",
+    "completed": "Terminé",
+    "switching": "Commutation...",
+    "reinstalling": "Réinstallation...",
+    "installedAt": "Installé à",
+    "notInstalled": "Non installé",
+    "confirmUninstall": "Êtes-vous sûr de vouloir désinstaller cette version?",
+    "confirmReinstall": "Êtes-vous sûr de vouloir réinstaller ce package? Cela supprimera le cache et la version installée, puis téléchargera et réinstallera.",
+    "reinstall": "Réinstaller",
+    "noVersionsAvailable": "Aucune version disponible",
+    "noVersionsInstalled": {
+      "title": "Aucune version installée pour le moment",
+      "description": "La manière la plus simple de démarrer avec Hagicode Desktop consiste à utiliser notre assistant de configuration guidée. Installation et configuration complètes en quelques étapes seulement.",
+      "startButton": "Démarrer l'assistant d'installation"
+    },
+    "status": {
+      "active": "Actif",
+      "ready": "Prêt",
+      "incomplete": "Dépendances manquantes",
+      "installed": "Installé",
+      "payloadInvalid": "Charge utile invalide",
+      "runtimeIncompatible": "Runtime fourni incompatible",
+      "desktopIncompatible": "Ordinateur de bureau incompatible"
+    },
+    "actions": {
+      "refresh": "Actualiser",
+      "install": "Installer la version",
+      "switch": "Changer",
+      "uninstall": "Désinstaller",
+      "reinstall": "Réinstaller",
+      "reinstallPackage": "Réinstallez ce package",
+      "openLogs": "Journaux ouverts",
+      "showMoreVersions": "Afficher plus de versions ({{count}} restantes)",
+      "showLessVersions": "Afficher moins",
+      "switchDisabledDesktop": "Mettre à niveau le bureau avant de changer"
+    },
+    "progressBar": "Barre de progression",
+    "progressText": "Texte de progression",
+    "info": {
+      "title": "À propos de la gestion des versions",
+      "description": "La gestion des versions vous permet d'installer plusieurs versions Hagicode Server, de basculer entre elles et de vérifier la compatibilité du bureau avant l'activation."
+    },
+    "toast": {
+      "installSuccess": "Installation réussie",
+      "installSuccessDescription": "La version a été installée avec succès. Démarrez le service manuellement lorsque vous êtes prêt.",
+      "installSuccessAutoSwitchedDescription": "La version a été installée avec succès et est désormais la version active.",
+      "installSuccessNoAutoSwitchDescription": "La version a été installée avec succès, mais la version active n'a pas changé.",
+      "installFailed": "L'installation a échoué",
+      "installFailedDescription": "Une erreur s'est produite lors de l'installation. Veuillez réessayer.",
+      "reinstallSuccess": "Réinstallé avec succès",
+      "reinstallFailed": "La réinstallation a échoué",
+      "uninstallSuccess": "Désinstallé avec succès",
+      "uninstallFailed": "La désinstallation a échoué",
+      "openLogsSuccess": "Dossier de journaux ouvert",
+      "logsNotFound": "Dossier de journaux introuvable",
+      "openLogsError": "Échec de l'ouverture du dossier des journaux",
+      "onboardingStarted": "L'assistant de configuration a démarré",
+      "onboardingFailed": "Échec du démarrage de l'assistant de configuration",
+      "switchBlocked": "Ce package nécessite une version de bureau plus récente.",
+      "switchFailed": "Échec du changement de version"
+    },
+    "dialog": {
+      "reinstallTitle": "Confirmer la réinstallation",
+      "reinstallDescription": "Cela supprimera le cache et la version installée, puis téléchargera et réinstallera. Voulez-vous continuer?",
+      "uninstallTitle": "Confirmer la désinstallation",
+      "uninstallDescription": "Êtes-vous sûr de vouloir désinstaller cette version? Cette action ne peut pas être annulée.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    },
+    "desktopCompatibility": {
+      "blockedTitle": "Mettez à niveau Desktop pour activer ce package",
+      "requiredVersion": "Bureau requis:",
+      "currentVersion": "Bureau actuel:",
+      "upgradeGuidance": "Mettez à niveau Hagicode Desktop, puis réessayez de changer ou de démarrer ce package."
+    },
+    "portableMode": {
+      "title": "Mode version portable",
+      "description": "L'installation de version, le changement et la gestion des sources du package sont masqués car cette version s'exécute à partir d'une charge utile fixe packagée.",
+      "activeRuntime": "Runtime packagé actif: {{version}}",
+      "updates": "Les mises à jour de cette version sont gérées par la distribution packagée au lieu des actions de version intégrées à l'application."
+    },
+    "downloadStage": {
+      "queued": "En file d'attente",
+      "backfilling": "Remplissage de secours",
+      "fetchingTorrent": "Récupération du torrent",
+      "sharedDownloading": "Téléchargement torrent d'abord"
+    },
+    "downloadMode": {
+      "shared": "Torrent d’abord",
+      "fallback": "Remblai de secours",
+      "direct": "HTTP/WebSeed"
+    },
+    "installTelemetry": {
+      "mode": "Mode",
+      "stage": "Scène",
+      "peers": "Pairs",
+      "sharedBytes": "Octets partagés",
+      "fallbackBytes": "Octets de secours",
+      "verified": "Vérifié",
+      "flow": "Flux: Récupérer le torrent -> Téléchargement du torrent en premier -> Remplissage de secours (si nécessaire) -> Vérifier -> Extraire -> Terminer",
+      "flowActive": "Flux de courant: {{stage}}"
+    },
+    "progressMessage": {
+      "direct-http": "Téléchargements supérieurs à HTTP/WebSeed",
+      "fetching-torrent-metadata": "Récupérer les métadonnées du torrent",
+      "torrent-metadata-ready": "Torrent prêt, démarrage de l'accélération partagée",
+      "torrent-first-started": "Le téléchargement du torrent a commencé",
+      "shared-acceleration-active": "Accélération partagée active",
+      "source-fallback-active": "Remplissage de secours actif",
+      "torrent-unavailable-fallback": "Torrent indisponible, passage automatique en secours",
+      "portable-mode-http-fallback": "Le mode portable force le téléchargement de secours",
+      "legacy-http-fallback": "Pas de métadonnées torrent, en utilisant uniquement HTTP/WebSeed",
+      "no-sha256-required": "Aucune vérification supplémentaire requise",
+      "sha256-verifying": "Vérification de l'intégrité du paquet",
+      "sha256-verified": "Vérification terminée",
+      "extracting-package": "Extraction du package",
+      "installation-complete": "Installation terminée"
+    }
+  },
+  "installProgressDialog": {
+    "title": "Installation des dépendances",
+    "executing": "Installation...",
+    "executingCommand": "Exécution de la commande {{current}} de {{total}}",
+    "currentCommand": "Commande actuelle",
+    "logs": "Journaux d'installation",
+    "status": {
+      "executing": "Installation...",
+      "success": "Installation terminée",
+      "error": "Échec de l'installation"
+    },
+    "buttons": {
+      "close": "Fermer",
+      "retry": "Réessayer"
+    }
+  }
+}

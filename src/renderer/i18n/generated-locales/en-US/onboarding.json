@@ -1,0 +1,354 @@
+{
+  "title": "First-Time Setup",
+  "welcome": {
+    "title": "Welcome to Hagicode Desktop",
+    "description": "Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in six steps.",
+    "features": {
+      "manage": {
+        "title": "Version Management",
+        "description": "Manage Hagicode Server installation and updates"
+      },
+      "monitor": {
+        "title": "Service Monitoring",
+        "description": "Start, stop, and monitor service status"
+      },
+      "dependencies": {
+        "title": "Dependency Management",
+        "description": "View and manage system dependencies"
+      }
+    },
+    "processTitle": "The first-time setup has 6 steps:",
+    "steps": {
+      "languageSelection": "Choose the Desktop language used during setup",
+      "welcome": "Review the setup and what will happen next",
+      "download": "Download the latest Hagicode Server package",
+      "launch": "Start the service and confirm it is running",
+      "dependencyPreparation": "Confirm required dependencies and Agent CLI packages are ready",
+      "sharingAcceleration": "Confirm whether shared acceleration should stay enabled by default",
+      "legalConsent": "Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser"
+    },
+    "skip": "Skip Setup",
+    "start": "Get Started"
+  },
+  "claude": {
+    "title": "Configure Claude Code"
+  },
+  "languageSelection": {
+    "title": "Choose Your Language",
+    "description": "Select the language used by Hagicode Desktop now. The first embedded backend startup will use a matching default.",
+    "recommended": "Recommended",
+    "selected": "Selected",
+    "choose": "Choose",
+    "error": "Desktop could not save the selected language yet. Retry to continue."
+  },
+  "download": {
+    "title": "Download Hagicode Server",
+    "version": "Version",
+    "progress": "Download Progress",
+    "fileSize": "File Size",
+    "downloading": {
+      "title": "Downloading Hagicode Server..."
+    },
+    "complete": {
+      "title": "Download Complete!",
+      "message": "The package was verified successfully. You can now return to the homepage and start the service manually whenever you are ready.",
+      "fileSize": "File Size"
+    },
+    "downloaded": "Downloaded",
+    "speed": "Speed",
+    "remaining": "Remaining",
+    "pleaseWait": "Please wait while we download..."
+  },
+  "dependencies": {
+    "title": "Install System Dependencies",
+    "subtitle": "Hagicode requires certain system dependencies to function properly.",
+    "description": "Check the installation status of system dependencies",
+    "installButton": "Install Dependencies",
+    "status": {
+      "installed": "Installed",
+      "installing": "Installing...",
+      "manualInstallRequired": "Manual install required",
+      "pending": "Pending",
+      "error": "Failed",
+      "notInstalled": "Not Installed",
+      "versionMismatch": "Version Mismatch",
+      "checking": "Checking...",
+      "ready": "Ready"
+    },
+    "actions": {
+      "install": "Install",
+      "upgrade": "Upgrade",
+      "installing": "Installing...",
+      "refresh": "Refresh",
+      "viewManualSteps": "View Manual Steps",
+      "visitWebsite": "Visit Official Website"
+    },
+    "details": {
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version",
+      "manualCommand": "Suggested Command"
+    },
+    "overallProgress": "Overall Progress",
+    "installing": {
+      "title": "Installing dependencies..."
+    },
+    "complete": {
+      "title": "Dependencies Installed",
+      "message": "All dependencies have been successfully installed."
+    },
+    "checking": "Checking dependencies...",
+    "error": {
+      "message": "Some dependencies failed to install. Please install them manually and continue."
+    },
+    "manualHandoff": {
+      "title": "Manual CLI package install required",
+      "description": "Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Refresh after the command finishes to re-check Desktop-managed dependencies."
+    }
+  },
+  "depInstallConfirm": {
+    "title": "Install Missing Dependencies",
+    "installingTitle": "Installing Dependencies",
+    "description": "Detected {{count}} missing dependency",
+    "description_other": "Detected {{count}} missing dependencies",
+    "versionMismatchNote": "Some dependencies have incorrect versions and need to be upgraded.",
+    "mixedMissingMessage": "Detected {{missing}} missing and {{mismatch}} version mismatched dependency",
+    "mixedMissingMessage_other": "Detected {{missing}} missing and {{mismatch}} version mismatched dependencies",
+    "versionMismatchOnlyMessage": "Detected {{count}} version mismatched dependency",
+    "versionMismatchOnlyMessage_other": "Detected {{count}} version mismatched dependencies",
+    "upgradeNote": "Version mismatched dependencies will be upgraded to the required version.",
+    "requiredVersion": "Required Version",
+    "permissionWarning": "Installing these dependencies may require administrator privileges.",
+    "preparing": "Preparing installation...",
+    "cancel": "Cancel",
+    "confirm": "Install Dependencies",
+    "installing": "Installing...",
+    "installButton": "Install {{count}} {{count, plural, =1 {dependency} other {dependencies}}}",
+    "errorsOccurred": "dependencies failed to install",
+    "success": "All dependencies installed successfully",
+    "partialSuccess": "{{success}} dependencies installed successfully, {{failed}} failed",
+    "error": "Dependency installation failed"
+  },
+  "launch": {
+    "title": "Start Service",
+    "starting": {
+      "title": "Starting Hagicode Server...",
+      "subtitle": "Initializing service components..."
+    },
+    "complete": {
+      "title": "Setup Complete!",
+      "subtitle": "Hagicode Desktop has been successfully installed and started.",
+      "success": "Congratulations! Hagicode Desktop has been successfully installed and started.",
+      "ready": "You can now start using all features.",
+      "button": "Enter Main Interface"
+    },
+    "progress": "Startup Progress",
+    "installInfo": {
+      "title": "Installation Information",
+      "version": "Installed Version",
+      "port": "Service Port",
+      "url": "Service URL"
+    },
+    "whatsNext": {
+      "title": "You can now:",
+      "manage": "Manage Hagicode Server from the main interface",
+      "webUI": "Access the Web management interface",
+      "logs": "View service logs and status",
+      "config": "Configure server parameters and settings"
+    },
+    "support": {
+      "title": "Support",
+      "docs": "Documentation",
+      "issues": "Report Issues"
+    },
+    "failure": {
+      "title": "Startup Failed",
+      "subtitle": "Hagicode Server could not finish starting. Review the diagnostics and reinstall before continuing setup.",
+      "guidance": "Open the full log, then reinstall the current version and restart the setup flow.",
+      "viewLog": "View Full Log",
+      "retryButton": "Retry Startup",
+      "reinstallButton": "Reinstall and Restart Setup",
+      "reinstallingButton": "Reinstalling...",
+      "dialogTitle": "Onboarding Startup Failure Log",
+      "emptySummary": "No startup failure summary was captured",
+      "emptyLog": "No startup failure log was captured",
+      "meta": "Port: {{port}} · Time: {{timestamp}}",
+      "truncatedHint": "The startup log was truncated to the most recent output.",
+      "recoveryHint": "We recommend reinstalling the current version and resetting onboarding before trying setup again.",
+      "copyButton": "Copy Log",
+      "copySuccess": "Startup failure log copied",
+      "copyError": "Failed to copy startup failure log",
+      "copyEmpty": "There is no startup failure log to copy"
+    }
+  },
+  "actions": {
+    "next": "Next",
+    "continueWithLanguage": "Continue with {{language}}",
+    "applyingLanguage": "Applying {{language}}...",
+    "finish": "Enter Hagicode Desktop",
+    "previous": "Previous",
+    "skip": "Skip Setup"
+  },
+  "skip": {
+    "checkbox": "Don't show this guide again",
+    "title": "Confirm Skip Setup",
+    "description": "Are you sure you want to skip the first-time setup?",
+    "manualInstallNote": "After skipping, you can:\n• Manually install Hagicode Server through \"Package Management\" in the main interface\n• Re-enable the setup process in settings",
+    "reenableNote": "If this is your first time using Hagicode Desktop, we recommend completing the setup process.",
+    "cancel": "Cancel",
+    "confirm": "Skip Setup"
+  },
+  "dependencyManagement": {
+    "title": "Dependency Management",
+    "description": "View and manage system dependencies",
+    "status": {
+      "installed": "Installed",
+      "bundled": "Bundled with Desktop",
+      "desktopManaged": "Desktop managed",
+      "manualInstallRequired": "Manual install required",
+      "notInstalled": "Not Installed",
+      "versionMismatch": "Version Mismatch",
+      "checking": "Checking..."
+    },
+    "actions": {
+      "install": "Install",
+      "upgrade": "Upgrade",
+      "installing": "Installing...",
+      "refresh": "Refresh",
+      "viewManualSteps": "View Manual Steps",
+      "visitWebsite": "Visit Official Website",
+      "reinstallDesktop": "Reinstall Desktop",
+      "updateDesktop": "Update Desktop"
+    },
+    "details": {
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version",
+      "manualCommand": "Suggested Command",
+      "source": "Source",
+      "bundledSource": "Bundled source",
+      "systemSource": "System source"
+    },
+    "manualHandoff": {
+      "title": "Manual CLI package install required",
+      "description": "Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "Refresh after the command finishes to re-check Desktop-managed dependencies."
+    },
+    "noDependencies": "No dependencies detected"
+  },
+  "dependencyCheck": {
+    "title": "Dependency Check Results",
+    "summary": "Checked {{total}} {{total, plural, =1 {dependency} other {dependencies}}}, {{passed}} {{passed, plural, =1 {passed} other {passed}}}, {{failed}} {{failed, plural, =1 {needs attention} other {need attention}}}",
+    "checking": "Checking dependencies...",
+    "status": {
+      "allPassed": "All dependencies are installed",
+      "hasIssues": "Some dependencies need attention"
+    },
+    "details": {
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "currentVersion": "Current Version",
+      "requiredVersion": "Required Version"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "Download & Sharing Acceleration",
+    "description": "Enabled by default. Latest desktop/server assets with torrent metadata start from torrent first and fall back automatically.",
+    "toggleTitle": "Enable LAN/Internet sharing acceleration (default)",
+    "toggleDescription": "You can disable it here first and adjust it later in Settings.",
+    "bullets": {
+      "latest": "External seeding stays focused on latest desktop and latest server assets",
+      "fallback": "If the torrent sidecar is missing or the handshake fails, fallback backfill starts automatically",
+      "disable": "Disable it now if your network is restricted or you do not want to share",
+      "portable": "Portable mode forces this feature off and never seeds implicitly"
+    }
+  },
+  "dependencyPreparation": {
+    "title": "Prepare Dependencies",
+    "description": "Install the command-line dependencies required by HagiCode Desktop and select at least one Agent CLI to use with coding sessions.",
+    "loading": "Checking Desktop-managed dependencies...",
+    "environment": {
+      "title": "Desktop-managed Node/npm environment",
+      "description": "Desktop installs and checks managed CLI packages in its own Node/npm environment. Read the FAQ for current path, package, and troubleshooting details.",
+      "faqLinkLabel": "View Node environment FAQ",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/"
+    },
+    "required": {
+      "title": "Required dependencies",
+      "description": "These dependencies must be installed before setup can continue."
+    },
+    "optional": {
+      "title": "Optional dependencies",
+      "description": "Optional dependencies do not block setup."
+    },
+    "agentCli": {
+      "title": "Agent CLI selection",
+      "description": "Select at least one Agent CLI. The selected CLI must be installed in Desktop's managed npm environment."
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "Node/npm environment unavailable",
+        "description": "Desktop cannot access its managed Node/npm environment. Refresh after the toolchain is available, or open the Node environment FAQ for troubleshooting details."
+      },
+      "required-packages-missing": {
+        "title": "Required dependencies need repair",
+        "description": "Install or upgrade the required dependencies before continuing."
+      },
+      "agent-cli-not-selected": {
+        "title": "Select an Agent CLI",
+        "description": "Choose at least one supported Agent CLI dependency."
+      },
+      "agent-cli-not-installed": {
+        "title": "Selected Agent CLI needs repair",
+        "description": "Install or upgrade at least one selected Agent CLI package into Desktop's managed npm environment."
+      }
+    },
+    "actions": {
+      "install": "Confirm and Install",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "recheck": "Recheck"
+    },
+    "complete": {
+      "title": "Dependencies are ready",
+      "description": "Required dependencies are installed and at least one selected Agent CLI is ready."
+    },
+    "error": {
+      "title": "Dependency preparation failed"
+    }
+  },
+  "legal": {
+    "title": "End User License Agreement and Privacy Policy",
+    "descriptionFull": "Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.",
+    "descriptionLegalOnly": "The current legal revisions have not been accepted yet. Review the official documents in your default browser, then return to Desktop to confirm.",
+    "progressFull": "Full setup: Language -> Welcome -> Legal Consent -> Sharing Acceleration -> Dependency Preparation -> Download",
+    "progressLegalOnly": "Compliance gate mode: language selection appears before the current legal consent step",
+    "browserInstruction": "Open the official documents in your default browser before you accept. Desktop only shows the revision summary, not the full legal text.",
+    "cacheHint": "You are currently seeing the most recent successfully cached legal summary. Refresh after network recovery to confirm whether a newer revision exists.",
+    "unavailableHint": "The legal revision summary is unavailable and no cached copy is available yet. Check your network and try again; setup cannot continue until valid metadata is loaded.",
+    "reviewPrompt": "After reviewing the official page, return to Desktop and confirm your acceptance.",
+    "effectiveDate": "Effective Date",
+    "revision": "Revision",
+    "openInBrowser": "Open {{title}} in Browser",
+    "checkbox": "I have reviewed the current EULA and Privacy Policy in the browser and agree to them.",
+    "modeHintFull": "After acceptance, setup continues to sharing acceleration and download.",
+    "modeHintLegalOnly": "After acceptance, the gate closes and the main interface resumes; declining exits the current app session.",
+    "accept": "Accept and Continue",
+    "accepting": "Recording acceptance...",
+    "decline": "Decline and Exit",
+    "declining": "Exiting...",
+    "refresh": "Refresh Legal Metadata",
+    "metadata": {
+      "remote": "Latest legal metadata loaded",
+      "cache": "Using the last successful cached legal metadata",
+      "unavailable": "Legal metadata is currently unavailable"
+    },
+    "types": {
+      "eula": "EULA",
+      "privacy-policy": "Privacy Policy"
+    }
+  }
+}

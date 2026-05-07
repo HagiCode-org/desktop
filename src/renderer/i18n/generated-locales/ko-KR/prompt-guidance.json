@@ -1,0 +1,57 @@
+{
+  "loading": "프롬프트 안내 로드 중...",
+  "emptyState": "데스크톱에서는 메시지를 확인하고 해당 메시지의 출처를 표시하며 복사/붙여넣기를 위해 정확한 텍스트를 준비할 수 있습니다.",
+  "availableTools": "사용 가능한 도구",
+  "promptTitle": "프롬프트",
+  "promptDescription": "AI CLI에 붙여넣기 전에 표시된 대로 전체 프롬프트를 정확하게 복사하세요.",
+  "tipTitle": "이 프롬프트를 사용하는 방법",
+  "tipDescription": "제안된 디렉터리에서 지원되는 CLI를 열고 프롬프트를 붙여넣은 다음 권장 변경 사항을 적용한 후 다시 돌아오세요.",
+  "actions": {
+    "refresh": "새로고침 안내",
+    "loading": "로드 중"
+  },
+  "steps": {
+    "openTool": "사용하려는 AI CLI 도구를 엽니다.",
+    "copyPrompt": "아래 프롬프트를 복사하세요.",
+    "runFromDirectory": "제안된 작업 디렉터리에서 실행: {{path}}",
+    "runFromCurrentDirectory": "이 작업과 가장 관련성이 높은 작업 디렉터리에서 실행하세요.",
+    "returnToDesktop": "생성된 지침을 따르고 완료되면 데스크톱으로 돌아갑니다."
+  },
+  "copy": {
+    "button": "프롬프트 복사",
+    "copying": "복사 중...",
+    "success": "프롬프트가 클립보드에 복사되었습니다.",
+    "failed": "프롬프트를 복사하지 못했습니다.",
+    "failedWithReason": "프롬프트를 복사하지 못했습니다: {{error}}"
+  },
+  "docs": {
+    "button": "{{tool}}개의 문서 열기",
+    "failed": "문서 링크를 열지 못했습니다."
+  },
+  "metadata": {
+    "source": "출처:",
+    "promptPath": "프롬프트 경로:",
+    "activeVersion": "활성 버전:",
+    "workingDirectory": "권장 작업 디렉토리:",
+    "attemptedPaths": "시도한 경로",
+    "unavailable": "이용 불가"
+  },
+  "sources": {
+    "custom": "사용자 정의 프롬프트 경로",
+    "active-version": "활성 설치 버전",
+    "packaged-resource": "패키지된 데스크톱 리소스",
+    "development-root": "개발 대체",
+    "manifest-entry": "버전과 함께 번들로 제공되는 프롬프트 파일",
+    "generated-from-manifest": "버전 매니페스트에서 생성됨"
+  },
+  "errors": {
+    "title": "신속한 안내 불가",
+    "defaultMessage": "데스크톱에서 요청한 프롬프트 안내를 확인할 수 없습니다.",
+    "promptNotFound": "데스크톱에서 이 워크플로에 대한 프롬프트 파일을 찾을 수 없습니다.",
+    "resolverUnavailable": "데스크톱 프롬프트 해결이 아직 준비되지 않았습니다.",
+    "managerUnavailable": "현재 데스크톱에서는 버전 프롬프트 안내를 로드할 수 없습니다.",
+    "promptLoadFailed": "데스크톱에서 버전 프롬프트를 로드하지 못했습니다.",
+    "promptReadFailed": "데스크톱에서 프롬프트 파일을 찾았지만 읽을 수 없습니다.",
+    "diagnosticPrefix": "시도한 경로:"
+  }
+}

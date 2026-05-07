@@ -1,0 +1,53 @@
+{
+  "title": "Assistant d'installation des dépendances",
+  "steps": {
+    "preparing": "Préparation",
+    "callingApi": "Appeler le Claude API",
+    "confirmation": "Confirmer le statut",
+    "completed": "Terminé"
+  },
+  "apiKey": {
+    "title": "Entrez la touche Claude API",
+    "description": "Pour utiliser la fonction d'installation alimentée par AI, vous devez fournir une clé Claude API. Vous pouvez en obtenir un sur Anthropic Console.",
+    "placeholder": "sk-ant-...",
+    "show": "Afficher",
+    "hide": "Masquer",
+    "continue": "Continuer",
+    "cancel": "Annuler",
+    "validating": "Validation...",
+    "invalid": "Clé API invalide. Veuillez vérifier et réessayer.",
+    "change": "Changement"
+  },
+  "status": {
+    "region": "Région",
+    "cn": "Chine",
+    "international": "Internationale"
+  },
+  "callingApi": {
+    "message": "Appel au Claude API...",
+    "hint": "Claude analyse votre système et exécute les commandes d'installation."
+  },
+  "confirmation": {
+    "title": "Confirmation",
+    "message": "Claude a terminé la vérification de l'installation. Veuillez confirmer les résultats.",
+    "retry": "Revérifier",
+    "complete": "Terminé",
+    "cancel": "Annuler"
+  },
+  "completed": {
+    "title": "Installation terminée",
+    "message": "Toutes les dépendances ont été vérifiées et installées.",
+    "return": "Retour à la maison"
+  },
+  "error": {
+    "title": "Erreur",
+    "dismiss": "Rejeter",
+    "loadPromptFailed": "Échec du chargement de l'invite d'installation",
+    "apiCallFailed": "L'appel API a échoué",
+    "apiKeyRequired": "La clé API est requise"
+  },
+  "actions": {
+    "startCheck": "Démarrer la vérification de l'installation",
+    "calling": "Appel..."
+  }
+}

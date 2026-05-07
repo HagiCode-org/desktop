@@ -1,0 +1,326 @@
+{
+  "status": {
+    "installed": "已安裝",
+    "notInstalled": "未安裝",
+    "installing": "安裝中",
+    "failed": "安裝失敗"
+  },
+  "installConfirm": {
+    "title": "停止服務確認",
+    "description": "Hagicode 服務正在運作中。安裝或重裝操作需要停止服務。",
+    "continueWill": "繼續操作將：",
+    "warnings": {
+      "stopService": "停止目前正在執行的 Hagicode 服務",
+      "interruptRequests": "中斷所有正在進行的請求",
+      "installOperation": "執行安裝/重裝操作"
+    },
+    "manualRestart": "安裝完成後，您需要手動重新啟動服務。",
+    "shouldContinue": "是否繼續？",
+    "cancel": "取消",
+    "confirm": "停止並繼續",
+    "stopping": "正在停止服務..."
+  },
+  "dependencyStartConfirm": {
+    "title": "啟動服務確認",
+    "description": "目前版本缺少以下必需的依賴項：",
+    "missingDependencies": "缺失依賴",
+    "currentVersion": "目前版本",
+    "required": "要求",
+    "risksTitle": "在缺少這些依賴項的情況下啟動服務可能會導致：",
+    "risks": {
+      "startupFailure": "服務無法正常啟動",
+      "featureUnavailable": "某些功能不可用",
+      "runtimeErrors": "運行時錯誤"
+    },
+    "confirmation": "是否仍然啟動服務？",
+    "cancel": "取消",
+    "confirm": "仍然啟動",
+    "starting": "正在啟動..."
+  },
+  "dependencyWarningBanner": {
+    "title": "警告：服務依賴項未完全滿足",
+    "description": "目前缺少 {{count}} 個必需的依賴項。部分功能可能無法正常運作。",
+    "viewDetails": "看詳情",
+    "fixLater": "稍後修復"
+  },
+  "packageManagement": {
+    "cardTitle": "套件管理",
+    "cardDescription": "管理 Web 服務包的安裝",
+    "platformLabel": "平台",
+    "detecting": "檢測中...",
+    "installationStatusLabel": "安裝狀態",
+    "installedVersionLabel": "已安裝版本",
+    "selectVersionLabel": "選擇要安裝的版本",
+    "versionPlaceholder": "-- 選擇版本 --",
+    "installingProgress": "安裝中...",
+    "reinstallingProgress": "重新安裝中...",
+    "reinstallButton": "重新安裝",
+    "reinstallConfirmTitle": "確認重新安裝",
+    "reinstallConfirmMessage": "您即將重新安裝版本 {{version}}。此操作將：",
+    "reinstallConfirmClearCache": "刪除快取中的舊軟體包",
+    "reinstallConfirmRemoveInstalled": "刪除目前已安裝的版本",
+    "reinstallConfirmDownloadInstall": "重新下載並安裝軟體包",
+    "reinstallCancel": "取消",
+    "reinstallConfirmButton": "重新安裝",
+    "reinstallProgress": {
+      "clearingCache": "清理快取中...",
+      "removingOld": "刪除舊版本...",
+      "downloading": "下載中...",
+      "installing": "安裝中..."
+    },
+    "reinstallSuccess": "重新安裝成功",
+    "reinstallFailed": "重新安裝失敗",
+    "noPackagesMessage": "沒有可用的包。請確保套件來源目錄存在於：",
+    "availableVersionsCount": "可用版本：找到 {{count}} 個",
+    "filteredByPlatform": "（依平台篩選：{{platform}}）",
+    "downloadButton": "安裝包",
+    "refreshButton": "重新整理版本",
+    "progress": {
+      "downloading": "下載中...",
+      "extracting": "解壓縮中...",
+      "verifying": "驗證中...",
+      "completed": "已完成",
+      "error": "錯誤"
+    }
+  },
+  "webServiceStatus": {
+    "cardTitle": "Hagicode 服務",
+    "cardDescription": "檢視與管理 Hagicode 服務運作狀態",
+    "status": {
+      "running": "運作中",
+      "stopped": "已停止",
+      "error": "錯誤",
+      "starting": "啟動中...",
+      "stopping": "停止中...",
+      "unknown": "未知",
+      "connected": "已連接遠端"
+    },
+    "statusDescription": {
+      "running": "Hagicode 服務正在運作",
+      "stopped": "Hagicode 服務未運作",
+      "error": "Hagicode 服務運作失敗",
+      "starting": "Hagicode 服務正在啟動",
+      "stopping": "Hagicode 服務正在關閉",
+      "unknown": "未知狀態"
+    },
+    "startButton": "啟動服務",
+    "dependencyReadinessButton": "進入依賴項管理",
+    "dependencyReadinessAlert": {
+      "title": "依赖项尚未就绪",
+      "message": "請先安裝 Desktop 託管環境中的必要相依性；選用相依性不會阻塞基礎服務啟動。"
+    },
+    "stoppingButton": "停止中...",
+    "restartButton": "重啟",
+    "restartingButton": "重啟中...",
+    "stopButton": "停止服務",
+    "openInBrowser": "在瀏覽器中開啟",
+    "openAppButton": "打開應用",
+    "openBrowserButton": "在瀏覽器中打開",
+    "portWaiting": {
+      "title": "正在等待連接埠可用",
+      "detail": "服務端口尚未可以訪問",
+      "detailWithPort": "連接埠 {{port}} 尚未可以存取"
+    },
+    "details": {
+      "serviceUrl": "服務 URL",
+      "uptime": "運行時間",
+      "restartCount": "重啟次數",
+      "port": "連接埠",
+      "version": "版本",
+      "remoteUrl": "遠端 URL",
+      "listenAddress": "監聽地址"
+    },
+    "notInstalledAlert": {
+      "title": "未安裝套件",
+      "message": "Hagicode 服務包尚未安裝。請先從套件管理部分安裝包，然後返回此處啟動服務。"
+    },
+    "noVersionAlert": {
+      "title": "無活動版本",
+      "message": "未找到活動版本。請先從版本管理頁面安裝並啟用一個版本。"
+    },
+    "versionNotReadyAlert": {
+      "title": "版本未就緒",
+      "message": "活動版本缺少必需的依賴項。請查看依賴管理頁面以了解詳情。"
+    },
+    "portError": {
+      "invalid": "無效的連接埠號",
+      "range": "連接埠必須在 1024 到 65535 之間"
+    },
+    "openLogsButton": "開啟 Web 日誌",
+    "startupFailureDialog": {
+      "title": "啟動失敗日誌",
+      "viewButton": "查看失敗日誌",
+      "copyButton": "複製日誌",
+      "closeButton": "關閉",
+      "emptySummary": "未取得到啟動失敗摘要",
+      "emptyLog": "暫無可用啟動日誌",
+      "meta": "埠: {{port}} | 時間: {{timestamp}}",
+      "truncatedHint": "日誌過長，已顯示最近輸出片段",
+      "copySuccess": "啟動日誌已複製",
+      "copyError": "複製日誌失敗",
+      "copyEmpty": "沒有可複製的日誌內容"
+    },
+    "toast": {
+      "noActiveVersion": "目前沒有可開啟 Web 日誌的活動版本",
+      "openLogsSuccess": "已開啟活動版本的 Web 日誌資料夾",
+      "logsNotFound": "未找到活動版本的 Web 日誌資料夾",
+      "openLogsError": "無法開啟活動版本的 Web 日誌資料夾"
+    },
+    "listenAddress": {
+      "label": "監聽地址",
+      "description": "在服務停止時選擇 Desktop 綁定嵌入式 Web 服務的位址。",
+      "customInputLabel": "自訂 IPv4",
+      "customPlaceholder": "192.168.1.24",
+      "customError": "請輸入有效的 IPv4 位址",
+      "accessUrlPreviewLabel": "訪問 URL 預覽",
+      "wildcardHint": "`0.0.0.0` 會綁定所有網路卡；Desktop 仍會透過 `127.0.0.1` 開啟本機用戶端。",
+      "localOnlyHint": "變更會在下次啟動本機服務時生效。",
+      "presets": {
+        "localhost": {
+          "label": "localhost",
+          "description": "適合目前裝置上的內建 WebView 和瀏覽器存取。"
+        },
+        "loopback": {
+          "label": "127.0.0.1",
+          "description": "使用明確 IPv4 回環位址，僅允許本機存取。"
+        },
+        "wildcard": {
+          "label": "0.0.0.0",
+          "description": "綁定所有本地網路卡，方便區域網路內其他設備存取。"
+        },
+        "custom": {
+          "label": "自訂 IP",
+          "description": "綁定到某個指定的 IPv4 網路卡位址，例如獨立的區域網路介面。"
+        }
+      }
+    }
+  },
+  "languageSelector": {
+    "currentLanguage": "目前語言",
+    "selectLanguage": "選擇語言"
+  },
+  "dependencyManagement": {
+    "title": "系統依賴管理",
+    "description": "檢查與管理 Hagicode 服務所需的系統運作時依賴",
+    "status": {
+      "installed": "已安裝",
+      "bundled": "隨 Desktop 內置",
+      "desktopManaged": "Desktop 託管",
+      "manualInstallRequired": "需要手動安裝",
+      "notInstalled": "未安裝",
+      "versionMismatch": "版本不匹配",
+      "checking": "檢測中...",
+      "ready": "可以使用"
+    },
+    "actions": {
+      "install": "安裝",
+      "installing": "安裝中...",
+      "refresh": "重新整理",
+      "viewManualSteps": "查看手動步驟",
+      "visitWebsite": "訪問官網",
+      "reinstallDesktop": "重新安裝 Desktop",
+      "updateDesktop": "更新 Desktop"
+    },
+    "details": {
+      "currentVersion": "目前版本",
+      "requiredVersion": "要求版本",
+      "manualCommand": "建議命令",
+      "source": "來源",
+      "bundledSource": "內建來源",
+      "systemSource": "系統來源"
+    },
+    "manualHandoff": {
+      "title": "需手動安裝 CLI 套件",
+      "description": "請在 Desktop 外執行建議指令。關於 Desktop 內建 Node/npm 環境和 PATH 行為的最新說明，請閱讀 FAQ。",
+      "faqLinkLabel": "查看 Node 環境 FAQ",
+      "faqUrl": "https://docs.hagicode.com/faq/desktop-node-environment/",
+      "refreshHint": "命令執行完成後刷新一次，以重新偵測 Desktop 託管相依性。"
+    },
+    "noDependencies": "未檢測到依賴"
+  },
+  "packageSource": {
+    "cardTitle": "套件來源配置",
+    "cardDescription": "配置和管理用於安裝的套件來源",
+    "sourceType": {
+      "label": "套件來源類型",
+      "folder": "本地資料夾",
+      "httpIndex": "HTTP 索引來源",
+      "http": "HTTP URL"
+    },
+    "folder": {
+      "path": {
+        "label": "資料夾路徑",
+        "placeholder": "輸入包目錄路徑"
+      },
+      "browseButton": "瀏覽...",
+      "scanButton": "掃描可用版本",
+      "scanning": "掃描中...",
+      "notFound": "資料夾不存在或無法存取"
+    },
+    "http": {
+      "url": {
+        "label": "包 URL",
+        "placeholder": "https://example.com/hagicode-0.1.0-linux-x64.zip"
+      }
+    },
+    "httpIndex": {
+      "indexUrl": {
+        "label": "索引 URL",
+        "placeholder": "https://index.hagicode.com/server/index.json",
+        "hint": "索引檔案必須包含 versions 陣列和每個版本的 assets"
+      }
+    },
+    "validateButton": "驗證配置",
+    "applyButton": "應用程式配置",
+    "fetchVersionsButton": "取得可用版本",
+    "validating": "驗證配置中...",
+    "valid": "配置有效",
+    "fetchingVersions": "取得版本中...",
+    "nortOnlyNotice": "僅支援 nort 套件（hagicode-*）",
+    "switchSource": "切換包源",
+    "addSource": "新增套件來源",
+    "removeSource": "刪除套件來源",
+    "editSource": "編輯包來源",
+    "currentSource": "目前包源",
+    "availableSources": "可用套件來源",
+    "noSources": "未配置包源",
+    "sourceName": "套件來源名稱",
+    "actions": "操作",
+    "scanSuccess": "掃描完成，找到 {{count}} 個版本",
+    "fetchSuccess": "取得完成，找到 {{count}} 個版本",
+    "saveSuccess": "套件來源配置已儲存",
+    "switchSuccess": "已切換包源",
+    "removeSuccess": "套件來源已刪除",
+    "confirmRemove": "確認刪除此套件來源？",
+    "error": {
+      "loadFailed": "載入套件來源配置失敗",
+      "saveFailed": "保存包源配置失敗",
+      "switchFailed": "切換包源失敗",
+      "removeFailed": "刪除包來源失敗",
+      "scanFailed": "掃描資料夾失敗",
+      "fetchFailed": "取得 GitHub 版本失敗",
+      "validateFailed": "驗證配置失敗"
+    }
+  },
+  "tray": {
+    "status": {
+      "running": "運作中",
+      "stopped": "已停止",
+      "error": "錯誤"
+    },
+    "openInApp": "開啟 Hagicode",
+    "openInBrowser": "瀏覽器打開",
+    "startService": "啟動服務",
+    "stopService": "停止服務"
+  },
+  "blogFeed": {
+    "title": "Hagicode 博客",
+    "openRss": "開啟 RSS",
+    "openRssFailed": "無法開啟 RSS 連結",
+    "refresh": "重新整理",
+    "loading": "加載中...",
+    "error": "載入失敗，請稍後重試",
+    "noArticles": "暫無文章",
+    "lastUpdate": "最後更新：{{date}}"
+  }
+}

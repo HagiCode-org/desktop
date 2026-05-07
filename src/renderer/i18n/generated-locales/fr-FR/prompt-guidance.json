@@ -1,0 +1,57 @@
+{
+  "loading": "Chargement des instructions d'invite...",
+  "emptyState": "Desktop peut résoudre l'invite, vous montrer d'où elle vient et conserver le texte exact prêt à être copié/collé.",
+  "availableTools": "Outils disponibles",
+  "promptTitle": "Invite",
+  "promptDescription": "Copiez l'invite complète exactement comme indiqué avant de la coller dans votre AI CLI.",
+  "tipTitle": "Comment utiliser cette invite",
+  "tipDescription": "Ouvrez n'importe quel CLI pris en charge dans le répertoire suggéré, collez l'invite et revenez après avoir appliqué les modifications recommandées.",
+  "actions": {
+    "refresh": "Conseils de rechargement",
+    "loading": "Chargement"
+  },
+  "steps": {
+    "openTool": "Ouvrez l'outil AI CLI que vous souhaitez utiliser.",
+    "copyPrompt": "Copiez l'invite ci-dessous.",
+    "runFromDirectory": "Exécutez-le à partir du répertoire de travail suggéré: {{path}}",
+    "runFromCurrentDirectory": "Exécutez-le à partir du répertoire de travail le plus pertinent pour cette tâche.",
+    "returnToDesktop": "Suivez les instructions générées et revenez au bureau lorsque vous avez terminé."
+  },
+  "copy": {
+    "button": "Copier l'invite",
+    "copying": "Copie...",
+    "success": "Invite copiée dans le presse-papiers",
+    "failed": "Échec de la copie de l'invite",
+    "failedWithReason": "Échec de la copie de l'invite: {{error}}"
+  },
+  "docs": {
+    "button": "Ouvrir {{tool}} documents",
+    "failed": "Échec de l'ouverture du lien de documentation"
+  },
+  "metadata": {
+    "source": "Source:",
+    "promptPath": "Chemin d'accès:",
+    "activeVersion": "Version active:",
+    "workingDirectory": "Répertoire de travail suggéré:",
+    "attemptedPaths": "Chemins tentés",
+    "unavailable": "Indisponible"
+  },
+  "sources": {
+    "custom": "Chemin d'invite personnalisé",
+    "active-version": "Version installée active",
+    "packaged-resource": "Ressource de bureau packagée",
+    "development-root": "Repli du développement",
+    "manifest-entry": "Fichier d'invite fourni avec la version",
+    "generated-from-manifest": "Généré à partir du manifeste de version"
+  },
+  "errors": {
+    "title": "Conseils rapides indisponibles",
+    "defaultMessage": "Desktop n’a pas pu résoudre l’invite demandée.",
+    "promptNotFound": "Desktop n'a pas trouvé le fichier d'invite pour ce flux de travail.",
+    "resolverUnavailable": "La résolution des invites du bureau n'est pas encore prête.",
+    "managerUnavailable": "Desktop ne peut pas charger les instructions d'invite de version pour le moment.",
+    "promptLoadFailed": "Desktop n’a pas réussi à charger l’invite de version.",
+    "promptReadFailed": "Desktop a trouvé le fichier d'invite mais n'a pas pu le lire.",
+    "diagnosticPrefix": "Chemins tentés:"
+  }
+}

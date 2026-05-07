@@ -1,0 +1,12 @@
+{
+  "dialog": {
+    "close": "关闭"
+  },
+  "button": {
+    "submit": "提交",
+    "cancel": "取消"
+  },
+  "alert": {
+    "dismiss": "关闭"
+  }
+}

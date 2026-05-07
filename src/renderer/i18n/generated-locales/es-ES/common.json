@@ -1,0 +1,760 @@
+{
+  "button": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "refresh": "Actualizar",
+    "install": "Instalar",
+    "uninstall": "Desinstalar",
+    "start": "Iniciar",
+    "stop": "Detener",
+    "restart": "Reiniciar",
+    "open": "Abrir",
+    "download": "Descargar"
+  },
+  "status": {
+    "loading": "Cargando...",
+    "success": "Éxito",
+    "error": "error",
+    "warning": "Advertencia",
+    "info": "Información",
+    "running": "corriendo",
+    "stopped": "Detenido",
+    "installed": "Instalado",
+    "notInstalled": "No instalado",
+    "pending": "Pendiente",
+    "failed": "Fallido"
+  },
+  "form": {
+    "required": "Requerido",
+    "optional": "Opcional",
+    "selectPlaceholder": "Por favor seleccione...",
+    "inputPlaceholder": "Por favor ingresa...",
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "invalidFormat": "Formato no válido",
+      "minLength": "Debe tener al menos {{min}} caracteres",
+      "maxLength": "No debe exceder los {{max}} caracteres"
+    }
+  },
+  "common": {
+    "version": "Versión",
+    "platform": "Plataforma",
+    "language": "Idioma",
+    "settings": "Configuración",
+    "noData": "No hay datos disponibles",
+    "operationSuccess": "Operación exitosa",
+    "operationFailed": "Operación fallida",
+    "confirmDelete": "¿Estás seguro de que deseas eliminar?",
+    "confirmAction": "¿Estás seguro de que quieres continuar?"
+  },
+  "header": {
+    "title": "Configuración",
+    "runningSuccessfully": "Ejecutando con éxito",
+    "language": {
+      "label": "Idioma",
+      "description": "Seleccione el idioma de la interfaz de la aplicación"
+    },
+    "embeddedWebServicePort": "Puerto de servicio web integrado"
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": {
+      "label": "Idioma",
+      "description": "Seleccione el idioma de la interfaz de la aplicación"
+    },
+    "embeddedWebServicePort": "Puerto de servicio web integrado"
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Construido con ❤️ usando Electron + React + TypeScript.",
+    "testBuild": "Aplicación de prueba: compilación de desarrollo"
+  },
+  "menu": {
+    "systemManagement": "Gestión del sistema",
+    "hagicoWeb": "Hagicode Web",
+    "dependencies": "Dependencias",
+    "webService": "Servicio Web",
+    "packages": "Paquetes",
+    "settings": "Configuración",
+    "openWebUI": "Abierto Web UI",
+    "navigate": "Navegación",
+    "back": "Atrás",
+    "forward": "Adelante",
+    "refresh": "Actualizar",
+    "devTools": "Herramientas para desarrolladores",
+    "help": "Ayuda",
+    "about": "Acerca de",
+    "quit": "dejar de fumar"
+  },
+  "webView": {
+    "back": "Atrás",
+    "forward": "Adelante",
+    "refresh": "Actualizar",
+    "openInBrowser": "Abrir en el navegador",
+    "serviceNotRunning": "El servicio web no se ejecuta",
+    "serviceNotRunningDesc": "Inicie el servicio web antes de acceder a la interfaz web.",
+    "backToSystem": "Volver a Gestión del sistema",
+    "error": "Error de carga",
+    "loadFailed": "Error de carga: {{reason}}",
+    "crashed": "El proceso de renderizado falló",
+    "retry": "Reintentar"
+  },
+  "mirror": {
+    "title": "NPM Configuración del espejo",
+    "region": "Región detectada",
+    "currentMirror": "Espejo actual",
+    "mirrorUrl": "Espejo URL",
+    "detectedAt": "Detectado en",
+    "official": "Oficial npm",
+    "taobao": "Taobao NPM Mirror",
+    "redetect": "Redetectar",
+    "info": "NPM herramientas usarán automáticamente este espejo para descargas más rápidas",
+    "regions": {
+      "CN": "China",
+      "INTERNATIONAL": "Internacional"
+    }
+  },
+  "navigation": {
+    "dashboard": "Panel",
+    "webService": "Servicio Web",
+    "versionManagement": "Gestión de versiones",
+    "webServiceNotRunning": "El servicio web no se está ejecutando",
+    "officialWebsite": "Sitio web oficial",
+    "officialWebsiteDesc": "Visite el sitio web oficial Hagicode para obtener las últimas noticias y documentación.",
+    "costCalculator": "AI Calculadora de reemplazo",
+    "about": {
+      "sectionDescription": "Primero, renderice la instantánea incluida y luego actualice los destinos oficiales más recientes.",
+      "snapshotLabel": "Instantánea incluida",
+      "runtimeLabel": "datos en vivo",
+      "updatedAt": "Actualizado {{value}}",
+      "loading": "Actualizando el último funcionario sobre datos...",
+      "refreshFailed": "El último funcionario sobre datos no se pudo cargar. En su lugar, se muestra la instantánea incluida.",
+      "loadFailed": "Los datos oficiales no están disponibles temporalmente, pero la entrada del sitio web aún funciona.",
+      "snapshotMissing": "Esta compilación no incluye una instantánea incluida. Probar el punto final en vivo directamente.",
+      "empty": "No hay información oficial sobre las entradas disponibles en este momento.",
+      "sections": {
+        "store": "Tienda",
+        "community": "Comunidad",
+        "content": "Contenido"
+      },
+      "types": {
+        "link": "Enlace",
+        "contact": "Contacto",
+        "qr": "QR",
+        "image": "Imagen"
+      }
+    },
+    "promotion": {
+      "label": "Promoción",
+      "defaultCta": "Más información"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Panel",
+    "webService": "Servicio Web",
+    "versionManagement": "Gestión de versiones",
+    "diagnostic": "Diagnóstico",
+    "dependencyManagement": "Gestión de dependencias",
+    "codeServer": "Code Server",
+    "omniroute": "OmniRoute",
+    "settings": "Configuración",
+    "desktopVersion": "Versión de escritorio",
+    "webVersion": "Versión web",
+    "unknownVersion": "No disponible",
+    "toggle": "Alternar barra lateral",
+    "collapse": "Colapso",
+    "expand": "Expandir"
+  },
+  "dependencyManagement": {
+    "title": "Gestión de dependencias",
+    "description": "Administre las dependencias de línea de comandos requeridas y opcionales para la preparación del lanzamiento de HagiCode e inspeccione el entorno integrado Node/npm del escritorio.",
+    "loading": "Leyendo el estado de dependencia...",
+    "unavailable": "No disponible",
+    "environment": {
+      "title": "Entorno de nodo",
+      "description": "Desktop utiliza su propio tiempo de ejecución Node/npm para los paquetes CLI administrados.",
+      "managedNotice": "Lea las preguntas frecuentes para obtener detalles actuales sobre el tiempo de ejecución Node/npm de Desktop, el aislamiento de PATH, las ubicaciones de los paquetes y la solución de problemas.",
+      "rationaleTitle": "Nodo/entorno npm administrado por escritorio",
+      "faqLinkLabel": "Ver preguntas frecuentes sobre el entorno de nodo",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "version": "Versión",
+      "toolchainRoot": "Raíz de la cadena de herramientas",
+      "nodeRuntimeRoot": "Raíz del tiempo de ejecución del nodo incluido",
+      "nodeMajorVersion": "Árbol de paquetes principales del nodo",
+      "globalPrefix": "Prefijo global",
+      "globalModulesRoot": "Raíz de módulos globales",
+      "status": {
+        "available": "Disponible",
+        "unavailable": "No disponible",
+        "error": "error"
+      }
+    },
+    "mirror": {
+      "title": "npm Aceleración del espejo",
+      "description": "Habilite npmmirror.com para las operaciones de instalación y sincronización de paquetes npm administrados.",
+      "toggleLabel": "Utilice la aceleración npmmirror.com",
+      "registryUrl": "Registro URL",
+      "enabled": "Habilitado",
+      "disabled": "Discapacitado",
+      "saving": "Ahorro",
+      "enabledHelp": "Las próximas operaciones de sincronización/instalación utilizarán el espejo de registro npmmirror.com.",
+      "disabledHelp": "Las próximas operaciones npm utilizarán el comportamiento de registro predeterminado npm.",
+      "saveFailed": "No se pudo guardar la configuración del espejo"
+    },
+    "omniRouteRepair": {
+      "title": "Regresar a OmniRoute después de reparar las dependencias",
+      "descriptionMissing": "OmniRoute no se pudo iniciar porque faltan uno o más paquetes administrados por el escritorio. Repare los paquetes resaltados aquí y luego vuelva a verificar OmniRoute.",
+      "descriptionRuntimeMissing": "OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeDamaged": "OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.",
+      "descriptionRuntimeAndPackage": "OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.",
+      "descriptionUnknown": "El escritorio no pudo confirmar las OmniRoute dependencias. Actualice o repare los paquetes resaltados aquí y luego vuelva a verificar OmniRoute.",
+      "descriptionVersionMismatch": "OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.",
+      "sourceLabel": "Fuente",
+      "sourceValue": "OmniRoute",
+      "targetBadge": "Objetivo de reparación",
+      "pendingNotice": "Mantenga los paquetes resaltados disponibles en esta tabla y luego ejecute la acción de volver a verificar cuando se complete la reparación.",
+      "recheckAction": "Reparación completa: vuelva a comprobar OmniRoute",
+      "recheckRunning": "Volviendo a comprobar OmniRoute dependencias...",
+      "incomplete": "OmniRoute todavía no está listo. Instale o actualice los paquetes resaltados y vuelva a intentarlo.",
+      "refreshFailed": "El escritorio no pudo actualizar el estado de dependencia. Vuelva a intentar la nueva verificación después de que finalice la operación actual."
+    },
+    "vendoredRuntime": {
+      "title": "Desktop-managed runtimes",
+      "description": "Vendored runtimes are staged and supervised by Desktop instead of npm package management.",
+      "managedByDesktop": "Managed directly by Desktop",
+      "runtimeRoot": "Runtime root",
+      "metadataPath": "Metadata path",
+      "healthUrl": "Local URL",
+      "diagnostics": "Diagnostics",
+      "reinstallHint": "This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.",
+      "primaryDescriptions": {
+        "ready": "Runtime files are staged and ready for Desktop-managed startup.",
+        "running": "Runtime is responding on its local Desktop-managed endpoint.",
+        "stopped": "Runtime files are present, but the Desktop-managed process is not currently running.",
+        "missing": "Runtime files are missing from the Desktop-managed location.",
+        "damaged": "Runtime files are incomplete or failed validation."
+      },
+      "status": {
+        "ready": "Ready",
+        "running": "Running",
+        "stopped": "Stopped",
+        "missing": "Missing",
+        "damaged": "Damaged"
+      },
+      "actions": {
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "repair": "Repair staged runtime",
+        "openLogs": "Open logs",
+        "openRuntimeRoot": "Open runtime root",
+        "openUrl": "Open local URL",
+        "reinstallDesktop": "Reinstall Desktop"
+      }
+    },
+    "vendoredRuntimes": {
+      "omniroute": {
+        "description": "Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      },
+      "codeServer": {
+        "description": "Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain."
+      }
+    },
+    "package": {
+      "version": "Versión",
+      "requiredVersion": "Required version",
+      "versionMismatch": "Current version {{current}} does not satisfy {{required}}.",
+      "packageName": "Paquete",
+      "category": "categoría"
+    },
+    "packageStatus": {
+      "installed": "Instalado",
+      "outdated": "Upgrade required",
+      "not-installed": "No instalado",
+      "unknown": "Desconocido"
+    },
+    "packages": {
+      "hagiscript": {
+        "description": "Orquestación de dependencia requerida CLI utilizada para sincronizar las herramientas de línea de comandos administradas por el escritorio."
+      },
+      "openspec": {
+        "description": "OpenSpec propuesta, especificación y flujo de trabajo de tareas CLI."
+      },
+      "skills": {
+        "description": "Codex/Gestión de habilidades del agente CLI."
+      },
+      "pm2": {
+        "description": "PM2 administrador de procesos utilizado por Desktop para supervisar OmniRoute."
+      },
+      "omniroute": {
+        "description": "OmniRoute enrutamiento local y cadena de herramientas CLI."
+      },
+      "claudeCode": {
+        "description": "Claude Code Agente CLI para sesiones de codificación asistida AI."
+      },
+      "codex": {
+        "description": "OpenAI Codex Agente CLI para codificar flujos de trabajo."
+      },
+      "githubCopilot": {
+        "description": "GitHub Copilot CLI distribuido a través del paquete oficial @github/copilot npm."
+      },
+      "codebuddy": {
+        "description": "CodeBuddy CLI distribuido a través del paquete oficial @tencent-ai/codebuddy-code npm."
+      },
+      "opencode": {
+        "description": "OpenCode Agent CLI distribuido a través del paquete opencode-ai npm."
+      },
+      "qoder": {
+        "description": "QoderCLI distribuido a través del paquete oficial @qoder-ai/qodercli npm."
+      },
+      "gemini": {
+        "description": "Google Gemini CLI distribuido a través del paquete oficial @google/gemini-cli npm."
+      }
+    },
+    "categories": {
+      "bootstrap": "Arranque",
+      "workflow": "Flujo de trabajo",
+      "agent-cli": "Agente CLI",
+      "developer-tool": "herramienta de desarrollo"
+    },
+    "bootstrap": {
+      "title": "Requerido"
+    },
+    "dependencyGate": {
+      "title": "Instale hagiscript primero",
+      "missing": "Otras acciones de dependencia están deshabilitadas hasta que se instale hagiscript.",
+      "unknown": "El escritorio no puede verificar hagiscript en este momento. Actualice o reinstale hagiscript antes de cambiar otras dependencias."
+    },
+    "packageTable": {
+      "title": "Dependencias de la línea de comandos",
+      "description": "Seleccione el Agente CLI y las dependencias del flujo de trabajo para instalar a través de hagiscript npm-sync.",
+      "tool": "Herramienta",
+      "status": "Estado",
+      "action": "acción"
+    },
+    "batchLog": {
+      "title": "Registro de instalación por lotes",
+      "description": "Salida combinada para {{count}} paquetes seleccionados.",
+      "empty": "Los registros aparecerán aquí después de que comience la instalación por lotes.",
+      "completed": "Instalación por lotes completada.",
+      "status": {
+        "running": "corriendo",
+        "completed": "Completado",
+        "failed": "Fallido"
+      }
+    },
+    "selection": {
+      "selectAll": "Seleccione todos los paquetes elegibles",
+      "selectPackage": "Seleccione {{name}}",
+      "selectedCount": "{{count}} seleccionado"
+    },
+    "disabled": {
+      "unknown": "El estado de este paquete es desconocido. Actualice antes de seleccionarlo o instalarlo."
+    },
+    "actions": {
+      "refresh": "Actualizar",
+      "install": "Instalar",
+      "installed": "Instalado",
+      "upgrade": "Upgrade",
+      "reinstall": "Reinstalar",
+      "installSelected": "Instalación por lotes seleccionada",
+      "installSelectedRunning": "Instalación por lotes...",
+      "uninstall": "Desinstalar"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar el estado de administración de dependencias",
+      "operationFailed": "La operación de dependencia falló"
+    }
+  },
+  "bootstrap": {
+    "loading": {
+      "title": "Finalizando la inicialización del primer lanzamiento...",
+      "summary": "Preparando el puente de escritorio, la configuración local y el directorio de datos.",
+      "description": "El shell de la aplicación permanece visible hasta que las dependencias de inicio críticas estén listas, por lo que el primer inicio empaquetado nunca cae en una ventana en blanco.",
+      "stepActive": "En progreso",
+      "stepPending": "Pendiente",
+      "stage": "Etapa actual: {{stage}}"
+    },
+    "steps": {
+      "shell": "Inicializar el shell de la aplicación",
+      "config": "Cargar configuración local",
+      "dataDirectory": "Preparar directorio de datos",
+      "render": "Montar la interfaz principal"
+    },
+    "error": {
+      "title": "El primer lanzamiento no terminó.",
+      "description": "El escritorio no pudo preparar los recursos locales necesarios para la primera pantalla.",
+      "diagnosticTitle": "Resumen diagnóstico",
+      "stage": "Etapa: {{stage}}",
+      "summary": "Resumen: {{summary}}",
+      "path": "Ruta: {{path}}"
+    },
+    "actions": {
+      "openLogs": "Abrir carpeta de registros",
+      "retry": "Recargar el shell de la aplicación",
+      "working": "Trabajando..."
+    },
+    "toasts": {
+      "logsOpened": "Abrió la carpeta de registros del escritorio.",
+      "logsFailed": "No se pudo abrir la carpeta de registros del escritorio"
+    }
+  },
+  "systemDiagnostic": {
+    "title": "Diagnóstico del sistema",
+    "description": "Recopile los detalles del entorno local de este dispositivo y comparta el informe en texto sin formato con el soporte técnico.",
+    "reportTitle": "Informe en texto plano",
+    "reportDescription": "Cada repetición reemplaza el informe anterior, por lo que el contenido copiado siempre refleja la instantánea de diagnóstico más reciente.",
+    "empty": "Ejecute un diagnóstico del sistema para capturar el sistema operativo, el hardware, las sondas de registro del Agente 0 y los detalles principales de la cadena de herramientas.",
+    "loading": "Recopilando detalles del entorno local...",
+    "actions": {
+      "run": "Iniciar diagnóstico",
+      "running": "Ejecutando diagnóstico",
+      "rerun": "correr de nuevo",
+      "copy": "Copiar resultado",
+      "copying": "Copiando"
+    },
+    "status": {
+      "success": "Completado",
+      "partialFailure": "Fallo parcial"
+    },
+    "summary": {
+      "completedAt": "Completado en: {{value}}",
+      "issueCount": "Problemas capturados: {{count}}"
+    },
+    "runtimeMatrix": {
+      "title": "Matriz de tiempo de ejecución incorporada",
+      "unknown": "desconocido",
+      "unresolved": "sin resolver",
+      "version": "Versión: {{value}}",
+      "path": "Ruta: {{value}}",
+      "boolean": {
+        "true": "habilitado",
+        "false": "discapacitado"
+      },
+      "source": {
+        "bundled": "incluido",
+        "desktop-managed": "Administrado por escritorio",
+        "host": "RUTA del anfitrión",
+        "unknown": "Fuente desconocida"
+      },
+      "status": {
+        "healthy": "saludable",
+        "warning": "Advertencia",
+        "missing": "desaparecido",
+        "invalid": "Inválido",
+        "unknown": "Desconocido"
+      },
+      "npmConfig": {
+        "title": "npm Configuración",
+        "registry": "Registro: {{value}}",
+        "cache": "Caché: {{value}}",
+        "prefix": "Prefijo/raíz del paquete: {{value}}",
+        "mirror": "Aceleración del espejo: {{value}}"
+      },
+      "managedCommands": {
+        "title": "Comandos administrados",
+        "empty": "No se informaron metadatos de comandos administrados.",
+        "status": {
+          "installed": "Instalado",
+          "deferred": "diferido",
+          "manual": "manuales",
+          "missing": "desaparecido",
+          "invalid": "Inválido",
+          "unknown": "Desconocido"
+        }
+      }
+    },
+    "boundary": {
+      "title": "Solo diagnóstico de máquina local",
+      "description": "Esta página recopila detalles del entorno en texto sin formato del dispositivo actual para que pueda compartirlos con el soporte técnico."
+    },
+    "partialFailure": {
+      "title": "Algunas comprobaciones no terminaron limpiamente",
+      "description": "El informe todavía se puede utilizar. Se marcaron {{count}} elementos como faltantes o fallidos y sus motivos se adjuntaron al informe."
+    },
+    "error": {
+      "title": "Error en la ejecución de diagnóstico",
+      "description": "El escritorio no pudo completar esta ejecución de diagnóstico: {{error}}"
+    },
+    "toast": {
+      "success": "Diagnóstico del sistema completado",
+      "partialFailure": "Diagnóstico del sistema completado con {{count}} problemas",
+      "runFailed": "Error de diagnóstico del sistema: {{error}}",
+      "copySuccess": "Informe de diagnóstico copiado",
+      "copyFailed": "No se pudo copiar el informe de diagnóstico: {{error}}"
+    }
+  },
+  "system": {
+    "logQuickAccess": {
+      "title": "Registrar acceso rápido",
+      "description": "Abra las carpetas de registro de la aplicación web y del escritorio directamente para acortar el tiempo de diagnóstico.",
+      "loading": "Comprobando carpetas de registro...",
+      "hint": "Los estados de los botones se actualizan automáticamente con la versión activa.",
+      "status": {
+        "available": "Disponible",
+        "unavailable": "No disponible"
+      },
+      "desktop": {
+        "label": "Carpeta de registros de escritorio",
+        "description": "Abra el directorio de registros de escritorio actual en este dispositivo.",
+        "openSuccess": "Carpeta de registros de escritorio abierta"
+      },
+      "webApp": {
+        "label": "Carpeta de registros de aplicaciones web",
+        "description": "Abra el directorio de registros de la aplicación web para la versión activa.",
+        "openSuccess": "Se abrió la carpeta de registros de la aplicación web"
+      },
+      "errors": {
+        "load_failed": "No se pudo cargar el estado de la carpeta de registro",
+        "logs_not_found": "Carpeta de registros no encontrada",
+        "no_active_version": "No se ha seleccionado ninguna versión activa",
+        "open_failed": "No se pudo abrir la carpeta de registros"
+      }
+    },
+    "noVersionInstalled": {
+      "title": "Aún no hay versiones instaladas",
+      "description": "La forma más sencilla de comenzar con Hagicode Desktop es a través de nuestro asistente de configuración guiada. Complete la instalación y configuración en solo unos pocos pasos.",
+      "startWizard": "Asistente de lanzamiento"
+    },
+    "activeVersion": {
+      "actions": {
+        "manage": "Administrar versiones"
+      },
+      "labels": {
+        "version": "Versión",
+        "installedAt": "Instalado en",
+        "status": "Estado"
+      },
+      "states": {
+        "ready": "Listo"
+      }
+    },
+    "updateReminder": {
+      "title": "Actualización disponible",
+      "labels": {
+        "current": "Actual",
+        "latest": "Lo último",
+        "state": "Estado"
+      },
+      "states": {
+        "checking": "comprobando",
+        "downloading": "Descargando",
+        "ready": "Listo",
+        "failed": "Fallido",
+        "disabled": "En pausa"
+      },
+      "descriptions": {
+        "checking": "Comprobando la fuente del paquete activo para encontrar una versión más reciente compatible.",
+        "downloading": "Se encontró una versión más nueva y el archivo se está descargando previamente en segundo plano.",
+        "ready": "El archivo más reciente está verificado y listo para el flujo de instalación de administración de versiones existente.",
+        "failed": "Error en la actualización en segundo plano: {{error}}",
+        "settings-disabled": "Las descargas previas en segundo plano están deshabilitadas. Puedes volver a activarlos en Configuración.",
+        "portable-mode": "El modo portátil omite las actualizaciones en segundo plano y mantiene el tiempo de ejecución actual como de solo lectura.",
+        "steam-mode": "Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.",
+        "no-package-source": "No hay ninguna fuente de paquete activa configurada, por lo que las actualizaciones en segundo plano no pueden iniciarse."
+      },
+      "actions": {
+        "openVersionPage": "Gestión de versiones abiertas",
+        "installLatest": "Instalar lo último",
+        "openSettings": "Abrir configuración"
+      }
+    },
+    "homepageTour": {
+      "buttons": {
+        "next": "Siguiente",
+        "previous": "Atrás",
+        "done": "hecho"
+      },
+      "steps": {
+        "hero": {
+          "title": "Bienvenido a la página de inicio",
+          "description": "Esta sección superior resume el estado del servicio y le ayuda a comprender por dónde empezar en el panel de escritorio."
+        },
+        "updateReminder": {
+          "title": "Seguimiento de actualizaciones disponibles",
+          "description": "Cuando se descubre un paquete más nuevo compatible, esta tarjeta de recordatorio muestra su estado y enlaza con la siguiente acción."
+        },
+        "serviceCard": {
+          "title": "Monitorear el estado del servicio",
+          "description": "Revise el estado del servicio integrado aquí, luego inicie, detenga, reinicie o abra Hagicode cuando el tiempo de ejecución esté listo."
+        },
+        "logAccess": {
+          "title": "Saltar a carpetas de registro",
+          "description": "Estas acciones rápidas abren carpetas de registro de aplicaciones web y de escritorio para que pueda recopilar pruebas más rápidamente durante el diagnóstico."
+        },
+        "activeVersion": {
+          "title": "Revisar la versión activa",
+          "description": "Esta sección muestra qué paquete está instalado en este momento y le brinda una ruta rápida hacia la administración de versiones."
+        },
+        "noVersionInstalled": {
+          "title": "Instala tu primera versión",
+          "description": "Cuando aún no haya ningún paquete instalado, utilice esta llamada a la acción para iniciar el asistente de instalación y completar la primera instalación en tiempo de ejecución."
+        }
+      }
+    }
+  },
+  "themeToggle": {
+    "switchToLight": "Cambiar al modo de luz",
+    "switchToDark": "Cambiar al modo oscuro"
+  },
+  "omniroute": {
+    "title": "OmniRoute",
+    "description": "Administre el servicio OmniRoute propiedad del escritorio a través de PM2, incluidos controles del ciclo de vida, rutas de ejecución, configuración de puertos y registros recientes.",
+    "loading": "Cargando estado OmniRoute...",
+    "actions": {
+      "refresh": "Actualizar",
+      "start": "Empezar",
+      "stop": "Detener",
+      "restart": "Reiniciar",
+      "working": "Trabajando...",
+      "openUi": "Abierto UI",
+      "save": "Guardar",
+      "open": "Abierto",
+      "refreshLogs": "Actualizar registros"
+    },
+    "status": {
+      "title": "Estado",
+      "running": "corriendo",
+      "stopped": "Detenido",
+      "partial": "Parcial",
+      "error": "error",
+      "baseUrl": "Base URL",
+      "pm2": "PM2 ejecutable",
+      "pm2Missing": "PM2 no está instalado"
+    },
+    "config": {
+      "title": "Configuración de tiempo de ejecución",
+      "description": "OmniRoute utiliza un puerto aislado administrado por el escritorio. No puede coincidir con el puerto del servicio web HagiCode.",
+      "portLabel": "Puerto",
+      "passwordLabel": "Contraseña de inicio de sesión",
+      "passwordDescription": "Desktop genera una contraseña aleatoria de forma predeterminada y la muestra aquí en texto sin formato. Se inyecta como INITIAL_PASSWORD cuando se inicia OmniRoute."
+    },
+    "validation": {
+      "numeric": "Introduzca un puerto numérico.",
+      "range": "Utilice un puerto entre 1024 y 65535.",
+      "passwordLength": "Utilice una contraseña de entre 4 y 200 caracteres."
+    },
+    "paths": {
+      "title": "Rutas administradas",
+      "description": "La configuración, los datos y los registros se almacenan en Electron userData/OmniRoute.",
+      "config": "configuración",
+      "data": "Datos",
+      "logs": "Registros"
+    },
+    "processes": {
+      "title": "PM2 Procesos",
+      "description": "Desktop solo administra su propio proceso de servicio OmniRoute y deja intactos los procesos PM2 no relacionados.",
+      "name": "Nombre",
+      "status": "Estado",
+      "restarts": "Se reinicia"
+    },
+    "processStatus": {
+      "online": "En línea",
+      "stopped": "Detenido",
+      "errored": "Error",
+      "unknown": "Desconocido"
+    },
+    "logs": {
+      "title": "Registros recientes",
+      "description": "Lea líneas recientes delimitadas de registros OmniRoute administrados por escritorio incluidos en la lista permitida.",
+      "empty": "Aún no hay salida de registro.",
+      "targets": {
+        "service-out": "Salida del servicio",
+        "service-error": "Error de servicio"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "Repare primero las dependencias administradas por el escritorio",
+      "descriptionMissing": "OmniRoute no puede iniciarse hasta que los paquetes resaltados administrados por el escritorio estén instalados o reparados en Dependency Management.",
+      "descriptionRuntimeMissing": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.",
+      "descriptionRuntimeDamaged": "OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.",
+      "descriptionRuntimeAndPackage": "OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.",
+      "descriptionUnknown": "Desktop no pudo verificar las OmniRoute dependencias resaltadas. Actualícelos o repárelos en Gestión de dependencias antes de volver a intentarlo.",
+      "descriptionVersionMismatch": "OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.",
+      "openDependencyManagement": "Gestión de dependencia abierta"
+    },
+    "errors": {
+      "title": "OmniRoute operación fallida",
+      "operationFailed": "La operación fracasó.",
+      "saveFailed": "No se pudo guardar la configuración OmniRoute.",
+      "openPathFailed": "No se pudo abrir la ruta administrada."
+    }
+  },
+  "codeServer": {
+    "title": "Code Server",
+    "description": "Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.",
+    "loading": "Loading Code Server status...",
+    "actions": {
+      "refresh": "Refresh",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "repair": "Repair runtime",
+      "working": "Working...",
+      "openDesktop": "Open in Desktop",
+      "openBrowser": "Open in Browser",
+      "save": "Save",
+      "open": "Open",
+      "refreshLogs": "Refresh Logs"
+    },
+    "status": {
+      "title": "Status",
+      "running": "Running",
+      "stopped": "Stopped",
+      "missing": "Missing",
+      "damaged": "Damaged",
+      "error": "Error",
+      "baseUrl": "Base URL",
+      "pm2": "PM2 executable",
+      "pm2Missing": "PM2 is not installed",
+      "runtimeStatus": "Runtime status",
+      "passwordMode": "Authentication",
+      "passwordModeValue": "Password required",
+      "diagnostics": "Diagnostics"
+    },
+    "config": {
+      "title": "Runtime Configuration",
+      "description": "Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.",
+      "portLabel": "Port",
+      "passwordLabel": "Login password",
+      "passwordDescription": "Desktop stores a local password for code-server and injects it as PASSWORD when the service starts."
+    },
+    "validation": {
+      "numeric": "Enter a numeric port.",
+      "range": "Use a port between 1024 and 65535.",
+      "passwordLength": "Use a password between 4 and 200 characters."
+    },
+    "paths": {
+      "title": "Managed Paths",
+      "description": "Runtime data, extensions, and logs are stored under Electron userData/CodeServer.",
+      "runtime-root": "Runtime root",
+      "data": "Data",
+      "extensions": "Extensions",
+      "logs": "Logs"
+    },
+    "logs": {
+      "title": "Recent Logs",
+      "description": "Read bounded recent lines from Desktop-managed code-server logs.",
+      "empty": "No log output yet.",
+      "targets": {
+        "service-out": "Service Output",
+        "service-error": "Service Error"
+      }
+    },
+    "dependencyGuidance": {
+      "title": "Install Desktop-managed PM2 first",
+      "description": "Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.",
+      "openDependencyManagement": "Open Dependency Management"
+    },
+    "errors": {
+      "title": "Code Server operation failed",
+      "operationFailed": "The operation failed.",
+      "saveFailed": "Failed to save Code Server configuration.",
+      "openPathFailed": "Failed to open the managed path.",
+      "openWindowFailed": "Failed to open the Desktop-managed Code Server window."
+    }
+  }
+}

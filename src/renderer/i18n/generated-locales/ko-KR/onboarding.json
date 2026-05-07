@@ -1,0 +1,354 @@
+{
+  "title": "최초 설정",
+  "welcome": {
+    "title": "Hagicode Desktop에 오신 것을 환영합니다",
+    "description": "Hagicode Desktop은 Hagicode의 로컬 실행 프로그램입니다. 6단계에 걸쳐 최초 설정 및 규정 준수 확인을 완료하겠습니다.",
+    "features": {
+      "manage": {
+        "title": "버전 관리",
+        "description": "Hagicode Server 설치 및 업데이트 관리"
+      },
+      "monitor": {
+        "title": "서비스 모니터링",
+        "description": "서비스 상태 시작, 중지 및 모니터링"
+      },
+      "dependencies": {
+        "title": "종속성 관리",
+        "description": "시스템 종속성 보기 및 관리"
+      }
+    },
+    "processTitle": "최초 설정에는 6단계가 있습니다.",
+    "steps": {
+      "welcome": "설정과 다음에 일어날 일을 검토하세요.",
+      "download": "최신 Hagicode Server 패키지 다운로드",
+      "launch": "서비스를 시작하고 실행 중인지 확인하세요.",
+      "dependencyPreparation": "필수 종속성을 확인하고 에이전트 패키지가 준비되었는지 확인하세요.",
+      "sharingAcceleration": "공유 가속을 기본적으로 활성화해야 하는지 확인하세요.",
+      "legalConsent": "현재 EULA 및 개인정보 보호정책 개정을 확인한 다음 브라우저에서 공식 페이지를 검토하세요.",
+      "languageSelection": "설정에 사용할 Desktop 언어를 먼저 선택합니다"
+    },
+    "skip": "설정 건너뛰기",
+    "start": "시작하기"
+  },
+  "claude": {
+    "title": "Claude Code 구성"
+  },
+  "download": {
+    "title": "Hagicode Server 다운로드",
+    "version": "버전",
+    "progress": "다운로드 진행 상황",
+    "fileSize": "파일 크기",
+    "downloading": {
+      "title": "Hagicode Server 다운로드 중..."
+    },
+    "complete": {
+      "title": "다운로드 완료!",
+      "message": "패키지가 성공적으로 확인되었습니다. 이제 준비가 되면 홈페이지로 돌아가 수동으로 서비스를 시작할 수 있습니다.",
+      "fileSize": "파일 크기"
+    },
+    "downloaded": "다운로드됨",
+    "speed": "속도",
+    "remaining": "남은",
+    "pleaseWait": "다운로드하는 동안 잠시 기다려 주십시오..."
+  },
+  "dependencies": {
+    "title": "시스템 종속성 설치",
+    "subtitle": "Hagicode이 제대로 작동하려면 특정 시스템 종속성이 필요합니다.",
+    "description": "시스템 종속성 설치 상태 확인",
+    "installButton": "종속성 설치",
+    "status": {
+      "installed": "설치됨",
+      "installing": "설치 중...",
+      "manualInstallRequired": "수동 설치 필요",
+      "pending": "보류 중",
+      "error": "실패",
+      "notInstalled": "설치되지 않음",
+      "versionMismatch": "버전 불일치",
+      "checking": "확인 중...",
+      "ready": "준비"
+    },
+    "actions": {
+      "install": "설치",
+      "upgrade": "업그레이드",
+      "installing": "설치 중...",
+      "refresh": "새로고침",
+      "viewManualSteps": "수동 단계 보기",
+      "visitWebsite": "공식 웹사이트 방문"
+    },
+    "details": {
+      "currentVersion": "현재 버전",
+      "requiredVersion": "필요한 버전",
+      "manualCommand": "제안된 명령"
+    },
+    "overallProgress": "전반적인 진행상황",
+    "installing": {
+      "title": "종속성 설치 중..."
+    },
+    "complete": {
+      "title": "설치된 종속성",
+      "message": "모든 종속성이 성공적으로 설치되었습니다."
+    },
+    "checking": "종속성 확인 중...",
+    "error": {
+      "message": "일부 종속성을 설치하지 못했습니다. 수동으로 설치하고 계속하세요."
+    },
+    "manualHandoff": {
+      "title": "수동 CLI 패키지 설치 필요",
+      "description": "Desktop 외부에서 제안된 명령을 실행합니다. Desktop의 번들 Node/npm 환경 및 PATH 동작에 대한 최신 세부 정보를 보려면 FAQ를 읽어보세요.",
+      "faqLinkLabel": "노드 환경 FAQ 보기",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "명령이 완료된 후 새로 고쳐 Desktop 관리 종속성을 다시 확인하세요."
+    }
+  },
+  "depInstallConfirm": {
+    "title": "누락된 종속성 설치",
+    "installingTitle": "종속성 설치",
+    "description": "{{count}} 누락된 종속성이 감지되었습니다.",
+    "description_other": "{{count}} 누락된 종속성이 감지되었습니다.",
+    "versionMismatchNote": "일부 종속 항목의 버전이 잘못되어 업그레이드가 필요합니다.",
+    "mixedMissingMessage": "{{missing}} 누락 및 {{mismatch}} 버전 불일치 종속성이 감지되었습니다.",
+    "mixedMissingMessage_other": "{{missing}} 누락 및 {{mismatch}} 버전 불일치 종속성이 감지되었습니다.",
+    "versionMismatchOnlyMessage": "{{count}} 버전 불일치 종속성이 감지되었습니다.",
+    "versionMismatchOnlyMessage_other": "{{count}} 버전 불일치 종속성이 감지되었습니다.",
+    "upgradeNote": "버전이 일치하지 않는 종속성은 필요한 버전으로 업그레이드됩니다.",
+    "requiredVersion": "필요한 버전",
+    "permissionWarning": "이러한 종속성을 설치하려면 관리자 권한이 필요할 수 있습니다.",
+    "preparing": "설치 준비 중...",
+    "cancel": "취소",
+    "confirm": "종속성 설치",
+    "installing": "설치 중...",
+    "installButton": "{{count}} {{count, plural, =1 {종속성} 기타 {종속성}}} 설치",
+    "errorsOccurred": "종속성을 설치하지 못했습니다.",
+    "success": "모든 종속성이 성공적으로 설치되었습니다.",
+    "partialSuccess": "{{success}} 종속성은 성공적으로 설치되었지만 {{failed}}는 실패했습니다.",
+    "error": "종속성 설치 실패"
+  },
+  "launch": {
+    "title": "서비스 시작",
+    "starting": {
+      "title": "Hagicode Server부터 시작합니다...",
+      "subtitle": "서비스 구성요소 초기화 중..."
+    },
+    "complete": {
+      "title": "설정 완료!",
+      "subtitle": "Hagicode Desktop이 성공적으로 설치되고 시작되었습니다.",
+      "success": "축하합니다! Hagicode Desktop이 성공적으로 설치되고 시작되었습니다.",
+      "ready": "이제 모든 기능을 사용할 수 있습니다.",
+      "button": "메인 인터페이스 들어가기"
+    },
+    "progress": "시동 진행",
+    "installInfo": {
+      "title": "설치정보",
+      "version": "설치된 버전",
+      "port": "서비스 포트",
+      "url": "서비스 URL"
+    },
+    "whatsNext": {
+      "title": "이제 다음을 수행할 수 있습니다.",
+      "manage": "메인 인터페이스에서 Hagicode Server 관리",
+      "webUI": "웹 관리 인터페이스에 액세스",
+      "logs": "서비스 로그 및 상태 보기",
+      "config": "서버 매개변수 및 설정 구성"
+    },
+    "support": {
+      "title": "지원",
+      "docs": "문서",
+      "issues": "문제 보고"
+    },
+    "failure": {
+      "title": "시작 실패",
+      "subtitle": "Hagicode Server의 시작을 완료할 수 없습니다. 설정을 계속하기 전에 진단 내용을 검토하고 다시 설치하세요.",
+      "guidance": "전체 로그를 연 다음 현재 버전을 다시 설치하고 설정 흐름을 다시 시작하세요.",
+      "viewLog": "전체 로그 보기",
+      "retryButton": "시동 재시도",
+      "reinstallButton": "설치 다시 설치 및 다시 시작",
+      "reinstallingButton": "재설치 중...",
+      "dialogTitle": "온보딩 시작 실패 로그",
+      "emptySummary": "시작 실패 요약이 캡처되지 않았습니다.",
+      "emptyLog": "시작 실패 로그가 캡처되지 않았습니다.",
+      "meta": "포트: {{port}} · 시간: {{timestamp}}",
+      "truncatedHint": "시작 로그가 가장 최근 출력으로 잘렸습니다.",
+      "recoveryHint": "설정을 다시 시도하기 전에 현재 버전을 다시 설치하고 온보딩을 재설정하는 것이 좋습니다.",
+      "copyButton": "로그 복사",
+      "copySuccess": "시작 실패 로그가 복사되었습니다.",
+      "copyError": "시작 실패 로그를 복사하지 못했습니다.",
+      "copyEmpty": "복사할 시작 실패 로그가 없습니다."
+    }
+  },
+  "actions": {
+    "next": "다음",
+    "finish": "Hagicode Desktop를 입력하세요",
+    "previous": "이전",
+    "skip": "설정 건너뛰기",
+    "continueWithLanguage": "{{language}}(으)로 계속",
+    "applyingLanguage": "{{language}} 적용 중..."
+  },
+  "skip": {
+    "checkbox": "이 가이드를 다시 표시하지 않음",
+    "title": "건너뛰기 설정 확인",
+    "description": "최초 설정을 건너뛰시겠습니까?",
+    "manualInstallNote": "건너뛴 후 다음을 수행할 수 있습니다.\n• 기본 인터페이스의 \"패키지 관리\"를 통해 Hagicode Server를 수동으로 설치합니다.\n• 설정에서 설정 프로세스를 다시 활성화합니다.",
+    "reenableNote": "Hagicode Desktop을 처음 사용하는 경우 설정 과정을 완료하는 것이 좋습니다.",
+    "cancel": "취소",
+    "confirm": "설정 건너뛰기"
+  },
+  "dependencyManagement": {
+    "title": "종속성 관리",
+    "description": "시스템 종속성 보기 및 관리",
+    "status": {
+      "installed": "설치됨",
+      "bundled": "데스크탑과 함께 번들로 제공",
+      "desktopManaged": "데스크탑 관리",
+      "manualInstallRequired": "수동 설치 필요",
+      "notInstalled": "설치되지 않음",
+      "versionMismatch": "버전 불일치",
+      "checking": "확인 중..."
+    },
+    "actions": {
+      "install": "설치",
+      "upgrade": "업그레이드",
+      "installing": "설치 중...",
+      "refresh": "새로고침",
+      "viewManualSteps": "수동 단계 보기",
+      "visitWebsite": "공식 웹사이트 방문",
+      "reinstallDesktop": "데스크탑 재설치",
+      "updateDesktop": "데스크탑 업데이트"
+    },
+    "details": {
+      "currentVersion": "현재 버전",
+      "requiredVersion": "필요한 버전",
+      "manualCommand": "제안된 명령",
+      "source": "소스",
+      "bundledSource": "번들 소스",
+      "systemSource": "시스템 소스"
+    },
+    "manualHandoff": {
+      "title": "수동 CLI 패키지 설치 필요",
+      "description": "Desktop 외부에서 제안된 명령을 실행합니다. Desktop의 번들 Node/npm 환경 및 PATH 동작에 대한 최신 세부 정보를 보려면 FAQ를 읽어보세요.",
+      "faqLinkLabel": "노드 환경 FAQ 보기",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "명령이 완료된 후 새로 고쳐 Desktop 관리 종속성을 다시 확인하세요."
+    },
+    "noDependencies": "종속성이 감지되지 않았습니다."
+  },
+  "dependencyCheck": {
+    "title": "종속성 검사 결과",
+    "summary": "선택됨 {{total}} {{전체, 복수형, =1 {종속성} 기타 {종속성}}}, {{passed}} {{통과, 복수, =1 {통과} 기타 {통과}}}, {{failed}} {{실패, 복수, =1 {주의 필요} 기타 {주의 필요}}}",
+    "checking": "종속성 확인 중...",
+    "status": {
+      "allPassed": "모든 종속성이 설치되었습니다.",
+      "hasIssues": "일부 종속성에 주의가 필요합니다."
+    },
+    "details": {
+      "expand": "세부정보 표시",
+      "collapse": "세부정보 숨기기",
+      "currentVersion": "현재 버전",
+      "requiredVersion": "필요한 버전"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "다운로드 및 공유 가속화",
+    "description": "기본적으로 활성화되어 있습니다. 토렌트 메타데이터가 포함된 최신 데스크탑/서버 자산은 먼저 토렌트에서 시작되고 자동으로 대체됩니다.",
+    "toggleTitle": "LAN/인터넷 공유 가속 활성화(기본값)",
+    "toggleDescription": "먼저 여기에서 비활성화하고 나중에 설정에서 조정할 수 있습니다.",
+    "bullets": {
+      "latest": "외부 시딩은 최신 데스크탑 및 최신 서버 자산에 계속 집중합니다.",
+      "fallback": "토렌트 사이드카가 없거나 핸드셰이크에 실패하면 폴백 백필이 자동으로 시작됩니다.",
+      "disable": "네트워크가 제한되어 있거나 공유하고 싶지 않다면 지금 비활성화하세요.",
+      "portable": "휴대용 모드에서는 이 기능을 강제로 끄고 암시적으로 시드하지 않습니다."
+    }
+  },
+  "dependencyPreparation": {
+    "title": "종속성 준비",
+    "description": "HagiCode Desktop에 필요한 명령줄 종속성을 설치하고 코딩 세션에 사용할 하나 이상의 에이전트 CLI를 선택합니다.",
+    "loading": "데스크톱 관리 종속성을 확인하는 중...",
+    "environment": {
+      "title": "데스크탑 관리 노드/npm 환경",
+      "description": "Desktop은 자체 Node/0 환경에서 관리되는 패키지를 설치하고 확인합니다. 현재 경로, 패키지 및 문제 해결 세부 정보는 FAQ를 읽어보세요.",
+      "faqLinkLabel": "노드 환경 FAQ 보기",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/"
+    },
+    "required": {
+      "title": "필수 종속성",
+      "description": "설치를 계속하려면 먼저 이러한 종속성을 설치해야 합니다."
+    },
+    "optional": {
+      "title": "선택적 종속성",
+      "description": "선택적 종속성은 설정을 차단하지 않습니다."
+    },
+    "agentCli": {
+      "title": "에이전트 CLI 선택",
+      "description": "에이전트 CLI를 하나 이상 선택하세요. 선택한 CLI는 Desktop의 관리되는 npm 환경에 설치되어야 합니다."
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "노드/npm 환경을 사용할 수 없습니다.",
+        "description": "데스크톱은 관리되는 Node/npm 환경에 액세스할 수 없습니다. 도구 체인을 사용할 수 있게 된 후 새로 고치거나 노드 환경 FAQ를 열어 문제 해결 세부 정보를 확인하세요."
+      },
+      "required-packages-missing": {
+        "title": "필수 종속성이 누락되었습니다.",
+        "description": "계속하기 전에 누락된 필수 종속성을 설치하세요."
+      },
+      "agent-cli-not-selected": {
+        "title": "에이전트 선택 CLI",
+        "description": "지원되는 Agent CLI 종속성을 하나 이상 선택하십시오."
+      },
+      "agent-cli-not-installed": {
+        "title": "선택한 에이전트 CLI이 설치되지 않았습니다.",
+        "description": "Desktop의 관리형 npm 환경에 선택한 Agent CLI 패키지를 하나 이상 설치하세요."
+      }
+    },
+    "actions": {
+      "install": "확인 및 설치",
+      "refresh": "새로고침",
+      "retry": "재시도",
+      "recheck": "재확인"
+    },
+    "complete": {
+      "title": "종속 항목이 준비되었습니다.",
+      "description": "필수 종속성이 설치되어 있고 선택된 하나 이상의 에이전트 CLI이 준비되었습니다."
+    },
+    "error": {
+      "title": "종속성 준비 실패"
+    }
+  },
+  "legal": {
+    "title": "최종 사용자 라이센스 계약 및 개인정보 보호정책",
+    "descriptionFull": "HagiCode Server를 다운로드하기 전에 현재 EULA 및 개인정보 보호정책 개정을 확인하세요. 공식 문서는 기본 브라우저에서 열립니다.",
+    "descriptionLegalOnly": "현재의 법적 개정은 아직 승인되지 않았습니다. 기본 브라우저에서 공식 문서를 검토한 다음 데스크톱으로 돌아가 확인하세요.",
+    "progressFull": "전체 설정: 언어 선택 -> 환영 -> 법적 동의 -> 공유 가속 -> 의존성 준비 -> 다운로드",
+    "progressLegalOnly": "컴플라이언스 게이트 모드: 현재 법적 동의 전에 언어 선택 단계가 표시됩니다.",
+    "browserInstruction": "수락하기 전에 기본 브라우저에서 공식 문서를 엽니다. 데스크톱에는 전체 법률 텍스트가 아닌 개정 요약만 표시됩니다.",
+    "cacheHint": "현재 성공적으로 캐시된 가장 최근의 법적 요약을 보고 계십니다. 네트워크 복구 후 새로 고쳐 최신 버전이 있는지 확인하세요.",
+    "unavailableHint": "법률 개정 요약을 사용할 수 없으며 아직 캐시된 사본을 사용할 수 없습니다. 네트워크를 확인하고 다시 시도하세요. 유효한 메타데이터가 로드될 때까지 설치를 계속할 수 없습니다.",
+    "reviewPrompt": "공식 페이지를 검토한 후 데스크톱으로 돌아가 수락을 확인하세요.",
+    "effectiveDate": "발효일",
+    "revision": "개정",
+    "openInBrowser": "브라우저에서 {{title}} 열기",
+    "checkbox": "브라우저에서 현재 EULA 및 개인정보 보호정책을 검토했으며 이에 동의합니다.",
+    "modeHintFull": "승인 후에도 설정은 계속해서 가속 및 다운로드를 공유합니다.",
+    "modeHintLegalOnly": "승인 후 게이트가 닫히고 기본 인터페이스가 다시 시작됩니다. 거부하면 현재 앱 세션이 종료됩니다.",
+    "accept": "동의하고 계속하세요",
+    "accepting": "녹음 승인...",
+    "decline": "거절하고 나가기",
+    "declining": "종료 중...",
+    "refresh": "법적 메타데이터 새로 고침",
+    "metadata": {
+      "remote": "최신 법률 메타데이터가 로드되었습니다.",
+      "cache": "마지막으로 성공적으로 캐시된 법적 메타데이터 사용",
+      "unavailable": "현재 법적 메타데이터를 사용할 수 없습니다."
+    },
+    "types": {
+      "eula": "EULA",
+      "privacy-policy": "개인 정보 보호 정책"
+    }
+  },
+  "languageSelection": {
+    "title": "언어 선택",
+    "description": "먼저 Hagicode Desktop 에서 사용할 언어를 선택하세요. 내장 백엔드의 첫 시작에도 대응되는 기본 언어가 사용됩니다.",
+    "recommended": "권장",
+    "selected": "선택됨",
+    "choose": "이 언어 선택",
+    "error": "선택한 언어를 아직 저장하지 못했습니다. 다시 시도한 뒤 계속하세요."
+  }
+}

@@ -1,0 +1,354 @@
+{
+  "title": "初回セットアップ",
+  "welcome": {
+    "title": "Hagicode Desktopへようこそ",
+    "description": "Hagicode Desktop は Hagicode のローカル ランチャーです。初回セットアップと適合確認は6つのステップで完了します。",
+    "features": {
+      "manage": {
+        "title": "バージョン管理",
+        "description": "Hagicode Server のインストールとアップデートを管理する"
+      },
+      "monitor": {
+        "title": "サービス監視",
+        "description": "サービスの状態を開始、停止、監視する"
+      },
+      "dependencies": {
+        "title": "依存関係の管理",
+        "description": "システムの依存関係を表示および管理する"
+      }
+    },
+    "processTitle": "初回セットアップには 6 つの手順があります。",
+    "steps": {
+      "welcome": "セットアップと次に何が起こるかを確認してください",
+      "download": "最新の Hagicode Server パッケージをダウンロード",
+      "launch": "サービスを開始し、実行されていることを確認します",
+      "dependencyPreparation": "必要な依存関係とエージェント CLI パッケージの準備ができていることを確認します",
+      "sharingAcceleration": "共有アクセラレーションをデフォルトで有効にしておくかどうかを確認する",
+      "legalConsent": "現在の EULA とプライバシー ポリシーの改訂を確認し、ブラウザで公式ページを確認してください",
+      "languageSelection": "セットアップで使う Desktop の言語を選択する"
+    },
+    "skip": "セットアップをスキップ",
+    "start": "始めましょう"
+  },
+  "claude": {
+    "title": "Claude Codeを構成する"
+  },
+  "download": {
+    "title": "ダウンロード Hagicode Server",
+    "version": "バージョン",
+    "progress": "ダウンロードの進行状況",
+    "fileSize": "ファイルサイズ",
+    "downloading": {
+      "title": "Hagicode Serverをダウンロード中..."
+    },
+    "complete": {
+      "title": "ダウンロード完了！",
+      "message": "パッケージは正常に検証されました。準備ができたら、いつでもホームページに戻ってサービスを手動で開始できます。",
+      "fileSize": "ファイルサイズ"
+    },
+    "downloaded": "ダウンロード済み",
+    "speed": "速度",
+    "remaining": "残り",
+    "pleaseWait": "ダウンロードするまでお待ちください..."
+  },
+  "dependencies": {
+    "title": "システムの依存関係をインストールする",
+    "subtitle": "Hagicode が適切に機能するには、特定のシステム依存関係が必要です。",
+    "description": "システムの依存関係のインストール状況を確認する",
+    "installButton": "依存関係のインストール",
+    "status": {
+      "installed": "インストール済み",
+      "installing": "インストール中...",
+      "manualInstallRequired": "手動インストールが必要です",
+      "pending": "保留中",
+      "error": "失敗しました",
+      "notInstalled": "インストールされていません",
+      "versionMismatch": "バージョンの不一致",
+      "checking": "確認中...",
+      "ready": "準備完了"
+    },
+    "actions": {
+      "install": "インストール",
+      "upgrade": "アップグレード",
+      "installing": "インストール中...",
+      "refresh": "リフレッシュ",
+      "viewManualSteps": "手動手順を表示",
+      "visitWebsite": "公式ウェブサイトにアクセス"
+    },
+    "details": {
+      "currentVersion": "現在のバージョン",
+      "requiredVersion": "必要なバージョン",
+      "manualCommand": "推奨されるコマンド"
+    },
+    "overallProgress": "全体的な進捗状況",
+    "installing": {
+      "title": "依存関係をインストールしています..."
+    },
+    "complete": {
+      "title": "依存関係がインストールされました",
+      "message": "すべての依存関係が正常にインストールされました。"
+    },
+    "checking": "依存関係を確認しています...",
+    "error": {
+      "message": "一部の依存関係のインストールに失敗しました。手動でインストールして続行してください。"
+    },
+    "manualHandoff": {
+      "title": "手動 CLI パッケージのインストールが必要",
+      "description": "推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。",
+      "faqLinkLabel": "ノード環境のよくある質問を見る",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。"
+    }
+  },
+  "depInstallConfirm": {
+    "title": "不足している依存関係をインストールする",
+    "installingTitle": "依存関係のインストール",
+    "description": "欠落した依存関係 {{count}} が検出されました",
+    "description_other": "欠落している依存関係 {{count}} が検出されました",
+    "versionMismatchNote": "一部の依存関係のバージョンが正しくないため、アップグレードする必要があります。",
+    "mixedMissingMessage": "{{missing}} 欠落および {{mismatch}} バージョンの不一致依存関係が検出されました",
+    "mixedMissingMessage_other": "欠落している {{missing}} およびバージョン不一致の {{mismatch}} 依存関係が検出されました",
+    "versionMismatchOnlyMessage": "{{count}} バージョンの不一致依存関係が検出されました",
+    "versionMismatchOnlyMessage_other": "{{count}} バージョンの不一致依存関係が検出されました",
+    "upgradeNote": "バージョンが一致しない依存関係は、必要なバージョンにアップグレードされます。",
+    "requiredVersion": "必要なバージョン",
+    "permissionWarning": "これらの依存関係をインストールするには、管理者権限が必要な場合があります。",
+    "preparing": "インストールを準備しています...",
+    "cancel": "キャンセル",
+    "confirm": "依存関係のインストール",
+    "installing": "インストール中...",
+    "installButton": "インストール {{count}} {{count, plural, =1 {依存関係} other {依存関係}}}",
+    "errorsOccurred": "依存関係のインストールに失敗しました",
+    "success": "すべての依存関係が正常にインストールされました",
+    "partialSuccess": "{{success}} 依存関係は正常にインストールされましたが、{{failed}} は失敗しました",
+    "error": "依存関係のインストールに失敗しました"
+  },
+  "launch": {
+    "title": "サービスを開始する",
+    "starting": {
+      "title": "Hagicode Server を開始します...",
+      "subtitle": "サービスコンポーネントを初期化しています..."
+    },
+    "complete": {
+      "title": "セットアップ完了！",
+      "subtitle": "Hagicode Desktop は正常にインストールされ、起動されました。",
+      "success": "おめでとうございます！ Hagicode Desktop は正常にインストールされ、起動されました。",
+      "ready": "これで、すべての機能の使用を開始できるようになります。",
+      "button": "メインインターフェイスに入る"
+    },
+    "progress": "起動の進行状況",
+    "installInfo": {
+      "title": "インストール情報",
+      "version": "インストールされているバージョン",
+      "port": "サービスポート",
+      "url": "サービス URL"
+    },
+    "whatsNext": {
+      "title": "次のことができるようになりました。",
+      "manage": "メインインターフェースから Hagicode Server を管理する",
+      "webUI": "Web管理インターフェースにアクセスする",
+      "logs": "サービスのログとステータスを表示する",
+      "config": "サーバーのパラメータと設定を構成する"
+    },
+    "support": {
+      "title": "サポート",
+      "docs": "ドキュメント",
+      "issues": "問題を報告する"
+    },
+    "failure": {
+      "title": "起動に失敗しました",
+      "subtitle": "Hagicode Server は起動を完了できませんでした。セットアップを続行する前に、診断を確認して再インストールしてください。",
+      "guidance": "完全なログを開いてから、現在のバージョンを再インストールし、セットアップ フローを再開します。",
+      "viewLog": "完全なログを表示",
+      "retryButton": "起動を再試行する",
+      "reinstallButton": "再インストールしてセットアップを再起動する",
+      "reinstallingButton": "再インストール中...",
+      "dialogTitle": "オンボーディング起動失敗ログ",
+      "emptySummary": "起動失敗の概要はキャプチャされませんでした",
+      "emptyLog": "起動失敗ログは取得されませんでした",
+      "meta": "ポート: {{port}} · 時刻: {{timestamp}}",
+      "truncatedHint": "起動ログは最新の出力に切り詰められました。",
+      "recoveryHint": "セットアップを再試行する前に、現在のバージョンを再インストールし、オンボーディングをリセットすることをお勧めします。",
+      "copyButton": "ログのコピー",
+      "copySuccess": "起動失敗ログをコピーしました",
+      "copyError": "起動失敗ログのコピーに失敗しました",
+      "copyEmpty": "コピーする起動失敗ログがありません"
+    }
+  },
+  "actions": {
+    "next": "次へ",
+    "finish": "Hagicode Desktopを入力してください",
+    "previous": "前へ",
+    "skip": "セットアップをスキップ",
+    "continueWithLanguage": "{{language}} で続行",
+    "applyingLanguage": "{{language}} を適用中..."
+  },
+  "skip": {
+    "checkbox": "このガイドを再度表示しないでください",
+    "title": "セットアップのスキップを確認する",
+    "description": "初回セットアップをスキップしてもよろしいですか?",
+    "manualInstallNote": "スキップした後は、次のことができます。\n• メインインターフェースの「パッケージ管理」を通じて Hagicode Server を手動でインストールします。\n• 設定でセットアッププロセスを再度有効にする",
+    "reenableNote": "Hagicode Desktop を初めて使用する場合は、セットアップ プロセスを完了することをお勧めします。",
+    "cancel": "キャンセル",
+    "confirm": "セットアップをスキップ"
+  },
+  "dependencyManagement": {
+    "title": "依存関係の管理",
+    "description": "システムの依存関係を表示および管理する",
+    "status": {
+      "installed": "インストール済み",
+      "bundled": "デスクトップにバンドルされている",
+      "desktopManaged": "デスクトップ管理",
+      "manualInstallRequired": "手動インストールが必要です",
+      "notInstalled": "インストールされていません",
+      "versionMismatch": "バージョンの不一致",
+      "checking": "確認中..."
+    },
+    "actions": {
+      "install": "インストール",
+      "upgrade": "アップグレード",
+      "installing": "インストール中...",
+      "refresh": "リフレッシュ",
+      "viewManualSteps": "手動手順を表示",
+      "visitWebsite": "公式ウェブサイトにアクセス",
+      "reinstallDesktop": "デスクトップを再インストールする",
+      "updateDesktop": "デスクトップを更新する"
+    },
+    "details": {
+      "currentVersion": "現在のバージョン",
+      "requiredVersion": "必要なバージョン",
+      "manualCommand": "推奨されるコマンド",
+      "source": "ソース",
+      "bundledSource": "バンドルされたソース",
+      "systemSource": "システムソース"
+    },
+    "manualHandoff": {
+      "title": "手動 CLI パッケージのインストールが必要",
+      "description": "推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。",
+      "faqLinkLabel": "ノード環境のよくある質問を見る",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。"
+    },
+    "noDependencies": "依存関係が検出されませんでした"
+  },
+  "dependencyCheck": {
+    "title": "依存関係チェックの結果",
+    "summary": "チェック済み {{total}} {{合計、複数、=1 {依存関係} その他の {依存関係}}}、{{passed}} {{合格、複数、=1 {合格} その他の {合格}}}、{{failed}} {{失敗、複数、=1 {注意が必要} その他の {注意が必要}}}",
+    "checking": "依存関係を確認しています...",
+    "status": {
+      "allPassed": "すべての依存関係がインストールされています",
+      "hasIssues": "一部の依存関係には注意が必要です"
+    },
+    "details": {
+      "expand": "詳細を表示",
+      "collapse": "詳細を隠す",
+      "currentVersion": "現在のバージョン",
+      "requiredVersion": "必要なバージョン"
+    }
+  },
+  "sharingAcceleration": {
+    "title": "ダウンロードと共有の高速化",
+    "description": "デフォルトで有効になっています。トレント メタデータを含む最新のデスクトップ/サーバー アセットは、まずトレントから開始され、自動的にフォールバックします。",
+    "toggleTitle": "LAN/インターネット共有アクセラレーションを有効にする (デフォルト)",
+    "toggleDescription": "最初にここで無効にし、後で [設定] で調整できます。",
+    "bullets": {
+      "latest": "外部シードは最新のデスクトップおよび最新のサーバー資産に重点を置き続けます",
+      "fallback": "torrent サイドカーが見つからない場合、またはハンドシェイクが失敗した場合、フォールバック バックフィルが自動的に開始されます",
+      "disable": "ネットワークが制限されている場合、または共有したくない場合は、今すぐ無効にしてください",
+      "portable": "ポータブル モードではこの機能が強制的にオフになり、暗黙的にシードされることはありません"
+    }
+  },
+  "dependencyPreparation": {
+    "title": "依存関係の準備",
+    "description": "HagiCode Desktop に必要なコマンドラインの依存関係をインストールし、コーディング セッションで使用するエージェント CLI を少なくとも 1 つ選択します。",
+    "loading": "デスクトップ管理の依存関係を確認しています...",
+    "environment": {
+      "title": "デスクトップ管理型ノード/npm環境",
+      "description": "デスクトップは、管理対象 CLI パッケージを独自の Node/npm 環境にインストールし、チェックします。現在のパス、パッケージ、トラブルシューティングの詳細については、FAQ を参照してください。",
+      "faqLinkLabel": "ノード環境のよくある質問を見る",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/"
+    },
+    "required": {
+      "title": "必要な依存関係",
+      "description": "セットアップを続行するには、これらの依存関係をインストールする必要があります。"
+    },
+    "optional": {
+      "title": "オプションの依存関係",
+      "description": "オプションの依存関係によってセットアップがブロックされることはありません。"
+    },
+    "agentCli": {
+      "title": "エージェント CLI の選択",
+      "description": "少なくとも 1 つのエージェント CLI を選択します。選択した CLI は、Desktop の管理された npm 環境にインストールする必要があります。"
+    },
+    "blocking": {
+      "environment-unavailable": {
+        "title": "ノード/npm環境は使用できません",
+        "description": "デスクトップは管理対象の Node/npm 環境にアクセスできません。ツールチェーンが利用可能になった後に更新するか、トラブルシューティングの詳細についてはノード環境 FAQ を開いてください。"
+      },
+      "required-packages-missing": {
+        "title": "必要な依存関係がありません",
+        "description": "続行する前に、不足している必要な依存関係をインストールしてください。"
+      },
+      "agent-cli-not-selected": {
+        "title": "エージェント CLI を選択してください",
+        "description": "サポートされているエージェント CLI 依存関係を少なくとも 1 つ選択します。"
+      },
+      "agent-cli-not-installed": {
+        "title": "選択したエージェント CLI はインストールされていません",
+        "description": "選択した少なくとも 1 つの Agent CLI パッケージを Desktop の管理対象 npm 環境にインストールします。"
+      }
+    },
+    "actions": {
+      "install": "確認してインストールする",
+      "refresh": "リフレッシュ",
+      "retry": "再試行",
+      "recheck": "再確認"
+    },
+    "complete": {
+      "title": "依存関係の準備ができました",
+      "description": "必要な依存関係がインストールされており、選択したエージェント CLI が少なくとも 1 つ用意されています。"
+    },
+    "error": {
+      "title": "依存関係の準備に失敗しました"
+    }
+  },
+  "legal": {
+    "title": "エンドユーザーライセンス契約とプライバシーポリシー",
+    "descriptionFull": "HagiCode サーバーをダウンロードする前に、現在の EULA とプライバシー ポリシーの改訂を確認してください。公式ドキュメントはデフォルトのブラウザで開きます。",
+    "descriptionLegalOnly": "現在の法改正はまだ受け入れられていません。デフォルトのブラウザで公式ドキュメントを確認し、デスクトップに戻って確認します。",
+    "progressFull": "完全なセットアップ: 言語選択 -> ようこそ -> 法的同意 -> 共有アクセラレーション -> 依存関係の準備 -> ダウンロード",
+    "progressLegalOnly": "コンプライアンスゲートモード: 現在の法的同意の前に言語選択が表示されます",
+    "browserInstruction": "同意する前に、デフォルトのブラウザで公式ドキュメントを開いてください。デスクトップには改訂の概要のみが表示され、法的な全文は表示されません。",
+    "cacheHint": "現在、正常にキャッシュされた最新の法的概要が表示されています。ネットワークの回復後に更新して、新しいリビジョンが存在するかどうかを確認します。",
+    "unavailableHint": "法改正の概要は利用できず、キャッシュされたコピーもまだ利用できません。ネットワークを確認して、もう一度試してください。有効なメタデータがロードされるまでセットアップを続行できません。",
+    "reviewPrompt": "公式ページを確認した後、デスクトップに戻って同意を確認します。",
+    "effectiveDate": "発効日",
+    "revision": "改訂",
+    "openInBrowser": "ブラウザで {{title}} を開く",
+    "checkbox": "現在の EULA とプライバシー ポリシーをブラウザで確認し、同意します。",
+    "modeHintFull": "承認後、セットアップは共有アクセラレーションとダウンロードに進みます。",
+    "modeHintLegalOnly": "受け入れられると、ゲートが閉じ、メイン インターフェイスが再開されます。拒否すると、現在のアプリセッションが終了します。",
+    "accept": "同意して続行",
+    "accepting": "録音受付中...",
+    "decline": "辞退して退場",
+    "declining": "終了中...",
+    "refresh": "法的メタデータを更新する",
+    "metadata": {
+      "remote": "最新の法的メタデータがロードされました",
+      "cache": "最後に成功したキャッシュされた法的メタデータの使用",
+      "unavailable": "法的なメタデータは現在利用できません"
+    },
+    "types": {
+      "eula": "EULA",
+      "privacy-policy": "プライバシーポリシー"
+    }
+  },
+  "languageSelection": {
+    "title": "言語を選択",
+    "description": "先に Hagicode Desktop で使う言語を選択します。組み込みバックエンドの初回起動でも、対応する既定言語が使われます。",
+    "recommended": "おすすめ",
+    "selected": "選択済み",
+    "choose": "この言語を選ぶ",
+    "error": "選択した言語をまだ保存できませんでした。再試行して続行してください。"
+  }
+}

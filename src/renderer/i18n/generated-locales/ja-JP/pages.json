@@ -1,0 +1,285 @@
+{
+  "settings": {
+    "title": "設定",
+    "tabs": {
+      "onboarding": "オンボーディング",
+      "sharingAcceleration": "ダウンロードと共有",
+      "updates": "バックグラウンドアップデート"
+    },
+    "smartConfig": {
+      "title": "Smart Config プロンプト ガイダンス",
+      "description": "解決されたプロンプトを確認し、それをサポートされている AI CLI にコピーし、構成フローを手動で完了します。"
+    },
+    "onboarding": {
+      "title": "オンボーディング",
+      "description": "初回セットアップ ウィザードを再実行して、パッケージをダウンロードし、依存関係をインストールし、サービスを開始します。",
+      "restartWizard": "再起動ウィザード",
+      "restartWizardDescription": "初回セットアップ ウィザードを再実行して、パッケージをダウンロードし、依存関係をインストールし、サービスを開始します。",
+      "restartButton": "再起動ウィザード",
+      "resetting": "リセット中...",
+      "resetSuccess": "ウィザードがリセットされました",
+      "resetError": "リセット失敗: {{error}}",
+      "homepageTour": {
+        "title": "ホームページ ツアーをリセット",
+        "description": "ホームページ ツアーの完了状態をクリアすると、次回システム管理を開いたときにガイド付きウォークスルーが再び自動再生されるようになります。",
+        "resetButton": "ホームページ ツアーをリセット",
+        "resetting": "ツアーをリセット中...",
+        "resetSuccess": "ホームページツアーがリセットされました",
+        "resetError": "ホームページツアーをリセットできませんでした: {{error}}"
+      }
+    },
+    "sharingAcceleration": {
+      "title": "ダウンロードと共有の高速化",
+      "description": "トレントファーストダウンロード、信頼できるキャッシュの再利用、自動フォールバック動作を管理します。",
+      "enabledTitle": "LAN/インターネット共有アクセラレーションを有効にする",
+      "enabledDescription": "トレント メタデータを含むアセットはすべて、最初にトレントから開始され、必要に応じて自動的にフォールバックします。",
+      "uploadLimit": "アップロード制限(Mbps)",
+      "cacheLimit": "キャッシュ制限 (GiB)",
+      "retentionDays": "保存日数",
+      "thresholdHint": "torrent メタデータを含むアセットは、古い 100 MB しきい値によって制限されなくなりました。",
+      "networkHint": "制限されたネットワークでは共有アクセラレーションを無効にします。ポータブルモードでは常に強制的にオフになります。",
+      "portableModeHint": "ポータブル モードでは、共有アクセラレーションと外部シードが無効になり、ダウンロードは HTTP/WebSeed フォールバックで維持されます。",
+      "save": "設定の保存",
+      "saving": "保存中...",
+      "saveSuccess": "共有アクセラレーション設定が保存されました",
+      "saveError": "共有アクセラレーション設定を保存できませんでした",
+      "loadError": "共有アクセラレーション設定の読み込みに失敗しました",
+      "modeHint": "モード: トレントが最初、失敗した場合は自動フォールバック。",
+      "scopeHint": "外部シードは、引き続き最新のデスクトップと最新のサーバーに重点を置きます。デフォルトのキャッシュ制限: 5 GiB。"
+    },
+    "updates": {
+      "title": "バックグラウンドアップデート",
+      "description": "自動チェック、バックグラウンドでの事前ダウンロード、検証されたアーカイブの保存を管理します。",
+      "steamMode": {
+        "title": "Updates are managed by Steam",
+        "description": "This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime."
+      },
+      "enabled": {
+        "label": "バックグラウンドでのプリダウンロードを有効にする",
+        "description": "互換性のある新しいバージョンが見つかった場合は、現在のランタイムを切り替えることなく、バックグラウンドでアーカイブをダウンロードします。"
+      },
+      "retainedArchiveCount": {
+        "label": "保存されたアーカイブ数",
+        "description": "検証済みの自動ダウンロードされたアーカイブのみが保持されます。制限を超えると、古いエントリは削除されます。"
+      },
+      "actions": {
+        "save": "設定の保存",
+        "saving": "保存中...",
+        "cancel": "キャンセル"
+      },
+      "messages": {
+        "saveSuccess": "バックグラウンド更新設定が保存されました",
+        "saveFailed": "バックグラウンド更新設定の保存に失敗しました"
+      },
+      "errors": {
+        "retainedArchiveCountPositive": "保持されるアーカイブ数は正の整数である必要があります。",
+        "saveErrorDetail": "保存に失敗しました: {{error}}"
+      },
+      "notes": {
+        "snapshotModel": "ダッシュボードのリマインダーは、永続化されたメインプロセスのスナップショットによって駆動されるため、デスクトップのリロード後も、最後に知られた更新状態が残ります。",
+        "retentionPolicy": "保持クリーンアップでは、キャッシュされたアーカイブとメタデータのみが削除されます。インストールされたバージョンのディレクトリはそのまま残ります。"
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Hagicode Desktop. Electron + React + TypeScript を使用して ❤️ で構築されています。",
+    "testBuild": "テスト アプリケーション - 開発ビルド"
+  },
+  "quickStart": {
+    "title": "クイックスタート",
+    "description": "組み込み Web サービス パッケージをインストールし、ローカル PCode インスタンスの管理を開始します。"
+  },
+  "secure": {
+    "title": "安全",
+    "description": "セキュリティを念頭に置いて構築されています。データはマシン上に残ります。"
+  },
+  "header": {
+    "runningSuccessfully": "正常に実行されました"
+  },
+  "dependencyManagement": {
+    "title": "依存関係の管理",
+    "backToDashboard": "ダッシュボードに戻る",
+    "description": "埋め込み Web サービス パッケージとシステムの依存関係を管理する",
+    "tips": {
+      "title": "ヒント",
+      "description": "最高のパフォーマンスとセキュリティを実現するために、依存関係を最新の状態に保ちます。"
+    },
+    "noPackageInstalled": "パッケージがインストールされていません",
+    "installedVersion": "インストールされているバージョン",
+    "requiredVersion": "必要なバージョン",
+    "status": {
+      "installed": "インストール済み",
+      "bundled": "デスクトップにバンドルされている",
+      "desktopManaged": "デスクトップ管理",
+      "manualInstallRequired": "手動インストールが必要です",
+      "notInstalled": "見つかりません",
+      "versionMismatch": "バージョンの不一致"
+    },
+    "actions": {
+      "refresh": "依存関係を更新する",
+      "install": "インストール",
+      "installing": "インストール中...",
+      "viewManualSteps": "手動手順を表示",
+      "download": "ダウンロード",
+      "reinstallDesktop": "デスクトップを再インストールする",
+      "updateDesktop": "デスクトップを更新する"
+    },
+    "details": {
+      "manualCommand": "推奨されるコマンド",
+      "source": "ソース",
+      "bundledSource": "バンドルされたソース",
+      "systemSource": "システムソース"
+    },
+    "manualHandoff": {
+      "title": "手動 CLI パッケージのインストールが必要",
+      "description": "推奨されたコマンドをデスクトップの外で実行します。 Desktop のバンドルされた Node/npm 環境と PATH の動作の現在の詳細については、FAQ を参照してください。",
+      "faqLinkLabel": "ノード環境のよくある質問を見る",
+      "faqUrl": "https://docs.hagicode.com/en/faq/desktop-node-environment/",
+      "refreshHint": "コマンドの終了後に更新して、デスクトップ管理の依存関係を再確認します。"
+    }
+  },
+  "versionManagement": {
+    "title": "バージョン管理",
+    "description": "Hagicode Server バージョンのインストール、切り替え、管理",
+    "availableVersions": "利用可能なバージョン",
+    "installedVersions": "インストールされているバージョン",
+    "installed": "インストール済み",
+    "installing": "インストール中...",
+    "downloading": "ダウンロード中",
+    "extracting": "抽出中",
+    "verifying": "検証中",
+    "completed": "完了",
+    "switching": "切り替え中...",
+    "reinstalling": "再インストール中...",
+    "installedAt": "設置場所",
+    "notInstalled": "インストールされていません",
+    "confirmUninstall": "このバージョンをアンインストールしてもよろしいですか?",
+    "confirmReinstall": "このパッケージを再インストールしてもよろしいですか?これにより、キャッシュとインストールされているバージョンが削除され、再度ダウンロードしてインストールされます。",
+    "reinstall": "再インストール",
+    "noVersionsAvailable": "利用可能なバージョンはありません",
+    "noVersionsInstalled": {
+      "title": "まだバージョンがインストールされていません",
+      "description": "Hagicode Desktop を開始する最も簡単な方法は、ガイド付きセットアップ ウィザードを使用することです。わずか数ステップでインストールと構成を完了します。",
+      "startButton": "セットアップウィザードの開始"
+    },
+    "status": {
+      "active": "アクティブ",
+      "ready": "準備完了",
+      "incomplete": "不足している依存関係",
+      "installed": "インストール済み",
+      "payloadInvalid": "ペイロードが無効です",
+      "runtimeIncompatible": "バンドルされたランタイムに互換性がない",
+      "desktopIncompatible": "デスクトップ非互換"
+    },
+    "actions": {
+      "refresh": "リフレッシュ",
+      "install": "インストールバージョン",
+      "switch": "スイッチ",
+      "uninstall": "アンインストール",
+      "reinstall": "再インストール",
+      "reinstallPackage": "このパッケージを再インストールします",
+      "openLogs": "ログを開く",
+      "showMoreVersions": "さらにバージョンを表示 (残り {{count}})",
+      "showLessVersions": "表示を減らす",
+      "switchDisabledDesktop": "切り替える前にデスクトップをアップグレードする"
+    },
+    "progressBar": "プログレスバー",
+    "progressText": "進行状況テキスト",
+    "info": {
+      "title": "バージョン管理について",
+      "description": "バージョン管理を使用すると、複数の Hagicode Server バージョンをインストールし、それらを切り替えて、アクティベーション前にデスクトップの互換性を確認できます。"
+    },
+    "toast": {
+      "installSuccess": "インストール成功",
+      "installSuccessDescription": "バージョンは正常にインストールされました。準備ができたら、サービスを手動で開始します。",
+      "installSuccessAutoSwitchedDescription": "このバージョンは正常にインストールされ、現在はアクティブなバージョンです。",
+      "installSuccessNoAutoSwitchDescription": "バージョンは正常にインストールされましたが、アクティブなバージョンは変更されませんでした。",
+      "installFailed": "インストールに失敗しました",
+      "installFailedDescription": "インストール中にエラーが発生しました。もう一度試してください。",
+      "reinstallSuccess": "正常に再インストールされました",
+      "reinstallFailed": "再インストールに失敗しました",
+      "uninstallSuccess": "正常にアンインストールされました",
+      "uninstallFailed": "アンインストールに失敗しました",
+      "openLogsSuccess": "ログフォルダーが開かれました",
+      "logsNotFound": "ログフォルダーが見つかりません",
+      "openLogsError": "ログフォルダーを開けませんでした",
+      "onboardingStarted": "セットアップウィザードが開始されました",
+      "onboardingFailed": "セットアップウィザードの開始に失敗しました",
+      "switchBlocked": "このパッケージには、新しいデスクトップ バージョンが必要です。",
+      "switchFailed": "バージョンの切り替えに失敗しました"
+    },
+    "dialog": {
+      "reinstallTitle": "再インストールの確認",
+      "reinstallDescription": "これにより、キャッシュとインストールされているバージョンが削除され、再度ダウンロードしてインストールされます。続けますか?",
+      "uninstallTitle": "アンインストールの確認",
+      "uninstallDescription": "このバージョンをアンインストールしてもよろしいですか?この操作は元に戻すことができません。",
+      "cancel": "キャンセル",
+      "confirm": "確認する"
+    },
+    "desktopCompatibility": {
+      "blockedTitle": "このパッケージをアクティブ化するにはデスクトップをアップグレードしてください",
+      "requiredVersion": "必要なデスクトップ:",
+      "currentVersion": "現在のデスクトップ:",
+      "upgradeGuidance": "Hagicode Desktop をアップグレードしてから、このパッケージの切り替えまたは起動を再試行してください。"
+    },
+    "portableMode": {
+      "title": "ポータブル版モード",
+      "description": "このビルドはパッケージ化された固定ペイロードから実行されるため、バージョンのインストール、切り替え、およびパッケージ ソースの管理は非表示になります。",
+      "activeRuntime": "アクティブなパッケージ化されたランタイム: {{version}}",
+      "updates": "このビルドの更新は、アプリ内バージョンのアクションではなく、パッケージ化されたディストリビューションによって管理されます。"
+    },
+    "downloadStage": {
+      "queued": "キューに入れられました",
+      "backfilling": "フォールバック埋め戻し",
+      "fetchingTorrent": "トレントを取得しています",
+      "sharedDownloading": "トレントファーストダウンロード"
+    },
+    "downloadMode": {
+      "shared": "まずはトレント",
+      "fallback": "フォールバック埋め戻し",
+      "direct": "HTTP/WebSeed"
+    },
+    "installTelemetry": {
+      "mode": "モード",
+      "stage": "ステージ",
+      "peers": "ピア",
+      "sharedBytes": "共有バイト",
+      "fallbackBytes": "フォールバックバイト",
+      "verified": "確認済み",
+      "flow": "フロー: torrent の取得 -> Torrent ファースト ダウンロード -> フォールバック バックフィル (必要な場合) -> 検証 -> 抽出 -> 完了",
+      "flowActive": "電流の流れ: {{stage}}"
+    },
+    "progressMessage": {
+      "direct-http": "HTTP/WebSeedを超えるダウンロード中",
+      "fetching-torrent-metadata": "トレントメタデータの取得",
+      "torrent-metadata-ready": "Torrent の準備が完了し、共有アクセラレーションを開始します",
+      "torrent-first-started": "Torrent ファーストダウンロードが開始されました",
+      "shared-acceleration-active": "共有アクセラレーションがアクティブです",
+      "source-fallback-active": "フォールバックバックフィルがアクティブです",
+      "torrent-unavailable-fallback": "トレントが利用できないため、自動的にフォールバックに切り替わります",
+      "portable-mode-http-fallback": "ポータブル モードではフォールバック ダウンロードが強制されます",
+      "legacy-http-fallback": "トレントメタデータなし、HTTP/WebSeed のみを使用",
+      "no-sha256-required": "追加の検証は必要ありません",
+      "sha256-verifying": "パッケージの整合性の検証",
+      "sha256-verified": "検証完了",
+      "extracting-package": "パッケージを抽出しています",
+      "installation-complete": "インストール完了"
+    }
+  },
+  "installProgressDialog": {
+    "title": "依存関係のインストール",
+    "executing": "インストール中...",
+    "executingCommand": "{{total}}のコマンド{{current}}を実行中",
+    "currentCommand": "現在のコマンド",
+    "logs": "インストールログ",
+    "status": {
+      "executing": "インストール中...",
+      "success": "インストール完了",
+      "error": "インストールに失敗しました"
+    },
+    "buttons": {
+      "close": "閉じる",
+      "retry": "再試行"
+    }
+  }
+}
