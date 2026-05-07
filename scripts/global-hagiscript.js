@@ -40,6 +40,20 @@ function resolveDirectHagiscriptCommands() {
   return ['hagiscript'];
 }
 
+function resolveLocalHagiscriptCommand() {
+  const candidates = process.platform === 'win32'
+    ? [
+        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript.cmd'),
+        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript.exe'),
+        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript'),
+      ]
+    : [
+        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript'),
+      ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
 function resolveFallbackHagiscriptCommand() {
   const prefixResult = spawnSync('npm', ['config', 'get', 'prefix'], {
     cwd: process.cwd(),
@@ -74,11 +88,25 @@ function resolveFallbackHagiscriptCommand() {
 function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
   let result = null;
   let resolvedCommand = null;
-  for (const command of resolveDirectHagiscriptCommands()) {
-    result = runHagiscriptVersion(command);
+  let resolvedScope = 'global';
+
+  const localCommand = resolveLocalHagiscriptCommand();
+  if (localCommand) {
+    result = runHagiscriptVersion(localCommand);
     if (!result.error || result.error.code !== 'ENOENT') {
-      resolvedCommand = command;
-      break;
+      resolvedCommand = localCommand;
+      resolvedScope = 'local';
+    }
+  }
+
+  if (!resolvedCommand) {
+    for (const command of resolveDirectHagiscriptCommands()) {
+      result = runHagiscriptVersion(command);
+      if (!result.error || result.error.code !== 'ENOENT') {
+        resolvedCommand = command;
+        resolvedScope = 'global';
+        break;
+      }
     }
   }
 
@@ -87,6 +115,7 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
     if (fallbackCommand) {
       result = runHagiscriptVersion(fallbackCommand);
       resolvedCommand = fallbackCommand;
+      resolvedScope = 'global';
     }
   }
 
@@ -95,26 +124,32 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
   }
 
   if (result.error) {
-    throw new Error(`Global hagiscript prerequisite is missing: ${result.error.message}`);
+    throw new Error(`Required hagiscript installation is missing: ${result.error.message}`);
   }
   if ((result.status ?? 1) !== 0) {
-    throw new Error(`Global hagiscript prerequisite check failed: ${(result.stderr || result.stdout || '').trim() || 'unknown error'}`);
+    throw new Error(`hagiscript prerequisite check failed: ${(result.stderr || result.stdout || '').trim() || 'unknown error'}`);
   }
 
   const actual = parseVersion(result.stdout || result.stderr || '');
   const required = parseVersion(minimumVersion);
   if (!actual || !required) {
-    throw new Error('Global hagiscript prerequisite check could not determine a semantic version.');
+    throw new Error('hagiscript prerequisite check could not determine a semantic version.');
   }
 
   if (compareVersions(actual, required) < 0) {
-    throw new Error(`Global hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed.`);
+    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed${resolvedScope === 'local' ? ' locally' : ' globally'}.`);
   }
 
   return {
     command: resolvedCommand,
     version: actual.join('.'),
+    scope: resolvedScope,
   };
+}
+
+function resolveLocalHagiscriptPackageRoot() {
+  const packageRoot = path.join(process.cwd(), 'node_modules', '@hagicode', 'hagiscript');
+  return fs.existsSync(packageRoot) ? packageRoot : null;
 }
 
 function resolveGlobalNodeModulesRoot() {
@@ -145,7 +180,14 @@ export function resolveGlobalHagiscriptCommand(minimumVersion = '0.1.8') {
 }
 
 export function resolveGlobalHagiscriptPackageRoot(minimumVersion = '0.1.8') {
-  resolveInstalledHagiscript(minimumVersion);
+  const resolved = resolveInstalledHagiscript(minimumVersion);
+  if (resolved.scope === 'local') {
+    const localPackageRoot = resolveLocalHagiscriptPackageRoot();
+    if (!localPackageRoot) {
+      throw new Error('Local hagiscript package root was not found.');
+    }
+    return localPackageRoot;
+  }
   const packageRoot = path.join(resolveGlobalNodeModulesRoot(), '@hagicode', 'hagiscript');
   if (!fs.existsSync(packageRoot)) {
     throw new Error(`Global hagiscript package root was not found: ${packageRoot}`);
