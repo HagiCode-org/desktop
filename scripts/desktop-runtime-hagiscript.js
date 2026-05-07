@@ -16,8 +16,7 @@ import {
 } from './omniroute-runtime-contract.js';
 import {
   assertGlobalHagiscriptAvailable,
-  getHagiscriptSpawnOptions,
-  resolveGlobalHagiscriptCommand,
+  resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
 const MINIMUM_HAGISCRIPT_VERSION = '0.1.10';
@@ -160,11 +159,13 @@ function writeManagedDesktopRuntimeManifest() {
 
 export async function installDesktopRuntimeComponents(componentIds, options = {}) {
   assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
-  const hagiscriptCommand = resolveGlobalHagiscriptCommand(MINIMUM_HAGISCRIPT_VERSION);
+  const hagiscriptPackageRoot = resolveGlobalHagiscriptPackageRoot(MINIMUM_HAGISCRIPT_VERSION);
+  const hagiscriptCliPath = path.join(hagiscriptPackageRoot, 'dist', 'cli.js');
   const manifestPath = writeManagedDesktopRuntimeManifest();
   const runtimeRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
   const componentNames = componentIds.map((componentId) => resolveManagedDesktopRuntimeComponentName(componentId));
   const args = [
+    hagiscriptCliPath,
     'runtime',
     'install',
     '--from-manifest',
@@ -178,21 +179,78 @@ export async function installDesktopRuntimeComponents(componentIds, options = {}
   if (options.force) {
     args.push('--force');
   }
-  if (process.env.HAGICODE_RUNTIME_VERBOSE === '1') {
+  if (process.env.HAGICODE_RUNTIME_VERBOSE === '1' || process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
     args.push('--verbose');
   }
 
-  const result = spawnSync(hagiscriptCommand, args, {
+  const result = spawnSync(process.execPath, args, {
     cwd: process.cwd(),
     env: process.env,
-    stdio: 'inherit',
-    ...getHagiscriptSpawnOptions(hagiscriptCommand),
+    encoding: 'utf8',
+    stdio: 'pipe',
   });
+
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
 
   if (result.error) {
     throw result.error;
   }
   if ((result.status ?? 1) !== 0) {
-    throw new Error(`hagiscript runtime install failed for ${componentIds.join(', ')}`);
+    const failureParts = [
+      `hagiscript runtime install failed for ${componentIds.join(', ')}`,
+      `exit code: ${result.status ?? 'unknown'}`,
+    ];
+    if (result.signal) {
+      failureParts.push(`signal: ${result.signal}`);
+    }
+
+    const outputSections = [];
+    if (result.stderr?.trim()) {
+      outputSections.push(`stderr:\n${result.stderr.trim()}`);
+    }
+    if (result.stdout?.trim()) {
+      outputSections.push(`stdout:\n${result.stdout.trim()}`);
+    }
+
+    const latestLog = readLatestRuntimeInstallLog(runtimeRoot);
+    if (latestLog) {
+      outputSections.push(`runtime log (${latestLog.path}):\n${latestLog.content}`);
+    }
+
+    throw new Error(`${failureParts.join('\n')}${outputSections.length > 0 ? `\n${outputSections.join('\n\n')}` : ''}`);
   }
+}
+
+function readLatestRuntimeInstallLog(runtimeRoot) {
+  const logsDirectory = path.resolve(runtimeRoot, '..', 'runtime-data', 'logs');
+  if (!fs.existsSync(logsDirectory)) {
+    return null;
+  }
+
+  const candidates = fs.readdirSync(logsDirectory)
+    .filter((entry) => entry.endsWith('.log'))
+    .map((entry) => {
+      const targetPath = path.join(logsDirectory, entry);
+      return {
+        path: targetPath,
+        mtimeMs: fs.statSync(targetPath).mtimeMs,
+      };
+    })
+    .sort((left, right) => right.mtimeMs - left.mtimeMs);
+
+  const latest = candidates[0];
+  if (!latest) {
+    return null;
+  }
+
+  const content = fs.readFileSync(latest.path, 'utf8').trim();
+  return {
+    path: latest.path,
+    content: content.length > 8000 ? `${content.slice(-8000)}` : content,
+  };
 }
