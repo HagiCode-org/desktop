@@ -20,6 +20,7 @@ export type ManagedNpmPackageInstallMode = 'embedded-npm' | 'hagiscript-sync';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
 export type VendoredRuntimeId = 'code-server' | 'omniroute';
+export type VendoredRuntimeInstallStatus = 'installed' | 'not-installed' | 'removed' | 'failed';
 export type VendoredRuntimeStatus = 'ready' | 'running' | 'stopped' | 'missing' | 'damaged';
 export type VendoredRuntimePrimaryAction = 'none' | 'repair' | 'reinstall-desktop' | 'start' | 'stop';
 export type VendoredRuntimeLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
@@ -76,6 +77,7 @@ export interface VendoredRuntimeHealthSnapshot {
 export interface VendoredRuntimeStatusSnapshot {
   id: VendoredRuntimeId;
   definition: VendoredRuntimeDefinition;
+  installStatus: VendoredRuntimeInstallStatus;
   status: VendoredRuntimeStatus;
   version: string | null;
   runtimeRoot: string;

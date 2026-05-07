@@ -1,6 +1,7 @@
 import type {
   ManagedNpmPackageId,
   VendoredRuntimeId,
+  VendoredRuntimeStatusSnapshot,
 } from './dependency-management.js';
 
 export const OMNIROUTE_DEFAULT_PORT = 36988;
@@ -56,6 +57,7 @@ export interface OmniRouteConfigSnapshot {
 export interface OmniRouteStatusSnapshot {
   status: OmniRouteOverallStatus;
   config: OmniRouteConfigSnapshot;
+  runtime: VendoredRuntimeStatusSnapshot;
   paths: OmniRouteManagedPaths;
   processes: OmniRouteProcessSnapshot[];
   pm2Available: boolean;
