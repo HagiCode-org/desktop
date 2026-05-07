@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -8,23 +9,38 @@ const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts']);
 const IGNORED_DIRECTORIES = new Set(['.git', '.generated', 'node_modules', 'dist', 'pkg', 'coverage', 'build']);
 const importPattern = /(?:from\s*['"]([^'"]+\.(?:[cm]?ts|tsx))['"]|import\(\s*['"]([^'"]+\.(?:[cm]?ts|tsx))['"]\s*\))/g;
 
+function isGitIgnored(targetPath) {
+  const relativePath = path.relative(rootDir, targetPath);
+  if (!relativePath || relativePath.startsWith('..')) {
+    return false;
+  }
+
+  const result = spawnSync('git', ['check-ignore', '-q', relativePath], {
+    cwd: rootDir,
+    stdio: 'ignore',
+  });
+  return result.status === 0;
+}
+
 function walk(directoryPath, collectedFiles) {
   for (const entry of fs.readdirSync(directoryPath, { withFileTypes: true })) {
+    const entryPath = path.join(directoryPath, entry.name);
+
     if (entry.isDirectory()) {
-      if (IGNORED_DIRECTORIES.has(entry.name)) {
+      if (IGNORED_DIRECTORIES.has(entry.name) || isGitIgnored(entryPath)) {
         continue;
       }
 
-      walk(path.join(directoryPath, entry.name), collectedFiles);
+      walk(entryPath, collectedFiles);
       continue;
     }
 
     const extension = path.extname(entry.name);
-    if (!SOURCE_EXTENSIONS.has(extension) || entry.name.endsWith('.d.ts')) {
+    if (!SOURCE_EXTENSIONS.has(extension) || entry.name.endsWith('.d.ts') || isGitIgnored(entryPath)) {
       continue;
     }
 
-    collectedFiles.push(path.join(directoryPath, entry.name));
+    collectedFiles.push(entryPath);
   }
 }
 
