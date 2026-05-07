@@ -28,6 +28,10 @@ function runHagiscriptVersion(command) {
   });
 }
 
+function useShellForCommand(command) {
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
+
 function resolveDirectHagiscriptCommands() {
   if (process.platform === 'win32') {
     return ['hagiscript.cmd', 'hagiscript.exe', 'hagiscript'];
@@ -67,11 +71,13 @@ function resolveFallbackHagiscriptCommand() {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
 }
 
-export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
+function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
   let result = null;
+  let resolvedCommand = null;
   for (const command of resolveDirectHagiscriptCommands()) {
     result = runHagiscriptVersion(command);
     if (!result.error || result.error.code !== 'ENOENT') {
+      resolvedCommand = command;
       break;
     }
   }
@@ -80,7 +86,12 @@ export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
     const fallbackCommand = resolveFallbackHagiscriptCommand();
     if (fallbackCommand) {
       result = runHagiscriptVersion(fallbackCommand);
+      resolvedCommand = fallbackCommand;
     }
+  }
+
+  if (!resolvedCommand) {
+    resolvedCommand = process.platform === 'win32' ? 'hagiscript.cmd' : 'hagiscript';
   }
 
   if (result.error) {
@@ -100,5 +111,54 @@ export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
     throw new Error(`Global hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed.`);
   }
 
-  return actual.join('.');
+  return {
+    command: resolvedCommand,
+    version: actual.join('.'),
+  };
+}
+
+function resolveGlobalNodeModulesRoot() {
+  const npmRootResult = spawnSync('npm', ['root', '-g'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+    shell: false,
+  });
+
+  if (npmRootResult.error) {
+    throw new Error(`Failed to resolve global npm root for hagiscript: ${npmRootResult.error.message}`);
+  }
+  if ((npmRootResult.status ?? 1) !== 0) {
+    throw new Error(`Failed to resolve global npm root for hagiscript: ${(npmRootResult.stderr || npmRootResult.stdout || '').trim() || 'unknown error'}`);
+  }
+
+  const npmRoot = String(npmRootResult.stdout ?? '').trim();
+  if (!npmRoot) {
+    throw new Error('Global npm root for hagiscript is empty.');
+  }
+
+  return npmRoot;
+}
+
+export function resolveGlobalHagiscriptCommand(minimumVersion = '0.1.8') {
+  return resolveInstalledHagiscript(minimumVersion).command;
+}
+
+export function resolveGlobalHagiscriptPackageRoot(minimumVersion = '0.1.8') {
+  resolveInstalledHagiscript(minimumVersion);
+  const packageRoot = path.join(resolveGlobalNodeModulesRoot(), '@hagicode', 'hagiscript');
+  if (!fs.existsSync(packageRoot)) {
+    throw new Error(`Global hagiscript package root was not found: ${packageRoot}`);
+  }
+  return packageRoot;
+}
+
+export function getHagiscriptSpawnOptions(command) {
+  return {
+    shell: useShellForCommand(command),
+  };
+}
+
+export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
+  return resolveInstalledHagiscript(minimumVersion).version;
 }
