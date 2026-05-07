@@ -5,7 +5,7 @@ import {
 } from '../shared/npm-managed-packages.js';
 import type {
   ManagedNpmPackageStatus,
-  VendoredRuntimeStatus,
+  VendoredRuntimeInstallStatus,
 } from '../types/dependency-management.js';
 import type {
   OmniRouteDependencyFailureKind,
@@ -23,7 +23,7 @@ export interface OmniRoutePackageDependencyCheck {
 
 export interface OmniRouteRuntimeDependencyCheck {
   runtimeId: OmniRouteDependencyRuntimeId;
-  runtimeStatus: VendoredRuntimeStatus | null;
+  runtimeInstallStatus: VendoredRuntimeInstallStatus | null;
 }
 
 export type OmniRouteDependencyProblem =
@@ -70,13 +70,13 @@ export function classifyOmniRouteDependencyProblems(input: {
 }): OmniRouteDependencyProblem[] {
   const problems: OmniRouteDependencyProblem[] = [];
 
-  if (input.runtime.runtimeStatus === 'missing') {
+  if (input.runtime.runtimeInstallStatus === 'not-installed' || input.runtime.runtimeInstallStatus === 'removed') {
     problems.push({
       kind: 'runtime',
       runtimeId: input.runtime.runtimeId,
       issue: 'missing',
     });
-  } else if (input.runtime.runtimeStatus === 'damaged') {
+  } else if (input.runtime.runtimeInstallStatus === 'failed') {
     problems.push({
       kind: 'runtime',
       runtimeId: input.runtime.runtimeId,

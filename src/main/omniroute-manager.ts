@@ -384,7 +384,7 @@ export class OmniRouteManager {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: {
         runtimeId: 'omniroute',
-        runtimeStatus: runtime.status,
+        runtimeInstallStatus: runtime.installStatus,
       },
       packages: [
         {
@@ -405,6 +405,7 @@ export class OmniRouteManager {
     return {
       status: remediation && process.status !== 'online' ? 'error' : overallStatus,
       config,
+      runtime,
       paths,
       processes: [process],
       pm2Available,
@@ -472,7 +473,7 @@ export class OmniRouteManager {
       remediation = buildOmniRouteDependencyRemediation({
         runtime: {
           runtimeId: 'omniroute',
-          runtimeStatus: runtime.status,
+          runtimeInstallStatus: runtime.installStatus,
         },
         packages: [
           {
@@ -821,12 +822,21 @@ export class OmniRouteManager {
     return 'stopped';
   }
 
-  private buildFallbackStatus(error: unknown): OmniRouteStatusSnapshot {
+  private async buildFallbackStatus(error: unknown): Promise<OmniRouteStatusSnapshot> {
     const paths = this.getPaths();
     const config = this.getConfig();
+    const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager, {
+      health: {
+        reachable: false,
+        url: buildBaseUrl(config.port),
+        lastCheckedAt: new Date().toISOString(),
+        message: error instanceof Error ? error.message : String(error),
+      },
+    });
     return {
       status: 'error',
       config,
+      runtime,
       paths,
       processes: [this.emptyProcessSnapshot()],
       pm2Available: false,
