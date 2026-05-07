@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { execa } from 'execa';
-import AdmZip from 'adm-zip';
+import fs from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
   detectRuntimePlatform,
@@ -14,19 +13,80 @@ import {
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
 import { resolveStagedDesktopRuntimeComponentRoot, resolveStagedDesktopRuntimeProgramHome } from './desktop-runtime-layout.js';
-import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
+import {
+  installDesktopRuntimeComponents,
+  isManagedDesktopRuntimeComponentExecution,
+  resolveManagedDesktopRuntimeComponentRoot,
+} from './desktop-runtime-hagiscript.js';
+import {
+  assertGlobalHagiscriptAvailable,
+  resolveGlobalHagiscriptPackageRoot,
+} from './global-hagiscript.js';
+
+const MINIMUM_HAGISCRIPT_VERSION = '0.1.9';
+
+if (!isManagedDesktopRuntimeComponentExecution()) {
+  await installDesktopRuntimeComponents(['dotnet']);
+  process.exit(0);
+}
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const stageRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
-const downloadsRoot = path.join(process.cwd(), 'build', 'embedded-runtime', 'downloads');
-const stagedRuntimeRoot = resolveStagedDesktopRuntimeComponentRoot('dotnet', {
-  cwd: process.cwd(),
-  platform: runtimePlatform,
-});
+const stagedRuntimeRoot = resolveManagedDesktopRuntimeComponentRoot()
+  || resolveStagedDesktopRuntimeComponentRoot('dotnet', {
+    cwd: process.cwd(),
+    platform: runtimePlatform,
+  });
+const hagiscriptPackageRoot = resolveGlobalHagiscriptPackageRoot(MINIMUM_HAGISCRIPT_VERSION);
+const {
+  installManagedDotnetRuntime,
+  verifyManagedDotnetRuntime,
+} = await import(pathToFileURL(path.join(hagiscriptPackageRoot, 'dist', 'runtime', 'dotnet-installer.js')).href);
+
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
+
+main().catch((error) => {
+  console.error('[embedded-runtime] Failed to install Desktop runtime through hagiscript:', error instanceof Error ? error.stack || error.message : String(error));
+  process.exit(1);
+});
+
+async function main() {
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
+  ensureOfficialMicrosoftDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
+  await rm(stagedRuntimeRoot, { recursive: true, force: true });
+  await mkdir(path.dirname(stagedRuntimeRoot), { recursive: true });
+
+  const installation = await installManagedDotnetRuntime({
+    targetDirectory: stagedRuntimeRoot,
+    version: runtimeConfig.releaseVersion,
+    verbose: process.env.HAGICODE_RUNTIME_VERBOSE === '1',
+    scriptBaseUrl: process.env.HAGISCRIPT_DOTNET_INSTALL_SCRIPT_BASE_URL?.trim() || undefined,
+  });
+
+  if (!installation.valid) {
+    throw new Error(installation.failureReason || 'Managed .NET runtime install failed.');
+  }
+
+  const validation = validateRuntimeLayout(stagedRuntimeRoot);
+  ensureExpectedPinnedVersions(validation);
+
+  const verification = await verifyManagedDotnetRuntime({
+    targetDirectory: stagedRuntimeRoot,
+    version: runtimeConfig.releaseVersion,
+  });
+  if (!verification.valid) {
+    throw new Error(verification.failureReason || 'Managed .NET runtime verification failed.');
+  }
+
+  const metadata = buildRuntimeMetadata(validation);
+  await writeRuntimeMetadata(metadata);
+
+  console.log(`[embedded-runtime] Installed ${runtimeConfig.releaseVersion} for ${runtimePlatform} via hagiscript ${hagiscriptVersion}`);
+  console.log(`[embedded-runtime] Staged runtime root: ${stagedRuntimeRoot}`);
+}
 
 function listVersionDirectories(targetPath) {
   try {
@@ -55,6 +115,15 @@ function compareVersions(left, right) {
 
 function pickHighestVersion(versions) {
   return [...versions].sort((left, right) => compareVersions(right, left))[0];
+}
+
+function isExecutable(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function validateRuntimeLayout(runtimeRoot) {
@@ -96,28 +165,6 @@ function validateRuntimeLayout(runtimeRoot) {
   };
 }
 
-function isExecutable(targetPath) {
-  try {
-    fs.accessSync(targetPath, fs.constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function ensureBundledDotnetHost(runtimeRoot) {
-  if (!requiresExecutableDotnetHost) {
-    return;
-  }
-
-  const dotnetPath = path.join(runtimeRoot, dotnetExecutableName);
-  const currentMode = fs.statSync(dotnetPath).mode;
-  const executableMode = currentMode | 0o755;
-  if (currentMode !== executableMode) {
-    fs.chmodSync(dotnetPath, executableMode);
-  }
-}
-
 function ensureExpectedPinnedVersions(validation) {
   const mismatches = [];
 
@@ -136,54 +183,13 @@ function ensureExpectedPinnedVersions(validation) {
   }
 }
 
-async function downloadRuntimeArchive(downloadUrl, destinationPath) {
-  const response = await fetch(downloadUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download runtime archive (${response.status} ${response.statusText}): ${downloadUrl}`);
-  }
-
-  const payload = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(destinationPath, payload);
-}
-
-async function extractArchive(archivePath, archiveType, destinationPath) {
-  if (archiveType === 'zip') {
-    const archive = new AdmZip(archivePath);
-    archive.extractAllTo(destinationPath, true);
-    return;
-  }
-
-  if (archiveType === 'tar.gz') {
-    await execa('tar', ['-xzf', archivePath, '-C', destinationPath], { stdout: 'inherit', stderr: 'inherit', stdin: 'ignore' });
-    return;
-  }
-
-  throw new Error(`Unsupported embedded runtime archive type: ${archiveType}`);
-}
-
-function findExtractedRuntimeRoot(extractRoot) {
-  if (fs.existsSync(path.join(extractRoot, dotnetExecutableName))) {
-    return extractRoot;
-  }
-
-  const entries = fs.readdirSync(extractRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
-  if (entries.length === 1) {
-    const nestedRoot = path.join(extractRoot, entries[0].name);
-    if (fs.existsSync(path.join(nestedRoot, dotnetExecutableName))) {
-      return nestedRoot;
-    }
-  }
-
-  throw new Error(`Extracted runtime payload at ${extractRoot} does not contain ${dotnetExecutableName}`);
-}
-
-function writeRuntimeMetadata(validation, archivePath) {
+function buildRuntimeMetadata(validation) {
   const sourceUrl = ensureOfficialMicrosoftDownloadUrl(
     runtimeTarget.downloadUrl,
     runtimeConfig.source?.allowedDownloadHosts || [],
   );
 
-  const metadata = {
+  return {
     schemaVersion: 1,
     platform: runtimePlatform,
     provider: runtimeConfig.source.provider,
@@ -194,103 +200,26 @@ function writeRuntimeMetadata(validation, archivePath) {
     downloadUrl: runtimeTarget.downloadUrl,
     sourceHost: sourceUrl.hostname,
     archiveType: runtimeTarget.archiveType,
-    archivePath,
+    archivePath: null,
     dotnetPath: path.join(stagedRuntimeRoot, dotnetExecutableName),
     runtimeRoot: stagedRuntimeRoot,
     aspNetCoreVersion: validation.aspNetCoreVersion,
     netCoreVersion: validation.netCoreVersion,
     hostFxrVersion: validation.hostFxrVersion,
     stagedAt: new Date().toISOString(),
+    ownership: 'hagiscript-managed',
   };
+}
 
-  fs.writeFileSync(
+async function writeRuntimeMetadata(metadata) {
+  await writeFile(
     path.join(stagedRuntimeRoot, EMBEDDED_RUNTIME_METADATA_FILE),
     `${JSON.stringify(metadata, null, 2)}\n`,
     'utf8',
   );
-
-  fs.writeFileSync(
+  await writeFile(
     path.join(stageRoot, '.runtime-stage.json'),
     `${JSON.stringify(metadata, null, 2)}\n`,
     'utf8',
   );
-
-  return metadata;
 }
-
-function validateWrittenRuntimeMetadata(metadata) {
-  const metadataPath = path.join(stagedRuntimeRoot, EMBEDDED_RUNTIME_METADATA_FILE);
-  const persisted = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-  const errors = [];
-
-  if (persisted.platform !== runtimePlatform) {
-    errors.push(`platform expected ${runtimePlatform} but found ${persisted.platform || 'missing'}`);
-  }
-  if (persisted.downloadUrl !== runtimeTarget.downloadUrl) {
-    errors.push('downloadUrl does not match the pinned runtime manifest');
-  }
-  if (persisted.runtimeRoot !== stagedRuntimeRoot) {
-    errors.push(`runtimeRoot expected ${stagedRuntimeRoot} but found ${persisted.runtimeRoot || 'missing'}`);
-  }
-  if (persisted.dotnetPath !== metadata.dotnetPath) {
-    errors.push(`dotnetPath expected ${metadata.dotnetPath} but found ${persisted.dotnetPath || 'missing'}`);
-  }
-  if (persisted.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
-    errors.push(`ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${persisted.aspNetCoreVersion || 'missing'}`);
-  }
-  if (persisted.netCoreVersion !== runtimeTarget.netCoreVersion) {
-    errors.push(`Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${persisted.netCoreVersion || 'missing'}`);
-  }
-  if (persisted.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
-    errors.push(`host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${persisted.hostFxrVersion || 'missing'}`);
-  }
-
-  if (errors.length > 0) {
-    throw new Error(`Pinned runtime metadata validation failed for ${runtimePlatform}: ${errors.join('; ')}`);
-  }
-}
-
-async function stageRuntime() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable();
-  fs.mkdirSync(downloadsRoot, { recursive: true });
-  ensureOfficialMicrosoftDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
-
-  const archiveExtension = runtimeTarget.archiveType === 'zip' ? 'zip' : 'tar.gz';
-  const archivePath = path.join(downloadsRoot, `${runtimePlatform}-${runtimeConfig.releaseVersion}.${archiveExtension}`);
-
-  if (!fs.existsSync(archivePath)) {
-    console.log(`[embedded-runtime] Downloading ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
-    await downloadRuntimeArchive(runtimeTarget.downloadUrl, archivePath);
-  } else {
-    console.log(`[embedded-runtime] Reusing cached runtime archive ${archivePath}`);
-  }
-
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `hagicode-runtime-${runtimePlatform}-`));
-
-  try {
-    await extractArchive(archivePath, runtimeTarget.archiveType, tempRoot);
-    const extractedRuntimeRoot = findExtractedRuntimeRoot(tempRoot);
-
-    fs.rmSync(stagedRuntimeRoot, { recursive: true, force: true });
-    fs.mkdirSync(path.dirname(stagedRuntimeRoot), { recursive: true });
-    fs.cpSync(extractedRuntimeRoot, stagedRuntimeRoot, { recursive: true, force: true });
-    ensureBundledDotnetHost(stagedRuntimeRoot);
-
-    const validation = validateRuntimeLayout(stagedRuntimeRoot);
-    ensureExpectedPinnedVersions(validation);
-    const metadata = writeRuntimeMetadata(validation, archivePath);
-    validateWrittenRuntimeMetadata(metadata);
-
-    console.log(`[embedded-runtime] Staged ${runtimePlatform} runtime from ${runtimeTarget.downloadUrl}`);
-    console.log(`[embedded-runtime] ASP.NET Core ${validation.aspNetCoreVersion} -> ${stagedRuntimeRoot}`);
-    console.log(`[embedded-runtime] Using global hagiscript ${hagiscriptVersion} for runtime preparation`);
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
-}
-
-stageRuntime().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`[embedded-runtime] ${message}`);
-  process.exit(1);
-});

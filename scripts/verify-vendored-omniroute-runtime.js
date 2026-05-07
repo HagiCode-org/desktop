@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { resolveManagedDesktopRuntimeComponentRoot } from './desktop-runtime-hagiscript.js';
 import {
   detectOmniRouteRuntimePlatform,
   readOmniRouteRuntimeConfig,
@@ -12,11 +13,12 @@ import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
-const runtimeRoot = process.argv[2]
+const runtimeRoot = resolveManagedDesktopRuntimeComponentRoot()
+  || (process.argv[2]
   ? path.resolve(process.cwd(), process.argv[2])
-  : resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
+  : resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() }));
 
-assertGlobalHagiscriptAvailable();
+assertGlobalHagiscriptAvailable('0.1.9');
 
 if (!fs.existsSync(runtimeRoot)) {
   throw new Error(`Vendored OmniRoute runtime root does not exist: ${runtimeRoot}`);
