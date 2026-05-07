@@ -36,6 +36,34 @@ function useShellForCommand(command) {
   return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
 }
 
+function resolveDirectNpmCommands() {
+  if (process.platform === 'win32') {
+    return ['npm.cmd', 'npm.exe', 'npm'];
+  }
+
+  return ['npm'];
+}
+
+function runNpmCommand(args) {
+  let lastResult = null;
+
+  for (const command of resolveDirectNpmCommands()) {
+    const result = spawnSync(command, args, {
+      cwd: process.cwd(),
+      env: process.env,
+      encoding: 'utf8',
+      shell: useShellForCommand(command),
+    });
+
+    lastResult = result;
+    if (!result.error || result.error.code !== 'ENOENT') {
+      return result;
+    }
+  }
+
+  return lastResult;
+}
+
 function resolveDirectHagiscriptCommands() {
   if (process.platform === 'win32') {
     return ['hagiscript.cmd', 'hagiscript.exe', 'hagiscript'];
@@ -59,12 +87,7 @@ function resolveLocalHagiscriptCommand() {
 }
 
 function resolveFallbackHagiscriptCommand() {
-  const prefixResult = spawnSync('npm', ['config', 'get', 'prefix'], {
-    cwd: process.cwd(),
-    env: process.env,
-    encoding: 'utf8',
-    shell: false,
-  });
+  const prefixResult = runNpmCommand(['config', 'get', 'prefix']);
 
   if (prefixResult.error || (prefixResult.status ?? 1) !== 0) {
     return null;
@@ -193,12 +216,7 @@ function resolveLocalHagiscriptPackageRoot() {
 }
 
 function resolveGlobalNodeModulesRoot() {
-  const npmRootResult = spawnSync('npm', ['root', '-g'], {
-    cwd: process.cwd(),
-    env: process.env,
-    encoding: 'utf8',
-    shell: false,
-  });
+  const npmRootResult = runNpmCommand(['root', '-g']);
 
   if (npmRootResult.error) {
     throw new Error(`Failed to resolve global npm root for hagiscript: ${npmRootResult.error.message}`);
