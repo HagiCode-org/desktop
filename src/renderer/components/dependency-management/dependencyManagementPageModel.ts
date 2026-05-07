@@ -154,7 +154,7 @@ export function prioritizeVendoredRuntimesForRepair(
     if (!highlighted.has(item.id)) {
       return 2;
     }
-    if (item.status === 'missing' || item.status === 'damaged') {
+    if (item.installStatus !== 'installed') {
       return 0;
     }
     return 1;
@@ -192,7 +192,7 @@ export function evaluateDependencyRepairIntent(
   });
   const pendingRuntimeIds = targetRuntimeIds.filter((runtimeId) => {
     const item = runtimeById.get(runtimeId);
-    return !item || item.status === 'missing' || item.status === 'damaged';
+    return !item || item.installStatus !== 'installed';
   });
 
   return {

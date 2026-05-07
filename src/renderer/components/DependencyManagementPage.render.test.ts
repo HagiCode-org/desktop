@@ -267,5 +267,7 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof JSON.parse(zh).dependencyManagement.mirror.saveFailed, 'string');
     assert.equal(typeof JSON.parse(en).dependencyManagement.mirror.enabledHelp, 'string');
     assert.equal(typeof JSON.parse(en).dependencyManagement.omniRouteRepair.targetBadge, 'string');
+    assert.equal(typeof JSON.parse(en).dependencyManagement.vendoredRuntime.installStatus.installed, 'string');
+    assert.equal(typeof JSON.parse(zh).dependencyManagement.vendoredRuntime.runtimeState, 'string');
   });
 });

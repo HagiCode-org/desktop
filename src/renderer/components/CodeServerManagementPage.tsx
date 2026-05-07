@@ -76,7 +76,7 @@ export default function CodeServerManagementPage() {
   const portValidationKey = useMemo(() => validatePortInput(portInput), [portInput]);
   const passwordValidationKey = useMemo(() => validatePasswordInput(passwordInput), [passwordInput]);
   const isRunning = status?.status === 'running';
-  const lifecycleBlocked = !status?.pm2Available || status?.runtime.status === 'missing' || status?.runtime.status === 'damaged';
+  const lifecycleBlocked = !status?.pm2Available || status?.runtime.installStatus !== 'installed';
 
   const applyStatus = (nextStatus: CodeServerStatusSnapshot) => {
     startTransition(() => {
@@ -302,7 +302,7 @@ export default function CodeServerManagementPage() {
                 </div>
                 <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t('codeServer.status.runtimeStatus')}</p>
-                  <p className="mt-2 text-sm">{t(`dependencyManagement.vendoredRuntime.status.${status?.runtime.status ?? 'missing'}`)}</p>
+                  <p className="mt-2 text-sm">{t(`dependencyManagement.vendoredRuntime.installStatus.${status?.runtime.installStatus ?? 'not-installed'}`)}</p>
                 </div>
                 <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t('codeServer.status.passwordMode')}</p>

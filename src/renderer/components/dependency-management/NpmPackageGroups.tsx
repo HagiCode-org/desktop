@@ -40,13 +40,10 @@ import {
 } from './dependencyManagementPageModel';
 
 function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'default' | 'secondary' | 'destructive' | 'outline' {
-  if (item.status === 'running') {
+  if (item.installStatus === 'installed') {
     return 'default';
   }
-  if (item.status === 'ready') {
-    return 'secondary';
-  }
-  if (item.status === 'stopped') {
+  if (item.installStatus === 'not-installed' || item.installStatus === 'removed') {
     return 'outline';
   }
   return 'destructive';
@@ -122,7 +119,7 @@ export function VendoredRuntimeCard({
           <div className="flex items-center gap-2">
             {highlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
             <Badge variant={vendoredRuntimeBadgeVariant(item)}>
-              {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}
+              {t(`dependencyManagement.vendoredRuntime.installStatus.${item.installStatus}`)}
             </Badge>
           </div>
         </div>
@@ -131,6 +128,7 @@ export function VendoredRuntimeCard({
         <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
           <p>{t('dependencyManagement.package.version')}: {item.version ?? t('dependencyManagement.unavailable')}</p>
           <p>{t('dependencyManagement.vendoredRuntime.managedByDesktop')}</p>
+          <p>{t('dependencyManagement.vendoredRuntime.runtimeState')}: {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}</p>
           <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.runtimeRoot')}: {item.runtimeRoot}</p>
           {item.metadataPath ? (
             <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.metadataPath')}: {item.metadataPath}</p>
@@ -138,14 +136,14 @@ export function VendoredRuntimeCard({
           <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.healthUrl')}: {item.health.url ?? t('dependencyManagement.unavailable')}</p>
         </div>
 
-        <Alert className={item.status === 'running' ? 'border-emerald-500/30 bg-emerald-500/5' : undefined}>
+        <Alert className={item.installStatus === 'installed' ? 'border-emerald-500/30 bg-emerald-500/5' : undefined}>
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}</AlertTitle>
-          <AlertDescription>{t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${item.status}`)}</AlertDescription>
+          <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${item.installStatus}`)}</AlertTitle>
+          <AlertDescription>{t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${item.installStatus}`)}</AlertDescription>
         </Alert>
 
         {diagnostics.length > 0 ? (
-          <Alert variant={item.status === 'running' ? 'default' : 'destructive'}>
+          <Alert variant={item.installStatus === 'installed' ? 'default' : 'destructive'}>
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('dependencyManagement.vendoredRuntime.diagnostics')}</AlertTitle>
             <AlertDescription>
