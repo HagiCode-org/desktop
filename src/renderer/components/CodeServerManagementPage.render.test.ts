@@ -36,13 +36,15 @@ describe('Code Server renderer wiring', () => {
     assert.match(source, /validatePasswordInput/);
     assert.match(source, /password: passwordInput\.trim\(\)/);
     assert.match(source, /dispatch\(switchView\('dependency-management'\)\)/);
+    assert.match(source, /runLifecycle\('repair'\)/);
+    assert.match(source, /codeServer\.actions\.repair/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.reinstallHint/);
     assert.match(source, /PATH_TARGETS\.map/);
     assert.match(source, /getBridge\(\)\.openPath\(target\)/);
     assert.match(source, /LOG_TARGETS\.map/);
     assert.match(source, /getBridge\(\)\.readLog\(\{ target, maxLines: 200 \}\)/);
     assert.match(source, /codeServer\.config\.passwordLabel/);
     assert.match(source, /codeServer\.logs\.empty/);
-    assert.equal(source.includes("codeServer.actions.repair"), false);
   });
 
   it('adds zh-CN and en-US localization keys', async () => {

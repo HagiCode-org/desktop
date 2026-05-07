@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ExternalLink, FolderOpen, Loader2, Play, RefreshCw, RotateCcw, Save, Square } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Loader2, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type {
   OmniRouteBridge,
@@ -22,7 +22,7 @@ import { openOmniRouteDependencyRepair } from '@/store/thunks/viewThunks';
 import type { AppDispatch } from '@/store';
 
 type PageState = 'loading' | 'ready' | 'error';
-type Operation = 'start' | 'stop' | 'restart' | 'refresh' | 'save-port' | 'load-log' | null;
+type Operation = 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-port' | 'load-log' | null;
 
 const LOG_TARGETS: OmniRouteLogTarget[] = ['service-out', 'service-error'];
 const PATH_TARGETS: OmniRoutePathTarget[] = ['config', 'data', 'logs'];
@@ -32,18 +32,6 @@ function getBridge(): OmniRouteBridge {
 }
 
 function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediation): string {
-  if (remediation.failureKind === 'runtime-missing') {
-    return 'omniroute.dependencyGuidance.descriptionRuntimeMissing';
-  }
-
-  if (remediation.failureKind === 'runtime-damaged') {
-    return 'omniroute.dependencyGuidance.descriptionRuntimeDamaged';
-  }
-
-  if (remediation.failureKind === 'runtime-and-package') {
-    return 'omniroute.dependencyGuidance.descriptionRuntimeAndPackage';
-  }
-
   if (remediation.failureKind === 'dependency-unknown') {
     return 'omniroute.dependencyGuidance.descriptionUnknown';
   }
@@ -107,7 +95,15 @@ export default function OmniRouteManagementPage() {
   const dependencyRemediation = status?.remediation;
   const hasOnlineProcess = status?.processes.some((process) => process.status === 'online') ?? false;
   const isRunning = hasOnlineProcess;
-  const lifecycleBlockedByDependencies = Boolean(dependencyRemediation);
+  const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
+  const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
+  const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
+  const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
+  const runtimeRequiresDesktopReinstall = runtimePrimaryAction === 'reinstall-desktop';
+  const packageRemediation = dependencyRemediation && dependencyRemediation.targetPackageIds.length > 0
+    ? dependencyRemediation
+    : null;
+  const lifecycleBlockedByDependencies = runtimeNeedsRepair || Boolean(packageRemediation);
 
   const applyStatus = (nextStatus: OmniRouteStatusSnapshot) => {
     startTransition(() => {
@@ -131,7 +127,7 @@ export default function OmniRouteManagementPage() {
     }
   };
 
-  const runLifecycle = async (action: 'start' | 'stop' | 'restart') => {
+  const runLifecycle = async (action: 'start' | 'stop' | 'restart' | 'repair') => {
     setOperation(action);
     setErrorMessage(null);
     try {
@@ -141,10 +137,6 @@ export default function OmniRouteManagementPage() {
         const errorLog = await getBridge().readLog({ target: 'service-error', maxLines: 200 });
         setLogs((current) => ({ ...current, 'service-error': errorLog }));
         setSelectedLogTarget('service-error');
-        if ((action === 'start' || action === 'restart') && result.remediation) {
-          void dispatch(openOmniRouteDependencyRepair(result.remediation));
-          return;
-        }
         setErrorMessage(result.error ?? t('omniroute.errors.operationFailed'));
       }
     } catch (error) {
@@ -260,22 +252,51 @@ export default function OmniRouteManagementPage() {
         </Alert>
       ) : null}
 
-      {dependencyRemediation ? (
+      {status && runtimeNeedsRepair ? (
+        <Alert className="border-amber-500/40 bg-amber-500/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${runtimeInstallStatus}`)}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{status.runtime.message ?? t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${runtimeInstallStatus}`)}</p>
+            {status.runtime.diagnostics.length > 0 ? (
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {status.runtime.diagnostics.slice(0, 4).map((diagnostic) => (
+                  <li key={diagnostic}>{diagnostic}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {runtimeRepairAvailable ? (
+                <Button type="button" onClick={() => void runLifecycle('repair')} disabled={isBusy}>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  {operation === 'repair' ? t('omniroute.actions.working') : t('omniroute.actions.repair')}
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" onClick={() => openPath('logs')} disabled={isBusy}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                {t('omniroute.actions.open')}
+              </Button>
+            </div>
+            {runtimeRequiresDesktopReinstall ? (
+              <p className="text-sm text-muted-foreground">{t('dependencyManagement.vendoredRuntime.reinstallHint')}</p>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {packageRemediation ? (
         <Alert className="border-amber-500/40 bg-amber-500/5">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t('omniroute.dependencyGuidance.title')}</AlertTitle>
           <AlertDescription className="space-y-3">
-            <p>{t(getDependencyGuidanceCopyKey(dependencyRemediation))}</p>
+            <p>{t(getDependencyGuidanceCopyKey(packageRemediation))}</p>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                {dependencyRemediation.targetRuntimeIds.map((runtimeId) => (
-                  <Badge key={runtimeId} variant="outline">{getDependencyTargetLabel(runtimeId)}</Badge>
-                ))}
-                {dependencyRemediation.targetPackageIds.map((packageId) => (
+                {packageRemediation.targetPackageIds.map((packageId) => (
                   <Badge key={packageId} variant="outline">{getDependencyTargetLabel(packageId)}</Badge>
                 ))}
               </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void dispatch(openOmniRouteDependencyRepair(dependencyRemediation))} disabled={isBusy}>
+              <Button type="button" onClick={() => void dispatch(openOmniRouteDependencyRepair(packageRemediation))} disabled={isBusy}>
                 {t('omniroute.dependencyGuidance.openDependencyManagement')}
               </Button>
             </div>

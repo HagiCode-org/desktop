@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, Play, RefreshCw, RotateCcw, Save, Square } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type {
   CodeServerBridge,
@@ -77,6 +77,11 @@ export default function CodeServerManagementPage() {
   const passwordValidationKey = useMemo(() => validatePasswordInput(passwordInput), [passwordInput]);
   const isRunning = status?.status === 'running';
   const lifecycleBlocked = !status?.pm2Available || status?.runtime.installStatus !== 'installed';
+  const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
+  const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
+  const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
+  const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
+  const runtimeRequiresDesktopReinstall = runtimePrimaryAction === 'reinstall-desktop';
 
   const applyStatus = (nextStatus: CodeServerStatusSnapshot) => {
     startTransition(() => {
@@ -274,6 +279,38 @@ export default function CodeServerManagementPage() {
                 {t('codeServer.dependencyGuidance.openDependencyManagement')}
               </Button>
             </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {status && runtimeNeedsRepair ? (
+        <Alert className="border-amber-500/40 bg-amber-500/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${runtimeInstallStatus}`)}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{status.runtime.message ?? t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${runtimeInstallStatus}`)}</p>
+            {status.runtime.diagnostics.length > 0 ? (
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {status.runtime.diagnostics.slice(0, 4).map((diagnostic) => (
+                  <li key={diagnostic}>{diagnostic}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {runtimeRepairAvailable ? (
+                <Button type="button" onClick={() => void runLifecycle('repair')} disabled={isBusy}>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  {operation === 'repair' ? t('codeServer.actions.working') : t('codeServer.actions.repair')}
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" onClick={() => openPath('runtime-root')} disabled={isBusy}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                {t('codeServer.actions.open')}
+              </Button>
+            </div>
+            {runtimeRequiresDesktopReinstall ? (
+              <p className="text-sm text-muted-foreground">{t('dependencyManagement.vendoredRuntime.reinstallHint')}</p>
+            ) : null}
           </AlertDescription>
         </Alert>
       ) : null}

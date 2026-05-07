@@ -7,8 +7,8 @@ const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/Sidebar
 const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
 const pagePath = path.resolve(process.cwd(), 'src/renderer/components/OmniRouteManagementPage.tsx');
 const viewSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/viewSlice.ts');
-const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/common.json');
-const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/common.json');
+const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/common.json');
+const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/common.json');
 
 describe('OmniRoute renderer wiring', () => {
   it('adds the first-level sidebar item and renders the page from App', async () => {
@@ -30,11 +30,13 @@ describe('OmniRoute renderer wiring', () => {
     assert.match(source, /window\.electronAPI\.omniroute/);
     assert.match(source, /getBridge\(\)\.getStatus\(\)/);
     assert.match(source, /getBridge\(\)\[action\]\(\)/);
+    assert.match(source, /runLifecycle\('repair'\)/);
     assert.match(source, /openOmniRouteDependencyRepair/);
-    assert.match(source, /result\.remediation/);
     assert.match(source, /status\?\.remediation/);
     assert.match(source, /omniroute\.dependencyGuidance\.title/);
     assert.match(source, /omniroute\.dependencyGuidance\.openDependencyManagement/);
+    assert.match(source, /omniroute\.actions\.repair/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.reinstallHint/);
     assert.match(source, /status\?\.config\.baseUrl/);
     assert.match(source, /nextStatus\.config\.password/);
     assert.match(source, /disabled=\{isBusy \|\| isRunning \|\| lifecycleBlockedByDependencies\}/);
