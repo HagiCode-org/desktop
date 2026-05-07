@@ -67,7 +67,7 @@ function resolveFallbackHagiscriptCommand() {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
 }
 
-export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.7') {
+export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
   let result = null;
   for (const command of resolveDirectHagiscriptCommands()) {
     result = runHagiscriptVersion(command);
