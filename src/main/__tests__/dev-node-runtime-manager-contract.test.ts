@@ -42,6 +42,9 @@ describe('source mode bundled node runtime contract', () => {
     assert.doesNotMatch(gitignore, /^\.runtime\/node-dev\//m);
     assert.match(gitignore, /^build\/embedded-node-runtime\//m);
     assert.equal(packageJson.scripts['install:dev-node-runtime'], undefined);
-    assert.equal(packageJson.scripts.predev, 'npm run prepare:bundled-toolchain:optional && npm run prepare:code-server-runtime:optional');
+    assert.equal(
+      packageJson.scripts.predev,
+      'npm run prepare:runtime:optional && npm run prepare:bundled-toolchain:optional && npm run prepare:code-server-runtime:optional && npm run prepare:omniroute-runtime:optional',
+    );
   });
 });

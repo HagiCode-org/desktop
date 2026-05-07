@@ -97,7 +97,8 @@ describe('embedded runtime packaging configuration', () => {
 
     assert.match(stagingScript, /removeUnusedNodeBinEntrypoints/);
     assert.match(stagingScript, /entry !== 'node'/);
-    assert.match(stagingScript, /createPosixNpmCompatibilityShim\(stableNpmRelativePath, compatibilityRelativePath\)/);
+    assert.match(stagingScript, /materializeNpmCompatibilityPath/);
+    assert.match(stagingScript, /installNodeRuntime\(/);
     assert.match(stagingScript, /cleanDeferredPackageRoots/);
     assert.match(stagingScript, /legacyNpmGlobalRoot/);
     assert.match(bundledToolchainContract, /unused Node entrypoint must be pruned before packaging/);

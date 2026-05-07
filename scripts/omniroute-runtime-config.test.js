@@ -57,6 +57,7 @@ if (previousReleaseOverride === undefined) {
 const prepareScript = fs.readFileSync(new URL('./prepare-vendored-omniroute-runtime.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-vendored-omniroute-runtime-if-supported.js', import.meta.url), 'utf8');
 
+assert.match(prepareScript, /installDesktopRuntimeComponents\(\['omniroute'\]\)/, 'prepare script delegates top-level staging to hagiscript');
 assert.match(prepareScript, /normalizeResolvedRuntimeMetadata\(metadata\)/, 'prepare script normalizes cached OmniRoute metadata before staging');
 assert.match(prepareScript, /bundledNodeRuntime:\s*true/, 'prepare script enforces bundledNodeRuntime=true');
 assert.match(optionalPrepareScript, /resolveRequestedOmniRouteRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');

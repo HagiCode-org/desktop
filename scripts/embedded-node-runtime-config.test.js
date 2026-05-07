@@ -76,12 +76,11 @@ assert.throws(() => resolvePinnedNodeRuntimeTarget('linux-arm64', manifest), /no
 
 const prepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain-if-supported.js', import.meta.url), 'utf8');
+assert.match(prepareScript, /installDesktopRuntimeComponents\(\['node'\]\)/, 'prepare script delegates top-level staging to hagiscript');
+assert.match(prepareScript, /installNodeRuntime\(/, 'prepare script uses hagiscript Node installer for the runtime payload');
 assert.match(prepareScript, /materializeNpmCompatibilityPath/, 'prepare script materializes the Desktop npm compatibility path');
 assert.match(prepareScript, /pathExistsOrIsSymlink/, 'prepare script detects dangling compatibility-path symlinks');
 assert.match(prepareScript, /fs\.rmSync\(shimPath, \{ force: true \}\)/, 'prepare script removes stale npm compatibility entries before writing the shim');
-assert.match(prepareScript, /printStagingDiagnostics/, 'prepare script emits staging diagnostics on failure');
-assert.match(prepareScript, /attempted command candidates/, 'diagnostics include attempted command candidates');
-assert.match(prepareScript, /shallow snapshot/, 'diagnostics include a shallow staged directory snapshot');
 assert.match(prepareScript, /buildDeferredPackageMetadata/, 'prepare script writes deferred package metadata');
 assert.equal(prepareScript.includes('installCorePackages('), false, 'prepare script no longer auto-installs bundled CLI packages');
 assert.equal(prepareScript.includes('stagePackageCommands('), false, 'prepare script no longer writes bundled CLI shims during staging');

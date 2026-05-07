@@ -57,6 +57,7 @@ if (previousReleaseOverride === undefined) {
 const prepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime-if-supported.js', import.meta.url), 'utf8');
 
+assert.match(prepareScript, /installDesktopRuntimeComponents\(\['code-server'\]\)/, 'prepare script delegates top-level staging to hagiscript');
 assert.match(prepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'prepare script resolves the pinned code-server runtime version');
 assert.match(prepareScript, /resolveConfiguredCodeServerReleaseUrls/, 'prepare script resolves per-platform release URLs');
 assert.match(optionalPrepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');

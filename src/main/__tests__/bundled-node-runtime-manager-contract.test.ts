@@ -69,6 +69,8 @@ describe('bundled node runtime manager contract', () => {
 
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
+    assert.match(prepareBundledToolchainSource, /installDesktopRuntimeComponents\(\['node'\]\)/);
+    assert.match(prepareBundledToolchainSource, /installNodeRuntime\(/);
     assert.match(prepareBundledToolchainSource, /defaultEnabledByConsumer: \{ \.\.\.\(runtimeConfig\.defaultEnabledByConsumer \|\| {}\) \}/);
   });
 });
