@@ -15,6 +15,7 @@ describe('OmniRoute preload contract', () => {
     assert.match(source, /start: \(\) => ipcRenderer\.invoke\(omniRouteChannels\.start\)/);
     assert.match(source, /stop: \(\) => ipcRenderer\.invoke\(omniRouteChannels\.stop\)/);
     assert.match(source, /restart: \(\) => ipcRenderer\.invoke\(omniRouteChannels\.restart\)/);
+    assert.match(source, /repair: \(\) => ipcRenderer\.invoke\(omniRouteChannels\.repair\)/);
     assert.match(source, /setConfig: \(payload: OmniRouteConfigUpdatePayload\) => ipcRenderer\.invoke\(omniRouteChannels\.setConfig, payload\)/);
     assert.match(source, /readLog: \(request: OmniRouteLogReadRequest\) => ipcRenderer\.invoke\(omniRouteChannels\.readLog, request\)/);
     assert.match(source, /openPath: \(target: OmniRoutePathTarget\) => ipcRenderer\.invoke\(omniRouteChannels\.openPath, target\)/);

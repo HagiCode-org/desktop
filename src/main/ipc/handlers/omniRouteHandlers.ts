@@ -74,6 +74,18 @@ export function registerOmniRouteHandlers(deps: {
     return result;
   });
 
+  ipcMain.handle(omniRouteChannels.repair, async () => {
+    const manager = await requireManager();
+    const result = await manager.repairVendoredRuntime();
+    const status = await emitCurrentStatus();
+    return {
+      success: result.success,
+      action: 'repair',
+      status,
+      error: result.error,
+    };
+  });
+
   ipcMain.handle(omniRouteChannels.getConfig, async () => {
     const manager = await requireManager();
     return manager.getConfig();

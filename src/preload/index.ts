@@ -768,6 +768,7 @@ const electronAPI: ElectronAPI = {
     start: () => ipcRenderer.invoke(omniRouteChannels.start),
     stop: () => ipcRenderer.invoke(omniRouteChannels.stop),
     restart: () => ipcRenderer.invoke(omniRouteChannels.restart),
+    repair: () => ipcRenderer.invoke(omniRouteChannels.repair),
     getConfig: () => ipcRenderer.invoke(omniRouteChannels.getConfig),
     setConfig: (payload: OmniRouteConfigUpdatePayload) => ipcRenderer.invoke(omniRouteChannels.setConfig, payload),
     readLog: (request: OmniRouteLogReadRequest) => ipcRenderer.invoke(omniRouteChannels.readLog, request),

@@ -7,7 +7,7 @@ import type {
 export const OMNIROUTE_DEFAULT_PORT = 36988;
 export const OMNIROUTE_PROCESS_NAME = 'desktop-omniroute-service';
 
-export type OmniRouteLifecycleAction = 'start' | 'stop' | 'restart';
+export type OmniRouteLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
 export type OmniRouteOverallStatus = 'running' | 'stopped' | 'partial' | 'error';
 export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type OmniRouteLogTarget = 'service-out' | 'service-error';
@@ -111,6 +111,7 @@ export interface OmniRouteBridge {
   start: () => Promise<OmniRouteLifecycleResult>;
   stop: () => Promise<OmniRouteLifecycleResult>;
   restart: () => Promise<OmniRouteLifecycleResult>;
+  repair: () => Promise<OmniRouteLifecycleResult>;
   getConfig: () => Promise<OmniRouteConfigSnapshot>;
   setConfig: (payload: OmniRouteConfigUpdatePayload) => Promise<OmniRouteConfigUpdateResult>;
   readLog: (request: OmniRouteLogReadRequest) => Promise<OmniRouteLogReadResult>;
@@ -123,6 +124,7 @@ export const omniRouteChannels = {
   start: 'omniroute:start',
   stop: 'omniroute:stop',
   restart: 'omniroute:restart',
+  repair: 'omniroute:repair',
   getConfig: 'omniroute:config:get',
   setConfig: 'omniroute:config:set',
   readLog: 'omniroute:log:read',
