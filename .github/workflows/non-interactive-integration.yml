@@ -13,7 +13,7 @@ permissions:
 
 env:
   NODE_VERSION: "22"
-  HAGISCRIPT_VERSION: "0.1.7"
+  HAGISCRIPT_VERSION: "0.1.8"
 
 jobs:
   integration-linux:
