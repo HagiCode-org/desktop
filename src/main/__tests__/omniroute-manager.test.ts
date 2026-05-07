@@ -11,7 +11,7 @@ describe('OmniRoute manager contract', () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /app\.getPath\('userData'\)/);
-    assert.match(source, /path\.join\(this\.userDataPath, 'OmniRoute'\)/);
+    assert.match(source, /this\.pathManager\.getOmniRouteRuntimeDataHome\(\)/);
     assert.match(source, /config: path\.join\(root, 'config'\)/);
     assert.match(source, /data: path\.join\(root, 'data'\)/);
     assert.match(source, /logs: path\.join\(root, 'logs'\)/);
@@ -38,8 +38,8 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
     assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
-    assert.match(source, /this\.pathManager\.getOmniRouteRuntimeRoot\(\)/);
-    assert.match(source, /this\.pathManager\.getEmbeddedNodeCommand\(\)/);
+    assert.match(source, /const runtime = await this\.getRuntimeSnapshot\(\);/);
+    assert.match(source, /const nodeExecutablePath = pm2Context\.environment\.node\.executablePath;/);
     assert.match(source, /args: \[entryScriptPath, 'serve', '--no-open'\]/);
     assert.match(source, /interpreter: "none"/);
     assert.match(source, /'serve', '--no-open'/);
@@ -73,7 +73,8 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
     assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
     assert.match(source, /PM2_HOME/);
-    assert.match(source, /fs\.mkdir\(pm2HomePaths\.pm2Home, \{ recursive: true \}\)/);
+    assert.match(source, /const pm2Home = path\.join\(this\.pathManager\.getOmniRouteRuntimeDataHome\(\), 'pm2', pm2HomePaths\.pm2MajorVersion\)/);
+    assert.match(source, /await fs\.mkdir\(pm2Home, \{ recursive: true \}\)/);
     assert.match(source, /process or namespace \.\* not found/);
     assert.match(source, /appendLifecycleFailureLog/);
     assert.match(source, /stdout:/);

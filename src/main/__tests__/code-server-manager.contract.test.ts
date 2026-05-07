@@ -22,7 +22,7 @@ describe('code-server manager contract', () => {
     assert.match(source, /code-server-out\.log/);
     assert.match(source, /code-server-error\.log/);
     assert.match(source, /this\.configManager\.set\('codeServer'/);
-    assert.match(source, /generateDefaultPassword/);
+    assert.match(source, /normalizePassword/);
     assert.match(source, /readLog\(request: CodeServerLogReadRequest\)/);
     assert.match(source, /Vendored code-server repair is only available in development builds/);
     assert.match(source, /Desktop-managed PM2 is unavailable/);

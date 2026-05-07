@@ -8,7 +8,7 @@ import {
 describe('omniroute remediation classification', () => {
   const healthyRuntime = {
     runtimeId: 'omniroute' as const,
-    runtimeStatus: 'ready' as const,
+    runtimeInstallStatus: 'installed' as const,
   };
 
   it('classifies missing PM2 as a dependency remediation failure', () => {
@@ -31,7 +31,7 @@ describe('omniroute remediation classification', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: {
         runtimeId: 'omniroute',
-        runtimeStatus: 'missing',
+        runtimeInstallStatus: 'not-installed',
       },
       packages: [
         { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
@@ -59,7 +59,7 @@ describe('omniroute remediation classification', () => {
     });
 
     assert.deepEqual(problems, [
-      { packageId: 'pm2', issue: 'unknown' },
+      { kind: 'package', packageId: 'pm2', issue: 'unknown' },
     ]);
     assert.equal(remediation?.failureKind, 'dependency-unknown');
     assert.deepEqual(remediation?.targetPackageIds, ['pm2']);
@@ -80,7 +80,7 @@ describe('omniroute remediation classification', () => {
     });
 
     assert.deepEqual(problems, [
-      { packageId: 'pm2', issue: 'version-mismatch' },
+      { kind: 'package', packageId: 'pm2', issue: 'version-mismatch' },
     ]);
     assert.equal(remediation?.failureKind, 'dependency-version-mismatch');
     assert.deepEqual(remediation?.targetPackageIds, ['pm2']);
@@ -91,7 +91,7 @@ describe('omniroute remediation classification', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: {
         runtimeId: 'omniroute',
-        runtimeStatus: 'damaged',
+        runtimeInstallStatus: 'failed',
       },
       packages: [
         { packageId: 'pm2', packageStatus: 'not-installed', executablePath: null },

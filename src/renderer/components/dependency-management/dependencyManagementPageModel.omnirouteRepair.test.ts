@@ -55,6 +55,7 @@ function createRuntime(
       supportsStartStop: true,
       supportsRepair: true,
     },
+    installStatus: status === 'missing' ? 'not-installed' : status === 'damaged' ? 'failed' : 'installed',
     status,
     version: status === 'ready' ? '1.0.0' : null,
     runtimeRoot: `/tmp/${id}`,
