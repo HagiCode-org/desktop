@@ -8,8 +8,8 @@ const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
 const pagePath = path.resolve(process.cwd(), 'src/renderer/components/DependencyManagementPage.tsx');
 const modelPath = path.resolve(process.cwd(), 'src/renderer/components/dependency-management/dependencyManagementPageModel.ts');
 const packageGroupsPath = path.resolve(process.cwd(), 'src/renderer/components/dependency-management/NpmPackageGroups.tsx');
-const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/common.json');
-const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/common.json');
+const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/common.json');
+const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/common.json');
 
 describe('dependency management renderer wiring', () => {
   it('adds the first-level sidebar item and renders the page from App', async () => {
