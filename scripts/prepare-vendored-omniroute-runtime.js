@@ -135,7 +135,7 @@ async function resolveLocalArtifact(artifactsDir) {
       continue;
     }
     candidates.push({
-      metadata,
+      metadata: normalizeResolvedRuntimeMetadata(metadata),
       archivePath: path.join(path.dirname(metadataPath), archive.fileName),
       sha256: archive.sha256 ?? null,
       origin: 'local',
@@ -353,6 +353,15 @@ function createRuntimeMetadata({
     },
     artifacts,
   };
+}
+
+function normalizeResolvedRuntimeMetadata(metadata) {
+  return createRuntimeMetadata({
+    version: metadata.version,
+    sourceRevision: typeof metadata.sourceRevision === 'string' ? metadata.sourceRevision : null,
+    extra: metadata && typeof metadata.extra === 'object' && metadata.extra ? metadata.extra : {},
+    artifacts: Array.isArray(metadata?.artifacts) ? metadata.artifacts : [],
+  });
 }
 
 async function ensureRuntimeWrapper(targetRuntimeRoot) {
