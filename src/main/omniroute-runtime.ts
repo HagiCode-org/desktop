@@ -5,6 +5,7 @@ import type { PathManager } from './path-manager.js';
 import { getOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
 import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
+  VendoredRuntimeInstallStatus,
   VendoredRuntimeHealthSnapshot,
   VendoredRuntimeMetadata,
   VendoredRuntimePrimaryAction,
@@ -56,6 +57,7 @@ export interface ValidatedOmniRouteRuntime {
   entryScriptPath: string | null;
   missingEntries: string[];
   diagnostics: string[];
+  installStatus: VendoredRuntimeInstallStatus;
   status: VendoredRuntimeStatus;
 }
 
@@ -148,6 +150,19 @@ function resolveRequiredEntry(relativePattern: string, runtimeRoot: string, exis
   return null;
 }
 
+function normalizeInstallStatus(
+  missingEntries: string[],
+  diagnostics: string[],
+): VendoredRuntimeInstallStatus {
+  if (missingEntries.includes('runtime-root')) {
+    return 'not-installed';
+  }
+  if (missingEntries.length > 0 || diagnostics.length > 0) {
+    return 'failed';
+  }
+  return 'installed';
+}
+
 function normalizeStatus(
   missingEntries: string[],
   diagnostics: string[],
@@ -230,6 +245,7 @@ export async function validateOmniRouteRuntime(
     entryScriptPath: existsSync(entryScriptPath) ? entryScriptPath : null,
     missingEntries,
     diagnostics,
+    installStatus: normalizeInstallStatus(missingEntries, diagnostics),
     status: normalizeStatus(missingEntries, diagnostics, options.health),
   };
 }
@@ -260,7 +276,7 @@ export async function inspectVendoredOmniRouteRuntime(
     url: null,
     lastCheckedAt: null,
   };
-  const primaryAction: VendoredRuntimePrimaryAction = validated.status === 'missing' || validated.status === 'damaged'
+  const primaryAction: VendoredRuntimePrimaryAction = validated.installStatus !== 'installed'
     ? (process.env.NODE_ENV === 'development' ? 'repair' : 'reinstall-desktop')
     : validated.status === 'running'
       ? 'stop'
@@ -269,6 +285,7 @@ export async function inspectVendoredOmniRouteRuntime(
   return {
     id: definition.id,
     definition,
+    installStatus: validated.installStatus,
     status: validated.status,
     version: validated.metadata?.version ?? null,
     runtimeRoot,
