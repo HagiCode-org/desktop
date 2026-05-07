@@ -20,7 +20,7 @@ import {
   resolveGlobalHagiscriptCommand,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.1.9';
+const MINIMUM_HAGISCRIPT_VERSION = '0.1.10';
 const NODE_COMPONENT_NAME = 'node/runtime';
 
 export function isManagedDesktopRuntimeComponentExecution() {
