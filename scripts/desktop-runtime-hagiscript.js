@@ -16,6 +16,7 @@ import {
 } from './omniroute-runtime-contract.js';
 import {
   assertGlobalHagiscriptAvailable,
+  buildResolvedHagiscriptEnvironment,
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
@@ -158,9 +159,10 @@ function writeManagedDesktopRuntimeManifest() {
 }
 
 export async function installDesktopRuntimeComponents(componentIds, options = {}) {
-  assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
   const hagiscriptPackageRoot = resolveGlobalHagiscriptPackageRoot(MINIMUM_HAGISCRIPT_VERSION);
   const hagiscriptCliPath = path.join(hagiscriptPackageRoot, 'dist', 'cli.js');
+  const hagiscriptEnv = buildResolvedHagiscriptEnvironment(MINIMUM_HAGISCRIPT_VERSION);
   const manifestPath = writeManagedDesktopRuntimeManifest();
   const runtimeRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
   const componentNames = componentIds.map((componentId) => resolveManagedDesktopRuntimeComponentName(componentId));
@@ -185,7 +187,10 @@ export async function installDesktopRuntimeComponents(componentIds, options = {}
 
   const result = spawnSync(process.execPath, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: {
+      ...process.env,
+      ...hagiscriptEnv,
+    },
     encoding: 'utf8',
     stdio: 'pipe',
   });
@@ -204,6 +209,7 @@ export async function installDesktopRuntimeComponents(componentIds, options = {}
     const failureParts = [
       `hagiscript runtime install failed for ${componentIds.join(', ')}`,
       `exit code: ${result.status ?? 'unknown'}`,
+      `hagiscript version: ${hagiscriptVersion}`,
     ];
     if (result.signal) {
       failureParts.push(`signal: ${result.signal}`);

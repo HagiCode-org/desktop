@@ -2,6 +2,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+const HAGISCRIPT_VERSION_ENV = 'HAGICODE_HAGISCRIPT_VERSION';
+const HAGISCRIPT_COMMAND_ENV = 'HAGICODE_HAGISCRIPT_COMMAND';
+const HAGISCRIPT_PACKAGE_ROOT_ENV = 'HAGICODE_HAGISCRIPT_PACKAGE_ROOT';
+
 function parseVersion(raw) {
   const match = String(raw).match(/(\d+)\.(\d+)\.(\d+)/);
   return match ? match.slice(1).map((value) => Number.parseInt(value, 10)) : null;
@@ -85,7 +89,42 @@ function resolveFallbackHagiscriptCommand() {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
 }
 
+function resolveEnvProvidedHagiscript(minimumVersion) {
+  const version = process.env[HAGISCRIPT_VERSION_ENV]?.trim();
+  const command = process.env[HAGISCRIPT_COMMAND_ENV]?.trim() || null;
+  const packageRoot = process.env[HAGISCRIPT_PACKAGE_ROOT_ENV]?.trim() || null;
+
+  if (!version) {
+    return null;
+  }
+
+  const actual = parseVersion(version);
+  const required = parseVersion(minimumVersion);
+  if (!actual || !required) {
+    throw new Error('hagiscript prerequisite check could not determine a semantic version from environment.');
+  }
+  if (compareVersions(actual, required) < 0) {
+    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${version} was provided by environment.`);
+  }
+
+  if (packageRoot && !fs.existsSync(packageRoot)) {
+    throw new Error(`Environment-provided hagiscript package root was not found: ${packageRoot}`);
+  }
+
+  return {
+    command: command || (process.platform === 'win32' ? 'hagiscript.cmd' : 'hagiscript'),
+    version,
+    scope: 'environment',
+    packageRoot,
+  };
+}
+
 function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
+  const envProvided = resolveEnvProvidedHagiscript(minimumVersion);
+  if (envProvided) {
+    return envProvided;
+  }
+
   let result = null;
   let resolvedCommand = null;
   let resolvedScope = 'global';
@@ -144,6 +183,7 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
     command: resolvedCommand,
     version: actual.join('.'),
     scope: resolvedScope,
+    packageRoot: null,
   };
 }
 
@@ -181,6 +221,9 @@ export function resolveGlobalHagiscriptCommand(minimumVersion = '0.1.8') {
 
 export function resolveGlobalHagiscriptPackageRoot(minimumVersion = '0.1.8') {
   const resolved = resolveInstalledHagiscript(minimumVersion);
+  if (resolved.packageRoot) {
+    return resolved.packageRoot;
+  }
   if (resolved.scope === 'local') {
     const localPackageRoot = resolveLocalHagiscriptPackageRoot();
     if (!localPackageRoot) {
@@ -203,4 +246,14 @@ export function getHagiscriptSpawnOptions(command) {
 
 export function assertGlobalHagiscriptAvailable(minimumVersion = '0.1.8') {
   return resolveInstalledHagiscript(minimumVersion).version;
+}
+
+export function buildResolvedHagiscriptEnvironment(minimumVersion = '0.1.8') {
+  const resolved = resolveInstalledHagiscript(minimumVersion);
+  const packageRoot = resolveGlobalHagiscriptPackageRoot(minimumVersion);
+  return {
+    [HAGISCRIPT_VERSION_ENV]: resolved.version,
+    [HAGISCRIPT_COMMAND_ENV]: resolved.command,
+    [HAGISCRIPT_PACKAGE_ROOT_ENV]: packageRoot,
+  };
 }
