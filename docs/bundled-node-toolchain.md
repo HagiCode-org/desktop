@@ -20,7 +20,7 @@ Desktop also uses this bundled Node toolchain to launch the vendored `code-serve
 - `defaultEnabledByConsumer.desktop = true`
 - `defaultEnabledByConsumer.steam-packer = true`
 
-`npm run prepare:bundled-toolchain` copies that matrix into the emitted `toolchain-manifest.json`; do not hard-code separate downstream defaults in build or packaging scripts.
+`npm run prepare:bundled-toolchain` now runs through `hagiscript runtime install`, then copies that matrix into the emitted `toolchain-manifest.json`; do not hard-code separate downstream defaults in build or packaging scripts.
 
 Desktop packages and verifies the bundled toolchain by default, and it automatically prepends bundled Node paths for Desktop-managed startup when the effective Desktop policy remains enabled. To force the old system-PATH behavior for troubleshooting, set:
 

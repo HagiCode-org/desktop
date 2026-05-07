@@ -40,7 +40,9 @@ npm run build:prod
 
 Source-mode development uses the shared Desktop runtime tree under `build/desktop-runtime/current/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
 
-`npm run prepare:bundled-toolchain:optional` stages the governed Node runtime when the current platform is supported. `npm run dev` runs that preparation step through `predev`.
+`npm run dev` runs `predev`, which stages the governed Desktop runtime payloads for supported platforms: the embedded .NET runtime, the bundled Node toolchain, the vendored code-server runtime, and the vendored OmniRoute runtime.
+
+Those `prepare:*` commands now delegate the staging workflow to `hagiscript runtime install` with a Desktop-specific manifest, so the runtime layout still lands under `build/desktop-runtime/current/components/...` while the install orchestration stays inside hagiscript.
 
 Managed npm packages are installed into Desktop-owned writable runtime data under `userData/runtimeData/node/`:
 

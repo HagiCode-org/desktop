@@ -112,7 +112,7 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` also reuses or stages `build/desktop-runtime/current/components/bundled/code-server` through `prepare:code-server-runtime:optional` before Electron launches. By default, Desktop first checks the monorepo-root cache at `.generated/code-server-runtime/artifacts`, then falls back to public release downloads when the cache is empty.
+`npm run dev` also reuses or stages the governed Desktop runtime payloads through `hagiscript runtime install` before Electron launches. Desktop keeps its existing runtime layout under `build/desktop-runtime/current/components/...`; the hagiscript manifest points each component back at the Desktop contract and source configuration.
 
 ### Building for Production
 
@@ -124,7 +124,7 @@ npm run build:all
 npm run build:prod
 ```
 
-Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) now stage three Desktop-owned runtime inputs before `electron-builder`: the embedded .NET runtime, the bundled Node toolchain, and the vendored `code-server` runtime.
+Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop runtime inputs through hagiscript before `electron-builder`: the embedded .NET runtime, the bundled Node toolchain, the vendored `code-server` runtime, and the vendored OmniRoute runtime.
 
 ### Running Smoke Tests
 
@@ -525,10 +525,10 @@ npm run prepare:runtime
 
 Behavior:
 
-1. Reads `resources/embedded-runtime/runtime-manifest.json`
-2. Verifies the target download URL is HTTPS and uses an allowed Microsoft host
-3. Downloads the pinned archive into `build/embedded-runtime/downloads/`
-4. Extracts the runtime into `build/desktop-runtime/current/components/dotnet/runtime/<rid>/`
+1. Generates a Desktop-specific hagiscript runtime manifest in the repo root
+2. Invokes `hagiscript runtime install --from-manifest ... --runtime-root build/desktop-runtime/current`
+3. Uses the pinned Desktop runtime contract from `resources/embedded-runtime/runtime-manifest.json`
+4. Stages the runtime into `build/desktop-runtime/current/components/dotnet/runtime/<rid>/`
 5. Writes `.hagicode-runtime.json` and `.runtime-stage.json`
 6. Verifies the staged payload exposes the pinned `host/fxr`, `Microsoft.NETCore.App`, and `Microsoft.AspNetCore.App` versions
 
