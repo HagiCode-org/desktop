@@ -27,7 +27,7 @@ permissions:
 
 env:
   NODE_VERSION: "22"
-  HAGISCRIPT_VERSION: "0.1.9"
+  HAGISCRIPT_VERSION: "0.1.10"
   # Release channel (auto-detected from tag/branch, can be overridden manually)
   RELEASE_CHANNEL: "${{ github.event.inputs.channel || '' }}"
 

@@ -18,7 +18,7 @@ const runtimeRoot = resolveManagedDesktopRuntimeComponentRoot()
   ? path.resolve(process.cwd(), process.argv[2])
   : resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() }));
 
-assertGlobalHagiscriptAvailable('0.1.9');
+assertGlobalHagiscriptAvailable('0.1.10');
 
 if (!fs.existsSync(runtimeRoot)) {
   throw new Error(`Vendored OmniRoute runtime root does not exist: ${runtimeRoot}`);
