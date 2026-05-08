@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { load } from 'js-yaml';
+import { DESKTOP_LANGUAGES } from '../../shared/desktop-languages.js';
 
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
 const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
 const pagePath = path.resolve(process.cwd(), 'src/renderer/components/CodeServerManagementPage.tsx');
 const viewSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/viewSlice.ts');
-const zhLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/common.yml');
-const enLocalePath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/common.yml');
+const localesRoot = path.resolve(process.cwd(), 'src/renderer/i18n/locales');
 
 describe('Code Server renderer wiring', () => {
   it('adds the first-level sidebar item and renders the page from App', async () => {
@@ -47,19 +48,50 @@ describe('Code Server renderer wiring', () => {
     assert.match(source, /codeServer\.logs\.empty/);
   });
 
-  it('adds zh-CN and en-US localization keys', async () => {
-    const [zh, en] = await Promise.all([
-      fs.readFile(zhLocalePath, 'utf8'),
-      fs.readFile(enLocalePath, 'utf8'),
-    ]);
+  it('keeps top-level codeServer localization keys complete for every supported language', async () => {
+    for (const language of DESKTOP_LANGUAGES) {
+      const raw = await fs.readFile(path.join(localesRoot, language.code, 'common.yml'), 'utf8');
+      assert.match(raw, /sidebar:\n[\s\S]*codeServer: Code Server/);
+      assert.doesNotMatch(raw, /\nomniroute:\n[\s\S]*\n  codeServer:/, `${language.code} should not nest codeServer under omniroute`);
 
-    assert.match(zh, /sidebar:\n[\s\S]*codeServer: Code Server/);
-    assert.match(zh, /codeServer:/);
-    assert.match(zh, /passwordDescription:/);
-    assert.match(zh, /openDesktop:/);
-    assert.match(en, /codeServer:/);
-    assert.match(en, /description: Manage the Desktop-owned code-server runtime/);
-    assert.match(en, /passwordDescription:/);
-    assert.match(en, /openDesktop:/);
+      const parsed = load(raw) as Record<string, unknown>;
+      const codeServer = parsed.codeServer as Record<string, unknown> | undefined;
+      assert.ok(codeServer, `${language.code} must define a top-level codeServer section`);
+      assert.equal(typeof codeServer.title, 'string');
+      assert.equal(typeof codeServer.description, 'string');
+      assert.equal(typeof codeServer.loading, 'string');
+
+      const actions = codeServer.actions as Record<string, unknown> | undefined;
+      assert.ok(actions, `${language.code} must define codeServer.actions`);
+      assert.equal(typeof actions?.openDesktop, 'string');
+      assert.equal(typeof actions?.openBrowser, 'string');
+      assert.equal(typeof actions?.refreshLogs, 'string');
+
+      const status = codeServer.status as Record<string, unknown> | undefined;
+      assert.ok(status, `${language.code} must define codeServer.status`);
+      assert.equal(typeof status?.runtimeStatus, 'string');
+      assert.equal(typeof status?.passwordModeValue, 'string');
+
+      const config = codeServer.config as Record<string, unknown> | undefined;
+      assert.ok(config, `${language.code} must define codeServer.config`);
+      assert.equal(typeof config?.passwordDescription, 'string');
+
+      const paths = codeServer.paths as Record<string, unknown> | undefined;
+      assert.ok(paths, `${language.code} must define codeServer.paths`);
+      assert.equal(typeof paths?.['runtime-root'], 'string');
+
+      const logs = codeServer.logs as Record<string, unknown> | undefined;
+      assert.ok(logs, `${language.code} must define codeServer.logs`);
+      assert.equal(typeof logs?.empty, 'string');
+
+      const dependencyGuidance = codeServer.dependencyGuidance as Record<string, unknown> | undefined;
+      assert.ok(dependencyGuidance, `${language.code} must define codeServer.dependencyGuidance`);
+      assert.equal(typeof dependencyGuidance?.description, 'string');
+      assert.equal(typeof dependencyGuidance?.openDependencyManagement, 'string');
+
+      const errors = codeServer.errors as Record<string, unknown> | undefined;
+      assert.ok(errors, `${language.code} must define codeServer.errors`);
+      assert.equal(typeof errors?.openWindowFailed, 'string');
+    }
   });
 });

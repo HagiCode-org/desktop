@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { ensureGeneratedLocales } from '../test-utils/ensure-generated-locales.mjs';
 
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
 const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
@@ -236,38 +237,42 @@ describe('dependency management renderer wiring', () => {
   });
 
   it('adds zh-CN and en-US localization keys', async () => {
+    await ensureGeneratedLocales();
+
     const [zh, en] = await Promise.all([
       fs.readFile(zhLocalePath, 'utf8'),
       fs.readFile(enLocalePath, 'utf8'),
     ]);
+    const zhJson = JSON.parse(zh) as Record<string, any>;
+    const enJson = JSON.parse(en) as Record<string, any>;
 
-    assert.equal(JSON.parse(zh).sidebar.dependencyManagement, '依赖项管理');
-    assert.equal(JSON.parse(en).sidebar.dependencyManagement, 'Dependency Management');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.environment.status.available, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.environment.rationaleTitle, 'string');
-    assert.equal(JSON.parse(zh).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/faq/desktop-node-environment/');
-    assert.equal(JSON.parse(en).dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.actions.install, 'string');
-    assert.equal(JSON.parse(zh).dependencyManagement.actions.installSelectedRunning, '正在批量安装...');
-    assert.equal(JSON.parse(en).dependencyManagement.actions.installSelectedRunning, 'Batch installing...');
-    assert.equal(JSON.parse(en).dependencyManagement.categories['agent-cli'], 'Agent CLI');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.claudeCode.description, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.codex.description, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.githubCopilot.description, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.opencode.description, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.qoder.description, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.packages.gemini.description, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.dependencyGate.missing, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.batchLog.title, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.batchLog.status.running, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.selection.selectedCount, 'string');
-    assert.equal(JSON.parse(zh).dependencyManagement.mirror.title, 'npm 镜像加速');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.omniRouteRepair.recheckAction, 'string');
-    assert.equal(JSON.parse(en).dependencyManagement.mirror.registryUrl, 'Registry URL');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.mirror.saveFailed, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.mirror.enabledHelp, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.omniRouteRepair.targetBadge, 'string');
-    assert.equal(typeof JSON.parse(en).dependencyManagement.vendoredRuntime.installStatus.installed, 'string');
-    assert.equal(typeof JSON.parse(zh).dependencyManagement.vendoredRuntime.runtimeState, 'string');
+    assert.equal(zhJson.sidebar.dependencyManagement, '依赖项管理');
+    assert.equal(enJson.sidebar.dependencyManagement, 'Dependency Management');
+    assert.equal(typeof zhJson.dependencyManagement.environment.status.available, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.environment.rationaleTitle, 'string');
+    assert.equal(zhJson.dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/faq/desktop-node-environment/');
+    assert.equal(enJson.dependencyManagement.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
+    assert.equal(typeof enJson.dependencyManagement.actions.install, 'string');
+    assert.equal(zhJson.dependencyManagement.actions.installSelectedRunning, '正在批量安装...');
+    assert.equal(enJson.dependencyManagement.actions.installSelectedRunning, 'Batch installing...');
+    assert.equal(enJson.dependencyManagement.categories['agent-cli'], 'Agent CLI');
+    assert.equal(typeof enJson.dependencyManagement.packages.claudeCode.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.codex.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.githubCopilot.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.opencode.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.qoder.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.gemini.description, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.dependencyGate.missing, 'string');
+    assert.equal(typeof enJson.dependencyManagement.batchLog.title, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.batchLog.status.running, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.selection.selectedCount, 'string');
+    assert.equal(zhJson.dependencyManagement.mirror.title, 'npm 镜像加速');
+    assert.equal(typeof zhJson.dependencyManagement.omniRouteRepair.recheckAction, 'string');
+    assert.equal(enJson.dependencyManagement.mirror.registryUrl, 'Registry URL');
+    assert.equal(typeof zhJson.dependencyManagement.mirror.saveFailed, 'string');
+    assert.equal(typeof enJson.dependencyManagement.mirror.enabledHelp, 'string');
+    assert.equal(typeof enJson.dependencyManagement.omniRouteRepair.targetBadge, 'string');
+    assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.installStatus.installed, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.vendoredRuntime.runtimeState, 'string');
   });
 });

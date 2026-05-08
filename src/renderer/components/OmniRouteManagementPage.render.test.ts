@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { ensureGeneratedLocales } from '../test-utils/ensure-generated-locales.mjs';
 
 const sidebarPath = path.resolve(process.cwd(), 'src/renderer/components/SidebarNavigation.tsx');
 const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
@@ -55,12 +56,14 @@ describe('OmniRoute renderer wiring', () => {
   });
 
   it('adds zh-CN and en-US localization keys', async () => {
+    await ensureGeneratedLocales();
+
     const [zh, en] = await Promise.all([
       fs.readFile(zhLocalePath, 'utf8'),
       fs.readFile(enLocalePath, 'utf8'),
     ]);
-    const zhJson = JSON.parse(zh);
-    const enJson = JSON.parse(en);
+    const zhJson = JSON.parse(zh) as Record<string, any>;
+    const enJson = JSON.parse(en) as Record<string, any>;
 
     assert.equal(zhJson.sidebar.omniroute, 'OmniRoute');
     assert.equal(enJson.sidebar.omniroute, 'OmniRoute');
