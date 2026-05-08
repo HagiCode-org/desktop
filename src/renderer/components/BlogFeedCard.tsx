@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import {
   selectRSSFeedItems,
@@ -70,8 +69,11 @@ const BlogFeedCard: React.FC = () => {
   };
 
   // Handle article click - open in browser
-  const handleArticleClick = (link: string) => {
-    window.electronAPI.openExternal(link);
+  const handleArticleClick = async (link: string) => {
+    const result = await window.electronAPI.openExternal(link);
+    if (!result.success) {
+      toast.error(result.error || t('blogFeed.openRssFailed', '无法打开 RSS 链接'));
+    }
   };
 
   // Format date based on current language
@@ -120,26 +122,38 @@ const BlogFeedCard: React.FC = () => {
 
   // Display items (max 5)
   const displayItems = items.slice(0, 5);
+  const featuredItem = displayItems[0] ?? null;
+  const secondaryItems = displayItems.slice(1, 5);
+
+  const getItemLabel = (index: number) => {
+    if (index === 0) {
+      return t('blogFeed.labels.recommended', 'Recommended');
+    }
+
+    if (index === 1) {
+      return t('blogFeed.labels.updates', 'Updates');
+    }
+
+    return t('blogFeed.labels.news', 'News');
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <Card className="overflow-hidden">
+    <div>
+      <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              >
-                <Newspaper className="w-5 h-5 text-primary" />
-              </motion.div>
-              <CardTitle className="text-lg">
-                {t('blogFeed.title', 'Hagicode 博客')}
-              </CardTitle>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary">
+                <Newspaper className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">
+                  {t('blogFeed.title', 'Hagicode Recommendations & Updates')}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {t('blogFeed.description', 'Review official recommendations and update notes without leaving the control console.')}
+                </CardDescription>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -172,7 +186,7 @@ const BlogFeedCard: React.FC = () => {
             </div>
           </div>
           {lastUpdate && (
-            <CardDescription className="flex items-center gap-1 text-xs">
+            <CardDescription className="mt-3 flex items-center gap-1 text-xs">
               <Clock className="w-3 h-3" />
               {t('blogFeed.lastUpdate', '最后更新：{{date}}', {
                 date: formatLastUpdate(lastUpdate),
@@ -181,24 +195,19 @@ const BlogFeedCard: React.FC = () => {
           )}
         </CardHeader>
 
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg"
-            >
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">
                 {t('blogFeed.error', '加载失败，请稍后重试')}
               </p>
-              <p className="text-xs text-destructive/70 mt-1">{error}</p>
-            </motion.div>
+              <p className="mt-1 text-xs text-destructive/70">{error}</p>
+            </div>
           )}
 
           {!loading && !error && displayItems.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Newspaper className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <div className="py-8 text-center text-muted-foreground">
+              <Newspaper className="mx-auto mb-2 h-12 w-12 opacity-50" />
               <p className="text-sm">
                 {t('blogFeed.noArticles', '暂无文章')}
               </p>
@@ -207,47 +216,78 @@ const BlogFeedCard: React.FC = () => {
 
           {loading && displayItems.length === 0 && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2 text-muted-foreground">
                 {t('blogFeed.loading', '加载中...')}
               </span>
             </div>
           )}
 
-          {displayItems.map((item, index) => (
-            <motion.article
-              key={item.guid || item.link}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="group"
-            >
-              <div
-                onClick={() => handleArticleClick(item.link)}
-                className="p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent/5 transition-all cursor-pointer"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                      {item.title}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {getTruncatedDescription(item.description)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        {formatDate(item.pubDate)}
-                      </Badge>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-                </div>
+          {featuredItem ? (
+            <section className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                  {getItemLabel(0)}
+                </Badge>
+                <span className="text-xs text-muted-foreground">{formatDate(featuredItem.pubDate)}</span>
               </div>
-            </motion.article>
-          ))}
+              <h3 className="mt-3 text-base font-semibold text-foreground">
+                {featuredItem.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {getTruncatedDescription(featuredItem.description, 180)}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" onClick={() => void handleArticleClick(featuredItem.link)}>
+                  {t('blogFeed.actions.readArticle', 'Read article')}
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="outline" onClick={() => void handleOpenRss()}>
+                  {t('blogFeed.actions.openFeed', 'Open feed')}
+                </Button>
+              </div>
+            </section>
+          ) : null}
+
+          {secondaryItems.length > 0 ? (
+            <div className="space-y-3">
+              {secondaryItems.map((item, index) => (
+                <article
+                  key={item.guid || item.link}
+                  className="group rounded-xl border border-border/70 bg-background/70 p-3 transition-colors hover:border-border hover:bg-muted/30"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {getItemLabel(index + 1)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{formatDate(item.pubDate)}</span>
+                      </div>
+                      <h4 className="mt-2 line-clamp-2 text-sm font-medium text-foreground">
+                        {item.title}
+                      </h4>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {getTruncatedDescription(item.description, 110)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleArticleClick(item.link)}
+                      className="mt-0.5"
+                    >
+                      {t('blogFeed.actions.readArticle', 'Read article')}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 };
 

@@ -188,16 +188,11 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
   }, [currentView, dispatch, distributionMode]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
-      </div>
-
+    <div className="desktop-shell-background min-h-screen bg-background text-foreground">
       <SidebarNavigation distributionMode={distributionMode} />
 
-      <div className="ml-64 transition-all duration-500 ease-out">
-        <div className="container mx-auto px-4 py-8 min-h-screen">
+      <div className="ml-64 min-h-screen transition-all duration-200 ease-out">
+        <div className="min-h-screen px-6 py-6 lg:px-8">
           {currentView === 'system' && <SystemManagementView distributionMode={distributionMode} />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
           {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}

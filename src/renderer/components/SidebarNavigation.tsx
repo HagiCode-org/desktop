@@ -386,7 +386,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   return (
     <aside
       className={`
-        fixed left-0 top-0 z-40 flex h-screen min-h-0 flex-col border-r border-border bg-background
+        fixed left-0 top-0 z-40 flex h-screen min-h-0 flex-col border-r border-border/80 bg-sidebar/92 shadow-sm backdrop-blur-sm
         transition-all duration-300 ease-in-out
         ${collapsed ? 'w-16' : 'w-64'}
       `}
@@ -395,7 +395,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
         initial={false}
         animate={{ width: collapsed ? 64 : 256 }}
         transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-        className="flex items-center justify-between h-16 px-4 border-b border-border"
+        className="flex h-16 items-center justify-between border-b border-border/80 px-4"
       >
         <AnimatePresence mode="wait">
           {!collapsed ? (
@@ -408,18 +408,16 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               className="flex items-center gap-3"
             >
               <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-muted text-foreground"
               >
-                <span className="text-xl font-bold text-primary-foreground">H</span>
+                <span className="text-xl font-semibold">H</span>
               </motion.div>
               <div>
                 <motion.h1
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="text-lg font-bold text-foreground"
+                  className="text-base font-semibold text-foreground"
                 >
                   Hagicode
                 </motion.h1>
@@ -439,10 +437,10 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
-            >
-              <span className="text-xl font-bold text-primary-foreground">H</span>
-            </motion.div>
+               className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-muted text-foreground"
+             >
+               <span className="text-xl font-semibold">H</span>
+             </motion.div>
           )}
         </AnimatePresence>
 
@@ -476,59 +474,27 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
-                  whileHover={{ x: isActive ? 0 : 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`
-                    relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                    overflow-hidden group
-                    ${isActive
-                      ? 'text-primary-foreground'
-                      : 'text-muted-foreground hover:text-accent-foreground'
-                    }
-                  `}
-                >
-                  <AnimatePresence>
-                    {isActive && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-0 bg-linear-to-br from-primary to-primary/80"
-                      />
-                    )}
-                  </AnimatePresence>
+                   whileHover={{ x: 0 }}
+                   whileTap={{ scale: 0.98 }}
+                   className={`
+                     relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left
+                     overflow-hidden group
+                     ${isActive
+                       ? 'border border-border/80 bg-accent text-foreground shadow-sm'
+                       : 'border border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground'
+                     }
+                   `}
+                 >
+                   {!isActive && (
+                     <motion.div
+                       initial={{ opacity: 0 }}
+                       whileHover={{ opacity: 1 }}
+                       exit={{ opacity: 0 }}
+                       className="absolute inset-0 bg-muted/35"
+                     />
+                   )}
 
-                  {!isActive && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-accent/50"
-                    />
-                  )}
-
-                  {isActive && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute inset-0 bg-primary/30 blur-md"
-                    />
-                  )}
-
-                  <AnimatePresence>
-                    {isActive && (
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: 24 }}
-                        exit={{ height: 0 }}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary-foreground rounded-r-full"
-                      />
-                    )}
-                  </AnimatePresence>
-
-                  <Icon className={`w-5 h-5 flex-shrink-0 relative z-10 ${isActive ? 'text-primary-foreground' : ''}`} />
+                   <Icon className={`relative z-10 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} />
 
                   <AnimatePresence mode="wait">
                     {!collapsed && (
@@ -569,18 +535,18 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                   type="button"
                   onClick={() => void handleNavClick(officialWebsiteItem)}
                   title={t(officialWebsiteItem.descriptionKey ?? '')}
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={collapsed
-                    ? 'relative w-full flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-muted-foreground hover:text-accent-foreground group'
-                    : 'relative w-full overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-left group'}
-                >
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-accent/40"
-                  />
+                   whileHover={{ x: 0 }}
+                   whileTap={{ scale: 0.98 }}
+                   className={collapsed
+                     ? 'group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border border-transparent px-3 py-2.5 text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground'
+                     : 'group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card px-3 py-3 text-left shadow-sm'}
+                 >
+                   <motion.div
+                     initial={{ opacity: 0 }}
+                     whileHover={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     className="absolute inset-0 bg-muted/35"
+                   />
 
                   <div className={collapsed ? 'relative z-10 flex items-center gap-3' : 'relative z-10 flex items-start gap-3'}>
                     <div className={collapsed

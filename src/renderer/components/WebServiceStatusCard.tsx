@@ -452,15 +452,7 @@ const WebServiceStatusCard: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <Card className="relative overflow-hidden border-border/50 shadow-lg shadow-primary/5">
-        {/* Animated status indicator line */}
-        <motion.div
-          className="absolute top-0 left-0 h-1 bg-linear-to-r from-primary to-primary/50"
-          initial={{ width: 0 }}
-          animate={{ width: isRunning ? '100%' : isStopped ? '0%' : '50%' }}
-          transition={{ duration: 0.5 }}
-        />
-
+      <Card className="relative overflow-hidden rounded-[24px] border-border/80 shadow-sm">
         <CardHeader>
           <motion.div
             initial={{ x: -20, opacity: 0 }}
@@ -468,13 +460,7 @@ const WebServiceStatusCard: React.FC = () => {
             transition={{ delay: 0.1 }}
           >
             <CardTitle className="flex items-center gap-2">
-              <motion.div
-                animate={isRunning ? {
-                  rotate: [0, 5, -5, 0],
-                  scale: [1, 1.1, 1],
-                } : {}}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
+              <motion.div>
                 <Server className={`w-5 h-5 ${isRunning ? 'text-primary' : ''}`} />
               </motion.div>
               {t('webServiceStatus.cardTitle')}
@@ -487,13 +473,6 @@ const WebServiceStatusCard: React.FC = () => {
               >
                 {getStatusDescription(webServiceInfo.status)}
               </motion.span>
-              {isRunning && (
-                <motion.span
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-2 h-2 bg-primary rounded-full"
-                />
-              )}
             </CardDescription>
           </motion.div>
         </CardHeader>
@@ -586,7 +565,7 @@ const WebServiceStatusCard: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2, delay: 0.1 }}
-                className="flex flex-wrap gap-2 justify-center"
+                className="flex flex-wrap gap-2 justify-start"
               >
                 {showRuntimeSecondaryControls && (
                   <>
@@ -665,7 +644,7 @@ const WebServiceStatusCard: React.FC = () => {
 
           {/* Local bind host + port configuration - only editable while stopped */}
           {!isRunning && (
-            <div className="space-y-4 rounded-lg border border-border/50 bg-muted/20 p-4">
+            <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/25 p-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Settings className="h-4 w-4" />
@@ -708,7 +687,7 @@ const WebServiceStatusCard: React.FC = () => {
                 ].map((option) => (
                   <label
                     key={option.value}
-                    className="flex cursor-pointer items-start gap-3 rounded-md border border-border/60 bg-background/70 p-3 transition-colors hover:border-primary/50"
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/80 p-3 transition-colors hover:border-primary/35"
                   >
                     <RadioGroupItem value={option.value} className="mt-0.5" />
                     <div className="space-y-1">
@@ -765,7 +744,7 @@ const WebServiceStatusCard: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-2 rounded-md border border-dashed border-border/60 bg-background/60 p-3">
+              <div className="space-y-2 rounded-xl border border-dashed border-border/60 bg-background/80 p-3">
                 <div className="text-xs text-muted-foreground">
                   {t('webServiceStatus.listenAddress.accessUrlPreviewLabel')}
                 </div>
@@ -805,7 +784,7 @@ const WebServiceStatusCard: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50"
+                className="grid grid-cols-2 gap-4 rounded-2xl border border-border/60 bg-muted/25 p-4 md:grid-cols-3 lg:grid-cols-6"
               >
                 {[
                   { label: t('webServiceStatus.details.serviceUrl'), value: webServiceInfo.url || 'N/A', mono: true, primary: true },

@@ -17,49 +17,49 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
   const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings(distributionMode);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+      <section className="rounded-[28px] border border-border/80 bg-card p-6 shadow-sm">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           {t('settings.title')}
         </h1>
-      </div>
+      </section>
 
       <Tabs defaultValue="onboarding" className="w-full">
-        <div className="flex gap-8">
-          <TabsList className="flex flex-col h-auto w-52 justify-start items-stretch bg-muted/30 p-2 rounded-lg">
+        <div className="rounded-3xl border border-border/80 bg-card p-4 shadow-sm lg:flex lg:gap-6">
+          <TabsList className="flex h-auto w-full flex-col items-stretch justify-start rounded-2xl border border-border/70 bg-muted/25 p-2 lg:w-60">
             <TabsTrigger
               value="onboarding"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               {t('settings.tabs.onboarding')}
             </TabsTrigger>
             <TabsTrigger
               value="updates"
-              className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               {t('settings.tabs.updates')}
             </TabsTrigger>
             {showSharingAccelerationSettings ? (
               <TabsTrigger
                 value="sharingAcceleration"
-                className="justify-start px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 {t('settings.tabs.sharingAcceleration')}
               </TabsTrigger>
             ) : null}
           </TabsList>
 
-          <div className="flex-1 min-w-0">
-            <TabsContent value="onboarding" className="mt-0">
+          <div className="mt-4 min-w-0 flex-1 lg:mt-0">
+            <TabsContent value="onboarding" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
               <OnboardingSettings />
             </TabsContent>
 
-            <TabsContent value="updates" className="mt-0">
+            <TabsContent value="updates" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
               <VersionUpdateSettings distributionMode={distributionMode} />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (
-              <TabsContent value="sharingAcceleration" className="mt-0">
+              <TabsContent value="sharingAcceleration" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
                 <SharingAccelerationSettings distributionMode={distributionMode} />
               </TabsContent>
             ) : null}

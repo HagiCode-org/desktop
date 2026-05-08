@@ -14,6 +14,7 @@ import {
   FolderOpen,
   Loader2,
   Rocket,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   Dialog,
@@ -119,8 +120,35 @@ interface VersionManagementPageProps {
   distributionMode: DistributionMode;
 }
 
+function SummaryTile({
+  icon: Icon,
+  label,
+  value,
+  description,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-border/70 bg-background/75 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+          <p className="text-lg font-semibold text-foreground">{value}</p>
+        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">{description}</p>
+    </section>
+  );
+}
+
 export default function VersionManagementPage({ distributionMode }: VersionManagementPageProps) {
-  const { t, i18n } = useTranslation('pages');
+  const { t, i18n } = useTranslation(['pages', 'common']);
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
@@ -491,22 +519,27 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-10">
+        <div className="rounded-3xl border border-border/80 bg-card px-8 py-10 shadow-sm">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span>{t('status.loading', { ns: 'common', defaultValue: 'Loading...' })}</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (distributionMode === 'steam') {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
-              <Package className="w-6 h-6 text-primary" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-primary">
+              <Package className="w-6 h-6" />
             </div>
             <div className="space-y-3">
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-2xl font-semibold text-foreground">
                 {t('versionManagement.portableMode.title')}
               </h1>
               <p className="text-muted-foreground">
@@ -529,54 +562,83 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex items-center justify-center w-12 h-12 bg-primary rounded-xl">
-            <Package className="w-6 h-6 text-primary-foreground" />
+    <>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        <section className="rounded-[28px] border border-border/80 bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-primary">
+                  <Package className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                    {t('versionManagement.title')}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('versionManagement.description')}</p>
+                </div>
+              </div>
+            </div>
+            <Button type="button" variant="outline" onClick={fetchAllData}>
+              <RefreshCw className="h-4 w-4" />
+              {t('versionManagement.actions.refresh')}
+            </Button>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {t('versionManagement.title')}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">{t('versionManagement.description')}</p>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryTile
+              icon={Package}
+              label={t('common.version', { ns: 'common' })}
+              value={activeVersion?.version ?? t('versionManagement.notInstalled')}
+              description={activeVersion ? activeVersion.packageFilename : t('versionManagement.noVersionsInstalled.description')}
+            />
+            <SummaryTile
+              icon={HardDrive}
+              label={t('versionManagement.installedVersions')}
+              value={installedVersions.length.toString()}
+              description={installedVersions.length > 0 ? t('versionManagement.status.installed') : t('versionManagement.notInstalled')}
+            />
+            <SummaryTile
+              icon={Download}
+              label={t('versionManagement.availableVersions')}
+              value={availableVersions.length.toString()}
+              description={availableVersions.length > 0 ? t('versionManagement.actions.install') : t('versionManagement.noVersionsAvailable')}
+            />
+            <SummaryTile
+              icon={isInstallingFromState ? Loader2 : RefreshCw}
+              label={t('versionManagement.actions.refresh')}
+              value={isInstallingFromState ? getInstallProgressText() : t('versionManagement.status.ready')}
+              description={isInstallingFromState ? getInstallStageFlow() : t('versionManagement.info.description')}
+            />
           </div>
-        </div>
+        </section>
 
-      </div>
+        <section className="rounded-3xl border border-border/80 bg-card p-5 shadow-sm">
+          <PackageSourceSelector />
+        </section>
 
-      {/* Package Source Selector */}
-      <div className="mb-8">
-        <PackageSourceSelector />
-      </div>
+        <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+              <Download className="w-5 h-5 text-primary" />
+              {t('versionManagement.availableVersions')}
+            </h2>
+            <Button type="button" variant="outline" size="sm" onClick={fetchAllData}>
+              <RefreshCw className="w-4 h-4" />
+              {t('versionManagement.actions.refresh')}
+            </Button>
+          </div>
 
-      {/* Available Versions */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-            <Download className="w-5 h-5 text-primary" />
-            {t('versionManagement.availableVersions')}
-          </h2>
-          <button
-            onClick={fetchAllData}
-            className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t('versionManagement.actions.refresh')}
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {displayVersions.map((version) => {
+          <div className="space-y-3">
+           {displayVersions.map((version) => {
             const installed = installedVersions.find((v) => v.id === version.id);
             const isInstallingCurrentVersion = isInstallingFromState && installingVersionId === version.id;
 
             return (
-              <div
-                key={version.id}
-                className="bg-card rounded-xl p-4 border border-border hover:border-border/80 transition-colors"
-              >
+               <div
+                 key={version.id}
+                 className="rounded-2xl border border-border/70 bg-background/60 p-4 transition-colors hover:border-border"
+               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
@@ -618,7 +680,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                         <button
                           onClick={() => handleInstall(version.id)}
                           disabled={isInstallingFromState || webServiceOperating}
-                          className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isInstallingCurrentVersion ? (
                             <>
@@ -657,56 +719,54 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
             </button>
           )}
 
-          {availableVersions.length === 0 && (
-            <div className="bg-card rounded-xl p-8 text-center text-muted-foreground">
-              <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{t('versionManagement.noVersionsAvailable')}</p>
-            </div>
-          )}
-        </div>
-      </div>
+           {availableVersions.length === 0 && (
+             <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-8 text-center text-muted-foreground">
+               <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+               <p>{t('versionManagement.noVersionsAvailable')}</p>
+             </div>
+           )}
+          </div>
+        </section>
 
-      {/* Installed Versions */}
-      {installedVersions.length === 0 ? (
-        /* No versions installed - show onboarding CTA */
-        <div className="bg-card rounded-xl border border-border p-12">
-          <div className="text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="p-4 bg-primary/10 rounded-full">
-                <Rocket className="w-12 h-12 text-primary" />
+        <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
+          {installedVersions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-12">
+              <div className="space-y-6 text-center">
+                <div className="flex justify-center">
+                  <div className="rounded-full bg-primary/10 p-4">
+                    <Rocket className="w-12 h-12 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="mb-2 text-2xl font-bold text-foreground">
+                    {t('versionManagement.noVersionsInstalled.title')}
+                  </h2>
+                  <p className="mx-auto max-w-md text-muted-foreground">
+                    {t('versionManagement.noVersionsInstalled.description')}
+                  </p>
+                </div>
+                <button
+                  onClick={handleStartOnboarding}
+                  className="mx-auto flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <Rocket className="w-5 h-5" />
+                  {t('versionManagement.noVersionsInstalled.startButton')}
+                </button>
               </div>
             </div>
+          ) : (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                {t('versionManagement.noVersionsInstalled.title')}
+              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-foreground">
+                <HardDrive className="w-5 h-5 text-primary" />
+                {t('versionManagement.installedVersions')}
               </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {t('versionManagement.noVersionsInstalled.description')}
-              </p>
-            </div>
-            <button
-              onClick={handleStartOnboarding}
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
-            >
-              <Rocket className="w-5 h-5" />
-              {t('versionManagement.noVersionsInstalled.startButton')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* Has installed versions - show list */
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground mb-4">
-            <HardDrive className="w-5 h-5 text-primary" />
-            {t('versionManagement.installedVersions')}
-          </h2>
-
-          <div className="space-y-3">
-            {installedVersions.map((version) => (
-              <div
-                key={version.id}
-                className="bg-card rounded-xl border border-border overflow-hidden"
-              >
+ 
+              <div className="space-y-3">
+                {installedVersions.map((version) => (
+                <div
+                  key={version.id}
+                  className="overflow-hidden rounded-2xl border border-border/70 bg-background/60"
+               >
                 {/* Version Header */}
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -729,8 +789,8 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
 
                     <div className="flex items-center gap-2">
                       {/* Reinstall button for all installed versions */}
-                      {isInstallingFromState && webServiceInstallProgress ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg">
+                       {isInstallingFromState && webServiceInstallProgress ? (
+                         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-1.5">
                           {/* 进度条 */}
                           <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -749,12 +809,12 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                           </span>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => handleReinstall(version.id)}
-                          disabled={isInstallingFromState || switching === version.id}
-                          className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                          title={t('versionManagement.actions.reinstallPackage')}
-                        >
+                         <button
+                           onClick={() => handleReinstall(version.id)}
+                           disabled={isInstallingFromState || switching === version.id}
+                           className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50"
+                           title={t('versionManagement.actions.reinstallPackage')}
+                         >
                           {isInstallingFromState ? (
                             <>
                               <Loader2 className="animate-spin h-3 w-3" />
@@ -770,22 +830,22 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                       )}
 
                       {/* Open Logs button for all installed versions */}
-                      <button
-                        onClick={() => handleOpenLogs(version.id)}
-                        className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors flex items-center gap-1.5"
-                        title={t('versionManagement.actions.openLogs')}
-                      >
+                       <button
+                         onClick={() => handleOpenLogs(version.id)}
+                         className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
+                         title={t('versionManagement.actions.openLogs')}
+                       >
                         <FolderOpen className="w-4 h-4" />
                         {t('versionManagement.actions.openLogs')}
                       </button>
 
                       {!version.isActive && (
-                        <button
-                          onClick={() => handleSwitch(version.id)}
-                          disabled={switching === version.id || isInstallingFromState || isDesktopIncompatible(version)}
-                          className="px-3 py-1.5 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                          title={isDesktopIncompatible(version) ? t('versionManagement.actions.switchDisabledDesktop') : undefined}
-                        >
+                         <button
+                           onClick={() => handleSwitch(version.id)}
+                           disabled={switching === version.id || isInstallingFromState || isDesktopIncompatible(version)}
+                           className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                           title={isDesktopIncompatible(version) ? t('versionManagement.actions.switchDisabledDesktop') : undefined}
+                         >
                           {switching === version.id ? (
                             <>
                               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary-foreground"></div>
@@ -850,17 +910,17 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                     </div>
                   )}
 
-                  {renderInstallTelemetry(version.id)}
-                </div>
+                   {renderInstallTelemetry(version.id)}
+                 </div>
+               </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+        </section>
 
-      {/* Footer Info */}
-      <div className="mt-8 p-4 bg-muted/30 rounded-lg border border-border">
-        <div className="flex items-start gap-3">
+       <section className="rounded-3xl border border-border/80 bg-muted/25 p-4">
+         <div className="flex items-start gap-3">
           <div className="flex items-center justify-center w-5 h-5 bg-primary/10 rounded mt-0.5 flex-shrink-0">
             <Clock className="w-3 h-3 text-primary" />
           </div>
@@ -868,11 +928,12 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
             <p className="text-sm text-foreground font-medium mb-1">
               {t('versionManagement.info.title')}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {t('versionManagement.info.description')}
-            </p>
+           <p className="text-xs text-muted-foreground">
+             {t('versionManagement.info.description')}
+           </p>
           </div>
-        </div>
+         </div>
+        </section>
       </div>
 
       {/* Reinstall Confirmation Dialog */}
@@ -936,6 +997,6 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
         </DialogContent>
       </Dialog>
 
-    </div>
+    </>
   );
 }
