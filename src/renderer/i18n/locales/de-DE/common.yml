@@ -200,17 +200,22 @@ dependencyManagement:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
     managedByDesktop: Managed directly by Desktop
+    runtimeState: Laufzeitstatus
     runtimeRoot: Runtime root
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      ready: Runtime files are staged and ready for Desktop-managed startup.
-      running: Runtime is responding on its local Desktop-managed endpoint.
-      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
-      missing: Runtime files are missing from the Desktop-managed location.
-      damaged: Runtime files are incomplete or failed validation.
+      installed: Laufzeitdateien sind installiert und entsprechen dem aktuellen hagiscript-Laufzeitvertrag.
+      not-installed: An diesem von Desktop verwalteten Speicherort sind noch keine Laufzeitdateien installiert.
+      removed: Laufzeitdateien wurden aus dem von Desktop verwalteten Speicherort entfernt.
+      failed: Laufzeitdateien sind unvollständig oder haben die Validierung nicht bestanden.
+    installStatus:
+      installed: Installiert
+      not-installed: Nicht installiert
+      removed: Entfernt
+      failed: Validierung fehlgeschlagen
     status:
       ready: Ready
       running: Running
@@ -518,6 +523,7 @@ omniroute:
     baseUrl: Basis URL
     pm2: PM2 ausführbare Datei
     pm2Missing: PM2 ist nicht installiert
+    runtimeInstallStatus: Installationsstatus der Laufzeit
   config:
     title: Laufzeitkonfiguration
     description: OmniRoute verwendet einen isolierten Desktop-verwalteten Port. Er kann nicht mit dem Webdienst-Port HagiCode übereinstimmen.
@@ -568,65 +574,65 @@ omniroute:
     openPathFailed: Der verwaltete Pfad konnte nicht geöffnet werden.
 codeServer:
   title: Code Server
-  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
-  loading: Loading Code Server status...
+  description: Verwalte die von Desktop bereitgestellte code-server-Laufzeit, einschließlich Start und Stopp, lokaler Adresse, passwortgeschütztem Zugriff, verwalteten Pfaden und aktuellen Logs.
+  loading: Code Server-Status wird geladen...
   actions:
-    refresh: Refresh
-    start: Start
-    stop: Stop
-    restart: Restart
-    repair: Repair runtime
-    working: Working...
-    openDesktop: Open in Desktop
-    openBrowser: Open in Browser
-    save: Save
-    open: Open
-    refreshLogs: Refresh Logs
+    refresh: Aktualisieren
+    start: Starten
+    stop: Stoppen
+    restart: Neu starten
+    repair: Laufzeit reparieren
+    working: Wird verarbeitet...
+    openDesktop: In Desktop öffnen
+    openBrowser: Im Browser öffnen
+    save: Speichern
+    open: Öffnen
+    refreshLogs: Logs aktualisieren
   status:
     title: Status
-    running: Running
-    stopped: Stopped
-    missing: Missing
-    damaged: Damaged
-    error: Error
-    baseUrl: Base URL
-    pm2: PM2 executable
-    pm2Missing: PM2 is not installed
-    runtimeStatus: Runtime status
-    passwordMode: Authentication
-    passwordModeValue: Password required
-    diagnostics: Diagnostics
+    running: Aktiv
+    stopped: Gestoppt
+    missing: Fehlt
+    damaged: Beschädigt
+    error: Fehler
+    baseUrl: Zugriffs-URL
+    pm2: PM2-Ausführungsdatei
+    pm2Missing: PM2 ist nicht installiert
+    runtimeStatus: Installationsstatus der Laufzeit
+    passwordMode: Authentifizierung
+    passwordModeValue: Passwort erforderlich
+    diagnostics: Diagnoseinformationen
   config:
-    title: Runtime Configuration
-    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
+    title: Laufzeitkonfiguration
+    description: Code Server lauscht auf einem von Desktop verwalteten lokalen Port. Beim Speichern werden Änderungen bei Bedarf durch einen automatischen Neustart des laufenden Dienstes übernommen.
     portLabel: Port
-    passwordLabel: Login password
-    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+    passwordLabel: Anmeldepasswort
+    passwordDescription: Desktop speichert ein lokales Passwort für code-server und übergibt es beim Start des Dienstes als PASSWORD.
   validation:
-    numeric: Enter a numeric port.
-    range: Use a port between 1024 and 65535.
-    passwordLength: Use a password between 4 and 200 characters.
+    numeric: Gib einen numerischen Port ein.
+    range: Verwende einen Port zwischen 1024 und 65535.
+    passwordLength: Verwende ein Passwort mit 4 bis 200 Zeichen.
   paths:
-    title: Managed Paths
-    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
-    runtime-root: Runtime root
-    data: Data
-    extensions: Extensions
+    title: Verwaltete Pfade
+    description: Laufzeitdaten, Erweiterungen und Logs werden unter Electron userData/CodeServer gespeichert.
+    runtime-root: Laufzeitwurzel
+    data: Daten
+    extensions: Erweiterungen
     logs: Logs
   logs:
-    title: Recent Logs
-    description: Read bounded recent lines from Desktop-managed code-server logs.
-    empty: No log output yet.
+    title: Aktuelle Logs
+    description: Lies eine begrenzte Anzahl aktueller Zeilen aus den von Desktop verwalteten code-server-Logs.
+    empty: Es gibt noch keine Logausgabe.
     targets:
-      service-out: Service Output
-      service-error: Service Error
+      service-out: Dienstausgabe
+      service-error: Dienstfehler
   dependencyGuidance:
-    title: Install Desktop-managed PM2 first
-    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
-    openDependencyManagement: Open Dependency Management
+    title: Zuerst Desktop-verwaltetes PM2 installieren
+    description: Code Server verwendet den von Desktop verwalteten PM2-Prozessmanager. Installiere oder repariere PM2 in der Abhängigkeitsverwaltung, bevor du Code Server startest.
+    openDependencyManagement: Abhängigkeitsverwaltung öffnen
   errors:
-    title: Code Server operation failed
-    operationFailed: The operation failed.
-    saveFailed: Failed to save Code Server configuration.
-    openPathFailed: Failed to open the managed path.
-    openWindowFailed: Failed to open the Desktop-managed Code Server window.
+    title: Code Server-Vorgang fehlgeschlagen
+    operationFailed: Der Vorgang ist fehlgeschlagen.
+    saveFailed: Die Code Server-Konfiguration konnte nicht gespeichert werden.
+    openPathFailed: Der verwaltete Pfad konnte nicht geöffnet werden.
+    openWindowFailed: Das von Desktop verwaltete Code Server-Fenster konnte nicht geöffnet werden.

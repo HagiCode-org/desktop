@@ -200,17 +200,22 @@ dependencyManagement:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
     managedByDesktop: Managed directly by Desktop
+    runtimeState: 런타임 상태
     runtimeRoot: Runtime root
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      ready: Runtime files are staged and ready for Desktop-managed startup.
-      running: Runtime is responding on its local Desktop-managed endpoint.
-      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
-      missing: Runtime files are missing from the Desktop-managed location.
-      damaged: Runtime files are incomplete or failed validation.
+      installed: 런타임 파일이 설치되어 있으며 최신 hagiscript 런타임 계약과 일치합니다.
+      not-installed: Desktop 관리 위치에 아직 이 런타임 파일이 설치되지 않았습니다.
+      removed: 런타임 파일이 Desktop 관리 위치에서 제거되었습니다.
+      failed: 런타임 파일이 불완전하거나 검증에 실패했습니다.
+    installStatus:
+      installed: 설치됨
+      not-installed: 설치되지 않음
+      removed: 제거됨
+      failed: 검증 실패
     status:
       ready: Ready
       running: Running
@@ -518,6 +523,7 @@ omniroute:
     baseUrl: 베이스 URL
     pm2: PM2 실행 가능
     pm2Missing: PM2이(가) 설치되지 않았습니다
+    runtimeInstallStatus: 런타임 설치 상태
   config:
     title: 런타임 구성
     description: OmniRoute은 격리된 데스크톱 관리 포트를 사용합니다. HagiCode 웹 서비스 포트와 일치할 수 없습니다.
@@ -568,65 +574,65 @@ omniroute:
     openPathFailed: 관리 경로를 열지 못했습니다.
 codeServer:
   title: Code Server
-  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
-  loading: Loading Code Server status...
+  description: Desktop에서 관리하는 code-server 런타임을 관리합니다. 시작과 중지, 로컬 주소, 비밀번호 인증, 관리 경로, 최근 로그를 확인할 수 있습니다.
+  loading: Code Server 상태를 불러오는 중...
   actions:
-    refresh: Refresh
-    start: Start
-    stop: Stop
-    restart: Restart
-    repair: Repair runtime
-    working: Working...
-    openDesktop: Open in Desktop
-    openBrowser: Open in Browser
-    save: Save
-    open: Open
-    refreshLogs: Refresh Logs
+    refresh: 새로 고침
+    start: 시작
+    stop: 중지
+    restart: 다시 시작
+    repair: 런타임 복구
+    working: 처리 중...
+    openDesktop: Desktop에서 열기
+    openBrowser: 브라우저에서 열기
+    save: 저장
+    open: 열기
+    refreshLogs: 로그 새로 고침
   status:
-    title: Status
-    running: Running
-    stopped: Stopped
-    missing: Missing
-    damaged: Damaged
-    error: Error
-    baseUrl: Base URL
-    pm2: PM2 executable
-    pm2Missing: PM2 is not installed
-    runtimeStatus: Runtime status
-    passwordMode: Authentication
-    passwordModeValue: Password required
-    diagnostics: Diagnostics
+    title: 상태
+    running: 실행 중
+    stopped: 중지됨
+    missing: 누락됨
+    damaged: 손상됨
+    error: 오류
+    baseUrl: 접속 URL
+    pm2: PM2 실행 파일
+    pm2Missing: PM2이(가) 설치되지 않았습니다
+    runtimeStatus: 런타임 설치 상태
+    passwordMode: 인증 방식
+    passwordModeValue: 비밀번호 필요
+    diagnostics: 진단 정보
   config:
-    title: Runtime Configuration
-    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
-    portLabel: Port
-    passwordLabel: Login password
-    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+    title: 런타임 구성
+    description: Code Server는 Desktop이 관리하는 로컬 포트를 사용합니다. 설정을 저장하면 필요할 때 실행 중인 서비스가 자동으로 다시 시작됩니다.
+    portLabel: 포트
+    passwordLabel: 로그인 비밀번호
+    passwordDescription: Desktop은 code-server용 로컬 비밀번호를 저장하고 서비스 시작 시 PASSWORD 환경 변수로 주입합니다.
   validation:
-    numeric: Enter a numeric port.
-    range: Use a port between 1024 and 65535.
-    passwordLength: Use a password between 4 and 200 characters.
+    numeric: 숫자 포트를 입력하세요.
+    range: 1024에서 65535 사이의 포트를 사용하세요.
+    passwordLength: 4자에서 200자 사이의 비밀번호를 사용하세요.
   paths:
-    title: Managed Paths
-    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
-    runtime-root: Runtime root
-    data: Data
-    extensions: Extensions
-    logs: Logs
+    title: 관리 경로
+    description: 런타임 데이터, 확장, 로그는 Electron userData/CodeServer 아래에 저장됩니다.
+    runtime-root: 런타임 루트
+    data: 데이터
+    extensions: 확장
+    logs: 로그
   logs:
-    title: Recent Logs
-    description: Read bounded recent lines from Desktop-managed code-server logs.
-    empty: No log output yet.
+    title: 최근 로그
+    description: Desktop이 관리하는 code-server 로그에서 최신 줄을 제한된 범위로 읽습니다.
+    empty: 아직 로그 출력이 없습니다.
     targets:
-      service-out: Service Output
-      service-error: Service Error
+      service-out: 서비스 출력
+      service-error: 서비스 오류
   dependencyGuidance:
-    title: Install Desktop-managed PM2 first
-    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
-    openDependencyManagement: Open Dependency Management
+    title: 먼저 Desktop 관리 PM2를 설치하세요
+    description: Code Server는 Desktop이 관리하는 PM2 프로세스 관리자를 사용합니다. Code Server를 시작하기 전에 의존성 관리에서 PM2를 설치하거나 복구하세요.
+    openDependencyManagement: 의존성 관리 열기
   errors:
-    title: Code Server operation failed
-    operationFailed: The operation failed.
-    saveFailed: Failed to save Code Server configuration.
-    openPathFailed: Failed to open the managed path.
-    openWindowFailed: Failed to open the Desktop-managed Code Server window.
+    title: Code Server 작업에 실패했습니다
+    operationFailed: 작업에 실패했습니다.
+    saveFailed: Code Server 구성을 저장하지 못했습니다.
+    openPathFailed: 관리 경로를 열지 못했습니다.
+    openWindowFailed: Desktop이 관리하는 Code Server 창을 열지 못했습니다.

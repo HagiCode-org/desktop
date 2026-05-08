@@ -200,17 +200,22 @@ dependencyManagement:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
     managedByDesktop: Managed directly by Desktop
+    runtimeState: ランタイム状態
     runtimeRoot: Runtime root
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      ready: Runtime files are staged and ready for Desktop-managed startup.
-      running: Runtime is responding on its local Desktop-managed endpoint.
-      stopped: Runtime files are present, but the Desktop-managed process is not currently running.
-      missing: Runtime files are missing from the Desktop-managed location.
-      damaged: Runtime files are incomplete or failed validation.
+      installed: ランタイム ファイルはインストール済みで、最新の hagiscript ランタイム契約に一致しています。
+      not-installed: Desktop 管理場所には、まだこのランタイム ファイルがインストールされていません。
+      removed: ランタイム ファイルは Desktop 管理場所から削除されました。
+      failed: ランタイム ファイルが不完全であるか、検証に失敗しました。
+    installStatus:
+      installed: インストール済み
+      not-installed: 未インストール
+      removed: 削除済み
+      failed: 検証失敗
     status:
       ready: Ready
       running: Running
@@ -518,6 +523,7 @@ omniroute:
     baseUrl: ベース URL
     pm2: PM2 実行可能ファイル
     pm2Missing: PM2はインストールされていません
+    runtimeInstallStatus: ランタイムのインストール状態
   config:
     title: ランタイム構成
     description: OmniRoute は、分離されたデスクトップ管理ポートを使用します。 HagiCode Web サービス ポートと一致することはできません。
@@ -568,65 +574,65 @@ omniroute:
     openPathFailed: 管理パスのオープンに失敗しました。
 codeServer:
   title: Code Server
-  description: Manage the Desktop-owned code-server runtime, including lifecycle, local address, password-based access, managed paths, and recent logs.
-  loading: Loading Code Server status...
+  description: Desktop が管理する code-server ランタイムを管理します。起動と停止、ローカルアドレス、パスワード認証、管理パス、最近のログを確認できます。
+  loading: Code Server の状態を読み込んでいます...
   actions:
-    refresh: Refresh
-    start: Start
-    stop: Stop
-    restart: Restart
-    repair: Repair runtime
-    working: Working...
-    openDesktop: Open in Desktop
-    openBrowser: Open in Browser
-    save: Save
-    open: Open
-    refreshLogs: Refresh Logs
+    refresh: 更新
+    start: 開始
+    stop: 停止
+    restart: 再起動
+    repair: ランタイムを修復
+    working: 処理中...
+    openDesktop: Desktop で開く
+    openBrowser: ブラウザーで開く
+    save: 保存
+    open: 開く
+    refreshLogs: ログを更新
   status:
-    title: Status
-    running: Running
-    stopped: Stopped
-    missing: Missing
-    damaged: Damaged
-    error: Error
-    baseUrl: Base URL
-    pm2: PM2 executable
-    pm2Missing: PM2 is not installed
-    runtimeStatus: Runtime status
-    passwordMode: Authentication
-    passwordModeValue: Password required
-    diagnostics: Diagnostics
+    title: 状態
+    running: 稼働中
+    stopped: 停止
+    missing: 不足
+    damaged: 破損
+    error: エラー
+    baseUrl: アクセス URL
+    pm2: PM2 実行ファイル
+    pm2Missing: PM2 はインストールされていません
+    runtimeStatus: ランタイムのインストール状態
+    passwordMode: 認証方式
+    passwordModeValue: パスワード必須
+    diagnostics: 診断情報
   config:
-    title: Runtime Configuration
-    description: Code Server listens on a Desktop-managed local port. Saving changes restarts the running service automatically when needed.
-    portLabel: Port
-    passwordLabel: Login password
-    passwordDescription: Desktop stores a local password for code-server and injects it as PASSWORD when the service starts.
+    title: ランタイム構成
+    description: Code Server は Desktop 管理のローカルポートで待機します。設定を保存すると、必要に応じて実行中のサービスが自動で再起動します。
+    portLabel: ポート
+    passwordLabel: ログインパスワード
+    passwordDescription: Desktop は code-server 用のローカルパスワードを保存し、サービス起動時に PASSWORD として注入します。
   validation:
-    numeric: Enter a numeric port.
-    range: Use a port between 1024 and 65535.
-    passwordLength: Use a password between 4 and 200 characters.
+    numeric: 数値のポートを入力してください。
+    range: 1024 から 65535 のポートを使用してください。
+    passwordLength: 4 から 200 文字のパスワードを使用してください。
   paths:
-    title: Managed Paths
-    description: Runtime data, extensions, and logs are stored under Electron userData/CodeServer.
-    runtime-root: Runtime root
-    data: Data
-    extensions: Extensions
-    logs: Logs
+    title: 管理パス
+    description: ランタイムデータ、拡張機能、ログは Electron userData/CodeServer に保存されます。
+    runtime-root: ランタイム ルート
+    data: データ
+    extensions: 拡張機能
+    logs: ログ
   logs:
-    title: Recent Logs
-    description: Read bounded recent lines from Desktop-managed code-server logs.
-    empty: No log output yet.
+    title: 最近のログ
+    description: Desktop が管理する code-server ログから最新の行を制限付きで読み取ります。
+    empty: まだログ出力はありません。
     targets:
-      service-out: Service Output
-      service-error: Service Error
+      service-out: サービス出力
+      service-error: サービスエラー
   dependencyGuidance:
-    title: Install Desktop-managed PM2 first
-    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
-    openDependencyManagement: Open Dependency Management
+    title: 先に Desktop 管理の PM2 をインストールしてください
+    description: Code Server は Desktop 管理の PM2 プロセスマネージャーを使用します。Code Server を起動する前に、依存関係管理で PM2 をインストールまたは修復してください。
+    openDependencyManagement: 依存関係管理を開く
   errors:
-    title: Code Server operation failed
-    operationFailed: The operation failed.
-    saveFailed: Failed to save Code Server configuration.
-    openPathFailed: Failed to open the managed path.
-    openWindowFailed: Failed to open the Desktop-managed Code Server window.
+    title: Code Server の操作に失敗しました
+    operationFailed: 操作に失敗しました。
+    saveFailed: Code Server の設定を保存できませんでした。
+    openPathFailed: 管理パスを開けませんでした。
+    openWindowFailed: Desktop 管理の Code Server ウィンドウを開けませんでした。
