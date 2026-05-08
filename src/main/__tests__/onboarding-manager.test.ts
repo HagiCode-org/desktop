@@ -61,4 +61,13 @@ describe('onboarding-manager legal consent gating', () => {
     assert.match(source, /Onboarding no longer executes dependency installers automatically/);
     assert.equal(source.includes('installFromManifest('), false);
   });
+
+  it('routes onboarding service startup through the shared web service manager lifecycle and failure payload helpers', async () => {
+    const source = await readSource();
+
+    assert.match(source, /const startResult = await this\.webServiceManager\.start\(\);/);
+    assert.match(source, /const status = await this\.webServiceManager\.getStatus\(\);/);
+    assert.match(source, /const failureResult = buildOnboardingStartupFailureResult\(startResult, status\.port\);/);
+    assert.match(source, /return failureResult;/);
+  });
 });

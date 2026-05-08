@@ -145,7 +145,7 @@ export function registerWebServiceHandlers(deps: {
         const entryPoint = manifestReader.parseEntryPoint(manifest);
         state.webServiceManager.setEntryPoint(entryPoint);
       } else {
-        log.warn('[WebServiceHandlers] No manifest found, entryPoint may not be available');
+        log.warn('[WebServiceHandlers] No manifest found, startup metadata may be limited');
         state.webServiceManager.setEntryPoint(null);
       }
 

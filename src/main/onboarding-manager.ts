@@ -782,13 +782,14 @@ export class OnboardingManager {
       // Set the active version path in web service manager
       this.webServiceManager.setActiveVersion(versionId);
 
-      // Read manifest and set entryPoint
+      // Preserve manifest-derived metadata for version reporting while the
+      // shared web service manager delegates actual launch ownership to hagiscript.
       const manifest = await manifestReader.readManifest(version.installedPath);
       if (manifest) {
         const entryPoint = manifestReader.parseEntryPoint(manifest);
         this.webServiceManager.setEntryPoint(entryPoint);
       } else {
-        log.warn('[OnboardingManager] No manifest found, entryPoint may not be available');
+        log.warn('[OnboardingManager] No manifest found, startup metadata may be limited');
         this.webServiceManager.setEntryPoint(null);
       }
 
