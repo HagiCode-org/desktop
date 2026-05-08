@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: Informe de diagnóstico copiado
     copyFailed: 'No se pudo copiar el informe de diagnóstico: {{error}}'
 system:
+  dashboard:
+    title: Centro de control de Desktop
+    description: Reúne el estado del servicio, las acciones de inicio y detención, la versión activa, el acceso a registros y las actualizaciones recomendadas en un único espacio de trabajo.
   logQuickAccess:
     title: Registrar acceso rápido
     description: Abra las carpetas de registro de la aplicación web y del escritorio directamente para acortar el tiempo de diagnóstico.

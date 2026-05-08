@@ -269,7 +269,8 @@ tray:
   startService: Iniciar serviço
   stopService: Parar serviço
 blogFeed:
-  title: HagicodeBlog
+  title: Recomendações e atualizações
+  description: Revise recomendações oficiais e notas de atualização sem sair do console de controle.
   openRss: Abrir RSS
   openRssFailed: Não foi possível abrir o link RSS
   refresh: Atualizar
@@ -277,3 +278,10 @@ blogFeed:
   error: Falha ao carregar, tente novamente mais tarde
   noArticles: Nenhum artigo disponível
   lastUpdate: 'Última atualização: {{date}}'
+  labels:
+    recommended: Recomendado
+    updates: Atualizações
+    news: Notícias
+  actions:
+    readArticle: Ler artigo
+    openFeed: Abrir feed

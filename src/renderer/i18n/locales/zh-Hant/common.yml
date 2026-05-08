@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: 診斷報告已複製
     copyFailed: 複製診斷報告失敗：{{error}}
 system:
+  dashboard:
+    title: 控制台總覽
+    description: 在同一個工作區中聚焦服務狀態、啟停維護、活動版本、日誌入口與推薦消息。
   logQuickAccess:
     title: 日誌快捷訪問
     description: 直接開啟 Desktop 與 Web App 的日誌目錄，減少排障時的路徑尋找成本。

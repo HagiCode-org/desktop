@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: Rapport de diagnostic copié
     copyFailed: 'Échec de la copie du rapport de diagnostic: {{error}}'
 system:
+  dashboard:
+    title: Centre de contrôle Desktop
+    description: Réunit l'état du service, les actions de démarrage et d'arrêt, la version active, l'accès aux journaux et les mises à jour recommandées dans un espace de travail unique.
   logQuickAccess:
     title: Accès rapide au journal
     description: Ouvrez directement les dossiers des journaux du bureau et de l'application Web pour réduire le temps de diagnostic.

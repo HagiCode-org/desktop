@@ -269,7 +269,8 @@ tray:
   startService: サービスを開始する
   stopService: サービスの停止
 blogFeed:
-  title: Hagicode ブログ
+  title: 推奨と更新
+  description: コントロールコンソールを離れずに、公式の推奨情報と更新内容を確認できます。
   openRss: RSS を開く
   openRssFailed: RSS リンクを開けません
   refresh: リフレッシュ
@@ -277,3 +278,10 @@ blogFeed:
   error: ロードに失敗しました。後でもう一度お試しください
   noArticles: 利用できる記事はありません
   lastUpdate: '最終更新日: {{date}}'
+  labels:
+    recommended: 推奨
+    updates: 更新
+    news: お知らせ
+  actions:
+    readArticle: 記事を開く
+    openFeed: フィードを開く

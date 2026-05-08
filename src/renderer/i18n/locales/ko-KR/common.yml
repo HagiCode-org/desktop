@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: 진단 보고서가 복사되었습니다.
     copyFailed: '진단 보고서 복사 실패: {{error}}'
 system:
+  dashboard:
+    title: 데스크톱 제어 센터
+    description: 서비스 상태, 시작과 중지, 활성 버전, 로그 진입점, 추천 업데이트를 하나의 작업 화면에 모읍니다.
   logQuickAccess:
     title: 로그 빠른 액세스
     description: 진단 시간을 단축하려면 데스크탑 및 웹 앱 로그 폴더를 직접 엽니다.

@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: Diagnosebericht kopiert
     copyFailed: 'Fehler beim Kopieren des Diagnoseberichts: {{error}}'
 system:
+  dashboard:
+    title: Desktop-Kontrollzentrum
+    description: Bündelt Servicestatus, Start- und Stopp-Aktionen, aktive Version, Log-Zugänge und empfohlene Updates in einer fokussierten Arbeitsfläche.
   logQuickAccess:
     title: Schnellzugriff protokollieren
     description: Öffnen Sie die Desktop- und Web-App-Protokollordner direkt, um die Diagnosezeit zu verkürzen.

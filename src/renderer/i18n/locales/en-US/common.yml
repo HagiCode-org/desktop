@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: Diagnostic report copied
     copyFailed: 'Failed to copy diagnostic report: {{error}}'
 system:
+  dashboard:
+    title: Desktop Control Center
+    description: Keep service health, lifecycle actions, active version, log access, and recommended updates in one focused workspace.
   logQuickAccess:
     title: Log Quick Access
     description: Open the Desktop and Web App log folders directly to shorten diagnostics time.

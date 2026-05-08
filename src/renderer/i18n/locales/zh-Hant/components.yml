@@ -269,7 +269,8 @@ tray:
   startService: 啟動服務
   stopService: 停止服務
 blogFeed:
-  title: Hagicode 博客
+  title: 推薦與更新
+  description: 不離開控制台也能查看官方推薦消息與更新說明。
   openRss: 開啟 RSS
   openRssFailed: 無法開啟 RSS 連結
   refresh: 重新整理
@@ -277,3 +278,10 @@ blogFeed:
   error: 載入失敗，請稍後重試
   noArticles: 暫無文章
   lastUpdate: 最後更新：{{date}}
+  labels:
+    recommended: 推薦
+    updates: 更新
+    news: 資訊
+  actions:
+    readArticle: 查看詳情
+    openFeed: 開啟訂閱源

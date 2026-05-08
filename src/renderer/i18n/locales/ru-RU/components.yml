@@ -269,7 +269,8 @@ tray:
   startService: Запустить службу
   stopService: Остановить службу
 blogFeed:
-  title: Hagicode Блог
+  title: Рекомендации и обновления
+  description: Просматривайте официальные рекомендации и заметки об обновлениях, не покидая консоль управления.
   openRss: Открыть RSS
   openRssFailed: Не удалось открыть ссылку RSS
   refresh: Обновить
@@ -277,3 +278,10 @@ blogFeed:
   error: Не удалось загрузить, повторите попытку позже.
   noArticles: Нет доступных статей
   lastUpdate: 'Последнее обновление: {{date}}'
+  labels:
+    recommended: Рекомендовано
+    updates: Обновления
+    news: Новости
+  actions:
+    readArticle: Открыть статью
+    openFeed: Открыть ленту

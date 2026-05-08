@@ -414,6 +414,9 @@ systemDiagnostic:
     copySuccess: 診断レポートがコピーされました
     copyFailed: '診断レポートのコピーに失敗しました: {{error}}'
 system:
+  dashboard:
+    title: デスクトップ制御センター
+    description: サービス状態、開始と停止、アクティブなバージョン、ログ導線、推奨アップデートを 1 つの作業面にまとめます。
   logQuickAccess:
     title: ログのクイックアクセス
     description: 診断時間を短縮するには、デスクトップおよび Web アプリのログ フォルダーを直接開きます。

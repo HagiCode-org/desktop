@@ -269,7 +269,8 @@ tray:
   startService: Dienst starten
   stopService: Stoppen Sie den Dienst
 blogFeed:
-  title: Hagicode Blog
+  title: Empfehlungen und Updates
+  description: Prüfen Sie offizielle Hinweise und Update-Notizen, ohne die Steuerkonsole zu verlassen.
   openRss: RSS öffnen
   openRssFailed: RSS-Link konnte nicht geöffnet werden
   refresh: Aktualisieren
@@ -277,3 +278,10 @@ blogFeed:
   error: Das Laden ist fehlgeschlagen. Bitte versuchen Sie es später noch einmal
   noArticles: Keine Artikel verfügbar
   lastUpdate: 'Letzte Aktualisierung: {{date}}'
+  labels:
+    recommended: Empfehlung
+    updates: Updates
+    news: Neuigkeiten
+  actions:
+    readArticle: Artikel öffnen
+    openFeed: Feed öffnen
