@@ -2417,6 +2417,7 @@ app.whenReady().then(async () => {
   }
 
   dependencyManagementService = new DependencyManagementService();
+  webServiceManager?.setDependencyManagementService(dependencyManagementService);
   codeServerManager = new CodeServerManager({
     dependencyManagementService,
     configManager,
