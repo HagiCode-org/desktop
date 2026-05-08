@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-08T15:14:08.765+08:00",
+  "title": "Design System: Hagicode Desktop",
+  "extensions": {
+    "northStar": {
+      "name": "The Local Operations Console",
+      "summary": "A calm desktop control surface for local service operations, maintenance, and recommended updates."
+    },
+    "colorMeta": {
+      "accent-blue": {
+        "role": "primary",
+        "displayName": "Control Blue",
+        "canonical": "#3563E9",
+        "tonalRamp": ["#E6EDFF", "#9FB7FF", "#3563E9", "#2449B8"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Console Mist",
+        "canonical": "#F5F7FB",
+        "tonalRamp": ["#FBFCFE", "#F5F7FB", "#EEF2F8", "#D9E0EC"]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Night Surface",
+        "canonical": "#161E31",
+        "tonalRamp": ["#EEF2FB", "#98A6C3", "#2A3550", "#161E31", "#0F1525"]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Dashboard Headline",
+        "purpose": "Used for page and panel titles in the desktop shell."
+      },
+      "body": {
+        "displayName": "Operational Body",
+        "purpose": "Used for descriptions, helper text, and maintenance guidance."
+      },
+      "label": {
+        "displayName": "Compact Label",
+        "purpose": "Used for metadata, card labels, and small utility text."
+      }
+    },
+    "elevation": {
+      "defaultMode": "tonal-layering",
+      "shadows": {
+        "shell-frame": "0 10px 30px rgba(22, 32, 51, 0.06)",
+        "interactive-lift": "0 4px 12px rgba(22, 32, 51, 0.08)",
+        "dark-surface-lift": "0 12px 28px rgba(8, 12, 24, 0.28)"
+      }
+    },
+    "motion": {
+      "philosophy": "State-first motion only",
+      "durations": {
+        "fast": "150ms",
+        "default": "200ms"
+      },
+      "reducedMotion": "Decorative animation should collapse to nearly static behavior when prefers-reduced-motion is enabled."
+    },
+    "rules": {
+      "dos": [
+        "Keep operational state above secondary content.",
+        "Use a single blue accent for selection and primary action.",
+        "Maintain visible focus states and compact desktop spacing."
+      ],
+      "donts": [
+        "Do not make the dashboard feel like a marketing site.",
+        "Do not use large-area glass surfaces or neon glow.",
+        "Do not let visual effects outrank readability or task efficiency."
+      ]
+    }
+  }
+}
