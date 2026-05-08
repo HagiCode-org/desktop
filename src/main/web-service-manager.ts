@@ -20,21 +20,23 @@ import {
   SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX,
 } from './system-vault-env.js';
 import { loadConsoleEnvironment } from './shell-env-loader.js';
-import { injectManagedCliPathEnv } from './portable-toolchain-env.js';
 import { desktopHttpClient, type DesktopHttpClient } from './http-client.js';
 import { executeCli } from './utils/cli-executor.js';
-import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
-import {
-  evaluateRuntimeCompatibility,
-  validateBundledRuntimeForPlatform,
-  validateFrameworkDependentPayload,
-} from './embedded-runtime.js';
-import {
-  PM2_RUNTIME_DIR_NAME,
-  Pm2DotnetManager,
-  type Pm2LifecycleResult,
-} from './pm2-dotnet-manager.js';
+import { validateFrameworkDependentPayload } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility } from './desktop-compatibility.js';
+import type { DependencyManagementService } from './dependency-management-service.js';
+import {
+  HagiscriptRuntimeContextResolver,
+  type HagiscriptRuntimeContext,
+} from './hagiscript-runtime-context.js';
+import {
+  HagiscriptServerManager,
+  type HagiscriptManagedServerStatus,
+  type HagiscriptRuntimeStateReport,
+  type HagiscriptRuntimeStateResult,
+  type HagiscriptServerLifecycleAction,
+  type HagiscriptServerLifecycleResult,
+} from './hagiscript-server-manager.js';
 import {
   buildAccessUrl,
   coerceListenHost,
@@ -95,7 +97,9 @@ interface PreparedServiceEnvironment {
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
-  pm2Manager?: Pm2DotnetManager;
+  dependencyManagementService?: DependencyManagementService | null;
+  hagiscriptServerManager?: HagiscriptServerManager;
+  hagiscriptRuntimeContextResolver?: HagiscriptRuntimeContextResolver;
 }
 
 export interface StartupFailureInfo {
@@ -108,10 +112,6 @@ export interface StartupFailureInfo {
 
 type ManagedLaunchErrorCode =
   | 'invalid-service-payload'
-  | 'missing-runtime-payload'
-  | 'unofficial-runtime-source'
-  | 'pinned-runtime-mismatch'
-  | 'runtime-incompatible'
   | 'desktop-incompatible';
 
 class ManagedLaunchError extends Error {
@@ -128,7 +128,9 @@ export class PCodeWebServiceManager {
   private config: WebServiceConfig;
   private readonly configManager: ConfigManager | null;
   private readonly httpClient: DesktopHttpClient;
-  private readonly pm2Manager: Pm2DotnetManager;
+  private dependencyManagementService: DependencyManagementService | null;
+  private hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver | null;
+  private readonly hagiscriptServerManager: HagiscriptServerManager;
   private status: ProcessStatus = 'stopped';
   private startTime: number | null = null;
   private restartCount: number = 0;
@@ -148,7 +150,7 @@ export class PCodeWebServiceManager {
   private readonly startupLogMaxChars: number = 16 * 1024;
   private startupLogLines: string[] = [];
   private startupLogTruncated: boolean = false;
-  private lastPm2Env: NodeJS.ProcessEnv | null = null;
+  private lastResolvedServiceEnv: NodeJS.ProcessEnv | null = null;
   private lastPm2StatusWarningKey: string | null = null;
   private repeatedPm2StatusWarningSuppressed: boolean = false;
   private distributionMode: DistributionMode = 'normal';
@@ -161,8 +163,16 @@ export class PCodeWebServiceManager {
     };
     this.configManager = deps.configManager ?? null;
     this.httpClient = deps.httpClient ?? desktopHttpClient;
-    this.pm2Manager = deps.pm2Manager ?? new Pm2DotnetManager();
     this.pathManager = PathManager.getInstance();
+    this.dependencyManagementService = deps.dependencyManagementService ?? null;
+    this.hagiscriptRuntimeContextResolver = deps.hagiscriptRuntimeContextResolver
+      ?? (this.dependencyManagementService
+        ? new HagiscriptRuntimeContextResolver({
+            pathManager: this.pathManager,
+            dependencyManagementService: this.dependencyManagementService,
+          })
+        : null);
+    this.hagiscriptServerManager = deps.hagiscriptServerManager ?? new HagiscriptServerManager();
 
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
       log.error('[WebService] Failed to initialize saved bind config:', error);
@@ -181,6 +191,16 @@ export class PCodeWebServiceManager {
   setDistributionMode(distributionMode: DistributionMode): void {
     this.distributionMode = distributionMode;
     log.info('[WebService] Distribution mode set:', { distributionMode });
+  }
+
+  setDependencyManagementService(dependencyManagementService: DependencyManagementService | null): void {
+    this.dependencyManagementService = dependencyManagementService;
+    this.hagiscriptRuntimeContextResolver = dependencyManagementService
+      ? new HagiscriptRuntimeContextResolver({
+          pathManager: this.pathManager,
+          dependencyManagementService,
+        })
+      : null;
   }
 
   /**
@@ -309,14 +329,14 @@ export class PCodeWebServiceManager {
     this.repeatedPm2StatusWarningSuppressed = false;
   }
 
-  private logPm2StatusFailure(result: Extract<Pm2LifecycleResult, { success: false }>): void {
-    const warningKey = `${result.operation}:${result.errorCode}:${result.message}`;
+  private logPm2StatusFailure(result: HagiscriptServerLifecycleResult): void {
+    const warningKey = `${result.action}:${result.status}:${result.summary}`;
     if (this.lastPm2StatusWarningKey === warningKey) {
       if (!this.repeatedPm2StatusWarningSuppressed) {
-        log.info('[WebService] Suppressing repeated PM2 status warnings after the initial failure:', {
-          operation: result.operation,
-          errorCode: result.errorCode,
-          message: result.message,
+        log.info('[WebService] Suppressing repeated hagiscript PM2 status warnings after the initial failure:', {
+          action: result.action,
+          status: result.status,
+          summary: result.summary,
         });
         this.repeatedPm2StatusWarningSuppressed = true;
       }
@@ -325,10 +345,10 @@ export class PCodeWebServiceManager {
 
     this.lastPm2StatusWarningKey = warningKey;
     this.repeatedPm2StatusWarningSuppressed = false;
-    log.warn('[WebService] PM2 status unavailable:', {
-      operation: result.operation,
-      errorCode: result.errorCode,
-      message: result.message,
+    log.warn('[WebService] hagiscript PM2 status unavailable:', {
+      action: result.action,
+      status: result.status,
+      summary: result.summary,
     });
   }
 
@@ -380,111 +400,58 @@ export class PCodeWebServiceManager {
     };
   }
 
-  private buildManagedRuntimeEnvironment(
-    mergedEnv: NodeJS.ProcessEnv,
-    runtimeRoot: string,
-    dotnetPath: string,
-  ): NodeJS.ProcessEnv {
-    return {
-      ...mergedEnv,
-      DOTNET_ROOT: runtimeRoot,
-      DOTNET_MULTILEVEL_LOOKUP: '0',
-      HAGICODE_DOTNET_EXE: dotnetPath,
-    };
-  }
-
-
-  private getPm2RuntimeFilesDirectory(): string {
-    return path.join(this.pathManager.getPaths().config, PM2_RUNTIME_DIR_NAME);
-  }
-
-  private async resolveManagedPm2CommandEnvironment(baseEnv: NodeJS.ProcessEnv): Promise<{
-    env: NodeJS.ProcessEnv;
-    pathKey: string;
-    managedCliPath: string | null;
-    managedNpmGlobalPath: string | null;
-    managedNodeExecutablePath: string | null;
-    activationPolicy: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>['activationPolicy'];
-    pm2Home: string;
-  }> {
-    const bundledRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
-    const bundledToolchainStatus = await bundledRuntimeManager.verify();
-    const activationPolicy = bundledToolchainStatus.activationPolicy;
-    const nodeVersion = bundledToolchainStatus.manifest?.node?.version
-      ?? bundledToolchainStatus.components.node.version
-      ?? process.versions.node;
-    const npmGlobalPaths = activationPolicy.enabled === false
-      ? null
-      : this.pathManager.getNodeMajorNpmGlobalPaths({ nodeVersion });
-    const managedCliEnv = injectManagedCliPathEnv(baseEnv, {
-      activationPolicy,
-      npmGlobalPaths,
-    });
-    const pm2Version = await this.resolveManagedPm2Version(npmGlobalPaths?.npmGlobalModulesRoot ?? null);
-    const pm2HomePaths = await this.pathManager.ensurePm2MajorHomeDirectory({ pm2Version });
-    const managedNodeExecutablePath = activationPolicy.enabled === false
-      ? null
-      : this.pathManager.getPortableNodeExecutablePath();
-
-    const env: NodeJS.ProcessEnv = {
-      ...managedCliEnv.env,
-      PM2_HOME: pm2HomePaths.pm2Home,
-    };
-    if (managedNodeExecutablePath) {
-      env.NODE = managedNodeExecutablePath;
-      env.npm_node_execpath = managedNodeExecutablePath;
-      env.HAGICODE_PM2_NODE_EXECUTABLE = managedNodeExecutablePath;
-      env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = this.pathManager.getPortableToolchainRoot();
-    }
-
-    return {
-      env,
-      pathKey: managedCliEnv.pathKey,
-      managedCliPath: managedCliEnv.managedCliPath,
-      managedNpmGlobalPath: managedCliEnv.managedNpmGlobalPath,
-      managedNodeExecutablePath,
-      activationPolicy,
-      pm2Home: pm2HomePaths.pm2Home,
-    };
-  }
-
-  private async resolveManagedPm2Version(npmGlobalModulesRoot: string | null): Promise<string | null> {
-    if (!npmGlobalModulesRoot) {
-      return null;
-    }
-
-    const packageJsonPath = path.join(npmGlobalModulesRoot, 'pm2', 'package.json');
+  private async appendDiagnosticFile(pathValue: string): Promise<void> {
     try {
-      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent) as { version?: unknown };
-      return typeof packageJson.version === 'string' ? packageJson.version : null;
-    } catch {
-      return null;
+      const content = await fs.readFile(pathValue, 'utf8');
+      this.appendStartupLogLine(`Diagnostic file: ${pathValue}`);
+      this.appendDiagnosticOutput(path.basename(pathValue), content);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+
+      log.warn('[WebService] Failed to read diagnostic file:', { path: pathValue, error });
     }
   }
 
-  private buildPm2LifecycleFailureResult(result: Pm2LifecycleResult): StartResult {
-    const message = result.success ? 'PM2 command failed unexpectedly' : result.message;
-    this.appendStartupLogLine(`PM2 ${result.operation} failure summary: ${message}`);
-    this.appendDiagnosticOutput('PM2 stdout', result.stdout);
-    this.appendDiagnosticOutput('PM2 stderr', result.stderr);
-    const failure = this.buildStartupFailureInfo(message);
+  private async appendHagiscriptDiagnostics(input: {
+    summary: string;
+    stdout: string;
+    stderr: string;
+    logPaths: readonly string[];
+  }): Promise<void> {
+    this.appendStartupLogLine(`hagiscript failure summary: ${input.summary}`);
+    this.appendDiagnosticOutput('hagiscript stdout', input.stdout);
+    this.appendDiagnosticOutput('hagiscript stderr', input.stderr);
+    for (const logPath of input.logPaths) {
+      await this.appendDiagnosticFile(logPath);
+    }
+  }
+
+  private async buildHagiscriptLifecycleFailureResult(result: HagiscriptServerLifecycleResult): Promise<StartResult> {
+    await this.appendHagiscriptDiagnostics({
+      summary: result.summary,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      logPaths: result.logPaths,
+    });
+    const failure = this.buildStartupFailureInfo(result.summary);
 
     return {
       success: false,
       resultSession: {
-        exitCode: -1,
+        exitCode: result.exitCode ?? -1,
         stdout: result.stdout,
-        stderr: result.stderr || message,
+        stderr: result.stderr || result.summary,
         duration: 0,
         timestamp: failure.timestamp,
         success: false,
-        errorMessage: message,
+        errorMessage: result.summary,
         port: failure.port,
       },
       parsedResult: {
         success: false,
-        errorMessage: message,
+        errorMessage: result.summary,
         rawOutput: failure.log,
         port: failure.port,
       },
@@ -493,13 +460,9 @@ export class PCodeWebServiceManager {
   }
 
   private async resolveManagedLaunchContext(): Promise<{
-    runtimeRoot: string;
-    dotnetPath: string;
     serviceDllPath: string;
     serviceWorkingDirectory: string;
-    bundledRuntimeVersion?: string;
     requiredRuntimeLabel?: string;
-    runtimeSource?: string;
   }> {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
@@ -522,58 +485,63 @@ export class PCodeWebServiceManager {
       );
     }
 
-    const runtimeRoot = this.pathManager.getPinnedRuntimeRoot();
-    const bundledRuntimeValidation = await validateBundledRuntimeForPlatform({
-      platform: this.pathManager.getCurrentPlatform(),
-      runtimeRoot,
-      requirement: payloadValidation.requirement,
-      executableName: this.pathManager.getEmbeddedDotnetExecutableName(),
-    });
-
-    if (!bundledRuntimeValidation.valid) {
-      throw new ManagedLaunchError(
-        bundledRuntimeValidation.code ?? 'runtime-incompatible',
-        bundledRuntimeValidation.message ?? 'Bundled Desktop runtime validation failed.',
-      );
-    }
-
-    const runtimeValidation = bundledRuntimeValidation.runtimeValidation;
-    const pinnedRuntimeValidation = bundledRuntimeValidation.pinnedRuntimeValidation;
-    const compatibility = bundledRuntimeValidation.compatibility
-      ?? (payloadValidation.requirement
-        ? evaluateRuntimeCompatibility(payloadValidation.requirement, runtimeValidation.aspNetCoreVersion)
-        : undefined);
-
-    if (compatibility && !compatibility.compatible) {
-      throw new ManagedLaunchError(
-        'runtime-incompatible',
-        `Pinned runtime version incompatible. ${compatibility.reason ?? 'Unsupported ASP.NET Core version.'}`,
-      );
-    }
-
-    log.info('[WebService] Using pinned runtime root:', runtimeRoot);
-    log.info('[WebService] Using pinned dotnet executable:', runtimeValidation.dotnetPath);
     log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
     log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
-    if (runtimeValidation.aspNetCoreVersion) {
-      log.info('[WebService] Pinned ASP.NET Core runtime:', runtimeValidation.aspNetCoreVersion);
-    }
-    if (pinnedRuntimeValidation.metadata?.downloadUrl) {
-      log.info('[WebService] Pinned runtime source:', pinnedRuntimeValidation.metadata.downloadUrl);
-    }
     if (payloadValidation.requirement?.effectiveLabel) {
       log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
     }
 
     return {
-      runtimeRoot,
-      dotnetPath: runtimeValidation.dotnetPath,
       serviceDllPath: payloadValidation.payloadPaths.serviceDllPath,
       serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
-      bundledRuntimeVersion: runtimeValidation.aspNetCoreVersion,
       requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
-      runtimeSource: pinnedRuntimeValidation.metadata?.downloadUrl,
     };
+  }
+
+  private async resolveHagiscriptRuntimeContext(
+    servicePayloadPath: string,
+    serviceWorkingDirectory: string,
+    serviceEnv?: NodeJS.ProcessEnv,
+  ): Promise<HagiscriptRuntimeContext> {
+    if (!this.activeRuntime) {
+      throw new Error('No active runtime set');
+    }
+
+    if (!this.hagiscriptRuntimeContextResolver) {
+      throw new Error('Desktop managed hagiscript is not initialized yet.');
+    }
+
+    return await this.hagiscriptRuntimeContextResolver.resolve({
+      activeRuntime: this.activeRuntime,
+      servicePayloadPath,
+      serviceWorkingDirectory,
+      serviceEnv,
+    });
+  }
+
+  private buildHagiscriptServiceEnvironment(baseEnv: NodeJS.ProcessEnv | undefined): NodeJS.ProcessEnv {
+    return {
+      ...(baseEnv ?? {}),
+      ...(this.config.env ?? {}),
+      ASPNETCORE_ENVIRONMENT: baseEnv?.ASPNETCORE_ENVIRONMENT ?? this.config.env?.ASPNETCORE_ENVIRONMENT ?? 'Production',
+      ASPNETCORE_URLS: buildAccessUrl(this.config.host, this.config.port),
+    };
+  }
+
+  private mapPm2StatusToProcessStatus(status: HagiscriptManagedServerStatus): ProcessStatus {
+    switch (status) {
+      case 'online':
+        return 'running';
+      case 'stopped':
+      case 'missing':
+        return 'stopped';
+      default:
+        return 'error';
+    }
+  }
+
+  private getServerRuntimeState(report: HagiscriptRuntimeStateReport | null): HagiscriptRuntimeStateReport['components'][number] | null {
+    return report?.components.find((component) => component.name === 'server') ?? null;
   }
 
   /**
@@ -1003,210 +971,7 @@ export class PCodeWebServiceManager {
       return this.buildStartupFailureResult('No active version set');
     }
 
-    try {
-      this.status = 'starting';
-      log.info('[WebService] Starting with configured host/port:', {
-        host: this.config.host,
-        port: this.config.port,
-      });
-
-      let launchContext: {
-        runtimeRoot: string;
-        dotnetPath: string;
-        serviceDllPath: string;
-        serviceWorkingDirectory: string;
-        bundledRuntimeVersion?: string;
-        requiredRuntimeLabel?: string;
-        runtimeSource?: string;
-      };
-
-      try {
-        launchContext = await this.resolveManagedLaunchContext();
-        this.appendStartupLogLine(`Pinned runtime root: ${launchContext.runtimeRoot}`);
-        this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
-        this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
-        if (launchContext.bundledRuntimeVersion) {
-          this.appendStartupLogLine(`Pinned ASP.NET Core runtime: ${launchContext.bundledRuntimeVersion}`);
-        }
-        if (launchContext.runtimeSource) {
-          this.appendStartupLogLine(`Pinned runtime source: ${launchContext.runtimeSource}`);
-        }
-        if (launchContext.requiredRuntimeLabel) {
-          this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorCode = error instanceof ManagedLaunchError ? error.code : 'runtime-incompatible';
-        log.error('[WebService] Managed runtime validation failed:', errorCode, errorMessage);
-        log.error('[WebService] Packaged Desktop does not fall back to a machine-wide dotnet installation.');
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, errorMessage);
-        this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
-        return this.buildStartupFailureResult(errorMessage);
-      }
-
-      let preparedEnv: NodeJS.ProcessEnv;
-      let envMode: WebServiceConfigMode = 'env';
-      try {
-        const prepared = await this.prepareServiceEnvironment();
-        const runtimeEnv = this.buildManagedRuntimeEnvironment(
-          prepared.mergedEnv,
-          launchContext.runtimeRoot,
-          launchContext.dotnetPath,
-        );
-        const managedPm2Env = await this.resolveManagedPm2CommandEnvironment(runtimeEnv);
-        preparedEnv = managedPm2Env.env;
-        envMode = prepared.mode;
-        const pathKey = managedPm2Env.pathKey;
-        this.appendStartupLogLine(`DOTNET_ROOT=${launchContext.runtimeRoot}`);
-        this.appendStartupLogLine('DOTNET_MULTILEVEL_LOOKUP=0');
-        this.appendStartupLogLine(`HAGICODE_DOTNET_EXE=${launchContext.dotnetPath}`);
-        this.appendStartupLogLine(`PM2_HOME=${managedPm2Env.pm2Home}`);
-        this.appendStartupLogLine(`Desktop-managed PM2 home keeps PM2 metadata under ${managedPm2Env.pm2Home}`);
-        this.appendStartupLogLine(`${pathKey} prepends only the managed npm-global CLI command directory when available; Desktop does not prepend bundled Node/npm paths for the managed server`);
-        this.appendStartupLogLine('Bundled dotnet is exposed explicitly through HAGICODE_DOTNET_EXE instead of PATH');
-        this.appendStartupLogLine(`Bundled Node toolchain policy for Desktop-managed package operations: enabled=${managedPm2Env.activationPolicy.enabled}, source=${managedPm2Env.activationPolicy.source}`);
-        if (managedPm2Env.managedNpmGlobalPath) {
-          this.appendStartupLogLine(`HAGICODE_NPM_GLOBAL_PATH=${managedPm2Env.managedNpmGlobalPath}`);
-        }
-        if (managedPm2Env.managedCliPath) {
-          this.appendStartupLogLine(`HAGICODE_AGENT_CLI_PATH=${managedPm2Env.managedCliPath}`);
-          this.appendStartupLogLine(`Desktop-managed server startup prepends ${pathKey} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH`);
-        }
-        if (managedPm2Env.managedNodeExecutablePath) {
-          this.appendStartupLogLine(`HAGICODE_PM2_NODE_EXECUTABLE=${managedPm2Env.managedNodeExecutablePath}`);
-          this.appendStartupLogLine(`PM2 CLI is launched through the managed Node executable ${managedPm2Env.managedNodeExecutablePath}`);
-        }
-        if (managedPm2Env.managedNpmGlobalPath || managedPm2Env.managedCliPath) {
-          log.info('[WebService] Managed server startup prepending managed CLI PATH with scoped npm metadata:', {
-            pathKey,
-            managedCliPath: managedPm2Env.managedCliPath,
-            managedNpmGlobalPath: managedPm2Env.managedNpmGlobalPath,
-            managedNodeExecutablePath: managedPm2Env.managedNodeExecutablePath,
-            activationPolicy: managedPm2Env.activationPolicy,
-            pm2Home: managedPm2Env.pm2Home,
-            managedCliPathPrepended: managedPm2Env.managedCliPath !== null,
-            bundledNodePathPrepended: false,
-          });
-        } else {
-          this.appendStartupLogLine(`Desktop-managed server startup preserves inherited ${pathKey} because no managed Agent CLI path hint is available; Desktop still does not prepend bundled Node/npm paths`);
-          log.info('[WebService] Managed Agent CLI path injection unavailable; preserving inherited PATH without bundled Node/npm path prepends:', {
-            activationPolicy: managedPm2Env.activationPolicy,
-            pm2Home: managedPm2Env.pm2Home,
-            bundledNodePathPrepended: false,
-          });
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        log.error('[WebService] Failed to prepare environment injection:', errorMessage);
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, `Environment injection failed: ${errorMessage}`);
-        this.appendStartupLogLine(`Start failed: environment injection failed - ${errorMessage}`);
-        return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
-      }
-
-      this.emitPhase(StartupPhase.Spawning, 'Starting service with pinned dotnet executable through PM2...');
-      const spawnArgs = [launchContext.serviceDllPath, ...(this.config.args || [])];
-      const pm2RuntimeDirectory = this.getPm2RuntimeFilesDirectory();
-      this.appendStartupLogLine(`PM2 managed service: ${launchContext.dotnetPath} ${spawnArgs.join(' ')}`);
-      this.appendStartupLogLine(`PM2 runtime files directory: ${pm2RuntimeDirectory}`);
-
-      if (await this.isManagedServiceReachable(this.config.port)) {
-        log.warn('[WebService] Target port is reachable before PM2 start; PM2 start may fail if this is a non-PM2 port conflict:', {
-          port: this.config.port,
-        });
-        this.appendStartupLogLine(`Target port ${this.config.port} is already reachable before PM2 start`);
-      }
-
-      const pm2StartResult = await this.pm2Manager.startFresh({
-        dotnetPath: launchContext.dotnetPath,
-        serviceDllPath: launchContext.serviceDllPath,
-        serviceWorkingDirectory: launchContext.serviceWorkingDirectory,
-        runtimeFilesDirectory: pm2RuntimeDirectory,
-        args: this.config.args || [],
-        env: preparedEnv,
-      });
-
-      if (!pm2StartResult.success) {
-        log.error('[WebService] PM2 start failed:', {
-          operation: pm2StartResult.operation,
-          errorCode: pm2StartResult.errorCode,
-          message: pm2StartResult.message,
-        });
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, pm2StartResult.message);
-        this.appendStartupLogLine(`Start failed [${pm2StartResult.errorCode}]: ${pm2StartResult.message}`);
-        return this.buildPm2LifecycleFailureResult(pm2StartResult);
-      }
-
-      this.lastPm2Env = preparedEnv;
-
-      // Wait for listening
-      this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
-      const listening = await this.waitForPortListening();
-      if (!listening) {
-        log.error('[WebService] Process not listening on port');
-        this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
-        this.appendStartupLogLine(`Start failed: service did not listen on ${this.config.host}:${this.config.port}`);
-        await this.stop();
-        this.status = 'error';
-        return this.buildStartupFailureResult('Service failed to start listening');
-      }
-
-      // Health check
-      this.emitPhase(StartupPhase.HealthCheck, 'Performing health check...');
-      const healthCheckPassed = await this.waitForHealthCheck();
-
-      if (healthCheckPassed) {
-        this.status = 'running';
-        this.startTime = Date.now();
-        this.resetPm2StatusWarningState();
-
-        // Persist successful bind configuration for future starts without storing process identity.
-        await this.saveLastSuccessfulConfig();
-
-        log.info('[WebService] Service started successfully on port:', this.config.port);
-        log.info('[WebService] Environment injection confirmed:', {
-          mode: envMode,
-          managedVariableCount: this.lastManagedEnvSnapshot.length,
-        });
-        this.emitPhase(StartupPhase.Running, 'Service is running');
-        log.info('[WebService] Started successfully via PM2 process name');
-
-        // Return success result with URL and port
-        return {
-          success: true,
-          resultSession: {
-            exitCode: 0,
-            stdout: '',
-            stderr: '',
-            duration: 0,
-            timestamp: new Date().toISOString(),
-            success: true,
-          },
-          parsedResult: {
-            success: true,
-            rawOutput: '',
-          },
-          url: buildAccessUrl(this.config.host, this.config.port),
-          port: this.config.port,
-        };
-      } else {
-        log.error('[WebService] Health check failed');
-        this.emitPhase(StartupPhase.Error, 'Health check failed');
-        this.appendStartupLogLine('Start failed: health check did not pass within timeout');
-        await this.stop();
-        this.status = 'error';
-        return this.buildStartupFailureResult('Health check failed');
-      }
-    } catch (error) {
-      log.error('[WebService] Failed to start:', error);
-      this.status = 'error';
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
-      this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
-      return this.buildStartupFailureResult(errorMessage);
-    }
+    return await this.runLifecycleTransition('start');
   }
 
   /**
@@ -1235,20 +1000,30 @@ export class PCodeWebServiceManager {
       this.status = 'stopping';
       log.info('[WebService] Stopping web service...');
 
-      const pm2Env = await this.resolveManagedPm2CommandEnvironment(this.lastPm2Env ?? process.env);
-      const pm2Stop = await this.pm2Manager.stop(this.getPm2RuntimeFilesDirectory(), pm2Env.env);
-      if (!pm2Stop.success) {
-        log.error('[WebService] PM2 stop failed:', {
-          operation: pm2Stop.operation,
-          errorCode: pm2Stop.errorCode,
-          message: pm2Stop.message,
+      const launchContext = await this.resolveManagedLaunchContext();
+      const context = await this.resolveHagiscriptRuntimeContext(
+        launchContext.serviceDllPath,
+        launchContext.serviceWorkingDirectory,
+        this.lastResolvedServiceEnv ?? this.buildHagiscriptServiceEnvironment(this.config.env),
+      );
+      let stopResult: HagiscriptServerLifecycleResult;
+      try {
+        stopResult = await this.hagiscriptServerManager.stop(context);
+      } finally {
+        await context.cleanup();
+      }
+
+      if (!stopResult.success && !['missing', 'stopped'].includes(stopResult.status)) {
+        log.error('[WebService] hagiscript stop failed:', {
+          status: stopResult.status,
+          summary: stopResult.summary,
         });
         this.status = 'error';
         return false;
       }
 
       this.status = 'stopped';
-      this.lastPm2Env = null;
+      this.lastResolvedServiceEnv = null;
       this.startTime = null;
       this.restartCount = 0;
       this.currentPhase = StartupPhase.Idle;
@@ -1267,10 +1042,8 @@ export class PCodeWebServiceManager {
    */
   async restart(): Promise<StartResult> {
     log.info('[WebService] Restarting web service...');
-    this.status = 'stopped';
     this.restartCount = 0;
-    this.currentPhase = StartupPhase.Idle;
-    return await this.start();
+    return await this.runLifecycleTransition('restart');
   }
 
   /**
@@ -1292,23 +1065,71 @@ export class PCodeWebServiceManager {
   private async getStatusInternal(): Promise<ProcessInfo> {
     await this.ensureSavedConfigInitialized();
 
-    const pm2Env = await this.resolveManagedPm2CommandEnvironment(this.lastPm2Env ?? process.env);
-    const pm2Status = await this.pm2Manager.status(this.getPm2RuntimeFilesDirectory(), pm2Env.env);
-    if (pm2Status.success && pm2Status.status) {
-      this.lastPm2Env = pm2Env.env;
-      this.resetPm2StatusWarningState();
-      if (pm2Status.status.online) {
+    if (!this.activeVersionPath || !this.activeRuntime) {
+      this.status = 'stopped';
+      this.currentPhase = StartupPhase.Idle;
+      this.startTime = null;
+      this.restartCount = 0;
+      return {
+        status: this.status,
+        uptime: 0,
+        startTime: null,
+        url: null,
+        restartCount: 0,
+        phase: this.currentPhase,
+        port: this.config.port,
+        host: this.config.host,
+      };
+    }
+
+    const launchContext = await this.resolveManagedLaunchContext();
+    const context = await this.resolveHagiscriptRuntimeContext(
+      launchContext.serviceDllPath,
+      launchContext.serviceWorkingDirectory,
+      this.lastResolvedServiceEnv ?? this.buildHagiscriptServiceEnvironment(this.config.env),
+    );
+    let lifecycleResult: HagiscriptServerLifecycleResult;
+    let runtimeStateResult: HagiscriptRuntimeStateResult | null = null;
+    try {
+      lifecycleResult = await this.hagiscriptServerManager.status(context);
+      if (lifecycleResult.status === 'online') {
+        runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(context);
+      }
+    } finally {
+      await context.cleanup();
+    }
+
+    if (!lifecycleResult.success) {
+      this.logPm2StatusFailure(lifecycleResult);
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.startTime = null;
+      this.restartCount = 0;
+    } else if (lifecycleResult.status === 'online') {
+      const healthCheckPassed = await this.performHealthCheck();
+      if (healthCheckPassed) {
         this.status = 'running';
         this.currentPhase = StartupPhase.Running;
-        this.startTime = this.startTime ?? Date.now() - pm2Status.status.uptime;
-        this.restartCount = pm2Status.status.restartCount;
-      } else if (this.status === 'running') {
-        this.status = 'stopped';
-        this.currentPhase = StartupPhase.Idle;
-        this.startTime = null;
+        this.startTime = lifecycleResult.pmUptime ?? this.startTime ?? Date.now();
+      } else {
+        const serverState = this.getServerRuntimeState(runtimeStateResult?.report ?? null);
+        const releasedServiceReady = serverState?.details?.releasedServiceReady;
+        this.status = 'error';
+        this.currentPhase = StartupPhase.Error;
+        this.appendStartupLogLine(
+          releasedServiceReady === false
+            ? 'hagiscript PM2 reports the server online, but the released-service payload is not ready.'
+            : 'hagiscript PM2 reports the server online, but Desktop health verification failed.',
+        );
+        this.startTime = lifecycleResult.pmUptime ?? this.startTime;
       }
-    } else if (!pm2Status.success) {
-      this.logPm2StatusFailure(pm2Status);
+      this.restartCount = lifecycleResult.restartCount;
+      this.resetPm2StatusWarningState();
+    } else {
+      this.status = this.mapPm2StatusToProcessStatus(lifecycleResult.status);
+      this.currentPhase = this.status === 'stopped' ? StartupPhase.Idle : StartupPhase.Error;
+      this.startTime = null;
+      this.restartCount = lifecycleResult.restartCount;
     }
 
     const uptime = this.startTime ? Date.now() - this.startTime : 0;
@@ -1324,6 +1145,199 @@ export class PCodeWebServiceManager {
       port: this.config.port,
       host: this.config.host,
     };
+  }
+
+  private async runLifecycleTransition(action: HagiscriptServerLifecycleAction): Promise<StartResult> {
+    try {
+      this.status = 'starting';
+      log.info('[WebService] Starting with configured host/port:', {
+        host: this.config.host,
+        port: this.config.port,
+        action,
+      });
+
+      let launchContext: {
+        serviceDllPath: string;
+        serviceWorkingDirectory: string;
+        requiredRuntimeLabel?: string;
+      };
+
+      try {
+        launchContext = await this.resolveManagedLaunchContext();
+        this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
+        this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
+        if (launchContext.requiredRuntimeLabel) {
+          this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorCode = error instanceof ManagedLaunchError ? error.code : 'invalid-service-payload';
+        log.error('[WebService] Service payload validation failed:', errorCode, errorMessage);
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, errorMessage);
+        this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
+        return this.buildStartupFailureResult(errorMessage);
+      }
+
+      let preparedEnv: NodeJS.ProcessEnv;
+      let envMode: WebServiceConfigMode = 'env';
+      try {
+        const prepared = await this.prepareServiceEnvironment();
+        preparedEnv = this.buildHagiscriptServiceEnvironment(prepared.mergedEnv);
+        envMode = prepared.mode;
+        this.lastResolvedServiceEnv = preparedEnv;
+        this.appendStartupLogLine(`ASPNETCORE_URLS=${preparedEnv.ASPNETCORE_URLS}`);
+        this.appendStartupLogLine(`ASPNETCORE_ENVIRONMENT=${preparedEnv.ASPNETCORE_ENVIRONMENT}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log.error('[WebService] Failed to prepare environment injection:', errorMessage);
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, `Environment injection failed: ${errorMessage}`);
+        this.appendStartupLogLine(`Start failed: environment injection failed - ${errorMessage}`);
+        return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
+      }
+
+      const context = await this.resolveHagiscriptRuntimeContext(
+        launchContext.serviceDllPath,
+        launchContext.serviceWorkingDirectory,
+        preparedEnv,
+      );
+      let lifecycleResult: HagiscriptServerLifecycleResult;
+      let runtimeStateResult: HagiscriptRuntimeStateResult | null = null;
+      try {
+        this.emitPhase(
+          StartupPhase.Spawning,
+          action === 'restart'
+            ? 'Restarting service via hagiscript PM2...'
+            : 'Starting service via hagiscript PM2...',
+        );
+        this.appendStartupLogLine(`hagiscript executable: ${context.hagiscriptExecutablePath}`);
+        this.appendStartupLogLine(`hagiscript manifest override: ${context.manifestPath}`);
+        this.appendStartupLogLine(`hagiscript runtime home: ${context.runtimeHome}`);
+        this.appendStartupLogLine(`hagiscript runtime data root: ${context.runtimeDataRoot}`);
+        this.appendStartupLogLine(`hagiscript PM2 home: ${context.pm2Home}`);
+        this.appendStartupLogLine(`hagiscript runtime files directory: ${context.runtimeFilesDir}`);
+
+        if (await this.isManagedServiceReachable(this.config.port)) {
+          log.warn('[WebService] Target port is reachable before hagiscript start; lifecycle start may fail if another process owns it:', {
+            port: this.config.port,
+          });
+          this.appendStartupLogLine(`Target port ${this.config.port} is already reachable before hagiscript PM2 action`);
+        }
+
+        lifecycleResult = action === 'restart'
+          ? await this.hagiscriptServerManager.restart(context)
+          : await this.hagiscriptServerManager.start(context);
+
+        if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
+          runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(context);
+        }
+      } finally {
+        await context.cleanup();
+      }
+
+      if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
+        if (runtimeStateResult) {
+          await this.appendHagiscriptDiagnostics({
+            summary: runtimeStateResult.summary,
+            stdout: runtimeStateResult.stdout,
+            stderr: runtimeStateResult.stderr,
+            logPaths: runtimeStateResult.logPaths,
+          });
+        }
+        this.status = 'error';
+        this.emitPhase(StartupPhase.Error, lifecycleResult.summary);
+        return await this.buildHagiscriptLifecycleFailureResult(
+          lifecycleResult.success
+            ? {
+                ...lifecycleResult,
+                success: false,
+                summary: `hagiscript PM2 reported ${lifecycleResult.status} during ${action}.`,
+              }
+            : lifecycleResult,
+        );
+      }
+
+      this.restartCount = lifecycleResult.restartCount;
+      this.startTime = lifecycleResult.pmUptime ?? Date.now();
+
+      this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
+      const listening = await this.waitForPortListening();
+      if (!listening) {
+        this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
+        this.appendStartupLogLine(`Start failed: service did not listen on ${this.config.host}:${this.config.port}`);
+        await this.stop();
+        this.status = 'error';
+        return this.buildStartupFailureResult('Service failed to start listening');
+      }
+
+      this.emitPhase(StartupPhase.HealthCheck, 'Performing health check...');
+      const healthCheckPassed = await this.waitForHealthCheck();
+      if (!healthCheckPassed) {
+        const contextForDiagnostics = await this.resolveHagiscriptRuntimeContext(
+          launchContext.serviceDllPath,
+          launchContext.serviceWorkingDirectory,
+          preparedEnv,
+        );
+        try {
+          const runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(contextForDiagnostics);
+          await this.appendHagiscriptDiagnostics({
+            summary: runtimeStateResult.summary,
+            stdout: runtimeStateResult.stdout,
+            stderr: runtimeStateResult.stderr,
+            logPaths: runtimeStateResult.logPaths,
+          });
+        } finally {
+          await contextForDiagnostics.cleanup();
+        }
+        log.error('[WebService] Health check failed');
+        this.emitPhase(StartupPhase.Error, 'Health check failed');
+        this.appendStartupLogLine('Start failed: health check did not pass within timeout');
+        await this.stop();
+        this.status = 'error';
+        return this.buildStartupFailureResult('Health check failed');
+      }
+
+      this.status = 'running';
+      this.resetPm2StatusWarningState();
+      await this.saveLastSuccessfulConfig();
+
+      log.info('[WebService] Service started successfully on port:', this.config.port);
+      log.info('[WebService] Environment injection confirmed:', {
+        mode: envMode,
+        managedVariableCount: this.lastManagedEnvSnapshot.length,
+      });
+      this.emitPhase(StartupPhase.Running, 'Service is running');
+
+      return {
+        success: true,
+        resultSession: {
+          exitCode: lifecycleResult.exitCode ?? -1,
+          stdout: lifecycleResult.stdout,
+          stderr: lifecycleResult.stderr,
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          success: true,
+          port: this.config.port,
+          url: buildAccessUrl(this.config.host, this.config.port),
+        },
+        parsedResult: {
+          success: true,
+          rawOutput: lifecycleResult.summary,
+          port: this.config.port,
+          url: buildAccessUrl(this.config.host, this.config.port),
+        },
+        url: buildAccessUrl(this.config.host, this.config.port),
+        port: this.config.port,
+      };
+    } catch (error) {
+      log.error('[WebService] Failed to start:', error);
+      this.status = 'error';
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
+      this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
+      return this.buildStartupFailureResult(errorMessage);
+    }
   }
 
   /**

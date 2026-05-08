@@ -12,6 +12,8 @@ import {
 import { resolveBundledNodeRuntimePolicy } from '../bundled-node-runtime-policy.js';
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
+const hagiscriptRuntimeContextPath = path.resolve(process.cwd(), 'src/main/hagiscript-runtime-context.ts');
+const hagiscriptServerManagerPath = path.resolve(process.cwd(), 'src/main/hagiscript-server-manager.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
 const retiredCompatibilityPayloadField = 'startup' + 'Compatibility';
 
@@ -22,7 +24,7 @@ describe('web-service startup flow', () => {
     assert.equal(source.includes('StartupPhase.CheckingPort'), false);
     assert.equal(source.includes('Checking port availability...'), false);
     assert.equal(source.includes('evaluateFixedPortStartup'), false);
-    assert.match(source, /emitPhase\(StartupPhase\.Spawning/);
+    assert.match(source, /emitPhase\(\s*StartupPhase\.Spawning/);
     assert.match(source, /waitForPortListening\(\)/);
     assert.match(source, /waitForHealthCheck\(\)/);
   });
@@ -32,53 +34,36 @@ describe('web-service startup flow', () => {
 
     assert.match(source, /A manual\s*\n\s*\/\/ Desktop start should always get a fresh attempt/);
     assert.match(source, /this\.restartCount = 0;\n\n    if \(this\.status === 'running'\)/);
-    assert.match(source, /this\.lastPm2Env = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;/);
-    assert.match(source, /this\.status = 'stopped';\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;\n\s*return await this\.start\(\);/);
+    assert.match(source, /this\.lastResolvedServiceEnv = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;/);
+    assert.match(source, /return await this\.runLifecycleTransition\('restart'\);/);
   });
 
-  it('starts the managed DLL through PM2 with the pinned dotnet runtime and runtime isolation env', async () => {
-    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+  it('routes lifecycle through the hagiscript adapter and runtime context resolver', async () => {
+    const webServiceSource = await fs.readFile(webServiceManagerPath, 'utf-8');
+    const runtimeContextSource = await fs.readFile(hagiscriptRuntimeContextPath, 'utf-8');
+    const serverManagerSource = await fs.readFile(hagiscriptServerManagerPath, 'utf-8');
 
-    assert.match(source, /resolveManagedLaunchContext/);
-    assert.match(source, /validateBundledRuntimeForPlatform/);
-    assert.match(source, /Starting service with pinned dotnet executable through PM2/);
-    assert.match(source, /resolveManagedPm2CommandEnvironment/);
-    assert.match(source, /injectManagedCliPathEnv\(baseEnv, \{/);
-    assert.match(source, /ensurePm2MajorHomeDirectory/);
-    assert.doesNotMatch(source, /DevNodeRuntimeManager/);
-    assert.doesNotMatch(source, /HAGICODE_DEV_NODE_RUNTIME_ROOT/);
-    assert.doesNotMatch(source, /prepends development Node runtime paths/);
-    assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
-    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
-    assert.match(source, /HAGICODE_PM2_NODE_EXECUTABLE/);
-    assert.match(source, /PM2_HOME=/);
-    assert.match(source, /Desktop-managed PM2 home keeps PM2 metadata under/);
-    assert.match(source, /const spawnArgs = \[launchContext\.serviceDllPath, \.\.\.\(this\.config\.args \|\| \[\]\)\]/);
-    assert.match(source, /serviceWorkingDirectory: path\.dirname\(payloadValidation\.payloadPaths\.serviceDllPath\)/);
-    assert.match(source, /this\.pm2Manager\.startFresh\(\{/);
-    assert.match(source, /env: preparedEnv,/);
-    assert.match(source, /isManagedServiceReachable\(this\.config\.port\)/);
-    assert.doesNotMatch(source, /terminateLingeringServiceByPort/);
-    assert.match(source, /PM2 start may fail if this is a non-PM2 port conflict/);
-    assert.match(source, /buildManagedRuntimeEnvironment\(\s*prepared\.mergedEnv,\s*launchContext\.runtimeRoot,\s*launchContext\.dotnetPath,\s*\)/);
-    assert.match(source, /dotnetPath: launchContext\.dotnetPath/);
-    assert.match(source, /serviceDllPath: launchContext\.serviceDllPath/);
-    assert.match(source, /serviceWorkingDirectory: launchContext\.serviceWorkingDirectory/);
-    assert.match(source, /DOTNET_ROOT: runtimeRoot/);
-    assert.match(source, /DOTNET_MULTILEVEL_LOOKUP: '0'/);
-    assert.match(source, /HAGICODE_DOTNET_EXE: dotnetPath/);
-    assert.match(source, /appendStartupLogLine\(`HAGICODE_DOTNET_EXE=\$\{launchContext\.dotnetPath\}`\)/);
-    assert.match(source, /prepends only the managed npm-global CLI command directory when available; Desktop does not prepend bundled Node\/npm paths for the managed server/);
-    assert.doesNotMatch(source, /includes pinned runtime root/);
-    assert.match(source, /Managed server startup prepending managed CLI PATH with scoped npm metadata/);
-    assert.match(source, /managedCliPathPrepended: managedPm2Env\.managedCliPath !== null/);
-    assert.match(source, /bundledNodePathPrepended: false/);
-    assert.match(source, /Desktop-managed server startup prepends \$\{pathKey\} with the managed CLI command directory and exposes Agent CLI discovery through HAGICODE_AGENT_CLI_PATH/);
-    assert.match(source, /PM2 CLI is launched through the managed Node executable/);
-    assert.match(source, /Desktop-managed server startup preserves inherited \$\{pathKey\} because no managed Agent CLI path hint is available; Desktop still does not prepend bundled Node\/npm paths/);
-    assert.match(source, /const pm2Env = await this\.resolveManagedPm2CommandEnvironment\(this\.lastPm2Env \?\? process\.env\);/);
-    assert.match(source, /this\.pm2Manager\.stop\(this\.getPm2RuntimeFilesDirectory\(\), pm2Env\.env\)/);
-    assert.match(source, /this\.pm2Manager\.status\(this\.getPm2RuntimeFilesDirectory\(\), pm2Env\.env\)/);
+    assert.match(webServiceSource, /setDependencyManagementService\(dependencyManagementService: DependencyManagementService \| null\)/);
+    assert.match(webServiceSource, /resolveHagiscriptRuntimeContext\(/);
+    assert.match(webServiceSource, /this\.hagiscriptServerManager\.start\(context\)/);
+    assert.match(webServiceSource, /this\.hagiscriptServerManager\.restart\(context\)/);
+    assert.match(webServiceSource, /this\.hagiscriptServerManager\.status\(context\)/);
+    assert.match(webServiceSource, /this\.hagiscriptServerManager\.getRuntimeState\(context\)/);
+    assert.match(webServiceSource, /hagiscript manifest override:/);
+    assert.match(webServiceSource, /ASPNETCORE_URLS=/);
+    assert.doesNotMatch(webServiceSource, /this\.pm2Manager\./);
+
+    assert.match(runtimeContextSource, /getManagedCommandContext\('hagiscript'\)/);
+    assert.match(runtimeContextSource, /runtimeHome: input\.runtimeHome/);
+    assert.match(runtimeContextSource, /runtimeDataRoot: input\.runtimeDataRoot/);
+    assert.match(runtimeContextSource, /dllPath: input\.servicePayloadPath/);
+    assert.match(runtimeContextSource, /workingDirectory: input\.serviceWorkingDirectory/);
+    assert.match(runtimeContextSource, /runtimeDataDir: SERVER_RUNTIME_DATA_DIR/);
+
+    assert.match(serverManagerSource, /\['runtime', 'state', '--json'/);
+    assert.match(serverManagerSource, /\['pm2', 'server', action, '--json'/);
+    assert.match(serverManagerSource, /hagiscript PM2 command returned invalid JSON output/);
+    assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
@@ -90,15 +75,15 @@ describe('web-service startup flow', () => {
     assert.match(source, /this\.setActiveRuntime\(\{/);
   });
 
-  it('fails fast when the pinned runtime is missing, unofficial, or incompatible and does not fall back to machine dotnet', async () => {
+  it('validates the active payload before hagiscript launch and keeps desktop compatibility gating', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.match(source, /Managed runtime validation failed:/);
     assert.match(source, /desktop-incompatible/);
     assert.match(source, /evaluateDesktopCompatibility\(manifest, app\.getVersion\(\)\)/);
-    assert.match(source, /Pinned runtime root:/);
+    assert.match(source, /validateFrameworkDependentPayload/);
     assert.match(source, /Required ASP\.NET Core runtime:/);
-    assert.match(source, /Packaged Desktop does not fall back to a machine-wide dotnet installation/);
+    assert.doesNotMatch(source, /validateBundledRuntimeForPlatform/);
+    assert.doesNotMatch(source, /evaluateRuntimeCompatibility/);
     assert.equal(source.includes('Please ensure .NET Runtime 8.0 is installed and in PATH'), false);
   });
 
