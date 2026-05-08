@@ -93,6 +93,7 @@ export class HagiscriptRuntimeContextResolver {
           runtimeRoot,
           runtimeHome,
           runtimeDataRoot,
+          npmPrefix: path.resolve(hagiscriptContext.environment.npmGlobalPrefix),
           hagiscriptPackageRoot,
           dotnetRuntimeRoot: path.resolve(this.pathManager.getEmbeddedRuntimeRoot(this.pathManager.getCurrentPlatform())),
           servicePayloadPath: path.resolve(input.servicePayloadPath),
@@ -134,6 +135,7 @@ export class HagiscriptRuntimeContextResolver {
     runtimeRoot: string;
     runtimeHome: string;
     runtimeDataRoot: string;
+    npmPrefix: string;
     hagiscriptPackageRoot: string;
     dotnetRuntimeRoot: string;
     servicePayloadPath: string;
@@ -159,7 +161,7 @@ export class HagiscriptRuntimeContextResolver {
         componentsRoot: path.join(input.runtimeHome, 'components'),
         componentDataRoot: path.join(input.runtimeDataRoot, 'components'),
         defaultPm2Home: 'pm2',
-        npmPrefix: path.join(input.runtimeHome, 'npm'),
+        npmPrefix: input.npmPrefix,
         nodeRuntime: path.join(input.runtimeHome, 'components', 'node', 'runtime'),
         dotnetRuntime: input.dotnetRuntimeRoot,
         vendoredRoot: path.join(input.runtimeHome, 'components', 'bundled'),

@@ -56,6 +56,7 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /getManagedCommandContext\('hagiscript'\)/);
     assert.match(runtimeContextSource, /runtimeHome: input\.runtimeHome/);
     assert.match(runtimeContextSource, /runtimeDataRoot: input\.runtimeDataRoot/);
+    assert.match(runtimeContextSource, /npmPrefix: path\.resolve\(hagiscriptContext\.environment\.npmGlobalPrefix\)/);
     assert.match(runtimeContextSource, /dllPath: input\.servicePayloadPath/);
     assert.match(runtimeContextSource, /workingDirectory: input\.serviceWorkingDirectory/);
     assert.match(runtimeContextSource, /runtimeDataDir: SERVER_RUNTIME_DATA_DIR/);
