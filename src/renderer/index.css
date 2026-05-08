@@ -6,31 +6,30 @@
 :root {
     color-scheme: light;
 
-    /* Website runtime source tokens - light */
-    --website-primary: #0080FF;
-    --website-primary-strong: #0060CC;
-    --website-primary-foreground: #F8FAFC;
-    --website-secondary: #00CCCC;
-    --website-success: #22C55E;
-    --website-accent: #6C5CE7;
-    --website-background: #F5F5F7;
-    --website-surface: #FFFFFF;
-    --website-surface-glass: rgba(255, 255, 255, 0.85);
-    --website-surface-hover: #F8F9FA;
-    --website-text: #0F172A;
-    --website-text-secondary: #475569;
-    --website-text-muted: #94A3B8;
-    --website-border: rgba(0, 0, 0, 0.1);
-    --website-border-light: rgba(0, 0, 0, 0.05);
-    --website-gradient-primary: linear-gradient(135deg, #0080FF 0%, #00AAAA 50%, #22C55E 100%);
-    --website-gradient-glow: radial-gradient(circle at center, rgba(0, 128, 255, 0.15) 0%, transparent 70%);
-    --website-gradient-tech: linear-gradient(135deg, rgba(0, 128, 255, 0.1) 0%, rgba(0, 255, 255, 0.05) 100%);
-    --website-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --website-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --website-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.1);
-    --website-shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
-    --website-shadow-glow: 0 0 20px rgba(0, 128, 255, 0.3);
-    --website-shadow-glow-alt: 0 0 20px rgba(0, 255, 255, 0.3);
+    --website-primary: #3563E9;
+    --website-primary-strong: #2449B8;
+    --website-primary-foreground: #F6F8FD;
+    --website-secondary: #5E7DDC;
+    --website-success: #2E8F62;
+    --website-accent: #7C8FB5;
+    --website-background: #F5F7FB;
+    --website-surface: #FBFCFE;
+    --website-surface-glass: rgba(251, 252, 254, 0.94);
+    --website-surface-hover: #EEF2F8;
+    --website-text: #162033;
+    --website-text-secondary: #42506A;
+    --website-text-muted: #66748E;
+    --website-border: rgba(89, 107, 143, 0.18);
+    --website-border-light: rgba(89, 107, 143, 0.1);
+    --website-gradient-primary: linear-gradient(135deg, #3563E9 0%, #4B70DF 100%);
+    --website-gradient-glow: radial-gradient(circle at center, rgba(53, 99, 233, 0.08) 0%, transparent 72%);
+    --website-gradient-tech: linear-gradient(180deg, rgba(53, 99, 233, 0.05) 0%, rgba(53, 99, 233, 0) 100%);
+    --website-shadow-sm: 0 2px 6px rgba(22, 32, 51, 0.04);
+    --website-shadow-md: 0 6px 16px rgba(22, 32, 51, 0.06);
+    --website-shadow-lg: 0 12px 28px rgba(22, 32, 51, 0.08);
+    --website-shadow-xl: 0 18px 42px rgba(22, 32, 51, 0.1);
+    --website-shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
+    --website-shadow-glow-alt: 0 0 0 rgba(0, 0, 0, 0);
 
     /* Desktop semantic variables mapped from website source tokens */
     --background: var(--website-background);
@@ -47,8 +46,8 @@
     --muted-foreground: var(--website-text-muted);
     --accent: color-mix(in srgb, var(--website-surface-hover) 82%, var(--website-primary) 18%);
     --accent-foreground: var(--website-text);
-    --destructive: #E5484D;
-    --destructive-foreground: #FFFFFF;
+    --destructive: #C94A54;
+    --destructive-foreground: #FBFCFE;
     --border: var(--website-border);
     --input: color-mix(in srgb, var(--website-border) 70%, var(--website-border-light) 30%);
     --ring: color-mix(in srgb, var(--website-primary) 35%, transparent);
@@ -58,20 +57,20 @@
     --chart-4: var(--website-accent);
     --chart-5: var(--website-primary-strong);
     --radius: 0.625rem;
-    --sidebar: color-mix(in srgb, var(--website-surface) 90%, var(--website-background) 10%);
+    --sidebar: color-mix(in srgb, var(--website-surface) 84%, var(--website-background) 16%);
     --sidebar-foreground: var(--website-text);
     --sidebar-primary: var(--website-primary);
     --sidebar-primary-foreground: var(--website-primary-foreground);
-    --sidebar-accent: color-mix(in srgb, var(--website-surface-hover) 80%, var(--website-secondary) 20%);
+    --sidebar-accent: color-mix(in srgb, var(--website-surface-hover) 88%, var(--website-primary) 12%);
     --sidebar-accent-foreground: var(--website-text);
     --sidebar-border: var(--website-border);
     --sidebar-ring: var(--ring);
 
-    --glass-bg: var(--website-surface-glass);
-    --glass-border: color-mix(in srgb, var(--website-border) 72%, transparent);
-    --glass-shadow: rgba(15, 23, 42, 0.08);
-    --glass-highlight: rgba(255, 255, 255, 0.5);
-    --glass-blur: 16px;
+    --glass-bg: rgba(251, 252, 254, 0.92);
+    --glass-border: color-mix(in srgb, var(--website-border) 84%, transparent);
+    --glass-shadow: rgba(22, 32, 51, 0.06);
+    --glass-highlight: rgba(255, 255, 255, 0.32);
+    --glass-blur: 0px;
 
     --theme-gradient-primary: var(--website-gradient-primary);
     --theme-gradient-glow: var(--website-gradient-glow);
@@ -88,50 +87,49 @@
     --theme-toggle-fg: var(--website-text);
     --theme-toggle-ring: color-mix(in srgb, var(--website-primary) 35%, transparent);
     --theme-toggle-shadow: var(--website-shadow-sm);
-    --theme-toggle-shadow-hover: var(--website-shadow-glow);
+    --theme-toggle-shadow-hover: var(--website-shadow-md);
 }
 
 .dark {
     color-scheme: dark;
 
-    /* Website runtime source tokens - dark */
-    --website-primary: #00D4FF;
-    --website-primary-strong: #00A3FF;
-    --website-primary-foreground: #03111D;
-    --website-secondary: #00FFFF;
-    --website-success: #4ADE80;
-    --website-accent: #A78BFA;
-    --website-background: #030712;
-    --website-surface: #0A0F1E;
-    --website-surface-glass: rgba(15, 23, 42, 0.85);
-    --website-surface-hover: #151E32;
-    --website-text: #F8FAFC;
-    --website-text-secondary: #E2E8F0;
-    --website-text-muted: #94A3B8;
-    --website-border: rgba(255, 255, 255, 0.12);
-    --website-border-light: rgba(255, 255, 255, 0.06);
-    --website-gradient-primary: linear-gradient(135deg, #00D4FF 0%, #00FFFF 50%, #4ADE80 100%);
-    --website-gradient-glow: radial-gradient(circle at center, rgba(0, 212, 255, 0.2) 0%, transparent 70%);
-    --website-gradient-tech: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 255, 255, 0.08) 100%);
-    --website-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
-    --website-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.7);
-    --website-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.8);
-    --website-shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.9);
-    --website-shadow-glow: 0 0 25px rgba(0, 212, 255, 0.4);
-    --website-shadow-glow-alt: 0 0 25px rgba(0, 255, 255, 0.35);
+    --website-primary: #7DA4FF;
+    --website-primary-strong: #5F86E8;
+    --website-primary-foreground: #0F1525;
+    --website-secondary: #93A8D8;
+    --website-success: #55B488;
+    --website-accent: #7E92BA;
+    --website-background: #0F1525;
+    --website-surface: #161E31;
+    --website-surface-glass: rgba(22, 30, 49, 0.96);
+    --website-surface-hover: #1C2740;
+    --website-text: #EEF2FB;
+    --website-text-secondary: #D6DEF0;
+    --website-text-muted: #98A6C3;
+    --website-border: rgba(158, 175, 211, 0.2);
+    --website-border-light: rgba(158, 175, 211, 0.12);
+    --website-gradient-primary: linear-gradient(135deg, #7DA4FF 0%, #5F86E8 100%);
+    --website-gradient-glow: radial-gradient(circle at center, rgba(125, 164, 255, 0.1) 0%, transparent 72%);
+    --website-gradient-tech: linear-gradient(180deg, rgba(125, 164, 255, 0.08) 0%, rgba(125, 164, 255, 0) 100%);
+    --website-shadow-sm: 0 4px 12px rgba(8, 12, 24, 0.24);
+    --website-shadow-md: 0 8px 18px rgba(8, 12, 24, 0.28);
+    --website-shadow-lg: 0 12px 28px rgba(8, 12, 24, 0.32);
+    --website-shadow-xl: 0 18px 40px rgba(8, 12, 24, 0.36);
+    --website-shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
+    --website-shadow-glow-alt: 0 0 0 rgba(0, 0, 0, 0);
 
-    --glass-bg: rgba(15, 23, 42, 0.8);
-    --glass-border: rgba(255, 255, 255, 0.12);
-    --glass-shadow: rgba(0, 0, 0, 0.45);
-    --glass-highlight: rgba(255, 255, 255, 0.08);
-    --glass-blur: 20px;
+    --glass-bg: rgba(22, 30, 49, 0.94);
+    --glass-border: rgba(158, 175, 211, 0.18);
+    --glass-shadow: rgba(8, 12, 24, 0.32);
+    --glass-highlight: rgba(238, 242, 251, 0.06);
+    --glass-blur: 0px;
 
-    --theme-toggle-bg: rgba(15, 23, 42, 0.8);
-    --theme-toggle-bg-hover: rgba(21, 30, 50, 0.9);
-    --theme-toggle-border: rgba(0, 255, 255, 0.15);
-    --theme-toggle-border-hover: var(--website-secondary);
-    --theme-toggle-fg: var(--website-secondary);
-    --theme-toggle-ring: color-mix(in srgb, var(--website-secondary) 38%, transparent);
+    --theme-toggle-bg: rgba(22, 30, 49, 0.94);
+    --theme-toggle-bg-hover: rgba(28, 39, 64, 0.98);
+    --theme-toggle-border: rgba(158, 175, 211, 0.18);
+    --theme-toggle-border-hover: var(--website-primary);
+    --theme-toggle-fg: var(--website-text);
+    --theme-toggle-ring: color-mix(in srgb, var(--website-primary) 38%, transparent);
     --theme-toggle-shadow: var(--website-shadow-sm);
     --theme-toggle-shadow-hover: var(--website-shadow-glow-alt);
 }
@@ -191,11 +189,19 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply font-sans bg-background text-foreground;
+    @apply font-sans bg-background text-foreground antialiased;
     }
   html {
     @apply font-sans;
     }
+  body,
+  #root {
+    min-height: 100vh;
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--primary) 72%, transparent);
+    outline-offset: 2px;
+  }
 }
 
 /* Custom animation keyframes */
@@ -257,6 +263,26 @@
 
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+.desktop-shell-background {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 4%, transparent) 0%, transparent 180px),
+    linear-gradient(color-mix(in srgb, var(--border) 38%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 32%, transparent) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Hide the scrollbar without reserving gutter space. */
