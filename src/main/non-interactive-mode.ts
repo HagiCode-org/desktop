@@ -6,11 +6,14 @@ import type {
   NonInteractiveRuntimeVerificationReport,
 } from './non-interactive-runtime-verify.js';
 import type {
+  NonInteractiveRuntimeLifecycleReport,
+} from './non-interactive-runtime-lifecycle.js';
+import type {
   DependencyManagementOperationProgress,
   ManagedNpmPackageId,
 } from '../types/dependency-management.js';
 
-export type NonInteractiveCommandKind = 'deps-install' | 'runtime-verify';
+export type NonInteractiveCommandKind = 'deps-install' | 'runtime-verify' | 'runtime-lifecycle';
 
 export interface NonInteractiveDepsInstallCommand {
   kind: 'deps-install';
@@ -21,7 +24,14 @@ export interface NonInteractiveRuntimeVerifyCommand {
   kind: 'runtime-verify';
 }
 
-export type NonInteractiveCommand = NonInteractiveDepsInstallCommand | NonInteractiveRuntimeVerifyCommand;
+export interface NonInteractiveRuntimeLifecycleCommand {
+  kind: 'runtime-lifecycle';
+}
+
+export type NonInteractiveCommand =
+  | NonInteractiveDepsInstallCommand
+  | NonInteractiveRuntimeVerifyCommand
+  | NonInteractiveRuntimeLifecycleCommand;
 
 export type NonInteractiveParseResult =
   | { handled: false; reason: 'no-command' }
@@ -43,6 +53,7 @@ export interface NonInteractiveRunOptions {
   service?: Pick<DependencyManagementService, 'onProgress' | 'installManagedPackagesForCli'>;
   output?: NonInteractiveOutput;
   runtimeVerifier?: () => Promise<NonInteractiveRuntimeVerificationReport>;
+  runtimeLifecycleVerifier?: () => Promise<NonInteractiveRuntimeLifecycleReport>;
 }
 
 export const nonInteractiveExitCodes = {
@@ -56,19 +67,23 @@ export const nonInteractiveExitCodes = {
 } as const;
 
 const flagToPackageId = new Map<string, ManagedNpmPackageId>([
+  ['--pm2', 'pm2'],
   ['--claude-code', 'claude-code'],
   ['--codex', 'codex'],
 ]);
 
 export const nonInteractiveUsageText = [
   'Usage:',
-  '  Hagicode Desktop deps install --claude-code --codex',
+  '  Hagicode Desktop deps install --pm2 --claude-code --codex',
   '  Hagicode Desktop runtime verify',
+  '  Hagicode Desktop runtime lifecycle',
   '',
   'Supported commands:',
   '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
+  '  runtime lifecycle  Validate Desktop-managed PM2 resolution and service lifecycle transitions.',
   '',
   'Supported deps install flags:',
+  '  --pm2           Install the Desktop-managed PM2 package.',
   '  --claude-code   Install the Desktop-managed Claude Code package.',
   '  --codex         Install the Desktop-managed Codex package.',
   '',
@@ -176,7 +191,7 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
 
   if (userArgs[0] !== 'deps') {
     if (userArgs[0] === 'runtime') {
-      if (userArgs[1] !== 'verify') {
+      if (userArgs[1] !== 'verify' && userArgs[1] !== 'lifecycle') {
         return {
           handled: true,
           ok: false,
@@ -189,7 +204,7 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
         return {
           handled: true,
           ok: false,
-          error: `runtime verify does not accept extra arguments: ${userArgs.slice(2).join(' ')}`,
+          error: `runtime ${userArgs[1]} does not accept extra arguments: ${userArgs.slice(2).join(' ')}`,
           userArgs,
         };
       }
@@ -198,7 +213,7 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
         handled: true,
         ok: true,
         command: {
-          kind: 'runtime-verify',
+          kind: userArgs[1] === 'verify' ? 'runtime-verify' : 'runtime-lifecycle',
         },
         userArgs,
       };
@@ -381,6 +396,68 @@ function printRuntimeVerificationFailure(output: NonInteractiveOutput, report: N
   }
 }
 
+function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonInteractiveRuntimeLifecycleReport): void {
+  output.stdout('HagiCode Desktop non-interactive runtime lifecycle');
+  output.stdout('command: runtime lifecycle');
+  output.stdout(`desktop logs directory: ${report.desktopLogsDirectory}`);
+  output.stdout(`pm2 managed npm prefix: ${report.pm2.npmGlobalPrefix}`);
+  output.stdout(`pm2 managed npm bin: ${report.pm2.npmGlobalBinRoot}`);
+  output.stdout(`pm2 managed npm modules: ${report.pm2.npmGlobalModulesRoot}`);
+  output.stdout(`pm2 package root: ${report.pm2.packageRoot ?? '<missing>'}`);
+  output.stdout(`pm2 executable: ${report.pm2.executablePath ?? '<missing>'}`);
+  output.stdout(`pm2 version: ${report.pm2.packageVersion ?? '<missing>'}`);
+  output.stdout(`pm2 launch command: ${report.pm2.launchCommand}`);
+  output.stdout(`pm2 launch cli: ${report.pm2.launchCli ?? '<missing>'}`);
+  output.stdout(`pm2 launch shell: ${report.pm2.launchShell}`);
+  output.stdout(`pm2 launch command managed: ${report.pm2.launchCommandUnderManagedNode}`);
+  output.stdout(`pm2 launch cli managed: ${report.pm2.launchCliUnderManagedModules}`);
+
+  output.stdout(`code-server pm2 home: ${report.services.codeServer.pm2Home}`);
+  output.stdout(`code-server runtime data: ${report.services.codeServer.runtimeDataHome}`);
+  output.stdout(`code-server runtime files: ${report.services.codeServer.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`code-server start success: ${report.services.codeServer.startSuccess}`);
+  output.stdout(`code-server status after start: ${report.services.codeServer.statusAfterStart}`);
+  output.stdout(`code-server stop success: ${report.services.codeServer.stopSuccess}`);
+  output.stdout(`code-server status after stop: ${report.services.codeServer.statusAfterStop}`);
+
+  output.stdout(`omniroute pm2 home: ${report.services.omniRoute.pm2Home}`);
+  output.stdout(`omniroute runtime data: ${report.services.omniRoute.runtimeDataHome}`);
+  output.stdout(`omniroute runtime files: ${report.services.omniRoute.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`omniroute start success: ${report.services.omniRoute.startSuccess}`);
+  output.stdout(`omniroute status after start: ${report.services.omniRoute.statusAfterStart}`);
+  output.stdout(`omniroute stop success: ${report.services.omniRoute.stopSuccess}`);
+  output.stdout(`omniroute status after stop: ${report.services.omniRoute.statusAfterStop}`);
+
+  output.stdout(`backend active runtime root: ${report.services.backend.activeRuntimeRoot ?? '<missing>'}`);
+  output.stdout(`backend payload dll: ${report.services.backend.serviceDllPath ?? '<missing>'}`);
+  output.stdout(`backend working directory: ${report.services.backend.serviceWorkingDirectory ?? '<missing>'}`);
+  output.stdout(`backend required runtime: ${report.services.backend.requiredRuntimeLabel ?? '<missing>'}`);
+  output.stdout(`backend pm2 home: ${report.services.backend.pm2Home}`);
+  output.stdout(`backend runtime data: ${report.services.backend.runtimeDataHome}`);
+  output.stdout(`backend runtime files: ${report.services.backend.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`backend start success: ${report.services.backend.startSuccess}`);
+  output.stdout(`backend status after start: ${report.services.backend.statusAfterStart}`);
+  output.stdout(`backend restart success: ${report.services.backend.restartSuccess}`);
+  output.stdout(`backend status after restart: ${report.services.backend.statusAfterRestart}`);
+  output.stdout(`backend stop success: ${report.services.backend.stopSuccess}`);
+  output.stdout(`backend status after stop: ${report.services.backend.statusAfterStop}`);
+}
+
+function printRuntimeLifecycleFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeLifecycleReport): void {
+  output.stderr('result: failure');
+  output.stderr('stage: verification');
+  output.stderr('error: runtime lifecycle verification failed');
+  for (const issue of report.issues) {
+    output.stderr(`issue: ${issue}`);
+  }
+
+  for (const [serviceName, serviceReport] of Object.entries(report.services)) {
+    for (const diagnostic of serviceReport.diagnostics) {
+      output.stderr(`${serviceName} diagnostic: ${diagnostic}`);
+    }
+  }
+}
+
 async function runRuntimeVerificationCommand(
   output: NonInteractiveOutput,
   runtimeVerifier?: () => Promise<NonInteractiveRuntimeVerificationReport>,
@@ -398,6 +475,43 @@ async function runRuntimeVerificationCommand(
         exitCode: nonInteractiveExitCodes.verification,
         stage: 'verification',
         error: report.issues.join('; ') || 'runtime verification failed',
+      };
+    }
+    output.stdout('result: success');
+    return {
+      exitCode: nonInteractiveExitCodes.success,
+      stage: 'success',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    output.stderr('result: failure');
+    output.stderr('stage: verification');
+    output.stderr(`error: ${message}`);
+    return {
+      exitCode: nonInteractiveExitCodes.verification,
+      stage: 'verification',
+      error: message,
+    };
+  }
+}
+
+async function runRuntimeLifecycleCommand(
+  output: NonInteractiveOutput,
+  runtimeLifecycleVerifier?: () => Promise<NonInteractiveRuntimeLifecycleReport>,
+): Promise<NonInteractiveRunResult> {
+  try {
+    const verifier = runtimeLifecycleVerifier ?? (async () => {
+      const { verifyDesktopRuntimeLifecycle } = await import('./non-interactive-runtime-lifecycle.js');
+      return verifyDesktopRuntimeLifecycle();
+    });
+    const report = await verifier();
+    printRuntimeLifecycleReport(output, report);
+    if (!report.ok) {
+      printRuntimeLifecycleFailure(output, report);
+      return {
+        exitCode: nonInteractiveExitCodes.verification,
+        stage: 'verification',
+        error: report.issues.join('; ') || 'runtime lifecycle verification failed',
       };
     }
     output.stdout('result: success');
@@ -440,6 +554,9 @@ export async function runNonInteractiveCommand(
 
   if (parseResult.command.kind === 'runtime-verify') {
     return runRuntimeVerificationCommand(output, options.runtimeVerifier);
+  }
+  if (parseResult.command.kind === 'runtime-lifecycle') {
+    return runRuntimeLifecycleCommand(output, options.runtimeLifecycleVerifier);
   }
 
   const service = options.service ?? new (await import('./dependency-management-service.js')).default();

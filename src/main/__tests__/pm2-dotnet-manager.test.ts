@@ -135,6 +135,7 @@ describe('pm2-dotnet-manager', () => {
     ]);
     assert.deepEqual(buildPm2CommandArgs('stop', { processName: 'svc' }), ['stop', 'svc']);
     assert.deepEqual(buildPm2CommandArgs('delete', { processName: 'svc' }), ['delete', 'svc']);
+    assert.deepEqual(buildPm2CommandArgs('kill', { processName: 'svc' }), ['kill']);
     assert.deepEqual(buildPm2CommandArgs('status', { processName: 'svc' }), ['jlist']);
   });
 
@@ -660,9 +661,9 @@ describe('pm2-dotnet-manager', () => {
       assert.equal(calls[2]?.args[1], path.join(tmpDir, PM2_ECOSYSTEM_FILE_NAME));
       assert.match(envContent, /HAGICODE_DOTNET_EXE=\/runtime\/dotnet/);
       assert.match(envContent, /PATH=\/managed\/npm-global\/bin:\/usr\/local\/bin/);
-      assert.match(envContent, /PM2_HOME=\/managed\/user-data\/pm2\/22/);
+      assert.match(envContent, /PM2_HOME=\/managed\/user-data\/runtimeData\/pm2\/22/);
       assert.match(ecosystemContent, /"PATH": "\/managed\/npm-global\/bin:\/usr\/local\/bin"/);
-      assert.match(ecosystemContent, /"PM2_HOME": "\/managed\/user-data\/pm2\/22"/);
+      assert.match(ecosystemContent, /"PM2_HOME": "\/managed\/user-data\/runtimeData\/pm2\/22"/);
       assert.match(ecosystemContent, /PCode\.Web\.dll/);
       assert.deepEqual(delays, [5, 5]);
     } finally {

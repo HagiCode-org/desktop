@@ -94,6 +94,12 @@ interface PreparedServiceEnvironment {
   managedSnapshot: ManagedEnvSnapshotEntry[];
 }
 
+export interface ManagedLaunchContext {
+  serviceDllPath: string;
+  serviceWorkingDirectory: string;
+  requiredRuntimeLabel?: string;
+}
+
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
@@ -122,6 +128,40 @@ class ManagedLaunchError extends Error {
     this.name = 'ManagedLaunchError';
     this.code = code;
   }
+}
+
+export async function resolveManagedLaunchContextForRuntimeRoot(
+  activeVersionPath: string,
+  desktopVersion: string = app.getVersion(),
+): Promise<ManagedLaunchContext> {
+  const manifest = await manifestReader.readManifest(activeVersionPath);
+  const desktopCompatibility = evaluateDesktopCompatibility(manifest, desktopVersion);
+  if (!desktopCompatibility.compatible) {
+    throw new ManagedLaunchError(
+      'desktop-incompatible',
+      desktopCompatibility.reason ?? 'Package requires a newer Desktop version.',
+    );
+  }
+
+  const payloadValidation = await validateFrameworkDependentPayload(activeVersionPath, manifest);
+  if (!payloadValidation.startable) {
+    throw new ManagedLaunchError(
+      'invalid-service-payload',
+      `Invalid service payload: ${payloadValidation.message ?? 'framework-dependent payload validation failed.'}`,
+    );
+  }
+
+  log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
+  log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
+  if (payloadValidation.requirement?.effectiveLabel) {
+    log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
+  }
+
+  return {
+    serviceDllPath: payloadValidation.payloadPaths.serviceDllPath,
+    serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
+    requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
+  };
 }
 
 export class PCodeWebServiceManager {
@@ -459,43 +499,11 @@ export class PCodeWebServiceManager {
     };
   }
 
-  private async resolveManagedLaunchContext(): Promise<{
-    serviceDllPath: string;
-    serviceWorkingDirectory: string;
-    requiredRuntimeLabel?: string;
-  }> {
+  private async resolveManagedLaunchContext(): Promise<ManagedLaunchContext> {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
     }
-
-    const manifest = await manifestReader.readManifest(this.activeVersionPath);
-    const desktopCompatibility = evaluateDesktopCompatibility(manifest, app.getVersion());
-    if (!desktopCompatibility.compatible) {
-      throw new ManagedLaunchError(
-        'desktop-incompatible',
-        desktopCompatibility.reason ?? 'Package requires a newer Desktop version.',
-      );
-    }
-
-    const payloadValidation = await validateFrameworkDependentPayload(this.activeVersionPath, manifest);
-    if (!payloadValidation.startable) {
-      throw new ManagedLaunchError(
-        'invalid-service-payload',
-        `Invalid service payload: ${payloadValidation.message ?? 'framework-dependent payload validation failed.'}`,
-      );
-    }
-
-    log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
-    log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
-    if (payloadValidation.requirement?.effectiveLabel) {
-      log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
-    }
-
-    return {
-      serviceDllPath: payloadValidation.payloadPaths.serviceDllPath,
-      serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
-      requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
-    };
+    return await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath);
   }
 
   private async resolveHagiscriptRuntimeContext(

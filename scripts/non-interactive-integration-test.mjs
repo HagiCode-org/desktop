@@ -5,13 +5,23 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import AdmZip from 'adm-zip';
 
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, 'pkg');
 const runtimeVerifyArgs = ['runtime', 'verify'];
-const dependencyInstallArgs = ['deps', 'install', '--claude-code', '--codex'];
+const dependencyInstallArgs = ['deps', 'install', '--pm2', '--claude-code', '--codex'];
+const runtimeLifecycleArgs = ['runtime', 'lifecycle'];
 const defaultCommandTimeoutMs = 240_000;
+const interestingDiagnosticBasenames = new Set([
+  'non-interactive-startup.log',
+  'launch-contract.json',
+  'state.json',
+  '.env',
+  'ecosystem.config.js',
+  'ecosystem.config.cjs',
+]);
 
 function log(message) {
   console.log(`[non-interactive-integration] ${message}`);
@@ -31,6 +41,26 @@ function readDiagnosticFile(diagnosticLogPath) {
   } catch (error) {
     return `Failed to read diagnostic log ${diagnosticLogPath}: ${error instanceof Error ? error.message : String(error)}`;
   }
+}
+
+function shouldKeepTempRoot() {
+  const value = process.env.HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP?.trim().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
+async function loadDesktopManagedPathHelpers() {
+  const desktopRuntimePathsModulePath = path.join(projectRoot, 'dist', 'main', 'desktop-runtime-paths.js');
+  const portableToolchainPathsModulePath = path.join(projectRoot, 'dist', 'main', 'portable-toolchain-paths.js');
+  if (!pathExists(desktopRuntimePathsModulePath) || !pathExists(portableToolchainPathsModulePath)) {
+    fail('Compiled Desktop path helpers are missing under dist/main. Run npm run build:tsc before the packaged integration harness.');
+  }
+
+  const desktopRuntimePathsModule = await import(pathToFileURL(desktopRuntimePathsModulePath).href);
+  const portableToolchainPathsModule = await import(pathToFileURL(portableToolchainPathsModulePath).href);
+  return {
+    resolveDesktopRuntimeDataHome: desktopRuntimePathsModule.resolveDesktopRuntimeDataHome,
+    buildNodeMajorNpmGlobalPaths: portableToolchainPathsModule.buildNodeMajorNpmGlobalPaths,
+  };
 }
 
 function runCommand(command, args, options = {}) {
@@ -427,7 +457,40 @@ function assertPathWithinRoot(candidatePath, rootPath, label) {
   }
 }
 
-function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir }) {
+function assertPathContainsSpaces(candidatePath, label) {
+  if (!candidatePath?.includes(' ')) {
+    fail(`Expected ${label} to preserve staged paths with spaces.\nPath: ${candidatePath ?? '<missing>'}`);
+  }
+}
+
+async function readIntegrationDiagnostics(userDataDir) {
+  const diagnostics = [];
+  const runtimeDataRoot = path.join(userDataDir, 'runtimeData');
+  const candidateFiles = walkFiles(userDataDir)
+    .filter((targetPath) => {
+      const baseName = path.basename(targetPath);
+      return baseName.endsWith('.log')
+        || interestingDiagnosticBasenames.has(baseName)
+        || targetPath.includes(`${path.sep}.pm2${path.sep}`);
+    })
+    .sort();
+
+  for (const targetPath of candidateFiles) {
+    const content = readDiagnosticFile(targetPath);
+    if (!content) {
+      continue;
+    }
+    diagnostics.push(`== ${path.relative(userDataDir, targetPath) || path.basename(targetPath)} ==\n${content.trim()}`);
+  }
+
+  if (diagnostics.length === 0 && pathExists(runtimeDataRoot)) {
+    diagnostics.push(`runtimeData root exists but no matching diagnostic files were found under ${runtimeDataRoot}`);
+  }
+
+  return diagnostics.join('\n\n');
+}
+
+function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir, helpers }) {
   const programHome = parseOutputValue(output, 'runtime program home');
   const dataHome = parseOutputValue(output, 'runtime data home');
   const dotnetRoot = parseOutputValue(output, 'runtime component dotnet root');
@@ -436,8 +499,9 @@ function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir }) 
   const omniRouteRoot = parseOutputValue(output, 'runtime component omniroute root');
   const codeServerDataHome = parseOutputValue(output, 'runtime service code-server data');
   const omniRouteDataHome = parseOutputValue(output, 'runtime service omniroute data');
+  const governedNodeVersion = parseOutputValue(output, 'runtime component node version');
 
-  if (!programHome || !dataHome || !dotnetRoot || !nodeRoot || !codeServerRoot || !omniRouteRoot || !codeServerDataHome || !omniRouteDataHome) {
+  if (!programHome || !dataHome || !dotnetRoot || !nodeRoot || !codeServerRoot || !omniRouteRoot || !codeServerDataHome || !omniRouteDataHome || !governedNodeVersion) {
     fail('Runtime verification output did not include all required runtime structure diagnostics.');
   }
 
@@ -453,12 +517,132 @@ function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir }) 
   assertPathWithinRoot(codeServerRoot, programHome, 'code-server runtime root');
   assertPathWithinRoot(omniRouteRoot, programHome, 'omniroute runtime root');
 
-  const expectedDataHome = path.join(userDataDir, 'runtimeData');
+  const expectedDataHome = helpers.resolveDesktopRuntimeDataHome({ userDataPath: userDataDir });
   if (dataHome !== expectedDataHome) {
     fail(`Expected runtime data home to use the migrated userData/runtimeData contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
   }
   assertPathWithinRoot(codeServerDataHome, expectedDataHome, 'code-server runtime data home');
   assertPathWithinRoot(omniRouteDataHome, expectedDataHome, 'omniroute runtime data home');
+  assertPathContainsSpaces(programHome, 'runtime program home');
+  assertPathContainsSpaces(dataHome, 'runtime data home');
+
+  return {
+    dataHome,
+    nodeVersion: governedNodeVersion,
+  };
+}
+
+function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, helpers }) {
+  const installRoot = parseOutputValue(output, 'install root');
+  const managedModules = parseOutputValue(output, 'managed modules');
+  const managedBin = parseOutputValue(output, 'managed bin');
+
+  if (!installRoot || !managedModules || !managedBin) {
+    fail('CLI output did not include install root, managed modules, and managed bin diagnostics.');
+  }
+
+  const expectedPaths = helpers.buildNodeMajorNpmGlobalPaths({
+    userDataPath: userDataDir,
+    nodeVersion: runtimeContext.nodeVersion,
+  });
+  if (installRoot !== expectedPaths.npmGlobalPrefix) {
+    fail(`Managed npm prefix does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalPrefix}\nActual: ${installRoot}`);
+  }
+  if (managedModules !== expectedPaths.npmGlobalModulesRoot) {
+    fail(`Managed npm modules root does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalModulesRoot}\nActual: ${managedModules}`);
+  }
+  if (managedBin !== expectedPaths.npmGlobalBinRoot) {
+    fail(`Managed npm bin root does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalBinRoot}\nActual: ${managedBin}`);
+  }
+
+  for (const expectedPath of [installRoot, managedModules, managedBin]) {
+    assertPathWithinRoot(expectedPath, runtimeContext.dataHome, 'managed npm path');
+    assertPathContainsSpaces(expectedPath, 'managed npm path');
+    if (!pathExists(expectedPath)) {
+      fail(`Expected managed path to exist after install: ${expectedPath}`);
+    }
+  }
+
+  for (const packageId of ['hagiscript', 'pm2', 'claude-code', 'codex']) {
+    assertOutputContainsPackage(output, packageId);
+  }
+}
+
+function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) {
+  const managedNpmPrefix = parseOutputValue(output, 'pm2 managed npm prefix');
+  const managedNpmBin = parseOutputValue(output, 'pm2 managed npm bin');
+  const managedNpmModules = parseOutputValue(output, 'pm2 managed npm modules');
+  const pm2PackageRoot = parseOutputValue(output, 'pm2 package root');
+  const pm2Executable = parseOutputValue(output, 'pm2 executable');
+  const pm2LaunchCli = parseOutputValue(output, 'pm2 launch cli');
+  const desktopLogsDirectory = parseOutputValue(output, 'desktop logs directory');
+  const backendRuntimeRoot = parseOutputValue(output, 'backend active runtime root');
+  const backendPayloadDll = parseOutputValue(output, 'backend payload dll');
+  const codeServerPm2Home = parseOutputValue(output, 'code-server pm2 home');
+  const omniRoutePm2Home = parseOutputValue(output, 'omniroute pm2 home');
+  const backendPm2Home = parseOutputValue(output, 'backend pm2 home');
+  const backendRuntimeData = parseOutputValue(output, 'backend runtime data');
+
+  for (const [label, value] of [
+    ['pm2 managed npm prefix', managedNpmPrefix],
+    ['pm2 managed npm bin', managedNpmBin],
+    ['pm2 managed npm modules', managedNpmModules],
+    ['pm2 package root', pm2PackageRoot],
+    ['pm2 executable', pm2Executable],
+    ['pm2 launch cli', pm2LaunchCli],
+    ['desktop logs directory', desktopLogsDirectory],
+    ['backend active runtime root', backendRuntimeRoot],
+    ['backend payload dll', backendPayloadDll],
+    ['code-server pm2 home', codeServerPm2Home],
+    ['omniroute pm2 home', omniRoutePm2Home],
+    ['backend pm2 home', backendPm2Home],
+    ['backend runtime data', backendRuntimeData],
+  ]) {
+    if (!value) {
+      fail(`Runtime lifecycle output did not include ${label}.`);
+    }
+  }
+
+  assertOutputValue(output, 'pm2 launch shell', 'false');
+  assertOutputValue(output, 'pm2 launch command managed', 'true');
+  assertOutputValue(output, 'pm2 launch cli managed', 'true');
+  assertOutputValue(output, 'code-server start success', 'true');
+  assertOutputValue(output, 'code-server status after start', 'online');
+  assertOutputValue(output, 'code-server stop success', 'true');
+  assertOutputValue(output, 'code-server status after stop', 'stopped');
+  assertOutputValue(output, 'omniroute start success', 'true');
+  assertOutputValue(output, 'omniroute status after start', 'online');
+  assertOutputValue(output, 'omniroute stop success', 'true');
+  assertOutputValue(output, 'omniroute status after stop', 'stopped');
+  assertOutputValue(output, 'backend start success', 'true');
+  assertOutputValue(output, 'backend status after start', 'online');
+  assertOutputValue(output, 'backend restart success', 'true');
+  assertOutputValue(output, 'backend status after restart', 'online');
+  assertOutputValue(output, 'backend stop success', 'true');
+  assertOutputValue(output, 'backend status after stop', 'stopped');
+  assertOutputValue(output, 'result', 'success');
+
+  for (const managedPath of [
+    managedNpmPrefix,
+    managedNpmBin,
+    managedNpmModules,
+    pm2PackageRoot,
+    pm2Executable,
+    pm2LaunchCli,
+    codeServerPm2Home,
+    omniRoutePm2Home,
+    backendPm2Home,
+    backendRuntimeData,
+    desktopLogsDirectory,
+  ]) {
+    assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
+    assertPathContainsSpaces(managedPath, 'managed PM2 path');
+  }
+
+  assertPathWithinRoot(backendRuntimeRoot, artifactRoot, 'backend active runtime root');
+  assertPathWithinRoot(backendPayloadDll, backendRuntimeRoot, 'backend payload dll');
+  assertPathContainsSpaces(backendRuntimeRoot, 'backend active runtime root');
+  assertPathContainsSpaces(backendPayloadDll, 'backend payload dll');
 }
 
 async function runScenario({
@@ -468,23 +652,23 @@ async function runScenario({
   commandArgs,
   onSuccess,
 }) {
-  const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
   log(`running ${name}: ${commandArgs.join(' ')}`);
   const result = await runExecutable(executablePath, userDataDir, commandArgs);
   log(`${name} exit code: ${result.code}`);
   if (result.signal) {
     log(`${name} signal: ${result.signal}`);
   }
+  const diagnosticContent = await readIntegrationDiagnostics(userDataDir);
   if (result.timedOut) {
     fail(
       `${name} timed out after ${result.timeoutMs}ms.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
-      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+      `diagnostic:\n${diagnosticContent || '<missing>'}`,
     );
   }
   if (result.code !== 0) {
     fail(
       `${name} failed with exit code ${result.code}.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\n` +
-      `diagnostic:\n${readDiagnosticFile(diagnosticLogPath) ?? '<missing>'}`,
+      `diagnostic:\n${diagnosticContent || '<missing>'}`,
     );
   }
 
@@ -492,6 +676,7 @@ async function runScenario({
 }
 
 async function main() {
+  const helpers = await loadDesktopManagedPathHelpers();
   const { tempRoot, artifactRoot, source } = await copyArtifactToPathWithSpaces();
   const executablePath = findDesktopExecutable(artifactRoot);
   if (!executablePath) {
@@ -501,68 +686,78 @@ async function main() {
   const userDataDir = path.join(tempRoot, 'Managed npm user data with spaces');
   await fsp.mkdir(userDataDir, { recursive: true });
   const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
+  let runtimeContext = null;
 
-  log(`source artifact: ${source}`);
-  log(`staged artifact root: ${artifactRoot}`);
-  log(`desktop executable: ${executablePath}`);
-  log(`managed userData root: ${userDataDir}`);
-  log(`startup diagnostic log: ${diagnosticLogPath}`);
-  log(`command timeout: ${defaultCommandTimeoutMs}ms default`);
-  if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
-    log('launch mode: headless Linux runtime switches enabled');
+  try {
+    log(`source artifact: ${source}`);
+    log(`staged artifact root: ${artifactRoot}`);
+    log(`desktop executable: ${executablePath}`);
+    log(`managed userData root: ${userDataDir}`);
+    log(`startup diagnostic log: ${diagnosticLogPath}`);
+    log(`command timeout: ${defaultCommandTimeoutMs}ms default`);
+    if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+      log('launch mode: headless Linux runtime switches enabled');
+    }
+    if (process.platform === 'linux') {
+      log('launch mode: Linux sandbox override enabled for staged artifact execution');
+    }
+
+    if (!artifactRoot.includes(' ') || !executablePath.includes(' ') || !userDataDir.includes(' ')) {
+      fail('Integration harness must run with artifact and managed paths containing spaces.');
+    }
+
+    log('stage 1/4: runtime verification');
+    await runScenario({
+      name: 'runtime verification',
+      executablePath,
+      userDataDir,
+      commandArgs: runtimeVerifyArgs,
+      onSuccess: async (result) => {
+        runtimeContext = assertRuntimeVerificationOutput(result.stdout, {
+          artifactRoot,
+          userDataDir,
+          helpers,
+        });
+      },
+    });
+
+    log('stage 2/4: managed PM2 bootstrap');
+    await runScenario({
+      name: 'dependency install',
+      executablePath,
+      userDataDir,
+      commandArgs: dependencyInstallArgs,
+      onSuccess: async (result) => {
+        assertDependencyInstallOutput(result.stdout, {
+          userDataDir,
+          runtimeContext,
+          helpers,
+        });
+      },
+    });
+
+    log('stage 3/4 and 4/4: PM2 environment and lifecycle verification');
+    await runScenario({
+      name: 'runtime lifecycle',
+      executablePath,
+      userDataDir,
+      commandArgs: runtimeLifecycleArgs,
+      onSuccess: async (result) => {
+        assertRuntimeLifecycleOutput(result.stdout, {
+          artifactRoot,
+          runtimeContext,
+        });
+      },
+    });
+
+    log('non-interactive integration test passed');
+  } finally {
+    if (shouldKeepTempRoot()) {
+      log(`retaining integration temp root for debugging: ${tempRoot}`);
+    } else {
+      await fsp.rm(tempRoot, { recursive: true, force: true });
+    }
   }
-  if (process.platform === 'linux') {
-    log('launch mode: Linux sandbox override enabled for staged artifact execution');
-  }
-
-  if (!artifactRoot.includes(' ') || !executablePath.includes(' ') || !userDataDir.includes(' ')) {
-    fail('Integration harness must run with artifact and managed paths containing spaces.');
-  }
-
-  await runScenario({
-    name: 'runtime verification',
-    executablePath,
-    userDataDir,
-    commandArgs: runtimeVerifyArgs,
-    onSuccess: async (result) => {
-      assertRuntimeVerificationOutput(result.stdout, { artifactRoot, userDataDir });
-    },
-  });
-
-  await runScenario({
-    name: 'dependency install',
-    executablePath,
-    userDataDir,
-    commandArgs: dependencyInstallArgs,
-    onSuccess: async (result) => {
-      const stdout = result.stdout;
-      const installRoot = parseOutputValue(stdout, 'install root');
-      const managedModules = parseOutputValue(stdout, 'managed modules');
-      const managedBin = parseOutputValue(stdout, 'managed bin');
-
-      if (!installRoot || !managedModules || !managedBin) {
-        fail('CLI output did not include install root, managed modules, and managed bin diagnostics.');
-      }
-
-      for (const expectedPath of [installRoot, managedModules, managedBin]) {
-        if (!expectedPath.startsWith(userDataDir)) {
-          fail(`Expected managed path to be under clean integration userData root.\nPath: ${expectedPath}\nUserData: ${userDataDir}`);
-        }
-      }
-
-      for (const packageId of ['hagiscript', 'claude-code', 'codex']) {
-        assertOutputContainsPackage(stdout, packageId);
-      }
-
-      for (const expectedPath of [installRoot, managedModules, managedBin]) {
-        if (!pathExists(expectedPath)) {
-          fail(`Expected managed path to exist after install: ${expectedPath}`);
-        }
-      }
-    },
-  });
-
-  log('non-interactive integration test passed');
 }
 
 main().catch((error) => {

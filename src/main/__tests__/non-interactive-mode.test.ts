@@ -8,6 +8,7 @@ import {
   runNonInteractiveCommand,
 } from '../non-interactive-mode.js';
 import type { NonInteractiveRuntimeVerificationReport } from '../non-interactive-runtime-verify.js';
+import type { NonInteractiveRuntimeLifecycleReport } from '../non-interactive-runtime-lifecycle.js';
 import type {
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
@@ -175,6 +176,65 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
   };
 }
 
+function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecycleReport {
+  return {
+    ok,
+    desktopLogsDirectory: '/tmp/Hagi Code/userData/logs',
+    pm2: {
+      npmGlobalPrefix: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal',
+      npmGlobalBinRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
+      packageRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/lib/node_modules/pm2',
+      executablePath: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/bin/pm2',
+      packageVersion: '7.0.1',
+      launchCommand: '/tmp/Hagi Code/toolchain/node/bin/node',
+      launchCli: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/lib/node_modules/pm2/bin/pm2',
+      launchShell: false,
+      launchCommandUnderManagedNode: true,
+      launchCliUnderManagedModules: true,
+    },
+    services: {
+      codeServer: {
+        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/pm2/7',
+        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
+        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime',
+        startSuccess: ok,
+        statusAfterStart: ok ? 'online' : 'errored',
+        stopSuccess: ok,
+        statusAfterStop: 'stopped',
+        diagnostics: ok ? [] : ['code-server diagnostic: start failed'],
+      },
+      omniRoute: {
+        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/pm2/7',
+        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute',
+        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime',
+        startSuccess: ok,
+        statusAfterStart: ok ? 'online' : 'errored',
+        stopSuccess: ok,
+        statusAfterStop: 'stopped',
+        diagnostics: ok ? [] : ['omniroute diagnostic: start failed'],
+      },
+      backend: {
+        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/server/.pm2',
+        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/server',
+        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/server/pm2-runtime',
+        activeRuntimeRoot: '/artifact/resources/extra/portable-fixed/current',
+        serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
+        serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
+        requiredRuntimeLabel: '10.0.0',
+        startSuccess: ok,
+        statusAfterStart: ok ? 'online' : 'errored',
+        restartSuccess: ok,
+        statusAfterRestart: ok ? 'online' : 'errored',
+        stopSuccess: ok,
+        statusAfterStop: 'stopped',
+        diagnostics: ok ? [] : ['backend diagnostic: restart failed'],
+      },
+    },
+    issues: ok ? [] : ['backend failed to restart under Desktop-managed PM2.'],
+  };
+}
+
 describe('non-interactive mode parser', () => {
   it('parses deps install --claude-code --codex into managed package IDs', () => {
     const result = parseNonInteractiveCommand([
@@ -193,6 +253,23 @@ describe('non-interactive mode parser', () => {
     }
   });
 
+  it('accepts --pm2 alongside agent CLI dependency flags', () => {
+    const result = parseNonInteractiveCommand([
+      '/opt/Hagicode Desktop/hagicode',
+      'deps',
+      'install',
+      '--pm2',
+      '--claude-code',
+      '--codex',
+    ]);
+
+    assert.equal(result.handled, true);
+    assert.equal(result.ok, true);
+    if (result.handled && result.ok && result.command.kind === 'deps-install') {
+      assert.deepEqual(result.command.packageIds, ['pm2', 'claude-code', 'codex']);
+    }
+  });
+
   it('parses runtime verify without extra arguments', () => {
     const result = parseNonInteractiveCommand([
       '/opt/Hagicode Desktop/hagicode',
@@ -205,6 +282,21 @@ describe('non-interactive mode parser', () => {
     if (result.handled && result.ok) {
       assert.equal(result.command.kind, 'runtime-verify');
       assert.deepEqual(result.userArgs, ['runtime', 'verify']);
+    }
+  });
+
+  it('parses runtime lifecycle without extra arguments', () => {
+    const result = parseNonInteractiveCommand([
+      '/opt/Hagicode Desktop/hagicode',
+      'runtime',
+      'lifecycle',
+    ]);
+
+    assert.equal(result.handled, true);
+    assert.equal(result.ok, true);
+    if (result.handled && result.ok) {
+      assert.equal(result.command.kind, 'runtime-lifecycle');
+      assert.deepEqual(result.userArgs, ['runtime', 'lifecycle']);
     }
   });
 
@@ -315,7 +407,7 @@ describe('non-interactive mode parser', () => {
     assert.equal(unsupportedCommand.handled, true);
     assert.equal(unsupportedCommand.ok, false);
 
-    const unsupportedFlag = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--pm2']);
+    const unsupportedFlag = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--unknown']);
     assert.equal(unsupportedFlag.handled, true);
     assert.equal(unsupportedFlag.ok, false);
     assert.match(unsupportedFlag.handled && !unsupportedFlag.ok ? unsupportedFlag.error : '', /Unsupported deps install flag/);
@@ -339,6 +431,11 @@ describe('non-interactive mode parser', () => {
     assert.equal(extraRuntimeArgs.handled, true);
     assert.equal(extraRuntimeArgs.ok, false);
     assert.match(extraRuntimeArgs.handled && !extraRuntimeArgs.ok ? extraRuntimeArgs.error : '', /does not accept extra arguments/);
+
+    const extraLifecycleArgs = parseNonInteractiveCommand(['hagicode', 'runtime', 'lifecycle', '--verbose']);
+    assert.equal(extraLifecycleArgs.handled, true);
+    assert.equal(extraLifecycleArgs.ok, false);
+    assert.match(extraLifecycleArgs.handled && !extraLifecycleArgs.ok ? extraLifecycleArgs.error : '', /does not accept extra arguments/);
   });
 
   it('preserves normal startup when no supported non-interactive command is present', () => {
@@ -392,6 +489,26 @@ describe('non-interactive mode dispatch', () => {
     assert.match(stdout.join('\n'), /result: success/);
   });
 
+  it('maps successful runtime lifecycle verification to stdout and exit code 0', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const parseResult = parseNonInteractiveCommand(['hagicode', 'runtime', 'lifecycle']);
+    const result = await runNonInteractiveCommand(parseResult, {
+      runtimeLifecycleVerifier: async () => createRuntimeLifecycleReport(true),
+      output: {
+        stdout: (line) => stdout.push(line),
+        stderr: (line) => stderr.push(line),
+      },
+    });
+
+    assert.equal(result.exitCode, nonInteractiveExitCodes.success);
+    assert.equal(stderr.length, 0);
+    assert.match(stdout.join('\n'), /pm2 launch cli managed: true/);
+    assert.match(stdout.join('\n'), /code-server status after start: online/);
+    assert.match(stdout.join('\n'), /backend status after restart: online/);
+    assert.match(stdout.join('\n'), /result: success/);
+  });
+
   it('maps usage, bootstrap, install, and verification failures to stderr and deterministic exit codes', async () => {
     const usageStderr: string[] = [];
     const usage = await runNonInteractiveCommand(parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--bad']), {
@@ -439,6 +556,25 @@ describe('non-interactive mode dispatch', () => {
     assert.match(stdout.join('\n'), /runtime component dotnet issues: dotnet runtime missing metadata/);
     assert.match(stderr.join('\n'), /stage: verification/);
     assert.match(stderr.join('\n'), /issue: dotnet runtime missing metadata/);
+  });
+
+  it('maps failed runtime lifecycle verification to stderr and exit code 72', async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const parseResult = parseNonInteractiveCommand(['hagicode', 'runtime', 'lifecycle']);
+    const result = await runNonInteractiveCommand(parseResult, {
+      runtimeLifecycleVerifier: async () => createRuntimeLifecycleReport(false),
+      output: {
+        stdout: (line) => stdout.push(line),
+        stderr: (line) => stderr.push(line),
+      },
+    });
+
+    assert.equal(result.exitCode, nonInteractiveExitCodes.verification);
+    assert.match(stdout.join('\n'), /backend restart success: false/);
+    assert.match(stderr.join('\n'), /runtime lifecycle verification failed/);
+    assert.match(stderr.join('\n'), /backend failed to restart under Desktop-managed PM2/);
+    assert.match(stderr.join('\n'), /backend diagnostic: restart failed/);
   });
 
   it('keeps main-process UI startup hooks behind non-interactive detection', async () => {

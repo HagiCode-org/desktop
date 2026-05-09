@@ -11,7 +11,7 @@ export const PM2_RUNTIME_DIR_NAME = 'pm2-dotnet-service';
 export const PM2_ENV_FILE_NAME = '.env';
 export const PM2_ECOSYSTEM_FILE_NAME = 'ecosystem.config.js';
 
-export type Pm2DotnetOperation = 'startOrReload' | 'start' | 'restart' | 'stop' | 'delete' | 'status';
+export type Pm2DotnetOperation = 'startOrReload' | 'start' | 'restart' | 'stop' | 'delete' | 'status' | 'kill';
 
 export interface Pm2DotnetRuntimeConfig {
   processName?: string;
@@ -850,6 +850,9 @@ export function buildPm2CommandArgs(operation: Pm2DotnetOperation, input: { ecos
   if (operation === 'delete') {
     return ['delete', input.processName];
   }
+  if (operation === 'kill') {
+    return ['kill'];
+  }
   return ['jlist'];
 }
 
@@ -1058,6 +1061,15 @@ export class Pm2DotnetManager {
     const result = await this.runPm2('delete', buildPm2CommandArgs('delete', { processName: this.processName }), cwd, resolvedEnv);
     if (!result.success && result.errorCode === 'pm2-command-failed' && /not found|doesn't exist|process or namespace/i.test(`${result.stderr}\n${result.stdout}`)) {
       return { success: true, operation: 'delete', stdout: result.stdout, stderr: result.stderr };
+    }
+    return result;
+  }
+
+  async kill(cwd: string, env?: NodeJS.ProcessEnv): Promise<Pm2LifecycleResult> {
+    const resolvedEnv = this.resolveLifecycleEnv(env);
+    const result = await this.runPm2('kill', buildPm2CommandArgs('kill', { processName: this.processName }), cwd, resolvedEnv);
+    if (!result.success && result.errorCode === 'pm2-command-failed' && /no process found|daemon is not launched|pm2 daemon not launched/i.test(`${result.stderr}\n${result.stdout}`)) {
+      return { success: true, operation: 'kill', stdout: result.stdout, stderr: result.stderr };
     }
     return result;
   }

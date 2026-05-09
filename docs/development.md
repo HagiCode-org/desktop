@@ -587,6 +587,7 @@ After packaging Windows/Linux artifacts:
 
 ```bash
 npm run package:smoke-test
+npm run package:runtime-pm2-integration
 ```
 
 `package:smoke-test` validates both:
@@ -594,6 +595,39 @@ npm run package:smoke-test
 - staged runtime payload under `build/desktop-runtime/current/components/dotnet/runtime/<rid>`
 - packaged runtime payload under `pkg/<platform>-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
+
+`package:runtime-pm2-integration` stages a packaged Desktop artifact into a temp path with spaces, then runs the full non-interactive runtime-management flow:
+
+1. `runtime verify`
+2. `deps install --pm2 --claude-code --codex`
+3. `runtime lifecycle`
+
+The lifecycle stage asserts Desktop-managed PM2 resolution plus start/status/stop coverage for `code-server`, `omniroute`, and the packaged backend payload.
+
+### Packaged runtime + PM2 integration debugging
+
+Useful environment overrides:
+
+```bash
+HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS=480000 npm run package:runtime-pm2-integration
+HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1 npm run package:runtime-pm2-integration
+```
+
+- `HAGICODE_NON_INTERACTIVE_INTEGRATION_TIMEOUT_MS` raises the per-command timeout used by the packaged harness and the lifecycle polling window inside the Desktop non-interactive verifier.
+- `HAGICODE_NON_INTERACTIVE_INTEGRATION_KEEP_TEMP=1` retains the staged artifact and staged user-data root so you can inspect PM2 state after a failure.
+
+When the temp root is retained, inspect these locations first:
+
+- `<temp>/Managed npm user data with spaces/non-interactive-startup.log`
+- `<temp>/Managed npm user data with spaces/logs/`
+- `<temp>/Managed npm user data with spaces/runtimeData/components/services/*/.pm2/logs/`
+- `<temp>/Managed npm user data with spaces/runtimeData/components/services/*/runtime/`
+
+The harness fails hard when the packaged backend payload contract is broken. In that case, confirm the staged portable runtime still contains:
+
+- `lib/PCode.Web.dll`
+- `lib/PCode.Web.runtimeconfig.json`
+- `lib/PCode.Web.deps.json`
 
 ### Release archive outputs
 
