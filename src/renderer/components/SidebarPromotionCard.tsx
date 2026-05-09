@@ -50,25 +50,28 @@ export function SidebarPromotionCard({
       onClick={() => onActivate(promotion.link)}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.98 }}
-      className="group relative w-full overflow-hidden rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 via-background to-accent/20 p-3 text-left shadow-sm transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+      className="group relative w-full overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left shadow-sm transition-colors hover:border-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
     >
       <motion.div
         initial={{ opacity: 0 }}
         whileHover={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-primary/5"
+        className="absolute inset-0 bg-muted/30"
       />
-      <div className="relative z-10 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-primary/20 bg-background/80 text-primary shadow-sm">
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">
-            {label}
-          </p>
+      <div className="relative z-10 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-primary shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {label}
+            </p>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
         </div>
         {promotion.image ? (
-          <div className="overflow-hidden rounded-lg border border-border/60 bg-background/70 shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-background/70 shadow-sm">
             <img
               src={promotion.image.src}
               alt={promotion.image.alt}
@@ -79,18 +82,21 @@ export function SidebarPromotionCard({
             />
           </div>
         ) : null}
-        <div className="space-y-1">
-          <p className="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
+        <div className="space-y-1.5">
+          <p className="line-clamp-2 text-base font-semibold leading-6 text-foreground">
             {promotion.title}
           </p>
-          <p className="line-clamp-3 text-xs leading-5 text-muted-foreground">
+          <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">
             {promotion.description}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary transition-colors group-hover:text-primary/80">
-          {promotion.cta}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </span>
+        <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+          <p className="line-clamp-1 text-xs text-muted-foreground">{promotion.cta}</p>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary transition-colors group-hover:text-primary/80">
+            <Sparkles className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" />
+          </span>
+        </div>
       </div>
     </motion.button>
   );

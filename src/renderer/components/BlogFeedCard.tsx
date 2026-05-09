@@ -7,7 +7,6 @@ import {
   selectRSSFeedLoading,
   selectRSSFeedError,
   selectRSSFeedLastUpdate,
-  type RSSFeedItem,
 } from '../store/slices/rssFeedSlice';
 import {
   fetchFeedItems,
@@ -140,30 +139,39 @@ const BlogFeedCard: React.FC = () => {
   return (
     <div>
       <Card className="overflow-hidden border-border/80 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-primary">
-                <Newspaper className="w-5 h-5" />
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-muted/35 text-primary">
+                <Newspaper className="h-4.5 w-4.5" />
               </div>
-              <div>
-                <CardTitle className="text-lg">
+              <div className="min-w-0">
+                <CardTitle className="text-base leading-6">
                   {t('blogFeed.title', 'Hagicode Recommendations & Updates')}
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-1 max-w-md text-sm leading-6">
                   {t('blogFeed.description', 'Review official recommendations and update notes without leaving the control console.')}
                 </CardDescription>
+                {lastUpdate && (
+                  <CardDescription className="mt-2 flex items-center gap-1.5 text-xs">
+                    <Clock className="h-3 w-3" />
+                    {t('blogFeed.lastUpdate', '最后更新：{{date}}', {
+                      date: formatLastUpdate(lastUpdate),
+                    })}
+                  </CardDescription>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 self-start">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => void handleOpenRss()}
-                className="h-8 gap-1"
+                className="h-8 gap-1.5"
               >
-                <Rss className="w-4 h-4" />
+                <Rss className="h-3.5 w-3.5" />
                 <span>{t('blogFeed.openRss', 'RSS')}</span>
               </Button>
               <Button
@@ -172,12 +180,12 @@ const BlogFeedCard: React.FC = () => {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="h-8 gap-1"
+                className="h-8 gap-1.5 px-2 text-muted-foreground"
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw className="h-3.5 w-3.5" />
                 )}
                 <span className="hidden sm:inline">
                   {t('blogFeed.refresh', '刷新')}
@@ -185,14 +193,6 @@ const BlogFeedCard: React.FC = () => {
               </Button>
             </div>
           </div>
-          {lastUpdate && (
-            <CardDescription className="mt-3 flex items-center gap-1 text-xs">
-              <Clock className="w-3 h-3" />
-              {t('blogFeed.lastUpdate', '最后更新：{{date}}', {
-                date: formatLastUpdate(lastUpdate),
-              })}
-            </CardDescription>
-          )}
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -231,19 +231,17 @@ const BlogFeedCard: React.FC = () => {
                 </Badge>
                 <span className="text-xs text-muted-foreground">{formatDate(featuredItem.pubDate)}</span>
               </div>
-              <h3 className="mt-3 text-base font-semibold text-foreground">
+              <h3 className="mt-3 text-sm font-semibold leading-6 text-foreground sm:text-base">
                 {featuredItem.title}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
                 {getTruncatedDescription(featuredItem.description, 180)}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" onClick={() => void handleArticleClick(featuredItem.link)}>
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <span className="text-xs text-muted-foreground">{t('blogFeed.actions.openFeed', 'Open feed')}</span>
+                <Button type="button" variant="outline" size="sm" onClick={() => void handleArticleClick(featuredItem.link)} className="gap-1.5">
                   {t('blogFeed.actions.readArticle', 'Read article')}
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-                <Button type="button" variant="outline" onClick={() => void handleOpenRss()}>
-                  {t('blogFeed.actions.openFeed', 'Open feed')}
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </section>
@@ -264,10 +262,10 @@ const BlogFeedCard: React.FC = () => {
                         </Badge>
                         <span className="text-xs text-muted-foreground">{formatDate(item.pubDate)}</span>
                       </div>
-                      <h4 className="mt-2 line-clamp-2 text-sm font-medium text-foreground">
+                      <h4 className="mt-2 line-clamp-2 text-sm font-medium leading-5 text-foreground">
                         {item.title}
                       </h4>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
                         {getTruncatedDescription(item.description, 110)}
                       </p>
                     </div>
@@ -276,9 +274,9 @@ const BlogFeedCard: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => void handleArticleClick(item.link)}
-                      className="mt-0.5"
+                      className="mt-0.5 h-8 px-2 text-muted-foreground group-hover:text-foreground"
                     >
-                      {t('blogFeed.actions.readArticle', 'Read article')}
+                      <ExternalLink className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </article>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'motion/react';
 import { useNavigate } from '../hooks/useNavigate';
 import { Package, Activity, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -67,25 +68,29 @@ function DashboardSummaryCard({
   value,
   description,
   accentClass = 'text-primary',
+  className,
+  valueClassName,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   description: string;
   accentClass?: string;
+  className?: string;
+  valueClassName?: string;
 }) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+    <section className={cn('rounded-2xl border border-border/70 bg-card p-4 shadow-sm', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-          <p className="text-lg font-semibold text-foreground">{value}</p>
+          <p className={cn('text-lg font-semibold text-foreground', valueClassName)}>{value}</p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground">
           <Icon className={`h-5 w-5 ${accentClass}`} />
         </div>
       </div>
-      <p className="mt-3 text-sm text-muted-foreground">{description}</p>
+      <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{description}</p>
     </section>
   );
 }
@@ -478,6 +483,11 @@ export default function SystemManagementView({
       : t('webServiceStatus.dependencyReadinessAlert.message', { ns: 'components' });
   const networkValue = `${webServiceInfo.host || 'localhost'}:${webServiceInfo.port || 36556}`;
   const networkDescription = webServiceInfo.url || t('webServiceStatus.details.listenAddress', { ns: 'components' });
+  const heroDetails = [
+    { label: t('common.version'), value: activeVersion?.version ?? t('status.notInstalled') },
+    { label: t('webServiceStatus.details.listenAddress', { ns: 'components' }), value: networkValue },
+    { label: t('dependencyManagement.title'), value: dependencyValue },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -485,7 +495,7 @@ export default function SystemManagementView({
         className="rounded-[28px] border border-border/80 bg-card px-6 py-6 shadow-sm lg:px-8"
         {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'hero' }}
       >
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
           <div className="max-w-3xl">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               {t('sidebar.dashboard')}
@@ -513,29 +523,67 @@ export default function SystemManagementView({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" onClick={handleOpenVersionManagement}>
-              {t('system.activeVersion.actions.manage')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleOpenUpdateSettings}>
-              {t('sidebar.settings')}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            {!activeVersion ? (
-              <Button type="button" onClick={() => void handleStartWizard()}>
-                {t('system.noVersionInstalled.startWizard')}
+          <aside className="rounded-2xl border border-border/70 bg-muted/25 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  {t('system.dashboard.title')}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {webServiceInfo.phaseMessage?.trim() || networkDescription}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {t('sidebar.webService')}
+                </div>
+                <div className={cn('mt-1 text-sm font-semibold', getStatusColor(serverStatus))}>
+                  {getStatusText(serverStatus)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {heroDetails.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card px-4 py-3 shadow-sm"
+                >
+                  <span className="text-sm text-muted-foreground">{item.label}</span>
+                  <span className="text-sm font-medium text-foreground">{item.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row xl:flex-col">
+              {!activeVersion ? (
+                <Button type="button" onClick={() => void handleStartWizard()} className="justify-between">
+                  <span>{t('system.noVersionInstalled.startWizard')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button type="button" onClick={handleOpenVersionManagement} className="justify-between">
+                  <span>{t('system.activeVersion.actions.manage')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={handleOpenUpdateSettings} className="justify-between">
+                <span>{t('sidebar.settings')}</span>
+                <ArrowRight className="h-4 w-4" />
               </Button>
-            ) : null}
-          </div>
+            </div>
+          </aside>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <DashboardSummaryCard
             icon={Activity}
             label={t('sidebar.webService')}
             value={getStatusText(serverStatus)}
             description={webServiceInfo.phaseMessage?.trim() || webServiceInfo.url || t('system.dashboard.description')}
             accentClass={getStatusColor(serverStatus)}
+            className="xl:col-span-2"
+            valueClassName="text-xl"
           />
           <DashboardSummaryCard
             icon={Package}
@@ -562,70 +610,74 @@ export default function SystemManagementView({
                   : 'text-amber-600'
             }
           />
-          <DashboardSummaryCard
-            icon={BellRing}
-            label={t('system.updateReminder.title')}
-            value={versionUpdateReminder ? t(`system.updateReminder.states.${versionUpdateReminder.status}`) : t('system.logQuickAccess.status.unavailable')}
-            description={versionUpdateReminder ? getUpdateReminderDescription() : t('system.logQuickAccess.hint')}
-          />
         </div>
       </section>
 
       {shouldShowVersionUpdateReminder ? (
-        <section
-          className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'update-reminder' }}
         >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-primary/10 p-3">
-                  <BellRing className="h-5 w-5 text-primary" />
+          <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-primary/10 p-3">
+                    <BellRing className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
+                      <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                        {t(`system.updateReminder.states.${versionUpdateReminder.status}`)}
+                      </span>
+                    </div>
+                    <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{getUpdateReminderDescription()}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
-                  <p className="text-sm text-muted-foreground">{getUpdateReminderDescription()}</p>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-xl border border-border bg-muted/30 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.current')}</div>
+                    <div className="mt-1 font-medium text-foreground">
+                      {versionUpdateReminder.currentVersion?.version ?? t('status.loading')}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.latest')}</div>
+                    <div className="mt-1 font-medium text-foreground">
+                      {versionUpdateReminder.latestVersion?.version ?? t('status.loading')}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.state')}</div>
+                    <div className="mt-1 font-medium text-foreground">{t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-border bg-muted/30 p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.current')}</div>
-                  <div className="mt-1 font-medium text-foreground">
-                    {versionUpdateReminder.currentVersion?.version ?? t('status.loading')}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/30 p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.latest')}</div>
-                  <div className="mt-1 font-medium text-foreground">
-                    {versionUpdateReminder.latestVersion?.version ?? t('status.loading')}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/30 p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.state')}</div>
-                  <div className="mt-1 font-medium text-foreground">{t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
-                </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                {versionUpdateReminder.status === 'ready' ? (
+                  <Button type="button" onClick={() => void handleInstallLatest()} className="justify-between">
+                    <span>{t('system.updateReminder.actions.installLatest')}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                <Button type="button" variant={versionUpdateReminder.status === 'ready' ? 'outline' : 'default'} onClick={handleOpenVersionManagement} className="justify-between">
+                  <span>{t('system.updateReminder.actions.openVersionPage')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                {versionUpdateReminder.status === 'disabled' ? (
+                  <Button type="button" variant="outline" onClick={handleOpenUpdateSettings}>
+                    {t('system.updateReminder.actions.openSettings')}
+                  </Button>
+                ) : null}
               </div>
             </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Button type="button" onClick={handleOpenVersionManagement} className="justify-between">
-                <span>{t('system.updateReminder.actions.openVersionPage')}</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-              {versionUpdateReminder.status === 'ready' ? (
-                <Button type="button" variant="outline" onClick={() => void handleInstallLatest()}>
-                  {t('system.updateReminder.actions.installLatest')}
-                </Button>
-              ) : null}
-              {versionUpdateReminder.status === 'disabled' ? (
-                <Button type="button" variant="outline" onClick={handleOpenUpdateSettings}>
-                  {t('system.updateReminder.actions.openSettings')}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </section>
+          </section>
+        </motion.div>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
@@ -639,9 +691,9 @@ export default function SystemManagementView({
             {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'log-access' }}
           >
             <div>
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-5">
+              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <h2 className="flex items-center gap-2 text-xl font-semibold">
                     <FolderOpen className="w-5 h-5 text-primary" />
                     {t('system.logQuickAccess.title')}
                   </h2>
@@ -649,7 +701,7 @@ export default function SystemManagementView({
                     {t('system.logQuickAccess.description')}
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="inline-flex self-start rounded-full border border-border/70 bg-muted/25 px-2.5 py-1 text-xs text-muted-foreground">
                   {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
                 </span>
               </div>
@@ -662,11 +714,11 @@ export default function SystemManagementView({
                   return (
                     <div
                       key={target}
-                      className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-muted/35 p-4"
+                      className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-muted/20 p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
-                          <div className="mt-0.5 rounded-xl border border-border/70 bg-background p-2.5">
+                          <div className="mt-0.5 rounded-xl border border-border/70 bg-background p-2.5 shadow-sm">
                             <Icon className="w-4 h-4 text-primary" />
                           </div>
                           <div>
@@ -690,20 +742,28 @@ export default function SystemManagementView({
                         </span>
                       </div>
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void handleOpenLogDirectory(target)}
-                        disabled={isDisabled}
-                        className="justify-between"
-                      >
-                        <span>{label}</span>
-                        {isOpening ? (
-                          <LoaderCircle className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <FolderOpen className="w-4 h-4" />
-                        )}
-                      </Button>
+                      <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                        <span className="text-xs text-muted-foreground">
+                          {status.available
+                            ? t('system.logQuickAccess.status.available')
+                            : t('system.logQuickAccess.status.unavailable')}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleOpenLogDirectory(target)}
+                          disabled={isDisabled}
+                          className="justify-between gap-2"
+                        >
+                          <span>{label}</span>
+                          {isOpening ? (
+                            <LoaderCircle className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <FolderOpen className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -721,11 +781,14 @@ export default function SystemManagementView({
                 [HOMEPAGE_TOUR_VARIANT_ATTRIBUTE]: HOMEPAGE_TOUR_VARIANTS.activeVersion,
               }}
             >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Package className="w-5 h-5 text-primary" />
-                  {t('common.version')}
-                </h2>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">{t('common.version')}</h2>
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{activeVersion.version}</p>
+                </div>
                 <Button type="button" variant="ghost" onClick={handleOpenVersionManagement} className="px-0 text-primary">
                   {t('system.activeVersion.actions.manage')}
                   <ArrowRight className="h-4 w-4" />
@@ -775,8 +838,6 @@ export default function SystemManagementView({
             </section>
           )}
 
-          <BlogFeedCard />
-
           {promotion ? (
             <SidebarPromotionCard
               promotion={promotion}
@@ -785,6 +846,8 @@ export default function SystemManagementView({
               onActivate={(url) => void handleOpenPromotion(url)}
             />
           ) : null}
+
+          <BlogFeedCard />
         </div>
       </div>
 

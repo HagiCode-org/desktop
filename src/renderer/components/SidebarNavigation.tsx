@@ -538,7 +538,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                    whileHover={{ x: 0 }}
                    whileTap={{ scale: 0.98 }}
                    className={collapsed
-                     ? 'group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border border-transparent px-3 py-2.5 text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground'
+                     ? 'relative w-full flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-muted-foreground hover:bg-muted/55 hover:text-foreground group'
                      : 'group relative w-full overflow-hidden rounded-2xl border border-border/70 bg-card px-3 py-3 text-left shadow-sm'}
                  >
                    <motion.div
