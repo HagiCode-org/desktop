@@ -661,13 +661,20 @@ export class OmniRouteManager {
   private async resolveVendoredRuntimeLaunchSpec(
     runtime: VendoredRuntimeStatusSnapshot,
   ): Promise<ManagedCliLaunchSpec> {
-    const runtimeRoot = await ensureNoSpacePathAlias(
-      this.pathManager.getOmniRouteRuntimeRoot(),
-      'omniroute-runtime',
+    const runtimeHome = await ensureNoSpacePathAlias(
+      this.pathManager.getRuntimeProgramHome(),
+      'desktop-runtime-home',
+    );
+    const runtimeRoot = path.join(
+      runtimeHome,
+      path.relative(this.pathManager.getRuntimeProgramHome(), this.pathManager.getOmniRouteRuntimeRoot()),
+    );
+    const portableToolchainRoot = path.join(
+      runtimeHome,
+      path.relative(this.pathManager.getRuntimeProgramHome(), this.pathManager.getPortableToolchainRoot()),
     );
     const bundledNodeExecutablePath = path.join(
-      runtimeRoot,
-      'toolchain',
+      portableToolchainRoot,
       getNodeExecutableRelativePath(process.platform),
     );
     const entryScriptPath = path.join(
