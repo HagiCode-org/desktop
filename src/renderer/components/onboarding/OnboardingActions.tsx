@@ -22,9 +22,9 @@ function OnboardingActions({
   const { t } = useTranslation('onboarding');
 
   return (
-    <div className="flex items-center justify-between px-8 py-4 border-t bg-muted/20 rounded-b-lg">
-      {/* Left side - Previous button */}
-      <div className="flex-1">
+    <div className="border-t bg-muted/10 px-6 py-4 sm:px-8">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-h-10 items-center">
         {canGoPrevious && (
           <Button
             variant="ghost"
@@ -35,10 +35,9 @@ function OnboardingActions({
             {t('actions.previous')}
           </Button>
         )}
-      </div>
+        </div>
 
-      {/* Right side - Next/Skip buttons */}
-      <div className="flex items-center gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
         {onSkip && (
           <Button
             variant="ghost"
@@ -51,11 +50,12 @@ function OnboardingActions({
         <Button
           onClick={onNext}
           disabled={!canGoNext}
-          className="gap-2"
+          className="min-w-40 justify-center gap-2"
         >
           {nextLabel ?? t('actions.next')}
           <ArrowRight className="h-4 w-4" />
         </Button>
+        </div>
       </div>
     </div>
   );

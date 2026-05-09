@@ -169,7 +169,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const title = useMemo(() => {
+  const currentStepLabel = useMemo(() => {
     switch (currentStep) {
       case OnboardingStep.LanguageSelection:
         return t('languageSelection.title');
@@ -216,20 +216,26 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm">
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col">
-        <div className="mb-6 flex flex-shrink-0 items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">{title}</h1>
-            <p className="text-sm text-muted-foreground">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4">
+        <div className="flex flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-sm font-semibold tracking-[0.08em] text-muted-foreground">
+              {t('title')}
+            </h1>
+            <p className="max-w-3xl text-sm text-muted-foreground">
               {t(mode === 'legal-only' ? 'legal.progressLegalOnly' : 'legal.progressFull')}
             </p>
           </div>
-          <OnboardingProgress currentStepNumber={currentStepNumber} totalSteps={totalSteps} />
+          <OnboardingProgress
+            currentStepNumber={currentStepNumber}
+            totalSteps={totalSteps}
+            currentStepLabel={currentStepLabel}
+          />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-lg">
-          <div className="flex-1 overflow-y-auto p-8">{renderStep()}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card shadow-lg">
+          <div className="flex-1 overflow-y-auto p-6 sm:p-8">{renderStep()}</div>
 
           {currentStep !== OnboardingStep.Welcome &&
             currentStep !== OnboardingStep.LegalConsent && (
