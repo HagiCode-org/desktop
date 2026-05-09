@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { ensureGeneratedLocales } from '../test-utils/ensure-generated-locales.mjs';
 
 const cardPath = path.resolve(process.cwd(), 'src/renderer/components/WebServiceStatusCard.tsx');
 const actionButtonPath = path.resolve(process.cwd(), 'src/renderer/components/HagicodeActionButton.tsx');
-const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/components.json');
-const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/components.json');
+const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/components.json');
+const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/components.json');
 
 describe('hagicode action button port waiting state', () => {
   it('derives the waiting state from active lifecycle status without a ready URL', async () => {
@@ -48,6 +49,8 @@ describe('hagicode action button port waiting state', () => {
   });
 
   it('adds localized waiting labels without inline component literals', async () => {
+    await ensureGeneratedLocales();
+
     const [zhRaw, enRaw, buttonSource] = await Promise.all([
       fs.readFile(zhComponentsPath, 'utf8'),
       fs.readFile(enComponentsPath, 'utf8'),

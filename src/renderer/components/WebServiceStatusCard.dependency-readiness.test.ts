@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { ensureGeneratedLocales } from '../test-utils/ensure-generated-locales.mjs';
 
 const cardPath = path.resolve(process.cwd(), 'src/renderer/components/WebServiceStatusCard.tsx');
 const actionButtonPath = path.resolve(process.cwd(), 'src/renderer/components/HagicodeActionButton.tsx');
-const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/components.json');
-const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/components.json');
+const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/components.json');
+const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/components.json');
 
 describe('home launch dependency readiness guard', () => {
   it('loads readiness with the shared evaluator and routes incomplete required readiness to dependency management', async () => {
@@ -32,6 +33,8 @@ describe('home launch dependency readiness guard', () => {
   });
 
   it('adds localized dependency management entry and readiness failure feedback', async () => {
+    await ensureGeneratedLocales();
+
     const [zhRaw, enRaw] = await Promise.all([
       fs.readFile(zhComponentsPath, 'utf8'),
       fs.readFile(enComponentsPath, 'utf8'),
