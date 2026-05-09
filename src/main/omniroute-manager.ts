@@ -8,7 +8,7 @@ import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
-import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
+import { Pm2DotnetManager, resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import { ensurePm2HomeAlias } from './pm2-home-alias.js';
 import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
@@ -59,15 +59,6 @@ class OmniRouteLifecycleCommandError extends Error {
     this.stderr = result.stderr;
     this.exitCode = result.exitCode;
   }
-}
-
-interface Pm2ListEntry {
-  name?: string;
-  pm2_env?: {
-    status?: string;
-    restart_time?: number;
-    pm_uptime?: number;
-  };
 }
 
 interface ManagedCliLaunchSpec {
@@ -715,27 +706,21 @@ export class OmniRouteManager {
       return null;
     }
 
-    try {
-      const result = await this.runPm2(pm2ExecutablePath, ['jlist'], env, true);
-      if (result.exitCode !== 0) {
-        return null;
-      }
-
-      const entries = JSON.parse(result.stdout || '[]') as Pm2ListEntry[];
-      const entry = entries.find((item) => item.name === OMNIROUTE_PROCESS_NAME);
-      if (!entry) {
-        return null;
-      }
-
-      return {
-        name: OMNIROUTE_PROCESS_NAME,
-        status: toStatus(entry.pm2_env?.status),
-        restartCount: typeof entry.pm2_env?.restart_time === 'number' ? entry.pm2_env.restart_time : null,
-        uptime: typeof entry.pm2_env?.pm_uptime === 'number' ? Math.max(0, Date.now() - entry.pm2_env.pm_uptime) : null,
-      };
-    } catch {
+    const manager = new Pm2DotnetManager({
+      pm2Command: pm2ExecutablePath,
+      processName: OMNIROUTE_PROCESS_NAME,
+    });
+    const result = await manager.status(this.getPaths().runtime, env);
+    if (!result.success || !result.status || !result.status.exists) {
       return null;
     }
+
+    return {
+      name: OMNIROUTE_PROCESS_NAME,
+      status: toStatus(result.status.status ?? undefined),
+      restartCount: result.status.restartCount,
+      uptime: result.status.uptime,
+    };
   }
 
   private runPm2(command: string, args: string[], env: NodeJS.ProcessEnv, allowFailure = false): Promise<CommandResult> {

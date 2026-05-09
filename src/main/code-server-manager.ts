@@ -13,7 +13,7 @@ import {
   injectManagedCliPathEnv,
   resolvePathEnvKey,
 } from './portable-toolchain-env.js';
-import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
+import { Pm2DotnetManager, resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCli } from './utils/cli-executor.js';
 import { PathManager } from './path-manager.js';
@@ -51,13 +51,6 @@ interface CommandResult {
   exitCode: number | null;
   stdout: string;
   stderr: string;
-}
-
-interface Pm2ListEntry {
-  name?: string;
-  pm2_env?: {
-    status?: string;
-  };
 }
 
 interface Pm2ContextSnapshot {
@@ -629,32 +622,29 @@ export class CodeServerManager {
       return 'stopped';
     }
 
-    const result = await this.runPm2(pm2.executablePath, ['jlist'], pm2.env, true);
-    if (result.exitCode !== 0) {
+    const manager = new Pm2DotnetManager({
+      pm2Command: pm2.executablePath,
+      processName: PROCESS_NAME,
+    });
+    const result = await manager.status(this.getPaths().runtime, pm2.env);
+    if (!result.success || !result.status) {
       return 'unknown';
     }
 
-    try {
-      const entries = JSON.parse(result.stdout || '[]') as Pm2ListEntry[];
-      const entry = entries.find((item) => item.name === PROCESS_NAME);
-      if (!entry) {
-        return 'stopped';
-      }
-
-      const status = entry.pm2_env?.status;
-      if (status === 'online') {
-        return 'online';
-      }
-      if (status === 'errored') {
-        return 'errored';
-      }
-      if (status === 'stopped' || status === 'stopping' || status === 'launching') {
-        return 'stopped';
-      }
-      return 'unknown';
-    } catch {
-      return 'unknown';
+    const status = result.status.status;
+    if (!result.status.exists || status === null) {
+      return 'stopped';
     }
+    if (status === 'online') {
+      return 'online';
+    }
+    if (status === 'errored') {
+      return 'errored';
+    }
+    if (status === 'stopped' || status === 'stopping' || status === 'launching') {
+      return 'stopped';
+    }
+    return 'unknown';
   }
 
   private resolveOverallStatus(

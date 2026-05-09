@@ -373,7 +373,7 @@ async function verifyBackendLifecycle(input: {
   const packageSourceConfigManager = new PackageSourceConfigManager(input.configManager.getStore() as unknown as Store);
   const versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
   const distributionModeState = await versionManager.initializeDistributionMode();
-  const activeRuntime = distributionModeState.activeRuntime;
+  const activeRuntime = distributionModeState.activeRuntime ?? await versionManager.getActiveRuntimeDescriptor();
 
   report.activeRuntimeRoot = activeRuntime?.rootPath ?? null;
   if (!activeRuntime) {

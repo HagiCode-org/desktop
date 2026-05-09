@@ -231,6 +231,46 @@ describe('pm2-dotnet-manager', () => {
     });
   });
 
+  it('rewrites bare POSIX pm2 launches using managed npm env from DependencyManagementService', () => {
+    const plan = resolvePm2LaunchPlan('pm2', {
+      platform: 'linux',
+      env: {
+        HAGICODE_NPM_GLOBAL_PREFIX: '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal',
+        HAGICODE_NPM_GLOBAL_MODULES_ROOT: '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal/lib/node_modules',
+        NODE: '/portable/toolchain/node/bin/node',
+        npm_node_execpath: '/portable/toolchain/node/bin/node',
+      },
+      existsSync: target => target === '/portable/toolchain/node/bin/node'
+        || target === '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal/lib/node_modules/pm2/bin/pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: '/portable/toolchain/node/bin/node',
+      argsPrefix: ['/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal/lib/node_modules/pm2/bin/pm2'],
+      shell: false,
+    });
+  });
+
+  it('rewrites bare Windows pm2 launches using managed npm modules root from DependencyManagementService', () => {
+    const plan = resolvePm2LaunchPlan('pm2.cmd', {
+      platform: 'win32',
+      env: {
+        HAGICODE_NPM_GLOBAL_PREFIX: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal',
+        HAGICODE_NPM_GLOBAL_MODULES_ROOT: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\node_modules',
+        NODE: 'C:\\portable-toolchain\\node\\node.exe',
+        npm_node_execpath: 'C:\\portable-toolchain\\node\\node.exe',
+      },
+      existsSync: target => target === 'C:\\portable-toolchain\\node\\node.exe'
+        || target === 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\node_modules\\pm2\\bin\\pm2',
+    });
+
+    assert.deepEqual(plan, {
+      command: 'C:\\portable-toolchain\\node\\node.exe',
+      argsPrefix: ['C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\node_modules\\pm2\\bin\\pm2'],
+      shell: false,
+    });
+  });
+
   it('normalizes missing executable and non-zero exit failures', async () => {
     const missingExecutor: Pm2CommandExecutor = {
       run: async () => {

@@ -299,30 +299,24 @@ function resolveWindowsPm2LaunchFromEnvironment(
   const preferredNodeExecutable = [env.npm_node_execpath, env.NODE]
     .map(value => value?.trim())
     .find((value): value is string => Boolean(value));
-  const managedNpmGlobalPath = env.HAGICODE_NPM_GLOBAL_PATH?.trim();
-  if (managedNpmGlobalPath) {
-    const pm2CliPath = resolveExistingPath(
-      buildPathCandidates(managedNpmGlobalPath, 'node_modules', 'pm2', 'bin', 'pm2'),
+  const pm2CliPath = resolveManagedPm2CliPath('win32', env, existsSync);
+  if (pm2CliPath) {
+    if (preferredNodeExecutable && isAbsolutePathLike(preferredNodeExecutable) && existsSync(preferredNodeExecutable)) {
+      return {
+        command: preferredNodeExecutable,
+        argsPrefix: [pm2CliPath],
+      };
+    }
+
+    const bundledNodeExecutable = resolveWindowsNodeExecutableFromPortableToolchainRoots(
+      [...mergedPortableToolchainRoots],
       existsSync,
     );
-    if (pm2CliPath) {
-      if (preferredNodeExecutable && isAbsolutePathLike(preferredNodeExecutable) && existsSync(preferredNodeExecutable)) {
-        return {
-          command: preferredNodeExecutable,
-          argsPrefix: [pm2CliPath],
-        };
-      }
-
-      const bundledNodeExecutable = resolveWindowsNodeExecutableFromPortableToolchainRoots(
-        [...mergedPortableToolchainRoots],
-        existsSync,
-      );
-      if (bundledNodeExecutable) {
-        return {
-          command: bundledNodeExecutable,
-          argsPrefix: [pm2CliPath],
-        };
-      }
+    if (bundledNodeExecutable) {
+      return {
+        command: bundledNodeExecutable,
+        argsPrefix: [pm2CliPath],
+      };
     }
   }
 
@@ -435,15 +429,7 @@ function resolvePosixPm2LaunchFromEnvironment(
     return null;
   }
 
-  const managedNpmGlobalPath = env.HAGICODE_NPM_GLOBAL_PATH?.trim();
-  if (!managedNpmGlobalPath) {
-    return null;
-  }
-
-  const pm2CliPath = resolveExistingPath(
-    buildPathCandidates(managedNpmGlobalPath, 'lib', 'node_modules', 'pm2', 'bin', 'pm2'),
-    existsSync,
-  );
+  const pm2CliPath = resolveManagedPm2CliPath('posix', env, existsSync);
   if (!pm2CliPath) {
     return null;
   }
@@ -457,6 +443,35 @@ function resolvePosixPm2LaunchFromEnvironment(
     command: nodeExecutablePath,
     argsPrefix: [pm2CliPath],
   };
+}
+
+function resolveManagedPm2CliPath(
+  platform: 'win32' | 'posix',
+  env: NodeJS.ProcessEnv,
+  existsSync: (targetPath: string) => boolean,
+): string | null {
+  const managedModulesRoot = env.HAGICODE_NPM_GLOBAL_MODULES_ROOT?.trim();
+  if (managedModulesRoot) {
+    const pm2CliFromModulesRoot = resolveExistingPath(
+      buildPathCandidates(managedModulesRoot, 'pm2', 'bin', 'pm2'),
+      existsSync,
+    );
+    if (pm2CliFromModulesRoot) {
+      return pm2CliFromModulesRoot;
+    }
+  }
+
+  const managedNpmGlobalPath = env.HAGICODE_NPM_GLOBAL_PATH?.trim() ?? env.HAGICODE_NPM_GLOBAL_PREFIX?.trim();
+  if (!managedNpmGlobalPath) {
+    return null;
+  }
+
+  return resolveExistingPath(
+    platform === 'win32'
+      ? buildPathCandidates(managedNpmGlobalPath, 'node_modules', 'pm2', 'bin', 'pm2')
+      : buildPathCandidates(managedNpmGlobalPath, 'lib', 'node_modules', 'pm2', 'bin', 'pm2'),
+    existsSync,
+  );
 }
 
 function resolveDefaultPortableToolchainRoots(): string[] {
