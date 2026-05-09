@@ -43,6 +43,8 @@ const ERROR_LOG_FILE = 'code-server-error.log';
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
 const DEFAULT_LOG_LINE_LIMIT = 200;
+const DEFAULT_PM2_STATUS_TIMEOUT_MS = 5_000;
+const DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS = 20_000;
 
 interface CommandResult {
   exitCode: number | null;
@@ -702,6 +704,7 @@ export class CodeServerManager {
       env,
       windowsHide: true,
       shell: launch.shell,
+      timeoutMs: args[0] === 'jlist' ? DEFAULT_PM2_STATUS_TIMEOUT_MS : DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS,
       metadata: { component: 'CodeServerManager', command },
     });
     const normalized = {

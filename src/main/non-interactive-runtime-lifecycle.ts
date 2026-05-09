@@ -22,7 +22,7 @@ import OmniRouteManager from './omniroute-manager.js';
 import { CODE_SERVER_PROCESS_NAME } from '../types/code-server-management.js';
 import { OMNIROUTE_PROCESS_NAME } from '../types/omniroute-management.js';
 
-const DEFAULT_VERIFICATION_TIMEOUT_MS = 120_000;
+const DEFAULT_VERIFICATION_TIMEOUT_MS = 30_000;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const MAX_LOG_TAIL_CHARS = 4_000;
 
@@ -219,6 +219,8 @@ async function verifyCodeServerLifecycle(input: {
     report.startSuccess = startResult.success;
     if (!startResult.success) {
       report.error = startResult.error ?? 'code-server start failed.';
+      report.statusAfterStart = (await input.manager.getStatus()).process.status;
+      return report;
     }
 
     const online = await waitForResult(
@@ -238,6 +240,8 @@ async function verifyCodeServerLifecycle(input: {
     report.stopSuccess = stopResult.success;
     if (!stopResult.success) {
       report.error = report.error ?? stopResult.error ?? 'code-server stop failed.';
+      report.statusAfterStop = (await input.manager.getStatus()).process.status;
+      return report;
     }
 
     const stopped = await waitForResult(
@@ -291,6 +295,8 @@ async function verifyOmniRouteLifecycle(input: {
     report.startSuccess = startResult.success;
     if (!startResult.success) {
       report.error = startResult.error ?? 'omniroute start failed.';
+      report.statusAfterStart = (await input.manager.getStatus()).processes[0]?.status ?? 'unknown';
+      return report;
     }
 
     const online = await waitForResult(
@@ -310,6 +316,8 @@ async function verifyOmniRouteLifecycle(input: {
     report.stopSuccess = stopResult.success;
     if (!stopResult.success) {
       report.error = report.error ?? stopResult.error ?? 'omniroute stop failed.';
+      report.statusAfterStop = (await input.manager.getStatus()).processes[0]?.status ?? 'unknown';
+      return report;
     }
 
     const stopped = await waitForResult(
@@ -402,6 +410,8 @@ async function verifyBackendLifecycle(input: {
     report.startSuccess = startResult.success;
     if (!startResult.success) {
       report.error = startResult.summary;
+      report.statusAfterStart = startResult.status;
+      return report;
     }
 
     const online = await waitForResult(
@@ -419,6 +429,8 @@ async function verifyBackendLifecycle(input: {
     report.restartSuccess = restartResult.success;
     if (!restartResult.success) {
       report.error = report.error ?? restartResult.summary;
+      report.statusAfterRestart = restartResult.status;
+      return report;
     }
 
     const restarted = await waitForResult(
@@ -436,6 +448,8 @@ async function verifyBackendLifecycle(input: {
     report.stopSuccess = stopResult.success;
     if (!stopResult.success) {
       report.error = report.error ?? stopResult.summary;
+      report.statusAfterStop = stopResult.status;
+      return report;
     }
 
     const stopped = await waitForResult(

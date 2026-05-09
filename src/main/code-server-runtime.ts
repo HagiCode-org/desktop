@@ -129,9 +129,18 @@ export async function readCodeServerRuntimeMetadata(runtimeRoot: string): Promis
 export function resolveCodeServerWrapperPath(
   runtimeRoot: string,
   config: CodeServerRuntimeConfig = readCodeServerRuntimeConfig(),
+  platform: NodeJS.Platform = process.platform,
   existsSync: (targetPath: string) => boolean = fsSync.existsSync,
 ): string | null {
-  for (const relativePath of config.expectedLayout.wrapperCandidates) {
+  const orderedCandidates = platform === 'win32'
+    ? [
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.cmd$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|ps1)$/i.test(candidate)),
+      ]
+    : config.expectedLayout.wrapperCandidates;
+
+  for (const relativePath of orderedCandidates) {
     const candidate = path.join(runtimeRoot, relativePath);
     if (existsSync(candidate)) {
       return candidate;
@@ -234,7 +243,12 @@ export async function validateCodeServerRuntime(
   }
 
   const entryScriptPath = path.join(options.runtimeRoot, config.expectedLayout.entryScript);
-  const wrapperPath = resolveCodeServerWrapperPath(options.runtimeRoot, config, existsSync);
+  const wrapperPath = resolveCodeServerWrapperPath(
+    options.runtimeRoot,
+    config,
+    options.platform ?? process.platform,
+    existsSync,
+  );
   if (!wrapperPath) {
     diagnostics.push('No runnable code-server wrapper was found in the staged runtime root');
   }

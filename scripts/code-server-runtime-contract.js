@@ -126,8 +126,16 @@ export function readCodeServerRuntimeMetadata(runtimeRoot) {
   return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
 }
 
-export function resolveCodeServerWrapperPath(runtimeRoot, config = readCodeServerRuntimeConfig()) {
-  for (const relativePath of config.expectedLayout.wrapperCandidates) {
+export function resolveCodeServerWrapperPath(runtimeRoot, config = readCodeServerRuntimeConfig(), platform = process.platform) {
+  const orderedCandidates = platform === 'win32'
+    ? [
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.cmd$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|ps1)$/i.test(candidate)),
+      ]
+    : config.expectedLayout.wrapperCandidates;
+
+  for (const relativePath of orderedCandidates) {
     const candidate = path.join(runtimeRoot, relativePath);
     if (fs.existsSync(candidate)) {
       return candidate;
@@ -190,7 +198,7 @@ export function validateCodeServerRuntimePayload(
     }
   }
 
-  const wrapperPath = resolveCodeServerWrapperPath(runtimeRoot, config);
+  const wrapperPath = resolveCodeServerWrapperPath(runtimeRoot, config, process.platform);
   if (!wrapperPath) {
     diagnostics.push('No runnable code-server wrapper was found');
   }
