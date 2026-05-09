@@ -7,6 +7,7 @@ import {
 import type DependencyManagementService from './dependency-management-service.js';
 import type { ConfigManager } from './config.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
+import { ensurePm2HomeAlias } from './pm2-home-alias.js';
 import {
   injectCodeServerRuntimeEnv,
   injectManagedCliPathEnv,
@@ -64,6 +65,13 @@ interface Pm2ContextSnapshot {
   env: NodeJS.ProcessEnv | null;
   available: boolean;
   error?: string;
+}
+
+interface CodeServerLaunchSpec {
+  script: string;
+  args: string[];
+  interpreterNone: boolean;
+  cwd: string;
 }
 
 function normalizePassword(value: unknown): string | null {
@@ -296,7 +304,7 @@ export class CodeServerManager {
       }
 
       const snapshot = await this.getRuntimeSnapshot();
-      if (!snapshot.wrapperPath) {
+      if (!snapshot.wrapperPath && !(process.platform === 'win32' && snapshot.entryScriptPath)) {
         throw new Error(snapshot.message ?? 'Vendored code-server runtime is not ready.');
       }
 
@@ -309,7 +317,9 @@ export class CodeServerManager {
       const runtimeEnv = injectCodeServerRuntimeEnv(pm2.env, this.pathManager, {
         platform: process.platform,
       });
-      await this.renderEcosystem(paths, snapshot.wrapperPath, runtimeEnv.env);
+      const nodeExecutablePath = pm2.env.HAGICODE_NODE_EXECUTABLE_PATH ?? pm2.env.HAGICODE_DOTNET_EXE;
+      const launchSpec = this.resolveLaunchSpec(snapshot, nodeExecutablePath);
+      await this.renderEcosystem(paths, launchSpec, runtimeEnv.env);
 
       if (action === 'start') {
         await this.deletePm2Process(pm2.executablePath, pm2.env);
@@ -519,6 +529,9 @@ export class CodeServerManager {
       npmGlobalBinRoot: string;
       npmGlobalModulesRoot: string;
       npmCacheRoot: string;
+      node: {
+        executablePath: string;
+      };
     },
   ): Promise<NodeJS.ProcessEnv> {
     const managedCliEnv = injectManagedCliPathEnv(baseEnv, {
@@ -541,12 +554,14 @@ export class CodeServerManager {
     });
     const pm2Home = path.join(this.pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2HomePaths.pm2MajorVersion);
     await fs.mkdir(pm2Home, { recursive: true });
+    const pm2HomeAlias = await ensurePm2HomeAlias(pm2Home, `code-server-${pm2HomePaths.pm2MajorVersion}`);
 
     return {
       ...managedCliEnv,
       HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
       HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getCodeServerRuntimeDataHome(),
-      PM2_HOME: pm2Home,
+      HAGICODE_NODE_EXECUTABLE_PATH: environment.node.executablePath,
+      PM2_HOME: pm2HomeAlias,
     };
   }
 
@@ -561,25 +576,51 @@ export class CodeServerManager {
     }
   }
 
-  private async renderEcosystem(paths: CodeServerManagedPaths, wrapperPath: string, runtimeEnv: NodeJS.ProcessEnv): Promise<void> {
+  private resolveLaunchSpec(
+    runtime: VendoredRuntimeStatusSnapshot,
+    nodeExecutablePath: string | undefined,
+  ): CodeServerLaunchSpec {
+    const args = [
+      '--bind-addr',
+      `127.0.0.1:${this.getConfig().port}`,
+      '--auth',
+      'password',
+      '--user-data-dir',
+      this.getPaths().data,
+      '--extensions-dir',
+      this.getPaths().extensions,
+      '--disable-telemetry',
+    ];
+
+    if (process.platform === 'win32' && runtime.entryScriptPath && nodeExecutablePath) {
+      return {
+        script: nodeExecutablePath,
+        args: [runtime.entryScriptPath, ...args],
+        interpreterNone: true,
+        cwd: this.pathManager.getCodeServerRuntimeRoot(),
+      };
+    }
+
+    if (!runtime.wrapperPath) {
+      throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
+    }
+
+    return {
+      script: runtime.wrapperPath,
+      args,
+      interpreterNone: true,
+      cwd: this.pathManager.getCodeServerRuntimeRoot(),
+    };
+  }
+
+  private async renderEcosystem(paths: CodeServerManagedPaths, launchSpec: CodeServerLaunchSpec, runtimeEnv: NodeJS.ProcessEnv): Promise<void> {
     const pathKey = resolvePathEnvKey(runtimeEnv, process.platform);
     const pathValue = runtimeEnv[pathKey] ?? runtimeEnv.PATH ?? runtimeEnv.Path ?? '';
     const config = this.getConfig();
     const outLog = path.join(paths.logs, OUT_LOG_FILE);
     const errorLog = path.join(paths.logs, ERROR_LOG_FILE);
-    const args = [
-      '--bind-addr',
-      `127.0.0.1:${config.port}`,
-      '--auth',
-      'password',
-      '--user-data-dir',
-      paths.data,
-      '--extensions-dir',
-      paths.extensions,
-      '--disable-telemetry',
-    ];
-
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(wrapperPath)},\n      args: ${JSON.stringify(args)},\n      interpreter: 'none',\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      cwd: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
+    const interpreterLine = launchSpec.interpreterNone ? `,\n      interpreter: 'none'` : '';
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(launchSpec.script)},\n      args: ${JSON.stringify(launchSpec.args)},\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10${interpreterLine},\n      cwd: ${JSON.stringify(launchSpec.cwd)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
   }
 

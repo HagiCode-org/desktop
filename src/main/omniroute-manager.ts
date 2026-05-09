@@ -9,6 +9,7 @@ import type DependencyManagementService from './dependency-management-service.js
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import { resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
+import { ensurePm2HomeAlias } from './pm2-home-alias.js';
 import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
@@ -97,6 +98,8 @@ const MAX_LOG_LINES = 1000;
 const DEFAULT_PASSWORD_BYTES = 18;
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
+const DEFAULT_PM2_STATUS_TIMEOUT_MS = 5_000;
+const DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS = 20_000;
 
 function toStatus(value: string | undefined): OmniRouteProcessStatus {
   if (value === 'online') {
@@ -643,12 +646,13 @@ export class OmniRouteManager {
     });
     const pm2Home = path.join(this.pathManager.getOmniRouteRuntimeDataHome(), 'pm2', pm2HomePaths.pm2MajorVersion);
     await fs.mkdir(pm2Home, { recursive: true });
+    const pm2HomeAlias = await ensurePm2HomeAlias(pm2Home, `omniroute-${pm2HomePaths.pm2MajorVersion}`);
 
     return {
       ...managedCliEnv,
       HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
       HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getOmniRouteRuntimeDataHome(),
-      PM2_HOME: pm2Home,
+      PM2_HOME: pm2HomeAlias,
     };
   }
 
@@ -749,6 +753,7 @@ export class OmniRouteManager {
       env,
       windowsHide: true,
       shell: launch.shell,
+      timeoutMs: args[0] === 'jlist' ? DEFAULT_PM2_STATUS_TIMEOUT_MS : DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS,
       metadata: { component: 'OmniRouteManager', command },
     }).then((result) => {
       const commandResult = {

@@ -3,6 +3,9 @@ import { executeCli, type CliExecutionResult } from './utils/cli-executor.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import type { HagiscriptRuntimeContext } from './hagiscript-runtime-context.js';
 
+const DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS = 15_000;
+const DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS = 30_000;
+
 export type HagiscriptManagedServerStatus = 'online' | 'stopped' | 'errored' | 'missing' | 'unknown';
 export type HagiscriptServerLifecycleAction = 'start' | 'stop' | 'restart' | 'status';
 
@@ -217,6 +220,9 @@ export class HagiscriptServerManager {
       args,
       cwd: context.runtimeHome,
       env: context.commandEnv,
+      timeoutMs: args[0] === 'runtime'
+        ? DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS
+        : DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS,
       shell: launch.shell,
       windowsHide: true,
       metadata: {
