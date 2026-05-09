@@ -21,6 +21,7 @@ import { CodeServerManager } from './code-server-manager.js';
 import OmniRouteManager from './omniroute-manager.js';
 import { CODE_SERVER_PROCESS_NAME } from '../types/code-server-management.js';
 import { OMNIROUTE_PROCESS_NAME } from '../types/omniroute-management.js';
+import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
 const DEFAULT_VERIFICATION_TIMEOUT_MS = 30_000;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
@@ -204,6 +205,17 @@ function createEmptyBackendReport(): BackendLifecycleReport {
   };
 }
 
+function buildEmbeddedRuntimeDescriptor(pathManager: PathManager): ActiveRuntimeDescriptor {
+  return {
+    kind: 'portable-fixed',
+    rootPath: pathManager.getEmbeddedRuntimeRoot(),
+    versionId: `embedded-${app.getVersion()}-${pathManager.getCurrentPlatform()}`,
+    versionLabel: app.getVersion(),
+    displayName: 'embedded-runtime',
+    isReadOnly: true,
+  };
+}
+
 async function verifyCodeServerLifecycle(input: {
   manager: CodeServerManager;
   pm2Command: string | null;
@@ -373,7 +385,9 @@ async function verifyBackendLifecycle(input: {
   const packageSourceConfigManager = new PackageSourceConfigManager(input.configManager.getStore() as unknown as Store);
   const versionManager = new VersionManager(dependencyManager, packageSourceConfigManager);
   const distributionModeState = await versionManager.initializeDistributionMode();
-  const activeRuntime = distributionModeState.activeRuntime ?? await versionManager.getActiveRuntimeDescriptor();
+  const activeRuntime = distributionModeState.activeRuntime
+    ?? await versionManager.getActiveRuntimeDescriptor()
+    ?? buildEmbeddedRuntimeDescriptor(input.pathManager);
 
   report.activeRuntimeRoot = activeRuntime?.rootPath ?? null;
   if (!activeRuntime) {

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { DependencyManagementService } from './dependency-management-service.js';
+import { ensureNoSpacePathAlias } from './pm2-home-alias.js';
 import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
@@ -77,6 +78,15 @@ export class HagiscriptRuntimeContextResolver {
     const runtimeHome = path.resolve(this.pathManager.getRuntimeProgramHome());
     const runtimeDataRoot = path.resolve(this.pathManager.getRuntimeDataHome());
     const runtimeRoot = path.resolve(input.activeRuntime.rootPath);
+    const aliasedRuntimeHome = await ensureNoSpacePathAlias(runtimeHome, 'desktop-runtime-home');
+    const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-active-runtime-root');
+    const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeRoot(this.pathManager.getCurrentPlatform()));
+    const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
+    const serviceWorkingDirectory = path.resolve(input.serviceWorkingDirectory);
+    const aliasedServiceWorkingDirectory = await ensureNoSpacePathAlias(
+      serviceWorkingDirectory,
+      'desktop-service-working-directory',
+    );
     const runtimeLogsDirectory = path.join(runtimeDataRoot, 'logs');
     const runtimeStateFilePath = path.join(runtimeDataRoot, 'state.json');
     const serviceDataHome = path.join(runtimeDataRoot, 'components', SERVER_RUNTIME_DATA_DIR);
@@ -90,14 +100,17 @@ export class HagiscriptRuntimeContextResolver {
       manifestPath,
       `${JSON.stringify(
         this.buildManifestOverride({
-          runtimeRoot,
-          runtimeHome,
+          runtimeRoot: aliasedRuntimeRoot,
+          runtimeHome: aliasedRuntimeHome,
           runtimeDataRoot,
           npmPrefix: path.resolve(hagiscriptContext.environment.npmGlobalPrefix),
           hagiscriptPackageRoot,
-          dotnetRuntimeRoot: path.resolve(this.pathManager.getEmbeddedRuntimeRoot(this.pathManager.getCurrentPlatform())),
-          servicePayloadPath: path.resolve(input.servicePayloadPath),
-          serviceWorkingDirectory: path.resolve(input.serviceWorkingDirectory),
+          dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
+          servicePayloadPath: path.join(
+            aliasedServiceWorkingDirectory,
+            path.basename(path.resolve(input.servicePayloadPath)),
+          ),
+          serviceWorkingDirectory: aliasedServiceWorkingDirectory,
           serviceEnv: input.serviceEnv ?? {},
         }),
         null,
@@ -111,8 +124,8 @@ export class HagiscriptRuntimeContextResolver {
       hagiscriptExecutablePath,
       hagiscriptPackageRoot,
       commandEnv: hagiscriptContext.commandEnv,
-      runtimeRoot,
-      runtimeHome,
+      runtimeRoot: aliasedRuntimeRoot,
+      runtimeHome: aliasedRuntimeHome,
       runtimeDataRoot,
       runtimeLogsDirectory,
       runtimeStateFilePath,
@@ -123,8 +136,11 @@ export class HagiscriptRuntimeContextResolver {
       manifestPath,
       manifestDirectory,
       appName: 'hagicode-server',
-      servicePayloadPath: path.resolve(input.servicePayloadPath),
-      serviceWorkingDirectory: path.resolve(input.serviceWorkingDirectory),
+      servicePayloadPath: path.join(
+        aliasedServiceWorkingDirectory,
+        path.basename(path.resolve(input.servicePayloadPath)),
+      ),
+      serviceWorkingDirectory: aliasedServiceWorkingDirectory,
       cleanup: async () => {
         await fs.rm(manifestDirectory, { recursive: true, force: true });
       },

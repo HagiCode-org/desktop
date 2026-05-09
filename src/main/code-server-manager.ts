@@ -6,8 +6,9 @@ import {
 } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import type { ConfigManager } from './config.js';
+import { getNodeExecutableRelativePath } from './embedded-node-runtime-config.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
-import { ensurePm2HomeAlias } from './pm2-home-alias.js';
+import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
 import {
   injectCodeServerRuntimeEnv,
   injectManagedCliPathEnv,
@@ -297,7 +298,7 @@ export class CodeServerManager {
       }
 
       const snapshot = await this.getRuntimeSnapshot();
-      if (!snapshot.wrapperPath && !(process.platform === 'win32' && snapshot.entryScriptPath)) {
+      if (!snapshot.wrapperPath && !snapshot.entryScriptPath) {
         throw new Error(snapshot.message ?? 'Vendored code-server runtime is not ready.');
       }
 
@@ -310,8 +311,7 @@ export class CodeServerManager {
       const runtimeEnv = injectCodeServerRuntimeEnv(pm2.env, this.pathManager, {
         platform: process.platform,
       });
-      const nodeExecutablePath = pm2.env.HAGICODE_NODE_EXECUTABLE_PATH ?? pm2.env.HAGICODE_DOTNET_EXE;
-      const launchSpec = this.resolveLaunchSpec(snapshot, nodeExecutablePath);
+      const launchSpec = await this.resolveLaunchSpec(snapshot);
       await this.renderEcosystem(paths, launchSpec, runtimeEnv.env);
 
       if (action === 'start') {
@@ -569,10 +569,9 @@ export class CodeServerManager {
     }
   }
 
-  private resolveLaunchSpec(
+  private async resolveLaunchSpec(
     runtime: VendoredRuntimeStatusSnapshot,
-    nodeExecutablePath: string | undefined,
-  ): CodeServerLaunchSpec {
+  ): Promise<CodeServerLaunchSpec> {
     const args = [
       '--bind-addr',
       `127.0.0.1:${this.getConfig().port}`,
@@ -585,12 +584,29 @@ export class CodeServerManager {
       '--disable-telemetry',
     ];
 
-    if (process.platform === 'win32' && runtime.entryScriptPath && nodeExecutablePath) {
+    const runtimeRoot = await ensureNoSpacePathAlias(
+      this.pathManager.getCodeServerRuntimeRoot(),
+      'code-server-runtime',
+    );
+    const portableToolchainRoot = await ensureNoSpacePathAlias(
+      this.pathManager.getPortableToolchainRoot(),
+      'desktop-toolchain',
+    );
+
+    if (runtime.entryScriptPath) {
+      const aliasedEntryScriptPath = path.join(
+        runtimeRoot,
+        path.relative(this.pathManager.getCodeServerRuntimeRoot(), runtime.entryScriptPath),
+      );
+      const nodeExecutablePath = path.join(
+        portableToolchainRoot,
+        getNodeExecutableRelativePath(process.platform),
+      );
       return {
         script: nodeExecutablePath,
-        args: [runtime.entryScriptPath, ...args],
+        args: [aliasedEntryScriptPath, ...args],
         interpreterNone: true,
-        cwd: this.pathManager.getCodeServerRuntimeRoot(),
+        cwd: runtimeRoot,
       };
     }
 
@@ -598,11 +614,16 @@ export class CodeServerManager {
       throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
     }
 
+    const aliasedWrapperPath = path.join(
+      runtimeRoot,
+      path.relative(this.pathManager.getCodeServerRuntimeRoot(), runtime.wrapperPath),
+    );
+
     return {
-      script: runtime.wrapperPath,
+      script: aliasedWrapperPath,
       args,
       interpreterNone: true,
-      cwd: this.pathManager.getCodeServerRuntimeRoot(),
+      cwd: runtimeRoot,
     };
   }
 

@@ -6,10 +6,11 @@ import { app, shell } from 'electron';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
+import { getNodeExecutableRelativePath } from './embedded-node-runtime-config.js';
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import { Pm2DotnetManager, resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
-import { ensurePm2HomeAlias } from './pm2-home-alias.js';
+import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
 import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
@@ -482,13 +483,12 @@ export class OmniRouteManager {
         throw new Error(remediation.message);
       }
       const pm2ExecutablePath = pm2Context.executablePath;
-      const nodeExecutablePath = pm2Context.environment.node.executablePath;
-      if (!pm2ExecutablePath || !nodeExecutablePath || !runtime.entryScriptPath) {
+      if (!pm2ExecutablePath || !runtime.entryScriptPath) {
         throw new Error('Desktop-managed OmniRoute dependencies are unavailable.');
       }
 
       await this.renderEnvironment(paths);
-      const launchSpec = this.resolveVendoredRuntimeLaunchSpec(paths, nodeExecutablePath, runtime.entryScriptPath);
+      const launchSpec = await this.resolveVendoredRuntimeLaunchSpec(runtime);
       await this.renderEcosystemConfig(paths, launchSpec, managedPm2Env);
 
       if (action === 'start') {
@@ -658,16 +658,27 @@ export class OmniRouteManager {
     }
   }
 
-  private resolveVendoredRuntimeLaunchSpec(
-    paths: OmniRouteManagedPaths,
-    nodeExecutablePath: string,
-    entryScriptPath: string,
-  ): ManagedCliLaunchSpec {
+  private async resolveVendoredRuntimeLaunchSpec(
+    runtime: VendoredRuntimeStatusSnapshot,
+  ): Promise<ManagedCliLaunchSpec> {
+    const runtimeRoot = await ensureNoSpacePathAlias(
+      this.pathManager.getOmniRouteRuntimeRoot(),
+      'omniroute-runtime',
+    );
+    const bundledNodeExecutablePath = path.join(
+      runtimeRoot,
+      'toolchain',
+      getNodeExecutableRelativePath(process.platform),
+    );
+    const entryScriptPath = path.join(
+      runtimeRoot,
+      path.relative(this.pathManager.getOmniRouteRuntimeRoot(), runtime.entryScriptPath ?? ''),
+    );
     return {
-      script: stripWrappingQuotes(nodeExecutablePath),
+      script: stripWrappingQuotes(bundledNodeExecutablePath),
       args: [entryScriptPath, 'serve', '--no-open'],
       interpreterNone: true,
-      cwd: paths.root,
+      cwd: runtimeRoot,
     };
   }
 
