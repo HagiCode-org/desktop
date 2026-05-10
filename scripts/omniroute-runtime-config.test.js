@@ -60,6 +60,9 @@ const optionalPrepareScript = fs.readFileSync(new URL('./prepare-vendored-omniro
 assert.match(prepareScript, /installDesktopRuntimeComponents\(\['omniroute'\]\)/, 'prepare script delegates top-level staging to hagiscript');
 assert.match(prepareScript, /normalizeResolvedRuntimeMetadata\(metadata\)/, 'prepare script normalizes cached OmniRoute metadata before staging');
 assert.match(prepareScript, /bundledNodeRuntime:\s*true/, 'prepare script enforces bundledNodeRuntime=true');
+assert.match(prepareScript, /rebuildBetterSqlite3ForDesktopNode\(runtimeRoot\)/, 'prepare script rebuilds better-sqlite3 against the Desktop bundled Node toolchain');
+assert.match(prepareScript, /npmExecutablePath, \['rebuild', 'better-sqlite3'\]/, 'prepare script rebuilds better-sqlite3 with bundled npm');
+assert.match(prepareScript, /'\.\.\/\.\.\/\.\.\/node\/runtime\//, 'OmniRoute wrapper points at the canonical Desktop bundled Node runtime');
 assert.match(optionalPrepareScript, /resolveRequestedOmniRouteRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');
 assert.match(optionalPrepareScript, /resolveConfiguredOmniRouteReleaseUrls/, 'optional prepare script checks per-platform release URLs');
 

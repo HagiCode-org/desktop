@@ -11,7 +11,10 @@ import {
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
-import { getNodeExecutableRelativePath } from './embedded-node-runtime-config.js';
+import {
+  getNodeExecutableRelativePath,
+  getNpmExecutableRelativePath,
+} from './embedded-node-runtime-config.js';
 import {
   detectOmniRouteRuntimePlatform,
   readOmniRouteRuntimeConfig,
@@ -60,6 +63,7 @@ async function main() {
   await rm(runtimeRoot, { recursive: true, force: true });
   await mkdir(path.dirname(runtimeRoot), { recursive: true });
   await cp(extractedRoot, runtimeRoot, { recursive: true });
+  await rebuildBetterSqlite3ForDesktopNode(runtimeRoot);
   await ensureRuntimeWrapper(runtimeRoot);
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
 
@@ -384,7 +388,7 @@ async function ensureRuntimeWrapper(targetRuntimeRoot) {
   }
 
   const relativeNodeExecutablePath = toPortablePath(getNodeExecutableRelativePath(platformKey));
-  const portableNodeExecutablePath = `../../../toolchain/${relativeNodeExecutablePath}`;
+  const portableNodeExecutablePath = `../../../node/runtime/${relativeNodeExecutablePath}`;
 
   if (platformKey.startsWith('win-')) {
     const cmdWrapperPath = path.join(binRoot, 'omniroute.cmd');
@@ -419,6 +423,46 @@ async function ensureRuntimeWrapper(targetRuntimeRoot) {
     '',
   ].join('\n'), 'utf8');
   await chmod(wrapperPath, 0o755);
+}
+
+async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
+  const applicationRoot = path.join(targetRuntimeRoot, 'app');
+  const betterSqlite3Root = path.join(applicationRoot, 'node_modules', 'better-sqlite3');
+  if (!fs.existsSync(betterSqlite3Root)) {
+    return;
+  }
+
+  const toolchainRoot = resolveManagedDesktopRuntimeComponentRoot()
+    || resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
+  const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platformKey));
+  const npmExecutablePath = path.join(toolchainRoot, getNpmExecutableRelativePath(platformKey));
+  if (!fs.existsSync(nodeExecutablePath)) {
+    throw new Error(`Desktop bundled Node executable is missing for OmniRoute rebuild: ${nodeExecutablePath}`);
+  }
+  if (!fs.existsSync(npmExecutablePath)) {
+    throw new Error(`Desktop bundled npm executable is missing for OmniRoute rebuild: ${npmExecutablePath}`);
+  }
+
+  const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
+  const inheritedPath = process.env[pathKey] ?? process.env.PATH ?? '';
+  const nodeBinRoot = path.dirname(nodeExecutablePath);
+  const targetArch = target.arch === 'amd64' ? 'x64' : target.arch;
+
+  await execa(npmExecutablePath, ['rebuild', 'better-sqlite3'], {
+    cwd: applicationRoot,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      [pathKey]: inheritedPath ? `${nodeBinRoot}${path.delimiter}${inheritedPath}` : nodeBinRoot,
+      npm_config_arch: targetArch,
+      npm_config_target_arch: targetArch,
+      npm_config_build_from_source: 'true',
+      npm_config_update_notifier: 'false',
+      npm_config_fund: 'false',
+      npm_config_audit: 'false',
+      npm_config_cache: path.join(buildRoot, 'npm-cache'),
+    },
+  });
 }
 
 function toPortablePath(relativePath) {
