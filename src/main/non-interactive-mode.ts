@@ -435,6 +435,8 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`backend pm2 home: ${report.services.backend.pm2Home}`);
   output.stdout(`backend runtime data: ${report.services.backend.runtimeDataHome}`);
   output.stdout(`backend runtime files: ${report.services.backend.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`backend lifecycle skipped: ${report.services.backend.skipped}`);
+  output.stdout(`backend lifecycle skip reason: ${report.services.backend.skipReason ?? '<none>'}`);
   output.stdout(`backend start success: ${report.services.backend.startSuccess}`);
   output.stdout(`backend status after start: ${report.services.backend.statusAfterStart}`);
   output.stdout(`backend restart success: ${report.services.backend.restartSuccess}`);

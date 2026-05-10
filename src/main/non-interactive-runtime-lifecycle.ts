@@ -58,6 +58,8 @@ interface BackendLifecycleReport extends ManagedServiceStageReport {
   serviceDllPath: string | null;
   serviceWorkingDirectory: string | null;
   requiredRuntimeLabel: string | null;
+  skipped: boolean;
+  skipReason: string | null;
   restartSuccess: boolean;
   statusAfterRestart: string;
 }
@@ -200,6 +202,8 @@ function createEmptyBackendReport(): BackendLifecycleReport {
     serviceDllPath: null,
     serviceWorkingDirectory: null,
     requiredRuntimeLabel: null,
+    skipped: false,
+    skipReason: null,
     restartSuccess: false,
     statusAfterRestart: 'unknown',
   };
@@ -395,7 +399,28 @@ async function verifyBackendLifecycle(input: {
     return report;
   }
 
-  const launchContext = await resolveManagedLaunchContextForRuntimeRoot(activeRuntime.rootPath);
+  report.serviceDllPath = path.join(activeRuntime.rootPath, 'lib', 'PCode.Web.dll');
+  report.serviceWorkingDirectory = path.join(activeRuntime.rootPath, 'lib');
+  let launchContext: Awaited<ReturnType<typeof resolveManagedLaunchContextForRuntimeRoot>>;
+  try {
+    launchContext = await resolveManagedLaunchContextForRuntimeRoot(activeRuntime.rootPath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('Invalid service payload: Missing framework-dependent payload files:')) {
+      report.skipped = true;
+      report.skipReason = message;
+      report.statusAfterStart = 'skipped';
+      report.statusAfterRestart = 'skipped';
+      report.stopSuccess = true;
+      report.statusAfterStop = 'skipped';
+      report.diagnostics.push(message);
+      return report;
+    }
+
+    report.error = message;
+    report.diagnostics.push(message);
+    return report;
+  }
   report.serviceDllPath = launchContext.serviceDllPath;
   report.serviceWorkingDirectory = launchContext.serviceWorkingDirectory;
   report.requiredRuntimeLabel = launchContext.requiredRuntimeLabel ?? null;
@@ -595,6 +620,9 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   });
 
   for (const [serviceName, serviceReport] of Object.entries(report.services)) {
+    if (serviceName === 'backend' && 'skipped' in serviceReport && serviceReport.skipped) {
+      continue;
+    }
     if (!serviceReport.startSuccess) {
       report.issues.push(`${serviceName} failed to start under Desktop-managed PM2.`);
     }

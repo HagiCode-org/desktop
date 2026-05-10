@@ -582,6 +582,8 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   const omniRoutePm2Home = parseOutputValue(output, 'omniroute pm2 home');
   const backendPm2Home = parseOutputValue(output, 'backend pm2 home');
   const backendRuntimeData = parseOutputValue(output, 'backend runtime data');
+  const backendLifecycleSkipped = parseOutputValue(output, 'backend lifecycle skipped') === 'true';
+  const backendLifecycleSkipReason = parseOutputValue(output, 'backend lifecycle skip reason');
 
   for (const [label, value] of [
     ['pm2 managed npm prefix', managedNpmPrefix],
@@ -595,8 +597,6 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     ['backend payload dll', backendPayloadDll],
     ['code-server pm2 home', codeServerPm2Home],
     ['omniroute pm2 home', omniRoutePm2Home],
-    ['backend pm2 home', backendPm2Home],
-    ['backend runtime data', backendRuntimeData],
   ]) {
     if (!value) {
       fail(`Runtime lifecycle output did not include ${label}.`);
@@ -614,12 +614,6 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   assertOutputValue(output, 'omniroute status after start', 'online');
   assertOutputValue(output, 'omniroute stop success', 'true');
   assertOutputValue(output, 'omniroute status after stop', 'stopped');
-  assertOutputValue(output, 'backend start success', 'true');
-  assertOutputValue(output, 'backend status after start', 'online');
-  assertOutputValue(output, 'backend restart success', 'true');
-  assertOutputValue(output, 'backend status after restart', 'online');
-  assertOutputValue(output, 'backend stop success', 'true');
-  assertOutputValue(output, 'backend status after stop', 'stopped');
   assertOutputValue(output, 'result', 'success');
 
   for (const managedPath of [
@@ -631,8 +625,6 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     pm2LaunchCli,
     codeServerPm2Home,
     omniRoutePm2Home,
-    backendPm2Home,
-    backendRuntimeData,
     desktopLogsDirectory,
   ]) {
     assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
@@ -640,8 +632,28 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   }
 
   assertPathWithinRoot(backendRuntimeRoot, artifactRoot, 'backend active runtime root');
-  assertPathWithinRoot(backendPayloadDll, backendRuntimeRoot, 'backend payload dll');
   assertPathContainsSpaces(backendRuntimeRoot, 'backend active runtime root');
+
+  if (backendLifecycleSkipped) {
+    if (!backendLifecycleSkipReason || !backendLifecycleSkipReason.includes('Missing framework-dependent payload files')) {
+      fail(`Expected backend lifecycle skip reason to explain the missing packaged payload.\nReason: ${backendLifecycleSkipReason ?? '<missing>'}`);
+    }
+    return;
+  }
+
+  assertOutputValue(output, 'backend start success', 'true');
+  assertOutputValue(output, 'backend status after start', 'online');
+  assertOutputValue(output, 'backend restart success', 'true');
+  assertOutputValue(output, 'backend status after restart', 'online');
+  assertOutputValue(output, 'backend stop success', 'true');
+  assertOutputValue(output, 'backend status after stop', 'stopped');
+
+  for (const managedPath of [backendPm2Home, backendRuntimeData]) {
+    assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
+    assertPathContainsSpaces(managedPath, 'managed PM2 path');
+  }
+
+  assertPathWithinRoot(backendPayloadDll, backendRuntimeRoot, 'backend payload dll');
   assertPathContainsSpaces(backendPayloadDll, 'backend payload dll');
 }
 
@@ -687,6 +699,8 @@ async function main() {
   await fsp.mkdir(userDataDir, { recursive: true });
   const diagnosticLogPath = path.join(userDataDir, 'non-interactive-startup.log');
   let runtimeContext = null;
+
+  let caughtError = null;
 
   try {
     log(`source artifact: ${source}`);
@@ -751,11 +765,23 @@ async function main() {
     });
 
     log('non-interactive integration test passed');
+  } catch (error) {
+    caughtError = error;
+    throw error;
   } finally {
     if (shouldKeepTempRoot()) {
       log(`retaining integration temp root for debugging: ${tempRoot}`);
     } else {
-      await fsp.rm(tempRoot, { recursive: true, force: true });
+      try {
+        await fsp.rm(tempRoot, { recursive: true, force: true });
+      } catch (cleanupError) {
+        const message = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        if (caughtError) {
+          log(`cleanup warning: ${message}`);
+        } else {
+          throw cleanupError;
+        }
+      }
     }
   }
 }

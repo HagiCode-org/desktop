@@ -222,6 +222,8 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
         requiredRuntimeLabel: '10.0.0',
+        skipped: false,
+        skipReason: null,
         startSuccess: ok,
         statusAfterStart: ok ? 'online' : 'errored',
         restartSuccess: ok,
