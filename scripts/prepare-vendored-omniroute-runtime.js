@@ -58,6 +58,7 @@ async function main() {
   await rm(runtimeRoot, { recursive: true, force: true });
   await mkdir(path.dirname(runtimeRoot), { recursive: true });
   await cp(extractedRoot, runtimeRoot, { recursive: true });
+  await ensureRootNodeModulesLink(runtimeRoot);
   await rebuildBetterSqlite3ForDesktopNode(runtimeRoot);
   await ensureRuntimeWrapper(runtimeRoot);
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
@@ -545,6 +546,17 @@ async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, better
 
   await rm(betterSqlite3Root, { recursive: true, force: true });
   await cp(path.join(unpackRoot, 'package'), betterSqlite3Root, { recursive: true });
+}
+
+async function ensureRootNodeModulesLink(targetRuntimeRoot) {
+  const rootNodeModulesPath = path.join(targetRuntimeRoot, 'node_modules');
+  const appNodeModulesPath = path.join(targetRuntimeRoot, 'app', 'node_modules');
+  if (!fs.existsSync(appNodeModulesPath) || fs.existsSync(rootNodeModulesPath)) {
+    return;
+  }
+
+  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+  await fs.symlink(appNodeModulesPath, rootNodeModulesPath, linkType);
 }
 
 function toPortablePath(relativePath) {

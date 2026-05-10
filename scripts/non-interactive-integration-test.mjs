@@ -625,11 +625,12 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     pm2LaunchCli,
     codeServerPm2Home,
     omniRoutePm2Home,
-    desktopLogsDirectory,
   ]) {
     assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
     assertPathContainsSpaces(managedPath, 'managed PM2 path');
   }
+  assertPathWithinRoot(desktopLogsDirectory, path.dirname(runtimeContext.dataHome), 'desktop logs directory');
+  assertPathContainsSpaces(desktopLogsDirectory, 'desktop logs directory');
 
   assertPathWithinRoot(backendRuntimeRoot, artifactRoot, 'backend active runtime root');
   assertPathContainsSpaces(backendRuntimeRoot, 'backend active runtime root');
