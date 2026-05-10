@@ -456,16 +456,7 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
 
   try {
     if (!fs.existsSync(path.join(betterSqlite3Root, 'binding.gyp'))) {
-      await execa(
-        npmCommand.command,
-        [...npmCommand.args, 'install', '--no-save', '--no-package-lock', `better-sqlite3@${betterSqlite3Version}`],
-        {
-          cwd: applicationRoot,
-          stdio: 'inherit',
-          env: rebuildEnvironment,
-        },
-      );
-      return;
+      await restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, betterSqlite3Version, rebuildEnvironment);
     }
 
     await execa(npmCommand.command, [...npmCommand.args, 'rebuild', 'better-sqlite3'], {
@@ -524,6 +515,32 @@ function resolveDesktopBundledNpmCommand(toolchainRoot, nodeExecutablePath) {
     command: npmEntrypointPath,
     args: [],
   };
+}
+
+async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, betterSqlite3Version, rebuildEnvironment) {
+  const restoreRoot = path.join(buildRoot, 'better-sqlite3-restore');
+  await rm(restoreRoot, { recursive: true, force: true });
+  await mkdir(restoreRoot, { recursive: true });
+
+  const packResult = await execa(
+    npmCommand.command,
+    [...npmCommand.args, 'pack', `better-sqlite3@${betterSqlite3Version}`],
+    {
+      cwd: restoreRoot,
+      env: rebuildEnvironment,
+    },
+  );
+  const archiveName = packResult.stdout.trim().split(/\r?\n/).at(-1)?.trim();
+  if (!archiveName) {
+    throw new Error(`Unable to determine packed better-sqlite3 archive name for version ${betterSqlite3Version}.`);
+  }
+
+  const archivePath = path.join(restoreRoot, archiveName);
+  await rm(betterSqlite3Root, { recursive: true, force: true });
+  await mkdir(betterSqlite3Root, { recursive: true });
+  await execa('tar', ['-xzf', archivePath, '--strip-components=1', '-C', betterSqlite3Root], {
+    env: rebuildEnvironment,
+  });
 }
 
 function toPortablePath(relativePath) {
