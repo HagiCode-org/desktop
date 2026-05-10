@@ -519,6 +519,7 @@ function resolveDesktopBundledNpmCommand(toolchainRoot, nodeExecutablePath) {
 
 async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, betterSqlite3Version, rebuildEnvironment) {
   const restoreRoot = path.join(buildRoot, 'better-sqlite3-restore');
+  const unpackRoot = path.join(restoreRoot, 'unpacked');
   await rm(restoreRoot, { recursive: true, force: true });
   await mkdir(restoreRoot, { recursive: true });
 
@@ -535,12 +536,15 @@ async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, better
     throw new Error(`Unable to determine packed better-sqlite3 archive name for version ${betterSqlite3Version}.`);
   }
 
-  await rm(betterSqlite3Root, { recursive: true, force: true });
-  await mkdir(betterSqlite3Root, { recursive: true });
-  await execa('tar', ['-xzf', archiveName, '--strip-components=1', '-C', betterSqlite3Root], {
+  await rm(unpackRoot, { recursive: true, force: true });
+  await mkdir(unpackRoot, { recursive: true });
+  await execa('tar', ['-xzf', archiveName, '-C', 'unpacked'], {
     cwd: restoreRoot,
     env: rebuildEnvironment,
   });
+
+  await rm(betterSqlite3Root, { recursive: true, force: true });
+  await cp(path.join(unpackRoot, 'package'), betterSqlite3Root, { recursive: true });
 }
 
 function toPortablePath(relativePath) {
