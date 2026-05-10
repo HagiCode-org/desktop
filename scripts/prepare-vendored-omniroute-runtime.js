@@ -556,7 +556,7 @@ async function ensureRootNodeModulesLink(targetRuntimeRoot) {
   }
 
   const linkType = process.platform === 'win32' ? 'junction' : 'dir';
-  await fs.symlink(appNodeModulesPath, rootNodeModulesPath, linkType);
+  await fs.promises.symlink(appNodeModulesPath, rootNodeModulesPath, linkType);
 }
 
 function toPortablePath(relativePath) {
