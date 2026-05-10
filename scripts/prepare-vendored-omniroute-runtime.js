@@ -432,8 +432,7 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
     return;
   }
 
-  const toolchainRoot = resolveManagedDesktopRuntimeComponentRoot()
-    || resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
+  const toolchainRoot = resolveDesktopBundledNodeRuntimeRoot();
   const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platformKey));
   const npmExecutablePath = path.join(toolchainRoot, getNpmExecutableRelativePath(platformKey));
   if (!fs.existsSync(nodeExecutablePath)) {
@@ -463,6 +462,14 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
       npm_config_cache: path.join(buildRoot, 'npm-cache'),
     },
   });
+}
+
+function resolveDesktopBundledNodeRuntimeRoot() {
+  const managedComponentRoot = resolveManagedDesktopRuntimeComponentRoot();
+  if (managedComponentRoot) {
+    return path.join(path.dirname(managedComponentRoot), 'node', 'runtime');
+  }
+  return resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
 }
 
 function toPortablePath(relativePath) {
