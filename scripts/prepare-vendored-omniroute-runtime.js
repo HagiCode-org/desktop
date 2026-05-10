@@ -535,10 +535,10 @@ async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, better
     throw new Error(`Unable to determine packed better-sqlite3 archive name for version ${betterSqlite3Version}.`);
   }
 
-  const archivePath = path.join(restoreRoot, archiveName);
   await rm(betterSqlite3Root, { recursive: true, force: true });
   await mkdir(betterSqlite3Root, { recursive: true });
-  await execa('tar', ['-xzf', archivePath, '--strip-components=1', '-C', betterSqlite3Root], {
+  await execa('tar', ['-xzf', archiveName, '--strip-components=1', '-C', betterSqlite3Root], {
+    cwd: restoreRoot,
     env: rebuildEnvironment,
   });
 }
