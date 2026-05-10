@@ -7,7 +7,6 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { execa } from 'execa';
 import {
-  installDesktopRuntimeComponents,
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
@@ -28,11 +27,6 @@ import {
 } from './omniroute-runtime-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
-
-if (!isManagedDesktopRuntimeComponentExecution()) {
-  await installDesktopRuntimeComponents(['omniroute']);
-  process.exit(0);
-}
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
