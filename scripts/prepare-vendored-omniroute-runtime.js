@@ -13,6 +13,7 @@ import {
 } from './desktop-runtime-hagiscript.js';
 import {
   getNodeExecutableRelativePath,
+  getNpmExecutableRelativePathCandidates,
   getNpmExecutableRelativePath,
 } from './embedded-node-runtime-config.js';
 import {
@@ -434,34 +435,54 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
 
   const toolchainRoot = resolveDesktopBundledNodeRuntimeRoot();
   const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platformKey));
-  const npmExecutablePath = path.join(toolchainRoot, getNpmExecutableRelativePath(platformKey));
   if (!fs.existsSync(nodeExecutablePath)) {
     throw new Error(`Desktop bundled Node executable is missing for OmniRoute rebuild: ${nodeExecutablePath}`);
   }
-  if (!fs.existsSync(npmExecutablePath)) {
-    throw new Error(`Desktop bundled npm executable is missing for OmniRoute rebuild: ${npmExecutablePath}`);
-  }
+  const npmCommand = resolveDesktopBundledNpmCommand(toolchainRoot, nodeExecutablePath);
 
   const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
   const inheritedPath = process.env[pathKey] ?? process.env.PATH ?? '';
   const nodeBinRoot = path.dirname(nodeExecutablePath);
   const targetArch = target.arch === 'amd64' ? 'x64' : target.arch;
 
-  await execa(npmExecutablePath, ['rebuild', 'better-sqlite3'], {
-    cwd: applicationRoot,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      [pathKey]: inheritedPath ? `${nodeBinRoot}${path.delimiter}${inheritedPath}` : nodeBinRoot,
-      npm_config_arch: targetArch,
-      npm_config_target_arch: targetArch,
-      npm_config_build_from_source: 'true',
-      npm_config_update_notifier: 'false',
-      npm_config_fund: 'false',
-      npm_config_audit: 'false',
-      npm_config_cache: path.join(buildRoot, 'npm-cache'),
-    },
-  });
+  const rebuildEnvironment = {
+    ...process.env,
+    [pathKey]: inheritedPath ? `${nodeBinRoot}${path.delimiter}${inheritedPath}` : nodeBinRoot,
+    npm_config_arch: targetArch,
+    npm_config_target_arch: targetArch,
+    npm_config_build_from_source: 'true',
+    npm_config_update_notifier: 'false',
+    npm_config_fund: 'false',
+    npm_config_audit: 'false',
+    npm_config_cache: path.join(buildRoot, 'npm-cache'),
+  };
+
+  try {
+    await execa(npmCommand.command, [...npmCommand.args, 'rebuild', 'better-sqlite3'], {
+      cwd: applicationRoot,
+      stdio: 'inherit',
+      env: rebuildEnvironment,
+    });
+  } catch (error) {
+    const detailParts = [
+      `Failed to rebuild better-sqlite3 for OmniRoute with Desktop bundled Node.`,
+      `command: ${npmCommand.command} ${[
+        ...npmCommand.args,
+        'rebuild',
+        'better-sqlite3',
+      ].map((part) => JSON.stringify(part)).join(' ')}`,
+    ];
+    if (error.shortMessage) {
+      detailParts.push(`shortMessage: ${error.shortMessage}`);
+    }
+    if (error.stderr?.trim()) {
+      detailParts.push(`stderr:\n${error.stderr.trim()}`);
+    }
+    if (error.stdout?.trim()) {
+      detailParts.push(`stdout:\n${error.stdout.trim()}`);
+    }
+    throw new Error(detailParts.join('\n\n'));
+  }
 }
 
 function resolveDesktopBundledNodeRuntimeRoot() {
@@ -470,6 +491,29 @@ function resolveDesktopBundledNodeRuntimeRoot() {
     return path.join(path.dirname(managedComponentRoot), 'node', 'runtime');
   }
   return resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
+}
+
+function resolveDesktopBundledNpmCommand(toolchainRoot, nodeExecutablePath) {
+  const npmRelativePath = getNpmExecutableRelativePathCandidates(platformKey)
+    .find((candidate) => fs.existsSync(path.join(toolchainRoot, candidate)));
+  if (!npmRelativePath) {
+    throw new Error(
+      `Desktop bundled npm executable is missing for OmniRoute rebuild: ${path.join(toolchainRoot, getNpmExecutableRelativePath(platformKey))}`,
+    );
+  }
+
+  const npmEntrypointPath = path.join(toolchainRoot, npmRelativePath);
+  if (npmRelativePath.endsWith('.js')) {
+    return {
+      command: nodeExecutablePath,
+      args: [npmEntrypointPath],
+    };
+  }
+
+  return {
+    command: npmEntrypointPath,
+    args: [],
+  };
 }
 
 function toPortablePath(relativePath) {
