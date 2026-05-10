@@ -62,6 +62,8 @@ assert.match(prepareScript, /bundledNodeRuntime:\s*true/, 'prepare script enforc
 assert.match(prepareScript, /rebuildBetterSqlite3ForDesktopNode\(runtimeRoot\)/, 'prepare script rebuilds better-sqlite3 against the Desktop bundled Node toolchain');
 assert.match(prepareScript, /resolveDesktopBundledNodeRuntimeRoot\(\)/, 'prepare script resolves the shared Desktop bundled Node runtime instead of the OmniRoute component root');
 assert.match(prepareScript, /resolveDesktopBundledNpmCommand\(toolchainRoot, nodeExecutablePath\)/, 'prepare script resolves the bundled npm entrypoint using the shared toolchain contract');
+assert.match(prepareScript, /!fs\.existsSync\(path\.join\(betterSqlite3Root, 'binding\.gyp'\)\)/, 'prepare script detects stripped better-sqlite3 payloads before attempting rebuild');
+assert.match(prepareScript, /'install', '--no-save', '--no-package-lock', `better-sqlite3@\\$\\{betterSqlite3Version\\}`/, 'prepare script restores the exact better-sqlite3 package when vendored payload omits source files');
 assert.match(prepareScript, /\[\.\.\.npmCommand\.args, 'rebuild', 'better-sqlite3'\]/, 'prepare script rebuilds better-sqlite3 with bundled npm');
 assert.match(prepareScript, /'\.\.\/\.\.\/\.\.\/node\/runtime\//, 'OmniRoute wrapper points at the canonical Desktop bundled Node runtime');
 assert.match(optionalPrepareScript, /resolveRequestedOmniRouteRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');

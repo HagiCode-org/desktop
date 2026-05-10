@@ -426,6 +426,8 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
   if (!fs.existsSync(betterSqlite3Root)) {
     return;
   }
+  const betterSqlite3PackagePath = path.join(betterSqlite3Root, 'package.json');
+  const betterSqlite3Version = JSON.parse(await readFile(betterSqlite3PackagePath, 'utf8')).version;
 
   const toolchainRoot = resolveDesktopBundledNodeRuntimeRoot();
   const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platformKey));
@@ -448,10 +450,24 @@ async function rebuildBetterSqlite3ForDesktopNode(targetRuntimeRoot) {
     npm_config_update_notifier: 'false',
     npm_config_fund: 'false',
     npm_config_audit: 'false',
+    npm_config_package_lock: 'false',
     npm_config_cache: path.join(buildRoot, 'npm-cache'),
   };
 
   try {
+    if (!fs.existsSync(path.join(betterSqlite3Root, 'binding.gyp'))) {
+      await execa(
+        npmCommand.command,
+        [...npmCommand.args, 'install', '--no-save', '--no-package-lock', `better-sqlite3@${betterSqlite3Version}`],
+        {
+          cwd: applicationRoot,
+          stdio: 'inherit',
+          env: rebuildEnvironment,
+        },
+      );
+      return;
+    }
+
     await execa(npmCommand.command, [...npmCommand.args, 'rebuild', 'better-sqlite3'], {
       cwd: applicationRoot,
       stdio: 'inherit',
