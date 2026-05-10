@@ -58,7 +58,7 @@ async function main() {
   await rm(runtimeRoot, { recursive: true, force: true });
   await mkdir(path.dirname(runtimeRoot), { recursive: true });
   await cp(extractedRoot, runtimeRoot, { recursive: true });
-  await ensureRootNodeModulesLink(runtimeRoot);
+  await ensureRootNodeModulesPayload(runtimeRoot);
   await rebuildBetterSqlite3ForDesktopNode(runtimeRoot);
   await ensureRuntimeWrapper(runtimeRoot);
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
@@ -548,15 +548,23 @@ async function restoreBetterSqlite3Package(npmCommand, betterSqlite3Root, better
   await cp(path.join(unpackRoot, 'package'), betterSqlite3Root, { recursive: true });
 }
 
-async function ensureRootNodeModulesLink(targetRuntimeRoot) {
+async function ensureRootNodeModulesPayload(targetRuntimeRoot) {
   const rootNodeModulesPath = path.join(targetRuntimeRoot, 'node_modules');
   const appNodeModulesPath = path.join(targetRuntimeRoot, 'app', 'node_modules');
-  if (!fs.existsSync(appNodeModulesPath) || fs.existsSync(rootNodeModulesPath)) {
+  const runtimePackageNames = ['wreq-js'];
+  if (!fs.existsSync(appNodeModulesPath)) {
     return;
   }
 
-  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
-  await fs.promises.symlink(appNodeModulesPath, rootNodeModulesPath, linkType);
+  await mkdir(rootNodeModulesPath, { recursive: true });
+  for (const packageName of runtimePackageNames) {
+    const sourcePath = path.join(appNodeModulesPath, packageName);
+    const targetPath = path.join(rootNodeModulesPath, packageName);
+    if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) {
+      continue;
+    }
+    await cp(sourcePath, targetPath, { recursive: true });
+  }
 }
 
 function toPortablePath(relativePath) {
