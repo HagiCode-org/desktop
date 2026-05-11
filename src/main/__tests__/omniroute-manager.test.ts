@@ -40,6 +40,7 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
     assert.match(source, /const runtime = await this\.getRuntimeSnapshot\(\);/);
     assert.match(source, /const nodeExecutablePath = pm2Context\.environment\.node\.executablePath;/);
+    assert.match(source, /if \(wrapperPath && process\.platform !== 'win32'\)/);
     assert.match(source, /script: stripWrappingQuotes\(wrapperPath\)/);
     assert.match(source, /args: \['--no-open'\]/);
     assert.match(source, /args: \[entryScriptPath, '--no-open'\]/);

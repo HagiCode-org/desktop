@@ -690,7 +690,7 @@ export class OmniRouteManager {
       runtimeRoot,
       path.relative(this.pathManager.getOmniRouteRuntimeRoot(), runtime.wrapperPath),
     ) : null;
-    if (wrapperPath) {
+    if (wrapperPath && process.platform !== 'win32') {
       return {
         script: stripWrappingQuotes(wrapperPath),
         args: ['--no-open'],

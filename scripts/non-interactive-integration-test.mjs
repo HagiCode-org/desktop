@@ -48,6 +48,40 @@ function shouldKeepTempRoot() {
   return value === '1' || value === 'true' || value === 'yes';
 }
 
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isRetryableCleanupError(error) {
+  const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
+  return code === 'ENOTEMPTY' || code === 'EBUSY' || code === 'EPERM';
+}
+
+async function removePathWithRetries(targetPath, {
+  maxAttempts = 6,
+  retryDelayMs = 500,
+} = {}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await fsp.rm(targetPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableCleanupError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      await delay(retryDelayMs * attempt);
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+}
+
 async function loadDesktopManagedPathHelpers() {
   const desktopRuntimePathsModulePath = path.join(projectRoot, 'dist', 'main', 'desktop-runtime-paths.js');
   const portableToolchainPathsModulePath = path.join(projectRoot, 'dist', 'main', 'portable-toolchain-paths.js');
@@ -774,7 +808,7 @@ async function main() {
       log(`retaining integration temp root for debugging: ${tempRoot}`);
     } else {
       try {
-        await fsp.rm(tempRoot, { recursive: true, force: true });
+        await removePathWithRetries(tempRoot);
       } catch (cleanupError) {
         const message = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
         if (caughtError) {
