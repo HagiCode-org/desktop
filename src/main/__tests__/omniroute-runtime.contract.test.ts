@@ -17,6 +17,10 @@ describe('vendored OmniRoute runtime contract', () => {
     assert.equal(typeof manifest.releaseVersionByPlatform['osx-arm64'], 'string');
     assert.equal(typeof manifest.releaseVersionByPlatform['win-x64'], 'string');
     assert.deepEqual(manifest.expectedLayout.wrapperCandidates, [
+      'omniroute.sh',
+      'omniroute.cmd',
+      'omniroute.bat',
+      'omniroute.ps1',
       'bin/omniroute',
       'bin/omniroute.cmd',
       'bin/omniroute.ps1',

@@ -40,9 +40,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
     assert.match(source, /const runtime = await this\.getRuntimeSnapshot\(\);/);
     assert.match(source, /const nodeExecutablePath = pm2Context\.environment\.node\.executablePath;/);
-    assert.match(source, /args: \[entryScriptPath, 'serve', '--no-open'\]/);
+    assert.match(source, /script: stripWrappingQuotes\(wrapperPath\)/);
+    assert.match(source, /args: \['--no-open'\]/);
+    assert.match(source, /args: \[entryScriptPath, '--no-open'\]/);
     assert.match(source, /interpreter: "none"/);
-    assert.match(source, /'serve', '--no-open'/);
     assert.match(source, /autorestart: true/);
     assert.match(source, /restart_delay: 3000/);
     assert.match(source, /omniroute-out\.log/);
@@ -55,11 +56,13 @@ describe('OmniRoute manager contract', () => {
 
     assert.match(source, /buildOmniRouteDependencyRemediation/);
     assert.match(source, /resolvePm2LaunchPlan/);
+    assert.match(source, /injectPortableToolchainEnv/);
     assert.match(source, /injectManagedCliPathEnv/);
     assert.match(source, /buildPm2MajorHomePaths/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /buildManagedPm2CommandEnv/);
     assert.match(source, /await this\.buildManagedPm2CommandEnv\(pm2Context\.commandEnv, pm2Context\.environment\)/);
+    assert.match(source, /const portableToolchainEnv = injectPortableToolchainEnv\(baseEnv, this\.pathManager/);
     assert.match(source, /packageId: 'pm2'/);
     assert.match(source, /if \(remediation\) \{\s*throw new Error\(remediation\.message\);/);
     assert.match(source, /status: \{ \.\.\.status, status: 'error', error: message, remediation: resolvedRemediation \}/);

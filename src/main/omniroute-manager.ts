@@ -11,7 +11,7 @@ import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js'
 import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import { Pm2DotnetManager, resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
 import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
-import { injectManagedCliPathEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
+import { injectManagedCliPathEnv, injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCli } from './utils/cli-executor.js';
@@ -618,16 +618,21 @@ export class OmniRouteManager {
   ): Promise<NodeJS.ProcessEnv> {
     const hasManagedNpmGlobalContext = typeof baseEnv.HAGICODE_NPM_GLOBAL_PREFIX === 'string'
       || typeof baseEnv.HAGICODE_NODE_MAJOR_VERSION === 'string';
-    const managedCliEnv = injectManagedCliPathEnv(baseEnv, {
+    const npmGlobalPaths = hasManagedNpmGlobalContext ? {
+      nodeVersion: environment.nodeVersion ?? process.versions.node,
+      nodeMajorVersion: environment.nodeMajorVersion,
+      npmGlobalPrefix: environment.npmGlobalPrefix,
+      npmGlobalBinRoot: environment.npmGlobalBinRoot,
+      npmGlobalModulesRoot: environment.npmGlobalModulesRoot,
+      npmCacheRoot: environment.npmCacheRoot,
+    } : null;
+    const portableToolchainEnv = injectPortableToolchainEnv(baseEnv, this.pathManager, {
       platform: process.platform,
-      npmGlobalPaths: hasManagedNpmGlobalContext ? {
-        nodeVersion: environment.nodeVersion ?? process.versions.node,
-        nodeMajorVersion: environment.nodeMajorVersion,
-        npmGlobalPrefix: environment.npmGlobalPrefix,
-        npmGlobalBinRoot: environment.npmGlobalBinRoot,
-        npmGlobalModulesRoot: environment.npmGlobalModulesRoot,
-        npmCacheRoot: environment.npmCacheRoot,
-      } : null,
+      npmGlobalPaths,
+    });
+    const managedCliEnv = injectManagedCliPathEnv(portableToolchainEnv.env, {
+      platform: process.platform,
+      npmGlobalPaths,
     }).env;
     const pm2Version = await this.resolveManagedPm2Version(environment.npmGlobalModulesRoot);
     const pm2HomePaths = buildPm2MajorHomePaths({
@@ -677,13 +682,28 @@ export class OmniRouteManager {
       portableToolchainRoot,
       getNodeExecutableRelativePath(process.platform),
     );
-    const entryScriptPath = path.join(
+    const entryScriptPath = runtime.entryScriptPath ? path.join(
       runtimeRoot,
-      path.relative(this.pathManager.getOmniRouteRuntimeRoot(), runtime.entryScriptPath ?? ''),
-    );
+      path.relative(this.pathManager.getOmniRouteRuntimeRoot(), runtime.entryScriptPath),
+    ) : null;
+    const wrapperPath = runtime.wrapperPath ? path.join(
+      runtimeRoot,
+      path.relative(this.pathManager.getOmniRouteRuntimeRoot(), runtime.wrapperPath),
+    ) : null;
+    if (wrapperPath) {
+      return {
+        script: stripWrappingQuotes(wrapperPath),
+        args: ['--no-open'],
+        interpreterNone: true,
+        cwd: runtimeRoot,
+      };
+    }
+    if (!entryScriptPath) {
+      throw new Error('Vendored OmniRoute runtime is missing both wrapperPath and entryScriptPath');
+    }
     return {
       script: stripWrappingQuotes(bundledNodeExecutablePath),
-      args: [entryScriptPath, 'serve', '--no-open'],
+      args: [entryScriptPath, '--no-open'],
       interpreterNone: true,
       cwd: runtimeRoot,
     };
