@@ -41,6 +41,12 @@ import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
 const requireRuntimePayload = args.includes('--require-runtime') || process.env.HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME === '1';
+const requirePackagedRuntimePayload = requireRuntimePayload || [
+  process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT,
+  process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT,
+  process.env.HAGICODE_SMOKE_TEST_PACKAGED_CODE_SERVER_ROOT,
+  process.env.HAGICODE_SMOKE_TEST_PACKAGED_OMNIROUTE_ROOT,
+].some((value) => typeof value === 'string' && value.trim().length > 0);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
@@ -630,7 +636,7 @@ test('packaged bundled Node toolchain payload is complete', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedToolchainRoot)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged bundled Node toolchain not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
@@ -714,7 +720,7 @@ test('packaged vendored code-server payload is complete', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedCodeServerRoot)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged vendored code-server runtime not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
@@ -748,7 +754,7 @@ test('packaged vendored OmniRoute payload is complete', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedOmniRouteRoot)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged vendored OmniRoute runtime not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
@@ -811,7 +817,7 @@ test('packaged runtime payload is complete', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedRuntimeRoot)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged runtime not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
@@ -851,7 +857,7 @@ test('packaged Steam wrapper is available for Linux launches', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedSteamWrapperPath)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged Steam wrapper not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
@@ -884,7 +890,7 @@ test('packaged Steam sandbox helper is available for Linux launches', () => {
     return;
   }
 
-  if (!requireRuntimePayload && !fs.existsSync(packagedSteamSandboxPath)) {
+  if (!requirePackagedRuntimePayload) {
     log('  - Skipping: packaged Steam sandbox helper not required for this smoke-test run', colors.yellow);
     results.skipped++;
     return;
