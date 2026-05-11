@@ -3,10 +3,10 @@
   "runtime": "omniroute",
   "packageId": "omniroute",
   "releaseVersionByPlatform": {
-    "linux-x64": "2026.0511.0042",
-    "osx-x64": "2026.0511.0042",
-    "osx-arm64": "2026.0511.0042",
-    "win-x64": "2026.0511.0042"
+    "linux-x64": "2026.0509.0034",
+    "osx-x64": "2026.0509.0034",
+    "osx-arm64": "2026.0509.0034",
+    "win-x64": "2026.0509.0034"
   },
   "source": {
     "generatedRootSubdir": "omniroute-runtime",
@@ -14,16 +14,16 @@
     "indexUrl": null,
     "releaseUrlsByPlatform": {
       "linux-x64": [
-        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0511.0042"
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034"
       ],
       "osx-x64": [
-        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0511.0042"
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034"
       ],
       "osx-arm64": [
-        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0511.0042"
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034"
       ],
       "win-x64": [
-        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0511.0042"
+        "https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034"
       ]
     },
     "allowedDownloadHosts": [

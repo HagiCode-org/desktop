@@ -19,10 +19,10 @@ assert.equal(detectCodeServerRuntimePlatform('win32', 'x64'), 'win-x64');
 assert.throws(() => detectCodeServerRuntimePlatform('freebsd', 'x64'), /Unsupported vendored code-server platform/);
 
 for (const platform of targetPlatforms) {
-  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), '2026.0506.0026');
+  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), '2026.0509.0034');
   assert.deepEqual(
     resolveConfiguredCodeServerReleaseUrls(platform, manifest),
-    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0506.0026'],
+    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034'],
   );
   assert.ok(resolveCodeServerRuntimeTarget(platform, manifest));
 }
