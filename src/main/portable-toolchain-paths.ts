@@ -64,9 +64,9 @@ export function resolvePortableToolchainRoot(options: PortableToolchainPathOptio
 export function buildPortableToolchainPaths(options: PortableToolchainPathOptions): PortableToolchainPaths {
   const platform = options.platform ?? process.platform;
   const toolchainRoot = resolvePortableToolchainRoot(options);
-  const nodeRoot = path.join(toolchainRoot, 'node');
-  const toolchainBinRoot = path.join(toolchainRoot, 'bin');
-  const nodeBinRoot = platform === 'win32' ? nodeRoot : path.join(nodeRoot, 'bin');
+  const nodeRoot = toolchainRoot;
+  const toolchainBinRoot = platform === 'win32' ? toolchainRoot : path.join(toolchainRoot, 'bin');
+  const nodeBinRoot = toolchainBinRoot;
   const nodeExecutableName = platform === 'win32' ? 'node.exe' : 'node';
   const npmExecutableName = platform === 'win32' ? 'npm.cmd' : 'npm';
 

@@ -46,6 +46,7 @@ export class HagiscriptRuntimeContextResolver {
     PathManager,
     | 'getRuntimeProgramHome'
     | 'getRuntimeDataHome'
+    | 'getEmbeddedRuntimeContainerRoot'
     | 'getEmbeddedRuntimeRoot'
     | 'getCurrentPlatform'
   >;
@@ -56,6 +57,7 @@ export class HagiscriptRuntimeContextResolver {
       PathManager,
       | 'getRuntimeProgramHome'
       | 'getRuntimeDataHome'
+      | 'getEmbeddedRuntimeContainerRoot'
       | 'getEmbeddedRuntimeRoot'
       | 'getCurrentPlatform'
     >;
@@ -80,7 +82,7 @@ export class HagiscriptRuntimeContextResolver {
     const runtimeRoot = path.resolve(input.activeRuntime.rootPath);
     const aliasedRuntimeHome = await ensureNoSpacePathAlias(runtimeHome, 'desktop-runtime-home');
     const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-active-runtime-root');
-    const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeRoot(this.pathManager.getCurrentPlatform()));
+    const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeContainerRoot(this.pathManager.getCurrentPlatform()));
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
     const serviceWorkingDirectory = path.resolve(input.serviceWorkingDirectory);
     const aliasedServiceWorkingDirectory = await ensureNoSpacePathAlias(

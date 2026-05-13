@@ -857,7 +857,7 @@ export class SystemDiagnosticManager {
     const npmCommandPath = bundledStatus?.manifest?.commands?.npm
       ? path.join(bundledStatus.toolchainRoot, bundledStatus.manifest.commands.npm)
       : null;
-    const bundledRuntimeRoot = bundledStatus ? path.join(bundledStatus.toolchainRoot, 'node') : null;
+    const bundledRuntimeRoot = bundledStatus?.toolchainRoot ?? null;
     const base: SystemDiagnosticNpmConfigInfo = {
       registry: null,
       cachePath: runtimeEnv.HAGICODE_NPM_CACHE_ROOT ?? null,

@@ -408,7 +408,10 @@ function resolvePosixNodeExecutableFromEnvironment(
 
   for (const toolchainRoot of candidateRoots) {
     const nodeExecutablePath = resolveExistingPath(
-      buildPathCandidates(toolchainRoot, 'node', 'bin', 'node'),
+      [
+        ...buildPathCandidates(toolchainRoot, 'bin', 'node'),
+        ...buildPathCandidates(toolchainRoot, 'node', 'bin', 'node'),
+      ],
       existsSync,
     );
     if (nodeExecutablePath) {
