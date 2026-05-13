@@ -19,11 +19,11 @@ describe('path-manager portable toolchain paths', () => {
     });
 
     assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime');
-    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/node');
+    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime');
     assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin');
-    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/node/bin');
-    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/node/bin/node');
-    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/node/bin/npm');
+    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin');
+    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin/node');
+    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin/npm');
     assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/toolchain-manifest.json');
     assert.notEqual(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/toolchain');
     assert.equal('openspecExecutablePath' in paths, false);
@@ -38,10 +38,10 @@ describe('path-manager portable toolchain paths', () => {
     });
 
     assert.equal(paths.toolchainRoot, path.join('C:/Program Files/HagiCode/resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
-    assert.equal(paths.nodeRoot, path.join(paths.toolchainRoot, 'node'));
-    assert.equal(paths.nodeBinRoot, paths.nodeRoot);
-    assert.equal(paths.nodeExecutablePath, path.join(paths.nodeRoot, 'node.exe'));
-    assert.equal(paths.npmExecutablePath, path.join(paths.nodeRoot, 'npm.cmd'));
+    assert.equal(paths.nodeRoot, paths.toolchainRoot);
+    assert.equal(paths.nodeBinRoot, paths.toolchainRoot);
+    assert.equal(paths.nodeExecutablePath, path.join(paths.toolchainRoot, 'node.exe'));
+    assert.equal(paths.npmExecutablePath, path.join(paths.toolchainRoot, 'npm.cmd'));
     assert.equal('openspecExecutablePath' in paths, false);
   });
 
@@ -63,7 +63,7 @@ describe('path-manager portable toolchain paths', () => {
 
     assert.equal(toolchainRoot, path.resolve('../portable/toolchain'));
     assert.equal(paths.toolchainRoot, toolchainRoot);
-    assert.equal(paths.nodeExecutablePath, path.join(toolchainRoot, 'node', 'bin', 'node'));
+    assert.equal(paths.nodeExecutablePath, path.join(toolchainRoot, 'bin', 'node'));
   });
 
   it('keeps macOS packaged root under Contents/Resources via process.resourcesPath', () => {
@@ -78,7 +78,7 @@ describe('path-manager portable toolchain paths', () => {
       paths.toolchainRoot,
       '/Applications/HagiCode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime',
     );
-    assert.equal(paths.nodeExecutablePath, '/Applications/HagiCode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime/node/bin/node');
+    assert.equal(paths.nodeExecutablePath, '/Applications/HagiCode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime/bin/node');
   });
 
   it('resolves Node-major npm global paths under userData on linux and macOS', () => {
