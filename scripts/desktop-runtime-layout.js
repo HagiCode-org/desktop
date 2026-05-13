@@ -5,6 +5,13 @@ export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
 }
 
 export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {
+  return path.join(
+    resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options),
+    ...(componentId === 'node' ? [] : ['current']),
+  );
+}
+
+export function resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options = {}) {
   const cwd = options.cwd ?? process.cwd();
   const programHome = resolveStagedDesktopRuntimeProgramHome(cwd);
 

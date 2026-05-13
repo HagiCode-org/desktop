@@ -30,7 +30,7 @@ import {
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.1.10';
+const MINIMUM_HAGISCRIPT_VERSION = '0.1.14';
 
 if (!isManagedDesktopRuntimeComponentExecution()) {
   await installDesktopRuntimeComponents(['node']);
@@ -43,9 +43,8 @@ const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeCon
 const portableFixedRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
 const toolchainRoot = resolveManagedDesktopRuntimeComponentRoot()
   || resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
-const nodeRoot = path.join(toolchainRoot, 'node');
-const binRoot = path.join(toolchainRoot, 'bin');
 const envRoot = path.join(toolchainRoot, 'env');
+const legacyNodeRoot = path.join(toolchainRoot, 'node');
 const legacyNpmGlobalRoot = path.join(toolchainRoot, 'npm-global');
 const hagiscriptPackageRoot = resolveGlobalHagiscriptPackageRoot(MINIMUM_HAGISCRIPT_VERSION);
 const { installNodeRuntime } = await import(pathToFileURL(path.join(hagiscriptPackageRoot, 'dist', 'runtime', 'node-installer.js')).href);
@@ -60,14 +59,14 @@ async function main() {
   const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
   const sourceUrl = ensureOfficialNodeDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
 
-  await rm(nodeRoot, { recursive: true, force: true });
+  await rm(toolchainRoot, { recursive: true, force: true });
   await mkdir(toolchainRoot, { recursive: true });
   await installNodeRuntime({
-    targetDirectory: nodeRoot,
+    targetDirectory: toolchainRoot,
     versionSelector: runtimeConfig.releaseVersion,
   });
 
-  const verification = await verifyNodeRuntime(nodeRoot);
+  const verification = await verifyNodeRuntime(toolchainRoot);
   if (!verification.valid) {
     throw new Error(verification.failureReason || 'Installed Node runtime failed verification.');
   }
@@ -131,7 +130,7 @@ function ensureExecutable(targetPath) {
 
 function removeUnusedNodeBinEntrypoints() {
   if (isWindowsPlatform(runtimePlatform)) {
-    for (const candidate of [path.join(nodeRoot, 'corepack'), path.join(nodeRoot, 'corepack.cmd'), path.join(nodeRoot, 'npx'), path.join(nodeRoot, 'npx.cmd')]) {
+    for (const candidate of ['corepack', 'corepack.cmd', 'npx', 'npx.cmd'].map((entry) => path.join(toolchainRoot, entry))) {
       if (pathExistsOrIsSymlink(candidate)) {
         fs.rmSync(candidate, { force: true });
       }
@@ -139,7 +138,7 @@ function removeUnusedNodeBinEntrypoints() {
     return;
   }
 
-  const binDirectory = path.join(nodeRoot, 'bin');
+  const binDirectory = path.join(toolchainRoot, 'bin');
   if (!pathExists(binDirectory)) {
     return;
   }
@@ -152,7 +151,7 @@ function removeUnusedNodeBinEntrypoints() {
 }
 
 function cleanDeferredPackageRoots() {
-  for (const targetPath of [binRoot, legacyNpmGlobalRoot]) {
+  for (const targetPath of [legacyNodeRoot, legacyNpmGlobalRoot]) {
     if (pathExistsOrIsSymlink(targetPath)) {
       fs.rmSync(targetPath, { recursive: true, force: true });
     }
@@ -197,7 +196,7 @@ function materializeNpmCompatibilityPath(npmRelativePath) {
       '#!/usr/bin/env bash',
       'set -euo pipefail',
       'SCRIPT_DIR="$(CDPATH=\'\' cd -- "$(dirname -- "$0")" && pwd)"',
-      'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"',
+      'TOOLCHAIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"',
       `exec "$TOOLCHAIN_ROOT/${toPosixPath(getNodeExecutableRelativePath(runtimePlatform))}" "$TOOLCHAIN_ROOT/${toPosixPath(stableNpmRelativePath)}" "$@"`,
     ].join('\n') + '\n', 'utf8');
     ensureExecutable(shimPath);
@@ -238,10 +237,10 @@ async function writeActivationArtifacts() {
 
   if (!isWindowsPlatform(runtimePlatform)) {
     const activationPath = path.join(envRoot, 'activate.sh');
-    const pathEntries = [
-      'bin',
-      path.dirname(getNodeExecutableRelativePath(runtimePlatform)),
-    ].map((entry) => `$TOOLCHAIN_ROOT/${toPosixPath(entry)}`).join(':');
+    const pathEntries = [...new Set(['bin', path.dirname(getNodeExecutableRelativePath(runtimePlatform))])]
+      .filter((entry) => entry.length > 0 && entry !== '.')
+      .map((entry) => `$TOOLCHAIN_ROOT/${toPosixPath(entry)}`)
+      .join(':');
     await writeFile(activationPath, [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
@@ -263,14 +262,14 @@ async function writeActivationArtifacts() {
     'set "SCRIPT_DIR=%~dp0"',
     'for %%I in ("%SCRIPT_DIR%..") do set "TOOLCHAIN_ROOT=%%~fI"',
     'set "HAGICODE_PORTABLE_TOOLCHAIN_ROOT=%TOOLCHAIN_ROOT%"',
-    'set "PATH=%TOOLCHAIN_ROOT%\\bin;%TOOLCHAIN_ROOT%\\node;%PATH%"',
+    'set "PATH=%TOOLCHAIN_ROOT%;%PATH%"',
     'echo HagiCode bundled toolchain activated: %TOOLCHAIN_ROOT%',
   ].join('\r\n') + '\r\n', 'utf8');
   await writeFile(ps1Path, [
     '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
     '$toolchainRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path',
     '$env:HAGICODE_PORTABLE_TOOLCHAIN_ROOT = $toolchainRoot',
-    '$env:PATH = "$toolchainRoot\\bin;$toolchainRoot\\node;" + $env:PATH',
+    '$env:PATH = "$toolchainRoot;" + $env:PATH',
     'Write-Output "HagiCode bundled toolchain activated: $toolchainRoot"',
   ].join('\r\n') + '\r\n', 'utf8');
   return [path.join('env', 'activate.cmd'), path.join('env', 'activate.ps1')];

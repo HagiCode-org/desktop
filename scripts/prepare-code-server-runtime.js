@@ -33,8 +33,11 @@ const config = readCodeServerRuntimeConfig();
 const platformKey = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const target = resolveCodeServerRuntimeTarget(platformKey, config);
 const runtimeVersionOverride = resolveRequestedCodeServerRuntimeVersion(platformKey, config);
-const runtimeRoot = resolveManagedDesktopRuntimeComponentRoot()
-  || resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
+const managedComponentRoot = resolveManagedDesktopRuntimeComponentRoot();
+const runtimeRoot = managedComponentRoot
+  ? path.join(managedComponentRoot, 'current')
+  : resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
+const componentRoot = managedComponentRoot ?? path.dirname(runtimeRoot);
 const buildRoot = resolveCodeServerGeneratedRoot(config) ?? path.join(process.cwd(), 'build', 'code-server-runtime');
 const downloadsRoot = path.join(buildRoot, 'downloads');
 const extractRoot = path.join(buildRoot, 'extract');
@@ -45,7 +48,7 @@ main().catch((error) => {
 });
 
 async function main() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.10');
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.14');
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
@@ -56,8 +59,8 @@ async function main() {
   await extractArchive(archivePath, target.archiveExtension, extractRoot);
 
   const extractedRoot = await resolveExtractedRoot(extractRoot);
-  await rm(runtimeRoot, { recursive: true, force: true });
-  await mkdir(path.dirname(runtimeRoot), { recursive: true });
+  await rm(componentRoot, { recursive: true, force: true });
+  await mkdir(runtimeRoot, { recursive: true });
   await cp(extractedRoot, runtimeRoot, { recursive: true, dereference: true });
   await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
 
