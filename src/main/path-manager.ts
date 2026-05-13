@@ -30,6 +30,7 @@ import { getCodeServerRuntimeConfigPath as resolveCodeServerRuntimeConfigPath } 
 import {
   getDesktopRuntimeManifestPath,
   readDesktopRuntimeManifest,
+  resolveDesktopRuntimeComponentContainerRoot,
   resolveDesktopRuntimeComponentProgramRoot,
   resolveDesktopRuntimeDataHome,
   resolveDesktopRuntimeProgramHome,
@@ -676,8 +677,15 @@ export class PathManager {
       if (override) {
         const resolvedOverride = path.resolve(override);
         const nestedPlatformRoot = path.join(resolvedOverride, platform);
+        const nestedPlatformCurrentRoot = path.join(nestedPlatformRoot, 'current');
+        if (fsSync.existsSync(path.join(nestedPlatformCurrentRoot, this.getEmbeddedDotnetExecutableName()))) {
+          return nestedPlatformCurrentRoot;
+        }
         if (fsSync.existsSync(path.join(nestedPlatformRoot, this.getEmbeddedDotnetExecutableName()))) {
           return nestedPlatformRoot;
+        }
+        if (fsSync.existsSync(path.join(resolvedOverride, 'current', this.getEmbeddedDotnetExecutableName()))) {
+          return path.join(resolvedOverride, 'current');
         }
 
         return resolvedOverride;
@@ -691,6 +699,26 @@ export class PathManager {
 
   getEmbeddedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return this.getPinnedRuntimeRoot(platform);
+  }
+
+  getEmbeddedRuntimeContainerRoot(platform: Platform = this.getCurrentPlatform()): string {
+    const override = process.env.HAGICODE_EMBEDDED_DOTNET_ROOT?.trim();
+    if (override) {
+      const resolvedOverride = path.resolve(override);
+      const nestedPlatformRoot = path.join(resolvedOverride, platform);
+      const nestedPlatformCurrentRoot = path.join(nestedPlatformRoot, 'current');
+      if (fsSync.existsSync(path.join(nestedPlatformCurrentRoot, this.getEmbeddedDotnetExecutableName()))) {
+        return nestedPlatformRoot;
+      }
+      if (fsSync.existsSync(path.join(nestedPlatformRoot, this.getEmbeddedDotnetExecutableName()))) {
+        return nestedPlatformRoot;
+      }
+      if (fsSync.existsSync(path.join(resolvedOverride, 'current', this.getEmbeddedDotnetExecutableName()))) {
+        return resolvedOverride;
+      }
+    }
+
+    return resolveDesktopRuntimeComponentContainerRoot('dotnet', this.getRuntimeProgramHome(), platform);
   }
 
   getPortableRuntimeBundleRoot(): string {
@@ -742,7 +770,9 @@ export class PathManager {
   getCodeServerRuntimeRoot(): string {
     const overrideRoot = process.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT?.trim();
     if (overrideRoot) {
-      return path.resolve(overrideRoot);
+      const resolvedOverride = path.resolve(overrideRoot);
+      const currentRoot = path.join(resolvedOverride, 'current');
+      return fsSync.existsSync(path.join(currentRoot, 'metadata.json')) ? currentRoot : resolvedOverride;
     }
 
     return resolveDesktopRuntimeComponentProgramRoot('code-server', this.getRuntimeProgramHome(), this.getCurrentPlatform());
@@ -755,7 +785,9 @@ export class PathManager {
   getOmniRouteRuntimeRoot(): string {
     const overrideRoot = process.env.HAGICODE_OMNIROUTE_RUNTIME_ROOT?.trim();
     if (overrideRoot) {
-      return path.resolve(overrideRoot);
+      const resolvedOverride = path.resolve(overrideRoot);
+      const currentRoot = path.join(resolvedOverride, 'current');
+      return fsSync.existsSync(path.join(currentRoot, 'metadata.json')) ? currentRoot : resolvedOverride;
     }
 
     return resolveDesktopRuntimeComponentProgramRoot('omniroute', this.getRuntimeProgramHome(), this.getCurrentPlatform());

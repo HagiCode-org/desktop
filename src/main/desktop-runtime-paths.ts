@@ -118,12 +118,32 @@ export function resolveDesktopRuntimeComponentProgramRoot(
   platform: string,
   manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
 ): string {
+  return path.join(
+    resolveDesktopRuntimeComponentContainerRoot(componentId, programHome, platform, manifest),
+    ...resolveDesktopRuntimeComponentRuntimeSuffix(componentId),
+  );
+}
+
+export function resolveDesktopRuntimeComponentContainerRoot(
+  componentId: DesktopRuntimeComponentId,
+  programHome: string,
+  platform: string,
+  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
+): string {
   const component = manifest.components[componentId];
   if (!component) {
     throw new Error(`Desktop runtime component is not configured: ${componentId}`);
   }
 
   return path.join(programHome, component.relativePath.split('{platform}').join(platform));
+}
+
+function resolveDesktopRuntimeComponentRuntimeSuffix(componentId: DesktopRuntimeComponentId): string[] {
+  if (componentId === 'node') {
+    return [];
+  }
+
+  return ['current'];
 }
 
 export function resolveDesktopRuntimeServiceDataHome(
