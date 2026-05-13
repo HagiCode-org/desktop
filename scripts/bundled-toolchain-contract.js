@@ -68,8 +68,8 @@ export function validateToolchainPayload(toolchainRoot, options = {}) {
   }
 
   const unusedNodeEntrypoints = platform.startsWith('win-')
-    ? [path.join('node', 'corepack.cmd'), path.join('node', 'npx.cmd')]
-    : [path.join('node', 'bin', 'corepack'), path.join('node', 'bin', 'npx')];
+    ? ['corepack.cmd', 'npx.cmd']
+    : [path.join('bin', 'corepack'), path.join('bin', 'npx')];
   for (const relativePath of unusedNodeEntrypoints) {
     if (pathExists(path.join(toolchainRoot, relativePath))) {
       missing.push(`unused Node entrypoint must be pruned before packaging: ${relativePath}`);

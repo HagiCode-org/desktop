@@ -137,7 +137,7 @@ export function getNpmExecutableName(platform: NodeJS.Platform | string): string
 }
 
 export function getNodeBinRelativePath(platform: NodeJS.Platform | string): string {
-  return String(platform).startsWith('win') ? 'node' : path.join('node', 'bin');
+  return String(platform).startsWith('win') ? '' : 'bin';
 }
 
 export function getNodeExecutableRelativePath(platform: NodeJS.Platform | string): string {
@@ -154,27 +154,27 @@ export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform
   if (platformValue.startsWith('win')) {
     return [
       compatibilityPath,
-      path.join(getNodeBinRelativePath(platformValue), 'npm'),
+      'npm',
     ];
   }
 
   return [
     compatibilityPath,
-    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm'),
+    path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join('lib', 'node_modules', 'npm', 'bin', 'npm'),
   ];
 }
 
 export function getNpmGlobalBinRelativePath(platform: NodeJS.Platform | string): string {
   return String(platform).startsWith('win')
-    ? 'node'
-    : path.join('node', 'bin');
+    ? ''
+    : 'bin';
 }
 
 export function getNpmGlobalModulesRelativePath(platform: NodeJS.Platform | string): string {
   return String(platform).startsWith('win')
-    ? path.join('node', 'node_modules')
-    : path.join('node', 'lib', 'node_modules');
+    ? 'node_modules'
+    : path.join('lib', 'node_modules');
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {

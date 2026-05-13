@@ -71,7 +71,7 @@ export function getCommandExecutableName(platform, commandName) {
 }
 
 export function getNodeBinRelativePath(platform) {
-  return platform.startsWith('win-') ? 'node' : path.join('node', 'bin');
+  return platform.startsWith('win-') ? '' : 'bin';
 }
 
 export function getNodeExecutableRelativePath(platform) {
@@ -87,23 +87,23 @@ export function getNpmExecutableRelativePathCandidates(platform) {
   if (platform.startsWith('win-')) {
     return [
       compatibilityPath,
-      path.join(getNodeBinRelativePath(platform), 'npm'),
+      'npm',
     ];
   }
 
   return [
     compatibilityPath,
-    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-    path.join('node', 'lib', 'node_modules', 'npm', 'bin', 'npm'),
+    path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join('lib', 'node_modules', 'npm', 'bin', 'npm'),
   ];
 }
 
 export function getNpmGlobalBinRelativePath(platform) {
-  return platform.startsWith('win-') ? 'node' : path.join('node', 'bin');
+  return platform.startsWith('win-') ? '' : 'bin';
 }
 
 export function getNpmGlobalModulesRelativePath(platform) {
-  return platform.startsWith('win-') ? path.join('node', 'node_modules') : path.join('node', 'lib', 'node_modules');
+  return platform.startsWith('win-') ? 'node_modules' : path.join('lib', 'node_modules');
 }
 
 export function getPinnedNodeRuntimeConfigPath() {
