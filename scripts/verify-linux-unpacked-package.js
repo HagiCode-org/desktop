@@ -224,17 +224,17 @@ function main() {
     },
     {
       label: 'embedded dotnet runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'dotnet', 'runtime', runtimePlatform),
+      targetRoot: path.join(runtimeRoot, 'components', 'dotnet', 'runtime', runtimePlatform, 'current'),
       validate: validateDotnetRuntimePayload,
     },
     {
       label: 'vendored code-server runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server'),
+      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server', 'current'),
       validate: validateCodeServerRuntime,
     },
     {
       label: 'vendored OmniRoute runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'omniroute'),
+      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'omniroute', 'current'),
       validate: validateOmniRouteRuntime,
     },
   ];

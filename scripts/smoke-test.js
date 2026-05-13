@@ -102,17 +102,17 @@ function resolvePackagedRuntimeRoots(platform) {
   }
 
   if (platform.startsWith('win-')) {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform)];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current')];
   }
   if (platform.startsWith('linux-')) {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform)];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current')];
   }
   if (platform.startsWith('osx-')) {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
     ];
   }
   return [];
@@ -165,17 +165,17 @@ function resolvePackagedCodeServerRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
     ];
   }
   return [];
@@ -188,17 +188,17 @@ function resolvePackagedOmniRouteRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
     ];
   }
   return [];
