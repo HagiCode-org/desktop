@@ -1,6 +1,6 @@
 runtime:
   name: hagicode-desktop-runtime
-  version: 0.1.15-dev.94.1.64ce9f6
+  version: 0.2.0
 
 paths:
   runtimeRoot: .

@@ -52,7 +52,7 @@ main().catch((error) => {
 });
 
 async function main() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.15-dev.94.1.64ce9f6');
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.2.0');
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
