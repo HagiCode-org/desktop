@@ -11,12 +11,12 @@
   "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
   "sourceHost": "builds.dotnet.microsoft.com",
   "archiveType": "tar.gz",
-  "archivePath": "/home/newbe36524/.config/Hagicode Desktop/dev/build/embedded-runtime/downloads/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
-  "dotnetPath": "/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current/dotnet",
-  "runtimeRoot": "/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current",
+  "archivePath": "/home/newbe36524/.config/Hagicode Desktop/build/embedded-runtime/downloads/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
+  "dotnetPath": "/home/newbe36524/repos/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current/dotnet",
+  "runtimeRoot": "/home/newbe36524/repos/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current",
   "aspNetCoreVersion": "10.0.5",
   "netCoreVersion": "10.0.5",
   "hostFxrVersion": "10.0.5",
-  "stagedAt": "2026-05-17T14:09:38.314Z",
+  "stagedAt": "2026-05-18T14:27:24.406Z",
   "ownership": "desktop-direct-managed"
 }

@@ -5,6 +5,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
+import {
+  EMBEDDED_RUNTIME_METADATA_FILE,
+  detectRuntimePlatform,
+  ensureOfficialMicrosoftDownloadUrl,
+  getDotnetExecutableName,
+  readPinnedRuntimeConfig,
+  resolvePinnedRuntimeTarget,
+} from './embedded-runtime-config.js';
 import { detectNodeRuntimePlatform } from './embedded-node-runtime-config.js';
 import {
   readToolchainManifest,
@@ -24,6 +32,9 @@ import {
 
 const args = process.argv.slice(2);
 const archives = [];
+const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
+const runtimeConfig = readPinnedRuntimeConfig();
+const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const codeServerConfig = readCodeServerRuntimeConfig();
@@ -100,6 +111,122 @@ function suffixSegments(relativePath) {
   return relativePath.split(path.sep).filter(Boolean);
 }
 
+function pathExists(targetPath) {
+  return fs.existsSync(targetPath);
+}
+
+function isExecutable(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function listVersionDirectories(targetPath) {
+  try {
+    return fs.readdirSync(targetPath, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((entry) => /^\d+(?:\.\d+){1,3}$/.test(entry));
+  } catch {
+    return [];
+  }
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split('.').map((segment) => Number.parseInt(segment, 10));
+  const rightParts = right.split('.').map((segment) => Number.parseInt(segment, 10));
+
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftValue = leftParts[index] || 0;
+    const rightValue = rightParts[index] || 0;
+    if (leftValue > rightValue) return 1;
+    if (leftValue < rightValue) return -1;
+  }
+
+  return 0;
+}
+
+function pickHighestVersion(versions) {
+  return [...versions].sort((left, right) => compareVersions(right, left))[0];
+}
+
+function inspectDotnetRuntimeVersions(runtimeRoot) {
+  return {
+    aspNetCoreVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App'))),
+    netCoreVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App'))),
+    hostFxrVersion: pickHighestVersion(listVersionDirectories(path.join(runtimeRoot, 'host', 'fxr'))),
+  };
+}
+
+function validateDotnetRuntimePayload(runtimeRoot, options = {}) {
+  const errors = [];
+  const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
+  const dotnetPath = path.join(runtimeRoot, dotnetExecutableName);
+  const requireExecutableDotnetHost = !runtimePlatform.startsWith('win-') && !options.extractedFromZip;
+
+  if (!pathExists(dotnetPath)) {
+    errors.push(`missing ${dotnetExecutableName}`);
+  } else if (requireExecutableDotnetHost && !isExecutable(dotnetPath)) {
+    errors.push(`${dotnetExecutableName} is not executable`);
+  }
+
+  if (listVersionDirectories(path.join(runtimeRoot, 'host', 'fxr')).length === 0) {
+    errors.push('missing host/fxr');
+  }
+  if (listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.AspNetCore.App')).length === 0) {
+    errors.push('missing shared/Microsoft.AspNetCore.App');
+  }
+  if (listVersionDirectories(path.join(runtimeRoot, 'shared', 'Microsoft.NETCore.App')).length === 0) {
+    errors.push('missing shared/Microsoft.NETCore.App');
+  }
+
+  const metadataPath = path.join(runtimeRoot, EMBEDDED_RUNTIME_METADATA_FILE);
+  if (!pathExists(metadataPath)) {
+    errors.push(`missing ${EMBEDDED_RUNTIME_METADATA_FILE}`);
+    return errors;
+  }
+
+  const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+  const versions = inspectDotnetRuntimeVersions(runtimeRoot);
+  ensureOfficialMicrosoftDownloadUrl(metadata.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
+
+  if (metadata.provider !== runtimeConfig.source.provider) {
+    errors.push(`provider expected ${runtimeConfig.source.provider} but found ${metadata.provider || 'missing'}`);
+  }
+  if (metadata.platform !== runtimePlatform) {
+    errors.push(`platform expected ${runtimePlatform} but found ${metadata.platform || 'missing'}`);
+  }
+  if (metadata.releaseVersion !== runtimeConfig.releaseVersion) {
+    errors.push(`releaseVersion expected ${runtimeConfig.releaseVersion} but found ${metadata.releaseVersion || 'missing'}`);
+  }
+  if (metadata.downloadUrl !== runtimeTarget.downloadUrl) {
+    errors.push('downloadUrl does not match the pinned runtime manifest');
+  }
+  if (metadata.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    errors.push(`metadata ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${metadata.aspNetCoreVersion || 'missing'}`);
+  }
+  if (metadata.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    errors.push(`metadata Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${metadata.netCoreVersion || 'missing'}`);
+  }
+  if (metadata.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    errors.push(`metadata host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${metadata.hostFxrVersion || 'missing'}`);
+  }
+  if (versions.aspNetCoreVersion !== runtimeTarget.aspNetCoreVersion) {
+    errors.push(`runtime ASP.NET Core version expected ${runtimeTarget.aspNetCoreVersion} but found ${versions.aspNetCoreVersion || 'missing'}`);
+  }
+  if (versions.netCoreVersion !== runtimeTarget.netCoreVersion) {
+    errors.push(`runtime Microsoft.NETCore.App version expected ${runtimeTarget.netCoreVersion} but found ${versions.netCoreVersion || 'missing'}`);
+  }
+  if (versions.hostFxrVersion !== runtimeTarget.hostFxrVersion) {
+    errors.push(`runtime host/fxr version expected ${runtimeTarget.hostFxrVersion} but found ${versions.hostFxrVersion || 'missing'}`);
+  }
+
+  return errors;
+}
+
 function findToolchainRoots(rootPath) {
   const matches = [];
   const stack = [rootPath];
@@ -135,8 +262,18 @@ function findToolchainRoots(rootPath) {
   return matches.sort();
 }
 
+function collectToolchainRoots(rootPath) {
+  return [
+    ...new Set([
+      ...findExtraRoots(rootPath, ['node', 'runtime']),
+      ...findToolchainRoots(rootPath),
+    ]),
+  ].sort();
+}
+
 function findExtraRoots(rootPath, suffixParts) {
-  const matches = [];
+  const exactMatches = [];
+  const fallbackMatches = [];
   const stack = [rootPath];
   const alternateSuffixParts = suffixParts.at(-1) === 'current'
     ? suffixParts.slice(0, -1)
@@ -164,20 +301,24 @@ function findExtraRoots(rootPath, suffixParts) {
         return tail.every((value, index) => value === expectedParts[index]);
       };
 
-      if (parts.includes('extra') && (matchesSuffix(suffixParts) || matchesSuffix(alternateSuffixParts))) {
-        matches.push(absolutePath);
+      if (parts.includes('extra') && matchesSuffix(suffixParts)) {
+        exactMatches.push(absolutePath);
         continue;
+      }
+
+      if (parts.includes('extra') && matchesSuffix(alternateSuffixParts)) {
+        fallbackMatches.push(absolutePath);
       }
 
       stack.push(absolutePath);
     }
   }
 
-  return matches.sort();
+  return (exactMatches.length > 0 ? exactMatches : fallbackMatches).sort();
 }
 
 function describeToolchainRoots(rootPath) {
-  return findToolchainRoots(rootPath)
+  return collectToolchainRoots(rootPath)
     .map((candidate) => path.relative(rootPath, candidate) || '.')
     .join(', ');
 }
@@ -203,7 +344,7 @@ function validateVendoredRuntimeRoots(archivePath, extractionRoot, options) {
 }
 
 function validateExtractedToolchain(archivePath, extractionRoot, options = {}) {
-  const toolchainRoots = findToolchainRoots(extractionRoot);
+  const toolchainRoots = collectToolchainRoots(extractionRoot);
   if (toolchainRoots.length === 0) {
     const available = describeToolchainRoots(extractionRoot);
     throw new Error(
@@ -240,6 +381,12 @@ function extractZip(archivePath, destinationRoot) {
   archive.extractAllTo(destinationRoot, true);
   validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: true });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'embedded dotnet runtime',
+    suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],
+    platform: runtimePlatform,
+    validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: true }),
+  });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored code-server runtime',
     suffixParts: ['code-server', 'current'],
     platform: codeServerPlatform,
@@ -262,6 +409,12 @@ function extractZip(archivePath, destinationRoot) {
 function extractTarGz(archivePath, destinationRoot) {
   execFileSync('tar', ['-xzf', archivePath, '-C', destinationRoot], { stdio: 'inherit' });
   validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: false });
+  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+    label: 'embedded dotnet runtime',
+    suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],
+    platform: runtimePlatform,
+    validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: false }),
+  });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored code-server runtime',
     suffixParts: ['code-server', 'current'],
