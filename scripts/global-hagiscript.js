@@ -72,20 +72,6 @@ function resolveDirectHagiscriptCommands() {
   return ['hagiscript'];
 }
 
-function resolveLocalHagiscriptCommand() {
-  const candidates = process.platform === 'win32'
-    ? [
-        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript.cmd'),
-        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript.exe'),
-        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript'),
-      ]
-    : [
-        path.join(process.cwd(), 'node_modules', '.bin', 'hagiscript'),
-      ];
-
-  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
-}
-
 function resolveFallbackHagiscriptCommand() {
   const prefixResult = runNpmCommand(['config', 'get', 'prefix']);
 
@@ -152,23 +138,12 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
   let resolvedCommand = null;
   let resolvedScope = 'global';
 
-  const localCommand = resolveLocalHagiscriptCommand();
-  if (localCommand) {
-    result = runHagiscriptVersion(localCommand);
+  for (const command of resolveDirectHagiscriptCommands()) {
+    result = runHagiscriptVersion(command);
     if (!result.error || result.error.code !== 'ENOENT') {
-      resolvedCommand = localCommand;
-      resolvedScope = 'local';
-    }
-  }
-
-  if (!resolvedCommand) {
-    for (const command of resolveDirectHagiscriptCommands()) {
-      result = runHagiscriptVersion(command);
-      if (!result.error || result.error.code !== 'ENOENT') {
-        resolvedCommand = command;
-        resolvedScope = 'global';
-        break;
-      }
+      resolvedCommand = command;
+      resolvedScope = 'global';
+      break;
     }
   }
 
@@ -199,7 +174,7 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
   }
 
   if (compareVersions(actual, required) < 0) {
-    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed${resolvedScope === 'local' ? ' locally' : ' globally'}.`);
+    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed globally.`);
   }
 
   return {
@@ -208,11 +183,6 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
     scope: resolvedScope,
     packageRoot: null,
   };
-}
-
-function resolveLocalHagiscriptPackageRoot() {
-  const packageRoot = path.join(process.cwd(), 'node_modules', '@hagicode', 'hagiscript');
-  return fs.existsSync(packageRoot) ? packageRoot : null;
 }
 
 function resolveGlobalNodeModulesRoot() {
@@ -241,13 +211,6 @@ export function resolveGlobalHagiscriptPackageRoot(minimumVersion = '0.1.8') {
   const resolved = resolveInstalledHagiscript(minimumVersion);
   if (resolved.packageRoot) {
     return resolved.packageRoot;
-  }
-  if (resolved.scope === 'local') {
-    const localPackageRoot = resolveLocalHagiscriptPackageRoot();
-    if (!localPackageRoot) {
-      throw new Error('Local hagiscript package root was not found.');
-    }
-    return localPackageRoot;
   }
   const packageRoot = path.join(resolveGlobalNodeModulesRoot(), '@hagicode', 'hagiscript');
   if (!fs.existsSync(packageRoot)) {

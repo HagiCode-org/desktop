@@ -38,6 +38,15 @@ describe('hagicode action button port waiting state', () => {
     );
   });
 
+  it('renders both starting and stopping as transition states on the primary button branch', async () => {
+    const source = await fs.readFile(actionButtonPath, 'utf8');
+
+    assert.match(source, /const isStarting = status === 'starting';/);
+    assert.match(source, /const isStopping = status === 'stopping';/);
+    assert.match(source, /const isTransitioning = isStarting \|\| isStopping;/);
+    assert.match(source, /t\(isStopping \? 'webServiceStatus\.status\.stopping' : 'webServiceStatus\.status\.starting'\)/);
+  });
+
   it('keeps ready URL state on the existing open action branch', async () => {
     const source = await fs.readFile(actionButtonPath, 'utf8');
 

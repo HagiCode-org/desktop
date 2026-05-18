@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
@@ -37,12 +37,23 @@ import {
   resolveDesktopRuntimeServiceDataHome,
   resolveDesktopRuntimeSharedDataPaths,
 } from './desktop-runtime-paths.js';
+import {
+  registerRuntimeManifestUserDataPath,
+  resolveRuntimeManifestDataScopePath,
+} from './runtime-manifest-store.js';
 import { getOmniRouteRuntimeConfigPath as resolveOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
   DataDirectorySource,
 } from '../types/bootstrap.js';
+
+const { app } = electron;
+
+function hasVendoredRuntimeMetadata(runtimeRoot: string): boolean {
+  return fsSync.existsSync(path.join(runtimeRoot, 'metadata.json'))
+    || fsSync.existsSync(path.join(runtimeRoot, '..', '.hagicode-runtime.json'));
+}
 
 export {
   buildNodeMajorNpmGlobalPaths,
@@ -359,11 +370,19 @@ export class PathManager {
   ] as const;
   private paths: AppPaths;
   private userDataPath: string;
+  private runtimeDataScopePath: string;
 
   private constructor() {
     this.userDataPath = app.getPath('userData');
+    this.runtimeDataScopePath = resolveRuntimeManifestDataScopePath(this.userDataPath);
+    registerRuntimeManifestUserDataPath(this.userDataPath);
     this.paths = this.buildPaths();
-    log.info('[PathManager] Initialized with paths:', this.paths);
+    log.info(
+      '[PathManager] Initialized. Dev scope:',
+      process.env.HAGICODE_DESKTOP_INSTANCE_NAME === 'hagicode_dev',
+      '| runtimeDataScope:', this.runtimeDataScopePath,
+      '| appsInstalled:', this.paths.appsInstalled,
+    );
   }
 
   /**
@@ -381,6 +400,7 @@ export class PathManager {
    */
   private buildPaths(): AppPaths {
     const userData = this.userDataPath;
+    const runtimeDataScopePath = this.runtimeDataScopePath;
     const configDir = path.join(userData, 'config');
 
     return {
@@ -388,8 +408,8 @@ export class PathManager {
       userData,
 
       // Apps/versions paths (new structure)
-      appsInstalled: path.join(userData, 'apps', 'installed'),
-      appsData: path.join(userData, 'apps', 'data'),
+      appsInstalled: path.join(runtimeDataScopePath, 'apps', 'installed'),
+      appsData: path.join(runtimeDataScopePath, 'apps', 'data'),
 
       // Config paths
       config: configDir,
@@ -424,7 +444,7 @@ export class PathManager {
 
   getRuntimeDataHome(): string {
     return resolveDesktopRuntimeDataHome({
-      userDataPath: this.userDataPath,
+      userDataPath: this.runtimeDataScopePath,
       overrideRoot: process.env.HAGICODE_RUNTIME_DATA_HOME,
     });
   }
@@ -446,7 +466,7 @@ export class PathManager {
   ): NodeMajorNpmGlobalPaths {
     return buildNodeMajorNpmGlobalPaths({
       ...input,
-      userDataPath: this.userDataPath,
+      userDataPath: this.runtimeDataScopePath,
     });
   }
 
@@ -455,7 +475,7 @@ export class PathManager {
   ): Pm2MajorHomePaths {
     return buildPm2MajorHomePaths({
       ...input,
-      userDataPath: this.userDataPath,
+      userDataPath: this.runtimeDataScopePath,
     });
   }
 
@@ -511,7 +531,15 @@ export class PathManager {
   }
 
   getDesktopAppsRoot(): string {
-    return path.join(this.userDataPath, 'apps');
+    return path.join(this.runtimeDataScopePath, 'apps');
+  }
+
+  getManagedServerProgramHome(): string {
+    return this.paths.appsInstalled;
+  }
+
+  getManagedServerDataHome(): string {
+    return this.paths.appsData;
   }
 
   getDesktopConfigDirectory(): string {
@@ -601,7 +629,7 @@ export class PathManager {
    */
   getDefaultDataDirectory(): string {
     return normalizeDataDirectoryPathForPlatform(
-      path.join(this.userDataPath, 'apps', 'data'),
+      path.join(this.runtimeDataScopePath, 'apps', 'data'),
       process.platform,
     );
   }
@@ -772,7 +800,7 @@ export class PathManager {
     if (overrideRoot) {
       const resolvedOverride = path.resolve(overrideRoot);
       const currentRoot = path.join(resolvedOverride, 'current');
-      return fsSync.existsSync(path.join(currentRoot, 'metadata.json')) ? currentRoot : resolvedOverride;
+      return hasVendoredRuntimeMetadata(currentRoot) ? currentRoot : resolvedOverride;
     }
 
     return resolveDesktopRuntimeComponentProgramRoot('code-server', this.getRuntimeProgramHome(), this.getCurrentPlatform());
@@ -787,7 +815,7 @@ export class PathManager {
     if (overrideRoot) {
       const resolvedOverride = path.resolve(overrideRoot);
       const currentRoot = path.join(resolvedOverride, 'current');
-      return fsSync.existsSync(path.join(currentRoot, 'metadata.json')) ? currentRoot : resolvedOverride;
+      return hasVendoredRuntimeMetadata(currentRoot) ? currentRoot : resolvedOverride;
     }
 
     return resolveDesktopRuntimeComponentProgramRoot('omniroute', this.getRuntimeProgramHome(), this.getCurrentPlatform());

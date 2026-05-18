@@ -3,6 +3,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import type { PathManager } from './path-manager.js';
 import { getCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
+import { readRuntimeManifestSection } from './runtime-manifest-store.js';
 import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   VendoredRuntimeInstallStatus,
@@ -54,6 +55,7 @@ export interface ValidateCodeServerRuntimeOptions {
 export interface ValidatedCodeServerRuntime {
   config: CodeServerRuntimeConfig;
   metadata: VendoredRuntimeMetadata | null;
+  metadataPath: string | null;
   wrapperPath: string | null;
   entryScriptPath: string | null;
   missingEntries: string[];
@@ -62,8 +64,13 @@ export interface ValidatedCodeServerRuntime {
   status: VendoredRuntimeStatus;
 }
 
+const LEGACY_METADATA_FILE = 'metadata.json';
+const HAGISCRIPT_COMPONENT_MARKER_FILE = '.hagicode-runtime.json';
+
 export function readCodeServerRuntimeConfig(): CodeServerRuntimeConfig {
-  return JSON.parse(fsSync.readFileSync(getCodeServerRuntimeConfigPath(), 'utf8')) as CodeServerRuntimeConfig;
+  return readRuntimeManifestSection<CodeServerRuntimeConfig>('codeServerRuntime', {
+    manifestPath: getCodeServerRuntimeConfigPath(),
+  });
 }
 
 export function detectCodeServerRuntimePlatform(
@@ -114,16 +121,74 @@ function resolveExpectedCodeServerRuntimeVersion(
   return null;
 }
 
-export async function readCodeServerRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
-  const metadataPath = path.join(runtimeRoot, 'metadata.json');
+async function readCodeServerRuntimeMetadataRecord(
+  runtimeRoot: string,
+  {
+    platform = detectCodeServerRuntimePlatform(),
+    config = readCodeServerRuntimeConfig(),
+  }: {
+    platform?: keyof CodeServerRuntimeConfig['platforms'];
+    config?: CodeServerRuntimeConfig;
+  } = {},
+): Promise<{ metadata: VendoredRuntimeMetadata | null; metadataPath: string | null }> {
+  const metadataPath = path.join(runtimeRoot, LEGACY_METADATA_FILE);
   try {
-    return JSON.parse(await fs.readFile(metadataPath, 'utf8')) as VendoredRuntimeMetadata;
+    return {
+      metadata: JSON.parse(await fs.readFile(metadataPath, 'utf8')) as VendoredRuntimeMetadata,
+      metadataPath,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  const markerPath = path.join(runtimeRoot, '..', HAGISCRIPT_COMPONENT_MARKER_FILE);
+  try {
+    const marker = JSON.parse(await fs.readFile(markerPath, 'utf8')) as Record<string, unknown>;
+    const target = resolveCodeServerRuntimeTarget(platform, config);
+    return {
+      metadata: {
+        schemaVersion: config.schemaVersion,
+        packageId: config.packageId,
+        version: typeof marker.version === 'string' ? marker.version : '',
+        platform: target.platform,
+        arch: target.arch,
+        sourceRevision:
+          (typeof marker.vendoredReleaseTag === 'string' && marker.vendoredReleaseTag)
+          || (typeof marker.vendoredReleaseName === 'string' && marker.vendoredReleaseName)
+          || (typeof marker.generatedAt === 'string' && marker.generatedAt)
+          || 'hagiscript-managed',
+        extra: {
+          bundledNodeRuntime: false,
+        },
+        artifacts: typeof marker.vendoredAssetName === 'string'
+          ? [{
+            kind: 'release-asset',
+            fileName: marker.vendoredAssetName,
+            blobKey: typeof marker.vendoredAssetUrl === 'string' && marker.vendoredAssetUrl
+              ? marker.vendoredAssetUrl
+              : marker.vendoredAssetName,
+            platform: target.platform,
+            arch: target.arch,
+          }]
+          : undefined,
+      },
+      metadataPath: markerPath,
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
+      return {
+        metadata: null,
+        metadataPath: null,
+      };
     }
     throw error;
   }
+}
+
+export async function readCodeServerRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
+  return (await readCodeServerRuntimeMetadataRecord(runtimeRoot)).metadata;
 }
 
 export function resolveCodeServerWrapperPath(
@@ -200,13 +265,11 @@ export async function validateCodeServerRuntime(
   const config = readCodeServerRuntimeConfig();
   const diagnostics: string[] = [];
   const missingEntries: string[] = [];
-  const metadata = await readCodeServerRuntimeMetadata(options.runtimeRoot);
+  const platform = detectCodeServerRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch);
+  const { metadata, metadataPath } = await readCodeServerRuntimeMetadataRecord(options.runtimeRoot, { platform, config });
 
   try {
-    resolveCodeServerRuntimeTarget(
-      detectCodeServerRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch),
-      config,
-    );
+    resolveCodeServerRuntimeTarget(platform, config);
   } catch (error) {
     diagnostics.push(error instanceof Error ? error.message : String(error));
   }
@@ -222,7 +285,7 @@ export async function validateCodeServerRuntime(
   }
 
   if (!metadata) {
-    diagnostics.push('Vendored runtime metadata is missing at metadata.json');
+    diagnostics.push('Vendored runtime metadata is missing (metadata.json or ../.hagicode-runtime.json)');
   } else {
     if (metadata.schemaVersion !== config.schemaVersion) {
       diagnostics.push(`Metadata schemaVersion expected ${config.schemaVersion} but found ${metadata.schemaVersion ?? 'missing'}`);
@@ -231,7 +294,7 @@ export async function validateCodeServerRuntime(
       diagnostics.push(`Metadata packageId expected ${config.packageId} but found ${metadata.packageId ?? 'missing'}`);
     }
     const expectedVersion = resolveExpectedCodeServerRuntimeVersion(
-      detectCodeServerRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch),
+      platform,
       config,
     );
     if (expectedVersion && metadata.version !== expectedVersion) {
@@ -256,6 +319,7 @@ export async function validateCodeServerRuntime(
   return {
     config,
     metadata,
+    metadataPath,
     wrapperPath,
     entryScriptPath: existsSync(entryScriptPath) ? entryScriptPath : null,
     missingEntries,
@@ -285,7 +349,6 @@ export async function inspectVendoredCodeServerRuntime(
     existsSync: options.existsSync,
     health: options.health,
   });
-  const metadataPath = path.join(runtimeRoot, 'metadata.json');
   const health = options.health ?? {
     reachable: false,
     url: null,
@@ -304,7 +367,7 @@ export async function inspectVendoredCodeServerRuntime(
     status: validated.status,
     version: validated.metadata?.version ?? null,
     runtimeRoot,
-    metadataPath,
+    metadataPath: validated.metadataPath,
     wrapperPath: validated.wrapperPath,
     entryScriptPath: validated.entryScriptPath,
     packageId: validated.metadata?.packageId ?? 'code-server',

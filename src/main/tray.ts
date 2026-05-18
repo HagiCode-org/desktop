@@ -1,10 +1,13 @@
-import { Tray, Menu, nativeImage, app, Notification, shell, ipcMain } from 'electron';
+import { electron } from '../electron-api.js';
+import type { Tray } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { activateMainWindow, mainWindow } from './main.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
+
+const { Tray: ElectronTray, Menu: ElectronMenu, nativeImage, app, Notification, shell, ipcMain } = electron;
 
 // Reference to webServiceManager - will be set from main.ts
 let webServiceManagerRef: any = null;
@@ -137,7 +140,7 @@ export function setTrayLanguage(language: string): void {
 export function createTray(): void {
   const icon = loadTrayIcon();
 
-  tray = new Tray(icon.resize({ width: 16, height: 16 }));
+  tray = new ElectronTray(icon.resize({ width: 16, height: 16 }));
 
   updateTrayMenu();
 
@@ -229,7 +232,7 @@ export function updateTrayMenu(): void {
     },
   ];
 
-  const contextMenu = Menu.buildFromTemplate(menuTemplate);
+  const contextMenu = ElectronMenu.buildFromTemplate(menuTemplate);
   tray.setContextMenu(contextMenu);
   tray.setToolTip('Hagicode Desktop');
 }

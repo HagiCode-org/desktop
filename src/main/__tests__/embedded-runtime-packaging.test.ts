@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { load } from 'js-yaml';
 
-const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-runtime/runtime-manifest.json');
+const runtimeManifestPath = path.resolve(process.cwd(), 'resources/manifest.yml');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
@@ -18,7 +19,8 @@ const publishDevWorkflowPath = path.resolve(process.cwd(), '.github/workflows/pu
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
-    const manifest = JSON.parse(await fs.readFile(runtimeManifestPath, 'utf-8'));
+    const manifestStore = load(await fs.readFile(runtimeManifestPath, 'utf-8')) as { desktopExtensions: { embeddedRuntime: Record<string, unknown> } };
+    const manifest = manifestStore.desktopExtensions.embeddedRuntime as any;
 
     assert.equal(manifest.platforms['osx-x64']?.rid, 'osx-x64');
     assert.equal(manifest.platforms['osx-arm64']?.rid, 'osx-arm64');

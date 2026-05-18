@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import * as electron from 'electron';
 import type {
   AcceptLegalDocumentsPayload,
   LegalDocumentType,
@@ -42,6 +42,8 @@ import type {
 } from '../types/bootstrap.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
+
+const { contextBridge, ipcRenderer } = electron;
 export type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';

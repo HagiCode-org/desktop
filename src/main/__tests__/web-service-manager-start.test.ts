@@ -29,6 +29,15 @@ describe('web-service startup flow', () => {
     assert.match(source, /waitForHealthCheck\(\)/);
   });
 
+  it('keeps transitional startup polling in starting state until startup truly fails or succeeds', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /private isStartupTransitionActive\(\): boolean/);
+    assert.match(source, /const startupTransitionActive = this\.isStartupTransitionActive\(\);/);
+    assert.match(source, /if \(startupTransitionActive && this\.currentPhase !== StartupPhase\.Error\) {\s*this\.status = 'starting';/);
+    assert.match(source, /this\.currentPhase = StartupPhase\.HealthCheck;/);
+  });
+
   it('resets stale restart counters for manual start and stop flows', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
@@ -54,12 +63,14 @@ describe('web-service startup flow', () => {
     assert.doesNotMatch(webServiceSource, /this\.pm2Manager\./);
 
     assert.match(runtimeContextSource, /getManagedCommandContext\('hagiscript'\)/);
-    assert.match(runtimeContextSource, /runtimeHome: input\.runtimeHome/);
-    assert.match(runtimeContextSource, /runtimeDataRoot: input\.runtimeDataRoot/);
+    assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
+    assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
+    assert.match(runtimeContextSource, /serverProgramRoot/);
+    assert.match(runtimeContextSource, /serverDataRoot/);
     assert.match(runtimeContextSource, /npmPrefix: path\.resolve\(hagiscriptContext\.environment\.npmGlobalPrefix\)/);
-    assert.match(runtimeContextSource, /dllPath: input\.servicePayloadPath/);
-    assert.match(runtimeContextSource, /workingDirectory: input\.serviceWorkingDirectory/);
-    assert.match(runtimeContextSource, /runtimeDataDir: SERVER_RUNTIME_DATA_DIR/);
+    assert.match(runtimeContextSource, /servicePayloadPath,/);
+    assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
+    assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
 
     assert.match(serverManagerSource, /\['runtime', 'state', '--json'/);
     assert.match(serverManagerSource, /\['pm2', 'server', action, '--json'/);
@@ -80,7 +91,7 @@ describe('web-service startup flow', () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /desktop-incompatible/);
-    assert.match(source, /evaluateDesktopCompatibility\(manifest, app\.getVersion\(\)\)/);
+    assert.match(source, /evaluateDesktopCompatibility\(manifest, desktopVersion\)/);
     assert.match(source, /validateFrameworkDependentPayload/);
     assert.match(source, /Required ASP\.NET Core runtime:/);
     assert.doesNotMatch(source, /validateBundledRuntimeForPlatform/);

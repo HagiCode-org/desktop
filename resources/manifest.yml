@@ -1,0 +1,389 @@
+runtime:
+  name: hagicode-desktop-runtime
+  version: 0.1.15-dev.94.1.64ce9f6
+
+paths:
+  runtimeRoot: .
+  runtimeHome: .
+  runtimeDataRoot: ../runtime-data
+  serverProgramRoot: ../apps/installed
+  serverDataRoot: ../apps/data
+  bin: bin
+  config: config
+  logs: logs
+  data: data
+  stateFile: state.json
+  componentsRoot: components
+  componentDataRoot: components
+  defaultPm2Home: pm2
+  npmPrefix: npm
+  nodeRuntime: components/node/runtime
+  dotnetRuntime: components/dotnet/runtime
+  vendoredRoot: components/bundled
+
+components:
+  - name: node
+    type: runtime
+    source: desktop-bundled-node
+    version: 22.22.2
+    channelVersion: "22"
+    lifecycleDependencies: []
+    installScript: ../scripts/hagiscript/install-node.mjs
+    verifyScript: ../scripts/hagiscript/verify-node.mjs
+
+  - name: dotnet/runtime/linux-x64
+    type: runtime
+    source: desktop-embedded-dotnet
+    version: 10.0.5
+    channelVersion: "10.0"
+    lifecycleDependencies: []
+    installScript: ../scripts/hagiscript/install-dotnet.mjs
+    verifyScript: ../scripts/hagiscript/verify-dotnet.mjs
+
+  - name: dotnet/runtime/osx-x64
+    type: runtime
+    source: desktop-embedded-dotnet
+    version: 10.0.5
+    channelVersion: "10.0"
+    lifecycleDependencies: []
+    installScript: ../scripts/hagiscript/install-dotnet.mjs
+    verifyScript: ../scripts/hagiscript/verify-dotnet.mjs
+
+  - name: dotnet/runtime/osx-arm64
+    type: runtime
+    source: desktop-embedded-dotnet
+    version: 10.0.5
+    channelVersion: "10.0"
+    lifecycleDependencies: []
+    installScript: ../scripts/hagiscript/install-dotnet.mjs
+    verifyScript: ../scripts/hagiscript/verify-dotnet.mjs
+
+  - name: dotnet/runtime/win-x64
+    type: runtime
+    source: desktop-embedded-dotnet
+    version: 10.0.5
+    channelVersion: "10.0"
+    lifecycleDependencies: []
+    installScript: ../scripts/hagiscript/install-dotnet.mjs
+    verifyScript: ../scripts/hagiscript/verify-dotnet.mjs
+
+  - name: omniroute
+    type: bundled-runtime
+    source: desktop-vendored-runtime
+    version: "2026.0516.0063"
+    runtimeDataDir: services/omniroute
+    lifecycleDependencies:
+      - node
+    installScript: ../scripts/hagiscript/install-omniroute.mjs
+    configureScript: ../scripts/hagiscript/configure-omniroute.mjs
+    pm2:
+      appName: hagicode-omniroute
+      cwd: current
+
+  - name: code-server
+    type: bundled-runtime
+    source: desktop-vendored-runtime
+    version: "2026.0516.0063"
+    runtimeDataDir: services/code-server
+    lifecycleDependencies:
+      - node
+    installScript: ../scripts/hagiscript/install-code-server.mjs
+    configureScript: ../scripts/hagiscript/configure-code-server.mjs
+    pm2:
+      appName: hagicode-code-server
+      cwd: current
+
+phases:
+  install:
+    order:
+      - node
+      - dotnet/runtime/linux-x64
+      - dotnet/runtime/osx-x64
+      - dotnet/runtime/osx-arm64
+      - dotnet/runtime/win-x64
+      - omniroute
+      - code-server
+  remove:
+    order:
+      - code-server
+      - omniroute
+      - dotnet/runtime/win-x64
+      - dotnet/runtime/osx-arm64
+      - dotnet/runtime/osx-x64
+      - dotnet/runtime/linux-x64
+      - node
+  update:
+    order:
+      - node
+      - dotnet/runtime/linux-x64
+      - dotnet/runtime/osx-x64
+      - dotnet/runtime/osx-arm64
+      - dotnet/runtime/win-x64
+      - omniroute
+      - code-server
+
+npmSync:
+  packages:
+    "@anthropic-ai/claude-code":
+      version: 2.1.119
+      target: 2.1.119
+    "@fission-ai/openspec":
+      version: 1.3.1
+      target: 1.3.1
+    "@openai/codex":
+      version: 0.125.0
+      target: 0.125.0
+    skills:
+      version: 1.5.1
+      target: 1.5.1
+
+desktopExtensions:
+  distribution:
+    programHomes:
+      development: resources
+      packaged: extra/runtime
+    runtimeDataRelativePath: runtimeData
+
+  embeddedRuntime:
+    schemaVersion: 1
+    channelVersion: "10.0"
+    releaseVersion: 10.0.5
+    releaseDate: "2026-03-12"
+    source:
+      provider: microsoft
+      releaseMetadataUrl: https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json
+      allowedDownloadHosts:
+        - builds.dotnet.microsoft.com
+    platforms:
+      linux-x64:
+        rid: linux-x64
+        archiveType: tar.gz
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz
+        aspNetCoreVersion: 10.0.5
+        netCoreVersion: 10.0.5
+        hostFxrVersion: 10.0.5
+      osx-x64:
+        rid: osx-x64
+        archiveType: tar.gz
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-x64.tar.gz
+        aspNetCoreVersion: 10.0.5
+        netCoreVersion: 10.0.5
+        hostFxrVersion: 10.0.5
+      osx-arm64:
+        rid: osx-arm64
+        archiveType: tar.gz
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-arm64.tar.gz
+        aspNetCoreVersion: 10.0.5
+        netCoreVersion: 10.0.5
+        hostFxrVersion: 10.0.5
+      win-x64:
+        rid: win-x64
+        archiveType: zip
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-win-x64.zip
+        aspNetCoreVersion: 10.0.5
+        netCoreVersion: 10.0.5
+        hostFxrVersion: 10.0.5
+    expectedLayout:
+      runtimeRootPattern: dotnet/<rid>
+      requiredEntries:
+        - dotnet[.exe]
+        - host/fxr/<hostFxrVersion>
+        - shared/Microsoft.NETCore.App/<netCoreVersion>
+        - shared/Microsoft.AspNetCore.App/<aspNetCoreVersion>
+        - .hagicode-runtime.json
+
+  embeddedNodeRuntime:
+    schemaVersion: 2
+    runtime: node
+    channelVersion: "22"
+    releaseVersion: 22.22.2
+    releaseDate: "2026-03-30"
+    layoutVersion: 2
+    defaultEnabledByConsumer:
+      desktop: true
+      steam-packer: true
+    source:
+      provider: nodejs.org
+      releaseMetadataUrl: https://nodejs.org/download/release/v22.22.2/SHASUMS256.txt
+      allowedDownloadHosts:
+        - nodejs.org
+    corePackages:
+      openspec:
+        packageName: "@fission-ai/openspec"
+        version: 1.3.1
+        binName: openspec
+        aliases:
+          - opsx
+        integrity: sha512-QnbJfq/lUNCRY+TTXo87fuIpGCCaOYt280tmbuI112B/1vF0feIneK0/qhoTZNslRDhwwg1YcYDX0suxq2h6tw==
+        installMode: manual
+        installState: pending
+        installSpec: "@fission-ai/openspec@1.3.1"
+        manualActionId: install-bundled-node-cli
+      skills:
+        packageName: skills
+        version: 1.5.1
+        binName: skills
+        aliases:
+          - add-skill
+        integrity: sha512-8LQFrbFPexuV8U1B0LnIexL2KRjGBNiy+9+rLp8iDrBQrVPhb6TbFon7ngspnTTqkA/Up+GkBbCeUGx0gtK2VQ==
+        installMode: manual
+        installState: pending
+        installSpec: skills@1.5.1
+        manualActionId: install-bundled-node-cli
+    platforms:
+      linux-x64:
+        rid: linux-x64
+        archiveType: tar.xz
+        archiveName: node-v22.22.2-linux-x64.tar.xz
+        downloadUrl: https://nodejs.org/download/release/v22.22.2/node-v22.22.2-linux-x64.tar.xz
+        extractRoot: node-v22.22.2-linux-x64
+        checksumSha256: 88fd1ce767091fd8d4a99fdb2356e98c819f93f3b1f8663853a2dee9b438068a
+      osx-x64:
+        rid: osx-x64
+        archiveType: tar.gz
+        archiveName: node-v22.22.2-darwin-x64.tar.gz
+        downloadUrl: https://nodejs.org/download/release/v22.22.2/node-v22.22.2-darwin-x64.tar.gz
+        extractRoot: node-v22.22.2-darwin-x64
+        checksumSha256: 12a6abb9c2902cf48a21120da13f87fde1ed1b71a13330712949e8db818708ba
+      osx-arm64:
+        rid: osx-arm64
+        archiveType: tar.gz
+        archiveName: node-v22.22.2-darwin-arm64.tar.gz
+        downloadUrl: https://nodejs.org/download/release/v22.22.2/node-v22.22.2-darwin-arm64.tar.gz
+        extractRoot: node-v22.22.2-darwin-arm64
+        checksumSha256: db4b275b83736df67533529a18cc55de2549a8329ace6c7bcc68f8d22d3c9000
+      win-x64:
+        rid: win-x64
+        archiveType: zip
+        archiveName: node-v22.22.2-win-x64.zip
+        downloadUrl: https://nodejs.org/download/release/v22.22.2/node-v22.22.2-win-x64.zip
+        extractRoot: node-v22.22.2-win-x64
+        checksumSha256: 7c93e9d92bf68c07182b471aa187e35ee6cd08ef0f24ab060dfff605fcc1c57c
+    expectedLayout:
+      toolchainRootPattern: toolchain
+      nodeRootPattern: toolchain/node
+      requiredEntries:
+        - node/bin/node|node/node.exe
+        - node/bin/npm|node/npm.cmd|node/lib/node_modules/npm/bin/npm-cli.js
+        - toolchain-manifest.json
+      deferredPackageContract:
+        installMode: manual
+        installState: pending
+        manualActionId: install-bundled-node-cli
+
+  codeServerRuntime:
+    schemaVersion: 1
+    runtime: code-server
+    packageId: code-server
+    releaseVersionByPlatform:
+      linux-x64: "2026.0516.0063"
+      osx-x64: "2026.0516.0063"
+      osx-arm64: "2026.0516.0063"
+      win-x64: "2026.0516.0063"
+    defaultPort: 37667
+    source:
+      generatedRootSubdir: code-server-runtime
+      localArtifactDir: null
+      indexUrl: null
+      releaseUrlsByPlatform:
+        linux-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        osx-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        osx-arm64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        win-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+      allowedDownloadHosts:
+        - github.com
+        - release-assets.githubusercontent.com
+        - objects.githubusercontent.com
+        - githubusercontent.com
+        - index.hagicode.com
+    platforms:
+      linux-x64:
+        platform: linux
+        arch: amd64
+        archiveExtension: .tar.gz
+      osx-x64:
+        platform: macos
+        arch: amd64
+        archiveExtension: .tar.gz
+      osx-arm64:
+        platform: macos
+        arch: arm64
+        archiveExtension: .tar.gz
+      win-x64:
+        platform: windows
+        arch: amd64
+        archiveExtension: .zip
+    expectedLayout:
+      requiredEntries:
+        - metadata.json|../.hagicode-runtime.json
+        - out/node/entry.js
+        - bin/code-server|bin/code-server.cmd|bin/code-server.ps1
+      wrapperCandidates:
+        - bin/code-server
+        - bin/code-server.cmd
+        - bin/code-server.ps1
+      entryScript: out/node/entry.js
+
+  omniRouteRuntime:
+    schemaVersion: 1
+    runtime: omniroute
+    packageId: omniroute
+    releaseVersionByPlatform:
+      linux-x64: "2026.0516.0063"
+      osx-x64: "2026.0516.0063"
+      osx-arm64: "2026.0516.0063"
+      win-x64: "2026.0516.0063"
+    source:
+      generatedRootSubdir: omniroute-runtime
+      localArtifactDir: null
+      indexUrl: null
+      releaseUrlsByPlatform:
+        linux-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        osx-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        osx-arm64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+        win-x64:
+          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+      allowedDownloadHosts:
+        - github.com
+        - release-assets.githubusercontent.com
+        - objects.githubusercontent.com
+        - githubusercontent.com
+        - index.hagicode.com
+    platforms:
+      linux-x64:
+        platform: linux
+        arch: amd64
+        archiveExtension: .tar.gz
+      osx-x64:
+        platform: macos
+        arch: amd64
+        archiveExtension: .tar.gz
+      osx-arm64:
+        platform: macos
+        arch: arm64
+        archiveExtension: .tar.gz
+      win-x64:
+        platform: windows
+        arch: amd64
+        archiveExtension: .zip
+    expectedLayout:
+      requiredEntries:
+        - metadata.json|../.hagicode-runtime.json
+        - bin/omniroute.mjs
+        - omniroute.sh|omniroute.cmd|omniroute.bat|omniroute.ps1|bin/omniroute|bin/omniroute.cmd|bin/omniroute.ps1
+      wrapperCandidates:
+        - omniroute.sh
+        - omniroute.cmd
+        - omniroute.bat
+        - omniroute.ps1
+        - bin/omniroute
+        - bin/omniroute.cmd
+        - bin/omniroute.ps1
+      entryScript: bin/omniroute.mjs

@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: Instale sua primeira versão
         description: Quando nenhum pacote estiver instalado ainda, use esta chamada para ação para iniciar o assistente de configuração e concluir a primeira instalação em tempo de execução.
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: Mudar para o modo claro
   switchToDark: Mudar para o modo escuro

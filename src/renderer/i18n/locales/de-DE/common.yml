@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: Installieren Sie Ihre erste Version
         description: Wenn noch kein Paket installiert ist, verwenden Sie diesen Call-to-Action, um den Setup-Assistenten zu starten und die erste Laufzeitinstallation abzuschließen.
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: Wechseln Sie in den Lichtmodus
   switchToDark: Wechseln Sie in den Dunkelmodus

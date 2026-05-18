@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { app, shell } from 'electron';
+import { electron } from '../electron-api.js';
 import {
   inspectVendoredCodeServerRuntime,
 } from './code-server-runtime.js';
@@ -38,6 +38,8 @@ import type {
   CodeServerProcessStatus,
   CodeServerStatusSnapshot,
 } from '../types/code-server-management.js';
+
+const { app, shell } = electron;
 
 const PROCESS_NAME = 'hagicode-code-server';
 const OUT_LOG_FILE = 'code-server-out.log';

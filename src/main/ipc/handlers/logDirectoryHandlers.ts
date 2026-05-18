@@ -1,9 +1,11 @@
-import { app, ipcMain, shell } from 'electron';
+import { electron } from '../../../electron-api.js';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { createLogDirectoryService } from '../../log-directory-service.js';
 import { VersionManager } from '../../version-manager.js';
 import type { LogDirectoryOpenResult, LogDirectoryTarget } from '../../../types/log-directory.js';
+
+const { app, ipcMain, shell } = electron;
 
 interface LogDirectoryHandlerState {
   versionManager: VersionManager | null;

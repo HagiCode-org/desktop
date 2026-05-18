@@ -1,4 +1,9 @@
+import fsSync from 'node:fs';
 import path from 'node:path';
+import {
+  getNodeExecutableRelativePath,
+  resolveExistingNpmExecutableRelativePath,
+} from './embedded-node-runtime-config.js';
 import {
   resolveDesktopRuntimeComponentProgramRoot,
   resolveDesktopRuntimeProgramHome,
@@ -67,8 +72,11 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
   const nodeRoot = toolchainRoot;
   const toolchainBinRoot = platform === 'win32' ? toolchainRoot : path.join(toolchainRoot, 'bin');
   const nodeBinRoot = toolchainBinRoot;
-  const nodeExecutableName = platform === 'win32' ? 'node.exe' : 'node';
-  const npmExecutableName = platform === 'win32' ? 'npm.cmd' : 'npm';
+  const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platform));
+  const npmExecutablePath = path.join(
+    toolchainRoot,
+    resolveExistingNpmExecutableRelativePath(toolchainRoot, platform, fsSync.existsSync),
+  );
 
   return {
     toolchainRoot,
@@ -76,8 +84,8 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
     toolchainBinRoot,
     nodeBinRoot,
     toolchainManifestPath: path.join(toolchainRoot, 'toolchain-manifest.json'),
-    nodeExecutablePath: path.join(nodeBinRoot, nodeExecutableName),
-    npmExecutablePath: path.join(nodeBinRoot, npmExecutableName),
+    nodeExecutablePath,
+    npmExecutablePath,
   };
 }
 

@@ -33,6 +33,8 @@ export default function HagicodeActionButton({
   const { t } = useTranslation(['components', 'tray']);
 
   const isStarting = status === 'starting';
+  const isStopping = status === 'stopping';
+  const isTransitioning = isStarting || isStopping;
 
   // Stopped state - Start button
   if (!isRunning) {
@@ -101,16 +103,16 @@ export default function HagicodeActionButton({
             src={hagicodeIcon}
             alt="Hagicode"
             className="w-8 h-8"
-            animate={isStarting ? { rotate: 360 } : { scale: [1, 1.1, 1] }}
-            transition={{ duration: isStarting ? 1 : 2, repeat: isStarting ? 0 : Infinity, ease: 'easeInOut' }}
+            animate={isTransitioning ? { rotate: 360 } : { scale: [1, 1.1, 1] }}
+            transition={{ duration: isTransitioning ? 1 : 2, repeat: isTransitioning ? 0 : Infinity, ease: 'easeInOut' }}
           />
 
           {/* Play icon or loader */}
           <div className="flex items-center gap-2">
-            {isStarting ? (
+            {isTransitioning ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>{t('webServiceStatus.status.starting')}</span>
+                <span>{t(isStopping ? 'webServiceStatus.status.stopping' : 'webServiceStatus.status.starting')}</span>
               </>
             ) : (
               <>
@@ -126,26 +128,6 @@ export default function HagicodeActionButton({
           </div>
 
           {/* Separator */}
-          {!isStarting && (
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: '2px' }}
-              transition={{ delay: 0.2, duration: 0.3 }}
-              className="h-8 bg-primary-foreground/30 rounded-full"
-            />
-          )}
-
-          {/* "Hagicode" text */}
-          {!isStarting && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-lg font-bold tracking-wide"
-            >
-              Hagicode
-            </motion.span>
-          )}
         </div>
 
         {/* Subtle border */}

@@ -1,5 +1,8 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import { OnboardingManager } from '../../onboarding-manager.js';
+
+const { ipcMain } = electron;
 
 // Module state
 interface OnboardingHandlerState {

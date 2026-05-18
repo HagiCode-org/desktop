@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRuntimeManifestPath, readRuntimeManifestSection } from './runtime-manifest-store.js';
 
 export const EMBEDDED_RUNTIME_METADATA_FILE = '.hagicode-runtime.json';
 
@@ -52,8 +52,6 @@ export interface EmbeddedRuntimeStageMetadata {
   stagedAt: string;
 }
 
-let cachedManifest: PinnedEmbeddedRuntimeManifest | null = null;
-
 export function detectPinnedRuntimePlatform(
   platform: NodeJS.Platform = process.platform,
   arch: string = process.arch,
@@ -76,29 +74,11 @@ export function getEmbeddedDotnetExecutableName(platform: string): string {
 }
 
 export function getPinnedRuntimeManifestPath(): string {
-  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    path.resolve(process.cwd(), 'resources', 'embedded-runtime', 'runtime-manifest.json'),
-    path.resolve(moduleDirectory, '../../resources/embedded-runtime/runtime-manifest.json'),
-  ];
-
-  const match = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!match) {
-    throw new Error(`Pinned embedded runtime manifest was not found. Checked: ${candidates.join(', ')}`);
-  }
-
-  return match;
+  return getRuntimeManifestPath();
 }
 
 export function readPinnedRuntimeManifest(): PinnedEmbeddedRuntimeManifest {
-  if (cachedManifest) {
-    return cachedManifest;
-  }
-
-  const manifestPath = getPinnedRuntimeManifestPath();
-  const content = fs.readFileSync(manifestPath, 'utf8');
-  cachedManifest = JSON.parse(content) as PinnedEmbeddedRuntimeManifest;
-  return cachedManifest;
+  return readRuntimeManifestSection<PinnedEmbeddedRuntimeManifest>('embeddedRuntime');
 }
 
 export function resolvePinnedRuntimeTarget(platform: string): PinnedEmbeddedRuntimeTarget {

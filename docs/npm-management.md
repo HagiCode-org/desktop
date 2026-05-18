@@ -13,7 +13,7 @@ To add a future Desktop-managed npm CLI tool:
 - Extend the `ManagedNpmPackageId` union in `src/types/npm-management.ts`.
 - Add or update tests that cover status detection, install/uninstall rejection for invalid ids, and renderer row display.
 
-All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable. Mutable global packages are stored in the Electron `userData/runtimeData/node/node<major>/npmGlobal` directory, where `<major>` is derived from the active Desktop-managed Node runtime.
+All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable. Mutable global packages are stored in the Electron `userData[/dev]/runtimeData/node/node<major>/npmGlobal` directory, where `<major>` is derived from the active Desktop-managed Node runtime.
 
 The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands. It is not the active npm global package prefix. Dependency snapshots only inspect the active Node-major `userData` prefix for managed package state.
 
@@ -22,7 +22,7 @@ The bundled portable toolchain root remains the immutable runtime source for `no
 `code-server` is no longer part of the npm-managed catalog.
 
 - Vendored runtime metadata and layout validation live under `resources/code-server-runtime/` and `src/main/code-server-runtime.ts`.
-- Development staging targets `build/desktop-runtime/current/components/bundled/code-server`.
+- Development staging targets `resources/components/bundled/code-server`.
 - Packaged Desktop builds ship the runtime at `extra/runtime/components/bundled/code-server`.
 - Dependency Management renders vendored runtimes separately from npm-managed packages and rejects npm install/uninstall/sync mutations for vendored runtime identifiers.
 

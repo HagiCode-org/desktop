@@ -1,5 +1,7 @@
-import { ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
 import { RegionDetector } from '../../region-detector.js';
+
+const { ipcMain } = electron;
 
 // Module state
 let regionDetector: RegionDetector | null = null;

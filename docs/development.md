@@ -112,7 +112,7 @@ This command:
 3. Builds the preload script in watch mode
 4. Launches Electron with the development configuration
 
-`npm run dev` also reuses or stages the governed Desktop runtime payloads through `hagiscript runtime install` before Electron launches. Desktop keeps its existing runtime layout under `build/desktop-runtime/current/components/...`; the hagiscript manifest points each component back at the Desktop contract and source configuration.
+`npm run dev` also reuses or stages the governed Desktop runtime payloads through `hagiscript runtime install` before Electron launches. Desktop now stages the governed runtime layout under `resources/components/...`; the hagiscript manifest points each component back at the Desktop contract and source configuration.
 
 ### Building for Production
 
@@ -322,7 +322,7 @@ binds such as `0.0.0.0` still open through loopback (`127.0.0.1`) locally.
 Desktop-hosted Hagicode Server startup uses a pinned private `dotnet` runtime instead of `start.ps1` / `start.sh`.
 Windows and Linux builds now stage the runtime from a single manifest:
 
-- Manifest: `resources/embedded-runtime/runtime-manifest.json`
+- Manifest: `resources/manifest.yml` (`desktopExtensions.embeddedRuntime`)
 - Current pinned channel: `.NET 10.0`
 - Current pinned release: `10.0.5` (release date `2026-03-12`)
 - Official release metadata: `https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json`
@@ -525,16 +525,16 @@ npm run prepare:runtime
 
 Behavior:
 
-1. Generates a Desktop-specific hagiscript runtime manifest in the repo root
-2. Invokes `hagiscript runtime install --from-manifest ... --runtime-root build/desktop-runtime/current`
-3. Uses the pinned Desktop runtime contract from `resources/embedded-runtime/runtime-manifest.json`
-4. Stages the runtime into `build/desktop-runtime/current/components/dotnet/runtime/<rid>/`
+1. Uses `resources/manifest.yml` directly as the Desktop hagiscript runtime manifest
+2. Invokes `hagiscript runtime install --from-manifest ... --runtime-root resources`
+3. Uses the pinned Desktop runtime contract from `resources/manifest.yml` (`desktopExtensions.embeddedRuntime`)
+4. Stages the runtime into `resources/components/dotnet/runtime/<rid>/`
 5. Writes `.hagicode-runtime.json` and `.runtime-stage.json`
 6. Verifies the staged payload exposes the pinned `host/fxr`, `Microsoft.NETCore.App`, and `Microsoft.AspNetCore.App` versions
 
 ### Packaged runtime location
 
-`electron-builder.yml` ships `build/desktop-runtime/current` through `extraResources`, so the packaged runtime remains outside `app.asar`:
+`electron-builder.yml` ships the generated `resources/bin` and `resources/components` trees through `extraResources`, so the packaged runtime remains outside `app.asar`:
 
 - Packaged Linux: `pkg/linux-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - Packaged Windows: `pkg/win-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
@@ -557,20 +557,20 @@ Notes:
 - Windows and Linux are supported in this helper flow.
 - The helper stages the pinned runtime first, then launches `npm run dev` with:
   - `HAGICODE_EMBEDDED_DOTNET_PLATFORM=<rid>`
-  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/build/desktop-runtime/current/components/dotnet/runtime/<rid>`
+  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/resources/components/dotnet/runtime/<rid>`
 - Development runtime resolution reuses the staged runtime directly instead of relying on global `dotnet`.
 
 Manual override remains available:
 
 ```bash
-export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/build/desktop-runtime/current/components/dotnet/runtime/linux-x64"
+export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/resources/components/dotnet/runtime/linux-x64"
 npm run dev
 ```
 
 Windows PowerShell example:
 
 ```powershell
-$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/build/desktop-runtime/current/components/dotnet/runtime/win-x64"
+$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/resources/components/dotnet/runtime/win-x64"
 npm run dev
 ```
 
@@ -592,7 +592,7 @@ npm run package:runtime-pm2-integration
 
 `package:smoke-test` validates both:
 
-- staged runtime payload under `build/desktop-runtime/current/components/dotnet/runtime/<rid>`
+- staged runtime payload under `resources/components/dotnet/runtime/<rid>`
 - packaged runtime payload under `pkg/<platform>-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - pinned metadata (`.hagicode-runtime.json`) matches the manifest and official Microsoft source host
 
@@ -642,7 +642,7 @@ Desktop release packaging now publishes extractable ZIP archives alongside the e
 
 The Desktop Windows and Linux packaging jobs now share the same runtime rules as local builds:
 
-- cache key source: `hashFiles('resources/embedded-runtime/runtime-manifest.json')`
+- cache key source: `hashFiles('resources/manifest.yml')`
 - cached download directory: `build/embedded-runtime/downloads`
 - explicit build env:
   - Windows: `HAGICODE_EMBEDDED_DOTNET_PLATFORM=win-x64`
@@ -669,7 +669,7 @@ Symptoms:
 Actions:
 
 1. Re-run `npm run prepare:runtime`
-2. Confirm `build/desktop-runtime/current/components/dotnet/runtime/<rid>` exists
+2. Confirm `resources/components/dotnet/runtime/<rid>` exists
 3. Rebuild the package and rerun `npm run package:smoke-test`
 
 #### Unofficial runtime source
@@ -681,7 +681,7 @@ Symptoms:
 
 Actions:
 
-1. Inspect `resources/embedded-runtime/runtime-manifest.json`
+1. Inspect `resources/manifest.yml` (`desktopExtensions.embeddedRuntime`)
 2. Confirm `platforms.<rid>.downloadUrl` still points to `builds.dotnet.microsoft.com`
 3. Remove stale archives from `build/embedded-runtime/downloads/` and stage again
 
@@ -694,7 +694,7 @@ Symptoms:
 
 Actions:
 
-1. Compare `.hagicode-runtime.json` with `runtime-manifest.json`
+1. Compare `.hagicode-runtime.json` with `resources/manifest.yml`
 2. Check `host/fxr`, `shared/Microsoft.NETCore.App`, and `shared/Microsoft.AspNetCore.App` version directories
 3. Clear `build/embedded-runtime/current/` and rerun `npm run prepare:runtime`
 

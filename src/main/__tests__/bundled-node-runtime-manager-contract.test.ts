@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { load } from 'js-yaml';
 
 const runtimeManagerPath = path.resolve(process.cwd(), 'src/main/bundled-node-runtime-manager.ts');
-const runtimeManifestPath = path.resolve(process.cwd(), 'resources/embedded-node-runtime/runtime-manifest.json');
+const runtimeManifestPath = path.resolve(process.cwd(), 'resources/manifest.yml');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 const bundledToolchainContractPath = path.resolve(process.cwd(), 'scripts/bundled-toolchain-contract.js');
 const prepareBundledToolchainPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
@@ -15,7 +16,8 @@ describe('bundled node runtime manager contract', () => {
       fs.readFile(runtimeManagerPath, 'utf8'),
       fs.readFile(runtimeManifestPath, 'utf8'),
     ]);
-    const manifest = JSON.parse(manifestRaw);
+    const manifestStore = load(manifestRaw) as { desktopExtensions: { embeddedNodeRuntime: Record<string, unknown> } };
+    const manifest = manifestStore.desktopExtensions.embeddedNodeRuntime as any;
 
     assert.equal(manifest.schemaVersion, 2);
     assert.equal(manifest.layoutVersion, 2);
@@ -49,7 +51,8 @@ describe('bundled node runtime manager contract', () => {
       fs.readFile(bundledToolchainContractPath, 'utf8'),
       fs.readFile(runtimeManifestPath, 'utf8'),
     ]);
-    const manifest = JSON.parse(manifestRaw);
+    const manifestStore = load(manifestRaw) as { desktopExtensions: { embeddedNodeRuntime: Record<string, unknown> } };
+    const manifest = manifestStore.desktopExtensions.embeddedNodeRuntime as any;
 
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
@@ -65,11 +68,12 @@ describe('bundled node runtime manager contract', () => {
       fs.readFile(prepareBundledToolchainPath, 'utf8'),
       fs.readFile(runtimeManifestPath, 'utf8'),
     ]);
-    const manifest = JSON.parse(manifestRaw);
+    const manifestStore = load(manifestRaw) as { desktopExtensions: { embeddedNodeRuntime: Record<string, unknown> } };
+    const manifest = manifestStore.desktopExtensions.embeddedNodeRuntime as any;
 
     assert.equal(manifest.defaultEnabledByConsumer.desktop, true);
     assert.equal(manifest.defaultEnabledByConsumer['steam-packer'], true);
-    assert.match(prepareBundledToolchainSource, /installDesktopRuntimeComponents\(\['node'\]\)/);
+    assert.match(prepareBundledToolchainSource, /updateDesktopRuntimeComponents\(\['node'\](?:,\s*\{[\s\S]*?\})?\)/);
     assert.match(prepareBundledToolchainSource, /installNodeRuntime\(/);
     assert.match(prepareBundledToolchainSource, /defaultEnabledByConsumer: \{ \.\.\.\(runtimeConfig\.defaultEnabledByConsumer \|\| {}\) \}/);
   });

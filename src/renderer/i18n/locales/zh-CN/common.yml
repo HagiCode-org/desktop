@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: 先安装第一个版本
         description: 如果当前还没有安装任何版本，可以从这里启动向导，完成首次下载、依赖安装与服务启动。
+  services:
+    title: 托管服务
+    description: 在一处监控和控制 Desktop 托管的各项服务。
+    viewDetails: 详情
+    port: '端口: {{port}}'
+    notReady: 未就绪
+    installRequired: 需要安装
+    startFailed: 服务启动失败
+    stopFailed: 服务停止失败
+    restartFailed: 服务重启失败
 themeToggle:
   switchToLight: 切换到亮色模式
   switchToDark: 切换到暗色模式

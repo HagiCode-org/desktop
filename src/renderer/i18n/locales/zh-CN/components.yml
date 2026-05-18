@@ -91,8 +91,23 @@ webServiceStatus:
     starting: Hagicode 服务正在启动
     stopping: Hagicode 服务正在关闭
     unknown: 未知状态
-  startButton: 启动服务
+  startButton: 启动 Hagicode 服务
   dependencyReadinessButton: 进入依赖项管理
+  managedStartup:
+    label: 托管服务联动启动
+    description: 选择在启动 Hagicode 时，需要一起启动的托管服务。
+    options:
+      codeServer:
+        label: 同时开启 code-server
+        description: 启动 Hagicode 时自动启动 code-server。
+      omniroute:
+        label: 同时开启 OmniRoute
+        description: 启动 Hagicode 时自动启动 OmniRoute。
+    errors:
+      codeServerUnavailable: 已启用 code-server 联动启动，但其运行时当前未就绪。
+      codeServerStartFailed: 启动 Hagicode 时未能同时启动 code-server。
+      omnirouteUnavailable: 已启用 OmniRoute 联动启动，但其运行时当前未就绪。
+      omnirouteStartFailed: 启动 Hagicode 时未能同时启动 OmniRoute。
   dependencyReadinessAlert:
     title: 依赖项尚未就绪
     message: 请先安装 Desktop 托管环境中的必需依赖项；可选依赖项不会阻塞基础服务启动。

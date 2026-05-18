@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import log from 'electron-log';
 import { manifestReader } from './manifest-reader.js';
 import { DependencyManager, type DependencyCheckResult } from './dependency-manager.js';
@@ -14,6 +14,7 @@ import type { RegionDetector } from './region-detector.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
+import { DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE } from './hagiscript-desktop-manifest.js';
 import {
   type ActiveRuntimeDescriptor,
   type DistributionMode,
@@ -21,6 +22,8 @@ import {
   PORTABLE_VERSION_MODE_ERROR,
 } from '../types/distribution-mode.js';
 import type { HybridDistributionMetadata, VersionAssetKind, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+
+const { app } = electron;
 
 /**
  * Version information
@@ -126,7 +129,7 @@ export class VersionManager {
   private configManager: ConfigManager;
   private packageSourceConfigManager: PackageSourceConfigManager;
   private hybridDownloadCoordinator: HybridDownloadCoordinator;
-  private userDataPath: string;
+
   private currentPackageSource: PackageSource | null;
   private distributionMode: DistributionMode = 'normal';
   private activePortableRuntime: InstalledVersion | null = null;
@@ -141,8 +144,6 @@ export class VersionManager {
     this.pathManager = PathManager.getInstance();
     this.configManager = new ConfigManager(this.pathManager);
     this.hybridDownloadCoordinator = new HybridDownloadCoordinator({ regionDetector });
-    // Use Electron's app.getPath('userData') to get the correct user data path
-    this.userDataPath = app.getPath('userData');
 
     // Initialize package source configuration manager
     this.packageSourceConfigManager = packageSourceConfigManager || new PackageSourceConfigManager();
@@ -682,9 +683,7 @@ export class VersionManager {
 
       // Create installation directory using version ID
       const installPath = path.join(
-        this.userDataPath,
-        'apps',
-        'installed',
+        this.pathManager.getManagedServerProgramHome(),
         targetVersion.id
       );
 
@@ -761,6 +760,7 @@ export class VersionManager {
       if (!currentActive && versionInfo.status !== 'desktop-incompatible') {
         await this.stateManager.setActiveVersion(versionId);
       }
+      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version installed successfully:', versionId, 'status:', versionInfo.status);
 
@@ -865,6 +865,7 @@ export class VersionManager {
 
       // Remove from state
       await this.stateManager.removeInstalledVersion(versionId);
+      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version uninstalled:', versionId);
       return true;
@@ -905,6 +906,7 @@ export class VersionManager {
 
       // Update active version (allow switching to any installed version)
       await this.stateManager.setActiveVersion(versionId);
+      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Switched to version:', versionId, 'status:', targetVersion.status);
 
@@ -1046,6 +1048,45 @@ export class VersionManager {
     }
   }
 
+  private async syncHagiscriptManagedServerVersionState(): Promise<void> {
+    const [installedVersions, activeVersion] = await Promise.all([
+      this.stateManager.getInstalledVersions(),
+      this.stateManager.getActiveVersion(),
+    ]);
+    const serverDataHome = this.pathManager.getManagedServerDataHome();
+    const statePath = path.join(serverDataHome, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
+    const versions = Object.fromEntries(
+      installedVersions.map((version) => [
+        version.id,
+        {
+          version: version.id,
+          installPath: version.installedPath,
+          installedAt: version.installedAt,
+          source: {
+            kind: 'local-folder',
+            locator: version.installedPath,
+            assetName: version.packageFilename || path.basename(version.installedPath),
+          },
+        },
+      ]),
+    );
+
+    await fs.mkdir(serverDataHome, { recursive: true });
+    await fs.writeFile(
+      statePath,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          activeVersion: activeVersion?.versionId ?? null,
+          versions,
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+  }
+
   /**
    * Reinstall a version (works even for active versions)
    * This will clear the active status, remove the version, and reinstall it
@@ -1082,6 +1123,7 @@ export class VersionManager {
 
       // Remove from state
       await this.stateManager.removeInstalledVersion(versionId);
+      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version removed for reinstallation:', versionId);
 

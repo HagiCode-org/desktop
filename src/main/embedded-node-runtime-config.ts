@@ -1,16 +1,8 @@
-import fs from 'node:fs';
+import fsSync from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRuntimeManifestPath, readRuntimeManifestSection } from './runtime-manifest-store.js';
 
 export const TOOLCHAIN_MANIFEST_FILE = 'toolchain-manifest.json';
-
-function resolvePinnedNodeRuntimeConfigCandidates(): string[] {
-  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
-  return [
-    path.resolve(process.cwd(), 'resources', 'embedded-node-runtime', 'runtime-manifest.json'),
-    path.resolve(moduleDirectory, '../../resources/embedded-node-runtime/runtime-manifest.json'),
-  ];
-}
 
 export type EmbeddedNodeRuntimeConsumer = 'desktop' | 'steam-packer' | string;
 
@@ -54,18 +46,8 @@ export interface EmbeddedNodeRuntimeConfig {
   platforms: Record<string, EmbeddedNodeRuntimePlatformTarget>;
 }
 
-function findPinnedNodeRuntimeConfigPath(): string {
-  const candidates = resolvePinnedNodeRuntimeConfigCandidates();
-  const match = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!match) {
-    throw new Error(`Pinned embedded Node runtime manifest was not found. Checked: ${candidates.join(', ')}`);
-  }
-
-  return match;
-}
-
-export function readPinnedNodeRuntimeConfig(configPath: string = findPinnedNodeRuntimeConfigPath()): EmbeddedNodeRuntimeConfig {
-  return JSON.parse(fs.readFileSync(configPath, 'utf8')) as EmbeddedNodeRuntimeConfig;
+export function readPinnedNodeRuntimeConfig(): EmbeddedNodeRuntimeConfig {
+  return readRuntimeManifestSection<EmbeddedNodeRuntimeConfig>('embeddedNodeRuntime');
 }
 
 export function detectNodeRuntimePlatform(
@@ -145,7 +127,10 @@ export function getNodeExecutableRelativePath(platform: NodeJS.Platform | string
 }
 
 export function getNpmExecutableRelativePath(platform: NodeJS.Platform | string): string {
-  return path.join(getNodeBinRelativePath(platform), getNpmExecutableName(platform));
+  const platformValue = String(platform);
+  return platformValue.startsWith('win')
+    ? path.join('node_modules', 'npm', 'bin', 'npm-cli.js')
+    : path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
 }
 
 export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform | string): string[] {
@@ -154,15 +139,32 @@ export function getNpmExecutableRelativePathCandidates(platform: NodeJS.Platform
   if (platformValue.startsWith('win')) {
     return [
       compatibilityPath,
+      path.join('node_modules', 'npm', 'bin', 'npm'),
       'npm',
+      'npm.cmd',
     ];
   }
 
   return [
     compatibilityPath,
-    path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
     path.join('lib', 'node_modules', 'npm', 'bin', 'npm'),
+    path.join('bin', 'npm'),
   ];
+}
+
+export function resolveExistingNpmExecutableRelativePath(
+  toolchainRoot: string,
+  platform: NodeJS.Platform | string,
+  existsSync: (targetPath: string) => boolean = fsSync.existsSync,
+): string {
+  const candidates = getNpmExecutableRelativePathCandidates(platform);
+  for (const relativePath of candidates) {
+    if (existsSync(path.join(toolchainRoot, relativePath))) {
+      return relativePath;
+    }
+  }
+
+  return candidates[0] ?? getNpmExecutableRelativePath(platform);
 }
 
 export function getNpmGlobalBinRelativePath(platform: NodeJS.Platform | string): string {
@@ -178,5 +180,5 @@ export function getNpmGlobalModulesRelativePath(platform: NodeJS.Platform | stri
 }
 
 export function getPinnedNodeRuntimeConfigPath(): string {
-  return findPinnedNodeRuntimeConfigPath();
+  return getRuntimeManifestPath();
 }

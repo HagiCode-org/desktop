@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import {
@@ -12,6 +12,8 @@ import {
   collectBootstrapRuntimeEnvOverrides,
   formatHagicodeEnvDiagnostics,
 } from './startup/hagicode-env.js';
+
+const { app } = electron;
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));

@@ -522,17 +522,23 @@ test('electron-builder configuration is valid', async () => {
   }
 
   const hasAsar = buildConfig?.asar === true;
-  const hasFiles = Array.isArray(buildConfig?.files);
+  const files = Array.isArray(buildConfig?.files) ? buildConfig.files : [];
+  const hasFiles = files.length > 0;
   const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
   const linuxExtraFiles = Array.isArray(buildConfig?.linux?.extraFiles) ? buildConfig.linux.extraFiles : [];
   const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
-  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'build/desktop-runtime/current');
+  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'resources' && entry.to === 'extra/runtime');
   const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
   const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
   const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
   const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
   const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
   const runtimeCanonicalPath = runtimeExtraResource?.to === 'extra/runtime';
+  const runtimeExtraResourceFilter = Array.isArray(runtimeExtraResource?.filter) ? runtimeExtraResource.filter : [];
+  const runtimeGeneratedPathsExcludedFromAsar = files.includes('!resources/bin/**/*')
+    && files.includes('!resources/components/**/*');
+  const runtimeGeneratedPathsPackagedOutsideAsar = runtimeExtraResourceFilter.includes('bin/**/*')
+    && runtimeExtraResourceFilter.includes('components/**/*');
   const legacyToolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain' || entry.to === 'extra/toolchain');
   const legacyCodeServerExtraResource = extraResources.find((entry) => entry.from === 'resources/code-server/current' || entry.to === 'extra/code-server/current');
   const legacyOmniRouteExtraResource = extraResources.find((entry) => entry.from === 'resources/omniroute/current' || entry.to === 'extra/omniroute/current');
@@ -561,6 +567,8 @@ test('electron-builder configuration is valid', async () => {
   assert(Boolean(runtimeExtraResource), 'desktop runtime is shipped via extraResources');
   assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
   assert(runtimeCanonicalPath, 'desktop runtime is staged at extra/runtime');
+  assert(runtimeGeneratedPathsExcludedFromAsar, 'generated runtime directories are excluded from app.asar source files');
+  assert(runtimeGeneratedPathsPackagedOutsideAsar, 'desktop runtime extraResources only ships generated runtime directories');
   assert(!legacyToolchainExtraResource, 'legacy split packaged toolchain root is no longer shipped');
   assert(!legacyCodeServerExtraResource, 'legacy split packaged code-server root is no longer shipped');
   assert(!legacyOmniRouteExtraResource, 'legacy split packaged OmniRoute root is no longer shipped');

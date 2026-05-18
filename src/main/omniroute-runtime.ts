@@ -3,6 +3,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import type { PathManager } from './path-manager.js';
 import { getOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
+import { readRuntimeManifestSection } from './runtime-manifest-store.js';
 import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   VendoredRuntimeInstallStatus,
@@ -53,6 +54,7 @@ export interface ValidateOmniRouteRuntimeOptions {
 export interface ValidatedOmniRouteRuntime {
   config: OmniRouteRuntimeConfig;
   metadata: VendoredRuntimeMetadata | null;
+  metadataPath: string | null;
   wrapperPath: string | null;
   entryScriptPath: string | null;
   missingEntries: string[];
@@ -61,8 +63,13 @@ export interface ValidatedOmniRouteRuntime {
   status: VendoredRuntimeStatus;
 }
 
+const LEGACY_METADATA_FILE = 'metadata.json';
+const HAGISCRIPT_COMPONENT_MARKER_FILE = '.hagicode-runtime.json';
+
 export function readOmniRouteRuntimeConfig(): OmniRouteRuntimeConfig {
-  return JSON.parse(fsSync.readFileSync(getOmniRouteRuntimeConfigPath(), 'utf8')) as OmniRouteRuntimeConfig;
+  return readRuntimeManifestSection<OmniRouteRuntimeConfig>('omniRouteRuntime', {
+    manifestPath: getOmniRouteRuntimeConfigPath(),
+  });
 }
 
 export function detectOmniRouteRuntimePlatform(
@@ -113,16 +120,74 @@ function resolveExpectedOmniRouteRuntimeVersion(
   return null;
 }
 
-export async function readOmniRouteRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
-  const metadataPath = path.join(runtimeRoot, 'metadata.json');
+async function readOmniRouteRuntimeMetadataRecord(
+  runtimeRoot: string,
+  {
+    platform = detectOmniRouteRuntimePlatform(),
+    config = readOmniRouteRuntimeConfig(),
+  }: {
+    platform?: keyof OmniRouteRuntimeConfig['platforms'];
+    config?: OmniRouteRuntimeConfig;
+  } = {},
+): Promise<{ metadata: VendoredRuntimeMetadata | null; metadataPath: string | null }> {
+  const metadataPath = path.join(runtimeRoot, LEGACY_METADATA_FILE);
   try {
-    return JSON.parse(await fs.readFile(metadataPath, 'utf8')) as VendoredRuntimeMetadata;
+    return {
+      metadata: JSON.parse(await fs.readFile(metadataPath, 'utf8')) as VendoredRuntimeMetadata,
+      metadataPath,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  const markerPath = path.join(runtimeRoot, '..', HAGISCRIPT_COMPONENT_MARKER_FILE);
+  try {
+    const marker = JSON.parse(await fs.readFile(markerPath, 'utf8')) as Record<string, unknown>;
+    const target = resolveOmniRouteRuntimeTarget(platform, config);
+    return {
+      metadata: {
+        schemaVersion: config.schemaVersion,
+        packageId: config.packageId,
+        version: typeof marker.version === 'string' ? marker.version : '',
+        platform: target.platform,
+        arch: target.arch,
+        sourceRevision:
+          (typeof marker.vendoredReleaseTag === 'string' && marker.vendoredReleaseTag)
+          || (typeof marker.vendoredReleaseName === 'string' && marker.vendoredReleaseName)
+          || (typeof marker.generatedAt === 'string' && marker.generatedAt)
+          || 'hagiscript-managed',
+        extra: {
+          bundledNodeRuntime: true,
+        },
+        artifacts: typeof marker.vendoredAssetName === 'string'
+          ? [{
+            kind: 'release-asset',
+            fileName: marker.vendoredAssetName,
+            blobKey: typeof marker.vendoredAssetUrl === 'string' && marker.vendoredAssetUrl
+              ? marker.vendoredAssetUrl
+              : marker.vendoredAssetName,
+            platform: target.platform,
+            arch: target.arch,
+          }]
+          : undefined,
+      },
+      metadataPath: markerPath,
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null;
+      return {
+        metadata: null,
+        metadataPath: null,
+      };
     }
     throw error;
   }
+}
+
+export async function readOmniRouteRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
+  return (await readOmniRouteRuntimeMetadataRecord(runtimeRoot)).metadata;
 }
 
 export function resolveOmniRouteWrapperPath(
@@ -190,13 +255,11 @@ export async function validateOmniRouteRuntime(
   const config = readOmniRouteRuntimeConfig();
   const diagnostics: string[] = [];
   const missingEntries: string[] = [];
-  const metadata = await readOmniRouteRuntimeMetadata(options.runtimeRoot);
+  const platform = detectOmniRouteRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch);
+  const { metadata, metadataPath } = await readOmniRouteRuntimeMetadataRecord(options.runtimeRoot, { platform, config });
 
   try {
-    resolveOmniRouteRuntimeTarget(
-      detectOmniRouteRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch),
-      config,
-    );
+    resolveOmniRouteRuntimeTarget(platform, config);
   } catch (error) {
     diagnostics.push(error instanceof Error ? error.message : String(error));
   }
@@ -212,7 +275,7 @@ export async function validateOmniRouteRuntime(
   }
 
   if (!metadata) {
-    diagnostics.push('Vendored OmniRoute metadata is missing at metadata.json');
+    diagnostics.push('Vendored OmniRoute metadata is missing (metadata.json or ../.hagicode-runtime.json)');
   } else {
     if (metadata.schemaVersion !== config.schemaVersion) {
       diagnostics.push(`Metadata schemaVersion expected ${config.schemaVersion} but found ${metadata.schemaVersion ?? 'missing'}`);
@@ -221,7 +284,7 @@ export async function validateOmniRouteRuntime(
       diagnostics.push(`Metadata packageId expected ${config.packageId} but found ${metadata.packageId ?? 'missing'}`);
     }
     const expectedVersion = resolveExpectedOmniRouteRuntimeVersion(
-      detectOmniRouteRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch),
+      platform,
       config,
     );
     if (expectedVersion && metadata.version !== expectedVersion) {
@@ -241,6 +304,7 @@ export async function validateOmniRouteRuntime(
   return {
     config,
     metadata,
+    metadataPath,
     wrapperPath,
     entryScriptPath: existsSync(entryScriptPath) ? entryScriptPath : null,
     missingEntries,
@@ -270,7 +334,6 @@ export async function inspectVendoredOmniRouteRuntime(
     existsSync: options.existsSync,
     health: options.health,
   });
-  const metadataPath = path.join(runtimeRoot, 'metadata.json');
   const health = options.health ?? {
     reachable: false,
     url: null,
@@ -289,7 +352,7 @@ export async function inspectVendoredOmniRouteRuntime(
     status: validated.status,
     version: validated.metadata?.version ?? null,
     runtimeRoot,
-    metadataPath,
+    metadataPath: validated.metadataPath,
     wrapperPath: validated.wrapperPath,
     entryScriptPath: validated.entryScriptPath,
     packageId: validated.metadata?.packageId ?? 'omniroute',

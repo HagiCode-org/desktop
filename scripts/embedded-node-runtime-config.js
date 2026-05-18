@@ -1,12 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-
-const CONFIG_PATH = path.join(process.cwd(), 'resources', 'embedded-node-runtime', 'runtime-manifest.json');
+import { ensureRuntimeManifestPath, readRuntimeManifestSection } from './runtime-manifest-store.js';
 
 export const TOOLCHAIN_MANIFEST_FILE = 'toolchain-manifest.json';
 
 export function readPinnedNodeRuntimeConfig() {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  return readRuntimeManifestSection('embeddedNodeRuntime');
 }
 
 export function detectNodeRuntimePlatform(runtimePlatform = process.platform, runtimeArch = process.arch) {
@@ -79,7 +78,9 @@ export function getNodeExecutableRelativePath(platform) {
 }
 
 export function getNpmExecutableRelativePath(platform) {
-  return path.join(getNodeBinRelativePath(platform), getNpmExecutableName(platform));
+  return platform.startsWith('win-')
+    ? path.join('node_modules', 'npm', 'bin', 'npm-cli.js')
+    : path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
 }
 
 export function getNpmExecutableRelativePathCandidates(platform) {
@@ -87,15 +88,28 @@ export function getNpmExecutableRelativePathCandidates(platform) {
   if (platform.startsWith('win-')) {
     return [
       compatibilityPath,
+      path.join('node_modules', 'npm', 'bin', 'npm'),
       'npm',
+      'npm.cmd',
     ];
   }
 
   return [
     compatibilityPath,
-    path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
     path.join('lib', 'node_modules', 'npm', 'bin', 'npm'),
+    path.join('bin', 'npm'),
   ];
+}
+
+export function resolveExistingNpmExecutableRelativePath(toolchainRoot, platform, existsSync = fs.existsSync) {
+  const candidates = getNpmExecutableRelativePathCandidates(platform);
+  for (const relativePath of candidates) {
+    if (existsSync(path.join(toolchainRoot, relativePath))) {
+      return relativePath;
+    }
+  }
+
+  return candidates[0] || getNpmExecutableRelativePath(platform);
 }
 
 export function getNpmGlobalBinRelativePath(platform) {
@@ -107,5 +121,5 @@ export function getNpmGlobalModulesRelativePath(platform) {
 }
 
 export function getPinnedNodeRuntimeConfigPath() {
-  return CONFIG_PATH;
+  return ensureRuntimeManifestPath();
 }

@@ -7,6 +7,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { execa } from 'execa';
 import {
+  updateDesktopRuntimeComponents,
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
@@ -38,13 +39,20 @@ const buildRoot = resolveOmniRouteGeneratedRoot(config) ?? path.join(process.cwd
 const downloadsRoot = path.join(buildRoot, 'downloads');
 const extractRoot = path.join(buildRoot, 'extract');
 
+if (!isManagedDesktopRuntimeComponentExecution()) {
+  await updateDesktopRuntimeComponents(['omniroute'], {
+    force: process.env.HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE === '1',
+  });
+  process.exit(0);
+}
+
 main().catch((error) => {
   console.error('[omniroute-runtime] Failed to prepare vendored runtime:', error instanceof Error ? error.stack || error.message : String(error));
   process.exitCode = 1;
 });
 
 async function main() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.14');
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.15-dev.94.1.64ce9f6');
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });

@@ -1,6 +1,8 @@
-import { ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
 import { HagicoServerClient, type ServerStatus } from '../../server.js';
 import { setServerStatus } from '../../tray.js';
+
+const { ipcMain } = electron;
 
 // Module state
 let serverClient: HagicoServerClient | null = null;

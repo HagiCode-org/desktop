@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type Store from 'electron-store';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import { ConfigManager } from './config.js';
 import { DependencyManager } from './dependency-manager.js';
 import DependencyManagementService from './dependency-management-service.js';
@@ -22,6 +22,8 @@ import OmniRouteManager from './omniroute-manager.js';
 import { CODE_SERVER_PROCESS_NAME } from '../types/code-server-management.js';
 import { OMNIROUTE_PROCESS_NAME } from '../types/omniroute-management.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
+
+const { app } = electron;
 
 const DEFAULT_VERIFICATION_TIMEOUT_MS = 30_000;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;

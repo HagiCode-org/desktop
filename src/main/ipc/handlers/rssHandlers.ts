@@ -1,5 +1,7 @@
-import { ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
 import { RSSFeedManager } from '../../rss-feed-manager.js';
+
+const { ipcMain } = electron;
 
 // Module state
 let rssFeedManager: RSSFeedManager | null = null;

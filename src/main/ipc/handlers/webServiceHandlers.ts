@@ -1,4 +1,5 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { PCodeWebServiceManager, StartupPhase, type ProcessInfo, type WebServiceConfig } from '../../web-service-manager.js';
 import { VersionManager } from '../../version-manager.js';
@@ -7,6 +8,8 @@ import { manifestReader } from '../../manifest-reader.js';
 import { buildStartupFailurePayload, type StartupFailurePayload } from '../../startup-failure-payload.js';
 import { setServerStatus, setServiceUrl } from '../../tray.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../../../types/web-service-network.js';
+
+const { ipcMain } = electron;
 
 interface StartServiceError {
   type: string;

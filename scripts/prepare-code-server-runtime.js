@@ -7,7 +7,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { execa } from 'execa';
 import {
-  installDesktopRuntimeComponents,
+  updateDesktopRuntimeComponents,
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
@@ -25,7 +25,9 @@ import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layo
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
 if (!isManagedDesktopRuntimeComponentExecution()) {
-  await installDesktopRuntimeComponents(['code-server']);
+  await updateDesktopRuntimeComponents(['code-server'], {
+    force: process.env.HAGICODE_FORCE_CODE_SERVER_RUNTIME_RESTAGE === '1',
+  });
   process.exit(0);
 }
 
@@ -48,7 +50,7 @@ main().catch((error) => {
 });
 
 async function main() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.14');
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.1.15-dev.94.1.64ce9f6');
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });

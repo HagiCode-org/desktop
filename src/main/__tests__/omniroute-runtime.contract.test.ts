@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { load } from 'js-yaml';
 
 const runtimeInspectorPath = path.resolve(process.cwd(), 'src/main/omniroute-runtime.ts');
-const runtimeManifestPath = path.resolve(process.cwd(), 'resources/omniroute/runtime-manifest.json');
+const runtimeManifestPath = path.resolve(process.cwd(), 'resources/manifest.yml');
 
 describe('vendored OmniRoute runtime contract', () => {
   it('pins a Desktop-owned runtime manifest for all supported platforms', async () => {
-    const manifest = JSON.parse(await fs.readFile(runtimeManifestPath, 'utf8'));
+    const manifestStore = load(await fs.readFile(runtimeManifestPath, 'utf8')) as { desktopExtensions: { omniRouteRuntime: Record<string, unknown> } };
+    const manifest = manifestStore.desktopExtensions.omniRouteRuntime as any;
 
     assert.equal(manifest.packageId, 'omniroute');
     assert.equal(manifest.runtime, 'omniroute');

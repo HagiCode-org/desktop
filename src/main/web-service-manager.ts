@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
 import { manifestReader, type EntryPoint, type StartResult } from './manifest-reader.js';
@@ -49,6 +49,8 @@ import {
   resolveSteamIntegration,
   HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY,
 } from './steam-integration-env.js';
+
+const { app } = electron;
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -550,6 +552,13 @@ export class PCodeWebServiceManager {
 
   private getServerRuntimeState(report: HagiscriptRuntimeStateReport | null): HagiscriptRuntimeStateReport['components'][number] | null {
     return report?.components.find((component) => component.name === 'server') ?? null;
+  }
+
+  private isStartupTransitionActive(): boolean {
+    return this.status === 'starting'
+      || this.currentPhase === StartupPhase.Spawning
+      || this.currentPhase === StartupPhase.WaitingListening
+      || this.currentPhase === StartupPhase.HealthCheck;
   }
 
   /**
@@ -1107,18 +1116,32 @@ export class PCodeWebServiceManager {
       await context.cleanup();
     }
 
+    const startupTransitionActive = this.isStartupTransitionActive();
+
     if (!lifecycleResult.success) {
-      this.logPm2StatusFailure(lifecycleResult);
-      this.status = 'error';
-      this.currentPhase = StartupPhase.Error;
-      this.startTime = null;
-      this.restartCount = 0;
+      if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
+        this.status = 'starting';
+        this.restartCount = lifecycleResult.restartCount;
+      } else {
+        this.logPm2StatusFailure(lifecycleResult);
+        this.status = 'error';
+        this.currentPhase = StartupPhase.Error;
+        this.startTime = null;
+        this.restartCount = 0;
+      }
     } else if (lifecycleResult.status === 'online') {
       const healthCheckPassed = await this.performHealthCheck();
       if (healthCheckPassed) {
         this.status = 'running';
         this.currentPhase = StartupPhase.Running;
         this.startTime = lifecycleResult.pmUptime ?? this.startTime ?? Date.now();
+        this.restartCount = lifecycleResult.restartCount;
+        this.resetPm2StatusWarningState();
+      } else if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
+        this.status = 'starting';
+        this.currentPhase = StartupPhase.HealthCheck;
+        this.startTime = lifecycleResult.pmUptime ?? this.startTime ?? Date.now();
+        this.restartCount = lifecycleResult.restartCount;
       } else {
         const serverState = this.getServerRuntimeState(runtimeStateResult?.report ?? null);
         const releasedServiceReady = serverState?.details?.releasedServiceReady;
@@ -1130,14 +1153,18 @@ export class PCodeWebServiceManager {
             : 'hagiscript PM2 reports the server online, but Desktop health verification failed.',
         );
         this.startTime = lifecycleResult.pmUptime ?? this.startTime;
+        this.restartCount = lifecycleResult.restartCount;
       }
-      this.restartCount = lifecycleResult.restartCount;
-      this.resetPm2StatusWarningState();
     } else {
-      this.status = this.mapPm2StatusToProcessStatus(lifecycleResult.status);
-      this.currentPhase = this.status === 'stopped' ? StartupPhase.Idle : StartupPhase.Error;
-      this.startTime = null;
-      this.restartCount = lifecycleResult.restartCount;
+      if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
+        this.status = 'starting';
+        this.restartCount = lifecycleResult.restartCount;
+      } else {
+        this.status = this.mapPm2StatusToProcessStatus(lifecycleResult.status);
+        this.currentPhase = this.status === 'stopped' ? StartupPhase.Idle : StartupPhase.Error;
+        this.startTime = null;
+        this.restartCount = lifecycleResult.restartCount;
+      }
     }
 
     const uptime = this.startTime ? Date.now() - this.startTime : 0;

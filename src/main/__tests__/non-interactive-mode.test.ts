@@ -115,7 +115,7 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
   return {
     ok,
     mode: 'packaged',
-    manifestPath: '/artifact/resources/app.asar/resources/desktop-runtime/runtime-manifest.json',
+    manifestPath: '/artifact/resources/app.asar/resources/manifest.yml',
     programHome: '/artifact/resources/extra/runtime',
     programHomeExists: true,
     dataHome: '/tmp/Hagi Code/userData/runtimeData',
@@ -146,12 +146,12 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         ok,
         status: ok ? 'ok' : 'error',
         root: '/artifact/resources/extra/runtime/components/node/runtime',
-        manifestPath: '/artifact/resources/extra/runtime/components/node/runtime/toolchain-manifest.json',
+        manifestPath: '/artifact/resources/manifest.yml',
         activeForDesktop: true,
         nodeExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/bin/node',
-        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/bin/npm',
+        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/lib/node_modules/npm/bin/npm-cli.js',
         governedNodeVersion: '22.0.0',
-        issues: ok ? [] : ['toolchain manifest is missing or invalid'],
+        issues: ok ? [] : ['bundled Node runtime metadata is missing or invalid'],
       },
       codeServer: {
         ok,
@@ -172,7 +172,7 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         issues: ok ? [] : ['omniroute wrapper missing'],
       },
     },
-    issues: ok ? [] : ['dotnet runtime missing metadata', 'toolchain manifest is missing or invalid'],
+    issues: ok ? [] : ['dotnet runtime missing metadata', 'bundled Node runtime metadata is missing or invalid'],
   };
 }
 
@@ -215,9 +215,9 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         diagnostics: ok ? [] : ['omniroute diagnostic: start failed'],
       },
       backend: {
-        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/server/.pm2',
-        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/server',
-        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/server/pm2-runtime',
+        pm2Home: '/tmp/Hagi Code/userData/apps/data/.pm2',
+        runtimeDataHome: '/tmp/Hagi Code/userData/apps/data',
+        runtimeFilesDir: '/tmp/Hagi Code/userData/apps/data/pm2-runtime',
         activeRuntimeRoot: '/artifact/resources/extra/portable-fixed/current',
         serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
@@ -486,7 +486,7 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(result.exitCode, nonInteractiveExitCodes.success);
     assert.equal(stderr.length, 0);
     assert.match(stdout.join('\n'), /runtime component dotnet status: ok/);
-    assert.match(stdout.join('\n'), /runtime component node manifest: \/artifact\/resources\/extra\/runtime\/components\/node\/runtime\/toolchain-manifest.json/);
+    assert.match(stdout.join('\n'), /runtime component node manifest: \/artifact\/resources\/manifest.yml/);
     assert.match(stdout.join('\n'), /runtime service code-server data: \/tmp\/Hagi Code\/userData\/runtimeData\/components\/services\/code-server/);
     assert.match(stdout.join('\n'), /result: success/);
   });

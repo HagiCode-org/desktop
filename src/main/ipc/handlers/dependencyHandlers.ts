@@ -1,9 +1,12 @@
-import { ipcMain, BrowserWindow, app } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { VersionManager } from '../../version-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
 import { manifestReader } from '../../manifest-reader.js';
 import { BundledNodeRuntimeManager } from '../../bundled-node-runtime-manager.js';
+
+const { ipcMain, app } = electron;
 
 // Module state
 interface DependencyHandlerState {

@@ -21,7 +21,7 @@ import {
 } from './bundled-toolchain-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot, resolveStagedDesktopRuntimeProgramHome } from './desktop-runtime-layout.js';
 import {
-  installDesktopRuntimeComponents,
+  updateDesktopRuntimeComponents,
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
@@ -30,19 +30,24 @@ import {
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.1.14';
+const MINIMUM_HAGISCRIPT_VERSION = '0.1.15-dev.94.1.64ce9f6';
+const managedExecution = isManagedDesktopRuntimeComponentExecution();
 
-if (!isManagedDesktopRuntimeComponentExecution()) {
-  await installDesktopRuntimeComponents(['node']);
+if (!managedExecution) {
+  await updateDesktopRuntimeComponents(['node'], {
+    force: process.env.HAGICODE_FORCE_BUNDLED_TOOLCHAIN_RESTAGE === '1',
+  });
   process.exit(0);
 }
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const runtimeConfig = readPinnedNodeRuntimeConfig();
 const runtimeTarget = resolvePinnedNodeRuntimeTarget(runtimePlatform, runtimeConfig);
-const portableFixedRoot = resolveStagedDesktopRuntimeProgramHome(process.cwd());
 const toolchainRoot = resolveManagedDesktopRuntimeComponentRoot()
   || resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
+const portableFixedRoot = managedExecution
+  ? path.resolve(toolchainRoot, '..', '..', '..')
+  : resolveStagedDesktopRuntimeProgramHome(process.cwd());
 const envRoot = path.join(toolchainRoot, 'env');
 const legacyNodeRoot = path.join(toolchainRoot, 'node');
 const legacyNpmGlobalRoot = path.join(toolchainRoot, 'npm-global');

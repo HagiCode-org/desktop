@@ -1,7 +1,7 @@
 import path from 'path';
 
 export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
-  return path.join(cwd, 'build', 'desktop-runtime', 'current');
+  return path.join(cwd, 'resources');
 }
 
 export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {

@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: Install your first version
         description: When no package is installed yet, use this call to action to launch the setup wizard and complete the first runtime install.
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: Switch to light mode
   switchToDark: Switch to dark mode

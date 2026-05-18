@@ -38,21 +38,21 @@ npm run build:prod
 
 ### Development bundled Node runtime
 
-Source-mode development uses the shared Desktop runtime tree under `build/desktop-runtime/current/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
+Source-mode development uses the shared Desktop runtime tree under `resources/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
 
 `npm run dev` runs `predev`, which stages the governed Desktop runtime payloads for supported platforms: the embedded .NET runtime, the bundled Node toolchain, the vendored code-server runtime, and the vendored OmniRoute runtime.
 
-Those `prepare:*` commands now delegate the staging workflow to `hagiscript runtime install` with a Desktop-specific manifest, so the runtime layout still lands under `build/desktop-runtime/current/components/...` while the install orchestration stays inside hagiscript.
+Those `prepare:*` commands now delegate the staging workflow to `hagiscript runtime install` with a Desktop-specific manifest, so the runtime layout now lands under `resources/components/...` while the install orchestration stays inside hagiscript.
 
-Managed npm packages are installed into Desktop-owned writable runtime data under `userData/runtimeData/node/`:
+Managed npm packages are installed into Desktop-owned writable runtime data under `userData[/dev]/runtimeData/node/`:
 
 - Unix-like platforms: `userData/runtimeData/node/node<major>/npmGlobal/bin` and `userData/runtimeData/node/node<major>/npmGlobal/lib/node_modules`
 - Windows: `userData/runtimeData/node/node<major>/npmGlobal` and `userData/runtimeData/node/node<major>/npmGlobal/node_modules`
 
 ### Development runtime troubleshooting
 
-- Download failures: check network access to the pinned host in `resources/embedded-node-runtime/runtime-manifest.json`, or pre-populate the staged archive cache used by the bundled toolchain preparation script.
-- Unsupported platform/architecture: the command uses the platforms pinned in `resources/embedded-node-runtime/runtime-manifest.json`; add a governed platform entry before expecting detection to succeed.
+- Download failures: check network access to the pinned host in `resources/manifest.yml` under `desktopExtensions.embeddedNodeRuntime`, or pre-populate the staged archive cache used by the bundled toolchain preparation script.
+- Unsupported platform/architecture: the command uses the platforms pinned in `resources/manifest.yml` under `desktopExtensions.embeddedNodeRuntime`; add a governed platform entry before expecting detection to succeed.
 - Version mismatch: rerun `npm run prepare:bundled-toolchain:optional` after governance updates so the staged executable matches the active Node version.
 
 ## Related guides

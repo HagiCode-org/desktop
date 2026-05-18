@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import type { CodeServerManager } from '../../code-server-manager.js';
 import type DependencyManagementService from '../../dependency-management-service.js';
 import type OmniRouteManager from '../../omniroute-manager.js';
@@ -9,6 +10,8 @@ import {
   legacyDependencyManagementChannels,
   type NpmMirrorSettingsInput,
 } from '../../../types/dependency-management.js';
+
+const { BrowserWindow: ElectronBrowserWindow, ipcMain } = electron;
 
 interface DependencyManagementHandlerState {
   dependencyManagementService: DependencyManagementService | null;
@@ -54,7 +57,7 @@ export function registerDependencyManagementHandlers(deps: {
   }
 
   state.unsubscribeProgress = state.dependencyManagementService?.onProgress((event) => {
-    const windows = BrowserWindow.getAllWindows();
+    const windows = ElectronBrowserWindow.getAllWindows();
     const targets = windows.length > 0 ? windows : [state.mainWindow].filter(Boolean) as BrowserWindow[];
     for (const target of targets) {
       if (!target.isDestroyed()) {

@@ -4,9 +4,9 @@ import {
   TOOLCHAIN_MANIFEST_FILE,
   detectNodeRuntimePlatform,
   getNodeExecutableRelativePath,
-  getNpmExecutableRelativePath,
-  getNpmExecutableRelativePathCandidates,
+  resolveExistingNpmExecutableRelativePath,
   readPinnedNodeRuntimeConfig,
+  resolvePinnedNodeRuntimeTarget,
 } from './embedded-node-runtime-config.js';
 
 function pathExists(targetPath) {
@@ -24,11 +24,73 @@ export function isExecutable(targetPath) {
 
 export function readToolchainManifest(toolchainRoot) {
   const manifestPath = path.join(toolchainRoot, TOOLCHAIN_MANIFEST_FILE);
-  if (!pathExists(manifestPath)) {
+  if (pathExists(manifestPath)) {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  }
+
+  const platform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
+  const nodeExecutableRelativePath = getNodeExecutableRelativePath(platform);
+  if (!pathExists(path.join(toolchainRoot, nodeExecutableRelativePath))) {
     return null;
   }
 
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const runtimeConfig = readPinnedNodeRuntimeConfig();
+  let runtimeTarget = null;
+  try {
+    runtimeTarget = resolvePinnedNodeRuntimeTarget(platform, runtimeConfig);
+  } catch {
+    runtimeTarget = null;
+  }
+
+  const npmExecutableRelativePath = resolveExistingNpmExecutableRelativePath(toolchainRoot, platform);
+  return {
+    schemaVersion: runtimeConfig.schemaVersion,
+    layoutVersion: runtimeConfig.layoutVersion,
+    owner: 'hagicode-desktop',
+    source: 'bundled-desktop',
+    platform,
+    defaultEnabledByConsumer: { ...(runtimeConfig.defaultEnabledByConsumer || {}) },
+    stagedAt: new Date(0).toISOString(),
+    portableFixedRoot: path.resolve(toolchainRoot, '..', '..', '..'),
+    toolchainRoot,
+    node: {
+      version: runtimeConfig.releaseVersion,
+      channelVersion: runtimeConfig.channelVersion,
+      releaseDate: runtimeConfig.releaseDate,
+      provider: runtimeConfig.source.provider,
+      releaseMetadataUrl: runtimeConfig.source.releaseMetadataUrl,
+      allowedDownloadHosts: runtimeConfig.source.allowedDownloadHosts,
+      downloadUrl: runtimeTarget?.downloadUrl || '',
+      sourceHost: runtimeTarget ? new URL(runtimeTarget.downloadUrl).hostname : '',
+      archiveName: runtimeTarget?.archiveName || '',
+      archiveType: runtimeTarget?.archiveType || '',
+      archivePath: '',
+      checksumSha256: runtimeTarget?.checksumSha256 || '',
+      extractRoot: runtimeTarget?.extractRoot || '',
+      executableRelativePath: nodeExecutableRelativePath,
+      npmExecutableRelativePath,
+    },
+    packages: Object.fromEntries(
+      Object.entries(runtimeConfig.corePackages || {}).map(([packageId, packageConfig]) => [
+        packageId,
+        {
+          packageName: packageConfig.packageName,
+          version: packageConfig.version,
+          integrity: packageConfig.integrity,
+          binName: packageConfig.binName,
+          aliases: packageConfig.aliases,
+          installMode: packageConfig.installMode || 'manual',
+          installState: packageConfig.installState || 'pending',
+          installSpec: packageConfig.installSpec || `${packageConfig.packageName}@${packageConfig.version}`,
+          manualActionId: packageConfig.manualActionId || 'install-bundled-node-cli',
+        },
+      ]),
+    ),
+    commands: {
+      node: nodeExecutableRelativePath,
+      npm: npmExecutableRelativePath,
+    },
+  };
 }
 
 export function resolveToolchainPlatform(toolchainRoot, fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform()) {
@@ -42,8 +104,7 @@ export function validateToolchainPayload(toolchainRoot, options = {}) {
   const missing = [];
   const requiredCommands = [
     manifest?.commands?.node || getNodeExecutableRelativePath(platform),
-    manifest?.commands?.npm || getNpmExecutableRelativePath(platform),
-    TOOLCHAIN_MANIFEST_FILE,
+    manifest?.commands?.npm || resolveExistingNpmExecutableRelativePath(toolchainRoot, platform),
   ];
 
   for (const relativePath of requiredCommands) {
@@ -53,26 +114,12 @@ export function validateToolchainPayload(toolchainRoot, options = {}) {
       continue;
     }
 
-    const shouldCheckExecutability = platform.startsWith('win-') === false
+    const shouldCheckExecutability = relativePath === (manifest?.commands?.node || getNodeExecutableRelativePath(platform))
+      && platform.startsWith('win-') === false
       && requireExecutableCommands
-      && (relativePath.endsWith('/node') || relativePath.endsWith('/npm'));
+      && relativePath.endsWith('/node');
     if (shouldCheckExecutability && !isExecutable(absolutePath)) {
       missing.push(`${relativePath} (not executable)`);
-    }
-  }
-
-  const candidateNpmPaths = getNpmExecutableRelativePathCandidates(platform)
-    .map((relativePath) => path.join(toolchainRoot, relativePath));
-  if (!candidateNpmPaths.some((candidatePath) => pathExists(candidatePath))) {
-    missing.push(`${getNpmExecutableRelativePath(platform)} or equivalent npm entrypoint`);
-  }
-
-  const unusedNodeEntrypoints = platform.startsWith('win-')
-    ? ['corepack.cmd', 'npx.cmd']
-    : [path.join('bin', 'corepack'), path.join('bin', 'npx')];
-  for (const relativePath of unusedNodeEntrypoints) {
-    if (pathExists(path.join(toolchainRoot, relativePath))) {
-      missing.push(`unused Node entrypoint must be pruned before packaging: ${relativePath}`);
     }
   }
 
@@ -84,7 +131,7 @@ export function validateToolchainManifest(toolchainRoot, options = {}) {
   const runtimeConfig = readPinnedNodeRuntimeConfig();
   const manifest = readToolchainManifest(toolchainRoot);
   if (!manifest) {
-    return [`${TOOLCHAIN_MANIFEST_FILE} is missing`];
+    return ['bundled Node runtime metadata is missing'];
   }
 
   const errors = [];

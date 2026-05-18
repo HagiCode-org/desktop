@@ -2,7 +2,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { app, shell } from 'electron';
+import { electron } from '../electron-api.js';
 import log from 'electron-log';
 import { ConfigManager } from './config.js';
 import type DependencyManagementService from './dependency-management-service.js';
@@ -41,6 +41,8 @@ import type {
   VendoredRuntimeHealthSnapshot,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
+
+const { app, shell } = electron;
 
 interface CommandResult {
   exitCode: number | null;

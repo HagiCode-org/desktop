@@ -91,8 +91,23 @@ webServiceStatus:
     starting: Web service is starting up
     stopping: Web service is shutting down
     unknown: Unknown status
-  startButton: Start Service
+  startButton: Start Hagicode Service
   dependencyReadinessButton: Open Dependency Management
+  managedStartup:
+    label: Managed service startup
+    description: Choose which managed services should start together when you launch Hagicode.
+    options:
+      codeServer:
+        label: Start code-server together
+        description: Automatically start code-server when launching Hagicode.
+      omniroute:
+        label: Start OmniRoute together
+        description: Automatically start OmniRoute when launching Hagicode.
+    errors:
+      codeServerUnavailable: code-server is enabled for joint startup, but its runtime is not ready.
+      codeServerStartFailed: Failed to start code-server together with Hagicode.
+      omnirouteUnavailable: OmniRoute is enabled for joint startup, but its runtime is not ready.
+      omnirouteStartFailed: Failed to start OmniRoute together with Hagicode.
   dependencyReadinessAlert:
     title: Dependencies are not ready
     message: Install required Desktop-managed dependencies before starting Hagicode; optional dependencies do not block base service launch.

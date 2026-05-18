@@ -6,8 +6,8 @@ Desktop also uses this bundled Node toolchain to launch the vendored `code-serve
 
 ## Contract
 
-- Pinned input manifest: `resources/embedded-node-runtime/runtime-manifest.json`
-- Development output root: `build/desktop-runtime/current/components/node/runtime/`
+- Pinned input manifest: `resources/manifest.yml` (`desktopExtensions.embeddedNodeRuntime`)
+- Development output root: `resources/components/node/runtime/`
 - Packaged output root: `resources/extra/runtime/components/node/runtime/` on Windows/Linux and `Contents/Resources/extra/runtime/components/node/runtime/` on macOS
 - Required runtime: Node.js 22 plus npm
 - Deferred managed CLI packages: `openspec` and `skills`
@@ -15,7 +15,7 @@ Desktop also uses this bundled Node toolchain to launch the vendored `code-serve
 
 ## Default Activation Policy
 
-`resources/embedded-node-runtime/runtime-manifest.json` is the source of truth for consumer defaults:
+`resources/manifest.yml` (`desktopExtensions.embeddedNodeRuntime`) is the source of truth for consumer defaults:
 
 - `defaultEnabledByConsumer.desktop = true`
 - `defaultEnabledByConsumer.steam-packer = true`
@@ -65,7 +65,7 @@ npm run build:mac:x64
 npm run build:mac:arm64
 ```
 
-`electron-builder.yml` ships `build/desktop-runtime/current` to the canonical packaged `extra/runtime` location outside `app.asar`.
+`electron-builder.yml` ships the generated `resources/bin` and `resources/components` trees to the canonical packaged `extra/runtime` location outside `app.asar`.
 
 When vendored runtimes are staged, they live inside that same packaged runtime tree:
 

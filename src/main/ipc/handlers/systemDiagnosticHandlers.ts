@@ -1,5 +1,7 @@
-import { ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
 import type SystemDiagnosticManager from '../../system-diagnostic-manager.js';
+
+const { ipcMain } = electron;
 
 interface SystemDiagnosticHandlerState {
   systemDiagnosticManager: SystemDiagnosticManager | null;

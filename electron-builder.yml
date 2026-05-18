@@ -5,6 +5,8 @@ directories:
 files:
   - dist/**/*
   - resources/**/*
+  - '!resources/bin/**/*'
+  - '!resources/components/**/*'
   - '!pkg/**/*'
   - package.json
 asar: true
@@ -14,8 +16,11 @@ asarUnpack:
 extraResources:
   - from: resources/icon.png
     to: icon.png
-  - from: build/desktop-runtime/current
+  - from: resources
     to: extra/runtime
+    filter:
+      - bin/**/*
+      - components/**/*
   - from: resources/portable-fixed/current
     to: extra/portable-fixed/current
     filter:

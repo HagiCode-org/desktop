@@ -1,4 +1,5 @@
-import { ipcMain, BrowserWindow, shell } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { DistributionModeError, VersionManager } from '../../version-manager.js';
@@ -9,6 +10,8 @@ import { createEmptyVersionUpdateSnapshot } from '../../state-manager.js';
 import { installWebServicePackageWithAutoSwitch } from '../../install-web-service-package.js';
 import { setServerStatus, setServiceUrl } from '../../tray.js';
 import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
+
+const { ipcMain, shell } = electron;
 
 // Module state
 interface VersionHandlerState {

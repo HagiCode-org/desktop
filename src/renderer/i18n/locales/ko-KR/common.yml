@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: 첫 번째 버전 설치
         description: 아직 패키지가 설치되지 않은 경우 이 클릭 유도 문구를 사용하여 설정 마법사를 시작하고 첫 번째 런타임 설치를 완료하세요.
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: 조명 모드로 전환
   switchToDark: 어두운 모드로 전환

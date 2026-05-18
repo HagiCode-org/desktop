@@ -1,10 +1,12 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import log from 'electron-log';
 import type { AspNetRuntimeRequirement } from './embedded-runtime.js';
 import type { DesktopCompatibilityDetails } from './desktop-compatibility.js';
 import type { RuntimeSourceKind } from '../types/distribution-mode.js';
+
+const { app } = electron;
 
 export type InstalledVersionStatus = 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
 

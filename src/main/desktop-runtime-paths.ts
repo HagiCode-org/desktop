@@ -1,6 +1,10 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {
+  getRuntimeManifestPath,
+  readRuntimeManifestSection,
+  resolveRuntimeManifestCandidates,
+  type ResolveRuntimeManifestPathOptions,
+} from './runtime-manifest-store.js';
 
 export type DesktopRuntimeComponentId = 'dotnet' | 'node' | 'code-server' | 'omniroute';
 export type DesktopRuntimeServiceId = Extract<DesktopRuntimeComponentId, 'code-server' | 'omniroute'>;
@@ -27,6 +31,9 @@ export interface DesktopRuntimeManifest {
   };
   components: Record<DesktopRuntimeComponentId, { relativePath: string }>;
   services: Record<DesktopRuntimeServiceId, { dataRelativePath: string }>;
+  npmSync?: {
+    packages: Record<string, { version: string; target?: string }>;
+  };
 }
 
 export interface ResolveDesktopRuntimeProgramHomeOptions {
@@ -41,43 +48,22 @@ export interface ResolveDesktopRuntimeDataHomeOptions {
   overrideRoot?: string | null;
 }
 
-let cachedManifest: DesktopRuntimeManifest | null = null;
-
 export function resolveDesktopRuntimeManifestCandidates(
-  moduleDirectory: string = path.dirname(fileURLToPath(import.meta.url)),
-  cwd: string = process.cwd(),
+  moduleDirectory?: string,
+  cwd?: string,
+  userDataPath?: string | null,
 ): string[] {
-  return [
-    path.resolve(cwd, 'resources', 'desktop-runtime', 'runtime-manifest.json'),
-    path.resolve(moduleDirectory, '../../resources/desktop-runtime/runtime-manifest.json'),
-  ];
+  return resolveRuntimeManifestCandidates({ moduleDirectory, cwd, userDataPath });
 }
 
-export function getDesktopRuntimeManifestPath(options?: {
-  cwd?: string;
-  moduleDirectory?: string;
-  existsSync?: (targetPath: string) => boolean;
-}): string {
-  const existsSync = options?.existsSync ?? fs.existsSync;
-  const candidates = resolveDesktopRuntimeManifestCandidates(options?.moduleDirectory, options?.cwd);
-  const match = candidates.find((candidate) => existsSync(candidate));
-  if (!match) {
-    throw new Error(`Desktop runtime manifest was not found. Checked: ${candidates.join(', ')}`);
-  }
-
-  return match;
+export function getDesktopRuntimeManifestPath(options?: ResolveRuntimeManifestPathOptions): string {
+  return getRuntimeManifestPath(options);
 }
 
 export function readDesktopRuntimeManifest(
-  manifestPath: string = getDesktopRuntimeManifestPath(),
+  options: ResolveRuntimeManifestPathOptions = {},
 ): DesktopRuntimeManifest {
-  if (cachedManifest && manifestPath === getDesktopRuntimeManifestPath()) {
-    return cachedManifest;
-  }
-
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as DesktopRuntimeManifest;
-  cachedManifest = manifest;
-  return manifest;
+  return readRuntimeManifestSection<DesktopRuntimeManifest>('desktopRuntime', options);
 }
 
 export function resolveDesktopRuntimeProgramHome(

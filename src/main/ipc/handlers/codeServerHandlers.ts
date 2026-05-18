@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import type { CodeServerManager } from '../../code-server-manager.js';
 import {
   codeServerChannels,
@@ -8,6 +9,8 @@ import {
   type CodeServerPathTarget,
   type CodeServerStatusSnapshot,
 } from '../../../types/code-server-management.js';
+
+const { ipcMain } = electron;
 
 interface CodeServerHandlerState {
   manager: CodeServerManager | null;

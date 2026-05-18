@@ -18,13 +18,13 @@ describe('path-manager portable toolchain paths', () => {
       platform: 'linux',
     });
 
-    assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime');
-    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime');
-    assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin');
-    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin');
-    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin/node');
-    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/bin/npm');
-    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/build/desktop-runtime/current/components/node/runtime/toolchain-manifest.json');
+    assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/components/node/runtime');
+    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/resources/components/node/runtime');
+    assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
+    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
+    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/bin/node');
+    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/lib/node_modules/npm/bin/npm-cli.js');
+    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/components/node/runtime/toolchain-manifest.json');
     assert.notEqual(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/toolchain');
     assert.equal('openspecExecutablePath' in paths, false);
   });
@@ -41,7 +41,7 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.nodeRoot, paths.toolchainRoot);
     assert.equal(paths.nodeBinRoot, paths.toolchainRoot);
     assert.equal(paths.nodeExecutablePath, path.join(paths.toolchainRoot, 'node.exe'));
-    assert.equal(paths.npmExecutablePath, path.join(paths.toolchainRoot, 'npm.cmd'));
+    assert.equal(paths.npmExecutablePath, path.join(paths.toolchainRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
     assert.equal('openspecExecutablePath' in paths, false);
   });
 

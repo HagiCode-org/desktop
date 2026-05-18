@@ -1,5 +1,8 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import { VersionManager } from '../../version-manager.js';
+
+const { ipcMain } = electron;
 
 interface PackageSourceHandlerState {
   versionManager: VersionManager | null;

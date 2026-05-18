@@ -10,8 +10,10 @@ import {
   getGovernedNodeRuntimeMajor,
   getNpmGlobalBinRelativePath,
   getNpmGlobalModulesRelativePath,
+  getNodeExecutableRelativePath,
   nodeVersionMatchesGovernedMajor,
   readPinnedNodeRuntimeConfig,
+  resolveExistingNpmExecutableRelativePath,
   resolvePinnedNodeRuntimeTarget,
   type EmbeddedNodeRuntimeConsumerDefaultMatrix,
   type EmbeddedNodeRuntimeConfig,
@@ -139,6 +141,22 @@ function normalizeManifest(raw: unknown): BundledToolchainManifest | null {
   return manifest as BundledToolchainManifest;
 }
 
+function toBundledToolchainManifestPackage(
+  packageConfig: EmbeddedNodeRuntimeConfig['corePackages'][string],
+): BundledToolchainManifestPackage {
+  return {
+    packageName: packageConfig.packageName,
+    version: packageConfig.version,
+    integrity: packageConfig.integrity,
+    binName: packageConfig.binName,
+    aliases: packageConfig.aliases,
+    installMode: packageConfig.installMode ?? 'manual',
+    installState: packageConfig.installState ?? 'pending',
+    installSpec: packageConfig.installSpec ?? `${packageConfig.packageName}@${packageConfig.version}`,
+    manualActionId: packageConfig.manualActionId ?? 'install-bundled-node-cli',
+  };
+}
+
 function resolveManagedPackageRoot(
   toolchainRoot: string,
   packageName: string,
@@ -202,12 +220,74 @@ export class BundledNodeRuntimeManager {
     return this.pathManager.getPortableToolchainManifestPath();
   }
 
+  private buildSyntheticToolchainManifest(toolchainRoot: string, platform: string): BundledToolchainManifest | null {
+    const nodeExecutableRelativePath = getNodeExecutableRelativePath(platform);
+    const nodeExecutablePath = path.join(toolchainRoot, nodeExecutableRelativePath);
+    if (!fsSync.existsSync(nodeExecutablePath)) {
+      return null;
+    }
+
+    const npmExecutableRelativePath = resolveExistingNpmExecutableRelativePath(toolchainRoot, platform, fsSync.existsSync);
+    let runtimeTarget: ReturnType<typeof resolvePinnedNodeRuntimeTarget> | null = null;
+    try {
+      runtimeTarget = resolvePinnedNodeRuntimeTarget(platform, this.runtimeConfig);
+    } catch {
+      runtimeTarget = null;
+    }
+
+    return {
+      schemaVersion: this.runtimeConfig.schemaVersion,
+      layoutVersion: this.runtimeConfig.layoutVersion,
+      owner: 'hagicode-desktop',
+      source: 'bundled-desktop',
+      platform,
+      defaultEnabledByConsumer: { ...(this.runtimeConfig.defaultEnabledByConsumer ?? {}) },
+      stagedAt: new Date(0).toISOString(),
+      portableFixedRoot: path.resolve(toolchainRoot, '..', '..', '..'),
+      toolchainRoot,
+      node: {
+        version: this.runtimeConfig.releaseVersion,
+        channelVersion: this.runtimeConfig.channelVersion,
+        releaseDate: this.runtimeConfig.releaseDate,
+        provider: this.runtimeConfig.source.provider,
+        releaseMetadataUrl: this.runtimeConfig.source.releaseMetadataUrl,
+        allowedDownloadHosts: this.runtimeConfig.source.allowedDownloadHosts,
+        downloadUrl: runtimeTarget?.downloadUrl ?? '',
+        sourceHost: runtimeTarget ? new URL(runtimeTarget.downloadUrl).hostname : '',
+        archiveName: runtimeTarget?.archiveName ?? '',
+        archiveType: runtimeTarget?.archiveType ?? '',
+        archivePath: '',
+        checksumSha256: runtimeTarget?.checksumSha256 ?? '',
+        extractRoot: runtimeTarget?.extractRoot ?? '',
+        executableRelativePath: nodeExecutableRelativePath,
+        npmExecutableRelativePath,
+      },
+      packages: Object.fromEntries(
+        Object.entries(this.runtimeConfig.corePackages).map(([packageId, packageConfig]) => [
+          packageId,
+          toBundledToolchainManifestPackage(packageConfig),
+        ]),
+      ),
+      commands: {
+        node: nodeExecutableRelativePath,
+        npm: npmExecutableRelativePath,
+      },
+    };
+  }
+
   async readToolchainManifest(): Promise<BundledToolchainManifest | null> {
     const manifestPath = this.getManifestPath();
+    const toolchainRoot = this.getToolchainRoot();
+    const platform = detectNodeRuntimePlatform();
     try {
       const raw = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
       const manifest = normalizeManifest(raw);
       if (!manifest) {
+        const syntheticManifest = this.buildSyntheticToolchainManifest(toolchainRoot, platform);
+        if (syntheticManifest) {
+          log.info('[BundledNodeRuntimeManager] Falling back to synthesized native hagiscript Node metadata:', toolchainRoot);
+          return syntheticManifest;
+        }
         log.warn('[BundledNodeRuntimeManager] Ignoring invalid bundled toolchain manifest:', manifestPath);
       }
       return manifest;
@@ -215,7 +295,7 @@ export class BundledNodeRuntimeManager {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         log.warn('[BundledNodeRuntimeManager] Failed to read bundled toolchain manifest:', manifestPath, error);
       }
-      return null;
+      return this.buildSyntheticToolchainManifest(toolchainRoot, platform);
     }
   }
 
@@ -232,9 +312,9 @@ export class BundledNodeRuntimeManager {
   async verify(): Promise<BundledToolchainStatus> {
     const platform = detectNodeRuntimePlatform();
     const toolchainRoot = this.getToolchainRoot();
-    const manifestPath = this.getManifestPath();
     const runtimeManifestPath = this.pathManager.getEmbeddedNodeRuntimeManifestPath();
     const manifest = await this.readToolchainManifest();
+    const manifestPath = fsSync.existsSync(this.getManifestPath()) ? this.getManifestPath() : runtimeManifestPath;
     const activationPolicy = this.resolveDesktopActivationPolicy(manifest);
     const missingEntries: string[] = [];
     const errors: string[] = [];
@@ -247,7 +327,7 @@ export class BundledNodeRuntimeManager {
     }
 
     if (!manifest) {
-      errors.push(`${TOOLCHAIN_MANIFEST_FILE} is missing or invalid`);
+      errors.push('bundled Node runtime metadata is missing or invalid');
     } else {
       if (manifest.schemaVersion !== this.runtimeConfig.schemaVersion) {
         errors.push(`toolchain schema version expected ${this.runtimeConfig.schemaVersion} but found ${manifest.schemaVersion || 'missing'}`);
@@ -313,15 +393,15 @@ export class BundledNodeRuntimeManager {
     const componentErrors: string[] = [];
 
     if (!manifest) {
-      componentErrors.push(`${TOOLCHAIN_MANIFEST_FILE} is missing or invalid`);
+      componentErrors.push('bundled Node runtime metadata is missing or invalid');
     }
     if (!commandRelativePath) {
-      componentErrors.push(`${componentId} command is not declared in ${TOOLCHAIN_MANIFEST_FILE}`);
+      componentErrors.push(`${componentId} command is not declared in bundled Node runtime metadata`);
     }
     if (executablePath && !fsSync.existsSync(executablePath)) {
       componentErrors.push(`${componentId} executable is missing at ${executablePath}`);
     }
-    if (executablePath && requiresExecutableBit(process.platform) && !isExecutable(executablePath)) {
+    if (componentId === 'node' && executablePath && requiresExecutableBit(process.platform) && !isExecutable(executablePath)) {
       componentErrors.push(`${componentId} executable is not executable at ${executablePath}`);
     }
 
@@ -356,10 +436,10 @@ export class BundledNodeRuntimeManager {
     const componentErrors: string[] = [];
 
     if (!manifest) {
-      componentErrors.push(`${TOOLCHAIN_MANIFEST_FILE} is missing or invalid`);
+      componentErrors.push('bundled Node runtime metadata is missing or invalid');
     }
     if (!packageRecord) {
-      componentErrors.push(`${componentId} package is not declared in ${TOOLCHAIN_MANIFEST_FILE}`);
+      componentErrors.push(`${componentId} package is not declared in bundled Node runtime metadata`);
     }
     if (configuredPackage && packageRecord && packageRecord.version !== configuredPackage.version) {
       componentErrors.push(`${componentId} package expected ${configuredPackage.version} but found ${packageRecord.version || 'missing'}`);
@@ -368,10 +448,10 @@ export class BundledNodeRuntimeManager {
       componentErrors.push(`${componentId} installMode expected ${configuredPackage.installMode || 'manual'} but found ${packageRecord.installMode || 'missing'}`);
     }
     if (packageRecord && !packageRecord.installSpec) {
-      componentErrors.push(`${componentId} installSpec is missing from ${TOOLCHAIN_MANIFEST_FILE}`);
+      componentErrors.push(`${componentId} installSpec is missing from bundled Node runtime metadata`);
     }
     if (packageRecord && !packageRecord.manualActionId) {
-      componentErrors.push(`${componentId} manualActionId is missing from ${TOOLCHAIN_MANIFEST_FILE}`);
+      componentErrors.push(`${componentId} manualActionId is missing from bundled Node runtime metadata`);
     }
 
     const packageRoot = packageRecord

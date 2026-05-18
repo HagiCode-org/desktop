@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { load } from 'js-yaml';
 import {
   detectNodeRuntimePlatform,
   getGovernedNodeRuntimeMajor,
@@ -24,31 +25,31 @@ function assertCandidateContract(platform, expected) {
 }
 
 assertCandidateContract('linux-x64', {
-  node: 'node/bin/node',
-  npmCompatibility: 'node/bin/npm',
+  node: 'bin/node',
+  npmCompatibility: 'bin/npm',
   npmCandidates: [
-    'node/bin/npm',
-    'node/lib/node_modules/npm/bin/npm-cli.js',
-    'node/lib/node_modules/npm/bin/npm',
+    'bin/npm',
+    'lib/node_modules/npm/bin/npm-cli.js',
+    'lib/node_modules/npm/bin/npm',
   ],
 });
 
 assertCandidateContract('osx-arm64', {
-  node: 'node/bin/node',
-  npmCompatibility: 'node/bin/npm',
+  node: 'bin/node',
+  npmCompatibility: 'bin/npm',
   npmCandidates: [
-    'node/bin/npm',
-    'node/lib/node_modules/npm/bin/npm-cli.js',
-    'node/lib/node_modules/npm/bin/npm',
+    'bin/npm',
+    'lib/node_modules/npm/bin/npm-cli.js',
+    'lib/node_modules/npm/bin/npm',
   ],
 });
 
 assertCandidateContract('win-x64', {
-  node: 'node/node.exe',
-  npmCompatibility: 'node/npm.cmd',
+  node: 'node.exe',
+  npmCompatibility: 'npm.cmd',
   npmCandidates: [
-    'node/npm.cmd',
-    'node/npm',
+    'npm.cmd',
+    'npm',
   ],
 });
 
@@ -60,7 +61,8 @@ assert.equal(detectNodeRuntimePlatform('darwin', 'x64'), 'osx-x64');
 assert.equal(detectNodeRuntimePlatform('darwin', 'arm64'), 'osx-arm64');
 assert.throws(() => detectNodeRuntimePlatform('freebsd', 'x64'), /Unsupported Node runtime platform/);
 
-const manifest = JSON.parse(fs.readFileSync(new URL('../resources/embedded-node-runtime/runtime-manifest.json', import.meta.url), 'utf8'));
+const manifestStore = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+const manifest = manifestStore.desktopExtensions.embeddedNodeRuntime;
 assert.equal(getGovernedNodeRuntimeMajor(manifest), '22');
 assert.equal(nodeVersionMatchesGovernedMajor('22.22.2', manifest), true);
 assert.equal(nodeVersionMatchesGovernedMajor('v22.0.0', manifest), true);
@@ -76,7 +78,7 @@ assert.throws(() => resolvePinnedNodeRuntimeTarget('linux-arm64', manifest), /no
 
 const prepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain-if-supported.js', import.meta.url), 'utf8');
-assert.match(prepareScript, /installDesktopRuntimeComponents\(\['node'\]\)/, 'prepare script delegates top-level staging to hagiscript');
+assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['node'\]\)/, 'prepare script delegates top-level staging to hagiscript update');
 assert.match(prepareScript, /installNodeRuntime\(/, 'prepare script uses hagiscript Node installer for the runtime payload');
 assert.match(prepareScript, /materializeNpmCompatibilityPath/, 'prepare script materializes the Desktop npm compatibility path');
 assert.match(prepareScript, /pathExistsOrIsSymlink/, 'prepare script detects dangling compatibility-path symlinks');

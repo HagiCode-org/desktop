@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { useNavigate } from '../hooks/useNavigate';
-import { Package, Activity, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight, type LucideIcon } from 'lucide-react';
+import { Package, FolderOpen, Globe, Monitor, LoaderCircle, BellRing, ArrowRight } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
+import { CodeServerMiniCard, OmniRouteMiniCard } from './ManagedServiceMiniCard';
 import { SidebarPromotionCard } from './SidebarPromotionCard';
 import { Button } from '@/components/ui/button';
 import { useSidebarPromotion } from '../hooks/useSidebarPromotion';
@@ -22,7 +23,6 @@ import {
 } from '@/lib/homepageInteractiveTour';
 import { cn } from '@/lib/utils';
 import { evaluateDependencyReadiness } from '../../shared/npm-managed-packages.js';
-import { selectWebServiceInfo } from '../store/slices/webServiceSlice';
 import { selectVisibleVersionUpdateReminder } from '../store/slices/versionUpdateSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import { installWebServicePackage } from '../store/thunks/webServiceThunks';
@@ -59,41 +59,7 @@ declare global {
   }
 }
 
-type ServerStatus = 'running' | 'stopped' | 'error';
 type LogTargetStateMap = Record<LogDirectoryTarget, LogDirectoryTargetStatus>;
-
-function DashboardSummaryCard({
-  icon: Icon,
-  label,
-  value,
-  description,
-  accentClass = 'text-primary',
-  className,
-  valueClassName,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-  accentClass?: string;
-  className?: string;
-  valueClassName?: string;
-}) {
-  return (
-    <section className={cn('rounded-2xl border border-border/70 bg-card p-4 shadow-sm', className)}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-          <p className={cn('text-lg font-semibold text-foreground', valueClassName)}>{value}</p>
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground">
-          <Icon className={`h-5 w-5 ${accentClass}`} />
-        </div>
-      </div>
-      <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{description}</p>
-    </section>
-  );
-}
 
 interface SystemManagementViewProps {
   distributionMode?: DistributionMode;
@@ -128,7 +94,6 @@ export default function SystemManagementView({
   const { t, i18n } = useTranslation(['common', 'components']);
   const { navigateTo } = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const webServiceInfo = useSelector((state: RootState) => selectWebServiceInfo(state));
   const versionUpdateReminder = useSelector((state: RootState) => selectVisibleVersionUpdateReminder(state));
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
@@ -346,34 +311,6 @@ export default function SystemManagementView({
     }
   }, [getOpenErrorMessage, getOpenSuccessMessage, loadLogTargets]);
 
-  // Get server status from Redux store
-  const serverStatus: ServerStatus =
-    webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping'
-      ? 'running'
-      : webServiceInfo.status;
-
-  const getStatusColor = (status: ServerStatus) => {
-    switch (status) {
-      case 'running':
-        return 'text-primary';
-      case 'stopped':
-        return 'text-muted-foreground';
-      case 'error':
-        return 'text-destructive';
-    }
-  };
-
-  const getStatusText = (status: ServerStatus) => {
-    switch (status) {
-      case 'running':
-        return t('status.running');
-      case 'stopped':
-        return t('status.stopped');
-      case 'error':
-        return t('status.error');
-    }
-  };
-
   const handleStartWizard = async () => {
     try {
       await dispatch(resetOnboarding()).unwrap();
@@ -471,148 +408,8 @@ export default function SystemManagementView({
         day: 'numeric',
       })
     : null;
-  const dependencyValue = dependencyReadinessError
-    ? t('status.error')
-    : dependencyReadiness?.requiredReady
-      ? t('dependencyManagement.status.ready', { ns: 'components' })
-      : t('status.warning');
-  const dependencyDescription = dependencyReadinessError
-    ? dependencyReadinessError
-    : dependencyReadiness?.requiredReady
-      ? t('dependencyManagement.description')
-      : t('webServiceStatus.dependencyReadinessAlert.message', { ns: 'components' });
-  const networkValue = `${webServiceInfo.host || 'localhost'}:${webServiceInfo.port || 36556}`;
-  const networkDescription = webServiceInfo.url || t('webServiceStatus.details.listenAddress', { ns: 'components' });
-  const heroDetails = [
-    { label: t('common.version'), value: activeVersion?.version ?? t('status.notInstalled') },
-    { label: t('webServiceStatus.details.listenAddress', { ns: 'components' }), value: networkValue },
-    { label: t('dependencyManagement.title'), value: dependencyValue },
-  ];
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <section
-        className="rounded-[28px] border border-border/80 bg-card px-6 py-6 shadow-sm lg:px-8"
-        {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'hero' }}
-      >
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
-          <div className="max-w-3xl">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {t('sidebar.dashboard')}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                {t('system.dashboard.title')}
-              </h1>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium',
-                  serverStatus === 'running'
-                    ? 'border-primary/25 bg-primary/10 text-primary'
-                    : serverStatus === 'error'
-                      ? 'border-destructive/25 bg-destructive/10 text-destructive'
-                      : 'border-border bg-muted text-muted-foreground',
-                )}
-              >
-                <Activity className="h-4 w-4" />
-                {getStatusText(serverStatus)}
-              </span>
-            </div>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
-              {t('system.dashboard.description')}
-            </p>
-          </div>
-
-          <aside className="rounded-2xl border border-border/70 bg-muted/25 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  {t('system.dashboard.title')}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {webServiceInfo.phaseMessage?.trim() || networkDescription}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {t('sidebar.webService')}
-                </div>
-                <div className={cn('mt-1 text-sm font-semibold', getStatusColor(serverStatus))}>
-                  {getStatusText(serverStatus)}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {heroDetails.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card px-4 py-3 shadow-sm"
-                >
-                  <span className="text-sm text-muted-foreground">{item.label}</span>
-                  <span className="text-sm font-medium text-foreground">{item.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row xl:flex-col">
-              {!activeVersion ? (
-                <Button type="button" onClick={() => void handleStartWizard()} className="justify-between">
-                  <span>{t('system.noVersionInstalled.startWizard')}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleOpenVersionManagement} className="justify-between">
-                  <span>{t('system.activeVersion.actions.manage')}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-              <Button type="button" variant="outline" onClick={handleOpenUpdateSettings} className="justify-between">
-                <span>{t('sidebar.settings')}</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </aside>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DashboardSummaryCard
-            icon={Activity}
-            label={t('sidebar.webService')}
-            value={getStatusText(serverStatus)}
-            description={webServiceInfo.phaseMessage?.trim() || webServiceInfo.url || t('system.dashboard.description')}
-            accentClass={getStatusColor(serverStatus)}
-            className="xl:col-span-2"
-            valueClassName="text-xl"
-          />
-          <DashboardSummaryCard
-            icon={Package}
-            label={t('common.version')}
-            value={activeVersion?.version ?? t('status.notInstalled')}
-            description={activeVersionInstalledAt ?? t('system.noVersionInstalled.description')}
-          />
-          <DashboardSummaryCard
-            icon={Globe}
-            label={t('webServiceStatus.details.listenAddress', { ns: 'components' })}
-            value={networkValue}
-            description={networkDescription}
-          />
-          <DashboardSummaryCard
-            icon={Monitor}
-            label={t('dependencyManagement.title')}
-            value={dependencyValue}
-            description={dependencyDescription}
-            accentClass={
-              dependencyReadinessError
-                ? 'text-destructive'
-                : dependencyReadiness?.requiredReady
-                  ? 'text-primary'
-                  : 'text-amber-600'
-            }
-          />
-        </div>
-      </section>
-
       {shouldShowVersionUpdateReminder ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -685,6 +482,23 @@ export default function SystemManagementView({
           <div {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
             <WebServiceStatusCard />
           </div>
+
+          {/* Managed services overview */}
+          <section
+            className="rounded-[28px] border border-border/80 bg-card px-6 py-6 shadow-sm lg:px-8"
+            {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'hero' }}
+          >
+            <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">{t('system.services.title')}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">{t('system.services.description')}</p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <CodeServerMiniCard />
+              <OmniRouteMiniCard />
+            </div>
+          </section>
 
           <section
             className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"

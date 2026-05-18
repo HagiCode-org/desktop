@@ -37,6 +37,8 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+resources/bin/
+resources/components/
 
 .claude/skills/ui-ux-pro-max/scripts/__pycache__/
 
@@ -51,7 +53,7 @@ build/portable-version-runtime/*
 !build/portable-version-runtime/current/
 build/portable-version-runtime/current/*
 !build/portable-version-runtime/current/.gitkeep
-.generated-hagiscript-runtime-manifest.json
+.generated-hagiscript-runtime-manifest.yml
 resources/portable-fixed
 resources/toolchain
 resources/code-server

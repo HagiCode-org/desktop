@@ -1,6 +1,9 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { MenuManager } from '../../menu-manager.js';
+
+const { ipcMain } = electron;
 
 // Module state
 interface ViewHandlerState {

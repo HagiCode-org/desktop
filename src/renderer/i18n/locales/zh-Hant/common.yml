@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: 先安裝第一個版本
         description: 如果目前還沒有安裝任何版本，可以從這裡啟動精靈，完成首次下載、依賴安裝與服務啟動。
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: 切換到亮色模式
   switchToDark: 切換到暗色模式

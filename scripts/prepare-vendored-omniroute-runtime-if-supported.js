@@ -12,11 +12,23 @@ import {
   validateOmniRouteRuntimePayload,
 } from './omniroute-runtime-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import {
+  resolveRuntimeManifestDataScopePath,
+  resolveScriptUserDataPath,
+} from './runtime-manifest-store.js';
 
 const config = readOmniRouteRuntimeConfig();
 const platformKey = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
 const runtimeRoot = resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() });
 const forceRestage = process.env.HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE === '1';
+const desktopDataScopeRoot = resolveRuntimeManifestDataScopePath(resolveScriptUserDataPath(), process.env);
+const expectedRuntimeDataHome = path.join(
+  desktopDataScopeRoot,
+  'runtimeData',
+  'components',
+  'services',
+  'omniroute',
+);
 
 function hasConfiguredSource() {
   if (process.env.HAGICODE_OMNIROUTE_ARCHIVE_URL?.trim()) {
@@ -34,30 +46,55 @@ function hasConfiguredSource() {
 
 function canReuseExistingRuntime() {
   if (!fs.existsSync(runtimeRoot)) {
-    return { reusable: false, reason: 'runtime root is missing' };
+    return { reusable: false, reason: 'runtime root is missing', forceUpdate: true };
   }
 
   const validation = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey, config });
   const errors = [...validation.missingEntries, ...validation.diagnostics];
   if (errors.length > 0) {
-    return { reusable: false, reason: errors.join('; ') };
+    return { reusable: false, reason: errors.join('; '), forceUpdate: true };
   }
 
   const requestedVersion = resolveRequestedOmniRouteRuntimeVersion(platformKey, config);
   if (requestedVersion && validation.metadata?.version !== requestedVersion) {
     return {
+        reusable: false,
+        reason: `runtime version mismatch: expected ${requestedVersion}, found ${validation.metadata?.version || 'missing'}`,
+        forceUpdate: true,
+      };
+    }
+
+  const actualRuntimeDataHome = readManagedRuntimeDataHome(validation.metadataPath);
+  if (actualRuntimeDataHome && path.resolve(actualRuntimeDataHome) !== expectedRuntimeDataHome) {
+    return {
       reusable: false,
-      reason: `runtime version mismatch: expected ${requestedVersion}, found ${validation.metadata?.version || 'missing'}`,
+      reason: `runtime data home mismatch: expected ${expectedRuntimeDataHome}, found ${actualRuntimeDataHome}`,
+      forceUpdate: true,
     };
   }
 
-  return { reusable: true, reason: null };
+  return { reusable: true, reason: null, forceUpdate: false };
 }
+
+function readManagedRuntimeDataHome(metadataPath) {
+  if (!metadataPath?.endsWith('.hagicode-runtime.json') || !fs.existsSync(metadataPath)) {
+    return null;
+  }
+
+  try {
+    const marker = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    return typeof marker.runtimeDataHome === 'string' ? marker.runtimeDataHome : null;
+  } catch {
+    return null;
+  }
+}
+
+let reuseDecision = { reusable: false, reason: null, forceUpdate: false };
 
 if (forceRestage) {
   console.log('[omniroute-runtime] Forced restage requested via HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE=1');
 } else {
-  const reuseDecision = canReuseExistingRuntime();
+  reuseDecision = canReuseExistingRuntime();
   if (reuseDecision.reusable) {
     console.log(`[omniroute-runtime] Reusing existing staged vendored runtime at ${runtimeRoot}`);
     process.exit(0);
@@ -74,11 +111,12 @@ const result = spawnSync(process.execPath, [path.join('scripts', 'prepare-vendor
   cwd: process.cwd(),
   stdio: 'inherit',
   shell: false,
-  env: {
-    ...process.env,
-    HAGICODE_OMNIROUTE_PLATFORM: platformKey,
-  },
-});
+    env: {
+      ...process.env,
+      HAGICODE_OMNIROUTE_PLATFORM: platformKey,
+      HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE: reuseDecision.forceUpdate ? '1' : process.env.HAGICODE_FORCE_OMNIROUTE_RUNTIME_RESTAGE,
+    },
+  });
 
 if (result.error) {
   console.error('[omniroute-runtime] Failed to prepare vendored runtime:', result.error);

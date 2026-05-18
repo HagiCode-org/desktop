@@ -1,12 +1,9 @@
-import {
-  BrowserWindow,
-  clipboard,
-  ipcMain,
-  Menu,
-  type WebContents,
-} from 'electron';
+import { electron } from '../electron-api.js';
+import type { BrowserWindow, WebContents } from 'electron';
 import { buildClipboardContextMenuTemplate } from './clipboard-context-menu.js';
 import { clipboardChannels } from '../types/clipboard.js';
+
+const { BrowserWindow: ElectronBrowserWindow, clipboard, ipcMain, Menu: ElectronMenu } = electron;
 
 let clipboardHandlersRegistered = false;
 const wiredWebContentsIds = new Set<number>();
@@ -28,10 +25,10 @@ function attachContextMenuHandler(targetContents: WebContents): void {
       return;
     }
 
-    Menu.buildFromTemplate(template).popup({
+    ElectronMenu.buildFromTemplate(template).popup({
       window: targetContents.hostWebContents
-        ? BrowserWindow.fromWebContents(targetContents.hostWebContents) ?? undefined
-        : BrowserWindow.fromWebContents(targetContents) ?? undefined,
+        ? ElectronBrowserWindow.fromWebContents(targetContents.hostWebContents) ?? undefined
+        : ElectronBrowserWindow.fromWebContents(targetContents) ?? undefined,
     });
   });
 }

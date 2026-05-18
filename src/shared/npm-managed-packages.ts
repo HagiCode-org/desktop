@@ -1,4 +1,4 @@
-import { coerce, satisfies, validRange } from 'semver';
+import { coerce, satisfies, valid, validRange } from 'semver';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
@@ -16,7 +16,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'hagiscript',
     descriptionKey: 'dependencyManagement.packages.hagiscript.description',
     binName: 'hagiscript',
-    installSpec: '@hagicode/hagiscript@>=0.1.9',
+    installSpec: '@hagicode/hagiscript@0.1.15-dev.94.1.64ce9f6',
     category: 'bootstrap',
     installMode: 'embedded-npm',
     required: true,
@@ -225,7 +225,9 @@ export function isManagedPackageVersionSatisfied(
     return false;
   }
 
-  const normalizedVersion = coerce(installedVersion)?.version;
+  // Prefer the raw version when it is a valid semver string (preserves prerelease identifiers).
+  // Fall back to coerce only for non-standard version strings that need normalisation.
+  const normalizedVersion = valid(installedVersion) ?? coerce(installedVersion)?.version;
   if (!normalizedVersion) {
     return false;
   }

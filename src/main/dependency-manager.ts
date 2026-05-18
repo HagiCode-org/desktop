@@ -1,5 +1,5 @@
 import { manifestReader, ParsedDependency, DependencyTypeName, type Manifest, type EntryPoint, type InstallResult } from './manifest-reader.js';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import Store from 'electron-store';
 import log from 'electron-log';
 import path from 'node:path';
@@ -15,6 +15,8 @@ import {
   type BundledToolchainComponentStatus,
 } from './bundled-node-runtime-manager.js';
 import { satisfies } from 'semver';
+
+const { app } = electron;
 
 /**
  * Dependency type enumeration
@@ -217,13 +219,15 @@ export class DependencyManager {
     bundledStatus: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>,
   ): BundledCliManualAction | undefined {
     const packageRecord = bundledStatus.manifest?.packages?.[componentId];
+    const nodeExecutablePath = bundledStatus.components.node.executablePath;
     const npmExecutablePath = bundledStatus.components.npm.executablePath;
     if (!packageRecord) {
       return undefined;
     }
 
-    const command = npmExecutablePath
+    const command = nodeExecutablePath && npmExecutablePath
       ? [
+        this.quoteManualCommandSegment(nodeExecutablePath),
         this.quoteManualCommandSegment(npmExecutablePath),
         'install',
         '-g',

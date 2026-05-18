@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
 import { PathManager } from '../../path-manager.js';
 import type { RegionDetector } from '../../region-detector.js';
 import type { VersionManager } from '../../version-manager.js';
@@ -8,6 +8,8 @@ import {
   type PromptResourceKey,
 } from '../../prompt-resource-resolver.js';
 import { PromptGuidanceService } from '../../prompt-guidance-service.js';
+
+const { app, ipcMain } = electron;
 
 // Module state
 interface LlmHandlerState {

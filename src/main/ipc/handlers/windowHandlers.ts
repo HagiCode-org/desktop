@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +7,7 @@ import { openHagicodeInAppWindow } from '../../hagicode-url.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from '../../clipboard-integration.js';
 import { resolveWindowIconPath } from '../../window-icon-path.js';
 
+const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -92,7 +94,7 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
         const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
         const icon = loadWindowIcon(appRoot);
 
-        const childWindow = new BrowserWindow({
+        const childWindow = new ElectronBrowserWindow({
           minWidth: 800,
           minHeight: 600,
           show: false,

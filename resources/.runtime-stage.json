@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "platform": "linux-x64",
+  "provider": "microsoft",
+  "releaseMetadataUrl": "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json",
+  "allowedDownloadHosts": [
+    "builds.dotnet.microsoft.com"
+  ],
+  "releaseVersion": "10.0.5",
+  "releaseDate": "2026-03-12",
+  "downloadUrl": "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
+  "sourceHost": "builds.dotnet.microsoft.com",
+  "archiveType": "tar.gz",
+  "archivePath": "/home/newbe36524/.config/Hagicode Desktop/dev/build/embedded-runtime/downloads/aspnetcore-runtime-10.0.5-linux-x64.tar.gz",
+  "dotnetPath": "/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current/dotnet",
+  "runtimeRoot": "/home/newbe36524/repos/newbe36524/hagicode-mono/repos/hagicode-desktop/resources/components/dotnet/runtime/linux-x64/current",
+  "aspNetCoreVersion": "10.0.5",
+  "netCoreVersion": "10.0.5",
+  "hostFxrVersion": "10.0.5",
+  "stagedAt": "2026-05-17T14:09:38.314Z",
+  "ownership": "desktop-direct-managed"
+}

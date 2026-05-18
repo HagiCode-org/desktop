@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { electron } from '../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import Store from 'electron-store';
 import log from 'electron-log';
 import { VersionManager } from './version-manager.js';
@@ -33,6 +34,8 @@ import type {
   ResolvedLegalDocumentsPayload,
   LegalDocumentType,
 } from '../types/onboarding.js';
+
+const { app, shell } = electron;
 
 interface OnboardingManagerOptions {
   legalMetadataUrl?: string;

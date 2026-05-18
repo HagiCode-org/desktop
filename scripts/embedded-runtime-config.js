@@ -1,12 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { ensureRuntimeManifestPath, readRuntimeManifestSection } from './runtime-manifest-store.js';
 
 export const EMBEDDED_RUNTIME_METADATA_FILE = '.hagicode-runtime.json';
-const CONFIG_PATH = path.join(process.cwd(), 'resources', 'embedded-runtime', 'runtime-manifest.json');
 
 export function readPinnedRuntimeConfig() {
-  const content = fs.readFileSync(CONFIG_PATH, 'utf8');
-  return JSON.parse(content);
+  return readRuntimeManifestSection('embeddedRuntime');
 }
 
 export function detectRuntimePlatform() {
@@ -53,5 +50,5 @@ export function ensureOfficialMicrosoftDownloadUrl(downloadUrl, allowedHosts) {
 }
 
 export function getPinnedRuntimeConfigPath() {
-  return CONFIG_PATH;
+  return ensureRuntimeManifestPath();
 }

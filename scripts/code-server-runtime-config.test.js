@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { load } from 'js-yaml';
 import {
   detectCodeServerRuntimePlatform,
   resolveConfiguredCodeServerReleaseUrls,
@@ -9,8 +10,9 @@ import {
   resolveCodeServerRuntimeTarget,
 } from './code-server-runtime-contract.js';
 
-const manifest = JSON.parse(fs.readFileSync(new URL('../resources/code-server-runtime/runtime-manifest.json', import.meta.url), 'utf8'));
-const targetPlatforms = ['linux-x64', 'osx-arm64', 'win-x64'];
+const manifestStore = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+const manifest = manifestStore.desktopExtensions.codeServerRuntime;
+const targetPlatforms = ['linux-x64', 'osx-x64', 'osx-arm64', 'win-x64'];
 
 assert.equal(detectCodeServerRuntimePlatform('linux', 'x64'), 'linux-x64');
 assert.equal(detectCodeServerRuntimePlatform('darwin', 'arm64'), 'osx-arm64');
@@ -19,19 +21,13 @@ assert.equal(detectCodeServerRuntimePlatform('win32', 'x64'), 'win-x64');
 assert.throws(() => detectCodeServerRuntimePlatform('freebsd', 'x64'), /Unsupported vendored code-server platform/);
 
 for (const platform of targetPlatforms) {
-  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), '2026.0509.0034');
+  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), '2026.0516.0063');
   assert.deepEqual(
     resolveConfiguredCodeServerReleaseUrls(platform, manifest),
-    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0509.0034'],
+    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063'],
   );
   assert.ok(resolveCodeServerRuntimeTarget(platform, manifest));
 }
-
-assert.equal(resolveRequestedCodeServerRuntimeVersion('osx-x64', manifest), null);
-assert.deepEqual(
-  resolveConfiguredCodeServerReleaseUrls('osx-x64', manifest),
-  ['https://github.com/coder/code-server/releases/latest'],
-);
 
 const previousVersionOverride = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION;
 const previousReleaseOverride = process.env.HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL;
@@ -57,7 +53,7 @@ if (previousReleaseOverride === undefined) {
 const prepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime-if-supported.js', import.meta.url), 'utf8');
 
-assert.match(prepareScript, /installDesktopRuntimeComponents\(\['code-server'\]\)/, 'prepare script delegates top-level staging to hagiscript');
+assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['code-server'\](?:,\s*\{[\s\S]*?\})?\)/, 'prepare script delegates top-level staging to hagiscript update');
 assert.match(prepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'prepare script resolves the pinned code-server runtime version');
 assert.match(prepareScript, /resolveConfiguredCodeServerReleaseUrls/, 'prepare script resolves per-platform release URLs');
 assert.match(optionalPrepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');

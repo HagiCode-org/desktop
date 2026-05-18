@@ -1,6 +1,9 @@
-import { BrowserWindow, Menu, MenuItemConstructorOptions, app } from 'electron';
+import { electron } from '../electron-api.js';
+import type { BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
 import { buildMenuTemplate, type MenuTranslations } from './menu-template.js';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
+
+const { Menu: ElectronMenu, app } = electron;
 
 export class MenuManager {
   private menu: Menu | null = null;
@@ -14,8 +17,8 @@ export class MenuManager {
     this.webServiceRunning = webServiceRunning;
 
     const template = this.getMenuTemplate();
-    this.menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(this.menu);
+    this.menu = ElectronMenu.buildFromTemplate(template);
+    ElectronMenu.setApplicationMenu(this.menu);
 
     return this.menu;
   }

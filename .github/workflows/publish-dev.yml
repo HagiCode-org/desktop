@@ -108,7 +108,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/embedded-runtime/downloads
-          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/manifest.yml') }}
 
       - name: Sync package version
         shell: bash
@@ -345,7 +345,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/embedded-runtime/downloads
-          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/embedded-runtime/runtime-manifest.json') }}
+          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/manifest.yml') }}
 
       - name: Sync package version
         shell: bash

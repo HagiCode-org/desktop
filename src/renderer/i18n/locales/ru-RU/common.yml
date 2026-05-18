@@ -500,6 +500,16 @@ system:
       noVersionInstalled:
         title: Установите свою первую версию
         description: Если пакет еще не установлен, используйте этот призыв к действию, чтобы запустить мастер установки и завершить первую установку во время выполнения.
+  services:
+    title: Managed Services
+    description: Monitor and control Desktop-managed services from one place.
+    viewDetails: Details
+    port: 'Port: {{port}}'
+    notReady: Not ready
+    installRequired: Installation required
+    startFailed: Failed to start the service
+    stopFailed: Failed to stop the service
+    restartFailed: Failed to restart the service
 themeToggle:
   switchToLight: Переключиться в светлый режим
   switchToDark: Переключиться в темный режим

@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { electron } from '../../../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import type OmniRouteManager from '../../omniroute-manager.js';
 import {
   omniRouteChannels,
@@ -7,6 +8,8 @@ import {
   type OmniRoutePathTarget,
   type OmniRouteStatusSnapshot,
 } from '../../../types/omniroute-management.js';
+
+const { ipcMain } = electron;
 
 interface OmniRouteHandlerState {
   manager: OmniRouteManager | null;

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, nativeImage, shell } from 'electron';
+import { electron } from '../electron-api.js';
+import type { BrowserWindow } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fsSync from 'node:fs';
@@ -73,6 +74,7 @@ import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
 import { evaluateDependencyReadiness } from '../shared/npm-managed-packages.js';
 
+const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
@@ -546,7 +548,7 @@ function createWindow(): void {
   console.log('[Hagicode] Icon path:', iconPath);
   console.log('[Hagicode] __dirname:', __dirname);
 
-  mainWindow = new BrowserWindow({
+  mainWindow = new ElectronBrowserWindow({
     minWidth: 800,
     minHeight: 600,
     show: false,
@@ -623,7 +625,7 @@ function createManagedChildWindow(): BrowserWindow {
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
   const { icon } = loadWindowIcon(appRoot);
 
-  const childWindow = new BrowserWindow({
+  const childWindow = new ElectronBrowserWindow({
     minWidth: 800,
     minHeight: 600,
     show: false,
@@ -646,7 +648,7 @@ function createCodeServerWindow(): BrowserWindow {
   const appRoot = getAppRootPath();
   const { icon } = loadWindowIcon(appRoot);
 
-  const childWindow = new BrowserWindow({
+  const childWindow = new ElectronBrowserWindow({
     minWidth: 960,
     minHeight: 640,
     show: false,
@@ -672,7 +674,7 @@ function createAboutPopupWindow(): BrowserWindow {
   const preloadPath = path.join(distRoot, 'preload', 'index.mjs');
   const { icon } = loadWindowIcon(appRoot);
 
-  const childWindow = new BrowserWindow({
+  const childWindow = new ElectronBrowserWindow({
     width: 1120,
     height: 780,
     minWidth: 860,
@@ -2563,7 +2565,7 @@ app.on('before-quit', async (event) => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (ElectronBrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });

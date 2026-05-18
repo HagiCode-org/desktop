@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { app } from 'electron';
+import { electron } from '../electron-api.js';
 import log from 'electron-log';
 import type {
   PresetCacheData,
@@ -8,6 +8,8 @@ import type {
   PresetIndex,
 } from '../types/preset.js';
 import { CACHE_FILENAME, CACHE_MAX_SIZE_MB } from '../types/preset.js';
+
+const { app } = electron;
 
 /**
  * PresetCacheManager manages local caching of preset configurations
