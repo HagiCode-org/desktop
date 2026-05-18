@@ -51,14 +51,14 @@ jobs:
       - name: Build main-process helpers
         run: npm run build:tsc
 
-      - name: Download Linux ZIP artifact
+      - name: Download Linux tar.gz artifact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "hagicode-linux-zip-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "hagicode-linux-targz-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration

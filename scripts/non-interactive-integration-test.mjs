@@ -208,6 +208,19 @@ function findZipArtifact() {
   return zips[0] ?? null;
 }
 
+function findTarGzArtifact() {
+  if (!pathExists(pkgRoot)) {
+    return null;
+  }
+
+  const tarballs = fs.readdirSync(pkgRoot)
+    .filter((entry) => entry.toLowerCase().endsWith('.tar.gz'))
+    .map((entry) => path.join(pkgRoot, entry))
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+
+  return tarballs[0] ?? null;
+}
+
 function shouldRestoreExecutableBit(filePath) {
   if (process.platform === 'win32') {
     return false;
@@ -263,6 +276,13 @@ async function extractZipArtifact(zipArtifact, stagedRoot) {
   await restoreExecutablePermissions(stagedRoot);
 }
 
+async function extractTarGzArtifact(tarGzArtifact, stagedRoot) {
+  const result = await runCommand('tar', ['-xzf', tarGzArtifact, '-C', stagedRoot]);
+  if (result.code !== 0) {
+    fail(`Failed to extract tar.gz artifact.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+  }
+}
+
 async function copyArtifactToPathWithSpaces() {
   const tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'hagicode cli integration '));
   const stagedRoot = path.join(tempRoot, 'Desktop artifact with spaces');
@@ -275,13 +295,21 @@ async function copyArtifactToPathWithSpaces() {
     return { tempRoot, artifactRoot: targetRoot, source: unpackedRoot };
   }
 
+  if (process.platform === 'linux') {
+    const tarGzArtifact = findTarGzArtifact();
+    if (tarGzArtifact) {
+      await extractTarGzArtifact(tarGzArtifact, stagedRoot);
+      return { tempRoot, artifactRoot: stagedRoot, source: tarGzArtifact };
+    }
+  }
+
   const zipArtifact = findZipArtifact();
   if (zipArtifact) {
     await extractZipArtifact(zipArtifact, stagedRoot);
     return { tempRoot, artifactRoot: stagedRoot, source: zipArtifact };
   }
 
-  fail(`No unpacked artifact root or ZIP artifact found under ${pkgRoot}. Build a runnable Desktop artifact first.`);
+  fail(`No unpacked artifact root or packaged archive (.tar.gz/.zip) found under ${pkgRoot}. Build a runnable Desktop artifact first.`);
 }
 
 function findMacExecutable(root) {
