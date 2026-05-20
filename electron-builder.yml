@@ -38,6 +38,8 @@ win:
     - nsis
     - appx
   icon: resources/icon.ico
+nsis:
+  runAfterFinish: false
 appx:
   displayName: Hagicode Desktop
   publisherDisplayName: newbe36524
@@ -55,7 +57,7 @@ appx:
     - es-ES
     - pt-BR
     - ru-RU
-  addAutoLaunchExtension: true
+  addAutoLaunchExtension: false
 mac:
   target:
     - target: default
