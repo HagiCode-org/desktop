@@ -16,7 +16,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'hagiscript',
     descriptionKey: 'dependencyManagement.packages.hagiscript.description',
     binName: 'hagiscript',
-    installSpec: '@hagicode/hagiscript@0.2.0',
+    installSpec: '@hagicode/hagiscript@0.2.3',
     category: 'bootstrap',
     installMode: 'embedded-npm',
     required: true,
