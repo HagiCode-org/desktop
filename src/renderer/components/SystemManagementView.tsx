@@ -8,9 +8,7 @@ import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import { CodeServerMiniCard, OmniRouteMiniCard } from './ManagedServiceMiniCard';
-import { SidebarPromotionCard } from './SidebarPromotionCard';
 import { Button } from '@/components/ui/button';
-import { useSidebarPromotion } from '../hooks/useSidebarPromotion';
 import {
   buildHomepageTourSteps,
   HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE,
@@ -98,7 +96,6 @@ export default function SystemManagementView({
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
   const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean(versionUpdateReminder);
-  const promotion = useSidebarPromotion();
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
@@ -329,17 +326,6 @@ export default function SystemManagementView({
   const handleOpenVersionManagement = () => {
     navigateTo('version');
   };
-
-  const handleOpenPromotion = useCallback(async (url: string) => {
-    try {
-      const result = await window.electronAPI.openExternal(url);
-      if (!result.success) {
-        console.error('Failed to open external link:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to open external link:', error);
-    }
-  }, []);
 
   const handleOpenUpdateSettings = () => {
     navigateTo('settings');
@@ -651,15 +637,6 @@ export default function SystemManagementView({
               </div>
             </section>
           )}
-
-          {promotion ? (
-            <SidebarPromotionCard
-              promotion={promotion}
-              collapsed={false}
-              label={t('navigation.promotion.label')}
-              onActivate={(url) => void handleOpenPromotion(url)}
-            />
-          ) : null}
 
           <BlogFeedCard />
         </div>
