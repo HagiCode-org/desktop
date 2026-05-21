@@ -36,11 +36,15 @@ export function shouldUseShellForCommand(
   command: string,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  // Execa's non-shell path delegates Windows wrappers to cross-spawn, which
-  // escapes the command and each argument separately instead of flattening argv.
-  void command;
-  void platform;
-  return false;
+  if (platform !== 'win32') {
+    return false;
+  }
+
+  const normalizedCommand = stripWrappingQuotes(command).toLowerCase();
+  // MSIX/AppX launches can reject direct CreateProcess calls for Windows batch
+  // wrappers with EACCES/"Access is denied", so always route .cmd/.bat through
+  // the shell on Windows.
+  return normalizedCommand.endsWith('.cmd') || normalizedCommand.endsWith('.bat');
 }
 
 export function detectToolchainCommandName(command: string): 'node' | 'npm' | null {
@@ -63,7 +67,7 @@ export function resolveCommandLaunch(
 
   return {
     command: normalizedCommand,
-    shell: false,
+    shell: shouldUseShellForCommand(normalizedCommand, platform),
   };
 }
 

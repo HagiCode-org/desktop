@@ -208,7 +208,7 @@ describe('web-service startup flow', () => {
     assert.equal(plan.activationPolicy?.source, 'override');
   });
 
-  it('keeps Windows command-wrapper executables off shell mode and keeps args unchanged', () => {
+  it('routes Windows command-wrapper executables through shell mode and keeps args unchanged', () => {
     const plan = resolveToolchainLaunchPlan({
       commandName: 'npm',
       args: ['install', '--global', '@openspec/cli'],
@@ -222,12 +222,12 @@ describe('web-service startup flow', () => {
 
     assert.equal(plan.command, 'C:\\portable\\toolchain\\node\\npm.cmd');
     assert.deepEqual(plan.args, ['install', '--global', '@openspec/cli']);
-    assert.equal(plan.shell, false);
+    assert.equal(plan.shell, true);
     assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\node.exe', 'win32'), false);
-    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), false);
+    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), true);
   });
 
-  it('keeps Windows absolute wrapper commands under Program Files roots unquoted and off shell execution', () => {
+  it('keeps Windows absolute wrapper commands under Program Files roots unquoted and routes wrappers through shell execution', () => {
     const npmLaunch = resolveCommandLaunch(
       'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
       'win32',
@@ -246,11 +246,11 @@ describe('web-service startup flow', () => {
     );
 
     assert.equal(npmLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd');
-    assert.equal(npmLaunch.shell, false);
+    assert.equal(npmLaunch.shell, true);
     assert.equal(hagiscriptLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
-    assert.equal(hagiscriptLaunch.shell, false);
+    assert.equal(hagiscriptLaunch.shell, true);
     assert.equal(batchLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\managed-tool.bat');
-    assert.equal(batchLaunch.shell, false);
+    assert.equal(batchLaunch.shell, true);
     assert.equal(nodeLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
     assert.equal(nodeLaunch.shell, false);
   });

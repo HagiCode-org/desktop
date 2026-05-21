@@ -279,7 +279,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /shell: launch\.shell,/);
   });
 
-  it('routes hagiscript npm-sync wrappers and manifest arguments through the same managed command launch path', async () => {
+  it('routes hagiscript npm-sync wrappers and manifest arguments through the Windows shell-aware managed command launch path', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
     const launch = resolveCommandLaunch(
       'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd',
@@ -302,7 +302,7 @@ describe('dependency management service contract', () => {
     }, manifestPath, 'https://registry.npmmirror.com/');
 
     assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
-    assert.equal(launch.shell, false);
+    assert.equal(launch.shell, true);
     assert.deepEqual(args, [
       'npm-sync',
       '--runtime',
