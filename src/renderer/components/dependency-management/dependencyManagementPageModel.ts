@@ -67,7 +67,6 @@ export function buildBatchSyncLogKey(entry: Pick<BatchSyncLogEntry, 'stage' | 'm
 export function isBatchSyncEvent(batchSyncState: BatchSyncState | null, event: DependencyManagementOperationProgress): boolean {
   return Boolean(
     batchSyncState
-    && event.operation === 'sync'
     && batchSyncState.packageIds.includes(event.packageId),
   );
 }
@@ -90,8 +89,12 @@ export function appendBatchSyncLog(
   return {
     ...batchSyncState,
     logs: nextLogs,
-    status: event.stage === 'failed' ? 'failed' : batchSyncState.status,
-    error: event.stage === 'failed' ? event.message : batchSyncState.error,
+    status: event.stage === 'failed'
+      ? 'failed'
+      : event.stage === 'completed'
+        ? 'completed'
+        : batchSyncState.status,
+    error: event.stage === 'failed' ? event.message : undefined,
   };
 }
 

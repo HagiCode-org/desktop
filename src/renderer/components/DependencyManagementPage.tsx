@@ -184,18 +184,34 @@ export default function DependencyManagementPage() {
 
   const runOperation = async (packageId: ManagedNpmPackageId, action: 'install' | 'uninstall') => {
     setOperationError((current) => ({ ...current, [packageId]: undefined }));
+    setBatchSyncState({
+      packageIds: [packageId],
+      status: 'running',
+      logs: [],
+    });
     try {
       const result = action === 'install'
         ? await getDependencyManagementBridge().install(packageId)
         : await getDependencyManagementBridge().uninstall(packageId);
       applySnapshot(result.snapshot);
       if (!result.success) {
+        setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
+          ? { ...current, status: 'failed', error: result.error ?? t('dependencyManagement.errors.operationFailed') }
+          : current);
         setOperationError((current) => ({ ...current, [packageId]: result.error ?? t('dependencyManagement.errors.operationFailed') }));
+        return;
       }
+      setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
+        ? { ...current, status: 'completed', error: undefined }
+        : current);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
+        ? { ...current, status: 'failed', error: message }
+        : current);
       setOperationError((current) => ({
         ...current,
-        [packageId]: error instanceof Error ? error.message : String(error),
+        [packageId]: message,
       }));
     }
   };

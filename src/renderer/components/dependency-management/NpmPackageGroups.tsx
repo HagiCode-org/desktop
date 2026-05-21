@@ -407,9 +407,8 @@ export function NpmPackageTable({
           <TableBody>
             {packages.map((item) => {
               const usesBatchSyncPanel = batchSyncPackageIds.has(item.id);
-              const itemProgress = usesBatchSyncPanel
-                ? undefined
-                : progressByPackageId[item.id] ?? (activeOperation?.packageId === item.id ? activeOperation : undefined);
+              const itemProgress = progressByPackageId[item.id]
+                ?? (activeOperation?.packageId === item.id ? activeOperation : undefined);
               const isActive = isOperationActive(itemProgress);
               const isHighlighted = highlightedPackageIdSet.has(item.id);
               const displayStatus = getManagedPackageDisplayStatus(item);
@@ -480,13 +479,13 @@ export function NpmPackageTable({
                         </Button>
                       )}
                     </div>
-                    {isActive && (
+                    {!usesBatchSyncPanel && isActive && (
                       <div className="min-w-48 space-y-1 text-left text-xs text-muted-foreground">
                         <div className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />{itemProgress?.message}</div>
                         <Progress value={itemProgress?.percentage ?? 20} />
                       </div>
                     )}
-                    {itemProgress?.stage === 'completed' && (
+                    {!usesBatchSyncPanel && itemProgress?.stage === 'completed' && (
                       <div className="flex items-center justify-end gap-1 text-xs text-emerald-700 dark:text-emerald-300">
                         <CheckCircle2 className="h-3 w-3" />
                         {itemProgress.message}
