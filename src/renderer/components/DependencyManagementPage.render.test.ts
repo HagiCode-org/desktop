@@ -56,6 +56,22 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /operationErrorByPackageId\[item\.id\]/);
   });
 
+  it('routes single-package install and uninstall logs into the shared log panel instead of rendering row-level log output', async () => {
+    const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(modelPath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /setBatchSyncState\(\{\s*packageIds: \[packageId\],\s*status: 'running',\s*logs: \[\],\s*\}\);/);
+    assert.match(pageSource, /current\.packageIds\.length === 1 && current\.packageIds\[0\] === packageId/);
+    assert.match(modelSource, /batchSyncState\s*&& batchSyncState\.packageIds\.includes\(event\.packageId\)/);
+    assert.doesNotMatch(modelSource, /event\.operation === 'sync'/);
+    assert.match(packageGroupsSource, /const itemProgress = progressByPackageId\[item\.id\]\s*\?\?\s*\(activeOperation\?\.packageId === item\.id \? activeOperation : undefined\);/);
+    assert.match(packageGroupsSource, /!\s*usesBatchSyncPanel && isActive/);
+    assert.match(packageGroupsSource, /!\s*usesBatchSyncPanel && itemProgress\?\.stage === 'completed'/);
+  });
+
   it('keeps extracted dependency management helpers and package group components wired into the page', async () => {
     const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
@@ -262,6 +278,7 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof enJson.dependencyManagement.packages.opencode.description, 'string');
     assert.equal(typeof enJson.dependencyManagement.packages.qoder.description, 'string');
     assert.equal(typeof enJson.dependencyManagement.packages.gemini.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.packages.impeccable.description, 'string');
     assert.equal(typeof zhJson.dependencyManagement.dependencyGate.missing, 'string');
     assert.equal(typeof enJson.dependencyManagement.batchLog.title, 'string');
     assert.equal(typeof zhJson.dependencyManagement.batchLog.status.running, 'string');
