@@ -133,7 +133,7 @@ export interface DependencyItem {
 }
 
 export interface BundledCliManualAction {
-  logicalName: 'openspec' | 'skills' | 'omniroute';
+  logicalName: 'openspec' | 'skills';
   packageName: string;
   version: string;
   binName: string;

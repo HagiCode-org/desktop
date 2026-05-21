@@ -165,7 +165,7 @@ export function validateToolchainManifest(toolchainRoot, options = {}) {
     }
   }
 
-  for (const managedCommandName of ['openspec', 'skills', 'omniroute']) {
+  for (const managedCommandName of ['openspec', 'skills']) {
     if (manifest.commands?.[managedCommandName]) {
       errors.push(`manifest command ${managedCommandName} must not be declared before manual installation`);
     }

@@ -23,7 +23,7 @@ import {
   type BundledNodeRuntimePolicyDecision,
 } from './bundled-node-runtime-policy.js';
 
-export type BundledToolchainComponentId = 'node' | 'npm' | 'openspec' | 'skills' | 'omniroute';
+export type BundledToolchainComponentId = 'node' | 'npm' | 'openspec' | 'skills';
 export type BundledToolchainIntegrity = 'ok' | 'missing' | 'corrupt' | 'incompatible' | 'pending';
 export type BundledToolchainRemediation = 'none' | 'reinstall-desktop' | 'update-desktop';
 export type BundledToolchainPrimaryAction = BundledToolchainRemediation | 'manual-install';
@@ -113,7 +113,7 @@ export interface BundledToolchainStatus {
   activeForDesktop: boolean;
 }
 
-const COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm', 'openspec', 'skills', 'omniroute'];
+const COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm', 'openspec', 'skills'];
 const RUNTIME_COMPONENTS: BundledToolchainComponentId[] = ['node', 'npm'];
 function isExecutable(targetPath: string): boolean {
   try {

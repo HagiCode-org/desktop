@@ -221,12 +221,14 @@ describe('dependency management service contract', () => {
     assert.match(source, /id: 'opencode'/);
     assert.match(source, /id: 'qoder'/);
     assert.match(source, /id: 'gemini'/);
+    assert.match(source, /id: 'impeccable'/);
     assert.match(source, /category: 'bootstrap'/);
     assert.match(source, /category: 'agent-cli'/);
+    assert.match(source, /category: 'developer-tool'/);
     assert.match(source, /installMode: 'embedded-npm'/);
     assert.match(source, /installMode: 'hagiscript-sync'/);
     assert.match(source, /packageName: '@hagicode\/hagiscript'/);
-    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.1\.15-dev\.94\.1\.64ce9f6'/);
+    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.2\.3'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /packageName: 'pm2'/);
@@ -239,6 +241,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /installSpec: 'opencode-ai'/);
     assert.match(source, /installSpec: '@qoder-ai\/qodercli'/);
     assert.match(source, /installSpec: '@google\/gemini-cli'/);
+    assert.match(source, /installSpec: 'impeccable@2\.1\.9'/);
     assert.match(source, /required: true/);
   });
 

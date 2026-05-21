@@ -30,7 +30,7 @@ export interface DependencyItem {
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
   manualAction?: {
-    logicalName: 'openspec' | 'skills' | 'omniroute';
+    logicalName: 'openspec' | 'skills';
     packageName: string;
     version: string;
     binName: string;

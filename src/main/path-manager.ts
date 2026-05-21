@@ -849,7 +849,7 @@ export class PathManager {
     return this.buildPortableToolchainRuntimePaths().npmExecutablePath;
   }
 
-  getPortableManagedCliExecutablePath(commandName: 'openspec' | 'skills' | 'omniroute'): string | null {
+  getPortableManagedCliExecutablePath(commandName: 'openspec' | 'skills'): string | null {
     const paths = this.buildPortableToolchainRuntimePaths();
     const executableName = getCommandExecutableName(process.platform, commandName);
     const npmGlobalCandidate = path.join(this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot, executableName);
@@ -875,10 +875,6 @@ export class PathManager {
 
   getPortableSkillsExecutablePath(): string | null {
     return this.getPortableManagedCliExecutablePath('skills');
-  }
-
-  getPortableOmnirouteExecutablePath(): string | null {
-    return this.getPortableManagedCliExecutablePath('omniroute');
   }
 
   getEmbeddedNodeRuntimeManifestPath(): string {

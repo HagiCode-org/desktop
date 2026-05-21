@@ -339,7 +339,6 @@ export class DependencyManager {
     if (normalizedKey === 'npm' || normalizedName === 'npm') return 'npm';
     if (normalizedKey === 'openspec' || normalizedName.includes('openspec')) return 'openspec';
     if (normalizedKey === 'skills' || normalizedName.includes('skills')) return 'skills';
-    if (normalizedKey === 'omniroute' || normalizedName.includes('omniroute')) return 'omniroute';
     return null;
   }
 
@@ -427,7 +426,7 @@ export class DependencyManager {
       return satisfies(version, '>=1.0.0 <2.0.0', { includePrerelease: true });
     }
 
-    if (componentId === 'skills' || componentId === 'omniroute') {
+    if (componentId === 'skills') {
       return true;
     }
 

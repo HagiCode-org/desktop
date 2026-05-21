@@ -85,7 +85,7 @@ describe('hagiscript desktop manifest builder', () => {
     );
     assert.deepEqual(
       Object.keys((manifest as { npmSync?: { packages: Record<string, unknown> } }).npmSync?.packages ?? {}),
-      ['@anthropic-ai/claude-code', '@fission-ai/openspec', '@openai/codex', 'skills'],
+      ['@anthropic-ai/claude-code', '@fission-ai/openspec', '@openai/codex', 'impeccable', 'skills'],
     );
 
     const bundledPm2Definitions = manifest.components
