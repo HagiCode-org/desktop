@@ -2,7 +2,7 @@
 // Source: https://index.hagicode.com/about.json
 export const bundledAboutSnapshotPayload = {
   "version": "1.0.0",
-  "updatedAt": "2026-04-20T00:00:00.000Z",
+  "updatedAt": "2026-05-20T00:00:00.000Z",
   "entries": [
     {
       "id": "youtube",
@@ -17,6 +17,13 @@ export const bundledAboutSnapshotPayload = {
       "label": "Product Hunt",
       "regionPriority": "international-first",
       "url": "https://www.producthunt.com/products/hagicode"
+    },
+    {
+      "id": "windows-store",
+      "type": "link",
+      "label": "Windows Store",
+      "regionPriority": "international-first",
+      "url": "https://apps.microsoft.com/detail/9N3PM0N3SVDW"
     },
     {
       "id": "steam",

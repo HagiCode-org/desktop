@@ -78,6 +78,13 @@ const globalHagiscriptVersion = (() => {
     return error instanceof Error ? error.message : String(error);
   }
 })();
+const appxAssetDir = path.join(process.cwd(), 'resources', 'appx');
+const requiredAppxAssets = [
+  { fileName: 'StoreLogo.png', width: 50, height: 50 },
+  { fileName: 'Square44x44Logo.png', width: 44, height: 44 },
+  { fileName: 'Square150x150Logo.png', width: 150, height: 150 },
+  { fileName: 'Wide310x150Logo.png', width: 310, height: 150 },
+];
 
 const colors = {
   reset: '\x1b[0m',
@@ -256,6 +263,19 @@ function compareVersions(left, right) {
 
 function pickHighestVersion(versions) {
   return [...versions].sort((left, right) => compareVersions(right, left))[0];
+}
+function readPngDimensions(targetPath) {
+  const buffer = fs.readFileSync(targetPath);
+  const pngSignature = '89504e470d0a1a0a';
+
+  if (buffer.length < 24 || buffer.subarray(0, 8).toString('hex') !== pngSignature) {
+    throw new Error('Invalid PNG file: ' + targetPath);
+  }
+
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
 }
 
 function validateRuntimePayload(runtimeRoot) {
@@ -553,15 +573,36 @@ test('electron-builder configuration is valid', async () => {
       .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
       .filter(Boolean)
     : [];
+  const missingAppxAssets = requiredAppxAssets
+    .filter((asset) => !fs.existsSync(path.join(appxAssetDir, asset.fileName)))
+    .map((asset) => asset.fileName);
+  const invalidAppxAssets = requiredAppxAssets
+    .filter((asset) => {
+      const assetPath = path.join(appxAssetDir, asset.fileName);
+      if (!fs.existsSync(assetPath)) {
+        return false;
+      }
+
+      try {
+        const dimensions = readPngDimensions(assetPath);
+        return dimensions.width !== asset.width || dimensions.height !== asset.height;
+      } catch {
+        return true;
+      }
+    })
+    .map((asset) => asset.fileName);
 
   logVerbose(`config source: ${configSource}`);
   logVerbose(`asar enabled: ${hasAsar}`);
+  logVerbose(`appx asset directory: ${appxAssetDir}`);
   logVerbose(`runtime extraResources entries: ${extraResources.length}`);
   logVerbose(`linux targets: ${linuxTargets.join(', ') || 'none'}`);
 
   assert(true, `build configuration exists (${configSource})`);
   assert(hasAsar, 'asar packaging is enabled');
   assert(hasFiles, 'files to include are specified');
+  assert(missingAppxAssets.length === 0, 'appx tile assets override electron-builder default samples');
+  assert(invalidAppxAssets.length === 0, 'appx tile assets use the expected Store dimensions');
   assert(Boolean(windowIconExtraResource), 'window icon is shipped via extraResources');
   assert(windowIconOutsideAsar, 'window icon is staged outside app.asar');
   assert(Boolean(runtimeExtraResource), 'desktop runtime is shipped via extraResources');

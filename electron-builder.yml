@@ -1,6 +1,7 @@
 appId: com.newbe36524.hagicode
 productName: Hagicode Desktop
 directories:
+  buildResources: resources
   output: pkg
 files:
   - dist/**/*
