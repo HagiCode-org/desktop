@@ -129,9 +129,6 @@ navigation:
       contact: Contacter
       qr: QR
       image: Images
-  promotion:
-    label: Promotion
-    defaultCta: En savoir plus
 sidebar:
   dashboard: Tableau de bord
   webService: Service Web
@@ -272,6 +269,8 @@ dependencyManagement:
       description: QoderCLI distribué via le package officiel @qoder-ai/qodercli npm.
     gemini:
       description: Google Gemini CLI distribué via le package officiel @google/gemini-cli npm.
+    impeccable:
+      description: Outil Impeccable fournissant des compétences de design, des commandes et la détection d anti-patterns pour les agents de codage IA.
   categories:
     bootstrap: Amorçage
     workflow: Flux de travail

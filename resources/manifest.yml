@@ -133,6 +133,9 @@ npmSync:
     "@openai/codex":
       version: 0.125.0
       target: 0.125.0
+    impeccable:
+      version: 2.1.9
+      target: 2.1.9
     skills:
       version: 1.5.1
       target: 1.5.1

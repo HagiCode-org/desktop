@@ -11,7 +11,8 @@ export type ManagedNpmPackageId =
   | 'codebuddy'
   | 'opencode'
   | 'qoder'
-  | 'gemini';
+  | 'gemini'
+  | 'impeccable';
 
 export type NpmEnvironmentComponentStatus = 'available' | 'unavailable' | 'error';
 export type ManagedNpmPackageStatus = 'installed' | 'not-installed' | 'unknown';

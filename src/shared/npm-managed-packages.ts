@@ -137,6 +137,16 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     agentCliId: 'gemini',
     docsLinkId: 'geminiSetup',
   },
+  {
+    id: 'impeccable',
+    packageName: 'impeccable',
+    displayName: 'Impeccable',
+    descriptionKey: 'dependencyManagement.packages.impeccable.description',
+    binName: 'impeccable',
+    installSpec: 'impeccable@2.1.9',
+    category: 'developer-tool',
+    installMode: 'hagiscript-sync',
+  },
 ] as const;
 
 export const managedAgentCliPackages = managedNpmPackages.filter(

@@ -129,9 +129,6 @@ navigation:
       contact: 聯繫
       qr: QR 圖碼
       image: 圖片
-  promotion:
-    label: 推廣
-    defaultCta: 了解更多
 sidebar:
   dashboard: 控制台
   webService: Hagicode 服務
@@ -272,6 +269,8 @@ dependencyManagement:
       description: 透過官方 @qoder-ai/qodercli npm 包分發的 QoderCLI。
     gemini:
       description: 透過官方 @google/gemini-cli npm 包分發的 Gemini CLI。
+    impeccable:
+      description: 為 AI 編碼代理提供設計技能、命令與反模式檢測的 Impeccable 工具。
   categories:
     bootstrap: 引導依賴
     workflow: 工作流程
