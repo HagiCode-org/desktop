@@ -301,7 +301,7 @@ describe('dependency management service contract', () => {
       npmCacheRoot: path.join(runtimeRoot, 'npmCache'),
     }, manifestPath, 'https://registry.npmmirror.com/');
 
-    assert.equal(launch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
+    assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
     assert.equal(launch.shell, true);
     assert.deepEqual(args, [
       'npm-sync',

@@ -32,6 +32,18 @@ function stripWrappingQuotes(command: string): string {
   return command.replace(/^"(.*)"$/, '$1');
 }
 
+function quoteShellCommandIfNeeded(
+  command: string,
+  shell: boolean,
+  platform: NodeJS.Platform,
+): string {
+  if (platform !== 'win32' || !shell || !/\s/.test(command)) {
+    return command;
+  }
+
+  return `"${command}"`;
+}
+
 export function shouldUseShellForCommand(
   command: string,
   platform: NodeJS.Platform = process.platform,
@@ -64,10 +76,11 @@ export function resolveCommandLaunch(
   platform: NodeJS.Platform = process.platform,
 ): CommandLaunchPlan {
   const normalizedCommand = stripWrappingQuotes(command);
+  const shell = shouldUseShellForCommand(normalizedCommand, platform);
 
   return {
-    command: normalizedCommand,
-    shell: shouldUseShellForCommand(normalizedCommand, platform),
+    command: quoteShellCommandIfNeeded(normalizedCommand, shell, platform),
+    shell,
   };
 }
 

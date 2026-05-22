@@ -227,7 +227,7 @@ describe('web-service startup flow', () => {
     assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), true);
   });
 
-  it('keeps Windows absolute wrapper commands under Program Files roots unquoted and routes wrappers through shell execution', () => {
+  it('quotes Windows absolute wrapper commands under Program Files roots before routing them through shell execution', () => {
     const npmLaunch = resolveCommandLaunch(
       'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
       'win32',
@@ -245,11 +245,11 @@ describe('web-service startup flow', () => {
       'win32',
     );
 
-    assert.equal(npmLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd');
+    assert.equal(npmLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
     assert.equal(npmLaunch.shell, true);
-    assert.equal(hagiscriptLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd');
+    assert.equal(hagiscriptLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
     assert.equal(hagiscriptLaunch.shell, true);
-    assert.equal(batchLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\managed-tool.bat');
+    assert.equal(batchLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\managed-tool.bat"');
     assert.equal(batchLaunch.shell, true);
     assert.equal(nodeLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
     assert.equal(nodeLaunch.shell, false);
