@@ -14,10 +14,12 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 6. Stage the Windows unpacked ZIP payload workspace under `pkg/windows-zip-payload/`
 7. Sign artifacts with `azure/artifact-signing-action@v1`
 8. Verify signatures before any upload or release step runs
-9. Create the Windows ZIP from the signed staged unpacked payload before upload
+9. Derive signed `.msix` release assets from the signed AppX outputs for Windows release publication
+10. Create the Windows ZIP from the signed staged unpacked payload before upload
 
 Only distributable Windows artifacts are signed in CI.
 The workflow signs the final installer outputs and only the staged `.exe`, `.appx`, `.msix`, and `.msi` files copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
+For release publication, the workflow also copies each signed `.appx` package into a byte-identical `.msix` asset under `pkg/release-msix/` so GitHub Releases can expose a Store-oriented package name without changing the signed payload bytes.
 
 Tag releases (`refs/tags/v*.*.*`) always require signing.
 Manual `workflow_dispatch` runs can opt in with `sign_windows_release=true`.
