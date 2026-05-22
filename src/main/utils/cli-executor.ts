@@ -41,13 +41,55 @@ export interface CliExecutionResult {
   };
 }
 
+function stripWrappingQuotes(command: string): string {
+  return command.replace(/^"(.*)"$/, '$1');
+}
+
+function shouldQuoteWindowsShellArgs(
+  command: string,
+  shell: boolean | string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform !== 'win32' || !shell) {
+    return false;
+  }
+
+  const normalizedCommand = stripWrappingQuotes(command).toLowerCase();
+  return normalizedCommand.endsWith('.cmd') || normalizedCommand.endsWith('.bat');
+}
+
+function quoteWindowsShellArg(arg: string): string {
+  if (arg.length === 0) {
+    return '""';
+  }
+
+  if (/^".*"$/u.test(arg) || !/[\s"]/u.test(arg)) {
+    return arg;
+  }
+
+  return `"${arg.replace(/"/gu, '\\"')}"`;
+}
+
+export function normalizeCliArgsForShell(
+  command: string,
+  args: string[],
+  shell: boolean | string,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  if (!shouldQuoteWindowsShellArgs(command, shell, platform)) {
+    return args;
+  }
+
+  return args.map((arg) => quoteWindowsShellArg(arg));
+}
+
 function normalizeChunk(chunk: unknown): string {
   return Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : String(chunk);
 }
 
 function buildCommandMetadata(options: CliExecutorOptions): CliCommandMetadata {
-  const args = options.args ?? [];
   const shell = options.shell ?? false;
+  const args = normalizeCliArgsForShell(options.command, options.args ?? [], shell);
   const windowsHide = options.windowsHide ?? true;
   return {
     command: options.command,
@@ -149,9 +191,10 @@ function toErrorResult(error: unknown, metadata: CliCommandMetadata, startedAt: 
 export async function executeCli(options: CliExecutorOptions): Promise<CliExecutionResult> {
   const startedAt = Date.now();
   const metadata = buildCommandMetadata(options);
+  const args = metadata.args;
 
   try {
-    const rawResult = await execa(options.command, options.args ?? [], buildExecaOptions(options, false));
+    const rawResult = await execa(options.command, args, buildExecaOptions(options, false));
     return toResult(rawResult, metadata, startedAt);
   } catch (error) {
     return toErrorResult(error, metadata, startedAt);
@@ -161,9 +204,10 @@ export async function executeCli(options: CliExecutorOptions): Promise<CliExecut
 export async function executeCliStreaming(options: CliExecutorOptions): Promise<CliExecutionResult> {
   const startedAt = Date.now();
   const metadata = buildCommandMetadata(options);
+  const args = metadata.args;
 
   try {
-    const subprocess = execa(options.command, options.args ?? [], buildExecaOptions(options, true));
+    const subprocess = execa(options.command, args, buildExecaOptions(options, true));
     subprocess.stdout?.on('data', (chunk) => options.onOutput?.('stdout', normalizeChunk(chunk)));
     subprocess.stderr?.on('data', (chunk) => options.onOutput?.('stderr', normalizeChunk(chunk)));
     const rawResult = await subprocess;
@@ -172,4 +216,3 @@ export async function executeCliStreaming(options: CliExecutorOptions): Promise<
     return toErrorResult(error, metadata, startedAt);
   }
 }
-

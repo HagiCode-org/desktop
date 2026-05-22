@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { executeCli, executeCliStreaming } from '../utils/cli-executor.js';
+import { executeCli, executeCliStreaming, normalizeCliArgsForShell } from '../utils/cli-executor.js';
 
 describe('cli-executor', () => {
   it('captures successful stdout and stderr with command metadata', async () => {
@@ -81,6 +81,37 @@ describe('cli-executor', () => {
     assert.equal(result.success, true);
     assert.equal(result.command.shell, false);
     assert.equal(result.command.windowsHide, false);
+  });
+
+  it('quotes Windows shell arguments for cmd wrappers when values contain spaces', () => {
+    const normalized = normalizeCliArgsForShell(
+      'C:\\Program Files\\HagiCode\\hagiscript.cmd',
+      [
+        'npm-sync',
+        '--runtime',
+        'C:\\Program Files\\HagiCode\\node',
+        '--manifest',
+        'C:\\Users\\Test User\\AppData\\Local\\Temp\\desktop manifest.json',
+      ],
+      true,
+      'win32',
+    );
+
+    assert.deepEqual(normalized, [
+      'npm-sync',
+      '--runtime',
+      '"C:\\Program Files\\HagiCode\\node"',
+      '--manifest',
+      '"C:\\Users\\Test User\\AppData\\Local\\Temp\\desktop manifest.json"',
+    ]);
+  });
+
+  it('does not rewrite args for non-Windows shells or non-wrapper commands', () => {
+    const args = ['npm-sync', '--runtime', 'C:\\Program Files\\HagiCode\\node'];
+
+    assert.deepEqual(normalizeCliArgsForShell('hagiscript', args, true, 'win32'), args);
+    assert.deepEqual(normalizeCliArgsForShell('hagiscript.cmd', args, false, 'win32'), args);
+    assert.deepEqual(normalizeCliArgsForShell('hagiscript.cmd', args, true, 'linux'), args);
   });
 
   it('streams bounded stdout and stderr while returning a final normalized result', async () => {
