@@ -78,6 +78,10 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(buildWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(buildWorkflow, /zip_path=/);
+    assert.match(buildWorkflow, /Prepare signed MSIX release assets/);
+    assert.match(buildWorkflow, /node scripts\/prepare-msix-release-assets\.js --out-dir/);
+    assert.match(buildWorkflow, /Upload signed MSIX package/);
+    assert.match(buildWorkflow, /Upload signed MSIX package to Release/);
     assert.match(publishDevWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(publishDevWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(publishDevWorkflow, /zip_path=/);

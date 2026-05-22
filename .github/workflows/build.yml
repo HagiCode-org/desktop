@@ -381,6 +381,37 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
+      - name: Prepare signed MSIX release assets
+        id: windows_msix_assets
+        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
+        shell: bash
+        env:
+          WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
+        run: |
+          set -euo pipefail
+          mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
+          if [ "${#appx_files[@]}" -eq 0 ]; then
+            echo '::error::Signed AppX assets were not available for MSIX publication.'
+            exit 1
+          fi
+
+          output_dir="pkg/release-msix"
+          output_json="$output_dir/msix-assets.json"
+          node scripts/prepare-msix-release-assets.js --out-dir "$output_dir" --output-json "$output_json" "${appx_files[@]}"
+
+          mapfile -t msix_files < <(node -e "const fs=require('fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));for(const entry of payload){console.log(entry.outputPath);}" "$output_json")
+          if [ "${#msix_files[@]}" -eq 0 ]; then
+            echo '::error::MSIX release asset preparation did not produce any files.'
+            exit 1
+          fi
+
+          {
+            echo 'msix_files<<EOF'
+            printf '%s\n' "${msix_files[@]}"
+            echo 'EOF'
+            echo "msix_count=${#msix_files[@]}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create Windows ZIP artifact
         id: windows_zip
         if: success()
@@ -438,6 +469,7 @@ jobs:
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
             echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -488,6 +520,23 @@ jobs:
         if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
         with:
           files: ${{ steps.windows_artifacts.outputs.appx_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload signed MSIX package
+        uses: actions/upload-artifact@v4
+        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
+        with:
+          name: hagicode-windows-msix-${{ github.sha }}
+          path: ${{ steps.windows_msix_assets.outputs.msix_files }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload signed MSIX package to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
+        with:
+          files: ${{ steps.windows_msix_assets.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -907,6 +956,37 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
+      - name: Prepare signed MSIX release assets
+        id: windows_msix_assets
+        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
+        shell: bash
+        env:
+          WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
+        run: |
+          set -euo pipefail
+          mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
+          if [ "${#appx_files[@]}" -eq 0 ]; then
+            echo '::error::Signed AppX assets were not available for MSIX publication.'
+            exit 1
+          fi
+
+          output_dir="pkg/release-msix"
+          output_json="$output_dir/msix-assets.json"
+          node scripts/prepare-msix-release-assets.js --out-dir "$output_dir" --output-json "$output_json" "${appx_files[@]}"
+
+          mapfile -t msix_files < <(node -e "const fs=require('fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));for(const entry of payload){console.log(entry.outputPath);}" "$output_json")
+          if [ "${#msix_files[@]}" -eq 0 ]; then
+            echo '::error::MSIX release asset preparation did not produce any files.'
+            exit 1
+          fi
+
+          {
+            echo 'msix_files<<EOF'
+            printf '%s\n' "${msix_files[@]}"
+            echo 'EOF'
+            echo "msix_count=${#msix_files[@]}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create Windows ZIP artifact
         id: windows_zip
         if: success()
@@ -957,6 +1037,7 @@ jobs:
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
             echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -1007,6 +1088,23 @@ jobs:
         if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
         with:
           files: ${{ steps.windows_artifacts.outputs.appx_files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload signed MSIX package
+        uses: actions/upload-artifact@v4
+        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
+        with:
+          name: hagicode-windows-msix-${{ github.sha }}
+          path: ${{ steps.windows_msix_assets.outputs.msix_files }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload signed MSIX package to Release
+        uses: softprops/action-gh-release@v2
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
+        with:
+          files: ${{ steps.windows_msix_assets.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
