@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import log from 'electron-log';
 import Store from 'electron-store';
+import { valid as validSemver } from 'semver';
 import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
 import { getCommandExecutableName } from './embedded-node-runtime-config.js';
@@ -30,10 +31,12 @@ import {
   findManagedNpmPackage,
   isVendoredRuntimeMutationId,
 } from '../shared/npm-managed-packages.js';
+import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
+  DependencyManagementInstallRequest,
   DependencyManagementBatchSyncRequest,
   DependencyManagementBatchSyncResult,
   NpmEnvironmentComponent,
@@ -44,6 +47,7 @@ import type {
   DependencyManagementOperationProgress,
   DependencyManagementOperationResult,
   DependencyManagementSnapshot,
+  VendoredRuntimeId,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
@@ -57,6 +61,9 @@ interface DependencyManagementServiceOptions {
 
 interface DependencyManagementSettingsStoreSchema {
   mirrorSettings?: NpmMirrorSettingsInput;
+  packageSelectors?: {
+    hagiscript?: string;
+  };
 }
 
 interface CommandResult {
@@ -76,6 +83,11 @@ interface ManagedNpmPackagePaths {
   packageRoot: string;
   executablePath: string;
   commandArtifacts: string[];
+}
+
+interface ResolvedInstallRequest {
+  packageId: ManagedNpmPackageId;
+  selector?: string;
 }
 
 type ProgressListener = (event: DependencyManagementOperationProgress) => void;
@@ -145,6 +157,21 @@ function normalizeVersionOutput(value: string): string | null {
   return line ? line.replace(/^v/, '') : null;
 }
 
+function normalizeHagiscriptSelector(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lowered = trimmed.toLowerCase();
+  if (lowered === 'latest' || lowered === 'dev') {
+    return lowered;
+  }
+
+  const normalizedVersion = validSemver(trimmed.replace(/^v(?=\d)/, ''));
+  return normalizedVersion ?? null;
+}
+
 export class DependencyManagementService {
   private readonly pathManager: PathManager;
   private readonly existsSync: (targetPath: string) => boolean;
@@ -178,13 +205,10 @@ export class DependencyManagementService {
 
   async getSnapshot(): Promise<DependencyManagementSnapshot> {
     const environment = await this.detectEnvironment();
-    const packages = await Promise.all(managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)));
-    const vendoredRuntimes = this.vendoredRuntimeInspector
-      ? await this.vendoredRuntimeInspector()
-      : [
-        await inspectVendoredCodeServerRuntime(this.pathManager),
-        await inspectVendoredOmniRouteRuntime(this.pathManager),
-      ];
+    const packages = await Promise.all(
+      managedNpmPackages.map((definition) => this.detectPackageStatus(this.resolveManagedPackageDefinition(definition.id) ?? definition, environment)),
+    );
+    const vendoredRuntimes = await this.getVendoredRuntimeSnapshots();
     const mirrorSettings = this.getMirrorSettings();
 
     return {
@@ -195,6 +219,63 @@ export class DependencyManagementService {
       activeOperation: this.activeOperation,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  private async getVendoredRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
+    if (this.vendoredRuntimeInspector) {
+      return await this.vendoredRuntimeInspector();
+    }
+
+    return await Promise.all([
+      this.inspectVendoredRuntimeSafely('code-server', () => inspectVendoredCodeServerRuntime(this.pathManager), this.pathManager.getCodeServerRuntimeRoot()),
+      this.inspectVendoredRuntimeSafely('omniroute', () => inspectVendoredOmniRouteRuntime(this.pathManager), this.pathManager.getOmniRouteRuntimeRoot()),
+    ]);
+  }
+
+  private async inspectVendoredRuntimeSafely(
+    runtimeId: VendoredRuntimeId,
+    inspector: () => Promise<VendoredRuntimeStatusSnapshot>,
+    runtimeRoot: string,
+  ): Promise<VendoredRuntimeStatusSnapshot> {
+    try {
+      return await inspector();
+    } catch (error) {
+      const definition = findVendoredRuntime(runtimeId);
+      if (!definition) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      log.warn('[DependencyManagementService] Vendored runtime inspection failed:', {
+        runtimeId,
+        message,
+      });
+
+      return {
+        id: runtimeId,
+        definition,
+        installStatus: 'failed',
+        status: 'damaged',
+        version: null,
+        runtimeRoot,
+        metadataPath: null,
+        wrapperPath: null,
+        entryScriptPath: null,
+        packageId: runtimeId,
+        schemaVersion: null,
+        bundledNodeRuntime: false,
+        managedByDesktop: true,
+        primaryAction: process.env.NODE_ENV === 'development' ? 'repair' : 'reinstall-desktop',
+        diagnostics: [message],
+        health: {
+          reachable: false,
+          url: null,
+          lastCheckedAt: null,
+          message,
+        },
+        message,
+      };
+    }
   }
 
   getMirrorSettings(): NpmMirrorSettings {
@@ -212,8 +293,25 @@ export class DependencyManagementService {
     return this.getSnapshot();
   }
 
-  async install(packageId: string): Promise<DependencyManagementOperationResult> {
-    return this.runPackageOperation(packageId, 'install');
+  async install(request: string | DependencyManagementInstallRequest): Promise<DependencyManagementOperationResult> {
+    const resolvedInstallRequest = this.resolveInstallRequest(request);
+    if (!resolvedInstallRequest.success) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageId: resolvedInstallRequest.packageId,
+        operation: 'install',
+        error: resolvedInstallRequest.error,
+        snapshot,
+      };
+    }
+
+    return this.runPackageOperation(
+      resolvedInstallRequest.definition.id,
+      'install',
+      resolvedInstallRequest.definition,
+      resolvedInstallRequest.selectorToPersist,
+    );
   }
 
   async syncPackages(request: DependencyManagementBatchSyncRequest): Promise<DependencyManagementBatchSyncResult> {
@@ -527,6 +625,119 @@ export class DependencyManagementService {
     return verifications;
   }
 
+  private normalizeInstallRequest(request: string | DependencyManagementInstallRequest): ResolvedInstallRequest {
+    if (typeof request === 'string') {
+      return { packageId: request as ManagedNpmPackageId };
+    }
+
+    return {
+      packageId: request.packageId,
+      selector: request.selector?.trim() || undefined,
+    };
+  }
+
+  private getConfiguredHagiscriptSelector(): string | null {
+    return normalizeHagiscriptSelector(this.settingsStore.get('packageSelectors')?.hagiscript);
+  }
+
+  private setConfiguredHagiscriptSelector(selector: string | null): void {
+    const packageSelectors = this.settingsStore.get('packageSelectors') ?? {};
+    if (!selector) {
+      const nextSelectors = { ...packageSelectors };
+      delete nextSelectors.hagiscript;
+      this.settingsStore.set('packageSelectors', nextSelectors);
+      return;
+    }
+
+    this.settingsStore.set('packageSelectors', {
+      ...packageSelectors,
+      hagiscript: selector,
+    });
+  }
+
+  private resolveManagedPackageDefinition(
+    packageId: string,
+    selectorOverride?: string | null,
+  ): ManagedNpmPackageDefinition | null {
+    const definition = findManagedNpmPackage(packageId);
+    if (!definition || definition.id !== 'hagiscript') {
+      return definition;
+    }
+
+    const selector = normalizeHagiscriptSelector(selectorOverride ?? this.getConfiguredHagiscriptSelector());
+    if (!selector) {
+      return definition;
+    }
+
+    return {
+      ...definition,
+      installSpec: `${definition.packageName}@${selector}`,
+    };
+  }
+
+  private resolveInstallRequest(
+    request: string | DependencyManagementInstallRequest,
+  ): (
+    | { success: true; definition: ManagedNpmPackageDefinition; selectorToPersist?: string }
+    | { success: false; packageId: ManagedNpmPackageId; error: string }
+  ) {
+    const normalizedRequest = this.normalizeInstallRequest(request);
+
+    if (isVendoredRuntimeMutationId(normalizedRequest.packageId)) {
+      return {
+        success: false,
+        packageId: normalizedRequest.packageId,
+        error: `${normalizedRequest.packageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
+      };
+    }
+
+    const definition = findManagedNpmPackage(normalizedRequest.packageId);
+    if (!definition) {
+      return {
+        success: false,
+        packageId: normalizedRequest.packageId,
+        error: `Unknown managed npm package: ${normalizedRequest.packageId}`,
+      };
+    }
+
+    if (normalizedRequest.selector && definition.id !== 'hagiscript') {
+      return {
+        success: false,
+        packageId: definition.id,
+        error: `${definition.displayName} does not support install selectors.`,
+      };
+    }
+
+    if (definition.id !== 'hagiscript') {
+      return {
+        success: true,
+        definition,
+      };
+    }
+
+    if (!normalizedRequest.selector) {
+      return {
+        success: true,
+        definition: this.resolveManagedPackageDefinition(definition.id) ?? definition,
+      };
+    }
+
+    const normalizedSelector = normalizeHagiscriptSelector(normalizedRequest.selector);
+    if (!normalizedSelector) {
+      return {
+        success: false,
+        packageId: definition.id,
+        error: `Unsupported hagiscript selector "${normalizedRequest.selector}". Use an exact version, latest, or dev.`,
+      };
+    }
+
+    return {
+      success: true,
+      definition: this.resolveManagedPackageDefinition(definition.id, normalizedSelector) ?? definition,
+      selectorToPersist: normalizedSelector,
+    };
+  }
+
   private resolvePackageDefinitions(
     packageIds: readonly string[],
     operation: DependencyManagementOperation,
@@ -542,7 +753,7 @@ export class DependencyManagementService {
         };
       }
 
-      const definition = findManagedNpmPackage(packageId);
+      const definition = this.resolveManagedPackageDefinition(packageId);
       if (!definition) {
         return { success: false, error: `Unknown managed npm package: ${packageId}` };
       }
@@ -1078,6 +1289,8 @@ export class DependencyManagementService {
   private async runPackageOperation(
     packageId: string,
     operation: DependencyManagementOperation,
+    definitionOverride?: ManagedNpmPackageDefinition,
+    hagiscriptSelectorToPersist?: string,
   ): Promise<DependencyManagementOperationResult> {
     if (isVendoredRuntimeMutationId(packageId)) {
       const snapshot = await this.getSnapshot();
@@ -1090,14 +1303,14 @@ export class DependencyManagementService {
       };
     }
 
-    const definition = findManagedNpmPackage(packageId);
+    const definition = definitionOverride ?? this.resolveManagedPackageDefinition(packageId);
     if (!definition) {
       const snapshot = await this.getSnapshot();
       return {
         success: false,
         packageId: packageId as ManagedNpmPackageId,
         operation,
-        error: `Unknown managed npm package: ${packageId}`,
+      error: `Unknown managed npm package: ${packageId}`,
         snapshot,
       };
     }
@@ -1185,12 +1398,22 @@ export class DependencyManagementService {
       errorMessage = error instanceof Error ? error.message : String(error);
     }
 
+    const previousHagiscriptSelector = definition.id === 'hagiscript'
+      ? this.getConfiguredHagiscriptSelector()
+      : null;
+    if (success && definition.id === 'hagiscript' && hagiscriptSelectorToPersist) {
+      this.setConfiguredHagiscriptSelector(hagiscriptSelectorToPersist);
+    }
+
     const snapshot = await this.getSnapshot();
     const status = snapshot.packages.find((item) => item.id === definition.id);
     const verificationError = success
       ? this.validatePackageOperationOutcome(definition, operation, status)
       : null;
     if (verificationError) {
+      if (definition.id === 'hagiscript' && hagiscriptSelectorToPersist) {
+        this.setConfiguredHagiscriptSelector(previousHagiscriptSelector);
+      }
       success = false;
       errorMessage = verificationError;
     }

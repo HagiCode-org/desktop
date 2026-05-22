@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -17,6 +17,7 @@ import type {
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementOperationProgress,
+  DependencyManagementInstallRequest,
   VendoredRuntimeLifecycleAction,
   VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
@@ -25,7 +26,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
@@ -38,6 +41,37 @@ import {
   packageBadgeVariant,
   type BatchSyncState,
 } from './dependencyManagementPageModel';
+
+type HagiscriptInstallTargetMode = 'latest' | 'dev' | 'version';
+
+function parseHagiscriptInstallSelection(item: ManagedNpmPackageStatusSnapshot): {
+  mode: HagiscriptInstallTargetMode;
+  customVersion: string;
+} {
+  const installSpec = item.definition.installSpec.trim();
+  const scopedTargetPrefix = `${item.definition.packageName}@`;
+  if (installSpec === item.definition.packageName || installSpec === `${item.definition.packageName}@latest`) {
+    return { mode: 'latest', customVersion: '' };
+  }
+
+  if (!installSpec.startsWith(scopedTargetPrefix)) {
+    return { mode: 'latest', customVersion: '' };
+  }
+
+  const selector = installSpec.slice(scopedTargetPrefix.length).trim();
+  if (!selector || selector === 'latest') {
+    return { mode: 'latest', customVersion: '' };
+  }
+
+  if (selector === 'dev') {
+    return { mode: 'dev', customVersion: '' };
+  }
+
+  return {
+    mode: 'version',
+    customVersion: selector.replace(/^v(?=\d)/, ''),
+  };
+}
 
 function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (item.installStatus === 'installed') {
@@ -270,7 +304,7 @@ interface NpmPackageBootstrapCardProps {
   error?: string;
   actionsDisabled: boolean;
   refreshDisabled: boolean;
-  onInstall: (packageId: ManagedNpmPackageId) => void;
+  onInstall: (request: ManagedNpmPackageId | DependencyManagementInstallRequest) => void;
   onRefresh: () => void;
 }
 
@@ -286,6 +320,20 @@ export function NpmPackageBootstrapCard({
   const { t } = useTranslation('common');
   const displayStatus = getManagedPackageDisplayStatus(item);
   const actionKey = getManagedPackageActionKey(item);
+  const [installMode, setInstallMode] = useState<HagiscriptInstallTargetMode>('latest');
+  const [customVersion, setCustomVersion] = useState('');
+
+  useEffect(() => {
+    const nextSelection = parseHagiscriptInstallSelection(item);
+    setInstallMode(nextSelection.mode);
+    setCustomVersion(nextSelection.customVersion);
+  }, [item]);
+
+  const resolvedSelector = installMode === 'version' ? customVersion.trim() : installMode;
+  const currentTargetLabel = installMode === 'version'
+    ? resolvedSelector
+    : t(`dependencyManagement.bootstrap.targetOptions.${installMode}`);
+  const installDisabled = actionsDisabled || (installMode === 'version' && customVersion.trim().length === 0);
 
   return (
     <Card className="border-primary/40">
@@ -303,8 +351,54 @@ export function NpmPackageBootstrapCard({
       <CardContent className="space-y-4">
         <PackageDetails item={item} />
         <PackageProgress item={item} progress={progress} error={error} />
+        <div className="grid gap-3 rounded-lg border bg-muted/30 p-4 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{t('dependencyManagement.bootstrap.selectorLabel')}</p>
+            <Select
+              value={installMode}
+              onValueChange={(value) => setInstallMode(value as HagiscriptInstallTargetMode)}
+              disabled={actionsDisabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="latest">{t('dependencyManagement.bootstrap.targetOptions.latest')}</SelectItem>
+                <SelectItem value="dev">{t('dependencyManagement.bootstrap.targetOptions.dev')}</SelectItem>
+                <SelectItem value="version">{t('dependencyManagement.bootstrap.targetOptions.version')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            {installMode === 'version' ? (
+              <>
+                <p className="text-sm font-medium">{t('dependencyManagement.bootstrap.customVersionLabel')}</p>
+                <Input
+                  value={customVersion}
+                  onChange={(event) => setCustomVersion(event.target.value)}
+                  placeholder={t('dependencyManagement.bootstrap.customVersionPlaceholder')}
+                  disabled={actionsDisabled}
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium">{t('dependencyManagement.bootstrap.currentTarget', { target: currentTargetLabel })}</p>
+                <p className="text-sm text-muted-foreground">{t('dependencyManagement.bootstrap.selectorHint')}</p>
+              </>
+            )}
+          </div>
+          {installMode === 'version' ? (
+            <p className="text-xs text-muted-foreground md:col-span-2">{t('dependencyManagement.bootstrap.customVersionDescription')}</p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => onInstall(item.id)} disabled={actionsDisabled}>
+          <Button
+            onClick={() => onInstall({ packageId: item.id, selector: resolvedSelector })}
+            disabled={installDisabled}
+          >
             {isOperationActive(progress) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
             {t(`dependencyManagement.actions.${actionKey}`)}
           </Button>

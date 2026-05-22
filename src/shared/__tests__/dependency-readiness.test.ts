@@ -109,6 +109,34 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
   });
 
+  it('uses the snapshot definition when hagiscript is configured to latest or dev', () => {
+    const latestSnapshot = createSnapshot({}, { hagiscript: '9.9.9' });
+    const latestDefinition = latestSnapshot.packages.find((item) => item.id === 'hagiscript')?.definition;
+    if (!latestDefinition) {
+      throw new Error('hagiscript definition missing from snapshot');
+    }
+    latestDefinition.installSpec = '@hagicode/hagiscript@latest';
+
+    const latestSummary = evaluateDependencyReadiness(latestSnapshot, ['codex']);
+    const latestHagiscript = latestSummary.requiredPackages.find((item) => item.id === 'hagiscript');
+    assert.equal(latestHagiscript?.installSpec, '@hagicode/hagiscript@latest');
+    assert.equal(latestHagiscript?.requiredVersionRange, null);
+    assert.equal(latestHagiscript?.versionSatisfied, true);
+
+    const devSnapshot = createSnapshot({}, { hagiscript: '0.3.0-dev.5' });
+    const devDefinition = devSnapshot.packages.find((item) => item.id === 'hagiscript')?.definition;
+    if (!devDefinition) {
+      throw new Error('hagiscript definition missing from snapshot');
+    }
+    devDefinition.installSpec = '@hagicode/hagiscript@dev';
+
+    const devSummary = evaluateDependencyReadiness(devSnapshot, ['codex']);
+    const devHagiscript = devSummary.requiredPackages.find((item) => item.id === 'hagiscript');
+    assert.equal(devHagiscript?.installSpec, '@hagicode/hagiscript@dev');
+    assert.equal(devHagiscript?.requiredVersionRange, null);
+    assert.equal(devHagiscript?.versionSatisfied, true);
+  });
+
   it('keeps optional package status visible without blocking readiness', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex']);
 

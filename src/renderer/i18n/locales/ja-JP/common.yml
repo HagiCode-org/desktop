@@ -278,6 +278,16 @@ dependencyManagement:
     developer-tool: 開発者ツール
   bootstrap:
     title: 必須
+    selectorLabel: Install target
+    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
+    currentTarget: 'Current target: {{target}}'
+    customVersionLabel: Custom version
+    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    targetOptions:
+      latest: Latest stable
+      dev: Development build
+      version: Exact version
   dependencyGate:
     title: まずハギスクリプトをインストールしてください
     missing: hagiscript がインストールされるまで、他の依存関係アクションは無効になります。

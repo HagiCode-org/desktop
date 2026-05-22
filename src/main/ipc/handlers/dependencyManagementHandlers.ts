@@ -5,6 +5,7 @@ import type DependencyManagementService from '../../dependency-management-servic
 import type OmniRouteManager from '../../omniroute-manager.js';
 import {
   type DependencyManagementBatchSyncRequest,
+  type DependencyManagementInstallRequest,
   type VendoredRuntimeId,
   dependencyManagementChannels,
   legacyDependencyManagementChannels,
@@ -99,12 +100,15 @@ export function registerDependencyManagementHandlers(deps: {
     return state.dependencyManagementService.setMirrorSettings(settings);
   };
 
-  const handleInstall = async (_event: Electron.IpcMainInvokeEvent, packageId: string) => {
+  const handleInstall = async (
+    _event: Electron.IpcMainInvokeEvent,
+    request: string | DependencyManagementInstallRequest,
+  ) => {
     if (!state.dependencyManagementService) {
       throw new Error('DependencyManagementService is not initialized');
     }
 
-    return state.dependencyManagementService.install(packageId);
+    return state.dependencyManagementService.install(request);
   };
 
   const handleUninstall = async (_event: Electron.IpcMainInvokeEvent, packageId: string) => {

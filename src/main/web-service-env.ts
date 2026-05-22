@@ -42,6 +42,9 @@ export interface BuildManagedEnvInput {
     port: number;
     password: string;
   } | null;
+  omniRoute?: {
+    apiEndpoint: string;
+  } | null;
   systemVaultEnvEntries?: Record<string, string> | null;
   yamlConfig?: Record<string, unknown> | null;
   existingEnv?: Record<string, string | undefined>;
@@ -155,6 +158,24 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
   {
     key: 'VsCodeServer__SourceLocked',
     sourceConfig: 'desktop-managed code-server source lock',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'OmniRoute__ApiEndpoint',
+    sourceConfig: 'desktop-managed OmniRoute endpoint',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'OmniRoute__Source',
+    sourceConfig: 'desktop-managed OmniRoute source',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'OmniRoute__SourceLocked',
+    sourceConfig: 'desktop-managed OmniRoute source lock',
     required: false,
     sensitive: false,
   },
@@ -313,6 +334,10 @@ function resolveValue(
     return resolveManagedCodeServerEnv(definition.key, input.codeServer);
   }
 
+  if (definition.key.startsWith('OmniRoute__')) {
+    return resolveManagedOmniRouteEnv(definition.key, input.omniRoute);
+  }
+
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
     return normalizeResolvedValue(definition, existingValue, 'existing-env');
@@ -368,6 +393,32 @@ function resolveManagedCodeServerEnv(
                 : key === 'VsCodeServer__SourceLocked'
                   ? 'true'
                   : undefined,
+    source: 'runtime',
+  };
+}
+
+function resolveManagedOmniRouteEnv(
+  key: string,
+  omniRoute: BuildManagedEnvInput['omniRoute'],
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  if (!omniRoute) {
+    return { source: 'default' };
+  }
+
+  const apiEndpoint = sanitizeString(omniRoute.apiEndpoint);
+
+  return {
+    value: key === 'OmniRoute__ApiEndpoint'
+      ? apiEndpoint
+      : key === 'OmniRoute__Source'
+        ? apiEndpoint
+          ? 'desktop-managed'
+          : undefined
+        : key === 'OmniRoute__SourceLocked'
+          ? apiEndpoint
+            ? 'true'
+            : undefined
+          : undefined,
     source: 'runtime',
   };
 }

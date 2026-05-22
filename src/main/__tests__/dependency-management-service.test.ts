@@ -75,6 +75,24 @@ describe('dependency management service contract', () => {
     assert.match(source, /Another npm operation is already active/);
   });
 
+  it('accepts hagiscript install requests with selector overrides and persists them after successful installs', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /async install\(request: string \| DependencyManagementInstallRequest\)/);
+    assert.match(source, /private normalizeInstallRequest\(request: string \| DependencyManagementInstallRequest\)/);
+    assert.match(source, /private resolveInstallRequest\(/);
+    assert.match(source, /latest, or dev/);
+    assert.match(source, /definition\.id !== 'hagiscript'/);
+    assert.match(source, /does not support install selectors/);
+    assert.match(source, /private getConfiguredHagiscriptSelector\(\)/);
+    assert.match(source, /private setConfiguredHagiscriptSelector\(selector: string \| null\)/);
+    assert.match(source, /installSpec: `\$\{definition\.packageName\}@\$\{selector\}`/);
+    assert.match(source, /const previousHagiscriptSelector = definition\.id === 'hagiscript'/);
+    assert.match(source, /if \(success && definition\.id === 'hagiscript' && hagiscriptSelectorToPersist\)/);
+    assert.match(source, /this\.setConfiguredHagiscriptSelector\(hagiscriptSelectorToPersist\)/);
+    assert.match(source, /if \(definition\.id === 'hagiscript' && hagiscriptSelectorToPersist\) \{\s*this\.setConfiguredHagiscriptSelector\(previousHagiscriptSelector\);/);
+  });
+
   it('normalizes npm process output into progress and operation result payloads', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
@@ -243,6 +261,27 @@ describe('dependency management service contract', () => {
     assert.match(source, /installSpec: '@google\/gemini-cli'/);
     assert.match(source, /installSpec: 'impeccable@2\.1\.9'/);
     assert.match(source, /required: true/);
+  });
+
+  it('uses effective snapshot definitions when computing readiness summaries', async () => {
+    const source = await fs.readFile(catalogPath, 'utf8');
+
+    assert.match(source, /const effectiveDefinition = statusSnapshot\?\.definition \?\? definition;/);
+    assert.match(source, /getManagedPackageRequiredVersionRange\(effectiveDefinition\)/);
+    assert.match(source, /isManagedPackageVersionSatisfied\(effectiveDefinition, installedVersion\)/);
+    assert.match(source, /definition: effectiveDefinition,/);
+    assert.match(source, /installSpec: effectiveDefinition\.installSpec,/);
+  });
+
+  it('degrades vendored runtime inspection failures into snapshots instead of failing refresh', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /private async getVendoredRuntimeSnapshots\(\): Promise<VendoredRuntimeStatusSnapshot\[\]>/);
+    assert.match(source, /this\.inspectVendoredRuntimeSafely\('code-server'/);
+    assert.match(source, /this\.inspectVendoredRuntimeSafely\('omniroute'/);
+    assert.match(source, /installStatus: 'failed'/);
+    assert.match(source, /status: 'damaged'/);
+    assert.match(source, /Vendored runtime inspection failed/);
   });
 
   it('prevents required managed npm packages from being removed', async () => {

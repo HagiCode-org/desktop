@@ -250,19 +250,20 @@ function toReadinessPackageSummary(
   snapshot: DependencyManagementSnapshot,
 ): DependencyReadinessPackageSummary {
   const statusSnapshot = findManagedPackageStatus(snapshot, definition.id);
+  const effectiveDefinition = statusSnapshot?.definition ?? definition;
   const installedVersion = statusSnapshot?.version ?? null;
-  const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
-  const versionSatisfied = isManagedPackageVersionSatisfied(definition, installedVersion);
+  const requiredVersionRange = getManagedPackageRequiredVersionRange(effectiveDefinition);
+  const versionSatisfied = isManagedPackageVersionSatisfied(effectiveDefinition, installedVersion);
 
   return {
     id: definition.id,
-    definition,
+    definition: effectiveDefinition,
     status: statusSnapshot?.status ?? 'unknown',
     installedVersion,
-    installSpec: definition.installSpec,
+    installSpec: effectiveDefinition.installSpec,
     requiredVersionRange,
     versionSatisfied,
-    packageName: definition.packageName,
+    packageName: effectiveDefinition.packageName,
     message: statusSnapshot?.message,
   };
 }

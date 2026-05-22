@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type {
   ManagedNpmPackageId,
   DependencyManagementBridge,
+  DependencyManagementInstallRequest,
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
 } from '../../types/dependency-management.js';
@@ -182,7 +183,11 @@ export default function DependencyManagementPage() {
     batchLogPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [isBatchSyncRunning]);
 
-  const runOperation = async (packageId: ManagedNpmPackageId, action: 'install' | 'uninstall') => {
+  const runOperation = async (
+    packageId: ManagedNpmPackageId,
+    action: 'install' | 'uninstall',
+    installRequest?: DependencyManagementInstallRequest,
+  ) => {
     setOperationError((current) => ({ ...current, [packageId]: undefined }));
     setBatchSyncState({
       packageIds: [packageId],
@@ -191,7 +196,7 @@ export default function DependencyManagementPage() {
     });
     try {
       const result = action === 'install'
-        ? await getDependencyManagementBridge().install(packageId)
+        ? await getDependencyManagementBridge().install(installRequest ?? packageId)
         : await getDependencyManagementBridge().uninstall(packageId);
       applySnapshot(result.snapshot);
       if (!result.success) {
@@ -357,7 +362,11 @@ export default function DependencyManagementPage() {
       error={operationError[hagiscript.id] ?? (hagiscript.status === 'unknown' ? hagiscript.message : undefined)}
       actionsDisabled={actionsDisabled}
       refreshDisabled={pageStatus === 'loading' || isPending}
-      onInstall={(packageId) => void runOperation(packageId, 'install')}
+      onInstall={(request) => void runOperation(
+        typeof request === 'string' ? request : request.packageId,
+        'install',
+        typeof request === 'string' ? undefined : request,
+      )}
       onRefresh={() => void refreshSnapshot()}
     />
   ) : null;

@@ -120,6 +120,15 @@ describe('dependency management renderer wiring', () => {
 
     assert.match(pageSource, /item\.id === 'hagiscript'/);
     assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.title/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.selectorLabel/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.targetOptions\.latest/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.targetOptions\.dev/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.targetOptions\.version/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.customVersionPlaceholder/);
+    assert.match(packageGroupsSource, /dependencyManagement\.bootstrap\.currentTarget/);
+    assert.match(packageGroupsSource, /DependencyManagementInstallRequest/);
+    assert.match(packageGroupsSource, /onInstall: \(request: ManagedNpmPackageId \| DependencyManagementInstallRequest\) => void;/);
+    assert.match(packageGroupsSource, /onClick=\{\(\) => onInstall\(\{ packageId: item\.id, selector: resolvedSelector \}\)\}/);
     assert.match(pageSource, /hagiscriptGateOpen/);
     assert.match(packageGroupsSource, /dependencyGateMessage/);
     assert.match(packageGroupsSource, /dependencyManagement\.packageTable\.title/);
@@ -128,6 +137,8 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /toggleSelectAll/);
     assert.match(pageSource, /shouldPromoteHagiscriptCard/);
     assert.match(pageSource, /getDependencyManagementBridge\(\)\.syncPackages\(\{ packageIds \}\)/);
+    assert.match(pageSource, /installRequest \?\? packageId/);
+    assert.match(pageSource, /typeof request === 'string' \? request : request\.packageId/);
     assert.match(packageGroupsSource, /dependencyManagement\.batchLog\.title/);
     assert.match(packageGroupsSource, /dependencyManagement\.batchLog\.status\./);
     assert.match(packageGroupsSource, /dependencyManagement\.categories\.\$\{item\.definition\.category\}/);
@@ -279,6 +290,15 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof enJson.dependencyManagement.packages.qoder.description, 'string');
     assert.equal(typeof enJson.dependencyManagement.packages.gemini.description, 'string');
     assert.equal(typeof enJson.dependencyManagement.packages.impeccable.description, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.selectorLabel, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.selectorHint, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.currentTarget, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.targetOptions.latest, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.targetOptions.dev, 'string');
+    assert.equal(typeof enJson.dependencyManagement.bootstrap.targetOptions.version, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.bootstrap.customVersionLabel, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.bootstrap.customVersionPlaceholder, 'string');
+    assert.equal(typeof zhJson.dependencyManagement.bootstrap.customVersionDescription, 'string');
     assert.equal(typeof zhJson.dependencyManagement.dependencyGate.missing, 'string');
     assert.equal(typeof enJson.dependencyManagement.batchLog.title, 'string');
     assert.equal(typeof zhJson.dependencyManagement.batchLog.status.running, 'string');

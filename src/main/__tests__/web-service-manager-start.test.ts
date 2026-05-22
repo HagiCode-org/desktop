@@ -78,6 +78,14 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 
+  it('injects desktop-managed OmniRoute endpoint metadata into the backend child-process environment', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /const desktopManagedOmniRoute = this\.configManager/);
+    assert.match(source, /apiEndpoint: buildManagedOmniRouteApiEndpoint\(port\)/);
+    assert.match(source, /omniRoute: desktopManagedOmniRoute,/);
+  });
+
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 

@@ -21,10 +21,10 @@ assert.equal(detectOmniRouteRuntimePlatform('win32', 'x64'), 'win-x64');
 assert.throws(() => detectOmniRouteRuntimePlatform('freebsd', 'x64'), /Unsupported vendored OmniRoute platform/);
 
 for (const platform of targetPlatforms) {
-  assert.equal(resolveRequestedOmniRouteRuntimeVersion(platform, manifest), '2026.0516.0063');
+  assert.equal(resolveRequestedOmniRouteRuntimeVersion(platform, manifest), '2026.0522.0073');
   assert.deepEqual(
     resolveConfiguredOmniRouteReleaseUrls(platform, manifest),
-    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063'],
+    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073'],
   );
   assert.ok(resolveOmniRouteRuntimeTarget(platform, manifest));
 }

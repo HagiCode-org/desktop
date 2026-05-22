@@ -278,6 +278,16 @@ dependencyManagement:
     developer-tool: 개발자 도구
   bootstrap:
     title: 필수
+    selectorLabel: Install target
+    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
+    currentTarget: 'Current target: {{target}}'
+    customVersionLabel: Custom version
+    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    targetOptions:
+      latest: Latest stable
+      dev: Development build
+      version: Exact version
   dependencyGate:
     title: 하기스크립트를 먼저 설치하세요
     missing: 다른 종속성 작업은 hagiscript가 설치될 때까지 비활성화됩니다.

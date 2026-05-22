@@ -636,7 +636,6 @@ const WebServiceStatusCard: React.FC = () => {
                     isDisabled={isDisabled}
                     status={webServiceInfo.status}
                     canLaunchService={canLaunchService}
-                    startLabel={isStopped && (!dependencyReadiness?.environmentAvailable || !dependencyReadiness?.requiredReady || dependencyReadinessError) ? t('webServiceStatus.dependencyReadinessButton') : undefined}
                     isWaitingForPort={isWaitingForPort}
                     waitingPort={webServiceInfo.port}
                     waitingPhaseMessage={webServiceInfo.phaseMessage}

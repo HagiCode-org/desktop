@@ -40,6 +40,7 @@ describe('Code Server renderer wiring', () => {
     assert.match(source, /runLifecycle\('repair'\)/);
     assert.match(source, /codeServer\.actions\.repair/);
     assert.match(source, /dependencyManagement\.vendoredRuntime\.reinstallHint/);
+    assert.match(source, /status\?\.runtime\.version \?\? t\('dependencyManagement\.unavailable'\)/);
     assert.match(source, /PATH_TARGETS\.map/);
     assert.match(source, /getBridge\(\)\.openPath\(target\)/);
     assert.match(source, /LOG_TARGETS\.map/);

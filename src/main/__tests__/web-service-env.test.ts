@@ -85,6 +85,27 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.VsCodeServer__SourceLocked, 'true');
   });
 
+  it('injects desktop-managed OmniRoute bootstrap settings for the backend child process', () => {
+    const result = buildManagedServiceEnv({
+      host: '127.0.0.1',
+      port: 36556,
+      dataDir: '/tmp/hagicode-data',
+      currentDesktopLanguage: 'zh-CN',
+      omniRoute: {
+        apiEndpoint: 'http://localhost:36988',
+      },
+      yamlConfig: null,
+      existingEnv: {
+        OmniRoute__ApiEndpoint: 'http://legacy-host:3000',
+      },
+    });
+
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.injectedEnv.OmniRoute__ApiEndpoint, 'http://localhost:36988');
+    assert.equal(result.injectedEnv.OmniRoute__Source, 'desktop-managed');
+    assert.equal(result.injectedEnv.OmniRoute__SourceLocked, 'true');
+  });
+
   it('injects bundled Node PATH entries only for vendored code-server launches', () => {
     const result = injectCodeServerRuntimeEnv(
       {
@@ -536,6 +557,9 @@ describe('web-service-env', () => {
         port: 37667,
         password: 'desktop-secret',
       },
+      omniRoute: {
+        apiEndpoint: 'http://localhost:36988',
+      },
       systemVaultEnvEntries: {
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Name`]: 'Desktop Logs',
@@ -564,6 +588,9 @@ describe('web-service-env', () => {
         process.env.VsCodeServer__AuthMode,
         process.env.VsCodeServer__Source,
         process.env.VsCodeServer__SourceLocked,
+        process.env.OmniRoute__ApiEndpoint,
+        process.env.OmniRoute__Source,
+        process.env.OmniRoute__SourceLocked,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath
       ].join('|'))`,
@@ -572,7 +599,7 @@ describe('web-service-env', () => {
     assert.equal(child.status, 0);
     assert.equal(
       child.stdout,
-      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|127.0.0.1|37667|password|desktop-managed|true|desktoplogs|/tmp/hagicode/logs',
+      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|127.0.0.1|37667|password|desktop-managed|true|http://localhost:36988|desktop-managed|true|desktoplogs|/tmp/hagicode/logs',
     );
   });
 

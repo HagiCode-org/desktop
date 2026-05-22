@@ -278,6 +278,16 @@ dependencyManagement:
     developer-tool: Entwicklertool
   bootstrap:
     title: Erforderlich
+    selectorLabel: Install target
+    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
+    currentTarget: 'Current target: {{target}}'
+    customVersionLabel: Custom version
+    customVersionPlaceholder: Enter a version such as 0.2.3
+    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    targetOptions:
+      latest: Latest stable
+      dev: Development build
+      version: Exact version
   dependencyGate:
     title: Installieren Sie zuerst Hagiscript
     missing: Andere Abhängigkeitsaktionen sind deaktiviert, bis Hagiscript installiert ist.

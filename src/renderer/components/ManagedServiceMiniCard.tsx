@@ -35,6 +35,7 @@ interface ServiceMiniCardDisplayProps {
   title: string;
   icon: LucideIcon;
   status: NormalizedStatus;
+  version?: string | null;
   port?: number | null;
   url?: string | null;
   isBusy: boolean;
@@ -59,6 +60,7 @@ function ServiceMiniCardDisplay({
   title,
   icon: Icon,
   status,
+  version,
   port,
   url,
   isBusy,
@@ -107,14 +109,19 @@ function ServiceMiniCardDisplay({
       </div>
 
       {/* Info row */}
-      <div className="min-h-[1.5rem] text-sm text-muted-foreground">
-        {lifecycleBlocked ? (
-          <span className="text-amber-600 dark:text-amber-500">{t('system.services.installRequired')}</span>
-        ) : isRunning && url ? (
-          <span className="font-mono text-xs text-muted-foreground break-all">{url}</span>
-        ) : port ? (
-          <span>{t('system.services.port', { port })}</span>
-        ) : null}
+      <div className="min-h-[2.75rem] space-y-1 text-sm text-muted-foreground">
+        <div className="text-xs">
+          {t('common.version')}: <span className="font-mono">{version ?? t('dependencyManagement.unavailable')}</span>
+        </div>
+        <div>
+          {lifecycleBlocked ? (
+            <span className="text-amber-600 dark:text-amber-500">{t('system.services.installRequired')}</span>
+          ) : isRunning && url ? (
+            <span className="font-mono text-xs text-muted-foreground break-all">{url}</span>
+          ) : port ? (
+            <span>{t('system.services.port', { port })}</span>
+          ) : null}
+        </div>
       </div>
 
       {/* Actions */}
@@ -319,6 +326,7 @@ export function CodeServerMiniCard() {
       title={t('sidebar.codeServer')}
       icon={Code2}
       status={isInitialLoading ? 'loading' : normalizedStatus}
+      version={snapshot?.runtime.version ?? null}
       port={snapshot?.config?.port ?? null}
       url={snapshot?.status === 'running' ? snapshot.config?.baseUrl : null}
       isBusy={isBusy}
@@ -429,6 +437,7 @@ export function OmniRouteMiniCard() {
       title={t('sidebar.omniroute')}
       icon={Route}
       status={isInitialLoading ? 'loading' : normalizedStatus}
+      version={snapshot?.runtime.version ?? null}
       port={snapshot?.config?.port ?? null}
       url={snapshot?.status === 'running' ? snapshot.config?.baseUrl : null}
       isBusy={isBusy}

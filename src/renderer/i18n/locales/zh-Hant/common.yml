@@ -278,6 +278,16 @@ dependencyManagement:
     developer-tool: 開發工具
   bootstrap:
     title: 必要
+    selectorLabel: 安裝目標
+    selectorHint: latest 會跟隨最新穩定版，dev 會跟隨開發標籤。
+    currentTarget: '目前目標：{{target}}'
+    customVersionLabel: 自訂版本
+    customVersionPlaceholder: 輸入版本號，例如 0.2.3
+    customVersionDescription: 輸入 hagiscript 的精確版本號，前導 v 可省略。
+    targetOptions:
+      latest: 最新穩定版
+      dev: 開發版
+      version: 精確版本
   dependencyGate:
     title: 請先安裝 hagiscript
     missing: 安裝 hagiscript 之前，其他依賴項操作會保持停用。

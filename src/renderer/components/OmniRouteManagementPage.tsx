@@ -330,6 +330,10 @@ export default function OmniRouteManagementPage() {
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t('omniroute.status.runtimeInstallStatus')}</p>
                   <p className="mt-2 text-sm">{t(`dependencyManagement.vendoredRuntime.installStatus.${status?.runtime.installStatus ?? 'not-installed'}`)}</p>
                 </div>
+                <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{t('common.version')}</p>
+                  <p className="mt-2 break-all font-mono text-sm">{status?.runtime.version ?? t('dependencyManagement.unavailable')}</p>
+                </div>
               </div>
               <div className="flex flex-wrap items-start gap-2 md:justify-end">
                 <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlockedByDependencies}>

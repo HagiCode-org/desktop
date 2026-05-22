@@ -23,7 +23,12 @@ import type {
 import { codeServerChannels } from '../types/code-server-management.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
-import type { ManagedNpmPackageId, DependencyManagementBatchSyncRequest, DependencyManagementBridge } from '../types/dependency-management.js';
+import type {
+  ManagedNpmPackageId,
+  DependencyManagementBatchSyncRequest,
+  DependencyManagementBridge,
+  DependencyManagementInstallRequest,
+} from '../types/dependency-management.js';
 import type { VendoredRuntimeId } from '../types/dependency-management.js';
 import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
 import { dependencyManagementChannels } from '../types/dependency-management.js';
@@ -389,7 +394,7 @@ const dependencyManagementBridge: DependencyManagementBridge = {
   refresh: () => ipcRenderer.invoke(dependencyManagementChannels.refresh),
   getMirrorSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getMirrorSettings),
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(dependencyManagementChannels.setMirrorSettings, settings),
-  install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),
+  install: (request: ManagedNpmPackageId | DependencyManagementInstallRequest) => ipcRenderer.invoke(dependencyManagementChannels.install, request),
   uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
   syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.startVendoredRuntime, runtimeId),

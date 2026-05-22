@@ -143,6 +143,12 @@ export interface ManagedNpmPackageStatusSnapshot {
   message?: string;
 }
 
+export interface DependencyManagementInstallRequest {
+  packageId: ManagedNpmPackageId;
+  // Selector currently applies only to hagiscript and supports exact versions plus dist-tags like latest/dev.
+  selector?: string;
+}
+
 export interface NpmMirrorSettings {
   enabled: boolean;
   registryUrl: string | null;
@@ -239,7 +245,9 @@ export interface DependencyManagementBridge {
   refresh: () => Promise<DependencyManagementSnapshot>;
   getMirrorSettings: () => Promise<NpmMirrorSettings>;
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => Promise<DependencyManagementSnapshot>;
-  install: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
+  install: (
+    request: ManagedNpmPackageId | DependencyManagementInstallRequest,
+  ) => Promise<DependencyManagementOperationResult>;
   uninstall: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   syncPackages: (request: DependencyManagementBatchSyncRequest) => Promise<DependencyManagementBatchSyncResult>;
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;

@@ -21,7 +21,7 @@ describe('home launch dependency readiness guard', () => {
     assert.match(source, /dependencyReadinessError \|\| t\('webServiceStatus\.dependencyReadinessAlert\.message'\)/);
   });
 
-  it('changes the primary button label through HagicodeActionButton without removing the existing start behavior', async () => {
+  it('keeps the primary button on the default start label even when dependency readiness warns', async () => {
     const [cardSource, buttonSource] = await Promise.all([
       fs.readFile(cardPath, 'utf8'),
       fs.readFile(actionButtonPath, 'utf8'),
@@ -29,7 +29,7 @@ describe('home launch dependency readiness guard', () => {
 
     assert.match(buttonSource, /startLabel\?: string;/);
     assert.match(buttonSource, /startLabel \?\? t\('webServiceStatus\.startButton'\)/);
-    assert.match(cardSource, /startLabel=\{isStopped && \(!dependencyReadiness\?\.environmentAvailable \|\| !dependencyReadiness\?\.requiredReady \|\| dependencyReadinessError\) \? t\('webServiceStatus\.dependencyReadinessButton'\) : undefined\}/);
+    assert.doesNotMatch(cardSource, /startLabel=\{/);
     assert.doesNotMatch(buttonSource, /"Hagicode" text/);
     assert.doesNotMatch(buttonSource, /Hagicode<\/motion\.span>/);
   });
