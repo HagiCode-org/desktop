@@ -274,7 +274,7 @@ export class ManifestReader {
     const manifestPath = path.join(installPath, 'manifest.json');
 
     try {
-      log.info('[ManifestReader] Reading manifest:', manifestPath);
+      log.debug('[ManifestReader] Reading manifest:', manifestPath);
 
       // Check if file exists
       await fs.access(manifestPath);
@@ -304,7 +304,7 @@ export class ManifestReader {
         log.warn('[ManifestReader] Unsupported manifest version:', manifest.manifestVersion);
       }
 
-      log.info('[ManifestReader] Manifest loaded successfully:', manifest.package.name, manifest.package.version);
+      log.debug('[ManifestReader] Manifest loaded successfully:', manifest.package.name, manifest.package.version);
       return manifest;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

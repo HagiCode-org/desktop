@@ -395,10 +395,8 @@ async function openManagedUrlWindow({
     console.log(`[${logScope}] Opening managed window for ${actionName}:`, loadUrl);
 
     const managedWindow = createWindow();
-    console.log(`[${logScope}] Managed window created for ${actionName}`);
 
     managedWindow.once('ready-to-show', () => {
-      console.log(`[${logScope}] Managed window ready to show for ${actionName}, maximizing...`);
       managedWindow.maximize();
       managedWindow.show();
       managedWindow.focus();
@@ -409,7 +407,6 @@ async function openManagedUrlWindow({
     });
 
     await managedWindow.loadURL(loadUrl);
-    console.log(`[${logScope}] Managed URL loaded successfully for ${actionName}`);
 
     return { success: true };
   } catch (error) {
