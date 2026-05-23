@@ -41,10 +41,10 @@ export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from '
 export { registerDependencyManagementHandlers, initDependencyManagementHandlers } from './dependencyManagementHandlers.js';
 
 // Code Server handlers
-export { registerCodeServerHandlers, initCodeServerHandlers } from './codeServerHandlers.js';
+export { registerCodeServerHandlers, initCodeServerHandlers, emitCodeServerStatus } from './codeServerHandlers.js';
 
 // OmniRoute handlers
-export { registerOmniRouteHandlers, initOmniRouteHandlers } from './omniRouteHandlers.js';
+export { registerOmniRouteHandlers, initOmniRouteHandlers, emitOmniRouteStatus } from './omniRouteHandlers.js';
 
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';

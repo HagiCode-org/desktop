@@ -22,12 +22,38 @@ const state: CodeServerHandlerState = {
   mainWindow: null,
 };
 
+const STATUS_RECONCILE_DELAYS_MS = [1000, 3000] as const;
+
+let lastCodeServerStatusSignature: string | null = null;
+
+function buildCodeServerStatusSignature(status: CodeServerStatusSnapshot): string {
+  const { generatedAt: _generatedAt, ...stableStatus } = status;
+  return JSON.stringify(stableStatus);
+}
+
+function scheduleCodeServerStatusReconcile(): void {
+  for (const delayMs of STATUS_RECONCILE_DELAYS_MS) {
+    setTimeout(() => {
+      void emitCurrentStatus().catch((error) => {
+        console.error('Failed to reconcile Code Server status:', error);
+      });
+    }, delayMs);
+  }
+}
+
 export function initCodeServerHandlers(manager: CodeServerManager | null, mainWindow: BrowserWindow | null): void {
   state.manager = manager;
   state.mainWindow = mainWindow;
+  lastCodeServerStatusSignature = null;
 }
 
 export function emitCodeServerStatus(status: CodeServerStatusSnapshot): void {
+  const nextSignature = buildCodeServerStatusSignature(status);
+  if (nextSignature === lastCodeServerStatusSignature) {
+    return;
+  }
+
+  lastCodeServerStatusSignature = nextSignature;
   state.mainWindow?.webContents.send(codeServerChannels.statusChanged, status);
 }
 
@@ -75,15 +101,28 @@ export function registerCodeServerHandlers(deps: {
 }): void {
   state.manager = deps.manager;
   state.mainWindow = deps.mainWindow;
+  lastCodeServerStatusSignature = null;
 
   ipcMain.handle(codeServerChannels.status, async () => {
     const manager = await requireManager();
     return manager.getStatus();
   });
 
-  ipcMain.handle(codeServerChannels.start, async () => toLifecycleResult('start'));
-  ipcMain.handle(codeServerChannels.stop, async () => toLifecycleResult('stop'));
-  ipcMain.handle(codeServerChannels.restart, async () => toLifecycleResult('restart'));
+  ipcMain.handle(codeServerChannels.start, async () => {
+    const result = await toLifecycleResult('start');
+    scheduleCodeServerStatusReconcile();
+    return result;
+  });
+  ipcMain.handle(codeServerChannels.stop, async () => {
+    const result = await toLifecycleResult('stop');
+    scheduleCodeServerStatusReconcile();
+    return result;
+  });
+  ipcMain.handle(codeServerChannels.restart, async () => {
+    const result = await toLifecycleResult('restart');
+    scheduleCodeServerStatusReconcile();
+    return result;
+  });
   ipcMain.handle(codeServerChannels.repair, async () => toLifecycleResult('repair'));
 
   ipcMain.handle(codeServerChannels.getConfig, async () => {
@@ -95,6 +134,7 @@ export function registerCodeServerHandlers(deps: {
     const manager = await requireManager();
     const result = await manager.setConfig(payload);
     emitCodeServerStatus(result.status);
+    scheduleCodeServerStatusReconcile();
     return result;
   });
 

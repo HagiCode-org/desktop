@@ -21,12 +21,38 @@ const state: OmniRouteHandlerState = {
   mainWindow: null,
 };
 
+const STATUS_RECONCILE_DELAYS_MS = [1000, 3000] as const;
+
+let lastOmniRouteStatusSignature: string | null = null;
+
+function buildOmniRouteStatusSignature(status: OmniRouteStatusSnapshot): string {
+  const { generatedAt: _generatedAt, ...stableStatus } = status;
+  return JSON.stringify(stableStatus);
+}
+
+function scheduleOmniRouteStatusReconcile(): void {
+  for (const delayMs of STATUS_RECONCILE_DELAYS_MS) {
+    setTimeout(() => {
+      void emitCurrentStatus().catch((error) => {
+        console.error('Failed to reconcile OmniRoute status:', error);
+      });
+    }, delayMs);
+  }
+}
+
 export function initOmniRouteHandlers(manager: OmniRouteManager | null, mainWindow: BrowserWindow | null): void {
   state.manager = manager;
   state.mainWindow = mainWindow;
+  lastOmniRouteStatusSignature = null;
 }
 
 export function emitOmniRouteStatus(status: OmniRouteStatusSnapshot): void {
+  const nextSignature = buildOmniRouteStatusSignature(status);
+  if (nextSignature === lastOmniRouteStatusSignature) {
+    return;
+  }
+
+  lastOmniRouteStatusSignature = nextSignature;
   state.mainWindow?.webContents.send(omniRouteChannels.statusChanged, status);
 }
 
@@ -50,6 +76,7 @@ export function registerOmniRouteHandlers(deps: {
 }): void {
   state.manager = deps.manager;
   state.mainWindow = deps.mainWindow;
+  lastOmniRouteStatusSignature = null;
 
   ipcMain.handle(omniRouteChannels.status, async () => {
     const manager = await requireManager();
@@ -60,6 +87,7 @@ export function registerOmniRouteHandlers(deps: {
     const manager = await requireManager();
     const result = await manager.start();
     emitOmniRouteStatus(result.status);
+    scheduleOmniRouteStatusReconcile();
     return result;
   });
 
@@ -67,6 +95,7 @@ export function registerOmniRouteHandlers(deps: {
     const manager = await requireManager();
     const result = await manager.stop();
     emitOmniRouteStatus(result.status);
+    scheduleOmniRouteStatusReconcile();
     return result;
   });
 
@@ -74,6 +103,7 @@ export function registerOmniRouteHandlers(deps: {
     const manager = await requireManager();
     const result = await manager.restart();
     emitOmniRouteStatus(result.status);
+    scheduleOmniRouteStatusReconcile();
     return result;
   });
 
@@ -98,6 +128,7 @@ export function registerOmniRouteHandlers(deps: {
     const manager = await requireManager();
     const result = await manager.setConfig(payload);
     emitOmniRouteStatus(result.status);
+    scheduleOmniRouteStatusReconcile();
     return result;
   });
 
