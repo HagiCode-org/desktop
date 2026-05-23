@@ -120,7 +120,12 @@ export class HagiscriptRuntimeContextResolver {
       path.basename(path.resolve(input.servicePayloadPath)),
     );
 
-    await fs.mkdir(serviceDataHome, { recursive: true });
+    await Promise.all([
+      fs.mkdir(serviceDataHome, { recursive: true }),
+      fs.mkdir(pm2Home, { recursive: true }),
+      fs.mkdir(pm2LogsDirectory, { recursive: true }),
+      fs.mkdir(runtimeFilesDir, { recursive: true }),
+    ]);
     await fs.writeFile(
       versionsStatePath,
       `${JSON.stringify(
@@ -204,7 +209,12 @@ export class HagiscriptRuntimeContextResolver {
       `desktop-${input.service}-working-directory`,
     );
 
-    await fs.mkdir(serviceDataHome, { recursive: true });
+    await Promise.all([
+      fs.mkdir(serviceDataHome, { recursive: true }),
+      fs.mkdir(pm2Home, { recursive: true }),
+      fs.mkdir(pm2LogsDirectory, { recursive: true }),
+      fs.mkdir(runtimeFilesDir, { recursive: true }),
+    ]);
 
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: shared.runtimeRoot,
