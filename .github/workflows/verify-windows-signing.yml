@@ -229,14 +229,23 @@ jobs:
             }
           }
 
-          $primaryExecutableName = "{0}.exe" -f $env:WINDOWS_ZIP_BASE_NAME
-          $zipPayloadSignableFiles = @(
+          $zipPayloadRootExecutables = @(
             $zipPayloadFiles | Where-Object {
               $_.Extension -ieq '.exe' -and
-              $_.Name -ieq $primaryExecutableName -and
               $_.DirectoryName -eq $payloadDir
             } | Sort-Object FullName -Unique
           )
+
+          if ($zipPayloadRootExecutables.Count -ne 1) {
+            $detectedExecutables = if ($zipPayloadRootExecutables.Count -gt 0) {
+              ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }) -join [Environment]::NewLine
+            } else {
+              '(none)'
+            }
+            throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
+          }
+
+          $zipPayloadSignableFiles = $zipPayloadRootExecutables
 
           $catalogEntries = @()
           foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
