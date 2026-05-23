@@ -7,7 +7,14 @@ import type {
 } from './hagiscript-runtime-context.js';
 
 const DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS = 15_000;
-const DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS = 30_000;
+const DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS = 60_000;
+
+function resolvePm2LifecycleTimeoutMs(): number {
+  const configured = Number.parseInt(process.env.HAGICODE_PM2_LIFECYCLE_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS;
+}
 
 export type HagiscriptManagedServerStatus = 'online' | 'stopped' | 'errored' | 'missing' | 'unknown';
 export type HagiscriptServerLifecycleAction = 'start' | 'stop' | 'restart' | 'status';
@@ -225,7 +232,7 @@ export class HagiscriptPm2Manager {
       env: context.commandEnv,
       timeoutMs: args[0] === 'runtime'
         ? DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS
-        : DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS,
+        : resolvePm2LifecycleTimeoutMs(),
       shell: launch.shell,
       windowsHide: true,
       metadata: {
