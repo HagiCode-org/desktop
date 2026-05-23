@@ -61,7 +61,9 @@ import {
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
   registerCodeServerHandlers,
+  initCodeServerHandlers,
   registerOmniRouteHandlers,
+  initOmniRouteHandlers,
   emitCodeServerStatus,
   emitOmniRouteStatus,
   registerRssHandlers,
@@ -572,6 +574,11 @@ function createWindow(): void {
     },
   });
   wireDesktopWindowClipboard(mainWindow);
+
+  // These handler modules are registered before the BrowserWindow exists.
+  // Rebind them here so lifecycle/status events can reach the renderer.
+  initCodeServerHandlers(codeServerManager, mainWindow);
+  initOmniRouteHandlers(omniRouteManager, mainWindow);
 
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
