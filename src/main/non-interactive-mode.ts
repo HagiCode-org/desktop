@@ -80,7 +80,7 @@ export const nonInteractiveUsageText = [
   '',
   'Supported commands:',
   '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
-  '  runtime lifecycle  Validate Desktop-managed PM2 resolution and service lifecycle transitions.',
+  '  runtime lifecycle  Validate hagiscript-managed runtime service lifecycle transitions.',
   '',
   'Supported deps install flags:',
   '  --pm2           Install the Desktop-managed PM2 package.',
@@ -400,17 +400,19 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout('HagiCode Desktop non-interactive runtime lifecycle');
   output.stdout('command: runtime lifecycle');
   output.stdout(`desktop logs directory: ${report.desktopLogsDirectory}`);
-  output.stdout(`pm2 managed npm prefix: ${report.pm2.npmGlobalPrefix}`);
-  output.stdout(`pm2 managed npm bin: ${report.pm2.npmGlobalBinRoot}`);
-  output.stdout(`pm2 managed npm modules: ${report.pm2.npmGlobalModulesRoot}`);
-  output.stdout(`pm2 package root: ${report.pm2.packageRoot ?? '<missing>'}`);
-  output.stdout(`pm2 executable: ${report.pm2.executablePath ?? '<missing>'}`);
-  output.stdout(`pm2 version: ${report.pm2.packageVersion ?? '<missing>'}`);
-  output.stdout(`pm2 launch command: ${report.pm2.launchCommand}`);
-  output.stdout(`pm2 launch cli: ${report.pm2.launchCli ?? '<missing>'}`);
-  output.stdout(`pm2 launch shell: ${report.pm2.launchShell}`);
-  output.stdout(`pm2 launch command managed: ${report.pm2.launchCommandUnderManagedNode}`);
-  output.stdout(`pm2 launch cli managed: ${report.pm2.launchCliUnderManagedModules}`);
+  output.stdout(`managed npm prefix: ${report.tooling.npmGlobalPrefix}`);
+  output.stdout(`managed npm bin: ${report.tooling.npmGlobalBinRoot}`);
+  output.stdout(`managed npm modules: ${report.tooling.npmGlobalModulesRoot}`);
+  output.stdout(`hagiscript package root: ${report.tooling.hagiscriptPackageRoot ?? '<missing>'}`);
+  output.stdout(`hagiscript executable: ${report.tooling.hagiscriptExecutablePath ?? '<missing>'}`);
+  output.stdout(`hagiscript version: ${report.tooling.hagiscriptPackageVersion ?? '<missing>'}`);
+  output.stdout(`hagiscript package managed: ${report.tooling.hagiscriptPackageUnderManagedModules}`);
+  output.stdout(`hagiscript executable managed: ${report.tooling.hagiscriptExecutableUnderManagedBin}`);
+  output.stdout(`pm2 package root: ${report.tooling.pm2PackageRoot ?? '<missing>'}`);
+  output.stdout(`pm2 executable: ${report.tooling.pm2ExecutablePath ?? '<missing>'}`);
+  output.stdout(`pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);
+  output.stdout(`pm2 package managed: ${report.tooling.pm2PackageUnderManagedModules}`);
+  output.stdout(`pm2 executable managed: ${report.tooling.pm2ExecutableUnderManagedBin}`);
 
   output.stdout(`code-server pm2 home: ${report.services.codeServer.pm2Home}`);
   output.stdout(`code-server runtime data: ${report.services.codeServer.runtimeDataHome}`);

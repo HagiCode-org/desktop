@@ -96,14 +96,14 @@ describe('web-service-env', () => {
       },
       yamlConfig: null,
       existingEnv: {
-        OmniRoute__ApiEndpoint: 'http://legacy-host:3000',
+        OmniRoute__DefaultBaseUrl: 'http://legacy-host:3000',
       },
     });
 
     assert.equal(result.errors.length, 0);
-    assert.equal(result.injectedEnv.OmniRoute__ApiEndpoint, 'http://localhost:36988');
-    assert.equal(result.injectedEnv.OmniRoute__Source, 'desktop-managed');
-    assert.equal(result.injectedEnv.OmniRoute__SourceLocked, 'true');
+    assert.equal(result.injectedEnv.OmniRoute__DefaultBaseUrl, 'http://localhost:36988');
+    assert.equal(result.injectedEnv.OmniRoute__DefaultBaseUrlSource, 'desktop-managed');
+    assert.equal(result.injectedEnv.OmniRoute__DefaultBaseUrlLocked, 'true');
   });
 
   it('injects bundled Node PATH entries only for vendored code-server launches', () => {
@@ -588,9 +588,9 @@ describe('web-service-env', () => {
         process.env.VsCodeServer__AuthMode,
         process.env.VsCodeServer__Source,
         process.env.VsCodeServer__SourceLocked,
-        process.env.OmniRoute__ApiEndpoint,
-        process.env.OmniRoute__Source,
-        process.env.OmniRoute__SourceLocked,
+        process.env.OmniRoute__DefaultBaseUrl,
+        process.env.OmniRoute__DefaultBaseUrlSource,
+        process.env.OmniRoute__DefaultBaseUrlLocked,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath
       ].join('|'))`,

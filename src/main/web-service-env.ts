@@ -162,20 +162,20 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     sensitive: false,
   },
   {
-    key: 'OmniRoute__ApiEndpoint',
-    sourceConfig: 'desktop-managed OmniRoute endpoint',
+    key: 'OmniRoute__DefaultBaseUrl',
+    sourceConfig: 'desktop-managed OmniRoute base URL',
     required: false,
     sensitive: false,
   },
   {
-    key: 'OmniRoute__Source',
-    sourceConfig: 'desktop-managed OmniRoute source',
+    key: 'OmniRoute__DefaultBaseUrlSource',
+    sourceConfig: 'desktop-managed OmniRoute base URL source',
     required: false,
     sensitive: false,
   },
   {
-    key: 'OmniRoute__SourceLocked',
-    sourceConfig: 'desktop-managed OmniRoute source lock',
+    key: 'OmniRoute__DefaultBaseUrlLocked',
+    sourceConfig: 'desktop-managed OmniRoute base URL lock',
     required: false,
     sensitive: false,
   },
@@ -408,13 +408,13 @@ function resolveManagedOmniRouteEnv(
   const apiEndpoint = sanitizeString(omniRoute.apiEndpoint);
 
   return {
-    value: key === 'OmniRoute__ApiEndpoint'
+    value: key === 'OmniRoute__DefaultBaseUrl'
       ? apiEndpoint
-      : key === 'OmniRoute__Source'
+      : key === 'OmniRoute__DefaultBaseUrlSource'
         ? apiEndpoint
           ? 'desktop-managed'
           : undefined
-        : key === 'OmniRoute__SourceLocked'
+        : key === 'OmniRoute__DefaultBaseUrlLocked'
           ? apiEndpoint
             ? 'true'
             : undefined
