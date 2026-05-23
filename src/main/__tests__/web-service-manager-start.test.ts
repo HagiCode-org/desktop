@@ -73,7 +73,7 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
 
     assert.match(serverManagerSource, /\['runtime', 'state', '--json'/);
-    assert.match(serverManagerSource, /\['pm2', 'server', action, '--json'/);
+    assert.match(serverManagerSource, /\['pm2', context\.serviceName, action, '--json'/);
     assert.match(serverManagerSource, /hagiscript PM2 command returned invalid JSON output/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
@@ -84,6 +84,13 @@ describe('web-service startup flow', () => {
     assert.match(source, /const desktopManagedOmniRoute = this\.configManager/);
     assert.match(source, /apiEndpoint: buildManagedOmniRouteApiEndpoint\(port\)/);
     assert.match(source, /omniRoute: desktopManagedOmniRoute,/);
+  });
+
+  it('keeps Desktop-managed environment injection authoritative over legacy config env values', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /return \{\s*\.\.\.\(this\.config\.env \?\? \{\}\),\s*\.\.\.\(baseEnv \?\? \{\}\),/s);
+    assert.doesNotMatch(source, /return \{\s*\.\.\.\(baseEnv \?\? \{\}\),\s*\.\.\.\(this\.config\.env \?\? \{\}\),/s);
   });
 
   it('accepts a resolved runtime descriptor instead of only reconstructing installed paths from version ids', async () => {
