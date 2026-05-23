@@ -8,10 +8,10 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 
 1. Decide whether signing is required
 2. Validate signing configuration from GitHub secrets
-3. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
-4. Build Windows installers into `pkg/`
-5. Collect signable release artifacts from `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`) plus the `win-unpacked` app directory
-6. Stage the Windows unpacked ZIP payload workspace under `pkg/windows-zip-payload/`
+3. Build Windows installers into `pkg/`
+4. Collect signable release artifacts from `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`) plus the `win-unpacked` app directory
+5. Stage the Windows unpacked ZIP payload workspace under `pkg/windows-zip-payload/`
+6. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
 7. Sign artifacts with `azure/artifact-signing-action@v1`
 8. Verify signatures before any upload or release step runs
 9. Derive signed `.msix` release assets from the signed AppX outputs for Windows release publication
@@ -127,8 +127,11 @@ The Artifact Signing action authenticates through `DefaultAzureCredential`.
 In this workflow, the primary path is:
 
 1. GitHub Actions obtains an OIDC token
-2. `azure/login@v2` exchanges it for Azure access before the Windows build starts
+2. `azure/login@v2` exchanges it for Azure access immediately before Artifact Signing runs
 3. `azure/artifact-signing-action@v1` signs files with the configured signing account and certificate profile
+
+The Azure login step is intentionally placed right before the signing action.
+Windows packaging can take long enough for short-lived OIDC-backed Azure CLI assertions to expire if login happens earlier in the job.
 
 If you need to troubleshoot authentication behavior, the action also supports direct environment credentials and per-credential exclude switches. For this repository, OIDC remains the recommended path.
 
@@ -156,6 +159,14 @@ If `azure/login@v2` fails:
 1. Verify the Entra application exists and the client ID is correct
 2. Verify the federated credential subject matches the GitHub ref that triggered the workflow
 3. Verify the subscription and tenant IDs belong to the same Azure context
+
+### Signing fails with `AADSTS700024`
+
+If Artifact Signing fails with `AADSTS700024: Client assertion is not within its valid time range`:
+
+1. Confirm the workflow runs `azure/login@v2` immediately before `azure/artifact-signing-action@v1`
+2. Avoid moving Azure login ahead of long-running packaging or dependency-install steps
+3. Re-run the workflow after refreshing the Azure login placement or any reused runner login state
 
 ### Signing succeeds but verification fails
 
