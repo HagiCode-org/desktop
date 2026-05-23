@@ -193,9 +193,18 @@ export async function readOmniRouteRuntimeMetadata(runtimeRoot: string): Promise
 export function resolveOmniRouteWrapperPath(
   runtimeRoot: string,
   config: OmniRouteRuntimeConfig = readOmniRouteRuntimeConfig(),
+  platform: NodeJS.Platform = process.platform,
   existsSync: (targetPath: string) => boolean = fsSync.existsSync,
 ): string | null {
-  for (const relativePath of config.expectedLayout.wrapperCandidates) {
+  const orderedCandidates = platform === 'win32'
+    ? [
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.(cmd|bat)$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|bat|ps1)$/i.test(candidate)),
+      ]
+    : config.expectedLayout.wrapperCandidates;
+
+  for (const relativePath of orderedCandidates) {
     const candidate = path.join(runtimeRoot, relativePath);
     if (existsSync(candidate)) {
       return candidate;
@@ -296,7 +305,12 @@ export async function validateOmniRouteRuntime(
   }
 
   const entryScriptPath = path.join(options.runtimeRoot, config.expectedLayout.entryScript);
-  const wrapperPath = resolveOmniRouteWrapperPath(options.runtimeRoot, config, existsSync);
+  const wrapperPath = resolveOmniRouteWrapperPath(
+    options.runtimeRoot,
+    config,
+    options.platform ?? process.platform,
+    existsSync,
+  );
   if (!wrapperPath) {
     diagnostics.push('No runnable OmniRoute wrapper was found in the staged runtime root');
   }

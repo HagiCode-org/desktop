@@ -158,8 +158,16 @@ function readOmniRouteRuntimeMetadataRecord(
   };
 }
 
-export function resolveOmniRouteWrapperPath(runtimeRoot, config = readOmniRouteRuntimeConfig()) {
-  for (const relativePath of config.expectedLayout.wrapperCandidates) {
+export function resolveOmniRouteWrapperPath(runtimeRoot, config = readOmniRouteRuntimeConfig(), platform = process.platform) {
+  const orderedCandidates = platform === 'win32'
+    ? [
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.(cmd|bat)$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
+        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|bat|ps1)$/i.test(candidate)),
+      ]
+    : config.expectedLayout.wrapperCandidates;
+
+  for (const relativePath of orderedCandidates) {
     const candidate = path.join(runtimeRoot, relativePath);
     if (fs.existsSync(candidate)) {
       return candidate;
@@ -222,7 +230,7 @@ export function validateOmniRouteRuntimePayload(
     }
   }
 
-  const wrapperPath = resolveOmniRouteWrapperPath(runtimeRoot, config);
+  const wrapperPath = resolveOmniRouteWrapperPath(runtimeRoot, config, process.platform);
   if (!wrapperPath) {
     diagnostics.push('No runnable OmniRoute wrapper was found');
   }

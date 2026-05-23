@@ -35,6 +35,10 @@ describe('vendored OmniRoute runtime contract', () => {
 
     assert.match(source, /readOmniRouteRuntimeConfig/);
     assert.match(source, /resolveOmniRouteWrapperPath/);
+    assert.match(source, /platform === 'win32'/);
+    assert.ok(source.includes('filter(candidate => /\\.(cmd|bat)$/i.test(candidate))'));
+    assert.ok(source.includes('filter(candidate => !/\\.(cmd|bat|ps1)$/i.test(candidate))'));
+    assert.match(source, /options\.platform \?\? process\.platform/);
     assert.match(source, /metadata\.json/);
     assert.match(source, /extra\.bundledNodeRuntime=true/);
     assert.match(source, /getOmniRouteRuntimeConfigPath\(\)/);

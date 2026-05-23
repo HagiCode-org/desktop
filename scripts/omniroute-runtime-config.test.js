@@ -59,6 +59,7 @@ if (previousReleaseOverride === undefined) {
 
 const prepareScript = fs.readFileSync(new URL('./prepare-vendored-omniroute-runtime.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-vendored-omniroute-runtime-if-supported.js', import.meta.url), 'utf8');
+const runtimeContractScript = fs.readFileSync(new URL('./omniroute-runtime-contract.js', import.meta.url), 'utf8');
 
 assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['omniroute'\](?:,\s*\{[\s\S]*?\})?\)/, 'prepare script delegates top-level staging to hagiscript update');
 assert.match(prepareScript, /normalizeResolvedRuntimeMetadata\(metadata\)/, 'prepare script normalizes cached OmniRoute metadata before staging');
@@ -78,5 +79,8 @@ assert.match(prepareScript, /\[\.\.\.npmCommand\.args, 'rebuild', 'better-sqlite
 assert.match(prepareScript, /\.\.\/\.\.\/\.\.\/node\/runtime\//, 'OmniRoute wrapper points at the canonical Desktop bundled Node runtime');
 assert.match(optionalPrepareScript, /resolveRequestedOmniRouteRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');
 assert.match(optionalPrepareScript, /resolveConfiguredOmniRouteReleaseUrls/, 'optional prepare script checks per-platform release URLs');
+assert.match(runtimeContractScript, /platform === 'win32'/, 'runtime contract prefers Windows wrappers when resolving OmniRoute launchers');
+assert.ok(runtimeContractScript.includes('filter(candidate => /\\.(cmd|bat)$/i.test(candidate))'), 'runtime contract prioritizes cmd and bat wrappers before POSIX shims on Windows');
+assert.ok(runtimeContractScript.includes('const wrapperPath = resolveOmniRouteWrapperPath(runtimeRoot, config, process.platform);'), 'runtime payload validation resolves wrappers using the host platform preference');
 
 console.log('omniroute-runtime-config tests passed');
