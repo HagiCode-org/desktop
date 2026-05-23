@@ -17,6 +17,8 @@ env:
   NODE_VERSION: "22"
   PUBLISH_BASE_VERSION: "0.0.1"
   RELEASE_CHANNEL: "dev"
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
   prepare-release:
@@ -104,11 +106,19 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Cache pinned runtime downloads
+      - name: Cache build downloads
         uses: actions/cache@v4
         with:
-          path: build/embedded-runtime/downloads
-          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/manifest.yml') }}
+          path: |
+            .cache/electron
+            .cache/electron-builder
+            build/embedded-runtime/downloads
+            build/embedded-node-runtime/downloads
+            .generated/code-server-runtime/downloads
+            .generated/omniroute-runtime/downloads
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-downloads-
 
       - name: Sync package version
         shell: bash
@@ -341,11 +351,19 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Cache pinned runtime downloads
+      - name: Cache build downloads
         uses: actions/cache@v4
         with:
-          path: build/embedded-runtime/downloads
-          key: ${{ runner.os }}-embedded-runtime-${{ hashFiles('resources/manifest.yml') }}
+          path: |
+            .cache/electron
+            .cache/electron-builder
+            build/embedded-runtime/downloads
+            build/embedded-node-runtime/downloads
+            .generated/code-server-runtime/downloads
+            .generated/omniroute-runtime/downloads
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-downloads-
 
       - name: Sync package version
         shell: bash
@@ -454,6 +472,20 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: package-lock.json
+
+      - name: Cache build downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/electron
+            .cache/electron-builder
+            build/embedded-runtime/downloads
+            build/embedded-node-runtime/downloads
+            .generated/code-server-runtime/downloads
+            .generated/omniroute-runtime/downloads
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-downloads-
 
       - name: Sync package version
         shell: bash
