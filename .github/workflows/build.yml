@@ -351,7 +351,7 @@ jobs:
           $catalogEntries = @()
           foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
             $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
@@ -900,7 +900,7 @@ jobs:
           $catalogEntries = @()
           foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
             $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
