@@ -59,6 +59,11 @@ appx:
     - pt-BR
     - ru-RU
   addAutoLaunchExtension: false
+  capabilities:
+    - runFullTrust
+    - internetClient
+    - internetClientServer
+    - privateNetworkClientServer
 mac:
   target:
     - target: default
