@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - verify/windows-signing
+    tags:
+      - 'verify-win-signing-v*'
   workflow_dispatch:
 
 permissions:
@@ -104,6 +106,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-verify-windows-signing-
             ${{ runner.os }}-build-downloads-
+
+      - name: Sync version from verification tag
+        if: startsWith(github.ref, 'refs/tags/verify-win-signing-v')
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#verify-win-signing-v}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
 
       - name: Install dependencies
         run: npm ci
