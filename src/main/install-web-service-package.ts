@@ -64,9 +64,12 @@ export async function installWebServicePackageWithAutoSwitch(
   versionId: string,
   options: InstallWebServicePackageOptions = {},
 ): Promise<InstallWebServicePackageResult> {
-  const onProgress: ProgressCallback = (progress) => {
+  const emitProgress = (progress: VersionDownloadProgress) => {
     deps.mainWindow.webContents.send('version:install-progress', progress);
     deps.mainWindow.webContents.send('package-install-progress', progress);
+  };
+  const onProgress: ProgressCallback = (progress) => {
+    emitProgress(progress);
   };
 
   const installedVersions = await deps.versionManager.getInstalledVersions();
@@ -96,6 +99,15 @@ export async function installWebServicePackageWithAutoSwitch(
     try {
       const webServiceStatus = await deps.webServiceManager.getStatus();
       if (webServiceStatus.status !== 'running') {
+        emitProgress({
+          current: 95,
+          total: 100,
+          percentage: 95,
+          stage: 'switching',
+          mode: 'http-direct',
+          message: 'switching-active-version',
+        });
+
         const switchResult = await deps.versionManager.switchVersion(versionId);
         if (switchResult.success) {
           autoSwitched = true;

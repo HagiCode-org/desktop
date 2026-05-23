@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 const thunkPath = path.resolve(process.cwd(), 'src/renderer/store/thunks/webServiceThunks.ts');
 const homepagePath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 const versionPagePath = path.resolve(process.cwd(), 'src/renderer/components/VersionManagementPage.tsx');
+const installHelperPath = path.resolve(process.cwd(), 'src/main/install-web-service-package.ts');
 
 describe('web service install thunk auto-switch contract', () => {
   it('passes install options through the thunk and preserves them across the stop-service confirmation flow', async () => {
@@ -26,5 +27,13 @@ describe('web service install thunk auto-switch contract', () => {
     assert.match(homepageSource, /dispatch\(installWebServicePackage\(\{\s*version: versionUpdateReminder\.latestVersion\.id,\s*options: \{\s*autoSwitchWhenIdle: true,/s);
     assert.match(versionPageSource, /dispatch\(installWebServicePackage\(versionId\)\);/);
     assert.match(versionPageSource, /dispatch\(installWebServicePackage\(pendingVersionId\)\);/);
+  });
+
+  it('emits a dedicated switching progress event before auto-switching the installed version', async () => {
+    const source = await fs.readFile(installHelperPath, 'utf8');
+
+    assert.match(source, /const emitProgress = \(progress: VersionDownloadProgress\) => \{/);
+    assert.match(source, /stage: 'switching'/);
+    assert.match(source, /message: 'switching-active-version'/);
   });
 });

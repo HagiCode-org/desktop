@@ -456,7 +456,7 @@ async function doInstallPackage(
   options: InstallWebServicePackageOptions | undefined,
   dispatch: any,
 ) {
-  dispatch(setInstallProgress({ stage: 'verifying', progress: 0, message: 'Starting installation...' }));
+  dispatch(setInstallProgress({ stage: 'queued', progress: 0, message: 'queued' }));
   dispatch(setError(null));
 
   const result = await window.electronAPI.installWebServicePackage(version, options);

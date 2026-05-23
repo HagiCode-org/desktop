@@ -75,7 +75,7 @@ export interface PackageInfo {
 }
 
 export interface InstallProgress {
-  stage: 'queued' | 'fetching-torrent' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'completed' | 'error';
+  stage: 'queued' | 'fetching-torrent' | 'downloading' | 'backfilling' | 'verifying' | 'extracting' | 'switching' | 'completed' | 'error';
   progress: number;
   message: string;
   mode?: 'http-direct' | 'shared-acceleration' | 'source-fallback';
