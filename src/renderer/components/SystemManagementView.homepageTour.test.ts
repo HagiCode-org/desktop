@@ -35,4 +35,14 @@ describe('homepage tour renderer integration', () => {
     assert.match(settingsSource, /settings\.onboarding\.homepageTour\.resetSuccess/);
     assert.match(settingsSource, /settings\.onboarding\.homepageTour\.resetButton/);
   });
+
+  it('shows homepage install progress when the latest version is being installed or switched', async () => {
+    const source = await fs.readFile(systemManagementViewPath, 'utf8');
+
+    assert.match(source, /const isLatestVersionInstalling = Boolean\(/);
+    assert.match(source, /const isHomepageInstallBusy =/);
+    assert.match(source, /system\.updateReminder\.progress\.stoppingService/);
+    assert.match(source, /system\.updateReminder\.progress\.switchingDescription/);
+    assert.match(source, /<Progress value=\{homepageInstallProgressValue\}/);
+  });
 });

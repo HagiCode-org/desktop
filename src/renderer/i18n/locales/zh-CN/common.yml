@@ -481,6 +481,14 @@ system:
       portable-mode: portable mode 下已跳过后台更新，当前运行环境保持只读。
       steam-mode: Steam 模式下不会执行应用内后台更新，因为该运行时的更新由 Steam 平台负责分发。
       no-package-source: 尚未配置有效的软件包源，无法执行后台更新。
+    progress:
+      confirming: 等待确认
+      stoppingService: 正在停止服务
+      confirmingDescription: '即将安装 {{version}}，请先确认是否允许停止当前服务。'
+      stoppingServiceDescription: 正在停止当前运行中的服务，随后继续下载并安装新版本。
+      switchingDescription: '安装已完成，正在切换到 {{version}}。'
+      completedDescription: '{{version}} 已安装完成，首页状态已同步。'
+      activeDescription: '正在处理 {{version}}，当前阶段：{{stage}}。'
     actions:
       openVersionPage: 打开版本管理
       installLatest: 安装最新版本

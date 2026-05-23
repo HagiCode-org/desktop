@@ -214,6 +214,7 @@ versionManagement:
     flow: 'Flow: Fetch torrent -> Torrent-first download -> Fallback backfill (if needed) -> Verify -> Extract -> Complete'
     flowActive: 'Current flow: {{stage}}'
   progressMessage:
+    queued: Queued
     direct-http: Downloading over HTTP/WebSeed
     fetching-torrent-metadata: Fetching torrent metadata
     torrent-metadata-ready: Torrent ready, starting shared acceleration
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: Verifying package integrity
     sha256-verified: Verification completed
     extracting-package: Extracting package
+    switching-active-version: Switching the active version
     installation-complete: Installation complete
 installProgressDialog:
   title: Installing Dependencies

@@ -346,6 +346,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
       'backfilling': t('versionManagement.downloadStage.backfilling'),
       'extracting': t('versionManagement.extracting'),
       'verifying': t('versionManagement.verifying'),
+      'switching': t('versionManagement.switching'),
       'completed': t('versionManagement.completed'),
       'error': t('versionManagement.toast.installFailed'),
     };
@@ -386,6 +387,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
       'backfilling': t('versionManagement.downloadStage.backfilling'),
       'verifying': t('versionManagement.verifying'),
       'extracting': t('versionManagement.extracting'),
+      'switching': t('versionManagement.switching'),
       'completed': t('versionManagement.completed'),
     };
 
@@ -673,6 +675,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                             {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {webServiceInstallProgress.stage === 'switching' && t('versionManagement.switching')}
                             {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
                           </span>
                         </div>
@@ -805,6 +808,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
                             {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
                             {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
+                            {webServiceInstallProgress.stage === 'switching' && t('versionManagement.switching')}
                             {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
                           </span>
                         </div>

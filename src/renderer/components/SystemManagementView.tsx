@@ -9,6 +9,7 @@ import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import { CodeServerMiniCard, OmniRouteMiniCard } from './ManagedServiceMiniCard';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   buildHomepageTourSteps,
   HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE,
@@ -22,6 +23,12 @@ import {
 import { cn } from '@/lib/utils';
 import { evaluateDependencyReadiness } from '../../shared/npm-managed-packages.js';
 import { selectVisibleVersionUpdateReminder } from '../store/slices/versionUpdateSlice';
+import {
+  InstallState,
+  selectInstallProgress,
+  selectInstallingVersionId,
+  selectInstallState,
+} from '../store/slices/webServiceSlice';
 import { resetOnboarding, checkOnboardingTrigger } from '../store/thunks/onboardingThunks';
 import { installWebServicePackage } from '../store/thunks/webServiceThunks';
 import type { AppDispatch, RootState } from '../store';
@@ -93,6 +100,9 @@ export default function SystemManagementView({
   const { navigateTo } = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const versionUpdateReminder = useSelector((state: RootState) => selectVisibleVersionUpdateReminder(state));
+  const installProgress = useSelector((state: RootState) => selectInstallProgress(state));
+  const installState = useSelector((state: RootState) => selectInstallState(state));
+  const installingVersionId = useSelector((state: RootState) => selectInstallingVersionId(state));
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
   const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean(versionUpdateReminder);
@@ -371,6 +381,99 @@ export default function SystemManagementView({
         day: 'numeric',
       })
     : null;
+
+  const isLatestVersionInstalling = Boolean(
+    versionUpdateReminder?.latestVersion?.id && installingVersionId === versionUpdateReminder.latestVersion.id,
+  );
+  const isHomepageInstallBusy =
+    installState === InstallState.Confirming ||
+    installState === InstallState.StoppingService ||
+    isLatestVersionInstalling;
+
+  const getHomepageInstallStageLabel = () => {
+    if (installState === InstallState.Confirming) {
+      return t('system.updateReminder.progress.confirming');
+    }
+    if (installState === InstallState.StoppingService) {
+      return t('system.updateReminder.progress.stoppingService');
+    }
+    if (!installProgress) {
+      return t('system.updateReminder.states.ready');
+    }
+
+    const translatedMessage = installProgress.message
+      ? t(`versionManagement.progressMessage.${installProgress.message}`, {
+          ns: 'pages',
+          defaultValue: '',
+        })
+      : '';
+
+    if (translatedMessage) {
+      return translatedMessage;
+    }
+
+    const stageLabels: Record<string, string> = {
+      queued: t('versionManagement.downloadStage.queued', { ns: 'pages' }),
+      'fetching-torrent': t('versionManagement.downloadStage.fetchingTorrent', { ns: 'pages' }),
+      downloading: t('versionManagement.downloadStage.sharedDownloading', { ns: 'pages' }),
+      backfilling: t('versionManagement.downloadStage.backfilling', { ns: 'pages' }),
+      verifying: t('versionManagement.verifying', { ns: 'pages' }),
+      extracting: t('versionManagement.extracting', { ns: 'pages' }),
+      switching: t('versionManagement.switching', { ns: 'pages' }),
+      completed: t('versionManagement.completed', { ns: 'pages' }),
+      error: t('versionManagement.toast.installFailed', { ns: 'pages' }),
+    };
+
+    return stageLabels[installProgress.stage] ?? t('system.updateReminder.states.downloading');
+  };
+
+  const getHomepageInstallSummary = () => {
+    if (!versionUpdateReminder?.latestVersion) {
+      return null;
+    }
+
+    if (installState === InstallState.Confirming) {
+      return t('system.updateReminder.progress.confirmingDescription', {
+        version: versionUpdateReminder.latestVersion.version,
+      });
+    }
+
+    if (installState === InstallState.StoppingService) {
+      return t('system.updateReminder.progress.stoppingServiceDescription');
+    }
+
+    if (!installProgress) {
+      return t('system.updateReminder.descriptions.ready');
+    }
+
+    if (installProgress.stage === 'completed') {
+      return t('system.updateReminder.progress.completedDescription', {
+        version: versionUpdateReminder.latestVersion.version,
+      });
+    }
+
+    if (installProgress.stage === 'switching') {
+      return t('system.updateReminder.progress.switchingDescription', {
+        version: versionUpdateReminder.latestVersion.version,
+      });
+    }
+
+    return t('system.updateReminder.progress.activeDescription', {
+      version: versionUpdateReminder.latestVersion.version,
+      stage: getHomepageInstallStageLabel(),
+    });
+  };
+
+  const homepageInstallProgressValue = (() => {
+    if (installState === InstallState.Confirming) {
+      return 8;
+    }
+    if (installState === InstallState.StoppingService) {
+      return 16;
+    }
+    return Math.max(0, Math.min(100, installProgress?.progress ?? 0));
+  })();
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {shouldShowVersionUpdateReminder ? (
@@ -391,9 +494,14 @@ export default function SystemManagementView({
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-semibold text-foreground">{t('system.updateReminder.title')}</h2>
                       <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        {t(`system.updateReminder.states.${versionUpdateReminder.status}`)}
+                        {isHomepageInstallBusy ? getHomepageInstallStageLabel() : t(`system.updateReminder.states.${versionUpdateReminder.status}`)}
                       </span>
                     </div>
+                    <p className="mt-2 max-w-[62ch] text-sm text-muted-foreground">
+                      {isHomepageInstallBusy ? getHomepageInstallSummary() : t(`system.updateReminder.descriptions.${versionUpdateReminder.disabledReason ?? versionUpdateReminder.status}`, {
+                        error: versionUpdateReminder.failure?.message ?? '',
+                      })}
+                    </p>
                   </div>
                 </div>
 
@@ -412,16 +520,31 @@ export default function SystemManagementView({
                   </div>
                   <div className="rounded-xl border border-border bg-muted/30 p-3">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('system.updateReminder.labels.state')}</div>
-                    <div className="mt-1 font-medium text-foreground">{t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
+                    <div className="mt-1 font-medium text-foreground">{isHomepageInstallBusy ? getHomepageInstallStageLabel() : t(`system.updateReminder.states.${versionUpdateReminder.status}`)}</div>
                   </div>
                 </div>
+
+                {isHomepageInstallBusy ? (
+                  <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{getHomepageInstallStageLabel()}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">{getHomepageInstallSummary()}</div>
+                      </div>
+                      <div className="text-sm font-medium text-foreground">
+                        {homepageInstallProgressValue}%
+                      </div>
+                    </div>
+                    <Progress value={homepageInstallProgressValue} className="mt-3 h-2.5" />
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 {versionUpdateReminder.status === 'ready' ? (
-                  <Button type="button" onClick={() => void handleInstallLatest()} className="justify-between">
-                    <span>{t('system.updateReminder.actions.installLatest')}</span>
-                    <ArrowRight className="h-4 w-4" />
+                  <Button type="button" onClick={() => void handleInstallLatest()} className="justify-between" disabled={isHomepageInstallBusy}>
+                    <span>{isHomepageInstallBusy ? getHomepageInstallStageLabel() : t('system.updateReminder.actions.installLatest')}</span>
+                    {isHomepageInstallBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                   </Button>
                 ) : null}
                 <Button type="button" variant={versionUpdateReminder.status === 'ready' ? 'outline' : 'default'} onClick={handleOpenVersionManagement} className="justify-between">
