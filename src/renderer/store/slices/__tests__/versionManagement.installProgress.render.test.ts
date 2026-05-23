@@ -15,6 +15,7 @@ describe('version management install progress rendering', () => {
     assert.match(source, /versionManagement\.installTelemetry\.stage/);
     assert.match(source, /versionManagement\.installTelemetry\.peers/);
     assert.match(source, /versionManagement\.installTelemetry\.verified/);
+    assert.match(source, /'switching': t\('versionManagement\.switching'\)/);
   });
 
   it('removes dependency affordances from installed version cards', async () => {
