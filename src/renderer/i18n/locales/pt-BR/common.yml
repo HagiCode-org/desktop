@@ -585,7 +585,7 @@ omniroute:
     descriptionMissing: OmniRoute não pode ser iniciado até que os pacotes gerenciados por Desktop destacados sejam instalados ou reparados no Gerenciamento de Dependências.
     descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
     descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
+    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and hagiscript are repaired in Dependency Management.
     descriptionUnknown: O Desktop não pôde verificar as dependências OmniRoute destacadas. Atualize ou repare-os no Gerenciamento de Dependências antes de tentar novamente.
     descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: Gerenciamento de Dependências Abertas

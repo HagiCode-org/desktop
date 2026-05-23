@@ -22,9 +22,9 @@ describe('OmniRoute repair navigation thunk', () => {
       kind: 'dependency',
       failureKind: 'runtime-and-package',
       targetRuntimeIds: ['omniroute'],
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
       recommendedAction: 'open-dependency-management',
-      message: 'Restore the OmniRoute runtime and PM2 from Dependency Management and retry.',
+      message: 'Restore the OmniRoute runtime and hagiscript from Dependency Management and retry.',
     }));
 
     const state = store.getState().view;
@@ -35,7 +35,7 @@ describe('OmniRoute repair navigation thunk', () => {
       returnView: 'omniroute',
       failureKind: 'runtime-and-package',
       targetRuntimeIds: ['omniroute'],
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
     });
   });
 
@@ -47,7 +47,7 @@ describe('OmniRoute repair navigation thunk', () => {
       returnView: 'omniroute',
       failureKind: 'dependency-unknown',
       targetRuntimeIds: [],
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
     }));
     store.dispatch(switchView('dependency-management'));
     store.dispatch(switchView('system'));

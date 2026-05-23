@@ -439,9 +439,9 @@ export class OmniRouteManager {
     try {
       this.validatePort(this.getConfig().port);
 
-      const [hagiscriptContext, pm2Context] = await this.resolveDependencyContexts();
+      const hagiscriptContext = await this.resolveDependencyContext();
       const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager);
-      remediation = this.buildRemediation(runtime, hagiscriptContext, pm2Context);
+      remediation = this.buildRemediation(runtime, hagiscriptContext);
       if (remediation) {
         throw new Error(remediation.message);
       }
@@ -497,10 +497,11 @@ export class OmniRouteManager {
 
   private async resolveStatusDetails(paths?: OmniRouteManagedPaths): Promise<OmniRouteStatusDetails> {
     const resolvedPaths = paths ?? await this.ensureLayout();
-    const [hagiscriptContext, pm2Context] = await this.resolveDependencyContexts();
+    const hagiscriptContext = await this.resolveDependencyContext();
     const runtimeWithoutHealth = await inspectVendoredOmniRouteRuntime(this.pathManager);
-    const remediation = this.buildRemediation(runtimeWithoutHealth, hagiscriptContext, pm2Context);
+    const remediation = this.buildRemediation(runtimeWithoutHealth, hagiscriptContext);
     let lifecycleResult: HagiscriptServerLifecycleResult | null = null;
+    let pm2ExecutablePath: string | null = null;
     let error: string | undefined;
 
     if (!remediation) {
@@ -520,6 +521,7 @@ export class OmniRouteManager {
           await runtimeContext.cleanup();
         }
 
+        pm2ExecutablePath = lifecycleResult.pm2BinaryPath;
         if (!lifecycleResult.success) {
           error = lifecycleResult.summary;
         }
@@ -538,21 +540,15 @@ export class OmniRouteManager {
     return {
       runtime,
       process,
-      pm2Available: this.isManagedPackageAvailable(pm2Context),
-      pm2ExecutablePath: pm2Context.executablePath,
+      pm2Available: this.isManagedPackageAvailable(hagiscriptContext),
+      pm2ExecutablePath,
       remediation,
       error,
     };
   }
 
-  private async resolveDependencyContexts(): Promise<[
-    ManagedNpmCommandContext,
-    ManagedNpmCommandContext,
-  ]> {
-    return await Promise.all([
-      this.dependencyManagementService.getManagedCommandContext('hagiscript'),
-      this.dependencyManagementService.getManagedCommandContext('pm2'),
-    ]);
+  private async resolveDependencyContext(): Promise<ManagedNpmCommandContext> {
+    return await this.dependencyManagementService.getManagedCommandContext('hagiscript');
   }
 
   private buildManagedServiceEnvironment(paths: OmniRouteManagedPaths): NodeJS.ProcessEnv {
@@ -651,7 +647,6 @@ export class OmniRouteManager {
   private buildRemediation(
     runtime: VendoredRuntimeStatusSnapshot,
     hagiscriptContext: ManagedNpmCommandContext,
-    pm2Context: ManagedNpmCommandContext,
   ): OmniRouteLifecycleResult['remediation'] {
     return buildOmniRouteDependencyRemediation({
       runtime: {
@@ -664,12 +659,6 @@ export class OmniRouteManager {
           packageStatus: hagiscriptContext.packageStatus?.status ?? null,
           executablePath: hagiscriptContext.executablePath,
           installedVersion: hagiscriptContext.packageStatus?.version ?? null,
-        },
-        {
-          packageId: 'pm2',
-          packageStatus: pm2Context.packageStatus?.status ?? null,
-          executablePath: pm2Context.executablePath,
-          installedVersion: pm2Context.packageStatus?.version ?? null,
         },
       ],
     });
@@ -753,9 +742,9 @@ export class OmniRouteManager {
   }
 
   private async refreshLegacyLogs(paths: OmniRouteManagedPaths): Promise<void> {
-    const [hagiscriptContext, pm2Context] = await this.resolveDependencyContexts();
+    const hagiscriptContext = await this.resolveDependencyContext();
     const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager);
-    const remediation = this.buildRemediation(runtime, hagiscriptContext, pm2Context);
+    const remediation = this.buildRemediation(runtime, hagiscriptContext);
     if (remediation) {
       return;
     }

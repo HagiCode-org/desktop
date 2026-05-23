@@ -56,7 +56,6 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     requiredVersionRange: '>=7.0.1',
     category: 'workflow',
     installMode: 'hagiscript-sync',
-    required: true,
   },
   {
     id: 'claude-code',

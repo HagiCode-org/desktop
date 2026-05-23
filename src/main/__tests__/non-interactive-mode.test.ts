@@ -190,11 +190,11 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
       hagiscriptPackageVersion: '0.9.0',
       hagiscriptPackageUnderManagedModules: true,
       hagiscriptExecutableUnderManagedBin: true,
-      pm2PackageRoot: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/lib/node_modules/pm2',
-      pm2ExecutablePath: '/tmp/Hagi Code/userData/runtimeData/node/node22/npmGlobal/bin/pm2',
-      pm2PackageVersion: '7.0.1',
-      pm2PackageUnderManagedModules: true,
-      pm2ExecutableUnderManagedBin: true,
+      pm2PackageRoot: null,
+      pm2ExecutablePath: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/pm2/7/node_modules/pm2/bin/pm2',
+      pm2PackageVersion: null,
+      pm2PackageUnderManagedModules: false,
+      pm2ExecutableUnderManagedBin: false,
     },
     services: {
       codeServer: {
@@ -258,12 +258,11 @@ describe('non-interactive mode parser', () => {
     }
   });
 
-  it('accepts --pm2 alongside agent CLI dependency flags', () => {
+  it('accepts supported agent CLI dependency flags', () => {
     const result = parseNonInteractiveCommand([
       '/opt/Hagicode Desktop/hagicode',
       'deps',
       'install',
-      '--pm2',
       '--claude-code',
       '--codex',
     ]);
@@ -271,7 +270,7 @@ describe('non-interactive mode parser', () => {
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
     if (result.handled && result.ok && result.command.kind === 'deps-install') {
-      assert.deepEqual(result.command.packageIds, ['pm2', 'claude-code', 'codex']);
+      assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
     }
   });
 

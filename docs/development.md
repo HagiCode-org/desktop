@@ -599,10 +599,10 @@ npm run package:runtime-pm2-integration
 `package:runtime-pm2-integration` stages a packaged Desktop artifact into a temp path with spaces, then runs the full non-interactive runtime-management flow:
 
 1. `runtime verify`
-2. `deps install --pm2 --claude-code --codex`
+2. `deps install --claude-code --codex`
 3. `runtime lifecycle`
 
-The lifecycle stage asserts Desktop-managed PM2 resolution plus start/status/stop coverage for `code-server`, `omniroute`, and the packaged backend payload.
+The lifecycle stage asserts Desktop-managed hagiscript resolution plus hagiscript-backed bundled PM2 start/status/stop coverage for `code-server`, `omniroute`, and the packaged backend payload.
 
 ### Packaged runtime + PM2 integration debugging
 
@@ -634,7 +634,7 @@ The harness fails hard when the packaged backend payload contract is broken. In 
 Desktop release packaging now publishes extractable ZIP archives alongside the existing platform installers:
 
 - Linux keeps the native Electron Builder outputs (`.AppImage`, `.tar.gz`) and now also emits a `.zip` from the same packaging workspace.
-- Windows keeps the portable `.exe`, NSIS installer, and `.appx`, then stages the unpacked app directory into a ZIP payload so the release ZIP behaves as an extract-and-run package instead of a zipped single-file launcher.
+- Windows keeps the portable `.exe`, NSIS installer, and `.msix`, then stages the unpacked app directory into a ZIP payload so the release ZIP behaves as an extract-and-run package instead of a zipped single-file launcher.
 - Non-tag CI runs upload the Windows and Linux ZIP files as workflow artifacts.
 - Tagged builds attach the ZIP files to the GitHub Release, and the downstream Azure sync continues mirroring them with the rest of the release asset set.
 

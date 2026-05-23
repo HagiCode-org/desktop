@@ -81,21 +81,21 @@ describe('dependency-management OmniRoute repair helpers', () => {
   it('prioritizes highlighted repair targets before unrelated packages', () => {
     const packages = [
       createPackage('openspec', 'OpenSpec', 'installed'),
-      createPackage('pm2', 'PM2', 'unknown'),
+      createPackage('hagiscript', 'hagiscript', 'unknown'),
       createPackage('skills', 'Skills', 'installed'),
     ];
 
-    const prioritized = prioritizePackagesForRepair(packages, ['pm2']);
+    const prioritized = prioritizePackagesForRepair(packages, ['hagiscript']);
 
     assert.deepEqual(
       prioritized.map((item) => item.id),
-      ['pm2', 'openspec', 'skills'],
+      ['hagiscript', 'openspec', 'skills'],
     );
   });
 
   it('marks repair completion as blocked until every targeted runtime and package is ready', () => {
     const packages = [
-      createPackage('pm2', 'PM2', 'installed'),
+      createPackage('hagiscript', 'hagiscript', 'installed'),
       createPackage('openspec', 'OpenSpec', 'installed'),
     ];
     const runtimes = [
@@ -104,7 +104,7 @@ describe('dependency-management OmniRoute repair helpers', () => {
 
     const evaluation = evaluateDependencyRepairIntent(packages, runtimes, {
       targetRuntimeIds: ['omniroute'],
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
     });
 
     assert.equal(evaluation.ready, false);
@@ -114,21 +114,21 @@ describe('dependency-management OmniRoute repair helpers', () => {
 
   it('keeps repair completion blocked when a targeted package is installed at an unsupported version', () => {
     const packages = [
-      createPackage('pm2', 'PM2', 'installed', '6.0.14'),
+      createPackage('hagiscript', 'hagiscript', 'installed', '0.2.2'),
     ];
 
     const evaluation = evaluateDependencyRepairIntent(packages, [], {
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
       targetRuntimeIds: [],
     });
 
     assert.equal(evaluation.ready, false);
-    assert.deepEqual(evaluation.pendingPackageIds, ['pm2']);
+    assert.deepEqual(evaluation.pendingPackageIds, ['hagiscript']);
   });
 
   it('allows return to OmniRoute only after every targeted package is available', () => {
     const packages = [
-      createPackage('pm2', 'PM2', 'installed'),
+      createPackage('hagiscript', 'hagiscript', 'installed'),
       createPackage('openspec', 'OpenSpec', 'installed'),
     ];
     const runtimes = [
@@ -137,7 +137,7 @@ describe('dependency-management OmniRoute repair helpers', () => {
 
     const evaluation = evaluateDependencyRepairIntent(packages, runtimes, {
       targetRuntimeIds: ['omniroute'],
-      targetPackageIds: ['pm2'],
+      targetPackageIds: ['hagiscript'],
     });
 
     assert.equal(evaluation.ready, true);

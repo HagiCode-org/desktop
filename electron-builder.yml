@@ -42,6 +42,7 @@ win:
 nsis:
   runAfterFinish: false
 appx:
+  artifactName: ${productName} ${version}.msix
   displayName: Hagicode Desktop
   publisherDisplayName: newbe36524
   publisher: CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F

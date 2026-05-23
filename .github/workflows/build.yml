@@ -228,8 +228,8 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
-          $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
+          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
+          $signable = @($nsis + $portable + $msix | Sort-Object FullName -Unique)
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
 
           if ($signable.Count -eq 0) {
@@ -258,7 +258,7 @@ jobs:
 
           Write-MultilineOutput 'nsis_files' $nsis
           Write-MultilineOutput 'portable_files' $portable
-          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'msix_files' $msix
           Write-MultilineOutput 'signable_files' $signable
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
@@ -266,9 +266,10 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_count=$($msix.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
-          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($msix.Count) MSIX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
 
       - name: Prepare Windows unpacked ZIP payload workspace
         id: windows_zip_payload
@@ -329,9 +330,12 @@ jobs:
             }
           }
 
+          $primaryExecutableName = "{0}.exe" -f $env:WINDOWS_ZIP_BASE_NAME
           $zipPayloadSignableFiles = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              $_.Extension -ieq '.exe' -and
+              $_.Name -ieq $primaryExecutableName -and
+              $_.DirectoryName -eq $payloadDir
             } | Sort-Object FullName -Unique
           )
 
@@ -391,36 +395,6 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
-      - name: Prepare signed MSIX release assets
-        id: windows_msix_assets
-        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
-        shell: bash
-        env:
-          WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
-        run: |
-          set -euo pipefail
-          mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
-          if [ "${#appx_files[@]}" -eq 0 ]; then
-            echo '::error::Signed AppX assets were not available for MSIX publication.'
-            exit 1
-          fi
-
-          output_dir="pkg/release-msix"
-          output_json="$output_dir/msix-assets.json"
-          node scripts/prepare-msix-release-assets.js --out-dir "$output_dir" --output-json "$output_json" "${appx_files[@]}"
-
-          mapfile -t msix_files < <(node -e "const fs=require('fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));for(const entry of payload){console.log(entry.outputPath);}" "$output_json")
-          if [ "${#msix_files[@]}" -eq 0 ]; then
-            echo '::error::MSIX release asset preparation did not produce any files.'
-            exit 1
-          fi
-
-          {
-            echo 'msix_files<<EOF'
-            printf '%s\n' "${msix_files[@]}"
-            echo 'EOF'
-            echo "msix_count=${#msix_files[@]}"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Create Windows ZIP artifact
         id: windows_zip
@@ -478,8 +452,8 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
-            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
+            echo '- Signed staged unpacked payload primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed MSIX packages: ${{ steps.windows_artifacts.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -495,7 +469,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -516,37 +490,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package
+      - name: Upload MSIX package
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.msix_files != ''
         with:
-          name: hagicode-windows-appx-${{ github.sha }}
-          path: ${{ steps.windows_artifacts.outputs.appx_files }}
+          name: hagicode-windows-msix-${{ github.sha }}
+          path: ${{ steps.windows_artifacts.outputs.msix_files }}
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Upload AppX package to Release
+      - name: Upload MSIX package to Release
         uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.msix_files != ''
         with:
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload signed MSIX package
-        uses: actions/upload-artifact@v4
-        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
-        with:
-          name: hagicode-windows-msix-${{ github.sha }}
-          path: ${{ steps.windows_msix_assets.outputs.msix_files }}
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload signed MSIX package to Release
-        uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
-        with:
-          files: ${{ steps.windows_msix_assets.outputs.msix_files }}
+          files: ${{ steps.windows_artifacts.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -811,8 +768,8 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
-          $signable = @($nsis + $portable + $appx | Sort-Object FullName -Unique)
+          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
+          $signable = @($nsis + $portable + $msix | Sort-Object FullName -Unique)
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
 
           if ($signable.Count -eq 0) {
@@ -841,7 +798,7 @@ jobs:
 
           Write-MultilineOutput 'nsis_files' $nsis
           Write-MultilineOutput 'portable_files' $portable
-          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'msix_files' $msix
           Write-MultilineOutput 'signable_files' $signable
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
@@ -849,9 +806,10 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "msix_count=$($msix.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
-          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
+          "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($msix.Count) MSIX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
 
       - name: Prepare Windows unpacked ZIP payload workspace
         id: windows_zip_payload
@@ -912,9 +870,12 @@ jobs:
             }
           }
 
+          $primaryExecutableName = "{0}.exe" -f $env:WINDOWS_ZIP_BASE_NAME
           $zipPayloadSignableFiles = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              $_.Extension -ieq '.exe' -and
+              $_.Name -ieq $primaryExecutableName -and
+              $_.DirectoryName -eq $payloadDir
             } | Sort-Object FullName -Unique
           )
 
@@ -974,36 +935,6 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
-      - name: Prepare signed MSIX release assets
-        id: windows_msix_assets
-        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
-        shell: bash
-        env:
-          WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
-        run: |
-          set -euo pipefail
-          mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
-          if [ "${#appx_files[@]}" -eq 0 ]; then
-            echo '::error::Signed AppX assets were not available for MSIX publication.'
-            exit 1
-          fi
-
-          output_dir="pkg/release-msix"
-          output_json="$output_dir/msix-assets.json"
-          node scripts/prepare-msix-release-assets.js --out-dir "$output_dir" --output-json "$output_json" "${appx_files[@]}"
-
-          mapfile -t msix_files < <(node -e "const fs=require('fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));for(const entry of payload){console.log(entry.outputPath);}" "$output_json")
-          if [ "${#msix_files[@]}" -eq 0 ]; then
-            echo '::error::MSIX release asset preparation did not produce any files.'
-            exit 1
-          fi
-
-          {
-            echo 'msix_files<<EOF'
-            printf '%s\n' "${msix_files[@]}"
-            echo 'EOF'
-            echo "msix_count=${#msix_files[@]}"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Create Windows ZIP artifact
         id: windows_zip
@@ -1054,8 +985,8 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
-            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
+            echo '- Signed staged unpacked payload primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Signed MSIX packages: ${{ steps.windows_artifacts.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -1071,7 +1002,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -1092,37 +1023,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package
+      - name: Upload MSIX package
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.msix_files != ''
         with:
-          name: hagicode-windows-appx-${{ github.sha }}
-          path: ${{ steps.windows_artifacts.outputs.appx_files }}
+          name: hagicode-windows-msix-${{ github.sha }}
+          path: ${{ steps.windows_artifacts.outputs.msix_files }}
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Upload AppX package to Release
+      - name: Upload MSIX package to Release
         uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.msix_files != ''
         with:
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload signed MSIX package
-        uses: actions/upload-artifact@v4
-        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
-        with:
-          name: hagicode-windows-msix-${{ github.sha }}
-          path: ${{ steps.windows_msix_assets.outputs.msix_files }}
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload signed MSIX package to Release
-        uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
-        with:
-          files: ${{ steps.windows_msix_assets.outputs.msix_files }}
+          files: ${{ steps.windows_artifacts.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

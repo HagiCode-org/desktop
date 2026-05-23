@@ -151,10 +151,10 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
 
-          if ($nsis.Count -eq 0 -and $portable.Count -eq 0 -and $appx.Count -eq 0) {
+          if ($nsis.Count -eq 0 -and $portable.Count -eq 0 -and $msix.Count -eq 0) {
             throw 'No Windows artifacts were found in pkg/ for release upload.'
           }
 
@@ -179,7 +179,7 @@ jobs:
 
           Write-MultilineOutput 'nsis_files' $nsis
           Write-MultilineOutput 'portable_files' $portable
-          Write-MultilineOutput 'appx_files' $appx
+          Write-MultilineOutput 'msix_files' $msix
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
@@ -296,16 +296,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package to prerelease
+      - name: Upload MSIX package to prerelease
         uses: softprops/action-gh-release@v2
-        if: success() && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && steps.windows_artifacts.outputs.msix_files != ''
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           name: ${{ needs.prepare-release.outputs.release_name }}
           draft: 'false'
           prerelease: 'true'
           overwrite_files: 'true'
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
+          files: ${{ steps.windows_artifacts.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

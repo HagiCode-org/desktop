@@ -71,6 +71,7 @@ export interface HagiscriptServerLifecycleResult {
   runtimeHome: string;
   runtimeDataHome: string;
   pm2Home: string;
+  pm2BinaryPath: string | null;
   runtimeFilesDir: string | null;
   logPaths: string[];
 }
@@ -189,6 +190,7 @@ export class HagiscriptPm2Manager {
         runtimeHome: context.runtimeHome,
         runtimeDataHome: context.serviceDataHome,
         pm2Home: context.pm2Home,
+        pm2BinaryPath: null,
         runtimeFilesDir: context.runtimeFilesDir,
         logPaths: this.buildLifecycleLogPaths(context, null),
       };
@@ -210,6 +212,7 @@ export class HagiscriptPm2Manager {
       runtimeHome: response.runtimeHome,
       runtimeDataHome: response.runtimeDataHome,
       pm2Home: response.pm2Home,
+      pm2BinaryPath: response.pm2Binary ?? null,
       runtimeFilesDir: response.runtimeFilesDir ?? null,
       logPaths: this.buildLifecycleLogPaths(context, response),
     };
@@ -276,6 +279,7 @@ export class HagiscriptPm2Manager {
       runtimeHome: context.runtimeHome,
       runtimeDataHome: context.serviceDataHome,
       pm2Home: context.pm2Home,
+      pm2BinaryPath: null,
       runtimeFilesDir: context.runtimeFilesDir,
       logPaths: this.buildLifecycleLogPaths(context, null),
     };

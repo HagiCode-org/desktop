@@ -640,9 +640,8 @@ test('desktop build workflow includes ZIP and signed MSIX publication steps', ()
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
   assert(content.includes('Upload Windows ZIP'), 'workflow uploads Windows ZIP CI artifacts');
   assert(content.includes('Upload Windows ZIP to Release'), 'workflow uploads Windows ZIP release assets');
-  assert(content.includes('Prepare signed MSIX release assets'), 'workflow derives signed MSIX release assets after Windows signature verification');
-  assert(content.includes('Upload signed MSIX package'), 'workflow uploads signed MSIX CI artifacts');
-  assert(content.includes('Upload signed MSIX package to Release'), 'workflow uploads signed MSIX release assets');
+    assert(content.includes('Upload MSIX package'), 'workflow uploads MSIX CI artifacts');
+  assert(content.includes('Upload MSIX package to Release'), 'workflow uploads MSIX release assets');
   assert(content.includes('Summarize Linux ZIP artifacts'), 'workflow reports Linux ZIP diagnostics');
   assert(content.includes('Upload Linux ZIP'), 'workflow uploads Linux ZIP CI artifacts');
   assert(content.includes('Upload Linux ZIP to Release'), 'workflow uploads Linux ZIP release assets');

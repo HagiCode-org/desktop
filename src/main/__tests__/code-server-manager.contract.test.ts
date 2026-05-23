@@ -19,7 +19,7 @@ describe('code-server manager contract', () => {
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
-    assert.match(source, /getManagedCommandContext\('pm2'\)/);
+    assert.match(source, /getManagedCommandContext\('hagiscript'\)/);
     assert.match(source, /--bind-addr/);
     assert.match(source, /--auth',\s*'password'/);
     assert.match(source, /PASSWORD:/);
@@ -31,7 +31,7 @@ describe('code-server manager contract', () => {
     assert.match(source, /normalizePassword/);
     assert.match(source, /readLog\(request: CodeServerLogReadRequest\)/);
     assert.match(source, /Vendored code-server repair is only available in development builds/);
-    assert.match(source, /Desktop-managed PM2 is unavailable/);
+    assert.match(source, /Desktop-managed hagiscript is unavailable/);
     assert.match(source, /fetch\(baseUrl/);
     assert.match(source, /context\.pm2LogsDirectory/);
     assert.match(source, /context\.appName/);

@@ -44,7 +44,7 @@ function getDependencyGuidanceCopyKey(remediation: OmniRouteDependencyRemediatio
 }
 
 function getDependencyTargetLabel(target: OmniRouteDependencyRemediation['targetRuntimeIds'][number] | OmniRouteDependencyRemediation['targetPackageIds'][number]): string {
-  return target === 'pm2' ? 'PM2' : 'OmniRoute runtime';
+  return target === 'hagiscript' ? 'hagiscript' : 'OmniRoute runtime';
 }
 
 function statusBadgeVariant(status: OmniRouteStatusSnapshot['status']) {
