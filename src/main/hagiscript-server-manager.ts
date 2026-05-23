@@ -1,7 +1,10 @@
 import path from 'node:path';
 import { executeCli, type CliExecutionResult } from './utils/cli-executor.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
-import type { HagiscriptRuntimeContext } from './hagiscript-runtime-context.js';
+import type {
+  HagiscriptManagedPm2Service,
+  HagiscriptRuntimeContext,
+} from './hagiscript-runtime-context.js';
 
 const DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS = 15_000;
 const DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS = 30_000;
@@ -66,7 +69,7 @@ export interface HagiscriptServerLifecycleResult {
 }
 
 interface HagiscriptPm2Response {
-  service: string;
+  service: HagiscriptManagedPm2Service;
   action: HagiscriptServerLifecycleAction;
   appName: string;
   cwd: string;
@@ -88,7 +91,7 @@ interface Pm2ProcessMetrics {
   pmUptime: number | null;
 }
 
-export class HagiscriptServerManager {
+export class HagiscriptPm2Manager {
   async getRuntimeState(context: HagiscriptRuntimeContext): Promise<HagiscriptRuntimeStateResult> {
     const execution = await this.executeCommand(
       context,
@@ -154,7 +157,7 @@ export class HagiscriptServerManager {
   ): Promise<HagiscriptServerLifecycleResult> {
     const execution = await this.executeCommand(
       context,
-      ['pm2', 'server', action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
+      ['pm2', context.serviceName, action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
       `pm2-${action}`,
     );
 
@@ -188,7 +191,7 @@ export class HagiscriptServerManager {
     return {
       success: true,
       action,
-      summary: `hagiscript pm2 server ${action} completed with status ${response.status}.`,
+      summary: `hagiscript pm2 ${response.service} ${action} completed with status ${response.status}.`,
       stdout: execution.result.stdout,
       stderr: execution.result.stderr,
       exitCode: execution.result.exitCode,
@@ -226,7 +229,7 @@ export class HagiscriptServerManager {
       shell: launch.shell,
       windowsHide: true,
       metadata: {
-        component: 'HagiscriptServerManager',
+        component: 'HagiscriptPm2Manager',
         operation,
       },
     });
@@ -385,3 +388,5 @@ export class HagiscriptServerManager {
       .find((line) => line.length > 0) ?? null;
   }
 }
+
+export class HagiscriptServerManager extends HagiscriptPm2Manager {}
