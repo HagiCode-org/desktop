@@ -546,8 +546,8 @@ export class PCodeWebServiceManager {
 
   private buildHagiscriptServiceEnvironment(baseEnv: NodeJS.ProcessEnv | undefined): NodeJS.ProcessEnv {
     return {
-      ...(baseEnv ?? {}),
       ...(this.config.env ?? {}),
+      ...(baseEnv ?? {}),
       ASPNETCORE_ENVIRONMENT: baseEnv?.ASPNETCORE_ENVIRONMENT ?? this.config.env?.ASPNETCORE_ENVIRONMENT ?? 'Production',
       ASPNETCORE_URLS: buildAccessUrl(this.config.host, this.config.port),
     };
