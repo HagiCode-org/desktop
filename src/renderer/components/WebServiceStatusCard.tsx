@@ -28,7 +28,7 @@ import {
 } from '../store/thunks/webServiceThunks';
 import { RootState, AppDispatch } from '../store';
 import { switchViewWithSideEffects } from '../store/thunks/viewThunks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -160,6 +160,9 @@ const WebServiceStatusCard: React.FC = () => {
     : null;
   const effectiveNetworkConfigError = networkConfigError || customListenHostError || portValidationError;
   const normalizedCurrentHost = normalizeListenHost(webServiceInfo.host) || DEFAULT_WEB_SERVICE_HOST;
+  const hasBlockingDependencyReadiness = dependencyReadiness !== null && (
+    !dependencyReadiness.environmentAvailable || !dependencyReadiness.requiredReady
+  );
   const isNetworkConfigDirty = (
     (normalizedPendingHost ?? pendingHostValue) !== normalizedCurrentHost ||
     (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
@@ -270,7 +273,7 @@ const WebServiceStatusCard: React.FC = () => {
   };
 
   const handleStart = async () => {
-    if (!dependencyReadiness?.environmentAvailable || !dependencyReadiness?.requiredReady) {
+    if (hasBlockingDependencyReadiness) {
       dispatch(switchViewWithSideEffects('dependency-management'));
       return;
     }
@@ -323,10 +326,15 @@ const WebServiceStatusCard: React.FC = () => {
     };
 
     const startHagicodePromise = dispatch(startWebService());
-    const managedStartupTasks = [
-      ...(autoStartCodeServer ? [ensureCodeServerStarted()] : []),
-      ...(autoStartOmniRoute ? [ensureOmniRouteStarted()] : []),
-    ];
+    const managedStartupTasks: Promise<void>[] = [];
+
+    if (autoStartCodeServer) {
+      managedStartupTasks.push(ensureCodeServerStarted());
+    }
+
+    if (autoStartOmniRoute) {
+      managedStartupTasks.push(ensureOmniRouteStarted());
+    }
 
     await Promise.allSettled([startHagicodePromise, ...managedStartupTasks]);
   };
@@ -574,15 +582,6 @@ const WebServiceStatusCard: React.FC = () => {
                 </motion.div>
                 {t('webServiceStatus.cardTitle')}
               </CardTitle>
-              <CardDescription className="max-w-2xl text-sm leading-6">
-                <motion.span
-                  key={webServiceInfo.status}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  {getStatusDescription(webServiceInfo.status)}
-                </motion.span>
-              </CardDescription>
             </div>
 
             <motion.div

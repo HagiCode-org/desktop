@@ -149,9 +149,6 @@ const BlogFeedCard: React.FC = () => {
                 <CardTitle className="text-base leading-6">
                   {t('blogFeed.title', 'Hagicode Recommendations & Updates')}
                 </CardTitle>
-                <CardDescription className="mt-1 max-w-md text-sm leading-6">
-                  {t('blogFeed.description', 'Review official recommendations and update notes without leaving the control console.')}
-                </CardDescription>
                 {lastUpdate && (
                   <CardDescription className="mt-2 flex items-center gap-1.5 text-xs">
                     <Clock className="h-3 w-3" />

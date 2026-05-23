@@ -10,37 +10,45 @@ const zhComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generate
 const enComponentsPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/components.json');
 
 describe('home launch dependency readiness guard', () => {
-  it('loads readiness with the shared evaluator and routes incomplete required readiness to dependency management', async () => {
+  it('loads readiness with the shared evaluator and only routes confirmed blocking readiness to dependency management', async () => {
     const source = await fs.readFile(cardPath, 'utf8');
 
     assert.match(source, /evaluateDependencyReadiness\(snapshot, \[npmInstallableAgentCliPackages\[0\]\?\.id\]\.filter\(Boolean\)\)/);
     assert.match(source, /window\.electronAPI\.dependencyManagement\.refresh\(\)/);
     assert.match(source, /if \(isStopped\) \{\s*void loadDependencyReadiness\(\);\s*\}/);
-    assert.match(source, /if \(!dependencyReadiness\?\.environmentAvailable \|\| !dependencyReadiness\?\.requiredReady\) \{\s*dispatch\(switchViewWithSideEffects\('dependency-management'\)\);\s*return;/);
+    assert.match(source, /const hasBlockingDependencyReadiness = dependencyReadiness !== null && \(\s*!dependencyReadiness\.environmentAvailable \|\| !dependencyReadiness\.requiredReady\s*\);/);
+    assert.match(source, /if \(hasBlockingDependencyReadiness\) \{\s*dispatch\(switchViewWithSideEffects\('dependency-management'\)\);\s*return;\s*\}/);
+    assert.doesNotMatch(source, /if \(!dependencyReadiness\?\.environmentAvailable \|\| !dependencyReadiness\?\.requiredReady\) \{/);
     assert.match(source, /const startHagicodePromise = dispatch\(startWebService\(\)\);/);
     assert.match(source, /dependencyReadinessError \|\| t\('webServiceStatus\.dependencyReadinessAlert\.message'\)/);
   });
 
-  it('keeps the primary button on the default start label even when dependency readiness warns', async () => {
+  it('keeps the stopped-state local Hagicode start affordance independent from auxiliary readiness state', async () => {
     const [cardSource, buttonSource] = await Promise.all([
       fs.readFile(cardPath, 'utf8'),
       fs.readFile(actionButtonPath, 'utf8'),
     ]);
 
-    assert.match(buttonSource, /startLabel\?: string;/);
-    assert.match(buttonSource, /startLabel \?\? t\('webServiceStatus\.startButton'\)/);
+    assert.match(buttonSource, /if \(!canLaunchService\) \{\s*return null;\s*\}/);
+    assert.match(cardSource, /\{!\(isStopped && !canLaunchService\) \? \(/);
+    assert.match(cardSource, /canLaunchService=\{canLaunchService\}/);
     assert.doesNotMatch(cardSource, /startLabel=\{/);
     assert.doesNotMatch(buttonSource, /"Hagicode" text/);
     assert.doesNotMatch(buttonSource, /Hagicode<\/motion\.span>/);
   });
 
-  it('persists managed service startup toggles and fans out startup to selected services', async () => {
+  it('persists managed service startup toggles and fans out startup intent to selected services', async () => {
     const source = await fs.readFile(cardPath, 'utf8');
 
     assert.match(source, /AUTO_START_CODE_SERVER_STORAGE_KEY = 'webService\.autoStart\.codeServer'/);
     assert.match(source, /AUTO_START_OMNIROUTE_STORAGE_KEY = 'webService\.autoStart\.omniroute'/);
     assert.match(source, /readStoredStartupPreference\(AUTO_START_CODE_SERVER_STORAGE_KEY, true\)/);
     assert.match(source, /readStoredStartupPreference\(AUTO_START_OMNIROUTE_STORAGE_KEY, false\)/);
+    assert.match(source, /const managedStartupTasks: Promise<void>\[\] = \[\];/);
+    assert.match(source, /if \(autoStartCodeServer\) \{\s*managedStartupTasks\.push\(ensureCodeServerStarted\(\)\);\s*\}/);
+    assert.match(source, /if \(autoStartOmniRoute\) \{\s*managedStartupTasks\.push\(ensureOmniRouteStarted\(\)\);\s*\}/);
+    assert.match(source, /window\.electronAPI\.codeServer\.getStatus\(\)/);
+    assert.match(source, /window\.electronAPI\.omniroute\.getStatus\(\)/);
     assert.match(source, /window\.electronAPI\.codeServer\.start\(\)/);
     assert.match(source, /window\.electronAPI\.omniroute\.start\(\)/);
     assert.match(source, /await Promise\.allSettled\(\[startHagicodePromise, \.\.\.managedStartupTasks\]\);/);

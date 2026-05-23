@@ -344,29 +344,6 @@ export default function SystemManagementView({
     }));
   };
 
-  const getUpdateReminderDescription = () => {
-    if (!versionUpdateReminder) {
-      return '';
-    }
-
-    switch (versionUpdateReminder.status) {
-      case 'checking':
-        return t('system.updateReminder.descriptions.checking');
-      case 'downloading':
-        return t('system.updateReminder.descriptions.downloading');
-      case 'ready':
-        return t('system.updateReminder.descriptions.ready');
-      case 'failed':
-        return t('system.updateReminder.descriptions.failed', {
-          error: versionUpdateReminder.failure?.message ?? t('status.failed'),
-        });
-      case 'disabled':
-        return t(`system.updateReminder.descriptions.${versionUpdateReminder.disabledReason ?? 'settings-disabled'}`);
-      default:
-        return '';
-    }
-  };
-
   const logQuickAccessItems: Array<{
     target: LogDirectoryTarget;
     icon: LucideIcon;
@@ -417,7 +394,6 @@ export default function SystemManagementView({
                         {t(`system.updateReminder.states.${versionUpdateReminder.status}`)}
                       </span>
                     </div>
-                    <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{getUpdateReminderDescription()}</p>
                   </div>
                 </div>
 
@@ -477,7 +453,6 @@ export default function SystemManagementView({
             <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{t('system.services.title')}</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">{t('system.services.description')}</p>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -497,9 +472,6 @@ export default function SystemManagementView({
                     <FolderOpen className="w-5 h-5 text-primary" />
                     {t('system.logQuickAccess.title')}
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t('system.logQuickAccess.description')}
-                  </p>
                 </div>
                 <span className="inline-flex self-start rounded-full border border-border/70 bg-muted/25 px-2.5 py-1 text-xs text-muted-foreground">
                   {isLogTargetsLoading ? t('system.logQuickAccess.loading') : t('system.logQuickAccess.hint')}
@@ -627,9 +599,6 @@ export default function SystemManagementView({
                 <Package className="h-6 w-6" />
               </div>
               <h2 className="mt-4 text-xl font-semibold text-foreground">{t('system.noVersionInstalled.title')}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {t('system.noVersionInstalled.description')}
-              </p>
               <div className="mt-5">
                 <Button type="button" onClick={() => void handleStartWizard()}>
                   {t('system.noVersionInstalled.startWizard')}
