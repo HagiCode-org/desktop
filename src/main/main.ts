@@ -62,6 +62,8 @@ import {
   registerDependencyManagementHandlers,
   registerCodeServerHandlers,
   registerOmniRouteHandlers,
+  emitCodeServerStatus,
+  emitOmniRouteStatus,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
@@ -80,6 +82,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_RENDERER_HOST = '127.0.0.1';
 const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
+const MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS = 5000;
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));
@@ -281,6 +284,10 @@ let versionUpdateManager: VersionUpdateManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let webServicePollingInFlight = false;
+let codeServerPollingInterval: NodeJS.Timeout | null = null;
+let codeServerPollingInFlight = false;
+let omniRoutePollingInterval: NodeJS.Timeout | null = null;
+let omniRoutePollingInFlight = false;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
@@ -2242,7 +2249,49 @@ function startWebServiceStatusPolling(): void {
     } finally {
       webServicePollingInFlight = false;
     }
-  }, 5000); // Poll every 5 seconds
+  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
+}
+
+function startCodeServerStatusPolling(): void {
+  if (codeServerPollingInterval) {
+    clearInterval(codeServerPollingInterval);
+  }
+
+  codeServerPollingInterval = setInterval(async () => {
+    if (!codeServerManager || !mainWindow) return;
+    if (codeServerPollingInFlight) return;
+
+    try {
+      codeServerPollingInFlight = true;
+      const status = await codeServerManager.getStatus();
+      emitCodeServerStatus(status);
+    } catch (error) {
+      console.error('Failed to poll code-server status:', error);
+    } finally {
+      codeServerPollingInFlight = false;
+    }
+  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
+}
+
+function startOmniRouteStatusPolling(): void {
+  if (omniRoutePollingInterval) {
+    clearInterval(omniRoutePollingInterval);
+  }
+
+  omniRoutePollingInterval = setInterval(async () => {
+    if (!omniRouteManager || !mainWindow) return;
+    if (omniRoutePollingInFlight) return;
+
+    try {
+      omniRoutePollingInFlight = true;
+      const status = await omniRouteManager.getStatus();
+      emitOmniRouteStatus(status);
+    } catch (error) {
+      console.error('Failed to poll OmniRoute status:', error);
+    } finally {
+      omniRoutePollingInFlight = false;
+    }
+  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
 }
 
 /**
@@ -2512,6 +2561,21 @@ app.whenReady().then(async () => {
 
   startWebServiceStatusPolling();
 
+  try {
+    emitCodeServerStatus(await codeServerManager.getStatus());
+  } catch (error) {
+    console.error('Failed to get initial code-server status:', error);
+  }
+
+  try {
+    emitOmniRouteStatus(await omniRouteManager.getStatus());
+  } catch (error) {
+    console.error('Failed to get initial OmniRoute status:', error);
+  }
+
+  startCodeServerStatusPolling();
+  startOmniRouteStatusPolling();
+
   // Initialize Menu Manager
   if (mainWindow) {
     menuManager = new MenuManager(mainWindow);
@@ -2549,6 +2613,22 @@ app.on('before-quit', async (event) => {
 
   try {
     console.log('[App] Cleaning up before quit...');
+    if (statusPollingInterval) {
+      clearInterval(statusPollingInterval);
+      statusPollingInterval = null;
+    }
+    if (webServicePollingInterval) {
+      clearInterval(webServicePollingInterval);
+      webServicePollingInterval = null;
+    }
+    if (codeServerPollingInterval) {
+      clearInterval(codeServerPollingInterval);
+      codeServerPollingInterval = null;
+    }
+    if (omniRoutePollingInterval) {
+      clearInterval(omniRoutePollingInterval);
+      omniRoutePollingInterval = null;
+    }
     if (webServiceManager) {
       await webServiceManager.cleanup();
     }

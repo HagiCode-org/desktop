@@ -672,6 +672,7 @@ export class DependencyManagementService {
     return {
       ...definition,
       installSpec: `${definition.packageName}@${selector}`,
+      requiredVersionRange: validSemver(selector) ? selector : undefined,
     };
   }
 
