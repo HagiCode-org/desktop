@@ -44,6 +44,7 @@ import {
 } from './hagicode-url.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
+import { exitNonInteractiveProcess } from './non-interactive-exit.js';
 import { extractNonInteractiveUserArgs, parseNonInteractiveCommand, runNonInteractiveCommand } from './non-interactive-mode.js';
 import { initializePresetServices, getPresetLoader, presetFetchHandler, presetRefreshHandler, presetClearCacheHandler, presetGetProviderHandler, presetGetAllProvidersHandler, presetGetCacheStatsHandler } from '../ipc/handlers/preset-handlers.js';
 import {
@@ -2268,7 +2269,7 @@ app.whenReady().then(async () => {
     writeNonInteractiveDiagnostic('[App] app.whenReady reached for non-interactive command');
     const result = await runNonInteractiveCommand(nonInteractiveParseResult);
     writeNonInteractiveDiagnostic('[App] Non-interactive command completed', result);
-    app.exit(result.exitCode);
+    exitNonInteractiveProcess(result.exitCode);
     return;
   }
 

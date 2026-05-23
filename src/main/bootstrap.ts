@@ -7,6 +7,7 @@ import {
   parseNonInteractiveCommand,
   runNonInteractiveCommand,
 } from './non-interactive-mode.js';
+import { exitNonInteractiveProcess } from './non-interactive-exit.js';
 import {
   applyHagicodeEnvFile,
   collectBootstrapRuntimeEnvOverrides,
@@ -101,13 +102,13 @@ async function runNonInteractiveBootstrap(): Promise<void> {
     writeNonInteractiveDiagnostic('[Bootstrap] app.whenReady reached for non-interactive command');
     const result = await runNonInteractiveCommand(nonInteractiveParseResult);
     writeNonInteractiveDiagnostic('[Bootstrap] Non-interactive command completed', result);
-    app.exit(result.exitCode);
+    exitNonInteractiveProcess(result.exitCode);
   }).catch((error: unknown) => {
     const message = error instanceof Error ? error.stack || error.message : String(error);
     writeNonInteractiveDiagnostic('[Bootstrap] Non-interactive command failed before dispatch', { error: message });
     console.error('[Bootstrap] Non-interactive command failed before dispatch');
     console.error(message);
-    app.exit(nonInteractiveExitCodes.internal);
+    exitNonInteractiveProcess(nonInteractiveExitCodes.internal);
   });
 }
 
@@ -116,7 +117,7 @@ async function runGuiBootstrap(): Promise<void> {
     writeBootstrapDiagnostic();
     writeNonInteractiveDiagnostic('[Bootstrap] Integration mode did not include a supported command; refusing GUI startup.');
     console.error('Non-interactive integration mode did not include a supported command.');
-    app.exit(nonInteractiveExitCodes.usage);
+    exitNonInteractiveProcess(nonInteractiveExitCodes.usage);
     return;
   }
 

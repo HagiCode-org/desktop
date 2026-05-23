@@ -599,6 +599,7 @@ describe('non-interactive mode dispatch', () => {
     assert.ok(createTrayIndex > runIndex);
     assert.match(source, /const gotSingleInstanceLock = nonInteractiveParseResult\.handled\s*\?\s*true\s*:\s*app\.requestSingleInstanceLock\(\);/);
     assert.match(source, /if \(!nonInteractiveParseResult\.handled\) \{\s*app\.on\('second-instance'/);
+    assert.match(source, /exitNonInteractiveProcess\(result\.exitCode\);/);
   });
 
   it('keeps the packaged entrypoint lightweight before GUI startup imports', async () => {
@@ -613,6 +614,9 @@ describe('non-interactive mode dispatch', () => {
     assert.doesNotMatch(source, /from '\.\/main\.js'/);
     assert.match(source, /if \(nonInteractiveParseResult\.handled\) \{\s*await runNonInteractiveBootstrap\(\);/);
     assert.match(source, /Integration mode did not include a supported command/);
+    assert.match(source, /exitNonInteractiveProcess\(result\.exitCode\);/);
+    assert.match(source, /exitNonInteractiveProcess\(nonInteractiveExitCodes\.internal\);/);
+    assert.match(source, /exitNonInteractiveProcess\(nonInteractiveExitCodes\.usage\);/);
   });
 });
 
