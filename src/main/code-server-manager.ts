@@ -1,21 +1,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { electron } from '../electron-api.js';
-import {
-  inspectVendoredCodeServerRuntime,
-} from './code-server-runtime.js';
+import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
+import type { ManagedNpmCommandContext } from './dependency-management-service.js';
 import type { ConfigManager } from './config.js';
-import { getNodeExecutableRelativePath } from './embedded-node-runtime-config.js';
-import { buildPm2MajorHomePaths } from './portable-toolchain-paths.js';
-import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
 import {
-  injectCodeServerRuntimeEnv,
-  injectManagedCliPathEnv,
-  resolvePathEnvKey,
-} from './portable-toolchain-env.js';
-import { Pm2DotnetManager, resolvePm2LaunchPlan } from './pm2-dotnet-manager.js';
-import { resolveCommandLaunch } from './toolchain-launch.js';
+  HagiscriptPm2Manager,
+  type HagiscriptServerLifecycleResult,
+} from './hagiscript-server-manager.js';
+import {
+  HagiscriptRuntimeContextResolver,
+  type HagiscriptRuntimeContext,
+} from './hagiscript-runtime-context.js';
 import { executeCli } from './utils/cli-executor.js';
 import { PathManager } from './path-manager.js';
 import type {
@@ -47,27 +44,21 @@ const ERROR_LOG_FILE = 'code-server-error.log';
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
 const DEFAULT_LOG_LINE_LIMIT = 200;
-const DEFAULT_PM2_STATUS_TIMEOUT_MS = 5_000;
-const DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS = 20_000;
-
-interface CommandResult {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-}
-
-interface Pm2ContextSnapshot {
-  executablePath: string | null;
-  env: NodeJS.ProcessEnv | null;
-  available: boolean;
-  error?: string;
-}
 
 interface CodeServerLaunchSpec {
   script: string;
   args: string[];
   interpreterNone: boolean;
   cwd: string;
+}
+
+interface CodeServerStatusDetails {
+  runtime: VendoredRuntimeStatusSnapshot;
+  processStatus: CodeServerProcessStatus;
+  restartCount: number | null;
+  pm2Available: boolean;
+  pm2ExecutablePath: string | null;
+  error?: string;
 }
 
 function normalizePassword(value: unknown): string | null {
@@ -87,12 +78,26 @@ function coerceLogLineLimit(value: number | undefined): number {
   return Math.min(value, 1000);
 }
 
+function toProcessStatus(value: string | undefined): CodeServerProcessStatus {
+  if (value === 'online') {
+    return 'online';
+  }
+  if (value === 'errored') {
+    return 'errored';
+  }
+  if (value === 'stopped' || value === 'stopping' || value === 'launching' || value === 'missing') {
+    return 'stopped';
+  }
+  return 'unknown';
+}
+
 export class CodeServerManager {
   private readonly dependencyManagementService: DependencyManagementService;
   private readonly configManager: ConfigManager;
   private readonly pathManager: PathManager;
-  private readonly userDataPath: string;
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
+  private readonly hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver;
+  private readonly hagiscriptPm2Manager: HagiscriptPm2Manager;
 
   constructor(options: {
     dependencyManagementService: DependencyManagementService;
@@ -104,8 +109,12 @@ export class CodeServerManager {
     this.dependencyManagementService = options.dependencyManagementService;
     this.configManager = options.configManager;
     this.pathManager = options.pathManager ?? PathManager.getInstance();
-    this.userDataPath = options.userDataPath ?? app.getPath('userData');
     this.openPathImpl = options.openPath ?? ((targetPath) => shell.openPath(targetPath));
+    this.hagiscriptRuntimeContextResolver = new HagiscriptRuntimeContextResolver({
+      pathManager: this.pathManager,
+      dependencyManagementService: this.dependencyManagementService,
+    });
+    this.hagiscriptPm2Manager = new HagiscriptPm2Manager();
   }
 
   async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
@@ -113,32 +122,7 @@ export class CodeServerManager {
   }
 
   async getRuntimeSnapshot(): Promise<VendoredRuntimeStatusSnapshot> {
-    await this.ensureLayout();
-    const pm2 = await this.resolvePm2Context();
-    const pm2ProcessStatus = await this.getPm2ProcessStatus(pm2);
-    const health = await this.probeHealth(this.getBaseUrl(), pm2ProcessStatus);
-    const snapshot = await inspectVendoredCodeServerRuntime(this.pathManager, { health });
-    const diagnostics = [...snapshot.diagnostics];
-
-    if (!pm2.available && pm2.error) {
-      diagnostics.push(pm2.error);
-    }
-    if (pm2ProcessStatus === 'errored') {
-      diagnostics.push('PM2 reports the vendored code-server process as errored.');
-    }
-    if (pm2ProcessStatus === 'online' && !health.reachable) {
-      diagnostics.push('PM2 reports code-server online, but the local health probe failed.');
-    }
-
-    return {
-      ...snapshot,
-      diagnostics,
-      health: {
-        ...health,
-        url: this.getBaseUrl(),
-      },
-      message: diagnostics[0] ?? snapshot.message,
-    };
+    return (await this.resolveStatusDetails()).runtime;
   }
 
   getConfig(): CodeServerConfigSnapshot {
@@ -190,24 +174,22 @@ export class CodeServerManager {
   async getStatus(): Promise<CodeServerStatusSnapshot> {
     const paths = await this.ensureLayout();
     const config = this.getConfig();
-    const pm2 = await this.resolvePm2Context();
-    const processStatus = await this.getPm2ProcessStatus(pm2);
-    const runtime = await this.getRuntimeSnapshot();
-    const status = this.resolveOverallStatus(runtime.status, pm2.available, processStatus);
+    const details = await this.resolveStatusDetails(paths);
+    const status = this.resolveOverallStatus(details.runtime.status, details.pm2Available, details.processStatus);
 
     return {
       status,
       config,
-      runtime,
+      runtime: details.runtime,
       paths,
-      pm2Available: pm2.available,
-      pm2ExecutablePath: pm2.executablePath,
+      pm2Available: details.pm2Available,
+      pm2ExecutablePath: details.pm2ExecutablePath,
       process: {
         name: PROCESS_NAME,
-        status: processStatus,
-        restartCount: null,
+        status: details.processStatus,
+        restartCount: details.restartCount,
       },
-      error: this.resolveStatusError(runtime, pm2, processStatus),
+      error: this.resolveStatusError(details.runtime, details.pm2Available, details.processStatus, details.error),
       generatedAt: new Date().toISOString(),
     };
   }
@@ -222,6 +204,8 @@ export class CodeServerManager {
     if (!fileName) {
       throw new Error(`Unsupported Code Server log target: ${request.target}`);
     }
+
+    await this.refreshLegacyLogs(paths).catch(() => undefined);
 
     const logPath = path.join(paths.logs, fileName);
     try {
@@ -293,46 +277,71 @@ export class CodeServerManager {
     };
   }
 
+  getPaths(): CodeServerManagedPaths {
+    const root = this.pathManager.getCodeServerRuntimeDataHome();
+    const runtime = path.join(root, 'runtime');
+    return {
+      root,
+      data: path.join(root, 'data'),
+      extensions: path.join(root, 'data', 'extensions'),
+      logs: path.join(root, 'logs'),
+      runtime,
+      ecosystemFile: path.join(runtime, 'ecosystem.config.cjs'),
+    };
+  }
+
+  private async ensureLayout(): Promise<CodeServerManagedPaths> {
+    const paths = this.getPaths();
+    await Promise.all([
+      fs.mkdir(paths.data, { recursive: true }),
+      fs.mkdir(paths.extensions, { recursive: true }),
+      fs.mkdir(paths.logs, { recursive: true }),
+      fs.mkdir(paths.runtime, { recursive: true }),
+    ]);
+    return paths;
+  }
+
   private async runLifecycle(action: VendoredRuntimeLifecycleAction): Promise<VendoredRuntimeLifecycleResult> {
     try {
       if (action === 'repair') {
         return await this.runRepair();
       }
 
-      const snapshot = await this.getRuntimeSnapshot();
-      if (!snapshot.wrapperPath && !snapshot.entryScriptPath) {
-        throw new Error(snapshot.message ?? 'Vendored code-server runtime is not ready.');
-      }
-
       const paths = await this.ensureLayout();
-      const pm2 = await this.resolvePm2Context();
-      if (!pm2.available || !pm2.executablePath || !pm2.env) {
-        throw new Error(pm2.error ?? 'Desktop-managed PM2 is unavailable.');
+      const runtime = await inspectVendoredCodeServerRuntime(this.pathManager);
+      if (!runtime.wrapperPath && !runtime.entryScriptPath) {
+        throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
       }
 
-      const runtimeEnv = injectCodeServerRuntimeEnv(pm2.env, this.pathManager, {
-        platform: process.platform,
+      const launchSpec = this.resolveLaunchSpec(runtime);
+      const managedEnv = this.buildManagedServiceEnvironment(paths);
+      const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
+        service: 'code-server',
+        launchScriptPath: launchSpec.script,
+        launchWorkingDirectory: launchSpec.cwd,
+        launchArgs: launchSpec.args,
+        serviceEnv: managedEnv,
       });
-      const launchSpec = await this.resolveLaunchSpec(snapshot);
-      await this.renderEcosystem(paths, launchSpec, runtimeEnv.env);
 
-      if (action === 'start') {
-        await this.deletePm2Process(pm2.executablePath, pm2.env);
-        await this.runPm2(pm2.executablePath, ['start', paths.ecosystemFile, '--only', PROCESS_NAME, '--update-env'], pm2.env);
-      } else if (action === 'stop') {
-        await this.stopPm2Process(pm2.executablePath, pm2.env);
-      } else {
-        const processStatus = await this.getPm2ProcessStatus(pm2);
-        if (processStatus === 'online') {
-          const restartResult = await this.runPm2(pm2.executablePath, ['restart', PROCESS_NAME, '--update-env'], pm2.env, true);
-          if (restartResult.exitCode !== 0) {
-            await this.deletePm2Process(pm2.executablePath, pm2.env);
-            await this.runPm2(pm2.executablePath, ['start', paths.ecosystemFile, '--only', PROCESS_NAME, '--update-env'], pm2.env);
-          }
-        } else {
-          await this.deletePm2Process(pm2.executablePath, pm2.env);
-          await this.runPm2(pm2.executablePath, ['start', paths.ecosystemFile, '--only', PROCESS_NAME, '--update-env'], pm2.env);
+      try {
+        await this.renderEcosystem(paths, launchSpec, runtimeContext, managedEnv);
+        const lifecycleResult = action === 'start'
+          ? await this.hagiscriptPm2Manager.start(runtimeContext)
+          : action === 'stop'
+            ? await this.hagiscriptPm2Manager.stop(runtimeContext)
+            : await this.hagiscriptPm2Manager.restart(runtimeContext);
+
+        await this.syncLegacyLogFiles(runtimeContext, paths);
+
+        if (!this.isLifecycleResultSuccessful(action, lifecycleResult)) {
+          throw new Error(
+            lifecycleResult.success
+              ? `hagiscript PM2 reported ${lifecycleResult.status} during ${action}.`
+              : lifecycleResult.summary,
+          );
         }
+      } finally {
+        await runtimeContext.cleanup();
       }
 
       return {
@@ -433,8 +442,216 @@ export class CodeServerManager {
     return this.getConfig().baseUrl;
   }
 
-  private getPort(): string {
-    return String(this.getConfig().port);
+  private async resolveStatusDetails(paths?: CodeServerManagedPaths): Promise<CodeServerStatusDetails> {
+    const resolvedPaths = paths ?? await this.ensureLayout();
+    const pm2Context = await this.resolvePm2Context();
+    let processStatus: CodeServerProcessStatus = 'stopped';
+    let restartCount: number | null = null;
+    let error: string | undefined;
+
+    const runtimeWithoutHealth = await inspectVendoredCodeServerRuntime(this.pathManager);
+    if (pm2Context.available && (runtimeWithoutHealth.wrapperPath || runtimeWithoutHealth.entryScriptPath)) {
+      try {
+        const launchSpec = this.resolveLaunchSpec(runtimeWithoutHealth);
+        const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
+          service: 'code-server',
+          launchScriptPath: launchSpec.script,
+          launchWorkingDirectory: launchSpec.cwd,
+          launchArgs: launchSpec.args,
+          serviceEnv: this.buildManagedServiceEnvironment(resolvedPaths),
+        });
+        try {
+          const lifecycleResult = await this.hagiscriptPm2Manager.status(runtimeContext);
+          await this.syncLegacyLogFiles(runtimeContext, resolvedPaths);
+          processStatus = toProcessStatus(lifecycleResult.status);
+          restartCount = lifecycleResult.success ? lifecycleResult.restartCount : null;
+          if (!lifecycleResult.success) {
+            error = lifecycleResult.summary;
+          }
+        } finally {
+          await runtimeContext.cleanup();
+        }
+      } catch (statusError) {
+        error = statusError instanceof Error ? statusError.message : String(statusError);
+        processStatus = 'unknown';
+      }
+    } else if (!pm2Context.available) {
+      error = pm2Context.error;
+    }
+
+    const health = await this.probeHealth(this.getBaseUrl(), processStatus);
+    const snapshot = await inspectVendoredCodeServerRuntime(this.pathManager, { health });
+    const diagnostics = [...snapshot.diagnostics];
+
+    if (!pm2Context.available && pm2Context.error) {
+      diagnostics.push(pm2Context.error);
+    }
+    if (error && !diagnostics.includes(error)) {
+      diagnostics.push(error);
+    }
+    if (processStatus === 'errored') {
+      diagnostics.push('PM2 reports the vendored code-server process as errored.');
+    }
+    if (processStatus === 'online' && !health.reachable) {
+      diagnostics.push('PM2 reports code-server online, but the local health probe failed.');
+    }
+
+    return {
+      runtime: {
+        ...snapshot,
+        diagnostics,
+        health: {
+          ...health,
+          url: this.getBaseUrl(),
+        },
+        message: diagnostics[0] ?? snapshot.message,
+      },
+      processStatus,
+      restartCount,
+      pm2Available: pm2Context.available,
+      pm2ExecutablePath: pm2Context.executablePath,
+      error,
+    };
+  }
+
+  private buildManagedServiceEnvironment(paths: CodeServerManagedPaths): NodeJS.ProcessEnv {
+    const config = this.getConfig();
+    return {
+      PASSWORD: config.password,
+      PORT: String(config.port),
+      CODE_SERVER_BIND_HOST: '127.0.0.1',
+      CODE_SERVER_BIND_PORT: String(config.port),
+      HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',
+      HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
+      HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getCodeServerRuntimeDataHome(),
+      HAGICODE_CODE_SERVER_RUNTIME_ROOT: this.pathManager.getCodeServerRuntimeRoot(),
+      HAGICODE_CODE_SERVER_DATA_DIR: paths.data,
+      HAGICODE_CODE_SERVER_EXTENSIONS_DIR: paths.extensions,
+    };
+  }
+
+  private async resolvePm2Context(): Promise<{
+    executablePath: string | null;
+    available: boolean;
+    error?: string;
+  }> {
+    try {
+      const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
+      if (!this.isManagedPackageAvailable(pm2Context)) {
+        return {
+          executablePath: pm2Context.executablePath,
+          available: false,
+          error: 'Desktop-managed PM2 is unavailable. Install PM2 from Dependency Management first.',
+        };
+      }
+
+      return {
+        executablePath: pm2Context.executablePath,
+        available: true,
+      };
+    } catch (error) {
+      return {
+        executablePath: null,
+        available: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private resolveLaunchSpec(runtime: VendoredRuntimeStatusSnapshot): CodeServerLaunchSpec {
+    const runtimeRoot = this.pathManager.getCodeServerRuntimeRoot();
+    const args = [
+      '--bind-addr',
+      `127.0.0.1:${this.getConfig().port}`,
+      '--auth',
+      'password',
+      '--user-data-dir',
+      this.getPaths().data,
+      '--extensions-dir',
+      this.getPaths().extensions,
+      '--disable-telemetry',
+    ];
+
+    if (runtime.wrapperPath) {
+      return {
+        script: runtime.wrapperPath,
+        args,
+        interpreterNone: true,
+        cwd: runtimeRoot,
+      };
+    }
+
+    if (!runtime.entryScriptPath) {
+      throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
+    }
+
+    return {
+      script: runtime.entryScriptPath,
+      args,
+      interpreterNone: false,
+      cwd: runtimeRoot,
+    };
+  }
+
+  private async renderEcosystem(
+    paths: CodeServerManagedPaths,
+    launchSpec: CodeServerLaunchSpec,
+    context: HagiscriptRuntimeContext,
+    runtimeEnv: NodeJS.ProcessEnv,
+  ): Promise<void> {
+    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
+    const pathValue = context.commandEnv[pathKey] ?? context.commandEnv.PATH ?? context.commandEnv.Path ?? '';
+    const config = this.getConfig();
+    const outLog = path.join(paths.logs, OUT_LOG_FILE);
+    const errorLog = path.join(paths.logs, ERROR_LOG_FILE);
+    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(context.appName)},\n      script: ${JSON.stringify(launchSpec.script)},\n      args: ${JSON.stringify(launchSpec.args)},\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      interpreter: ${JSON.stringify(launchSpec.interpreterNone ? 'none' : 'node')},\n      cwd: ${JSON.stringify(launchSpec.cwd)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PASSWORD: ${JSON.stringify(runtimeEnv.PASSWORD ?? '')},\n        PORT: ${JSON.stringify(String(config.port))},\n        CODE_SERVER_BIND_HOST: ${JSON.stringify(runtimeEnv.CODE_SERVER_BIND_HOST ?? '')},\n        CODE_SERVER_BIND_PORT: ${JSON.stringify(runtimeEnv.CODE_SERVER_BIND_PORT ?? '')}\n      }\n    }\n  ]\n};\n`;
+    await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
+  }
+
+  private async refreshLegacyLogs(paths: CodeServerManagedPaths): Promise<void> {
+    const pm2Context = await this.resolvePm2Context();
+    const runtime = await inspectVendoredCodeServerRuntime(this.pathManager);
+    if (!pm2Context.available || (!runtime.wrapperPath && !runtime.entryScriptPath)) {
+      return;
+    }
+
+    const launchSpec = this.resolveLaunchSpec(runtime);
+    const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
+      service: 'code-server',
+      launchScriptPath: launchSpec.script,
+      launchWorkingDirectory: launchSpec.cwd,
+      launchArgs: launchSpec.args,
+      serviceEnv: this.buildManagedServiceEnvironment(paths),
+    });
+    try {
+      await this.syncLegacyLogFiles(runtimeContext, paths);
+    } finally {
+      await runtimeContext.cleanup();
+    }
+  }
+
+  private async syncLegacyLogFiles(context: HagiscriptRuntimeContext, paths: CodeServerManagedPaths): Promise<void> {
+    const mappings = [
+      {
+        source: path.join(context.pm2LogsDirectory, `${context.appName}-out.log`),
+        target: path.join(paths.logs, OUT_LOG_FILE),
+      },
+      {
+        source: path.join(context.pm2LogsDirectory, `${context.appName}-error.log`),
+        target: path.join(paths.logs, ERROR_LOG_FILE),
+      },
+    ];
+
+    for (const mapping of mappings) {
+      try {
+        const content = await fs.readFile(mapping.source, 'utf8');
+        await fs.writeFile(mapping.target, content, 'utf8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
   }
 
   private async probeHealth(baseUrl: string, pm2Status: CodeServerProcessStatus): Promise<VendoredRuntimeHealthSnapshot> {
@@ -463,213 +680,6 @@ export class CodeServerManager {
     }
   }
 
-  getPaths(): CodeServerManagedPaths {
-    const root = this.pathManager.getCodeServerRuntimeDataHome();
-    const runtime = path.join(root, 'runtime');
-    return {
-      root,
-      data: path.join(root, 'data'),
-      extensions: path.join(root, 'data', 'extensions'),
-      logs: path.join(root, 'logs'),
-      runtime,
-      ecosystemFile: path.join(runtime, 'ecosystem.config.cjs'),
-    };
-  }
-
-  private async ensureLayout(): Promise<CodeServerManagedPaths> {
-    const paths = this.getPaths();
-    await Promise.all([
-      fs.mkdir(paths.data, { recursive: true }),
-      fs.mkdir(paths.extensions, { recursive: true }),
-      fs.mkdir(paths.logs, { recursive: true }),
-      fs.mkdir(paths.runtime, { recursive: true }),
-    ]);
-    return paths;
-  }
-
-  private async resolvePm2Context(): Promise<Pm2ContextSnapshot> {
-    try {
-      const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
-      if (!pm2Context.executablePath || pm2Context.packageStatus?.status !== 'installed') {
-        return {
-          executablePath: pm2Context.executablePath,
-          env: null,
-          available: false,
-          error: 'Desktop-managed PM2 is unavailable. Install PM2 from Dependency Management first.',
-        };
-      }
-
-      const env = await this.buildManagedPm2CommandEnv(pm2Context.commandEnv, pm2Context.environment);
-      return {
-        executablePath: pm2Context.executablePath,
-        env,
-        available: true,
-      };
-    } catch (error) {
-      return {
-        executablePath: null,
-        env: null,
-        available: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  private async buildManagedPm2CommandEnv(
-    baseEnv: NodeJS.ProcessEnv,
-    environment: {
-      nodeVersion: string | null;
-      nodeMajorVersion: string;
-      npmGlobalPrefix: string;
-      npmGlobalBinRoot: string;
-      npmGlobalModulesRoot: string;
-      npmCacheRoot: string;
-      node: {
-        executablePath: string;
-      };
-    },
-  ): Promise<NodeJS.ProcessEnv> {
-    const managedCliEnv = injectManagedCliPathEnv(baseEnv, {
-      platform: process.platform,
-      npmGlobalPaths: {
-        nodeVersion: environment.nodeVersion ?? process.versions.node,
-        nodeMajorVersion: environment.nodeMajorVersion,
-        npmGlobalPrefix: environment.npmGlobalPrefix,
-        npmGlobalBinRoot: environment.npmGlobalBinRoot,
-        npmGlobalModulesRoot: environment.npmGlobalModulesRoot,
-        npmCacheRoot: environment.npmCacheRoot,
-      },
-    }).env;
-
-    const pm2Version = await this.resolveManagedPm2Version(environment.npmGlobalModulesRoot);
-    const pm2HomePaths = buildPm2MajorHomePaths({
-      userDataPath: this.userDataPath,
-      pm2Version,
-      platform: process.platform,
-    });
-    const pm2Home = path.join(this.pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2HomePaths.pm2MajorVersion);
-    await fs.mkdir(pm2Home, { recursive: true });
-    const pm2HomeAlias = await ensurePm2HomeAlias(pm2Home, `code-server-${pm2HomePaths.pm2MajorVersion}`);
-
-    return {
-      ...managedCliEnv,
-      HAGICODE_RUNTIME_HOME: this.pathManager.getRuntimeProgramHome(),
-      HAGICODE_RUNTIME_DATA_HOME: this.pathManager.getCodeServerRuntimeDataHome(),
-      HAGICODE_NODE_EXECUTABLE_PATH: environment.node.executablePath,
-      PM2_HOME: pm2HomeAlias,
-    };
-  }
-
-  private async resolveManagedPm2Version(npmGlobalModulesRoot: string): Promise<string | null> {
-    const packageJsonPath = path.join(npmGlobalModulesRoot, 'pm2', 'package.json');
-    try {
-      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent) as { version?: unknown };
-      return typeof packageJson.version === 'string' ? packageJson.version : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private async resolveLaunchSpec(
-    runtime: VendoredRuntimeStatusSnapshot,
-  ): Promise<CodeServerLaunchSpec> {
-    const args = [
-      '--bind-addr',
-      `127.0.0.1:${this.getConfig().port}`,
-      '--auth',
-      'password',
-      '--user-data-dir',
-      this.getPaths().data,
-      '--extensions-dir',
-      this.getPaths().extensions,
-      '--disable-telemetry',
-    ];
-
-    const runtimeRoot = await ensureNoSpacePathAlias(
-      this.pathManager.getCodeServerRuntimeRoot(),
-      'code-server-runtime',
-    );
-    const portableToolchainRoot = await ensureNoSpacePathAlias(
-      this.pathManager.getPortableToolchainRoot(),
-      'desktop-toolchain',
-    );
-
-    if (runtime.entryScriptPath) {
-      const aliasedEntryScriptPath = path.join(
-        runtimeRoot,
-        path.relative(this.pathManager.getCodeServerRuntimeRoot(), runtime.entryScriptPath),
-      );
-      const nodeExecutablePath = path.join(
-        portableToolchainRoot,
-        getNodeExecutableRelativePath(process.platform),
-      );
-      return {
-        script: nodeExecutablePath,
-        args: [aliasedEntryScriptPath, ...args],
-        interpreterNone: true,
-        cwd: runtimeRoot,
-      };
-    }
-
-    if (!runtime.wrapperPath) {
-      throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
-    }
-
-    const aliasedWrapperPath = path.join(
-      runtimeRoot,
-      path.relative(this.pathManager.getCodeServerRuntimeRoot(), runtime.wrapperPath),
-    );
-
-    return {
-      script: aliasedWrapperPath,
-      args,
-      interpreterNone: true,
-      cwd: runtimeRoot,
-    };
-  }
-
-  private async renderEcosystem(paths: CodeServerManagedPaths, launchSpec: CodeServerLaunchSpec, runtimeEnv: NodeJS.ProcessEnv): Promise<void> {
-    const pathKey = resolvePathEnvKey(runtimeEnv, process.platform);
-    const pathValue = runtimeEnv[pathKey] ?? runtimeEnv.PATH ?? runtimeEnv.Path ?? '';
-    const config = this.getConfig();
-    const outLog = path.join(paths.logs, OUT_LOG_FILE);
-    const errorLog = path.join(paths.logs, ERROR_LOG_FILE);
-    const interpreterLine = launchSpec.interpreterNone ? `,\n      interpreter: 'none'` : '';
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(PROCESS_NAME)},\n      script: ${JSON.stringify(launchSpec.script)},\n      args: ${JSON.stringify(launchSpec.args)},\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10${interpreterLine},\n      cwd: ${JSON.stringify(launchSpec.cwd)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_PORTABLE_TOOLCHAIN_ROOT: ${JSON.stringify(runtimeEnv.HAGICODE_PORTABLE_TOOLCHAIN_ROOT ?? '')},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PORT: ${JSON.stringify(String(config.port))},\n        PASSWORD: ${JSON.stringify(config.password)}\n      }\n    }\n  ]\n};\n`;
-    await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
-  }
-
-  private async getPm2ProcessStatus(pm2: Pm2ContextSnapshot): Promise<CodeServerProcessStatus> {
-    if (!pm2.available || !pm2.executablePath || !pm2.env) {
-      return 'stopped';
-    }
-
-    const manager = new Pm2DotnetManager({
-      pm2Command: pm2.executablePath,
-      processName: PROCESS_NAME,
-    });
-    const result = await manager.status(this.getPaths().runtime, pm2.env);
-    if (!result.success || !result.status) {
-      return 'unknown';
-    }
-
-    const status = result.status.status;
-    if (!result.status.exists || status === null) {
-      return 'stopped';
-    }
-    if (status === 'online') {
-      return 'online';
-    }
-    if (status === 'errored') {
-      return 'errored';
-    }
-    if (status === 'stopped' || status === 'stopping' || status === 'launching') {
-      return 'stopped';
-    }
-    return 'unknown';
-  }
-
   private resolveOverallStatus(
     runtimeStatus: VendoredRuntimeStatusSnapshot['status'],
     pm2Available: boolean,
@@ -684,7 +694,7 @@ export class CodeServerManager {
     if (processStatus === 'online' || runtimeStatus === 'running') {
       return 'running';
     }
-    if (!pm2Available || processStatus === 'errored') {
+    if (!pm2Available || processStatus === 'errored' || processStatus === 'unknown') {
       return 'error';
     }
     return 'stopped';
@@ -692,19 +702,20 @@ export class CodeServerManager {
 
   private resolveStatusError(
     runtime: VendoredRuntimeStatusSnapshot,
-    pm2: Pm2ContextSnapshot,
+    pm2Available: boolean,
     processStatus: CodeServerProcessStatus,
+    statusError?: string,
   ): string | undefined {
     if (runtime.diagnostics[0]) {
       return runtime.diagnostics[0];
     }
-    if (!pm2.available) {
-      return pm2.error ?? 'Desktop-managed PM2 is unavailable.';
+    if (!pm2Available) {
+      return statusError ?? 'Desktop-managed PM2 is unavailable.';
     }
     if (processStatus === 'errored') {
       return 'PM2 reports the Desktop-managed Code Server process as errored.';
     }
-    return undefined;
+    return statusError;
   }
 
   private normalizePort(value: unknown, fallback: number): number {
@@ -727,48 +738,22 @@ export class CodeServerManager {
     return password;
   }
 
-  private async deletePm2Process(command: string, env: NodeJS.ProcessEnv): Promise<void> {
-    const result = await this.runPm2(command, ['delete', PROCESS_NAME], env, true);
-    if (result.exitCode === 0 || /not found/i.test(`${result.stdout}\n${result.stderr}`)) {
-      return;
-    }
-    throw new Error((result.stderr || result.stdout || 'PM2 delete failed').trim());
+  private isManagedPackageAvailable(context: ManagedNpmCommandContext): boolean {
+    return context.packageStatus?.status === 'installed' && context.executablePath !== null;
   }
 
-  private async stopPm2Process(command: string, env: NodeJS.ProcessEnv): Promise<void> {
-    const result = await this.runPm2(command, ['stop', PROCESS_NAME], env, true);
-    if (result.exitCode === 0 || /not found/i.test(`${result.stdout}\n${result.stderr}`)) {
-      return;
+  private isLifecycleResultSuccessful(
+    action: VendoredRuntimeLifecycleAction,
+    result: HagiscriptServerLifecycleResult,
+  ): boolean {
+    if (!result.success) {
+      return false;
     }
-    throw new Error((result.stderr || result.stdout || 'PM2 stop failed').trim());
-  }
 
-  private async runPm2(command: string, args: string[], env: NodeJS.ProcessEnv, allowFailure = false): Promise<CommandResult> {
-    const pm2LaunchPlan = resolvePm2LaunchPlan(command, {
-      env,
-      platform: process.platform,
-    });
-    const launch = pm2LaunchPlan.shell
-      ? resolveCommandLaunch(pm2LaunchPlan.command)
-      : { command: pm2LaunchPlan.command, shell: false };
-
-    const result = await executeCli({
-      command: launch.command,
-      args: [...pm2LaunchPlan.argsPrefix, ...args],
-      env,
-      windowsHide: true,
-      shell: launch.shell,
-      timeoutMs: args[0] === 'jlist' ? DEFAULT_PM2_STATUS_TIMEOUT_MS : DEFAULT_PM2_LIFECYCLE_TIMEOUT_MS,
-      metadata: { component: 'CodeServerManager', command },
-    });
-    const normalized = {
-      exitCode: result.exitCode,
-      stdout: result.stdout,
-      stderr: result.stderr,
-    };
-    if (!allowFailure && result.exitCode !== 0) {
-      throw new Error((result.stderr || result.stdout || `PM2 exited with code ${result.exitCode}`).trim());
+    if (action === 'stop') {
+      return result.status === 'stopped' || result.status === 'missing';
     }
-    return normalized;
+
+    return result.status === 'online';
   }
 }

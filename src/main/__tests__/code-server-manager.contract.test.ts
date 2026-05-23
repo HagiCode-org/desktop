@@ -8,12 +8,18 @@ const handlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/dependenc
 const codeServerHandlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/codeServerHandlers.ts');
 
 describe('code-server manager contract', () => {
-  it('uses PM2 with scoped bundled Node injection, password auth, and Desktop-owned runtime directories', async () => {
+  it('routes lifecycle through hagiscript while preserving password auth and Desktop-owned runtime directories', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /PROCESS_NAME = 'hagicode-code-server'/);
-    assert.match(source, /injectCodeServerRuntimeEnv\(pm2\.env, this\.pathManager/);
-    assert.match(source, /buildPm2MajorHomePaths/);
+    assert.match(source, /HagiscriptPm2Manager/);
+    assert.match(source, /HagiscriptRuntimeContextResolver/);
+    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'code-server'/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
+    assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /--bind-addr/);
     assert.match(source, /--auth',\s*'password'/);
     assert.match(source, /PASSWORD:/);
@@ -27,6 +33,14 @@ describe('code-server manager contract', () => {
     assert.match(source, /Vendored code-server repair is only available in development builds/);
     assert.match(source, /Desktop-managed PM2 is unavailable/);
     assert.match(source, /fetch\(baseUrl/);
+    assert.match(source, /context\.pm2LogsDirectory/);
+    assert.match(source, /context\.appName/);
+    assert.doesNotMatch(source, /Pm2DotnetManager/);
+    assert.doesNotMatch(source, /resolvePm2LaunchPlan/);
+    assert.doesNotMatch(source, /injectCodeServerRuntimeEnv/);
+    assert.doesNotMatch(source, /injectManagedCliPathEnv/);
+    assert.doesNotMatch(source, /buildPm2MajorHomePaths/);
+    assert.doesNotMatch(source, /ensurePm2HomeAlias/);
   });
 
   it('registers vendored runtime lifecycle IPC handlers through dependency management channels', async () => {
