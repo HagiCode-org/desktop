@@ -17,6 +17,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'dependencyManagement.packages.hagiscript.description',
     binName: 'hagiscript',
     installSpec: '@hagicode/hagiscript@0.2.3',
+    requiredVersionRange: '>=0.2.3',
     category: 'bootstrap',
     installMode: 'embedded-npm',
     required: true,
@@ -28,6 +29,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'dependencyManagement.packages.openspec.description',
     binName: 'openspec',
     installSpec: '@fission-ai/openspec@1.3.1',
+    requiredVersionRange: '>=1.3.1',
     category: 'workflow',
     installMode: 'hagiscript-sync',
     required: true,
@@ -39,6 +41,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'dependencyManagement.packages.skills.description',
     binName: 'skills',
     installSpec: 'skills@1.5.1',
+    requiredVersionRange: '>=1.5.1',
     category: 'workflow',
     installMode: 'hagiscript-sync',
     required: true,
@@ -50,6 +53,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'dependencyManagement.packages.pm2.description',
     binName: 'pm2',
     installSpec: 'pm2@7.0.1',
+    requiredVersionRange: '>=7.0.1',
     category: 'workflow',
     installMode: 'hagiscript-sync',
     required: true,
@@ -144,6 +148,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     descriptionKey: 'dependencyManagement.packages.impeccable.description',
     binName: 'impeccable',
     installSpec: 'impeccable@2.1.9',
+    requiredVersionRange: '>=2.1.9',
     category: 'developer-tool',
     installMode: 'hagiscript-sync',
   },
@@ -207,6 +212,10 @@ export function getSupportedSelectedAgentCliPackageIds(selectedIds: readonly str
 export function getManagedPackageRequiredVersionRange(
   definition: ManagedNpmPackageDefinition,
 ): string | null {
+  if (definition.requiredVersionRange) {
+    return validRange(definition.requiredVersionRange, { includePrerelease: true }) ?? null;
+  }
+
   const installSpec = definition.installSpec.trim();
   const scopedTargetPrefix = `${definition.packageName}@`;
 

@@ -33,6 +33,7 @@ export interface ManagedNpmPackageDefinition {
   descriptionKey: string;
   binName: string;
   installSpec: string;
+  requiredVersionRange?: string;
   category: ManagedNpmPackageCategory;
   installMode: ManagedNpmPackageInstallMode;
   agentCliId?: AgentCliId;

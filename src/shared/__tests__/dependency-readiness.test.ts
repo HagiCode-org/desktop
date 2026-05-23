@@ -4,6 +4,7 @@ import { minVersion } from 'semver';
 import {
   evaluateDependencyReadiness,
   getManagedPackageRequiredVersionRange,
+  isManagedPackageVersionSatisfied,
   managedNpmPackages,
   npmInstallableAgentCliPackages,
   optionalManagedNpmPackages,
@@ -135,6 +136,37 @@ describe('dependency readiness evaluation', () => {
     assert.equal(devHagiscript?.installSpec, '@hagicode/hagiscript@dev');
     assert.equal(devHagiscript?.requiredVersionRange, null);
     assert.equal(devHagiscript?.versionSatisfied, true);
+  });
+
+  it('treats catalog-pinned managed package versions as minimum supported versions', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.7-dev', pm2: '7.1.0' }), ['codex']);
+    const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
+    const pm2 = summary.requiredPackages.find((item) => item.id === 'pm2');
+
+    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.3');
+    assert.equal(hagiscript?.versionSatisfied, true);
+    assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
+    assert.equal(pm2?.versionSatisfied, true);
+    assert.equal(summary.requiredReady, true);
+  });
+
+  it('still allows exact-version checks when a snapshot definition explicitly requires one', () => {
+    const hagiscriptDefinition = managedNpmPackages.find((definition) => definition.id === 'hagiscript');
+    if (!hagiscriptDefinition) {
+      throw new Error('hagiscript definition missing from managed catalog');
+    }
+
+    assert.equal(
+      isManagedPackageVersionSatisfied(
+        {
+          ...hagiscriptDefinition,
+          installSpec: '@hagicode/hagiscript@0.2.3',
+          requiredVersionRange: '0.2.3',
+        },
+        '0.2.7-dev',
+      ),
+      false,
+    );
   });
 
   it('keeps optional package status visible without blocking readiness', () => {

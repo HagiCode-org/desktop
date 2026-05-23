@@ -28,6 +28,7 @@ export type VersionDownloadMessage =
   | 'sha256-verifying'
   | 'sha256-verified'
   | 'extracting-package'
+  | 'switching-active-version'
   | 'installation-complete';
 
 export type VersionInstallStage =
@@ -37,6 +38,7 @@ export type VersionInstallStage =
   | 'backfilling'
   | 'verifying'
   | 'extracting'
+  | 'switching'
   | 'completed'
   | 'error';
 
