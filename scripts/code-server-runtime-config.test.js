@@ -11,6 +11,7 @@ import {
 } from './code-server-runtime-contract.js';
 
 const manifestStore = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+const vendoredRuntime = manifestStore.vendoredRuntime;
 const manifest = manifestStore.desktopExtensions.codeServerRuntime;
 const targetPlatforms = ['linux-x64', 'osx-x64', 'osx-arm64', 'win-x64'];
 
@@ -21,10 +22,10 @@ assert.equal(detectCodeServerRuntimePlatform('win32', 'x64'), 'win-x64');
 assert.throws(() => detectCodeServerRuntimePlatform('freebsd', 'x64'), /Unsupported vendored code-server platform/);
 
 for (const platform of targetPlatforms) {
-  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), '2026.0522.0073');
+  assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), vendoredRuntime.releaseVersion);
   assert.deepEqual(
     resolveConfiguredCodeServerReleaseUrls(platform, manifest),
-    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073'],
+    [vendoredRuntime.releaseTagUrl],
   );
   assert.ok(resolveCodeServerRuntimeTarget(platform, manifest));
 }

@@ -21,6 +21,24 @@ paths:
   dotnetRuntime: components/dotnet/runtime
   vendoredRoot: components/bundled
 
+vendoredRuntime:
+  releaseVersion: &vendoredRuntimeVersion "2026.0523.0075"
+  releaseTagUrl: &vendoredRuntimeReleaseTagUrl https://github.com/HagiCode-org/vendered/releases/tag/v2026.0523.0075
+  releaseVersionByPlatform: &vendoredRuntimeReleaseVersionByPlatform
+    linux-x64: *vendoredRuntimeVersion
+    osx-x64: *vendoredRuntimeVersion
+    osx-arm64: *vendoredRuntimeVersion
+    win-x64: *vendoredRuntimeVersion
+  releaseUrlsByPlatform: &vendoredRuntimeReleaseUrlsByPlatform
+    linux-x64:
+      - *vendoredRuntimeReleaseTagUrl
+    osx-x64:
+      - *vendoredRuntimeReleaseTagUrl
+    osx-arm64:
+      - *vendoredRuntimeReleaseTagUrl
+    win-x64:
+      - *vendoredRuntimeReleaseTagUrl
+
 components:
   - name: node
     type: runtime
@@ -70,7 +88,7 @@ components:
   - name: omniroute
     type: bundled-runtime
     source: desktop-vendored-runtime
-    version: "2026.0522.0073"
+    version: *vendoredRuntimeVersion
     runtimeDataDir: services/omniroute
     lifecycleDependencies:
       - node
@@ -83,7 +101,7 @@ components:
   - name: code-server
     type: bundled-runtime
     source: desktop-vendored-runtime
-    version: "2026.0522.0073"
+    version: *vendoredRuntimeVersion
     runtimeDataDir: services/code-server
     lifecycleDependencies:
       - node
@@ -278,25 +296,14 @@ desktopExtensions:
     schemaVersion: 1
     runtime: code-server
     packageId: code-server
-    releaseVersionByPlatform:
-      linux-x64: "2026.0522.0073"
-      osx-x64: "2026.0522.0073"
-      osx-arm64: "2026.0522.0073"
-      win-x64: "2026.0522.0073"
+    releaseVersion: *vendoredRuntimeVersion
+    releaseVersionByPlatform: *vendoredRuntimeReleaseVersionByPlatform
     defaultPort: 37667
     source:
       generatedRootSubdir: code-server-runtime
       localArtifactDir: null
       indexUrl: null
-      releaseUrlsByPlatform:
-        linux-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        osx-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        osx-arm64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        win-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
+      releaseUrlsByPlatform: *vendoredRuntimeReleaseUrlsByPlatform
       allowedDownloadHosts:
         - github.com
         - release-assets.githubusercontent.com
@@ -335,24 +342,13 @@ desktopExtensions:
     schemaVersion: 1
     runtime: omniroute
     packageId: omniroute
-    releaseVersionByPlatform:
-      linux-x64: "2026.0522.0073"
-      osx-x64: "2026.0522.0073"
-      osx-arm64: "2026.0522.0073"
-      win-x64: "2026.0522.0073"
+    releaseVersion: *vendoredRuntimeVersion
+    releaseVersionByPlatform: *vendoredRuntimeReleaseVersionByPlatform
     source:
       generatedRootSubdir: omniroute-runtime
       localArtifactDir: null
       indexUrl: null
-      releaseUrlsByPlatform:
-        linux-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        osx-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        osx-arm64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
-        win-x64:
-          - https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073
+      releaseUrlsByPlatform: *vendoredRuntimeReleaseUrlsByPlatform
       allowedDownloadHosts:
         - github.com
         - release-assets.githubusercontent.com

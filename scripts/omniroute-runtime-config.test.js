@@ -11,8 +11,9 @@ import {
 } from './omniroute-runtime-contract.js';
 
 const manifestStore = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+const vendoredRuntime = manifestStore.vendoredRuntime;
 const manifest = manifestStore.desktopExtensions.omniRouteRuntime;
-const targetPlatforms = ['linux-x64', 'osx-arm64', 'win-x64'];
+const targetPlatforms = ['linux-x64', 'osx-x64', 'osx-arm64', 'win-x64'];
 
 assert.equal(detectOmniRouteRuntimePlatform('linux', 'x64'), 'linux-x64');
 assert.equal(detectOmniRouteRuntimePlatform('darwin', 'arm64'), 'osx-arm64');
@@ -21,10 +22,10 @@ assert.equal(detectOmniRouteRuntimePlatform('win32', 'x64'), 'win-x64');
 assert.throws(() => detectOmniRouteRuntimePlatform('freebsd', 'x64'), /Unsupported vendored OmniRoute platform/);
 
 for (const platform of targetPlatforms) {
-  assert.equal(resolveRequestedOmniRouteRuntimeVersion(platform, manifest), '2026.0522.0073');
+  assert.equal(resolveRequestedOmniRouteRuntimeVersion(platform, manifest), vendoredRuntime.releaseVersion);
   assert.deepEqual(
     resolveConfiguredOmniRouteReleaseUrls(platform, manifest),
-    ['https://github.com/HagiCode-org/vendered/releases/tag/v2026.0522.0073'],
+    [vendoredRuntime.releaseTagUrl],
   );
   assert.ok(resolveOmniRouteRuntimeTarget(platform, manifest));
 }
