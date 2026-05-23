@@ -11,10 +11,28 @@ describe('omniroute remediation classification', () => {
     runtimeInstallStatus: 'installed' as const,
   };
 
+  it('classifies missing hagiscript as a dependency remediation failure', () => {
+    const remediation = buildOmniRouteDependencyRemediation({
+      runtime: healthyRuntime,
+      packages: [
+        { packageId: 'hagiscript', packageStatus: 'not-installed', executablePath: null },
+        { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
+      ],
+    });
+
+    assert.equal(remediation?.kind, 'dependency');
+    assert.equal(remediation?.failureKind, 'dependency-missing');
+    assert.deepEqual(remediation?.targetRuntimeIds, []);
+    assert.deepEqual(remediation?.targetPackageIds, ['hagiscript']);
+    assert.equal(remediation?.recommendedAction, 'open-dependency-management');
+    assert.match(remediation?.message ?? '', /hagiscript/i);
+  });
+
   it('classifies missing PM2 as a dependency remediation failure', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: healthyRuntime,
       packages: [
+        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.3' },
         { packageId: 'pm2', packageStatus: 'not-installed', executablePath: null },
       ],
     });
@@ -34,6 +52,7 @@ describe('omniroute remediation classification', () => {
         runtimeInstallStatus: 'not-installed',
       },
       packages: [
+        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.3' },
         { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
       ],
     });
@@ -48,21 +67,21 @@ describe('omniroute remediation classification', () => {
     const problems = classifyOmniRouteDependencyProblems({
       runtime: healthyRuntime,
       packages: [
-        { packageId: 'pm2', packageStatus: 'unknown', executablePath: null },
+        { packageId: 'hagiscript', packageStatus: 'unknown', executablePath: null },
       ],
     });
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: healthyRuntime,
       packages: [
-        { packageId: 'pm2', packageStatus: 'unknown', executablePath: null },
+        { packageId: 'hagiscript', packageStatus: 'unknown', executablePath: null },
       ],
     });
 
     assert.deepEqual(problems, [
-      { kind: 'package', packageId: 'pm2', issue: 'unknown' },
+      { kind: 'package', packageId: 'hagiscript', issue: 'unknown' },
     ]);
     assert.equal(remediation?.failureKind, 'dependency-unknown');
-    assert.deepEqual(remediation?.targetPackageIds, ['pm2']);
+    assert.deepEqual(remediation?.targetPackageIds, ['hagiscript']);
   });
 
   it('treats installed but unsupported package versions as dependency-version-mismatch guidance', () => {
@@ -87,26 +106,28 @@ describe('omniroute remediation classification', () => {
     assert.match(remediation?.message ?? '', /unsupported version/i);
   });
 
-  it('classifies combined runtime and package failures together', () => {
+  it('classifies combined hagiscript, PM2, and runtime failures together', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: {
         runtimeId: 'omniroute',
         runtimeInstallStatus: 'failed',
       },
       packages: [
+        { packageId: 'hagiscript', packageStatus: 'not-installed', executablePath: null },
         { packageId: 'pm2', packageStatus: 'not-installed', executablePath: null },
       ],
     });
 
     assert.equal(remediation?.failureKind, 'runtime-and-package');
     assert.deepEqual(remediation?.targetRuntimeIds, ['omniroute']);
-    assert.deepEqual(remediation?.targetPackageIds, ['pm2']);
+    assert.deepEqual(remediation?.targetPackageIds, ['hagiscript', 'pm2']);
   });
 
   it('does not classify healthy runtime and managed dependencies as dependency guidance', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: healthyRuntime,
       packages: [
+        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.3' },
         { packageId: 'pm2', packageStatus: 'installed', executablePath: '/toolchain/pm2', installedVersion: '7.0.1' },
       ],
     });

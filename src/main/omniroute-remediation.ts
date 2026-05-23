@@ -39,6 +39,7 @@ export type OmniRouteDependencyProblem =
     };
 
 const PACKAGE_LABELS: Record<OmniRouteDependencyPackageId, string> = {
+  hagiscript: 'hagiscript',
   pm2: 'PM2',
 };
 
@@ -155,7 +156,7 @@ export function buildOmniRouteDependencyRemediation(input: {
     return requiredVersionRange ? `${PACKAGE_LABELS[packageId]} must satisfy ${requiredVersionRange}` : PACKAGE_LABELS[packageId];
   }).join('; ');
   const message = failureKind === 'runtime-and-package'
-    ? `Desktop-managed ${runtimeList} and ${packageList} need repair. Restore the vendored runtime and PM2 from Dependency Management, then retry.`
+    ? `Desktop-managed ${runtimeList} and ${packageList} need repair. Restore the vendored runtime and required runtime tooling from Dependency Management, then retry.`
     : failureKind === 'runtime-damaged'
       ? `Desktop-managed ${runtimeList} failed validation. Repair or reinstall Desktop to restore the vendored runtime, then retry.`
       : failureKind === 'runtime-missing'

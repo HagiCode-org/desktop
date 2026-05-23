@@ -12,7 +12,7 @@ export type OmniRouteOverallStatus = 'running' | 'stopped' | 'partial' | 'error'
 export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type OmniRouteLogTarget = 'service-out' | 'service-error';
 export type OmniRoutePathTarget = 'config' | 'data' | 'logs';
-export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'pm2'>;
+export type OmniRouteDependencyPackageId = Extract<ManagedNpmPackageId, 'hagiscript' | 'pm2'>;
 export type OmniRouteDependencyRuntimeId = Extract<VendoredRuntimeId, 'omniroute'>;
 export type OmniRouteDependencyFailureKind =
   | 'runtime-missing'
@@ -44,6 +44,7 @@ export interface OmniRouteManagedPaths {
 export interface OmniRouteProcessSnapshot {
   name: string;
   status: OmniRouteProcessStatus;
+  pid: number | null;
   restartCount: number | null;
   uptime: number | null;
 }

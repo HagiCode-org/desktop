@@ -7,10 +7,10 @@ const managerPath = path.resolve(process.cwd(), 'src/main/omniroute-manager.ts')
 const configPath = path.resolve(process.cwd(), 'src/main/config.ts');
 
 describe('OmniRoute manager contract', () => {
-  it('owns the Desktop userData OmniRoute directory layout', async () => {
+  it('owns the Desktop-managed OmniRoute directory layout through PathManager', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /app\.getPath\('userData'\)/);
+    assert.doesNotMatch(source, /app\.getPath\('userData'\)/);
     assert.match(source, /this\.pathManager\.getOmniRouteRuntimeDataHome\(\)/);
     assert.match(source, /config: path\.join\(root, 'config'\)/);
     assert.match(source, /data: path\.join\(root, 'data'\)/);
@@ -19,7 +19,7 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /fs\.mkdir\(paths\.config, \{ recursive: true \}\)/);
   });
 
-  it('renders environment and PM2 ecosystem files for only the desktop OmniRoute service process', async () => {
+  it('renders Desktop-managed environment files and a compatibility ecosystem file', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /OMNIROUTE_DEFAULT_PORT/);
@@ -32,67 +32,59 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /OMNIROUTE_RUNTIME_DIR/);
     assert.match(source, /DATA_DIR/);
     assert.match(source, /CLIPROXYAPI_CONFIG_DIR/);
-    assert.match(source, /DATA_DIR: \${JSON\.stringify\(paths\.data\)}/);
-    assert.match(source, /CLIPROXYAPI_CONFIG_DIR: \${JSON\.stringify\(paths\.config\)}/);
     assert.match(source, /INITIAL_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
     assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
-    assert.match(source, /const runtime = await this\.getRuntimeSnapshot\(\);/);
-    assert.match(source, /const nodeExecutablePath = pm2Context\.environment\.node\.executablePath;/);
-    assert.match(source, /if \(wrapperPath && process\.platform !== 'win32'\)/);
-    assert.match(source, /script: stripWrappingQuotes\(wrapperPath\)/);
     assert.match(source, /args: \['--no-open'\]/);
-    assert.match(source, /args: \[entryScriptPath, '--no-open'\]/);
-    assert.match(source, /interpreter: "none"/);
-    assert.match(source, /autorestart: true/);
-    assert.match(source, /restart_delay: 3000/);
+    assert.match(source, /interpreterNone: true/);
+    assert.match(source, /interpreterNone: false/);
+    assert.match(source, /module\.exports = \{/);
+    assert.match(source, /name: \$\{JSON\.stringify\(context\.appName\)\}/);
+    assert.match(source, /out_file: \$\{JSON\.stringify\(outLog\)\}/);
+    assert.match(source, /error_file: \$\{JSON\.stringify\(errorLog\)\}/);
     assert.match(source, /omniroute-out\.log/);
     assert.match(source, /omniroute-error\.log/);
-    assert.doesNotMatch(source, /omniroute-reconcile/);
   });
 
-  it('uses Desktop-managed PM2 and scopes lifecycle commands by process name', async () => {
+  it('routes OmniRoute lifecycle through hagiscript-managed PM2 without a direct fallback', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /buildOmniRouteDependencyRemediation/);
-    assert.match(source, /resolvePm2LaunchPlan/);
-    assert.match(source, /injectPortableToolchainEnv/);
-    assert.match(source, /injectManagedCliPathEnv/);
-    assert.match(source, /buildPm2MajorHomePaths/);
+    assert.match(source, /HagiscriptPm2Manager/);
+    assert.match(source, /HagiscriptRuntimeContextResolver/);
+    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute'/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
+    assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
+    assert.match(source, /getManagedCommandContext\('hagiscript'\)/);
     assert.match(source, /getManagedCommandContext\('pm2'\)/);
-    assert.match(source, /buildManagedPm2CommandEnv/);
-    assert.match(source, /await this\.buildManagedPm2CommandEnv\(pm2Context\.commandEnv, pm2Context\.environment\)/);
-    assert.match(source, /const portableToolchainEnv = injectPortableToolchainEnv\(baseEnv, this\.pathManager/);
+    assert.match(source, /packageId: 'hagiscript'/);
     assert.match(source, /packageId: 'pm2'/);
-    assert.match(source, /if \(remediation\) \{\s*throw new Error\(remediation\.message\);/);
+    assert.match(source, /syncLegacyLogFiles/);
+    assert.match(source, /context\.pm2LogsDirectory/);
+    assert.match(source, /context\.appName/);
     assert.match(source, /status: \{ \.\.\.status, status: 'error', error: message, remediation: resolvedRemediation \}/);
-    assert.match(source, /remediation: resolvedRemediation/);
-    assert.match(source, /startFreshPm2Process/);
-    assert.match(source, /\['delete', OMNIROUTE_PROCESS_NAME\]/);
-    assert.match(source, /\['start', ecosystemFile, '--only', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
-    assert.match(source, /\['stop', OMNIROUTE_PROCESS_NAME\]/);
-    assert.match(source, /\['restart', OMNIROUTE_PROCESS_NAME, '--update-env'\]/);
-    assert.match(source, /isMissingPm2ProcessMessage/);
-    assert.match(source, /HAGICODE_AGENT_CLI_PATH/);
-    assert.match(source, /HAGICODE_NPM_GLOBAL_PATH/);
-    assert.match(source, /PM2_HOME/);
-    assert.match(source, /const pm2Home = path\.join\(this\.pathManager\.getOmniRouteRuntimeDataHome\(\), 'pm2', pm2HomePaths\.pm2MajorVersion\)/);
-    assert.match(source, /await fs\.mkdir\(pm2Home, \{ recursive: true \}\)/);
-    assert.match(source, /process or namespace \.\* not found/);
     assert.match(source, /appendLifecycleFailureLog/);
     assert.match(source, /stdout:/);
     assert.match(source, /stderr:/);
-    assert.match(source, /item\.name === OMNIROUTE_PROCESS_NAME/);
+    assert.doesNotMatch(source, /resolvePm2LaunchPlan/);
+    assert.doesNotMatch(source, /injectPortableToolchainEnv/);
+    assert.doesNotMatch(source, /injectManagedCliPathEnv/);
+    assert.doesNotMatch(source, /buildPm2MajorHomePaths/);
+    assert.doesNotMatch(source, /startFreshPm2Process/);
+    assert.doesNotMatch(source, /isMissingPm2ProcessMessage/);
   });
 
-  it('surfaces remediation metadata from passive status refresh without hiding process inspection', async () => {
+  it('surfaces remediation metadata and preserves renderer-facing process snapshots', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /const remediation = buildOmniRouteDependencyRemediation\(\{/);
-    assert.match(source, /error: remediation\?\.message/);
-    assert.match(source, /remediation,/);
-    assert.match(source, /processes: \[process\]/);
+    assert.match(source, /buildOmniRouteDependencyRemediation/);
+    assert.match(source, /error = details\.remediation\?\.message \?\? details\.error/);
+    assert.match(source, /processes: \[details\.process\]/);
+    assert.match(source, /name: OMNIROUTE_PROCESS_NAME/);
+    assert.match(source, /pid: result\.pid/);
+    assert.match(source, /remediation: resolvedRemediation/);
   });
 
   it('validates OmniRoute port isolation against the configured web service port', async () => {
@@ -120,6 +112,9 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /'service-error': 'omniroute-error\.log'/);
     assert.match(source, /PATH_TARGETS/);
     assert.match(source, /\['config', 'data', 'logs'\]/);
+    assert.match(source, /await this\.refreshLegacyLogs\(paths\)\.catch\(\(\) => undefined\);/);
+    assert.match(source, /source: path\.join\(context\.pm2LogsDirectory, `\$\{context\.appName\}-out\.log`\)/);
+    assert.match(source, /source: path\.join\(context\.pm2LogsDirectory, `\$\{context\.appName\}-error\.log`\)/);
     assert.match(source, /ENOENT/);
     assert.match(source, /exists: false/);
     assert.match(source, /slice\(-maxLines\)/);
