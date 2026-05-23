@@ -15,6 +15,7 @@ const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-
 const hagiscriptRuntimeContextPath = path.resolve(process.cwd(), 'src/main/hagiscript-runtime-context.ts');
 const hagiscriptServerManagerPath = path.resolve(process.cwd(), 'src/main/hagiscript-server-manager.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
+const manifestReaderPath = path.resolve(process.cwd(), 'src/main/manifest-reader.ts');
 const retiredCompatibilityPayloadField = 'startup' + 'Compatibility';
 
 describe('web-service startup flow', () => {
@@ -121,6 +122,29 @@ describe('web-service startup flow', () => {
     assert.match(source, /Spawning = 'spawning'/);
     assert.match(source, /WaitingListening = 'waiting_listening'/);
     assert.match(source, /HealthCheck = 'health_check'/);
+  });
+
+  it('caches managed launch context for status polling and only logs health-check transitions', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.equal(source.includes("private cachedManagedLaunchContext: { runtimeRoot: string; context: ManagedLaunchContext } | null = null;"), true);
+    assert.match(source, /if \(this\.cachedManagedLaunchContext\?\.runtimeRoot === this\.activeVersionPath\) \{\s*return this\.cachedManagedLaunchContext\.context;\s*\}/s);
+    assert.equal(source.includes("private lastHealthCheckLogState: 'healthy' | 'unhealthy' | null = null;"), true);
+    assert.equal(source.includes("if (this.lastHealthCheckLogState !== 'healthy') {"), true);
+    assert.equal(source.includes("this.lastHealthCheckLogState = 'healthy';"), true);
+    assert.equal(source.includes("if (this.lastHealthCheckLogState !== 'unhealthy') {"), true);
+    assert.equal(source.includes("this.lastHealthCheckLogState = 'unhealthy';"), true);
+    assert.equal(source.includes('launchContext = await this.resolveManagedLaunchContextForLifecycleTransition();'), true);
+    assert.equal(source.includes('logResolvedContext: true'), true);
+  });
+
+  it('keeps repeated manifest reads out of the default info log level', async () => {
+    const source = await fs.readFile(manifestReaderPath, 'utf-8');
+
+    assert.equal(source.includes("log.debug('[ManifestReader] Reading manifest:'"), true);
+    assert.equal(source.includes("log.debug('[ManifestReader] Manifest loaded successfully:'"), true);
+    assert.equal(source.includes("log.info('[ManifestReader] Reading manifest:'"), false);
+    assert.equal(source.includes("log.info('[ManifestReader] Manifest loaded successfully:'"), false);
   });
 
   it('keeps startup failure diagnostics tied to the configured port context', () => {

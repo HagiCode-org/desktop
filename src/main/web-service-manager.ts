@@ -106,6 +106,10 @@ export interface ManagedLaunchContext {
   requiredRuntimeLabel?: string;
 }
 
+interface ResolveManagedLaunchContextOptions {
+  logResolvedContext?: boolean;
+}
+
 interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
@@ -139,6 +143,7 @@ class ManagedLaunchError extends Error {
 export async function resolveManagedLaunchContextForRuntimeRoot(
   activeVersionPath: string,
   desktopVersion: string = app.getVersion(),
+  options: ResolveManagedLaunchContextOptions = {},
 ): Promise<ManagedLaunchContext> {
   const manifest = await manifestReader.readManifest(activeVersionPath);
   const desktopCompatibility = evaluateDesktopCompatibility(manifest, desktopVersion);
@@ -157,10 +162,12 @@ export async function resolveManagedLaunchContextForRuntimeRoot(
     );
   }
 
-  log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
-  log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
-  if (payloadValidation.requirement?.effectiveLabel) {
-    log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
+  if (options.logResolvedContext) {
+    log.info('[WebService] Managed entry point:', payloadValidation.payloadPaths.serviceDllPath);
+    log.info('[WebService] Managed working directory:', path.dirname(payloadValidation.payloadPaths.serviceDllPath));
+    if (payloadValidation.requirement?.effectiveLabel) {
+      log.info('[WebService] Required ASP.NET Core runtime:', payloadValidation.requirement.effectiveLabel);
+    }
   }
 
   return {
@@ -210,6 +217,8 @@ export class PCodeWebServiceManager {
   private lastResolvedServiceEnv: NodeJS.ProcessEnv | null = null;
   private lastPm2StatusWarningKey: string | null = null;
   private repeatedPm2StatusWarningSuppressed: boolean = false;
+  private cachedManagedLaunchContext: { runtimeRoot: string; context: ManagedLaunchContext } | null = null;
+  private lastHealthCheckLogState: 'healthy' | 'unhealthy' | null = null;
   private distributionMode: DistributionMode = 'normal';
   private statusRequestPromise: Promise<ProcessInfo> | null = null;
 
@@ -247,6 +256,7 @@ export class PCodeWebServiceManager {
 
   setDistributionMode(distributionMode: DistributionMode): void {
     this.distributionMode = distributionMode;
+    this.cachedManagedLaunchContext = null;
     log.info('[WebService] Distribution mode set:', { distributionMode });
   }
 
@@ -279,6 +289,8 @@ export class PCodeWebServiceManager {
     this.activeRuntime = runtime;
     this.activeVersionId = runtime?.versionId ?? null;
     this.activeVersionPath = runtime?.rootPath ?? null;
+    this.cachedManagedLaunchContext = null;
+    this.lastHealthCheckLogState = null;
 
     if (runtime) {
       log.info('[WebService] Active runtime set:', {
@@ -520,7 +532,32 @@ export class PCodeWebServiceManager {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
     }
-    return await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath);
+
+    if (this.cachedManagedLaunchContext?.runtimeRoot === this.activeVersionPath) {
+      return this.cachedManagedLaunchContext.context;
+    }
+
+    const context = await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath);
+    this.cachedManagedLaunchContext = {
+      runtimeRoot: this.activeVersionPath,
+      context,
+    };
+    return context;
+  }
+
+  private async resolveManagedLaunchContextForLifecycleTransition(): Promise<ManagedLaunchContext> {
+    if (!this.activeVersionPath) {
+      throw new Error('No active version set');
+    }
+
+    const context = await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath, app.getVersion(), {
+      logResolvedContext: true,
+    });
+    this.cachedManagedLaunchContext = {
+      runtimeRoot: this.activeVersionPath,
+      context,
+    };
+    return context;
   }
 
   private async resolveHagiscriptRuntimeContext(
@@ -792,7 +829,17 @@ export class PCodeWebServiceManager {
           validateStatus: () => true,
         });
         if (response.status >= 200 && response.status < 300) {
-          log.info('[WebService] Health check passed:', url, 'status:', response.status);
+          if (this.lastHealthCheckLogState !== 'healthy') {
+            log.info(
+              this.lastHealthCheckLogState === 'unhealthy'
+                ? '[WebService] Health check recovered:'
+                : '[WebService] Health check passed:',
+              url,
+              'status:',
+              response.status,
+            );
+          }
+          this.lastHealthCheckLogState = 'healthy';
           return true;
         }
         lastErrorMessage = `HTTP ${response.status}`;
@@ -808,12 +855,19 @@ export class PCodeWebServiceManager {
       }
     }
 
-    log.warn('[WebService] Health check failed after trying all endpoints:', {
+    const failureDetails = {
       port,
       host: this.config.host,
       urlsTried: urls,
       reason: lastErrorMessage,
-    });
+    };
+
+    if (this.lastHealthCheckLogState !== 'unhealthy') {
+      log.warn('[WebService] Health check failed after trying all endpoints:', failureDetails);
+    } else {
+      log.debug('[WebService] Health check still failing after trying all endpoints:', failureDetails);
+    }
+    this.lastHealthCheckLogState = 'unhealthy';
     return false;
   }
 
@@ -1040,6 +1094,7 @@ export class PCodeWebServiceManager {
   async stop(): Promise<boolean> {
     try {
       this.status = 'stopping';
+      this.lastHealthCheckLogState = null;
       log.info('[WebService] Stopping web service...');
 
       const launchContext = await this.resolveManagedLaunchContext();
@@ -1069,6 +1124,7 @@ export class PCodeWebServiceManager {
       this.startTime = null;
       this.restartCount = 0;
       this.currentPhase = StartupPhase.Idle;
+      this.lastHealthCheckLogState = null;
       this.resetPm2StatusWarningState();
       log.info('[WebService] Stopped successfully');
       return true;
@@ -1112,6 +1168,8 @@ export class PCodeWebServiceManager {
       this.currentPhase = StartupPhase.Idle;
       this.startTime = null;
       this.restartCount = 0;
+      this.cachedManagedLaunchContext = null;
+      this.lastHealthCheckLogState = null;
       return {
         status: this.status,
         uptime: 0,
@@ -1210,6 +1268,7 @@ export class PCodeWebServiceManager {
   private async runLifecycleTransition(action: HagiscriptServerLifecycleAction): Promise<StartResult> {
     try {
       this.status = 'starting';
+      this.lastHealthCheckLogState = null;
       log.info('[WebService] Starting with configured host/port:', {
         host: this.config.host,
         port: this.config.port,
@@ -1223,7 +1282,7 @@ export class PCodeWebServiceManager {
       };
 
       try {
-        launchContext = await this.resolveManagedLaunchContext();
+        launchContext = await this.resolveManagedLaunchContextForLifecycleTransition();
         this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
         this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
         if (launchContext.requiredRuntimeLabel) {
