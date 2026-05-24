@@ -19,12 +19,8 @@ import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 
-// Parse command line arguments
 const args = process.argv.slice(2);
 
-/**
- * ANSI color codes for terminal output
- */
 const colors = {
   reset: '\x1b[0m',
   green: '\x1b[32m',
@@ -36,30 +32,27 @@ const colors = {
   magenta: '\x1b[35m',
 };
 
-/**
- * Check if running in CI environment
- */
 const isCI = process.env.CI === 'true';
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
 
-/**
- * Configuration
- */
 const config = {
   platform: '',
   prod: false,
 };
 
-/**
- * Log messages with optional colors
- */
+const macArchAliases = new Map([
+  ['x64', 'x64'],
+  ['amd64', 'x64'],
+  ['intel', 'x64'],
+  ['arm64', 'arm64'],
+  ['aarch64', 'arm64'],
+  ['apple-silicon', 'arm64'],
+]);
+
 function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-/**
- * Log CI-specific information
- */
 function logCI(message, type = 'info') {
   if (isGitHubActions) {
     switch (type) {
@@ -86,9 +79,6 @@ function logCI(message, type = 'info') {
   }
 }
 
-/**
- * Print banner
- */
 function printBanner() {
   log('', colors.cyan);
   log('='.repeat(60), colors.cyan);
@@ -109,9 +99,6 @@ function printBanner() {
   log('', colors.reset);
 }
 
-/**
- * Show help message
- */
 function showHelp() {
   console.log(`
 Usage: node scripts/ci-build.js [options]
@@ -126,9 +113,6 @@ for automated build environments.
 `);
 }
 
-/**
- * Parse command line arguments
- */
 function parseArgs() {
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -148,7 +132,6 @@ function parseArgs() {
     }
   }
 
-  // Auto-detect platform if not specified
   if (!config.platform) {
     const platform = process.platform;
     if (platform === 'win32') {
@@ -162,54 +145,33 @@ function parseArgs() {
   }
 }
 
-/**
- * Execute a command and return the result
- */
-async function executeCommand(command, args, options = {}) {
-  log(`Executing: ${command} ${args.join(' ')}`, colors.gray);
+async function executeCommand(command, commandArgs, options = {}) {
+  log(`Executing: ${command} ${commandArgs.join(' ')}`, colors.gray);
 
-  const result = await execa(command, args, {
+  const result = await execa(command, commandArgs, {
     stdin: 'ignore',
-    stdout: isCI ? ['pipe', 'pipe'] : 'inherit',
-    stderr: isCI ? ['pipe', 'pipe'] : 'inherit',
+    stdout: 'inherit',
+    stderr: 'inherit',
     shell: true,
     reject: false,
     ...options,
   });
 
   if (result.exitCode === 0) {
-    return { stdout: result.stdout || '', stderr: result.stderr || '', code: result.exitCode };
-  }
-
-  const stdout = `${result.stdout || ''}`.trim();
-  const stderr = `${result.stderr || ''}`.trim();
-  if (stdout) {
-    logCI(`Command stdout:\n${stdout}`, 'notice');
-  }
-  if (stderr) {
-    logCI(`Command stderr:\n${stderr}`, 'error');
+    return { code: result.exitCode };
   }
 
   throw new Error(`Command failed with exit code ${result.exitCode}`);
 }
 
-/**
- * Get build output information
- */
-function getBuildInfo() {
-  const distPath = path.join(process.cwd(), 'dist');
-  const info = {
-    distPath,
-    artifacts: [],
-    totalSize: 0,
-  };
-
-  if (!fs.existsSync(distPath)) {
-    return info;
+function collectArtifactsFromRoot(rootPath, sourceRoot, info) {
+  if (!fs.existsSync(rootPath)) {
+    return;
   }
 
-  // Collect all build artifacts
-  function collectArtifacts(dir, basePath = '') {
+  info.roots.push({ sourceRoot, rootPath });
+
+  function walk(dir, basePath = '') {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -217,10 +179,11 @@ function getBuildInfo() {
       const relativePath = path.join(basePath, entry.name);
 
       if (entry.isDirectory()) {
-        collectArtifacts(fullPath, relativePath);
+        walk(fullPath, relativePath);
       } else if (entry.isFile()) {
         const stats = fs.statSync(fullPath);
         info.artifacts.push({
+          sourceRoot,
           path: relativePath,
           fullPath,
           size: stats.size,
@@ -230,24 +193,33 @@ function getBuildInfo() {
     }
   }
 
-  collectArtifacts(distPath);
+  walk(rootPath);
+}
+
+function getBuildInfo() {
+  const info = {
+    roots: [],
+    artifacts: [],
+    totalSize: 0,
+  };
+
+  collectArtifactsFromRoot(path.join(process.cwd(), 'dist'), 'dist', info);
+  collectArtifactsFromRoot(path.join(process.cwd(), 'pkg'), 'pkg', info);
 
   return info;
 }
 
-/**
- * Format file size for display
- */
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-/**
- * Print build summary
- */
-function printBuildSummary() {
+function formatDurationMs(durationMs) {
+  return `${(durationMs / 1000).toFixed(2)}s`;
+}
+
+function printBuildSummary(stepResults = []) {
   log('', colors.cyan);
   log('='.repeat(60), colors.cyan);
   log('Build Summary', colors.cyan);
@@ -260,18 +232,25 @@ function printBuildSummary() {
   log(`  Platform:     ${config.platform}`, colors.green);
   log(`  Production:   ${config.prod}`, colors.green);
 
+  if (stepResults.length > 0) {
+    log('', colors.cyan);
+    log('Step timings:', colors.cyan);
+    for (const step of stepResults) {
+      log(`  ${step.status.padEnd(7)} ${step.name} (${formatDurationMs(step.durationMs)})`, step.status === 'success' ? colors.green : step.status === 'failed' ? colors.red : colors.yellow);
+    }
+  }
+
   log('', colors.cyan);
   log('Artifacts:', colors.cyan);
   if (buildInfo.artifacts.length > 0) {
-    // Group artifacts by type
-    const installers = buildInfo.artifacts.filter(a =>
-      a.path.endsWith('.exe') ||
-      a.path.endsWith('.msix') ||
-      a.path.endsWith('.dmg') ||
-      a.path.endsWith('.AppImage') ||
-      a.path.endsWith('.rpm') ||
-      a.path.endsWith('.tar.gz') ||
-      a.path.endsWith('.zip')
+    const installers = buildInfo.artifacts.filter((artifact) =>
+      artifact.path.endsWith('.exe') ||
+      artifact.path.endsWith('.msix') ||
+      artifact.path.endsWith('.dmg') ||
+      artifact.path.endsWith('.AppImage') ||
+      artifact.path.endsWith('.rpm') ||
+      artifact.path.endsWith('.tar.gz') ||
+      artifact.path.endsWith('.zip')
     );
 
     if (installers.length > 0) {
@@ -279,11 +258,12 @@ function printBuildSummary() {
       log('Installers:', colors.cyan);
       for (const artifact of installers) {
         const fileName = path.basename(artifact.path);
-        log(`  ${fileName} (${formatSize(artifact.size)})`, colors.green);
+        log(`  ${artifact.sourceRoot}/${fileName} (${formatSize(artifact.size)})`, colors.green);
       }
     }
 
     log('', colors.cyan);
+    log(`Scanned roots: ${buildInfo.roots.map((root) => root.sourceRoot).join(', ')}`, colors.blue);
     log(`Total artifacts: ${buildInfo.artifacts.length}`, colors.blue);
     log(`Total size: ${formatSize(buildInfo.totalSize)}`, colors.blue);
   } else {
@@ -294,9 +274,6 @@ function printBuildSummary() {
   log('', colors.reset);
 }
 
-/**
- * Set GitHub Actions output
- */
 function setGitHubOutput(name, value) {
   if (isGitHubActions && process.env.GITHUB_OUTPUT) {
     const outputPath = process.env.GITHUB_OUTPUT;
@@ -309,9 +286,179 @@ function setGitHubOutput(name, value) {
   }
 }
 
-/**
- * Main execution function
- */
+function appendGitHubStepSummary(lines) {
+  if (!isGitHubActions || !process.env.GITHUB_STEP_SUMMARY) {
+    return;
+  }
+
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, 'utf8');
+}
+
+function normalizeMacArch(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return macArchAliases.get(normalized) || null;
+}
+
+function resolveDefaultMacArch() {
+  const detected = normalizeMacArch(process.arch);
+  if (!detected) {
+    throw new Error(`Unsupported macOS build host architecture: ${process.arch}`);
+  }
+  return detected;
+}
+
+function resolveMacBuildArchs() {
+  const raw = process.env.HAGICODE_MAC_BUILD_ARCHS?.trim();
+  if (!raw) {
+    return [resolveDefaultMacArch()];
+  }
+
+  const archs = raw
+    .split(/[\s,]+/)
+    .map(normalizeMacArch)
+    .filter(Boolean);
+
+  return [...new Set(archs)];
+}
+
+function buildStep(command, commandArgs, name) {
+  return {
+    name,
+    command,
+    args: commandArgs,
+    commandLine: `${command} ${commandArgs.join(' ')}`,
+  };
+}
+
+function getBuildSteps() {
+  if (config.platform === 'win') {
+    return [
+      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+      buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
+      buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
+      buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
+      buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+      buildStep('npx', ['electron-builder', '--win', '--publish', 'never'], 'Package Windows artifacts'),
+      buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
+    ];
+  }
+
+  if (config.platform === 'linux') {
+    return [
+      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+      buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
+      buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
+      buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
+      buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+      buildStep('npx', ['electron-builder', '--linux', '--publish', 'never'], 'Package Linux artifacts'),
+      buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
+      buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
+      buildStep('npm', ['run', 'package:verify-release-archives'], 'Verify release archives'),
+    ];
+  }
+
+  if (config.platform === 'mac') {
+    const archs = resolveMacBuildArchs();
+    if (archs.length === 0) {
+      throw new Error('No valid macOS build architectures were requested. Use HAGICODE_MAC_BUILD_ARCHS=x64,arm64.');
+    }
+
+    return archs.map((arch) => buildStep('npm', ['run', `build:mac:${arch}`], `Build macOS (${arch})`));
+  }
+
+  throw new Error(`Unsupported build platform: ${config.platform}`);
+}
+
+function startGroup(title) {
+  if (isGitHubActions) {
+    logCI(title, 'group');
+    return;
+  }
+
+  log('', colors.cyan);
+  log(title, colors.cyan);
+}
+
+function endGroup() {
+  if (isGitHubActions) {
+    logCI('', 'endgroup');
+  }
+}
+
+async function runBuildStep(step, index, total) {
+  const startedAt = Date.now();
+  const title = `[${index + 1}/${total}] ${step.name}`;
+  startGroup(title);
+  log(`Step command: ${step.commandLine}`, colors.gray);
+
+  try {
+    await executeCommand(step.command, step.args, {
+      cwd: process.cwd(),
+    });
+
+    const durationMs = Date.now() - startedAt;
+    logCI(`${step.name} completed in ${formatDurationMs(durationMs)}`, 'notice');
+    return {
+      ...step,
+      status: 'success',
+      durationMs,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    logCI(`${step.name} failed after ${formatDurationMs(durationMs)}`, 'error');
+    throw {
+      cause: error,
+      stepResult: {
+        ...step,
+        status: 'failed',
+        durationMs,
+      },
+    };
+  } finally {
+    endGroup();
+  }
+}
+
+function fillNotRunSteps(stepResults, buildSteps) {
+  if (stepResults.length >= buildSteps.length) {
+    return stepResults;
+  }
+
+  const remaining = buildSteps.slice(stepResults.length).map((step) => ({
+    ...step,
+    status: 'not_run',
+    durationMs: 0,
+  }));
+
+  return [...stepResults, ...remaining];
+}
+
+function printTimingSummary(stepResults, totalDurationMs) {
+  log('', colors.magenta);
+  log('Build timing breakdown:', colors.magenta);
+  for (const step of stepResults) {
+    const color = step.status === 'success' ? colors.green : step.status === 'failed' ? colors.red : colors.yellow;
+    log(`  ${step.status.padEnd(7)} ${step.name} ${formatDurationMs(step.durationMs)}`, color);
+  }
+  log(`  total   Build total ${formatDurationMs(totalDurationMs)}`, colors.blue);
+}
+
+function appendTimingSummary(stepResults, totalDurationMs, status) {
+  const lines = [
+    `## CI build timing (${config.platform})`,
+    '',
+    `- Status: ${status}`,
+    `- Total duration: ${formatDurationMs(totalDurationMs)}`,
+    '',
+    '| Step | Status | Duration |',
+    '| --- | --- | --- |',
+    ...stepResults.map((step) => `| ${step.name} | ${step.status} | ${formatDurationMs(step.durationMs)} |`),
+    '',
+  ];
+
+  appendGitHubStepSummary(lines);
+}
+
 async function main() {
   const startTime = Date.now();
 
@@ -320,36 +467,50 @@ async function main() {
 
   logCI('Starting CI build process...', 'info');
 
+  const buildSteps = getBuildSteps();
+  const stepResults = [];
+
   try {
-    // Build for production
-    const buildCmd = config.platform === 'win' ? 'npm run build:win' :
-                     config.platform === 'mac' ? 'npm run build:mac' :
-                     'npm run build:linux';
+    logCI(`Planned ${buildSteps.length} build step(s) for platform ${config.platform}`, 'notice');
 
-    logCI(`Executing: ${buildCmd}`, 'info');
+    for (let index = 0; index < buildSteps.length; index += 1) {
+      const stepResult = await runBuildStep(buildSteps[index], index, buildSteps.length);
+      stepResults.push(stepResult);
+    }
 
-    await executeCommand('npm', ['run', `build:${config.platform}`], {
-      cwd: process.cwd(),
-    });
+    const durationMs = Date.now() - startTime;
+    const duration = (durationMs / 1000).toFixed(2);
 
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    printTimingSummary(stepResults, durationMs);
+    appendTimingSummary(stepResults, durationMs, 'success');
+
     logCI(`Build completed in ${duration}s`, 'info');
 
-    // Set GitHub Actions outputs
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
     setGitHubOutput('build_status', 'success');
 
-    printBuildSummary();
+    printBuildSummary(stepResults);
 
     logCI('Build process completed successfully', 'info');
     process.exit(0);
-
   } catch (error) {
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    logCI(`Build failed after ${duration}s: ${error.message}`, 'error');
+    const durationMs = Date.now() - startTime;
+    const duration = (durationMs / 1000).toFixed(2);
 
-    // Set GitHub Actions outputs
+    const failedStep = error?.stepResult;
+    if (failedStep) {
+      stepResults.push(failedStep);
+    }
+
+    const summarizedSteps = fillNotRunSteps(stepResults, buildSteps);
+    printTimingSummary(summarizedSteps, durationMs);
+    appendTimingSummary(summarizedSteps, durationMs, 'failed');
+
+    const failureMessage = error?.cause?.message || error?.message || 'Unknown build failure';
+    const failedStepName = failedStep?.name ? ` during ${failedStep.name}` : '';
+    logCI(`Build failed after ${duration}s${failedStepName}: ${failureMessage}`, 'error');
+
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
     setGitHubOutput('build_status', 'failed');
@@ -358,8 +519,7 @@ async function main() {
   }
 }
 
-// Run the script
-main().catch(error => {
+main().catch((error) => {
   log(`Fatal error: ${error.message}`, colors.red);
   console.error(error);
   process.exit(1);
