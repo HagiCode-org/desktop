@@ -30,12 +30,102 @@ env:
   HAGISCRIPT_VERSION: 'latest'
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
   ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
-  RELEASE_CHANNEL: "${{ github.event.inputs.channel || '' }}"
 
 jobs:
+  prepare-release:
+    name: Prepare Release Metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      channel: ${{ steps.meta.outputs.channel }}
+      channel_source: ${{ steps.meta.outputs.channel_source }}
+      version_source: ${{ steps.meta.outputs.version_source }}
+      is_tag_release: ${{ steps.meta.outputs.is_tag_release }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        env:
+          MANUAL_CHANNEL: ${{ github.event.inputs.channel || '' }}
+        run: |
+          set -euo pipefail
+
+          package_version="$(node -p \"require('./package.json').version\")"
+          version="${package_version}"
+          release_tag=''
+          release_name="Build ${package_version}"
+          version_source="package-json:${package_version}"
+          is_tag_release='false'
+
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            release_tag="${GITHUB_REF_NAME}"
+            release_name="Release ${release_tag}"
+            version_source="tag:${GITHUB_REF_NAME}"
+            is_tag_release='true'
+          elif [[ "${GITHUB_REF}" == 'refs/heads/main' ]]; then
+            release_name="Main Build ${package_version}"
+            version_source="main-branch:${package_version}"
+          fi
+
+          if [[ -n "${MANUAL_CHANNEL}" ]]; then
+            channel="${MANUAL_CHANNEL}"
+            channel_source='manual-input'
+          elif [[ "${is_tag_release}" == 'true' ]]; then
+            if [[ "${version}" =~ -(beta|rc) ]]; then
+              channel='beta'
+            elif [[ "${version}" =~ -(alpha|dev) ]]; then
+              channel='dev'
+            else
+              channel='stable'
+            fi
+            channel_source="tag:${GITHUB_REF_NAME}"
+          elif [[ "${GITHUB_REF}" == 'refs/heads/main' ]]; then
+            channel='beta'
+            channel_source='branch:main'
+          else
+            channel='dev'
+            channel_source="ref:${GITHUB_REF}"
+          fi
+
+          {
+            echo "version=${version}"
+            echo "release_tag=${release_tag}"
+            echo "release_name=${release_name}"
+            echo "channel=${channel}"
+            echo "channel_source=${channel_source}"
+            echo "version_source=${version_source}"
+            echo "is_tag_release=${is_tag_release}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write workflow summary
+        shell: bash
+        run: |
+          {
+            echo '## Release metadata prepared'
+            echo
+            echo '- Version: ${{ steps.meta.outputs.version }}'
+            echo '- Release tag: ${{ steps.meta.outputs.release_tag || '(none)' }}'
+            echo '- Release channel: ${{ steps.meta.outputs.channel }}'
+            echo '- Channel source: ${{ steps.meta.outputs.channel_source }}'
+            echo '- Version source: ${{ steps.meta.outputs.version_source }}'
+            echo '- Tag release: ${{ steps.meta.outputs.is_tag_release }}'
+            echo '- Ref: ${{ github.ref }}'
+            echo '- Commit: ${{ github.sha }}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   build-windows:
     name: Build Windows (${{ matrix.target.name }})
     runs-on: windows-2022
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +148,8 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    env:
+      RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
 
     steps:
       - name: Checkout code
@@ -147,6 +239,14 @@ jobs:
           key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
           restore-keys: |
             ${{ runner.os }}-build-downloads-
+
+      - name: Sync package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
 
       - name: Install dependencies
         run: npm ci
@@ -311,7 +411,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
       - name: Azure login for Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -401,6 +501,8 @@ jobs:
             echo '## Windows package build'
             echo
             echo '- Package target: ${{ matrix.target.name }}'
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
             echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
             echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
@@ -446,7 +548,7 @@ jobs:
             '代码签名失败 (Windows) ❌',
             '',
             '平台: Windows / ${{ matrix.target.name }}',
-            '版本: ${{ github.ref_name }}',
+            '版本: ${{ needs.prepare-release.outputs.release_tag || needs.prepare-release.outputs.version }}',
             '提交: ${{ github.sha }}',
             '',
             '请检查签名配置和证书状态。',
@@ -472,6 +574,7 @@ jobs:
   build-platform-artifacts:
     name: Build ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs_on }}
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -530,6 +633,8 @@ jobs:
             report_suffix: zip
             artifact_glob: '*.zip'
             upload_glob: '**/*.zip'
+    env:
+      RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
 
     steps:
       - name: Checkout code
@@ -568,11 +673,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-downloads-
 
-      - name: Sync version from tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Sync package version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
           echo "Syncing npm/package.json version to ${VERSION}"
           npm version "${VERSION}" --no-git-tag-version
 
@@ -610,6 +715,8 @@ jobs:
           {
             echo '## Linux packaging artifacts'
             echo
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
             echo '- Package target: ${{ matrix.target.builder_target }}'
             echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
             echo "- Matched artifacts: ${artifact_count}"
@@ -639,6 +746,8 @@ jobs:
           {
             echo '## macOS packaging artifacts'
             echo
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
             echo "- Target architecture: ${{ matrix.target.mac_arch }}"
             echo "- Package target: ${{ matrix.target.builder_target }}"
             echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
@@ -702,8 +811,10 @@ jobs:
 
   publish-windows-release:
     name: Publish Windows Release Assets
-    needs: build-windows
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build-windows.result == 'success' }}
+    needs:
+      - prepare-release
+      - build-windows
+    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-windows.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -717,7 +828,7 @@ jobs:
       - name: Upload Windows assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           overwrite_files: 'true'
           files: |
             release-assets/windows/**/*.exe
@@ -728,8 +839,10 @@ jobs:
 
   publish-platform-release:
     name: Publish ${{ matrix.target.name }} Release Assets
-    needs: build-platform-artifacts
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build-platform-artifacts.result == 'success' }}
+    needs:
+      - prepare-release
+      - build-platform-artifacts
+    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-platform-artifacts.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -783,7 +896,7 @@ jobs:
         if: startsWith(matrix.target.id, 'linux-')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           overwrite_files: 'true'
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
@@ -794,7 +907,7 @@ jobs:
         if: startsWith(matrix.target.id, 'macos-')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           overwrite_files: 'true'
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
@@ -804,10 +917,11 @@ jobs:
   build-summary:
     name: Build Summary
     outputs:
-      channel: ${{ steps.channel.outputs.channel }}
+      channel: ${{ needs.prepare-release.outputs.channel }}
       release_status: ${{ steps.status.outputs.overall }}
       sync_eligible: ${{ steps.status.outputs.sync_eligible }}
     needs:
+      - prepare-release
       - build-windows
       - build-platform-artifacts
       - publish-windows-release
@@ -816,45 +930,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Determine release channel
-        id: channel
-        if: always()
-        run: |
-          if [ -n "${{ github.event.inputs.channel }}" ]; then
-            CHANNEL="${{ github.event.inputs.channel }}"
-            echo "Using manually specified channel: ${CHANNEL}"
-          else
-            if [ "${{ github.ref_type }}" == "tag" ]; then
-              TAG="${GITHUB_REF_NAME#v}"
-              if [[ "$TAG" =~ -(beta|alpha|rc|dev) ]]; then
-                if [[ "$TAG" =~ -beta ]]; then
-                  CHANNEL="beta"
-                elif [[ "$TAG" =~ -alpha ]]; then
-                  CHANNEL="dev"
-                elif [[ "$TAG" =~ -rc ]]; then
-                  CHANNEL="beta"
-                elif [[ "$TAG" =~ -dev ]]; then
-                  CHANNEL="dev"
-                fi
-              else
-                CHANNEL="stable"
-              fi
-            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-              CHANNEL="beta"
-            else
-              CHANNEL="dev"
-            fi
-            echo "Auto-detected channel: ${CHANNEL}"
-          fi
-
-          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
-
       - name: Determine workflow status
         id: status
         if: always()
         shell: bash
         env:
-          IS_TAG_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          IS_TAG_RELEASE: ${{ needs.prepare-release.outputs.is_tag_release }}
           BUILD_WINDOWS_STATUS: ${{ needs.build-windows.result }}
           BUILD_PLATFORMS_STATUS: ${{ needs.build-platform-artifacts.result }}
           PUBLISH_WINDOWS_STATUS: ${{ needs.publish-windows-release.result }}
@@ -916,6 +997,7 @@ jobs:
           if [ "${WINDOWS_STATUS}" = 'success' ]; then
             platforms+=("Windows Portable")
             platforms+=("Windows NSIS")
+            platforms+=("Windows AppX")
           fi
           if [ "${PLATFORM_STATUS}" = 'success' ]; then
             platforms+=("Linux AppImage")
@@ -940,12 +1022,16 @@ jobs:
           {
             echo '## Release orchestration summary'
             echo
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Release tag: ${{ needs.prepare-release.outputs.release_tag || '(none)' }}'
+            echo '- Version source: ${{ needs.prepare-release.outputs.version_source }}'
+            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
+            echo '- Channel source: ${{ needs.prepare-release.outputs.channel_source }}'
             echo '- Windows build status: ${{ steps.status.outputs.windows_build_status }}'
             echo '- Non-Windows matrix build status: ${{ steps.status.outputs.platform_build_status }}'
             echo '- Windows publish status: ${{ steps.status.outputs.windows_publish_status }}'
             echo '- Non-Windows matrix publish status: ${{ steps.status.outputs.platform_publish_status }}'
             echo '- Normalized overall status: ${{ steps.status.outputs.overall }}'
-            echo '- Release channel: ${{ steps.channel.outputs.channel }}'
             echo '- Azure sync eligible: ${{ steps.status.outputs.sync_eligible }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -977,11 +1063,13 @@ jobs:
 
   sync-azure-upload:
     name: Upload Release Shards to Azure Storage
-    needs: build-summary
-    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.build-summary.outputs.release_status == 'success' }}
+    needs:
+      - prepare-release
+      - build-summary
+    if: ${{ always() && needs.build-summary.outputs.sync_eligible == 'true' && needs.build-summary.outputs.release_status == 'success' }}
     uses: ./.github/workflows/sync-azure-storage.yml
     with:
-      release_tag: ${{ github.ref_name }}
+      release_tag: ${{ needs.prepare-release.outputs.release_tag }}
       release_channel: ${{ needs.build-summary.outputs.channel }}
     secrets: inherit
 

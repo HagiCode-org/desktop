@@ -1,4 +1,4 @@
-name: Publish Dev Build
+name: Publish Production Preview Build
 
 on:
   push:
@@ -7,94 +7,140 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: publish-dev-${{ github.ref }}
+  group: publish-production-preview-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   NODE_VERSION: '22'
   HAGISCRIPT_VERSION: 'latest'
-  PUBLISH_BASE_VERSION: '0.0.1'
-  RELEASE_CHANNEL: 'dev'
+  RELEASE_CHANNEL: 'stable'
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
   ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
   prepare-release:
-    name: Prepare Dev Release
+    name: Prepare Production Preview Metadata
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       version: ${{ steps.meta.outputs.version }}
       release_tag: ${{ steps.meta.outputs.release_tag }}
       release_name: ${{ steps.meta.outputs.release_name }}
       channel: ${{ steps.meta.outputs.channel }}
+      version_source: ${{ steps.meta.outputs.version_source }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Compute dev release metadata
+      - name: Resolve next stable release version
         id: meta
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${PUBLISH_BASE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
-          RELEASE_TAG="V${VERSION}"
-          RELEASE_NAME="Publish Dev ${VERSION}"
-
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "release_name=${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
-          echo "channel=${RELEASE_CHANNEL}" >> "$GITHUB_OUTPUT"
-
-          {
-            echo '## Publish dev release prepared'
-            echo
-            echo "- Version: ${VERSION}"
-            echo "- Release tag: ${RELEASE_TAG}"
-            echo "- Release channel: ${RELEASE_CHANNEL}"
-            echo "- Commit: ${GITHUB_SHA}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Create or update prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
-          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
         run: |
           set -euo pipefail
-          NOTES_FILE="$(mktemp)"
-          cat > "$NOTES_FILE" <<NOTES
-          Automated publish branch prerelease.
+          gh api --paginate --slurp "repos/${GH_REPO}/releases" > releases.json
 
-          - Branch: ${GITHUB_REF_NAME}
-          - Commit: ${GITHUB_SHA}
-          - Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-          NOTES
+          python3 - <<'PY2'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
 
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Updating existing prerelease ${RELEASE_TAG}"
-            gh release edit "$RELEASE_TAG" \
-              --title "$RELEASE_NAME" \
-              --prerelease
-          else
-            echo "Creating prerelease ${RELEASE_TAG}"
-            gh release create "$RELEASE_TAG" \
-              --target "$GITHUB_SHA" \
-              --title "$RELEASE_NAME" \
-              --prerelease \
-              --latest=false \
-              --notes-file "$NOTES_FILE"
-          fi
+          semver_re = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+          def parse(tag: str):
+              match = semver_re.fullmatch(tag or "")
+              if not match:
+                  return None
+              return tuple(int(part) for part in match.groups())
+
+          pages = json.loads(Path("releases.json").read_text(encoding="utf-8"))
+          releases = [release for page in pages for release in page]
+
+          draft_candidates = [
+              release
+              for release in releases
+              if release.get("draft")
+              and not release.get("prerelease")
+              and parse(release.get("tag_name", ""))
+          ]
+
+          version = None
+          release_tag = None
+          version_source = None
+
+          if draft_candidates:
+              selected = max(draft_candidates, key=lambda item: parse(item["tag_name"]))
+              release_tag = selected["tag_name"]
+              version = release_tag.removeprefix("v")
+              version_source = f"draft-release:{release_tag}"
+          else:
+              tags = subprocess.check_output(
+                  ["git", "tag", "--list", "v*", "--sort=-version:refname"],
+                  text=True,
+              ).splitlines()
+              stable_tags = [tag for tag in tags if parse(tag)]
+
+              if stable_tags:
+                  latest_tag = stable_tags[0]
+                  major, minor, patch = parse(latest_tag)
+                  version = f"{major}.{minor}.{patch + 1}"
+                  release_tag = f"v{version}"
+                  version_source = f"latest-tag:{latest_tag}"
+              else:
+                  package_json = json.loads(Path("package.json").read_text(encoding="utf-8"))
+                  package_version = package_json["version"]
+                  package_tag = f"v{package_version}"
+                  parsed_package = parse(package_tag)
+                  if not parsed_package:
+                      raise SystemExit(f"package.json version is not a stable semver: {package_version}")
+                  major, minor, patch = parsed_package
+                  version = f"{major}.{minor}.{patch + 1}"
+                  release_tag = f"v{version}"
+                  version_source = f"package-json:{package_version}"
+
+          release_name = f"Publish Preview {version}"
+          outputs = {
+              "version": version,
+              "release_tag": release_tag,
+              "release_name": release_name,
+              "channel": "stable",
+              "version_source": version_source,
+          }
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              for key, value in outputs.items():
+                  handle.write(f"{key}={value}\n")
+          PY2
+
+      - name: Write workflow summary
+        shell: bash
+        run: |
+          {
+            echo '## Publish production preview prepared'
+            echo
+            echo '- Version: ${{ steps.meta.outputs.version }}'
+            echo '- Expected release tag: ${{ steps.meta.outputs.release_tag }}'
+            echo '- Release channel: ${{ steps.meta.outputs.channel }}'
+            echo '- Version source: ${{ steps.meta.outputs.version_source }}'
+            echo '- Branch: ${{ github.ref_name }}'
+            echo '- Commit: ${{ github.sha }}'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build-windows:
-    name: Build Windows Dev Assets (${{ matrix.target.name }})
+    name: Build Windows Preview (${{ matrix.target.name }})
     runs-on: windows-2022
     needs: prepare-release
+    environment: production
     strategy:
       fail-fast: false
       matrix:
@@ -114,10 +160,57 @@ jobs:
             builder_target: appx
             report_suffix: appx
             requires_zip: false
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Determine Windows signing policy
+        id: signing_policy
+        shell: bash
+        run: |
+          required=true
+          reason="publish branch production preview"
+
+          echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "Windows signing required: ${required} (${reason})"
+
+      - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+        run: |
+          missing=()
+
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+            if [ -z "${!key}" ]; then
+              missing+=("${key}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## Windows code signing configuration error'
+              echo
+              echo 'The publish preview build requires Artifact Signing, but the following values are missing:'
+              echo
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -163,14 +256,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build for Windows
+      - name: Build Windows ${{ matrix.target.name }} package
         shell: bash
         run: node scripts/ci-build.js --platform win --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
 
-      - name: Collect Windows artifacts
+      - name: Collect Windows ${{ matrix.target.name }} artifacts
         id: windows_artifacts
         shell: pwsh
         run: |
@@ -191,10 +284,11 @@ jobs:
             default { @() }
           }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
+          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
           $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
 
           if ($selectedFiles.Count -eq 0) {
-            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/ for prerelease publication."
+            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/."
           }
 
           if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
@@ -204,6 +298,13 @@ jobs:
           if (-not (Test-Path $buildReport)) {
             throw "CI build report was not found: $buildReport"
           }
+
+          $catalogEntries = @()
+          foreach ($file in $selectedFiles) {
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $file.FullName).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+          }
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
 
           $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
           $zipBaseName = [System.IO.Path]::GetFileNameWithoutExtension($selectedFiles[0].Name)
@@ -218,6 +319,7 @@ jobs:
 
           Write-MultilineOutput 'package_files' $selectedFiles
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "package_count=$($selectedFiles.Count)"
@@ -230,10 +332,13 @@ jobs:
         shell: pwsh
         env:
           WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
+          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.package_files }}
           WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
         run: |
           $ErrorActionPreference = 'Stop'
           $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
+          $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
+          $pkgDir = Split-Path -Path $catalogPath -Parent
 
           if (Test-Path $zipPayloadRoot) {
             Remove-Item -Path $zipPayloadRoot -Recurse -Force
@@ -273,9 +378,92 @@ jobs:
             throw 'Windows ZIP payload staging did not produce any files.'
           }
 
+          $signableFiles = @()
+          $env:WINDOWS_SIGNABLE_FILES -split "`r?`n" | ForEach-Object {
+            $trimmed = $_.Trim()
+            if ($trimmed) {
+              $signableFiles += $trimmed
+            }
+          }
+
+          $zipPayloadRootExecutables = @(
+            $zipPayloadFiles | Where-Object {
+              $_.Extension -ieq '.exe' -and
+              $_.DirectoryName -eq $payloadDir
+            } | Sort-Object FullName -Unique
+          )
+
+          if ($zipPayloadRootExecutables.Count -ne 1) {
+            $detectedExecutables = if ($zipPayloadRootExecutables.Count -gt 0) {
+              ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }) -join [Environment]::NewLine
+            } else {
+              '(none)'
+            }
+            throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
+          }
+
+          $catalogEntries = @()
+          foreach ($filePath in @($signableFiles + ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }))) {
+            $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+          }
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
+
           Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
+
+      - name: Azure login for Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign Windows ${{ matrix.target.name }} root EXE artifacts with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign unpacked Windows root EXE with Artifact Signing
+        if: success() && matrix.target.requires_zip && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Verify Windows signatures
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        shell: bash
+        env:
+          VERIFY_STRICT: 'true'
+        run: |
+          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
 
       - name: Create Windows ZIP artifact
         if: success() && matrix.target.requires_zip
@@ -310,14 +498,16 @@ jobs:
         run: |
           node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
 
-      - name: Summarize Windows packaging
+      - name: Summarize Windows package build
         if: success()
         shell: bash
         run: |
           {
-            echo '## Windows packaging'
+            echo '## Windows package build'
             echo
             echo '- Package target: ${{ matrix.target.name }}'
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
             echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
@@ -325,51 +515,58 @@ jobs:
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Windows release bundle
+      - name: Upload Windows preview bundle
         uses: actions/upload-artifact@v4
         with:
-          name: dev-release-windows-${{ matrix.target.id }}
+          name: publish-preview-windows-${{ matrix.target.id }}-${{ needs.prepare-release.outputs.version }}
           path: |
             ${{ steps.windows_artifacts.outputs.package_files }}
             ${{ steps.windows_zip.outputs.zip_files }}
             ${{ steps.windows_artifacts.outputs.report_path }}
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
 
-  publish-windows:
-    name: Publish Windows Dev Assets
-    needs:
-      - prepare-release
-      - build-windows
-    runs-on: ubuntu-latest
+      - name: Code signing failure notification
+        if: failure()
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
+            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
+            exit 0
+          }
 
-    steps:
-      - name: Download Windows release bundle
-        uses: actions/download-artifact@v4
-        with:
-          pattern: dev-release-windows-*
-          merge-multiple: true
-          path: release-assets/windows
+          $message = @(
+            '代码签名失败 (Windows) ❌',
+            '',
+            '平台: Windows / ${{ matrix.target.name }}',
+            '版本: ${{ needs.prepare-release.outputs.release_tag }}',
+            '提交: ${{ github.sha }}',
+            '',
+            '请检查签名配置和证书状态。',
+            '可能的原因：',
+            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
+            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
+            '- 产物签名成功但验签失败',
+            '',
+            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ) -join "`n"
 
-      - name: Upload Windows assets to prerelease
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          name: ${{ needs.prepare-release.outputs.release_name }}
-          draft: 'false'
-          prerelease: 'true'
-          overwrite_files: 'true'
-          files: |
-            release-assets/windows/**/*.exe
-            release-assets/windows/**/*.zip
-            release-assets/windows/**/*.appx
+          $payload = @{
+            msg_type = 'text'
+            content = @{
+              text = $message
+            }
+          } | ConvertTo-Json -Depth 4
+
+          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
-  build-platform-assets:
-    name: Build ${{ matrix.target.name }} Dev Assets
+  build-platform-artifacts:
+    name: Build ${{ matrix.target.name }} Preview
     runs-on: ${{ matrix.target.runs_on }}
     needs: prepare-release
+    environment: production
     strategy:
       fail-fast: false
       matrix:
@@ -400,7 +597,6 @@ jobs:
             builder_target: dmg
             report_suffix: dmg
             artifact_glob: '*.dmg'
-            upload_glob: '**/*.dmg'
           - id: macos-x64-zip
             name: macOS x64 ZIP
             runs_on: macos-latest
@@ -409,7 +605,6 @@ jobs:
             builder_target: zip
             report_suffix: zip
             artifact_glob: '*.zip'
-            upload_glob: '**/*.zip'
           - id: macos-arm64-dmg
             name: macOS arm64 DMG
             runs_on: macos-latest
@@ -418,7 +613,6 @@ jobs:
             builder_target: dmg
             report_suffix: dmg
             artifact_glob: '*.dmg'
-            upload_glob: '**/*.dmg'
           - id: macos-arm64-zip
             name: macOS arm64 ZIP
             runs_on: macos-latest
@@ -427,7 +621,6 @@ jobs:
             builder_target: zip
             report_suffix: zip
             artifact_glob: '*.zip'
-            upload_glob: '**/*.zip'
 
     steps:
       - name: Checkout code
@@ -477,14 +670,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Linux assets
+      - name: Build Linux artifacts
         if: startsWith(matrix.target.id, 'linux-')
         run: node scripts/ci-build.js --platform linux --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
-      - name: Build macOS assets
+      - name: Build macOS artifacts
         if: startsWith(matrix.target.id, 'macos-')
         run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
         env:
@@ -508,10 +701,11 @@ jobs:
           {
             echo '## Linux packaging artifacts'
             echo
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
             echo '- Package target: ${{ matrix.target.builder_target }}'
             echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
             echo "- Matched artifacts: ${artifact_count}"
-            echo "- CI build report: \\`${report_path}\\`"
+            echo "- CI build report: \`${report_path}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$artifact_count" -eq 0 ]; then
@@ -537,8 +731,9 @@ jobs:
           {
             echo '## macOS packaging artifacts'
             echo
-            echo "- Target architecture: ${{ matrix.target.mac_arch }}"
-            echo "- Package target: ${{ matrix.target.builder_target }}"
+            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
+            echo '- Target architecture: ${{ matrix.target.mac_arch }}'
+            echo '- Package target: ${{ matrix.target.builder_target }}'
             echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
             echo "- Matched artifacts: ${artifact_count}"
             echo "- CI build report: \`${report_path}\`"
@@ -554,123 +749,40 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Linux release bundle
+      - name: Upload Linux preview bundle
         if: startsWith(matrix.target.id, 'linux-')
         uses: actions/upload-artifact@v4
         with:
-          name: dev-release-${{ matrix.target.id }}
+          name: publish-preview-${{ matrix.target.id }}-${{ needs.prepare-release.outputs.version }}
           path: |
             pkg/${{ matrix.target.artifact_glob }}
             pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
 
-      - name: Upload macOS release bundle
+      - name: Upload macOS preview bundle
         if: startsWith(matrix.target.id, 'macos-')
         uses: actions/upload-artifact@v4
         with:
-          name: dev-release-${{ matrix.target.id }}
+          name: publish-preview-${{ matrix.target.id }}-${{ needs.prepare-release.outputs.version }}
           path: |
             pkg/${{ matrix.target.artifact_glob }}
             pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
 
-  publish-platform-assets:
-    name: Publish ${{ matrix.target.name }} Dev Assets
-    needs:
-      - prepare-release
-      - build-platform-assets
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - id: linux-appimage
-            name: Linux AppImage
-            artifact_path: release-assets/linux-appimage
-            upload_glob: '**/*.AppImage'
-          - id: linux-tar-gz
-            name: Linux tar.gz
-            artifact_path: release-assets/linux-tar-gz
-            upload_glob: '**/*.tar.gz'
-          - id: linux-zip
-            name: Linux ZIP
-            artifact_path: release-assets/linux-zip
-            upload_glob: '**/*.zip'
-          - id: macos-x64-dmg
-            name: macOS x64 DMG
-            artifact_path: release-assets/macos-x64-dmg
-            upload_glob: '**/*.dmg'
-          - id: macos-x64-zip
-            name: macOS x64 ZIP
-            artifact_path: release-assets/macos-x64-zip
-            upload_glob: '**/*.zip'
-          - id: macos-arm64-dmg
-            name: macOS arm64 DMG
-            artifact_path: release-assets/macos-arm64-dmg
-            upload_glob: '**/*.dmg'
-          - id: macos-arm64-zip
-            name: macOS arm64 ZIP
-            artifact_path: release-assets/macos-arm64-zip
-            upload_glob: '**/*.zip'
-
-    steps:
-      - name: Download Linux release bundle
-        if: startsWith(matrix.target.id, 'linux-')
-        uses: actions/download-artifact@v4
-        with:
-          name: dev-release-${{ matrix.target.id }}
-          path: ${{ matrix.target.artifact_path }}
-
-      - name: Download macOS release bundle
-        if: startsWith(matrix.target.id, 'macos-')
-        uses: actions/download-artifact@v4
-        with:
-          name: dev-release-${{ matrix.target.id }}
-          path: ${{ matrix.target.artifact_path }}
-
-      - name: Upload Linux assets to prerelease
-        if: startsWith(matrix.target.id, 'linux-')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          name: ${{ needs.prepare-release.outputs.release_name }}
-          draft: 'false'
-          prerelease: 'true'
-          overwrite_files: 'true'
-          files: |
-            ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload macOS assets to prerelease
-        if: startsWith(matrix.target.id, 'macos-')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          name: ${{ needs.prepare-release.outputs.release_name }}
-          draft: 'false'
-          prerelease: 'true'
-          overwrite_files: 'true'
-          files: |
-            ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-summary:
-    name: Publish Dev Summary
+    name: Publish Preview Summary
     needs:
       - prepare-release
       - build-windows
-      - publish-windows
-      - build-platform-assets
-      - publish-platform-assets
+      - build-platform-artifacts
     if: always()
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       release_status: ${{ steps.status.outputs.overall }}
-      channel: ${{ steps.status.outputs.channel }}
+      channel: ${{ needs.prepare-release.outputs.channel }}
 
     steps:
       - name: Determine workflow status
@@ -679,70 +791,37 @@ jobs:
         run: |
           set -euo pipefail
           windows_build_status="${{ needs.build-windows.result }}"
-          windows_publish_status="${{ needs.publish-windows.result }}"
-          platform_build_status="${{ needs.build-platform-assets.result }}"
-          platform_publish_status="${{ needs.publish-platform-assets.result }}"
+          platform_build_status="${{ needs.build-platform-artifacts.result }}"
 
           echo "Windows build: ${windows_build_status}"
-          echo "Windows publish: ${windows_publish_status}"
           echo "Matrix build: ${platform_build_status}"
-          echo "Matrix publish: ${platform_publish_status}"
 
-          if [ "$windows_build_status" != 'success' ] || [ "$windows_publish_status" != 'success' ] || \
-             [ "$platform_build_status" != 'success' ] || [ "$platform_publish_status" != 'success' ]; then
+          if [ "$windows_build_status" != 'success' ] || [ "$platform_build_status" != 'success' ]; then
             echo 'overall=failed' >> "$GITHUB_OUTPUT"
           else
             echo 'overall=success' >> "$GITHUB_OUTPUT"
           fi
 
-          echo 'channel=dev' >> "$GITHUB_OUTPUT"
-
       - name: Publish workflow summary
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.status.outputs.overall }}" = 'success' ]; then
-            azure_sync_eligible=true
-          else
-            azure_sync_eligible=false
-          fi
-
           {
-            echo '## Publish dev orchestration summary'
+            echo '## Publish production preview summary'
             echo
             echo '- Version: ${{ needs.prepare-release.outputs.version }}'
-            echo '- Release tag: ${{ needs.prepare-release.outputs.release_tag }}'
+            echo '- Expected release tag: ${{ needs.prepare-release.outputs.release_tag }}'
+            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
+            echo '- Version source: ${{ needs.prepare-release.outputs.version_source }}'
             echo '- Windows build status: ${{ needs.build-windows.result }}'
-            echo '- Windows publish status: ${{ needs.publish-windows.result }}'
-            echo '- Non-Windows matrix build status: ${{ needs.build-platform-assets.result }}'
-            echo '- Non-Windows matrix publish status: ${{ needs.publish-platform-assets.result }}'
+            echo '- Non-Windows matrix build status: ${{ needs.build-platform-artifacts.result }}'
             echo '- Overall status: ${{ steps.status.outputs.overall }}'
-            echo "- Azure sync eligible: ${azure_sync_eligible}"
+            echo '- Artifact retention: 30 days'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail workflow on platform failure
         if: steps.status.outputs.overall != 'success'
         shell: bash
         run: |
-          echo '::error::One or more publish dev build or upload jobs failed. Azure sync is blocked.'
+          echo '::error::One or more publish preview build jobs failed.'
           exit 1
-
-  sync-azure-upload:
-    name: Upload Dev Release Shards to Azure Storage
-    needs:
-      - prepare-release
-      - build-summary
-    if: ${{ always() && needs.build-summary.outputs.release_status == 'success' }}
-    uses: ./.github/workflows/sync-azure-storage.yml
-    with:
-      release_tag: ${{ needs.prepare-release.outputs.release_tag }}
-      release_version: v${{ needs.prepare-release.outputs.version }}
-      release_channel: ${{ needs.prepare-release.outputs.channel }}
-    secrets: inherit
-
-  sync-azure-finalize:
-    name: Finalize Dev Azure Storage Sync
-    needs: sync-azure-upload
-    if: ${{ always() && needs.sync-azure-upload.result == 'success' }}
-    uses: ./.github/workflows/finalize-azure-storage.yml
-    secrets: inherit
