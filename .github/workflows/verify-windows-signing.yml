@@ -21,6 +21,7 @@ jobs:
   verify-windows-signing:
     name: Verify signed Windows artifacts
     runs-on: windows-latest
+    environment: production
     permissions:
       contents: read
       id-token: write
