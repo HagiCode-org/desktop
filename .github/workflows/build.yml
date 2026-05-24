@@ -50,15 +50,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve main branch version with Release Drafter
+        id: draft
+        if: github.ref == 'refs/heads/main'
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Resolve release metadata
         id: meta
         shell: bash
         env:
           MANUAL_CHANNEL: ${{ github.event.inputs.channel || '' }}
+          DRAFT_VERSION: ${{ steps.draft.outputs.resolved_version || '' }}
         run: |
           set -euo pipefail
 
           package_version="$(node -p "require('./package.json').version")"
+          draft_version="${DRAFT_VERSION}"
           version="${package_version}"
           release_tag=''
           release_name="Build ${package_version}"
@@ -72,8 +81,13 @@ jobs:
             version_source="tag:${GITHUB_REF_NAME}"
             is_tag_release='true'
           elif [[ "${GITHUB_REF}" == 'refs/heads/main' ]]; then
-            release_name="Main Build ${package_version}"
-            version_source="main-branch:${package_version}"
+            if [[ -z "${draft_version}" ]]; then
+              echo '::error::Release Drafter did not return resolved_version for the main branch build.'
+              exit 1
+            fi
+            version="${draft_version}"
+            release_name="Main Build ${version}"
+            version_source="release-drafter:${version}"
           fi
 
           if [[ -n "${MANUAL_CHANNEL}" ]]; then
