@@ -92,7 +92,7 @@ jobs:
 
   build-windows:
     name: Build Windows Dev Artifacts
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: prepare-release
 
     steps:
@@ -158,6 +158,10 @@ jobs:
             throw 'No Windows artifacts were found in pkg/ for release upload.'
           }
 
+          if ($appx.Count -eq 0) {
+            throw 'No Windows AppX artifact was found in pkg/ for MSIX publication.'
+          }
+
           if ($unpackedRoots.Count -eq 0) {
             throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
@@ -185,6 +189,37 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
+
+      - name: Prepare Windows MSIX release assets
+        id: windows_msix_assets
+        if: success() && steps.windows_artifacts.outputs.appx_files != ''
+        shell: bash
+        env:
+          WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
+        run: |
+          set -euo pipefail
+          mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
+          if [ "${#appx_files[@]}" -eq 0 ]; then
+            echo '::error::AppX assets were not available for MSIX publication.'
+            exit 1
+          fi
+
+          output_dir="pkg/release-msix"
+          output_json="$output_dir/msix-assets.json"
+          node scripts/prepare-msix-release-assets.js --out-dir "$output_dir" --output-json "$output_json" "${appx_files[@]}"
+
+          mapfile -t msix_files < <(node -e "const fs=require('fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));for(const entry of payload){console.log(entry.outputPath);}" "$output_json")
+          if [ "${#msix_files[@]}" -eq 0 ]; then
+            echo '::error::MSIX release asset preparation did not produce any files.'
+            exit 1
+          fi
+
+          {
+            echo 'msix_files<<EOF'
+            printf '%s\n' "${msix_files[@]}"
+            echo 'EOF'
+            echo "msix_count=${#msix_files[@]}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare Windows unpacked ZIP payload workspace
         id: windows_zip_payload
@@ -296,16 +331,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package to prerelease
+      - name: Upload MSIX package to prerelease
         uses: softprops/action-gh-release@v2
-        if: success() && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           name: ${{ needs.prepare-release.outputs.release_name }}
           draft: 'false'
           prerelease: 'true'
           overwrite_files: 'true'
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
+          files: ${{ steps.windows_msix_assets.outputs.msix_files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

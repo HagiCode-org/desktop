@@ -99,15 +99,15 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
   });
 
-  it('blocks readiness when a required package is installed below the declared minimum version', () => {
+  it('keeps non-required PM2 version visibility without blocking readiness', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({}, { pm2: '6.0.14' }), ['codex']);
 
-    assert.equal(summary.requiredReady, false);
-    assert.equal(summary.ready, false);
+    assert.equal(summary.requiredReady, true);
+    assert.equal(summary.ready, true);
     assert.deepEqual(summary.missingRequiredPackageIds, []);
-    assert.deepEqual(summary.versionMismatchRequiredPackageIds, ['pm2']);
-    assert.equal(summary.requiredPackages.some((item) => item.id === 'pm2' && item.versionSatisfied === false), true);
-    assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
+    assert.deepEqual(summary.versionMismatchRequiredPackageIds, []);
+    assert.equal(summary.optionalPackages.some((item) => item.id === 'pm2' && item.versionSatisfied === false), true);
+    assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), false);
   });
 
   it('uses the snapshot definition when hagiscript is configured to latest or dev', () => {
@@ -141,7 +141,7 @@ describe('dependency readiness evaluation', () => {
   it('treats catalog-pinned managed package versions as minimum supported versions', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.7-dev', pm2: '7.1.0' }), ['codex']);
     const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
-    const pm2 = summary.requiredPackages.find((item) => item.id === 'pm2');
+    const pm2 = summary.optionalPackages.find((item) => item.id === 'pm2');
 
     assert.equal(hagiscript?.requiredVersionRange, '>=0.2.3');
     assert.equal(hagiscript?.versionSatisfied, true);

@@ -551,8 +551,8 @@ omniroute:
     partial: Partial
     error: Error
     baseUrl: Base URL
-    pm2: PM2 executable
-    pm2Missing: PM2 is not installed
+    pm2: Bundled PM2 executable
+    pm2Missing: Bundled PM2 is unavailable
     runtimeInstallStatus: Runtime install status
   config:
     title: Runtime Configuration
@@ -593,7 +593,7 @@ omniroute:
     descriptionMissing: OmniRoute cannot start until the highlighted Desktop-managed packages are installed or repaired in Dependency Management.
     descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
     descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
+    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and hagiscript are repaired in Dependency Management.
     descriptionUnknown: Desktop could not verify the highlighted OmniRoute dependencies. Refresh or repair them in Dependency Management before retrying.
     descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: Open Dependency Management
@@ -626,8 +626,8 @@ codeServer:
     damaged: Damaged
     error: Error
     baseUrl: Base URL
-    pm2: PM2 executable
-    pm2Missing: PM2 is not installed
+    pm2: Bundled PM2 executable
+    pm2Missing: Bundled PM2 is unavailable
     runtimeStatus: Runtime install status
     passwordMode: Authentication
     passwordModeValue: Password required
@@ -657,8 +657,8 @@ codeServer:
       service-out: Service Output
       service-error: Service Error
   dependencyGuidance:
-    title: Install Desktop-managed PM2 first
-    description: Code Server uses the Desktop-managed PM2 process manager. Install or repair PM2 in Dependency Management before starting Code Server.
+    title: Repair Desktop-managed dependencies first
+    description: Code Server runs through hagiscript pm2, which uses Desktop-managed bundled PM2. Install or repair hagiscript in Dependency Management before starting Code Server.
     openDependencyManagement: Open Dependency Management
   errors:
     title: Code Server operation failed

@@ -543,8 +543,8 @@ omniroute:
     partial: 部分運行
     error: 錯誤
     baseUrl: 訪問地址
-    pm2: PM2 執行檔
-    pm2Missing: PM2 尚未安裝
+    pm2: 內建 PM2 執行檔
+    pm2Missing: 內建 PM2 無法使用
     runtimeInstallStatus: 執行階段安裝狀態
   config:
     title: 運行配置
@@ -585,7 +585,7 @@ omniroute:
     descriptionMissing: 在依賴項管理中安裝或修復高亮的 Desktop 託管套件之前，OmniRoute 無法啟動。
     descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
     descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and PM2 are repaired in Dependency Management.
+    descriptionRuntimeAndPackage: 在相依性管理中修復 Desktop 託管的 OmniRoute 執行階段與 hagiscript 之前，OmniRoute 無法啟動。
     descriptionUnknown: Desktop 目前無法確認高亮的 OmniRoute 依賴狀態。請先到依賴項管理刷新或修復後再重試。
     descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
     openDependencyManagement: 開啟相依性管理
@@ -618,8 +618,8 @@ codeServer:
     damaged: 已損壞
     error: 錯誤
     baseUrl: 存取位址
-    pm2: PM2 可執行檔
-    pm2Missing: PM2 尚未安裝
+    pm2: 內建 PM2 可執行檔
+    pm2Missing: 內建 PM2 無法使用
     runtimeStatus: 執行階段安裝狀態
     passwordMode: 驗證方式
     passwordModeValue: 需要密碼
@@ -649,8 +649,8 @@ codeServer:
       service-out: 服務輸出
       service-error: 服務錯誤
   dependencyGuidance:
-    title: 請先安裝 Desktop 託管的 PM2
-    description: Code Server 依賴 Desktop 託管的 PM2 程序管理器。請先在相依性管理中安裝或修復 PM2，再啟動 Code Server。
+    title: 請先修復 Desktop 託管依賴項
+    description: Code Server 透過 hagiscript pm2 執行，而 hagiscript pm2 使用 Desktop 託管的內建 PM2。請先在相依性管理中安裝或修復 hagiscript，再啟動 Code Server。
     openDependencyManagement: 開啟相依性管理
   errors:
     title: Code Server 操作失敗

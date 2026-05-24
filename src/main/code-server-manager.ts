@@ -447,6 +447,7 @@ export class CodeServerManager {
     const pm2Context = await this.resolvePm2Context();
     let processStatus: CodeServerProcessStatus = 'stopped';
     let restartCount: number | null = null;
+    let pm2ExecutablePath: string | null = null;
     let error: string | undefined;
 
     const runtimeWithoutHealth = await inspectVendoredCodeServerRuntime(this.pathManager);
@@ -465,6 +466,7 @@ export class CodeServerManager {
           await this.syncLegacyLogFiles(runtimeContext, resolvedPaths);
           processStatus = toProcessStatus(lifecycleResult.status);
           restartCount = lifecycleResult.success ? lifecycleResult.restartCount : null;
+          pm2ExecutablePath = lifecycleResult.pm2BinaryPath;
           if (!lifecycleResult.success) {
             error = lifecycleResult.summary;
           }
@@ -509,7 +511,7 @@ export class CodeServerManager {
       processStatus,
       restartCount,
       pm2Available: pm2Context.available,
-      pm2ExecutablePath: pm2Context.executablePath,
+      pm2ExecutablePath,
       error,
     };
   }
@@ -536,17 +538,17 @@ export class CodeServerManager {
     error?: string;
   }> {
     try {
-      const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
-      if (!this.isManagedPackageAvailable(pm2Context)) {
+      const hagiscriptContext = await this.dependencyManagementService.getManagedCommandContext('hagiscript');
+      if (!this.isManagedPackageAvailable(hagiscriptContext)) {
         return {
-          executablePath: pm2Context.executablePath,
+          executablePath: null,
           available: false,
-          error: 'Desktop-managed PM2 is unavailable. Install PM2 from Dependency Management first.',
+          error: 'Desktop-managed hagiscript is unavailable. Install hagiscript from Dependency Management first.',
         };
       }
 
       return {
-        executablePath: pm2Context.executablePath,
+        executablePath: null,
         available: true,
       };
     } catch (error) {
@@ -710,7 +712,7 @@ export class CodeServerManager {
       return runtime.diagnostics[0];
     }
     if (!pm2Available) {
-      return statusError ?? 'Desktop-managed PM2 is unavailable.';
+      return statusError ?? 'Desktop-managed hagiscript is unavailable.';
     }
     if (processStatus === 'errored') {
       return 'PM2 reports the Desktop-managed Code Server process as errored.';

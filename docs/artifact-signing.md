@@ -12,14 +12,13 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 4. Collect signable release artifacts from `pkg/` (`*Setup*.exe`, portable `.exe`, `.appx`) plus the `win-unpacked` app directory
 5. Stage the Windows unpacked ZIP payload workspace under `pkg/windows-zip-payload/`
 6. Authenticate to Azure with GitHub OIDC via `azure/login@v2`
-7. Sign artifacts with `azure/artifact-signing-action@v1`
+7. Sign root EXEs plus the generated `.appx` with `azure/artifact-signing-action@v1`
 8. Verify signatures before any upload or release step runs
-9. Derive signed `.msix` release assets from the signed AppX outputs for Windows release publication
+9. Prepare release-facing `.msix` assets from the signed `.appx` outputs
 10. Create the Windows ZIP from the signed staged unpacked payload before upload
 
 Only distributable Windows artifacts are signed in CI.
-The workflow signs the final installer outputs and only the staged `.exe`, `.appx`, `.msix`, and `.msi` files copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
-For release publication, the workflow also copies each signed `.appx` package into a byte-identical `.msix` asset under `pkg/release-msix/` so GitHub Releases can expose a Store-oriented package name without changing the signed payload bytes.
+The workflow signs the final installer outputs plus only the staged root Desktop executable copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
 
 ## AppX/MSIX Capability Declarations
 
@@ -38,12 +37,12 @@ Regular `main` branch builds stay unsigned by default and are marked as such in 
 
 ## Production Environment Scope
 
-The GitHub Actions `production` environment is attached only to the tag-triggered Windows release job.
+The GitHub Actions `production` environment is attached to Windows jobs that must perform Azure OIDC signing, including the dedicated verification workflow and the release-oriented Windows build job.
 That means:
 
 - tag releases enter `production` before Windows signing starts
-- normal `main` branch Windows builds do not use the environment
-- manual `workflow_dispatch` signing runs do not use the environment unless they are converted into a tag-driven release flow
+- the `verify/windows-signing` verification workflow also enters `production` so its OIDC subject can match the configured environment
+- unsigned Windows builds do not use the environment
 - the separate Azure Storage sync workflow is not bound to `production`
 
 ## Azure Prerequisites
@@ -109,7 +108,7 @@ Add these repository secrets:
 | `AZURE_CODESIGN_APPX_PUBLISHER` | Exact AppX publisher subject string that must match the signing certificate subject |
 
 `AZURE_CODESIGN_APPX_PUBLISHER` is required because AppX/MSIX packages validate the manifest publisher against the signing certificate subject.
-For signed Windows releases, the workflow rewrites `appx.publisher` in `electron-builder.yml` before the build so the generated `.appx` matches the Azure signing certificate.
+For signed Windows releases, the workflow rewrites `appx.publisher` in `electron-builder.yml` before the build so the generated `.appx` matches the Azure signing certificate. After signing, CI prepares release-facing `.msix` assets by copying the signed `.appx` bytes without modifying the package content.
 
 ## Signing Policy Switches
 
@@ -177,15 +176,16 @@ If Artifact Signing completes but `scripts/verify-signature.js` fails:
 3. Confirm the workflow signed the same file list that it later verified and uploaded
 4. Check whether the certificate profile supports the file type being signed
 
-### AppX signing fails with `SignerSign() failed` or `0x8007000b`
+### MSIX signing fails with `SignerSign() failed` or `0x8007000b`
 
-If the Azure signing action signs `.exe` files but fails while processing `.appx`:
+If the Azure signing action signs `.exe` files but fails while processing the Store package:
 
 1. Verify `AZURE_CODESIGN_APPX_PUBLISHER` is configured
 2. Verify the value exactly matches the Azure signing certificate subject used by the certificate profile
 3. Confirm the workflow updated `electron-builder.yml` before the Windows build ran
+4. Confirm CI is signing the real `.appx` output and only preparing `.msix` assets after signing
 
-This error usually means the AppX manifest publisher does not match the certificate subject, which Windows packaging treats as invalid even if the remote signing request itself succeeds.
+A common failure mode is renaming an AppX payload to `.msix` before signing. That produces `0x800700C1` or similar bad-format errors because the file extension no longer matches the package format expected by SignTool.
 
 ## References
 

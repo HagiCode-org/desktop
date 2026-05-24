@@ -58,9 +58,8 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
     assert.match(source, /getManagedCommandContext\('hagiscript'\)/);
-    assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /packageId: 'hagiscript'/);
-    assert.match(source, /packageId: 'pm2'/);
+    assert.doesNotMatch(source, /packageId: 'pm2'/);
     assert.match(source, /syncLegacyLogFiles/);
     assert.match(source, /context\.pm2LogsDirectory/);
     assert.match(source, /context\.appName/);

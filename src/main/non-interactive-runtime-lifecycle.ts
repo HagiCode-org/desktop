@@ -640,7 +640,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   const configManager = new ConfigManager();
   const pathManager = PathManager.getInstance();
   const dependencyManagementService = new DependencyManagementService();
-  const pm2Context = await dependencyManagementService.getManagedCommandContext('pm2');
   const hagiscriptContext = await dependencyManagementService.getManagedCommandContext('hagiscript');
   const timeoutMs = resolveVerificationTimeoutMs();
   const runtimeContextResolver = new HagiscriptRuntimeContextResolver({
@@ -662,17 +661,11 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
       hagiscriptContext.environment.npmGlobalBinRoot,
       hagiscriptContext.executablePath,
     ),
-    pm2PackageRoot: pm2Context.packageStatus?.packageRoot ?? null,
-    pm2ExecutablePath: pm2Context.executablePath,
-    pm2PackageVersion: pm2Context.packageStatus?.version ?? null,
-    pm2PackageUnderManagedModules: isPathUnder(
-      pm2Context.environment.npmGlobalModulesRoot,
-      pm2Context.packageStatus?.packageRoot ?? null,
-    ),
-    pm2ExecutableUnderManagedBin: isPathUnder(
-      pm2Context.environment.npmGlobalBinRoot,
-      pm2Context.executablePath,
-    ),
+    pm2PackageRoot: null,
+    pm2ExecutablePath: null,
+    pm2PackageVersion: null,
+    pm2PackageUnderManagedModules: false,
+    pm2ExecutableUnderManagedBin: false,
   };
 
   const codeServerManager = new CodeServerManager({
@@ -683,7 +676,7 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     configManager,
     dependencyManagementService,
   });
-  const pm2MajorVersion = extractPm2MajorVersion(pm2Context.packageStatus?.version ?? null);
+  const pm2MajorVersion = extractPm2MajorVersion(null);
   const codeServerPm2Home = path.join(pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2MajorVersion);
   const omniRoutePm2Home = path.join(pathManager.getOmniRouteRuntimeDataHome(), 'pm2', pm2MajorVersion);
 
@@ -708,16 +701,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   if (!toolingReport.hagiscriptExecutableUnderManagedBin) {
     report.issues.push(`hagiscript executable is outside the Desktop-managed npm bin root: ${toolingReport.hagiscriptExecutablePath ?? '<missing>'}`);
   }
-  if (pm2Context.packageStatus?.status !== 'installed') {
-    report.issues.push('Desktop-managed PM2 is not installed in the managed npm prefix.');
-  }
-  if (!toolingReport.pm2PackageUnderManagedModules) {
-    report.issues.push(`PM2 package root is outside the Desktop-managed npm modules root: ${toolingReport.pm2PackageRoot ?? '<missing>'}`);
-  }
-  if (!toolingReport.pm2ExecutableUnderManagedBin) {
-    report.issues.push(`PM2 executable is outside the Desktop-managed npm bin root: ${toolingReport.pm2ExecutablePath ?? '<missing>'}`);
-  }
-
   report.services.codeServer = await verifyCodeServerLifecycle({
     manager: codeServerManager,
     pm2Home: codeServerPm2Home,
@@ -738,6 +721,13 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     dependencyManagementService,
     timeoutMs,
   });
+
+  const [codeServerStatus, omniRouteStatus] = await Promise.all([
+    codeServerManager.getStatus().catch(() => null),
+    omniRouteManager.getStatus().catch(() => null),
+  ]);
+  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? omniRouteStatus?.pm2ExecutablePath ?? null;
+  toolingReport.pm2ExecutableUnderManagedBin = isPathUnder(toolingReport.npmGlobalBinRoot, toolingReport.pm2ExecutablePath);
 
   for (const [serviceName, serviceReport] of Object.entries(report.services)) {
     if (serviceName === 'backend' && 'skipped' in serviceReport && serviceReport.skipped) {

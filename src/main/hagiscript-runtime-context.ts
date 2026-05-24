@@ -190,11 +190,10 @@ export class HagiscriptRuntimeContextResolver {
 
   async resolveBundledRuntime(input: HagiscriptBundledRuntimeContextInput): Promise<HagiscriptRuntimeContext> {
     const shared = await this.resolveSharedContext();
-    const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
     const serviceDataHome = input.service === 'omniroute'
       ? path.resolve(this.pathManager.getOmniRouteRuntimeDataHome())
       : path.resolve(this.pathManager.getCodeServerRuntimeDataHome());
-    const pm2MajorVersion = extractPm2MajorVersion(pm2Context.packageStatus?.version ?? null);
+    const pm2MajorVersion = extractPm2MajorVersion(null);
     const pm2Home = path.join(serviceDataHome, 'pm2', pm2MajorVersion);
     const runtimeFilesDir = path.join(serviceDataHome, 'runtime');
     const pm2LogsDirectory = path.join(pm2Home, 'logs');

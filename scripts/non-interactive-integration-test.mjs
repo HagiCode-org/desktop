@@ -11,7 +11,7 @@ import AdmZip from 'adm-zip';
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, 'pkg');
 const runtimeVerifyArgs = ['runtime', 'verify'];
-const dependencyInstallArgs = ['deps', 'install', '--pm2', '--claude-code', '--codex'];
+const dependencyInstallArgs = ['deps', 'install', '--claude-code', '--codex'];
 const runtimeLifecycleArgs = ['runtime', 'lifecycle'];
 const defaultCommandTimeoutMs = 240_000;
 const interestingDiagnosticBasenames = new Set([
@@ -625,7 +625,7 @@ function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, he
     }
   }
 
-  for (const packageId of ['hagiscript', 'pm2', 'claude-code', 'codex']) {
+  for (const packageId of ['hagiscript', 'claude-code', 'codex']) {
     assertOutputContainsPackage(output, packageId);
   }
 }

@@ -40,7 +40,7 @@ jobs:
   build-windows:
     name: Build for Windows
     if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
       id-token: write
@@ -236,6 +236,10 @@ jobs:
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
+          if ($appx.Count -eq 0) {
+            throw 'No Windows AppX artifact was found in pkg/ for MSIX publication.'
+          }
+
           if ($unpackedRoots.Count -eq 0) {
             throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
@@ -266,6 +270,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "appx_count=$($appx.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
           "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
@@ -329,16 +334,28 @@ jobs:
             }
           }
 
-          $zipPayloadSignableFiles = @(
+          $zipPayloadRootExecutables = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              $_.Extension -ieq '.exe' -and
+              $_.DirectoryName -eq $payloadDir
             } | Sort-Object FullName -Unique
           )
+
+          if ($zipPayloadRootExecutables.Count -ne 1) {
+            $detectedExecutables = if ($zipPayloadRootExecutables.Count -gt 0) {
+              ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }) -join [Environment]::NewLine
+            } else {
+              '(none)'
+            }
+            throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
+          }
+
+          $zipPayloadSignableFiles = $zipPayloadRootExecutables
 
           $catalogEntries = @()
           foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
             $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
@@ -367,14 +384,50 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign Windows artifacts with Artifact Signing
+      - name: Sign root Windows EXE artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign unpacked Windows root EXE with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign Windows AppX with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.appx'
+          files-folder-recurse: false
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -391,9 +444,9 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
-      - name: Prepare signed MSIX release assets
+      - name: Prepare Windows MSIX release assets
         id: windows_msix_assets
-        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && steps.windows_artifacts.outputs.appx_files != ''
         shell: bash
         env:
           WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
@@ -401,7 +454,7 @@ jobs:
           set -euo pipefail
           mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
           if [ "${#appx_files[@]}" -eq 0 ]; then
-            echo '::error::Signed AppX assets were not available for MSIX publication.'
+            echo '::error::AppX assets were not available for MSIX publication.'
             exit 1
           fi
 
@@ -478,8 +531,8 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
-            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
+            echo '- Signed staged unpacked payload primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Prepared MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -495,7 +548,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -516,33 +569,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package
+      - name: Upload MSIX package
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
-        with:
-          name: hagicode-windows-appx-${{ github.sha }}
-          path: ${{ steps.windows_artifacts.outputs.appx_files }}
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: Upload AppX package to Release
-        uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
-        with:
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload signed MSIX package
-        uses: actions/upload-artifact@v4
-        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
         with:
           name: hagicode-windows-msix-${{ github.sha }}
           path: ${{ steps.windows_msix_assets.outputs.msix_files }}
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
 
-      - name: Upload signed MSIX package to Release
+      - name: Upload MSIX package to Release
         uses: softprops/action-gh-release@v2
         if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
         with:
@@ -622,7 +658,7 @@ jobs:
   build-windows-release:
     name: Build for Windows Release
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     environment: production
     permissions:
       contents: write
@@ -819,6 +855,10 @@ jobs:
             throw 'No Windows artifacts were found in pkg/ for signing or upload.'
           }
 
+          if ($appx.Count -eq 0) {
+            throw 'No Windows AppX artifact was found in pkg/ for MSIX publication.'
+          }
+
           if ($unpackedRoots.Count -eq 0) {
             throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
@@ -849,6 +889,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "appx_count=$($appx.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
 
           "Found $($nsis.Count) NSIS, $($portable.Count) portable, $($appx.Count) AppX, and $($unpackedRoots.Count) unpacked Windows artifact(s)."
@@ -912,16 +953,28 @@ jobs:
             }
           }
 
-          $zipPayloadSignableFiles = @(
+          $zipPayloadRootExecutables = @(
             $zipPayloadFiles | Where-Object {
-              @('.exe', '.appx', '.msix', '.msi') -contains $_.Extension.ToLowerInvariant()
+              $_.Extension -ieq '.exe' -and
+              $_.DirectoryName -eq $payloadDir
             } | Sort-Object FullName -Unique
           )
+
+          if ($zipPayloadRootExecutables.Count -ne 1) {
+            $detectedExecutables = if ($zipPayloadRootExecutables.Count -gt 0) {
+              ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }) -join [Environment]::NewLine
+            } else {
+              '(none)'
+            }
+            throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
+          }
+
+          $zipPayloadSignableFiles = $zipPayloadRootExecutables
 
           $catalogEntries = @()
           foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
             $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath)
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
           $catalogEntries = @($catalogEntries | Sort-Object -Unique)
           $catalogEntries | Set-Content -Path $catalogPath
@@ -950,14 +1003,50 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign Windows artifacts with Artifact Signing
+      - name: Sign root Windows EXE artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign unpacked Windows root EXE with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign Windows AppX with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.appx'
+          files-folder-recurse: false
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -974,9 +1063,9 @@ jobs:
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_zip_payload.outputs.catalog_path }}"
 
-      - name: Prepare signed MSIX release assets
+      - name: Prepare Windows MSIX release assets
         id: windows_msix_assets
-        if: success() && steps.signing_policy.outputs.required == 'true' && steps.windows_artifacts.outputs.appx_files != ''
+        if: success() && steps.windows_artifacts.outputs.appx_files != ''
         shell: bash
         env:
           WINDOWS_APPX_FILES: ${{ steps.windows_artifacts.outputs.appx_files }}
@@ -984,7 +1073,7 @@ jobs:
           set -euo pipefail
           mapfile -t appx_files < <(printf '%s\n' "$WINDOWS_APPX_FILES" | sed '/^[[:space:]]*$/d')
           if [ "${#appx_files[@]}" -eq 0 ]; then
-            echo '::error::Signed AppX assets were not available for MSIX publication.'
+            echo '::error::AppX assets were not available for MSIX publication.'
             exit 1
           fi
 
@@ -1054,8 +1143,8 @@ jobs:
             echo
             echo "- Policy: required (${SIGNING_REASON})"
             echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
-            echo '- Signed MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
+            echo '- Signed staged unpacked payload primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Prepared MSIX release assets: ${{ steps.windows_msix_assets.outputs.msix_count || 0 }}'
             echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -1071,7 +1160,7 @@ jobs:
             echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP payload signable executables/packages: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- ZIP payload signable primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -1092,33 +1181,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppX package
+      - name: Upload MSIX package
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
-        with:
-          name: hagicode-windows-appx-${{ github.sha }}
-          path: ${{ steps.windows_artifacts.outputs.appx_files }}
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: Upload AppX package to Release
-        uses: softprops/action-gh-release@v2
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_artifacts.outputs.appx_files != ''
-        with:
-          files: ${{ steps.windows_artifacts.outputs.appx_files }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload signed MSIX package
-        uses: actions/upload-artifact@v4
-        if: success() && steps.windows_msix_assets.outputs.msix_files != ''
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
         with:
           name: hagicode-windows-msix-${{ github.sha }}
           path: ${{ steps.windows_msix_assets.outputs.msix_files }}
           retention-days: 30
-          if-no-files-found: error
+          if-no-files-found: warn
 
-      - name: Upload signed MSIX package to Release
+      - name: Upload MSIX package to Release
         uses: softprops/action-gh-release@v2
         if: success() && startsWith(github.ref, 'refs/tags/v') && steps.windows_msix_assets.outputs.msix_files != ''
         with:

@@ -67,14 +67,13 @@ export const nonInteractiveExitCodes = {
 } as const;
 
 const flagToPackageId = new Map<string, ManagedNpmPackageId>([
-  ['--pm2', 'pm2'],
   ['--claude-code', 'claude-code'],
   ['--codex', 'codex'],
 ]);
 
 export const nonInteractiveUsageText = [
   'Usage:',
-  '  Hagicode Desktop deps install --pm2 --claude-code --codex',
+  '  Hagicode Desktop deps install --claude-code --codex',
   '  Hagicode Desktop runtime verify',
   '  Hagicode Desktop runtime lifecycle',
   '',
@@ -83,7 +82,6 @@ export const nonInteractiveUsageText = [
   '  runtime lifecycle  Validate hagiscript-managed runtime service lifecycle transitions.',
   '',
   'Supported deps install flags:',
-  '  --pm2           Install the Desktop-managed PM2 package.',
   '  --claude-code   Install the Desktop-managed Claude Code package.',
   '  --codex         Install the Desktop-managed Codex package.',
   '',
@@ -408,11 +406,11 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`hagiscript version: ${report.tooling.hagiscriptPackageVersion ?? '<missing>'}`);
   output.stdout(`hagiscript package managed: ${report.tooling.hagiscriptPackageUnderManagedModules}`);
   output.stdout(`hagiscript executable managed: ${report.tooling.hagiscriptExecutableUnderManagedBin}`);
-  output.stdout(`pm2 package root: ${report.tooling.pm2PackageRoot ?? '<missing>'}`);
-  output.stdout(`pm2 executable: ${report.tooling.pm2ExecutablePath ?? '<missing>'}`);
-  output.stdout(`pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);
-  output.stdout(`pm2 package managed: ${report.tooling.pm2PackageUnderManagedModules}`);
-  output.stdout(`pm2 executable managed: ${report.tooling.pm2ExecutableUnderManagedBin}`);
+  output.stdout(`standalone pm2 package root: ${report.tooling.pm2PackageRoot ?? '<missing>'}`);
+  output.stdout(`bundled pm2 executable: ${report.tooling.pm2ExecutablePath ?? '<missing>'}`);
+  output.stdout(`standalone pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);
+  output.stdout(`standalone pm2 package managed: ${report.tooling.pm2PackageUnderManagedModules}`);
+  output.stdout(`standalone pm2 executable managed: ${report.tooling.pm2ExecutableUnderManagedBin}`);
 
   output.stdout(`code-server pm2 home: ${report.services.codeServer.pm2Home}`);
   output.stdout(`code-server runtime data: ${report.services.codeServer.runtimeDataHome}`);

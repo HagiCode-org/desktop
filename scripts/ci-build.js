@@ -266,7 +266,7 @@ function printBuildSummary() {
     // Group artifacts by type
     const installers = buildInfo.artifacts.filter(a =>
       a.path.endsWith('.exe') ||
-      a.path.endsWith('.appx') ||
+      a.path.endsWith('.msix') ||
       a.path.endsWith('.dmg') ||
       a.path.endsWith('.AppImage') ||
       a.path.endsWith('.rpm') ||
