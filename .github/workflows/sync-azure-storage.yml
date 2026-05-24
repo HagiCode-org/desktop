@@ -59,6 +59,9 @@ jobs:
   plan:
     name: Plan Azure Upload Shards
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      deployment: false
     outputs:
       release_tag: ${{ steps.plan.outputs.release_tag }}
       release_version: ${{ steps.plan.outputs.release_version }}
@@ -168,6 +171,9 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_shards == 'true'
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      deployment: false
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.plan.outputs.max_parallel) }}

@@ -13,6 +13,9 @@ jobs:
   finalize:
     name: Finalize Azure Sync
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      deployment: false
 
     steps:
     - name: Checkout code
