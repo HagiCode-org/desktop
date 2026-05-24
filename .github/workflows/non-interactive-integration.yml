@@ -59,7 +59,7 @@ jobs:
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "hagicode-linux-targz-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "hagicode-linux-tar-gz-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration
@@ -107,7 +107,12 @@ jobs:
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "hagicode-macos-zip-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "hagicode-macos-x64-zip-${{ github.event.workflow_run.head_sha }}" \
+            --output-dir pkg
+          node scripts/download-workflow-artifact.mjs \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "${{ github.event.workflow_run.id }}" \
+            --artifact-name "hagicode-macos-arm64-zip-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration
@@ -156,7 +161,7 @@ jobs:
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "hagicode-windows-zip-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "hagicode-windows-portable-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration
