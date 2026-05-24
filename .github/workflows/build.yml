@@ -35,7 +35,6 @@ env:
 jobs:
   build-windows:
     name: Build for Windows
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-2022
     permissions:
       contents: write
@@ -415,9 +414,22 @@ jobs:
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload Windows release bundle
+        uses: actions/upload-artifact@v4
+        if: success() && startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: release-windows-assets
+          path: |
+            ${{ steps.windows_artifacts.outputs.nsis_files }}
+            ${{ steps.windows_artifacts.outputs.portable_files }}
+            ${{ steps.windows_zip.outputs.zip_files }}
+            ${{ steps.windows_artifacts.outputs.report_path }}
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Upload Windows build bundle
         uses: actions/upload-artifact@v4
-        if: success()
+        if: success() && !startsWith(github.ref, 'refs/tags/v')
         with:
           name: hagicode-windows-${{ github.sha }}
           path: |
@@ -647,8 +659,8 @@ jobs:
 
   publish-windows-release:
     name: Publish Windows Release Assets
-    needs: build-windows-release
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build-windows-release.result == 'success' }}
+    needs: build-windows
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build-windows.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -733,7 +745,6 @@ jobs:
       sync_eligible: ${{ steps.status.outputs.sync_eligible }}
     needs:
       - build-windows
-      - build-windows-release
       - build-platform-artifacts
       - publish-windows-release
       - publish-platform-release
@@ -781,19 +792,13 @@ jobs:
         env:
           IS_TAG_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
           BUILD_WINDOWS_STATUS: ${{ needs.build-windows.result }}
-          BUILD_WINDOWS_RELEASE_STATUS: ${{ needs.build-windows-release.result }}
           BUILD_PLATFORMS_STATUS: ${{ needs.build-platform-artifacts.result }}
           PUBLISH_WINDOWS_STATUS: ${{ needs.publish-windows-release.result }}
           PUBLISH_PLATFORMS_STATUS: ${{ needs.publish-platform-release.result }}
         run: |
           set -euo pipefail
 
-          if [ "${IS_TAG_RELEASE}" = 'true' ]; then
-            windows_build_status="${BUILD_WINDOWS_RELEASE_STATUS}"
-          else
-            windows_build_status="${BUILD_WINDOWS_STATUS}"
-          fi
-
+          windows_build_status="${BUILD_WINDOWS_STATUS}"
           platform_build_status="${BUILD_PLATFORMS_STATUS}"
           windows_publish_status="${PUBLISH_WINDOWS_STATUS}"
           platform_publish_status="${PUBLISH_PLATFORMS_STATUS}"
