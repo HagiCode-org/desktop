@@ -457,8 +457,25 @@ jobs:
           description-url: https://github.com/HagiCode-org/desktop
           timeout: 600
 
+      - name: Sign Windows AppX package with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'appx'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.appx'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
       - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
