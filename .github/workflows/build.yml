@@ -380,14 +380,50 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign Windows artifacts with Artifact Signing
+      - name: Sign root Windows EXE artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign unpacked Windows root EXE with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign Windows MSIX with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.msix'
+          files-folder-recurse: false
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -929,14 +965,50 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign Windows artifacts with Artifact Signing
+      - name: Sign root Windows EXE artifacts with Artifact Signing
         if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_zip_payload.outputs.catalog_path }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign unpacked Windows root EXE with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
+          files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign Windows MSIX with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.msix'
+          files-folder-recurse: false
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
