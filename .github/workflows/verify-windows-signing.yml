@@ -20,7 +20,7 @@ env:
 jobs:
   verify-windows-signing:
     name: Verify signed Windows artifacts
-    runs-on: windows-latest
+    runs-on: windows-2022
     environment: production
     permissions:
       contents: read

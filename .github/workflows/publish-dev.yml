@@ -92,7 +92,7 @@ jobs:
 
   build-windows:
     name: Build Windows Dev Artifacts
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: prepare-release
 
     steps:
