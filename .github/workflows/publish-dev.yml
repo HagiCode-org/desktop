@@ -161,14 +161,26 @@ jobs:
             report_suffix: appx
             requires_zip: false
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine Windows signing policy
+        id: signing_policy
+        shell: bash
+        run: |
+          required=true
+          reason="publish branch production preview"
+
+          echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "Windows signing required: ${required} (${reason})"
+
       - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
         shell: bash
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -404,6 +416,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
       - name: Azure login for Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -411,7 +424,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Windows ${{ matrix.target.name }} root EXE artifacts with Artifact Signing
-        if: success() && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
@@ -428,7 +441,7 @@ jobs:
           timeout: 600
 
       - name: Sign unpacked Windows root EXE with Artifact Signing
-        if: success() && matrix.target.requires_zip
+        if: success() && matrix.target.requires_zip && steps.signing_policy.outputs.required == 'true'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
@@ -445,7 +458,7 @@ jobs:
           timeout: 600
 
       - name: Verify Windows signatures
-        if: success() && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
@@ -494,7 +507,7 @@ jobs:
             echo
             echo '- Package target: ${{ matrix.target.name }}'
             echo '- Version: ${{ needs.prepare-release.outputs.version }}'
-            echo '- Signing policy: publish branch production preview'
+            echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
             echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
             echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
@@ -512,6 +525,42 @@ jobs:
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 30
           if-no-files-found: error
+
+      - name: Code signing failure notification
+        if: failure()
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
+            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
+            exit 0
+          }
+
+          $message = @(
+            '代码签名失败 (Windows) ❌',
+            '',
+            '平台: Windows / ${{ matrix.target.name }}',
+            '版本: ${{ needs.prepare-release.outputs.release_tag }}',
+            '提交: ${{ github.sha }}',
+            '',
+            '请检查签名配置和证书状态。',
+            '可能的原因：',
+            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
+            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
+            '- 产物签名成功但验签失败',
+            '',
+            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ) -join "`n"
+
+          $payload = @{
+            msg_type = 'text'
+            content = @{
+              text = $message
+            }
+          } | ConvertTo-Json -Depth 4
+
+          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
   build-platform-artifacts:
     name: Build ${{ matrix.target.name }} Preview
