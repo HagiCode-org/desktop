@@ -109,6 +109,11 @@ jobs:
             builder_target: nsis
             report_suffix: nsis
             requires_zip: false
+          - id: appx
+            name: AppX
+            builder_target: appx
+            report_suffix: appx
+            requires_zip: false
 
     steps:
       - name: Checkout code
@@ -178,12 +183,18 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $selectedFiles = if ('${{ matrix.target.id }}' -eq 'portable') { $portable } else { $nsis }
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $selectedFiles = switch ('${{ matrix.target.id }}') {
+            'portable' { $portable }
+            'nsis' { $nsis }
+            'appx' { $appx }
+            default { @() }
+          }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
           $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
 
           if ($selectedFiles.Count -eq 0) {
-            throw "No Windows ${{ matrix.target.name }} EXE artifacts were found in pkg/ for prerelease publication."
+            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/ for prerelease publication."
           }
 
           if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
@@ -309,8 +320,8 @@ jobs:
             echo '- Package target: ${{ matrix.target.name }}'
             echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
-            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count || '' }}'
-            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count || '' }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -351,6 +362,7 @@ jobs:
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.zip
+            release-assets/windows/**/*.appx
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

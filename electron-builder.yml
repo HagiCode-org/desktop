@@ -37,9 +37,33 @@ win:
   target:
     - portable
     - nsis
+    - appx
   icon: resources/icon.ico
 nsis:
   runAfterFinish: false
+appx:
+  displayName: Hagicode Desktop
+  publisherDisplayName: newbe36524
+  publisher: CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F
+  identityName: newbe36524.HagicodeDesktop
+  backgroundColor: transparent
+  languages:
+    - en-US
+    - zh-CN
+    - zh-Hant
+    - ja-JP
+    - ko-KR
+    - de-DE
+    - fr-FR
+    - es-ES
+    - pt-BR
+    - ru-RU
+  addAutoLaunchExtension: false
+  capabilities:
+    - runFullTrust
+    - internetClient
+    - internetClientServer
+    - privateNetworkClientServer
 mac:
   target:
     - target: default

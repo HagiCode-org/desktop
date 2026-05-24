@@ -70,9 +70,10 @@ describe('embedded runtime packaging configuration', () => {
   });
 
   it('validates release archive payloads before Windows release ZIP upload', async () => {
-    const [buildWorkflow, publishDevWorkflow] = await Promise.all([
+    const [buildWorkflow, publishDevWorkflow, builder] = await Promise.all([
       fs.readFile(buildWorkflowPath, 'utf-8'),
       fs.readFile(publishDevWorkflowPath, 'utf-8'),
+      fs.readFile(electronBuilderPath, 'utf-8'),
     ]);
 
     assert.match(buildWorkflow, /Verify Windows ZIP toolchain payload/);
@@ -80,24 +81,31 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /zip_path=/);
     assert.match(buildWorkflow, /Publish Windows Release Assets/);
     assert.match(buildWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
+    assert.match(buildWorkflow, /builder_target: appx/);
     assert.match(buildWorkflow, /linux-appimage/);
     assert.match(buildWorkflow, /linux-tar-gz/);
     assert.match(buildWorkflow, /linux-zip/);
     assert.match(buildWorkflow, /macos-arm64/);
     assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
     assert.doesNotMatch(buildWorkflow, /pkg\/\*\.deb/);
-    assert.doesNotMatch(buildWorkflow, /Upload MSIX package/);
+    assert.doesNotMatch(buildWorkflow, /prepare-msix-release-assets\.js/);
+    assert.match(buildWorkflow, /release-assets\/windows\/\*\*\/\*\.appx/);
+    assert.match(builder, /publisherDisplayName: newbe36524/);
+    assert.match(builder, /- appx/);
     assert.match(publishDevWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(publishDevWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(publishDevWorkflow, /zip_path=/);
     assert.match(publishDevWorkflow, /Publish Windows Dev Assets/);
     assert.match(publishDevWorkflow, /Build Windows Dev Assets \(\$\{\{ matrix\.target\.name \}\}\)/);
+    assert.match(publishDevWorkflow, /builder_target: appx/);
     assert.match(publishDevWorkflow, /linux-appimage/);
     assert.match(publishDevWorkflow, /linux-tar-gz/);
     assert.match(publishDevWorkflow, /linux-zip/);
     assert.match(publishDevWorkflow, /macos-arm64/);
     assert.match(publishDevWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Dev Assets/);
     assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);
+    assert.doesNotMatch(publishDevWorkflow, /prepare-msix-release-assets\.js/);
+    assert.match(publishDevWorkflow, /release-assets\/windows\/\*\*\/\*\.appx/);
   });
 
   it('raises macOS open file limits before electron-builder packaging', async () => {

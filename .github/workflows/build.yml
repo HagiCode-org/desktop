@@ -50,6 +50,11 @@ jobs:
             builder_target: nsis
             report_suffix: nsis
             requires_zip: false
+          - id: appx
+            name: AppX
+            builder_target: appx
+            report_suffix: appx
+            requires_zip: false
     permissions:
       contents: write
       id-token: write
@@ -166,13 +171,19 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $selectedFiles = if ('${{ matrix.target.id }}' -eq 'portable') { $portable } else { $nsis }
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $selectedFiles = switch ('${{ matrix.target.id }}') {
+            'portable' { $portable }
+            'nsis' { $nsis }
+            'appx' { $appx }
+            default { @() }
+          }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
           $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
           $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
 
           if ($selectedFiles.Count -eq 0) {
-            throw "No Windows ${{ matrix.target.name }} EXE artifacts were found in pkg/."
+            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/."
           }
 
           if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
@@ -182,6 +193,13 @@ jobs:
           if (-not (Test-Path $buildReport)) {
             throw "CI build report was not found: $buildReport"
           }
+
+          $catalogEntries = @()
+          foreach ($file in $selectedFiles) {
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $file.FullName).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+          }
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
 
           $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
           $zipBaseName = [System.IO.Path]::GetFileNameWithoutExtension($selectedFiles[0].Name)
@@ -301,7 +319,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Windows ${{ matrix.target.name }} root EXE artifacts with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
@@ -335,7 +353,7 @@ jobs:
           timeout: 600
 
       - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
@@ -386,8 +404,8 @@ jobs:
             echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
             echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
-            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count || '' }}'
-            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count || '' }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -667,6 +685,7 @@ jobs:
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.zip
+            release-assets/windows/**/*.appx
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
