@@ -45,6 +45,13 @@ That means:
 - unsigned Windows builds do not use the environment
 - the separate Azure Storage sync workflow is not bound to `production`
 
+The dedicated verification workflow at `.github/workflows/verify-windows-signing.yml` is narrower than the release build:
+
+- it builds only a direct `.msix` package
+- it does not stage NSIS, portable `.exe`, or ZIP outputs
+- it asserts the packaged archive stays in `distributionMode=normal` by verifying no `portable-fixed` payload is embedded
+- it signs the generated `.msix` directly and verifies the resulting signature on that same artifact
+
 ## Azure Prerequisites
 
 ### 1. Register the Artifact Signing resource provider
