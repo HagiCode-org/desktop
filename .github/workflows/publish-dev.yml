@@ -392,14 +392,42 @@ jobs:
             builder_target: zip
             report_suffix: zip
             artifact_glob: '*.zip'
-          - id: macos-x64
-            name: macOS (x64)
+          - id: macos-x64-dmg
+            name: macOS x64 DMG
             runs_on: macos-latest
             mac_arch: x64
-          - id: macos-arm64
-            name: macOS (arm64)
+            mac_runtime_platform: osx-x64
+            builder_target: dmg
+            report_suffix: dmg
+            artifact_glob: '*.dmg'
+            upload_glob: '**/*.dmg'
+          - id: macos-x64-zip
+            name: macOS x64 ZIP
+            runs_on: macos-latest
+            mac_arch: x64
+            mac_runtime_platform: osx-x64
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
+            upload_glob: '**/*.zip'
+          - id: macos-arm64-dmg
+            name: macOS arm64 DMG
             runs_on: macos-latest
             mac_arch: arm64
+            mac_runtime_platform: osx-arm64
+            builder_target: dmg
+            report_suffix: dmg
+            artifact_glob: '*.dmg'
+            upload_glob: '**/*.dmg'
+          - id: macos-arm64-zip
+            name: macOS arm64 ZIP
+            runs_on: macos-latest
+            mac_arch: arm64
+            mac_runtime_platform: osx-arm64
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
+            upload_glob: '**/*.zip'
 
     steps:
       - name: Checkout code
@@ -458,10 +486,14 @@ jobs:
 
       - name: Build macOS assets
         if: startsWith(matrix.target.id, 'macos-')
-        run: node scripts/ci-build.js --platform mac
+        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
 
       - name: Summarize Linux artifacts
         if: startsWith(matrix.target.id, 'linux-') && success()
@@ -498,20 +530,27 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          dmg_files=(pkg/*.dmg)
-          zip_files=(pkg/*.zip)
+          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
+          artifact_count=${#artifact_files[@]}
+          report_path="pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json"
 
           {
             echo '## macOS packaging artifacts'
             echo
             echo "- Target architecture: ${{ matrix.target.mac_arch }}"
-            echo "- DMG artifacts: ${#dmg_files[@]}"
-            echo "- ZIP artifacts: ${#zip_files[@]}"
-            echo '- CI build report: `pkg/ci-build-report-mac.json`'
+            echo "- Package target: ${{ matrix.target.builder_target }}"
+            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
+            echo "- Matched artifacts: ${artifact_count}"
+            echo "- CI build report: \`${report_path}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${#dmg_files[@]}" -eq 0 ] || [ "${#zip_files[@]}" -eq 0 ]; then
-            echo '::error::macOS DMG/ZIP artifacts were not both produced in pkg/.'
+          if [ "$artifact_count" -eq 0 ]; then
+            echo '::error::macOS target artifact was not produced in pkg/.'
+            exit 1
+          fi
+
+          if [ ! -f "$report_path" ]; then
+            echo "::error::macOS CI build report is missing: $report_path"
             exit 1
           fi
 
@@ -532,9 +571,8 @@ jobs:
         with:
           name: dev-release-${{ matrix.target.id }}
           path: |
-            pkg/*.dmg
-            pkg/*.zip
-            pkg/ci-build-report-mac.json
+            pkg/${{ matrix.target.artifact_glob }}
+            pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
           retention-days: 14
           if-no-files-found: error
 
@@ -560,10 +598,22 @@ jobs:
             name: Linux ZIP
             artifact_path: release-assets/linux-zip
             upload_glob: '**/*.zip'
-          - id: macos-x64
-            name: macOS (x64)
-          - id: macos-arm64
-            name: macOS (arm64)
+          - id: macos-x64-dmg
+            name: macOS x64 DMG
+            artifact_path: release-assets/macos-x64-dmg
+            upload_glob: '**/*.dmg'
+          - id: macos-x64-zip
+            name: macOS x64 ZIP
+            artifact_path: release-assets/macos-x64-zip
+            upload_glob: '**/*.zip'
+          - id: macos-arm64-dmg
+            name: macOS arm64 DMG
+            artifact_path: release-assets/macos-arm64-dmg
+            upload_glob: '**/*.dmg'
+          - id: macos-arm64-zip
+            name: macOS arm64 ZIP
+            artifact_path: release-assets/macos-arm64-zip
+            upload_glob: '**/*.zip'
 
     steps:
       - name: Download Linux release bundle
@@ -578,7 +628,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dev-release-${{ matrix.target.id }}
-          path: release-assets/${{ matrix.target.id }}
+          path: ${{ matrix.target.artifact_path }}
 
       - name: Upload Linux assets to prerelease
         if: startsWith(matrix.target.id, 'linux-')
@@ -604,8 +654,7 @@ jobs:
           prerelease: 'true'
           overwrite_files: 'true'
           files: |
-            release-assets/${{ matrix.target.id }}/**/*.dmg
-            release-assets/${{ matrix.target.id }}/**/*.zip
+            ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

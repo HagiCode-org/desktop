@@ -461,6 +461,23 @@ function resolveMacBuildArchs() {
   return [...new Set(archs)];
 }
 
+function resolveMacPackageTargets() {
+  const targets = resolveConfiguredTargets();
+  if (targets.length === 0) {
+    return [];
+  }
+
+  const supportedTargets = new Set(['dmg', 'zip']);
+  const normalizedTargets = targets.map((target) => String(target).trim().toLowerCase()).filter(Boolean);
+  const unsupportedTargets = normalizedTargets.filter((target) => !supportedTargets.has(target));
+
+  if (unsupportedTargets.length > 0) {
+    throw new Error(`Unsupported macOS package target(s): ${unsupportedTargets.join(', ')}. Supported targets: dmg, zip.`);
+  }
+
+  return [...new Set(normalizedTargets)];
+}
+
 function buildStep(command, commandArgs, name) {
   return {
     name,
@@ -510,7 +527,33 @@ function getBuildSteps() {
       throw new Error('No valid macOS build architectures were requested. Use HAGICODE_MAC_BUILD_ARCHS=x64,arm64.');
     }
 
-    return archs.map((arch) => buildStep('npm', ['run', `build:mac:${arch}`], `Build macOS (${arch})`));
+    const targets = resolveMacPackageTargets();
+    if (targets.length === 0) {
+      return archs.map((arch) => buildStep('npm', ['run', `build:mac:${arch}`], `Build macOS (${arch})`));
+    }
+
+    return archs.flatMap((arch) => {
+      const archFlag = arch === 'arm64' ? '--arm64' : '--x64';
+      const steps = [
+        buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
+        buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
+        buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
+        buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
+        buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
+        buildStep(
+          'node',
+          ['scripts/run-electron-builder.js', '--mac', ...targets, archFlag, '--publish', 'never'],
+          `Package macOS artifacts (${arch}${targets.length > 0 ? ` / ${targets.join(', ')}` : ''})`,
+        ),
+        buildStep('npm', ['run', `package:smoke-test:mac:${arch}`], `Run packaged smoke test (${arch})`),
+      ];
+
+      if (targets.some((target) => target === 'zip')) {
+        steps.push(buildStep('npm', ['run', `package:verify-release-archives:mac:${arch}`], `Verify release archives (${arch})`));
+      }
+
+      return steps;
+    });
   }
 
   throw new Error(`Unsupported build platform: ${config.platform}`);

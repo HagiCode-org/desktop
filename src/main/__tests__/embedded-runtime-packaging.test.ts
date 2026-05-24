@@ -11,6 +11,7 @@ const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
 const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
+const ciBuildScriptPath = path.resolve(process.cwd(), 'scripts/ci-build.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
 const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-builder.js');
 const macToolchainSigningHookPath = path.resolve(process.cwd(), 'scripts/macos-toolchain-signing-hook.cjs');
@@ -39,7 +40,10 @@ describe('embedded runtime packaging configuration', () => {
 
   it('package scripts provide targeted macOS runtime smoke validation for both architectures', async () => {
     const pkg = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
-    const macBuildScript = await fs.readFile(macBuildScriptPath, 'utf-8');
+    const [macBuildScript, ciBuildScript] = await Promise.all([
+      fs.readFile(macBuildScriptPath, 'utf-8'),
+      fs.readFile(ciBuildScriptPath, 'utf-8'),
+    ]);
 
     assert.equal(pkg.scripts['build:mac'], 'node scripts/build-macos.js');
     assert.match(pkg.scripts['build:mac:x64'] || '', /package:smoke-test:mac:x64/);
@@ -67,6 +71,10 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['package:verify-release-archives:mac:arm64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-arm64/);
     assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
+    assert.match(ciBuildScript, /Unsupported macOS package target\(s\)/);
+    assert.match(ciBuildScript, /Supported targets: dmg, zip/);
+    assert.match(ciBuildScript, /scripts\/run-electron-builder\.js/);
+    assert.match(ciBuildScript, /package:verify-release-archives:mac:\$\{arch\}/);
   });
 
   it('validates release archive payloads before Windows release ZIP upload', async () => {
@@ -85,7 +93,13 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /linux-appimage/);
     assert.match(buildWorkflow, /linux-tar-gz/);
     assert.match(buildWorkflow, /linux-zip/);
-    assert.match(buildWorkflow, /macos-arm64/);
+    assert.match(buildWorkflow, /macos-x64-dmg/);
+    assert.match(buildWorkflow, /macos-x64-zip/);
+    assert.match(buildWorkflow, /macos-arm64-dmg/);
+    assert.match(buildWorkflow, /macos-arm64-zip/);
+    assert.match(buildWorkflow, /builder_target: dmg/);
+    assert.match(buildWorkflow, /builder_target: zip/);
+    assert.match(buildWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
     assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
     assert.doesNotMatch(buildWorkflow, /pkg\/\*\.deb/);
     assert.doesNotMatch(buildWorkflow, /prepare-msix-release-assets\.js/);
@@ -101,7 +115,13 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(publishDevWorkflow, /linux-appimage/);
     assert.match(publishDevWorkflow, /linux-tar-gz/);
     assert.match(publishDevWorkflow, /linux-zip/);
-    assert.match(publishDevWorkflow, /macos-arm64/);
+    assert.match(publishDevWorkflow, /macos-x64-dmg/);
+    assert.match(publishDevWorkflow, /macos-x64-zip/);
+    assert.match(publishDevWorkflow, /macos-arm64-dmg/);
+    assert.match(publishDevWorkflow, /macos-arm64-zip/);
+    assert.match(publishDevWorkflow, /builder_target: dmg/);
+    assert.match(publishDevWorkflow, /builder_target: zip/);
+    assert.match(publishDevWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
     assert.match(publishDevWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Dev Assets/);
     assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);
     assert.doesNotMatch(publishDevWorkflow, /prepare-msix-release-assets\.js/);
