@@ -32,6 +32,7 @@ const maxDeltaPreview = 5;
 const config = {
   platform: '',
   prod: false,
+  targets: [],
 };
 
 const macArchAliases = new Map([
@@ -99,6 +100,7 @@ Usage: node scripts/ci-build.js [options]
 
 Options:
   --platform <win|mac|linux>   Target platform
+  --target <name>              Package target override (repeatable or comma-separated)
   --prod                       Production build
   --help                       Show this help message
 
@@ -116,6 +118,15 @@ function parseArgs() {
       case '--prod':
         config.prod = true;
         break;
+      case '--target': {
+        const value = args[++i];
+        if (!value) {
+          log('Missing value for --target', colors.red);
+          process.exit(1);
+        }
+        config.targets.push(...value.split(',').map((target) => target.trim()).filter(Boolean));
+        break;
+      }
       case '--help':
         showHelp();
         process.exit(0);
@@ -137,6 +148,27 @@ function parseArgs() {
     }
     log(`Auto-detected platform: ${config.platform}`, colors.blue);
   }
+}
+
+function resolveConfiguredTargets() {
+  return [...new Set(config.targets.map((target) => String(target).trim()).filter(Boolean))];
+}
+
+function formatConfiguredTargets() {
+  const targets = resolveConfiguredTargets();
+  return targets.length > 0 ? targets.join(', ') : 'default';
+}
+
+function getTargetSlug() {
+  const targets = resolveConfiguredTargets();
+  if (targets.length === 0) {
+    return '';
+  }
+
+  return targets
+    .map((target) => target.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .join('-');
 }
 
 async function executeCommand(command, commandArgs, options = {}) {
@@ -331,6 +363,7 @@ function printBuildSummary(stepResults = [], reportPath = null) {
   log('', colors.cyan);
   log('Configuration:', colors.cyan);
   log(`  Platform:     ${config.platform}`, colors.green);
+  log(`  Targets:      ${formatConfiguredTargets()}`, colors.green);
   log(`  Production:   ${config.prod}`, colors.green);
   if (reportPath) {
     log(`  Build report: ${reportPath}`, colors.green);
@@ -439,29 +472,36 @@ function buildStep(command, commandArgs, name) {
 
 function getBuildSteps() {
   if (config.platform === 'win') {
+    const targets = resolveConfiguredTargets();
     return [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('node', ['scripts/run-electron-builder.js', '--win', '--publish', 'never'], 'Package Windows artifacts'),
+      buildStep('node', ['scripts/run-electron-builder.js', '--win', ...targets, '--publish', 'never'], `Package Windows artifacts${targets.length > 0 ? ` (${targets.join(', ')})` : ''}`),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
     ];
   }
 
   if (config.platform === 'linux') {
-    return [
+    const targets = resolveConfiguredTargets();
+    const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('node', ['scripts/run-electron-builder.js', '--linux', '--publish', 'never'], 'Package Linux artifacts'),
+      buildStep('node', ['scripts/run-electron-builder.js', '--linux', ...targets, '--publish', 'never'], `Package Linux artifacts${targets.length > 0 ? ` (${targets.join(', ')})` : ''}`),
       buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
-      buildStep('npm', ['run', 'package:verify-release-archives'], 'Verify release archives'),
     ];
+
+    if (targets.length === 0 || targets.some((target) => target === 'zip' || target === 'tar.gz')) {
+      steps.push(buildStep('npm', ['run', 'package:verify-release-archives'], 'Verify release archives'));
+    }
+
+    return steps;
   }
 
   if (config.platform === 'mac') {
@@ -603,7 +643,7 @@ function printTimingSummary(stepResults, totalDurationMs) {
 
 function appendTimingSummary(stepResults, totalDurationMs, status, reportPath) {
   const lines = [
-    `## CI build timing (${config.platform})`,
+    `## CI build timing (${config.platform}${resolveConfiguredTargets().length > 0 ? ` / ${formatConfiguredTargets()}` : ''})`,
     '',
     `- Status: ${status}`,
     `- Total duration: ${formatDurationMs(totalDurationMs)}`,
@@ -637,10 +677,12 @@ function ensureReportDirectory() {
 
 function writeBuildReport(stepResults, totalDurationMs, status) {
   const reportDirectory = ensureReportDirectory();
-  const reportPath = path.join(reportDirectory, `ci-build-report-${config.platform}.json`);
+  const targetSlug = getTargetSlug();
+  const reportPath = path.join(reportDirectory, `ci-build-report-${config.platform}${targetSlug ? `-${targetSlug}` : ''}.json`);
   const buildInfo = getBuildInfo();
   const payload = {
     platform: config.platform,
+    targets: resolveConfiguredTargets(),
     production: config.prod,
     status,
     totalDurationMs,
@@ -719,6 +761,7 @@ async function main() {
 
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
+    setGitHubOutput('build_targets', resolveConfiguredTargets().join(','));
     setGitHubOutput('build_status', 'success');
     setGitHubOutput('build_report_path', reportPath);
 
@@ -746,6 +789,7 @@ async function main() {
 
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
+    setGitHubOutput('build_targets', resolveConfiguredTargets().join(','));
     setGitHubOutput('build_status', 'failed');
     setGitHubOutput('build_report_path', reportPath);
 

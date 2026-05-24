@@ -79,6 +79,10 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(buildWorkflow, /zip_path=/);
     assert.match(buildWorkflow, /Publish Windows Release Assets/);
+    assert.match(buildWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
+    assert.match(buildWorkflow, /linux-appimage/);
+    assert.match(buildWorkflow, /linux-tar-gz/);
+    assert.match(buildWorkflow, /linux-zip/);
     assert.match(buildWorkflow, /macos-arm64/);
     assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
     assert.doesNotMatch(buildWorkflow, /pkg\/\*\.deb/);
@@ -87,6 +91,10 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(publishDevWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(publishDevWorkflow, /zip_path=/);
     assert.match(publishDevWorkflow, /Publish Windows Dev Assets/);
+    assert.match(publishDevWorkflow, /Build Windows Dev Assets \(\$\{\{ matrix\.target\.name \}\}\)/);
+    assert.match(publishDevWorkflow, /linux-appimage/);
+    assert.match(publishDevWorkflow, /linux-tar-gz/);
+    assert.match(publishDevWorkflow, /linux-zip/);
     assert.match(publishDevWorkflow, /macos-arm64/);
     assert.match(publishDevWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Dev Assets/);
     assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);

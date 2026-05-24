@@ -92,9 +92,23 @@ jobs:
           fi
 
   build-windows:
-    name: Build Windows Dev Assets
+    name: Build Windows Dev Assets (${{ matrix.target.name }})
     runs-on: windows-2022
     needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - id: portable
+            name: Portable
+            builder_target: portable
+            report_suffix: portable
+            requires_zip: true
+          - id: nsis
+            name: NSIS
+            builder_target: nsis
+            report_suffix: nsis
+            requires_zip: false
 
     steps:
       - name: Checkout code
@@ -146,7 +160,7 @@ jobs:
 
       - name: Build for Windows
         shell: bash
-        run: node scripts/ci-build.js --platform win
+        run: node scripts/ci-build.js --platform win --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
@@ -164,14 +178,15 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
+          $selectedFiles = if ('${{ matrix.target.id }}' -eq 'portable') { $portable } else { $nsis }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
-          $buildReport = Join-Path $pkgDir 'ci-build-report-win.json'
+          $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
 
-          if ($nsis.Count -eq 0 -and $portable.Count -eq 0) {
-            throw 'No Windows EXE artifacts were found in pkg/ for prerelease publication.'
+          if ($selectedFiles.Count -eq 0) {
+            throw "No Windows ${{ matrix.target.name }} EXE artifacts were found in pkg/ for prerelease publication."
           }
 
-          if ($unpackedRoots.Count -eq 0) {
+          if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
             throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
 
@@ -180,11 +195,7 @@ jobs:
           }
 
           $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
-          $zipBaseName = if ($portable.Count -gt 0) {
-            [System.IO.Path]::GetFileNameWithoutExtension($portable[0].Name)
-          } else {
-            'hagicode-windows-unpacked'
-          }
+          $zipBaseName = [System.IO.Path]::GetFileNameWithoutExtension($selectedFiles[0].Name)
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -194,16 +205,16 @@ jobs:
             Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
           }
 
-          Write-MultilineOutput 'nsis_files' $nsis
-          Write-MultilineOutput 'portable_files' $portable
+          Write-MultilineOutput 'package_files' $selectedFiles
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "package_count=$($selectedFiles.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "report_path=$buildReport"
 
       - name: Prepare Windows unpacked ZIP payload workspace
+        if: success() && matrix.target.requires_zip
         id: windows_zip_payload
         shell: pwsh
         env:
@@ -256,6 +267,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
 
       - name: Create Windows ZIP artifact
+        if: success() && matrix.target.requires_zip
         id: windows_zip
         shell: pwsh
         run: |
@@ -282,7 +294,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
 
       - name: Verify Windows ZIP toolchain payload
-        if: success() && steps.windows_zip.outputs.zip_path != ''
+        if: success() && matrix.target.requires_zip && steps.windows_zip.outputs.zip_path != ''
         shell: bash
         run: |
           node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
@@ -294,20 +306,20 @@ jobs:
           {
             echo '## Windows packaging'
             echo
-            echo '- Portable artifacts discovered: ${{ steps.windows_artifacts.outputs.portable_count }}'
+            echo '- Package target: ${{ matrix.target.name }}'
+            echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
             echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
-            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count || '' }}'
+            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count || '' }}'
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Windows release bundle
         uses: actions/upload-artifact@v4
         with:
-          name: dev-release-windows
+          name: dev-release-windows-${{ matrix.target.id }}
           path: |
-            ${{ steps.windows_artifacts.outputs.nsis_files }}
-            ${{ steps.windows_artifacts.outputs.portable_files }}
+            ${{ steps.windows_artifacts.outputs.package_files }}
             ${{ steps.windows_zip.outputs.zip_files }}
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 14
@@ -324,7 +336,8 @@ jobs:
       - name: Download Windows release bundle
         uses: actions/download-artifact@v4
         with:
-          name: dev-release-windows
+          pattern: dev-release-windows-*
+          merge-multiple: true
           path: release-assets/windows
 
       - name: Upload Windows assets to prerelease
@@ -349,9 +362,24 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - id: linux
-            name: Linux
+          - id: linux-appimage
+            name: Linux AppImage
             runs_on: ubuntu-latest
+            builder_target: AppImage
+            report_suffix: appimage
+            artifact_glob: '*.AppImage'
+          - id: linux-tar-gz
+            name: Linux tar.gz
+            runs_on: ubuntu-latest
+            builder_target: tar.gz
+            report_suffix: tar-gz
+            artifact_glob: '*.tar.gz'
+          - id: linux-zip
+            name: Linux ZIP
+            runs_on: ubuntu-latest
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
           - id: macos-x64
             name: macOS (x64)
             runs_on: macos-latest
@@ -410,8 +438,8 @@ jobs:
         run: npm ci
 
       - name: Build Linux assets
-        if: matrix.target.id == 'linux'
-        run: node scripts/ci-build.js --platform linux
+        if: startsWith(matrix.target.id, 'linux-')
+        run: node scripts/ci-build.js --platform linux --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
@@ -424,29 +452,31 @@ jobs:
           HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
 
       - name: Summarize Linux artifacts
-        if: matrix.target.id == 'linux' && success()
+        if: startsWith(matrix.target.id, 'linux-') && success()
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
-          zip_files=(pkg/*.zip)
-          zip_count=${#zip_files[@]}
+          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
+          artifact_count=${#artifact_files[@]}
+          report_path="pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json"
 
           {
             echo '## Linux packaging artifacts'
             echo
-            echo '- AppImage upload pattern: pkg/*.AppImage'
-            echo '- tar.gz upload pattern: pkg/*.tar.gz'
-            if [ "$zip_count" -eq 0 ]; then
-              echo '- ZIP upload pattern: pkg/*.zip (missing)'
-            else
-              echo "- ZIP upload pattern: pkg/*.zip (${zip_count} file(s))"
-            fi
-            echo '- CI build report: `pkg/ci-build-report-linux.json`'
+            echo '- Package target: ${{ matrix.target.builder_target }}'
+            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
+            echo "- Matched artifacts: ${artifact_count}"
+            echo "- CI build report: \\`${report_path}\\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$zip_count" -eq 0 ]; then
-            echo '::error::Linux ZIP artifact was not produced in pkg/.'
+          if [ "$artifact_count" -eq 0 ]; then
+            echo '::error::Linux target artifact was not produced in pkg/.'
+            exit 1
+          fi
+
+          if [ ! -f "$report_path" ]; then
+            echo "::error::Linux CI build report is missing: $report_path"
             exit 1
           fi
 
@@ -474,15 +504,13 @@ jobs:
           fi
 
       - name: Upload Linux release bundle
-        if: matrix.target.id == 'linux'
+        if: startsWith(matrix.target.id, 'linux-')
         uses: actions/upload-artifact@v4
         with:
-          name: dev-release-linux
+          name: dev-release-${{ matrix.target.id }}
           path: |
-            pkg/*.AppImage
-            pkg/*.tar.gz
-            pkg/*.zip
-            pkg/ci-build-report-linux.json
+            pkg/${{ matrix.target.artifact_glob }}
+            pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
           retention-days: 14
           if-no-files-found: error
 
@@ -508,8 +536,18 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - id: linux
-            name: Linux
+          - id: linux-appimage
+            name: Linux AppImage
+            artifact_path: release-assets/linux-appimage
+            upload_glob: '**/*.AppImage'
+          - id: linux-tar-gz
+            name: Linux tar.gz
+            artifact_path: release-assets/linux-tar-gz
+            upload_glob: '**/*.tar.gz'
+          - id: linux-zip
+            name: Linux ZIP
+            artifact_path: release-assets/linux-zip
+            upload_glob: '**/*.zip'
           - id: macos-x64
             name: macOS (x64)
           - id: macos-arm64
@@ -517,11 +555,11 @@ jobs:
 
     steps:
       - name: Download Linux release bundle
-        if: matrix.target.id == 'linux'
+        if: startsWith(matrix.target.id, 'linux-')
         uses: actions/download-artifact@v4
         with:
-          name: dev-release-linux
-          path: release-assets/linux
+          name: dev-release-${{ matrix.target.id }}
+          path: ${{ matrix.target.artifact_path }}
 
       - name: Download macOS release bundle
         if: startsWith(matrix.target.id, 'macos-')
@@ -531,7 +569,7 @@ jobs:
           path: release-assets/${{ matrix.target.id }}
 
       - name: Upload Linux assets to prerelease
-        if: matrix.target.id == 'linux'
+        if: startsWith(matrix.target.id, 'linux-')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
@@ -540,9 +578,7 @@ jobs:
           prerelease: 'true'
           overwrite_files: 'true'
           files: |
-            release-assets/linux/**/*.AppImage
-            release-assets/linux/**/*.tar.gz
-            release-assets/linux/**/*.zip
+            ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
