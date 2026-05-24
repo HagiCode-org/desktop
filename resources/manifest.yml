@@ -22,8 +22,8 @@ paths:
   vendoredRoot: components/bundled
 
 vendoredRuntime:
-  releaseVersion: &vendoredRuntimeVersion "2026.0516.0063"
-  releaseTagUrl: &vendoredRuntimeReleaseTagUrl https://github.com/HagiCode-org/vendered/releases/tag/v2026.0516.0063
+  releaseVersion: &vendoredRuntimeVersion "2026.0523.0075"
+  releaseTagUrl: &vendoredRuntimeReleaseTagUrl https://github.com/HagiCode-org/vendered/releases/tag/v2026.0523.0075
   releaseVersionByPlatform: &vendoredRuntimeReleaseVersionByPlatform
     linux-x64: *vendoredRuntimeVersion
     osx-x64: *vendoredRuntimeVersion
