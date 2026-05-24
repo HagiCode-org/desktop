@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import AdmZip from 'adm-zip';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
@@ -73,22 +74,65 @@ function listDiscoveredArchives() {
     .filter((entry) => entry.isFile())
     .map((entry) => entry.name);
 
-  if (process.platform === 'linux') {
+  return selectDiscoveredArchives(entries).map((name) => path.join(pkgRoot, name));
+}
+
+function resolveMacArchiveArch(options = {}) {
+  const requestedPlatforms = [
+    options.runtimePlatform ?? runtimePlatform,
+    options.fallbackPlatform ?? fallbackPlatform,
+    options.codeServerPlatform ?? codeServerPlatform,
+    options.omniroutePlatform ?? omniroutePlatform,
+  ].filter(Boolean);
+
+  if (requestedPlatforms.some((platform) => platform === 'osx-arm64')) {
+    return 'arm64';
+  }
+
+  if (requestedPlatforms.some((platform) => platform === 'osx-x64')) {
+    return 'x64';
+  }
+
+  return null;
+}
+
+function selectDiscoveredArchives(entries, options = {}) {
+  const platform = options.platform ?? process.platform;
+
+  if (platform === 'linux') {
     return entries
       .filter((name) => name.endsWith('.zip') || name.endsWith('.tar.gz'))
-      .map((name) => path.join(pkgRoot, name));
+      .sort();
   }
 
-  if (process.platform === 'darwin') {
-    return entries
-      .filter((name) => name.endsWith('.zip'))
-      .map((name) => path.join(pkgRoot, name));
+  if (platform === 'darwin') {
+    const zipEntries = entries.filter((name) => name.endsWith('.zip')).sort();
+    const desiredArch = resolveMacArchiveArch(options);
+
+    if (desiredArch === 'arm64') {
+      const arm64Entries = zipEntries.filter((name) => /-(?:arm64|aarch64)-mac\.zip$/i.test(name));
+      return arm64Entries.length > 0 ? arm64Entries : zipEntries;
+    }
+
+    if (desiredArch === 'x64') {
+      const explicitX64Entries = zipEntries.filter((name) => /-x64-mac\.zip$/i.test(name));
+      if (explicitX64Entries.length > 0) {
+        return explicitX64Entries;
+      }
+
+      const implicitX64Entries = zipEntries.filter(
+        (name) => /-mac\.zip$/i.test(name) && !/-(?:arm64|aarch64)-mac\.zip$/i.test(name),
+      );
+      return implicitX64Entries.length > 0 ? implicitX64Entries : zipEntries;
+    }
+
+    return zipEntries;
   }
 
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     return entries
       .filter((name) => name.endsWith('.zip'))
-      .map((name) => path.join(pkgRoot, name));
+      .sort();
   }
 
   return [];
@@ -466,4 +510,11 @@ function main() {
   }
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
+
+export {
+  resolveMacArchiveArch,
+  selectDiscoveredArchives,
+};
