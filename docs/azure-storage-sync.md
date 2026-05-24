@@ -224,8 +224,8 @@ The workflow automatically runs when `build.yml` reaches its summary-gated relea
 
 1. Create and push a version tag (e.g., `git tag v1.0.0 && git push origin v1.0.0`)
 2. The `build.yml` workflow is triggered and builds all platforms (Windows, macOS, Linux)
-3. For tag releases, `build.yml` uses the dedicated `build-windows-release` job to sign and upload the Windows assets, while Linux and macOS upload their release assets
-4. The `build-summary` job normalizes the effective Windows result (`build-windows-release` for tags, `build-windows` for non-tags), resolves the release channel, and emits an explicit overall release status
+3. For tag releases, `build.yml` uses the dedicated `build-windows-release` job to sign and upload the Windows assets, while a non-Windows matrix job builds Linux plus macOS `x64` and `arm64` assets in parallel
+4. The `build-summary` job normalizes the effective Windows result (`build-windows-release` for tags, `build-windows` for non-tags), combines it with the non-Windows matrix result, resolves the release channel, and emits an explicit overall release status
 5. When the normalized release status is `success`, `build.yml` calls `sync-azure-storage.yml` through `workflow_call` with an explicit `release_tag`, `release_channel`, and `run_finalize=false`
 6. `sync-azure-storage.yml` runs the `plan` job and fans out one upload shard per eligible release asset
 7. After the upload workflow succeeds, `build.yml` calls `finalize-azure-storage.yml`, which reads the plan artifact from the same run and publishes the root `index.json`

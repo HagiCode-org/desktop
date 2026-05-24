@@ -3,21 +3,13 @@
 /**
  * CI Build Helper Script
  *
- * This script assists with CI-specific build operations, providing
- * detailed logging and build status reporting for CI environments.
- *
- * Usage:
- *   node scripts/ci-build.js [options]
- *
- * Options:
- *   --platform <win|mac|linux>   Target platform
- *   --prod                        Production build
- *   --help                        Show help message
+ * Provides step-level timing, artifact delta reporting, and machine-readable
+ * build reports for GitHub Actions and local CI troubleshooting.
  */
 
 import { execa } from 'execa';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const args = process.argv.slice(2);
 
@@ -34,6 +26,8 @@ const colors = {
 
 const isCI = process.env.CI === 'true';
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
+const buildRoots = ['dist', 'pkg'];
+const maxDeltaPreview = 5;
 
 const config = {
   platform: '',
@@ -81,17 +75,17 @@ function logCI(message, type = 'info') {
 
 function printBanner() {
   log('', colors.cyan);
-  log('='.repeat(60), colors.cyan);
+  log('='.repeat(72), colors.cyan);
   log('CI Build Helper', colors.cyan);
-  log('='.repeat(60), colors.cyan);
+  log('='.repeat(72), colors.cyan);
   log('', colors.cyan);
 
   if (isCI) {
     log('Running in CI Environment', colors.green);
     if (isGitHubActions) {
-      log(`GitHub Actions: ${process.env.GITHUB_REPO || 'unknown'}`, colors.blue);
-      log(`Workflow: ${process.env.GITHUB_WORKFLOW || 'unknown'}`, colors.blue);
-      log(`Run ID: ${process.env.GITHUB_RUN_ID || 'unknown'}`, colors.blue);
+      log(`Repository: ${process.env.GITHUB_REPOSITORY || 'unknown'}`, colors.blue);
+      log(`Workflow:   ${process.env.GITHUB_WORKFLOW || 'unknown'}`, colors.blue);
+      log(`Run ID:     ${process.env.GITHUB_RUN_ID || 'unknown'}`, colors.blue);
     }
   } else {
     log('Running in Local Environment', colors.yellow);
@@ -105,16 +99,16 @@ Usage: node scripts/ci-build.js [options]
 
 Options:
   --platform <win|mac|linux>   Target platform
-  --prod                        Production build
-  --help                        Show this help message
+  --prod                       Production build
+  --help                       Show this help message
 
-This script provides CI-specific build helpers and detailed logging
-for automated build environments.
+This script provides CI-specific build helpers, detailed timing, and
+artifact delta reporting for automated build environments.
 `);
 }
 
 function parseArgs() {
-  for (let i = 0; i < args.length; i++) {
+  for (let i = 0; i < args.length; i += 1) {
     switch (args[i]) {
       case '--platform':
         config.platform = args[++i];
@@ -186,7 +180,9 @@ function collectArtifactsFromRoot(rootPath, sourceRoot, info) {
           sourceRoot,
           path: relativePath,
           fullPath,
+          relativeKey: `${sourceRoot}/${relativePath.replace(/\\/g, '/')}`,
           size: stats.size,
+          mtimeMs: stats.mtimeMs,
         });
         info.totalSize += stats.size;
       }
@@ -203,27 +199,132 @@ function getBuildInfo() {
     totalSize: 0,
   };
 
-  collectArtifactsFromRoot(path.join(process.cwd(), 'dist'), 'dist', info);
-  collectArtifactsFromRoot(path.join(process.cwd(), 'pkg'), 'pkg', info);
+  for (const root of buildRoots) {
+    collectArtifactsFromRoot(path.join(process.cwd(), root), root, info);
+  }
 
   return info;
+}
+
+function snapshotArtifacts() {
+  const buildInfo = getBuildInfo();
+  const artifactMap = new Map();
+  for (const artifact of buildInfo.artifacts) {
+    artifactMap.set(artifact.relativeKey, artifact);
+  }
+
+  return {
+    roots: buildInfo.roots,
+    artifactCount: buildInfo.artifacts.length,
+    totalSize: buildInfo.totalSize,
+    artifacts: buildInfo.artifacts,
+    artifactMap,
+  };
+}
+
+function diffArtifactSnapshots(before, after) {
+  const added = [];
+  const modified = [];
+  const removed = [];
+
+  for (const [key, artifact] of after.artifactMap.entries()) {
+    const previous = before.artifactMap.get(key);
+    if (!previous) {
+      added.push(artifact);
+      continue;
+    }
+
+    if (previous.size !== artifact.size || previous.mtimeMs !== artifact.mtimeMs) {
+      modified.push({ before: previous, after: artifact });
+    }
+  }
+
+  for (const [key, artifact] of before.artifactMap.entries()) {
+    if (!after.artifactMap.has(key)) {
+      removed.push(artifact);
+    }
+  }
+
+  return {
+    added,
+    modified,
+    removed,
+    beforeCount: before.artifactCount,
+    afterCount: after.artifactCount,
+    beforeSize: before.totalSize,
+    afterSize: after.totalSize,
+    countDelta: after.artifactCount - before.artifactCount,
+    sizeDelta: after.totalSize - before.totalSize,
+  };
 }
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function formatSignedSize(bytes) {
+  const sign = bytes > 0 ? '+' : '';
+  return `${sign}${formatSize(bytes)}`;
 }
 
 function formatDurationMs(durationMs) {
   return `${(durationMs / 1000).toFixed(2)}s`;
 }
 
-function printBuildSummary(stepResults = []) {
+function formatTimestamp(value) {
+  return new Date(value).toISOString();
+}
+
+function formatArtifactLabel(artifact) {
+  return `${artifact.relativeKey} (${formatSize(artifact.size)})`;
+}
+
+function renderArtifactPreview(label, entries, formatter) {
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const lines = [`  ${label}: ${entries.length}`];
+  for (const entry of entries.slice(0, maxDeltaPreview)) {
+    lines.push(`    - ${formatter(entry)}`);
+  }
+  if (entries.length > maxDeltaPreview) {
+    lines.push(`    - ... ${entries.length - maxDeltaPreview} more`);
+  }
+  return lines;
+}
+
+function printArtifactDelta(delta) {
+  const hasChanges = delta.added.length > 0 || delta.modified.length > 0 || delta.removed.length > 0;
+  if (!hasChanges) {
+    log('Artifact delta: no changes detected', colors.gray);
+    return;
+  }
+
+  log(
+    `Artifact delta: +${delta.added.length} added, ~${delta.modified.length} modified, -${delta.removed.length} removed, size ${formatSignedSize(delta.sizeDelta)}`,
+    colors.blue,
+  );
+
+  const lines = [
+    ...renderArtifactPreview('Added', delta.added, formatArtifactLabel),
+    ...renderArtifactPreview('Modified', delta.modified, (entry) => `${entry.after.relativeKey} (${formatSize(entry.before.size)} -> ${formatSize(entry.after.size)})`),
+    ...renderArtifactPreview('Removed', delta.removed, formatArtifactLabel),
+  ];
+
+  for (const line of lines) {
+    log(line, colors.gray);
+  }
+}
+
+function printBuildSummary(stepResults = [], reportPath = null) {
   log('', colors.cyan);
-  log('='.repeat(60), colors.cyan);
+  log('='.repeat(72), colors.cyan);
   log('Build Summary', colors.cyan);
-  log('='.repeat(60), colors.cyan);
+  log('='.repeat(72), colors.cyan);
 
   const buildInfo = getBuildInfo();
 
@@ -231,12 +332,19 @@ function printBuildSummary(stepResults = []) {
   log('Configuration:', colors.cyan);
   log(`  Platform:     ${config.platform}`, colors.green);
   log(`  Production:   ${config.prod}`, colors.green);
+  if (reportPath) {
+    log(`  Build report: ${reportPath}`, colors.green);
+  }
 
   if (stepResults.length > 0) {
     log('', colors.cyan);
     log('Step timings:', colors.cyan);
     for (const step of stepResults) {
-      log(`  ${step.status.padEnd(7)} ${step.name} (${formatDurationMs(step.durationMs)})`, step.status === 'success' ? colors.green : step.status === 'failed' ? colors.red : colors.yellow);
+      const color = step.status === 'success' ? colors.green : step.status === 'failed' ? colors.red : colors.yellow;
+      const delta = step.artifactDelta
+        ? `, +${step.artifactDelta.added.length}/~${step.artifactDelta.modified.length}/-${step.artifactDelta.removed.length}`
+        : '';
+      log(`  ${step.status.padEnd(7)} ${step.name} (${formatDurationMs(step.durationMs)})${delta}`, color);
     }
   }
 
@@ -245,7 +353,6 @@ function printBuildSummary(stepResults = []) {
   if (buildInfo.artifacts.length > 0) {
     const installers = buildInfo.artifacts.filter((artifact) =>
       artifact.path.endsWith('.exe') ||
-      artifact.path.endsWith('.msix') ||
       artifact.path.endsWith('.dmg') ||
       artifact.path.endsWith('.AppImage') ||
       artifact.path.endsWith('.rpm') ||
@@ -270,7 +377,7 @@ function printBuildSummary(stepResults = []) {
     log('  No artifacts found', colors.yellow);
   }
 
-  log('='.repeat(60), colors.cyan);
+  log('='.repeat(72), colors.cyan);
   log('', colors.reset);
 }
 
@@ -338,7 +445,7 @@ function getBuildSteps() {
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('npx', ['electron-builder', '--win', '--publish', 'never'], 'Package Windows artifacts'),
+      buildStep('node', ['scripts/run-electron-builder.js', '--win', '--publish', 'never'], 'Package Windows artifacts'),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
     ];
   }
@@ -350,7 +457,7 @@ function getBuildSteps() {
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('npx', ['electron-builder', '--linux', '--publish', 'never'], 'Package Linux artifacts'),
+      buildStep('node', ['scripts/run-electron-builder.js', '--linux', '--publish', 'never'], 'Package Linux artifacts'),
       buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
       buildStep('npm', ['run', 'package:verify-release-archives'], 'Verify release archives'),
@@ -387,31 +494,65 @@ function endGroup() {
 
 async function runBuildStep(step, index, total) {
   const startedAt = Date.now();
+  const startedAtIso = formatTimestamp(startedAt);
   const title = `[${index + 1}/${total}] ${step.name}`;
+  const beforeSnapshot = snapshotArtifacts();
+
   startGroup(title);
   log(`Step command: ${step.commandLine}`, colors.gray);
+  log(`Started at: ${startedAtIso}`, colors.gray);
+  log(
+    `Artifacts before step: ${beforeSnapshot.artifactCount} file(s), ${formatSize(beforeSnapshot.totalSize)}`,
+    colors.gray,
+  );
 
   try {
-    await executeCommand(step.command, step.args, {
-      cwd: process.cwd(),
-    });
+    await executeCommand(step.command, step.args, { cwd: process.cwd() });
 
-    const durationMs = Date.now() - startedAt;
+    const finishedAt = Date.now();
+    const afterSnapshot = snapshotArtifacts();
+    const artifactDelta = diffArtifactSnapshots(beforeSnapshot, afterSnapshot);
+    const durationMs = finishedAt - startedAt;
+
+    log(`Finished at: ${formatTimestamp(finishedAt)}`, colors.gray);
+    log(
+      `Artifacts after step: ${afterSnapshot.artifactCount} file(s), ${formatSize(afterSnapshot.totalSize)}`,
+      colors.gray,
+    );
+    printArtifactDelta(artifactDelta);
     logCI(`${step.name} completed in ${formatDurationMs(durationMs)}`, 'notice');
+
     return {
       ...step,
       status: 'success',
+      startedAt: startedAtIso,
+      finishedAt: formatTimestamp(finishedAt),
       durationMs,
+      artifactDelta,
     };
   } catch (error) {
-    const durationMs = Date.now() - startedAt;
+    const finishedAt = Date.now();
+    const afterSnapshot = snapshotArtifacts();
+    const artifactDelta = diffArtifactSnapshots(beforeSnapshot, afterSnapshot);
+    const durationMs = finishedAt - startedAt;
+
+    log(`Finished at: ${formatTimestamp(finishedAt)}`, colors.gray);
+    log(
+      `Artifacts after failed step: ${afterSnapshot.artifactCount} file(s), ${formatSize(afterSnapshot.totalSize)}`,
+      colors.gray,
+    );
+    printArtifactDelta(artifactDelta);
     logCI(`${step.name} failed after ${formatDurationMs(durationMs)}`, 'error');
+
     throw {
       cause: error,
       stepResult: {
         ...step,
         status: 'failed',
+        startedAt: startedAtIso,
+        finishedAt: formatTimestamp(finishedAt),
         durationMs,
+        artifactDelta,
       },
     };
   } finally {
@@ -427,7 +568,20 @@ function fillNotRunSteps(stepResults, buildSteps) {
   const remaining = buildSteps.slice(stepResults.length).map((step) => ({
     ...step,
     status: 'not_run',
+    startedAt: null,
+    finishedAt: null,
     durationMs: 0,
+    artifactDelta: {
+      added: [],
+      modified: [],
+      removed: [],
+      beforeCount: 0,
+      afterCount: 0,
+      beforeSize: 0,
+      afterSize: 0,
+      countDelta: 0,
+      sizeDelta: 0,
+    },
   }));
 
   return [...stepResults, ...remaining];
@@ -438,25 +592,101 @@ function printTimingSummary(stepResults, totalDurationMs) {
   log('Build timing breakdown:', colors.magenta);
   for (const step of stepResults) {
     const color = step.status === 'success' ? colors.green : step.status === 'failed' ? colors.red : colors.yellow;
-    log(`  ${step.status.padEnd(7)} ${step.name} ${formatDurationMs(step.durationMs)}`, color);
+    const window = step.startedAt && step.finishedAt ? ` ${step.startedAt} -> ${step.finishedAt}` : '';
+    const delta = step.artifactDelta
+      ? ` | +${step.artifactDelta.added.length}/~${step.artifactDelta.modified.length}/-${step.artifactDelta.removed.length} | ${formatSignedSize(step.artifactDelta.sizeDelta)}`
+      : '';
+    log(`  ${step.status.padEnd(7)} ${step.name} ${formatDurationMs(step.durationMs)}${delta}${window}`, color);
   }
   log(`  total   Build total ${formatDurationMs(totalDurationMs)}`, colors.blue);
 }
 
-function appendTimingSummary(stepResults, totalDurationMs, status) {
+function appendTimingSummary(stepResults, totalDurationMs, status, reportPath) {
   const lines = [
     `## CI build timing (${config.platform})`,
     '',
     `- Status: ${status}`,
     `- Total duration: ${formatDurationMs(totalDurationMs)}`,
+    ...(reportPath ? [`- Report path: \`${reportPath}\``] : []),
     '',
-    '| Step | Status | Duration |',
-    '| --- | --- | --- |',
-    ...stepResults.map((step) => `| ${step.name} | ${step.status} | ${formatDurationMs(step.durationMs)} |`),
+    '| Step | Status | Started | Finished | Duration | Added | Modified | Removed | Size delta |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...stepResults.map((step) => {
+      const delta = step.artifactDelta ?? { added: [], modified: [], removed: [], sizeDelta: 0 };
+      return `| ${step.name} | ${step.status} | ${step.startedAt ?? '-'} | ${step.finishedAt ?? '-'} | ${formatDurationMs(step.durationMs)} | ${delta.added.length} | ${delta.modified.length} | ${delta.removed.length} | ${formatSignedSize(delta.sizeDelta)} |`;
+    }),
     '',
   ];
 
   appendGitHubStepSummary(lines);
+}
+
+function ensureReportDirectory() {
+  const candidateRoots = [path.join(process.cwd(), 'pkg'), path.join(process.cwd(), '.generated', 'ci-build')];
+  for (const candidate of candidateRoots) {
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      return candidate;
+    } catch {
+      // Try the next location.
+    }
+  }
+
+  throw new Error('Unable to create a writable CI build report directory.');
+}
+
+function writeBuildReport(stepResults, totalDurationMs, status) {
+  const reportDirectory = ensureReportDirectory();
+  const reportPath = path.join(reportDirectory, `ci-build-report-${config.platform}.json`);
+  const buildInfo = getBuildInfo();
+  const payload = {
+    platform: config.platform,
+    production: config.prod,
+    status,
+    totalDurationMs,
+    generatedAt: new Date().toISOString(),
+    environment: {
+      ci: isCI,
+      githubActions: isGitHubActions,
+      workflow: process.env.GITHUB_WORKFLOW ?? null,
+      runId: process.env.GITHUB_RUN_ID ?? null,
+      runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+      repository: process.env.GITHUB_REPOSITORY ?? null,
+      ref: process.env.GITHUB_REF ?? null,
+      sha: process.env.GITHUB_SHA ?? null,
+    },
+    steps: stepResults.map((step) => ({
+      name: step.name,
+      command: step.command,
+      args: step.args,
+      commandLine: step.commandLine,
+      status: step.status,
+      startedAt: step.startedAt,
+      finishedAt: step.finishedAt,
+      durationMs: step.durationMs,
+      artifactDelta: {
+        added: step.artifactDelta?.added.map((artifact) => ({ path: artifact.relativeKey, size: artifact.size })) ?? [],
+        modified: step.artifactDelta?.modified.map((artifact) => ({
+          path: artifact.after.relativeKey,
+          previousSize: artifact.before.size,
+          nextSize: artifact.after.size,
+        })) ?? [],
+        removed: step.artifactDelta?.removed.map((artifact) => ({ path: artifact.relativeKey, size: artifact.size })) ?? [],
+        sizeDelta: step.artifactDelta?.sizeDelta ?? 0,
+      },
+    })),
+    finalArtifacts: buildInfo.artifacts.map((artifact) => ({
+      sourceRoot: artifact.sourceRoot,
+      path: artifact.relativeKey,
+      size: artifact.size,
+      mtimeMs: artifact.mtimeMs,
+    })),
+    finalArtifactCount: buildInfo.artifacts.length,
+    finalArtifactSize: buildInfo.totalSize,
+  };
+
+  fs.writeFileSync(reportPath, JSON.stringify(payload, null, 2));
+  return reportPath;
 }
 
 async function main() {
@@ -480,17 +710,19 @@ async function main() {
 
     const durationMs = Date.now() - startTime;
     const duration = (durationMs / 1000).toFixed(2);
+    const reportPath = writeBuildReport(stepResults, durationMs, 'success');
 
     printTimingSummary(stepResults, durationMs);
-    appendTimingSummary(stepResults, durationMs, 'success');
+    appendTimingSummary(stepResults, durationMs, 'success', reportPath);
 
     logCI(`Build completed in ${duration}s`, 'info');
 
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
     setGitHubOutput('build_status', 'success');
+    setGitHubOutput('build_report_path', reportPath);
 
-    printBuildSummary(stepResults);
+    printBuildSummary(stepResults, reportPath);
 
     logCI('Build process completed successfully', 'info');
     process.exit(0);
@@ -504,8 +736,9 @@ async function main() {
     }
 
     const summarizedSteps = fillNotRunSteps(stepResults, buildSteps);
+    const reportPath = writeBuildReport(summarizedSteps, durationMs, 'failed');
     printTimingSummary(summarizedSteps, durationMs);
-    appendTimingSummary(summarizedSteps, durationMs, 'failed');
+    appendTimingSummary(summarizedSteps, durationMs, 'failed', reportPath);
 
     const failureMessage = error?.cause?.message || error?.message || 'Unknown build failure';
     const failedStepName = failedStep?.name ? ` during ${failedStep.name}` : '';
@@ -514,7 +747,9 @@ async function main() {
     setGitHubOutput('build_duration', duration);
     setGitHubOutput('build_platform', config.platform);
     setGitHubOutput('build_status', 'failed');
+    setGitHubOutput('build_report_path', reportPath);
 
+    printBuildSummary(summarizedSteps, reportPath);
     process.exit(1);
   }
 }

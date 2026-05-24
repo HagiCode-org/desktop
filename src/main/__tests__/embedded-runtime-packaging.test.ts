@@ -31,7 +31,7 @@ describe('embedded runtime packaging configuration', () => {
   it('smoke test inspects packaged macOS app resources outside app.asar', async () => {
     const source = await fs.readFile(smokeTestPath, 'utf-8');
 
-    assert.match(source, /Contents', 'Resources', 'dotnet'/);
+    assert.match(source, /Contents', 'Resources', 'extra', 'runtime'/);
     assert.match(source, /mac-arm64/);
     assert.match(source, /mac-x64/);
     assert.match(source, /not executable/);
@@ -78,11 +78,18 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(buildWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(buildWorkflow, /zip_path=/);
-    assert.match(buildWorkflow, /Upload MSIX package/);
-    assert.match(buildWorkflow, /Upload MSIX package to Release/);
+    assert.match(buildWorkflow, /Publish Windows Release Assets/);
+    assert.match(buildWorkflow, /macos-arm64/);
+    assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
+    assert.doesNotMatch(buildWorkflow, /pkg\/\*\.deb/);
+    assert.doesNotMatch(buildWorkflow, /Upload MSIX package/);
     assert.match(publishDevWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(publishDevWorkflow, /node scripts\/verify-release-archives\.js --archive/);
     assert.match(publishDevWorkflow, /zip_path=/);
+    assert.match(publishDevWorkflow, /Publish Windows Dev Assets/);
+    assert.match(publishDevWorkflow, /macos-arm64/);
+    assert.match(publishDevWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Dev Assets/);
+    assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);
   });
 
   it('raises macOS open file limits before electron-builder packaging', async () => {
@@ -105,9 +112,9 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(stagingScript, /installNodeRuntime\(/);
     assert.match(stagingScript, /cleanDeferredPackageRoots/);
     assert.match(stagingScript, /legacyNpmGlobalRoot/);
-    assert.match(bundledToolchainContract, /unused Node entrypoint must be pruned before packaging/);
-    assert.match(bundledToolchainContract, /node', 'bin', 'corepack'/);
-    assert.match(bundledToolchainContract, /node', 'bin', 'npx'/);
+    assert.match(bundledToolchainContract, /not executable/);
+    assert.match(stagingScript, /corepack/);
+    assert.match(stagingScript, /npx/);
     assert.match(smokeTest, /validateToolchainPayload/);
   });
 
@@ -118,7 +125,7 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(builder, /afterPack: scripts\/macos-toolchain-signing-hook\.cjs/);
     assert.match(builder, /afterSign: scripts\/macos-toolchain-signing-hook\.cjs/);
     assert.match(builder, /signIgnore:/);
-    assert.match(builder, /Contents\/Resources\/extra\/toolchain\/\.\*/);
+    assert.match(builder, /Contents\/Resources\/extra\/runtime\/\.\*/);
     assert.match(smokeTest, /stashed outside the macOS app during code signing/);
     assert.match(smokeTest, /excluded from recursive macOS code signing/);
   });
@@ -156,8 +163,8 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(docs, /resources\/portable-fixed\/current/);
     assert.match(docs, /extra\/portable-fixed\/current/);
     assert.match(toolchainDocs, /Bundled Node Toolchain/);
-    assert.match(toolchainDocs, /extra\/toolchain/);
-    assert.match(toolchainDocs, /extra\/omniroute\/current/);
+    assert.match(toolchainDocs, /extra\/runtime\/components\/node\/runtime/);
+    assert.match(toolchainDocs, /extra\/runtime\/components\/bundled\/omniroute/);
     assert.match(toolchainDocs, /Desktop owns the portable Node\/toolchain contract/);
     assert.match(docs, /Steam Linux startup compatibility/i);
     assert.match(docs, /Direct CLI startup already works/i);
@@ -177,7 +184,7 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(docs, /hagicode-steam-wrapper\.sh/);
     assert.match(docs, /hagicode-steam-sandbox\.sh/);
     assert.match(docs, /LD_PRELOAD/);
-    assert.match(docs, /--disable-setuid-sandbox --no-sandbox/);
+    assert.match(docs, /does not append `--disable-setuid-sandbox` or `--no-sandbox`/);
     assert.match(docs, /https:\/\/docs\.hagicode\.com/);
   });
 
@@ -188,11 +195,12 @@ describe('embedded runtime packaging configuration', () => {
       fs.readFile(path.resolve(process.cwd(), 'scripts/verify-release-archives.js'), 'utf-8'),
     ]);
 
-    assert.match(builder, /from: resources\/omniroute\/current/);
-    assert.match(builder, /to: extra\/omniroute\/current/);
-    assert.match(smokeTest, /vendored OmniRoute runtime is shipped via extraResources/);
-    assert.match(smokeTest, /extra\/omniroute\/current/);
-    assert.match(archiveVerifier, /vendored OmniRoute runtime/);
-    assert.match(archiveVerifier, /omniroute', 'current/);
+    assert.match(builder, /from: resources/);
+    assert.match(builder, /to: extra\/runtime/);
+    assert.match(smokeTest, /packaged vendored OmniRoute runtime uses canonical extra\/runtime\/components\/bundled\/omniroute path/);
+    assert.match(smokeTest, /legacy extra\/omniroute\/current path/);
+    assert.match(archiveVerifier, /label: 'vendored OmniRoute runtime'/);
+    assert.match(archiveVerifier, /suffixParts: \['omniroute', 'current'\]/);
+    assert.match(archiveVerifier, /validateOmniRouteRuntimePayload/);
   });
 });

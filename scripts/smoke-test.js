@@ -626,7 +626,7 @@ test('electron-builder configuration is valid', async () => {
   assert(!linuxTargets.includes('deb'), 'linux packaging no longer emits deb output');
 });
 
-test('desktop build workflow includes ZIP and signed MSIX publication steps', () => {
+test('desktop build workflow includes ZIP packaging and parallel release publication steps', () => {
   const workflowPath = path.join(process.cwd(), '.github', 'workflows', 'build.yml');
   const exists = fs.existsSync(workflowPath);
 
@@ -638,13 +638,15 @@ test('desktop build workflow includes ZIP and signed MSIX publication steps', ()
 
   assert(content.includes('Prepare Windows unpacked ZIP payload workspace'), 'workflow stages the unpacked Windows ZIP payload before compression');
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
-  assert(content.includes('Upload Windows ZIP'), 'workflow uploads Windows ZIP CI artifacts');
-  assert(content.includes('Upload Windows ZIP to Release'), 'workflow uploads Windows ZIP release assets');
-    assert(content.includes('Upload MSIX package'), 'workflow uploads MSIX CI artifacts');
-  assert(content.includes('Upload MSIX package to Release'), 'workflow uploads MSIX release assets');
-  assert(content.includes('Summarize Linux ZIP artifacts'), 'workflow reports Linux ZIP diagnostics');
-  assert(content.includes('Upload Linux ZIP'), 'workflow uploads Linux ZIP CI artifacts');
-  assert(content.includes('Upload Linux ZIP to Release'), 'workflow uploads Linux ZIP release assets');
+  assert(content.includes('Upload Windows build bundle'), 'workflow uploads a Windows build bundle after packaging');
+  assert(content.includes('Publish Windows Release Assets'), 'workflow publishes Windows release assets in a separate job');
+  assert(!content.includes('Upload MSIX package'), 'workflow no longer publishes desktop-owned MSIX assets');
+  assert(content.includes('strategy:'), 'workflow uses a matrix strategy for non-Windows packaging');
+  assert(content.includes('macos-arm64'), 'workflow includes a dedicated macOS arm64 matrix target');
+  assert(content.includes('Summarize Linux artifacts'), 'workflow reports Linux ZIP diagnostics');
+  assert(content.includes('Upload Linux release bundle'), 'workflow uploads a Linux release bundle for later publication');
+  assert(content.includes('Publish ${{ matrix.target.name }} Release Assets'), 'workflow publishes non-Windows release assets through a matrix job');
+  assert(!content.includes('pkg/*.deb'), 'workflow no longer references deb artifacts');
 });
 
 test('global hagiscript prerequisite is available', () => {
