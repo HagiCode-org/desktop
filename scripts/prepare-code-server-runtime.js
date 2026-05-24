@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import fs from 'fs';
 import { copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'path';
-import AdmZip from 'adm-zip';
 import { execa } from 'execa';
 import {
   updateDesktopRuntimeComponents,
@@ -22,7 +21,12 @@ import {
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
-import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
+import {
+  assertGlobalHagiscriptAvailable,
+  extractZipArchiveWithGlobalHagiscript,
+} from './global-hagiscript.js';
+
+const MINIMUM_HAGISCRIPT_VERSION = '0.2.7';
 
 if (!isManagedDesktopRuntimeComponentExecution()) {
   await updateDesktopRuntimeComponents(['code-server'], {
@@ -50,7 +54,7 @@ main().catch((error) => {
 });
 
 async function main() {
-  const hagiscriptVersion = assertGlobalHagiscriptAvailable('0.2.3');
+  const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
   const selectedArtifact = await resolveArtifact();
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
@@ -292,8 +296,7 @@ function validateArchiveChecksum(archivePath, expectedChecksum) {
 
 async function extractArchive(archivePath, archiveExtension, destinationPath) {
   if (archiveExtension === '.zip') {
-    const archive = new AdmZip(archivePath);
-    archive.extractAllTo(destinationPath, true);
+    await extractZipArchiveWithGlobalHagiscript(archivePath, destinationPath, MINIMUM_HAGISCRIPT_VERSION);
     return;
   }
 

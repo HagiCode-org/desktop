@@ -1,10 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const HAGISCRIPT_VERSION_ENV = 'HAGICODE_HAGISCRIPT_VERSION';
 const HAGISCRIPT_COMMAND_ENV = 'HAGICODE_HAGISCRIPT_COMMAND';
 const HAGISCRIPT_PACKAGE_ROOT_ENV = 'HAGICODE_HAGISCRIPT_PACKAGE_ROOT';
+const hagiscriptModuleCache = new Map();
 
 function parseVersion(raw) {
   const match = String(raw).match(/(\d+)\.(\d+)\.(\d+)/);
@@ -237,4 +239,45 @@ export function buildResolvedHagiscriptEnvironment(minimumVersion = '0.1.8') {
     [HAGISCRIPT_COMMAND_ENV]: resolved.command,
     [HAGISCRIPT_PACKAGE_ROOT_ENV]: packageRoot,
   };
+}
+
+function resolveImportableHagiscriptModulePath(packageRoot, relativeCandidates) {
+  const matchedPath = relativeCandidates
+    .map((relativePath) => path.join(packageRoot, relativePath))
+    .find((candidate) => fs.existsSync(candidate));
+
+  if (matchedPath) {
+    return matchedPath;
+  }
+
+  throw new Error(
+    `Unable to locate hagiscript module. Checked: ${relativeCandidates.join(', ')} under ${packageRoot}`,
+  );
+}
+
+async function importGlobalHagiscriptModule(relativeCandidates, minimumVersion = '0.1.8') {
+  const packageRoot = resolveGlobalHagiscriptPackageRoot(minimumVersion);
+  const targetPath = resolveImportableHagiscriptModulePath(packageRoot, relativeCandidates);
+  if (!hagiscriptModuleCache.has(targetPath)) {
+    hagiscriptModuleCache.set(targetPath, import(pathToFileURL(targetPath).href));
+  }
+
+  return hagiscriptModuleCache.get(targetPath);
+}
+
+export async function extractZipArchiveWithGlobalHagiscript(
+  archivePath,
+  destination,
+  minimumVersion = '0.2.7',
+) {
+  const module = await importGlobalHagiscriptModule(
+    ['dist/runtime/zip-extract.js', 'runtime/lib/zip-extract.mjs'],
+    minimumVersion,
+  );
+
+  if (typeof module.extractZipArchive !== 'function') {
+    throw new Error('Resolved hagiscript zip extraction module does not export extractZipArchive().');
+  }
+
+  return module.extractZipArchive(archivePath, destination);
 }
