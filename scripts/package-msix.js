@@ -127,6 +127,20 @@ function normalizeApplicationId(value) {
   return raw.join('.');
 }
 
+export function resolveProducedMsixFileName({ desiredFileName, packageVersion, arch, fileNames }) {
+  const desiredBaseName = path.basename(desiredFileName);
+  const desiredStem = desiredBaseName.replace(/\.msix$/i, '');
+  const candidates = Array.isArray(fileNames) ? fileNames.filter(Boolean) : [];
+  const expectedNames = new Set([
+    desiredBaseName,
+    `${desiredBaseName}_${packageVersion}_${arch}.msix`,
+    `${desiredStem}_${packageVersion}_${arch}.msix`,
+  ]);
+
+  return candidates.find((fileName) => expectedNames.has(fileName)) || null;
+}
+
+
 function renderCapabilities(capabilities) {
   const tags = [];
   for (const capability of capabilities) {
@@ -331,17 +345,49 @@ export async function packageMsix(rawOptions = {}) {
     packageArgs.push('--verbose');
   }
 
+  const existingMsixFileNames = new Set(
+    (await fsp.readdir(options.output, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.msix'))
+      .map((entry) => entry.name),
+  );
+
   await execa('npx', packageArgs, {
     cwd: projectRoot,
     stdio: 'inherit',
   });
 
-  if (!fs.existsSync(artifactPath)) {
-    throw new Error(`MSIX packaging completed without producing the expected artifact: ${artifactPath}`);
+  let resolvedArtifactPath = artifactPath;
+  if (!fs.existsSync(resolvedArtifactPath)) {
+    const outputEntries = await fsp.readdir(options.output, { withFileTypes: true });
+    const candidateFileNames = outputEntries
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.msix'))
+      .map((entry) => entry.name)
+      .filter((fileName) => !existingMsixFileNames.has(fileName));
+
+    const producedFileName = resolveProducedMsixFileName({
+      desiredFileName: msixFileName,
+      packageVersion: version,
+      arch,
+      fileNames: candidateFileNames,
+    });
+
+    if (!producedFileName) {
+      throw new Error(`MSIX packaging completed without producing the expected artifact: ${artifactPath}`);
+    }
+
+    const producedArtifactPath = path.join(options.output, producedFileName);
+    if (producedArtifactPath !== artifactPath) {
+      if (fs.existsSync(artifactPath)) {
+        await fsp.rm(artifactPath, { force: true });
+      }
+      await fsp.rename(producedArtifactPath, artifactPath);
+    }
+
+    resolvedArtifactPath = artifactPath;
   }
 
   return {
-    artifactPath,
+    artifactPath: resolvedArtifactPath,
     executable,
     manifestPath,
     stageAppDir,

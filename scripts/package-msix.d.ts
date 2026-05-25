@@ -31,5 +31,6 @@ export interface PackageMsixResult {
 }
 
 export function toWindowsPackageVersion(version: string): string;
+export function resolveProducedMsixFileName(options: { desiredFileName: string; packageVersion: string; arch: string; fileNames: string[]; }): string | null;
 export function renderMsixManifest(options: RenderMsixManifestOptions): string;
 export function packageMsix(options?: PackageMsixOptions): Promise<PackageMsixResult>;

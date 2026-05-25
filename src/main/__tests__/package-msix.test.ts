@@ -1,13 +1,35 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { renderMsixManifest, toWindowsPackageVersion } from '../../../scripts/package-msix.js';
+import { renderMsixManifest, resolveProducedMsixFileName, toWindowsPackageVersion } from '../../../scripts/package-msix.js';
 
 describe('package-msix helpers', () => {
   it('converts semver into Windows package version format', () => {
     assert.equal(toWindowsPackageVersion('1.2.3'), '1.2.3.0');
     assert.equal(toWindowsPackageVersion('1.2.3-beta.4'), '1.2.3.4');
     assert.equal(toWindowsPackageVersion('1.2.3-rc.12'), '1.2.3.12');
+  });
+
+  it('resolves winapp output names that append package metadata', () => {
+    assert.equal(
+      resolveProducedMsixFileName({
+        desiredFileName: 'Hagicode-Desktop-0.1.58-x64.msix',
+        packageVersion: '0.1.58.0',
+        arch: 'x64',
+        fileNames: ['Hagicode-Desktop-0.1.58-x64.msix_0.1.58.0_x64.msix'],
+      }),
+      'Hagicode-Desktop-0.1.58-x64.msix_0.1.58.0_x64.msix',
+    );
+
+    assert.equal(
+      resolveProducedMsixFileName({
+        desiredFileName: 'Hagicode-Desktop-0.1.58-x64.msix',
+        packageVersion: '0.1.58.0',
+        arch: 'x64',
+        fileNames: ['Hagicode-Desktop-0.1.58-x64_0.1.58.0_x64.msix'],
+      }),
+      'Hagicode-Desktop-0.1.58-x64_0.1.58.0_x64.msix',
+    );
   });
 
   it('renders a full-trust MSIX manifest with desktop assets and capabilities', () => {
