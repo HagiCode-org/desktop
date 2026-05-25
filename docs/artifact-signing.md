@@ -22,8 +22,8 @@ The workflow signs the final installer outputs plus only the staged root Desktop
 
 ## Store Packaging Boundary
 
-Desktop no longer builds or publishes AppX/MSIX artifacts in its own repository workflows.
-Windows Store packaging is owned by `repos/win_store_packer`, which reads Desktop as an upstream input and generates Store-specific packages independently.
+Desktop now builds Windows `.appx` and `.msix` artifacts in its own repository workflows alongside the existing installer outputs.
+The dedicated `repos/win_store_packer` repository remains the place for any downstream Store-specific repackaging, submission, or policy-specific adjustments that should not live in the Desktop release pipeline.
 
 Desktop still keeps the Store tile assets under `resources/appx/` because `win_store_packer` depends on those assets when it generates Store-ready packages.
 

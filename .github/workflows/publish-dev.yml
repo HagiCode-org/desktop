@@ -160,6 +160,11 @@ jobs:
             builder_target: appx
             report_suffix: appx
             requires_zip: false
+          - id: msix
+            name: MSIX
+            builder_target: msix
+            report_suffix: msix
+            requires_zip: false
     permissions:
       contents: write
       id-token: write
@@ -277,10 +282,12 @@ jobs:
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
           $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
           $selectedFiles = switch ('${{ matrix.target.id }}') {
             'portable' { $portable }
             'nsis' { $nsis }
             'appx' { $appx }
+            'msix' { $msix }
             default { @() }
           }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
@@ -424,7 +431,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Windows ${{ matrix.target.name }} root EXE artifacts with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
@@ -432,6 +439,23 @@ jobs:
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
           files-folder: ${{ github.workspace }}/pkg
           files-folder-filter: '*.exe'
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Hagicode Desktop
+          description-url: https://github.com/HagiCode-org/desktop
+          timeout: 600
+
+      - name: Sign Windows MSIX package with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix'
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}/pkg
+          files-folder-filter: '*.msix'
           files-folder-recurse: false
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com

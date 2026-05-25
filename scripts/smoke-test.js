@@ -640,7 +640,9 @@ test('desktop build workflow includes ZIP packaging and parallel release publica
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
   assert(content.includes('Upload Windows build bundle'), 'workflow uploads a Windows build bundle after packaging');
   assert(content.includes('Publish Windows Release Assets'), 'workflow publishes Windows release assets in a separate job');
-  assert(!content.includes('Upload MSIX package'), 'workflow no longer publishes desktop-owned MSIX assets');
+  assert(content.includes('name: MSIX'), 'workflow includes a dedicated MSIX matrix target');
+  assert(content.includes('builder_target: msix'), 'workflow wires the MSIX target into the Windows packaging matrix');
+  assert(content.includes('release-assets/windows/**/*.msix'), 'workflow publishes MSIX release assets');
   assert(content.includes('strategy:'), 'workflow uses a matrix strategy for non-Windows packaging');
   assert(content.includes('macos-arm64'), 'workflow includes a dedicated macOS arm64 matrix target');
   assert(content.includes('Summarize Linux artifacts'), 'workflow reports Linux ZIP diagnostics');

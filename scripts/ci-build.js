@@ -154,6 +154,35 @@ function resolveConfiguredTargets() {
   return [...new Set(config.targets.map((target) => String(target).trim()).filter(Boolean))];
 }
 
+function resolveWindowsPackageTargets() {
+  const targets = resolveConfiguredTargets();
+  if (targets.length === 0) {
+    return {
+      electronBuilderTargets: [],
+      packageMsix: false,
+    };
+  }
+
+  const supportedTargets = new Set(['portable', 'nsis', 'appx', 'dir', 'msix']);
+  const normalizedTargets = targets.map((target) => String(target).trim().toLowerCase()).filter(Boolean);
+  const unsupportedTargets = normalizedTargets.filter((target) => !supportedTargets.has(target));
+
+  if (unsupportedTargets.length > 0) {
+    throw new Error(`Unsupported Windows package target(s): ${unsupportedTargets.join(', ')}. Supported targets: portable, nsis, appx, dir, msix.`);
+  }
+
+  const packageMsix = normalizedTargets.includes('msix');
+  const electronBuilderTargets = normalizedTargets.filter((target) => target !== 'msix');
+  if (packageMsix && !electronBuilderTargets.includes('dir')) {
+    electronBuilderTargets.push('dir');
+  }
+
+  return {
+    electronBuilderTargets: [...new Set(electronBuilderTargets)],
+    packageMsix,
+  };
+}
+
 function formatConfiguredTargets() {
   const targets = resolveConfiguredTargets();
   return targets.length > 0 ? targets.join(', ') : 'default';
@@ -388,6 +417,8 @@ function printBuildSummary(stepResults = [], reportPath = null) {
       artifact.path.endsWith('.exe') ||
       artifact.path.endsWith('.dmg') ||
       artifact.path.endsWith('.AppImage') ||
+      artifact.path.endsWith('.appx') ||
+      artifact.path.endsWith('.msix') ||
       artifact.path.endsWith('.rpm') ||
       artifact.path.endsWith('.tar.gz') ||
       artifact.path.endsWith('.zip')
@@ -489,16 +520,29 @@ function buildStep(command, commandArgs, name) {
 
 function getBuildSteps() {
   if (config.platform === 'win') {
-    const targets = resolveConfiguredTargets();
-    return [
+    const { electronBuilderTargets, packageMsix } = resolveWindowsPackageTargets();
+    const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('node', ['scripts/run-electron-builder.js', '--win', ...targets, '--publish', 'never'], `Package Windows artifacts${targets.length > 0 ? ` (${targets.join(', ')})` : ''}`),
-      buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
     ];
+
+    steps.push(
+      buildStep(
+        'node',
+        ['scripts/run-electron-builder.js', '--win', ...electronBuilderTargets, '--publish', 'never'],
+        `Package Windows artifacts${electronBuilderTargets.length > 0 ? ` (${electronBuilderTargets.join(', ')})` : ''}`,
+      ),
+    );
+
+    if (packageMsix) {
+      steps.push(buildStep('node', ['scripts/package-msix.js'], 'Package Windows MSIX artifact'));
+    }
+
+    steps.push(buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'));
+    return steps;
   }
 
   if (config.platform === 'linux') {
