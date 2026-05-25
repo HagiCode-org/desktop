@@ -11,19 +11,20 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 3. Build Windows installers into `pkg/`.
 4. Collect signable release artifacts from `pkg/` (`*Setup*.exe`, portable `.exe`) plus the `win-unpacked` app directory.
 5. Stage the Windows unpacked ZIP payload workspace under `pkg/windows-zip-payload/`.
-6. Authenticate to Azure with GitHub OIDC via `azure/login@v2`.
-7. Sign root EXEs plus the staged unpacked root Desktop executable with `azure/artifact-signing-action@v1`.
-8. Verify signatures before any release upload step runs.
-9. Create the Windows ZIP from the signed staged unpacked payload before upload.
-10. Upload build bundles first, then publish GitHub Release assets in parallel jobs.
+6. Preserve unsigned Windows artifacts for release traceability.
+7. Authenticate to Azure with GitHub OIDC via `azure/login@v3`.
+8. Sign Windows package artifacts through a catalog with `azure/artifact-signing-action@v2`.
+9. Verify signatures before any release upload step runs.
+10. Create the Windows ZIP from the signed staged unpacked payload before upload.
+11. Upload build bundles first, then publish GitHub Release assets in parallel jobs, including unsigned fallbacks when retained.
 
-Only distributable Windows artifacts are signed in CI.
-The workflow signs the final installer outputs plus only the staged root Desktop executable copied from `pkg/win-unpacked/`, then compresses that staged unpacked payload for publication.
+The workflow now aligns AppX/MSIX manifest publisher metadata with the signing certificate subject through `WINDOWS_PACKAGE_PUBLISHER` so store-style packages and signature identity stay consistent.
+Signed Windows artifacts are the primary release outputs, while unsigned counterparts are preserved with a `-unsigned` suffix for recovery and audit scenarios.
 
 ## Store Packaging Boundary
 
 Desktop now builds Windows `.appx` and `.msix` artifacts in its own repository workflows alongside the existing installer outputs.
-Current limitation: the workflow publishes MSIX artifacts unsigned because Azure Trusted Signing via `azure/artifact-signing-action@v1` currently fails on these packages with `SignTool` error `0x800700C1`.
+MSIX signing is attempted through the same Artifact Signing v2 path as the other Windows artifacts. If a given run still cannot sign MSIX successfully, the workflow retains only the unsigned MSIX fallback for that target instead of blocking the whole release.
 The dedicated `repos/win_store_packer` repository remains the place for any downstream Store-specific repackaging, submission, or policy-specific adjustments that should not live in the Desktop release pipeline.
 
 Desktop still keeps the Store tile assets under `resources/appx/` because `win_store_packer` depends on those assets when it generates Store-ready packages.
@@ -90,6 +91,7 @@ Add these repository secrets:
 | `AZURE_CODESIGN_ENDPOINT` | Azure Artifact Signing endpoint URL |
 | `AZURE_CODESIGN_ACCOUNT_NAME` | Signing account name |
 | `AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME` | Certificate profile name |
+| `WINDOWS_PACKAGE_PUBLISHER` | Certificate subject string used to override AppX/MSIX `Publisher` metadata |
 | `FEISHU_WEBHOOK_URL` | Existing build/signing failure notification webhook |
 
 ## Signing Policy Switches
@@ -117,8 +119,8 @@ The Artifact Signing action authenticates through `DefaultAzureCredential`.
 In this workflow, the primary path is:
 
 1. GitHub Actions obtains an OIDC token.
-2. `azure/login@v2` exchanges it for Azure access immediately before Artifact Signing runs.
-3. `azure/artifact-signing-action@v1` signs files with the configured signing account and certificate profile.
+2. `azure/login@v3` exchanges it for Azure access immediately before Artifact Signing runs.
+3. `azure/artifact-signing-action@v2` signs files from the generated artifact catalog with the configured signing account and certificate profile.
 
 The Azure login step is intentionally placed right before the signing action.
 Windows packaging can take long enough for short-lived OIDC-backed Azure CLI assertions to expire if login happens earlier in the job.
@@ -126,7 +128,7 @@ Windows packaging can take long enough for short-lived OIDC-backed Azure CLI ass
 ## Local Signing
 
 This repository does not maintain a custom local signing helper.
-CI release signing is handled only by `azure/artifact-signing-action@v1`.
+CI release signing is handled only by `azure/artifact-signing-action@v2`.
 
 If manual signing is ever required for a one-off recovery scenario, use the Microsoft-recommended tooling directly on a Windows machine rather than re-introducing a repository-specific wrapper script.
 
@@ -142,7 +144,7 @@ If the workflow summary reports missing Artifact Signing configuration:
 
 ### Azure login failure
 
-If `azure/login@v2` fails:
+If `azure/login@v3` fails:
 
 1. Verify the Entra application exists and the client ID is correct.
 2. Verify the federated credential subject matches the GitHub ref that triggered the workflow.
@@ -152,7 +154,7 @@ If `azure/login@v2` fails:
 
 If Artifact Signing fails with `AADSTS700024: Client assertion is not within its valid time range`:
 
-1. Confirm the workflow runs `azure/login@v2` immediately before `azure/artifact-signing-action@v1`.
+1. Confirm the workflow runs `azure/login@v3` immediately before `azure/artifact-signing-action@v2`.
 2. Avoid moving Azure login ahead of long-running packaging or dependency-install steps.
 3. Re-run the workflow after refreshing the Azure login placement or any reused runner login state.
 

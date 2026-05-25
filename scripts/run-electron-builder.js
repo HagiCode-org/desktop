@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 const args = process.argv.slice(2);
 const require = createRequire(import.meta.url);
 const electronBuilderCliPath = require.resolve('electron-builder/out/cli/cli.js');
+const WINDOWS_PACKAGE_PUBLISHER_ENV = 'WINDOWS_PACKAGE_PUBLISHER';
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
@@ -40,6 +41,17 @@ function raiseMacOpenFileLimit() {
 
 raiseMacOpenFileLimit();
 
+function buildElectronBuilderArgs() {
+  const windowsPackagePublisher = String(process.env[WINDOWS_PACKAGE_PUBLISHER_ENV] || '').trim();
+  if (!windowsPackagePublisher) {
+    return args;
+  }
+
+  console.log(`[electron-builder] overriding appx.publisher from ${WINDOWS_PACKAGE_PUBLISHER_ENV}`);
+  return [...args, `--config.appx.publisher=${windowsPackagePublisher}`];
+}
+
+const builderArgs = buildElectronBuilderArgs();
 const command = process.platform === 'darwin' ? '/bin/bash' : process.execPath;
 const commandArgs = process.platform === 'darwin'
   ? [
@@ -48,9 +60,9 @@ const commandArgs = process.platform === 'darwin'
     'electron-builder-runner',
     process.execPath,
     electronBuilderCliPath,
-    ...args,
+    ...builderArgs,
   ]
-  : [electronBuilderCliPath, ...args];
+  : [electronBuilderCliPath, ...builderArgs];
 
 const result = run(command, commandArgs);
 process.exit(result.status ?? 0);

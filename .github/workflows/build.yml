@@ -152,21 +152,25 @@ jobs:
             builder_target: portable
             report_suffix: portable
             requires_zip: true
+            artifact_path: pkg/*.exe
           - id: nsis
             name: NSIS
             builder_target: nsis
             report_suffix: nsis
             requires_zip: false
+            artifact_path: pkg/*Setup*.exe
           - id: appx
             name: AppX
             builder_target: appx
             report_suffix: appx
             requires_zip: false
+            artifact_path: pkg/*.appx
           - id: msix
             name: MSIX
             builder_target: msix
             report_suffix: msix
             requires_zip: false
+            artifact_path: pkg/*.msix
     permissions:
       contents: write
       id-token: write
@@ -206,10 +210,11 @@ jobs:
           AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
         run: |
           missing=()
 
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME; do
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME WINDOWS_PACKAGE_PUBLISHER; do
             if [ -z "${!key}" ]; then
               missing+=("${key}")
             fi
@@ -279,6 +284,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
+          WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
+
+      - name: Preserve unsigned Windows artifacts
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/preserve-artifacts.js \
+            --source-dir pkg \
+            --artifact-path "${{ matrix.target.artifact_path }}" \
+            --output-dir unsigned-artifacts \
+            --suffix unsigned
 
       - name: Collect Windows ${{ matrix.target.name }} artifacts
         id: windows_artifacts
@@ -435,66 +452,44 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
       - name: Azure login for Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
-        uses: azure/login@v2
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign Windows ${{ matrix.target.name }} root EXE artifacts with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
-        uses: azure/artifact-signing-action@v1
+      - name: Sign Windows artifacts with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        id: windows_signing
+        continue-on-error: ${{ matrix.target.id == 'msix' }}
+        uses: azure/artifact-signing-action@v2
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ github.workspace }}/pkg
-          files-folder-filter: '*.exe'
-          files-folder-recurse: false
+          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          description: Hagicode Desktop
-          description-url: https://github.com/HagiCode-org/desktop
-          timeout: 600
+          cache-dependencies: true
 
-      - name: Sign Windows MSIX package with Artifact Signing
-        if: false && success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix'
-        uses: azure/artifact-signing-action@v1
-        with:
-          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
-          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ github.workspace }}/pkg
-          files-folder-filter: '*.msix'
-          files-folder-recurse: false
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: Hagicode Desktop
-          description-url: https://github.com/HagiCode-org/desktop
-          timeout: 600
-
-      - name: Sign unpacked Windows root EXE with Artifact Signing
-        if: success() && matrix.target.requires_zip && steps.signing_policy.outputs.required == 'true'
-        uses: azure/artifact-signing-action@v1
-        with:
-          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
-          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
-          files-folder-filter: '*.exe'
-          files-folder-recurse: false
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: Hagicode Desktop
-          description-url: https://github.com/HagiCode-org/desktop
-          timeout: 600
+      - name: Summarize unsigned MSIX fallback
+        if: always() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix' && steps.windows_signing.outcome != 'success'
+        shell: pwsh
+        run: |
+          $summary = @(
+            '## Windows MSIX signing skipped',
+            '',
+            '- Azure Artifact Signing v2 for MSIX did not complete successfully on this run.',
+            '- The signed `MSIX` artifact was skipped.',
+            '- The unsigned MSIX artifact is still available with the `-unsigned` suffix.'
+          ) -join "`n"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+          Write-Warning 'MSIX signing failed; skipping signed artifact upload and retaining only the unsigned MSIX artifact.'
 
       - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'msix'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
@@ -554,24 +549,26 @@ jobs:
 
       - name: Upload Windows release bundle
         uses: actions/upload-artifact@v4
-        if: success() && startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v') && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
         with:
           name: release-windows-${{ matrix.target.id }}-assets
           path: |
             ${{ steps.windows_artifacts.outputs.package_files }}
             ${{ steps.windows_zip.outputs.zip_files }}
+            unsigned-artifacts/*
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 30
           if-no-files-found: error
 
       - name: Upload Windows build bundle
         uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v')
+        if: success() && !startsWith(github.ref, 'refs/tags/v') && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
         with:
           name: hagicode-windows-${{ matrix.target.id }}-${{ github.sha }}
           path: |
             ${{ steps.windows_artifacts.outputs.package_files }}
             ${{ steps.windows_zip.outputs.zip_files }}
+            unsigned-artifacts/*
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 30
           if-no-files-found: error
@@ -684,6 +681,63 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Resolve macOS signing mode
+        if: startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
+        id: mac_signing
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=()
+          if [[ -z "${CSC_LINK}" ]]; then
+            missing+=('CSC_LINK')
+          fi
+          if [[ -z "${CSC_KEY_PASSWORD}" ]]; then
+            missing+=('CSC_KEY_PASSWORD')
+          fi
+
+          has_api_key_auth=true
+          for key in APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
+            if [[ -z "${!key}" ]]; then
+              has_api_key_auth=false
+            fi
+          done
+
+          has_apple_id_auth=true
+          for key in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!key}" ]]; then
+              has_apple_id_auth=false
+            fi
+          done
+
+          if [[ "${has_api_key_auth}" != 'true' && "${has_apple_id_auth}" != 'true' ]]; then
+            missing+=('APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER or APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID')
+          fi
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            printf '::warning::Missing macOS release signing configuration: %s. Falling back to unsigned macOS build.\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## macOS signing fallback'
+              echo
+              echo 'Production macOS signing configuration is incomplete. This job will publish unsigned macOS packages only.'
+              echo
+              echo 'Missing values:'
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -735,11 +789,70 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
-      - name: Build macOS artifacts
-        if: startsWith(matrix.target.id, 'macos-')
+      - name: Build unsigned macOS artifacts
+        if: startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+
+      - name: Preserve unsigned macOS artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/preserve-artifacts.js \
+            --source-dir pkg \
+            --artifact-path "${{ matrix.target.artifact_glob }}" \
+            --output-dir unsigned-artifacts \
+            --suffix unsigned
+
+      - name: Reset macOS package output for signed artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          rm -rf pkg
+          mkdir -p pkg
+
+      - name: Prepare macOS release signing environment
+        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "CSC_LINK=${CSC_LINK}"
+            echo "CSC_KEY_PASSWORD=${CSC_KEY_PASSWORD}"
+            echo "APPLE_API_KEY<<EOF"
+            echo "${APPLE_API_KEY}"
+            echo 'EOF'
+            echo "APPLE_API_KEY_ID=${APPLE_API_KEY_ID}"
+            echo "APPLE_API_ISSUER=${APPLE_API_ISSUER}"
+            echo "APPLE_ID=${APPLE_ID}"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=${APPLE_APP_SPECIFIC_PASSWORD}"
+            echo "APPLE_TEAM_ID=${APPLE_TEAM_ID}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build signed macOS artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && (!startsWith(github.ref, 'refs/tags/v') || steps.mac_signing.outputs.enabled == 'true')
+        shell: bash
+        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true' && 'true' || 'false' }}
           HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
           HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
@@ -838,6 +951,7 @@ jobs:
           name: release-${{ matrix.target.id }}-assets
           path: |
             pkg/${{ matrix.target.artifact_glob }}
+            unsigned-artifacts/*
             pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
           retention-days: 30
           if-no-files-found: error

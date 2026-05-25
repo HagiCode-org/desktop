@@ -30,11 +30,19 @@ The desktop app packages the HagiCode experience into a local-first workflow for
 npm install
 npm run dev
 npm run build:prod
+npm run build:win:portable
+npm run build:win:appx
+npm run build:win:msix
+npm run build:linux:appimage
+npm run build:linux:zip
+npm run build:mac:x64:dmg
+npm run build:mac:arm64:zip
 ```
 
 - `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
+- platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
 
 ### Development bundled Node runtime
 

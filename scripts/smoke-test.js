@@ -638,6 +638,9 @@ test('desktop build workflow includes ZIP packaging and parallel release publica
 
   assert(content.includes('Prepare Windows unpacked ZIP payload workspace'), 'workflow stages the unpacked Windows ZIP payload before compression');
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
+  assert(content.includes('WINDOWS_PACKAGE_PUBLISHER'), 'workflow requires Windows package publisher alignment for signed store packages');
+  assert(content.includes('azure/artifact-signing-action@v2'), 'workflow uses Artifact Signing v2');
+  assert(content.includes('unsigned-artifacts/*'), 'workflow preserves unsigned artifacts alongside signed outputs');
   assert(content.includes('Upload Windows build bundle'), 'workflow uploads a Windows build bundle after packaging');
   assert(content.includes('Publish Windows Release Assets'), 'workflow publishes Windows release assets in a separate job');
   assert(content.includes('name: MSIX'), 'workflow includes a dedicated MSIX matrix target');
@@ -645,6 +648,9 @@ test('desktop build workflow includes ZIP packaging and parallel release publica
   assert(content.includes('release-assets/windows/**/*.msix'), 'workflow publishes MSIX release assets');
   assert(content.includes('strategy:'), 'workflow uses a matrix strategy for non-Windows packaging');
   assert(content.includes('macos-arm64'), 'workflow includes a dedicated macOS arm64 matrix target');
+  assert(content.includes('Resolve macOS signing mode'), 'workflow explicitly resolves macOS signing mode for production releases');
+  assert(content.includes('Build unsigned macOS artifacts'), 'workflow preserves unsigned macOS artifacts before signed rebuilds');
+  assert(content.includes('Build signed macOS artifacts'), 'workflow rebuilds signed macOS artifacts when signing material is present');
   assert(content.includes('Summarize Linux artifacts'), 'workflow reports Linux ZIP diagnostics');
   assert(content.includes('Upload Linux release bundle'), 'workflow uploads a Linux release bundle for later publication');
   assert(content.includes('Publish ${{ matrix.target.name }} Release Assets'), 'workflow publishes non-Windows release assets through a matrix job');

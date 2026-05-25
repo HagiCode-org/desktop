@@ -11,6 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const WINAPPCLI_VERSION = '0.3.1';
+const WINDOWS_PACKAGE_PUBLISHER_ENV = 'WINDOWS_PACKAGE_PUBLISHER';
 const REQUIRED_APPX_ASSETS = [
   'StoreLogo.png',
   'Square44x44Logo.png',
@@ -106,6 +107,16 @@ function sanitizeArtifactNameSegment(value) {
     .replace(/[^A-Za-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
+}
+
+function resolveWindowsPackagePublisher(defaultPublisher) {
+  const override = String(process.env[WINDOWS_PACKAGE_PUBLISHER_ENV] || '').trim();
+  if (!override) {
+    return defaultPublisher;
+  }
+
+  console.log(`[msix] using appx.publisher override from ${WINDOWS_PACKAGE_PUBLISHER_ENV}`);
+  return override;
 }
 
 function normalizeApplicationId(value) {
@@ -279,7 +290,7 @@ export async function packageMsix(rawOptions = {}) {
   const version = toWindowsPackageVersion(packageJson.version);
   const arch = toWindowsArch(process.arch);
   const identityName = appxConfig.identityName || builderConfig.appId || packageJson.name;
-  const publisher = appxConfig.publisher;
+  const publisher = resolveWindowsPackagePublisher(appxConfig.publisher);
 
   if (!publisher) {
     throw new Error('electron-builder appx.publisher is required for MSIX packaging.');
