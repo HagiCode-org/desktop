@@ -23,6 +23,7 @@ The workflow signs the final installer outputs plus only the staged root Desktop
 ## Store Packaging Boundary
 
 Desktop now builds Windows `.appx` and `.msix` artifacts in its own repository workflows alongside the existing installer outputs.
+Current limitation: the workflow publishes MSIX artifacts unsigned because Azure Trusted Signing via `azure/artifact-signing-action@v1` currently fails on these packages with `SignTool` error `0x800700C1`.
 The dedicated `repos/win_store_packer` repository remains the place for any downstream Store-specific repackaging, submission, or policy-specific adjustments that should not live in the Desktop release pipeline.
 
 Desktop still keeps the Store tile assets under `resources/appx/` because `win_store_packer` depends on those assets when it generates Store-ready packages.

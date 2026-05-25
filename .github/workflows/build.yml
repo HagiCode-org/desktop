@@ -435,7 +435,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
       - name: Azure login for Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -460,7 +460,7 @@ jobs:
           timeout: 600
 
       - name: Sign Windows MSIX package with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix'
+        if: false && success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix'
         uses: azure/artifact-signing-action@v1
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
@@ -494,7 +494,7 @@ jobs:
           timeout: 600
 
       - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx'
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'appx' && matrix.target.id != 'msix'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
