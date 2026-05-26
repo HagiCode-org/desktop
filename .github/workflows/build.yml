@@ -50,14 +50,113 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve main branch version with Release Drafter
+      - name: Resolve main branch version from Release Drafter draft
         id: draft
         if: github.ref == 'refs/heads/main'
-        uses: release-drafter/release-drafter@v6
-        with:
-          disable-releaser: true
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY2'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          import time
+          import urllib.request
+
+          semver_re = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+          def parse(tag: str):
+              match = semver_re.fullmatch(tag or "")
+              if not match:
+                  return None
+              return tuple(int(part) for part in match.groups())
+
+          def gh_api(path: str):
+              request = urllib.request.Request(
+                  f"https://api.github.com/{path}",
+                  headers={
+                      "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "hagicode-desktop-build",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+
+          repo = os.environ["GH_REPO"]
+          sha = os.environ["GH_SHA"]
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+
+          if event_name == "push":
+              deadline = time.time() + 300
+              while time.time() < deadline:
+                  runs = gh_api(f"repos/{repo}/actions/workflows/release-drafter.yml/runs?head_sha={sha}&event=push&per_page=10")
+                  candidates = [
+                      run for run in runs.get("workflow_runs", [])
+                      if run.get("path") == ".github/workflows/release-drafter.yml" and run.get("head_sha") == sha
+                  ]
+                  if candidates:
+                      release_drafter_run = candidates[0]
+                      if release_drafter_run.get("status") == "completed":
+                          conclusion = release_drafter_run.get("conclusion")
+                          if conclusion != "success":
+                              raise SystemExit(f"Release Drafter workflow for {sha} concluded with {conclusion}")
+                          break
+                  time.sleep(5)
+              else:
+                  raise SystemExit(f"Timed out waiting for Release Drafter workflow for {sha}")
+
+          releases = gh_api(f"repos/{repo}/releases?per_page=100")
+          draft_candidates = [
+              release
+              for release in releases
+              if release.get("draft") and parse(release.get("tag_name", ""))
+          ]
+
+          version = None
+          version_source = None
+
+          if draft_candidates:
+              selected = max(draft_candidates, key=lambda item: parse(item["tag_name"]))
+              release_tag = selected["tag_name"]
+              version = release_tag.removeprefix("v")
+              version_source = f"draft-release:{release_tag}"
+          else:
+              tags = subprocess.check_output(
+                  ["git", "tag", "--list", "v*", "--sort=-version:refname"],
+                  text=True,
+              ).splitlines()
+              stable_tags = [tag for tag in tags if parse(tag)]
+
+              if stable_tags:
+                  latest_tag = stable_tags[0]
+                  major, minor, patch = parse(latest_tag)
+                  version = f"{major}.{minor}.{patch + 1}"
+                  version_source = f"latest-tag:{latest_tag}"
+              else:
+                  package_json = json.loads(open("package.json", "r", encoding="utf-8").read())
+                  package_version = package_json["version"]
+                  package_tag = f"v{package_version}"
+                  parsed_package = parse(package_tag)
+                  if not parsed_package:
+                      raise SystemExit(f"package.json version is not a stable semver: {package_version}")
+                  major, minor, patch = parsed_package
+                  version = f"{major}.{minor}.{patch + 1}"
+                  version_source = f"package-json:{package_version}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"resolved_version={version}\n")
+              handle.write(f"version_source={version_source}\n")
+          PY2
 
       - name: Resolve release metadata
         id: meta
@@ -65,6 +164,7 @@ jobs:
         env:
           MANUAL_CHANNEL: ${{ github.event.inputs.channel || '' }}
           DRAFT_VERSION: ${{ steps.draft.outputs.resolved_version || '' }}
+          DRAFT_VERSION_SOURCE: ${{ steps.draft.outputs.version_source || '' }}
         run: |
           set -euo pipefail
 
@@ -89,7 +189,7 @@ jobs:
             fi
             version="${draft_version}"
             release_name="Main Build ${version}"
-            version_source="release-drafter:${version}"
+            version_source="${DRAFT_VERSION_SOURCE:-draft-release:${version}}"
           fi
 
           if [[ -n "${MANUAL_CHANNEL}" ]]; then
