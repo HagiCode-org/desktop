@@ -30,6 +30,7 @@ import {
   assertGlobalHagiscriptAvailable,
   extractZipArchiveWithGlobalHagiscript,
 } from './global-hagiscript.js';
+import { createRuntimePhaseTimer } from './runtime-phase-timing.js';
 
 const MINIMUM_HAGISCRIPT_VERSION = '0.2.7';
 
@@ -58,27 +59,44 @@ main().catch((error) => {
 async function main() {
   const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
   const selectedArtifact = await resolveArtifact();
+  const phaseTimer = createRuntimePhaseTimer('omniroute-runtime');
   await mkdir(downloadsRoot, { recursive: true });
   await mkdir(extractRoot, { recursive: true });
 
-  const archivePath = await materializeArchive(selectedArtifact);
-  await rm(extractRoot, { recursive: true, force: true });
-  await mkdir(extractRoot, { recursive: true });
-  await extractArchive(archivePath, target.archiveExtension, extractRoot);
+  let archivePath;
+  let validation;
 
-  const extractedRoot = await resolveExtractedRoot(extractRoot);
-  await rm(runtimeRoot, { recursive: true, force: true });
-  await mkdir(path.dirname(runtimeRoot), { recursive: true });
-  await cp(extractedRoot, runtimeRoot, { recursive: true });
-  await ensureRootNodeModulesPayload(runtimeRoot);
-  await rebuildBetterSqlite3ForDesktopNode(runtimeRoot);
-  await ensureRuntimeWrapper(runtimeRoot);
-  await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
+  try {
+    archivePath = await phaseTimer.run('download', () => materializeArchive(selectedArtifact));
 
-  const validation = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey, config });
-  const validationErrors = [...validation.missingEntries, ...validation.diagnostics];
-  if (validationErrors.length > 0) {
-    throw new Error(`Prepared vendored OmniRoute runtime is invalid:\n- ${validationErrors.join('\n- ')}`);
+    const extractedRoot = await phaseTimer.run('extract', async () => {
+      await rm(extractRoot, { recursive: true, force: true });
+      await mkdir(extractRoot, { recursive: true });
+      await extractArchive(archivePath, target.archiveExtension, extractRoot);
+      return resolveExtractedRoot(extractRoot);
+    });
+
+    await phaseTimer.run('copy', async () => {
+      await rm(runtimeRoot, { recursive: true, force: true });
+      await mkdir(path.dirname(runtimeRoot), { recursive: true });
+      await cp(extractedRoot, runtimeRoot, { recursive: true });
+      await ensureRootNodeModulesPayload(runtimeRoot);
+      await ensureRuntimeWrapper(runtimeRoot);
+      await writeRuntimeMetadata(runtimeRoot, selectedArtifact.metadata);
+    });
+
+    await phaseTimer.run('rebuild', async () => rebuildBetterSqlite3ForDesktopNode(runtimeRoot));
+
+    validation = await phaseTimer.run('validate', async () => {
+      const nextValidation = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey, config });
+      const validationErrors = [...nextValidation.missingEntries, ...nextValidation.diagnostics];
+      if (validationErrors.length > 0) {
+        throw new Error(`Prepared vendored OmniRoute runtime is invalid:\n- ${validationErrors.join('\n- ')}`);
+      }
+      return nextValidation;
+    });
+  } finally {
+    phaseTimer.logSummary();
   }
 
   await writeFile(
