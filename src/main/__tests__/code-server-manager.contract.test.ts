@@ -14,12 +14,18 @@ describe('code-server manager contract', () => {
     assert.match(source, /PROCESS_NAME = 'hagicode-code-server'/);
     assert.match(source, /HagiscriptPm2Manager/);
     assert.match(source, /HagiscriptRuntimeContextResolver/);
+    assert.match(source, /getVendoredRuntimeActivationService/);
     assert.match(source, /resolveBundledRuntime\(\{\s*service: 'code-server'/);
     assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
     assert.match(source, /getManagedCommandContext\('hagiscript'\)/);
+    assert.match(source, /async enable\(\): Promise<VendoredRuntimeLifecycleResult>/);
+    assert.match(source, /return this\.runLifecycle\('enable'\)/);
+    assert.match(source, /action === 'repair' \|\| action === 'enable'/);
+    assert.match(source, /this\.vendoredRuntimeActivationService\.activate\('code-server'\)/);
+    assert.match(source, /runtime\.status === 'extracting'/);
     assert.match(source, /--bind-addr/);
     assert.match(source, /--auth',\s*'password'/);
     assert.match(source, /PASSWORD:/);
@@ -30,7 +36,6 @@ describe('code-server manager contract', () => {
     assert.match(source, /this\.configManager\.set\('codeServer'/);
     assert.match(source, /normalizePassword/);
     assert.match(source, /readLog\(request: CodeServerLogReadRequest\)/);
-    assert.match(source, /Vendored code-server repair is only available in development builds/);
     assert.match(source, /Desktop-managed hagiscript is unavailable/);
     assert.match(source, /fetch\(baseUrl/);
     assert.match(source, /context\.pm2LogsDirectory/);
@@ -43,15 +48,19 @@ describe('code-server manager contract', () => {
     assert.doesNotMatch(source, /ensurePm2HomeAlias/);
   });
 
-  it('registers vendored runtime lifecycle IPC handlers through dependency management channels', async () => {
+  it('registers vendored runtime lifecycle IPC handlers and activation progress broadcasts', async () => {
     const source = await fs.readFile(handlerPath, 'utf8');
 
+    assert.match(source, /handleEnableVendoredRuntime/);
     assert.match(source, /handleStartVendoredRuntime/);
     assert.match(source, /handleStopVendoredRuntime/);
     assert.match(source, /handleRestartVendoredRuntime/);
     assert.match(source, /handleRepairVendoredRuntime/);
     assert.match(source, /handleOpenVendoredRuntimePath/);
-    assert.match(source, /dependencyManagementChannels\.startVendoredRuntime/);
+    assert.match(source, /dependencyManagementChannels\.enableVendoredRuntime/);
+    assert.match(source, /dependencyManagementChannels\.vendoredRuntimeActivationProgress/);
+    assert.match(source, /legacyDependencyManagementChannels\.vendoredRuntimeActivationProgress/);
+    assert.match(source, /onVendoredRuntimeActivationProgress\(/);
     assert.match(source, /dependencyManagementChannels\.openVendoredRuntimePath/);
   });
 

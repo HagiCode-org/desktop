@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ExternalLink, FolderOpen, Loader2, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Loader2, PackageOpen, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type {
   OmniRouteBridge,
@@ -22,7 +22,7 @@ import { openOmniRouteDependencyRepair } from '@/store/thunks/viewThunks';
 import type { AppDispatch } from '@/store';
 
 type PageState = 'loading' | 'ready' | 'error';
-type Operation = 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-port' | 'load-log' | null;
+type Operation = 'enable' | 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-port' | 'load-log' | null;
 
 const LOG_TARGETS: OmniRouteLogTarget[] = ['service-out', 'service-error'];
 const PATH_TARGETS: OmniRoutePathTarget[] = ['config', 'data', 'logs'];
@@ -95,15 +95,17 @@ export default function OmniRouteManagementPage() {
   const dependencyRemediation = status?.remediation;
   const hasOnlineProcess = status?.processes.some((process) => process.status === 'online') ?? false;
   const isRunning = hasOnlineProcess;
+  const activationInProgress = status?.runtime.status === 'extracting';
   const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
   const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
   const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
+  const runtimeEnableAvailable = runtimePrimaryAction === 'enable';
   const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
   const runtimeRequiresDesktopReinstall = runtimePrimaryAction === 'reinstall-desktop';
   const packageRemediation = dependencyRemediation && dependencyRemediation.targetPackageIds.length > 0
     ? dependencyRemediation
     : null;
-  const lifecycleBlockedByDependencies = runtimeNeedsRepair || Boolean(packageRemediation);
+  const lifecycleBlockedByDependencies = runtimeNeedsRepair || activationInProgress || Boolean(packageRemediation);
 
   const applyStatus = (nextStatus: OmniRouteStatusSnapshot) => {
     startTransition(() => {
@@ -137,6 +139,22 @@ export default function OmniRouteManagementPage() {
         const errorLog = await getBridge().readLog({ target: 'service-error', maxLines: 200 });
         setLogs((current) => ({ ...current, 'service-error': errorLog }));
         setSelectedLogTarget('service-error');
+        setErrorMessage(result.error ?? t('omniroute.errors.operationFailed'));
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOperation(null);
+    }
+  };
+
+  const enableRuntime = async () => {
+    setOperation('enable');
+    setErrorMessage(null);
+    try {
+      const result = await window.electronAPI.dependencyManagement.enableVendoredRuntime('omniroute');
+      applyStatus(await getBridge().getStatus());
+      if (!result.success) {
         setErrorMessage(result.error ?? t('omniroute.errors.operationFailed'));
       }
     } catch (error) {
@@ -205,12 +223,29 @@ export default function OmniRouteManagementPage() {
         applyStatus(nextStatus);
       }
     });
+    const activationUnsubscribe = window.electronAPI.dependencyManagement.onVendoredRuntimeActivationProgress((event) => {
+      if (disposed || event.runtimeId !== 'omniroute') {
+        return;
+      }
+      setStatus((current) => current ? {
+        ...current,
+        runtime: {
+          ...current.runtime,
+          activation: event,
+          status: ['completed', 'failed'].includes(event.stage) ? current.runtime.status : 'extracting',
+        },
+      } : current);
+      if (event.stage === 'completed' || event.stage === 'failed') {
+        void refreshStatus();
+      }
+    });
 
     void refreshStatus();
 
     return () => {
       disposed = true;
       unsubscribe();
+      activationUnsubscribe();
     };
   }, []);
 
@@ -258,6 +293,9 @@ export default function OmniRouteManagementPage() {
           <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${runtimeInstallStatus}`)}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{status.runtime.message ?? t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${runtimeInstallStatus}`)}</p>
+            {activationInProgress ? (
+              <p className="text-sm text-muted-foreground">{t('dependencyManagement.vendoredRuntime.activationInline', { percent: status.runtime.activation?.percentage ?? 0 })}</p>
+            ) : null}
             {status.runtime.diagnostics.length > 0 ? (
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                 {status.runtime.diagnostics.slice(0, 4).map((diagnostic) => (
@@ -266,6 +304,12 @@ export default function OmniRouteManagementPage() {
               </ul>
             ) : null}
             <div className="flex flex-wrap gap-2">
+              {runtimeEnableAvailable || activationInProgress ? (
+                <Button type="button" onClick={() => void enableRuntime()} disabled={isBusy || activationInProgress}>
+                  <PackageOpen className="mr-2 h-4 w-4" />
+                  {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
+                </Button>
+              ) : null}
               {runtimeRepairAvailable ? (
                 <Button type="button" onClick={() => void runLifecycle('repair')} disabled={isBusy}>
                   <Wrench className="mr-2 h-4 w-4" />
@@ -336,10 +380,17 @@ export default function OmniRouteManagementPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-start gap-2 md:justify-end">
-                <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlockedByDependencies}>
-                  <Play className="mr-2 h-4 w-4" />
-                  {operation === 'start' ? t('omniroute.actions.working') : t('omniroute.actions.start')}
-                </Button>
+                {runtimeEnableAvailable || activationInProgress ? (
+                  <Button onClick={() => void enableRuntime()} disabled={isBusy || activationInProgress}>
+                    <PackageOpen className="mr-2 h-4 w-4" />
+                    {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
+                  </Button>
+                ) : (
+                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlockedByDependencies}>
+                    <Play className="mr-2 h-4 w-4" />
+                    {operation === 'start' ? t('omniroute.actions.working') : t('omniroute.actions.start')}
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
                   <Square className="mr-2 h-4 w-4" />
                   {operation === 'stop' ? t('omniroute.actions.working') : t('omniroute.actions.stop')}

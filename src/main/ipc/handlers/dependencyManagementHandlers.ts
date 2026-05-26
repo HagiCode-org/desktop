@@ -20,6 +20,7 @@ interface DependencyManagementHandlerState {
   omniRouteManager: OmniRouteManager | null;
   mainWindow: BrowserWindow | null;
   unsubscribeProgress: (() => void) | null;
+  unsubscribeActivationProgress: (() => void) | null;
 }
 
 const state: DependencyManagementHandlerState = {
@@ -28,6 +29,7 @@ const state: DependencyManagementHandlerState = {
   omniRouteManager: null,
   mainWindow: null,
   unsubscribeProgress: null,
+  unsubscribeActivationProgress: null,
 };
 
 export function initDependencyManagementHandlers(
@@ -56,6 +58,9 @@ export function registerDependencyManagementHandlers(deps: {
   if (state.unsubscribeProgress) {
     state.unsubscribeProgress();
   }
+  if (state.unsubscribeActivationProgress) {
+    state.unsubscribeActivationProgress();
+  }
 
   state.unsubscribeProgress = state.dependencyManagementService?.onProgress((event) => {
     const windows = ElectronBrowserWindow.getAllWindows();
@@ -64,6 +69,17 @@ export function registerDependencyManagementHandlers(deps: {
       if (!target.isDestroyed()) {
         target.webContents.send(dependencyManagementChannels.progress, event);
         target.webContents.send(legacyDependencyManagementChannels.progress, event);
+      }
+    }
+  }) ?? null;
+
+  state.unsubscribeActivationProgress = state.dependencyManagementService?.onVendoredRuntimeActivationProgress((event) => {
+    const windows = ElectronBrowserWindow.getAllWindows();
+    const targets = windows.length > 0 ? windows : [state.mainWindow].filter(Boolean) as BrowserWindow[];
+    for (const target of targets) {
+      if (!target.isDestroyed()) {
+        target.webContents.send(dependencyManagementChannels.vendoredRuntimeActivationProgress, event);
+        target.webContents.send(legacyDependencyManagementChannels.vendoredRuntimeActivationProgress, event);
       }
     }
   }) ?? null;
@@ -141,6 +157,16 @@ export function registerDependencyManagementHandlers(deps: {
     return state.omniRouteManager;
   };
 
+  const handleEnableVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
+    if (runtimeId === 'code-server') {
+      return requireCodeServerManager().enable();
+    }
+    if (runtimeId === 'omniroute') {
+      return requireOmniRouteManager().enableVendoredRuntime();
+    }
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
+  };
+
   const handleStartVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
     if (runtimeId === 'code-server') {
       return requireCodeServerManager().start();
@@ -202,6 +228,7 @@ export function registerDependencyManagementHandlers(deps: {
   ipcMain.handle(dependencyManagementChannels.install, handleInstall);
   ipcMain.handle(dependencyManagementChannels.uninstall, handleUninstall);
   ipcMain.handle(dependencyManagementChannels.syncPackages, handleSyncPackages);
+  ipcMain.handle(dependencyManagementChannels.enableVendoredRuntime, handleEnableVendoredRuntime);
   ipcMain.handle(dependencyManagementChannels.startVendoredRuntime, handleStartVendoredRuntime);
   ipcMain.handle(dependencyManagementChannels.stopVendoredRuntime, handleStopVendoredRuntime);
   ipcMain.handle(dependencyManagementChannels.restartVendoredRuntime, handleRestartVendoredRuntime);
@@ -215,6 +242,7 @@ export function registerDependencyManagementHandlers(deps: {
   ipcMain.handle(legacyDependencyManagementChannels.install, handleInstall);
   ipcMain.handle(legacyDependencyManagementChannels.uninstall, handleUninstall);
   ipcMain.handle(legacyDependencyManagementChannels.syncPackages, handleSyncPackages);
+  ipcMain.handle(legacyDependencyManagementChannels.enableVendoredRuntime, handleEnableVendoredRuntime);
   ipcMain.handle(legacyDependencyManagementChannels.startVendoredRuntime, handleStartVendoredRuntime);
   ipcMain.handle(legacyDependencyManagementChannels.stopVendoredRuntime, handleStopVendoredRuntime);
   ipcMain.handle(legacyDependencyManagementChannels.restartVendoredRuntime, handleRestartVendoredRuntime);

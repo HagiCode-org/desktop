@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Code2,
   Route,
+  PackageOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { Badge } from './ui/badge';
@@ -27,9 +28,9 @@ import type {
   OmniRouteOverallStatus,
 } from '../../types/omniroute-management.js';
 
-// ─── types ───────────────────────────────────────────────────────────────────
-
 type NormalizedStatus = 'loading' | 'running' | 'stopped' | 'error';
+
+type MiniCardOperation = 'enable' | 'start' | 'stop' | 'restart' | null;
 
 interface ServiceMiniCardDisplayProps {
   title: string;
@@ -40,15 +41,17 @@ interface ServiceMiniCardDisplayProps {
   url?: string | null;
   isBusy: boolean;
   lifecycleBlocked: boolean;
+  enableRequired: boolean;
+  enableInProgress: boolean;
+  enableProgress?: number;
   openLabel: string;
+  onEnable: () => void;
   onStart: () => void;
   onStop: () => void;
   onRestart: () => void;
   onOpen?: () => void;
   onViewDetails: () => void;
 }
-
-// ─── pure display ─────────────────────────────────────────────────────────────
 
 function statusVariant(status: NormalizedStatus) {
   if (status === 'running') return 'default' as const;
@@ -65,7 +68,11 @@ function ServiceMiniCardDisplay({
   url,
   isBusy,
   lifecycleBlocked,
+  enableRequired,
+  enableInProgress,
+  enableProgress,
   openLabel,
+  onEnable,
   onStart,
   onStop,
   onRestart,
@@ -80,6 +87,8 @@ function ServiceMiniCardDisplay({
 
   const statusLabel = (() => {
     if (isLoading) return t('status.loading');
+    if (enableInProgress) return t('dependencyManagement.vendoredRuntime.status.extracting');
+    if (enableRequired) return t('dependencyManagement.vendoredRuntime.status.enable-required');
     if (lifecycleBlocked) return t('system.services.notReady');
     switch (status) {
       case 'running': return t('status.running');
@@ -89,8 +98,7 @@ function ServiceMiniCardDisplay({
   })();
 
   return (
-    <div className="flex flex-col rounded-2xl border border-border/70 bg-card p-5 shadow-sm gap-4">
-      {/* Header */}
+    <div className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
@@ -98,8 +106,8 @@ function ServiceMiniCardDisplay({
           </div>
           <span className="font-semibold text-foreground">{title}</span>
         </div>
-        <Badge variant={statusVariant(status)} className="shrink-0 mt-0.5">
-          {isLoading ? (
+        <Badge variant={statusVariant(status)} className="mt-0.5 shrink-0">
+          {isLoading || enableInProgress ? (
             <span className="flex items-center gap-1.5">
               <Loader2 className="h-3 w-3 animate-spin" />
               {statusLabel}
@@ -108,54 +116,65 @@ function ServiceMiniCardDisplay({
         </Badge>
       </div>
 
-      {/* Info row */}
       <div className="min-h-[2.75rem] space-y-1 text-sm text-muted-foreground">
         <div className="text-xs">
           {t('common.version')}: <span className="font-mono">{version ?? t('dependencyManagement.unavailable')}</span>
         </div>
         <div>
-          {lifecycleBlocked ? (
+          {enableInProgress ? (
+            <span className="text-amber-600 dark:text-amber-500">
+              {t('dependencyManagement.vendoredRuntime.activationInline', { percent: enableProgress ?? 0 })}
+            </span>
+          ) : enableRequired ? (
+            <span className="text-amber-600 dark:text-amber-500">{t('system.services.enableRequired')}</span>
+          ) : lifecycleBlocked ? (
             <span className="text-amber-600 dark:text-amber-500">{t('system.services.installRequired')}</span>
           ) : isRunning && url ? (
-            <span className="font-mono text-xs text-muted-foreground break-all">{url}</span>
+            <span className="break-all font-mono text-xs text-muted-foreground">{url}</span>
           ) : port ? (
             <span>{t('system.services.port', { port })}</span>
           ) : null}
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
-        {/* Start / Stop toggle */}
-        {!lifecycleBlocked && (
-          isRunning ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onStop}
-              disabled={actionDisabled}
-              className="gap-1.5"
-            >
-              {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
-              {t('omniroute.actions.stop')}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              onClick={onStart}
-              disabled={actionDisabled}
-              className="gap-1.5"
-            >
-              {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-              {t('omniroute.actions.start')}
-            </Button>
-          )
+        {enableRequired || enableInProgress ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onEnable}
+            disabled={isBusy || enableInProgress}
+            className="gap-1.5"
+          >
+            {isBusy || enableInProgress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageOpen className="h-3.5 w-3.5" />}
+            {enableInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
+          </Button>
+        ) : isRunning ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onStop}
+            disabled={actionDisabled}
+            className="gap-1.5"
+          >
+            {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
+            {t('omniroute.actions.stop')}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onStart}
+            disabled={actionDisabled}
+            className="gap-1.5"
+          >
+            {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            {t('omniroute.actions.start')}
+          </Button>
         )}
 
-        {/* Restart (only when running) */}
-        {!lifecycleBlocked && isRunning && (
+        {!enableRequired && !enableInProgress && isRunning && (
           <Button
             type="button"
             variant="ghost"
@@ -169,21 +188,19 @@ function ServiceMiniCardDisplay({
           </Button>
         )}
 
-        {/* Open URL */}
         {isRunning && onOpen && (
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onOpen}
-            className="gap-1.5 ml-auto"
+            className="ml-auto gap-1.5"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             {openLabel}
           </Button>
         )}
 
-        {/* Details link — always visible, pushed to end when no open button */}
         <Button
           type="button"
           variant="ghost"
@@ -198,8 +215,6 @@ function ServiceMiniCardDisplay({
     </div>
   );
 }
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeCodeServerStatus(
   status: CodeServerOverallStatus | undefined,
@@ -230,19 +245,19 @@ function normalizeOmniRouteStatus(
   }
 }
 
-// ─── CodeServerMiniCard ───────────────────────────────────────────────────────
-
 export function CodeServerMiniCard() {
   const { t } = useTranslation('common');
   const dispatch = useDispatch<AppDispatch>();
 
   const [snapshot, setSnapshot] = useState<CodeServerStatusSnapshot | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [operation, setOperation] = useState<'start' | 'stop' | 'restart' | null>(null);
+  const [operation, setOperation] = useState<MiniCardOperation>(null);
 
   const isBusy = operation !== null;
+  const enableRequired = snapshot?.runtime.primaryAction === 'enable';
+  const enableInProgress = snapshot?.runtime.status === 'extracting';
   const lifecycleBlocked =
-    !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed';
+    !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed' || enableInProgress;
   const normalizedStatus = normalizeCodeServerStatus(snapshot?.status, lifecycleBlocked);
 
   useEffect(() => {
@@ -261,12 +276,47 @@ export function CodeServerMiniCard() {
     const unsub = bridge.onStatusChange((s) => {
       if (!disposed) setSnapshot(s);
     });
+    const activationUnsub = window.electronAPI.dependencyManagement.onVendoredRuntimeActivationProgress((event) => {
+      if (event.runtimeId !== 'code-server' || disposed) {
+        return;
+      }
+      setSnapshot((current) => current ? {
+        ...current,
+        runtime: {
+          ...current.runtime,
+          activation: event,
+          status: ['completed', 'failed'].includes(event.stage) ? current.runtime.status : 'extracting',
+        },
+      } : current);
+      if (event.stage === 'completed' || event.stage === 'failed') {
+        void bridge.getStatus().then((status) => {
+          if (!disposed) {
+            setSnapshot(status);
+          }
+        });
+      }
+    });
 
     return () => {
       disposed = true;
       unsub();
+      activationUnsub();
     };
   }, []);
+
+  const handleEnable = useCallback(async () => {
+    setOperation('enable');
+    try {
+      const result = await window.electronAPI.dependencyManagement.enableVendoredRuntime('code-server');
+      const nextStatus = await window.electronAPI.codeServer.getStatus();
+      setSnapshot(nextStatus);
+      if (!result.success) toast.error(result.error ?? t('system.services.startFailed'));
+    } catch {
+      toast.error(t('system.services.startFailed'));
+    } finally {
+      setOperation(null);
+    }
+  }, [t]);
 
   const handleStart = useCallback(async () => {
     setOperation('start');
@@ -331,7 +381,11 @@ export function CodeServerMiniCard() {
       url={snapshot?.status === 'running' ? snapshot.config?.baseUrl : null}
       isBusy={isBusy}
       lifecycleBlocked={lifecycleBlocked && snapshot !== null}
+      enableRequired={Boolean(enableRequired)}
+      enableInProgress={Boolean(enableInProgress)}
+      enableProgress={snapshot?.runtime.activation?.percentage}
       openLabel={t('codeServer.actions.openBrowser')}
+      onEnable={() => void handleEnable()}
       onStart={() => void handleStart()}
       onStop={() => void handleStop()}
       onRestart={() => void handleRestart()}
@@ -341,19 +395,19 @@ export function CodeServerMiniCard() {
   );
 }
 
-// ─── OmniRouteMiniCard ────────────────────────────────────────────────────────
-
 export function OmniRouteMiniCard() {
   const { t } = useTranslation('common');
   const dispatch = useDispatch<AppDispatch>();
 
   const [snapshot, setSnapshot] = useState<OmniRouteStatusSnapshot | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [operation, setOperation] = useState<'start' | 'stop' | 'restart' | null>(null);
+  const [operation, setOperation] = useState<MiniCardOperation>(null);
 
   const isBusy = operation !== null;
+  const enableRequired = snapshot?.runtime.primaryAction === 'enable';
+  const enableInProgress = snapshot?.runtime.status === 'extracting';
   const lifecycleBlocked =
-    !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed';
+    !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed' || enableInProgress;
   const normalizedStatus = normalizeOmniRouteStatus(snapshot?.status);
 
   useEffect(() => {
@@ -372,12 +426,47 @@ export function OmniRouteMiniCard() {
     const unsub = bridge.onStatusChange((s) => {
       if (!disposed) setSnapshot(s);
     });
+    const activationUnsub = window.electronAPI.dependencyManagement.onVendoredRuntimeActivationProgress((event) => {
+      if (event.runtimeId !== 'omniroute' || disposed) {
+        return;
+      }
+      setSnapshot((current) => current ? {
+        ...current,
+        runtime: {
+          ...current.runtime,
+          activation: event,
+          status: ['completed', 'failed'].includes(event.stage) ? current.runtime.status : 'extracting',
+        },
+      } : current);
+      if (event.stage === 'completed' || event.stage === 'failed') {
+        void bridge.getStatus().then((status) => {
+          if (!disposed) {
+            setSnapshot(status);
+          }
+        });
+      }
+    });
 
     return () => {
       disposed = true;
       unsub();
+      activationUnsub();
     };
   }, []);
+
+  const handleEnable = useCallback(async () => {
+    setOperation('enable');
+    try {
+      const result = await window.electronAPI.dependencyManagement.enableVendoredRuntime('omniroute');
+      const nextStatus = await window.electronAPI.omniroute.getStatus();
+      setSnapshot(nextStatus);
+      if (!result.success) toast.error(result.error ?? t('system.services.startFailed'));
+    } catch {
+      toast.error(t('system.services.startFailed'));
+    } finally {
+      setOperation(null);
+    }
+  }, [t]);
 
   const handleStart = useCallback(async () => {
     setOperation('start');
@@ -442,7 +531,11 @@ export function OmniRouteMiniCard() {
       url={snapshot?.status === 'running' ? snapshot.config?.baseUrl : null}
       isBusy={isBusy}
       lifecycleBlocked={lifecycleBlocked && snapshot !== null}
+      enableRequired={Boolean(enableRequired)}
+      enableInProgress={Boolean(enableInProgress)}
+      enableProgress={snapshot?.runtime.activation?.percentage}
       openLabel={t('omniroute.actions.openUi')}
+      onEnable={() => void handleEnable()}
       onStart={() => void handleStart()}
       onStop={() => void handleStop()}
       onRestart={() => void handleRestart()}

@@ -77,6 +77,9 @@ function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'defa
   if (item.installStatus === 'installed') {
     return 'default';
   }
+  if (item.installStatus === 'packaged') {
+    return 'secondary';
+  }
   if (item.installStatus === 'not-installed' || item.installStatus === 'removed') {
     return 'outline';
   }
@@ -84,6 +87,9 @@ function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'defa
 }
 
 function getVendoredRuntimePrimaryLabel(item: VendoredRuntimeStatusSnapshot): string {
+  if (item.primaryAction === 'enable') {
+    return 'dependencyManagement.vendoredRuntime.actions.enable';
+  }
   if (item.primaryAction === 'start') {
     return 'dependencyManagement.vendoredRuntime.actions.start';
   }
@@ -97,6 +103,9 @@ function getVendoredRuntimePrimaryLabel(item: VendoredRuntimeStatusSnapshot): st
 }
 
 function getVendoredRuntimePrimaryIcon(item: VendoredRuntimeStatusSnapshot) {
+  if (item.primaryAction === 'enable') {
+    return PackageOpen;
+  }
   if (item.primaryAction === 'start') {
     return Play;
   }
@@ -138,8 +147,9 @@ export function VendoredRuntimeCard({
 }: VendoredRuntimeCardProps) {
   const { t } = useTranslation('common');
   const PrimaryIcon = getVendoredRuntimePrimaryIcon(item);
-  const isActionRunning = pendingAction !== null;
-  const primaryActionDisabled = item.primaryAction === 'reinstall-desktop';
+  const activationInProgress = item.status === 'extracting';
+  const isActionRunning = pendingAction !== null || activationInProgress;
+  const primaryActionDisabled = item.primaryAction === 'reinstall-desktop' || item.primaryAction === 'none';
   const diagnostics = error ? [error, ...item.diagnostics] : item.diagnostics;
 
   return (
@@ -164,6 +174,13 @@ export function VendoredRuntimeCard({
           <p>{t('dependencyManagement.vendoredRuntime.managedByDesktop')}</p>
           <p>{t('dependencyManagement.vendoredRuntime.runtimeState')}: {t(`dependencyManagement.vendoredRuntime.status.${item.status}`)}</p>
           <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.runtimeRoot')}: {item.runtimeRoot}</p>
+          <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.packagedRoot')}: {item.packagedRoot}</p>
+          {item.packagedArchivePath ? (
+            <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.packagedArchivePath')}: {item.packagedArchivePath}</p>
+          ) : null}
+          {item.packagedMarkerPath ? (
+            <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.packagedMarkerPath')}: {item.packagedMarkerPath}</p>
+          ) : null}
           {item.metadataPath ? (
             <p className="break-all sm:col-span-2">{t('dependencyManagement.vendoredRuntime.metadataPath')}: {item.metadataPath}</p>
           ) : null}
@@ -173,8 +190,18 @@ export function VendoredRuntimeCard({
         <Alert className={item.installStatus === 'installed' ? 'border-emerald-500/30 bg-emerald-500/5' : undefined}>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${item.installStatus}`)}</AlertTitle>
-          <AlertDescription>{t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${item.installStatus}`)}</AlertDescription>
+          <AlertDescription>{item.message ?? t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${item.installStatus}`)}</AlertDescription>
         </Alert>
+
+        {item.activation && item.status === 'extracting' ? (
+          <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span>{t(`dependencyManagement.vendoredRuntime.activationStage.${item.activation.stage}`)}</span>
+              <span>{item.activation.percentage ?? 0}%</span>
+            </div>
+            <Progress value={item.activation.percentage ?? 0} />
+          </div>
+        ) : null}
 
         {diagnostics.length > 0 ? (
           <Alert variant={item.installStatus === 'installed' ? 'default' : 'destructive'}>
@@ -199,7 +226,7 @@ export function VendoredRuntimeCard({
             {isActionRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PrimaryIcon className="mr-2 h-4 w-4" />}
             {t(getVendoredRuntimePrimaryLabel(item))}
           </Button>
-          <Button variant="outline" onClick={() => onRestart(item.id)} disabled={refreshDisabled || isActionRunning}>
+          <Button variant="outline" onClick={() => onRestart(item.id)} disabled={refreshDisabled || isActionRunning || item.installStatus !== 'installed'}>
             <RefreshCw className="mr-2 h-4 w-4" />
             {t('dependencyManagement.vendoredRuntime.actions.restart')}
           </Button>

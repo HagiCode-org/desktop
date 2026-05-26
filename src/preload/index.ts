@@ -397,6 +397,7 @@ const dependencyManagementBridge: DependencyManagementBridge = {
   install: (request: ManagedNpmPackageId | DependencyManagementInstallRequest) => ipcRenderer.invoke(dependencyManagementChannels.install, request),
   uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
   syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
+  enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.enableVendoredRuntime, runtimeId),
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.startVendoredRuntime, runtimeId),
   stopVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.stopVendoredRuntime, runtimeId),
   restartVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.restartVendoredRuntime, runtimeId),
@@ -408,6 +409,13 @@ const dependencyManagementBridge: DependencyManagementBridge = {
     };
     ipcRenderer.on(dependencyManagementChannels.progress, listener);
     return () => ipcRenderer.removeListener(dependencyManagementChannels.progress, listener);
+  },
+  onVendoredRuntimeActivationProgress: (callback) => {
+    const listener = (_event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on(dependencyManagementChannels.vendoredRuntimeActivationProgress, listener);
+    return () => ipcRenderer.removeListener(dependencyManagementChannels.vendoredRuntimeActivationProgress, listener);
   },
 };
 

@@ -18,6 +18,7 @@ describe('dependency management preload contract', () => {
     assert.match(source, /install: \(request: ManagedNpmPackageId \| DependencyManagementInstallRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.install, request\)/);
     assert.match(source, /uninstall: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.uninstall, packageId\)/);
     assert.match(source, /syncPackages: \(request: DependencyManagementBatchSyncRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.syncPackages, request\)/);
+    assert.match(source, /enableVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.enableVendoredRuntime, runtimeId\)/);
     assert.match(source, /startVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.startVendoredRuntime, runtimeId\)/);
     assert.match(source, /stopVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.stopVendoredRuntime, runtimeId\)/);
     assert.match(source, /restartVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.restartVendoredRuntime, runtimeId\)/);
@@ -25,6 +26,8 @@ describe('dependency management preload contract', () => {
     assert.match(source, /openVendoredRuntimePath: \(runtimeId: VendoredRuntimeId, target: 'logs' \| 'runtime-root'\) => ipcRenderer\.invoke\(dependencyManagementChannels\.openVendoredRuntimePath, runtimeId, target\)/);
     assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.progress, listener\)/);
     assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.progress, listener\)/);
+    assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.vendoredRuntimeActivationProgress, listener\)/);
+    assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.vendoredRuntimeActivationProgress, listener\)/);
   });
 
   it('exposes read-only hagiNode runtime metadata from dependency management snapshots', async () => {

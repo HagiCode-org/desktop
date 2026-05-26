@@ -432,7 +432,7 @@ function extractZip(archivePath, destinationRoot) {
   });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored code-server runtime',
-    suffixParts: ['code-server', 'current'],
+    suffixParts: ['code-server'],
     platform: codeServerPlatform,
     validate: (runtimeRoot) => {
       const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
@@ -441,7 +441,7 @@ function extractZip(archivePath, destinationRoot) {
   });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored OmniRoute runtime',
-    suffixParts: ['omniroute', 'current'],
+    suffixParts: ['omniroute'],
     platform: omniroutePlatform,
     validate: (runtimeRoot) => {
       const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });
@@ -461,7 +461,7 @@ function extractTarGz(archivePath, destinationRoot) {
   });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored code-server runtime',
-    suffixParts: ['code-server', 'current'],
+    suffixParts: ['code-server'],
     platform: codeServerPlatform,
     validate: (runtimeRoot) => {
       const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
@@ -470,7 +470,7 @@ function extractTarGz(archivePath, destinationRoot) {
   });
   validateVendoredRuntimeRoots(archivePath, destinationRoot, {
     label: 'vendored OmniRoute runtime',
-    suffixParts: ['omniroute', 'current'],
+    suffixParts: ['omniroute'],
     platform: omniroutePlatform,
     validate: (runtimeRoot) => {
       const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });

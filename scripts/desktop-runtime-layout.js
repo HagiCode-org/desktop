@@ -5,6 +5,10 @@ export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
 }
 
 export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {
+  if (componentId === 'code-server' || componentId === 'omniroute') {
+    return resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options);
+  }
+
   return path.join(
     resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options),
     ...(componentId === 'node' ? [] : ['current']),

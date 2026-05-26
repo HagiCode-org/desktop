@@ -23,12 +23,13 @@ assert.throws(() => detectCodeServerRuntimePlatform('freebsd', 'x64'), /Unsuppor
 
 for (const platform of targetPlatforms) {
   assert.equal(resolveRequestedCodeServerRuntimeVersion(platform, manifest), vendoredRuntime.releaseVersion);
-  assert.deepEqual(
-    resolveConfiguredCodeServerReleaseUrls(platform, manifest),
-    [vendoredRuntime.releaseTagUrl],
-  );
+  assert.deepEqual(resolveConfiguredCodeServerReleaseUrls(platform, manifest), [vendoredRuntime.releaseTagUrl]);
   assert.ok(resolveCodeServerRuntimeTarget(platform, manifest));
+  assert.equal(manifest.platforms[platform].archiveExtension, '.7z');
 }
+
+assert.equal(manifest.packagedLayout.archiveRelativePath, 'archives/code-server.7z');
+assert.equal(manifest.packagedLayout.installMode, 'archive-7z-only');
 
 const previousVersionOverride = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION;
 const previousReleaseOverride = process.env.HAGICODE_CODE_SERVER_RUNTIME_RELEASE_URL;
@@ -54,9 +55,11 @@ if (previousReleaseOverride === undefined) {
 const prepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-code-server-runtime-if-supported.js', import.meta.url), 'utf8');
 
-assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['code-server'\](?:,\s*\{[\s\S]*?\})?\)/, 'prepare script delegates top-level staging to hagiscript update');
-assert.match(prepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'prepare script resolves the pinned code-server runtime version');
-assert.match(prepareScript, /resolveConfiguredCodeServerReleaseUrls/, 'prepare script resolves per-platform release URLs');
+assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['code-server'\]/, 'prepare script delegates staging to hagiscript update');
+assert.match(prepareScript, /validateCodeServerRuntimePayload/, 'prepare script validates the packaged archive-only payload');
+assert.match(prepareScript, /archive payload/, 'prepare script reports archive payload staging');
+assert.doesNotMatch(prepareScript, /extractArchive\(/, 'prepare script no longer extracts the vendored code-server runtime into the packaged tree');
+assert.doesNotMatch(prepareScript, /cp\(/, 'prepare script no longer copies extracted runtime files into packaged current roots');
 assert.match(optionalPrepareScript, /resolveRequestedCodeServerRuntimeVersion/, 'optional prepare script reuses the pinned runtime version contract');
 assert.match(optionalPrepareScript, /resolveConfiguredCodeServerReleaseUrls/, 'optional prepare script checks per-platform release URLs');
 

@@ -259,7 +259,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /installMode: 'embedded-npm'/);
     assert.match(source, /installMode: 'hagiscript-sync'/);
     assert.match(source, /packageName: '@hagicode\/hagiscript'/);
-    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.2\.3'/);
+    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.2\.8'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /packageName: 'pm2'/);
@@ -284,6 +284,15 @@ describe('dependency management service contract', () => {
     assert.match(source, /isManagedPackageVersionSatisfied\(effectiveDefinition, installedVersion\)/);
     assert.match(source, /definition: effectiveDefinition,/);
     assert.match(source, /installSpec: effectiveDefinition\.installSpec,/);
+  });
+
+  it('exposes vendored runtime activation progress listeners and snapshot state', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /getActiveVendoredRuntimeActivation\(\)/);
+    assert.match(source, /onVendoredRuntimeActivationProgress\(/);
+    assert.match(source, /return onVendoredRuntimeActivationProgress\(listener\);/);
+    assert.match(source, /activeRuntimeActivation: getActiveVendoredRuntimeActivation\(\),/);
   });
 
   it('degrades vendored runtime inspection failures into snapshots instead of failing refresh', async () => {

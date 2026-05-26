@@ -199,17 +199,22 @@ dependencyManagement:
     managedByDesktop: 由 Desktop 直接管理
     runtimeState: 运行状态
     runtimeRoot: 运行时目录
+    packagedRoot: 打包源目录
+    packagedArchivePath: 打包归档
+    packagedMarkerPath: 打包标记
     metadataPath: 元数据路径
     healthUrl: 本地地址
     diagnostics: 诊断信息
     reinstallHint: 该 vendored 运行时随 Desktop 安装包分发。若打包副本损坏，请重新安装 Desktop 以恢复。
     primaryDescriptions:
       installed: 运行时文件已安装，并且符合最新 hagiscript 运行时契约。
+      packaged: 打包归档已就绪，但可写运行时尚未启用。
       not-installed: Desktop 托管位置中还没有安装该运行时文件。
       removed: 运行时文件已从 Desktop 托管位置移除。
       failed: 运行时文件不完整，或未通过校验。
     installStatus:
       installed: 已安装
+      packaged: 已打包
       not-installed: 未安装
       removed: 已移除
       failed: 校验失败
@@ -219,7 +224,10 @@ dependencyManagement:
       stopped: 已停止
       missing: 缺失
       damaged: 已损坏
+      enable-required: 需要启用
+      extracting: 提取中
     actions:
+      enable: 启用运行时
       start: 启动
       stop: 停止
       restart: 重启
@@ -228,6 +236,16 @@ dependencyManagement:
       openRuntimeRoot: 打开运行时目录
       openUrl: 打开本地地址
       reinstallDesktop: 重新安装 Desktop
+    activationInline: 正在提取运行时... {{percent}}%
+    activationStage:
+      idle: 空闲
+      validating-source: 正在校验打包源
+      preparing-staging: 正在准备 staging 目录
+      extracting: 正在提取归档
+      validating-runtime: 正在校验提取后的运行时
+      swapping-runtime: 正在切换到当前运行时
+      completed: 启用完成
+      failed: 启用失败
   vendoredRuntimes:
     omniroute:
       description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -524,6 +542,7 @@ system:
     port: '端口: {{port}}'
     notReady: 未就绪
     installRequired: 需要安装
+    enableRequired: 启用运行时
     startFailed: 服务启动失败
     stopFailed: 服务停止失败
     restartFailed: 服务重启失败

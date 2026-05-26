@@ -25,12 +25,19 @@ describe('OmniRoute renderer wiring', () => {
     assert.match(appSource, /\{currentView === 'omniroute' && <OmniRouteManagementPage \/>\}/);
   });
 
-  it('renders status summary, lifecycle controls, path buttons, config validation, and logs', async () => {
+  it('renders activation-aware status, lifecycle controls, path buttons, config validation, and logs', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
+    assert.match(source, /type Operation = 'enable' \| 'start' \| 'stop' \| 'restart' \| 'repair'/);
     assert.match(source, /window\.electronAPI\.omniroute/);
     assert.match(source, /getBridge\(\)\.getStatus\(\)/);
     assert.match(source, /getBridge\(\)\[action\]\(\)/);
+    assert.match(source, /window\.electronAPI\.dependencyManagement\.enableVendoredRuntime\('omniroute'\)/);
+    assert.match(source, /window\.electronAPI\.dependencyManagement\.onVendoredRuntimeActivationProgress/);
+    assert.match(source, /const activationInProgress = status\?\.runtime\.status === 'extracting';/);
+    assert.match(source, /const runtimeEnableAvailable = runtimePrimaryAction === 'enable';/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.activationInline/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.actions\.enable/);
     assert.match(source, /runLifecycle\('repair'\)/);
     assert.match(source, /openOmniRouteDependencyRepair/);
     assert.match(source, /status\?\.remediation/);

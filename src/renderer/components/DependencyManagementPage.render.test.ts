@@ -112,6 +112,31 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /dependencyManagement\.batchLog\.title/);
   });
 
+  it('renders vendored runtime cards with enable actions and activation progress updates', async () => {
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /const \[runtimeActionState, setRuntimeActionState\]/);
+    assert.match(pageSource, /const \[runtimeOperationError, setRuntimeOperationError\]/);
+    assert.match(pageSource, /const unsubscribeActivation = bridge\.onVendoredRuntimeActivationProgress/);
+    assert.match(pageSource, /activeRuntimeActivation: \['completed', 'failed'\]\.includes\(event\.stage\) \? null : event/);
+    assert.match(pageSource, /status: \['completed', 'failed'\]\.includes\(event\.stage\) \? item\.status : 'extracting'/);
+    assert.match(pageSource, /enableVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /startVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /stopVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /restartVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /repairVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /<VendoredRuntimeCard/);
+
+    assert.match(packageGroupsSource, /dependencyManagement\.vendoredRuntime\.actions\.enable/);
+    assert.match(packageGroupsSource, /item.status === 'extracting'/);
+    assert.match(packageGroupsSource, /dependencyManagement\.vendoredRuntime\.packagedArchivePath/);
+    assert.match(packageGroupsSource, /dependencyManagement\.vendoredRuntime\.activationStage\.\$\{item\.activation\.stage\}/);
+    assert.match(packageGroupsSource, /onOpenRuntimeRoot/);
+  });
+
   it('renders the hagiscript bootstrap card and gated selectable package table', async () => {
     const [pageSource, packageGroupsSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
@@ -310,6 +335,10 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof enJson.dependencyManagement.mirror.enabledHelp, 'string');
     assert.equal(typeof enJson.dependencyManagement.omniRouteRepair.targetBadge, 'string');
     assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.installStatus.installed, 'string');
+    assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.actions.enable, 'string');
+    assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.status['enable-required'], 'string');
+    assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.activationInline, 'string');
+    assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.activationStage.extracting, 'string');
     assert.equal(typeof zhJson.dependencyManagement.vendoredRuntime.runtimeState, 'string');
   });
 });

@@ -34,7 +34,7 @@ describe('omniroute remediation classification', () => {
         runtimeInstallStatus: 'not-installed',
       },
       packages: [
-        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.3' },
+        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.8' },
       ],
     });
 
@@ -85,7 +85,7 @@ describe('omniroute remediation classification', () => {
     const remediation = buildOmniRouteDependencyRemediation({
       runtime: healthyRuntime,
       packages: [
-        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.3' },
+        { packageId: 'hagiscript', packageStatus: 'installed', executablePath: '/toolchain/hagiscript', installedVersion: '0.2.8' },
       ],
     });
 

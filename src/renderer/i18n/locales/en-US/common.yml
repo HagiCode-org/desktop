@@ -199,17 +199,22 @@ dependencyManagement:
     managedByDesktop: Managed directly by Desktop
     runtimeState: Runtime state
     runtimeRoot: Runtime root
+    packagedRoot: Packaged source root
+    packagedArchivePath: Packaged archive
+    packagedMarkerPath: Packaged marker
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
       installed: Runtime files are installed and matched the latest hagiscript runtime contract.
+      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
       not-installed: Runtime files are not installed in the Desktop-managed location yet.
       removed: Runtime files were removed from the Desktop-managed location.
       failed: Runtime files are incomplete or failed validation.
     installStatus:
       installed: Installed
+      packaged: Packaged
       not-installed: Not installed
       removed: Removed
       failed: Failed validation
@@ -219,7 +224,10 @@ dependencyManagement:
       stopped: Stopped
       missing: Missing
       damaged: Damaged
+      enable-required: Enable required
+      extracting: Extracting
     actions:
+      enable: Enable Runtime
       start: Start
       stop: Stop
       restart: Restart
@@ -228,6 +236,16 @@ dependencyManagement:
       openRuntimeRoot: Open runtime root
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
+    activationInline: Extracting runtime... {{percent}}%
+    activationStage:
+      idle: Idle
+      validating-source: Validating packaged source
+      preparing-staging: Preparing staging directory
+      extracting: Extracting archive
+      validating-runtime: Validating extracted runtime
+      swapping-runtime: Promoting extracted runtime
+      completed: Activation complete
+      failed: Activation failed
   vendoredRuntimes:
     omniroute:
       description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -524,6 +542,7 @@ system:
     port: 'Port: {{port}}'
     notReady: Not ready
     installRequired: Installation required
+    enableRequired: Enable runtime
     startFailed: Failed to start the service
     stopFailed: Failed to stop the service
     restartFailed: Failed to restart the service

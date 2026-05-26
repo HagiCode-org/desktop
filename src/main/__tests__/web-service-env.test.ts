@@ -116,7 +116,7 @@ describe('web-service-env', () => {
         getPortableToolchainBinRoot: () => '/managed/toolchain/bin',
         getPortableNodeBinRoot: () => '/managed/toolchain/node/bin',
         getPortableNpmGlobalBinRoot: () => '/managed/toolchain/npm-global/bin',
-        getCodeServerRuntimeRoot: () => '/managed/code-server/current',
+        getCodeServerRuntimeRoot: () => '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current',
       },
       {
         platform: 'linux',
@@ -124,8 +124,8 @@ describe('web-service-env', () => {
       },
     );
 
-    assert.equal(result.runtimeRoot, '/managed/code-server/current');
-    assert.equal(result.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT, '/managed/code-server/current');
+    assert.equal(result.runtimeRoot, '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current');
+    assert.equal(result.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT, '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current');
     assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/managed/toolchain');
     assert.match(result.env.PATH || '', /^\/managed\/toolchain\/bin:\/managed\/toolchain\/node\/bin:\/managed\/toolchain\/npm-global\/bin:/);
   });

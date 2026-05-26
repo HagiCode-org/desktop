@@ -143,7 +143,7 @@ describe('dependency readiness evaluation', () => {
     const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
     const pm2 = summary.optionalPackages.find((item) => item.id === 'pm2');
 
-    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.3');
+    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.8');
     assert.equal(hagiscript?.versionSatisfied, true);
     assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
     assert.equal(pm2?.versionSatisfied, true);
@@ -160,8 +160,8 @@ describe('dependency readiness evaluation', () => {
       isManagedPackageVersionSatisfied(
         {
           ...hagiscriptDefinition,
-          installSpec: '@hagicode/hagiscript@0.2.3',
-          requiredVersionRange: '0.2.3',
+          installSpec: '@hagicode/hagiscript@0.2.8',
+          requiredVersionRange: '0.2.8',
         },
         '0.2.7-dev',
       ),

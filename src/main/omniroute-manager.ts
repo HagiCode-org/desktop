@@ -16,7 +16,9 @@ import {
 } from './hagiscript-runtime-context.js';
 import { buildOmniRouteDependencyRemediation } from './omniroute-remediation.js';
 import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
-import { executeCli } from './utils/cli-executor.js';
+import {
+  getVendoredRuntimeActivationService,
+} from './vendored-runtime-activation.js';
 import { PathManager } from './path-manager.js';
 import {
   OMNIROUTE_DEFAULT_PORT,
@@ -174,6 +176,7 @@ export class OmniRouteManager {
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
   private readonly hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver;
   private readonly hagiscriptPm2Manager: HagiscriptPm2Manager;
+  private readonly vendoredRuntimeActivationService: ReturnType<typeof getVendoredRuntimeActivationService>;
 
   constructor(options: OmniRouteManagerOptions) {
     this.configManager = options.configManager;
@@ -185,6 +188,7 @@ export class OmniRouteManager {
       dependencyManagementService: this.dependencyManagementService,
     });
     this.hagiscriptPm2Manager = new HagiscriptPm2Manager();
+    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(this.pathManager);
   }
 
   async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
@@ -263,6 +267,17 @@ export class OmniRouteManager {
     }
   }
 
+  async enableVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
+    const result = await this.runRuntimeActivation('enable');
+    return {
+      success: result.success,
+      runtimeId: 'omniroute',
+      action: 'enable',
+      status: result.status.runtime,
+      error: result.error,
+    };
+  }
+
   async start(): Promise<OmniRouteLifecycleResult> {
     return this.runLifecycle('start');
   }
@@ -309,41 +324,13 @@ export class OmniRouteManager {
   }
 
   async repairVendoredRuntime(): Promise<VendoredRuntimeLifecycleResult> {
-    if (process.env.NODE_ENV !== 'development') {
-      return {
-        success: false,
-        runtimeId: 'omniroute',
-        action: 'repair',
-        status: await this.getRuntimeSnapshot(),
-        error: 'Vendored OmniRoute repair is only available in development builds. Reinstall Desktop to restore the packaged runtime.',
-      };
-    }
-
-    const result = await executeCli({
-      command: process.execPath,
-      args: [path.join(process.cwd(), 'scripts', 'prepare-vendored-omniroute-runtime.js')],
-      cwd: process.cwd(),
-      env: process.env,
-      shell: false,
-      windowsHide: true,
-      metadata: { component: 'OmniRouteManager', command: 'prepare-vendored-omniroute-runtime' },
-    });
-
-    if (result.exitCode !== 0) {
-      return {
-        success: false,
-        runtimeId: 'omniroute',
-        action: 'repair',
-        status: await this.getRuntimeSnapshot(),
-        error: (result.stderr || result.stdout || 'Vendored OmniRoute repair failed.').trim(),
-      };
-    }
-
+    const result = await this.runRuntimeActivation('repair');
     return {
-      success: true,
+      success: result.success,
       runtimeId: 'omniroute',
       action: 'repair',
-      status: await this.getRuntimeSnapshot(),
+      status: result.status.runtime,
+      error: result.error,
     };
   }
 
@@ -440,6 +427,13 @@ export class OmniRouteManager {
       this.validatePort(this.getConfig().port);
 
       const hagiscriptContext = await this.resolveDependencyContext();
+      const activationFailure = action === 'start' || action === 'restart'
+        ? await this.ensureRuntimeReadyForLifecycle(action)
+        : null;
+      if (activationFailure) {
+        throw new Error(activationFailure);
+      }
+
       const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager);
       remediation = this.buildRemediation(runtime, hagiscriptContext);
       if (remediation) {
@@ -642,6 +636,42 @@ export class OmniRouteManager {
     const errorLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-error']);
     const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(context.appName)},\n      script: ${JSON.stringify(launch.script)},\n      args: ${JSON.stringify(launch.args)},\n      cwd: ${JSON.stringify(launch.cwd)},\n      interpreter: ${JSON.stringify(launch.interpreterNone ? 'none' : 'node')},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue ?? '')},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getOmniRouteRuntimeDataHome())},\n        PM2_HOME: ${JSON.stringify(context.pm2Home)},\n        PORT: ${JSON.stringify(env.PORT ?? '')},\n        OMNIROUTE_PORT: ${JSON.stringify(env.OMNIROUTE_PORT ?? '')},\n        DASHBOARD_PORT: ${JSON.stringify(env.DASHBOARD_PORT ?? '')},\n        API_PORT: ${JSON.stringify(env.API_PORT ?? '')},\n        HOSTNAME: ${JSON.stringify(env.HOSTNAME ?? '')},\n        NODE_ENV: ${JSON.stringify(env.NODE_ENV ?? '')},\n        NODE_OPTIONS: ${JSON.stringify(env.NODE_OPTIONS ?? '')},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(env.OMNIROUTE_BASE_URL ?? '')},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(env.OMNIROUTE_CONFIG_DIR ?? '')},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(env.OMNIROUTE_DATA_DIR ?? '')},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(env.OMNIROUTE_LOG_DIR ?? '')},\n        OMNIROUTE_ENV_DIR: ${JSON.stringify(env.OMNIROUTE_ENV_DIR ?? '')},\n        OMNIROUTE_ENV_PATH: ${JSON.stringify(env.OMNIROUTE_ENV_PATH ?? '')},\n        OMNIROUTE_RUNTIME_DIR: ${JSON.stringify(env.OMNIROUTE_RUNTIME_DIR ?? '')},\n        DATA_DIR: ${JSON.stringify(env.DATA_DIR ?? '')},\n        CLIPROXYAPI_CONFIG_DIR: ${JSON.stringify(env.CLIPROXYAPI_CONFIG_DIR ?? '')},\n        INITIAL_PASSWORD: ${JSON.stringify(env.INITIAL_PASSWORD ?? '')},\n        OMNIROUTE_DESKTOP_PASSWORD: ${JSON.stringify(env.OMNIROUTE_DESKTOP_PASSWORD ?? '')},\n        OMNIROUTE_DESKTOP_SECRET: ${JSON.stringify(env.OMNIROUTE_DESKTOP_SECRET ?? '')},\n        OMNIROUTE_DESKTOP_MANAGED: ${JSON.stringify(env.OMNIROUTE_DESKTOP_MANAGED ?? '')}\n      }\n    }\n  ]\n};\n`;
     await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
+  }
+
+  private async runRuntimeActivation(
+    action: 'enable' | 'repair',
+  ): Promise<OmniRouteLifecycleResult> {
+    const activation = await this.vendoredRuntimeActivationService.activate('omniroute');
+    return {
+      success: activation.success,
+      action,
+      status: await this.getStatus(),
+      error: activation.error,
+      remediation: activation.success ? undefined : await this.getStatus().then((status) => status.remediation),
+    };
+  }
+
+  private async ensureRuntimeReadyForLifecycle(
+    action: Extract<OmniRouteLifecycleAction, 'start' | 'restart'>,
+  ): Promise<string | null> {
+    const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager);
+    if (runtime.status === 'extracting') {
+      return runtime.message ?? 'Vendored OmniRoute runtime activation is already in progress.';
+    }
+
+    if (runtime.primaryAction === 'enable' || runtime.primaryAction === 'repair') {
+      const activation = await this.vendoredRuntimeActivationService.activate('omniroute');
+      if (!activation.success) {
+        return activation.error ?? activation.status.message ?? 'Vendored OmniRoute runtime activation failed.';
+      }
+    }
+
+    const readyRuntime = await inspectVendoredOmniRouteRuntime(this.pathManager);
+    if (!readyRuntime.wrapperPath && !readyRuntime.entryScriptPath) {
+      return readyRuntime.message ?? 'Vendored OmniRoute runtime is not ready.';
+    }
+
+    return null;
   }
 
   private buildRemediation(

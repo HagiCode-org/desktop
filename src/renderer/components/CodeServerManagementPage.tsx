@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Loader2, Monitor, PackageOpen, Play, RefreshCw, RotateCcw, Save, Square, Wrench } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type {
   CodeServerBridge,
@@ -21,7 +21,7 @@ import { switchView } from '@/store/slices/viewSlice';
 import type { AppDispatch } from '@/store';
 
 type PageState = 'loading' | 'ready' | 'error';
-type Operation = 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-config' | 'load-log' | 'open-window' | 'open-browser' | null;
+type Operation = 'enable' | 'start' | 'stop' | 'restart' | 'repair' | 'refresh' | 'save-config' | 'load-log' | 'open-window' | 'open-browser' | null;
 
 const LOG_TARGETS: CodeServerLogTarget[] = ['service-out', 'service-error'];
 const PATH_TARGETS: CodeServerPathTarget[] = ['runtime-root', 'data', 'extensions', 'logs'];
@@ -76,10 +76,12 @@ export default function CodeServerManagementPage() {
   const portValidationKey = useMemo(() => validatePortInput(portInput), [portInput]);
   const passwordValidationKey = useMemo(() => validatePasswordInput(passwordInput), [passwordInput]);
   const isRunning = status?.status === 'running';
-  const lifecycleBlocked = !status?.pm2Available || status?.runtime.installStatus !== 'installed';
+  const activationInProgress = status?.runtime.status === 'extracting';
+  const lifecycleBlocked = !status?.pm2Available || status?.runtime.installStatus !== 'installed' || activationInProgress;
   const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
   const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
   const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
+  const runtimeEnableAvailable = runtimePrimaryAction === 'enable';
   const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
   const runtimeRequiresDesktopReinstall = runtimePrimaryAction === 'reinstall-desktop';
 
@@ -115,6 +117,22 @@ export default function CodeServerManagementPage() {
         const errorLog = await getBridge().readLog({ target: 'service-error', maxLines: 200 });
         setLogs((current) => ({ ...current, 'service-error': errorLog }));
         setSelectedLogTarget('service-error');
+        setErrorMessage(result.error ?? t('codeServer.errors.operationFailed'));
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOperation(null);
+    }
+  };
+
+  const enableRuntime = async () => {
+    setOperation('enable');
+    setErrorMessage(null);
+    try {
+      const result = await window.electronAPI.dependencyManagement.enableVendoredRuntime('code-server');
+      applyStatus(await getBridge().getStatus());
+      if (!result.success) {
         setErrorMessage(result.error ?? t('codeServer.errors.operationFailed'));
       }
     } catch (error) {
@@ -221,12 +239,29 @@ export default function CodeServerManagementPage() {
         applyStatus(nextStatus);
       }
     });
+    const activationUnsubscribe = window.electronAPI.dependencyManagement.onVendoredRuntimeActivationProgress((event) => {
+      if (disposed || event.runtimeId !== 'code-server') {
+        return;
+      }
+      setStatus((current) => current ? {
+        ...current,
+        runtime: {
+          ...current.runtime,
+          activation: event,
+          status: ['completed', 'failed'].includes(event.stage) ? current.runtime.status : 'extracting',
+        },
+      } : current);
+      if (event.stage === 'completed' || event.stage === 'failed') {
+        void refreshStatus();
+      }
+    });
 
     void refreshStatus();
 
     return () => {
       disposed = true;
       unsubscribe();
+      activationUnsubscribe();
     };
   }, []);
 
@@ -289,6 +324,9 @@ export default function CodeServerManagementPage() {
           <AlertTitle>{t(`dependencyManagement.vendoredRuntime.installStatus.${runtimeInstallStatus}`)}</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>{status.runtime.message ?? t(`dependencyManagement.vendoredRuntime.primaryDescriptions.${runtimeInstallStatus}`)}</p>
+            {activationInProgress ? (
+              <p className="text-sm text-muted-foreground">{t('dependencyManagement.vendoredRuntime.activationInline', { percent: status.runtime.activation?.percentage ?? 0 })}</p>
+            ) : null}
             {status.runtime.diagnostics.length > 0 ? (
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                 {status.runtime.diagnostics.slice(0, 4).map((diagnostic) => (
@@ -297,6 +335,12 @@ export default function CodeServerManagementPage() {
               </ul>
             ) : null}
             <div className="flex flex-wrap gap-2">
+              {runtimeEnableAvailable || activationInProgress ? (
+                <Button type="button" onClick={() => void enableRuntime()} disabled={isBusy || activationInProgress}>
+                  <PackageOpen className="mr-2 h-4 w-4" />
+                  {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
+                </Button>
+              ) : null}
               {runtimeRepairAvailable ? (
                 <Button type="button" onClick={() => void runLifecycle('repair')} disabled={isBusy}>
                   <Wrench className="mr-2 h-4 w-4" />
@@ -353,10 +397,17 @@ export default function CodeServerManagementPage() {
             </CardContent>
             <CardContent className="pt-0">
               <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
-                <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlocked}>
-                  <Play className="mr-2 h-4 w-4" />
-                  {operation === 'start' ? t('codeServer.actions.working') : t('codeServer.actions.start')}
-                </Button>
+                {runtimeEnableAvailable || activationInProgress ? (
+                  <Button onClick={() => void enableRuntime()} disabled={isBusy || activationInProgress}>
+                    <PackageOpen className="mr-2 h-4 w-4" />
+                    {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
+                  </Button>
+                ) : (
+                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlocked}>
+                    <Play className="mr-2 h-4 w-4" />
+                    {operation === 'start' ? t('codeServer.actions.working') : t('codeServer.actions.start')}
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
                   <Square className="mr-2 h-4 w-4" />
                   {operation === 'stop' ? t('codeServer.actions.working') : t('codeServer.actions.stop')}

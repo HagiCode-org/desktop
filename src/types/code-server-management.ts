@@ -3,7 +3,7 @@ import type { VendoredRuntimeStatusSnapshot } from './dependency-management.js';
 export const CODE_SERVER_DEFAULT_PORT = 37667;
 export const CODE_SERVER_PROCESS_NAME = 'hagicode-code-server';
 
-export type CodeServerLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
+export type CodeServerLifecycleAction = 'enable' | 'start' | 'stop' | 'restart' | 'repair';
 export type CodeServerOverallStatus = 'running' | 'stopped' | 'missing' | 'damaged' | 'error';
 export type CodeServerProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type CodeServerLogTarget = 'service-out' | 'service-error';

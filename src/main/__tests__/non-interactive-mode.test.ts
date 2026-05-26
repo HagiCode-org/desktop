@@ -51,6 +51,7 @@ function createSnapshot(): DependencyManagementSnapshot {
       registryUrl: null,
     },
     activeOperation: null,
+    activeRuntimeActivation: null,
     generatedAt: '2026-04-28T00:00:00.000Z',
   };
 }
@@ -157,18 +158,18 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
       codeServer: {
         ok,
         status: ok ? 'ok' : 'damaged',
-        root: '/artifact/resources/extra/runtime/components/bundled/code-server/current',
-        wrapperPath: '/artifact/resources/extra/runtime/components/bundled/code-server/current/bin/code-server',
-        entryScriptPath: '/artifact/resources/extra/runtime/components/bundled/code-server/current/out/node/entry.js',
+        root: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current',
+        wrapperPath: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current/bin/code-server',
+        entryScriptPath: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime/current/out/node/entry.js',
         version: '4.99.0',
         issues: ok ? [] : ['code-server wrapper missing'],
       },
       omniRoute: {
         ok,
         status: ok ? 'ok' : 'damaged',
-        root: '/artifact/resources/extra/runtime/components/bundled/omniroute/current',
-        wrapperPath: '/artifact/resources/extra/runtime/components/bundled/omniroute/current/bin/omniroute',
-        entryScriptPath: '/artifact/resources/extra/runtime/components/bundled/omniroute/current/dist/index.js',
+        root: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime/current',
+        wrapperPath: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime/current/bin/omniroute',
+        entryScriptPath: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime/current/bin/omniroute.mjs',
         version: '0.1.0',
         issues: ok ? [] : ['omniroute wrapper missing'],
       },

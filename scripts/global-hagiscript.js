@@ -268,7 +268,7 @@ async function importGlobalHagiscriptModule(relativeCandidates, minimumVersion =
 export async function extractZipArchiveWithGlobalHagiscript(
   archivePath,
   destination,
-  minimumVersion = '0.2.7',
+  minimumVersion = '0.2.8',
 ) {
   const module = await importGlobalHagiscriptModule(
     ['dist/runtime/zip-extract.js', 'runtime/lib/zip-extract.mjs'],

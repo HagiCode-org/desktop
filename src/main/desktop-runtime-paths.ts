@@ -145,6 +145,39 @@ export function resolveDesktopRuntimeServiceDataHome(
   return path.join(runtimeDataHome, service.dataRelativePath);
 }
 
+export function resolveDesktopRuntimeServiceRuntimeHome(
+  serviceId: DesktopRuntimeServiceId,
+  runtimeDataHome: string,
+  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
+): string {
+  return path.join(
+    resolveDesktopRuntimeServiceDataHome(serviceId, runtimeDataHome, manifest),
+    'runtime',
+  );
+}
+
+export function resolveDesktopRuntimeServiceActiveRuntimeRoot(
+  serviceId: DesktopRuntimeServiceId,
+  runtimeDataHome: string,
+  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
+): string {
+  return path.join(
+    resolveDesktopRuntimeServiceRuntimeHome(serviceId, runtimeDataHome, manifest),
+    'current',
+  );
+}
+
+export function resolveDesktopRuntimeServiceStagingRuntimeRoot(
+  serviceId: DesktopRuntimeServiceId,
+  runtimeDataHome: string,
+  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
+): string {
+  return path.join(
+    resolveDesktopRuntimeServiceRuntimeHome(serviceId, runtimeDataHome, manifest),
+    'staging',
+  );
+}
+
 export function resolveDesktopRuntimeSharedDataPaths(
   runtimeDataHome: string,
   manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),

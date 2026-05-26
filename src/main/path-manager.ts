@@ -34,8 +34,12 @@ import {
   resolveDesktopRuntimeComponentProgramRoot,
   resolveDesktopRuntimeDataHome,
   resolveDesktopRuntimeProgramHome,
+  resolveDesktopRuntimeServiceActiveRuntimeRoot,
   resolveDesktopRuntimeServiceDataHome,
+  resolveDesktopRuntimeServiceRuntimeHome,
+  resolveDesktopRuntimeServiceStagingRuntimeRoot,
   resolveDesktopRuntimeSharedDataPaths,
+  type DesktopRuntimeServiceId,
 } from './desktop-runtime-paths.js';
 import {
   registerRuntimeManifestUserDataPath,
@@ -53,6 +57,13 @@ const { app } = electron;
 function hasVendoredRuntimeMetadata(runtimeRoot: string): boolean {
   return fsSync.existsSync(path.join(runtimeRoot, 'metadata.json'))
     || fsSync.existsSync(path.join(runtimeRoot, '..', '.hagicode-runtime.json'));
+}
+
+function resolveVendoredRuntimeOverrideRoot(overrideRoot: string): string {
+  const resolvedOverride = path.resolve(overrideRoot);
+  return path.basename(resolvedOverride) === 'current'
+    ? resolvedOverride
+    : path.join(resolvedOverride, 'current');
 }
 
 export {
@@ -461,6 +472,35 @@ export class PathManager {
     return resolveDesktopRuntimeServiceDataHome('omniroute', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
   }
 
+  getVendoredRuntimeDataHome(serviceId: DesktopRuntimeServiceId): string {
+    return resolveDesktopRuntimeServiceDataHome(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
+  getVendoredRuntimePackagedRoot(serviceId: DesktopRuntimeServiceId): string {
+    return resolveDesktopRuntimeComponentContainerRoot(serviceId, this.getRuntimeProgramHome(), this.getCurrentPlatform(), readDesktopRuntimeManifest());
+  }
+
+  getVendoredRuntimePackagedMarkerPath(serviceId: DesktopRuntimeServiceId): string {
+    return path.join(this.getVendoredRuntimePackagedRoot(serviceId), '.hagicode-runtime.json');
+  }
+
+  getVendoredRuntimePackagedArchivePath(serviceId: DesktopRuntimeServiceId): string {
+    const archiveFileName = serviceId === 'code-server' ? 'code-server.7z' : 'omniroute.7z';
+    return path.join(this.getVendoredRuntimePackagedRoot(serviceId), 'archives', archiveFileName);
+  }
+
+  getVendoredRuntimeHome(serviceId: DesktopRuntimeServiceId): string {
+    return resolveDesktopRuntimeServiceRuntimeHome(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
+  getVendoredRuntimeRoot(serviceId: DesktopRuntimeServiceId): string {
+    return resolveDesktopRuntimeServiceActiveRuntimeRoot(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
+  getVendoredRuntimeStagingRoot(serviceId: DesktopRuntimeServiceId): string {
+    return resolveDesktopRuntimeServiceStagingRuntimeRoot(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
+  }
+
   getNodeMajorNpmGlobalPaths(
     input: Omit<NodeMajorNpmGlobalPathOptions, 'userDataPath'> = {},
   ): NodeMajorNpmGlobalPaths {
@@ -795,30 +835,58 @@ export class PathManager {
     return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
   }
 
+  getCodeServerPackagedRuntimeRoot(): string {
+    return this.getVendoredRuntimePackagedRoot('code-server');
+  }
+
+  getCodeServerPackagedArchivePath(): string {
+    return this.getVendoredRuntimePackagedArchivePath('code-server');
+  }
+
+  getCodeServerRuntimeHome(): string {
+    return this.getVendoredRuntimeHome('code-server');
+  }
+
   getCodeServerRuntimeRoot(): string {
     const overrideRoot = process.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT?.trim();
     if (overrideRoot) {
-      const resolvedOverride = path.resolve(overrideRoot);
-      const currentRoot = path.join(resolvedOverride, 'current');
-      return hasVendoredRuntimeMetadata(currentRoot) ? currentRoot : resolvedOverride;
+      return resolveVendoredRuntimeOverrideRoot(overrideRoot);
     }
 
-    return resolveDesktopRuntimeComponentProgramRoot('code-server', this.getRuntimeProgramHome(), this.getCurrentPlatform());
+    return this.getVendoredRuntimeRoot('code-server');
+  }
+
+  getCodeServerRuntimeStagingRoot(): string {
+    return this.getVendoredRuntimeStagingRoot('code-server');
   }
 
   getCodeServerRuntimeConfigPath(): string {
     return resolveCodeServerRuntimeConfigPath();
   }
 
+  getOmniRoutePackagedRuntimeRoot(): string {
+    return this.getVendoredRuntimePackagedRoot('omniroute');
+  }
+
+  getOmniRoutePackagedArchivePath(): string {
+    return this.getVendoredRuntimePackagedArchivePath('omniroute');
+  }
+
+  getOmniRouteRuntimeHome(): string {
+    return this.getVendoredRuntimeHome('omniroute');
+  }
+
   getOmniRouteRuntimeRoot(): string {
     const overrideRoot = process.env.HAGICODE_OMNIROUTE_RUNTIME_ROOT?.trim();
     if (overrideRoot) {
-      const resolvedOverride = path.resolve(overrideRoot);
-      const currentRoot = path.join(resolvedOverride, 'current');
-      return hasVendoredRuntimeMetadata(currentRoot) ? currentRoot : resolvedOverride;
+      return resolveVendoredRuntimeOverrideRoot(overrideRoot);
     }
 
-    return resolveDesktopRuntimeComponentProgramRoot('omniroute', this.getRuntimeProgramHome(), this.getCurrentPlatform());
+    return this.getVendoredRuntimeRoot('omniroute');
+  }
+
+  getOmniRouteRuntimeStagingRoot(): string {
+    return this.getVendoredRuntimeStagingRoot('omniroute');
   }
 
   getOmniRouteRuntimeConfigPath(): string {

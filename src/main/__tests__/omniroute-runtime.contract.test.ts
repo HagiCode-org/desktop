@@ -30,19 +30,21 @@ describe('vendored OmniRoute runtime contract', () => {
     assert.equal(manifest.expectedLayout.entryScript, 'bin/omniroute.mjs');
   });
 
-  it('validates vendored metadata, wrapper discovery, and entry script paths without npm globals', async () => {
+  it('routes OmniRoute inspection through the shared archive-aware vendored runtime validator', async () => {
     const source = await fs.readFile(runtimeInspectorPath, 'utf8');
 
     assert.match(source, /readOmniRouteRuntimeConfig/);
     assert.match(source, /resolveOmniRouteWrapperPath/);
-    assert.match(source, /platform === 'win32'/);
-    assert.ok(source.includes('filter(candidate => /\\.(cmd|bat)$/i.test(candidate))'));
-    assert.ok(source.includes('filter(candidate => !/\\.(cmd|bat|ps1)$/i.test(candidate))'));
-    assert.match(source, /options\.platform \?\? process\.platform/);
-    assert.match(source, /metadata\.json/);
-    assert.match(source, /extra\.bundledNodeRuntime=true/);
-    assert.match(source, /getOmniRouteRuntimeConfigPath\(\)/);
-    assert.match(source, /pathManager\.getOmniRouteRuntimeRoot\(\)/);
+    assert.match(source, /detectSupportedVendoredRuntimePlatform/);
+    assert.match(source, /resolveVendoredRuntimeWrapperPath/);
+    assert.match(source, /validateVendoredRuntime\(\{/);
+    assert.match(source, /inspectVendoredRuntime\(\{/);
+    assert.match(source, /manifestPath: getOmniRouteRuntimeConfigPath\(\)/);
+    assert.match(source, /packagedRoot: options\.pathManager\.getOmniRoutePackagedRuntimeRoot\(\)/);
+    assert.match(source, /stagedRoot: options\.pathManager\.getOmniRouteRuntimeStagingRoot\(\)/);
+    assert.match(source, /runtimeRoot: options\.runtimeRoot \?\? pathManager\.getOmniRouteRuntimeRoot\(\)/);
+    assert.match(source, /expectedBundledNodeRuntime: true/);
+    assert.match(source, /versionOverrideEnvVar: 'HAGICODE_OMNIROUTE_RUNTIME_VERSION'/);
     assert.doesNotMatch(source, /node_modules', packageName/);
   });
 });

@@ -30,7 +30,7 @@ import {
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.2.3';
+const MINIMUM_HAGISCRIPT_VERSION = '0.2.8';
 const managedExecution = isManagedDesktopRuntimeComponentExecution();
 
 if (!managedExecution) {

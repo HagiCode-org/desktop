@@ -31,6 +31,10 @@ import {
   findManagedNpmPackage,
   isVendoredRuntimeMutationId,
 } from '../shared/npm-managed-packages.js';
+import {
+  getActiveVendoredRuntimeActivation,
+  onVendoredRuntimeActivationProgress,
+} from './vendored-runtime-activation-state.js';
 import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   ManagedNpmPackageDefinition,
@@ -199,6 +203,12 @@ export class DependencyManagementService {
     return () => this.events.off('progress', listener);
   }
 
+  onVendoredRuntimeActivationProgress(
+    listener: (event: import('../types/dependency-management.js').VendoredRuntimeActivationProgress) => void,
+  ): () => void {
+    return onVendoredRuntimeActivationProgress(listener);
+  }
+
   setVendoredRuntimeInspector(inspector: (() => Promise<VendoredRuntimeStatusSnapshot[]>) | null): void {
     this.vendoredRuntimeInspector = inspector;
   }
@@ -217,6 +227,7 @@ export class DependencyManagementService {
       vendoredRuntimes,
       mirrorSettings,
       activeOperation: this.activeOperation,
+      activeRuntimeActivation: getActiveVendoredRuntimeActivation(),
       generatedAt: new Date().toISOString(),
     };
   }
@@ -256,8 +267,21 @@ export class DependencyManagementService {
         definition,
         installStatus: 'failed',
         status: 'damaged',
+        sourceStatus: 'missing',
         version: null,
         runtimeRoot,
+        stagingRoot: runtimeId === 'code-server'
+          ? this.pathManager.getCodeServerRuntimeStagingRoot()
+          : this.pathManager.getOmniRouteRuntimeStagingRoot(),
+        packagedRoot: runtimeId === 'code-server'
+          ? this.pathManager.getCodeServerPackagedRuntimeRoot()
+          : this.pathManager.getOmniRoutePackagedRuntimeRoot(),
+        packagedArchivePath: runtimeId === 'code-server'
+          ? this.pathManager.getCodeServerPackagedArchivePath()
+          : this.pathManager.getOmniRoutePackagedArchivePath(),
+        packagedMarkerPath: runtimeId === 'code-server'
+          ? this.pathManager.getVendoredRuntimePackagedMarkerPath('code-server')
+          : this.pathManager.getVendoredRuntimePackagedMarkerPath('omniroute'),
         metadataPath: null,
         wrapperPath: null,
         entryScriptPath: null,
@@ -267,6 +291,7 @@ export class DependencyManagementService {
         managedByDesktop: true,
         primaryAction: process.env.NODE_ENV === 'development' ? 'repair' : 'reinstall-desktop',
         diagnostics: [message],
+        activation: null,
         health: {
           reachable: false,
           url: null,

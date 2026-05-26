@@ -21,10 +21,20 @@ export type ManagedNpmPackageInstallMode = 'embedded-npm' | 'hagiscript-sync';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
 export type VendoredRuntimeId = 'code-server' | 'omniroute';
-export type VendoredRuntimeInstallStatus = 'installed' | 'not-installed' | 'removed' | 'failed';
-export type VendoredRuntimeStatus = 'ready' | 'running' | 'stopped' | 'missing' | 'damaged';
-export type VendoredRuntimePrimaryAction = 'none' | 'repair' | 'reinstall-desktop' | 'start' | 'stop';
-export type VendoredRuntimeLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
+export type VendoredRuntimeInstallStatus = 'installed' | 'not-installed' | 'removed' | 'failed' | 'packaged';
+export type VendoredRuntimeStatus = 'ready' | 'running' | 'stopped' | 'missing' | 'damaged' | 'enable-required' | 'extracting';
+export type VendoredRuntimePrimaryAction = 'none' | 'enable' | 'repair' | 'reinstall-desktop' | 'start' | 'stop';
+export type VendoredRuntimeLifecycleAction = 'enable' | 'start' | 'stop' | 'restart' | 'repair';
+export type VendoredRuntimeSourceStatus = 'available' | 'missing' | 'invalid';
+export type VendoredRuntimeActivationStage =
+  | 'idle'
+  | 'validating-source'
+  | 'preparing-staging'
+  | 'extracting'
+  | 'validating-runtime'
+  | 'swapping-runtime'
+  | 'completed'
+  | 'failed';
 
 export interface ManagedNpmPackageDefinition {
   id: ManagedNpmPackageId;
@@ -76,13 +86,29 @@ export interface VendoredRuntimeHealthSnapshot {
   message?: string;
 }
 
+export interface VendoredRuntimeActivationProgress {
+  runtimeId: VendoredRuntimeId;
+  attemptId: string;
+  stage: VendoredRuntimeActivationStage;
+  message: string;
+  percentage?: number;
+  startedAt: string;
+  updatedAt: string;
+  error?: string;
+}
+
 export interface VendoredRuntimeStatusSnapshot {
   id: VendoredRuntimeId;
   definition: VendoredRuntimeDefinition;
   installStatus: VendoredRuntimeInstallStatus;
   status: VendoredRuntimeStatus;
+  sourceStatus: VendoredRuntimeSourceStatus;
   version: string | null;
   runtimeRoot: string;
+  stagingRoot: string;
+  packagedRoot: string;
+  packagedArchivePath: string | null;
+  packagedMarkerPath: string | null;
   metadataPath: string | null;
   wrapperPath: string | null;
   entryScriptPath: string | null;
@@ -92,6 +118,7 @@ export interface VendoredRuntimeStatusSnapshot {
   managedByDesktop: boolean;
   primaryAction: VendoredRuntimePrimaryAction;
   diagnostics: string[];
+  activation: VendoredRuntimeActivationProgress | null;
   health: VendoredRuntimeHealthSnapshot;
   message?: string;
 }
@@ -146,7 +173,6 @@ export interface ManagedNpmPackageStatusSnapshot {
 
 export interface DependencyManagementInstallRequest {
   packageId: ManagedNpmPackageId;
-  // Selector currently applies only to hagiscript and supports exact versions plus dist-tags like latest/dev.
   selector?: string;
 }
 
@@ -165,6 +191,7 @@ export interface DependencyManagementSnapshot {
   vendoredRuntimes: VendoredRuntimeStatusSnapshot[];
   mirrorSettings: NpmMirrorSettings;
   activeOperation: DependencyManagementOperationProgress | null;
+  activeRuntimeActivation: VendoredRuntimeActivationProgress | null;
   generatedAt: string;
 }
 
@@ -251,12 +278,14 @@ export interface DependencyManagementBridge {
   ) => Promise<DependencyManagementOperationResult>;
   uninstall: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   syncPackages: (request: DependencyManagementBatchSyncRequest) => Promise<DependencyManagementBatchSyncResult>;
+  enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   stopVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   restartVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   repairVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   openVendoredRuntimePath: (runtimeId: VendoredRuntimeId, target: 'logs' | 'runtime-root') => Promise<VendoredRuntimePathOpenResult>;
   onProgress: (callback: (event: DependencyManagementOperationProgress) => void) => () => void;
+  onVendoredRuntimeActivationProgress: (callback: (event: VendoredRuntimeActivationProgress) => void) => () => void;
 }
 
 export const dependencyManagementChannels = {
@@ -267,12 +296,14 @@ export const dependencyManagementChannels = {
   install: 'dependency-management:install',
   uninstall: 'dependency-management:uninstall',
   syncPackages: 'dependency-management:sync-packages',
+  enableVendoredRuntime: 'dependency-management:enable-vendored-runtime',
   startVendoredRuntime: 'dependency-management:start-vendored-runtime',
   stopVendoredRuntime: 'dependency-management:stop-vendored-runtime',
   restartVendoredRuntime: 'dependency-management:restart-vendored-runtime',
   repairVendoredRuntime: 'dependency-management:repair-vendored-runtime',
   openVendoredRuntimePath: 'dependency-management:open-vendored-runtime-path',
   progress: 'dependency-management:progress',
+  vendoredRuntimeActivationProgress: 'dependency-management:vendored-runtime-activation-progress',
 } as const;
 
 export type DependencyManagementChannelMap = typeof dependencyManagementChannels;
@@ -285,12 +316,14 @@ export const legacyDependencyManagementChannels = {
   install: 'npm-management:install',
   uninstall: 'npm-management:uninstall',
   syncPackages: 'npm-management:sync-packages',
+  enableVendoredRuntime: 'npm-management:enable-vendored-runtime',
   startVendoredRuntime: 'npm-management:start-vendored-runtime',
   stopVendoredRuntime: 'npm-management:stop-vendored-runtime',
   restartVendoredRuntime: 'npm-management:restart-vendored-runtime',
   repairVendoredRuntime: 'npm-management:repair-vendored-runtime',
   openVendoredRuntimePath: 'npm-management:open-vendored-runtime-path',
   progress: 'npm-management:progress',
+  vendoredRuntimeActivationProgress: 'npm-management:vendored-runtime-activation-progress',
 } as const;
 
 export type LegacyDependencyManagementChannelMap = typeof legacyDependencyManagementChannels;

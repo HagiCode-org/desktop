@@ -18,16 +18,16 @@ const runtimeRoot = resolveManagedDesktopRuntimeComponentRoot()
   ? path.resolve(process.cwd(), process.argv[2])
   : resolveStagedDesktopRuntimeComponentRoot('omniroute', { cwd: process.cwd() }));
 
-assertGlobalHagiscriptAvailable('0.2.3');
+assertGlobalHagiscriptAvailable('0.2.8');
 
 if (!fs.existsSync(runtimeRoot)) {
-  throw new Error(`Vendored OmniRoute runtime root does not exist: ${runtimeRoot}`);
+  throw new Error(`Vendored OmniRoute packaged runtime root does not exist: ${runtimeRoot}`);
 }
 
 const validation = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey, config });
 const errors = [...validation.missingEntries, ...validation.diagnostics];
 if (errors.length > 0) {
-  throw new Error(`Vendored OmniRoute runtime validation failed:\n- ${errors.join('\n- ')}`);
+  throw new Error(`Vendored OmniRoute packaged runtime validation failed:\n- ${errors.join('\n- ')}`);
 }
 
-console.log(`[omniroute-runtime] Verified vendored runtime at ${runtimeRoot}`);
+console.log(`[omniroute-runtime] Verified vendored packaged runtime at ${runtimeRoot}`);

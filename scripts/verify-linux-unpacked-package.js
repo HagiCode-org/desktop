@@ -229,12 +229,12 @@ function main() {
     },
     {
       label: 'vendored code-server runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server', 'current'),
+      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server'),
       validate: validateCodeServerRuntime,
     },
     {
       label: 'vendored OmniRoute runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'omniroute', 'current'),
+      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'omniroute'),
       validate: validateOmniRouteRuntime,
     },
   ];

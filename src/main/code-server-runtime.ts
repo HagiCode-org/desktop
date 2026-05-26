@@ -1,16 +1,19 @@
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import path from 'node:path';
-import type { PathManager } from './path-manager.js';
 import { getCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
 import { readRuntimeManifestSection } from './runtime-manifest-store.js';
-import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
+import type { PathManager } from './path-manager.js';
+import {
+  detectSupportedVendoredRuntimePlatform,
+  inspectVendoredRuntime,
+  resolveVendoredRuntimeTarget,
+  resolveVendoredRuntimeWrapperPath,
+  type ValidatedVendoredRuntime,
+  type VendoredRuntimeConfig,
+  type ValidateVendoredRuntimeOptions,
+  validateVendoredRuntime,
+} from './vendored-runtime-inspector.js';
 import type {
-  VendoredRuntimeInstallStatus,
+  VendoredRuntimeActivationProgress,
   VendoredRuntimeHealthSnapshot,
-  VendoredRuntimeMetadata,
-  VendoredRuntimePrimaryAction,
-  VendoredRuntimeStatus,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
@@ -20,12 +23,9 @@ interface CodeServerRuntimePlatformTarget {
   archiveExtension: string;
 }
 
-interface CodeServerRuntimeConfig {
-  schemaVersion: number;
+interface CodeServerRuntimeConfig extends VendoredRuntimeConfig {
   runtime: 'code-server';
   packageId: 'code-server';
-  releaseVersion?: string;
-  releaseVersionByPlatform?: Record<string, string>;
   defaultPort: number;
   source: {
     generatedRootSubdir?: string | null;
@@ -36,11 +36,6 @@ interface CodeServerRuntimeConfig {
     allowedDownloadHosts?: string[];
   };
   platforms: Record<string, CodeServerRuntimePlatformTarget>;
-  expectedLayout: {
-    requiredEntries: string[];
-    wrapperCandidates: string[];
-    entryScript: string;
-  };
 }
 
 export interface ValidateCodeServerRuntimeOptions {
@@ -50,22 +45,10 @@ export interface ValidateCodeServerRuntimeOptions {
   arch?: string;
   existsSync?: (targetPath: string) => boolean;
   health?: VendoredRuntimeHealthSnapshot;
+  activation?: VendoredRuntimeActivationProgress | null;
 }
 
-export interface ValidatedCodeServerRuntime {
-  config: CodeServerRuntimeConfig;
-  metadata: VendoredRuntimeMetadata | null;
-  metadataPath: string | null;
-  wrapperPath: string | null;
-  entryScriptPath: string | null;
-  missingEntries: string[];
-  diagnostics: string[];
-  installStatus: VendoredRuntimeInstallStatus;
-  status: VendoredRuntimeStatus;
-}
-
-const LEGACY_METADATA_FILE = 'metadata.json';
-const HAGISCRIPT_COMPONENT_MARKER_FILE = '.hagicode-runtime.json';
+export type ValidatedCodeServerRuntime = ValidatedVendoredRuntime;
 
 export function readCodeServerRuntimeConfig(): CodeServerRuntimeConfig {
   return readRuntimeManifestSection<CodeServerRuntimeConfig>('codeServerRuntime', {
@@ -77,256 +60,52 @@ export function detectCodeServerRuntimePlatform(
   runtimePlatform: NodeJS.Platform = process.platform,
   runtimeArch: string = process.arch,
 ): keyof CodeServerRuntimeConfig['platforms'] {
-  if (runtimePlatform === 'win32') {
-    return 'win-x64';
-  }
-  if (runtimePlatform === 'linux') {
-    return 'linux-x64';
-  }
-  if (runtimePlatform === 'darwin') {
-    return runtimeArch === 'arm64' ? 'osx-arm64' : 'osx-x64';
-  }
-  throw new Error(`Unsupported vendored code-server platform: ${runtimePlatform}/${runtimeArch}`);
+  return detectSupportedVendoredRuntimePlatform(
+    runtimePlatform,
+    runtimeArch,
+  ) as keyof CodeServerRuntimeConfig['platforms'];
 }
 
 export function resolveCodeServerRuntimeTarget(
   platform = detectCodeServerRuntimePlatform(),
   config = readCodeServerRuntimeConfig(),
 ): CodeServerRuntimePlatformTarget {
-  const target = config.platforms[platform];
-  if (!target) {
-    throw new Error(`Vendored code-server runtime is not configured for ${platform}`);
-  }
-  return target;
-}
-
-function resolveExpectedCodeServerRuntimeVersion(
-  platform = detectCodeServerRuntimePlatform(),
-  config = readCodeServerRuntimeConfig(),
-): string | null {
-  const override = process.env.HAGICODE_CODE_SERVER_RUNTIME_VERSION?.trim();
-  if (override) {
-    return override;
-  }
-
-  const perPlatform = config.releaseVersionByPlatform?.[platform];
-  if (typeof perPlatform === 'string' && perPlatform.trim().length > 0) {
-    return perPlatform.trim();
-  }
-
-  if (typeof config.releaseVersion === 'string' && config.releaseVersion.trim().length > 0) {
-    return config.releaseVersion.trim();
-  }
-
-  return null;
-}
-
-async function readCodeServerRuntimeMetadataRecord(
-  runtimeRoot: string,
-  {
-    platform = detectCodeServerRuntimePlatform(),
-    config = readCodeServerRuntimeConfig(),
-  }: {
-    platform?: keyof CodeServerRuntimeConfig['platforms'];
-    config?: CodeServerRuntimeConfig;
-  } = {},
-): Promise<{ metadata: VendoredRuntimeMetadata | null; metadataPath: string | null }> {
-  const metadataPath = path.join(runtimeRoot, LEGACY_METADATA_FILE);
-  try {
-    return {
-      metadata: JSON.parse(await fs.readFile(metadataPath, 'utf8')) as VendoredRuntimeMetadata,
-      metadataPath,
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
-  }
-
-  const markerPath = path.join(runtimeRoot, '..', HAGISCRIPT_COMPONENT_MARKER_FILE);
-  try {
-    const marker = JSON.parse(await fs.readFile(markerPath, 'utf8')) as Record<string, unknown>;
-    const target = resolveCodeServerRuntimeTarget(platform, config);
-    return {
-      metadata: {
-        schemaVersion: config.schemaVersion,
-        packageId: config.packageId,
-        version: typeof marker.version === 'string' ? marker.version : '',
-        platform: target.platform,
-        arch: target.arch,
-        sourceRevision:
-          (typeof marker.vendoredReleaseTag === 'string' && marker.vendoredReleaseTag)
-          || (typeof marker.vendoredReleaseName === 'string' && marker.vendoredReleaseName)
-          || (typeof marker.generatedAt === 'string' && marker.generatedAt)
-          || 'hagiscript-managed',
-        extra: {
-          bundledNodeRuntime: false,
-        },
-        artifacts: typeof marker.vendoredAssetName === 'string'
-          ? [{
-            kind: 'release-asset',
-            fileName: marker.vendoredAssetName,
-            blobKey: typeof marker.vendoredAssetUrl === 'string' && marker.vendoredAssetUrl
-              ? marker.vendoredAssetUrl
-              : marker.vendoredAssetName,
-            platform: target.platform,
-            arch: target.arch,
-          }]
-          : undefined,
-      },
-      metadataPath: markerPath,
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return {
-        metadata: null,
-        metadataPath: null,
-      };
-    }
-    throw error;
-  }
-}
-
-export async function readCodeServerRuntimeMetadata(runtimeRoot: string): Promise<VendoredRuntimeMetadata | null> {
-  return (await readCodeServerRuntimeMetadataRecord(runtimeRoot)).metadata;
+  return resolveVendoredRuntimeTarget(platform, config) as CodeServerRuntimePlatformTarget;
 }
 
 export function resolveCodeServerWrapperPath(
   runtimeRoot: string,
-  config: CodeServerRuntimeConfig = readCodeServerRuntimeConfig(),
+  config: Pick<CodeServerRuntimeConfig, 'expectedLayout'> = readCodeServerRuntimeConfig(),
   platform: NodeJS.Platform = process.platform,
-  existsSync: (targetPath: string) => boolean = fsSync.existsSync,
+  existsSync?: (targetPath: string) => boolean,
 ): string | null {
-  const orderedCandidates = platform === 'win32'
-    ? [
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.cmd$/i.test(candidate)),
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|ps1)$/i.test(candidate)),
-      ]
-    : config.expectedLayout.wrapperCandidates;
-
-  for (const relativePath of orderedCandidates) {
-    const candidate = path.join(runtimeRoot, relativePath);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-function resolveRequiredEntry(relativePattern: string, runtimeRoot: string, existsSync: (targetPath: string) => boolean): string | null {
-  const candidates = relativePattern.split('|').map((entry) => entry.trim()).filter(Boolean);
-  for (const candidate of candidates) {
-    const targetPath = path.join(runtimeRoot, candidate);
-    if (existsSync(targetPath)) {
-      return targetPath;
-    }
-  }
-  return null;
-}
-
-function normalizeInstallStatus(
-  missingEntries: string[],
-  diagnostics: string[],
-): VendoredRuntimeInstallStatus {
-  if (missingEntries.includes('runtime-root')) {
-    return 'not-installed';
-  }
-  if (missingEntries.length > 0 || diagnostics.length > 0) {
-    return 'failed';
-  }
-  return 'installed';
-}
-
-function normalizeStatus(
-  missingEntries: string[],
-  diagnostics: string[],
-  health: VendoredRuntimeHealthSnapshot | undefined,
-): VendoredRuntimeStatus {
-  if (missingEntries.length > 0) {
-    return missingEntries.includes('runtime-root') ? 'missing' : 'damaged';
-  }
-  if (health?.reachable) {
-    return 'running';
-  }
-  if (health?.message) {
-    return 'stopped';
-  }
-  if (diagnostics.length > 0) {
-    return 'damaged';
-  }
-  return 'ready';
+  return resolveVendoredRuntimeWrapperPath(
+    runtimeRoot,
+    config as VendoredRuntimeConfig,
+    platform,
+    existsSync,
+  );
 }
 
 export async function validateCodeServerRuntime(
   options: ValidateCodeServerRuntimeOptions,
 ): Promise<ValidatedCodeServerRuntime> {
-  const existsSync = options.existsSync ?? fsSync.existsSync;
   const config = readCodeServerRuntimeConfig();
-  const diagnostics: string[] = [];
-  const missingEntries: string[] = [];
-  const platform = detectCodeServerRuntimePlatform(options.platform ?? process.platform, options.arch ?? process.arch);
-  const { metadata, metadataPath } = await readCodeServerRuntimeMetadataRecord(options.runtimeRoot, { platform, config });
-
-  try {
-    resolveCodeServerRuntimeTarget(platform, config);
-  } catch (error) {
-    diagnostics.push(error instanceof Error ? error.message : String(error));
-  }
-
-  if (!existsSync(options.runtimeRoot)) {
-    missingEntries.push('runtime-root');
-  }
-
-  for (const relativePattern of config.expectedLayout.requiredEntries) {
-    if (!resolveRequiredEntry(relativePattern, options.runtimeRoot, existsSync)) {
-      missingEntries.push(relativePattern);
-    }
-  }
-
-  if (!metadata) {
-    diagnostics.push('Vendored runtime metadata is missing (metadata.json or ../.hagicode-runtime.json)');
-  } else {
-    if (metadata.schemaVersion !== config.schemaVersion) {
-      diagnostics.push(`Metadata schemaVersion expected ${config.schemaVersion} but found ${metadata.schemaVersion ?? 'missing'}`);
-    }
-    if (metadata.packageId !== config.packageId) {
-      diagnostics.push(`Metadata packageId expected ${config.packageId} but found ${metadata.packageId ?? 'missing'}`);
-    }
-    const expectedVersion = resolveExpectedCodeServerRuntimeVersion(
-      platform,
-      config,
-    );
-    if (expectedVersion && metadata.version !== expectedVersion) {
-      diagnostics.push(`Metadata version expected ${expectedVersion} but found ${metadata.version ?? 'missing'}`);
-    }
-    if (metadata.extra?.bundledNodeRuntime !== false) {
-      diagnostics.push('Vendored code-server metadata must declare extra.bundledNodeRuntime=false');
-    }
-  }
-
-  const entryScriptPath = path.join(options.runtimeRoot, config.expectedLayout.entryScript);
-  const wrapperPath = resolveCodeServerWrapperPath(
-    options.runtimeRoot,
+  return validateVendoredRuntime({
+    runtimeId: 'code-server',
+    runtimeRoot: options.runtimeRoot,
+    packagedRoot: options.pathManager.getCodeServerPackagedRuntimeRoot(),
+    stagedRoot: options.pathManager.getCodeServerRuntimeStagingRoot(),
+    pathManager: options.pathManager,
     config,
-    options.platform ?? process.platform,
-    existsSync,
-  );
-  if (!wrapperPath) {
-    diagnostics.push('No runnable code-server wrapper was found in the staged runtime root');
-  }
-
-  return {
-    config,
-    metadata,
-    metadataPath,
-    wrapperPath,
-    entryScriptPath: existsSync(entryScriptPath) ? entryScriptPath : null,
-    missingEntries,
-    diagnostics,
-    installStatus: normalizeInstallStatus(missingEntries, diagnostics),
-    status: normalizeStatus(missingEntries, diagnostics, options.health),
-  };
+    expectedBundledNodeRuntime: false,
+    versionOverrideEnvVar: 'HAGICODE_CODE_SERVER_RUNTIME_VERSION',
+    platform: options.platform,
+    arch: options.arch,
+    existsSync: options.existsSync,
+    health: options.health,
+    activation: options.activation,
+  } satisfies ValidateVendoredRuntimeOptions);
 }
 
 export async function inspectVendoredCodeServerRuntime(
@@ -337,46 +116,17 @@ export async function inspectVendoredCodeServerRuntime(
     existsSync?: (targetPath: string) => boolean;
   } = {},
 ): Promise<VendoredRuntimeStatusSnapshot> {
-  const definition = findVendoredRuntime('code-server');
-  if (!definition) {
-    throw new Error('Vendored runtime definition is missing for code-server');
-  }
-
-  const runtimeRoot = options.runtimeRoot ?? pathManager.getCodeServerRuntimeRoot();
-  const validated = await validateCodeServerRuntime({
-    runtimeRoot,
+  const config = readCodeServerRuntimeConfig();
+  return inspectVendoredRuntime({
+    runtimeId: 'code-server',
+    runtimeRoot: options.runtimeRoot ?? pathManager.getCodeServerRuntimeRoot(),
+    packagedRoot: pathManager.getCodeServerPackagedRuntimeRoot(),
+    stagedRoot: pathManager.getCodeServerRuntimeStagingRoot(),
     pathManager,
+    config,
+    expectedBundledNodeRuntime: false,
+    versionOverrideEnvVar: 'HAGICODE_CODE_SERVER_RUNTIME_VERSION',
     existsSync: options.existsSync,
     health: options.health,
-  });
-  const health = options.health ?? {
-    reachable: false,
-    url: null,
-    lastCheckedAt: null,
-  };
-  const primaryAction: VendoredRuntimePrimaryAction = validated.installStatus !== 'installed'
-    ? (process.env.NODE_ENV === 'development' ? 'repair' : 'reinstall-desktop')
-    : validated.status === 'running'
-      ? 'stop'
-      : 'start';
-
-  return {
-    id: definition.id,
-    definition,
-    installStatus: validated.installStatus,
-    status: validated.status,
-    version: validated.metadata?.version ?? null,
-    runtimeRoot,
-    metadataPath: validated.metadataPath,
-    wrapperPath: validated.wrapperPath,
-    entryScriptPath: validated.entryScriptPath,
-    packageId: validated.metadata?.packageId ?? 'code-server',
-    schemaVersion: validated.metadata?.schemaVersion ?? null,
-    bundledNodeRuntime: validated.metadata?.extra?.bundledNodeRuntime === true,
-    managedByDesktop: true,
-    primaryAction,
-    diagnostics: [...validated.missingEntries, ...validated.diagnostics],
-    health,
-    message: validated.diagnostics[0],
-  };
+  } satisfies ValidateVendoredRuntimeOptions);
 }

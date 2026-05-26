@@ -1,6 +1,6 @@
 runtime:
   name: hagicode-desktop-runtime
-  version: 0.2.3
+  version: 0.2.8
 
 paths:
   runtimeRoot: .
@@ -89,6 +89,7 @@ components:
     type: bundled-runtime
     source: desktop-vendored-runtime
     version: *vendoredRuntimeVersion
+    bundledInstallMode: archive-7z-only
     runtimeDataDir: services/omniroute
     lifecycleDependencies:
       - node
@@ -102,6 +103,7 @@ components:
     type: bundled-runtime
     source: desktop-vendored-runtime
     version: *vendoredRuntimeVersion
+    bundledInstallMode: archive-7z-only
     runtimeDataDir: services/code-server
     lifecycleDependencies:
       - node
@@ -310,23 +312,27 @@ desktopExtensions:
         - objects.githubusercontent.com
         - githubusercontent.com
         - index.hagicode.com
+    packagedLayout:
+      markerFile: .hagicode-runtime.json
+      archiveRelativePath: archives/code-server.7z
+      installMode: archive-7z-only
     platforms:
       linux-x64:
         platform: linux
         arch: amd64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       osx-x64:
         platform: macos
         arch: amd64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       osx-arm64:
         platform: macos
         arch: arm64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       win-x64:
         platform: windows
         arch: amd64
-        archiveExtension: .zip
+        archiveExtension: .7z
     expectedLayout:
       requiredEntries:
         - metadata.json|../.hagicode-runtime.json
@@ -355,23 +361,27 @@ desktopExtensions:
         - objects.githubusercontent.com
         - githubusercontent.com
         - index.hagicode.com
+    packagedLayout:
+      markerFile: .hagicode-runtime.json
+      archiveRelativePath: archives/omniroute.7z
+      installMode: archive-7z-only
     platforms:
       linux-x64:
         platform: linux
         arch: amd64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       osx-x64:
         platform: macos
         arch: amd64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       osx-arm64:
         platform: macos
         arch: arm64
-        archiveExtension: .tar.gz
+        archiveExtension: .7z
       win-x64:
         platform: windows
         arch: amd64
-        archiveExtension: .zip
+        archiveExtension: .7z
     expectedLayout:
       requiredEntries:
         - metadata.json|../.hagicode-runtime.json

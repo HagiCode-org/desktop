@@ -25,12 +25,19 @@ describe('Code Server renderer wiring', () => {
     assert.match(appSource, /\{currentView === 'code-server' && <CodeServerManagementPage \/>\}/);
   });
 
-  it('renders lifecycle controls, password config, path buttons, logs, and managed window actions', async () => {
+  it('renders activation-aware lifecycle controls, password config, path buttons, logs, and managed window actions', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
+    assert.match(source, /type Operation = 'enable' \| 'start' \| 'stop' \| 'restart' \| 'repair'/);
     assert.match(source, /window\.electronAPI\.codeServer/);
     assert.match(source, /getBridge\(\)\.getStatus\(\)/);
     assert.match(source, /getBridge\(\)\[action\]\(\)/);
+    assert.match(source, /window\.electronAPI\.dependencyManagement\.enableVendoredRuntime\('code-server'\)/);
+    assert.match(source, /window\.electronAPI\.dependencyManagement\.onVendoredRuntimeActivationProgress/);
+    assert.match(source, /const activationInProgress = status\?\.runtime\.status === 'extracting';/);
+    assert.match(source, /const runtimeEnableAvailable = runtimePrimaryAction === 'enable';/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.activationInline/);
+    assert.match(source, /dependencyManagement\.vendoredRuntime\.actions\.enable/);
     assert.match(source, /window\.electronAPI\.openCodeServerWindow\(status\.config\.baseUrl, status\.config\.password\)/);
     assert.match(source, /window\.electronAPI\.openCodeServerExternal\(status\.config\.baseUrl, status\.config\.password\)/);
     assert.match(source, /validatePortInput/);

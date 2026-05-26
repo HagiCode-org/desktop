@@ -7,7 +7,7 @@ import type {
 export const OMNIROUTE_DEFAULT_PORT = 36988;
 export const OMNIROUTE_PROCESS_NAME = 'desktop-omniroute-service';
 
-export type OmniRouteLifecycleAction = 'start' | 'stop' | 'restart' | 'repair';
+export type OmniRouteLifecycleAction = 'enable' | 'start' | 'stop' | 'restart' | 'repair';
 export type OmniRouteOverallStatus = 'running' | 'stopped' | 'partial' | 'error';
 export type OmniRouteProcessStatus = 'online' | 'stopped' | 'errored' | 'unknown';
 export type OmniRouteLogTarget = 'service-out' | 'service-error';

@@ -13,7 +13,9 @@ import {
   HagiscriptRuntimeContextResolver,
   type HagiscriptRuntimeContext,
 } from './hagiscript-runtime-context.js';
-import { executeCli } from './utils/cli-executor.js';
+import {
+  getVendoredRuntimeActivationService,
+} from './vendored-runtime-activation.js';
 import { PathManager } from './path-manager.js';
 import type {
   VendoredRuntimeHealthSnapshot,
@@ -36,7 +38,7 @@ import type {
   CodeServerStatusSnapshot,
 } from '../types/code-server-management.js';
 
-const { app, shell } = electron;
+const { shell } = electron;
 
 const PROCESS_NAME = 'hagicode-code-server';
 const OUT_LOG_FILE = 'code-server-out.log';
@@ -98,6 +100,7 @@ export class CodeServerManager {
   private readonly openPathImpl: (targetPath: string) => Promise<string>;
   private readonly hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver;
   private readonly hagiscriptPm2Manager: HagiscriptPm2Manager;
+  private readonly vendoredRuntimeActivationService: ReturnType<typeof getVendoredRuntimeActivationService>;
 
   constructor(options: {
     dependencyManagementService: DependencyManagementService;
@@ -115,6 +118,7 @@ export class CodeServerManager {
       dependencyManagementService: this.dependencyManagementService,
     });
     this.hagiscriptPm2Manager = new HagiscriptPm2Manager();
+    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(this.pathManager);
   }
 
   async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
@@ -249,6 +253,10 @@ export class CodeServerManager {
     };
   }
 
+  async enable(): Promise<VendoredRuntimeLifecycleResult> {
+    return this.runLifecycle('enable');
+  }
+
   async start(): Promise<VendoredRuntimeLifecycleResult> {
     return this.runLifecycle('start');
   }
@@ -303,11 +311,18 @@ export class CodeServerManager {
 
   private async runLifecycle(action: VendoredRuntimeLifecycleAction): Promise<VendoredRuntimeLifecycleResult> {
     try {
-      if (action === 'repair') {
-        return await this.runRepair();
+      if (action === 'repair' || action === 'enable') {
+        return await this.runRepair(action);
       }
 
       const paths = await this.ensureLayout();
+      if (action !== 'stop') {
+        const activationFailure = await this.ensureRuntimeReadyForLifecycle(action);
+        if (activationFailure) {
+          return activationFailure;
+        }
+      }
+
       const runtime = await inspectVendoredCodeServerRuntime(this.pathManager);
       if (!runtime.wrapperPath && !runtime.entryScriptPath) {
         throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
@@ -361,45 +376,56 @@ export class CodeServerManager {
     }
   }
 
-  private async runRepair(): Promise<VendoredRuntimeLifecycleResult> {
-    if (app.isPackaged) {
-      return {
-        success: false,
-        runtimeId: 'code-server',
-        action: 'repair',
-        status: await this.getRuntimeSnapshot(),
-        error: 'Vendored code-server repair is only available in development builds. Reinstall Desktop to restore the packaged runtime.',
-      };
-    }
-
-    const prepareScriptPath = path.resolve(process.cwd(), 'scripts', 'prepare-code-server-runtime.js');
-    const result = await executeCli({
-      command: process.execPath,
-      args: [prepareScriptPath],
-      env: {
-        ...process.env,
-      },
-      shell: false,
-      windowsHide: true,
-      metadata: { component: 'CodeServerManager', command: 'prepare-code-server-runtime' },
-    });
-
-    if (result.exitCode !== 0) {
-      return {
-        success: false,
-        runtimeId: 'code-server',
-        action: 'repair',
-        status: await this.getRuntimeSnapshot(),
-        error: (result.stderr || result.stdout || 'Vendored code-server repair failed.').trim(),
-      };
-    }
-
+  private async runRepair(action: 'enable' | 'repair'): Promise<VendoredRuntimeLifecycleResult> {
+    const result = await this.vendoredRuntimeActivationService.activate('code-server');
     return {
-      success: true,
+      success: result.success,
       runtimeId: 'code-server',
-      action: 'repair',
-      status: await this.getRuntimeSnapshot(),
+      action,
+      status: result.status,
+      error: result.error,
     };
+  }
+
+  private async ensureRuntimeReadyForLifecycle(
+    action: Extract<VendoredRuntimeLifecycleAction, 'start' | 'restart'>,
+  ): Promise<VendoredRuntimeLifecycleResult | null> {
+    const runtime = await inspectVendoredCodeServerRuntime(this.pathManager);
+    if (runtime.status === 'extracting') {
+      return {
+        success: false,
+        runtimeId: 'code-server',
+        action,
+        status: runtime,
+        error: runtime.message ?? 'Vendored code-server runtime activation is already in progress.',
+      };
+    }
+
+    if (runtime.primaryAction === 'enable' || runtime.primaryAction === 'repair') {
+      const activation = await this.vendoredRuntimeActivationService.activate('code-server');
+      if (!activation.success) {
+        return {
+          success: false,
+          runtimeId: 'code-server',
+          action,
+          status: activation.status,
+          error: activation.error,
+        };
+      }
+    }
+
+    const readyRuntime = await inspectVendoredCodeServerRuntime(this.pathManager);
+    if (!readyRuntime.wrapperPath && !readyRuntime.entryScriptPath) {
+      return {
+        success: false,
+        runtimeId: 'code-server',
+        action,
+        status: readyRuntime,
+        error: readyRuntime.message ?? 'Vendored code-server runtime is not ready.',
+      };
+    }
+
+    return null;
   }
 
   private async fallbackSnapshot(error: unknown): Promise<VendoredRuntimeStatusSnapshot> {
@@ -693,6 +719,9 @@ export class CodeServerManager {
     if (runtimeStatus === 'damaged') {
       return 'damaged';
     }
+    if (runtimeStatus === 'enable-required' || runtimeStatus === 'extracting') {
+      return 'stopped';
+    }
     if (processStatus === 'online' || runtimeStatus === 'running') {
       return 'running';
     }
@@ -708,6 +737,9 @@ export class CodeServerManager {
     processStatus: CodeServerProcessStatus,
     statusError?: string,
   ): string | undefined {
+    if (runtime.status === 'enable-required' || runtime.status === 'extracting') {
+      return runtime.message;
+    }
     if (runtime.diagnostics[0]) {
       return runtime.diagnostics[0];
     }
