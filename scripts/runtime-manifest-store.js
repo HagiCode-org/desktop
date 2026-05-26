@@ -82,9 +82,10 @@ export function ensureRuntimeManifestPath(userDataPath = resolveScriptUserDataPa
   const targetPath = getUserDataRuntimeManifestPath(userDataPath, env);
   const sourcePath = getBundledRuntimeManifestPath(cwd);
   const sourceContent = fs.readFileSync(sourcePath, 'utf8');
+  const dataScopePath = resolveRuntimeManifestDataScopePath(userDataPath, env);
   const materializedContent = materializeRuntimeManifestContent(
     sourceContent,
-    resolveRuntimeManifestDataScopePath(userDataPath, env),
+    dataScopePath,
     path.dirname(sourcePath),
   );
   const currentContent = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, 'utf8') : null;
@@ -94,7 +95,77 @@ export function ensureRuntimeManifestPath(userDataPath = resolveScriptUserDataPa
     fs.writeFileSync(targetPath, materializedContent, 'utf8');
   }
 
+  ensureBundledRuntimeTemplates(userDataPath, cwd, env);
   return targetPath;
+}
+
+export function ensureBundledRuntimeTemplates(
+  userDataPath = resolveScriptUserDataPath(),
+  cwd = process.cwd(),
+  env = process.env,
+) {
+  const sourcePath = getBundledRuntimeManifestPath(cwd);
+  const manifest = load(fs.readFileSync(sourcePath, 'utf8'));
+  if (!manifest || Array.isArray(manifest) || typeof manifest !== 'object') {
+    throw new Error('Bundled runtime manifest must be a YAML object.');
+  }
+
+  materializeBundledRuntimeTemplates(
+    manifest,
+    resolveRuntimeManifestDataScopePath(userDataPath, env),
+    path.dirname(sourcePath),
+  );
+}
+
+function materializeBundledRuntimeTemplates(manifest, dataScopePath, manifestDirectory) {
+  if (!manifestDirectory || !Array.isArray(manifest.components)) {
+    return;
+  }
+
+  const targetDirectory = path.join(path.resolve(dataScopePath), 'templates');
+  for (const component of manifest.components) {
+    const componentRecord = asRecord(component);
+    if (!componentRecord || readString(componentRecord.type) !== 'bundled-runtime') {
+      continue;
+    }
+
+    const componentName = readString(componentRecord.name);
+    if (!componentName) {
+      continue;
+    }
+
+    const sourceDirectory = path.resolve(
+      manifestDirectory,
+      'components',
+      'bundled',
+      componentName,
+      'current',
+      'templates',
+    );
+    if (!fs.existsSync(sourceDirectory)) {
+      continue;
+    }
+
+    for (const entry of fs.readdirSync(sourceDirectory, { withFileTypes: true })) {
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      const sourceTemplatePath = path.join(sourceDirectory, entry.name);
+      const targetTemplatePath = path.join(targetDirectory, entry.name);
+      const sourceTemplateContent = fs.readFileSync(sourceTemplatePath);
+      const targetTemplateContent = fs.existsSync(targetTemplatePath)
+        ? fs.readFileSync(targetTemplatePath)
+        : null;
+
+      if (targetTemplateContent && Buffer.compare(sourceTemplateContent, targetTemplateContent) === 0) {
+        continue;
+      }
+
+      fs.mkdirSync(targetDirectory, { recursive: true });
+      fs.writeFileSync(targetTemplatePath, sourceTemplateContent);
+    }
+  }
 }
 
 export function readRuntimeManifestStore(options = {}) {
