@@ -84,6 +84,7 @@ async function createPackagedRuntimeFixture(input: {
   schemaVersion: number;
   packageId: string;
   bundledNodeRuntime: boolean;
+  archiveIncludesLegacyMetadata?: boolean;
 }): Promise<void> {
   const sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), `${input.runtimeId}-payload-`));
   cleanupRoots.add(sourceRoot);
@@ -100,18 +101,30 @@ async function createPackagedRuntimeFixture(input: {
     },
   };
 
+  const archiveIncludesLegacyMetadata = input.archiveIncludesLegacyMetadata ?? true;
+
   await fs.mkdir(path.join(sourceRoot, 'bin'), { recursive: true });
-  await fs.writeFile(path.join(sourceRoot, 'metadata.json'), JSON.stringify(metadata, null, 2));
+  if (archiveIncludesLegacyMetadata) {
+    await fs.writeFile(path.join(sourceRoot, 'metadata.json'), JSON.stringify(metadata, null, 2));
+  }
 
   if (input.runtimeId === 'code-server') {
     await fs.mkdir(path.join(sourceRoot, 'out', 'node'), { recursive: true });
     await fs.writeFile(path.join(sourceRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\necho code-server\n');
     await fs.writeFile(path.join(sourceRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
-    await createArchive(input.archivePath, sourceRoot, ['metadata.json', 'bin', 'out']);
+    await createArchive(
+      input.archivePath,
+      sourceRoot,
+      archiveIncludesLegacyMetadata ? ['metadata.json', 'bin', 'out'] : ['bin', 'out'],
+    );
   } else {
     await fs.writeFile(path.join(sourceRoot, 'bin', 'omniroute'), '#!/usr/bin/env bash\necho omniroute\n');
     await fs.writeFile(path.join(sourceRoot, 'bin', 'omniroute.mjs'), 'console.log("omniroute");\n');
-    await createArchive(input.archivePath, sourceRoot, ['metadata.json', 'bin']);
+    await createArchive(
+      input.archivePath,
+      sourceRoot,
+      archiveIncludesLegacyMetadata ? ['metadata.json', 'bin'] : ['bin'],
+    );
   }
 
   await fs.mkdir(input.packagedRoot, { recursive: true });
@@ -186,6 +199,7 @@ describe('vendored runtime activation service', () => {
       schemaVersion: config.schemaVersion,
       packageId: config.packageId,
       bundledNodeRuntime: false,
+      archiveIncludesLegacyMetadata: false,
     });
 
     const service = new VendoredRuntimeActivationService(createFakePathManager(layout) as any);
@@ -199,6 +213,7 @@ describe('vendored runtime activation service', () => {
     assert.equal(result.status.packagedArchivePath, layout.codeServer.packagedArchivePath);
     assert.equal(Boolean(result.status.wrapperPath), true);
     assert.equal(Boolean(result.status.entryScriptPath), true);
+    await fs.access(path.join(layout.codeServer.runtimeHome, '.hagicode-runtime.json'));
   });
 
   it('activates vendored OmniRoute into the Desktop-owned userData runtime root', async () => {
@@ -214,6 +229,7 @@ describe('vendored runtime activation service', () => {
       schemaVersion: config.schemaVersion,
       packageId: config.packageId,
       bundledNodeRuntime: true,
+      archiveIncludesLegacyMetadata: false,
     });
 
     const service = new VendoredRuntimeActivationService(createFakePathManager(layout) as any);
@@ -227,6 +243,7 @@ describe('vendored runtime activation service', () => {
     assert.equal(result.status.packagedArchivePath, layout.omniRoute.packagedArchivePath);
     assert.equal(Boolean(result.status.wrapperPath), true);
     assert.equal(Boolean(result.status.entryScriptPath), true);
+    await fs.access(path.join(layout.omniRoute.runtimeHome, '.hagicode-runtime.json'));
   });
 
   it('returns a damaged snapshot when the packaged archive contract is invalid', async () => {

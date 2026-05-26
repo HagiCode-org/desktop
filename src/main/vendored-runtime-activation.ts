@@ -32,6 +32,7 @@ interface RuntimeActivationPaths {
   currentRoot: string;
   packagedRoot: string;
   packagedArchivePath: string;
+  packagedMarkerPath: string;
   runtimeHome: string;
   stagingRoot: string;
 }
@@ -132,6 +133,7 @@ export class VendoredRuntimeActivationService {
           currentRoot: this.pathManager.getCodeServerRuntimeRoot(),
           packagedRoot: this.pathManager.getCodeServerPackagedRuntimeRoot(),
           packagedArchivePath: this.pathManager.getCodeServerPackagedArchivePath(),
+          packagedMarkerPath: path.join(this.pathManager.getCodeServerPackagedRuntimeRoot(), '.hagicode-runtime.json'),
           runtimeHome: this.pathManager.getCodeServerRuntimeHome(),
           stagingRoot: this.pathManager.getCodeServerRuntimeStagingRoot(),
         },
@@ -157,6 +159,7 @@ export class VendoredRuntimeActivationService {
         currentRoot: this.pathManager.getOmniRouteRuntimeRoot(),
         packagedRoot: this.pathManager.getOmniRoutePackagedRuntimeRoot(),
         packagedArchivePath: this.pathManager.getOmniRoutePackagedArchivePath(),
+        packagedMarkerPath: path.join(this.pathManager.getOmniRoutePackagedRuntimeRoot(), '.hagicode-runtime.json'),
         runtimeHome: this.pathManager.getOmniRouteRuntimeHome(),
         stagingRoot: this.pathManager.getOmniRouteRuntimeStagingRoot(),
       },
@@ -168,8 +171,13 @@ export class VendoredRuntimeActivationService {
   ): Promise<VendoredRuntimeActivationResult> {
     const attemptId = randomUUID();
     const bindings = this.getBindings(runtimeId);
-    const { currentRoot, packagedArchivePath, runtimeHome, stagingRoot } =
-      bindings.paths;
+    const {
+      currentRoot,
+      packagedArchivePath,
+      packagedMarkerPath,
+      runtimeHome,
+      stagingRoot,
+    } = bindings.paths;
 
     try {
       this.emitProgress(
@@ -199,6 +207,7 @@ export class VendoredRuntimeActivationService {
         10,
       );
       await fs.mkdir(runtimeHome, { recursive: true });
+      await this.syncPackagedRuntimeMarker(packagedMarkerPath, runtimeHome);
       await fs.rm(stagingRoot, { recursive: true, force: true });
       await fs.mkdir(stagingRoot, { recursive: true });
 
@@ -292,6 +301,16 @@ export class VendoredRuntimeActivationService {
         error: message,
       };
     }
+  }
+
+  private async syncPackagedRuntimeMarker(
+    packagedMarkerPath: string,
+    runtimeHome: string,
+  ): Promise<void> {
+    await fs.copyFile(
+      packagedMarkerPath,
+      path.join(runtimeHome, '.hagicode-runtime.json'),
+    );
   }
 
   private async promoteStagedRuntime(
