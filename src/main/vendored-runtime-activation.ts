@@ -37,14 +37,19 @@ interface RuntimeActivationPaths {
   stagingRoot: string;
 }
 
+interface RuntimeActivationValidationResult {
+  status: VendoredRuntimeStatusSnapshot['status'];
+  sourceStatus: VendoredRuntimeStatusSnapshot['sourceStatus'];
+  installStatus: VendoredRuntimeStatusSnapshot['installStatus'];
+  diagnostics: string[];
+  missingEntries: string[];
+  wrapperPath: string | null;
+  entryScriptPath: string | null;
+}
+
 interface RuntimeActivationBindings {
   readStatus: () => Promise<VendoredRuntimeStatusSnapshot>;
-  validate: (runtimeRoot: string) => Promise<{
-    status: VendoredRuntimeStatusSnapshot['status'];
-    sourceStatus: VendoredRuntimeStatusSnapshot['sourceStatus'];
-    installStatus: VendoredRuntimeStatusSnapshot['installStatus'];
-    diagnostics: string[];
-  }>;
+  validate: (runtimeRoot: string) => Promise<RuntimeActivationValidationResult>;
   paths: RuntimeActivationPaths;
 }
 
@@ -126,7 +131,10 @@ export class VendoredRuntimeActivationService {
             status: result.status,
             sourceStatus: result.sourceStatus,
             installStatus: result.installStatus,
-            diagnostics: [...result.missingEntries, ...result.diagnostics],
+            diagnostics: [...result.diagnostics],
+            missingEntries: [...result.missingEntries],
+            wrapperPath: result.wrapperPath,
+            entryScriptPath: result.entryScriptPath,
           };
         },
         paths: {
@@ -152,7 +160,10 @@ export class VendoredRuntimeActivationService {
           status: result.status,
           sourceStatus: result.sourceStatus,
           installStatus: result.installStatus,
-          diagnostics: [...result.missingEntries, ...result.diagnostics],
+          diagnostics: [...result.diagnostics],
+          missingEntries: [...result.missingEntries],
+          wrapperPath: result.wrapperPath,
+          entryScriptPath: result.entryScriptPath,
         };
       },
       paths: {
@@ -180,6 +191,16 @@ export class VendoredRuntimeActivationService {
     } = bindings.paths;
 
     try {
+      log.info('[VendoredRuntimeActivationService] activation started', {
+        runtimeId,
+        attemptId,
+        packagedArchivePath,
+        packagedMarkerPath,
+        runtimeHome,
+        stagingRoot,
+        currentRoot,
+      });
+
       this.emitProgress(
         runtimeId,
         attemptId,
@@ -199,6 +220,13 @@ export class VendoredRuntimeActivationService {
         throw new Error('Packaged vendored runtime archive path is missing.');
       }
 
+      log.info('[VendoredRuntimeActivationService] packaged source validated', {
+        runtimeId,
+        packagedArchivePath: sourceStatus.packagedArchivePath,
+        packagedRoot: sourceStatus.packagedRoot,
+        packagedMarkerPath: sourceStatus.packagedMarkerPath,
+      });
+
       this.emitProgress(
         runtimeId,
         attemptId,
@@ -208,6 +236,11 @@ export class VendoredRuntimeActivationService {
       );
       await fs.mkdir(runtimeHome, { recursive: true });
       await this.syncPackagedRuntimeMarker(packagedMarkerPath, runtimeHome);
+      log.info('[VendoredRuntimeActivationService] synced packaged runtime marker', {
+        runtimeId,
+        packagedMarkerPath,
+        runtimeHomeMarkerPath: path.join(runtimeHome, '.hagicode-runtime.json'),
+      });
       await fs.rm(stagingRoot, { recursive: true, force: true });
       await fs.mkdir(stagingRoot, { recursive: true });
 
@@ -219,6 +252,7 @@ export class VendoredRuntimeActivationService {
         15,
       );
       await extract7zArchive({
+        runtimeId,
         archivePath: packagedArchivePath,
         destinationDir: stagingRoot,
         onProgress: (percentage, message) => {
@@ -234,6 +268,7 @@ export class VendoredRuntimeActivationService {
           );
         },
       });
+      await this.logRuntimeSnapshot(runtimeId, 'staging-after-extract', stagingRoot);
 
       this.emitProgress(
         runtimeId,
@@ -244,15 +279,39 @@ export class VendoredRuntimeActivationService {
       );
       const stagedValidation = await bindings.validate(stagingRoot);
       if (stagedValidation.sourceStatus !== 'available') {
+        log.warn('[VendoredRuntimeActivationService] staged source validation failed', {
+          runtimeId,
+          attemptId,
+          stagingRoot,
+          missingEntries: stagedValidation.missingEntries,
+          diagnostics: stagedValidation.diagnostics,
+          wrapperPath: stagedValidation.wrapperPath,
+          entryScriptPath: stagedValidation.entryScriptPath,
+        });
+        await this.logRuntimeSnapshot(runtimeId, 'staging-source-validation-failure', stagingRoot);
         throw new Error(
-          stagedValidation.diagnostics[0]
-            ?? 'Packaged vendored runtime source validation failed.',
+          this.formatValidationFailure(
+            stagedValidation,
+            'Packaged vendored runtime source validation failed.',
+          ),
         );
       }
       if (stagedValidation.installStatus !== 'installed') {
+        log.warn('[VendoredRuntimeActivationService] extracted runtime validation failed', {
+          runtimeId,
+          attemptId,
+          stagingRoot,
+          missingEntries: stagedValidation.missingEntries,
+          diagnostics: stagedValidation.diagnostics,
+          wrapperPath: stagedValidation.wrapperPath,
+          entryScriptPath: stagedValidation.entryScriptPath,
+        });
+        await this.logRuntimeSnapshot(runtimeId, 'staging-install-validation-failure', stagingRoot);
         throw new Error(
-          stagedValidation.diagnostics[0]
-            ?? 'Extracted vendored runtime failed validation.',
+          this.formatValidationFailure(
+            stagedValidation,
+            'Extracted vendored runtime failed validation.',
+          ),
         );
       }
 
@@ -264,6 +323,7 @@ export class VendoredRuntimeActivationService {
         97,
       );
       await this.promoteStagedRuntime(currentRoot, stagingRoot);
+      await this.logRuntimeSnapshot(runtimeId, 'current-after-promote', currentRoot);
 
       this.emitProgress(
         runtimeId,
@@ -279,9 +339,21 @@ export class VendoredRuntimeActivationService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const [stagingSnapshot, currentSnapshot] = await Promise.all([
+        this.collectRuntimeSnapshot(stagingRoot),
+        this.collectRuntimeSnapshot(currentRoot),
+      ]);
       log.warn('[VendoredRuntimeActivationService] activation failed', {
         runtimeId,
+        attemptId,
         message,
+        packagedArchivePath,
+        packagedMarkerPath,
+        runtimeHome,
+        stagingRoot,
+        currentRoot,
+        stagingSnapshot,
+        currentSnapshot,
       });
       this.emitProgress(
         runtimeId,
@@ -301,6 +373,88 @@ export class VendoredRuntimeActivationService {
         error: message,
       };
     }
+  }
+
+  private formatValidationFailure(
+    validation: RuntimeActivationValidationResult,
+    fallbackMessage: string,
+  ): string {
+    if (validation.missingEntries.length > 0) {
+      return `Extracted vendored runtime is missing required entries: ${validation.missingEntries.join(', ')}`;
+    }
+    return validation.diagnostics[0] ?? fallbackMessage;
+  }
+
+  private async logRuntimeSnapshot(
+    runtimeId: VendoredRuntimeId,
+    label: string,
+    runtimeRoot: string,
+  ): Promise<void> {
+    const entries = await this.collectRuntimeSnapshot(runtimeRoot);
+    log.info('[VendoredRuntimeActivationService] runtime snapshot', {
+      runtimeId,
+      label,
+      runtimeRoot,
+      entries,
+    });
+  }
+
+  private async collectRuntimeSnapshot(
+    runtimeRoot: string,
+    maxDepth = 4,
+    maxEntries = 80,
+  ): Promise<string[]> {
+    const queue: Array<{ absolutePath: string; relativePath: string; depth: number }> = [];
+    const entries: string[] = [];
+
+    const rootExists = await fs.access(runtimeRoot)
+      .then(() => true)
+      .catch(() => false);
+    if (!rootExists) {
+      return ['<missing>'];
+    }
+
+    queue.push({ absolutePath: runtimeRoot, relativePath: '', depth: 0 });
+
+    while (queue.length > 0 && entries.length < maxEntries) {
+      const current = queue.shift();
+      if (!current) {
+        break;
+      }
+
+      let children;
+      try {
+        children = await fs.readdir(current.absolutePath, { withFileTypes: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        entries.push(`${current.relativePath || '.'} <error: ${message}>`);
+        continue;
+      }
+
+      children.sort((left, right) => left.name.localeCompare(right.name));
+      for (const child of children) {
+        const relativePath = current.relativePath
+          ? path.join(current.relativePath, child.name)
+          : child.name;
+        entries.push(child.isDirectory() ? `${relativePath}/` : relativePath);
+        if (entries.length >= maxEntries) {
+          break;
+        }
+        if (child.isDirectory() && current.depth + 1 < maxDepth) {
+          queue.push({
+            absolutePath: path.join(current.absolutePath, child.name),
+            relativePath,
+            depth: current.depth + 1,
+          });
+        }
+      }
+    }
+
+    if (queue.length > 0) {
+      entries.push(`... truncated after ${maxEntries} entries`);
+    }
+
+    return entries.length > 0 ? entries : ['<empty>'];
   }
 
   private async syncPackagedRuntimeMarker(
