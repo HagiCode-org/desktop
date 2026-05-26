@@ -85,6 +85,7 @@ async function createPackagedRuntimeFixture(input: {
   packageId: string;
   bundledNodeRuntime: boolean;
   archiveIncludesLegacyMetadata?: boolean;
+  archiveRootSubdir?: string;
 }): Promise<void> {
   const sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), `${input.runtimeId}-payload-`));
   cleanupRoots.add(sourceRoot);
@@ -102,28 +103,38 @@ async function createPackagedRuntimeFixture(input: {
   };
 
   const archiveIncludesLegacyMetadata = input.archiveIncludesLegacyMetadata ?? true;
+  const payloadRoot = input.archiveRootSubdir
+    ? path.join(sourceRoot, input.archiveRootSubdir)
+    : sourceRoot;
+  const archiveEntry = (relativePath: string) => input.archiveRootSubdir
+    ? path.posix.join(input.archiveRootSubdir, relativePath).replace(/\\/g, '/')
+    : relativePath;
 
-  await fs.mkdir(path.join(sourceRoot, 'bin'), { recursive: true });
+  await fs.mkdir(path.join(payloadRoot, 'bin'), { recursive: true });
   if (archiveIncludesLegacyMetadata) {
-    await fs.writeFile(path.join(sourceRoot, 'metadata.json'), JSON.stringify(metadata, null, 2));
+    await fs.writeFile(path.join(payloadRoot, 'metadata.json'), JSON.stringify(metadata, null, 2));
   }
 
   if (input.runtimeId === 'code-server') {
-    await fs.mkdir(path.join(sourceRoot, 'out', 'node'), { recursive: true });
-    await fs.writeFile(path.join(sourceRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\necho code-server\n');
-    await fs.writeFile(path.join(sourceRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
+    await fs.mkdir(path.join(payloadRoot, 'out', 'node'), { recursive: true });
+    await fs.writeFile(path.join(payloadRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\necho code-server\n');
+    await fs.writeFile(path.join(payloadRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
     await createArchive(
       input.archivePath,
       sourceRoot,
-      archiveIncludesLegacyMetadata ? ['metadata.json', 'bin', 'out'] : ['bin', 'out'],
+      archiveIncludesLegacyMetadata
+        ? [archiveEntry('metadata.json'), archiveEntry('bin'), archiveEntry('out')]
+        : [archiveEntry('bin'), archiveEntry('out')],
     );
   } else {
-    await fs.writeFile(path.join(sourceRoot, 'bin', 'omniroute'), '#!/usr/bin/env bash\necho omniroute\n');
-    await fs.writeFile(path.join(sourceRoot, 'bin', 'omniroute.mjs'), 'console.log("omniroute");\n');
+    await fs.writeFile(path.join(payloadRoot, 'bin', 'omniroute'), '#!/usr/bin/env bash\necho omniroute\n');
+    await fs.writeFile(path.join(payloadRoot, 'bin', 'omniroute.mjs'), 'console.log("omniroute");\n');
     await createArchive(
       input.archivePath,
       sourceRoot,
-      archiveIncludesLegacyMetadata ? ['metadata.json', 'bin'] : ['bin'],
+      archiveIncludesLegacyMetadata
+        ? [archiveEntry('metadata.json'), archiveEntry('bin')]
+        : [archiveEntry('bin')],
     );
   }
 
@@ -214,6 +225,33 @@ describe('vendored runtime activation service', () => {
     assert.equal(Boolean(result.status.wrapperPath), true);
     assert.equal(Boolean(result.status.entryScriptPath), true);
     await fs.access(path.join(layout.codeServer.runtimeHome, '.hagicode-runtime.json'));
+  });
+
+  it('activates vendored code-server when the archive is wrapped in a release directory', async () => {
+    const layout = await createBaseLayout();
+    const config = readCodeServerRuntimeConfig();
+    const version = config.releaseVersionByPlatform?.[detectCodeServerRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
+
+    await createPackagedRuntimeFixture({
+      runtimeId: 'code-server',
+      packagedRoot: layout.codeServer.packagedRoot,
+      archivePath: layout.codeServer.packagedArchivePath,
+      version,
+      schemaVersion: config.schemaVersion,
+      packageId: config.packageId,
+      bundledNodeRuntime: false,
+      archiveIncludesLegacyMetadata: false,
+      archiveRootSubdir: 'release',
+    });
+
+    const service = new VendoredRuntimeActivationService(createFakePathManager(layout) as any);
+    const result = await service.activate('code-server');
+
+    assert.equal(result.success, true);
+    assert.equal(result.status.installStatus, 'installed');
+    assert.equal(result.status.runtimeRoot, layout.codeServer.currentRoot);
+    await fs.access(path.join(layout.codeServer.currentRoot, 'bin', 'code-server'));
+    await fs.access(path.join(layout.codeServer.currentRoot, 'out', 'node', 'entry.js'));
   });
 
   it('activates vendored OmniRoute into the Desktop-owned userData runtime root', async () => {

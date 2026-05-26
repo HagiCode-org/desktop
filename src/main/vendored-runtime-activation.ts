@@ -268,6 +268,7 @@ export class VendoredRuntimeActivationService {
           );
         },
       });
+      await this.normalizeExtractedRuntimeRoot(runtimeId, stagingRoot, bindings.validate);
       await this.logRuntimeSnapshot(runtimeId, 'staging-after-extract', stagingRoot);
 
       this.emitProgress(
@@ -373,6 +374,55 @@ export class VendoredRuntimeActivationService {
         error: message,
       };
     }
+  }
+
+  private async normalizeExtractedRuntimeRoot(
+    runtimeId: VendoredRuntimeId,
+    stagingRoot: string,
+    validate: RuntimeActivationBindings['validate'],
+  ): Promise<void> {
+    const topLevelEntries = await fs.readdir(stagingRoot, { withFileTypes: true });
+    if (topLevelEntries.length !== 1 || !topLevelEntries[0]?.isDirectory()) {
+      return;
+    }
+
+    const nestedRoot = path.join(stagingRoot, topLevelEntries[0].name);
+    const [rootValidation, nestedValidation] = await Promise.all([
+      validate(stagingRoot),
+      validate(nestedRoot),
+    ]);
+
+    const nestedOnlyMissingMarker = nestedValidation.missingEntries.every(
+      (entry) => entry === 'metadata.json|../.hagicode-runtime.json',
+    );
+    const nestedLooksRunnable = Boolean(
+      nestedValidation.wrapperPath || nestedValidation.entryScriptPath,
+    );
+
+    if (
+      rootValidation.installStatus === 'installed'
+      || (!nestedLooksRunnable || !nestedOnlyMissingMarker)
+    ) {
+      return;
+    }
+
+    log.info('[VendoredRuntimeActivationService] hoisting nested extracted runtime root', {
+      runtimeId,
+      stagingRoot,
+      nestedRoot,
+      nestedRootName: topLevelEntries[0].name,
+      rootMissingEntries: rootValidation.missingEntries,
+      nestedMissingEntries: nestedValidation.missingEntries,
+    });
+
+    const nestedEntries = await fs.readdir(nestedRoot, { withFileTypes: true });
+    for (const entry of nestedEntries) {
+      await fs.rename(
+        path.join(nestedRoot, entry.name),
+        path.join(stagingRoot, entry.name),
+      );
+    }
+    await fs.rm(nestedRoot, { recursive: true, force: true });
   }
 
   private formatValidationFailure(
