@@ -24,11 +24,16 @@ function extractPercent(message: string): number | undefined {
   return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : undefined;
 }
 
+function shouldSkipVerbose7zLine(type: 'stdout' | 'stderr', message: string): boolean {
+  return type === 'stdout' && /^-\s/u.test(message);
+}
+
 function splitLogLines(value: string, maxLines = 40): string[] {
   const lines = value
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((line) => !shouldSkipVerbose7zLine('stdout', line));
   if (lines.length <= maxLines) {
     return lines;
   }
@@ -68,6 +73,9 @@ export async function extract7zArchive(
         .map((line) => line.trim())
         .filter(Boolean);
       for (const message of lines) {
+        if (shouldSkipVerbose7zLine(type, message)) {
+          continue;
+        }
         const percentage = type === 'stdout' ? extractPercent(message) : undefined;
         log.info('[VendoredRuntime7z] output', {
           runtimeId: options.runtimeId ?? 'unknown',
