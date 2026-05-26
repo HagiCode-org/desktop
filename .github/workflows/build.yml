@@ -54,6 +54,8 @@ jobs:
         id: draft
         if: github.ref == 'refs/heads/main'
         uses: release-drafter/release-drafter@v6
+        with:
+          dry-run: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
