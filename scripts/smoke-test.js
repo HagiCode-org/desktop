@@ -640,7 +640,7 @@ test('desktop build workflow includes ZIP packaging and parallel release publica
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
   assert(content.includes('WINDOWS_PACKAGE_PUBLISHER'), 'workflow requires Windows package publisher alignment for signed store packages');
   assert(content.includes('azure/artifact-signing-action@v2'), 'workflow uses Artifact Signing v2');
-  assert(content.includes('dry-run: true'), 'main branch release-drafter runs in dry-run mode to avoid duplicate draft releases');
+  assert(content.includes('disable-releaser: true'), 'main branch release-drafter disables releaser mode to avoid duplicate draft releases');
   assert(content.includes('unsigned-artifacts/*'), 'workflow preserves unsigned artifacts alongside signed outputs');
   assert(content.includes('Upload Windows build bundle'), 'workflow uploads a Windows build bundle after packaging');
   assert(content.includes('Publish Windows Release Assets'), 'workflow publishes Windows release assets in a separate job');
