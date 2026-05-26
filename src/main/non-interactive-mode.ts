@@ -415,6 +415,8 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`code-server pm2 home: ${report.services.codeServer.pm2Home}`);
   output.stdout(`code-server runtime data: ${report.services.codeServer.runtimeDataHome}`);
   output.stdout(`code-server runtime files: ${report.services.codeServer.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`code-server launch script: ${report.services.codeServer.launchScriptPath ?? '<missing>'}`);
+  output.stdout(`code-server launch cwd: ${report.services.codeServer.launchWorkingDirectory ?? '<missing>'}`);
   output.stdout(`code-server start success: ${report.services.codeServer.startSuccess}`);
   output.stdout(`code-server status after start: ${report.services.codeServer.statusAfterStart}`);
   output.stdout(`code-server stop success: ${report.services.codeServer.stopSuccess}`);
@@ -423,6 +425,8 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`omniroute pm2 home: ${report.services.omniRoute.pm2Home}`);
   output.stdout(`omniroute runtime data: ${report.services.omniRoute.runtimeDataHome}`);
   output.stdout(`omniroute runtime files: ${report.services.omniRoute.runtimeFilesDir ?? '<missing>'}`);
+  output.stdout(`omniroute launch script: ${report.services.omniRoute.launchScriptPath ?? '<missing>'}`);
+  output.stdout(`omniroute launch cwd: ${report.services.omniRoute.launchWorkingDirectory ?? '<missing>'}`);
   output.stdout(`omniroute start success: ${report.services.omniRoute.startSuccess}`);
   output.stdout(`omniroute status after start: ${report.services.omniRoute.statusAfterStart}`);
   output.stdout(`omniroute stop success: ${report.services.omniRoute.stopSuccess}`);

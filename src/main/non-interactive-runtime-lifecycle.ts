@@ -47,6 +47,8 @@ interface ManagedServiceStageReport {
   pm2Home: string;
   runtimeDataHome: string;
   runtimeFilesDir: string | null;
+  launchScriptPath: string | null;
+  launchWorkingDirectory: string | null;
   startSuccess: boolean;
   statusAfterStart: string;
   stopSuccess: boolean;
@@ -218,6 +220,8 @@ function createEmptyServiceReport(pm2Home: string, runtimeDataHome: string, runt
     pm2Home,
     runtimeDataHome,
     runtimeFilesDir,
+    launchScriptPath: null,
+    launchWorkingDirectory: null,
     startSuccess: false,
     statusAfterStart: 'unknown',
     stopSuccess: false,
@@ -328,6 +332,8 @@ async function verifyCodeServerLifecycle(input: {
       report.pm2Home = runtimeContext.pm2Home;
       report.runtimeDataHome = runtimeContext.serviceDataHome;
       report.runtimeFilesDir = runtimeContext.runtimeFilesDir;
+      report.launchScriptPath = runtimeContext.servicePayloadPath;
+      report.launchWorkingDirectory = runtimeContext.serviceWorkingDirectory;
     } catch (error) {
       report.diagnostics.push(`code-server runtime context: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -418,6 +424,8 @@ async function verifyOmniRouteLifecycle(input: {
       report.pm2Home = runtimeContext.pm2Home;
       report.runtimeDataHome = runtimeContext.serviceDataHome;
       report.runtimeFilesDir = runtimeContext.runtimeFilesDir;
+      report.launchScriptPath = runtimeContext.servicePayloadPath;
+      report.launchWorkingDirectory = runtimeContext.serviceWorkingDirectory;
     } catch (error) {
       report.diagnostics.push(`omniroute runtime context: ${error instanceof Error ? error.message : String(error)}`);
     }

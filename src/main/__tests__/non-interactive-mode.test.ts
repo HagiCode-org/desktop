@@ -202,6 +202,8 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/pm2/7',
         runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
         runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime',
+        launchScriptPath: '/tmp/hagicode-desktop-path-alias/desktop-code-server-script-123456789abc',
+        launchWorkingDirectory: '/tmp/hagicode-desktop-path-alias/desktop-code-server-working-directory-123456789abc',
         startSuccess: ok,
         statusAfterStart: ok ? 'online' : 'errored',
         stopSuccess: ok,
@@ -212,6 +214,8 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/pm2/7',
         runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute',
         runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime',
+        launchScriptPath: '/tmp/hagicode-desktop-path-alias/desktop-omniroute-script-123456789abc',
+        launchWorkingDirectory: '/tmp/hagicode-desktop-path-alias/desktop-omniroute-working-directory-123456789abc',
         startSuccess: ok,
         statusAfterStart: ok ? 'online' : 'errored',
         stopSuccess: ok,
@@ -222,6 +226,8 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         pm2Home: '/tmp/Hagi Code/userData/apps/data/.pm2',
         runtimeDataHome: '/tmp/Hagi Code/userData/apps/data',
         runtimeFilesDir: '/tmp/Hagi Code/userData/apps/data/pm2-runtime',
+        launchScriptPath: null,
+        launchWorkingDirectory: null,
         activeRuntimeRoot: '/artifact/resources/extra/portable-fixed/current',
         serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
@@ -509,6 +515,8 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(result.exitCode, nonInteractiveExitCodes.success);
     assert.equal(stderr.length, 0);
     assert.match(stdout.join('\n'), /hagiscript executable managed: true/);
+    assert.match(stdout.join('\n'), /code-server launch script: \/tmp\/hagicode-desktop-path-alias\/desktop-code-server-script-123456789abc/);
+    assert.match(stdout.join('\n'), /omniroute launch cwd: \/tmp\/hagicode-desktop-path-alias\/desktop-omniroute-working-directory-123456789abc/);
     assert.match(stdout.join('\n'), /code-server status after start: online/);
     assert.match(stdout.join('\n'), /backend status after restart: online/);
     assert.match(stdout.join('\n'), /result: success/);

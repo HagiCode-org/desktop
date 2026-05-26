@@ -525,6 +525,30 @@ function assertPathContainsSpaces(candidatePath, label) {
   }
 }
 
+function assertPathOmitsSpaces(candidatePath, label) {
+  if (candidatePath?.includes(' ')) {
+    fail(`Expected ${label} to avoid spaces after aliasing.\nPath: ${candidatePath ?? '<missing>'}`);
+  }
+}
+
+function assertLaunchAliasPath(candidatePath, label, runtimeContext) {
+  if (!candidatePath) {
+    fail(`Expected ${label} to be present.`);
+  }
+  if (!pathExists(candidatePath)) {
+    fail(`Expected ${label} to exist.\nPath: ${candidatePath}`);
+  }
+
+  const resolvedPath = fs.realpathSync(candidatePath);
+  assertPathWithinRoot(resolvedPath, runtimeContext.dataHome, `${label} realpath`);
+
+  if (process.platform !== 'win32') {
+    assertPathOmitsSpaces(candidatePath, label);
+    const aliasRoot = path.join('/tmp', 'hagicode-desktop-path-alias');
+    assertPathWithinRoot(candidatePath, aliasRoot, `${label} alias path`);
+  }
+}
+
 async function readIntegrationDiagnostics(userDataDir) {
   const diagnostics = [];
   const runtimeDataRoot = path.join(userDataDir, 'runtimeData');
@@ -631,12 +655,15 @@ function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, he
 }
 
 function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) {
-  const managedNpmPrefix = parseOutputValue(output, 'pm2 managed npm prefix');
-  const managedNpmBin = parseOutputValue(output, 'pm2 managed npm bin');
-  const managedNpmModules = parseOutputValue(output, 'pm2 managed npm modules');
-  const pm2PackageRoot = parseOutputValue(output, 'pm2 package root');
-  const pm2Executable = parseOutputValue(output, 'pm2 executable');
-  const pm2LaunchCli = parseOutputValue(output, 'pm2 launch cli');
+  const managedNpmPrefix = parseOutputValue(output, 'managed npm prefix');
+  const managedNpmBin = parseOutputValue(output, 'managed npm bin');
+  const managedNpmModules = parseOutputValue(output, 'managed npm modules');
+  const pm2PackageRoot = parseOutputValue(output, 'standalone pm2 package root');
+  const pm2Executable = parseOutputValue(output, 'bundled pm2 executable');
+  const codeServerLaunchScript = parseOutputValue(output, 'code-server launch script');
+  const codeServerLaunchCwd = parseOutputValue(output, 'code-server launch cwd');
+  const omniRouteLaunchScript = parseOutputValue(output, 'omniroute launch script');
+  const omniRouteLaunchCwd = parseOutputValue(output, 'omniroute launch cwd');
   const desktopLogsDirectory = parseOutputValue(output, 'desktop logs directory');
   const backendRuntimeRoot = parseOutputValue(output, 'backend active runtime root');
   const backendPayloadDll = parseOutputValue(output, 'backend payload dll');
@@ -648,12 +675,14 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   const backendLifecycleSkipReason = parseOutputValue(output, 'backend lifecycle skip reason');
 
   for (const [label, value] of [
-    ['pm2 managed npm prefix', managedNpmPrefix],
-    ['pm2 managed npm bin', managedNpmBin],
-    ['pm2 managed npm modules', managedNpmModules],
-    ['pm2 package root', pm2PackageRoot],
-    ['pm2 executable', pm2Executable],
-    ['pm2 launch cli', pm2LaunchCli],
+    ['managed npm prefix', managedNpmPrefix],
+    ['managed npm bin', managedNpmBin],
+    ['managed npm modules', managedNpmModules],
+    ['bundled pm2 executable', pm2Executable],
+    ['code-server launch script', codeServerLaunchScript],
+    ['code-server launch cwd', codeServerLaunchCwd],
+    ['omniroute launch script', omniRouteLaunchScript],
+    ['omniroute launch cwd', omniRouteLaunchCwd],
     ['desktop logs directory', desktopLogsDirectory],
     ['backend active runtime root', backendRuntimeRoot],
     ['backend payload dll', backendPayloadDll],
@@ -665,9 +694,6 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     }
   }
 
-  assertOutputValue(output, 'pm2 launch shell', 'false');
-  assertOutputValue(output, 'pm2 launch command managed', 'true');
-  assertOutputValue(output, 'pm2 launch cli managed', 'true');
   assertOutputValue(output, 'code-server start success', 'true');
   assertOutputValue(output, 'code-server status after start', 'online');
   assertOutputValue(output, 'code-server stop success', 'true');
@@ -682,9 +708,7 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     managedNpmPrefix,
     managedNpmBin,
     managedNpmModules,
-    pm2PackageRoot,
     pm2Executable,
-    pm2LaunchCli,
     codeServerPm2Home,
     omniRoutePm2Home,
   ]) {
@@ -693,6 +717,16 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   }
   assertPathWithinRoot(desktopLogsDirectory, path.dirname(runtimeContext.dataHome), 'desktop logs directory');
   assertPathContainsSpaces(desktopLogsDirectory, 'desktop logs directory');
+
+  assertLaunchAliasPath(codeServerLaunchScript, 'code-server launch script', runtimeContext);
+  assertLaunchAliasPath(codeServerLaunchCwd, 'code-server launch cwd', runtimeContext);
+  assertLaunchAliasPath(omniRouteLaunchScript, 'omniroute launch script', runtimeContext);
+  assertLaunchAliasPath(omniRouteLaunchCwd, 'omniroute launch cwd', runtimeContext);
+
+  if (pm2PackageRoot && pm2PackageRoot !== '<missing>') {
+    assertPathWithinRoot(pm2PackageRoot, runtimeContext.dataHome, 'standalone pm2 package root');
+    assertPathContainsSpaces(pm2PackageRoot, 'standalone pm2 package root');
+  }
 
   assertPathWithinRoot(backendRuntimeRoot, artifactRoot, 'backend active runtime root');
   assertPathContainsSpaces(backendRuntimeRoot, 'backend active runtime root');

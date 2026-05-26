@@ -202,7 +202,10 @@ export class HagiscriptRuntimeContextResolver {
       : DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME;
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), `hagicode-desktop-hagiscript-${input.service}-`));
     const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
-    const launchScriptPath = path.resolve(input.launchScriptPath);
+    const launchScriptPath = await ensureNoSpacePathAlias(
+      path.resolve(input.launchScriptPath),
+      `desktop-${input.service}-script`,
+    );
     const launchWorkingDirectory = await ensureNoSpacePathAlias(
       path.resolve(input.launchWorkingDirectory),
       `desktop-${input.service}-working-directory`,
