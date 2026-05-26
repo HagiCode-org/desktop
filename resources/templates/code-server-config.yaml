@@ -1,0 +1,5 @@
+bind-addr: {{BIND_ADDR}}
+auth: none
+user-data-dir: {{DATA_DIR}}
+extensions-dir: {{EXTENSIONS_DIR}}
+log: info

@@ -142,30 +142,50 @@ function materializeBundledRuntimeTemplates(manifest, dataScopePath, manifestDir
       'current',
       'templates',
     );
-    if (!fs.existsSync(sourceDirectory)) {
+    if (fs.existsSync(sourceDirectory)) {
+      materializeTemplateDirectory(sourceDirectory, targetDirectory);
       continue;
     }
 
-    for (const entry of fs.readdirSync(sourceDirectory, { withFileTypes: true })) {
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      const sourceTemplatePath = path.join(sourceDirectory, entry.name);
-      const targetTemplatePath = path.join(targetDirectory, entry.name);
-      const sourceTemplateContent = fs.readFileSync(sourceTemplatePath);
-      const targetTemplateContent = fs.existsSync(targetTemplatePath)
-        ? fs.readFileSync(targetTemplatePath)
-        : null;
-
-      if (targetTemplateContent && Buffer.compare(sourceTemplateContent, targetTemplateContent) === 0) {
-        continue;
-      }
-
-      fs.mkdirSync(targetDirectory, { recursive: true });
-      fs.writeFileSync(targetTemplatePath, sourceTemplateContent);
+    const fallbackTemplatePath = path.resolve(
+      manifestDirectory,
+      'templates',
+      `${componentName}-config.yaml`,
+    );
+    if (fs.existsSync(fallbackTemplatePath)) {
+      materializeTemplateFile(
+        fallbackTemplatePath,
+        path.join(targetDirectory, path.basename(fallbackTemplatePath)),
+      );
     }
   }
+}
+
+function materializeTemplateDirectory(sourceDirectory, targetDirectory) {
+  for (const entry of fs.readdirSync(sourceDirectory, { withFileTypes: true })) {
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    materializeTemplateFile(
+      path.join(sourceDirectory, entry.name),
+      path.join(targetDirectory, entry.name),
+    );
+  }
+}
+
+function materializeTemplateFile(sourceTemplatePath, targetTemplatePath) {
+  const sourceTemplateContent = fs.readFileSync(sourceTemplatePath);
+  const targetTemplateContent = fs.existsSync(targetTemplatePath)
+    ? fs.readFileSync(targetTemplatePath)
+    : null;
+
+  if (targetTemplateContent && Buffer.compare(sourceTemplateContent, targetTemplateContent) === 0) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(targetTemplatePath), { recursive: true });
+  fs.writeFileSync(targetTemplatePath, sourceTemplateContent);
 }
 
 export function readRuntimeManifestStore(options = {}) {

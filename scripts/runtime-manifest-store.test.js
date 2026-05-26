@@ -118,4 +118,56 @@ describe('script runtime manifest store template materialization', () => {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
+
+  it('falls back to tracked repository templates when bundled template directories are unavailable', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hagicode-runtime-manifest-'));
+    const userDataRoot = path.join(workspaceRoot, 'user-data');
+    const resourcesRoot = path.join(workspaceRoot, 'resources');
+    const trackedTemplateRoot = path.join(resourcesRoot, 'templates');
+
+    try {
+      fs.mkdirSync(trackedTemplateRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(resourcesRoot, 'manifest.yml'),
+        [
+          'runtime:',
+          '  name: hagicode-desktop-runtime',
+          '  version: 0.1.0',
+          'paths:',
+          '  runtimeRoot: .',
+          '  runtimeHome: .',
+          '  runtimeDataRoot: ../runtime-data',
+          '  serverProgramRoot: ../apps/installed',
+          '  serverDataRoot: ../apps/data',
+          '  bin: bin',
+          '  config: config',
+          '  logs: logs',
+          '  data: data',
+          '  stateFile: state.json',
+          '  componentsRoot: components',
+          '  componentDataRoot: components',
+          '  defaultPm2Home: pm2',
+          '  npmPrefix: npm',
+          '  nodeRuntime: components/node/runtime',
+          '  dotnetRuntime: components/dotnet/runtime',
+          '  vendoredRoot: components/bundled',
+          'components:',
+          '  - name: code-server',
+          '    type: bundled-runtime',
+          '  - name: omniroute',
+          '    type: bundled-runtime',
+        ].join('\n'),
+        'utf8',
+      );
+      fs.writeFileSync(path.join(trackedTemplateRoot, 'code-server-config.yaml'), 'bind-addr: {{BIND_ADDR}}\n', 'utf8');
+      fs.writeFileSync(path.join(trackedTemplateRoot, 'omniroute-config.yaml'), 'runtimeHome: {{RUNTIME_ROOT}}\n', 'utf8');
+
+      ensureRuntimeManifestPath(userDataRoot, workspaceRoot, {});
+
+      assert.equal(fs.readFileSync(path.join(userDataRoot, 'templates', 'code-server-config.yaml'), 'utf8'), 'bind-addr: {{BIND_ADDR}}\n');
+      assert.equal(fs.readFileSync(path.join(userDataRoot, 'templates', 'omniroute-config.yaml'), 'utf8'), 'runtimeHome: {{RUNTIME_ROOT}}\n');
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
 });
