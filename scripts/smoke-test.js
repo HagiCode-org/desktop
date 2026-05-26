@@ -628,17 +628,28 @@ test('electron-builder configuration is valid', async () => {
 
 test('desktop build workflow includes ZIP packaging and parallel release publication steps', () => {
   const workflowPath = path.join(process.cwd(), '.github', 'workflows', 'build.yml');
+  const publishPreviewWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'publish-dev.yml');
+  const verifyWindowsSigningWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'verify-windows-signing.yml');
   const exists = fs.existsSync(workflowPath);
+  const publishPreviewExists = fs.existsSync(publishPreviewWorkflowPath);
+  const verifyWindowsSigningExists = fs.existsSync(verifyWindowsSigningWorkflowPath);
 
   if (!assert(exists, '.github/workflows/build.yml exists')) {
     return;
   }
 
+  assert(publishPreviewExists, '.github/workflows/publish-dev.yml exists');
+  assert(verifyWindowsSigningExists, '.github/workflows/verify-windows-signing.yml exists');
+
   const content = fs.readFileSync(workflowPath, 'utf8');
+  const publishPreviewContent = fs.readFileSync(publishPreviewWorkflowPath, 'utf8');
+  const verifyWindowsSigningContent = fs.readFileSync(verifyWindowsSigningWorkflowPath, 'utf8');
 
   assert(content.includes('Prepare Windows unpacked ZIP payload workspace'), 'workflow stages the unpacked Windows ZIP payload before compression');
   assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
   assert(content.includes('WINDOWS_PACKAGE_PUBLISHER'), 'workflow requires Windows package publisher alignment for signed store packages');
+  assert(publishPreviewContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'publish preview workflow requires Windows package publisher alignment for signed store packages');
+  assert(verifyWindowsSigningContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'Windows signing verification workflow requires Windows package publisher alignment for signed store packages');
   assert(content.includes('azure/artifact-signing-action@v2'), 'workflow uses Artifact Signing v2');
   assert(content.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
   assert(!content.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');

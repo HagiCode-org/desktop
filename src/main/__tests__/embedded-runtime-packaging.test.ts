@@ -17,6 +17,7 @@ const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-elect
 const macToolchainSigningHookPath = path.resolve(process.cwd(), 'scripts/macos-toolchain-signing-hook.cjs');
 const buildWorkflowPath = path.resolve(process.cwd(), '.github/workflows/build.yml');
 const publishDevWorkflowPath = path.resolve(process.cwd(), '.github/workflows/publish-dev.yml');
+const verifyWindowsSigningWorkflowPath = path.resolve(process.cwd(), '.github/workflows/verify-windows-signing.yml');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -78,9 +79,10 @@ describe('embedded runtime packaging configuration', () => {
   });
 
   it('validates release archive payloads before Windows release ZIP upload', async () => {
-    const [buildWorkflow, publishDevWorkflow, builder] = await Promise.all([
+    const [buildWorkflow, publishDevWorkflow, verifyWindowsSigningWorkflow, builder] = await Promise.all([
       fs.readFile(buildWorkflowPath, 'utf-8'),
       fs.readFile(publishDevWorkflowPath, 'utf-8'),
+      fs.readFile(verifyWindowsSigningWorkflowPath, 'utf-8'),
       fs.readFile(electronBuilderPath, 'utf-8'),
     ]);
 
@@ -129,6 +131,10 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(publishDevWorkflow, /publish-preview-\$\{\{ matrix\.target\.id \}\}-\$\{\{ needs\.prepare-release\.outputs\.version \}\}/);
     assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);
     assert.doesNotMatch(publishDevWorkflow, /prepare-msix-release-assets\.js/);
+    assert.match(buildWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
+    assert.match(publishDevWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
+    assert.match(verifyWindowsSigningWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
+    assert.match(verifyWindowsSigningWorkflow, /Build for Windows/);
   });
 
   it('raises macOS open file limits before electron-builder packaging', async () => {
