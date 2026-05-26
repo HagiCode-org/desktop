@@ -8,8 +8,13 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
+      production_build:
+        description: Run a production-signed build and upload results as workflow artifacts
+        required: false
+        default: false
+        type: boolean
       channel:
-        description: 'Release channel (stable, beta, dev)'
+        description: Release channel (stable, beta, dev)
         required: false
         type: choice
         options:
@@ -17,19 +22,14 @@ on:
           - beta
           - dev
       sign_windows_release:
-        description: 'Sign Windows release artifacts in this manual run'
+        description: Sign Windows release artifacts in this manual run
         required: false
-        type: boolean
         default: false
+        type: boolean
 
 permissions:
   contents: write
-
-env:
-  NODE_VERSION: '22'
-  HAGISCRIPT_VERSION: 'latest'
-  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
-  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+  id-token: write
 
 jobs:
   prepare-release:
@@ -43,6 +43,7 @@ jobs:
       channel_source: ${{ steps.meta.outputs.channel_source }}
       version_source: ${{ steps.meta.outputs.version_source }}
       is_tag_release: ${{ steps.meta.outputs.is_tag_release }}
+      is_production_build: ${{ steps.meta.outputs.is_production_build }}
 
     steps:
       - name: Checkout code
@@ -67,7 +68,6 @@ jobs:
           import os
           import re
           import subprocess
-          import sys
           import time
           import urllib.request
 
@@ -163,6 +163,7 @@ jobs:
         shell: bash
         env:
           MANUAL_CHANNEL: ${{ github.event.inputs.channel || '' }}
+          MANUAL_PRODUCTION_BUILD: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.production_build == 'true' && 'true' || 'false' }}
           DRAFT_VERSION: ${{ steps.draft.outputs.resolved_version || '' }}
           DRAFT_VERSION_SOURCE: ${{ steps.draft.outputs.version_source || '' }}
         run: |
@@ -175,6 +176,7 @@ jobs:
           release_name="Build ${package_version}"
           version_source="package-json:${package_version}"
           is_tag_release='false'
+          is_production_build='false'
 
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             version="${GITHUB_REF_NAME#v}"
@@ -182,6 +184,7 @@ jobs:
             release_name="Release ${release_tag}"
             version_source="tag:${GITHUB_REF_NAME}"
             is_tag_release='true'
+            is_production_build='true'
           elif [[ "${GITHUB_REF}" == 'refs/heads/main' ]]; then
             if [[ -z "${draft_version}" ]]; then
               echo '::error::Release Drafter did not return resolved_version for the main branch build.'
@@ -192,9 +195,19 @@ jobs:
             version_source="${DRAFT_VERSION_SOURCE:-draft-release:${version}}"
           fi
 
+          if [[ "${MANUAL_PRODUCTION_BUILD}" == 'true' ]]; then
+            is_production_build='true'
+            if [[ "${is_tag_release}" != 'true' ]]; then
+              release_name="Production Build ${version}"
+            fi
+          fi
+
           if [[ -n "${MANUAL_CHANNEL}" ]]; then
             channel="${MANUAL_CHANNEL}"
             channel_source='manual-input'
+          elif [[ "${MANUAL_PRODUCTION_BUILD}" == 'true' ]]; then
+            channel='stable'
+            channel_source='manual-production-build'
           elif [[ "${is_tag_release}" == 'true' ]]; then
             if [[ "${version}" =~ -(beta|rc) ]]; then
               channel='beta'
@@ -220,6 +233,7 @@ jobs:
             echo "channel_source=${channel_source}"
             echo "version_source=${version_source}"
             echo "is_tag_release=${is_tag_release}"
+            echo "is_production_build=${is_production_build}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Write workflow summary
@@ -230,844 +244,38 @@ jobs:
             echo
             echo '- Version: ${{ steps.meta.outputs.version }}'
             echo '- Release tag: ${{ steps.meta.outputs.release_tag || '(none)' }}'
+            echo '- Release name: ${{ steps.meta.outputs.release_name }}'
             echo '- Release channel: ${{ steps.meta.outputs.channel }}'
             echo '- Channel source: ${{ steps.meta.outputs.channel_source }}'
             echo '- Version source: ${{ steps.meta.outputs.version_source }}'
             echo '- Tag release: ${{ steps.meta.outputs.is_tag_release }}'
+            echo '- Production build: ${{ steps.meta.outputs.is_production_build }}'
             echo '- Ref: ${{ github.ref }}'
             echo '- Commit: ${{ github.sha }}'
           } >> "$GITHUB_STEP_SUMMARY"
 
   build-windows:
-    name: Build Windows (${{ matrix.target.name }})
-    runs-on: windows-2022
+    name: Build Windows Packages
     needs: prepare-release
-    environment:
-      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'ci' }}
-      deployment: false
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - id: portable
-            name: Portable
-            builder_target: portable
-            report_suffix: portable
-            requires_zip: true
-            artifact_path: pkg/*.exe
-          - id: nsis
-            name: NSIS
-            builder_target: nsis
-            report_suffix: nsis
-            requires_zip: false
-            artifact_path: pkg/*Setup*.exe
-          - id: appx
-            name: AppX
-            builder_target: appx
-            report_suffix: appx
-            requires_zip: false
-            artifact_path: pkg/*.appx
-          - id: msix
-            name: MSIX
-            builder_target: msix
-            report_suffix: msix
-            requires_zip: false
-            artifact_path: pkg/*.msix
-    permissions:
-      contents: write
-      id-token: write
-    env:
-      RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
+    uses: ./.github/workflows/reusable-build-windows.yml
+    with:
+      version: ${{ needs.prepare-release.outputs.version }}
+      channel: ${{ needs.prepare-release.outputs.channel }}
+      is_production_build: ${{ needs.prepare-release.outputs.is_production_build == 'true' }}
+      sign_windows_release: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows_release == 'true' }}
+      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Determine Windows signing policy
-        id: signing_policy
-        shell: bash
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            required=true
-            reason="tag release"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.sign_windows_release }}" == "true" ]]; then
-            required=true
-            reason="manual workflow_dispatch override"
-          else
-            required=false
-            reason="non-release build"
-          fi
-
-          echo "required=${required}" >> "$GITHUB_OUTPUT"
-          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
-          echo "Windows signing required: ${required} (${reason})"
-
-      - name: Validate Artifact Signing configuration
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        shell: bash
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_CODESIGN_ENDPOINT: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
-          AZURE_CODESIGN_ACCOUNT_NAME: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
-          AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
-        run: |
-          missing=()
-
-          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME WINDOWS_PACKAGE_PUBLISHER; do
-            if [ -z "${!key}" ]; then
-              missing+=("${key}")
-            fi
-          done
-
-          if [ ${#missing[@]} -gt 0 ]; then
-            printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
-            {
-              echo '## Windows code signing configuration error'
-              echo
-              echo 'The release build requires Artifact Signing, but the following values are missing:'
-              echo
-              for key in "${missing[@]}"; do
-                echo "- ${key}"
-              done
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install global hagiscript
-        shell: bash
-        run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
-          hash -r
-          hagiscript --version
-
-      - name: Cache build downloads
-        uses: actions/cache@v4
-        with:
-          path: |
-            .cache/electron
-            .cache/electron-builder
-            build/embedded-runtime/downloads
-            build/embedded-node-runtime/downloads
-            .generated/code-server-runtime/downloads
-            .generated/omniroute-runtime/downloads
-          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-downloads-
-
-      - name: Sync package version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${{ needs.prepare-release.outputs.version }}"
-          echo "Syncing npm/package.json version to ${VERSION}"
-          npm version "${VERSION}" --no-git-tag-version
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Windows ${{ matrix.target.name }} package
-        shell: bash
-        run: node scripts/ci-build.js --platform win --target "${{ matrix.target.builder_target }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
-          WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
-
-      - name: Preserve unsigned Windows artifacts
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/preserve-artifacts.js \
-            --source-dir pkg \
-            --artifact-path "${{ matrix.target.artifact_path }}" \
-            --output-dir unsigned-artifacts \
-            --suffix unsigned
-
-      - name: Collect Windows ${{ matrix.target.name }} artifacts
-        id: windows_artifacts
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
-          if (-not (Test-Path $pkgDir)) {
-            throw "pkg directory not found: $pkgDir"
-          }
-
-          $allFiles = Get-ChildItem -Path $pkgDir -File
-          $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
-          $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
-          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
-          $selectedFiles = switch ('${{ matrix.target.id }}') {
-            'portable' { $portable }
-            'nsis' { $nsis }
-            'appx' { $appx }
-            'msix' { $msix }
-            default { @() }
-          }
-          $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
-          $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
-          $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
-
-          if ($selectedFiles.Count -eq 0) {
-            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/."
-          }
-
-          if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
-            throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
-          }
-
-          if (-not (Test-Path $buildReport)) {
-            throw "CI build report was not found: $buildReport"
-          }
-
-          $catalogEntries = @()
-          foreach ($file in $selectedFiles) {
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $file.FullName).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
-          }
-          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
-          $catalogEntries | Set-Content -Path $catalogPath
-
-          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
-          $zipBaseName = [System.IO.Path]::GetFileNameWithoutExtension($selectedFiles[0].Name)
-
-          function Write-MultilineOutput([string]$Name, [object[]]$Files) {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
-            foreach ($file in $Files) {
-              Add-Content -Path $env:GITHUB_OUTPUT -Value $file.FullName
-            }
-            Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
-          }
-
-          Write-MultilineOutput 'package_files' $selectedFiles
-          Write-MultilineOutput 'unpacked_roots' $unpackedRoots
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "package_count=$($selectedFiles.Count)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "report_path=$buildReport"
-
-      - name: Prepare Windows unpacked ZIP payload workspace
-        if: success() && matrix.target.requires_zip
-        id: windows_zip_payload
-        shell: pwsh
-        env:
-          WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
-          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.package_files }}
-          WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $zipPayloadRoot = '${{ steps.windows_artifacts.outputs.zip_payload_root }}'
-          $catalogPath = '${{ steps.windows_artifacts.outputs.catalog_path }}'
-          $pkgDir = Split-Path -Path $catalogPath -Parent
-
-          if (Test-Path $zipPayloadRoot) {
-            Remove-Item -Path $zipPayloadRoot -Recurse -Force
-          }
-          New-Item -Path $zipPayloadRoot -ItemType Directory -Force | Out-Null
-
-          $unpackedRoots = @()
-          $env:WINDOWS_UNPACKED_ROOTS -split "`r?`n" | ForEach-Object {
-            $trimmed = $_.Trim()
-            if ($trimmed) {
-              $unpackedRoots += $trimmed
-            }
-          }
-
-          if ($unpackedRoots.Count -eq 0) {
-            throw 'No unpacked Windows roots were passed to ZIP payload staging.'
-          }
-
-          $payloadDirName = "{0}-unpacked" -f $env:WINDOWS_ZIP_BASE_NAME
-          $payloadDir = Join-Path $zipPayloadRoot $payloadDirName
-          New-Item -Path $payloadDir -ItemType Directory -Force | Out-Null
-
-          foreach ($unpackedRootPath in $unpackedRoots) {
-            $unpackedRoot = Get-Item -LiteralPath $unpackedRootPath
-            Get-ChildItem -LiteralPath $unpackedRoot.FullName -Force | ForEach-Object {
-              $targetPath = Join-Path $payloadDir $_.Name
-              if ($_.PSIsContainer) {
-                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Recurse -Force
-              } else {
-                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Force
-              }
-            }
-          }
-
-          $zipPayloadFiles = @(Get-ChildItem -LiteralPath $payloadDir -Recurse -File | Sort-Object FullName)
-          if ($zipPayloadFiles.Count -eq 0) {
-            throw 'Windows ZIP payload staging did not produce any files.'
-          }
-
-          $signableFiles = @()
-          $env:WINDOWS_SIGNABLE_FILES -split "`r?`n" | ForEach-Object {
-            $trimmed = $_.Trim()
-            if ($trimmed) {
-              $signableFiles += $trimmed
-            }
-          }
-
-          $zipPayloadRootExecutables = @(
-            $zipPayloadFiles | Where-Object {
-              $_.Extension -ieq '.exe' -and
-              $_.DirectoryName -eq $payloadDir
-            } | Sort-Object FullName -Unique
-          )
-
-          if ($zipPayloadRootExecutables.Count -ne 1) {
-            $detectedExecutables = if ($zipPayloadRootExecutables.Count -gt 0) {
-              ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }) -join [Environment]::NewLine
-            } else {
-              '(none)'
-            }
-            throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
-          }
-
-          $catalogEntries = @()
-          foreach ($filePath in @($signableFiles + ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }))) {
-            $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
-            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
-          }
-          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
-          $catalogEntries | Set-Content -Path $catalogPath
-
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
-
-      - name: Azure login for Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Sign Windows artifacts with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
-        id: windows_signing
-        continue-on-error: ${{ matrix.target.id == 'msix' }}
-        uses: azure/artifact-signing-action@v2
-        with:
-          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
-          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          cache-dependencies: true
-
-      - name: Summarize unsigned MSIX fallback
-        if: always() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix' && steps.windows_signing.outcome != 'success'
-        shell: pwsh
-        run: |
-          $summary = @(
-            '## Windows MSIX signing skipped',
-            '',
-            '- Azure Artifact Signing v2 for MSIX did not complete successfully on this run.',
-            '- The signed `MSIX` artifact was skipped.',
-            '- The unsigned MSIX artifact is still available with the `-unsigned` suffix.'
-          ) -join "`n"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
-          Write-Warning 'MSIX signing failed; skipping signed artifact upload and retaining only the unsigned MSIX artifact.'
-
-      - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'msix'
-        shell: bash
-        env:
-          VERIFY_STRICT: 'true'
-        run: |
-          node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
-
-      - name: Create Windows ZIP artifact
-        if: success() && matrix.target.requires_zip
-        id: windows_zip
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $pkgDir = Join-Path $env:GITHUB_WORKSPACE 'pkg'
-          $payloadDir = '${{ steps.windows_zip_payload.outputs.payload_dir }}'
-          $payloadDirName = '${{ steps.windows_zip_payload.outputs.payload_dir_name }}'
-          if (-not (Test-Path $payloadDir)) {
-            throw "Windows ZIP payload directory not found: $payloadDir"
-          }
-
-          $zipPath = Join-Path $pkgDir ("{0}.zip" -f $payloadDirName)
-          if (Test-Path $zipPath) {
-            Remove-Item -LiteralPath $zipPath -Force
-          }
-
-          Compress-Archive -Path (Join-Path $payloadDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
-          $zipFile = Get-Item -LiteralPath $zipPath
-
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
-          Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_path=$($zipFile.FullName)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
-
-      - name: Verify Windows ZIP toolchain payload
-        if: success() && matrix.target.requires_zip && steps.windows_zip.outputs.zip_path != ''
-        shell: bash
-        run: |
-          node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
-
-      - name: Summarize Windows package build
-        if: success()
-        shell: bash
-        run: |
-          {
-            echo '## Windows package build'
-            echo
-            echo '- Package target: ${{ matrix.target.name }}'
-            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
-            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
-            echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
-            echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
-            echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
-            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
-            echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
-            echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload Windows release bundle
-        uses: actions/upload-artifact@v4
-        if: success() && startsWith(github.ref, 'refs/tags/v') && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
-        with:
-          name: release-windows-${{ matrix.target.id }}-assets
-          path: |
-            ${{ steps.windows_artifacts.outputs.package_files }}
-            ${{ steps.windows_zip.outputs.zip_files }}
-            unsigned-artifacts/*
-            ${{ steps.windows_artifacts.outputs.report_path }}
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload Windows build bundle
-        uses: actions/upload-artifact@v4
-        if: success() && !startsWith(github.ref, 'refs/tags/v') && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
-        with:
-          name: hagicode-windows-${{ matrix.target.id }}-${{ github.sha }}
-          path: |
-            ${{ steps.windows_artifacts.outputs.package_files }}
-            ${{ steps.windows_zip.outputs.zip_files }}
-            unsigned-artifacts/*
-            ${{ steps.windows_artifacts.outputs.report_path }}
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Code signing failure notification
-        if: failure()
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
-            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
-            exit 0
-          }
-
-          $message = @(
-            '代码签名失败 (Windows) ❌',
-            '',
-            '平台: Windows / ${{ matrix.target.name }}',
-            '版本: ${{ needs.prepare-release.outputs.release_tag || needs.prepare-release.outputs.version }}',
-            '提交: ${{ github.sha }}',
-            '',
-            '请检查签名配置和证书状态。',
-            '可能的原因：',
-            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
-            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
-            '- 产物签名成功但验签失败',
-            '',
-            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          ) -join "`n"
-
-          $payload = @{
-            msg_type = 'text'
-            content = @{
-              text = $message
-            }
-          } | ConvertTo-Json -Depth 4
-
-          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-
-  build-platform-artifacts:
-    name: Build ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs_on }}
+  build-unix:
+    name: Build Linux and macOS Packages
     needs: prepare-release
-    environment:
-      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'ci' }}
-      deployment: false
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - id: linux-appimage
-            name: Linux AppImage
-            runs_on: ubuntu-latest
-            builder_target: AppImage
-            report_suffix: appimage
-            artifact_glob: '*.AppImage'
-          - id: linux-tar-gz
-            name: Linux tar.gz
-            runs_on: ubuntu-latest
-            builder_target: tar.gz
-            report_suffix: tar-gz
-            artifact_glob: '*.tar.gz'
-          - id: linux-zip
-            name: Linux ZIP
-            runs_on: ubuntu-latest
-            builder_target: zip
-            report_suffix: zip
-            artifact_glob: '*.zip'
-          - id: macos-x64-dmg
-            name: macOS x64 DMG
-            runs_on: macos-latest
-            mac_arch: x64
-            mac_runtime_platform: osx-x64
-            builder_target: dmg
-            report_suffix: dmg
-            artifact_glob: '*.dmg'
-            upload_glob: '**/*.dmg'
-          - id: macos-x64-zip
-            name: macOS x64 ZIP
-            runs_on: macos-latest
-            mac_arch: x64
-            mac_runtime_platform: osx-x64
-            builder_target: zip
-            report_suffix: zip
-            artifact_glob: '*.zip'
-            upload_glob: '**/*.zip'
-          - id: macos-arm64-dmg
-            name: macOS arm64 DMG
-            runs_on: macos-latest
-            mac_arch: arm64
-            mac_runtime_platform: osx-arm64
-            builder_target: dmg
-            report_suffix: dmg
-            artifact_glob: '*.dmg'
-            upload_glob: '**/*.dmg'
-          - id: macos-arm64-zip
-            name: macOS arm64 ZIP
-            runs_on: macos-latest
-            mac_arch: arm64
-            mac_runtime_platform: osx-arm64
-            builder_target: zip
-            report_suffix: zip
-            artifact_glob: '*.zip'
-            upload_glob: '**/*.zip'
-    env:
-      RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Resolve macOS signing mode
-        if: startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
-        id: mac_signing
-        shell: bash
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          missing=()
-          if [[ -z "${CSC_LINK}" ]]; then
-            missing+=('CSC_LINK')
-          fi
-          if [[ -z "${CSC_KEY_PASSWORD}" ]]; then
-            missing+=('CSC_KEY_PASSWORD')
-          fi
-
-          has_api_key_auth=true
-          for key in APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
-            if [[ -z "${!key}" ]]; then
-              has_api_key_auth=false
-            fi
-          done
-
-          has_apple_id_auth=true
-          for key in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
-            if [[ -z "${!key}" ]]; then
-              has_apple_id_auth=false
-            fi
-          done
-
-          if [[ "${has_api_key_auth}" != 'true' && "${has_apple_id_auth}" != 'true' ]]; then
-            missing+=('APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER or APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID')
-          fi
-
-          if [[ ${#missing[@]} -gt 0 ]]; then
-            echo 'enabled=false' >> "$GITHUB_OUTPUT"
-            printf '::warning::Missing macOS release signing configuration: %s. Falling back to unsigned macOS build.\n' "$(IFS=', '; echo "${missing[*]}")"
-            {
-              echo '## macOS signing fallback'
-              echo
-              echo 'Production macOS signing configuration is incomplete. This job will publish unsigned macOS packages only.'
-              echo
-              echo 'Missing values:'
-              for key in "${missing[@]}"; do
-                echo "- ${key}"
-              done
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'enabled=true' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install global hagiscript
-        shell: bash
-        run: |
-          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
-          prefix="$(npm config get prefix)"
-          echo "$prefix" >> "$GITHUB_PATH"
-          if [ -d "$prefix/bin" ]; then
-            echo "$prefix/bin" >> "$GITHUB_PATH"
-          fi
-          hash -r
-          hagiscript --version
-
-      - name: Cache build downloads
-        uses: actions/cache@v4
-        with:
-          path: |
-            .cache/electron
-            .cache/electron-builder
-            build/embedded-runtime/downloads
-            build/embedded-node-runtime/downloads
-            .generated/code-server-runtime/downloads
-            .generated/omniroute-runtime/downloads
-          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-downloads-
-
-      - name: Sync package version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${{ needs.prepare-release.outputs.version }}"
-          echo "Syncing npm/package.json version to ${VERSION}"
-          npm version "${VERSION}" --no-git-tag-version
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Linux artifacts
-        if: startsWith(matrix.target.id, 'linux-')
-        run: node scripts/ci-build.js --platform linux --target "${{ matrix.target.builder_target }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
-
-      - name: Build unsigned macOS artifacts
-        if: startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
-          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-
-      - name: Preserve unsigned macOS artifacts
-        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/preserve-artifacts.js \
-            --source-dir pkg \
-            --artifact-path "${{ matrix.target.artifact_glob }}" \
-            --output-dir unsigned-artifacts \
-            --suffix unsigned
-
-      - name: Reset macOS package output for signed artifacts
-        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true'
-        shell: bash
-        run: |
-          rm -rf pkg
-          mkdir -p pkg
-
-      - name: Prepare macOS release signing environment
-        if: success() && startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true'
-        shell: bash
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          {
-            echo "CSC_LINK=${CSC_LINK}"
-            echo "CSC_KEY_PASSWORD=${CSC_KEY_PASSWORD}"
-            echo "APPLE_API_KEY<<EOF"
-            echo "${APPLE_API_KEY}"
-            echo 'EOF'
-            echo "APPLE_API_KEY_ID=${APPLE_API_KEY_ID}"
-            echo "APPLE_API_ISSUER=${APPLE_API_ISSUER}"
-            echo "APPLE_ID=${APPLE_ID}"
-            echo "APPLE_APP_SPECIFIC_PASSWORD=${APPLE_APP_SPECIFIC_PASSWORD}"
-            echo "APPLE_TEAM_ID=${APPLE_TEAM_ID}"
-          } >> "$GITHUB_ENV"
-
-      - name: Build signed macOS artifacts
-        if: success() && startsWith(matrix.target.id, 'macos-') && (!startsWith(github.ref, 'refs/tags/v') || steps.mac_signing.outputs.enabled == 'true')
-        shell: bash
-        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ startsWith(github.ref, 'refs/tags/v') && steps.mac_signing.outputs.enabled == 'true' && 'true' || 'false' }}
-          HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
-          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-
-      - name: Summarize Linux artifacts
-        if: startsWith(matrix.target.id, 'linux-') && success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
-          artifact_count=${#artifact_files[@]}
-          report_path="pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json"
-
-          {
-            echo '## Linux packaging artifacts'
-            echo
-            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
-            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
-            echo '- Package target: ${{ matrix.target.builder_target }}'
-            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
-            echo "- Matched artifacts: ${artifact_count}"
-            echo "- CI build report: \\`${report_path}\\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$artifact_count" -eq 0 ]; then
-            echo '::error::Linux target artifact was not produced in pkg/.'
-            exit 1
-          fi
-
-          if [ ! -f "$report_path" ]; then
-            echo "::error::Linux CI build report is missing: $report_path"
-            exit 1
-          fi
-
-      - name: Validate macOS artifacts
-        if: startsWith(matrix.target.id, 'macos-')
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
-          artifact_count=${#artifact_files[@]}
-          report_path="pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json"
-
-          {
-            echo '## macOS packaging artifacts'
-            echo
-            echo '- Version: ${{ needs.prepare-release.outputs.version }}'
-            echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
-            echo "- Target architecture: ${{ matrix.target.mac_arch }}"
-            echo "- Package target: ${{ matrix.target.builder_target }}"
-            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
-            echo "- Matched artifacts: ${artifact_count}"
-            echo "- CI build report: \`${report_path}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$artifact_count" -eq 0 ]; then
-            echo '::error::macOS target artifact was not produced in pkg/.'
-            exit 1
-          fi
-
-          if [ ! -f "$report_path" ]; then
-            echo "::error::macOS CI build report is missing: $report_path"
-            exit 1
-          fi
-
-      - name: Upload Linux release bundle
-        if: startsWith(matrix.target.id, 'linux-') && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-${{ matrix.target.id }}-assets
-          path: |
-            pkg/${{ matrix.target.artifact_glob }}
-            pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload Linux build bundle
-        if: startsWith(matrix.target.id, 'linux-') && success() && !startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: hagicode-${{ matrix.target.id }}-${{ github.sha }}
-          path: |
-            pkg/${{ matrix.target.artifact_glob }}
-            pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload macOS release bundle
-        if: startsWith(matrix.target.id, 'macos-') && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-${{ matrix.target.id }}-assets
-          path: |
-            pkg/${{ matrix.target.artifact_glob }}
-            unsigned-artifacts/*
-            pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload macOS build bundle
-        if: startsWith(matrix.target.id, 'macos-') && success() && !startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: hagicode-${{ matrix.target.id }}-${{ github.sha }}
-          path: |
-            pkg/${{ matrix.target.artifact_glob }}
-            pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
-          retention-days: 30
-          if-no-files-found: error
+    uses: ./.github/workflows/reusable-build-unix.yml
+    with:
+      version: ${{ needs.prepare-release.outputs.version }}
+      channel: ${{ needs.prepare-release.outputs.channel }}
+      is_production_build: ${{ needs.prepare-release.outputs.is_production_build == 'true' }}
+      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' }}
+    secrets: inherit
 
   publish-windows-release:
     name: Publish Windows Release Assets
@@ -1105,8 +313,8 @@ jobs:
     name: Publish ${{ matrix.target.name }} Release Assets
     needs:
       - prepare-release
-      - build-platform-artifacts
-    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-platform-artifacts.result == 'success' }}
+      - build-unix
+    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-unix.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -1190,13 +398,13 @@ jobs:
     needs:
       - prepare-release
       - build-windows
-      - build-platform-artifacts
+      - build-unix
       - publish-windows-release
       - publish-platform-release
     if: always()
     runs-on: ubuntu-latest
     environment:
-      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'ci' }}
+      name: ${{ needs.prepare-release.outputs.is_production_build == 'true' && 'production' || 'ci' }}
       deployment: false
 
     steps:
@@ -1207,30 +415,30 @@ jobs:
         env:
           IS_TAG_RELEASE: ${{ needs.prepare-release.outputs.is_tag_release }}
           BUILD_WINDOWS_STATUS: ${{ needs.build-windows.result }}
-          BUILD_PLATFORMS_STATUS: ${{ needs.build-platform-artifacts.result }}
+          BUILD_UNIX_STATUS: ${{ needs.build-unix.result }}
           PUBLISH_WINDOWS_STATUS: ${{ needs.publish-windows-release.result }}
           PUBLISH_PLATFORMS_STATUS: ${{ needs.publish-platform-release.result }}
         run: |
           set -euo pipefail
 
           windows_build_status="${BUILD_WINDOWS_STATUS}"
-          platform_build_status="${BUILD_PLATFORMS_STATUS}"
+          unix_build_status="${BUILD_UNIX_STATUS}"
           windows_publish_status="${PUBLISH_WINDOWS_STATUS}"
           platform_publish_status="${PUBLISH_PLATFORMS_STATUS}"
 
           echo "Windows build: ${windows_build_status}"
-          echo "Matrix build: ${platform_build_status}"
+          echo "Unix build: ${unix_build_status}"
           if [ "${IS_TAG_RELEASE}" = 'true' ]; then
             echo "Windows publish: ${windows_publish_status}"
-            echo "Matrix publish: ${platform_publish_status}"
+            echo "Unix publish: ${platform_publish_status}"
           fi
 
           echo "windows_build_status=${windows_build_status}" >> "$GITHUB_OUTPUT"
-          echo "platform_build_status=${platform_build_status}" >> "$GITHUB_OUTPUT"
+          echo "unix_build_status=${unix_build_status}" >> "$GITHUB_OUTPUT"
           echo "windows_publish_status=${windows_publish_status}" >> "$GITHUB_OUTPUT"
           echo "platform_publish_status=${platform_publish_status}" >> "$GITHUB_OUTPUT"
 
-          if [ "${windows_build_status}" != 'success' ] || [ "${platform_build_status}" != 'success' ]; then
+          if [ "${windows_build_status}" != 'success' ] || [ "${unix_build_status}" != 'success' ]; then
             echo 'overall=failed' >> "$GITHUB_OUTPUT"
             echo 'status_icon=❌' >> "$GITHUB_OUTPUT"
             echo 'status_text=失败' >> "$GITHUB_OUTPUT"
@@ -1261,7 +469,7 @@ jobs:
         shell: bash
         env:
           WINDOWS_STATUS: ${{ steps.status.outputs.windows_build_status }}
-          PLATFORM_STATUS: ${{ steps.status.outputs.platform_build_status }}
+          UNIX_STATUS: ${{ steps.status.outputs.unix_build_status }}
         run: |
           platforms=()
           if [ "${WINDOWS_STATUS}" = 'success' ]; then
@@ -1269,7 +477,7 @@ jobs:
             platforms+=("Windows NSIS")
             platforms+=("Windows AppX")
           fi
-          if [ "${PLATFORM_STATUS}" = 'success' ]; then
+          if [ "${UNIX_STATUS}" = 'success' ]; then
             platforms+=("Linux AppImage")
             platforms+=("Linux tar.gz")
             platforms+=("Linux ZIP")
@@ -1294,13 +502,15 @@ jobs:
             echo
             echo '- Version: ${{ needs.prepare-release.outputs.version }}'
             echo '- Release tag: ${{ needs.prepare-release.outputs.release_tag || '(none)' }}'
+            echo '- Release name: ${{ needs.prepare-release.outputs.release_name }}'
             echo '- Version source: ${{ needs.prepare-release.outputs.version_source }}'
             echo '- Release channel: ${{ needs.prepare-release.outputs.channel }}'
             echo '- Channel source: ${{ needs.prepare-release.outputs.channel_source }}'
+            echo '- Production build: ${{ needs.prepare-release.outputs.is_production_build }}'
             echo '- Windows build status: ${{ steps.status.outputs.windows_build_status }}'
-            echo '- Non-Windows matrix build status: ${{ steps.status.outputs.platform_build_status }}'
+            echo '- Unix build status: ${{ steps.status.outputs.unix_build_status }}'
             echo '- Windows publish status: ${{ steps.status.outputs.windows_publish_status }}'
-            echo '- Non-Windows matrix publish status: ${{ steps.status.outputs.platform_publish_status }}'
+            echo '- Unix publish status: ${{ steps.status.outputs.platform_publish_status }}'
             echo '- Normalized overall status: ${{ steps.status.outputs.overall }}'
             echo '- Azure sync eligible: ${{ steps.status.outputs.sync_eligible }}'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -1320,8 +530,8 @@ jobs:
             构建平台: ${{ steps.platforms.outputs.platforms }}
 
             [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          msg_type: 'post'
-          title: 'Hagicode Desktop 构建通知 ${{ steps.status.outputs.status_icon }}'
+          msg_type: post
+          title: Hagicode Desktop 构建通知 ${{ steps.status.outputs.status_icon }}
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 

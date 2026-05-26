@@ -16,8 +16,8 @@ const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-
 const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-builder.js');
 const macToolchainSigningHookPath = path.resolve(process.cwd(), 'scripts/macos-toolchain-signing-hook.cjs');
 const buildWorkflowPath = path.resolve(process.cwd(), '.github/workflows/build.yml');
-const publishDevWorkflowPath = path.resolve(process.cwd(), '.github/workflows/publish-dev.yml');
-const verifyWindowsSigningWorkflowPath = path.resolve(process.cwd(), '.github/workflows/verify-windows-signing.yml');
+const reusableWindowsWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-windows.yml');
+const reusableUnixWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-unix.yml');
 
 describe('embedded runtime packaging configuration', () => {
   it('declares pinned macOS runtime targets in the manifest', async () => {
@@ -79,62 +79,53 @@ describe('embedded runtime packaging configuration', () => {
   });
 
   it('validates release archive payloads before Windows release ZIP upload', async () => {
-    const [buildWorkflow, publishDevWorkflow, verifyWindowsSigningWorkflow, builder] = await Promise.all([
+    const [buildWorkflow, reusableWindowsWorkflow, reusableUnixWorkflow, builder] = await Promise.all([
       fs.readFile(buildWorkflowPath, 'utf-8'),
-      fs.readFile(publishDevWorkflowPath, 'utf-8'),
-      fs.readFile(verifyWindowsSigningWorkflowPath, 'utf-8'),
+      fs.readFile(reusableWindowsWorkflowPath, 'utf-8'),
+      fs.readFile(reusableUnixWorkflowPath, 'utf-8'),
       fs.readFile(electronBuilderPath, 'utf-8'),
     ]);
 
-    assert.match(buildWorkflow, /Verify Windows ZIP toolchain payload/);
-    assert.match(buildWorkflow, /node scripts\/verify-release-archives\.js --archive/);
-    assert.match(buildWorkflow, /zip_path=/);
+    assert.match(buildWorkflow, /production_build:/);
+    assert.match(buildWorkflow, /is_production_build/);
+    assert.match(buildWorkflow, /uses: \.\/\.github\/workflows\/reusable-build-windows\.yml/);
+    assert.match(buildWorkflow, /uses: \.\/\.github\/workflows\/reusable-build-unix\.yml/);
     assert.match(buildWorkflow, /Publish Windows Release Assets/);
-    assert.match(buildWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
-    assert.match(buildWorkflow, /builder_target: appx/);
-    assert.match(buildWorkflow, /builder_target: msix/);
-    assert.match(buildWorkflow, /linux-appimage/);
-    assert.match(buildWorkflow, /linux-tar-gz/);
-    assert.match(buildWorkflow, /linux-zip/);
-    assert.match(buildWorkflow, /macos-x64-dmg/);
-    assert.match(buildWorkflow, /macos-x64-zip/);
-    assert.match(buildWorkflow, /macos-arm64-dmg/);
-    assert.match(buildWorkflow, /macos-arm64-zip/);
-    assert.match(buildWorkflow, /builder_target: dmg/);
-    assert.match(buildWorkflow, /builder_target: zip/);
-    assert.match(buildWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
     assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
-    assert.doesNotMatch(buildWorkflow, /pkg\/\*\.deb/);
-    assert.doesNotMatch(buildWorkflow, /prepare-msix-release-assets\.js/);
     assert.match(buildWorkflow, /release-assets\/windows\/\*\*\/\*\.appx/);
     assert.match(buildWorkflow, /release-assets\/windows\/\*\*\/\*\.msix/);
+    assert.match(buildWorkflow, /needs\.prepare-release\.outputs\.is_tag_release == 'true'/);
+
+    assert.match(reusableWindowsWorkflow, /Verify Windows ZIP toolchain payload/);
+    assert.match(reusableWindowsWorkflow, /node scripts\/verify-release-archives\.js --archive/);
+    assert.match(reusableWindowsWorkflow, /zip_path=/);
+    assert.match(reusableWindowsWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
+    assert.match(reusableWindowsWorkflow, /builder_target: appx/);
+    assert.match(reusableWindowsWorkflow, /builder_target: msix/);
+    assert.match(reusableWindowsWorkflow, /Upload Windows build bundle/);
+    assert.match(reusableWindowsWorkflow, /release-windows-\$\{\{ matrix\.target\.id \}\}-assets/);
+    assert.match(reusableWindowsWorkflow, /hagicode-windows-\$\{\{ matrix\.target\.id \}\}-\$\{\{ github\.sha \}\}/);
+    assert.match(reusableWindowsWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
+
+    assert.match(reusableUnixWorkflow, /linux-appimage/);
+    assert.match(reusableUnixWorkflow, /linux-tar-gz/);
+    assert.match(reusableUnixWorkflow, /linux-zip/);
+    assert.match(reusableUnixWorkflow, /macos-x64-dmg/);
+    assert.match(reusableUnixWorkflow, /macos-x64-zip/);
+    assert.match(reusableUnixWorkflow, /macos-arm64-dmg/);
+    assert.match(reusableUnixWorkflow, /macos-arm64-zip/);
+    assert.match(reusableUnixWorkflow, /builder_target: dmg/);
+    assert.match(reusableUnixWorkflow, /builder_target: zip/);
+    assert.match(reusableUnixWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
+    assert.match(reusableUnixWorkflow, /Resolve macOS signing mode/);
+    assert.match(reusableUnixWorkflow, /Build unsigned macOS artifacts/);
+    assert.match(reusableUnixWorkflow, /Build signed macOS artifacts/);
+    assert.doesNotMatch(reusableUnixWorkflow, /pkg\/\*\.deb/);
+
+    assert.doesNotMatch(reusableWindowsWorkflow, /prepare-msix-release-assets\.js/);
+    assert.doesNotMatch(reusableUnixWorkflow, /prepare-msix-release-assets\.js/);
     assert.match(builder, /publisherDisplayName: newbe36524/);
     assert.match(builder, /- appx/);
-    assert.match(publishDevWorkflow, /Verify Windows ZIP toolchain payload/);
-    assert.match(publishDevWorkflow, /node scripts\/verify-release-archives\.js --archive/);
-    assert.match(publishDevWorkflow, /zip_path=/);
-    assert.match(publishDevWorkflow, /Build Windows Preview \(\$\{\{ matrix\.target\.name \}\}\)/);
-    assert.match(publishDevWorkflow, /Upload Windows preview bundle/);
-    assert.match(publishDevWorkflow, /builder_target: appx/);
-    assert.match(publishDevWorkflow, /builder_target: msix/);
-    assert.match(publishDevWorkflow, /linux-appimage/);
-    assert.match(publishDevWorkflow, /linux-tar-gz/);
-    assert.match(publishDevWorkflow, /linux-zip/);
-    assert.match(publishDevWorkflow, /macos-x64-dmg/);
-    assert.match(publishDevWorkflow, /macos-x64-zip/);
-    assert.match(publishDevWorkflow, /macos-arm64-dmg/);
-    assert.match(publishDevWorkflow, /macos-arm64-zip/);
-    assert.match(publishDevWorkflow, /builder_target: dmg/);
-    assert.match(publishDevWorkflow, /builder_target: zip/);
-    assert.match(publishDevWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
-    assert.match(publishDevWorkflow, /publish-preview-windows-\$\{\{ matrix\.target\.id \}\}-\$\{\{ needs\.prepare-release\.outputs\.version \}\}/);
-    assert.match(publishDevWorkflow, /publish-preview-\$\{\{ matrix\.target\.id \}\}-\$\{\{ needs\.prepare-release\.outputs\.version \}\}/);
-    assert.doesNotMatch(publishDevWorkflow, /pkg\/\*\.deb/);
-    assert.doesNotMatch(publishDevWorkflow, /prepare-msix-release-assets\.js/);
-    assert.match(buildWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
-    assert.match(publishDevWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
-    assert.match(verifyWindowsSigningWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
-    assert.match(verifyWindowsSigningWorkflow, /Build for Windows/);
   });
 
   it('raises macOS open file limits before electron-builder packaging', async () => {
@@ -245,7 +236,7 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(smokeTest, /packaged vendored OmniRoute runtime uses canonical extra\/runtime\/components\/bundled\/omniroute path/);
     assert.match(smokeTest, /legacy extra\/omniroute\/current path/);
     assert.match(archiveVerifier, /label: 'vendored OmniRoute runtime'/);
-    assert.match(archiveVerifier, /suffixParts: \['omniroute', 'current'\]/);
+    assert.match(archiveVerifier, /suffixParts: \['omniroute'\]/);
     assert.match(archiveVerifier, /validateOmniRouteRuntimePayload/);
   });
 });

@@ -1,15 +1,27 @@
-name: Verify Windows Signing
+name: Reusable Windows Package Build
 
 on:
-  push:
-    branches:
-      - verify/windows-signing
-    tags:
-      - 'verify-win-signing-v*'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      is_production_build:
+        required: true
+        type: boolean
+      sign_windows_release:
+        required: true
+        type: boolean
+      publish_release_assets:
+        required: true
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 env:
   NODE_VERSION: '22'
@@ -18,19 +30,71 @@ env:
   ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
-  verify-windows-signing:
-    name: Verify signed Windows artifacts
-    runs-on: windows-2022
-    environment: production
+  build-windows:
+    name: Build Windows (${{ matrix.target.name }})
+    runs-on: windows-2025
+    environment:
+      name: ${{ inputs.is_production_build && 'production' || 'ci' }}
+      deployment: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - id: portable
+            name: Portable
+            builder_target: portable
+            report_suffix: portable
+            requires_zip: true
+            artifact_path: pkg/*.exe
+          - id: nsis
+            name: NSIS
+            builder_target: nsis
+            report_suffix: nsis
+            requires_zip: false
+            artifact_path: pkg/*Setup*.exe
+          - id: appx
+            name: AppX
+            builder_target: appx
+            report_suffix: appx
+            requires_zip: false
+            artifact_path: pkg/*.appx
+          - id: msix
+            name: MSIX
+            builder_target: msix
+            report_suffix: msix
+            requires_zip: false
+            artifact_path: pkg/*.msix
     permissions:
-      contents: read
+      contents: write
       id-token: write
+    env:
+      RELEASE_CHANNEL: ${{ inputs.channel }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine Windows signing policy
+        id: signing_policy
+        shell: bash
+        run: |
+          if [[ "${{ inputs.is_production_build }}" == 'true' ]]; then
+            required=true
+            reason='production build'
+          elif [[ "${{ inputs.sign_windows_release }}" == 'true' ]]; then
+            required=true
+            reason='manual workflow_dispatch override'
+          else
+            required=false
+            reason='non-release build'
+          fi
+
+          echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "Windows signing required: ${required} (${reason})"
+
       - name: Validate Artifact Signing configuration
+        if: success() && steps.signing_policy.outputs.required == 'true'
         shell: bash
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -42,14 +106,24 @@ jobs:
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
         run: |
           missing=()
+
           for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_CODESIGN_ENDPOINT AZURE_CODESIGN_ACCOUNT_NAME AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME WINDOWS_PACKAGE_PUBLISHER; do
-            if [ -z "${!key:-}" ]; then
+            if [ -z "${!key}" ]; then
               missing+=("${key}")
             fi
           done
 
           if [ ${#missing[@]} -gt 0 ]; then
             printf '::error::Missing Artifact Signing configuration: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## Windows code signing configuration error'
+              echo
+              echo 'The release build requires Artifact Signing, but the following values are missing:'
+              echo
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -82,31 +156,41 @@ jobs:
             build/embedded-node-runtime/downloads
             .generated/code-server-runtime/downloads
             .generated/omniroute-runtime/downloads
-          key: ${{ runner.os }}-verify-windows-signing-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
           restore-keys: |
-            ${{ runner.os }}-verify-windows-signing-
             ${{ runner.os }}-build-downloads-
 
-      - name: Sync version from verification tag
-        if: startsWith(github.ref, 'refs/tags/verify-win-signing-v')
+      - name: Sync package version
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#verify-win-signing-v}"
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
           echo "Syncing npm/package.json version to ${VERSION}"
           npm version "${VERSION}" --no-git-tag-version
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build for Windows
+      - name: Build Windows ${{ matrix.target.name }} package
         shell: bash
-        run: node scripts/ci-build.js --platform win
+        run: node scripts/ci-build.js --platform win --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
 
-      - name: Collect Windows artifacts
+      - name: Preserve unsigned Windows artifacts
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/preserve-artifacts.js \
+            --source-dir pkg \
+            --artifact-path "${{ matrix.target.artifact_path }}" \
+            --output-dir unsigned-artifacts \
+            --suffix unsigned
+
+      - name: Collect Windows ${{ matrix.target.name }} artifacts
         id: windows_artifacts
         shell: pwsh
         run: |
@@ -119,16 +203,24 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $signable = @($nsis + $portable | Sort-Object FullName -Unique)
+          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
+          $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
+          $selectedFiles = switch ('${{ matrix.target.id }}') {
+            'portable' { $portable }
+            'nsis' { $nsis }
+            'appx' { $appx }
+            'msix' { $msix }
+            default { @() }
+          }
           $unpackedRoots = @(Get-ChildItem -Path $pkgDir -Directory | Where-Object { $_.Name -eq 'win-unpacked' } | Sort-Object FullName -Unique)
           $catalogPath = Join-Path $pkgDir 'windows-signable-artifacts.txt'
-          $buildReport = Join-Path $pkgDir 'ci-build-report-win.json'
+          $buildReport = Join-Path $pkgDir 'ci-build-report-win-${{ matrix.target.report_suffix }}.json'
 
-          if ($signable.Count -eq 0) {
-            throw 'No Windows EXE artifacts were found in pkg/ for signing validation.'
+          if ($selectedFiles.Count -eq 0) {
+            throw "No Windows ${{ matrix.target.name }} artifacts were found in pkg/."
           }
 
-          if ($unpackedRoots.Count -eq 0) {
+          if ('${{ matrix.target.id }}' -eq 'portable' -and $unpackedRoots.Count -eq 0) {
             throw 'No win-unpacked directory was found in pkg/ for ZIP assembly.'
           }
 
@@ -136,12 +228,15 @@ jobs:
             throw "CI build report was not found: $buildReport"
           }
 
-          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
-          $zipBaseName = if ($portable.Count -gt 0) {
-            [System.IO.Path]::GetFileNameWithoutExtension($portable[0].Name)
-          } else {
-            'hagicode-windows-unpacked'
+          $catalogEntries = @()
+          foreach ($file in $selectedFiles) {
+            $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $file.FullName).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
+          $catalogEntries = @($catalogEntries | Sort-Object -Unique)
+          $catalogEntries | Set-Content -Path $catalogPath
+
+          $zipPayloadRoot = Join-Path $pkgDir 'windows-zip-payload'
+          $zipBaseName = [System.IO.Path]::GetFileNameWithoutExtension($selectedFiles[0].Name)
 
           function Write-MultilineOutput([string]$Name, [object[]]$Files) {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "$Name<<EOF"
@@ -151,24 +246,22 @@ jobs:
             Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
           }
 
-          Write-MultilineOutput 'nsis_files' $nsis
-          Write-MultilineOutput 'portable_files' $portable
-          Write-MultilineOutput 'signable_files' $signable
+          Write-MultilineOutput 'package_files' $selectedFiles
           Write-MultilineOutput 'unpacked_roots' $unpackedRoots
           Add-Content -Path $env:GITHUB_OUTPUT -Value "catalog_path=$catalogPath"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_root=$zipPayloadRoot"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_base_name=$zipBaseName"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "signable_count=$($signable.Count)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "portable_count=$($portable.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "package_count=$($selectedFiles.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "unpacked_count=$($unpackedRoots.Count)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "report_path=$buildReport"
 
       - name: Prepare Windows unpacked ZIP payload workspace
+        if: success() && matrix.target.requires_zip
         id: windows_zip_payload
         shell: pwsh
         env:
           WINDOWS_UNPACKED_ROOTS: ${{ steps.windows_artifacts.outputs.unpacked_roots }}
-          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.signable_files }}
+          WINDOWS_SIGNABLE_FILES: ${{ steps.windows_artifacts.outputs.package_files }}
           WINDOWS_ZIP_BASE_NAME: ${{ steps.windows_artifacts.outputs.zip_base_name }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -238,10 +331,8 @@ jobs:
             throw "Expected exactly one root desktop executable in ZIP payload staging, found $($zipPayloadRootExecutables.Count):`n$detectedExecutables"
           }
 
-          $zipPayloadSignableFiles = $zipPayloadRootExecutables
-
           $catalogEntries = @()
-          foreach ($filePath in @($signableFiles + ($zipPayloadSignableFiles | ForEach-Object { $_.FullName }))) {
+          foreach ($filePath in @($signableFiles + ($zipPayloadRootExecutables | ForEach-Object { $_.FullName }))) {
             $resolvedPath = Resolve-Path -LiteralPath $filePath | Select-Object -ExpandProperty Path
             $catalogEntries += [System.IO.Path]::GetRelativePath($pkgDir, $resolvedPath).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
           }
@@ -251,48 +342,47 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir=$payloadDir"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "payload_dir_name=$payloadDirName"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_count=$($zipPayloadFiles.Count)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadSignableFiles.Count)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
-      - name: Azure login
-        uses: azure/login@v2
+      - name: Azure login for Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Sign root Windows EXE artifacts with Artifact Signing
-        uses: azure/artifact-signing-action@v1
+      - name: Sign Windows artifacts with Artifact Signing
+        if: success() && steps.signing_policy.outputs.required == 'true'
+        id: windows_signing
+        continue-on-error: ${{ matrix.target.id == 'msix' }}
+        uses: azure/artifact-signing-action@v2
         with:
           endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ github.workspace }}/pkg
-          files-folder-filter: '*.exe'
-          files-folder-recurse: false
+          files-catalog: ${{ steps.windows_artifacts.outputs.catalog_path }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          description: Hagicode Desktop
-          description-url: https://github.com/HagiCode-org/desktop
-          timeout: 600
+          cache-dependencies: true
 
-      - name: Sign unpacked Windows root EXE with Artifact Signing
-        uses: azure/artifact-signing-action@v1
-        with:
-          endpoint: ${{ secrets.AZURE_CODESIGN_ENDPOINT }}
-          signing-account-name: ${{ secrets.AZURE_CODESIGN_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ steps.windows_zip_payload.outputs.payload_dir }}
-          files-folder-filter: '*.exe'
-          files-folder-recurse: false
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: Hagicode Desktop
-          description-url: https://github.com/HagiCode-org/desktop
-          timeout: 600
+      - name: Summarize unsigned MSIX fallback
+        if: always() && steps.signing_policy.outputs.required == 'true' && matrix.target.id == 'msix' && steps.windows_signing.outcome != 'success'
+        shell: pwsh
+        run: |
+          $summary = @(
+            '## Windows MSIX signing skipped',
+            '',
+            '- Azure Artifact Signing v2 for MSIX did not complete successfully on this run.',
+            '- The signed `MSIX` artifact was skipped.',
+            '- The unsigned MSIX artifact is still available with the `-unsigned` suffix.'
+          ) -join "`n"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+          Write-Warning 'MSIX signing failed; skipping signed artifact upload and retaining only the unsigned MSIX artifact.'
 
       - name: Verify Windows signatures
+        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'msix'
         shell: bash
         env:
           VERIFY_STRICT: 'true'
@@ -300,6 +390,7 @@ jobs:
           node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
 
       - name: Create Windows ZIP artifact
+        if: success() && matrix.target.requires_zip
         id: windows_zip
         shell: pwsh
         run: |
@@ -319,39 +410,94 @@ jobs:
           Compress-Archive -Path (Join-Path $payloadDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
           $zipFile = Get-Item -LiteralPath $zipPath
 
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_files<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_files<<EOF'
           Add-Content -Path $env:GITHUB_OUTPUT -Value $zipFile.FullName
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'EOF'
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_path=$($zipFile.FullName)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
 
       - name: Verify Windows ZIP toolchain payload
+        if: success() && matrix.target.requires_zip && steps.windows_zip.outputs.zip_path != ''
         shell: bash
         run: |
           node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
 
-      - name: Publish verification summary
+      - name: Summarize Windows package build
+        if: success()
         shell: bash
         run: |
           {
-            echo '## Windows signing verification summary'
+            echo '## Windows package build'
             echo
-            echo '- Signed installers: ${{ steps.windows_artifacts.outputs.signable_count }}'
-            echo '- Signed staged unpacked payload primary executables: ${{ steps.windows_zip_payload.outputs.zip_payload_signable_count }}'
+            echo '- Package target: ${{ matrix.target.name }}'
+            echo '- Version: ${{ inputs.version }}'
+            echo '- Release channel: ${{ inputs.channel }}'
+            echo "- Signing policy: ${{ steps.signing_policy.outputs.reason }}"
+            echo '- Package artifacts discovered: ${{ steps.windows_artifacts.outputs.package_count }}'
+            echo '- Unpacked roots discovered: ${{ steps.windows_artifacts.outputs.unpacked_count }}'
+            echo '- ZIP payload files staged: ${{ steps.windows_zip_payload.outputs.zip_payload_count }}'
             echo '- ZIP artifacts created: ${{ steps.windows_zip.outputs.zip_count }}'
             echo '- CI build report: `${{ steps.windows_artifacts.outputs.report_path }}`'
-            echo '- Verification: passed'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload verification bundle
+      - name: Upload Windows release bundle
         uses: actions/upload-artifact@v4
+        if: success() && inputs.publish_release_assets && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
         with:
-          name: verify-windows-signing-${{ github.run_id }}
+          name: release-windows-${{ matrix.target.id }}-assets
           path: |
-            ${{ steps.windows_artifacts.outputs.nsis_files }}
-            ${{ steps.windows_artifacts.outputs.portable_files }}
+            ${{ steps.windows_artifacts.outputs.package_files }}
             ${{ steps.windows_zip.outputs.zip_files }}
+            unsigned-artifacts/*
             ${{ steps.windows_artifacts.outputs.report_path }}
-            ${{ steps.windows_artifacts.outputs.catalog_path }}
-          retention-days: 14
+          retention-days: 30
           if-no-files-found: error
+
+      - name: Upload Windows build bundle
+        uses: actions/upload-artifact@v4
+        if: success() && !inputs.publish_release_assets && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
+        with:
+          name: hagicode-windows-${{ matrix.target.id }}-${{ github.sha }}
+          path: |
+            ${{ steps.windows_artifacts.outputs.package_files }}
+            ${{ steps.windows_zip.outputs.zip_files }}
+            unsigned-artifacts/*
+            ${{ steps.windows_artifacts.outputs.report_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Code signing failure notification
+        if: failure()
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
+            Write-Host 'FEISHU_WEBHOOK_URL is empty, skipping Windows code signing failure notification.'
+            exit 0
+          }
+
+          $message = @(
+            '代码签名失败 (Windows) ❌',
+            '',
+            '平台: Windows / ${{ matrix.target.name }}',
+            '版本: ${{ inputs.version }}',
+            '提交: ${{ github.sha }}',
+            '',
+            '请检查签名配置和证书状态。',
+            '可能的原因：',
+            '- GitHub OIDC 到 Azure 的联邦身份或角色配置不完整',
+            '- Artifact Signing 端点、签名账户或证书配置文件配置错误',
+            '- 产物签名成功但验签失败',
+            '',
+            '查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ) -join "`n"
+
+          $payload = @{
+            msg_type = 'text'
+            content = @{
+              text = $message
+            }
+          } | ConvertTo-Json -Depth 4
+
+          Invoke-RestMethod -Method Post -Uri $env:FEISHU_WEBHOOK_URL -ContentType 'application/json' -Body $payload | Out-Null
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}

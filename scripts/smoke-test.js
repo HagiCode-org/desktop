@@ -172,17 +172,17 @@ function resolvePackagedCodeServerRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
     ];
   }
   return [];
@@ -195,17 +195,17 @@ function resolvePackagedOmniRouteRoots() {
   }
 
   if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current')];
+    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute')];
   }
   if (process.platform === 'darwin') {
     return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute', 'current'),
+      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
+      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'omniroute'),
     ];
   }
   return [];
@@ -626,48 +626,56 @@ test('electron-builder configuration is valid', async () => {
   assert(!linuxTargets.includes('deb'), 'linux packaging no longer emits deb output');
 });
 
-test('desktop build workflow includes ZIP packaging and parallel release publication steps', () => {
-  const workflowPath = path.join(process.cwd(), '.github', 'workflows', 'build.yml');
-  const publishPreviewWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'publish-dev.yml');
-  const verifyWindowsSigningWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'verify-windows-signing.yml');
-  const exists = fs.existsSync(workflowPath);
-  const publishPreviewExists = fs.existsSync(publishPreviewWorkflowPath);
-  const verifyWindowsSigningExists = fs.existsSync(verifyWindowsSigningWorkflowPath);
+test('desktop build workflow uses reusable ZIP-aware packaging workflows and split release publication steps', () => {
+  const buildWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'build.yml');
+  const reusableWindowsWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'reusable-build-windows.yml');
+  const reusableUnixWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'reusable-build-unix.yml');
+  const legacyPublishPreviewWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'publish-dev.yml');
+  const buildExists = fs.existsSync(buildWorkflowPath);
+  const reusableWindowsExists = fs.existsSync(reusableWindowsWorkflowPath);
+  const reusableUnixExists = fs.existsSync(reusableUnixWorkflowPath);
+  const legacyPublishPreviewExists = fs.existsSync(legacyPublishPreviewWorkflowPath);
 
-  if (!assert(exists, '.github/workflows/build.yml exists')) {
+  if (!assert(buildExists, '.github/workflows/build.yml exists')) {
     return;
   }
 
-  assert(publishPreviewExists, '.github/workflows/publish-dev.yml exists');
-  assert(verifyWindowsSigningExists, '.github/workflows/verify-windows-signing.yml exists');
+  assert(reusableWindowsExists, '.github/workflows/reusable-build-windows.yml exists');
+  assert(reusableUnixExists, '.github/workflows/reusable-build-unix.yml exists');
+  assert(!legacyPublishPreviewExists, '.github/workflows/publish-dev.yml is removed in favor of reusable build workflows');
 
-  const content = fs.readFileSync(workflowPath, 'utf8');
-  const publishPreviewContent = fs.readFileSync(publishPreviewWorkflowPath, 'utf8');
-  const verifyWindowsSigningContent = fs.readFileSync(verifyWindowsSigningWorkflowPath, 'utf8');
+  const buildContent = fs.readFileSync(buildWorkflowPath, 'utf8');
+  const reusableWindowsContent = fs.readFileSync(reusableWindowsWorkflowPath, 'utf8');
+  const reusableUnixContent = fs.readFileSync(reusableUnixWorkflowPath, 'utf8');
 
-  assert(content.includes('Prepare Windows unpacked ZIP payload workspace'), 'workflow stages the unpacked Windows ZIP payload before compression');
-  assert(content.includes('Create Windows ZIP artifact'), 'workflow creates Windows ZIP artifacts after staging');
-  assert(content.includes('WINDOWS_PACKAGE_PUBLISHER'), 'workflow requires Windows package publisher alignment for signed store packages');
-  assert(publishPreviewContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'publish preview workflow requires Windows package publisher alignment for signed store packages');
-  assert(verifyWindowsSigningContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'Windows signing verification workflow requires Windows package publisher alignment for signed store packages');
-  assert(content.includes('azure/artifact-signing-action@v2'), 'workflow uses Artifact Signing v2');
-  assert(content.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
-  assert(!content.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
-  assert(content.includes('unsigned-artifacts/*'), 'workflow preserves unsigned artifacts alongside signed outputs');
-  assert(content.includes('Upload Windows build bundle'), 'workflow uploads a Windows build bundle after packaging');
-  assert(content.includes('Publish Windows Release Assets'), 'workflow publishes Windows release assets in a separate job');
-  assert(content.includes('name: MSIX'), 'workflow includes a dedicated MSIX matrix target');
-  assert(content.includes('builder_target: msix'), 'workflow wires the MSIX target into the Windows packaging matrix');
-  assert(content.includes('release-assets/windows/**/*.msix'), 'workflow publishes MSIX release assets');
-  assert(content.includes('strategy:'), 'workflow uses a matrix strategy for non-Windows packaging');
-  assert(content.includes('macos-arm64'), 'workflow includes a dedicated macOS arm64 matrix target');
-  assert(content.includes('Resolve macOS signing mode'), 'workflow explicitly resolves macOS signing mode for production releases');
-  assert(content.includes('Build unsigned macOS artifacts'), 'workflow preserves unsigned macOS artifacts before signed rebuilds');
-  assert(content.includes('Build signed macOS artifacts'), 'workflow rebuilds signed macOS artifacts when signing material is present');
-  assert(content.includes('Summarize Linux artifacts'), 'workflow reports Linux ZIP diagnostics');
-  assert(content.includes('Upload Linux release bundle'), 'workflow uploads a Linux release bundle for later publication');
-  assert(content.includes('Publish ${{ matrix.target.name }} Release Assets'), 'workflow publishes non-Windows release assets through a matrix job');
-  assert(!content.includes('pkg/*.deb'), 'workflow no longer references deb artifacts');
+  assert(buildContent.includes('production_build'), 'build workflow exposes a manual production_build input');
+  assert(buildContent.includes('is_production_build'), 'build workflow resolves production build metadata');
+  assert(buildContent.includes('uses: ./.github/workflows/reusable-build-windows.yml'), 'build workflow delegates Windows packaging to the reusable Windows workflow');
+  assert(buildContent.includes('uses: ./.github/workflows/reusable-build-unix.yml'), 'build workflow delegates Linux and macOS packaging to the reusable Unix workflow');
+  assert(buildContent.includes('Publish Windows Release Assets'), 'build workflow publishes Windows release assets in a separate job');
+  assert(buildContent.includes('Publish ${{ matrix.target.name }} Release Assets'), 'build workflow publishes non-Windows release assets through a matrix job');
+  assert(buildContent.includes('release-assets/windows/**/*.msix'), 'build workflow publishes MSIX release assets');
+  assert(buildContent.includes("needs.prepare-release.outputs.is_tag_release == 'true'"), 'build workflow only publishes GitHub release assets for tag releases');
+  assert(buildContent.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
+  assert(!buildContent.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
+
+  assert(reusableWindowsContent.includes('Prepare Windows unpacked ZIP payload workspace'), 'reusable Windows workflow stages the unpacked Windows ZIP payload before compression');
+  assert(reusableWindowsContent.includes('Create Windows ZIP artifact'), 'reusable Windows workflow creates Windows ZIP artifacts after staging');
+  assert(reusableWindowsContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'reusable Windows workflow requires Windows package publisher alignment for signed store packages');
+  assert(reusableWindowsContent.includes('azure/artifact-signing-action@v2'), 'reusable Windows workflow uses Artifact Signing v2');
+  assert(reusableWindowsContent.includes('unsigned-artifacts/*'), 'reusable Windows workflow preserves unsigned artifacts alongside signed outputs');
+  assert(reusableWindowsContent.includes('Upload Windows build bundle'), 'reusable Windows workflow uploads a Windows build bundle after packaging');
+  assert(reusableWindowsContent.includes('name: MSIX'), 'reusable Windows workflow includes a dedicated MSIX matrix target');
+  assert(reusableWindowsContent.includes('builder_target: msix'), 'reusable Windows workflow wires the MSIX target into the Windows packaging matrix');
+
+  assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
+  assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
+  assert(reusableUnixContent.includes('Resolve macOS signing mode'), 'reusable Unix workflow explicitly resolves macOS signing mode for production releases');
+  assert(reusableUnixContent.includes('Build unsigned macOS artifacts'), 'reusable Unix workflow preserves unsigned macOS artifacts before signed rebuilds');
+  assert(reusableUnixContent.includes('Build signed macOS artifacts'), 'reusable Unix workflow rebuilds signed macOS artifacts when signing material is present');
+  assert(reusableUnixContent.includes('Summarize Linux artifacts'), 'reusable Unix workflow reports Linux ZIP diagnostics');
+  assert(reusableUnixContent.includes('Upload Linux release bundle'), 'reusable Unix workflow uploads a Linux release bundle for later publication');
+  assert(!reusableUnixContent.includes('pkg/*.deb'), 'reusable Unix workflow no longer references deb artifacts');
 });
 
 test('global hagiscript prerequisite is available', () => {
@@ -811,6 +819,7 @@ test('packaged vendored code-server payload is complete', () => {
   assert(!packagedCodeServerRoot.includes('app.asar'), 'packaged vendored code-server runtime resolves outside app.asar');
   assert(packagedCodeServerRoot.includes(path.join('extra', 'runtime', 'components', 'bundled', 'code-server')), 'packaged vendored code-server runtime uses canonical extra/runtime/components/bundled/code-server path');
   assert(!packagedCodeServerRoot.includes(path.join('extra', 'code-server', 'current')), 'packaged vendored code-server runtime does not use the legacy extra/code-server/current path');
+  assert(!packagedCodeServerRoot.endsWith(path.join('code-server', 'current')), 'packaged vendored code-server runtime no longer treats current as the packaged root');
 
   const errors = validateVendoredCodeServerRuntime(packagedCodeServerRoot);
   assert(
@@ -845,6 +854,7 @@ test('packaged vendored OmniRoute payload is complete', () => {
   assert(!packagedOmniRouteRoot.includes('app.asar'), 'packaged vendored OmniRoute runtime resolves outside app.asar');
   assert(packagedOmniRouteRoot.includes(path.join('extra', 'runtime', 'components', 'bundled', 'omniroute')), 'packaged vendored OmniRoute runtime uses canonical extra/runtime/components/bundled/omniroute path');
   assert(!packagedOmniRouteRoot.includes(path.join('extra', 'omniroute', 'current')), 'packaged vendored OmniRoute runtime does not use the legacy extra/omniroute/current path');
+  assert(!packagedOmniRouteRoot.endsWith(path.join('omniroute', 'current')), 'packaged vendored OmniRoute runtime no longer treats current as the packaged root');
 
   const errors = validateVendoredOmniRouteRuntime(packagedOmniRouteRoot);
   assert(

@@ -1,0 +1,380 @@
+name: Reusable Unix Package Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      is_production_build:
+        required: true
+        type: boolean
+      publish_release_assets:
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+  HAGISCRIPT_VERSION: 'latest'
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+
+jobs:
+  build-platform-artifacts:
+    name: Build ${{ matrix.target.name }}
+    runs-on: ${{ matrix.target.runs_on }}
+    environment:
+      name: ${{ inputs.is_production_build && 'production' || 'ci' }}
+      deployment: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - id: linux-appimage
+            name: Linux AppImage
+            runs_on: ubuntu-latest
+            builder_target: AppImage
+            report_suffix: appimage
+            artifact_glob: '*.AppImage'
+          - id: linux-tar-gz
+            name: Linux tar.gz
+            runs_on: ubuntu-latest
+            builder_target: tar.gz
+            report_suffix: tar-gz
+            artifact_glob: '*.tar.gz'
+          - id: linux-zip
+            name: Linux ZIP
+            runs_on: ubuntu-latest
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
+          - id: macos-x64-dmg
+            name: macOS x64 DMG
+            runs_on: macos-latest
+            mac_arch: x64
+            mac_runtime_platform: osx-x64
+            builder_target: dmg
+            report_suffix: dmg
+            artifact_glob: '*.dmg'
+          - id: macos-x64-zip
+            name: macOS x64 ZIP
+            runs_on: macos-latest
+            mac_arch: x64
+            mac_runtime_platform: osx-x64
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
+          - id: macos-arm64-dmg
+            name: macOS arm64 DMG
+            runs_on: macos-latest
+            mac_arch: arm64
+            mac_runtime_platform: osx-arm64
+            builder_target: dmg
+            report_suffix: dmg
+            artifact_glob: '*.dmg'
+          - id: macos-arm64-zip
+            name: macOS arm64 ZIP
+            runs_on: macos-latest
+            mac_arch: arm64
+            mac_runtime_platform: osx-arm64
+            builder_target: zip
+            report_suffix: zip
+            artifact_glob: '*.zip'
+    env:
+      RELEASE_CHANNEL: ${{ inputs.channel }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve macOS signing mode
+        if: startsWith(matrix.target.id, 'macos-') && inputs.is_production_build
+        id: mac_signing
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=()
+          if [[ -z "${CSC_LINK}" ]]; then
+            missing+=('CSC_LINK')
+          fi
+          if [[ -z "${CSC_KEY_PASSWORD}" ]]; then
+            missing+=('CSC_KEY_PASSWORD')
+          fi
+
+          has_api_key_auth=true
+          for key in APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
+            if [[ -z "${!key}" ]]; then
+              has_api_key_auth=false
+            fi
+          done
+
+          has_apple_id_auth=true
+          for key in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!key}" ]]; then
+              has_apple_id_auth=false
+            fi
+          done
+
+          if [[ "${has_api_key_auth}" != 'true' && "${has_apple_id_auth}" != 'true' ]]; then
+            missing+=('APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER or APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID')
+          fi
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            printf '::warning::Missing macOS release signing configuration: %s. Falling back to unsigned macOS build.\n' "$(IFS=', '; echo "${missing[*]}")"
+            {
+              echo '## macOS signing fallback'
+              echo
+              echo 'Production macOS signing configuration is incomplete. This job will publish unsigned macOS packages only.'
+              echo
+              echo 'Missing values:'
+              for key in "${missing[@]}"; do
+                echo "- ${key}"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install global hagiscript
+        shell: bash
+        run: |
+          npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+          prefix="$(npm config get prefix)"
+          echo "$prefix" >> "$GITHUB_PATH"
+          if [ -d "$prefix/bin" ]; then
+            echo "$prefix/bin" >> "$GITHUB_PATH"
+          fi
+          hash -r
+          hagiscript --version
+
+      - name: Cache build downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/electron
+            .cache/electron-builder
+            build/embedded-runtime/downloads
+            build/embedded-node-runtime/downloads
+            .generated/code-server-runtime/downloads
+            .generated/omniroute-runtime/downloads
+          key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-downloads-
+
+      - name: Sync package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+          echo "Syncing npm/package.json version to ${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux artifacts
+        if: startsWith(matrix.target.id, 'linux-')
+        run: node scripts/ci-build.js --platform linux --target "${{ matrix.target.builder_target }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
+
+      - name: Build unsigned macOS artifacts
+        if: startsWith(matrix.target.id, 'macos-') && inputs.is_production_build
+        shell: bash
+        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+
+      - name: Preserve unsigned macOS artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && inputs.is_production_build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/preserve-artifacts.js \
+            --source-dir pkg \
+            --artifact-path "${{ matrix.target.artifact_glob }}" \
+            --output-dir unsigned-artifacts \
+            --suffix unsigned
+
+      - name: Reset macOS package output for signed artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && inputs.is_production_build && steps.mac_signing.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          rm -rf pkg
+          mkdir -p pkg
+
+      - name: Prepare macOS release signing environment
+        if: success() && startsWith(matrix.target.id, 'macos-') && inputs.is_production_build && steps.mac_signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "CSC_LINK=${CSC_LINK}"
+            echo "CSC_KEY_PASSWORD=${CSC_KEY_PASSWORD}"
+            echo 'APPLE_API_KEY<<EOF'
+            echo "${APPLE_API_KEY}"
+            echo 'EOF'
+            echo "APPLE_API_KEY_ID=${APPLE_API_KEY_ID}"
+            echo "APPLE_API_ISSUER=${APPLE_API_ISSUER}"
+            echo "APPLE_ID=${APPLE_ID}"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=${APPLE_APP_SPECIFIC_PASSWORD}"
+            echo "APPLE_TEAM_ID=${APPLE_TEAM_ID}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build signed macOS artifacts
+        if: success() && startsWith(matrix.target.id, 'macos-') && (!inputs.is_production_build || steps.mac_signing.outputs.enabled == 'true')
+        shell: bash
+        run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ inputs.is_production_build && steps.mac_signing.outputs.enabled == 'true' && 'true' || 'false' }}
+          HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
+          HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+          HAGICODE_OMNIROUTE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
+
+      - name: Summarize Linux artifacts
+        if: startsWith(matrix.target.id, 'linux-') && success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
+          artifact_count=${#artifact_files[@]}
+          report_path="pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json"
+
+          {
+            echo '## Linux packaging artifacts'
+            echo
+            echo '- Version: ${{ inputs.version }}'
+            echo '- Release channel: ${{ inputs.channel }}'
+            echo '- Package target: ${{ matrix.target.builder_target }}'
+            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
+            echo "- Matched artifacts: ${artifact_count}"
+            echo "- CI build report: \`${report_path}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$artifact_count" -eq 0 ]; then
+            echo '::error::Linux target artifact was not produced in pkg/.'
+            exit 1
+          fi
+
+          if [ ! -f "$report_path" ]; then
+            echo "::error::Linux CI build report is missing: $report_path"
+            exit 1
+          fi
+
+      - name: Validate macOS artifacts
+        if: startsWith(matrix.target.id, 'macos-')
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          artifact_files=(pkg/${{ matrix.target.artifact_glob }})
+          artifact_count=${#artifact_files[@]}
+          report_path="pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json"
+
+          {
+            echo '## macOS packaging artifacts'
+            echo
+            echo '- Version: ${{ inputs.version }}'
+            echo '- Release channel: ${{ inputs.channel }}'
+            echo '- Target architecture: ${{ matrix.target.mac_arch }}'
+            echo '- Package target: ${{ matrix.target.builder_target }}'
+            echo '- Artifact pattern: pkg/${{ matrix.target.artifact_glob }}'
+            echo "- Matched artifacts: ${artifact_count}"
+            echo "- CI build report: \`${report_path}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$artifact_count" -eq 0 ]; then
+            echo '::error::macOS target artifact was not produced in pkg/.'
+            exit 1
+          fi
+
+          if [ ! -f "$report_path" ]; then
+            echo "::error::macOS CI build report is missing: $report_path"
+            exit 1
+          fi
+
+      - name: Upload Linux release bundle
+        if: startsWith(matrix.target.id, 'linux-') && inputs.publish_release_assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target.id }}-assets
+          path: |
+            pkg/${{ matrix.target.artifact_glob }}
+            pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux build bundle
+        if: startsWith(matrix.target.id, 'linux-') && success() && !inputs.publish_release_assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: hagicode-${{ matrix.target.id }}-${{ github.sha }}
+          path: |
+            pkg/${{ matrix.target.artifact_glob }}
+            pkg/ci-build-report-linux-${{ matrix.target.report_suffix }}.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload macOS release bundle
+        if: startsWith(matrix.target.id, 'macos-') && inputs.publish_release_assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target.id }}-assets
+          path: |
+            pkg/${{ matrix.target.artifact_glob }}
+            unsigned-artifacts/*
+            pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload macOS build bundle
+        if: startsWith(matrix.target.id, 'macos-') && success() && !inputs.publish_release_assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: hagicode-${{ matrix.target.id }}-${{ github.sha }}
+          path: |
+            pkg/${{ matrix.target.artifact_glob }}
+            pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
+          retention-days: 30
+          if-no-files-found: error
