@@ -5,6 +5,8 @@ import { ensureRuntimeManifestPath, readRuntimeManifestSection } from './runtime
 
 const LEGACY_METADATA_FILE = 'metadata.json';
 const HAGISCRIPT_COMPONENT_MARKER_FILE = '.hagicode-runtime.json';
+const DEFAULT_ARCHIVE_RELATIVE_PATH = path.join('archives', 'omniroute.7z');
+const DEFAULT_INSTALL_MODE = 'archive-7z-only';
 
 function getOmniRouteRuntimeConfigPath() {
   return ensureRuntimeManifestPath();
@@ -104,6 +106,10 @@ export function resolveOmniRouteGeneratedRoot(config = readOmniRouteRuntimeConfi
   return path.join(baseRoot, '.generated', generatedSubdir);
 }
 
+export function resolveOmniRoutePackagedArchivePath(runtimeRoot, config = readOmniRouteRuntimeConfig()) {
+  return path.join(runtimeRoot, config.packagedLayout?.archiveRelativePath || DEFAULT_ARCHIVE_RELATIVE_PATH);
+}
+
 export function readOmniRouteRuntimeMetadata(runtimeRoot) {
   return readOmniRouteRuntimeMetadataRecord(runtimeRoot).metadata;
 }
@@ -115,70 +121,50 @@ function readOmniRouteRuntimeMetadataRecord(
     config = readOmniRouteRuntimeConfig(),
   } = {},
 ) {
-  const legacyMetadataPath = path.join(runtimeRoot, LEGACY_METADATA_FILE);
+  const markerPath = path.join(runtimeRoot, config.packagedLayout?.markerFile || HAGISCRIPT_COMPONENT_MARKER_FILE);
+  if (fs.existsSync(markerPath)) {
+    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    const target = resolveOmniRouteRuntimeTarget(platformKey, config);
+    return {
+      metadata: {
+        schemaVersion: config.schemaVersion,
+        packageId: config.packageId,
+        version: typeof marker.version === 'string' ? marker.version : '',
+        platform: target.platform,
+        arch: target.arch,
+        sourceRevision: marker.vendoredReleaseTag || marker.vendoredReleaseName || marker.generatedAt || 'hagiscript-managed',
+        extra: {
+          bundledNodeRuntime: true,
+        },
+        artifacts: marker.vendoredAssetName
+          ? [{
+              kind: 'release-asset',
+              fileName: marker.vendoredAssetName,
+              blobKey: marker.vendoredAssetUrl || marker.vendoredAssetName,
+              platform: target.platform,
+              arch: target.arch,
+            }]
+          : undefined,
+      },
+      metadataPath: markerPath,
+      marker,
+    };
+  }
+
+  const legacyMetadataPath = path.join(runtimeRoot, 'current', LEGACY_METADATA_FILE);
   if (fs.existsSync(legacyMetadataPath)) {
     return {
       metadata: JSON.parse(fs.readFileSync(legacyMetadataPath, 'utf8')),
       metadataPath: legacyMetadataPath,
+      marker: null,
     };
   }
 
-  const markerPath = path.join(runtimeRoot, '..', HAGISCRIPT_COMPONENT_MARKER_FILE);
-  if (!fs.existsSync(markerPath)) {
-    return {
-      metadata: null,
-      metadataPath: null,
-    };
-  }
-
-  const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
-  const target = resolveOmniRouteRuntimeTarget(platformKey, config);
   return {
-    metadata: {
-      schemaVersion: config.schemaVersion,
-      packageId: config.packageId,
-      version: typeof marker.version === 'string' ? marker.version : '',
-      platform: target.platform,
-      arch: target.arch,
-      sourceRevision: marker.vendoredReleaseTag || marker.vendoredReleaseName || marker.generatedAt || 'hagiscript-managed',
-      extra: {
-        bundledNodeRuntime: true,
-      },
-      artifacts: marker.vendoredAssetName
-        ? [{
-          kind: 'release-asset',
-          fileName: marker.vendoredAssetName,
-          blobKey: marker.vendoredAssetUrl || marker.vendoredAssetName,
-          platform: target.platform,
-          arch: target.arch,
-        }]
-        : undefined,
-    },
-    metadataPath: markerPath,
+    metadata: null,
+    metadataPath: null,
+    marker: null,
   };
-}
-
-export function resolveOmniRouteWrapperPath(runtimeRoot, config = readOmniRouteRuntimeConfig(), platform = process.platform) {
-  const orderedCandidates = platform === 'win32'
-    ? [
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.(cmd|bat)$/i.test(candidate)),
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => /\.ps1$/i.test(candidate)),
-        ...config.expectedLayout.wrapperCandidates.filter(candidate => !/\.(cmd|bat|ps1)$/i.test(candidate)),
-      ]
-    : config.expectedLayout.wrapperCandidates;
-
-  for (const relativePath of orderedCandidates) {
-    const candidate = path.join(runtimeRoot, relativePath);
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-function resolveRequiredEntry(relativePattern, runtimeRoot) {
-  const candidates = relativePattern.split('|').map((entry) => entry.trim()).filter(Boolean);
-  return candidates.find((candidate) => fs.existsSync(path.join(runtimeRoot, candidate))) ?? null;
 }
 
 export function validateOmniRouteRuntimePayload(
@@ -191,20 +177,24 @@ export function validateOmniRouteRuntimePayload(
   const diagnostics = [];
   const missingEntries = [];
   const target = resolveOmniRouteRuntimeTarget(platformKey, config);
-  const { metadata, metadataPath } = readOmniRouteRuntimeMetadataRecord(runtimeRoot, { platformKey, config });
+  const { metadata, metadataPath, marker } = readOmniRouteRuntimeMetadataRecord(runtimeRoot, { platformKey, config });
+  const archivePath = resolveOmniRoutePackagedArchivePath(runtimeRoot, config);
+  const expectedInstallMode = config.packagedLayout?.installMode || DEFAULT_INSTALL_MODE;
 
   if (!fs.existsSync(runtimeRoot)) {
     missingEntries.push('runtime-root');
   }
 
-  for (const relativePattern of config.expectedLayout.requiredEntries) {
-    if (!resolveRequiredEntry(relativePattern, runtimeRoot)) {
-      missingEntries.push(relativePattern);
-    }
+  if (!fs.existsSync(archivePath)) {
+    missingEntries.push(path.relative(runtimeRoot, archivePath).replaceAll('\\', '/'));
+  }
+
+  if (!metadataPath) {
+    diagnostics.push('Vendored OmniRoute metadata is missing (.hagicode-runtime.json)');
   }
 
   if (!metadata) {
-    diagnostics.push('Vendored OmniRoute metadata is missing (metadata.json or ../.hagicode-runtime.json)');
+    diagnostics.push('Vendored OmniRoute metadata could not be resolved from the packaged marker');
   } else {
     if (metadata.schemaVersion !== config.schemaVersion) {
       diagnostics.push(`metadata schemaVersion expected ${config.schemaVersion} but found ${metadata.schemaVersion ?? 'missing'}`);
@@ -230,22 +220,33 @@ export function validateOmniRouteRuntimePayload(
     }
   }
 
-  const wrapperPath = resolveOmniRouteWrapperPath(runtimeRoot, config, process.platform);
-  if (!wrapperPath) {
-    diagnostics.push('No runnable OmniRoute wrapper was found');
-  }
-
-  const entryScriptPath = path.join(runtimeRoot, config.expectedLayout.entryScript);
-  if (!fs.existsSync(entryScriptPath)) {
-    diagnostics.push(`Entry script is missing: ${config.expectedLayout.entryScript}`);
+  if (!marker || typeof marker !== 'object') {
+    diagnostics.push('Packaged OmniRoute marker payload is missing or invalid');
+  } else {
+    if (marker.bundledInstallMode !== expectedInstallMode) {
+      diagnostics.push(`marker bundledInstallMode expected ${expectedInstallMode} but found ${marker.bundledInstallMode ?? 'missing'}`);
+    }
+    if (marker.wrapperPath !== null) {
+      diagnostics.push('marker wrapperPath must be null for archive-only packaged OmniRoute payloads');
+    }
+    if (marker.entrypointPath !== null) {
+      diagnostics.push('marker entrypointPath must be null for archive-only packaged OmniRoute payloads');
+    }
+    if (marker.archiveFormat !== '7z') {
+      diagnostics.push(`marker archiveFormat expected 7z but found ${marker.archiveFormat ?? 'missing'}`);
+    }
+    if (typeof marker.vendoredAssetName !== 'string' || !marker.vendoredAssetName.endsWith('.7z')) {
+      diagnostics.push('marker vendoredAssetName must reference a .7z payload');
+    }
   }
 
   return {
     metadata,
     metadataPath,
+    marker,
+    archivePath,
+    installMode: expectedInstallMode,
     diagnostics,
     missingEntries,
-    wrapperPath,
-    entryScriptPath: fs.existsSync(entryScriptPath) ? entryScriptPath : null,
   };
 }
