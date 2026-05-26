@@ -646,14 +646,16 @@ describe('runtime lifecycle harness contract', () => {
 });
 
 describe('dependency service CLI contract', () => {
-  it('bootstraps hagiscript before sync-managed package installation and skips bootstrap when already installed', async () => {
+  it('bootstraps hagiscript before sync-managed package installation and injects pm2 into the internal sync set', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /installManagedPackagesForCli\(packageIds: ManagedNpmPackageId\[\]\)/);
     assert.match(source, /const hagiscriptStatus = this\.getHagiscriptStatus\(snapshot\);/);
     assert.match(source, /hagiscriptStatus\?\.status !== 'installed' \|\| !hagiscriptStatus\.executablePath/);
     assert.match(source, /const bootstrapResult = await this\.install\('hagiscript'\);/);
-    assert.match(source, /const installResult = await this\.syncPackages\(\{ packageIds: requestedPackageIds \}\);/);
+    assert.match(source, /const syncPackageIds = this\.resolveCliSyncPackageIds\(requestedPackageIds\);/);
+    assert.match(source, /const installResult = await this\.syncPackages\(\{ packageIds: syncPackageIds \}\);/);
+    assert.match(source, /const verificationPackageIds: ManagedNpmPackageId\[\] = \['hagiscript', \.\.\.syncPackageIds\];/);
   });
 
   it('verifies successful installs by refreshed package status, executable path, managed location, and injected PATH resolution', async () => {
