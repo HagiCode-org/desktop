@@ -139,6 +139,19 @@ describe('dependency management service contract', () => {
     assert.match(source, /env\.NPM_CONFIG_GLOBAL_PREFIX = environment\.npmGlobalPrefix;/);
   });
 
+
+  it('injects pm2 into CLI sync and verification while preserving the requested package ids', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /const requestedPackageIds = validation\.definitions/);
+    assert.match(source, /const syncPackageIds = this\.resolveCliSyncPackageIds\(requestedPackageIds\);/);
+    assert.match(source, /private resolveCliSyncPackageIds\(requestedPackageIds: readonly ManagedNpmPackageId\[\]\): ManagedNpmPackageId\[\] \{/);
+    assert.match(source, /addPackageId\('pm2'\);/);
+    assert.match(source, /for \(const packageId of requestedPackageIds\) \{\s*addPackageId\(packageId\);/);
+    assert.match(source, /const installResult = await this\.syncPackages\(\{ packageIds: syncPackageIds \}\);/);
+    assert.match(source, /const verificationPackageIds: ManagedNpmPackageId\[\] = \['hagiscript', \.\.\.syncPackageIds\];/);
+    assert.match(source, /requestedPackageIds,/);
+  });
   it('gates non-hagiscript mutations and validates batch sync package ids before spawning', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 

@@ -372,6 +372,8 @@ export class DependencyManagementService {
       });
     }
 
+    const syncPackageIds = this.resolveCliSyncPackageIds(requestedPackageIds);
+
     const initialSnapshot = await this.getSnapshot();
     if (!initialSnapshot.environment.available) {
       return this.buildCliDependencyInstallResult({
@@ -408,7 +410,7 @@ export class DependencyManagementService {
       }
     }
 
-    const installResult = await this.syncPackages({ packageIds: requestedPackageIds });
+    const installResult = await this.syncPackages({ packageIds: syncPackageIds });
     snapshot = installResult.snapshot;
     if (!installResult.success) {
       return this.buildCliDependencyInstallResult({
@@ -417,11 +419,11 @@ export class DependencyManagementService {
         requestedPackageIds,
         bootstrapPerformed,
         snapshot,
-        error: installResult.error ?? `Failed to install requested packages: ${requestedPackageIds.join(', ')}`,
+        error: installResult.error ?? `Failed to install requested packages: ${syncPackageIds.join(', ')}`,
       });
     }
 
-    const verificationPackageIds: ManagedNpmPackageId[] = ['hagiscript', ...requestedPackageIds];
+    const verificationPackageIds: ManagedNpmPackageId[] = ['hagiscript', ...syncPackageIds];
     const verifications = await this.verifyManagedPackagesForCli(verificationPackageIds, snapshot);
     const failedVerification = verifications.find((verification) => verification.error);
     if (failedVerification) {
@@ -446,6 +448,29 @@ export class DependencyManagementService {
       verifications,
       snapshot,
     };
+  }
+
+  private resolveCliSyncPackageIds(requestedPackageIds: readonly ManagedNpmPackageId[]): ManagedNpmPackageId[] {
+    const resolvedPackageIds: ManagedNpmPackageId[] = [];
+    const seen = new Set<ManagedNpmPackageId>();
+
+    const addPackageId = (packageId: ManagedNpmPackageId): void => {
+      if (seen.has(packageId)) {
+        return;
+      }
+
+      seen.add(packageId);
+      resolvedPackageIds.push(packageId);
+    };
+
+    // Non-interactive lifecycle validation depends on Desktop-managed PM2.
+    addPackageId('pm2');
+
+    for (const packageId of requestedPackageIds) {
+      addPackageId(packageId);
+    }
+
+    return resolvedPackageIds;
   }
 
   async uninstall(packageId: string): Promise<DependencyManagementOperationResult> {
