@@ -24,7 +24,7 @@ main().catch((error) => {
 async function main() {
   const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
 
-  if (!isManagedDesktopRuntimeComponentExecution()) {
+  if (!isManagedDesktopRuntimeComponentExecution(['code-server'])) {
     await updateDesktopRuntimeComponents(['code-server'], {
       force: process.env.HAGICODE_FORCE_CODE_SERVER_RUNTIME_RESTAGE === '1',
     });

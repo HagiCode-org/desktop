@@ -17,8 +17,19 @@ import {
 const MINIMUM_HAGISCRIPT_VERSION = '0.2.8';
 const NODE_COMPONENT_NAME = 'node';
 
-export function isManagedDesktopRuntimeComponentExecution() {
-  return Boolean(process.env.HAGISCRIPT_RUNTIME_COMPONENT_NAME?.trim());
+export function isManagedDesktopRuntimeComponentExecution(componentIds = null) {
+  const componentName = process.env.HAGISCRIPT_RUNTIME_COMPONENT_NAME?.trim();
+  if (!componentName) {
+    return false;
+  }
+
+  if (!Array.isArray(componentIds) || componentIds.length === 0) {
+    return true;
+  }
+
+  return componentIds
+    .map((componentId) => resolveManagedDesktopRuntimeComponentName(componentId))
+    .includes(componentName);
 }
 
 export function resolveManagedDesktopRuntimeComponentRoot() {
