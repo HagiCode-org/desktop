@@ -19,7 +19,7 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /fs\.mkdir\(paths\.config, \{ recursive: true \}\)/);
   });
 
-  it('renders Desktop-managed environment files and a compatibility ecosystem file', async () => {
+  it('renders Desktop-managed environment files and delegates runtime startup to dedicated hagiscript commands', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /OMNIROUTE_DEFAULT_PORT/);
@@ -35,24 +35,26 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /INITIAL_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_PASSWORD/);
     assert.match(source, /OMNIROUTE_DESKTOP_SECRET/);
-    assert.match(source, /resolveVendoredRuntimeLaunchSpec/);
-    assert.match(source, /args: \['--no-open'\]/);
-    assert.match(source, /interpreterNone: true/);
-    assert.match(source, /interpreterNone: false/);
-    assert.match(source, /module\.exports = \{/);
-    assert.match(source, /name: \$\{JSON\.stringify\(context\.appName\)\}/);
-    assert.match(source, /out_file: \$\{JSON\.stringify\(outLog\)\}/);
-    assert.match(source, /error_file: \$\{JSON\.stringify\(errorLog\)\}/);
-    assert.match(source, /omniroute-out\.log/);
-    assert.match(source, /omniroute-error\.log/);
+    assert.match(source, /renderEnvironment/);
+    assert.match(source, /quoteEnv/);
+    assert.match(source, /paths\.envFile/);
+    assert.doesNotMatch(source, /resolveVendoredRuntimeLaunchSpec/);
+    assert.doesNotMatch(source, /renderEcosystemConfig/);
+    assert.doesNotMatch(source, /launchScriptPath:/);
+    assert.doesNotMatch(source, /interpreterNone/);
+    assert.doesNotMatch(source, /args: \['--no-open'\]/);
+    assert.doesNotMatch(source, /module\.exports = \{/);
   });
 
-  it('routes OmniRoute lifecycle through hagiscript-managed PM2 without a direct fallback', async () => {
+  it('routes OmniRoute lifecycle through hagiscript-managed dedicated commands without a direct PM2 fallback', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /HagiscriptPm2Manager/);
     assert.match(source, /HagiscriptRuntimeContextResolver/);
-    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute'/);
+    assert.match(source, /this\.vendoredRuntimeActivationService = getVendoredRuntimeActivationService\(/);
+    assert.match(source, /this\.pathManager,/);
+    assert.match(source, /this\.dependencyManagementService,/);
+    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute',\s*serviceEnv,\s*\}\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);

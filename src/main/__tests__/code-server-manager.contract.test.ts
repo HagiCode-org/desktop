@@ -8,14 +8,17 @@ const handlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/dependenc
 const codeServerHandlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/codeServerHandlers.ts');
 
 describe('code-server manager contract', () => {
-  it('routes lifecycle through hagiscript while preserving password auth and Desktop-owned runtime directories', async () => {
+  it('routes lifecycle through dedicated hagiscript code_server commands while preserving Desktop-owned directories', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /PROCESS_NAME = 'hagicode-code-server'/);
     assert.match(source, /HagiscriptPm2Manager/);
     assert.match(source, /HagiscriptRuntimeContextResolver/);
     assert.match(source, /getVendoredRuntimeActivationService/);
-    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'code-server'/);
+    assert.match(source, /this\.vendoredRuntimeActivationService = getVendoredRuntimeActivationService\(/);
+    assert.match(source, /this\.pathManager,/);
+    assert.match(source, /this\.dependencyManagementService,/);
+    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'code-server',\s*serviceEnv: this\.buildManagedServiceEnvironment\(paths\),\s*\}\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
@@ -26,11 +29,16 @@ describe('code-server manager contract', () => {
     assert.match(source, /action === 'repair' \|\| action === 'enable'/);
     assert.match(source, /this\.vendoredRuntimeActivationService\.activate\('code-server'\)/);
     assert.match(source, /runtime\.status === 'extracting'/);
-    assert.match(source, /--bind-addr/);
-    assert.match(source, /--auth',\s*'password'/);
+    assert.match(source, /buildManagedServiceEnvironment/);
     assert.match(source, /PASSWORD:/);
-    assert.match(source, /--user-data-dir/);
-    assert.match(source, /--extensions-dir/);
+    assert.match(source, /auth: password/);
+    assert.match(source, /password: /);
+    assert.match(source, /user-data-dir:/);
+    assert.match(source, /extensions-dir:/);
+    assert.match(source, /CODE_SERVER_BIND_HOST:/);
+    assert.match(source, /CODE_SERVER_BIND_PORT:/);
+    assert.match(source, /HAGICODE_CODE_SERVER_DATA_DIR:/);
+    assert.match(source, /HAGICODE_CODE_SERVER_EXTENSIONS_DIR:/);
     assert.match(source, /code-server-out\.log/);
     assert.match(source, /code-server-error\.log/);
     assert.match(source, /this\.configManager\.set\('codeServer'/);
@@ -40,6 +48,14 @@ describe('code-server manager contract', () => {
     assert.match(source, /fetch\(baseUrl/);
     assert.match(source, /context\.pm2LogsDirectory/);
     assert.match(source, /context\.appName/);
+    assert.doesNotMatch(source, /resolveLaunchSpec/);
+    assert.doesNotMatch(source, /renderEcosystem/);
+    assert.doesNotMatch(source, /launchScriptPath:/);
+    assert.doesNotMatch(source, /--bind-addr/);
+    assert.doesNotMatch(source, /--auth/);
+    assert.doesNotMatch(source, /--user-data-dir/);
+    assert.doesNotMatch(source, /--extensions-dir/);
+    assert.doesNotMatch(source, /module\.exports =/);
     assert.doesNotMatch(source, /Pm2DotnetManager/);
     assert.doesNotMatch(source, /resolvePm2LaunchPlan/);
     assert.doesNotMatch(source, /injectCodeServerRuntimeEnv/);
