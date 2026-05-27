@@ -23,8 +23,8 @@ export type HagiscriptManagedPm2Service = 'server' | 'omniroute' | 'code-server'
 
 interface HagiscriptBundledRuntimeContextInput {
   service: Extract<HagiscriptManagedPm2Service, 'omniroute' | 'code-server'>;
-  launchScriptPath: string;
-  launchWorkingDirectory: string;
+  launchScriptPath?: string;
+  launchWorkingDirectory?: string;
   launchArgs?: string[];
   serviceEnv?: NodeJS.ProcessEnv;
 }
@@ -202,14 +202,18 @@ export class HagiscriptRuntimeContextResolver {
       : DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME;
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), `hagicode-desktop-hagiscript-${input.service}-`));
     const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
-    const launchScriptPath = await ensureNoSpacePathAlias(
-      path.resolve(input.launchScriptPath),
-      `desktop-${input.service}-script`,
-    );
-    const launchWorkingDirectory = await ensureNoSpacePathAlias(
-      path.resolve(input.launchWorkingDirectory),
-      `desktop-${input.service}-working-directory`,
-    );
+    const launchScriptPath = input.launchScriptPath
+      ? await ensureNoSpacePathAlias(
+          path.resolve(input.launchScriptPath),
+          `desktop-${input.service}-script`,
+        )
+      : null;
+    const launchWorkingDirectory = input.launchWorkingDirectory
+      ? await ensureNoSpacePathAlias(
+          path.resolve(input.launchWorkingDirectory),
+          `desktop-${input.service}-working-directory`,
+        )
+      : null;
 
     await Promise.all([
       fs.mkdir(serviceDataHome, { recursive: true }),
@@ -217,6 +221,29 @@ export class HagiscriptRuntimeContextResolver {
       fs.mkdir(pm2LogsDirectory, { recursive: true }),
       fs.mkdir(runtimeFilesDir, { recursive: true }),
     ]);
+
+    const pm2Override: {
+      appName: string;
+      args?: string[];
+      env: Record<string, string>;
+      pm2Home: string;
+      cwd?: string;
+      script?: string;
+    } = {
+      appName: componentBaseAppName,
+      env: normalizeStringEnv(input.serviceEnv ?? {}),
+      pm2Home,
+    };
+
+    if (input.launchArgs && input.launchArgs.length > 0) {
+      pm2Override.args = input.launchArgs;
+    }
+    if (launchWorkingDirectory) {
+      pm2Override.cwd = launchWorkingDirectory;
+    }
+    if (launchScriptPath) {
+      pm2Override.script = launchScriptPath;
+    }
 
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: shared.runtimeRoot,
@@ -230,12 +257,7 @@ export class HagiscriptRuntimeContextResolver {
       bundledRuntimeOverrides: {
         [input.service]: {
           pm2: {
-            appName: componentBaseAppName,
-            cwd: launchWorkingDirectory,
-            script: launchScriptPath,
-            args: input.launchArgs ?? [],
-            env: normalizeStringEnv(input.serviceEnv ?? {}),
-            pm2Home,
+            ...pm2Override,
           },
         },
       },
@@ -273,8 +295,16 @@ export class HagiscriptRuntimeContextResolver {
       manifestPath,
       manifestDirectory,
       appName: resolveDesktopManagedPm2AppName(componentBaseAppName),
-      servicePayloadPath: launchScriptPath,
-      serviceWorkingDirectory: launchWorkingDirectory,
+      servicePayloadPath: launchScriptPath ?? (
+        input.service === 'omniroute'
+          ? this.pathManager.getOmniRouteRuntimeRoot()
+          : this.pathManager.getCodeServerRuntimeRoot()
+      ),
+      serviceWorkingDirectory: launchWorkingDirectory ?? (
+        input.service === 'omniroute'
+          ? this.pathManager.getOmniRouteRuntimeRoot()
+          : this.pathManager.getCodeServerRuntimeRoot()
+      ),
       cleanup: async () => {
         await fs.rm(manifestDirectory, { recursive: true, force: true });
       },
