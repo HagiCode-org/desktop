@@ -47,13 +47,6 @@ const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
 const DEFAULT_LOG_LINE_LIMIT = 200;
 
-interface CodeServerLaunchSpec {
-  script: string;
-  args: string[];
-  interpreterNone: boolean;
-  cwd: string;
-}
-
 interface CodeServerStatusDetails {
   runtime: VendoredRuntimeStatusSnapshot;
   processStatus: CodeServerProcessStatus;
@@ -118,7 +111,10 @@ export class CodeServerManager {
       dependencyManagementService: this.dependencyManagementService,
     });
     this.hagiscriptPm2Manager = new HagiscriptPm2Manager();
-    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(this.pathManager);
+    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(
+      this.pathManager,
+      this.dependencyManagementService,
+    );
   }
 
   async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
@@ -144,6 +140,7 @@ export class CodeServerManager {
       const changed = currentConfig.port !== port || currentConfig.password !== password;
 
       this.configManager.set('codeServer', { port, password });
+      await this.syncManagedConfigFile(await this.ensureLayout());
 
       if (changed && currentStatus.process.status === 'online') {
         const restartResult = await this.restart();
@@ -177,6 +174,7 @@ export class CodeServerManager {
 
   async getStatus(): Promise<CodeServerStatusSnapshot> {
     const paths = await this.ensureLayout();
+    await this.syncManagedConfigFile(paths);
     const config = this.getConfig();
     const details = await this.resolveStatusDetails(paths);
     const status = this.resolveOverallStatus(details.runtime.status, details.pm2Available, details.processStatus);
@@ -328,18 +326,9 @@ export class CodeServerManager {
         throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
       }
 
-      const launchSpec = this.resolveLaunchSpec(runtime);
-      const managedEnv = this.buildManagedServiceEnvironment(paths);
-      const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-        service: 'code-server',
-        launchScriptPath: launchSpec.script,
-        launchWorkingDirectory: launchSpec.cwd,
-        launchArgs: launchSpec.args,
-        serviceEnv: managedEnv,
-      });
+      const runtimeContext = await this.createRuntimeContext(paths);
 
       try {
-        await this.renderEcosystem(paths, launchSpec, runtimeContext, managedEnv);
         const lifecycleResult = action === 'start'
           ? await this.hagiscriptPm2Manager.start(runtimeContext)
           : action === 'stop'
@@ -378,6 +367,9 @@ export class CodeServerManager {
 
   private async runRepair(action: 'enable' | 'repair'): Promise<VendoredRuntimeLifecycleResult> {
     const result = await this.vendoredRuntimeActivationService.activate('code-server');
+    if (result.success) {
+      await this.syncManagedConfigFile(await this.ensureLayout());
+    }
     return {
       success: result.success,
       runtimeId: 'code-server',
@@ -479,14 +471,7 @@ export class CodeServerManager {
     const runtimeWithoutHealth = await inspectVendoredCodeServerRuntime(this.pathManager);
     if (pm2Context.available && (runtimeWithoutHealth.wrapperPath || runtimeWithoutHealth.entryScriptPath)) {
       try {
-        const launchSpec = this.resolveLaunchSpec(runtimeWithoutHealth);
-        const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-          service: 'code-server',
-          launchScriptPath: launchSpec.script,
-          launchWorkingDirectory: launchSpec.cwd,
-          launchArgs: launchSpec.args,
-          serviceEnv: this.buildManagedServiceEnvironment(resolvedPaths),
-        });
+        const runtimeContext = await this.createRuntimeContext(resolvedPaths);
         try {
           const lifecycleResult = await this.hagiscriptPm2Manager.status(runtimeContext);
           await this.syncLegacyLogFiles(runtimeContext, resolvedPaths);
@@ -586,54 +571,39 @@ export class CodeServerManager {
     }
   }
 
-  private resolveLaunchSpec(runtime: VendoredRuntimeStatusSnapshot): CodeServerLaunchSpec {
-    const runtimeRoot = this.pathManager.getCodeServerRuntimeRoot();
-    const args = [
-      '--bind-addr',
-      `127.0.0.1:${this.getConfig().port}`,
-      '--auth',
-      'password',
-      '--user-data-dir',
-      this.getPaths().data,
-      '--extensions-dir',
-      this.getPaths().extensions,
-      '--disable-telemetry',
-    ];
-
-    if (runtime.wrapperPath) {
-      return {
-        script: runtime.wrapperPath,
-        args,
-        interpreterNone: true,
-        cwd: runtimeRoot,
-      };
-    }
-
-    if (!runtime.entryScriptPath) {
-      throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
-    }
-
-    return {
-      script: runtime.entryScriptPath,
-      args,
-      interpreterNone: false,
-      cwd: runtimeRoot,
-    };
+  private getManagedConfigDirectory(paths: CodeServerManagedPaths): string {
+    return path.join(paths.root, 'config');
   }
 
-  private async renderEcosystem(
-    paths: CodeServerManagedPaths,
-    launchSpec: CodeServerLaunchSpec,
-    context: HagiscriptRuntimeContext,
-    runtimeEnv: NodeJS.ProcessEnv,
-  ): Promise<void> {
-    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
-    const pathValue = context.commandEnv[pathKey] ?? context.commandEnv.PATH ?? context.commandEnv.Path ?? '';
+  private getManagedConfigFilePath(paths: CodeServerManagedPaths): string {
+    return path.join(this.getManagedConfigDirectory(paths), 'config.yaml');
+  }
+
+  private async syncManagedConfigFile(paths: CodeServerManagedPaths): Promise<string> {
+    const configDirectory = this.getManagedConfigDirectory(paths);
+    const configPath = this.getManagedConfigFilePath(paths);
     const config = this.getConfig();
-    const outLog = path.join(paths.logs, OUT_LOG_FILE);
-    const errorLog = path.join(paths.logs, ERROR_LOG_FILE);
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(context.appName)},\n      script: ${JSON.stringify(launchSpec.script)},\n      args: ${JSON.stringify(launchSpec.args)},\n      exec_mode: 'fork',\n      instances: 1,\n      autorestart: true,\n      restart_delay: 3000,\n      max_restarts: 10,\n      interpreter: ${JSON.stringify(launchSpec.interpreterNone ? 'none' : 'node')},\n      cwd: ${JSON.stringify(launchSpec.cwd)},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue)},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getCodeServerRuntimeDataHome())},\n        HAGICODE_CODE_SERVER_RUNTIME_ROOT: ${JSON.stringify(this.pathManager.getCodeServerRuntimeRoot())},\n        HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',\n        PASSWORD: ${JSON.stringify(runtimeEnv.PASSWORD ?? '')},\n        PORT: ${JSON.stringify(String(config.port))},\n        CODE_SERVER_BIND_HOST: ${JSON.stringify(runtimeEnv.CODE_SERVER_BIND_HOST ?? '')},\n        CODE_SERVER_BIND_PORT: ${JSON.stringify(runtimeEnv.CODE_SERVER_BIND_PORT ?? '')}\n      }\n    }\n  ]\n};\n`;
-    await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
+    const contents = [
+      `bind-addr: ${JSON.stringify(`127.0.0.1:${config.port}`)}`,
+      'auth: password',
+      `password: ${JSON.stringify(config.password)}`,
+      `user-data-dir: ${JSON.stringify(paths.data)}`,
+      `extensions-dir: ${JSON.stringify(paths.extensions)}`,
+      'log: info',
+      '',
+    ].join('\n');
+
+    await fs.mkdir(configDirectory, { recursive: true });
+    await fs.writeFile(configPath, contents, 'utf8');
+    return configPath;
+  }
+
+  private async createRuntimeContext(paths: CodeServerManagedPaths): Promise<HagiscriptRuntimeContext> {
+    await this.syncManagedConfigFile(paths);
+    return await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
+      service: 'code-server',
+      serviceEnv: this.buildManagedServiceEnvironment(paths),
+    });
   }
 
   private async refreshLegacyLogs(paths: CodeServerManagedPaths): Promise<void> {
@@ -643,14 +613,7 @@ export class CodeServerManager {
       return;
     }
 
-    const launchSpec = this.resolveLaunchSpec(runtime);
-    const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-      service: 'code-server',
-      launchScriptPath: launchSpec.script,
-      launchWorkingDirectory: launchSpec.cwd,
-      launchArgs: launchSpec.args,
-      serviceEnv: this.buildManagedServiceEnvironment(paths),
-    });
+    const runtimeContext = await this.createRuntimeContext(paths);
     try {
       await this.syncLegacyLogFiles(runtimeContext, paths);
     } finally {

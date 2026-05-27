@@ -62,13 +62,6 @@ class OmniRouteLifecycleCommandError extends Error {
   }
 }
 
-interface ManagedCliLaunchSpec {
-  script: string;
-  args: string[];
-  cwd: string;
-  interpreterNone: boolean;
-}
-
 interface OmniRouteStatusDetails {
   runtime: VendoredRuntimeStatusSnapshot;
   process: OmniRouteProcessSnapshot;
@@ -188,7 +181,10 @@ export class OmniRouteManager {
       dependencyManagementService: this.dependencyManagementService,
     });
     this.hagiscriptPm2Manager = new HagiscriptPm2Manager();
-    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(this.pathManager);
+    this.vendoredRuntimeActivationService = getVendoredRuntimeActivationService(
+      this.pathManager,
+      this.dependencyManagementService,
+    );
   }
 
   async getRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
@@ -440,19 +436,11 @@ export class OmniRouteManager {
         throw new Error(remediation.message);
       }
 
-      const launch = this.resolveVendoredRuntimeLaunchSpec(runtime);
       const managedEnv = this.buildManagedServiceEnvironment(paths);
       await this.renderEnvironment(paths, managedEnv);
-      const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-        service: 'omniroute',
-        launchScriptPath: launch.script,
-        launchWorkingDirectory: launch.cwd,
-        launchArgs: launch.args,
-        serviceEnv: managedEnv,
-      });
+      const runtimeContext = await this.createRuntimeContext(paths, managedEnv);
 
       try {
-        await this.renderEcosystemConfig(paths, launch, runtimeContext, managedEnv);
         const lifecycleResult = action === 'start'
           ? await this.hagiscriptPm2Manager.start(runtimeContext)
           : action === 'stop'
@@ -500,14 +488,7 @@ export class OmniRouteManager {
 
     if (!remediation) {
       try {
-        const launch = this.resolveVendoredRuntimeLaunchSpec(runtimeWithoutHealth);
-        const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-          service: 'omniroute',
-          launchScriptPath: launch.script,
-          launchWorkingDirectory: launch.cwd,
-          launchArgs: launch.args,
-          serviceEnv: this.buildManagedServiceEnvironment(resolvedPaths),
-        });
+        const runtimeContext = await this.createRuntimeContext(resolvedPaths);
         try {
           lifecycleResult = await this.hagiscriptPm2Manager.status(runtimeContext);
           await this.syncLegacyLogFiles(runtimeContext, resolvedPaths);
@@ -602,40 +583,14 @@ export class OmniRouteManager {
     await fs.writeFile(paths.envFile, contents, 'utf8');
   }
 
-  private resolveVendoredRuntimeLaunchSpec(runtime: VendoredRuntimeStatusSnapshot): ManagedCliLaunchSpec {
-    if (runtime.wrapperPath) {
-      return {
-        script: runtime.wrapperPath,
-        args: ['--no-open'],
-        cwd: path.dirname(runtime.wrapperPath),
-        interpreterNone: true,
-      };
-    }
-
-    if (!runtime.entryScriptPath) {
-      throw new Error('Vendored OmniRoute runtime is missing both wrapperPath and entryScriptPath.');
-    }
-
-    return {
-      script: runtime.entryScriptPath,
-      args: ['--no-open'],
-      cwd: path.dirname(runtime.entryScriptPath),
-      interpreterNone: false,
-    };
-  }
-
-  private async renderEcosystemConfig(
+  private async createRuntimeContext(
     paths: OmniRouteManagedPaths,
-    launch: ManagedCliLaunchSpec,
-    context: HagiscriptRuntimeContext,
-    env: NodeJS.ProcessEnv,
-  ): Promise<void> {
-    const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
-    const pathValue = context.commandEnv[pathKey] ?? context.commandEnv.PATH ?? context.commandEnv.Path;
-    const outLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-out']);
-    const errorLog = path.join(paths.logs, LOG_FILE_BY_TARGET['service-error']);
-    const contents = `module.exports = {\n  apps: [\n    {\n      name: ${JSON.stringify(context.appName)},\n      script: ${JSON.stringify(launch.script)},\n      args: ${JSON.stringify(launch.args)},\n      cwd: ${JSON.stringify(launch.cwd)},\n      interpreter: ${JSON.stringify(launch.interpreterNone ? 'none' : 'node')},\n      out_file: ${JSON.stringify(outLog)},\n      error_file: ${JSON.stringify(errorLog)},\n      env: {\n        ${JSON.stringify(pathKey)}: ${JSON.stringify(pathValue ?? '')},\n        HAGICODE_RUNTIME_HOME: ${JSON.stringify(this.pathManager.getRuntimeProgramHome())},\n        HAGICODE_RUNTIME_DATA_HOME: ${JSON.stringify(this.pathManager.getOmniRouteRuntimeDataHome())},\n        PM2_HOME: ${JSON.stringify(context.pm2Home)},\n        PORT: ${JSON.stringify(env.PORT ?? '')},\n        OMNIROUTE_PORT: ${JSON.stringify(env.OMNIROUTE_PORT ?? '')},\n        DASHBOARD_PORT: ${JSON.stringify(env.DASHBOARD_PORT ?? '')},\n        API_PORT: ${JSON.stringify(env.API_PORT ?? '')},\n        HOSTNAME: ${JSON.stringify(env.HOSTNAME ?? '')},\n        NODE_ENV: ${JSON.stringify(env.NODE_ENV ?? '')},\n        NODE_OPTIONS: ${JSON.stringify(env.NODE_OPTIONS ?? '')},\n        OMNIROUTE_BASE_URL: ${JSON.stringify(env.OMNIROUTE_BASE_URL ?? '')},\n        OMNIROUTE_CONFIG_DIR: ${JSON.stringify(env.OMNIROUTE_CONFIG_DIR ?? '')},\n        OMNIROUTE_DATA_DIR: ${JSON.stringify(env.OMNIROUTE_DATA_DIR ?? '')},\n        OMNIROUTE_LOG_DIR: ${JSON.stringify(env.OMNIROUTE_LOG_DIR ?? '')},\n        OMNIROUTE_ENV_DIR: ${JSON.stringify(env.OMNIROUTE_ENV_DIR ?? '')},\n        OMNIROUTE_ENV_PATH: ${JSON.stringify(env.OMNIROUTE_ENV_PATH ?? '')},\n        OMNIROUTE_RUNTIME_DIR: ${JSON.stringify(env.OMNIROUTE_RUNTIME_DIR ?? '')},\n        DATA_DIR: ${JSON.stringify(env.DATA_DIR ?? '')},\n        CLIPROXYAPI_CONFIG_DIR: ${JSON.stringify(env.CLIPROXYAPI_CONFIG_DIR ?? '')},\n        INITIAL_PASSWORD: ${JSON.stringify(env.INITIAL_PASSWORD ?? '')},\n        OMNIROUTE_DESKTOP_PASSWORD: ${JSON.stringify(env.OMNIROUTE_DESKTOP_PASSWORD ?? '')},\n        OMNIROUTE_DESKTOP_SECRET: ${JSON.stringify(env.OMNIROUTE_DESKTOP_SECRET ?? '')},\n        OMNIROUTE_DESKTOP_MANAGED: ${JSON.stringify(env.OMNIROUTE_DESKTOP_MANAGED ?? '')}\n      }\n    }\n  ]\n};\n`;
-    await fs.writeFile(paths.ecosystemFile, contents, 'utf8');
+    serviceEnv: NodeJS.ProcessEnv = this.buildManagedServiceEnvironment(paths),
+  ): Promise<HagiscriptRuntimeContext> {
+    return await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
+      service: 'omniroute',
+      serviceEnv,
+    });
   }
 
   private async runRuntimeActivation(
@@ -779,14 +734,7 @@ export class OmniRouteManager {
       return;
     }
 
-    const launch = this.resolveVendoredRuntimeLaunchSpec(runtime);
-    const runtimeContext = await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
-      service: 'omniroute',
-      launchScriptPath: launch.script,
-      launchWorkingDirectory: launch.cwd,
-      launchArgs: launch.args,
-      serviceEnv: this.buildManagedServiceEnvironment(paths),
-    });
+    const runtimeContext = await this.createRuntimeContext(paths);
     try {
       await this.syncLegacyLogFiles(runtimeContext, paths);
     } finally {
