@@ -2,6 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import log from 'electron-log';
+import type { DependencyManagementService } from './dependency-management-service.js';
+import { HagiscriptPm2Manager } from './hagiscript-server-manager.js';
+import { HagiscriptRuntimeContextResolver } from './hagiscript-runtime-context.js';
 import { PathManager } from './path-manager.js';
 import {
   inspectVendoredCodeServerRuntime,
@@ -62,22 +65,39 @@ export class VendoredRuntimeActivationService {
 
   static getInstance(
     pathManager: PathManager = PathManager.getInstance(),
+    dependencyManagementService?: DependencyManagementService,
   ): VendoredRuntimeActivationService {
     if (!VendoredRuntimeActivationService.instance) {
       VendoredRuntimeActivationService.instance =
-        new VendoredRuntimeActivationService(pathManager);
+        new VendoredRuntimeActivationService(pathManager, dependencyManagementService);
     }
     return VendoredRuntimeActivationService.instance;
   }
 
   private readonly pathManager: PathManager;
+  private readonly dependencyManagementService?: DependencyManagementService;
+  private readonly hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver | null;
+  private readonly hagiscriptPm2Manager: HagiscriptPm2Manager | null;
   private readonly inflight = new Map<
     VendoredRuntimeId,
     Promise<VendoredRuntimeActivationResult>
   >();
 
-  constructor(pathManager: PathManager = PathManager.getInstance()) {
+  constructor(
+    pathManager: PathManager = PathManager.getInstance(),
+    dependencyManagementService?: DependencyManagementService,
+  ) {
     this.pathManager = pathManager;
+    this.dependencyManagementService = dependencyManagementService;
+    this.hagiscriptRuntimeContextResolver = dependencyManagementService
+      ? new HagiscriptRuntimeContextResolver({
+          pathManager: this.pathManager,
+          dependencyManagementService,
+        })
+      : null;
+    this.hagiscriptPm2Manager = dependencyManagementService
+      ? new HagiscriptPm2Manager()
+      : null;
   }
 
   async activate(runtimeId: VendoredRuntimeId): Promise<VendoredRuntimeActivationResult> {
@@ -182,6 +202,10 @@ export class VendoredRuntimeActivationService {
   ): Promise<VendoredRuntimeActivationResult> {
     const attemptId = randomUUID();
     const bindings = this.getBindings(runtimeId);
+    if (this.hagiscriptRuntimeContextResolver && this.hagiscriptPm2Manager) {
+      return this.runHagiscriptExactActivation(runtimeId, attemptId, bindings);
+    }
+
     const {
       currentRoot,
       packagedArchivePath,
@@ -548,12 +572,83 @@ export class VendoredRuntimeActivationService {
       throw error;
     }
   }
+
+  private async runHagiscriptExactActivation(
+    runtimeId: VendoredRuntimeId,
+    attemptId: string,
+    bindings: RuntimeActivationBindings,
+  ): Promise<VendoredRuntimeActivationResult> {
+    const commandService = runtimeId === 'code-server' ? 'code-server' : 'omniroute';
+    try {
+      log.info('[VendoredRuntimeActivationService] hagiscript exact activation started', {
+        runtimeId,
+        attemptId,
+      });
+
+      this.emitProgress(runtimeId, attemptId, 'validating-source', 'Validating packaged runtime archive.', 5);
+      const sourceStatus = await bindings.readStatus();
+      if (sourceStatus.sourceStatus !== 'available') {
+        throw new Error(
+          sourceStatus.diagnostics[0]
+            ?? sourceStatus.message
+            ?? 'Packaged vendored runtime source is unavailable.',
+        );
+      }
+
+      this.emitProgress(runtimeId, attemptId, 'preparing-staging', 'Preparing hagiscript runtime context.', 20);
+      const runtimeContextResolver = this.hagiscriptRuntimeContextResolver;
+      const hagiscriptPm2Manager = this.hagiscriptPm2Manager;
+      if (!runtimeContextResolver || !hagiscriptPm2Manager) {
+        throw new Error('Desktop-managed hagiscript activation is unavailable.');
+      }
+
+      const runtimeContext = await runtimeContextResolver.resolveBundledRuntime({
+        service: commandService,
+      });
+
+      try {
+        this.emitProgress(runtimeId, attemptId, 'extracting', 'Running hagiscript exact.', 40);
+        const exactResult = await hagiscriptPm2Manager.exact(runtimeContext);
+        if (!exactResult.success) {
+          throw new Error(exactResult.summary);
+        }
+      } finally {
+        await runtimeContext.cleanup();
+      }
+
+      this.emitProgress(runtimeId, attemptId, 'validating-runtime', 'Validating extracted runtime layout.', 92);
+      const snapshot = await bindings.readStatus();
+      if (snapshot.installStatus !== 'installed') {
+        throw new Error(snapshot.message ?? 'Extracted vendored runtime failed validation.');
+      }
+
+      this.emitProgress(runtimeId, attemptId, 'completed', 'Vendored runtime activation completed.', 100);
+      return {
+        success: true,
+        status: snapshot,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.warn('[VendoredRuntimeActivationService] hagiscript exact activation failed', {
+        runtimeId,
+        attemptId,
+        message,
+      });
+      this.emitProgress(runtimeId, attemptId, 'failed', 'Vendored runtime activation failed.', undefined, message);
+      return {
+        success: false,
+        status: await bindings.readStatus(),
+        error: message,
+      };
+    }
+  }
 }
 
 export function getVendoredRuntimeActivationService(
   pathManager: PathManager = PathManager.getInstance(),
+  dependencyManagementService?: DependencyManagementService,
 ): VendoredRuntimeActivationService {
-  return VendoredRuntimeActivationService.getInstance(pathManager);
+  return VendoredRuntimeActivationService.getInstance(pathManager, dependencyManagementService);
 }
 
 export function isVendoredRuntimeActivationInFlight(

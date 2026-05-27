@@ -66,6 +66,33 @@ function resolveVendoredRuntimeOverrideRoot(overrideRoot: string): string {
     : path.join(resolvedOverride, 'current');
 }
 
+function resolveVendoredExtractedRuntimeRoot(
+  serviceDataHome: string,
+): string | null {
+  const statePath = path.join(serviceDataHome, 'extracted-runtime.json');
+
+  try {
+    const state = JSON.parse(fsSync.readFileSync(statePath, 'utf8')) as {
+      currentRoot?: unknown;
+    };
+    return typeof state.currentRoot === 'string' && state.currentRoot.trim().length > 0
+      ? path.resolve(state.currentRoot)
+      : null;
+  } catch (error) {
+    const errno = error as NodeJS.ErrnoException;
+    if (errno.code === 'ENOENT') {
+      return null;
+    }
+
+    log.warn('[PathManager] failed to read vendored extracted runtime state', {
+      serviceDataHome,
+      statePath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
 export {
   buildNodeMajorNpmGlobalPaths,
   buildPm2MajorHomePaths,
@@ -494,6 +521,13 @@ export class PathManager {
   }
 
   getVendoredRuntimeRoot(serviceId: DesktopRuntimeServiceId): string {
+    const extractedRuntimeRoot = resolveVendoredExtractedRuntimeRoot(
+      this.getVendoredRuntimeDataHome(serviceId),
+    );
+    if (extractedRuntimeRoot) {
+      return extractedRuntimeRoot;
+    }
+
     return resolveDesktopRuntimeServiceActiveRuntimeRoot(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
   }
 

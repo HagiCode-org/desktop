@@ -423,6 +423,13 @@ async function validateExtractedRuntime(
   }
 
   for (const relativePattern of options.config.expectedLayout.requiredEntries) {
+    if (
+      relativePattern === 'metadata.json|../.hagicode-runtime.json'
+      && metadata
+    ) {
+      continue;
+    }
+
     if (!resolveRequiredEntry(relativePattern, options.runtimeRoot, existsSync)) {
       missingEntries.push(relativePattern);
     }

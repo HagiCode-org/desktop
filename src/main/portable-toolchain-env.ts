@@ -85,6 +85,14 @@ const SERVER_NODE_ENV_KEYS = [
   'NPM_CONFIG_GLOBAL_CONFIG',
 ] as const;
 
+function removeInheritedHagiscriptRuntimeEnv(env: NodeJS.ProcessEnv): void {
+  for (const key of Object.keys(env)) {
+    if (key === 'HAGISCRIPT_DOWNLOAD_CACHE' || key.startsWith('HAGISCRIPT_RUNTIME_')) {
+      delete env[key];
+    }
+  }
+}
+
 function normalizePathForComparison(entry: string, platform: NodeJS.Platform): string {
   const resolved = path.resolve(entry);
   return platform === 'win32' ? resolved.toLowerCase() : resolved;
@@ -208,6 +216,7 @@ export function injectPortableToolchainEnv(
   const env: NodeJS.ProcessEnv = {
     ...baseEnv,
   };
+  removeInheritedHagiscriptRuntimeEnv(env);
 
   applyResolvedPathEntries(env, resolvedPathEntries, platform);
 
