@@ -48,9 +48,12 @@ describe('OmniRoute renderer wiring', () => {
     assert.match(source, /status\?\.config\.baseUrl/);
     assert.match(source, /status\?\.runtime\.version \?\? t\('dependencyManagement\.unavailable'\)/);
     assert.match(source, /nextStatus\.config\.password/);
-    assert.match(source, /disabled=\{isBusy \|\| isRunning \|\| lifecycleBlockedByDependencies\}/);
+    assert.match(source, /const lifecycleBlockedReason = packageRemediation\?\.message \?\? status\?\.error \?\? status\?\.runtime\.message \?\? t\('system\.services\.notReady'\);/);
+    assert.match(source, /if \(\(action === 'start' \|\| action === 'restart'\) && lifecycleBlockedByDependencies\) \{/);
+    assert.match(source, /setErrorMessage\(lifecycleBlockedReason\);/);
+    assert.match(source, /disabled=\{isBusy \|\| isRunning\}/);
     assert.match(source, /disabled=\{isBusy \|\| !isRunning\}/);
-    assert.match(source, /disabled=\{isBusy \|\| lifecycleBlockedByDependencies\}/);
+    assert.match(source, /disabled=\{isBusy\}/);
     assert.match(source, /validatePortInput/);
     assert.match(source, /validatePasswordInput/);
     assert.match(source, /password: passwordInput\.trim\(\)/);

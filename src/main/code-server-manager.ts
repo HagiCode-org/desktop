@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { electron } from '../electron-api.js';
+import log from 'electron-log';
 import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
 import type { ManagedNpmCommandContext } from './dependency-management-service.js';
@@ -47,6 +48,20 @@ const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 200;
 const DEFAULT_LOG_LINE_LIMIT = 200;
 
+class CodeServerLifecycleCommandError extends Error {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number | null;
+
+  constructor(message: string, result: { stdout: string; stderr: string; exitCode: number | null }) {
+    super(message);
+    this.name = 'CodeServerLifecycleCommandError';
+    this.stdout = result.stdout;
+    this.stderr = result.stderr;
+    this.exitCode = result.exitCode;
+  }
+}
+
 interface CodeServerStatusDetails {
   runtime: VendoredRuntimeStatusSnapshot;
   processStatus: CodeServerProcessStatus;
@@ -84,6 +99,28 @@ function toProcessStatus(value: string | undefined): CodeServerProcessStatus {
     return 'stopped';
   }
   return 'unknown';
+}
+
+function formatLifecycleFailureDetails(error: unknown): string[] {
+  if (!(error instanceof CodeServerLifecycleCommandError)) {
+    return [];
+  }
+
+  const details: string[] = [];
+  const stdout = error.stdout.trim();
+  const stderr = error.stderr.trim();
+
+  if (stdout) {
+    details.push('stdout:');
+    details.push(stdout);
+  }
+
+  if (stderr) {
+    details.push('stderr:');
+    details.push(stderr);
+  }
+
+  return details;
 }
 
 export class CodeServerManager {
@@ -308,12 +345,13 @@ export class CodeServerManager {
   }
 
   private async runLifecycle(action: VendoredRuntimeLifecycleAction): Promise<VendoredRuntimeLifecycleResult> {
+    let paths: CodeServerManagedPaths | null = null;
     try {
       if (action === 'repair' || action === 'enable') {
         return await this.runRepair(action);
       }
 
-      const paths = await this.ensureLayout();
+      paths = await this.ensureLayout();
       if (action !== 'stop') {
         const activationFailure = await this.ensureRuntimeReadyForLifecycle(action);
         if (activationFailure) {
@@ -338,11 +376,7 @@ export class CodeServerManager {
         await this.syncLegacyLogFiles(runtimeContext, paths);
 
         if (!this.isLifecycleResultSuccessful(action, lifecycleResult)) {
-          throw new Error(
-            lifecycleResult.success
-              ? `hagiscript PM2 reported ${lifecycleResult.status} during ${action}.`
-              : lifecycleResult.summary,
-          );
+          throw this.createHagiscriptCommandError(action, lifecycleResult);
         }
       } finally {
         await runtimeContext.cleanup();
@@ -355,12 +389,17 @@ export class CodeServerManager {
         status: await this.getRuntimeSnapshot(),
       };
     } catch (error) {
+      if (paths) {
+        await this.appendLifecycleFailureLog(paths, action, error).catch(() => undefined);
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      log.warn('[CodeServerManager] lifecycle operation failed', { action, error: message });
       return {
         success: false,
         runtimeId: 'code-server',
         action,
         status: await this.fallbackSnapshot(error),
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       };
     }
   }
@@ -598,11 +637,35 @@ export class CodeServerManager {
     return configPath;
   }
 
-  private async createRuntimeContext(paths: CodeServerManagedPaths): Promise<HagiscriptRuntimeContext> {
+  private async createRuntimeContext(
+    paths: CodeServerManagedPaths,
+    serviceEnv: NodeJS.ProcessEnv = this.buildManagedServiceEnvironment(paths),
+  ): Promise<HagiscriptRuntimeContext> {
     await this.syncManagedConfigFile(paths);
+    const runtime = await inspectVendoredCodeServerRuntime(this.pathManager);
+    const launchScriptPath = runtime.entryScriptPath ?? runtime.wrapperPath ?? null;
+    if (!launchScriptPath) {
+      throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
+    }
+
+    const config = this.getConfig();
+    const launchWorkingDirectory = this.pathManager.getCodeServerRuntimeRoot();
     return await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
       service: 'code-server',
-      serviceEnv: this.buildManagedServiceEnvironment(paths),
+      launchScriptPath,
+      launchWorkingDirectory,
+      launchArgs: [
+        '--bind-addr',
+        `127.0.0.1:${config.port}`,
+        '--auth',
+        'password',
+        '--user-data-dir',
+        paths.data,
+        '--extensions-dir',
+        paths.extensions,
+        '--disable-telemetry',
+      ],
+      serviceEnv,
     });
   }
 
@@ -752,5 +815,40 @@ export class CodeServerManager {
     }
 
     return result.status === 'online';
+  }
+
+  private createHagiscriptCommandError(
+    action: VendoredRuntimeLifecycleAction,
+    result: HagiscriptServerLifecycleResult,
+  ): CodeServerLifecycleCommandError {
+    return new CodeServerLifecycleCommandError(
+      result.success
+        ? `hagiscript PM2 reported ${result.status} during ${action}.`
+        : result.summary,
+      {
+        stdout: result.stdout,
+        stderr: result.stderr || result.summary,
+        exitCode: result.exitCode,
+      },
+    );
+  }
+
+  private async appendLifecycleFailureLog(
+    paths: CodeServerManagedPaths,
+    action: VendoredRuntimeLifecycleAction,
+    error: unknown,
+  ): Promise<void> {
+    const errorLogPath = path.join(paths.logs, ERROR_LOG_FILE);
+    const message = error instanceof Error ? error.message : String(error);
+    const detailLines = formatLifecycleFailureDetails(error);
+    const lines = [
+      `[${new Date().toISOString()}] lifecycle ${action} failed`,
+      `message: ${message}`,
+      ...detailLines,
+      '',
+    ];
+
+    await fs.mkdir(paths.logs, { recursive: true });
+    await fs.appendFile(errorLogPath, `${lines.join('\n')}\n`, 'utf8');
   }
 }

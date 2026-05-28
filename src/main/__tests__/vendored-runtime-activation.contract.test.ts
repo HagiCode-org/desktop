@@ -284,6 +284,62 @@ describe('vendored runtime activation service', () => {
     await fs.access(path.join(layout.omniRoute.runtimeHome, '.hagicode-runtime.json'));
   });
 
+  it('completes hagiscript exact activation after validating the extracted runtime root', async () => {
+    const layout = await createBaseLayout();
+    const config = readCodeServerRuntimeConfig();
+    const version = config.releaseVersionByPlatform?.[detectCodeServerRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
+
+    await createPackagedRuntimeFixture({
+      runtimeId: 'code-server',
+      packagedRoot: layout.codeServer.packagedRoot,
+      archivePath: layout.codeServer.packagedArchivePath,
+      version,
+      schemaVersion: config.schemaVersion,
+      packageId: config.packageId,
+      bundledNodeRuntime: false,
+      archiveIncludesLegacyMetadata: false,
+    });
+
+    const service = new VendoredRuntimeActivationService(
+      createFakePathManager(layout) as any,
+      {} as any,
+    );
+
+    (service as any).hagiscriptRuntimeContextResolver = {
+      resolveBundledRuntime: async () => ({
+        cleanup: async () => undefined,
+      }),
+    };
+    (service as any).hagiscriptPm2Manager = {
+      exact: async () => {
+        await fs.mkdir(path.join(layout.codeServer.currentRoot, 'bin'), { recursive: true });
+        await fs.mkdir(path.join(layout.codeServer.currentRoot, 'out', 'node'), { recursive: true });
+        await fs.writeFile(path.join(layout.codeServer.currentRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\n');
+        await fs.writeFile(path.join(layout.codeServer.currentRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
+        return {
+          success: true,
+          action: 'exact',
+          summary: 'ok',
+          stdout: '',
+          stderr: '',
+          exitCode: 0,
+          version,
+          archivePath: layout.codeServer.packagedArchivePath,
+          extractedRuntimeRoot: path.dirname(layout.codeServer.currentRoot),
+          currentRoot: layout.codeServer.currentRoot,
+          logPaths: [],
+        };
+      },
+    };
+
+    const result = await service.activate('code-server');
+
+    assert.equal(result.success, true);
+    assert.equal(result.status.installStatus, 'installed');
+    assert.equal(result.status.status, 'ready');
+    assert.equal(result.status.runtimeRoot, layout.codeServer.currentRoot);
+  });
+
   it('returns a damaged snapshot when the packaged archive contract is invalid', async () => {
     const layout = await createBaseLayout();
     await fs.mkdir(layout.codeServer.packagedRoot, { recursive: true });

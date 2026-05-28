@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import path from 'node:path';
+import log from 'electron-log';
 import {
   detectPinnedRuntimePlatform,
   readPinnedRuntimeManifest,
@@ -36,6 +38,60 @@ const HAGISCRIPT_RUNTIME_SCRIPTS_DIR = path.join('runtime', 'scripts');
 
 function normalizeComponentRuntimeDataDir(relativePath: string): string {
   return relativePath.replace(/^components[\\/]/u, '');
+}
+
+function resolveBundledRuntimePackagedRoot(
+  runtimeHome: string,
+  desktopRuntimeManifest: DesktopRuntimeManifest,
+  serviceId: DesktopRuntimeServiceId,
+): string {
+  return path.resolve(runtimeHome, desktopRuntimeManifest.components[serviceId].relativePath);
+}
+
+function readBundledRuntimeMarkerVersion(packagedRoot: string): string | undefined {
+  const markerPath = path.join(packagedRoot, '.hagicode-runtime.json');
+
+  try {
+    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as { version?: unknown };
+    const version = typeof marker.version === 'string' ? marker.version.trim() : '';
+    return version.length > 0 ? version : undefined;
+  } catch (error) {
+    const errno = error as NodeJS.ErrnoException;
+    if (errno.code !== 'ENOENT') {
+      log.warn('[hagiscript-desktop-manifest] failed to read bundled runtime marker version', {
+        packagedRoot,
+        markerPath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return undefined;
+  }
+}
+
+function resolveBundledRuntimeComponentVersion(input: {
+  runtimeHome: string;
+  desktopRuntimeManifest: DesktopRuntimeManifest;
+  serviceId: DesktopRuntimeServiceId;
+  configuredVersion: string | undefined;
+}): string | undefined {
+  const packagedRoot = resolveBundledRuntimePackagedRoot(
+    input.runtimeHome,
+    input.desktopRuntimeManifest,
+    input.serviceId,
+  );
+  const markerVersion = readBundledRuntimeMarkerVersion(packagedRoot);
+  const configuredVersion = input.configuredVersion?.trim() || undefined;
+
+  if (markerVersion && configuredVersion && markerVersion !== configuredVersion) {
+    log.warn('[hagiscript-desktop-manifest] bundled runtime version mismatch; preferring packaged marker', {
+      serviceId: input.serviceId,
+      packagedRoot,
+      markerVersion,
+      configuredVersion,
+    });
+  }
+
+  return markerVersion ?? configuredVersion;
 }
 
 export interface DesktopHagiscriptManifestServerOptions {
@@ -152,11 +208,17 @@ export function buildDesktopHagiscriptRuntimeManifest(
     name: DESKTOP_HAGISCRIPT_OMNIROUTE_COMPONENT_NAME,
     type: 'bundled-runtime',
     source: 'desktop-vendored-runtime',
-    version: resolveReleaseVersion(
-      omniRoutePlatform,
-      omniRouteRuntimeConfig.releaseVersionByPlatform,
-      omniRouteRuntimeConfig.releaseVersion,
-    ),
+    version: resolveBundledRuntimeComponentVersion({
+      runtimeHome: options.runtimeHome,
+      desktopRuntimeManifest,
+      serviceId: 'omniroute',
+      configuredVersion: resolveReleaseVersion(
+        omniRoutePlatform,
+        omniRouteRuntimeConfig.releaseVersionByPlatform,
+        omniRouteRuntimeConfig.releaseVersion,
+      ),
+    }),
+    bundledInstallMode: omniRouteRuntimeConfig.packagedLayout.installMode,
     runtimeDataDir: omnirouteOverride?.runtimeDataDir
       ?? normalizeComponentRuntimeDataDir(desktopRuntimeManifest.services.omniroute.dataRelativePath),
     lifecycleDependencies: [DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME],
@@ -173,11 +235,17 @@ export function buildDesktopHagiscriptRuntimeManifest(
     name: DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME,
     type: 'bundled-runtime',
     source: 'desktop-vendored-runtime',
-    version: resolveReleaseVersion(
-      codeServerPlatform,
-      codeServerRuntimeConfig.releaseVersionByPlatform,
-      codeServerRuntimeConfig.releaseVersion,
-    ),
+    version: resolveBundledRuntimeComponentVersion({
+      runtimeHome: options.runtimeHome,
+      desktopRuntimeManifest,
+      serviceId: 'code-server',
+      configuredVersion: resolveReleaseVersion(
+        codeServerPlatform,
+        codeServerRuntimeConfig.releaseVersionByPlatform,
+        codeServerRuntimeConfig.releaseVersion,
+      ),
+    }),
+    bundledInstallMode: codeServerRuntimeConfig.packagedLayout.installMode,
     runtimeDataDir: codeServerOverride?.runtimeDataDir
       ?? normalizeComponentRuntimeDataDir(desktopRuntimeManifest.services['code-server'].dataRelativePath),
     lifecycleDependencies: [DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME],

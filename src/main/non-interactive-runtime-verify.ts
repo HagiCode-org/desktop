@@ -119,14 +119,14 @@ export async function verifyDesktopRuntimeStructure(
   const codeServerIssues = flattenIssues([
     codeServerValidation.missingEntries,
     codeServerValidation.diagnostics,
-    !isWithinRoot(codeServerRoot, programHome)
-      && `code-server runtime root is outside runtime program home: ${codeServerRoot}`,
+    !isWithinRoot(codeServerRoot, dataHome)
+      && `code-server extracted runtime root is outside runtime data home: ${codeServerRoot}`,
   ]);
   const omniRouteIssues = flattenIssues([
     omniRouteValidation.missingEntries,
     omniRouteValidation.diagnostics,
-    !isWithinRoot(omniRouteRoot, programHome)
-      && `omniroute runtime root is outside runtime program home: ${omniRouteRoot}`,
+    !isWithinRoot(omniRouteRoot, dataHome)
+      && `omniroute extracted runtime root is outside runtime data home: ${omniRouteRoot}`,
   ]);
 
   const report: NonInteractiveRuntimeVerificationReport = {

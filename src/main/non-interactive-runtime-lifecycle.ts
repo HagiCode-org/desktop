@@ -259,18 +259,18 @@ function resolveOmniRouteLaunchSpec(runtime: {
   wrapperPath: string | null;
   entryScriptPath: string | null;
 }): { script: string; cwd: string; args: string[] } {
-  if (runtime.wrapperPath) {
-    return {
-      script: runtime.wrapperPath,
-      cwd: path.dirname(runtime.wrapperPath),
-      args: ['--no-open'],
-    };
-  }
-
   if (runtime.entryScriptPath) {
     return {
       script: runtime.entryScriptPath,
       cwd: path.dirname(runtime.entryScriptPath),
+      args: ['--no-open'],
+    };
+  }
+
+  if (runtime.wrapperPath) {
+    return {
+      script: runtime.wrapperPath,
+      cwd: path.dirname(runtime.wrapperPath),
       args: ['--no-open'],
     };
   }

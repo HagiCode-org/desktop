@@ -617,12 +617,18 @@ export class VendoredRuntimeActivationService {
       }
 
       this.emitProgress(runtimeId, attemptId, 'validating-runtime', 'Validating extracted runtime layout.', 92);
-      const snapshot = await bindings.readStatus();
-      if (snapshot.installStatus !== 'installed') {
-        throw new Error(snapshot.message ?? 'Extracted vendored runtime failed validation.');
+      const validation = await bindings.validate(bindings.paths.currentRoot);
+      if (validation.installStatus !== 'installed') {
+        throw new Error(
+          this.formatValidationFailure(
+            validation,
+            'Extracted vendored runtime failed validation.',
+          ),
+        );
       }
 
       this.emitProgress(runtimeId, attemptId, 'completed', 'Vendored runtime activation completed.', 100);
+      const snapshot = await bindings.readStatus();
       return {
         success: true,
         status: snapshot,

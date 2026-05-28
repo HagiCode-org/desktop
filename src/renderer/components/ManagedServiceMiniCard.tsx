@@ -53,6 +53,18 @@ interface ServiceMiniCardDisplayProps {
   onViewDetails: () => void;
 }
 
+function resolveBlockedReason(snapshot: {
+  error?: string;
+  runtime?: {
+    message?: string;
+  };
+  remediation?: {
+    message?: string;
+  };
+} | null): string | null {
+  return snapshot?.error ?? snapshot?.remediation?.message ?? snapshot?.runtime?.message ?? null;
+}
+
 function statusVariant(status: NormalizedStatus) {
   if (status === 'running') return 'default' as const;
   if (status === 'error') return 'destructive' as const;
@@ -83,7 +95,7 @@ function ServiceMiniCardDisplay({
 
   const isRunning = status === 'running';
   const isLoading = status === 'loading';
-  const actionDisabled = isBusy || isLoading || lifecycleBlocked;
+  const actionDisabled = isBusy || isLoading;
 
   const statusLabel = (() => {
     if (isLoading) return t('status.loading');
@@ -234,8 +246,10 @@ function normalizeCodeServerStatus(
 
 function normalizeOmniRouteStatus(
   status: OmniRouteOverallStatus | undefined,
+  lifecycleBlocked: boolean,
 ): NormalizedStatus {
   if (!status) return 'loading';
+  if (lifecycleBlocked && status !== 'running') return 'error';
   switch (status) {
     case 'running': return 'running';
     case 'stopped': return 'stopped';
@@ -258,6 +272,7 @@ export function CodeServerMiniCard() {
   const enableInProgress = snapshot?.runtime.status === 'extracting';
   const lifecycleBlocked =
     !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed' || enableInProgress;
+  const blockedReason = resolveBlockedReason(snapshot);
   const normalizedStatus = normalizeCodeServerStatus(snapshot?.status, lifecycleBlocked);
 
   useEffect(() => {
@@ -319,17 +334,25 @@ export function CodeServerMiniCard() {
   }, [t]);
 
   const handleStart = useCallback(async () => {
+    if (lifecycleBlocked) {
+      toast.error(blockedReason ?? t('system.services.notReady'));
+      return;
+    }
     setOperation('start');
     try {
       const result = await window.electronAPI.codeServer.start();
       if (result.status) setSnapshot(result.status);
-      if (!result.success) toast.error(t('system.services.startFailed'));
+      if (!result.success) {
+        toast.error(t('system.services.startFailed'), {
+          description: result.error,
+        });
+      }
     } catch {
       toast.error(t('system.services.startFailed'));
     } finally {
       setOperation(null);
     }
-  }, [t]);
+  }, [blockedReason, lifecycleBlocked, t]);
 
   const handleStop = useCallback(async () => {
     setOperation('stop');
@@ -345,6 +368,10 @@ export function CodeServerMiniCard() {
   }, [t]);
 
   const handleRestart = useCallback(async () => {
+    if (lifecycleBlocked) {
+      toast.error(blockedReason ?? t('system.services.notReady'));
+      return;
+    }
     setOperation('restart');
     try {
       const result = await window.electronAPI.codeServer.restart();
@@ -355,7 +382,7 @@ export function CodeServerMiniCard() {
     } finally {
       setOperation(null);
     }
-  }, [t]);
+  }, [blockedReason, lifecycleBlocked, t]);
 
   const handleOpen = useCallback(async () => {
     const url = snapshot?.config?.baseUrl;
@@ -408,7 +435,8 @@ export function OmniRouteMiniCard() {
   const enableInProgress = snapshot?.runtime.status === 'extracting';
   const lifecycleBlocked =
     !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed' || enableInProgress;
-  const normalizedStatus = normalizeOmniRouteStatus(snapshot?.status);
+  const blockedReason = resolveBlockedReason(snapshot);
+  const normalizedStatus = normalizeOmniRouteStatus(snapshot?.status, lifecycleBlocked);
 
   useEffect(() => {
     let disposed = false;
@@ -469,24 +497,36 @@ export function OmniRouteMiniCard() {
   }, [t]);
 
   const handleStart = useCallback(async () => {
+    if (lifecycleBlocked) {
+      toast.error(blockedReason ?? t('system.services.notReady'));
+      return;
+    }
     setOperation('start');
     try {
       const result = await window.electronAPI.omniroute.start();
       if (result.status) setSnapshot(result.status);
-      if (!result.success) toast.error(t('system.services.startFailed'));
+      if (!result.success) {
+        toast.error(t('system.services.startFailed'), {
+          description: result.error,
+        });
+      }
     } catch {
       toast.error(t('system.services.startFailed'));
     } finally {
       setOperation(null);
     }
-  }, [t]);
+  }, [blockedReason, lifecycleBlocked, t]);
 
   const handleStop = useCallback(async () => {
     setOperation('stop');
     try {
       const result = await window.electronAPI.omniroute.stop();
       if (result.status) setSnapshot(result.status);
-      if (!result.success) toast.error(t('system.services.stopFailed'));
+      if (!result.success) {
+        toast.error(t('system.services.stopFailed'), {
+          description: result.error,
+        });
+      }
     } catch {
       toast.error(t('system.services.stopFailed'));
     } finally {
@@ -495,17 +535,25 @@ export function OmniRouteMiniCard() {
   }, [t]);
 
   const handleRestart = useCallback(async () => {
+    if (lifecycleBlocked) {
+      toast.error(blockedReason ?? t('system.services.notReady'));
+      return;
+    }
     setOperation('restart');
     try {
       const result = await window.electronAPI.omniroute.restart();
       if (result.status) setSnapshot(result.status);
-      if (!result.success) toast.error(t('system.services.restartFailed'));
+      if (!result.success) {
+        toast.error(t('system.services.restartFailed'), {
+          description: result.error,
+        });
+      }
     } catch {
       toast.error(t('system.services.restartFailed'));
     } finally {
       setOperation(null);
     }
-  }, [t]);
+  }, [blockedReason, lifecycleBlocked, t]);
 
   const handleOpen = useCallback(async () => {
     const url = snapshot?.config?.baseUrl;

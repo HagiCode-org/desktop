@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, it } from 'node:test';
 import {
   DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME,
   buildDesktopHagiscriptRuntimeManifest,
@@ -14,6 +17,15 @@ import {
   resolveDesktopHagiscriptInstanceName,
   resolveDesktopManagedPm2AppName,
 } from '../hagiscript-desktop-manifest.js';
+
+const cleanupRoots = new Set<string>();
+
+afterEach(async () => {
+  await Promise.all([...cleanupRoots].map(async (rootPath) => {
+    cleanupRoots.delete(rootPath);
+    await fs.rm(rootPath, { recursive: true, force: true });
+  }));
+});
 
 describe('hagiscript desktop manifest builder', () => {
   it('builds the full four-directory Desktop manifest when a server payload is provided', () => {
@@ -107,6 +119,12 @@ describe('hagiscript desktop manifest builder', () => {
     assert.deepEqual(
       manifest.components
         .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
+        .map((component) => component.bundledInstallMode),
+      ['archive-7z-only', 'archive-7z-only'],
+    );
+    assert.deepEqual(
+      manifest.components
+        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
         .map((component) => (component.pm2 as { appName?: string }).appName),
       [DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME, DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME],
     );
@@ -183,6 +201,46 @@ describe('hagiscript desktop manifest builder', () => {
     assert.equal(
       manifest.runtime.hagicodeInstance,
       DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME,
+    );
+  });
+
+  it('prefers packaged marker versions for bundled runtimes when the unified manifest is stale', async () => {
+    const runtimeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'hagiscript-desktop-runtime-home-'));
+    cleanupRoots.add(runtimeHome);
+
+    await fs.mkdir(path.join(runtimeHome, 'components', 'bundled', 'code-server'), { recursive: true });
+    await fs.mkdir(path.join(runtimeHome, 'components', 'bundled', 'omniroute'), { recursive: true });
+    await fs.writeFile(
+      path.join(runtimeHome, 'components', 'bundled', 'code-server', '.hagicode-runtime.json'),
+      JSON.stringify({ version: '2026.0527.0001' }),
+      'utf8',
+    );
+    await fs.writeFile(
+      path.join(runtimeHome, 'components', 'bundled', 'omniroute', '.hagicode-runtime.json'),
+      JSON.stringify({ version: '2026.0527.0001' }),
+      'utf8',
+    );
+
+    const manifest = buildDesktopHagiscriptRuntimeManifest({
+      runtimeRoot: '/tmp/hagicode-user-data',
+      runtimeHome,
+      runtimeDataRoot: '/tmp/hagicode-user-data/runtimeData',
+      serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
+      serverDataRoot: '/tmp/hagicode-user-data/apps/data',
+      npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
+      hagiscriptPackageRoot: '/opt/hagiscript',
+      dotnetPlatform: 'linux-x64',
+      codeServerPlatform: 'linux-x64',
+      omniRoutePlatform: 'linux-x64',
+    }) as {
+      components: Array<Record<string, unknown>>;
+    };
+
+    assert.deepEqual(
+      manifest.components
+        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
+        .map((component) => component.version),
+      ['2026.0527.0001', '2026.0527.0001'],
     );
   });
 

@@ -297,7 +297,9 @@ const WebServiceStatusCard: React.FC = () => {
 
         const result = await window.electronAPI.codeServer.start();
         if (!result.success) {
-          toast.error(t('webServiceStatus.managedStartup.errors.codeServerStartFailed'));
+          toast.error(t('webServiceStatus.managedStartup.errors.codeServerStartFailed'), {
+            description: result.error,
+          });
         }
       } catch {
         toast.error(t('webServiceStatus.managedStartup.errors.codeServerStartFailed'));
@@ -318,7 +320,9 @@ const WebServiceStatusCard: React.FC = () => {
 
         const result = await window.electronAPI.omniroute.start();
         if (!result.success) {
-          toast.error(t('webServiceStatus.managedStartup.errors.omnirouteStartFailed'));
+          toast.error(t('webServiceStatus.managedStartup.errors.omnirouteStartFailed'), {
+            description: result.error,
+          });
         }
       } catch {
         toast.error(t('webServiceStatus.managedStartup.errors.omnirouteStartFailed'));

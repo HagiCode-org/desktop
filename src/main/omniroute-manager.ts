@@ -587,8 +587,18 @@ export class OmniRouteManager {
     paths: OmniRouteManagedPaths,
     serviceEnv: NodeJS.ProcessEnv = this.buildManagedServiceEnvironment(paths),
   ): Promise<HagiscriptRuntimeContext> {
+    const runtime = await inspectVendoredOmniRouteRuntime(this.pathManager);
+    const launchScriptPath = runtime.entryScriptPath ?? runtime.wrapperPath ?? null;
+    if (!launchScriptPath) {
+      throw new Error(runtime.message ?? 'Vendored OmniRoute runtime is not ready.');
+    }
+
+    const launchWorkingDirectory = this.pathManager.getOmniRouteRuntimeRoot();
     return await this.hagiscriptRuntimeContextResolver.resolveBundledRuntime({
       service: 'omniroute',
+      launchScriptPath,
+      launchWorkingDirectory,
+      launchArgs: ['--no-open'],
       serviceEnv,
     });
   }

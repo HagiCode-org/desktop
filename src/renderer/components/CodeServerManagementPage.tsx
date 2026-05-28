@@ -85,6 +85,7 @@ export default function CodeServerManagementPage() {
   const runtimeEnableAvailable = runtimePrimaryAction === 'enable';
   const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
   const runtimeRequiresDesktopReinstall = runtimePrimaryAction === 'reinstall-desktop';
+  const lifecycleBlockedReason = status?.error ?? status?.runtime.message ?? t('system.services.notReady');
 
   const applyStatus = (nextStatus: CodeServerStatusSnapshot) => {
     startTransition(() => {
@@ -109,6 +110,10 @@ export default function CodeServerManagementPage() {
   };
 
   const runLifecycle = async (action: 'start' | 'stop' | 'restart' | 'repair') => {
+    if ((action === 'start' || action === 'restart') && lifecycleBlocked) {
+      setErrorMessage(lifecycleBlockedReason);
+      return;
+    }
     setOperation(action);
     setErrorMessage(null);
     try {
@@ -404,7 +409,7 @@ export default function CodeServerManagementPage() {
                     {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
                   </Button>
                 ) : (
-                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlocked}>
+                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning}>
                     <Play className="mr-2 h-4 w-4" />
                     {operation === 'start' ? t('codeServer.actions.working') : t('codeServer.actions.start')}
                   </Button>
@@ -415,7 +420,7 @@ export default function CodeServerManagementPage() {
                       <Square className="mr-2 h-4 w-4" />
                       {operation === 'stop' ? t('codeServer.actions.working') : t('codeServer.actions.stop')}
                     </Button>
-                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlocked}>
+                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy}>
                       <RotateCcw className="mr-2 h-4 w-4" />
                       {operation === 'restart' ? t('codeServer.actions.working') : t('codeServer.actions.restart')}
                     </Button>

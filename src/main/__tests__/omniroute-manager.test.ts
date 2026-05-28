@@ -40,9 +40,10 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /paths\.envFile/);
     assert.doesNotMatch(source, /resolveVendoredRuntimeLaunchSpec/);
     assert.doesNotMatch(source, /renderEcosystemConfig/);
-    assert.doesNotMatch(source, /launchScriptPath:/);
     assert.doesNotMatch(source, /interpreterNone/);
-    assert.doesNotMatch(source, /args: \['--no-open'\]/);
+    assert.match(source, /launchScriptPath,/);
+    assert.match(source, /launchWorkingDirectory,/);
+    assert.match(source, /launchArgs: \['--no-open'\]/);
     assert.doesNotMatch(source, /module\.exports = \{/);
   });
 
@@ -54,7 +55,8 @@ describe('OmniRoute manager contract', () => {
     assert.match(source, /this\.vendoredRuntimeActivationService = getVendoredRuntimeActivationService\(/);
     assert.match(source, /this\.pathManager,/);
     assert.match(source, /this\.dependencyManagementService,/);
-    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute',\s*serviceEnv,\s*\}\)/);
+    assert.match(source, /const launchScriptPath = runtime\.entryScriptPath \?\? runtime\.wrapperPath \?\? null;/);
+    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute',/);
     assert.match(source, /this\.hagiscriptPm2Manager\.start\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);

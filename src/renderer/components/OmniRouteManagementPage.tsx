@@ -107,6 +107,7 @@ export default function OmniRouteManagementPage() {
     ? dependencyRemediation
     : null;
   const lifecycleBlockedByDependencies = runtimeNeedsRepair || activationInProgress || Boolean(packageRemediation);
+  const lifecycleBlockedReason = packageRemediation?.message ?? status?.error ?? status?.runtime.message ?? t('system.services.notReady');
 
   const applyStatus = (nextStatus: OmniRouteStatusSnapshot) => {
     startTransition(() => {
@@ -131,6 +132,10 @@ export default function OmniRouteManagementPage() {
   };
 
   const runLifecycle = async (action: 'start' | 'stop' | 'restart' | 'repair') => {
+    if ((action === 'start' || action === 'restart') && lifecycleBlockedByDependencies) {
+      setErrorMessage(lifecycleBlockedReason);
+      return;
+    }
     setOperation(action);
     setErrorMessage(null);
     try {
@@ -387,7 +392,7 @@ export default function OmniRouteManagementPage() {
                     {activationInProgress ? t('dependencyManagement.vendoredRuntime.status.extracting') : t('dependencyManagement.vendoredRuntime.actions.enable')}
                   </Button>
                 ) : (
-                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning || lifecycleBlockedByDependencies}>
+                  <Button onClick={() => void runLifecycle('start')} disabled={isBusy || isRunning}>
                     <Play className="mr-2 h-4 w-4" />
                     {operation === 'start' ? t('omniroute.actions.working') : t('omniroute.actions.start')}
                   </Button>
@@ -398,7 +403,7 @@ export default function OmniRouteManagementPage() {
                       <Square className="mr-2 h-4 w-4" />
                       {operation === 'stop' ? t('omniroute.actions.working') : t('omniroute.actions.stop')}
                     </Button>
-                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlockedByDependencies}>
+                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy}>
                       <RotateCcw className="mr-2 h-4 w-4" />
                       {operation === 'restart' ? t('omniroute.actions.working') : t('omniroute.actions.restart')}
                     </Button>

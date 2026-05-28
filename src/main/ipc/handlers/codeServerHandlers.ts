@@ -84,9 +84,18 @@ async function toLifecycleResult(action: CodeServerLifecycleAction): Promise<{
       ? await manager.stop()
       : action === 'restart'
         ? await manager.restart()
-        : await manager.repair();
+      : await manager.repair();
 
-  const status = await emitCurrentStatus();
+  let status = await manager.getStatus();
+  if (!result.success && result.error) {
+    status = {
+      ...status,
+      status: 'error',
+      error: result.error,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+  emitCodeServerStatus(status);
   return {
     success: result.success,
     action,

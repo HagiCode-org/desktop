@@ -45,6 +45,9 @@ describe('Code Server renderer wiring', () => {
     assert.match(source, /password: passwordInput\.trim\(\)/);
     assert.match(source, /dispatch\(switchView\('dependency-management'\)\)/);
     assert.match(source, /runLifecycle\('repair'\)/);
+    assert.match(source, /const lifecycleBlockedReason = status\?\.error \?\? status\?\.runtime\.message \?\? t\('system\.services\.notReady'\);/);
+    assert.match(source, /if \(\(action === 'start' \|\| action === 'restart'\) && lifecycleBlocked\) \{/);
+    assert.match(source, /setErrorMessage\(lifecycleBlockedReason\);/);
     assert.match(source, /codeServer\.actions\.repair/);
     assert.match(source, /dependencyManagement\.vendoredRuntime\.reinstallHint/);
     assert.match(source, /status\?\.runtime\.version \?\? t\('dependencyManagement\.unavailable'\)/);
