@@ -169,7 +169,7 @@ export default function DependencyManagementPage() {
                 ...item,
                 activation: event,
                 status: ['completed', 'failed'].includes(event.stage) ? item.status : 'extracting',
-                installStatus: item.installStatus === 'installed' ? 'installed' : 'packaged',
+                installStatus: item.installStatus === 'installed' ? 'installed' : 'not-installed',
                 primaryAction: ['completed', 'failed'].includes(event.stage) ? item.primaryAction : 'none',
               }
             : item),

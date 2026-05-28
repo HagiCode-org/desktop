@@ -80,6 +80,7 @@ export default function CodeServerManagementPage() {
   const lifecycleBlocked = !status?.pm2Available || status?.runtime.installStatus !== 'installed' || activationInProgress;
   const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
   const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
+  const runtimeInstalled = runtimeInstallStatus === 'installed';
   const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
   const runtimeEnableAvailable = runtimePrimaryAction === 'enable';
   const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
@@ -408,24 +409,28 @@ export default function CodeServerManagementPage() {
                     {operation === 'start' ? t('codeServer.actions.working') : t('codeServer.actions.start')}
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
-                  <Square className="mr-2 h-4 w-4" />
-                  {operation === 'stop' ? t('codeServer.actions.working') : t('codeServer.actions.stop')}
-                </Button>
-                <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlocked}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  {operation === 'restart' ? t('codeServer.actions.working') : t('codeServer.actions.restart')}
-                </Button>
-                {status?.config.baseUrl ? (
+                {runtimeInstalled ? (
                   <>
-                    <Button variant="secondary" onClick={() => void openManagedWindow()} disabled={isBusy}>
-                      <Monitor className="mr-2 h-4 w-4" />
-                      {t('codeServer.actions.openDesktop')}
+                    <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
+                      <Square className="mr-2 h-4 w-4" />
+                      {operation === 'stop' ? t('codeServer.actions.working') : t('codeServer.actions.stop')}
                     </Button>
-                    <Button variant="secondary" onClick={() => void openBrowserWindow()} disabled={isBusy}>
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      {t('codeServer.actions.openBrowser')}
+                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlocked}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {operation === 'restart' ? t('codeServer.actions.working') : t('codeServer.actions.restart')}
                     </Button>
+                    {status?.config.baseUrl && isRunning && !runtimeNeedsRepair ? (
+                      <>
+                        <Button variant="secondary" onClick={() => void openManagedWindow()} disabled={isBusy}>
+                          <Monitor className="mr-2 h-4 w-4" />
+                          {t('codeServer.actions.openDesktop')}
+                        </Button>
+                        <Button variant="secondary" onClick={() => void openBrowserWindow()} disabled={isBusy}>
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          {t('codeServer.actions.openBrowser')}
+                        </Button>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
               </div>

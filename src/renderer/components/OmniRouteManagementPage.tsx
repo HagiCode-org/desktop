@@ -98,6 +98,7 @@ export default function OmniRouteManagementPage() {
   const activationInProgress = status?.runtime.status === 'extracting';
   const runtimeInstallStatus = status?.runtime.installStatus ?? 'not-installed';
   const runtimeNeedsRepair = runtimeInstallStatus !== 'installed';
+  const runtimeInstalled = runtimeInstallStatus === 'installed';
   const runtimePrimaryAction = status?.runtime.primaryAction ?? 'none';
   const runtimeEnableAvailable = runtimePrimaryAction === 'enable';
   const runtimeRepairAvailable = runtimePrimaryAction === 'repair';
@@ -391,19 +392,23 @@ export default function OmniRouteManagementPage() {
                     {operation === 'start' ? t('omniroute.actions.working') : t('omniroute.actions.start')}
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
-                  <Square className="mr-2 h-4 w-4" />
-                  {operation === 'stop' ? t('omniroute.actions.working') : t('omniroute.actions.stop')}
-                </Button>
-                <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlockedByDependencies}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  {operation === 'restart' ? t('omniroute.actions.working') : t('omniroute.actions.restart')}
-                </Button>
-                {status?.config.baseUrl ? (
-                  <Button variant="secondary" onClick={() => void window.electronAPI.openExternal(status.config.baseUrl)}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {t('omniroute.actions.openUi')}
-                  </Button>
+                {runtimeInstalled ? (
+                  <>
+                    <Button variant="outline" onClick={() => void runLifecycle('stop')} disabled={isBusy || !isRunning}>
+                      <Square className="mr-2 h-4 w-4" />
+                      {operation === 'stop' ? t('omniroute.actions.working') : t('omniroute.actions.stop')}
+                    </Button>
+                    <Button variant="outline" onClick={() => void runLifecycle('restart')} disabled={isBusy || lifecycleBlockedByDependencies}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {operation === 'restart' ? t('omniroute.actions.working') : t('omniroute.actions.restart')}
+                    </Button>
+                    {status?.config.baseUrl && isRunning && !runtimeNeedsRepair ? (
+                      <Button variant="secondary" onClick={() => void window.electronAPI.openExternal(status.config.baseUrl)}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        {t('omniroute.actions.openUi')}
+                      </Button>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
             </CardContent>

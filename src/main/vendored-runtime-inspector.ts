@@ -527,7 +527,7 @@ function normalizeVendoredRuntimeInstallStatus(
     return 'failed';
   }
   if (status === 'enable-required' || status === 'extracting') {
-    return 'packaged';
+    return 'not-installed';
   }
   if (status === 'damaged') {
     return 'failed';
@@ -634,7 +634,7 @@ export async function inspectVendoredRuntime(
   const runtimeMessage =
     validated.activation?.error
     || (validated.status === 'enable-required'
-      ? 'Vendored runtime is packaged but not enabled yet.'
+      ? 'Vendored runtime is not installed in the Desktop-managed location yet.'
       : validated.activation?.message)
     || validated.diagnostics[0]
     || health.message;
