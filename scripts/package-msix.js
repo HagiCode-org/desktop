@@ -5,7 +5,10 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
-import { load } from 'js-yaml';
+
+import { DEFAULT_STORE_CONFIG_PATH, loadStorePackageConfig, toWindowsPackageVersion } from './store-package-config.js';
+
+export { toWindowsPackageVersion };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,25 +22,13 @@ const REQUIRED_APPX_ASSETS = [
   'Wide310x150Logo.png',
 ];
 
-export function toWindowsPackageVersion(version) {
-  const normalized = String(version || '').trim();
-  const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(normalized);
-  if (!match) {
-    throw new Error(`Unsupported package version for MSIX packaging: ${version}`);
-  }
-
-  const prerelease = match[4] || '';
-  const prereleaseNumberMatch = /(?:^|\.)(\d+)(?:$|\.)/.exec(prerelease);
-  const revision = prereleaseNumberMatch ? Number.parseInt(prereleaseNumberMatch[1], 10) : 0;
-  return `${match[1]}.${match[2]}.${match[3]}.${revision}`;
-}
-
 function parseArgs(argv) {
   const options = {
     input: path.join(projectRoot, 'pkg', 'win-unpacked'),
     output: path.join(projectRoot, 'pkg'),
     stage: path.join(projectRoot, 'build', 'msix-stage'),
     assets: path.join(projectRoot, 'resources', 'appx'),
+    storeConfigPath: DEFAULT_STORE_CONFIG_PATH,
     verbose: false,
   };
 
@@ -56,6 +47,9 @@ function parseArgs(argv) {
       case '--assets':
         options.assets = path.resolve(projectRoot, argv[++index]);
         break;
+      case '--store-config-path':
+        options.storeConfigPath = path.resolve(projectRoot, argv[++index]);
+        break;
       case '--verbose':
         options.verbose = true;
         break;
@@ -68,6 +62,7 @@ Options:
   --output <dir>  Output directory for the MSIX package (default: pkg)
   --stage <dir>   Temporary staging directory (default: build/msix-stage)
   --assets <dir>  AppX/MSIX asset directory (default: resources/appx)
+  --store-config-path <path>  Store config source (default: config/store-package.json)
   --verbose       Print verbose winapp CLI output
 `);
         process.exit(0);
@@ -259,15 +254,16 @@ async function copyAssets(sourceAssetsDir, targetAssetsDir) {
   }
 }
 
-async function loadProjectMetadata() {
-  const [packageJsonContent, builderConfigContent] = await Promise.all([
+async function loadProjectMetadata(storeConfigPath) {
+  const [packageJsonContent, storeConfigInfo] = await Promise.all([
     fsp.readFile(path.join(projectRoot, 'package.json'), 'utf8'),
-    fsp.readFile(path.join(projectRoot, 'electron-builder.yml'), 'utf8'),
+    loadStorePackageConfig(storeConfigPath),
   ]);
 
   return {
     packageJson: JSON.parse(packageJsonContent),
-    builderConfig: load(builderConfigContent),
+    storeConfig: storeConfigInfo.storeConfig,
+    storeConfigPath: storeConfigInfo.storeConfigPath,
   };
 }
 
@@ -283,22 +279,24 @@ export async function packageMsix(rawOptions = {}) {
 
   await ensureRequiredFilesExist([options.input, options.assets]);
 
-  const { packageJson, builderConfig } = await loadProjectMetadata();
-  const appxConfig = builderConfig.appx || {};
-  const productName = builderConfig.productName || packageJson.productName || packageJson.name;
+  const { packageJson, storeConfig, storeConfigPath } = await loadProjectMetadata(options.storeConfigPath);
+  const appxConfig = storeConfig.appx || {};
+  const productName = packageJson.productName || packageJson.name;
   const executable = await resolveExecutableName(options.input, productName);
   const version = toWindowsPackageVersion(packageJson.version);
   const arch = toWindowsArch(process.arch);
-  const identityName = appxConfig.identityName || builderConfig.appId || packageJson.name;
-  const publisher = resolveWindowsPackagePublisher(appxConfig.publisher);
+  const identityName = storeConfig.packageIdentity.identityName || packageJson.name;
+  const publisher = resolveWindowsPackagePublisher(storeConfig.packageIdentity.publisher);
 
   if (!publisher) {
-    throw new Error('electron-builder appx.publisher is required for MSIX packaging.');
+    throw new Error(`Store package publisher is required in ${storeConfigPath}.`);
   }
 
-  const publisherDisplayName = appxConfig.publisherDisplayName || packageJson.author?.name || 'HagiCode';
+  const publisherDisplayName = storeConfig.packageIdentity.publisherDisplayName || packageJson.author?.name || 'HagiCode';
   const description = packageJson.description || productName;
-  const languages = Array.isArray(appxConfig.languages) && appxConfig.languages.length > 0 ? appxConfig.languages : ['en-US'];
+  const languages = Array.isArray(storeConfig.packageIdentity.languages) && storeConfig.packageIdentity.languages.length > 0
+    ? storeConfig.packageIdentity.languages
+    : ['en-US'];
   const capabilitySet = new Set(Array.isArray(appxConfig.capabilities) ? appxConfig.capabilities : []);
   capabilitySet.add('runFullTrust');
 
@@ -315,12 +313,12 @@ export async function packageMsix(rawOptions = {}) {
     publisher,
     version,
     arch,
-    displayName: appxConfig.displayName || productName,
+    displayName: storeConfig.packageIdentity.displayName || productName,
     publisherDisplayName,
     description,
     executable,
     applicationId: normalizeApplicationId(identityName),
-    backgroundColor: appxConfig.backgroundColor || 'transparent',
+    backgroundColor: storeConfig.packageIdentity.backgroundColor || 'transparent',
     languages,
     capabilities: [...capabilitySet],
     minVersion: appxConfig.minVersion || '10.0.19041.0',
@@ -402,6 +400,7 @@ export async function packageMsix(rawOptions = {}) {
     executable,
     manifestPath,
     stageAppDir,
+    storeConfigPath,
   };
 }
 
