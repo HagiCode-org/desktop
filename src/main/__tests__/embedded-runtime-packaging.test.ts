@@ -101,7 +101,11 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(reusableWindowsWorkflow, /zip_path=/);
     assert.match(reusableWindowsWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
     assert.match(reusableWindowsWorkflow, /builder_target: appx/);
-    assert.match(reusableWindowsWorkflow, /builder_target: msix/);
+    assert.match(reusableWindowsWorkflow, /name: MSIX/);
+    assert.match(reusableWindowsWorkflow, /Build Windows MSIX Store package/);
+    assert.match(reusableWindowsWorkflow, /npm run build:win:store --/);
+    assert.match(reusableWindowsWorkflow, /npm run package:smoke-test/);
+    assert.match(reusableWindowsWorkflow, /pkg\/store-build-metadata\.json/);
     assert.match(reusableWindowsWorkflow, /Upload Windows build bundle/);
     assert.match(reusableWindowsWorkflow, /release-windows-\$\{\{ matrix\.target\.id \}\}-assets/);
     assert.match(reusableWindowsWorkflow, /hagicode-windows-\$\{\{ matrix\.target\.id \}\}-\$\{\{ github\.sha \}\}/);

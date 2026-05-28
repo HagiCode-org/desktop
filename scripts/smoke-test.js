@@ -666,7 +666,10 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableWindowsContent.includes('unsigned-artifacts/*'), 'reusable Windows workflow preserves unsigned artifacts alongside signed outputs');
   assert(reusableWindowsContent.includes('Upload Windows build bundle'), 'reusable Windows workflow uploads a Windows build bundle after packaging');
   assert(reusableWindowsContent.includes('name: MSIX'), 'reusable Windows workflow includes a dedicated MSIX matrix target');
-  assert(reusableWindowsContent.includes('builder_target: msix'), 'reusable Windows workflow wires the MSIX target into the Windows packaging matrix');
+  assert(reusableWindowsContent.includes('Build Windows MSIX Store package'), 'reusable Windows workflow uses a dedicated Store build step for MSIX artifacts');
+  assert(reusableWindowsContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
+  assert(reusableWindowsContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
+  assert(reusableWindowsContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
 
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
