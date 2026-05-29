@@ -30,6 +30,8 @@ describe('portable version payload detection', () => {
     assert.match(source, /Portable version bundle member not found, falling back to normal mode/);
     assert.match(source, /Portable version payload validation failed, falling back to normal mode/);
     assert.match(source, /Portable version payload detected successfully/);
+    assert.match(source, /Windows Store\/MSIX package detected, using normal distribution mode/);
+    assert.match(source, /process\.windowsStore/);
     assert.match(source, /selectedPlatform/);
     assert.match(source, /bundleRoot/);
     assert.match(source, /manifestPath/);

@@ -237,6 +237,13 @@ export class VersionManager {
   }
 
   async initializeDistributionMode(): Promise<DistributionModeState> {
+    if (process.platform === 'win32' && process.windowsStore) {
+      this.distributionMode = 'normal';
+      this.activePortableRuntime = null;
+      log.info('[VersionManager] Windows Store/MSIX package detected, using normal distribution mode.');
+      return { mode: this.distributionMode, activeRuntime: null };
+    }
+
     const portableSelection = this.pathManager.getPortableRuntimeSelection();
     const portableRoot = portableSelection.runtimeRoot;
 

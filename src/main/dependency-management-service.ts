@@ -1036,6 +1036,12 @@ export class DependencyManagementService {
       delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
     }
 
+    if (this.platform === 'win32' && process.windowsStore) {
+      env.HAGICODE_DESKTOP_WINDOWS_STORE = '1';
+    } else {
+      delete env.HAGICODE_DESKTOP_WINDOWS_STORE;
+    }
+
     return env;
   }
 
