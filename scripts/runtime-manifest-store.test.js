@@ -62,6 +62,18 @@ describe('script runtime manifest store data scope resolution', () => {
   });
 });
 
+describe('bundled runtime manifest component contracts', () => {
+  it('keeps omniroute optional and delegated to hagiscript built-in lifecycle scripts', () => {
+    const manifest = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+    const omniroute = manifest.components.find((component) => component.name === 'omniroute');
+
+    assert.equal(omniroute?.required, false);
+    assert.equal(omniroute?.installScript, undefined);
+    assert.equal(omniroute?.configureScript, undefined);
+    assert.deepEqual(omniroute?.lifecycleDependencies, ['node']);
+  });
+});
+
 
 describe('script runtime manifest store template materialization', () => {
   it('copies bundled runtime templates into the active userData scope', () => {

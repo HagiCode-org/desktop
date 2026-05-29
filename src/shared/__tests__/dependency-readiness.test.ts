@@ -158,11 +158,11 @@ describe('dependency readiness evaluation', () => {
   });
 
   it('treats catalog-pinned managed package versions as minimum supported versions', () => {
-    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.9', pm2: '7.1.0' }), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.10', pm2: '7.1.0' }), ['codex']);
     const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
     const pm2 = summary.optionalPackages.find((item) => item.id === 'pm2');
 
-    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.9');
+    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.10');
     assert.equal(hagiscript?.versionSatisfied, true);
     assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
     assert.equal(pm2?.versionSatisfied, true);
@@ -179,8 +179,8 @@ describe('dependency readiness evaluation', () => {
       isManagedPackageVersionSatisfied(
         {
           ...hagiscriptDefinition,
-          installSpec: '@hagicode/hagiscript@0.2.9',
-          requiredVersionRange: '0.2.9',
+          installSpec: '@hagicode/hagiscript@0.2.10',
+          requiredVersionRange: '0.2.10',
         },
         '0.2.7-dev',
       ),
