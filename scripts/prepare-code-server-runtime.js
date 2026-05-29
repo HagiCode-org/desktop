@@ -14,7 +14,7 @@ import {
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.2.8';
+const MINIMUM_HAGISCRIPT_VERSION = '0.2.9';
 
 main().catch((error) => {
   console.error('[code-server-runtime] Failed to prepare vendored runtime:', error instanceof Error ? error.stack || error.message : String(error));

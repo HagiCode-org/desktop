@@ -37,6 +37,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /delete env\.npm_config_prefix/);
     assert.match(source, /delete env\.NPM_CONFIG_PREFIX/);
     assert.match(source, /HAGICODE_PORTABLE_TOOLCHAIN_ROOT/);
+    assert.match(source, /HAGICODE_DESKTOP_WINDOWS_STORE/);
+    assert.match(source, /process\.windowsStore/);
     assert.match(source, /const launch = resolveCommandLaunch\(command, this\.platform\);/);
     assert.match(source, /return executeCliStreaming\(\{/);
     assert.match(source, /command: launch\.command,/);
@@ -259,7 +261,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /installMode: 'embedded-npm'/);
     assert.match(source, /installMode: 'hagiscript-sync'/);
     assert.match(source, /packageName: '@hagicode\/hagiscript'/);
-    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.2\.8'/);
+    assert.match(source, /installSpec: '@hagicode\/hagiscript@0\.2\.9'/);
     assert.match(source, /installSpec: '@fission-ai\/openspec@1\.3\.1'/);
     assert.match(source, /installSpec: 'skills@1\.5\.1'/);
     assert.match(source, /packageName: 'pm2'/);
@@ -378,6 +380,14 @@ describe('dependency management service contract', () => {
     assert.match(source, /this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\)/);
     assert.match(source, /const commandEnv = this\.buildHagiscriptCommandEnv\(activationPolicy, environment\);/);
     assert.match(source, /const result = await this\.runCommand\(\s*hagiscriptExecutablePath,\s*this\.buildHagiscriptSyncArgs\(environment, manifest\.manifestPath, mirrorSettings\.registryUrl\),/);
+  });
+
+  it('marks hagiscript child processes when Desktop runs from Windows Store/MSIX', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /if \(this\.platform === 'win32' && process\.windowsStore\) \{/);
+    assert.match(source, /env\.HAGICODE_DESKTOP_WINDOWS_STORE = '1';/);
+    assert.match(source, /delete env\.HAGICODE_DESKTOP_WINDOWS_STORE;/);
   });
 
   it('keeps batch sync package selectors in the manifest instead of npm-sync positional arguments', () => {

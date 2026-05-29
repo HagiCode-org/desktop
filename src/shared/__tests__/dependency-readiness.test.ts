@@ -12,6 +12,7 @@ import {
 } from '../npm-managed-packages.js';
 import type {
   ManagedNpmPackageId,
+  ManagedNpmPackageDefinition,
   ManagedNpmPackageStatus,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementSnapshot,
@@ -20,10 +21,15 @@ import type {
 function createSnapshot(
   statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>,
   versionOverrides: Partial<Record<ManagedNpmPackageId, string | null>> = {},
+  definitionOverrides: Partial<Record<ManagedNpmPackageId, Partial<ManagedNpmPackageDefinition>>> = {},
 ): DependencyManagementSnapshot {
   const packages: ManagedNpmPackageStatusSnapshot[] = managedNpmPackages.map((definition) => {
+    const effectiveDefinition = {
+      ...definition,
+      ...definitionOverrides[definition.id],
+    };
     const status = statusOverrides[definition.id] ?? 'installed';
-    const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
+    const requiredVersionRange = getManagedPackageRequiredVersionRange(effectiveDefinition);
     const version = status === 'installed'
       ? (
         versionOverrides[definition.id]
@@ -34,7 +40,7 @@ function createSnapshot(
 
     return {
       id: definition.id,
-      definition,
+      definition: effectiveDefinition,
       status,
       version,
       packageRoot: `/managed/${definition.id}`,
@@ -47,8 +53,12 @@ function createSnapshot(
       available: true,
       toolchainRoot: '/managed',
       nodeRuntimeRoot: '/managed/node',
+      nodeVersion: 'v24.0.0',
+      nodeMajorVersion: '24',
       npmGlobalPrefix: '/managed/node',
       npmGlobalBinRoot: '/managed/node/bin',
+      npmGlobalModulesRoot: '/managed/node/lib/node_modules',
+      npmCacheRoot: '/managed/node/npmCache',
       node: {
         status: 'available',
         executablePath: '/managed/node/bin/node',
@@ -62,6 +72,7 @@ function createSnapshot(
     },
     packages,
     vendoredRuntimes: [],
+    activeRuntimeActivation: null,
     mirrorSettings: {
       enabled: false,
       registryUrl: null,
@@ -111,12 +122,16 @@ describe('dependency readiness evaluation', () => {
   });
 
   it('uses the snapshot definition when hagiscript is configured to latest or dev', () => {
-    const latestSnapshot = createSnapshot({}, { hagiscript: '9.9.9' });
-    const latestDefinition = latestSnapshot.packages.find((item) => item.id === 'hagiscript')?.definition;
-    if (!latestDefinition) {
-      throw new Error('hagiscript definition missing from snapshot');
-    }
-    latestDefinition.installSpec = '@hagicode/hagiscript@latest';
+    const latestSnapshot = createSnapshot(
+      {},
+      { hagiscript: '9.9.9' },
+      {
+        hagiscript: {
+          installSpec: '@hagicode/hagiscript@latest',
+          requiredVersionRange: undefined,
+        },
+      },
+    );
 
     const latestSummary = evaluateDependencyReadiness(latestSnapshot, ['codex']);
     const latestHagiscript = latestSummary.requiredPackages.find((item) => item.id === 'hagiscript');
@@ -124,12 +139,16 @@ describe('dependency readiness evaluation', () => {
     assert.equal(latestHagiscript?.requiredVersionRange, null);
     assert.equal(latestHagiscript?.versionSatisfied, true);
 
-    const devSnapshot = createSnapshot({}, { hagiscript: '0.3.0-dev.5' });
-    const devDefinition = devSnapshot.packages.find((item) => item.id === 'hagiscript')?.definition;
-    if (!devDefinition) {
-      throw new Error('hagiscript definition missing from snapshot');
-    }
-    devDefinition.installSpec = '@hagicode/hagiscript@dev';
+    const devSnapshot = createSnapshot(
+      {},
+      { hagiscript: '0.3.0-dev.5' },
+      {
+        hagiscript: {
+          installSpec: '@hagicode/hagiscript@dev',
+          requiredVersionRange: undefined,
+        },
+      },
+    );
 
     const devSummary = evaluateDependencyReadiness(devSnapshot, ['codex']);
     const devHagiscript = devSummary.requiredPackages.find((item) => item.id === 'hagiscript');
@@ -139,11 +158,11 @@ describe('dependency readiness evaluation', () => {
   });
 
   it('treats catalog-pinned managed package versions as minimum supported versions', () => {
-    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.7-dev', pm2: '7.1.0' }), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.9', pm2: '7.1.0' }), ['codex']);
     const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
     const pm2 = summary.optionalPackages.find((item) => item.id === 'pm2');
 
-    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.8');
+    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.9');
     assert.equal(hagiscript?.versionSatisfied, true);
     assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
     assert.equal(pm2?.versionSatisfied, true);
@@ -160,8 +179,8 @@ describe('dependency readiness evaluation', () => {
       isManagedPackageVersionSatisfied(
         {
           ...hagiscriptDefinition,
-          installSpec: '@hagicode/hagiscript@0.2.8',
-          requiredVersionRange: '0.2.8',
+          installSpec: '@hagicode/hagiscript@0.2.9',
+          requiredVersionRange: '0.2.9',
         },
         '0.2.7-dev',
       ),
