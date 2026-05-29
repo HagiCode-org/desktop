@@ -87,14 +87,13 @@ components:
 
   - name: omniroute
     type: bundled-runtime
+    required: false
     source: desktop-vendored-runtime
     version: *vendoredRuntimeVersion
     bundledInstallMode: archive-7z-only
     runtimeDataDir: services/omniroute
     lifecycleDependencies:
       - node
-    installScript: ../scripts/hagiscript/install-omniroute.mjs
-    configureScript: ../scripts/hagiscript/configure-omniroute.mjs
     pm2:
       appName: hagicode-omniroute
       cwd: current
