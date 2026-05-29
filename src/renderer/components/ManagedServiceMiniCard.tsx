@@ -10,7 +10,6 @@ import {
   ExternalLink,
   ArrowRight,
   Code2,
-  Route,
   PackageOpen,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,10 +22,6 @@ import type {
   CodeServerStatusSnapshot,
   CodeServerOverallStatus,
 } from '../../types/code-server-management.js';
-import type {
-  OmniRouteStatusSnapshot,
-  OmniRouteOverallStatus,
-} from '../../types/omniroute-management.js';
 
 type NormalizedStatus = 'loading' | 'running' | 'stopped' | 'error';
 
@@ -45,6 +40,9 @@ interface ServiceMiniCardDisplayProps {
   enableInProgress: boolean;
   enableProgress?: number;
   openLabel: string;
+  startLabel: string;
+  stopLabel: string;
+  restartLabel: string;
   onEnable: () => void;
   onStart: () => void;
   onStop: () => void;
@@ -84,6 +82,9 @@ function ServiceMiniCardDisplay({
   enableInProgress,
   enableProgress,
   openLabel,
+  startLabel,
+  stopLabel,
+  restartLabel,
   onEnable,
   onStart,
   onStop,
@@ -171,7 +172,7 @@ function ServiceMiniCardDisplay({
             className="gap-1.5"
           >
             {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3.5 w-3.5" />}
-            {t('omniroute.actions.stop')}
+            {stopLabel}
           </Button>
         ) : (
           <Button
@@ -182,7 +183,7 @@ function ServiceMiniCardDisplay({
             className="gap-1.5"
           >
             {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-            {t('omniroute.actions.start')}
+            {startLabel}
           </Button>
         )}
 
@@ -196,7 +197,7 @@ function ServiceMiniCardDisplay({
             className="gap-1.5 text-muted-foreground"
           >
             {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
-            {t('omniroute.actions.restart')}
+            {restartLabel}
           </Button>
         )}
 
@@ -240,21 +241,6 @@ function normalizeCodeServerStatus(
     case 'error': return 'error';
     case 'missing':
     case 'damaged': return 'stopped';
-    default: return 'stopped';
-  }
-}
-
-function normalizeOmniRouteStatus(
-  status: OmniRouteOverallStatus | undefined,
-  lifecycleBlocked: boolean,
-): NormalizedStatus {
-  if (!status) return 'loading';
-  if (lifecycleBlocked && status !== 'running') return 'error';
-  switch (status) {
-    case 'running': return 'running';
-    case 'stopped': return 'stopped';
-    case 'partial':
-    case 'error': return 'error';
     default: return 'stopped';
   }
 }
@@ -412,177 +398,9 @@ export function CodeServerMiniCard() {
       enableInProgress={Boolean(enableInProgress)}
       enableProgress={snapshot?.runtime.activation?.percentage}
       openLabel={t('codeServer.actions.openBrowser')}
-      onEnable={() => void handleEnable()}
-      onStart={() => void handleStart()}
-      onStop={() => void handleStop()}
-      onRestart={() => void handleRestart()}
-      onOpen={() => void handleOpen()}
-      onViewDetails={handleViewDetails}
-    />
-  );
-}
-
-export function OmniRouteMiniCard() {
-  const { t } = useTranslation('common');
-  const dispatch = useDispatch<AppDispatch>();
-
-  const [snapshot, setSnapshot] = useState<OmniRouteStatusSnapshot | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [operation, setOperation] = useState<MiniCardOperation>(null);
-
-  const isBusy = operation !== null;
-  const enableRequired = snapshot?.runtime.primaryAction === 'enable';
-  const enableInProgress = snapshot?.runtime.status === 'extracting';
-  const lifecycleBlocked =
-    !snapshot?.pm2Available || snapshot?.runtime.installStatus !== 'installed' || enableInProgress;
-  const blockedReason = resolveBlockedReason(snapshot);
-  const normalizedStatus = normalizeOmniRouteStatus(snapshot?.status, lifecycleBlocked);
-
-  useEffect(() => {
-    let disposed = false;
-    const bridge = window.electronAPI.omniroute;
-
-    void bridge.getStatus().then((s) => {
-      if (!disposed) {
-        setSnapshot(s);
-        setIsInitialLoading(false);
-      }
-    }).catch(() => {
-      if (!disposed) setIsInitialLoading(false);
-    });
-
-    const unsub = bridge.onStatusChange((s) => {
-      if (!disposed) setSnapshot(s);
-    });
-    const activationUnsub = window.electronAPI.dependencyManagement.onVendoredRuntimeActivationProgress((event) => {
-      if (event.runtimeId !== 'omniroute' || disposed) {
-        return;
-      }
-      setSnapshot((current) => current ? {
-        ...current,
-        runtime: {
-          ...current.runtime,
-          activation: event,
-          status: ['completed', 'failed'].includes(event.stage) ? current.runtime.status : 'extracting',
-        },
-      } : current);
-      if (event.stage === 'completed' || event.stage === 'failed') {
-        void bridge.getStatus().then((status) => {
-          if (!disposed) {
-            setSnapshot(status);
-          }
-        });
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unsub();
-      activationUnsub();
-    };
-  }, []);
-
-  const handleEnable = useCallback(async () => {
-    setOperation('enable');
-    try {
-      const result = await window.electronAPI.dependencyManagement.enableVendoredRuntime('omniroute');
-      const nextStatus = await window.electronAPI.omniroute.getStatus();
-      setSnapshot(nextStatus);
-      if (!result.success) toast.error(result.error ?? t('system.services.startFailed'));
-    } catch {
-      toast.error(t('system.services.startFailed'));
-    } finally {
-      setOperation(null);
-    }
-  }, [t]);
-
-  const handleStart = useCallback(async () => {
-    if (lifecycleBlocked) {
-      toast.error(blockedReason ?? t('system.services.notReady'));
-      return;
-    }
-    setOperation('start');
-    try {
-      const result = await window.electronAPI.omniroute.start();
-      if (result.status) setSnapshot(result.status);
-      if (!result.success) {
-        toast.error(t('system.services.startFailed'), {
-          description: result.error,
-        });
-      }
-    } catch {
-      toast.error(t('system.services.startFailed'));
-    } finally {
-      setOperation(null);
-    }
-  }, [blockedReason, lifecycleBlocked, t]);
-
-  const handleStop = useCallback(async () => {
-    setOperation('stop');
-    try {
-      const result = await window.electronAPI.omniroute.stop();
-      if (result.status) setSnapshot(result.status);
-      if (!result.success) {
-        toast.error(t('system.services.stopFailed'), {
-          description: result.error,
-        });
-      }
-    } catch {
-      toast.error(t('system.services.stopFailed'));
-    } finally {
-      setOperation(null);
-    }
-  }, [t]);
-
-  const handleRestart = useCallback(async () => {
-    if (lifecycleBlocked) {
-      toast.error(blockedReason ?? t('system.services.notReady'));
-      return;
-    }
-    setOperation('restart');
-    try {
-      const result = await window.electronAPI.omniroute.restart();
-      if (result.status) setSnapshot(result.status);
-      if (!result.success) {
-        toast.error(t('system.services.restartFailed'), {
-          description: result.error,
-        });
-      }
-    } catch {
-      toast.error(t('system.services.restartFailed'));
-    } finally {
-      setOperation(null);
-    }
-  }, [blockedReason, lifecycleBlocked, t]);
-
-  const handleOpen = useCallback(async () => {
-    const url = snapshot?.config?.baseUrl;
-    if (!url) return;
-    try {
-      await window.electronAPI.openExternal(url);
-    } catch {
-      // ignore
-    }
-  }, [snapshot?.config?.baseUrl]);
-
-  const handleViewDetails = useCallback(() => {
-    dispatch(switchView('omniroute'));
-  }, [dispatch]);
-
-  return (
-    <ServiceMiniCardDisplay
-      title={t('sidebar.omniroute')}
-      icon={Route}
-      status={isInitialLoading ? 'loading' : normalizedStatus}
-      version={snapshot?.runtime.version ?? null}
-      port={snapshot?.config?.port ?? null}
-      url={snapshot?.status === 'running' ? snapshot.config?.baseUrl : null}
-      isBusy={isBusy}
-      lifecycleBlocked={lifecycleBlocked && snapshot !== null}
-      enableRequired={Boolean(enableRequired)}
-      enableInProgress={Boolean(enableInProgress)}
-      enableProgress={snapshot?.runtime.activation?.percentage}
-      openLabel={t('omniroute.actions.openUi')}
+      startLabel={t('codeServer.actions.start')}
+      stopLabel={t('codeServer.actions.stop')}
+      restartLabel={t('codeServer.actions.restart')}
       onEnable={() => void handleEnable()}
       onStart={() => void handleStart()}
       onStop={() => void handleStop()}

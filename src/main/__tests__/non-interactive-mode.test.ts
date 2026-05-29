@@ -130,7 +130,6 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
     },
     serviceDataHomes: {
       codeServer: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
-      omniRoute: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute',
     },
     components: {
       dotnet: {
@@ -163,15 +162,6 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         entryScriptPath: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current/out/node/entry.js',
         version: '4.99.0',
         issues: ok ? [] : ['code-server wrapper missing'],
-      },
-      omniRoute: {
-        ok,
-        status: ok ? 'ok' : 'damaged',
-        root: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/omniroute/0.1.0/current',
-        wrapperPath: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/omniroute/0.1.0/current/bin/omniroute',
-        entryScriptPath: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/omniroute/0.1.0/current/bin/omniroute.mjs',
-        version: '0.1.0',
-        issues: ok ? [] : ['omniroute wrapper missing'],
       },
     },
     issues: ok ? [] : ['dotnet runtime missing metadata', 'bundled Node runtime metadata is missing or invalid'],
@@ -209,18 +199,6 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
         stopSuccess: ok,
         statusAfterStop: 'stopped',
         diagnostics: ok ? [] : ['code-server diagnostic: start failed'],
-      },
-      omniRoute: {
-        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/pm2/7',
-        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute',
-        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/omniroute/runtime',
-        launchScriptPath: '/tmp/hagicode-desktop-path-alias/desktop-omniroute-script-123456789abc',
-        launchWorkingDirectory: '/tmp/hagicode-desktop-path-alias/desktop-omniroute-working-directory-123456789abc',
-        startSuccess: ok,
-        statusAfterStart: ok ? 'online' : 'errored',
-        stopSuccess: ok,
-        statusAfterStop: 'stopped',
-        diagnostics: ok ? [] : ['omniroute diagnostic: start failed'],
       },
       backend: {
         pm2Home: '/tmp/Hagi Code/userData/apps/data/.pm2',
@@ -516,7 +494,7 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(stderr.length, 0);
     assert.match(stdout.join('\n'), /hagiscript executable managed: true/);
     assert.match(stdout.join('\n'), /code-server launch script: \/tmp\/hagicode-desktop-path-alias\/desktop-code-server-script-123456789abc/);
-    assert.match(stdout.join('\n'), /omniroute launch cwd: \/tmp\/hagicode-desktop-path-alias\/desktop-omniroute-working-directory-123456789abc/);
+    assert.match(stdout.join('\n'), /code-server launch cwd: \/tmp\/hagicode-desktop-path-alias\/desktop-code-server-working-directory-123456789abc/);
     assert.match(stdout.join('\n'), /code-server status after start: online/);
     assert.match(stdout.join('\n'), /backend status after restart: online/);
     assert.match(stdout.join('\n'), /result: success/);
@@ -629,19 +607,6 @@ describe('non-interactive mode dispatch', () => {
 });
 
 describe('runtime lifecycle harness contract', () => {
-  it('validates OmniRoute through the hagiscript-managed runtime context instead of the legacy process name', async () => {
-    const source = await fs.readFile(runtimeLifecyclePath, 'utf8');
-
-    assert.match(source, /inspectVendoredOmniRouteRuntime/);
-    assert.match(source, /resolveOmniRouteLaunchSpec/);
-    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'omniroute'/);
-    assert.match(source, /collectHagiscriptManagedDiagnostics/);
-    assert.match(source, /runtimeContext\.pm2LogsDirectory/);
-    assert.match(source, /serviceLabel: 'omniroute'/);
-    assert.doesNotMatch(source, /processName: OMNIROUTE_PROCESS_NAME/);
-    assert.doesNotMatch(source, /Pm2DotnetManager/);
-    assert.doesNotMatch(source, /resolvePm2LaunchPlan/);
-  });
   it('validates Code Server through the hagiscript-managed runtime context instead of the legacy process name', async () => {
     const source = await fs.readFile(runtimeLifecyclePath, 'utf8');
 

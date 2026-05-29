@@ -63,7 +63,6 @@ describe('Code Server renderer wiring', () => {
     for (const language of DESKTOP_LANGUAGES) {
       const raw = await fs.readFile(path.join(localesRoot, language.code, 'common.yml'), 'utf8');
       assert.match(raw, /sidebar:\n[\s\S]*codeServer: Code Server/);
-      assert.doesNotMatch(raw, /\nomniroute:\n[\s\S]*\n  codeServer:/, `${language.code} should not nest codeServer under omniroute`);
 
       const parsed = load(raw) as Record<string, unknown>;
       const codeServer = parsed.codeServer as Record<string, unknown> | undefined;

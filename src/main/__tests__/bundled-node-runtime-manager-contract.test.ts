@@ -27,11 +27,8 @@ describe('bundled node runtime manager contract', () => {
     assert.equal(manifest.expectedLayout.nodeRootPattern, 'toolchain/node');
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/openspec[.cmd]'), false);
     assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/skills[.cmd]'), false);
-    assert.equal(manifest.expectedLayout.requiredEntries.includes('bin/omniroute[.cmd]'), false);
     assert.equal(manifest.corePackages.openspec.installMode, 'manual');
     assert.equal(manifest.corePackages.openspec.installState, 'pending');
-    assert.doesNotMatch(source, /\| 'omniroute'/, 'bundled toolchain component ids no longer include omniroute');
-    assert.doesNotMatch(source, /\['node', 'npm', 'openspec', 'skills', 'omniroute'\]/, 'bundled toolchain verification no longer iterates omniroute as a CLI package');
     assert.match(source, /const available = errors\.length === 0 && RUNTIME_COMPONENTS\.every/);
     assert.match(source, /integrity: 'pending'/);
     assert.match(source, /primaryAction: 'manual-install'/);

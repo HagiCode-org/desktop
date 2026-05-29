@@ -99,6 +99,55 @@ Invalid configurations will fall back to the default HTTP index source with a wa
 
 ## Development Workflow
 
+## Windows Store Packaging Contract
+
+Desktop owns the Windows Store packaging contract used by `repos/win_store_packer`.
+
+### Store metadata source
+
+Store-specific identity and capability metadata lives in `config/store-package.json`.
+
+That file is the source of truth for:
+
+- package identity fields such as `displayName`, `publisher`, and `identityName`
+- Store language and capability declarations
+- the Desktop runtime injection path that maps to packaged `extra/portable-fixed/current`
+- default output paths for Store build metadata
+
+### Workflow-facing entrypoint
+
+Run the Desktop Store build locally with:
+
+```bash
+npm run build:win:store -- \
+  --server-payload-path /abs/path/to/server-runtime \
+  --artifact-output-dir /abs/path/to/output \
+  --metadata-output-path /abs/path/to/store-build-metadata.json \
+  --overlay-output-path /abs/path/to/electron-builder.store.yml \
+  --platform-id win-x64
+```
+
+Supported parameters:
+
+- `--store-config-path`: override the Desktop Store config source
+- `--server-payload-path`: validate and inject an external Server payload
+- `--runtime-injection-path`: override the default injection root
+- `--artifact-output-dir`: choose where `.appx` or `.msix` outputs are written
+- `--metadata-output-path`: write workflow-consumable Desktop build metadata
+- `--overlay-output-path`: write the generated Store electron-builder overlay
+- `--platform-id`: record the workflow platform identity in metadata
+- `--dry-run`: emit a synthetic Store artifact without Windows packaging tools
+
+### Expected outputs
+
+The Store build writes:
+
+- a generated Store overlay config
+- one or more Store package artifacts
+- metadata that records the Store config source, Desktop source ref, payload source, effective injection path, and produced artifact paths
+
+`win_store_packer` consumes that metadata directly during signing finalization and release publication. It should not re-derive Desktop packaging state independently.
+
 ### Starting Development Mode
 
 ```bash

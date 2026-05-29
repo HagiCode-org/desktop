@@ -136,7 +136,6 @@ sidebar:
   diagnostic: 진단
   dependencyManagement: 종속성 관리
   codeServer: Code Server
-  omniroute: OmniRoute
   settings: 설정
   desktopVersion: 데스크톱 버전
   webVersion: 웹 버전
@@ -177,22 +176,6 @@ dependencyManagement:
     enabledHelp: 향후 동기화/설치 작업에서는 npmmirror.com 레지스트리 미러를 사용합니다.
     disabledHelp: 다가오는 npm 작업은 기본 npm 레지스트리 동작을 사용합니다.
     saveFailed: 미러 설정을 저장하지 못했습니다.
-  omniRouteRepair:
-    title: 종속성을 복구한 후 OmniRoute로 돌아갑니다.
-    descriptionMissing: 하나 이상의 데스크톱 관리 패키지가 없기 때문에 OmniRoute을 시작할 수 없습니다. 여기에서 강조 표시된 패키지를 수리한 후 OmniRoute을 다시 확인하세요.
-    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
-    descriptionUnknown: 데스크톱에서 OmniRoute 종속성을 확인할 수 없습니다. 여기에서 강조 표시된 패키지를 새로 고치거나 복구한 후 OmniRoute를 다시 확인하세요.
-    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
-    sourceLabel: 소스
-    sourceValue: OmniRoute
-    targetBadge: 수리대상
-    pendingNotice: 이 표에서 강조 표시된 패키지를 사용 가능한 상태로 유지한 다음 복구가 완료되면 재확인 작업을 실행하십시오.
-    recheckAction: '수리 완료: OmniRoute 재확인'
-    recheckRunning: OmniRoute 종속성을 다시 확인하는 중...
-    incomplete: OmniRoute은 아직 준비되지 않았습니다. 강조 표시된 패키지를 설치하거나 새로 고친 후 다시 시도하세요.
-    refreshFailed: 데스크톱에서 종속성 상태를 새로 고칠 수 없습니다. 현재 작업이 완료된 후 다시 확인을 다시 시도하세요.
   vendoredRuntime:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
@@ -229,8 +212,6 @@ dependencyManagement:
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
   vendoredRuntimes:
-    omniroute:
-      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
@@ -252,9 +233,7 @@ dependencyManagement:
     skills:
       description: Codex/상담원 스킬 관리 CLI.
     pm2:
-      description: PM2 프로세스 관리자는 Desktop에서 OmniRoute을 감독하는 데 사용됩니다.
-    omniroute:
-      description: OmniRoute 로컬 라우팅 및 툴체인 CLI.
+      description: Desktop 관리 서비스를 감독하는 데 사용할 수 있는 PM2 프로세스 관리자입니다.
     claudeCode:
       description: Claude Code 에이전트 CLI는 AI 지원 코딩 세션을 위한 것입니다.
     codex:
@@ -522,78 +501,6 @@ system:
 themeToggle:
   switchToLight: 조명 모드로 전환
   switchToDark: 어두운 모드로 전환
-omniroute:
-  title: OmniRoute
-  description: 수명 주기 제어, 런타임 경로, 포트 구성 및 최근 로그를 포함하여 PM2을 통해 데스크탑 소유 OmniRoute 서비스를 관리합니다.
-  loading: OmniRoute 상태 로드 중...
-  actions:
-    refresh: 새로고침
-    start: 시작
-    stop: 중지
-    restart: 다시 시작
-    working: 일하는 중...
-    openUi: UI 열기
-    save: 저장
-    open: 열기
-    refreshLogs: 로그 새로 고침
-  status:
-    title: 상태
-    running: 달리기
-    stopped: 중지됨
-    partial: 부분
-    error: 오류
-    baseUrl: 베이스 URL
-    pm2: PM2 실행 가능
-    pm2Missing: PM2이(가) 설치되지 않았습니다
-    runtimeInstallStatus: 런타임 설치 상태
-  config:
-    title: 런타임 구성
-    description: OmniRoute은 격리된 데스크톱 관리 포트를 사용합니다. HagiCode 웹 서비스 포트와 일치할 수 없습니다.
-    portLabel: 항구
-    passwordLabel: 로그인 비밀번호
-    passwordDescription: 데스크톱은 기본적으로 임의의 비밀번호를 생성하고 여기에 일반 텍스트로 표시합니다. OmniRoute이 시작되면 INITIAL_PASSWORD로 주입됩니다.
-  validation:
-    numeric: 숫자 포트를 입력하세요.
-    range: 1024~65535 사이의 포트를 사용하세요.
-    passwordLength: 4~200자 사이의 비밀번호를 사용하세요.
-  paths:
-    title: 관리 경로
-    description: 구성, 데이터 및 로그는 Electron userData/OmniRoute에 저장됩니다.
-    config: 구성
-    data: 데이터
-    logs: 로그
-  processes:
-    title: PM2 프로세스
-    description: Desktop은 자체 서비스 프로세스만 관리하고 관련 없는 1개 프로세스는 그대로 둡니다.
-    name: 이름
-    status: 상태
-    restarts: 다시 시작
-  processStatus:
-    online: 온라인
-    stopped: 중지됨
-    errored: 오류 발생
-    unknown: 알 수 없음
-  logs:
-    title: 최근 로그
-    description: 허용 목록에 있는 데스크톱 관리 OmniRoute 로그에서 제한된 최근 행을 읽습니다.
-    empty: 아직 로그 출력이 없습니다.
-    targets:
-      service-out: 서비스 출력
-      service-error: 서비스 오류
-  dependencyGuidance:
-    title: 먼저 데스크톱 관리 종속성을 복구하세요.
-    descriptionMissing: 강조 표시된 데스크톱 관리 패키지가 종속성 관리에서 설치되거나 복구될 때까지 OmniRoute을 시작할 수 없습니다.
-    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
-    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and hagiscript are repaired in Dependency Management.
-    descriptionUnknown: 데스크톱에서 강조 표시된 OmniRoute 종속성을 확인할 수 없습니다. 다시 시도하기 전에 종속성 관리에서 새로 고치거나 복구하세요.
-    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
-    openDependencyManagement: 개방형 종속성 관리
-  errors:
-    title: OmniRoute 작업이 실패했습니다.
-    operationFailed: 작업이 실패했습니다.
-    saveFailed: OmniRoute 구성을 저장하지 못했습니다.
-    openPathFailed: 관리 경로를 열지 못했습니다.
 codeServer:
   title: Code Server
   description: Desktop에서 관리하는 code-server 런타임을 관리합니다. 시작과 중지, 로컬 주소, 비밀번호 인증, 관리 경로, 최근 로그를 확인할 수 있습니다.

@@ -14,7 +14,6 @@ import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
-import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import {
   buildNpmGlobalCommandArtifactPaths,
   type NodeMajorNpmGlobalPaths,
@@ -239,7 +238,6 @@ export class DependencyManagementService {
 
     return await Promise.all([
       this.inspectVendoredRuntimeSafely('code-server', () => inspectVendoredCodeServerRuntime(this.pathManager), this.pathManager.getCodeServerRuntimeRoot()),
-      this.inspectVendoredRuntimeSafely('omniroute', () => inspectVendoredOmniRouteRuntime(this.pathManager), this.pathManager.getOmniRouteRuntimeRoot()),
     ]);
   }
 
@@ -270,18 +268,10 @@ export class DependencyManagementService {
         sourceStatus: 'missing',
         version: null,
         runtimeRoot,
-        stagingRoot: runtimeId === 'code-server'
-          ? this.pathManager.getCodeServerRuntimeStagingRoot()
-          : this.pathManager.getOmniRouteRuntimeStagingRoot(),
-        packagedRoot: runtimeId === 'code-server'
-          ? this.pathManager.getCodeServerPackagedRuntimeRoot()
-          : this.pathManager.getOmniRoutePackagedRuntimeRoot(),
-        packagedArchivePath: runtimeId === 'code-server'
-          ? this.pathManager.getCodeServerPackagedArchivePath()
-          : this.pathManager.getOmniRoutePackagedArchivePath(),
-        packagedMarkerPath: runtimeId === 'code-server'
-          ? this.pathManager.getVendoredRuntimePackagedMarkerPath('code-server')
-          : this.pathManager.getVendoredRuntimePackagedMarkerPath('omniroute'),
+        stagingRoot: this.pathManager.getCodeServerRuntimeStagingRoot(),
+        packagedRoot: this.pathManager.getCodeServerPackagedRuntimeRoot(),
+        packagedArchivePath: this.pathManager.getCodeServerPackagedArchivePath(),
+        packagedMarkerPath: this.pathManager.getVendoredRuntimePackagedMarkerPath('code-server'),
         metadataPath: null,
         wrapperPath: null,
         entryScriptPath: null,

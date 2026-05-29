@@ -5,11 +5,6 @@ import type {
 
 export const vendoredRuntimes: readonly VendoredRuntimeDefinition[] = [
   {
-    id: 'omniroute',
-    displayName: 'OmniRoute',
-    descriptionKey: 'dependencyManagement.vendoredRuntimes.omniroute.description',
-  },
-  {
     id: 'code-server',
     displayName: 'code-server',
     descriptionKey: 'dependencyManagement.vendoredRuntimes.codeServer.description',

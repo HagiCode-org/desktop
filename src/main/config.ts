@@ -22,10 +22,6 @@ export interface AppConfig {
     port?: number;
     password?: string;
   };
-  omniroute?: {
-    port?: number;
-    password?: string;
-  };
   versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;

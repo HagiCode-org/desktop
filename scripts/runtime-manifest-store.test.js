@@ -154,18 +154,14 @@ describe('script runtime manifest store template materialization', () => {
           'components:',
           '  - name: code-server',
           '    type: bundled-runtime',
-          '  - name: omniroute',
-          '    type: bundled-runtime',
         ].join('\n'),
         'utf8',
       );
       fs.writeFileSync(path.join(trackedTemplateRoot, 'code-server-config.yaml'), 'bind-addr: {{BIND_ADDR}}\n', 'utf8');
-      fs.writeFileSync(path.join(trackedTemplateRoot, 'omniroute-config.yaml'), 'runtimeHome: {{RUNTIME_ROOT}}\n', 'utf8');
 
       ensureRuntimeManifestPath(userDataRoot, workspaceRoot, {});
 
       assert.equal(fs.readFileSync(path.join(userDataRoot, 'templates', 'code-server-config.yaml'), 'utf8'), 'bind-addr: {{BIND_ADDR}}\n');
-      assert.equal(fs.readFileSync(path.join(userDataRoot, 'templates', 'omniroute-config.yaml'), 'utf8'), 'runtimeHome: {{RUNTIME_ROOT}}\n');
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }

@@ -42,7 +42,6 @@ import {
   registerRuntimeManifestUserDataPath,
   resolveRuntimeManifestDataScopePath,
 } from './runtime-manifest-store.js';
-import { getOmniRouteRuntimeConfigPath as resolveOmniRouteRuntimeConfigPath } from './omniroute-runtime-config-path.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
@@ -65,7 +64,7 @@ interface VendoredExtractedRuntimeState {
 }
 
 function resolveVendoredRuntimeDirectoryName(serviceId: DesktopRuntimeServiceId): string {
-  return serviceId === 'code-server' ? 'code_server' : 'omniroute';
+  return 'code_server';
 }
 
 function readVendoredExtractedRuntimeState(
@@ -114,9 +113,7 @@ function readVendoredPackagedRuntimeVersion(packagedRoot: string): string | null
 }
 
 function resolveVendoredRuntimeVersionOverride(serviceId: DesktopRuntimeServiceId): string | null {
-  const envKey = serviceId === 'code-server'
-    ? 'HAGICODE_CODE_SERVER_RUNTIME_VERSION'
-    : 'HAGICODE_OMNIROUTE_RUNTIME_VERSION';
+  const envKey = 'HAGICODE_CODE_SERVER_RUNTIME_VERSION';
   const override = process.env[envKey]?.trim();
   return override && override.length > 0 ? override : null;
 }
@@ -601,10 +598,6 @@ export class PathManager {
     return resolveDesktopRuntimeServiceDataHome('code-server', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
   }
 
-  getOmniRouteRuntimeDataHome(): string {
-    return resolveDesktopRuntimeServiceDataHome('omniroute', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
-  }
-
   getVendoredRuntimeDataHome(serviceId: DesktopRuntimeServiceId): string {
     return resolveDesktopRuntimeServiceDataHome(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
   }
@@ -618,7 +611,7 @@ export class PathManager {
   }
 
   getVendoredRuntimePackagedArchivePath(serviceId: DesktopRuntimeServiceId): string {
-    const archiveFileName = serviceId === 'code-server' ? 'code-server.7z' : 'omniroute.7z';
+    const archiveFileName = 'code-server.7z';
     return path.join(this.getVendoredRuntimePackagedRoot(serviceId), 'archives', archiveFileName);
   }
 
@@ -1009,35 +1002,6 @@ export class PathManager {
 
   getCodeServerRuntimeConfigPath(): string {
     return resolveCodeServerRuntimeConfigPath();
-  }
-
-  getOmniRoutePackagedRuntimeRoot(): string {
-    return this.getVendoredRuntimePackagedRoot('omniroute');
-  }
-
-  getOmniRoutePackagedArchivePath(): string {
-    return this.getVendoredRuntimePackagedArchivePath('omniroute');
-  }
-
-  getOmniRouteRuntimeHome(): string {
-    return this.getVendoredRuntimeHome('omniroute');
-  }
-
-  getOmniRouteRuntimeRoot(): string {
-    const overrideRoot = process.env.HAGICODE_OMNIROUTE_RUNTIME_ROOT?.trim();
-    if (overrideRoot) {
-      return resolveVendoredRuntimeOverrideRoot(overrideRoot);
-    }
-
-    return this.getVendoredRuntimeRoot('omniroute');
-  }
-
-  getOmniRouteRuntimeStagingRoot(): string {
-    return this.getVendoredRuntimeStagingRoot('omniroute');
-  }
-
-  getOmniRouteRuntimeConfigPath(): string {
-    return resolveOmniRouteRuntimeConfigPath();
   }
 
   getPortableNodeRoot(): string {

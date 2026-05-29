@@ -53,30 +53,6 @@ function getDependencyManagementBridge(): DependencyManagementBridge {
   }).electronAPI.dependencyManagement;
 }
 
-function getRepairDescriptionKey(failureKind: NonNullable<RootState['view']['dependencyManagementIntent']>['failureKind']): string {
-  if (failureKind === 'runtime-missing') {
-    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeMissing';
-  }
-
-  if (failureKind === 'runtime-damaged') {
-    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeDamaged';
-  }
-
-  if (failureKind === 'runtime-and-package') {
-    return 'dependencyManagement.omniRouteRepair.descriptionRuntimeAndPackage';
-  }
-
-  if (failureKind === 'dependency-unknown') {
-    return 'dependencyManagement.omniRouteRepair.descriptionUnknown';
-  }
-
-  if (failureKind === 'dependency-version-mismatch') {
-    return 'dependencyManagement.omniRouteRepair.descriptionVersionMismatch';
-  }
-
-  return 'dependencyManagement.omniRouteRepair.descriptionMissing';
-}
-
 export default function DependencyManagementPage() {
   const { t } = useTranslation('common');
   const dispatch = useDispatch<AppDispatch>();
@@ -405,16 +381,6 @@ export default function DependencyManagementPage() {
     setSelectedPackageIds((current) => updateSelectAllPackageIds(current, selectablePackageIds, checked));
   };
 
-  const repairTargetNames = [
-    ...(repairIntent?.targetRuntimeIds.map((runtimeId) =>
-      snapshot?.vendoredRuntimes.find((item) => item.id === runtimeId)?.definition.displayName ?? 'OmniRoute runtime',
-    ) ?? []),
-    ...(repairIntent?.targetPackageIds.map((packageId) =>
-    snapshot?.packages.find((item) => item.id === packageId)?.definition.displayName
-    ?? 'PM2',
-    ) ?? []),
-  ];
-
   const runRepairCompletionCheck = async () => {
     if (!repairIntent) {
       return;
@@ -477,49 +443,6 @@ export default function DependencyManagementPage() {
           </div>
         </CardHeader>
       </Card>
-
-      {repairIntent && (
-        <Alert className="border-amber-500/40 bg-amber-500/5">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('dependencyManagement.omniRouteRepair.title')}</AlertTitle>
-          <AlertDescription className="space-y-3">
-            <p>
-              {t(getRepairDescriptionKey(repairIntent.failureKind))}
-            </p>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">
-                {t('dependencyManagement.omniRouteRepair.sourceLabel')}: {t('dependencyManagement.omniRouteRepair.sourceValue')}
-              </Badge>
-              {repairTargetNames.map((name) => (
-                <Badge key={name} variant="outline">{name}</Badge>
-              ))}
-            </div>
-            {repairCompletionState === 'incomplete' ? (
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                {t('dependencyManagement.omniRouteRepair.incomplete')}
-              </p>
-            ) : null}
-            {repairCompletionState === 'failed' ? (
-              <p className="text-sm text-destructive">
-                {t('dependencyManagement.omniRouteRepair.refreshFailed')}
-              </p>
-            ) : null}
-            {!repairEvaluation.ready && (repairEvaluation.pendingPackageIds.length > 0 || repairEvaluation.pendingRuntimeIds.length > 0) ? (
-              <p className="text-sm text-muted-foreground">
-                {t('dependencyManagement.omniRouteRepair.pendingNotice')}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void runRepairCompletionCheck()} disabled={pageStatus === 'loading' || isRepairCompletionRunning}>
-                {isRepairCompletionRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                {isRepairCompletionRunning
-                  ? t('dependencyManagement.omniRouteRepair.recheckRunning')
-                  : t('dependencyManagement.omniRouteRepair.recheckAction')}
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {pageStatus === 'loading' && (
         <Card>

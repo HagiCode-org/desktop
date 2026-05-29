@@ -354,7 +354,6 @@ function printRuntimeVerificationReport(output: NonInteractiveOutput, report: No
   output.stdout(`runtime shared data: ${report.sharedPaths.data}`);
   output.stdout(`runtime shared state: ${report.sharedPaths.state}`);
   output.stdout(`runtime service code-server data: ${report.serviceDataHomes.codeServer}`);
-  output.stdout(`runtime service omniroute data: ${report.serviceDataHomes.omniRoute}`);
   output.stdout(`runtime component dotnet root: ${report.components.dotnet.root}`);
   output.stdout(`runtime component dotnet status: ${report.components.dotnet.status}`);
   output.stdout(`runtime component dotnet executable: ${report.components.dotnet.executablePath}`);
@@ -377,12 +376,6 @@ function printRuntimeVerificationReport(output: NonInteractiveOutput, report: No
   output.stdout(`runtime component code-server entry: ${report.components.codeServer.entryScriptPath ?? '<missing>'}`);
   output.stdout(`runtime component code-server version: ${report.components.codeServer.version ?? '<missing>'}`);
   output.stdout(`runtime component code-server issues: ${formatRuntimeVerificationIssues(report.components.codeServer.issues)}`);
-  output.stdout(`runtime component omniroute root: ${report.components.omniRoute.root}`);
-  output.stdout(`runtime component omniroute status: ${report.components.omniRoute.status}`);
-  output.stdout(`runtime component omniroute wrapper: ${report.components.omniRoute.wrapperPath ?? '<missing>'}`);
-  output.stdout(`runtime component omniroute entry: ${report.components.omniRoute.entryScriptPath ?? '<missing>'}`);
-  output.stdout(`runtime component omniroute version: ${report.components.omniRoute.version ?? '<missing>'}`);
-  output.stdout(`runtime component omniroute issues: ${formatRuntimeVerificationIssues(report.components.omniRoute.issues)}`);
 }
 
 function printRuntimeVerificationFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeVerificationReport): void {
@@ -421,16 +414,6 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`code-server status after start: ${report.services.codeServer.statusAfterStart}`);
   output.stdout(`code-server stop success: ${report.services.codeServer.stopSuccess}`);
   output.stdout(`code-server status after stop: ${report.services.codeServer.statusAfterStop}`);
-
-  output.stdout(`omniroute pm2 home: ${report.services.omniRoute.pm2Home}`);
-  output.stdout(`omniroute runtime data: ${report.services.omniRoute.runtimeDataHome}`);
-  output.stdout(`omniroute runtime files: ${report.services.omniRoute.runtimeFilesDir ?? '<missing>'}`);
-  output.stdout(`omniroute launch script: ${report.services.omniRoute.launchScriptPath ?? '<missing>'}`);
-  output.stdout(`omniroute launch cwd: ${report.services.omniRoute.launchWorkingDirectory ?? '<missing>'}`);
-  output.stdout(`omniroute start success: ${report.services.omniRoute.startSuccess}`);
-  output.stdout(`omniroute status after start: ${report.services.omniRoute.statusAfterStart}`);
-  output.stdout(`omniroute stop success: ${report.services.omniRoute.stopSuccess}`);
-  output.stdout(`omniroute status after stop: ${report.services.omniRoute.statusAfterStop}`);
 
   output.stdout(`backend active runtime root: ${report.services.backend.activeRuntimeRoot ?? '<missing>'}`);
   output.stdout(`backend payload dll: ${report.services.backend.serviceDllPath ?? '<missing>'}`);

@@ -11,10 +11,6 @@ import {
   validateCodeServerRuntime,
 } from './code-server-runtime.js';
 import {
-  inspectVendoredOmniRouteRuntime,
-  validateOmniRouteRuntime,
-} from './omniroute-runtime.js';
-import {
   clearVendoredRuntimeActivationProgress,
   setVendoredRuntimeActivationProgress,
 } from './vendored-runtime-activation-state.js';
@@ -168,33 +164,7 @@ export class VendoredRuntimeActivationService {
       };
     }
 
-    return {
-      readStatus: () => inspectVendoredOmniRouteRuntime(this.pathManager),
-      validate: async (runtimeRoot) => {
-        const result = await validateOmniRouteRuntime({
-          runtimeRoot,
-          pathManager: this.pathManager,
-          activation: null,
-        });
-        return {
-          status: result.status,
-          sourceStatus: result.sourceStatus,
-          installStatus: result.installStatus,
-          diagnostics: [...result.diagnostics],
-          missingEntries: [...result.missingEntries],
-          wrapperPath: result.wrapperPath,
-          entryScriptPath: result.entryScriptPath,
-        };
-      },
-      paths: {
-        currentRoot: this.pathManager.getOmniRouteRuntimeRoot(),
-        packagedRoot: this.pathManager.getOmniRoutePackagedRuntimeRoot(),
-        packagedArchivePath: this.pathManager.getOmniRoutePackagedArchivePath(),
-        packagedMarkerPath: path.join(this.pathManager.getOmniRoutePackagedRuntimeRoot(), '.hagicode-runtime.json'),
-        runtimeHome: this.pathManager.getOmniRouteRuntimeHome(),
-        stagingRoot: this.pathManager.getOmniRouteRuntimeStagingRoot(),
-      },
-    };
+    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   }
 
   private async runActivation(
@@ -578,7 +548,7 @@ export class VendoredRuntimeActivationService {
     attemptId: string,
     bindings: RuntimeActivationBindings,
   ): Promise<VendoredRuntimeActivationResult> {
-    const commandService = runtimeId === 'code-server' ? 'code-server' : 'omniroute';
+    const commandService = 'code-server';
     try {
       log.info('[VendoredRuntimeActivationService] hagiscript exact activation started', {
         runtimeId,

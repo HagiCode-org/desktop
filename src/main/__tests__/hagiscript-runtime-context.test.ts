@@ -24,19 +24,19 @@ describe('hagiscript runtime context resolver', () => {
     const runtimeRoot = path.join(root, 'Hagi Code userData');
     const serverProgramRoot = path.join(root, 'Hagi Code managed server');
     const serverDataRoot = path.join(root, 'Hagi Code managed data');
-    const omnirouteDataHome = path.join(runtimeDataRoot, 'components', 'services', 'omniroute');
-    const omnirouteRuntimeRoot = path.join(omnirouteDataHome, 'runtime', 'current');
-    const launchScriptPath = path.join(omnirouteRuntimeRoot, 'omniroute.sh');
+    const codeServerDataHome = path.join(runtimeDataRoot, 'components', 'services', 'code-server');
+    const codeServerRuntimeRoot = path.join(codeServerDataHome, 'runtime', 'current');
+    const launchScriptPath = path.join(codeServerRuntimeRoot, 'bin', 'code-server');
     const dotnetRuntimeRoot = path.join(runtimeHome, 'components', 'dotnet', 'runtime', 'linux-x64');
 
     await Promise.all([
-      fs.mkdir(omnirouteRuntimeRoot, { recursive: true }),
+      fs.mkdir(path.dirname(launchScriptPath), { recursive: true }),
       fs.mkdir(dotnetRuntimeRoot, { recursive: true }),
       fs.mkdir(serverProgramRoot, { recursive: true }),
       fs.mkdir(serverDataRoot, { recursive: true }),
       fs.mkdir(path.join(root, 'Hagi Code npm'), { recursive: true }),
     ]);
-    await fs.writeFile(launchScriptPath, '#!/usr/bin/env bash\necho omniroute\n', 'utf8');
+    await fs.writeFile(launchScriptPath, '#!/usr/bin/env bash\necho code-server\n', 'utf8');
 
     const resolver = new HagiscriptRuntimeContextResolver({
       pathManager: {
@@ -45,10 +45,8 @@ describe('hagiscript runtime context resolver', () => {
         getUserDataPath: () => runtimeRoot,
         getManagedServerProgramHome: () => serverProgramRoot,
         getManagedServerDataHome: () => serverDataRoot,
-        getCodeServerRuntimeDataHome: () => path.join(runtimeDataRoot, 'components', 'services', 'code-server'),
-        getCodeServerRuntimeRoot: () => path.join(runtimeDataRoot, 'components', 'services', 'code-server', 'runtime', 'current'),
-        getOmniRouteRuntimeDataHome: () => omnirouteDataHome,
-        getOmniRouteRuntimeRoot: () => omnirouteRuntimeRoot,
+        getCodeServerRuntimeDataHome: () => codeServerDataHome,
+        getCodeServerRuntimeRoot: () => codeServerRuntimeRoot,
         getEmbeddedRuntimeContainerRoot: () => dotnetRuntimeRoot,
         getEmbeddedRuntimeRoot: () => dotnetRuntimeRoot,
         getCurrentPlatform: () => 'linux-x64',
@@ -72,10 +70,10 @@ describe('hagiscript runtime context resolver', () => {
     });
 
     const context = await resolver.resolveBundledRuntime({
-      service: 'omniroute',
+      service: 'code-server',
       launchScriptPath,
-      launchWorkingDirectory: omnirouteRuntimeRoot,
-      launchArgs: ['--no-open'],
+      launchWorkingDirectory: codeServerRuntimeRoot,
+      launchArgs: ['--bind-addr', '127.0.0.1:36988'],
       serviceEnv: {
         PORT: '36988',
       },
@@ -83,11 +81,11 @@ describe('hagiscript runtime context resolver', () => {
 
     try {
       assert.equal(await fs.realpath(context.servicePayloadPath), await fs.realpath(launchScriptPath));
-      assert.equal(await fs.realpath(context.serviceWorkingDirectory), await fs.realpath(omnirouteRuntimeRoot));
+      assert.equal(await fs.realpath(context.serviceWorkingDirectory), await fs.realpath(codeServerRuntimeRoot));
 
       if (process.platform === 'win32') {
         assert.equal(context.servicePayloadPath, launchScriptPath);
-        assert.equal(context.serviceWorkingDirectory, omnirouteRuntimeRoot);
+        assert.equal(context.serviceWorkingDirectory, codeServerRuntimeRoot);
       } else {
         assert.doesNotMatch(context.servicePayloadPath, / /);
         assert.doesNotMatch(context.serviceWorkingDirectory, / /);

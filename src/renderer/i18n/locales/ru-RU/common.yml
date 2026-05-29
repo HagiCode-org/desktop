@@ -136,7 +136,6 @@ sidebar:
   diagnostic: Диагностика
   dependencyManagement: Управление зависимостями
   codeServer: Code Server
-  omniroute: OmniRoute
   settings: Настройки
   desktopVersion: Настольная версия
   webVersion: Веб-версия
@@ -177,22 +176,6 @@ dependencyManagement:
     enabledHelp: Предстоящие операции синхронизации/установки будут использовать зеркало реестра npmmirror.com.
     disabledHelp: Предстоящие операции npm будут использовать поведение реестра по умолчанию npm.
     saveFailed: Не удалось сохранить настройки зеркала.
-  omniRouteRepair:
-    title: Вернитесь к OmniRoute после восстановления зависимостей.
-    descriptionMissing: OmniRoute не удалось запустить, поскольку отсутствует один или несколько пакетов, управляемых с рабочего стола. Восстановите выделенные пакеты здесь, затем еще раз проверьте OmniRoute.
-    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
-    descriptionUnknown: Desktop не удалось подтвердить зависимости OmniRoute. Обновите или исправьте выделенные пакеты здесь, затем еще раз проверьте OmniRoute.
-    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
-    sourceLabel: Источник
-    sourceValue: OmniRoute
-    targetBadge: Ремонтная цель
-    pendingNotice: Сохраните выделенные пакеты доступными в этой таблице, а затем запустите повторную проверку после завершения восстановления.
-    recheckAction: 'Ремонт завершен: перепроверьте OmniRoute'
-    recheckRunning: Перепроверка OmniRoute зависимостей...
-    incomplete: OmniRoute все еще не готов. Установите или обновите выделенные пакеты, затем повторите попытку.
-    refreshFailed: Desktop не удалось обновить статус зависимости. Повторите повторную проверку после завершения текущей операции.
   vendoredRuntime:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
@@ -229,8 +212,6 @@ dependencyManagement:
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
   vendoredRuntimes:
-    omniroute:
-      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
@@ -252,9 +233,7 @@ dependencyManagement:
     skills:
       description: Codex/Управление навыками агента CLI.
     pm2:
-      description: PM2 менеджер процессов, используемый Desktop для контроля OmniRoute.
-    omniroute:
-      description: OmniRoute локальная маршрутизация и цепочка инструментов CLI.
+      description: Менеджер процессов PM2 для сопровождения сервисов, управляемых Desktop.
     claudeCode:
       description: Claude Code Агент CLI для сеансов кодирования с поддержкой AI.
     codex:
@@ -522,78 +501,6 @@ system:
 themeToggle:
   switchToLight: Переключиться в светлый режим
   switchToDark: Переключиться в темный режим
-omniroute:
-  title: OmniRoute
-  description: Управляйте службой OmniRoute, принадлежащей Desktop, через PM2, включая элементы управления жизненным циклом, пути выполнения, конфигурацию портов и последние журналы.
-  loading: Загрузка статуса OmniRoute...
-  actions:
-    refresh: Обновить
-    start: Старт
-    stop: Стоп
-    restart: Перезагрузить
-    working: Работаю...
-    openUi: Открыть UI
-    save: Сохранить
-    open: Открыть
-    refreshLogs: Обновить журналы
-  status:
-    title: Статус
-    running: Бег
-    stopped: Остановлено
-    partial: Частичный
-    error: Ошибка
-    baseUrl: База URL
-    pm2: PM2 исполняемый файл
-    pm2Missing: PM2 не установлено
-    runtimeInstallStatus: Состояние установки runtime
-  config:
-    title: Конфигурация времени выполнения
-    description: OmniRoute использует изолированный порт, управляемый настольным компьютером. Он не может соответствовать порту веб-службы HagiCode.
-    portLabel: Порт
-    passwordLabel: Пароль для входа
-    passwordDescription: Desktop по умолчанию генерирует случайный пароль и отображает его здесь в виде обычного текста. Он вводится как INITIAL_PASSWORD при запуске OmniRoute.
-  validation:
-    numeric: Введите числовой порт.
-    range: Используйте порт между 1024 и 65535.
-    passwordLength: Используйте пароль длиной от 4 до 200 символов.
-  paths:
-    title: Управляемые пути
-    description: Конфигурация, данные и журналы хранятся в папке Electron userData/OmniRoute.
-    config: Конфигурация
-    data: Данные
-    logs: Журналы
-  processes:
-    title: PM2 Процессы
-    description: Desktop управляет только собственным процессом службы OmniRoute и оставляет несвязанные процессы PM2 нетронутыми.
-    name: Имя
-    status: Статус
-    restarts: Перезапускает
-  processStatus:
-    online: Онлайн
-    stopped: Остановлено
-    errored: Ошибка
-    unknown: Неизвестно
-  logs:
-    title: Последние журналы
-    description: Чтение ограниченных последних строк из разрешенных журналов OmniRoute, управляемых настольным компьютером.
-    empty: Журнал еще не выведен.
-    targets:
-      service-out: Вывод услуги
-      service-error: Ошибка сервиса
-  dependencyGuidance:
-    title: Сначала восстановите зависимости, управляемые настольным компьютером.
-    descriptionMissing: OmniRoute не может запуститься, пока выделенные пакеты, управляемые рабочим столом, не будут установлены или исправлены в Dependency Management.
-    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
-    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and hagiscript are repaired in Dependency Management.
-    descriptionUnknown: Desktop не удалось проверить выделенные OmniRoute зависимости. Перед повторной попыткой обновите или исправьте их в разделе «Управление зависимостями».
-    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
-    openDependencyManagement: Открытое управление зависимостями
-  errors:
-    title: OmniRoute операция не удалась
-    operationFailed: Операция провалилась.
-    saveFailed: Не удалось сохранить конфигурацию OmniRoute.
-    openPathFailed: Не удалось открыть управляемый путь.
 codeServer:
   title: Code Server
   description: 'Управляйте runtime code-server, которым владеет Desktop: запуск и остановка, локальный адрес, доступ по паролю, управляемые пути и последние журналы.'

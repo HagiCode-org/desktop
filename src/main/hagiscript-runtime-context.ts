@@ -7,7 +7,6 @@ import {
   buildDesktopHagiscriptRuntimeManifest,
   buildDesktopManagedServerVersionState,
   DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
-  DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME,
   DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
   DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR,
   DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
@@ -19,10 +18,10 @@ import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 import { extractPm2MajorVersion } from './portable-toolchain-paths.js';
 
-export type HagiscriptManagedPm2Service = 'server' | 'omniroute' | 'code-server';
+export type HagiscriptManagedPm2Service = 'server' | 'code-server';
 
 interface HagiscriptBundledRuntimeContextInput {
-  service: Extract<HagiscriptManagedPm2Service, 'omniroute' | 'code-server'>;
+  service: Extract<HagiscriptManagedPm2Service, 'code-server'>;
   launchScriptPath?: string;
   launchWorkingDirectory?: string;
   launchArgs?: string[];
@@ -69,8 +68,6 @@ export class HagiscriptRuntimeContextResolver {
     | 'getManagedServerDataHome'
     | 'getCodeServerRuntimeDataHome'
     | 'getCodeServerRuntimeRoot'
-    | 'getOmniRouteRuntimeDataHome'
-    | 'getOmniRouteRuntimeRoot'
     | 'getEmbeddedRuntimeContainerRoot'
     | 'getEmbeddedRuntimeRoot'
     | 'getCurrentPlatform'
@@ -87,8 +84,6 @@ export class HagiscriptRuntimeContextResolver {
       | 'getManagedServerDataHome'
       | 'getCodeServerRuntimeDataHome'
       | 'getCodeServerRuntimeRoot'
-      | 'getOmniRouteRuntimeDataHome'
-      | 'getOmniRouteRuntimeRoot'
       | 'getEmbeddedRuntimeContainerRoot'
       | 'getEmbeddedRuntimeRoot'
       | 'getCurrentPlatform'
@@ -190,16 +185,12 @@ export class HagiscriptRuntimeContextResolver {
 
   async resolveBundledRuntime(input: HagiscriptBundledRuntimeContextInput): Promise<HagiscriptRuntimeContext> {
     const shared = await this.resolveSharedContext();
-    const serviceDataHome = input.service === 'omniroute'
-      ? path.resolve(this.pathManager.getOmniRouteRuntimeDataHome())
-      : path.resolve(this.pathManager.getCodeServerRuntimeDataHome());
+    const serviceDataHome = path.resolve(this.pathManager.getCodeServerRuntimeDataHome());
     const pm2MajorVersion = extractPm2MajorVersion(null);
     const pm2Home = path.join(serviceDataHome, 'pm2', pm2MajorVersion);
     const runtimeFilesDir = path.join(serviceDataHome, 'runtime');
     const pm2LogsDirectory = path.join(pm2Home, 'logs');
-    const componentBaseAppName = input.service === 'omniroute'
-      ? DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME
-      : DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME;
+    const componentBaseAppName = DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME;
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), `hagicode-desktop-hagiscript-${input.service}-`));
     const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
     const launchScriptPath = input.launchScriptPath
@@ -273,9 +264,7 @@ export class HagiscriptRuntimeContextResolver {
       serviceName: input.service,
       activeRuntime: {
         kind: 'portable-fixed',
-        rootPath: input.service === 'omniroute'
-          ? this.pathManager.getOmniRouteRuntimeRoot()
-          : this.pathManager.getCodeServerRuntimeRoot(),
+        rootPath: this.pathManager.getCodeServerRuntimeRoot(),
         versionLabel: input.service,
         displayName: input.service,
         isReadOnly: true,
@@ -295,16 +284,8 @@ export class HagiscriptRuntimeContextResolver {
       manifestPath,
       manifestDirectory,
       appName: resolveDesktopManagedPm2AppName(componentBaseAppName),
-      servicePayloadPath: launchScriptPath ?? (
-        input.service === 'omniroute'
-          ? this.pathManager.getOmniRouteRuntimeRoot()
-          : this.pathManager.getCodeServerRuntimeRoot()
-      ),
-      serviceWorkingDirectory: launchWorkingDirectory ?? (
-        input.service === 'omniroute'
-          ? this.pathManager.getOmniRouteRuntimeRoot()
-          : this.pathManager.getCodeServerRuntimeRoot()
-      ),
+      servicePayloadPath: launchScriptPath ?? this.pathManager.getCodeServerRuntimeRoot(),
+      serviceWorkingDirectory: launchWorkingDirectory ?? this.pathManager.getCodeServerRuntimeRoot(),
       cleanup: async () => {
         await fs.rm(manifestDirectory, { recursive: true, force: true });
       },

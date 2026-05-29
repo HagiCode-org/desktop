@@ -525,7 +525,6 @@ function getBuildSteps() {
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
-      buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
     ];
 
@@ -551,7 +550,6 @@ function getBuildSteps() {
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
-      buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
       buildStep('node', ['scripts/run-electron-builder.js', '--linux', ...targets, '--publish', 'never'], `Package Linux artifacts${targets.length > 0 ? ` (${targets.join(', ')})` : ''}`),
       buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
@@ -582,7 +580,6 @@ function getBuildSteps() {
         buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
         buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
         buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
-        buildStep('npm', ['run', 'prepare:omniroute-runtime'], 'Prepare OmniRoute runtime'),
         buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
         buildStep(
           'node',

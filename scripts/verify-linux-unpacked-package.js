@@ -21,21 +21,14 @@ import {
   readCodeServerRuntimeConfig,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
-import {
-  detectOmniRouteRuntimePlatform,
-  readOmniRouteRuntimeConfig,
-  validateOmniRouteRuntimePayload,
-} from './omniroute-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
-const omniroutePlatform = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const codeServerConfig = readCodeServerRuntimeConfig();
-const omnirouteConfig = readOmniRouteRuntimeConfig();
 
 function parseArgs() {
   let unpackedRoot = path.join(process.cwd(), 'pkg', 'linux-unpacked');
@@ -196,19 +189,11 @@ function validateCodeServerRuntime(runtimeRoot) {
   return [...result.missingEntries, ...result.diagnostics];
 }
 
-function validateOmniRouteRuntime(runtimeRoot) {
-  const result = validateOmniRouteRuntimePayload(runtimeRoot, {
-    platformKey: omniroutePlatform,
-    config: omnirouteConfig,
-  });
-  return [...result.missingEntries, ...result.diagnostics];
-}
 
 function main() {
   ensureLinuxPlatform(runtimePlatform, 'Embedded dotnet runtime platform');
   ensureLinuxPlatform(nodeRuntimePlatform, 'Bundled Node runtime platform');
   ensureLinuxPlatform(codeServerPlatform, 'Vendored code-server platform');
-  ensureLinuxPlatform(omniroutePlatform, 'Vendored OmniRoute platform');
 
   const unpackedRoot = parseArgs();
   const runtimeRoot = path.join(unpackedRoot, 'resources', 'extra', 'runtime');
@@ -231,11 +216,6 @@ function main() {
       label: 'vendored code-server runtime',
       targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server'),
       validate: validateCodeServerRuntime,
-    },
-    {
-      label: 'vendored OmniRoute runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'omniroute'),
-      validate: validateOmniRouteRuntime,
     },
   ];
 

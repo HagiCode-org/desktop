@@ -21,7 +21,6 @@ test('selectDiscoveredArchives keeps only the implicit x64 mac zip when arm64 zi
       runtimePlatform: 'osx-x64',
       fallbackPlatform: 'osx-x64',
       codeServerPlatform: 'osx-x64',
-      omniroutePlatform: 'osx-x64',
     }),
     ['Hagicode Desktop-0.1.0-mac.zip'],
   );
@@ -39,7 +38,6 @@ test('selectDiscoveredArchives keeps only the arm64 mac zip for arm64 validation
       runtimePlatform: 'osx-arm64',
       fallbackPlatform: 'osx-arm64',
       codeServerPlatform: 'osx-arm64',
-      omniroutePlatform: 'osx-arm64',
     }),
     ['Hagicode Desktop-0.1.0-arm64-mac.zip'],
   );

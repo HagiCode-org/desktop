@@ -1,19 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type {
-  OmniRouteDependencyFailureKind,
-  OmniRouteDependencyPackageId,
-  OmniRouteDependencyRemediation,
-  OmniRouteDependencyRuntimeId,
-} from '../../../types/omniroute-management.js';
+import type { ManagedNpmPackageId, VendoredRuntimeId } from '../../../types/dependency-management.js';
 
-export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings';
+export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'settings';
 
 export interface DependencyManagementRepairIntent {
-  sourceView: 'omniroute';
-  returnView: 'omniroute';
-  failureKind: OmniRouteDependencyFailureKind;
-  targetRuntimeIds: OmniRouteDependencyRuntimeId[];
-  targetPackageIds: OmniRouteDependencyPackageId[];
+  sourceView: ViewType;
+  returnView: ViewType;
+  failureKind: string;
+  targetRuntimeIds: VendoredRuntimeId[];
+  targetPackageIds: ManagedNpmPackageId[];
 }
 
 export interface ViewState {
@@ -64,18 +59,6 @@ const viewSlice = createSlice({
     },
   },
 });
-
-export function buildDependencyManagementRepairIntent(
-  remediation: OmniRouteDependencyRemediation,
-): DependencyManagementRepairIntent {
-  return {
-    sourceView: 'omniroute',
-    returnView: 'omniroute',
-    failureKind: remediation.failureKind,
-    targetRuntimeIds: remediation.targetRuntimeIds,
-    targetPackageIds: remediation.targetPackageIds,
-  };
-}
 
 export const {
   switchView,

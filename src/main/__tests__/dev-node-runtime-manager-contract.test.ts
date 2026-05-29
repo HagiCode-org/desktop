@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 const devRuntimeManagerPath = path.resolve(process.cwd(), 'src/main/dev-node-runtime-manager.ts');
 const dependencyManagerPath = path.resolve(process.cwd(), 'src/main/dependency-manager.ts');
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
+const portableToolchainEnvPath = path.resolve(process.cwd(), 'src/main/portable-toolchain-env.ts');
 const gitignorePath = path.resolve(process.cwd(), '.gitignore');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 
@@ -19,17 +20,20 @@ describe('source mode bundled node runtime contract', () => {
   });
 
   it('uses the portable-fixed bundled toolchain for dependency detection and web service startup', async () => {
-    const source = await fs.readFile(dependencyManagerPath, 'utf8');
-    const webServiceSource = await fs.readFile(webServiceManagerPath, 'utf8');
+    const [source, webServiceSource, portableToolchainEnvSource] = await Promise.all([
+      fs.readFile(dependencyManagerPath, 'utf8'),
+      fs.readFile(webServiceManagerPath, 'utf8'),
+      fs.readFile(portableToolchainEnvPath, 'utf8'),
+    ]);
 
     assert.doesNotMatch(source, /DevNodeRuntimeManager/, 'dependency detection no longer constructs a dev runtime locator');
     assert.doesNotMatch(source, /checkDevNodeRuntimeDependency/, 'node and npm checks no longer use a source-only runtime');
     assert.doesNotMatch(source, /bundled-dev/, 'dependency results no longer report bundled-dev');
     assert.match(source, /const bundledStatus = await this\.bundledNodeRuntimeManager\.verify\(\)/, 'dependency detection uses the bundled portable toolchain');
     assert.doesNotMatch(webServiceSource, /HAGICODE_DEV_NODE_RUNTIME_ROOT/, 'service startup no longer injects the dev runtime marker');
-    assert.match(webServiceSource, /injectManagedCliPathEnv\(runtimeEnv, \{/, 'service startup derives an explicit managed Agent CLI path for the server environment');
-    assert.match(webServiceSource, /HAGICODE_AGENT_CLI_PATH/, 'service startup exposes the managed Agent CLI path instead of mutating PATH with Node runtime roots');
-    assert.match(webServiceSource, /HAGICODE_NPM_GLOBAL_PATH/, 'service startup also exposes the Desktop-managed npm global prefix for runtime package resolution');
+    assert.match(portableToolchainEnvSource, /export function injectManagedCliPathEnv/, 'portable toolchain env exposes the managed Agent CLI path helper');
+    assert.match(portableToolchainEnvSource, /HAGICODE_AGENT_CLI_PATH/, 'portable toolchain env exposes the managed Agent CLI path instead of mutating PATH with Node runtime roots');
+    assert.match(portableToolchainEnvSource, /HAGICODE_NPM_GLOBAL_PATH/, 'portable toolchain env also exposes the Desktop-managed npm global prefix for runtime package resolution');
   });
 
   it('removes generated .runtime ignore rules and the dev runtime package command', async () => {
@@ -44,7 +48,7 @@ describe('source mode bundled node runtime contract', () => {
     assert.equal(packageJson.scripts['install:dev-node-runtime'], undefined);
     assert.equal(
       packageJson.scripts.predev,
-      'npm run prepare:runtime:optional && npm run prepare:bundled-toolchain:optional && npm run prepare:code-server-runtime:optional && npm run prepare:omniroute-runtime:optional',
+      'cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:runtime:optional && cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:bundled-toolchain:optional && cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:code-server-runtime:optional',
     );
   });
 });

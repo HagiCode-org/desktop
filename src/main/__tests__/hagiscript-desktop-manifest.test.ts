@@ -7,10 +7,10 @@ import {
   DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME,
   buildDesktopHagiscriptRuntimeManifest,
   DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
-  DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME,
   DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
   DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
   DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME,
+  DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
   DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME,
   DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
   DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR,
@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 describe('hagiscript desktop manifest builder', () => {
-  it('builds the full four-directory Desktop manifest when a server payload is provided', () => {
+  it('builds the full Desktop manifest when a server payload is provided', () => {
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: '/tmp/hagicode-user-data',
       runtimeHome: '/opt/HagiCode/resources/extra/runtime',
@@ -40,7 +40,6 @@ describe('hagiscript desktop manifest builder', () => {
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
-      omniRoutePlatform: 'linux-x64',
       server: {
         servicePayloadPath: '/tmp/hagicode-active/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/tmp/hagicode-active/lib',
@@ -103,34 +102,23 @@ describe('hagiscript desktop manifest builder', () => {
       ['@anthropic-ai/claude-code', '@fission-ai/openspec', '@openai/codex', 'impeccable', 'skills'],
     );
 
-    const bundledPm2Definitions = manifest.components
-      .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
-      .map((component) => (component.pm2 as { nameIdentifierEnv?: string }).nameIdentifierEnv);
-    assert.deepEqual(
-      bundledPm2Definitions,
-      [DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV, DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV],
+    const codeServerComponent = manifest.components.find(
+      (component) => component.name === 'code-server',
+    ) as Record<string, unknown> | undefined;
+    assert.ok(codeServerComponent);
+    assert.equal(
+      (codeServerComponent.pm2 as { nameIdentifierEnv?: string }).nameIdentifierEnv,
+      DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
     );
-    assert.deepEqual(
-      manifest.components
-        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
-        .map((component) => component.runtimeDataDir),
-      ['services/omniroute', 'services/code-server'],
-    );
-    assert.deepEqual(
-      manifest.components
-        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
-        .map((component) => component.bundledInstallMode),
-      ['archive-7z-only', 'archive-7z-only'],
-    );
-    assert.deepEqual(
-      manifest.components
-        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
-        .map((component) => (component.pm2 as { appName?: string }).appName),
-      [DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME, DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME],
+    assert.equal(codeServerComponent.runtimeDataDir, 'services/code-server');
+    assert.equal(codeServerComponent.bundledInstallMode, 'archive-7z-only');
+    assert.equal(
+      (codeServerComponent.pm2 as { appName?: string }).appName,
+      DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
     );
   });
 
-  it('applies bundled runtime overrides for OmniRoute PM2 metadata and runtime-data directory', () => {
+  it('applies bundled runtime overrides for Code Server PM2 metadata and runtime-data directory', () => {
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: '/tmp/hagicode-user-data',
       runtimeHome: '/opt/HagiCode/resources/extra/runtime',
@@ -141,17 +129,16 @@ describe('hagiscript desktop manifest builder', () => {
       hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
-      omniRoutePlatform: 'linux-x64',
       bundledRuntimeOverrides: {
-        omniroute: {
-          runtimeDataDir: 'services/custom-omniroute',
+        'code-server': {
+          runtimeDataDir: 'services/custom-code-server',
           pm2: {
-            appName: 'custom-omniroute',
-            cwd: '/opt/custom-omniroute/current',
-            script: '/opt/custom-omniroute/current/bin/omniroute.mjs',
-            args: ['--no-open', '--desktop-test'],
-            pm2Home: '/tmp/hagicode-user-data/runtimeData/components/services/custom-omniroute/pm2/7',
-            env: { OMNIROUTE_DESKTOP_MANAGED: 'true' },
+            appName: 'custom-code-server',
+            cwd: '/opt/custom-code-server/current',
+            script: '/opt/custom-code-server/current/bin/code-server',
+            args: ['--bind-addr', '127.0.0.1:8080'],
+            pm2Home: '/tmp/hagicode-user-data/runtimeData/components/services/custom-code-server/pm2/7',
+            env: { CODE_SERVER_DESKTOP_MANAGED: 'true' },
           },
         },
       },
@@ -159,19 +146,19 @@ describe('hagiscript desktop manifest builder', () => {
       components: Array<Record<string, unknown>>;
     };
 
-    const omniRouteComponent = manifest.components.find(
-      (component) => component.name === 'omniroute',
+    const codeServerComponent = manifest.components.find(
+      (component) => component.name === 'code-server',
     ) as Record<string, unknown> | undefined;
-    assert.ok(omniRouteComponent);
-    assert.equal(omniRouteComponent.runtimeDataDir, 'services/custom-omniroute');
-    assert.deepEqual(omniRouteComponent.pm2, {
-      appName: 'custom-omniroute',
+    assert.ok(codeServerComponent);
+    assert.equal(codeServerComponent.runtimeDataDir, 'services/custom-code-server');
+    assert.deepEqual(codeServerComponent.pm2, {
+      appName: 'custom-code-server',
       nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
-      cwd: '/opt/custom-omniroute/current',
-      script: '/opt/custom-omniroute/current/bin/omniroute.mjs',
-      args: ['--no-open', '--desktop-test'],
-      pm2Home: '/tmp/hagicode-user-data/runtimeData/components/services/custom-omniroute/pm2/7',
-      env: { OMNIROUTE_DESKTOP_MANAGED: 'true' },
+      cwd: '/opt/custom-code-server/current',
+      script: '/opt/custom-code-server/current/bin/code-server',
+      args: ['--bind-addr', '127.0.0.1:8080'],
+      pm2Home: '/tmp/hagicode-user-data/runtimeData/components/services/custom-code-server/pm2/7',
+      env: { CODE_SERVER_DESKTOP_MANAGED: 'true' },
     });
   });
 
@@ -186,7 +173,6 @@ describe('hagiscript desktop manifest builder', () => {
       hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
-      omniRoutePlatform: 'linux-x64',
     }) as {
       runtime: { hagicodeInstance?: string };
       components: Array<Record<string, unknown>>;
@@ -204,19 +190,13 @@ describe('hagiscript desktop manifest builder', () => {
     );
   });
 
-  it('prefers packaged marker versions for bundled runtimes when the unified manifest is stale', async () => {
+  it('prefers packaged marker versions for the bundled runtime when the unified manifest is stale', async () => {
     const runtimeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'hagiscript-desktop-runtime-home-'));
     cleanupRoots.add(runtimeHome);
 
     await fs.mkdir(path.join(runtimeHome, 'components', 'bundled', 'code-server'), { recursive: true });
-    await fs.mkdir(path.join(runtimeHome, 'components', 'bundled', 'omniroute'), { recursive: true });
     await fs.writeFile(
       path.join(runtimeHome, 'components', 'bundled', 'code-server', '.hagicode-runtime.json'),
-      JSON.stringify({ version: '2026.0527.0001' }),
-      'utf8',
-    );
-    await fs.writeFile(
-      path.join(runtimeHome, 'components', 'bundled', 'omniroute', '.hagicode-runtime.json'),
       JSON.stringify({ version: '2026.0527.0001' }),
       'utf8',
     );
@@ -231,17 +211,15 @@ describe('hagiscript desktop manifest builder', () => {
       hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
-      omniRoutePlatform: 'linux-x64',
     }) as {
       components: Array<Record<string, unknown>>;
     };
 
-    assert.deepEqual(
-      manifest.components
-        .filter((component) => component.name === 'omniroute' || component.name === 'code-server')
-        .map((component) => component.version),
-      ['2026.0527.0001', '2026.0527.0001'],
-    );
+    const codeServerComponent = manifest.components.find(
+      (component) => component.name === 'code-server',
+    ) as Record<string, unknown> | undefined;
+    assert.ok(codeServerComponent);
+    assert.equal(codeServerComponent.version, '2026.0527.0001');
   });
 
   it('drops hagicode_instance from server pm2 env because runtime.hagicodeInstance is authoritative', () => {
@@ -256,7 +234,6 @@ describe('hagiscript desktop manifest builder', () => {
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
-      omniRoutePlatform: 'linux-x64',
       server: {
         servicePayloadPath: '/tmp/hagicode-active/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/tmp/hagicode-active/lib',
@@ -297,12 +274,12 @@ describe('hagiscript desktop manifest builder', () => {
 
   it('derives Desktop-managed PM2 app names from the shared instance contract', () => {
     assert.equal(
-      resolveDesktopManagedPm2AppName(DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME, { NODE_ENV: 'production' }),
-      'hagicode-omniroute-hagicode_prod',
+      resolveDesktopManagedPm2AppName(DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME, { NODE_ENV: 'production' }),
+      'hagicode-server-hagicode_prod',
     );
     assert.equal(
-      resolveDesktopManagedPm2AppName(DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME, { NODE_ENV: 'development' }),
-      'hagicode-omniroute-hagicode_dev',
+      resolveDesktopManagedPm2AppName(DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME, { NODE_ENV: 'development' }),
+      'hagicode-server-hagicode_dev',
     );
     assert.equal(
       resolveDesktopManagedPm2AppName(DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME, { HAGICODE_DESKTOP_INSTANCE_NAME: 'custom_instance' }),

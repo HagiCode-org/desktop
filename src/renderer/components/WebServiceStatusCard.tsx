@@ -58,7 +58,6 @@ import {
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
 import type { CodeServerBridge } from '../../types/code-server-management.js';
-import type { OmniRouteBridge } from '../../types/omniroute-management.js';
 import {
   buildAccessUrl,
   DEFAULT_WEB_SERVICE_HOST,
@@ -81,14 +80,12 @@ declare global {
       getWebServiceVersion: () => Promise<string>;
       logDirectory: LogDirectoryBridge;
       codeServer: CodeServerBridge;
-      omniroute: OmniRouteBridge;
     };
   }
 }
 
 const WEB_APP_LOG_DIRECTORY_TARGET: LogDirectoryTarget = 'web-app';
 const AUTO_START_CODE_SERVER_STORAGE_KEY = 'webService.autoStart.codeServer';
-const AUTO_START_OMNIROUTE_STORAGE_KEY = 'webService.autoStart.omniroute';
 
 function readStoredStartupPreference(key: string, fallback: boolean): boolean {
   if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
@@ -128,9 +125,6 @@ const WebServiceStatusCard: React.FC = () => {
   const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
   const [autoStartCodeServer, setAutoStartCodeServer] = useState(() =>
     readStoredStartupPreference(AUTO_START_CODE_SERVER_STORAGE_KEY, true)
-  );
-  const [autoStartOmniRoute, setAutoStartOmniRoute] = useState(() =>
-    readStoredStartupPreference(AUTO_START_OMNIROUTE_STORAGE_KEY, false)
   );
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -222,14 +216,6 @@ const WebServiceStatusCard: React.FC = () => {
     globalThis.localStorage.setItem(AUTO_START_CODE_SERVER_STORAGE_KEY, String(autoStartCodeServer));
   }, [autoStartCodeServer]);
 
-  useEffect(() => {
-    if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
-      return;
-    }
-
-    globalThis.localStorage.setItem(AUTO_START_OMNIROUTE_STORAGE_KEY, String(autoStartOmniRoute));
-  }, [autoStartOmniRoute]);
-
   const persistNetworkConfig = async () => {
     const port = parseInt(portInputValue, 10);
     const candidateHost = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
@@ -306,38 +292,11 @@ const WebServiceStatusCard: React.FC = () => {
       }
     };
 
-    const ensureOmniRouteStarted = async () => {
-      try {
-        const status = await window.electronAPI.omniroute.getStatus();
-        if (status.status === 'running') {
-          return;
-        }
-
-        if (!status.pm2Available || status.runtime.installStatus !== 'installed') {
-          toast.error(t('webServiceStatus.managedStartup.errors.omnirouteUnavailable'));
-          return;
-        }
-
-        const result = await window.electronAPI.omniroute.start();
-        if (!result.success) {
-          toast.error(t('webServiceStatus.managedStartup.errors.omnirouteStartFailed'), {
-            description: result.error,
-          });
-        }
-      } catch {
-        toast.error(t('webServiceStatus.managedStartup.errors.omnirouteStartFailed'));
-      }
-    };
-
     const startHagicodePromise = dispatch(startWebService());
     const managedStartupTasks: Promise<void>[] = [];
 
     if (autoStartCodeServer) {
       managedStartupTasks.push(ensureCodeServerStarted());
-    }
-
-    if (autoStartOmniRoute) {
-      managedStartupTasks.push(ensureOmniRouteStarted());
     }
 
     await Promise.allSettled([startHagicodePromise, ...managedStartupTasks]);
@@ -880,14 +839,6 @@ const WebServiceStatusCard: React.FC = () => {
                       <p className="text-xs text-muted-foreground">{t('webServiceStatus.managedStartup.options.codeServer.description')}</p>
                     </div>
                     <Switch checked={autoStartCodeServer} onCheckedChange={setAutoStartCodeServer} />
-                  </div>
-
-                  <div className="flex items-start justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-3">
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium text-foreground">{t('webServiceStatus.managedStartup.options.omniroute.label')}</div>
-                      <p className="text-xs text-muted-foreground">{t('webServiceStatus.managedStartup.options.omniroute.description')}</p>
-                    </div>
-                    <Switch checked={autoStartOmniRoute} onCheckedChange={setAutoStartOmniRoute} />
                   </div>
                 </div>
               </div>

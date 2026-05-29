@@ -44,8 +44,6 @@ export function resolveManagedDesktopRuntimeComponentName(componentId) {
       return NODE_COMPONENT_NAME;
     case 'code-server':
       return 'code-server';
-    case 'omniroute':
-      return 'omniroute';
     default:
       throw new Error(`Unsupported Desktop runtime component: ${componentId}`);
   }

@@ -113,7 +113,7 @@ interface HagiscriptDedicatedComponentStatus {
 }
 
 interface HagiscriptDedicatedLifecycleEnvelope {
-  component: 'omniroute' | 'code_server';
+  component: 'code_server';
   service: HagiscriptManagedPm2Service;
   action: HagiscriptServerLifecycleAction;
   ok: boolean;
@@ -121,7 +121,7 @@ interface HagiscriptDedicatedLifecycleEnvelope {
 }
 
 interface HagiscriptDedicatedExactEnvelope {
-  component: 'omniroute' | 'code_server';
+  component: 'code_server';
   service: HagiscriptManagedPm2Service;
   action: 'exact';
   ok: boolean;
@@ -286,7 +286,7 @@ export class HagiscriptPm2Manager {
     action: HagiscriptServerLifecycleAction,
   ): Promise<HagiscriptServerLifecycleResult> {
     if (context.serviceName !== 'server') {
-      return this.runDedicatedLifecycleAction(context, action);
+      return this.runDedicatedLifecycleAction(context as HagiscriptRuntimeContext & { serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'> }, action);
     }
 
     const execution = await this.executeCommand(
@@ -345,13 +345,12 @@ export class HagiscriptPm2Manager {
   }
 
   private async runDedicatedLifecycleAction(
-    context: HagiscriptRuntimeContext,
+    context: HagiscriptRuntimeContext & { serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'> },
     action: HagiscriptServerLifecycleAction,
   ): Promise<HagiscriptServerLifecycleResult> {
-    const serviceName = context.serviceName === 'code-server' ? 'code-server' : 'omniroute';
     const execution = await this.executeCommand(
       context,
-      [this.resolveDedicatedServiceCommand(serviceName), action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
+      [this.resolveDedicatedServiceCommand(context.serviceName), action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
       `${context.serviceName}-${action}`,
     );
 
@@ -526,8 +525,8 @@ export class HagiscriptPm2Manager {
     ]);
   }
 
-  private resolveDedicatedServiceCommand(serviceName: Extract<HagiscriptManagedPm2Service, 'omniroute' | 'code-server'>): 'omniroute' | 'code_server' {
-    return serviceName === 'code-server' ? 'code_server' : 'omniroute';
+  private resolveDedicatedServiceCommand(serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'>): 'code_server' {
+    return serviceName === 'code-server' ? 'code_server' : 'code_server';
   }
 
   private parsePm2ProcessMetrics(rawOutput: string, appName: string): Pm2ProcessMetrics {

@@ -5,7 +5,7 @@ export function resolveStagedDesktopRuntimeProgramHome(cwd = process.cwd()) {
 }
 
 export function resolveStagedDesktopRuntimeComponentRoot(componentId, options = {}) {
-  if (componentId === 'code-server' || componentId === 'omniroute') {
+  if (componentId === 'code-server') {
     return resolveStagedDesktopRuntimeComponentContainerRoot(componentId, options);
   }
 
@@ -27,9 +27,6 @@ export function resolveStagedDesktopRuntimeComponentContainerRoot(componentId, o
   }
   if (componentId === 'code-server') {
     return path.join(programHome, 'components', 'bundled', 'code-server');
-  }
-  if (componentId === 'omniroute') {
-    return path.join(programHome, 'components', 'bundled', 'omniroute');
   }
 
   throw new Error(`Unsupported Desktop runtime component: ${componentId}`);

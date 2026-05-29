@@ -16,7 +16,6 @@ import { RegionDetector } from './region-detector.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import DependencyManagementService from './dependency-management-service.js';
 import { CodeServerManager } from './code-server-manager.js';
-import OmniRouteManager from './omniroute-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { VersionUpdateManager } from './version-update-manager.js';
@@ -62,10 +61,7 @@ import {
   registerDependencyManagementHandlers,
   registerCodeServerHandlers,
   initCodeServerHandlers,
-  registerOmniRouteHandlers,
-  initOmniRouteHandlers,
   emitCodeServerStatus,
-  emitOmniRouteStatus,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
@@ -288,14 +284,11 @@ let webServicePollingInterval: NodeJS.Timeout | null = null;
 let webServicePollingInFlight = false;
 let codeServerPollingInterval: NodeJS.Timeout | null = null;
 let codeServerPollingInFlight = false;
-let omniRoutePollingInterval: NodeJS.Timeout | null = null;
-let omniRoutePollingInFlight = false;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
 let codeServerManager: CodeServerManager | null = null;
-let omniRouteManager: OmniRouteManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
@@ -578,7 +571,6 @@ function createWindow(): void {
   // These handler modules are registered before the BrowserWindow exists.
   // Rebind them here so lifecycle/status events can reach the renderer.
   initCodeServerHandlers(codeServerManager, mainWindow);
-  initOmniRouteHandlers(omniRouteManager, mainWindow);
 
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
@@ -1748,7 +1740,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'omniroute' | 'settings') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'version' && isPortableVersionMode()) {
@@ -2280,27 +2272,6 @@ function startCodeServerStatusPolling(): void {
   }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
 }
 
-function startOmniRouteStatusPolling(): void {
-  if (omniRoutePollingInterval) {
-    clearInterval(omniRoutePollingInterval);
-  }
-
-  omniRoutePollingInterval = setInterval(async () => {
-    if (!omniRouteManager || !mainWindow) return;
-    if (omniRoutePollingInFlight) return;
-
-    try {
-      omniRoutePollingInFlight = true;
-      const status = await omniRouteManager.getStatus();
-      emitOmniRouteStatus(status);
-    } catch (error) {
-      console.error('Failed to poll OmniRoute status:', error);
-    } finally {
-      omniRoutePollingInFlight = false;
-    }
-  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
-}
-
 /**
  * Handle second-instance event
  *
@@ -2482,19 +2453,12 @@ app.whenReady().then(async () => {
     configManager,
     pathManager: pathManager ?? PathManager.getInstance(),
   });
-  omniRouteManager = new OmniRouteManager({
-    configManager,
-    dependencyManagementService,
-    pathManager: pathManager ?? PathManager.getInstance(),
-  });
   dependencyManagementService.setVendoredRuntimeInspector(async () => [
     ...(await codeServerManager!.getRuntimeSnapshots()),
-    ...(await omniRouteManager!.getRuntimeSnapshots()),
   ]);
   registerDependencyManagementHandlers({
     dependencyManagementService,
     codeServerManager,
-    omniRouteManager,
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
@@ -2504,13 +2468,6 @@ app.whenReady().then(async () => {
     mainWindow,
   });
   log.info('[App] Code Server IPC handlers registered');
-
-  registerOmniRouteHandlers({
-    manager: omniRouteManager,
-    mainWindow,
-  });
-  log.info('[App] OmniRoute IPC handlers registered');
-
   ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
   ipcMain.handle('bootstrap:refresh', async () => {
     bootstrapSnapshotCache = null;
@@ -2574,14 +2531,7 @@ app.whenReady().then(async () => {
     console.error('Failed to get initial code-server status:', error);
   }
 
-  try {
-    emitOmniRouteStatus(await omniRouteManager.getStatus());
-  } catch (error) {
-    console.error('Failed to get initial OmniRoute status:', error);
-  }
-
   startCodeServerStatusPolling();
-  startOmniRouteStatusPolling();
 
   // Initialize Menu Manager
   if (mainWindow) {
@@ -2631,10 +2581,6 @@ app.on('before-quit', async (event) => {
     if (codeServerPollingInterval) {
       clearInterval(codeServerPollingInterval);
       codeServerPollingInterval = null;
-    }
-    if (omniRoutePollingInterval) {
-      clearInterval(omniRoutePollingInterval);
-      omniRoutePollingInterval = null;
     }
     if (webServiceManager) {
       await webServiceManager.cleanup();

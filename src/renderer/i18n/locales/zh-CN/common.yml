@@ -136,7 +136,6 @@ sidebar:
   diagnostic: 诊断
   dependencyManagement: 依赖项管理
   codeServer: Code Server
-  omniroute: OmniRoute
   settings: 设置
   desktopVersion: Desktop 版本
   webVersion: Web 版本
@@ -177,22 +176,6 @@ dependencyManagement:
     enabledHelp: 后续同步/安装操作将使用 npmmirror.com registry 镜像。
     disabledHelp: 后续 npm 操作将使用 npm 默认 registry 行为。
     saveFailed: 保存镜像设置失败
-  omniRouteRepair:
-    title: 修复依赖后返回 OmniRoute
-    descriptionMissing: OmniRoute 因一个或多个 Desktop 托管包缺失而无法启动。请先在这里修复高亮依赖，然后重新检测 OmniRoute。
-    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
-    descriptionUnknown: Desktop 当前无法确认 OmniRoute 依赖。请先在这里刷新或修复高亮依赖，然后重新检测 OmniRoute。
-    descriptionVersionMismatch: OmniRoute 因一个或多个 Desktop 托管包版本不满足要求而无法启动。请先在这里升级高亮依赖，然后重新检测 OmniRoute。
-    sourceLabel: 来源
-    sourceValue: OmniRoute
-    targetBadge: 修复目标
-    pendingNotice: 请先让高亮依赖保持可用状态，再执行重新检测。
-    recheckAction: 修复后重新检测 OmniRoute
-    recheckRunning: 正在重新检测 OmniRoute 依赖...
-    incomplete: OmniRoute 仍未准备就绪。请继续安装或刷新高亮依赖后重试。
-    refreshFailed: Desktop 无法刷新依赖状态。请等待当前操作结束后再试一次。
   vendoredRuntime:
     title: Desktop 托管运行时
     description: Vendored 运行时由 Desktop 负责预置与托管，不通过 npm 包管理进行安装。
@@ -247,8 +230,6 @@ dependencyManagement:
       completed: 启用完成
       failed: 启用失败
   vendoredRuntimes:
-    omniroute:
-      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
     codeServer:
       description: 由 Desktop 从 vendored 制品预置的 code-server 运行时，并通过内置 Node 工具链启动。
   package:
@@ -270,9 +251,7 @@ dependencyManagement:
     skills:
       description: Codex/Agent 技能管理 CLI。
     pm2:
-      description: Desktop 用于托管 OmniRoute 的 PM2 进程管理器。
-    omniroute:
-      description: OmniRoute 本地路由与工具链 CLI。
+      description: PM2 进程管理器，可用于托管 Desktop 管理的服务。
     claudeCode:
       description: 用于 AI 辅助编码会话的 Claude Code Agent CLI。
     codex:
@@ -298,7 +277,7 @@ dependencyManagement:
     title: 必需
     selectorLabel: 安装目标
     selectorHint: latest 会跟随最新稳定版，dev 会跟随开发标签。
-    currentTarget: '当前目标：{{target}}'
+    currentTarget: 当前目标：{{target}}
     customVersionLabel: 自定义版本
     customVersionPlaceholder: 输入版本号，例如 0.2.3
     customVersionDescription: 输入 hagiscript 的精确版本号，前导 v 可省略。
@@ -502,11 +481,11 @@ system:
     progress:
       confirming: 等待确认
       stoppingService: 正在停止服务
-      confirmingDescription: '即将安装 {{version}}，请先确认是否允许停止当前服务。'
+      confirmingDescription: 即将安装 {{version}}，请先确认是否允许停止当前服务。
       stoppingServiceDescription: 正在停止当前运行中的服务，随后继续下载并安装新版本。
-      switchingDescription: '安装已完成，正在切换到 {{version}}。'
+      switchingDescription: 安装已完成，正在切换到 {{version}}。
       completedDescription: '{{version}} 已安装完成，首页状态已同步。'
-      activeDescription: '正在处理 {{version}}，当前阶段：{{stage}}。'
+      activeDescription: 正在处理 {{version}}，当前阶段：{{stage}}。
     actions:
       openVersionPage: 打开版本管理
       installLatest: 安装最新版本
@@ -549,78 +528,6 @@ system:
 themeToggle:
   switchToLight: 切换到亮色模式
   switchToDark: 切换到暗色模式
-omniroute:
-  title: OmniRoute
-  description: 通过 PM2 管理 Desktop 托管的 OmniRoute 服务，包括启停、运行路径、端口配置和近期日志。
-  loading: 正在读取 OmniRoute 状态...
-  actions:
-    refresh: 刷新
-    start: 启动
-    stop: 停止
-    restart: 重启
-    working: 处理中...
-    openUi: 打开 UI
-    save: 保存
-    open: 打开
-    refreshLogs: 刷新日志
-  status:
-    title: 状态
-    running: 运行中
-    stopped: 已停止
-    partial: 部分运行
-    error: 错误
-    baseUrl: 访问地址
-    pm2: 内置 PM2 可执行文件
-    pm2Missing: 内置 PM2 不可用
-    runtimeInstallStatus: 运行时安装状态
-  config:
-    title: 运行配置
-    description: OmniRoute 使用 Desktop 独立托管端口，不能与 HagiCode Web 服务端口相同。
-    portLabel: 端口
-    passwordLabel: 登录密码
-    passwordDescription: Desktop 会默认生成随机密码，并以明文显示在这里；启动 OmniRoute 时会作为 INITIAL_PASSWORD 注入。
-  validation:
-    numeric: 请输入数字端口。
-    range: 端口范围必须在 1024 到 65535 之间。
-    passwordLength: 密码长度必须在 4 到 200 个字符之间。
-  paths:
-    title: 托管路径
-    description: 配置、数据与日志均保存在 Electron userData/OmniRoute 下。
-    config: 配置
-    data: 数据
-    logs: 日志
-  processes:
-    title: PM2 进程
-    description: Desktop 只管理自己的 OmniRoute 服务进程，不影响其他 PM2 进程。
-    name: 名称
-    status: 状态
-    restarts: 重启次数
-  processStatus:
-    online: 在线
-    stopped: 已停止
-    errored: 错误
-    unknown: 未知
-  logs:
-    title: 近期日志
-    description: 从 Desktop 托管的 OmniRoute 日志白名单中读取有限行数。
-    empty: 暂无日志输出。
-    targets:
-      service-out: 服务输出
-      service-error: 服务错误
-  dependencyGuidance:
-    title: 请先修复 Desktop 托管依赖
-    descriptionMissing: 在依赖项管理中安装或修复高亮的 Desktop 托管包之前，OmniRoute 无法启动。
-    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
-    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: 在依赖项管理中修复 Desktop 托管的 OmniRoute 运行时和 hagiscript 之前，OmniRoute 无法启动。
-    descriptionUnknown: Desktop 当前无法确认高亮的 OmniRoute 依赖状态。请先到依赖项管理中刷新或修复后再重试。
-    descriptionVersionMismatch: 在依赖项管理中将高亮的 Desktop 托管包升级到要求版本之前，OmniRoute 无法启动。
-    openDependencyManagement: 打开依赖项管理
-  errors:
-    title: OmniRoute 操作失败
-    operationFailed: 操作失败。
-    saveFailed: 保存 OmniRoute 配置失败。
-    openPathFailed: 无法打开托管路径。
 codeServer:
   title: Code Server
   description: 管理 Desktop 托管的 code-server 运行时，包括启停、本地访问地址、密码访问、托管路径和近期日志。

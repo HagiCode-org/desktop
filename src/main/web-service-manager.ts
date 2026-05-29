@@ -44,7 +44,6 @@ import {
   normalizeListenHost,
   resolveProbeHostsForListenHost,
 } from '../types/web-service-network.js';
-import { OMNIROUTE_DEFAULT_PORT } from '../types/omniroute-management.js';
 import type { ActiveRuntimeDescriptor, DistributionMode } from '../types/distribution-mode.js';
 import {
   resolveSteamIntegration,
@@ -96,9 +95,6 @@ interface PreparedServiceEnvironment {
   mergedEnv: NodeJS.ProcessEnv;
   managedSnapshot: ManagedEnvSnapshotEntry[];
 }
-
-const OMNIROUTE_MIN_PORT = 1024;
-const OMNIROUTE_MAX_PORT = 65535;
 
 export interface ManagedLaunchContext {
   serviceDllPath: string;
@@ -175,17 +171,6 @@ export async function resolveManagedLaunchContextForRuntimeRoot(
     serviceWorkingDirectory: path.dirname(payloadValidation.payloadPaths.serviceDllPath),
     requiredRuntimeLabel: payloadValidation.requirement?.effectiveLabel,
   };
-}
-
-function normalizeManagedOmniRoutePort(value: unknown): number | null {
-  const port = Number.parseInt(String(value ?? ''), 10);
-  return Number.isInteger(port) && port >= OMNIROUTE_MIN_PORT && port <= OMNIROUTE_MAX_PORT
-    ? port
-    : null;
-}
-
-function buildManagedOmniRouteApiEndpoint(port: number): string {
-  return `http://localhost:${port}`;
 }
 
 export class PCodeWebServiceManager {
@@ -936,15 +921,6 @@ export class PCodeWebServiceManager {
         };
       })()
       : null;
-    const desktopManagedOmniRoute = this.configManager
-      ? (() => {
-        const configured = this.configManager.getAll().omniroute;
-        const port = normalizeManagedOmniRoutePort(configured?.port) ?? OMNIROUTE_DEFAULT_PORT;
-        return {
-          apiEndpoint: buildManagedOmniRouteApiEndpoint(port),
-        };
-      })()
-      : null;
     const systemVaultEnv = await buildDesktopSystemVaultEnv({
       pathResolver: createDesktopSystemVaultPathResolver(this.pathManager),
     });
@@ -969,7 +945,6 @@ export class PCodeWebServiceManager {
       steamAchievementSyncEnabled: steamIntegration.achievementSyncEnabled,
       steamAchievementSyncSource: steamIntegration.achievementSyncSource,
       codeServer: desktopManagedCodeServer,
-      omniRoute: desktopManagedOmniRoute,
       systemVaultEnvEntries: systemVaultEnv.envEntries,
       yamlConfig: existingConfig,
       existingEnv,

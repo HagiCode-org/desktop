@@ -6,16 +6,14 @@ import { describe, it } from 'node:test';
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
 
 describe('managed service IPC window rebinding', () => {
-  it('rebinds code-server and omniroute handlers after the main BrowserWindow is created', async () => {
+  it('rebinds code-server handlers after the main BrowserWindow is created', async () => {
     const source = await fs.readFile(mainPath, 'utf8');
 
     assert.match(source, /registerCodeServerHandlers,/);
     assert.match(source, /initCodeServerHandlers,/);
-    assert.match(source, /registerOmniRouteHandlers,/);
-    assert.match(source, /initOmniRouteHandlers,/);
     assert.match(
       source,
-      /mainWindow = new ElectronBrowserWindow\([\s\S]*?wireDesktopWindowClipboard\(mainWindow\);[\s\S]*?initCodeServerHandlers\(codeServerManager, mainWindow\);[\s\S]*?initOmniRouteHandlers\(omniRouteManager, mainWindow\);/,
+      /mainWindow = new ElectronBrowserWindow\([\s\S]*?wireDesktopWindowClipboard\(mainWindow\);[\s\S]*?initCodeServerHandlers\(codeServerManager, mainWindow\);/,
     );
   });
 });

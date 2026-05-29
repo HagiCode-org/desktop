@@ -25,11 +25,6 @@ import {
   readCodeServerRuntimeConfig,
   validateCodeServerRuntimePayload,
 } from './code-server-runtime-contract.js';
-import {
-  detectOmniRouteRuntimePlatform,
-  readOmniRouteRuntimeConfig,
-  validateOmniRouteRuntimePayload,
-} from './omniroute-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const archives = [];
@@ -39,8 +34,6 @@ const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig)
 const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const codeServerConfig = readCodeServerRuntimeConfig();
-const omniroutePlatform = process.env.HAGICODE_OMNIROUTE_PLATFORM || detectOmniRouteRuntimePlatform();
-const omnirouteConfig = readOmniRouteRuntimeConfig();
 
 function parseArgs() {
   for (let index = 0; index < args.length; index += 1) {
@@ -82,7 +75,6 @@ function resolveMacArchiveArch(options = {}) {
     options.runtimePlatform ?? runtimePlatform,
     options.fallbackPlatform ?? fallbackPlatform,
     options.codeServerPlatform ?? codeServerPlatform,
-    options.omniroutePlatform ?? omniroutePlatform,
   ].filter(Boolean);
 
   if (requestedPlatforms.some((platform) => platform === 'osx-arm64')) {
@@ -439,15 +431,6 @@ function extractZip(archivePath, destinationRoot) {
       return [...result.missingEntries, ...result.diagnostics];
     },
   });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
-    label: 'vendored OmniRoute runtime',
-    suffixParts: ['omniroute'],
-    platform: omniroutePlatform,
-    validate: (runtimeRoot) => {
-      const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });
-      return [...result.missingEntries, ...result.diagnostics];
-    },
-  });
 }
 
 function extractTarGz(archivePath, destinationRoot) {
@@ -465,15 +448,6 @@ function extractTarGz(archivePath, destinationRoot) {
     platform: codeServerPlatform,
     validate: (runtimeRoot) => {
       const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
-      return [...result.missingEntries, ...result.diagnostics];
-    },
-  });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
-    label: 'vendored OmniRoute runtime',
-    suffixParts: ['omniroute'],
-    platform: omniroutePlatform,
-    validate: (runtimeRoot) => {
-      const result = validateOmniRouteRuntimePayload(runtimeRoot, { platformKey: omniroutePlatform, config: omnirouteConfig });
       return [...result.missingEntries, ...result.diagnostics];
     },
   });

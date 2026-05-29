@@ -33,8 +33,6 @@ import type { VendoredRuntimeId } from '../types/dependency-management.js';
 import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
 import { dependencyManagementChannels } from '../types/dependency-management.js';
 import type { HagiNodeRuntimeBridge, HagiNodeRuntimeMetadata } from '../types/node-runtime.js';
-import type { OmniRouteBridge, OmniRouteConfigUpdatePayload, OmniRouteLogReadRequest, OmniRoutePathTarget } from '../types/omniroute-management.js';
-import { omniRouteChannels } from '../types/omniroute-management.js';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../types/version-install.js';
 import type {
   LogDirectoryBridge,
@@ -317,7 +315,6 @@ interface ElectronAPI {
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
   codeServer: CodeServerBridge;
-  omniroute: OmniRouteBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -653,7 +650,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'omniroute' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {
@@ -778,24 +775,6 @@ const electronAPI: ElectronAPI = {
   hagiNode: hagiNodeBridge,
   npmManagement: dependencyManagementBridge,
   dependencyManagement: dependencyManagementBridge,
-  omniroute: {
-    getStatus: () => ipcRenderer.invoke(omniRouteChannels.status),
-    start: () => ipcRenderer.invoke(omniRouteChannels.start),
-    stop: () => ipcRenderer.invoke(omniRouteChannels.stop),
-    restart: () => ipcRenderer.invoke(omniRouteChannels.restart),
-    repair: () => ipcRenderer.invoke(omniRouteChannels.repair),
-    getConfig: () => ipcRenderer.invoke(omniRouteChannels.getConfig),
-    setConfig: (payload: OmniRouteConfigUpdatePayload) => ipcRenderer.invoke(omniRouteChannels.setConfig, payload),
-    readLog: (request: OmniRouteLogReadRequest) => ipcRenderer.invoke(omniRouteChannels.readLog, request),
-    openPath: (target: OmniRoutePathTarget) => ipcRenderer.invoke(omniRouteChannels.openPath, target),
-    onStatusChange: (callback) => {
-      const listener = (_event, status) => {
-        callback(status);
-      };
-      ipcRenderer.on(omniRouteChannels.statusChanged, listener);
-      return () => ipcRenderer.removeListener(omniRouteChannels.statusChanged, listener);
-    },
-  },
 };
 
 ipcRenderer.on('webview-navigate', (_event, direction: 'back' | 'forward' | 'refresh') => {

@@ -46,7 +46,6 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /packages\.map/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
     assert.match(packageGroupsSource, /highlightedPackageIds\?: ManagedNpmPackageId\[];/);
-    assert.match(packageGroupsSource, /dependencyManagement\.omniRouteRepair\.targetBadge/);
     assert.match(packageGroupsSource, /dependencyManagement\.packageStatus\.\$\{displayStatus\}/);
     assert.match(packageGroupsSource, /dependencyManagement\.package\.versionMismatch/);
     assert.match(packageGroupsSource, /Progress value=\{itemProgress\?\.percentage \?\? 20\}/);
@@ -87,7 +86,6 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /getSelectAllChecked\(selectedPackageIds, selectablePackageIds\)/);
     assert.match(pageSource, /useSelector\(\(state: RootState\) => state\.view\.dependencyManagementIntent\)/);
     assert.match(pageSource, /runRepairCompletionCheck/);
-    assert.match(pageSource, /dependencyManagement\.omniRouteRepair\.recheckAction/);
     assert.match(pageSource, /dispatch\(setDependencyManagementIntent\(null\)\)/);
     assert.match(pageSource, /dispatch\(switchView\(repairIntent\.returnView\)\)/);
     assert.match(pageSource, /<NpmPackageBootstrapCard/);
@@ -172,7 +170,6 @@ describe('dependency management renderer wiring', () => {
   it('places the package table and batch log section before environment details while conditionally promoting the hagiscript card', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
-    assert.match(source, /dependencyManagement\.omniRouteRepair\.title[\s\S]*<NpmPackageTable/);
     assert.match(source, /<NpmPackageTable[\s\S]*dependencyManagement\.environment\.title/);
     assert.match(source, /BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}[\s\S]*dependencyManagement\.environment\.title/);
     assert.match(source, /\{shouldPromoteHagiscriptCard && hagiscriptCard\}/);
@@ -329,11 +326,9 @@ describe('dependency management renderer wiring', () => {
     assert.equal(typeof zhJson.dependencyManagement.batchLog.status.running, 'string');
     assert.equal(typeof zhJson.dependencyManagement.selection.selectedCount, 'string');
     assert.equal(zhJson.dependencyManagement.mirror.title, 'npm 镜像加速');
-    assert.equal(typeof zhJson.dependencyManagement.omniRouteRepair.recheckAction, 'string');
     assert.equal(enJson.dependencyManagement.mirror.registryUrl, 'Registry URL');
     assert.equal(typeof zhJson.dependencyManagement.mirror.saveFailed, 'string');
     assert.equal(typeof enJson.dependencyManagement.mirror.enabledHelp, 'string');
-    assert.equal(typeof enJson.dependencyManagement.omniRouteRepair.targetBadge, 'string');
     assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.installStatus.installed, 'string');
     assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.actions.enable, 'string');
     assert.equal(typeof enJson.dependencyManagement.vendoredRuntime.status['enable-required'], 'string');

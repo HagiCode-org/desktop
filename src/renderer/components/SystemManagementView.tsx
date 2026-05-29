@@ -7,7 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
-import { CodeServerMiniCard, OmniRouteMiniCard } from './ManagedServiceMiniCard';
+import { CodeServerMiniCard } from './ManagedServiceMiniCard';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -580,7 +580,6 @@ export default function SystemManagementView({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <CodeServerMiniCard />
-              <OmniRouteMiniCard />
             </div>
           </section>
 

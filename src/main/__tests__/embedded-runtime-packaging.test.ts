@@ -53,23 +53,17 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-x64/);
-    assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/run-electron-builder\.js --mac --x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/run-electron-builder\.js --mac --arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-x64/);
-    assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /package:verify-release-archives:mac:x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /package:verify-release-archives:mac:arm64/);
     assert.equal(pkg.scripts['package:verify-release-archives'], 'node scripts/verify-release-archives.js');
     assert.match(pkg.scripts['package:verify-release-archives:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:verify-release-archives:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['package:verify-release-archives:mac:x64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-x64/);
-    assert.match(pkg.scripts['package:verify-release-archives:mac:arm64'] || '', /HAGICODE_OMNIROUTE_PLATFORM=osx-arm64/);
     assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
     assert.match(ciBuildScript, /Unsupported macOS package target\(s\)/);
@@ -204,7 +198,6 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(docs, /extra\/portable-fixed\/current/);
     assert.match(toolchainDocs, /Bundled Node Toolchain/);
     assert.match(toolchainDocs, /extra\/runtime\/components\/node\/runtime/);
-    assert.match(toolchainDocs, /extra\/runtime\/components\/bundled\/omniroute/);
     assert.match(toolchainDocs, /Desktop owns the portable Node\/toolchain contract/);
     assert.match(docs, /Steam Linux startup compatibility/i);
     assert.match(docs, /Direct CLI startup already works/i);
@@ -228,19 +221,4 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(docs, /https:\/\/docs\.hagicode\.com/);
   });
 
-  it('ships the vendored OmniRoute runtime beside other packaged Desktop resources', async () => {
-    const [builder, smokeTest, archiveVerifier] = await Promise.all([
-      fs.readFile(electronBuilderPath, 'utf-8'),
-      fs.readFile(smokeTestPath, 'utf-8'),
-      fs.readFile(path.resolve(process.cwd(), 'scripts/verify-release-archives.js'), 'utf-8'),
-    ]);
-
-    assert.match(builder, /from: resources/);
-    assert.match(builder, /to: extra\/runtime/);
-    assert.match(smokeTest, /packaged vendored OmniRoute runtime uses canonical extra\/runtime\/components\/bundled\/omniroute path/);
-    assert.match(smokeTest, /legacy extra\/omniroute\/current path/);
-    assert.match(archiveVerifier, /label: 'vendored OmniRoute runtime'/);
-    assert.match(archiveVerifier, /suffixParts: \['omniroute'\]/);
-    assert.match(archiveVerifier, /validateOmniRouteRuntimePayload/);
-  });
 });

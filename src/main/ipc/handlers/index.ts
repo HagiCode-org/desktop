@@ -43,9 +43,6 @@ export { registerDependencyManagementHandlers, initDependencyManagementHandlers 
 // Code Server handlers
 export { registerCodeServerHandlers, initCodeServerHandlers, emitCodeServerStatus } from './codeServerHandlers.js';
 
-// OmniRoute handlers
-export { registerOmniRouteHandlers, initOmniRouteHandlers, emitOmniRouteStatus } from './omniRouteHandlers.js';
-
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 

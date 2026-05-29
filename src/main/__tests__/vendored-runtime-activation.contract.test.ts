@@ -11,23 +11,17 @@ import {
   readCodeServerRuntimeConfig,
 } from '../code-server-runtime.js';
 import {
-  detectOmniRouteRuntimePlatform,
-  readOmniRouteRuntimeConfig,
-} from '../omniroute-runtime.js';
-import {
   clearVendoredRuntimeActivationProgress,
 } from '../vendored-runtime-activation-state.js';
 import {
   VendoredRuntimeActivationService,
 } from '../vendored-runtime-activation.js';
-import type { VendoredRuntimeId } from '../../types/dependency-management.js';
 
 const execFileAsync = promisify(execFile);
 const cleanupRoots = new Set<string>();
 
 afterEach(async () => {
   clearVendoredRuntimeActivationProgress('code-server');
-  clearVendoredRuntimeActivationProgress('omniroute');
   await Promise.all([...cleanupRoots].map(async (rootPath) => {
     cleanupRoots.delete(rootPath);
     await fs.rm(rootPath, { recursive: true, force: true });
@@ -46,13 +40,6 @@ function createLayout(baseRoot: string) {
       currentRoot: path.join(runtimeDataHome, 'components', 'services', 'code-server', 'runtime', 'current'),
       stagingRoot: path.join(runtimeDataHome, 'components', 'services', 'code-server', 'runtime', 'staging'),
     },
-    omniRoute: {
-      packagedRoot: path.join(programHome, 'components', 'bundled', 'omniroute'),
-      packagedArchivePath: path.join(programHome, 'components', 'bundled', 'omniroute', 'archives', 'omniroute.7z'),
-      runtimeHome: path.join(runtimeDataHome, 'components', 'services', 'omniroute', 'runtime'),
-      currentRoot: path.join(runtimeDataHome, 'components', 'services', 'omniroute', 'runtime', 'current'),
-      stagingRoot: path.join(runtimeDataHome, 'components', 'services', 'omniroute', 'runtime', 'staging'),
-    },
   };
 }
 
@@ -63,11 +50,6 @@ function createFakePathManager(layout: ReturnType<typeof createLayout>) {
     getCodeServerRuntimeHome: () => layout.codeServer.runtimeHome,
     getCodeServerRuntimeRoot: () => layout.codeServer.currentRoot,
     getCodeServerRuntimeStagingRoot: () => layout.codeServer.stagingRoot,
-    getOmniRoutePackagedRuntimeRoot: () => layout.omniRoute.packagedRoot,
-    getOmniRoutePackagedArchivePath: () => layout.omniRoute.packagedArchivePath,
-    getOmniRouteRuntimeHome: () => layout.omniRoute.runtimeHome,
-    getOmniRouteRuntimeRoot: () => layout.omniRoute.currentRoot,
-    getOmniRouteRuntimeStagingRoot: () => layout.omniRoute.stagingRoot,
   };
 }
 
@@ -77,7 +59,6 @@ async function createArchive(archivePath: string, sourceRoot: string, entries: s
 }
 
 async function createPackagedRuntimeFixture(input: {
-  runtimeId: VendoredRuntimeId;
   packagedRoot: string;
   archivePath: string;
   version: string;
@@ -87,7 +68,7 @@ async function createPackagedRuntimeFixture(input: {
   archiveIncludesLegacyMetadata?: boolean;
   archiveRootSubdir?: string;
 }): Promise<void> {
-  const sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), `${input.runtimeId}-payload-`));
+  const sourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'code-server-payload-'));
   cleanupRoots.add(sourceRoot);
 
   const metadata = {
@@ -115,28 +96,16 @@ async function createPackagedRuntimeFixture(input: {
     await fs.writeFile(path.join(payloadRoot, 'metadata.json'), JSON.stringify(metadata, null, 2));
   }
 
-  if (input.runtimeId === 'code-server') {
-    await fs.mkdir(path.join(payloadRoot, 'out', 'node'), { recursive: true });
-    await fs.writeFile(path.join(payloadRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\necho code-server\n');
-    await fs.writeFile(path.join(payloadRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
-    await createArchive(
-      input.archivePath,
-      sourceRoot,
-      archiveIncludesLegacyMetadata
-        ? [archiveEntry('metadata.json'), archiveEntry('bin'), archiveEntry('out')]
-        : [archiveEntry('bin'), archiveEntry('out')],
-    );
-  } else {
-    await fs.writeFile(path.join(payloadRoot, 'bin', 'omniroute'), '#!/usr/bin/env bash\necho omniroute\n');
-    await fs.writeFile(path.join(payloadRoot, 'bin', 'omniroute.mjs'), 'console.log("omniroute");\n');
-    await createArchive(
-      input.archivePath,
-      sourceRoot,
-      archiveIncludesLegacyMetadata
-        ? [archiveEntry('metadata.json'), archiveEntry('bin')]
-        : [archiveEntry('bin')],
-    );
-  }
+  await fs.mkdir(path.join(payloadRoot, 'out', 'node'), { recursive: true });
+  await fs.writeFile(path.join(payloadRoot, 'bin', 'code-server'), '#!/usr/bin/env bash\necho code-server\n');
+  await fs.writeFile(path.join(payloadRoot, 'out', 'node', 'entry.js'), 'console.log("code-server");\n');
+  await createArchive(
+    input.archivePath,
+    sourceRoot,
+    archiveIncludesLegacyMetadata
+      ? [archiveEntry('metadata.json'), archiveEntry('bin'), archiveEntry('out')]
+      : [archiveEntry('bin'), archiveEntry('out')],
+  );
 
   await fs.mkdir(input.packagedRoot, { recursive: true });
   await fs.writeFile(
@@ -147,7 +116,7 @@ async function createPackagedRuntimeFixture(input: {
       version: input.version,
       archiveFormat: '7z',
       vendoredAssetName: path.basename(input.archivePath),
-      vendoredReleaseTag: `v${input.version}`,
+      vendoredReleaseTag: 'v' + input.version,
       generatedAt: '2026-05-26T00:00:00.000Z',
     }, null, 2),
   );
@@ -203,7 +172,6 @@ describe('vendored runtime activation service', () => {
     const version = config.releaseVersionByPlatform?.[detectCodeServerRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
 
     await createPackagedRuntimeFixture({
-      runtimeId: 'code-server',
       packagedRoot: layout.codeServer.packagedRoot,
       archivePath: layout.codeServer.packagedArchivePath,
       version,
@@ -233,7 +201,6 @@ describe('vendored runtime activation service', () => {
     const version = config.releaseVersionByPlatform?.[detectCodeServerRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
 
     await createPackagedRuntimeFixture({
-      runtimeId: 'code-server',
       packagedRoot: layout.codeServer.packagedRoot,
       archivePath: layout.codeServer.packagedArchivePath,
       version,
@@ -254,43 +221,12 @@ describe('vendored runtime activation service', () => {
     await fs.access(path.join(layout.codeServer.currentRoot, 'out', 'node', 'entry.js'));
   });
 
-  it('activates vendored OmniRoute into the Desktop-owned userData runtime root', async () => {
-    const layout = await createBaseLayout();
-    const config = readOmniRouteRuntimeConfig();
-    const version = config.releaseVersionByPlatform?.[detectOmniRouteRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
-
-    await createPackagedRuntimeFixture({
-      runtimeId: 'omniroute',
-      packagedRoot: layout.omniRoute.packagedRoot,
-      archivePath: layout.omniRoute.packagedArchivePath,
-      version,
-      schemaVersion: config.schemaVersion,
-      packageId: config.packageId,
-      bundledNodeRuntime: true,
-      archiveIncludesLegacyMetadata: false,
-    });
-
-    const service = new VendoredRuntimeActivationService(createFakePathManager(layout) as any);
-    const result = await service.activate('omniroute');
-
-    assert.equal(result.success, true);
-    assert.equal(result.status.installStatus, 'installed');
-    assert.equal(result.status.sourceStatus, 'available');
-    assert.equal(result.status.runtimeRoot, layout.omniRoute.currentRoot);
-    assert.match(result.status.runtimeRoot, /components\/services\/omniroute\/runtime\/current$/);
-    assert.equal(result.status.packagedArchivePath, layout.omniRoute.packagedArchivePath);
-    assert.equal(Boolean(result.status.wrapperPath), true);
-    assert.equal(Boolean(result.status.entryScriptPath), true);
-    await fs.access(path.join(layout.omniRoute.runtimeHome, '.hagicode-runtime.json'));
-  });
-
   it('completes hagiscript exact activation after validating the extracted runtime root', async () => {
     const layout = await createBaseLayout();
     const config = readCodeServerRuntimeConfig();
     const version = config.releaseVersionByPlatform?.[detectCodeServerRuntimePlatform()] ?? config.releaseVersion ?? '0.0.0';
 
     await createPackagedRuntimeFixture({
-      runtimeId: 'code-server',
       packagedRoot: layout.codeServer.packagedRoot,
       archivePath: layout.codeServer.packagedArchivePath,
       version,

@@ -12,7 +12,6 @@ import {
   Globe as GlobeIcon,
   Info,
   LoaderCircle,
-  Network,
   PackageOpen,
   Server,
   Settings,
@@ -51,7 +50,6 @@ const navigationItems: NavigationItem[] = [
   { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
   { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen },
   { id: 'code-server', labelKey: 'sidebar.codeServer', icon: Server },
-  { id: 'omniroute', labelKey: 'sidebar.omniroute', icon: Network },
   { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];
 

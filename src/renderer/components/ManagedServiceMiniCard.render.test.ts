@@ -7,7 +7,7 @@ const cardPath = path.resolve(process.cwd(), 'src/renderer/components/ManagedSer
 const systemManagementViewPath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 
 describe('managed service mini cards', () => {
-  it('renders runtime versions for code-server and omniroute on the system dashboard cards', async () => {
+  it('renders runtime versions for the code-server system dashboard card', async () => {
     const source = await fs.readFile(cardPath, 'utf8');
 
     assert.match(source, /version\?: string \| null;/);
@@ -28,10 +28,9 @@ describe('managed service mini cards', () => {
     assert.match(source, /status: \['completed', 'failed'\]\.includes\(event\.stage\) \? current\.runtime\.status : 'extracting'/);
   });
 
-  it('keeps the dashboard overview wired to the mini cards', async () => {
+  it('keeps the dashboard overview wired to the code-server mini card', async () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
     assert.match(source, /<CodeServerMiniCard \/>/);
-    assert.match(source, /<OmniRouteMiniCard \/>/);
   });
 });

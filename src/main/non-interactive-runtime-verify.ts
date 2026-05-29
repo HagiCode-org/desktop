@@ -3,7 +3,6 @@ import path from 'node:path';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
 import { validateCodeServerRuntime } from './code-server-runtime.js';
 import { validateBundledRuntimeForPlatform } from './embedded-runtime.js';
-import { validateOmniRouteRuntime } from './omniroute-runtime.js';
 import { PathManager } from './path-manager.js';
 
 export interface NonInteractiveRuntimeComponentReport {
@@ -29,7 +28,6 @@ export interface NonInteractiveRuntimeVerificationReport {
   };
   serviceDataHomes: {
     codeServer: string;
-    omniRoute: string;
   };
   components: {
     dotnet: NonInteractiveRuntimeComponentReport & {
@@ -47,11 +45,6 @@ export interface NonInteractiveRuntimeVerificationReport {
       governedNodeVersion: string | null;
     };
     codeServer: NonInteractiveRuntimeComponentReport & {
-      wrapperPath: string | null;
-      entryScriptPath: string | null;
-      version: string | null;
-    };
-    omniRoute: NonInteractiveRuntimeComponentReport & {
       wrapperPath: string | null;
       entryScriptPath: string | null;
       version: string | null;
@@ -83,7 +76,6 @@ export async function verifyDesktopRuntimeStructure(
   const sharedPaths = pathManager.getRuntimeSharedPaths();
   const serviceDataHomes = {
     codeServer: pathManager.getCodeServerRuntimeDataHome(),
-    omniRoute: pathManager.getOmniRouteRuntimeDataHome(),
   };
 
   const dotnetValidation = await validateBundledRuntimeForPlatform({
@@ -95,11 +87,6 @@ export async function verifyDesktopRuntimeStructure(
   const codeServerRoot = pathManager.getCodeServerRuntimeRoot();
   const codeServerValidation = await validateCodeServerRuntime({
     runtimeRoot: codeServerRoot,
-    pathManager,
-  });
-  const omniRouteRoot = pathManager.getOmniRouteRuntimeRoot();
-  const omniRouteValidation = await validateOmniRouteRuntime({
-    runtimeRoot: omniRouteRoot,
     pathManager,
   });
 
@@ -122,18 +109,11 @@ export async function verifyDesktopRuntimeStructure(
     !isWithinRoot(codeServerRoot, dataHome)
       && `code-server extracted runtime root is outside runtime data home: ${codeServerRoot}`,
   ]);
-  const omniRouteIssues = flattenIssues([
-    omniRouteValidation.missingEntries,
-    omniRouteValidation.diagnostics,
-    !isWithinRoot(omniRouteRoot, dataHome)
-      && `omniroute extracted runtime root is outside runtime data home: ${omniRouteRoot}`,
-  ]);
 
   const report: NonInteractiveRuntimeVerificationReport = {
     ok: dotnetIssues.length === 0
       && nodeIssues.length === 0
-      && codeServerIssues.length === 0
-      && omniRouteIssues.length === 0,
+      && codeServerIssues.length === 0,
     mode: process.env.NODE_ENV === 'development' ? 'development' : 'packaged',
     manifestPath,
     programHome,
@@ -174,24 +154,13 @@ export async function verifyDesktopRuntimeStructure(
         version: codeServerValidation.metadata?.version ?? null,
         issues: codeServerIssues,
       },
-      omniRoute: {
-        ok: omniRouteIssues.length === 0,
-        status: omniRouteIssues.length === 0 ? 'ok' : omniRouteValidation.status,
-        root: omniRouteRoot,
-        wrapperPath: omniRouteValidation.wrapperPath,
-        entryScriptPath: omniRouteValidation.entryScriptPath,
-        version: omniRouteValidation.metadata?.version ?? null,
-        issues: omniRouteIssues,
-      },
     },
     issues: flattenIssues([
       !fsSync.existsSync(manifestPath) && `desktop runtime manifest is missing: ${manifestPath}`,
       !isWithinRoot(serviceDataHomes.codeServer, dataHome) && `code-server runtime data home is outside runtime data home: ${serviceDataHomes.codeServer}`,
-      !isWithinRoot(serviceDataHomes.omniRoute, dataHome) && `omniroute runtime data home is outside runtime data home: ${serviceDataHomes.omniRoute}`,
       dotnetIssues,
       nodeIssues,
       codeServerIssues,
-      omniRouteIssues,
     ]),
   };
 

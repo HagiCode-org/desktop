@@ -136,7 +136,6 @@ sidebar:
   diagnostic: 診断
   dependencyManagement: 依存関係の管理
   codeServer: Code Server
-  omniroute: OmniRoute
   settings: 設定
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
@@ -177,22 +176,6 @@ dependencyManagement:
     enabledHelp: 今後の同期/インストール操作では、npmmirror.com レジストリ ミラーが使用されます。
     disabledHelp: 今後の npm 操作では、デフォルトの npm レジストリ動作が使用されます。
     saveFailed: ミラー設定の保存に失敗しました
-  omniRouteRepair:
-    title: 依存関係を修復した後に OmniRoute に戻る
-    descriptionMissing: 1 つ以上のデスクトップ管理パッケージが欠落しているため、OmniRoute を開始できませんでした。ここで強調表示されたパッケージを修復し、OmniRoute を再確認します。
-    descriptionRuntimeMissing: OmniRoute could not start because the Desktop-managed OmniRoute runtime is missing. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeDamaged: OmniRoute could not start because the Desktop-managed OmniRoute runtime failed validation. Repair the highlighted runtime here, then recheck OmniRoute.
-    descriptionRuntimeAndPackage: OmniRoute could not start because the Desktop-managed OmniRoute runtime and PM2 both need repair. Restore the highlighted runtime and package here, then recheck OmniRoute.
-    descriptionUnknown: デスクトップは OmniRoute 依存関係を確認できませんでした。ここで強調表示されたパッケージを更新または修復し、OmniRoute を再確認します。
-    descriptionVersionMismatch: OmniRoute could not start because one or more Desktop-managed packages are installed at an unsupported version. Upgrade the highlighted packages here, then recheck OmniRoute.
-    sourceLabel: ソース
-    sourceValue: OmniRoute
-    targetBadge: 修理対象
-    pendingNotice: この表で強調表示されたパッケージを使用可能な状態にしておき、修復が完了したら再チェック アクションを実行します。
-    recheckAction: '修理完了: 再チェック OmniRoute'
-    recheckRunning: OmniRoute 依存関係を再確認しています...
-    incomplete: OmniRoute はまだ準備ができていません。強調表示されたパッケージをインストールまたは更新して、再試行してください。
-    refreshFailed: デスクトップは依存関係ステータスを更新できませんでした。現在の操作が終了した後、再チェックを再試行してください。
   vendoredRuntime:
     title: Desktop-managed runtimes
     description: Vendored runtimes are staged and supervised by Desktop instead of npm package management.
@@ -229,8 +212,6 @@ dependencyManagement:
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
   vendoredRuntimes:
-    omniroute:
-      description: Desktop-managed OmniRoute runtime staged from vendored artifacts and launched with the bundled Node toolchain.
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
@@ -252,9 +233,7 @@ dependencyManagement:
     skills:
       description: Codex/エージェントのスキル管理 CLI。
     pm2:
-      description: PM2 プロセス マネージャは Desktop が OmniRoute を監視するために使用します。
-    omniroute:
-      description: OmniRoute ローカル ルーティングおよびツールチェーン CLI。
+      description: Desktop 管理サービスの監視に利用できる PM2 プロセスマネージャー。
     claudeCode:
       description: Claude Code エージェント CLI（AI 支援コーディング セッション用）。
     codex:
@@ -522,78 +501,6 @@ system:
 themeToggle:
   switchToLight: ライトモードに切り替える
   switchToDark: ダークモードに切り替える
-omniroute:
-  title: OmniRoute
-  description: ライフサイクル制御、ランタイム パス、ポート構成、最近のログなど、デスクトップ所有の OmniRoute サービスを PM2 を通じて管理します。
-  loading: OmniRoute ステータスを読み込んでいます...
-  actions:
-    refresh: リフレッシュ
-    start: スタート
-    stop: 停止
-    restart: 再起動
-    working: 働いています...
-    openUi: 開く UI
-    save: 保存
-    open: 開く
-    refreshLogs: ログを更新する
-  status:
-    title: ステータス
-    running: ランニング
-    stopped: 停止しました
-    partial: 部分的
-    error: エラー
-    baseUrl: ベース URL
-    pm2: PM2 実行可能ファイル
-    pm2Missing: PM2はインストールされていません
-    runtimeInstallStatus: ランタイムのインストール状態
-  config:
-    title: ランタイム構成
-    description: OmniRoute は、分離されたデスクトップ管理ポートを使用します。 HagiCode Web サービス ポートと一致することはできません。
-    portLabel: 港
-    passwordLabel: ログインパスワード
-    passwordDescription: Desktop はデフォルトでランダムなパスワードを生成し、それをプレーンテキストで表示します。 OmniRoute の開始時に INITIAL_PASSWORD として挿入されます。
-  validation:
-    numeric: 数値ポートを入力します。
-    range: 1024 ～ 65535 のポートを使用します。
-    passwordLength: 4 ～ 200 文字のパスワードを使用してください。
-  paths:
-    title: 管理されたパス
-    description: 構成、データ、ログは Electron userData/OmniRoute に保存されます。
-    config: 構成
-    data: データ
-    logs: ログ
-  processes:
-    title: PM2 プロセス
-    description: Desktop は独自の OmniRoute サービス プロセスのみを管理し、関係のない PM2 プロセスはそのまま残します。
-    name: 名前
-    status: ステータス
-    restarts: 再起動
-  processStatus:
-    online: オンライン
-    stopped: 停止しました
-    errored: エラーが発生しました
-    unknown: 不明
-  logs:
-    title: 最近のログ
-    description: ホワイトリストに登録されたデスクトップ管理の OmniRoute ログから、制限された最近の行を読み取ります。
-    empty: まだログは出力されていません。
-    targets:
-      service-out: サービスの出力
-      service-error: サービスエラー
-  dependencyGuidance:
-    title: 最初にデスクトップ管理の依存関係を修復します
-    descriptionMissing: OmniRoute は、強調表示されたデスクトップ管理パッケージが依存関係管理でインストールまたは修復されるまで起動できません。
-    descriptionRuntimeMissing: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is restored in Dependency Management.
-    descriptionRuntimeDamaged: OmniRoute cannot start until the Desktop-managed OmniRoute runtime is repaired in Dependency Management.
-    descriptionRuntimeAndPackage: OmniRoute cannot start until both the Desktop-managed OmniRoute runtime and hagiscript are repaired in Dependency Management.
-    descriptionUnknown: デスクトップは、強調表示された OmniRoute 依存関係を確認できませんでした。再試行する前に、依存関係管理でそれらを更新または修復してください。
-    descriptionVersionMismatch: OmniRoute cannot start until the highlighted Desktop-managed packages are upgraded to the required version in Dependency Management.
-    openDependencyManagement: オープンな依存関係管理
-  errors:
-    title: OmniRoute 操作が失敗しました
-    operationFailed: 操作は失敗しました。
-    saveFailed: OmniRoute 構成を保存できませんでした。
-    openPathFailed: 管理パスのオープンに失敗しました。
 codeServer:
   title: Code Server
   description: Desktop が管理する code-server ランタイムを管理します。起動と停止、ローカルアドレス、パスワード認証、管理パス、最近のログを確認できます。

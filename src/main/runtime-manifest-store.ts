@@ -192,7 +192,6 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
   const distribution = asRecord(desktopExtensions?.distribution);
   const programHomes = asRecord(distribution?.programHomes);
   const codeServerComponent = findRuntimeComponent(manifest, 'code-server');
-  const omniRouteComponent = findRuntimeComponent(manifest, 'omniroute');
   const componentDataRoot = normalizeRelativePath(readString(paths?.componentDataRoot)) ?? 'components';
   const nodeRuntime = normalizeRelativePath(readString(paths?.nodeRuntime)) ?? 'components/node/runtime';
   const dotnetRuntime = normalizeRelativePath(readString(paths?.dotnetRuntime)) ?? 'components/dotnet/runtime';
@@ -229,21 +228,12 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
       'code-server': {
         relativePath: joinRelativePath(vendoredRoot, 'code-server'),
       },
-      omniroute: {
-        relativePath: joinRelativePath(vendoredRoot, 'omniroute'),
-      },
     },
     services: {
       'code-server': {
         dataRelativePath: joinRelativePath(
           componentDataRoot,
           normalizeRelativePath(readString(codeServerComponent?.runtimeDataDir)) ?? 'services/code-server',
-        ),
-      },
-      omniroute: {
-        dataRelativePath: joinRelativePath(
-          componentDataRoot,
-          normalizeRelativePath(readString(omniRouteComponent?.runtimeDataDir)) ?? 'services/omniroute',
         ),
       },
     },

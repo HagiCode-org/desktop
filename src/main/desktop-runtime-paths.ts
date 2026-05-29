@@ -6,8 +6,8 @@ import {
   type ResolveRuntimeManifestPathOptions,
 } from './runtime-manifest-store.js';
 
-export type DesktopRuntimeComponentId = 'dotnet' | 'node' | 'code-server' | 'omniroute';
-export type DesktopRuntimeServiceId = Extract<DesktopRuntimeComponentId, 'code-server' | 'omniroute'>;
+export type DesktopRuntimeComponentId = 'dotnet' | 'node' | 'code-server';
+export type DesktopRuntimeServiceId = Extract<DesktopRuntimeComponentId, 'code-server'>;
 
 export interface DesktopRuntimeManifest {
   schemaVersion: number;

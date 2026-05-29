@@ -161,7 +161,6 @@ export function VendoredRuntimeCard({
             <CardDescription>{t(item.definition.descriptionKey)}</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {highlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
             <Badge variant={vendoredRuntimeBadgeVariant(item)}>
               {t(`dependencyManagement.vendoredRuntime.installStatus.${item.installStatus}`)}
             </Badge>
@@ -567,7 +566,6 @@ export function NpmPackageTable({
                       <Badge variant={packageBadgeVariant(item)}>
                         {t(`dependencyManagement.packageStatus.${displayStatus}`)}
                       </Badge>
-                      {isHighlighted ? <Badge variant="outline">{t('dependencyManagement.omniRouteRepair.targetBadge')}</Badge> : null}
                     </div>
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
                     {disabledReason && <div id={`${item.id}-disabled-reason`} className="sr-only">{disabledReason}</div>}

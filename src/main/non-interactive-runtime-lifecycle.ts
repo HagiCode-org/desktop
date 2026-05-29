@@ -17,8 +17,6 @@ import { VersionManager } from './version-manager.js';
 import { resolveManagedLaunchContextForRuntimeRoot } from './web-service-manager.js';
 import { CodeServerManager } from './code-server-manager.js';
 import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
-import OmniRouteManager from './omniroute-manager.js';
-import { inspectVendoredOmniRouteRuntime } from './omniroute-runtime.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
 const { app } = electron;
@@ -74,7 +72,6 @@ export interface NonInteractiveRuntimeLifecycleReport {
   tooling: ManagedRuntimeToolingReport;
   services: {
     codeServer: ManagedServiceStageReport;
-    omniRoute: ManagedServiceStageReport;
     backend: BackendLifecycleReport;
   };
   issues: string[];
@@ -255,29 +252,6 @@ function buildEmbeddedRuntimeDescriptor(pathManager: PathManager): ActiveRuntime
   };
 }
 
-function resolveOmniRouteLaunchSpec(runtime: {
-  wrapperPath: string | null;
-  entryScriptPath: string | null;
-}): { script: string; cwd: string; args: string[] } {
-  if (runtime.entryScriptPath) {
-    return {
-      script: runtime.entryScriptPath,
-      cwd: path.dirname(runtime.entryScriptPath),
-      args: ['--no-open'],
-    };
-  }
-
-  if (runtime.wrapperPath) {
-    return {
-      script: runtime.wrapperPath,
-      cwd: path.dirname(runtime.wrapperPath),
-      args: ['--no-open'],
-    };
-  }
-
-  throw new Error('Vendored OmniRoute runtime is missing both wrapperPath and entryScriptPath.');
-}
-
 async function verifyCodeServerLifecycle(input: {
   manager: CodeServerManager;
   pm2Home: string;
@@ -391,99 +365,6 @@ async function verifyCodeServerLifecycle(input: {
           status.paths.ecosystemFile,
         ],
         serviceLabel: 'code-server',
-      }),
-    );
-    await runtimeContext?.cleanup();
-  }
-
-  return report;
-}
-
-async function verifyOmniRouteLifecycle(input: {
-  manager: OmniRouteManager;
-  pm2Home: string;
-  timeoutMs: number;
-  runtimeContextResolver: HagiscriptRuntimeContextResolver;
-  pathManager: PathManager;
-}): Promise<ManagedServiceStageReport> {
-  const status = await input.manager.getStatus();
-  const report = createEmptyServiceReport(input.pm2Home, status.paths.root, status.paths.runtime);
-  let runtimeContext: HagiscriptRuntimeContext | null = null;
-
-  try {
-    try {
-      const runtime = await inspectVendoredOmniRouteRuntime(input.pathManager);
-      const launch = resolveOmniRouteLaunchSpec(runtime);
-      runtimeContext = await input.runtimeContextResolver.resolveBundledRuntime({
-        service: 'omniroute',
-        launchScriptPath: launch.script,
-        launchWorkingDirectory: launch.cwd,
-        launchArgs: launch.args,
-        serviceEnv: {},
-      });
-      report.pm2Home = runtimeContext.pm2Home;
-      report.runtimeDataHome = runtimeContext.serviceDataHome;
-      report.runtimeFilesDir = runtimeContext.runtimeFilesDir;
-      report.launchScriptPath = runtimeContext.servicePayloadPath;
-      report.launchWorkingDirectory = runtimeContext.serviceWorkingDirectory;
-    } catch (error) {
-      report.diagnostics.push(`omniroute runtime context: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    const startResult = await input.manager.start();
-    report.startSuccess = startResult.success;
-    if (!startResult.success) {
-      report.error = startResult.error ?? 'omniroute start failed.';
-      report.statusAfterStart = (await input.manager.getStatus()).processes[0]?.status ?? 'unknown';
-      return report;
-    }
-
-    const online = await waitForResult(
-      'omniroute PM2 status',
-      () => input.manager.getStatus(),
-      (value) => value.processes.some((entry) => entry.status === 'online'),
-      input.timeoutMs,
-    );
-    if (online.ok) {
-      report.statusAfterStart = online.value.processes[0]?.status ?? 'unknown';
-    } else {
-      report.statusAfterStart = online.value?.processes[0]?.status ?? 'unknown';
-      report.error = report.error ?? online.error;
-    }
-
-    const stopResult = await input.manager.stop();
-    report.stopSuccess = stopResult.success;
-    if (!stopResult.success) {
-      report.error = report.error ?? stopResult.error ?? 'omniroute stop failed.';
-      report.statusAfterStop = (await input.manager.getStatus()).processes[0]?.status ?? 'unknown';
-      return report;
-    }
-
-    const stopped = await waitForResult(
-      'omniroute stopped status',
-      () => input.manager.getStatus(),
-      (value) => value.processes.every((entry) => entry.status === 'stopped' || entry.status === 'unknown'),
-      input.timeoutMs,
-    );
-    if (stopped.ok) {
-      report.statusAfterStop = stopped.value.processes[0]?.status ?? 'stopped';
-    } else {
-      report.statusAfterStop = stopped.value?.processes[0]?.status ?? 'unknown';
-      report.error = report.error ?? stopped.error;
-    }
-  } finally {
-    const cleanupManager = new HagiscriptServerManager();
-    report.diagnostics.push(
-      ...await collectHagiscriptManagedDiagnostics({
-        manager: cleanupManager,
-        runtimeContext,
-        fallbackPaths: [
-          path.join(status.paths.logs, 'omniroute-error.log'),
-          path.join(status.paths.logs, 'omniroute-out.log'),
-          status.paths.envFile,
-          status.paths.ecosystemFile,
-        ],
-        serviceLabel: 'omniroute',
       }),
     );
     await runtimeContext?.cleanup();
@@ -680,13 +561,8 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     dependencyManagementService,
     configManager,
   });
-  const omniRouteManager = new OmniRouteManager({
-    configManager,
-    dependencyManagementService,
-  });
   const pm2MajorVersion = extractPm2MajorVersion(null);
   const codeServerPm2Home = path.join(pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2MajorVersion);
-  const omniRoutePm2Home = path.join(pathManager.getOmniRouteRuntimeDataHome(), 'pm2', pm2MajorVersion);
 
   const report: NonInteractiveRuntimeLifecycleReport = {
     ok: false,
@@ -694,7 +570,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     tooling: toolingReport,
     services: {
       codeServer: createEmptyServiceReport(codeServerPm2Home, pathManager.getCodeServerRuntimeDataHome(), path.join(pathManager.getCodeServerRuntimeDataHome(), 'runtime')),
-      omniRoute: createEmptyServiceReport(omniRoutePm2Home, pathManager.getOmniRouteRuntimeDataHome(), path.join(pathManager.getOmniRouteRuntimeDataHome(), 'runtime')),
       backend: createEmptyBackendReport(),
     },
     issues: [],
@@ -716,13 +591,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     runtimeContextResolver,
     pathManager,
   });
-  report.services.omniRoute = await verifyOmniRouteLifecycle({
-    manager: omniRouteManager,
-    pm2Home: omniRoutePm2Home,
-    timeoutMs,
-    runtimeContextResolver,
-    pathManager,
-  });
   report.services.backend = await verifyBackendLifecycle({
     pathManager,
     configManager,
@@ -730,11 +598,8 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     timeoutMs,
   });
 
-  const [codeServerStatus, omniRouteStatus] = await Promise.all([
-    codeServerManager.getStatus().catch(() => null),
-    omniRouteManager.getStatus().catch(() => null),
-  ]);
-  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? omniRouteStatus?.pm2ExecutablePath ?? null;
+  const codeServerStatus = await codeServerManager.getStatus().catch(() => null);
+  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? null;
   toolingReport.pm2ExecutableUnderManagedBin = isPathUnder(toolingReport.npmGlobalBinRoot, toolingReport.pm2ExecutablePath);
 
   for (const [serviceName, serviceReport] of Object.entries(report.services)) {

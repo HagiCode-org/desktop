@@ -300,7 +300,6 @@ describe('dependency management service contract', () => {
 
     assert.match(source, /private async getVendoredRuntimeSnapshots\(\): Promise<VendoredRuntimeStatusSnapshot\[\]>/);
     assert.match(source, /this\.inspectVendoredRuntimeSafely\('code-server'/);
-    assert.match(source, /this\.inspectVendoredRuntimeSafely\('omniroute'/);
     assert.match(source, /installStatus: 'failed'/);
     assert.match(source, /status: 'damaged'/);
     assert.match(source, /Vendored runtime inspection failed/);

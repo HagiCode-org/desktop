@@ -79,12 +79,12 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 
-  it('injects desktop-managed OmniRoute endpoint metadata into the backend child-process environment', async () => {
+  it('injects desktop-managed code-server metadata into the backend child-process environment', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.match(source, /const desktopManagedOmniRoute = this\.configManager/);
-    assert.match(source, /apiEndpoint: buildManagedOmniRouteApiEndpoint\(port\)/);
-    assert.match(source, /omniRoute: desktopManagedOmniRoute,/);
+    assert.match(source, /const desktopManagedCodeServer = this\.configManager/);
+    assert.match(source, /const config = this\.configManager\.getCodeServerConfig\(\)/);
+    assert.match(source, /codeServer: desktopManagedCodeServer,/);
   });
 
   it('keeps Desktop-managed environment injection authoritative over legacy config env values', async () => {

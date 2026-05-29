@@ -37,20 +37,15 @@ describe('home launch dependency readiness guard', () => {
     assert.doesNotMatch(buttonSource, /Hagicode<\/motion\.span>/);
   });
 
-  it('persists managed service startup toggles and fans out startup intent to selected services', async () => {
+  it('persists the code-server startup toggle and fans out startup intent to selected services', async () => {
     const source = await fs.readFile(cardPath, 'utf8');
 
     assert.match(source, /AUTO_START_CODE_SERVER_STORAGE_KEY = 'webService\.autoStart\.codeServer'/);
-    assert.match(source, /AUTO_START_OMNIROUTE_STORAGE_KEY = 'webService\.autoStart\.omniroute'/);
     assert.match(source, /readStoredStartupPreference\(AUTO_START_CODE_SERVER_STORAGE_KEY, true\)/);
-    assert.match(source, /readStoredStartupPreference\(AUTO_START_OMNIROUTE_STORAGE_KEY, false\)/);
     assert.match(source, /const managedStartupTasks: Promise<void>\[\] = \[\];/);
     assert.match(source, /if \(autoStartCodeServer\) \{\s*managedStartupTasks\.push\(ensureCodeServerStarted\(\)\);\s*\}/);
-    assert.match(source, /if \(autoStartOmniRoute\) \{\s*managedStartupTasks\.push\(ensureOmniRouteStarted\(\)\);\s*\}/);
     assert.match(source, /window\.electronAPI\.codeServer\.getStatus\(\)/);
-    assert.match(source, /window\.electronAPI\.omniroute\.getStatus\(\)/);
     assert.match(source, /window\.electronAPI\.codeServer\.start\(\)/);
-    assert.match(source, /window\.electronAPI\.omniroute\.start\(\)/);
     assert.match(source, /await Promise\.allSettled\(\[startHagicodePromise, \.\.\.managedStartupTasks\]\);/);
   });
 

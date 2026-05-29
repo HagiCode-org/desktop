@@ -11,10 +11,6 @@ import {
   readCodeServerRuntimeConfig,
 } from './code-server-runtime.js';
 import {
-  detectOmniRouteRuntimePlatform,
-  readOmniRouteRuntimeConfig,
-} from './omniroute-runtime.js';
-import {
   readDesktopRuntimeManifest,
   type DesktopRuntimeManifest,
   type DesktopRuntimeServiceId,
@@ -22,7 +18,6 @@ import {
 
 export const DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME = 'node';
 export const DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME = 'server';
-export const DESKTOP_HAGISCRIPT_OMNIROUTE_COMPONENT_NAME = 'omniroute';
 export const DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME = 'code-server';
 export const DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR = '.pm2';
 export const DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR = 'pm2-runtime';
@@ -31,7 +26,6 @@ export const DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV = 'hagicode_instance';
 export const DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME = 'hagicode_dev';
 export const DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME = 'hagicode_prod';
 export const DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME = 'hagicode-server';
-export const DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME = 'hagicode-omniroute';
 export const DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME = 'hagicode-code-server';
 
 const HAGISCRIPT_RUNTIME_SCRIPTS_DIR = path.join('runtime', 'scripts');
@@ -113,7 +107,6 @@ export interface DesktopHagiscriptManifestOptions {
   desktopRuntimeManifest?: DesktopRuntimeManifest;
   dotnetPlatform?: string;
   codeServerPlatform?: string;
-  omniRoutePlatform?: string;
   bundledRuntimeOverrides?: Partial<Record<DesktopRuntimeServiceId, {
     runtimeDataDir?: string;
     pm2?: {
@@ -154,13 +147,10 @@ export function buildDesktopHagiscriptRuntimeManifest(
   const desktopRuntimeManifest = options.desktopRuntimeManifest ?? readDesktopRuntimeManifest();
   const dotnetPlatform = options.dotnetPlatform ?? detectPinnedRuntimePlatform();
   const codeServerPlatform = options.codeServerPlatform ?? detectCodeServerRuntimePlatform();
-  const omniRoutePlatform = options.omniRoutePlatform ?? detectOmniRouteRuntimePlatform();
   const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
   const dotnetRuntimeConfig = readPinnedRuntimeManifest();
   const codeServerRuntimeConfig = readCodeServerRuntimeConfig();
-  const omniRouteRuntimeConfig = readOmniRouteRuntimeConfig();
   const bundledRuntimeOverrides = options.bundledRuntimeOverrides ?? {};
-  const omnirouteOverride = bundledRuntimeOverrides.omniroute;
   const codeServerOverride = bundledRuntimeOverrides['code-server'];
   const paths = {
     runtimeRoot: options.runtimeRoot,
@@ -204,33 +194,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
     installScript: path.join(hagiscriptRuntimeScriptsRoot, 'install-dotnet.mjs'),
     verifyScript: path.join(hagiscriptRuntimeScriptsRoot, 'verify-dotnet.mjs'),
   };
-  const omniRouteComponent = {
-    name: DESKTOP_HAGISCRIPT_OMNIROUTE_COMPONENT_NAME,
-    type: 'bundled-runtime',
-    source: 'desktop-vendored-runtime',
-    version: resolveBundledRuntimeComponentVersion({
-      runtimeHome: options.runtimeHome,
-      desktopRuntimeManifest,
-      serviceId: 'omniroute',
-      configuredVersion: resolveReleaseVersion(
-        omniRoutePlatform,
-        omniRouteRuntimeConfig.releaseVersionByPlatform,
-        omniRouteRuntimeConfig.releaseVersion,
-      ),
-    }),
-    bundledInstallMode: omniRouteRuntimeConfig.packagedLayout.installMode,
-    runtimeDataDir: omnirouteOverride?.runtimeDataDir
-      ?? normalizeComponentRuntimeDataDir(desktopRuntimeManifest.services.omniroute.dataRelativePath),
-    lifecycleDependencies: [DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME],
-    installScript: path.join(hagiscriptRuntimeScriptsRoot, 'install-omniroute.mjs'),
-    configureScript: path.join(hagiscriptRuntimeScriptsRoot, 'configure-omniroute.mjs'),
-    pm2: {
-      appName: DESKTOP_HAGISCRIPT_OMNIROUTE_BASE_APP_NAME,
-      nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
-      cwd: 'current',
-      ...(omnirouteOverride?.pm2 ?? {}),
-    },
-  };
   const codeServerComponent = {
     name: DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME,
     type: 'bundled-runtime',
@@ -262,7 +225,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
   const components: Array<Record<string, unknown>> = [
     nodeComponent,
     dotnetComponent,
-    omniRouteComponent,
     codeServerComponent,
   ];
 
@@ -272,7 +234,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
   ];
   const removeOrder = [
     'code-server',
-    'omniroute',
     dotnetComponentName,
     DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
   ];
@@ -293,8 +254,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
     updateOrder.push(DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME);
   }
 
-  installOrder.push('omniroute', 'code-server');
-  updateOrder.push('omniroute', 'code-server');
+  installOrder.push('code-server');
+  updateOrder.push('code-server');
 
   return {
     runtime: {
