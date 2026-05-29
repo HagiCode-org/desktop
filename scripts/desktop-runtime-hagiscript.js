@@ -14,7 +14,7 @@ import {
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.2.9';
+const MINIMUM_HAGISCRIPT_VERSION = '0.2.10';
 const NODE_COMPONENT_NAME = 'node';
 
 export function isManagedDesktopRuntimeComponentExecution(componentIds = null) {
