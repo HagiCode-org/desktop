@@ -36,7 +36,6 @@ describe('hagiscript desktop manifest builder', () => {
       serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
       serverDataRoot: '/tmp/hagicode-user-data/apps/data',
       npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
-      hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
@@ -126,7 +125,6 @@ describe('hagiscript desktop manifest builder', () => {
       serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
       serverDataRoot: '/tmp/hagicode-user-data/apps/data',
       npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
-      hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
       bundledRuntimeOverrides: {
@@ -170,7 +168,6 @@ describe('hagiscript desktop manifest builder', () => {
       serverProgramRoot: '../apps/installed',
       serverDataRoot: '../apps/data',
       npmPrefix: 'npm',
-      hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
     }) as {
@@ -208,7 +205,6 @@ describe('hagiscript desktop manifest builder', () => {
       serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
       serverDataRoot: '/tmp/hagicode-user-data/apps/data',
       npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
-      hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',
     }) as {
@@ -230,7 +226,6 @@ describe('hagiscript desktop manifest builder', () => {
       serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
       serverDataRoot: '/tmp/hagicode-user-data/apps/data',
       npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
-      hagiscriptPackageRoot: '/opt/hagiscript',
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       codeServerPlatform: 'linux-x64',

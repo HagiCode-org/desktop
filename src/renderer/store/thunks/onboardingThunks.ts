@@ -236,29 +236,18 @@ export const installOnboardingDependencyPackages = createAsyncThunk(
   'onboarding/installDependencyPackages',
   async (packageIds: ManagedNpmPackageId[], { rejectWithValue }) => {
     try {
-      let latestSnapshot: DependencyManagementSnapshot | null = null;
+      const latestSnapshot: DependencyManagementSnapshot | null = null;
 
-      if (packageIds.includes('hagiscript')) {
-        const result = await window.electronAPI.dependencyManagement.install('hagiscript');
-        latestSnapshot = result.snapshot;
-        if (!result.success) {
-          return rejectWithValue({
-            message: result.error || 'Failed to install hagiscript',
-            snapshot: result.snapshot,
-          } satisfies OnboardingDependencyOperationRejectedPayload);
-        }
-      }
-
-      const syncPackageIds = packageIds.filter((id) => id !== 'hagiscript');
-      if (syncPackageIds.length > 0) {
-        const result = await window.electronAPI.dependencyManagement.syncPackages({ packageIds: syncPackageIds });
-        latestSnapshot = result.snapshot;
+      if (packageIds.length > 0) {
+        const result = await window.electronAPI.dependencyManagement.syncPackages({ packageIds });
         if (!result.success) {
           return rejectWithValue({
             message: result.error || 'Failed to install npm packages',
             snapshot: result.snapshot,
           } satisfies OnboardingDependencyOperationRejectedPayload);
         }
+
+        return result.snapshot;
       }
 
       return latestSnapshot ?? await window.electronAPI.dependencyManagement.refresh();

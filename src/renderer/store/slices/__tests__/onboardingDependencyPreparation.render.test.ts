@@ -8,8 +8,8 @@ const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/onboard
 const thunksPath = path.resolve(process.cwd(), 'src/renderer/store/thunks/onboardingThunks.ts');
 const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
 const stepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/DependencyPreparationStep.tsx');
-const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/onboarding.json');
-const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/onboarding.json');
+const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/onboarding.json');
+const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/onboarding.json');
 
 describe('onboarding dependency preparation integration', () => {
   it('inserts dependency preparation between sharing acceleration and download while preserving selection state', async () => {
@@ -32,7 +32,7 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*!isDependencyPreparationComplete[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
 
-  it('loads snapshots, subscribes to progress, installs hagiscript first, and recomputes shared readiness', async () => {
+  it('loads snapshots, subscribes to progress, batch-syncs selected packages, and recomputes shared readiness', async () => {
     const [sliceSource, thunksSource, stepSource] = await Promise.all([
       fs.readFile(slicePath, 'utf8'),
       fs.readFile(thunksPath, 'utf8'),
@@ -44,10 +44,9 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(sliceSource, /state\.isDependencyOperationActive = true/);
     assert.match(thunksSource, /dependencyManagement\.getSnapshot\(\)/);
     assert.match(thunksSource, /dependencyManagement\.refresh\(\)/);
-    assert.match(thunksSource, /packageIds\.includes\('hagiscript'\)/);
-    assert.match(thunksSource, /dependencyManagement\.install\('hagiscript'\)/);
-    assert.match(thunksSource, /dependencyManagement\.syncPackages\(\{ packageIds: syncPackageIds \}\)/);
-    assert.match(thunksSource, /latestSnapshot = result\.snapshot/);
+    assert.doesNotMatch(thunksSource, /packageIds\.includes\('hagiscript'\)/);
+    assert.doesNotMatch(thunksSource, /dependencyManagement\.install\('hagiscript'\)/);
+    assert.match(thunksSource, /dependencyManagement\.syncPackages\(\{ packageIds \}\)/);
     assert.match(thunksSource, /return latestSnapshot \?\? await window\.electronAPI\.dependencyManagement\.refresh\(\)/);
     assert.match(stepSource, /dependencyManagement\.onProgress/);
     assert.match(stepSource, /setOnboardingDependencyProgress\(event\)/);
@@ -60,7 +59,7 @@ describe('onboarding dependency preparation integration', () => {
       fs.readFile(thunksPath, 'utf8'),
     ]);
 
-    assert.match(thunksSource, /rejectWithValue\(\{\s*message: result\.error \|\| 'Failed to install hagiscript',\s*snapshot: result\.snapshot,/);
+    assert.doesNotMatch(thunksSource, /Failed to install hagiscript/);
     assert.match(thunksSource, /rejectWithValue\(\{\s*message: result\.error \|\| 'Failed to install npm packages',\s*snapshot: result\.snapshot,/);
     assert.match(sliceSource, /readDependencyOperationRejectedPayload\(action\.payload\)/);
     assert.match(sliceSource, /if \(payload\.snapshot\) \{/);

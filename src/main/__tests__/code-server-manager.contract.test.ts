@@ -8,7 +8,7 @@ const handlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/dependenc
 const codeServerHandlerPath = path.resolve(process.cwd(), 'src/main/ipc/handlers/codeServerHandlers.ts');
 
 describe('code-server manager contract', () => {
-  it('routes lifecycle through dedicated hagiscript code_server commands while preserving Desktop-owned directories', async () => {
+  it('routes lifecycle through the Desktop SDK PM2 adapter while preserving Desktop-owned directories', async () => {
     const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /PROCESS_NAME = 'hagicode-code-server'/);
@@ -27,7 +27,7 @@ describe('code-server manager contract', () => {
     assert.match(source, /this\.hagiscriptPm2Manager\.stop\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.restart\(runtimeContext\)/);
     assert.match(source, /this\.hagiscriptPm2Manager\.status\(runtimeContext\)/);
-    assert.match(source, /getManagedCommandContext\('hagiscript'\)/);
+    assert.match(source, /getManagedCommandContext\('pm2'\)/);
     assert.match(source, /async enable\(\): Promise<VendoredRuntimeLifecycleResult>/);
     assert.match(source, /return this\.runLifecycle\('enable'\)/);
     assert.match(source, /action === 'repair' \|\| action === 'enable'/);
@@ -48,7 +48,7 @@ describe('code-server manager contract', () => {
     assert.match(source, /this\.configManager\.set\('codeServer'/);
     assert.match(source, /normalizePassword/);
     assert.match(source, /readLog\(request: CodeServerLogReadRequest\)/);
-    assert.match(source, /Desktop-managed hagiscript is unavailable/);
+    assert.match(source, /Desktop-managed PM2 is unavailable/);
     assert.match(source, /fetch\(baseUrl/);
     assert.match(source, /context\.pm2LogsDirectory/);
     assert.match(source, /context\.appName/);

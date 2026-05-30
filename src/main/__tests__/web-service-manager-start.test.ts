@@ -48,7 +48,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /return await this\.runLifecycleTransition\('restart'\);/);
   });
 
-  it('routes lifecycle through the hagiscript adapter and runtime context resolver', async () => {
+  it('routes lifecycle through the Desktop SDK adapter and runtime context resolver', async () => {
     const webServiceSource = await fs.readFile(webServiceManagerPath, 'utf-8');
     const runtimeContextSource = await fs.readFile(hagiscriptRuntimeContextPath, 'utf-8');
     const serverManagerSource = await fs.readFile(hagiscriptServerManagerPath, 'utf-8');
@@ -59,23 +59,26 @@ describe('web-service startup flow', () => {
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.restart\(context\)/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.status\(context\)/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.getRuntimeState\(context\)/);
-    assert.match(webServiceSource, /hagiscript manifest override:/);
+    assert.match(webServiceSource, /runtime manifest override:/);
     assert.match(webServiceSource, /ASPNETCORE_URLS=/);
     assert.doesNotMatch(webServiceSource, /this\.pm2Manager\./);
 
-    assert.match(runtimeContextSource, /getManagedCommandContext\('hagiscript'\)/);
+    assert.match(runtimeContextSource, /getManagedCommandContext\('pm2'\)/);
     assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
     assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /npmPrefix: path\.resolve\(hagiscriptContext\.environment\.npmGlobalPrefix\)/);
+    assert.match(runtimeContextSource, /npmPrefix: path\.resolve\(managedContext\.environment\.npmGlobalPrefix\)/);
     assert.match(runtimeContextSource, /servicePayloadPath,/);
     assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
 
-    assert.match(serverManagerSource, /\['runtime', 'state', '--json'/);
-    assert.match(serverManagerSource, /\['pm2', context\.serviceName, action, '--json'/);
-    assert.match(serverManagerSource, /hagiscript PM2 command returned invalid JSON output/);
+    assert.match(serverManagerSource, /executeComponentServiceAction/);
+    assert.match(serverManagerSource, /queryRuntimeState/);
+    assert.match(serverManagerSource, /startManagedServer/);
+    assert.match(serverManagerSource, /restartManagedServer/);
+    assert.match(serverManagerSource, /stopManagedServer/);
+    assert.match(serverManagerSource, /getManagedServerStatus/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 
