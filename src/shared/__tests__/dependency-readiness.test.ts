@@ -9,14 +9,14 @@ import {
   npmInstallableAgentCliPackages,
   optionalManagedNpmPackages,
   requiredManagedNpmPackages,
-} from '../npm-managed-packages.js';
+} from '../../../dist/shared/npm-managed-packages.js';
 import type {
   ManagedNpmPackageId,
   ManagedNpmPackageDefinition,
   ManagedNpmPackageStatus,
   ManagedNpmPackageStatusSnapshot,
   DependencyManagementSnapshot,
-} from '../../types/dependency-management.js';
+} from '../../../dist/types/dependency-management.js';
 
 function createSnapshot(
   statusOverrides: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageStatus>>,
@@ -121,68 +121,68 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), false);
   });
 
-  it('uses the snapshot definition when hagiscript is configured to latest or dev', () => {
+  it('uses the snapshot definition when a managed package is configured to latest or dev', () => {
     const latestSnapshot = createSnapshot(
       {},
-      { hagiscript: '9.9.9' },
+      { pm2: '9.9.9' },
       {
-        hagiscript: {
-          installSpec: '@hagicode/hagiscript@latest',
+        pm2: {
+          installSpec: 'pm2@latest',
           requiredVersionRange: undefined,
         },
       },
     );
 
     const latestSummary = evaluateDependencyReadiness(latestSnapshot, ['codex']);
-    const latestHagiscript = latestSummary.requiredPackages.find((item) => item.id === 'hagiscript');
-    assert.equal(latestHagiscript?.installSpec, '@hagicode/hagiscript@latest');
-    assert.equal(latestHagiscript?.requiredVersionRange, null);
-    assert.equal(latestHagiscript?.versionSatisfied, true);
+    const latestPm2 = latestSummary.optionalPackages.find((item) => item.id === 'pm2');
+    assert.equal(latestPm2?.installSpec, 'pm2@latest');
+    assert.equal(latestPm2?.requiredVersionRange, null);
+    assert.equal(latestPm2?.versionSatisfied, true);
 
     const devSnapshot = createSnapshot(
       {},
-      { hagiscript: '0.3.0-dev.5' },
+      { pm2: '7.0.1-dev.5' },
       {
-        hagiscript: {
-          installSpec: '@hagicode/hagiscript@dev',
+        pm2: {
+          installSpec: 'pm2@dev',
           requiredVersionRange: undefined,
         },
       },
     );
 
     const devSummary = evaluateDependencyReadiness(devSnapshot, ['codex']);
-    const devHagiscript = devSummary.requiredPackages.find((item) => item.id === 'hagiscript');
-    assert.equal(devHagiscript?.installSpec, '@hagicode/hagiscript@dev');
-    assert.equal(devHagiscript?.requiredVersionRange, null);
-    assert.equal(devHagiscript?.versionSatisfied, true);
+    const devPm2 = devSummary.optionalPackages.find((item) => item.id === 'pm2');
+    assert.equal(devPm2?.installSpec, 'pm2@dev');
+    assert.equal(devPm2?.requiredVersionRange, null);
+    assert.equal(devPm2?.versionSatisfied, true);
   });
 
   it('treats catalog-pinned managed package versions as minimum supported versions', () => {
-    const summary = evaluateDependencyReadiness(createSnapshot({}, { hagiscript: '0.2.10', pm2: '7.1.0' }), ['codex']);
-    const hagiscript = summary.requiredPackages.find((item) => item.id === 'hagiscript');
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { openspec: '1.3.1', pm2: '7.1.0' }), ['codex']);
+    const openspec = summary.requiredPackages.find((item) => item.id === 'openspec');
     const pm2 = summary.optionalPackages.find((item) => item.id === 'pm2');
 
-    assert.equal(hagiscript?.requiredVersionRange, '>=0.2.10');
-    assert.equal(hagiscript?.versionSatisfied, true);
+    assert.equal(openspec?.requiredVersionRange, '>=1.3.1');
+    assert.equal(openspec?.versionSatisfied, true);
     assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
     assert.equal(pm2?.versionSatisfied, true);
     assert.equal(summary.requiredReady, true);
   });
 
   it('still allows exact-version checks when a snapshot definition explicitly requires one', () => {
-    const hagiscriptDefinition = managedNpmPackages.find((definition) => definition.id === 'hagiscript');
-    if (!hagiscriptDefinition) {
-      throw new Error('hagiscript definition missing from managed catalog');
+    const pm2Definition = managedNpmPackages.find((definition) => definition.id === 'pm2');
+    if (!pm2Definition) {
+      throw new Error('pm2 definition missing from managed catalog');
     }
 
     assert.equal(
       isManagedPackageVersionSatisfied(
         {
-          ...hagiscriptDefinition,
-          installSpec: '@hagicode/hagiscript@0.2.10',
-          requiredVersionRange: '0.2.10',
+          ...pm2Definition,
+          installSpec: 'pm2@7.0.1',
+          requiredVersionRange: '7.0.1',
         },
-        '0.2.7-dev',
+        '7.0.0',
       ),
       false,
     );

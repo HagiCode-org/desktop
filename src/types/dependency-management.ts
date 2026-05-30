@@ -1,7 +1,6 @@
 import type { AgentCliId } from './agent-cli-catalog.js';
 
 export type ManagedNpmPackageId =
-  | 'hagiscript'
   | 'openspec'
   | 'skills'
   | 'pm2'
@@ -16,8 +15,8 @@ export type ManagedNpmPackageId =
 
 export type NpmEnvironmentComponentStatus = 'available' | 'unavailable' | 'error';
 export type ManagedNpmPackageStatus = 'installed' | 'not-installed' | 'unknown';
-export type ManagedNpmPackageCategory = 'bootstrap' | 'workflow' | 'agent-cli' | 'developer-tool';
-export type ManagedNpmPackageInstallMode = 'embedded-npm' | 'hagiscript-sync';
+export type ManagedNpmPackageCategory = 'workflow' | 'agent-cli' | 'developer-tool';
+export type ManagedNpmPackageInstallMode = 'sdk-sync';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
 export type VendoredRuntimeId = 'code-server';
@@ -171,11 +170,6 @@ export interface ManagedNpmPackageStatusSnapshot {
   message?: string;
 }
 
-export interface DependencyManagementInstallRequest {
-  packageId: ManagedNpmPackageId;
-  selector?: string;
-}
-
 export interface NpmMirrorSettings {
   enabled: boolean;
   registryUrl: string | null;
@@ -273,9 +267,7 @@ export interface DependencyManagementBridge {
   refresh: () => Promise<DependencyManagementSnapshot>;
   getMirrorSettings: () => Promise<NpmMirrorSettings>;
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => Promise<DependencyManagementSnapshot>;
-  install: (
-    request: ManagedNpmPackageId | DependencyManagementInstallRequest,
-  ) => Promise<DependencyManagementOperationResult>;
+  install: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   uninstall: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
   syncPackages: (request: DependencyManagementBatchSyncRequest) => Promise<DependencyManagementBatchSyncResult>;
   enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;

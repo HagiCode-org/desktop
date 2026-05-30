@@ -11,18 +11,6 @@ import { isVendoredRuntimeId } from './vendored-runtimes.js';
 
 export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
   {
-    id: 'hagiscript',
-    packageName: '@hagicode/hagiscript',
-    displayName: 'hagiscript',
-    descriptionKey: 'dependencyManagement.packages.hagiscript.description',
-    binName: 'hagiscript',
-    installSpec: '@hagicode/hagiscript@0.2.10',
-    requiredVersionRange: '>=0.2.10',
-    category: 'bootstrap',
-    installMode: 'embedded-npm',
-    required: true,
-  },
-  {
     id: 'openspec',
     packageName: '@fission-ai/openspec',
     displayName: 'OpenSpec',
@@ -31,7 +19,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     installSpec: '@fission-ai/openspec@1.3.1',
     requiredVersionRange: '>=1.3.1',
     category: 'workflow',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     required: true,
   },
   {
@@ -43,7 +31,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     installSpec: 'skills@1.5.1',
     requiredVersionRange: '>=1.5.1',
     category: 'workflow',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     required: true,
   },
   {
@@ -55,7 +43,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     installSpec: 'pm2@7.0.1',
     requiredVersionRange: '>=7.0.1',
     category: 'workflow',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
   },
   {
     id: 'claude-code',
@@ -65,7 +53,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'claude',
     installSpec: '@anthropic-ai/claude-code',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'claude-code',
     docsLinkId: 'claudeCodeSetup',
   },
@@ -77,7 +65,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'codex',
     installSpec: '@openai/codex',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'codex',
     docsLinkId: 'codexSetup',
   },
@@ -89,7 +77,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'copilot',
     installSpec: '@github/copilot',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'copilot',
     docsLinkId: 'copilotSetup',
   },
@@ -101,7 +89,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'codebuddy',
     installSpec: '@tencent-ai/codebuddy-code',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'codebuddy',
   },
   {
@@ -112,7 +100,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'opencode',
     installSpec: 'opencode-ai',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'opencode',
     docsLinkId: 'opencodeSetup',
   },
@@ -124,7 +112,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'qodercli',
     installSpec: '@qoder-ai/qodercli',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'qoder',
     docsLinkId: 'qoderSetup',
   },
@@ -136,7 +124,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     binName: 'gemini',
     installSpec: '@google/gemini-cli',
     category: 'agent-cli',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
     agentCliId: 'gemini',
     docsLinkId: 'geminiSetup',
   },
@@ -149,7 +137,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     installSpec: 'impeccable@2.1.9',
     requiredVersionRange: '>=2.1.9',
     category: 'developer-tool',
-    installMode: 'hagiscript-sync',
+    installMode: 'sdk-sync',
   },
 ] as const;
 
@@ -166,7 +154,7 @@ export const optionalManagedNpmPackages = managedNpmPackages.filter(
 );
 
 export const npmInstallableAgentCliPackages = managedAgentCliPackages.filter(
-  (definition) => definition.installMode === 'hagiscript-sync' && Boolean(definition.agentCliId),
+  (definition) => definition.installMode === 'sdk-sync' && Boolean(definition.agentCliId),
 );
 
 export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition | null {
