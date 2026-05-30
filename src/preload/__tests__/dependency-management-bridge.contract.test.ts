@@ -14,8 +14,8 @@ describe('dependency management preload contract', () => {
     assert.match(source, /refresh: \(\) => ipcRenderer\.invoke\(dependencyManagementChannels\.refresh\)/);
     assert.match(source, /getMirrorSettings: \(\) => ipcRenderer\.invoke\(dependencyManagementChannels\.getMirrorSettings\)/);
     assert.match(source, /setMirrorSettings: \(settings: NpmMirrorSettingsInput\) => ipcRenderer\.invoke\(dependencyManagementChannels\.setMirrorSettings, settings\)/);
-    assert.match(source, /DependencyManagementInstallRequest/);
-    assert.match(source, /install: \(request: ManagedNpmPackageId \| DependencyManagementInstallRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.install, request\)/);
+    assert.doesNotMatch(source, /DependencyManagementInstallRequest/);
+    assert.match(source, /install: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.install, packageId\)/);
     assert.match(source, /uninstall: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.uninstall, packageId\)/);
     assert.match(source, /syncPackages: \(request: DependencyManagementBatchSyncRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.syncPackages, request\)/);
     assert.match(source, /enableVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.enableVendoredRuntime, runtimeId\)/);

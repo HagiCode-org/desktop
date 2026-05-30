@@ -27,7 +27,6 @@ import type {
   ManagedNpmPackageId,
   DependencyManagementBatchSyncRequest,
   DependencyManagementBridge,
-  DependencyManagementInstallRequest,
 } from '../types/dependency-management.js';
 import type { VendoredRuntimeId } from '../types/dependency-management.js';
 import type { NpmMirrorSettingsInput } from '../types/dependency-management.js';
@@ -391,7 +390,7 @@ const dependencyManagementBridge: DependencyManagementBridge = {
   refresh: () => ipcRenderer.invoke(dependencyManagementChannels.refresh),
   getMirrorSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getMirrorSettings),
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(dependencyManagementChannels.setMirrorSettings, settings),
-  install: (request: ManagedNpmPackageId | DependencyManagementInstallRequest) => ipcRenderer.invoke(dependencyManagementChannels.install, request),
+  install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),
   uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
   syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
   enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.enableVendoredRuntime, runtimeId),
