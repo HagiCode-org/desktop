@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import log from 'electron-log';
 import {
   detectPinnedRuntimePlatform,
@@ -28,7 +29,8 @@ export const DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME = 'hagicode_prod';
 export const DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME = 'hagicode-server';
 export const DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME = 'hagicode-code-server';
 
-const HAGISCRIPT_RUNTIME_SCRIPTS_DIR = path.join('runtime', 'scripts');
+const DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME = 'hagiscript-runtime-scripts';
+const DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE = 'noop-install-node.mjs';
 
 function normalizeComponentRuntimeDataDir(relativePath: string): string {
   return relativePath.replace(/^components[\\/]/u, '');
@@ -102,7 +104,6 @@ export interface DesktopHagiscriptManifestOptions {
   serverProgramRoot: string;
   serverDataRoot: string;
   npmPrefix: string;
-  hagiscriptPackageRoot?: string;
   dotnetRuntimeRoot?: string;
   desktopRuntimeManifest?: DesktopRuntimeManifest;
   dotnetPlatform?: string;
@@ -142,7 +143,7 @@ export interface DesktopManagedServerVersionState {
 export function buildDesktopHagiscriptRuntimeManifest(
   options: DesktopHagiscriptManifestOptions,
 ): Record<string, unknown> {
-  const hagiscriptRuntimeScriptsRoot = resolveHagiscriptRuntimeScriptsRoot(options.hagiscriptPackageRoot);
+  const desktopRuntimeScriptsRoot = resolveDesktopRuntimeScriptsRoot();
   const instanceName = resolveDesktopHagiscriptInstanceName();
   const desktopRuntimeManifest = options.desktopRuntimeManifest ?? readDesktopRuntimeManifest();
   const dotnetPlatform = options.dotnetPlatform ?? detectPinnedRuntimePlatform();
@@ -181,8 +182,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
     source: 'desktop-bundled-node',
     version: nodeRuntimeConfig.releaseVersion,
     channelVersion: nodeRuntimeConfig.channelVersion,
-    installScript: path.join(hagiscriptRuntimeScriptsRoot, 'install-node.mjs'),
-    verifyScript: path.join(hagiscriptRuntimeScriptsRoot, 'verify-node.mjs'),
+    installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-node.mjs'),
+    verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-node.mjs'),
   };
   const dotnetComponentName = `dotnet/runtime/${dotnetPlatform}`;
   const dotnetComponent = {
@@ -191,8 +192,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
     source: 'desktop-embedded-dotnet',
     version: dotnetRuntimeConfig.releaseVersion,
     channelVersion: dotnetRuntimeConfig.channelVersion,
-    installScript: path.join(hagiscriptRuntimeScriptsRoot, 'install-dotnet.mjs'),
-    verifyScript: path.join(hagiscriptRuntimeScriptsRoot, 'verify-dotnet.mjs'),
+    installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-dotnet.mjs'),
+    verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-dotnet.mjs'),
   };
   const codeServerComponent = {
     name: DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME,
@@ -212,8 +213,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
     runtimeDataDir: codeServerOverride?.runtimeDataDir
       ?? normalizeComponentRuntimeDataDir(desktopRuntimeManifest.services['code-server'].dataRelativePath),
     lifecycleDependencies: [DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME],
-    installScript: path.join(hagiscriptRuntimeScriptsRoot, 'install-code-server.mjs'),
-    configureScript: path.join(hagiscriptRuntimeScriptsRoot, 'configure-code-server.mjs'),
+    installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-code-server.mjs'),
+    configureScript: path.join(desktopRuntimeScriptsRoot, 'noop-configure-code-server.mjs'),
     pm2: {
       appName: DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
       nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
@@ -244,7 +245,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
 
   if (options.server) {
     components.splice(2, 0, buildDesktopHagiscriptServerComponent({
-      hagiscriptPackageRoot: options.hagiscriptPackageRoot,
       server: options.server,
       nodeComponentName: DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       dotnetComponentName,
@@ -274,12 +274,52 @@ export function buildDesktopHagiscriptRuntimeManifest(
   };
 }
 
-function resolveHagiscriptRuntimeScriptsRoot(hagiscriptPackageRoot?: string): string {
-  if (!hagiscriptPackageRoot) {
-    throw new Error('hagiscriptPackageRoot is required when generating a Desktop runtime manifest.');
+function resolveDesktopRuntimeScriptsRoot(): string {
+  const moduleDirectory = fileURLToPath(new URL('.', import.meta.url));
+  const resourcesPath = typeof process.resourcesPath === 'string' && process.resourcesPath.trim().length > 0
+    ? process.resourcesPath
+    : null;
+  const cwdCandidate = path.resolve(
+    process.cwd(),
+    'resources',
+    DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME,
+  );
+  const moduleCandidate = path.resolve(
+    moduleDirectory,
+    '../../resources',
+    DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME,
+  );
+  const packagedAsarCandidate = resourcesPath
+    ? path.resolve(
+        resourcesPath,
+        'app.asar',
+        'resources',
+        DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME,
+      )
+    : null;
+  const packagedUnpackedCandidate = resourcesPath
+    ? path.resolve(
+        resourcesPath,
+        'resources',
+        DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME,
+      )
+    : null;
+  const candidates = [
+    cwdCandidate,
+    moduleCandidate,
+    packagedAsarCandidate,
+    packagedUnpackedCandidate,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  const resolved = candidates.find((candidate) => fs.existsSync(path.join(candidate, DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE)));
+  if (resolved) {
+    return resolved;
   }
 
-  return path.join(hagiscriptPackageRoot, HAGISCRIPT_RUNTIME_SCRIPTS_DIR);
+  log.warn('[hagiscript-desktop-manifest] Desktop runtime scripts root was not found; falling back to module-relative path', {
+    candidates,
+  });
+  return moduleCandidate;
 }
 
 export function buildDesktopManagedServerVersionState(input: {
@@ -309,16 +349,11 @@ export function buildDesktopManagedServerVersionState(input: {
 }
 
 function buildDesktopHagiscriptServerComponent(input: {
-  hagiscriptPackageRoot?: string;
   server: DesktopHagiscriptManifestServerOptions;
   nodeComponentName: string;
   dotnetComponentName: string;
 }): Record<string, unknown> {
-  if (!input.hagiscriptPackageRoot) {
-    throw new Error('hagiscriptPackageRoot is required when generating a Desktop server component manifest.');
-  }
-
-  const serverScriptsRoot = path.join(input.hagiscriptPackageRoot, HAGISCRIPT_RUNTIME_SCRIPTS_DIR);
+  const serverScriptsRoot = resolveDesktopRuntimeScriptsRoot();
 
   return {
     name: DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME,
@@ -328,9 +363,9 @@ function buildDesktopHagiscriptServerComponent(input: {
       input.nodeComponentName,
       input.dotnetComponentName,
     ],
-    installScript: path.join(serverScriptsRoot, 'install-server.mjs'),
-    configureScript: path.join(serverScriptsRoot, 'configure-server.mjs'),
-    removeScript: path.join(serverScriptsRoot, 'remove-server.mjs'),
+    installScript: path.join(serverScriptsRoot, 'noop-install-server.mjs'),
+    configureScript: path.join(serverScriptsRoot, 'noop-configure-server.mjs'),
+    removeScript: path.join(serverScriptsRoot, 'noop-remove-server.mjs'),
     pm2: {
       appName: DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
       nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,

@@ -29,11 +29,6 @@ interface ManagedRuntimeToolingReport {
   npmGlobalPrefix: string;
   npmGlobalBinRoot: string;
   npmGlobalModulesRoot: string;
-  hagiscriptPackageRoot: string | null;
-  hagiscriptExecutablePath: string | null;
-  hagiscriptPackageVersion: string | null;
-  hagiscriptPackageUnderManagedModules: boolean;
-  hagiscriptExecutableUnderManagedBin: boolean;
   pm2PackageRoot: string | null;
   pm2ExecutablePath: string | null;
   pm2PackageVersion: string | null;
@@ -163,7 +158,7 @@ async function collectHagiscriptManagedDiagnostics(input: {
   const logPaths = new Set(input.fallbackPaths);
 
   if (!input.runtimeContext) {
-    diagnostics.push(`${input.serviceLabel} hagiscript diagnostics skipped because the runtime context could not be resolved.`);
+    diagnostics.push(`${input.serviceLabel} runtime diagnostics skipped because the Desktop SDK runtime context could not be resolved.`);
     diagnostics.push(...await collectDiagnosticLines([...logPaths]));
     return diagnostics;
   }
@@ -180,32 +175,32 @@ async function collectHagiscriptManagedDiagnostics(input: {
     const statusResult = await input.manager.status(input.runtimeContext);
     addLogPaths(statusResult.logPaths);
     if (!statusResult.success) {
-      diagnostics.push(`hagiscript status failed: ${statusResult.summary}`);
+      diagnostics.push(`runtime status failed: ${statusResult.summary}`);
     } else if (!['stopped', 'missing'].includes(statusResult.status)) {
       const stopResult = await input.manager.stop(input.runtimeContext);
       addLogPaths(stopResult.logPaths);
       if (!stopResult.success) {
-        diagnostics.push(`hagiscript cleanup stop failed: ${stopResult.summary}`);
+        diagnostics.push(`runtime cleanup stop failed: ${stopResult.summary}`);
       }
 
       const stoppedResult = await input.manager.status(input.runtimeContext);
       addLogPaths(stoppedResult.logPaths);
       if (!['stopped', 'missing'].includes(stoppedResult.status)) {
-        diagnostics.push(`hagiscript cleanup status: ${normalizeLifecycleStatus(stoppedResult)}`);
+        diagnostics.push(`runtime cleanup status: ${normalizeLifecycleStatus(stoppedResult)}`);
       }
     }
   } catch (error) {
-    diagnostics.push(`hagiscript cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+    diagnostics.push(`runtime cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   try {
     const runtimeState = await input.manager.getRuntimeState(input.runtimeContext);
     addLogPaths(runtimeState.logPaths);
     if (!runtimeState.success) {
-      diagnostics.push(`hagiscript runtime state failed: ${runtimeState.summary}`);
+      diagnostics.push(`runtime state failed: ${runtimeState.summary}`);
     }
   } catch (error) {
-    diagnostics.push(`hagiscript runtime state threw: ${error instanceof Error ? error.message : String(error)}`);
+    diagnostics.push(`runtime state threw: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   diagnostics.push(...await collectDiagnosticLines([...logPaths]));
@@ -471,7 +466,7 @@ async function verifyBackendLifecycle(input: {
       return report;
     }
 
-    const restarted = await waitForResult(
+    const restarted = await waitForResult<HagiscriptServerLifecycleResult>(
       'backend PM2 restart status',
       () => serverManager.status(runtimeContext),
       (value) => value.status === 'online',
@@ -490,7 +485,7 @@ async function verifyBackendLifecycle(input: {
       return report;
     }
 
-    const stopped = await waitForResult(
+    const stopped = await waitForResult<HagiscriptServerLifecycleResult>(
       'backend PM2 stopped status',
       () => serverManager.status(runtimeContext),
       (value) => value.status === 'stopped' || value.status === 'missing',
@@ -529,32 +524,27 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   const configManager = new ConfigManager();
   const pathManager = PathManager.getInstance();
   const dependencyManagementService = new DependencyManagementService();
-  const hagiscriptContext = await dependencyManagementService.getManagedCommandContext('hagiscript');
+  const pm2Context = await dependencyManagementService.getManagedCommandContext('pm2');
   const timeoutMs = resolveVerificationTimeoutMs();
   const runtimeContextResolver = new HagiscriptRuntimeContextResolver({
     pathManager,
     dependencyManagementService,
   });
   const toolingReport: ManagedRuntimeToolingReport = {
-    npmGlobalPrefix: hagiscriptContext.environment.npmGlobalPrefix,
-    npmGlobalBinRoot: hagiscriptContext.environment.npmGlobalBinRoot,
-    npmGlobalModulesRoot: hagiscriptContext.environment.npmGlobalModulesRoot,
-    hagiscriptPackageRoot: hagiscriptContext.packageStatus?.packageRoot ?? null,
-    hagiscriptExecutablePath: hagiscriptContext.executablePath,
-    hagiscriptPackageVersion: hagiscriptContext.packageStatus?.version ?? null,
-    hagiscriptPackageUnderManagedModules: isPathUnder(
-      hagiscriptContext.environment.npmGlobalModulesRoot,
-      hagiscriptContext.packageStatus?.packageRoot ?? null,
+    npmGlobalPrefix: pm2Context.environment.npmGlobalPrefix,
+    npmGlobalBinRoot: pm2Context.environment.npmGlobalBinRoot,
+    npmGlobalModulesRoot: pm2Context.environment.npmGlobalModulesRoot,
+    pm2PackageRoot: pm2Context.packageStatus?.packageRoot ?? null,
+    pm2ExecutablePath: pm2Context.executablePath,
+    pm2PackageVersion: pm2Context.packageStatus?.version ?? null,
+    pm2PackageUnderManagedModules: isPathUnder(
+      pm2Context.environment.npmGlobalModulesRoot,
+      pm2Context.packageStatus?.packageRoot ?? null,
     ),
-    hagiscriptExecutableUnderManagedBin: isPathUnder(
-      hagiscriptContext.environment.npmGlobalBinRoot,
-      hagiscriptContext.executablePath,
+    pm2ExecutableUnderManagedBin: isPathUnder(
+      pm2Context.environment.npmGlobalBinRoot,
+      pm2Context.executablePath,
     ),
-    pm2PackageRoot: null,
-    pm2ExecutablePath: null,
-    pm2PackageVersion: null,
-    pm2PackageUnderManagedModules: false,
-    pm2ExecutableUnderManagedBin: false,
   };
 
   const codeServerManager = new CodeServerManager({
@@ -575,14 +565,14 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     issues: [],
   };
 
-  if (hagiscriptContext.packageStatus?.status !== 'installed') {
-    report.issues.push('Desktop-managed hagiscript is not installed in the managed npm prefix.');
+  if (pm2Context.packageStatus?.status !== 'installed') {
+    report.issues.push('Desktop-managed PM2 is not installed in the managed npm prefix.');
   }
-  if (!toolingReport.hagiscriptPackageUnderManagedModules) {
-    report.issues.push(`hagiscript package root is outside the Desktop-managed npm modules root: ${toolingReport.hagiscriptPackageRoot ?? '<missing>'}`);
+  if (!toolingReport.pm2PackageUnderManagedModules) {
+    report.issues.push(`PM2 package root is outside the Desktop-managed npm modules root: ${toolingReport.pm2PackageRoot ?? '<missing>'}`);
   }
-  if (!toolingReport.hagiscriptExecutableUnderManagedBin) {
-    report.issues.push(`hagiscript executable is outside the Desktop-managed npm bin root: ${toolingReport.hagiscriptExecutablePath ?? '<missing>'}`);
+  if (!toolingReport.pm2ExecutableUnderManagedBin) {
+    report.issues.push(`PM2 executable is outside the Desktop-managed npm bin root: ${toolingReport.pm2ExecutablePath ?? '<missing>'}`);
   }
   report.services.codeServer = await verifyCodeServerLifecycle({
     manager: codeServerManager,
@@ -599,7 +589,7 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   });
 
   const codeServerStatus = await codeServerManager.getStatus().catch(() => null);
-  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? null;
+  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? toolingReport.pm2ExecutablePath;
   toolingReport.pm2ExecutableUnderManagedBin = isPathUnder(toolingReport.npmGlobalBinRoot, toolingReport.pm2ExecutablePath);
 
   for (const [serviceName, serviceReport] of Object.entries(report.services)) {
@@ -607,19 +597,19 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
       continue;
     }
     if (!serviceReport.startSuccess) {
-      report.issues.push(`${serviceName} failed to start under Desktop-managed hagiscript runtime.`);
+      report.issues.push(`${serviceName} failed to start under the Desktop SDK runtime.`);
     }
     if (serviceReport.statusAfterStart !== 'online') {
       report.issues.push(`${serviceName} did not report online after start. Actual: ${serviceReport.statusAfterStart}`);
     }
     if ('restartSuccess' in serviceReport && !serviceReport.restartSuccess) {
-      report.issues.push(`${serviceName} failed to restart under Desktop-managed hagiscript runtime.`);
+      report.issues.push(`${serviceName} failed to restart under the Desktop SDK runtime.`);
     }
     if ('statusAfterRestart' in serviceReport && serviceReport.statusAfterRestart !== 'online') {
       report.issues.push(`${serviceName} did not report online after restart. Actual: ${serviceReport.statusAfterRestart}`);
     }
     if (!serviceReport.stopSuccess) {
-      report.issues.push(`${serviceName} failed to stop under Desktop-managed hagiscript runtime.`);
+      report.issues.push(`${serviceName} failed to stop under the Desktop SDK runtime.`);
     }
     if (!['stopped', 'missing'].includes(serviceReport.statusAfterStop)) {
       report.issues.push(`${serviceName} did not report stopped after stop. Actual: ${serviceReport.statusAfterStop}`);

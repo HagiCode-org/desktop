@@ -555,7 +555,7 @@ export class PCodeWebServiceManager {
     }
 
     if (!this.hagiscriptRuntimeContextResolver) {
-      throw new Error('Desktop managed hagiscript is not initialized yet.');
+      throw new Error('Desktop managed runtime context is not initialized yet.');
     }
 
     return await this.hagiscriptRuntimeContextResolver.resolve({
@@ -1305,12 +1305,11 @@ export class PCodeWebServiceManager {
             ? 'Restarting service via hagiscript PM2...'
             : 'Starting service via hagiscript PM2...',
         );
-        this.appendStartupLogLine(`hagiscript executable: ${context.hagiscriptExecutablePath}`);
-        this.appendStartupLogLine(`hagiscript manifest override: ${context.manifestPath}`);
-        this.appendStartupLogLine(`hagiscript runtime home: ${context.runtimeHome}`);
-        this.appendStartupLogLine(`hagiscript runtime data root: ${context.runtimeDataRoot}`);
-        this.appendStartupLogLine(`hagiscript PM2 home: ${context.pm2Home}`);
-        this.appendStartupLogLine(`hagiscript runtime files directory: ${context.runtimeFilesDir}`);
+        this.appendStartupLogLine(`runtime manifest override: ${context.manifestPath}`);
+        this.appendStartupLogLine(`runtime home: ${context.runtimeHome}`);
+        this.appendStartupLogLine(`runtime data root: ${context.runtimeDataRoot}`);
+        this.appendStartupLogLine(`PM2 home: ${context.pm2Home}`);
+        this.appendStartupLogLine(`runtime files directory: ${context.runtimeFilesDir}`);
 
         if (await this.isManagedServiceReachable(this.config.port)) {
           log.warn('[WebService] Target port is reachable before hagiscript start; lifecycle start may fail if another process owns it:', {

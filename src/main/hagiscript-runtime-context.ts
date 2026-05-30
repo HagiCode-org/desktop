@@ -31,9 +31,6 @@ interface HagiscriptBundledRuntimeContextInput {
 export interface HagiscriptRuntimeContext {
   readonly serviceName: HagiscriptManagedPm2Service;
   readonly activeRuntime: ActiveRuntimeDescriptor;
-  readonly hagiscriptExecutablePath: string;
-  readonly hagiscriptPackageRoot: string;
-  readonly commandEnv: NodeJS.ProcessEnv;
   readonly runtimeRoot: string;
   readonly runtimeHome: string;
   readonly runtimeDataRoot: string;
@@ -143,7 +140,6 @@ export class HagiscriptRuntimeContextResolver {
           serverProgramRoot: shared.serverProgramRoot,
           serverDataRoot: shared.serverDataRoot,
           npmPrefix: shared.npmPrefix,
-          hagiscriptPackageRoot: shared.hagiscriptPackageRoot,
           dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
           server: {
             servicePayloadPath,
@@ -160,9 +156,6 @@ export class HagiscriptRuntimeContextResolver {
     return {
       serviceName: 'server',
       activeRuntime: input.activeRuntime,
-      hagiscriptExecutablePath: shared.hagiscriptExecutablePath,
-      hagiscriptPackageRoot: shared.hagiscriptPackageRoot,
-      commandEnv: shared.commandEnv,
       runtimeRoot: shared.runtimeRoot,
       runtimeHome: shared.runtimeHome,
       runtimeDataRoot: shared.runtimeDataRoot,
@@ -243,7 +236,6 @@ export class HagiscriptRuntimeContextResolver {
       serverProgramRoot: shared.serverProgramRoot,
       serverDataRoot: shared.serverDataRoot,
       npmPrefix: shared.npmPrefix,
-      hagiscriptPackageRoot: shared.hagiscriptPackageRoot,
       dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
       bundledRuntimeOverrides: {
         [input.service]: {
@@ -269,9 +261,6 @@ export class HagiscriptRuntimeContextResolver {
         displayName: input.service,
         isReadOnly: true,
       },
-      hagiscriptExecutablePath: shared.hagiscriptExecutablePath,
-      hagiscriptPackageRoot: shared.hagiscriptPackageRoot,
-      commandEnv: shared.commandEnv,
       runtimeRoot: shared.runtimeRoot,
       runtimeHome: shared.runtimeHome,
       runtimeDataRoot: shared.runtimeDataRoot,
@@ -293,9 +282,6 @@ export class HagiscriptRuntimeContextResolver {
   }
 
   private async resolveSharedContext(): Promise<{
-    hagiscriptExecutablePath: string;
-    hagiscriptPackageRoot: string;
-    commandEnv: NodeJS.ProcessEnv;
     runtimeRoot: string;
     runtimeHome: string;
     runtimeDataRoot: string;
@@ -306,14 +292,7 @@ export class HagiscriptRuntimeContextResolver {
     npmPrefix: string;
     dotnetRuntimeRoot: string;
   }> {
-    const hagiscriptContext = await this.dependencyManagementService.getManagedCommandContext('hagiscript');
-    const packageStatus = hagiscriptContext.packageStatus;
-    const hagiscriptExecutablePath = hagiscriptContext.executablePath;
-    const hagiscriptPackageRoot = packageStatus?.packageRoot ?? null;
-
-    if (packageStatus?.status !== 'installed' || !hagiscriptExecutablePath || !hagiscriptPackageRoot) {
-      throw new Error('Desktop managed hagiscript is unavailable. Install or repair hagiscript in Dependency Management first.');
-    }
+    const managedContext = await this.dependencyManagementService.getManagedCommandContext('pm2');
 
     const runtimeHome = path.resolve(this.pathManager.getRuntimeProgramHome());
     const runtimeDataRoot = path.resolve(this.pathManager.getRuntimeDataHome());
@@ -326,9 +305,6 @@ export class HagiscriptRuntimeContextResolver {
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
 
     return {
-      hagiscriptExecutablePath,
-      hagiscriptPackageRoot,
-      commandEnv: hagiscriptContext.commandEnv,
       runtimeRoot: aliasedRuntimeRoot,
       runtimeHome: aliasedRuntimeHome,
       runtimeDataRoot,
@@ -336,7 +312,7 @@ export class HagiscriptRuntimeContextResolver {
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
       serverDataRoot,
-      npmPrefix: path.resolve(hagiscriptContext.environment.npmGlobalPrefix),
+      npmPrefix: path.resolve(managedContext.environment.npmGlobalPrefix),
       dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
     };
   }

@@ -4,7 +4,6 @@ import { electron } from '../electron-api.js';
 import log from 'electron-log';
 import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import type DependencyManagementService from './dependency-management-service.js';
-import type { ManagedNpmCommandContext } from './dependency-management-service.js';
 import type { ConfigManager } from './config.js';
 import {
   HagiscriptPm2Manager,
@@ -588,17 +587,17 @@ export class CodeServerManager {
     error?: string;
   }> {
     try {
-      const hagiscriptContext = await this.dependencyManagementService.getManagedCommandContext('hagiscript');
-      if (!this.isManagedPackageAvailable(hagiscriptContext)) {
+      const pm2Context = await this.dependencyManagementService.getManagedCommandContext('pm2');
+      if (pm2Context.packageStatus?.status !== 'installed' || !pm2Context.executablePath) {
         return {
-          executablePath: null,
+          executablePath: pm2Context.executablePath,
           available: false,
-          error: 'Desktop-managed hagiscript is unavailable. Install hagiscript from Dependency Management first.',
+          error: 'Desktop-managed PM2 is unavailable. Install or repair PM2 from Dependency Management first.',
         };
       }
 
       return {
-        executablePath: null,
+        executablePath: pm2Context.executablePath,
         available: true,
       };
     } catch (error) {
@@ -770,7 +769,7 @@ export class CodeServerManager {
       return runtime.diagnostics[0];
     }
     if (!pm2Available) {
-      return statusError ?? 'Desktop-managed hagiscript is unavailable.';
+      return statusError ?? 'Desktop-managed PM2 is unavailable.';
     }
     if (processStatus === 'errored') {
       return 'PM2 reports the Desktop-managed Code Server process as errored.';
@@ -798,10 +797,6 @@ export class CodeServerManager {
     return password;
   }
 
-  private isManagedPackageAvailable(context: ManagedNpmCommandContext): boolean {
-    return context.packageStatus?.status === 'installed' && context.executablePath !== null;
-  }
-
   private isLifecycleResultSuccessful(
     action: VendoredRuntimeLifecycleAction,
     result: HagiscriptServerLifecycleResult,
@@ -823,7 +818,7 @@ export class CodeServerManager {
   ): CodeServerLifecycleCommandError {
     return new CodeServerLifecycleCommandError(
       result.success
-        ? `hagiscript PM2 reported ${result.status} during ${action}.`
+        ? `Desktop SDK PM2 reported ${result.status} during ${action}.`
         : result.summary,
       {
         stdout: result.stdout,

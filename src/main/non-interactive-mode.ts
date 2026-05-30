@@ -40,7 +40,7 @@ export type NonInteractiveParseResult =
 
 export interface NonInteractiveRunResult {
   exitCode: number;
-  stage: 'usage' | 'environment' | 'bootstrap' | 'install' | 'verification' | 'success' | 'internal';
+  stage: 'usage' | 'environment' | 'install' | 'verification' | 'success' | 'internal';
   error?: string;
 }
 
@@ -60,7 +60,6 @@ export const nonInteractiveExitCodes = {
   success: 0,
   usage: 64,
   environment: 69,
-  bootstrap: 70,
   install: 71,
   verification: 72,
   internal: 1,
@@ -79,7 +78,7 @@ export const nonInteractiveUsageText = [
   '',
   'Supported commands:',
   '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
-  '  runtime lifecycle  Validate hagiscript-managed runtime service lifecycle transitions.',
+  '  runtime lifecycle  Validate Desktop SDK managed runtime service lifecycle transitions.',
   '',
   'Supported deps install flags:',
   '  --claude-code   Install the Desktop-managed Claude Code package.',
@@ -89,7 +88,6 @@ export const nonInteractiveUsageText = [
   `  ${nonInteractiveExitCodes.success}   success`,
   `  ${nonInteractiveExitCodes.usage}  command or flag usage error`,
   `  ${nonInteractiveExitCodes.environment}  Desktop-managed Node/npm environment unavailable`,
-  `  ${nonInteractiveExitCodes.bootstrap}  hagiscript bootstrap install or verification failed`,
   `  ${nonInteractiveExitCodes.install}  requested package installation failed`,
   `  ${nonInteractiveExitCodes.verification}  post-install package verification failed`,
   `  ${nonInteractiveExitCodes.internal}   unexpected internal failure`,
@@ -293,8 +291,6 @@ function exitCodeForStage(stage: CliDependencyInstallResult['stage']): number {
       return nonInteractiveExitCodes.success;
     case 'environment':
       return nonInteractiveExitCodes.environment;
-    case 'bootstrap':
-      return nonInteractiveExitCodes.bootstrap;
     case 'install':
       return nonInteractiveExitCodes.install;
     case 'verification':
@@ -313,7 +309,6 @@ function printSuccess(output: NonInteractiveOutput, result: CliDependencyInstall
   output.stdout('HagiCode Desktop non-interactive dependency install');
   output.stdout(`command: deps install`);
   output.stdout(`requested packages: ${result.requestedPackageIds.join(', ')}`);
-  output.stdout(`bootstrap package: hagiscript ${result.bootstrapPerformed ? 'installed' : 'already installed'}`);
   output.stdout(`install root: ${result.snapshot.environment.npmGlobalPrefix}`);
   output.stdout(`managed modules: ${result.snapshot.environment.npmGlobalModulesRoot}`);
   output.stdout(`managed bin: ${result.snapshot.environment.npmGlobalBinRoot}`);
@@ -394,11 +389,6 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`managed npm prefix: ${report.tooling.npmGlobalPrefix}`);
   output.stdout(`managed npm bin: ${report.tooling.npmGlobalBinRoot}`);
   output.stdout(`managed npm modules: ${report.tooling.npmGlobalModulesRoot}`);
-  output.stdout(`hagiscript package root: ${report.tooling.hagiscriptPackageRoot ?? '<missing>'}`);
-  output.stdout(`hagiscript executable: ${report.tooling.hagiscriptExecutablePath ?? '<missing>'}`);
-  output.stdout(`hagiscript version: ${report.tooling.hagiscriptPackageVersion ?? '<missing>'}`);
-  output.stdout(`hagiscript package managed: ${report.tooling.hagiscriptPackageUnderManagedModules}`);
-  output.stdout(`hagiscript executable managed: ${report.tooling.hagiscriptExecutableUnderManagedBin}`);
   output.stdout(`standalone pm2 package root: ${report.tooling.pm2PackageRoot ?? '<missing>'}`);
   output.stdout(`bundled pm2 executable: ${report.tooling.pm2ExecutablePath ?? '<missing>'}`);
   output.stdout(`standalone pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);

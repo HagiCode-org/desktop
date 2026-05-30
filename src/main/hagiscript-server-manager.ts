@@ -1,31 +1,26 @@
 import path from 'node:path';
-import { executeCli, type CliExecutionResult } from './utils/cli-executor.js';
-import { resolveCommandLaunch } from './toolchain-launch.js';
+import {
+  executeComponentServiceAction,
+  getManagedServerStatus,
+  queryRuntimeState,
+  restartManagedServer,
+  startManagedServer,
+  stopManagedServer,
+  type ComponentServiceResult,
+  type ManagedPm2CommandResult,
+  type RuntimeStateReport,
+} from '@hagicode/hagiscript-sdk';
 import type {
   HagiscriptManagedPm2Service,
   HagiscriptRuntimeContext,
 } from './hagiscript-runtime-context.js';
-
-const DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS = 15_000;
-const DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS = 60_000;
-
-function resolvePm2LifecycleTimeoutMs(): number {
-  const configured = Number.parseInt(process.env.HAGICODE_PM2_LIFECYCLE_TIMEOUT_MS ?? '', 10);
-  return Number.isFinite(configured) && configured > 0
-    ? configured
-    : DEFAULT_HAGISCRIPT_PM2_LIFECYCLE_TIMEOUT_MS;
-}
 
 export type HagiscriptManagedServerStatus = 'online' | 'stopped' | 'errored' | 'missing' | 'unknown';
 export type HagiscriptServerLifecycleAction = 'start' | 'stop' | 'restart' | 'status';
 export type HagiscriptBundledRuntimeAction = 'exact';
 
 export interface HagiscriptRuntimeStateReport {
-  runtime: {
-    name: string;
-    version: string;
-    manifestPath: string;
-  };
+  runtime: RuntimeStateReport['runtime'];
   managedRoot: string;
   managedPaths: {
     logs?: string;
@@ -77,60 +72,6 @@ export interface HagiscriptServerLifecycleResult {
   logPaths: string[];
 }
 
-interface HagiscriptPm2Response {
-  service: HagiscriptManagedPm2Service;
-  action: HagiscriptServerLifecycleAction;
-  appName: string;
-  cwd: string;
-  script: string;
-  runtimeHome: string;
-  runtimeDataHome: string;
-  pm2Home: string;
-  pm2Binary: string;
-  exists: boolean;
-  status: HagiscriptManagedServerStatus;
-  pid: number | null;
-  stdout: string;
-  stderr: string;
-  runtimeFilesDir?: string;
-}
-
-interface HagiscriptDedicatedComponentStatus {
-  service: HagiscriptManagedPm2Service;
-  action: HagiscriptServerLifecycleAction;
-  baseAppName: string;
-  appName: string;
-  status: HagiscriptManagedServerStatus;
-  exists: boolean;
-  pid: number | null;
-  stdout: string;
-  stderr: string;
-  runtimeHome: string;
-  runtimeDataHome: string;
-  pm2Home: string;
-  pm2Binary: string;
-  runtimeFilesDir?: string;
-}
-
-interface HagiscriptDedicatedLifecycleEnvelope {
-  component: 'code_server';
-  service: HagiscriptManagedPm2Service;
-  action: HagiscriptServerLifecycleAction;
-  ok: boolean;
-  status: HagiscriptDedicatedComponentStatus;
-}
-
-interface HagiscriptDedicatedExactEnvelope {
-  component: 'code_server';
-  service: HagiscriptManagedPm2Service;
-  action: 'exact';
-  ok: boolean;
-  version: string;
-  archivePath: string;
-  extractedRuntimeRoot: string;
-  currentRoot: string;
-}
-
 export interface HagiscriptBundledRuntimeExactResult {
   success: boolean;
   action: HagiscriptBundledRuntimeAction;
@@ -156,7 +97,7 @@ export class HagiscriptPm2Manager {
       return {
         success: false,
         action: 'exact',
-        summary: 'hagiscript exact is only available for bundled runtimes.',
+        summary: 'Desktop SDK exact is only available for bundled runtimes.',
         stdout: '',
         stderr: '',
         exitCode: null,
@@ -168,20 +109,50 @@ export class HagiscriptPm2Manager {
       };
     }
 
-    const execution = await this.executeCommand(
-      context,
-      [this.resolveDedicatedServiceCommand(context.serviceName), 'exact', '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
-      `${context.serviceName}-exact`,
-    );
+    try {
+      const result = await executeComponentServiceAction('code_server', 'exact', {
+        manifestPath: context.manifestPath,
+        runtimeRoot: context.runtimeRoot,
+      });
 
-    if (!execution.success) {
+      if (result.action !== 'exact') {
+        return {
+          success: false,
+          action: 'exact',
+          summary: 'Desktop SDK exact returned an unexpected response.',
+          stdout: '',
+          stderr: '',
+          exitCode: null,
+          version: null,
+          archivePath: null,
+          extractedRuntimeRoot: null,
+          currentRoot: null,
+          logPaths: this.buildExactLogPaths(context, null),
+        };
+      }
+
+      return {
+        success: true,
+        action: 'exact',
+        summary: `Desktop SDK ${result.component} exact completed.`,
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        version: result.version,
+        archivePath: result.archivePath,
+        extractedRuntimeRoot: result.extractedRuntimeRoot,
+        currentRoot: result.currentRoot,
+        logPaths: this.buildExactLogPaths(context, result),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         action: 'exact',
-        summary: execution.summary,
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
+        summary: message,
+        stdout: '',
+        stderr: message,
+        exitCode: null,
         version: null,
         archivePath: null,
         extractedRuntimeRoot: null,
@@ -189,80 +160,68 @@ export class HagiscriptPm2Manager {
         logPaths: this.buildExactLogPaths(context, null),
       };
     }
-
-    const response = this.parseJsonObject<HagiscriptDedicatedExactEnvelope>(execution.result.stdout);
-    if (!response || !response.ok) {
-      return {
-        success: false,
-        action: 'exact',
-        summary: 'hagiscript dedicated exact command returned invalid JSON output.',
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
-        version: null,
-        archivePath: null,
-        extractedRuntimeRoot: null,
-        currentRoot: null,
-        logPaths: this.buildExactLogPaths(context, null),
-      };
-    }
-
-    return {
-      success: true,
-      action: 'exact',
-      summary: `hagiscript ${response.component} exact completed.`,
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
-      exitCode: execution.result.exitCode,
-      version: response.version,
-      archivePath: response.archivePath,
-      extractedRuntimeRoot: response.extractedRuntimeRoot,
-      currentRoot: response.currentRoot,
-      logPaths: this.buildExactLogPaths(context, response),
-    };
   }
 
   async getRuntimeState(context: HagiscriptRuntimeContext): Promise<HagiscriptRuntimeStateResult> {
-    const execution = await this.executeCommand(
-      context,
-      ['runtime', 'state', '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
-      'runtime-state',
-    );
+    try {
+      const report = await queryRuntimeState({
+        manifestPath: context.manifestPath,
+        runtimeRoot: context.runtimeRoot,
+      });
 
-    if (!execution.success) {
+      return {
+        success: true,
+        summary: 'Desktop SDK runtime state resolved.',
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        report: {
+          runtime: report.runtime,
+          managedRoot: report.managedRoot,
+          managedPaths: {
+            logs: report.managedPaths.logs,
+          },
+          ready: report.ready,
+          components: report.components.map((component) => ({
+            name: component.name,
+            type: component.type,
+            status: component.status,
+            runtimeDataHome: component.runtimeDataHome,
+            pm2Home: component.pm2Home,
+            details: component.details,
+          })),
+          lastOperation: report.lastOperation,
+        },
+        logPaths: this.buildRuntimeStateLogPaths(context, {
+          runtime: report.runtime,
+          managedRoot: report.managedRoot,
+          managedPaths: {
+            logs: report.managedPaths.logs,
+          },
+          ready: report.ready,
+          components: report.components.map((component) => ({
+            name: component.name,
+            type: component.type,
+            status: component.status,
+            runtimeDataHome: component.runtimeDataHome,
+            pm2Home: component.pm2Home,
+            details: component.details,
+          })),
+          lastOperation: report.lastOperation,
+        }),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
-        summary: execution.summary,
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
+        summary: message,
+        stdout: '',
+        stderr: message,
+        exitCode: null,
         report: null,
         logPaths: this.buildRuntimeStateLogPaths(context, null),
       };
     }
-
-    const report = this.parseJsonObject<HagiscriptRuntimeStateReport>(execution.result.stdout);
-    if (!report) {
-      return {
-        success: false,
-        summary: 'hagiscript runtime state returned invalid JSON output.',
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
-        report: null,
-        logPaths: this.buildRuntimeStateLogPaths(context, null),
-      };
-    }
-
-    return {
-      success: true,
-      summary: 'hagiscript runtime state resolved.',
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
-      exitCode: execution.result.exitCode,
-      report,
-      logPaths: this.buildRuntimeStateLogPaths(context, report),
-    };
   }
 
   async start(context: HagiscriptRuntimeContext): Promise<HagiscriptServerLifecycleResult> {
@@ -285,193 +244,97 @@ export class HagiscriptPm2Manager {
     context: HagiscriptRuntimeContext,
     action: HagiscriptServerLifecycleAction,
   ): Promise<HagiscriptServerLifecycleResult> {
-    if (context.serviceName !== 'server') {
-      return this.runDedicatedLifecycleAction(context as HagiscriptRuntimeContext & { serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'> }, action);
+    try {
+      if (context.serviceName === 'server') {
+        const result = await this.runManagedServerAction(context, action);
+        return this.mapManagedPm2Result(context, action, result, `Desktop SDK server ${action}`);
+      }
+
+      const result = await executeComponentServiceAction('code_server', action, {
+        manifestPath: context.manifestPath,
+        runtimeRoot: context.runtimeRoot,
+      });
+
+      if (!this.isLifecycleComponentResult(result)) {
+        return this.buildLifecycleFailure(context, action, 'Desktop SDK returned an unexpected component lifecycle response.');
+      }
+
+      return this.mapManagedPm2Result(context, action, result.status, `Desktop SDK ${result.component} ${action}`);
+    } catch (error) {
+      return this.buildLifecycleFailure(context, action, error instanceof Error ? error.message : String(error));
     }
-
-    const execution = await this.executeCommand(
-      context,
-      ['pm2', context.serviceName, action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
-      `pm2-${action}`,
-    );
-
-    if (!execution.success) {
-      return this.buildLifecycleFailure(context, action, execution);
-    }
-
-    const response = this.parseJsonObject<HagiscriptPm2Response>(execution.result.stdout);
-    if (!response) {
-      return {
-        success: false,
-        action,
-        summary: 'hagiscript PM2 command returned invalid JSON output.',
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
-        exists: false,
-        status: 'unknown',
-        pid: null,
-        restartCount: 0,
-        pmUptime: null,
-        runtimeHome: context.runtimeHome,
-        runtimeDataHome: context.serviceDataHome,
-        pm2Home: context.pm2Home,
-        pm2BinaryPath: null,
-        runtimeFilesDir: context.runtimeFilesDir,
-        logPaths: this.buildLifecycleLogPaths(context, null),
-      };
-    }
-
-    const metrics = this.parsePm2ProcessMetrics(response.stdout, response.appName);
-    return {
-      success: true,
-      action,
-      summary: `hagiscript pm2 ${response.service} ${action} completed with status ${response.status}.`,
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
-      exitCode: execution.result.exitCode,
-      exists: response.exists,
-      status: response.status,
-      pid: response.pid,
-      restartCount: metrics.restartCount,
-      pmUptime: metrics.pmUptime,
-      runtimeHome: response.runtimeHome,
-      runtimeDataHome: response.runtimeDataHome,
-      pm2Home: response.pm2Home,
-      pm2BinaryPath: response.pm2Binary ?? null,
-      runtimeFilesDir: response.runtimeFilesDir ?? null,
-      logPaths: this.buildLifecycleLogPaths(context, response),
-    };
   }
 
-  private async runDedicatedLifecycleAction(
-    context: HagiscriptRuntimeContext & { serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'> },
-    action: HagiscriptServerLifecycleAction,
-  ): Promise<HagiscriptServerLifecycleResult> {
-    const execution = await this.executeCommand(
-      context,
-      [this.resolveDedicatedServiceCommand(context.serviceName), action, '--json', '--runtime-root', context.runtimeRoot, '--from-manifest', context.manifestPath],
-      `${context.serviceName}-${action}`,
-    );
-
-    if (!execution.success) {
-      return this.buildLifecycleFailure(context, action, execution);
-    }
-
-    const response = this.parseJsonObject<HagiscriptDedicatedLifecycleEnvelope>(execution.result.stdout);
-    if (!response?.ok) {
-      return {
-        success: false,
-        action,
-        summary: 'hagiscript dedicated service command returned invalid JSON output.',
-        stdout: execution.result.stdout,
-        stderr: execution.result.stderr,
-        exitCode: execution.result.exitCode,
-        exists: false,
-        status: 'unknown',
-        pid: null,
-        restartCount: 0,
-        pmUptime: null,
-        runtimeHome: context.runtimeHome,
-        runtimeDataHome: context.serviceDataHome,
-        pm2Home: context.pm2Home,
-        pm2BinaryPath: null,
-        runtimeFilesDir: context.runtimeFilesDir,
-        logPaths: this.buildLifecycleLogPaths(context, null),
-      };
-    }
-
-    const metrics = this.parsePm2ProcessMetrics(response.status.stdout, response.status.appName);
-    return {
-      success: true,
-      action,
-      summary: `hagiscript ${response.component} ${action} completed with status ${response.status.status}.`,
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
-      exitCode: execution.result.exitCode,
-      exists: response.status.exists,
-      status: response.status.status,
-      pid: response.status.pid,
-      restartCount: metrics.restartCount,
-      pmUptime: metrics.pmUptime,
-      runtimeHome: response.status.runtimeHome,
-      runtimeDataHome: response.status.runtimeDataHome,
-      pm2Home: response.status.pm2Home,
-      pm2BinaryPath: response.status.pm2Binary ?? null,
-      runtimeFilesDir: response.status.runtimeFilesDir ?? null,
-      logPaths: this.buildLifecycleLogPaths(context, {
-        service: response.status.service,
-        action,
-        appName: response.status.appName,
-        cwd: '',
-        script: '',
-        runtimeHome: response.status.runtimeHome,
-        runtimeDataHome: response.status.runtimeDataHome,
-        pm2Home: response.status.pm2Home,
-        pm2Binary: response.status.pm2Binary,
-        exists: response.status.exists,
-        status: response.status.status,
-        pid: response.status.pid,
-        stdout: response.status.stdout,
-        stderr: response.status.stderr,
-        runtimeFilesDir: response.status.runtimeFilesDir,
-      }),
-    };
-  }
-
-  private async executeCommand(
+  private async runManagedServerAction(
     context: HagiscriptRuntimeContext,
-    args: string[],
-    operation: string,
-  ): Promise<{
-    success: boolean;
-    summary: string;
-    result: CliExecutionResult;
-  }> {
-    const launch = resolveCommandLaunch(context.hagiscriptExecutablePath);
-    const result = await executeCli({
-      command: launch.command,
-      args,
-      cwd: context.runtimeHome,
-      env: context.commandEnv,
-      timeoutMs: args[0] === 'runtime'
-        ? DEFAULT_HAGISCRIPT_RUNTIME_STATE_TIMEOUT_MS
-        : resolvePm2LifecycleTimeoutMs(),
-      shell: launch.shell,
-      windowsHide: true,
-      metadata: {
-        component: 'HagiscriptPm2Manager',
-        operation,
-      },
-    });
+    action: HagiscriptServerLifecycleAction,
+  ): Promise<ManagedPm2CommandResult> {
+    const options = {
+      manifestPath: context.manifestPath,
+      runtimeRoot: context.runtimeRoot,
+    };
 
+    switch (action) {
+      case 'start':
+        return startManagedServer(options);
+      case 'stop':
+        return stopManagedServer(options);
+      case 'restart':
+        return restartManagedServer(options);
+      case 'status':
+        return getManagedServerStatus(options);
+    }
+  }
+
+  private isLifecycleComponentResult(
+    result: ComponentServiceResult,
+  ): result is Extract<ComponentServiceResult, { action: 'start' | 'stop' | 'restart' | 'status' }> {
+    return result.action === 'start'
+      || result.action === 'stop'
+      || result.action === 'restart'
+      || result.action === 'status';
+  }
+
+  private mapManagedPm2Result(
+    context: HagiscriptRuntimeContext,
+    action: HagiscriptServerLifecycleAction,
+    result: ManagedPm2CommandResult,
+    summaryPrefix: string,
+  ): HagiscriptServerLifecycleResult {
+    const metrics = this.parsePm2ProcessMetrics(result.stdout, result.appName);
     return {
-      success: result.success,
-      summary: result.success
-        ? 'ok'
-        : this.firstMeaningfulLine(result.stderr)
-          ?? this.firstMeaningfulLine(result.stdout)
-          ?? result.error?.message
-          ?? `hagiscript ${operation} failed.`,
-      result,
+      success: true,
+      action,
+      summary: `${summaryPrefix} completed with status ${result.status}.`,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      exitCode: 0,
+      exists: result.exists,
+      status: result.status,
+      pid: result.pid,
+      restartCount: metrics.restartCount,
+      pmUptime: metrics.pmUptime,
+      runtimeHome: result.runtimeHome,
+      runtimeDataHome: result.runtimeDataHome,
+      pm2Home: result.pm2Home,
+      pm2BinaryPath: result.pm2Binary ?? null,
+      runtimeFilesDir: result.runtimeFilesDir ?? null,
+      logPaths: this.buildLifecycleLogPaths(context, result),
     };
   }
 
   private buildLifecycleFailure(
     context: HagiscriptRuntimeContext,
     action: HagiscriptServerLifecycleAction,
-    execution: {
-      summary: string;
-      result: CliExecutionResult;
-    },
+    message: string,
   ): HagiscriptServerLifecycleResult {
     return {
       success: false,
       action,
-      summary: execution.summary,
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
-      exitCode: execution.result.exitCode,
+      summary: message,
+      stdout: '',
+      stderr: message,
+      exitCode: null,
       exists: false,
       status: 'unknown',
       pid: null,
@@ -499,7 +362,7 @@ export class HagiscriptPm2Manager {
 
   private buildLifecycleLogPaths(
     context: HagiscriptRuntimeContext,
-    response: HagiscriptPm2Response | null,
+    response: ManagedPm2CommandResult | null,
   ): string[] {
     const appName = response?.appName ?? context.appName;
     return this.uniquePaths([
@@ -514,7 +377,7 @@ export class HagiscriptPm2Manager {
 
   private buildExactLogPaths(
     context: HagiscriptRuntimeContext,
-    response: HagiscriptDedicatedExactEnvelope | null,
+    response: Extract<ComponentServiceResult, { action: 'exact' }> | null,
   ): string[] {
     return this.uniquePaths([
       response?.archivePath ?? null,
@@ -523,10 +386,6 @@ export class HagiscriptPm2Manager {
       context.runtimeStateFilePath,
       context.manifestPath,
     ]);
-  }
-
-  private resolveDedicatedServiceCommand(serviceName: Extract<HagiscriptManagedPm2Service, 'code-server'>): 'code_server' {
-    return serviceName === 'code-server' ? 'code_server' : 'code_server';
   }
 
   private parsePm2ProcessMetrics(rawOutput: string, appName: string): Pm2ProcessMetrics {
@@ -607,14 +466,6 @@ export class HagiscriptPm2Manager {
 
   private uniquePaths(values: Array<string | null | undefined>): string[] {
     return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0))];
-  }
-
-  private firstMeaningfulLine(value: string): string | null {
-    return value
-      .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '')
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find((line) => line.length > 0) ?? null;
   }
 }
 

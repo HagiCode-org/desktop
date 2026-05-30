@@ -4,7 +4,6 @@ import type { CodeServerManager } from '../../code-server-manager.js';
 import type DependencyManagementService from '../../dependency-management-service.js';
 import {
   type DependencyManagementBatchSyncRequest,
-  type DependencyManagementInstallRequest,
   type VendoredRuntimeId,
   dependencyManagementChannels,
   legacyDependencyManagementChannels,
@@ -111,13 +110,13 @@ export function registerDependencyManagementHandlers(deps: {
 
   const handleInstall = async (
     _event: Electron.IpcMainInvokeEvent,
-    request: string | DependencyManagementInstallRequest,
+    packageId: string,
   ) => {
     if (!state.dependencyManagementService) {
       throw new Error('DependencyManagementService is not initialized');
     }
 
-    return state.dependencyManagementService.install(request);
+    return state.dependencyManagementService.install(packageId);
   };
 
   const handleUninstall = async (_event: Electron.IpcMainInvokeEvent, packageId: string) => {

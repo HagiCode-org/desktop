@@ -1,22 +1,11 @@
-import type {
-  DependencyManagementEnvironmentStatus,
-  ManagedNpmPackageDefinition,
-} from '../types/dependency-management.js';
-
-export interface HagiscriptSyncManifestEntry {
-  version: string;
-  target?: string;
-}
-
-export interface HagiscriptSyncManifest {
-  packages: Record<string, HagiscriptSyncManifestEntry>;
-}
+import type { NpmSyncManifest } from '@hagicode/hagiscript-sdk';
+import type { ManagedNpmPackageDefinition } from '../types/dependency-management.js';
 
 function looksLikeSemverRange(selector: string): boolean {
   return /^[vV0-9*<>=~^xX|.\-\s]+$/.test(selector.trim());
 }
 
-export function getHagiscriptInstallTarget(definition: ManagedNpmPackageDefinition): string {
+export function getManagedPackageInstallTarget(definition: ManagedNpmPackageDefinition): string {
   const installSpec = definition.installSpec.trim();
   const scopedTargetPrefix = `${definition.packageName}@`;
   if (installSpec === definition.packageName) {
@@ -31,36 +20,35 @@ export function getHagiscriptInstallTarget(definition: ManagedNpmPackageDefiniti
   return 'latest';
 }
 
-export function buildHagiscriptSyncManifest(
+export function buildDesktopNpmSyncManifest(
   definitions: readonly ManagedNpmPackageDefinition[],
-): HagiscriptSyncManifest {
+  registryMirror?: string | null,
+): NpmSyncManifest {
   const packages = Object.fromEntries(definitions.map((definition) => {
-    const target = getHagiscriptInstallTarget(definition);
+    const target = getManagedPackageInstallTarget(definition);
     const version = looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*';
     return [definition.packageName, { version, target }];
   }));
 
-  return { packages };
+  return {
+    packages,
+    syncMode: 'packages',
+    ...(registryMirror ? { registryMirror } : {}),
+  };
 }
 
-export function buildHagiscriptSyncArgs(
-  environment: DependencyManagementEnvironmentStatus,
-  manifestPath: string,
-  registryUrl?: string | null,
-): string[] {
-  const args = [
-    'npm-sync',
-    '--runtime',
-    environment.nodeRuntimeRoot,
-    '--prefix',
-    environment.npmGlobalPrefix,
-    '--manifest',
-    manifestPath,
-  ];
+export function buildInstalledGlobalPackagesFromDefinitions(
+  definitions: readonly ManagedNpmPackageDefinition[],
+  installedVersionsByPackageName: Readonly<Record<string, string | null | undefined>>,
+): Record<string, string> {
+  const installed: Record<string, string> = {};
 
-  if (registryUrl) {
-    args.push('--registry-mirror', registryUrl);
+  for (const definition of definitions) {
+    const version = installedVersionsByPackageName[definition.packageName]?.trim();
+    if (version) {
+      installed[definition.packageName] = version;
+    }
   }
 
-  return args;
+  return installed;
 }
