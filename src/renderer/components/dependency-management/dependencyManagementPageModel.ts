@@ -208,7 +208,6 @@ export function evaluateDependencyRepairIntent(
 export function getSelectablePackageIds(
   packages: readonly ManagedNpmPackageStatusSnapshot[],
   options: {
-    hagiscriptGateOpen: boolean;
     actionsDisabled: boolean;
   },
 ): ManagedNpmPackageId[] {
@@ -221,12 +220,9 @@ export function getSelectablePackageIds(
 
 export function getInstallEligiblePackageIds(
   packages: readonly ManagedNpmPackageStatusSnapshot[],
-  options: {
-    hagiscriptGateOpen: boolean;
-  },
 ): ManagedNpmPackageId[] {
   return packages
-    .filter((item) => options.hagiscriptGateOpen && item.status !== 'unknown')
+    .filter((item) => item.status !== 'unknown')
     .map((item) => item.id);
 }
 
@@ -240,11 +236,8 @@ export function getSelectedEligiblePackageIds(
 export function pruneSelectedPackageIds(
   selectedPackageIds: readonly ManagedNpmPackageId[],
   packages: readonly ManagedNpmPackageStatusSnapshot[],
-  options: {
-    hagiscriptGateOpen: boolean;
-  },
 ): ManagedNpmPackageId[] {
-  const eligibleIds = new Set(getInstallEligiblePackageIds(packages, options));
+  const eligibleIds = new Set(getInstallEligiblePackageIds(packages));
   return selectedPackageIds.filter((id) => eligibleIds.has(id));
 }
 

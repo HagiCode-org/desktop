@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import type {
   ManagedNpmPackageId,
   DependencyManagementBridge,
-  DependencyManagementInstallRequest,
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
   VendoredRuntimeId,
@@ -33,7 +32,6 @@ import {
 } from './dependency-management/dependencyManagementPageModel';
 import {
   BatchSyncLogPanel,
-  NpmPackageBootstrapCard,
   NpmPackageTable,
   VendoredRuntimeCard,
 } from './dependency-management/NpmPackageGroups';
@@ -180,12 +178,7 @@ export default function DependencyManagementPage() {
       return;
     }
 
-    const nextHagiscript = snapshot.packages.find((item) => item.id === 'hagiscript');
-    const nextManagedPackages = snapshot.packages.filter((item) => item.id !== 'hagiscript');
-    const nextHagiscriptGateOpen = nextHagiscript?.status === 'installed' && Boolean(nextHagiscript.executablePath);
-    setSelectedPackageIds((current) => pruneSelectedPackageIds(current, nextManagedPackages, {
-      hagiscriptGateOpen: nextHagiscriptGateOpen,
-    }));
+    setSelectedPackageIds((current) => pruneSelectedPackageIds(current, snapshot.packages));
   }, [snapshot]);
 
   useEffect(() => {
@@ -206,7 +199,6 @@ export default function DependencyManagementPage() {
   const runOperation = async (
     packageId: ManagedNpmPackageId,
     action: 'install' | 'uninstall',
-    installRequest?: DependencyManagementInstallRequest,
   ) => {
     setOperationError((current) => ({ ...current, [packageId]: undefined }));
     setBatchSyncState({
@@ -216,7 +208,7 @@ export default function DependencyManagementPage() {
     });
     try {
       const result = action === 'install'
-        ? await getDependencyManagementBridge().install(installRequest ?? packageId)
+        ? await getDependencyManagementBridge().install(packageId)
         : await getDependencyManagementBridge().uninstall(packageId);
       applySnapshot(result.snapshot);
       if (!result.success) {
@@ -309,8 +301,7 @@ export default function DependencyManagementPage() {
     }
   };
 
-  const hagiscript = snapshot?.packages.find((item) => item.id === 'hagiscript');
-  const managedPackages = snapshot?.packages.filter((item) => item.id !== 'hagiscript') ?? [];
+  const managedPackages = snapshot?.packages ?? [];
   const vendoredRuntimes = snapshot?.vendoredRuntimes ?? [];
   const highlightedPackageIds = repairIntent?.targetPackageIds ?? [];
   const highlightedRuntimeIds = repairIntent?.targetRuntimeIds ?? [];
@@ -322,15 +313,10 @@ export default function DependencyManagementPage() {
   const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
   const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
-  const hagiscriptGateOpen = hagiscript?.status === 'installed' && Boolean(hagiscript.executablePath);
-  const dependencyGateMessage = hagiscript?.status === 'unknown'
-    ? t('dependencyManagement.dependencyGate.unknown')
-    : t('dependencyManagement.dependencyGate.missing');
-  const selectablePackageIds = getSelectablePackageIds(managedPackages, { hagiscriptGateOpen, actionsDisabled });
+  const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
   const selectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, selectablePackageIds);
   const selectAllChecked = getSelectAllChecked(selectedPackageIds, selectablePackageIds);
   const batchSyncPackageIds = new Set(batchSyncState?.packageIds ?? []);
-  const shouldPromoteHagiscriptCard = Boolean(hagiscript && !hagiscriptGateOpen);
 
   const runVendoredRuntimeAction = async (
     runtimeId: VendoredRuntimeId,
@@ -408,22 +394,6 @@ export default function DependencyManagementPage() {
     }
   };
 
-  const hagiscriptCard = hagiscript ? (
-    <NpmPackageBootstrapCard
-      item={hagiscript}
-      progress={progress[hagiscript.id]}
-      error={operationError[hagiscript.id] ?? (hagiscript.status === 'unknown' ? hagiscript.message : undefined)}
-      actionsDisabled={actionsDisabled}
-      refreshDisabled={pageStatus === 'loading' || isPending}
-      onInstall={(request) => void runOperation(
-        typeof request === 'string' ? request : request.packageId,
-        'install',
-        typeof request === 'string' ? undefined : request,
-      )}
-      onRefresh={() => void refreshSnapshot()}
-    />
-  ) : null;
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <Card className="border-border/80 shadow-md">
@@ -463,8 +433,6 @@ export default function DependencyManagementPage() {
 
       {pageStatus === 'ready' && snapshot && (
         <>
-          {shouldPromoteHagiscriptCard && hagiscriptCard}
-
           <NpmPackageTable
             packages={prioritizedManagedPackages}
             highlightedPackageIds={highlightedPackageIds}
@@ -477,9 +445,7 @@ export default function DependencyManagementPage() {
             progressByPackageId={progress}
             activeOperation={snapshot.activeOperation}
             operationErrorByPackageId={operationError}
-            hagiscriptGateOpen={hagiscriptGateOpen}
             actionsDisabled={actionsDisabled}
-            dependencyGateMessage={dependencyGateMessage}
             onTogglePackage={togglePackageSelection}
             onToggleAll={toggleSelectAll}
             onInstallSelected={() => void runBatchInstall()}
@@ -615,8 +581,6 @@ export default function DependencyManagementPage() {
               )}
             </CardContent>
           </Card>
-
-          {!shouldPromoteHagiscriptCard && hagiscriptCard}
         </>
       )}
     </div>
