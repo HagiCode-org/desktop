@@ -214,6 +214,7 @@ versionManagement:
     flow: 'Последовательность действий: Получить торрент -> Загрузка сначала через торрент -> Резервное заполнение (при необходимости) -> Проверить -> Извлечь -> Завершить.'
     flowActive: 'Текущий поток: {{stage}}'
   progressMessage:
+    queued: Queued
     direct-http: Загрузка более HTTP/WebSeed
     fetching-torrent-metadata: Получение метаданных торрента
     torrent-metadata-ready: Торрент готов, запускается общее ускорение
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: Проверка целостности упаковки
     sha256-verified: Проверка завершена
     extracting-package: Извлечение пакета
+    switching-active-version: Switching the active version
     installation-complete: Установка завершена
 installProgressDialog:
   title: Установка зависимостей

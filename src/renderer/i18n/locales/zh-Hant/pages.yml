@@ -214,6 +214,7 @@ versionManagement:
     flow: 階段：取得種子 -> 共享加速 -> 回源補塊(如需) -> 校驗 -> 解壓縮 -> 完成
     flowActive: 目前流程：{{stage}}
   progressMessage:
+    queued: Queued
     direct-http: HTTP/WebSeed 下載中
     fetching-torrent-metadata: 取得種子中
     torrent-metadata-ready: 種子已就緒，開始共享加速
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: 校驗包完整性中
     sha256-verified: 校驗完成
     extracting-package: 解壓縮安裝包中
+    switching-active-version: Switching the active version
     installation-complete: 安裝完成
 installProgressDialog:
   title: 正在安裝依賴

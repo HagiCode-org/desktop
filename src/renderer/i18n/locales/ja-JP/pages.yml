@@ -214,6 +214,7 @@ versionManagement:
     flow: 'フロー: torrent の取得 -> Torrent ファースト ダウンロード -> フォールバック バックフィル (必要な場合) -> 検証 -> 抽出 -> 完了'
     flowActive: '電流の流れ: {{stage}}'
   progressMessage:
+    queued: Queued
     direct-http: HTTP/WebSeedを超えるダウンロード中
     fetching-torrent-metadata: トレントメタデータの取得
     torrent-metadata-ready: Torrent の準備が完了し、共有アクセラレーションを開始します
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: パッケージの整合性の検証
     sha256-verified: 検証完了
     extracting-package: パッケージを抽出しています
+    switching-active-version: Switching the active version
     installation-complete: インストール完了
 installProgressDialog:
   title: 依存関係のインストール

@@ -190,7 +190,7 @@ dependencyManagement:
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      installed: Runtime files are installed and matched the latest hagiscript runtime contract.
+      installed: Runtime files are installed and matched the latest Desktop runtime contract.
       packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
       not-installed: Runtime files are not installed in the Desktop-managed location yet.
       removed: Runtime files were removed from the Desktop-managed location.
@@ -245,7 +245,7 @@ dependencyManagement:
     unknown: Unknown
   packages:
     hagiscript:
-      description: Required dependency orchestration CLI used to synchronize Desktop-managed command-line tools.
+      description: Legacy standalone CLI metadata retained for compatibility. Desktop now synchronizes managed tools through the embedded SDK.
     openspec:
       description: OpenSpec proposal, spec, and task workflow CLI.
     skills:
@@ -269,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: Impeccable design skills, commands, and anti-pattern detection for AI coding agents.
   categories:
-    bootstrap: Bootstrap
+    bootstrap: Legacy
     workflow: Workflow
     agent-cli: Agent CLI
     developer-tool: Developer tool
   bootstrap:
-    title: Required
+    title: Legacy CLI
     selectorLabel: Install target
-    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
-    currentTarget: 'Current target: {{target}}'
+    selectorHint: Desktop no longer installs a standalone hagiscript CLI. These labels remain only for compatibility with older surfaces.
+    currentTarget: 'Legacy target: {{target}}'
     customVersionLabel: Custom version
     customVersionPlaceholder: Enter a version such as 0.2.3
-    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    customVersionDescription: Standalone hagiscript versions are no longer used by Desktop-managed dependency flows.
     targetOptions:
       latest: Latest stable
       dev: Development build
       version: Exact version
   dependencyGate:
-    title: Install hagiscript first
-    missing: Other dependency actions are disabled until hagiscript is installed.
-    unknown: Desktop cannot verify hagiscript right now. Refresh or reinstall hagiscript before changing other dependencies.
+    title: Desktop SDK not ready yet
+    missing: Other dependency actions stay disabled until Desktop finishes preparing its managed npm environment.
+    unknown: Desktop cannot verify the managed npm environment right now. Refresh or repair the managed dependencies before changing other tools.
   packageTable:
     title: Command-line dependencies
-    description: Select Agent CLI and workflow dependencies to install through hagiscript npm-sync.
+    description: Select Agent CLI and workflow dependencies to install through the Desktop SDK npm sync flow.
     tool: Tool
     status: Status
     action: Action
@@ -584,7 +584,7 @@ codeServer:
       service-error: Service Error
   dependencyGuidance:
     title: Repair Desktop-managed dependencies first
-    description: Code Server runs through hagiscript pm2, which uses Desktop-managed bundled PM2. Install or repair hagiscript in Dependency Management before starting Code Server.
+    description: Code Server runs through Desktop-managed PM2. Install or repair the managed runtime dependencies in Dependency Management before starting Code Server.
     openDependencyManagement: Open Dependency Management
   errors:
     title: Code Server operation failed

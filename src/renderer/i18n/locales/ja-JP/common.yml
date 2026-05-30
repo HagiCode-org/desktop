@@ -182,17 +182,22 @@ dependencyManagement:
     managedByDesktop: Managed directly by Desktop
     runtimeState: ランタイム状態
     runtimeRoot: Runtime root
+    packagedRoot: Packaged source root
+    packagedArchivePath: Packaged archive
+    packagedMarkerPath: Packaged marker
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      installed: ランタイム ファイルはインストール済みで、最新の hagiscript ランタイム契約に一致しています。
+      installed: ランタイム ファイルはインストール済みで、最新の Desktop ランタイム契約に一致しています。
+      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
       not-installed: Desktop 管理場所には、まだこのランタイム ファイルがインストールされていません。
       removed: ランタイム ファイルは Desktop 管理場所から削除されました。
       failed: ランタイム ファイルが不完全であるか、検証に失敗しました。
     installStatus:
       installed: インストール済み
+      packaged: Packaged
       not-installed: 未インストール
       removed: 削除済み
       failed: 検証失敗
@@ -202,7 +207,10 @@ dependencyManagement:
       stopped: Stopped
       missing: Missing
       damaged: Damaged
+      enable-required: Enable required
+      extracting: Extracting
     actions:
+      enable: Enable Runtime
       start: Start
       stop: Stop
       restart: Restart
@@ -211,6 +219,16 @@ dependencyManagement:
       openRuntimeRoot: Open runtime root
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
+    activationInline: Extracting runtime... {{percent}}%
+    activationStage:
+      idle: Idle
+      validating-source: Validating packaged source
+      preparing-staging: Preparing staging directory
+      extracting: Extracting archive
+      validating-runtime: Validating extracted runtime
+      swapping-runtime: Promoting extracted runtime
+      completed: Activation complete
+      failed: Activation failed
   vendoredRuntimes:
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -227,7 +245,7 @@ dependencyManagement:
     unknown: 不明
   packages:
     hagiscript:
-      description: デスクトップ管理のコマンドライン ツールを同期するために使用される必須の依存関係オーケストレーション CLI。
+      description: 旧来のスタンドアロン CLI メタデータは互換性のために保持されています。Desktop は現在、組み込み SDK を通じて管理ツールを同期します。
     openspec:
       description: OpenSpec 提案書、仕様書、およびタスクのワークフロー CLI。
     skills:
@@ -251,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: AI コーディングエージェント向けの設計スキル、コマンド、アンチパターン検出を提供する Impeccable ツール。
   categories:
-    bootstrap: ブートストラップ
+    bootstrap: 旧互換
     workflow: ワークフロー
     agent-cli: エージェント CLI
     developer-tool: 開発者ツール
   bootstrap:
-    title: 必須
+    title: 旧 CLI
     selectorLabel: Install target
-    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
-    currentTarget: 'Current target: {{target}}'
+    selectorHint: Desktop はスタンドアロンの hagiscript CLI をもうインストールしません。これらのラベルは旧 UI 互換のためだけに残されています。
+    currentTarget: '旧ターゲット: {{target}}'
     customVersionLabel: Custom version
     customVersionPlaceholder: Enter a version such as 0.2.3
-    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    customVersionDescription: スタンドアロン hagiscript のバージョンは、Desktop 管理の依存関係フローではもう使用されません。
     targetOptions:
       latest: Latest stable
       dev: Development build
       version: Exact version
   dependencyGate:
-    title: まずハギスクリプトをインストールしてください
-    missing: hagiscript がインストールされるまで、他の依存関係アクションは無効になります。
-    unknown: 現在、デスクトップは hagiscript を検証できません。他の依存関係を変更する前に、hagiscript を更新または再インストールしてください。
+    title: Desktop SDK の準備がまだ完了していません
+    missing: Desktop による管理 npm 環境の準備が完了するまで、他の依存関係操作は無効のままです。
+    unknown: Desktop は現在、管理 npm 環境を検証できません。他のツールを変更する前に、まず管理対象の依存関係を更新または修復してください。
   packageTable:
     title: コマンドラインの依存関係
-    description: hagiscript npm-sync を通じてインストールするエージェント CLI とワークフローの依存関係を選択します。
+    description: Desktop SDK の npm 同期フローでインストールする Agent CLI とワークフロー依存関係を選択します。
     tool: ツール
     status: ステータス
     action: アクション
@@ -460,6 +478,14 @@ system:
       portable-mode: ポータブル モードでは、バックグラウンド更新がスキップされ、現在のランタイムが読み取り専用に保たれます。
       steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: アクティブなパッケージ ソースが構成されていないため、バックグラウンド更新を開始できません。
+    progress:
+      confirming: Waiting for confirmation
+      stoppingService: Stopping service
+      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
+      stoppingServiceDescription: 'The current service is stopping now, then the new version will continue downloading and installing.'
+      switchingDescription: 'Installation finished. Switching the active runtime to {{version}} now.'
+      completedDescription: '{{version}} is installed and the homepage status is already synced.'
+      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
     actions:
       openVersionPage: オープンなバージョン管理
       installLatest: 最新のインストール
@@ -495,6 +521,7 @@ system:
     port: 'Port: {{port}}'
     notReady: Not ready
     installRequired: Installation required
+    enableRequired: Enable runtime
     startFailed: Failed to start the service
     stopFailed: Failed to stop the service
     restartFailed: Failed to restart the service

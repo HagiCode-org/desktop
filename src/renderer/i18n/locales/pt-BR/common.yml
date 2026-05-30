@@ -182,17 +182,22 @@ dependencyManagement:
     managedByDesktop: Managed directly by Desktop
     runtimeState: Estado do runtime
     runtimeRoot: Runtime root
+    packagedRoot: Packaged source root
+    packagedArchivePath: Packaged archive
+    packagedMarkerPath: Packaged marker
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      installed: Os arquivos do runtime estão instalados e correspondem ao contrato de runtime mais recente do hagiscript.
+      installed: Os arquivos do runtime estão instalados e correspondem ao contrato de runtime mais recente do Desktop.
+      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
       not-installed: Os arquivos do runtime ainda não estão instalados no local gerenciado pelo Desktop.
       removed: Os arquivos do runtime foram removidos do local gerenciado pelo Desktop.
       failed: Os arquivos do runtime estão incompletos ou falharam na validação.
     installStatus:
       installed: Instalado
+      packaged: Packaged
       not-installed: Não instalado
       removed: Removido
       failed: Falha na validação
@@ -202,7 +207,10 @@ dependencyManagement:
       stopped: Stopped
       missing: Missing
       damaged: Damaged
+      enable-required: Enable required
+      extracting: Extracting
     actions:
+      enable: Enable Runtime
       start: Start
       stop: Stop
       restart: Restart
@@ -211,6 +219,16 @@ dependencyManagement:
       openRuntimeRoot: Open runtime root
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
+    activationInline: Extracting runtime... {{percent}}%
+    activationStage:
+      idle: Idle
+      validating-source: Validating packaged source
+      preparing-staging: Preparing staging directory
+      extracting: Extracting archive
+      validating-runtime: Validating extracted runtime
+      swapping-runtime: Promoting extracted runtime
+      completed: Activation complete
+      failed: Activation failed
   vendoredRuntimes:
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -227,7 +245,7 @@ dependencyManagement:
     unknown: Desconhecido
   packages:
     hagiscript:
-      description: Orquestração de dependência necessária CLI usada para sincronizar ferramentas de linha de comando gerenciadas pelo Desktop.
+      description: Os metadados da antiga CLI independente permanecem apenas por compatibilidade. O Desktop agora sincroniza as ferramentas gerenciadas por meio do SDK embutido.
     openspec:
       description: OpenSpec proposta, especificações e fluxo de trabalho de tarefas CLI.
     skills:
@@ -251,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: Ferramenta Impeccable com habilidades de design, comandos e detecção de antipadrões para agentes de codificação com IA.
   categories:
-    bootstrap: Inicialização
+    bootstrap: Legado
     workflow: Fluxo de trabalho
     agent-cli: Agente CLI
     developer-tool: Ferramenta de desenvolvedor
   bootstrap:
-    title: Obrigatório
+    title: CLI legado
     selectorLabel: Install target
-    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
-    currentTarget: 'Current target: {{target}}'
+    selectorHint: O Desktop não instala mais uma CLI hagiscript independente. Esses rótulos permanecem apenas por compatibilidade com interfaces antigas.
+    currentTarget: 'Destino legado: {{target}}'
     customVersionLabel: Custom version
     customVersionPlaceholder: Enter a version such as 0.2.3
-    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    customVersionDescription: Versões independentes do hagiscript não são mais usadas nos fluxos de dependências gerenciados pelo Desktop.
     targetOptions:
       latest: Latest stable
       dev: Development build
       version: Exact version
   dependencyGate:
-    title: Instale o hagiscript primeiro
-    missing: Outras ações de dependência são desativadas até que o hagiscript seja instalado.
-    unknown: O Desktop não pode verificar o hagiscript no momento. Atualize ou reinstale o hagiscript antes de alterar outras dependências.
+    title: O SDK do Desktop ainda não está pronto
+    missing: As outras ações de dependência permanecerão desativadas até que o Desktop termine de preparar o ambiente npm gerenciado.
+    unknown: O Desktop não consegue verificar o ambiente npm gerenciado no momento. Atualize ou repare primeiro as dependências gerenciadas antes de alterar outras ferramentas.
   packageTable:
     title: Dependências de linha de comando
-    description: Selecione Agente CLI e dependências de fluxo de trabalho para instalar através do hagiscript npm-sync.
+    description: Selecione as dependências de Agent CLI e fluxo de trabalho para instalar pelo fluxo de sincronização npm do SDK do Desktop.
     tool: Ferramenta
     status: Estado
     action: Ação
@@ -460,6 +478,14 @@ system:
       portable-mode: O modo portátil ignora atualizações em segundo plano e mantém o tempo de execução atual somente leitura.
       steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: Nenhuma fonte de pacote ativa está configurada, portanto, as atualizações em segundo plano não podem ser iniciadas.
+    progress:
+      confirming: Waiting for confirmation
+      stoppingService: Stopping service
+      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
+      stoppingServiceDescription: 'The current service is stopping now, then the new version will continue downloading and installing.'
+      switchingDescription: 'Installation finished. Switching the active runtime to {{version}} now.'
+      completedDescription: '{{version}} is installed and the homepage status is already synced.'
+      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
     actions:
       openVersionPage: Gerenciamento de versão aberta
       installLatest: Instalar mais recente
@@ -495,6 +521,7 @@ system:
     port: 'Port: {{port}}'
     notReady: Not ready
     installRequired: Installation required
+    enableRequired: Enable runtime
     startFailed: Failed to start the service
     stopFailed: Failed to stop the service
     restartFailed: Failed to restart the service

@@ -190,7 +190,7 @@ dependencyManagement:
     diagnostics: 诊断信息
     reinstallHint: 该 vendored 运行时随 Desktop 安装包分发。若打包副本损坏，请重新安装 Desktop 以恢复。
     primaryDescriptions:
-      installed: 运行时文件已安装，并且符合最新 hagiscript 运行时契约。
+      installed: 运行时文件已安装，并且符合最新的 Desktop 运行时契约。
       packaged: 打包归档已就绪，但可写运行时尚未启用。
       not-installed: Desktop 托管位置中还没有安装该运行时文件。
       removed: 运行时文件已从 Desktop 托管位置移除。
@@ -245,7 +245,7 @@ dependencyManagement:
     unknown: 未知
   packages:
     hagiscript:
-      description: 必需的依赖编排 CLI，用于同步 Desktop 管理的命令行工具。
+      description: 为兼容旧界面而保留的独立 CLI 元数据。Desktop 现在通过内置 SDK 同步托管工具。
     openspec:
       description: OpenSpec 提案、规范和任务流 CLI。
     skills:
@@ -269,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: 为 AI 编码代理提供设计技能、命令与反模式检测的 Impeccable 工具。
   categories:
-    bootstrap: 引导依赖
+    bootstrap: 旧版兼容
     workflow: 工作流
     agent-cli: Agent CLI
     developer-tool: 开发工具
   bootstrap:
-    title: 必需
+    title: 旧版 CLI
     selectorLabel: 安装目标
-    selectorHint: latest 会跟随最新稳定版，dev 会跟随开发标签。
-    currentTarget: 当前目标：{{target}}
+    selectorHint: Desktop 已不再安装独立 hagiscript CLI。这些文案仅为兼容旧界面而保留。
+    currentTarget: 旧版目标：{{target}}
     customVersionLabel: 自定义版本
     customVersionPlaceholder: 输入版本号，例如 0.2.3
-    customVersionDescription: 输入 hagiscript 的精确版本号，前导 v 可省略。
+    customVersionDescription: Desktop 托管的依赖流程已不再使用独立 hagiscript 版本。
     targetOptions:
       latest: 最新稳定版
       dev: 开发版
       version: 精确版本
   dependencyGate:
-    title: 请先安装 hagiscript
-    missing: 安装 hagiscript 之前，其他依赖项操作会保持禁用。
-    unknown: Desktop 当前无法验证 hagiscript。刷新或重新安装 hagiscript 后再修改其他依赖项。
+    title: Desktop SDK 尚未就绪
+    missing: 在 Desktop 完成托管 npm 环境准备前，其他依赖项操作会继续保持禁用。
+    unknown: Desktop 当前无法验证托管 npm 环境。请先刷新或修复托管依赖，再修改其他工具。
   packageTable:
     title: 命令行依赖项
-    description: 选择 Agent CLI 与工作流依赖项，通过 hagiscript npm-sync 安装。
+    description: 选择 Agent CLI 与工作流依赖项，通过 Desktop SDK 的 npm 同步流程安装。
     tool: 工具
     status: 状态
     action: 操作
@@ -584,7 +584,7 @@ codeServer:
       service-error: 服务错误
   dependencyGuidance:
     title: 请先修复 Desktop 托管依赖项
-    description: Code Server 通过 hagiscript pm2 运行，而 hagiscript pm2 使用 Desktop 托管的内置 PM2。请先在依赖项管理中安装或修复 hagiscript，再启动 Code Server。
+    description: Code Server 通过 Desktop 托管的 PM2 运行。启动 Code Server 之前，请先在依赖项管理中安装或修复相关运行时依赖。
     openDependencyManagement: 打开依赖项管理
   errors:
     title: Code Server 操作失败

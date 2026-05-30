@@ -93,6 +93,16 @@ webServiceStatus:
     unknown: 不明なステータス
   startButton: サービスを開始する
   dependencyReadinessButton: オープンな依存関係管理
+  managedStartup:
+    label: Managed service startup
+    description: Choose which managed services should start together when you launch Hagicode.
+    options:
+      codeServer:
+        label: Start code-server together
+        description: Automatically start code-server when launching Hagicode.
+    errors:
+      codeServerUnavailable: code-server is enabled for joint startup, but its runtime is not ready.
+      codeServerStartFailed: Failed to start code-server together with Hagicode.
   dependencyReadinessAlert:
     title: 依存関係の準備ができていません
     message: Hagicode を開始する前に、必要なデスクトップ管理の依存関係をインストールしてください。オプションの依存関係によって基本サービスの起動がブロックされることはありません。

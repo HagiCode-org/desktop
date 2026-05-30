@@ -182,17 +182,22 @@ dependencyManagement:
     managedByDesktop: Managed directly by Desktop
     runtimeState: Состояние runtime
     runtimeRoot: Runtime root
+    packagedRoot: Packaged source root
+    packagedArchivePath: Packaged archive
+    packagedMarkerPath: Packaged marker
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      installed: Файлы runtime установлены и соответствуют актуальному контракту runtime hagiscript.
+      installed: Файлы runtime установлены и соответствуют актуальному контракту runtime Desktop.
+      packaged: Packaged archive is ready, but the writable runtime has not been enabled yet.
       not-installed: Файлы runtime еще не установлены в расположении, которым управляет Desktop.
       removed: Файлы runtime были удалены из расположения, которым управляет Desktop.
       failed: Файлы runtime неполные или не прошли проверку.
     installStatus:
       installed: Установлено
+      packaged: Packaged
       not-installed: Не установлено
       removed: Удалено
       failed: Проверка не пройдена
@@ -202,7 +207,10 @@ dependencyManagement:
       stopped: Stopped
       missing: Missing
       damaged: Damaged
+      enable-required: Enable required
+      extracting: Extracting
     actions:
+      enable: Enable Runtime
       start: Start
       stop: Stop
       restart: Restart
@@ -211,6 +219,16 @@ dependencyManagement:
       openRuntimeRoot: Open runtime root
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
+    activationInline: Extracting runtime... {{percent}}%
+    activationStage:
+      idle: Idle
+      validating-source: Validating packaged source
+      preparing-staging: Preparing staging directory
+      extracting: Extracting archive
+      validating-runtime: Validating extracted runtime
+      swapping-runtime: Promoting extracted runtime
+      completed: Activation complete
+      failed: Activation failed
   vendoredRuntimes:
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -227,7 +245,7 @@ dependencyManagement:
     unknown: Неизвестно
   packages:
     hagiscript:
-      description: Требуемая оркестрация зависимостей CLI, используемая для синхронизации инструментов командной строки, управляемых с рабочего стола.
+      description: Метаданные старого автономного CLI сохранены только для совместимости. Теперь Desktop синхронизирует управляемые инструменты через встроенный SDK.
     openspec:
       description: OpenSpec Рабочий процесс предложений, спецификаций и задач CLI.
     skills:
@@ -251,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: Инструмент Impeccable для дизайн-навыков, команд и обнаружения анти-паттернов у ИИ-агентов для программирования.
   categories:
-    bootstrap: Бутстрап
+    bootstrap: Наследие
     workflow: Рабочий процесс
     agent-cli: Агент CLI
     developer-tool: Инструмент разработчика
   bootstrap:
-    title: Требуется
+    title: Старый CLI
     selectorLabel: Install target
-    selectorHint: latest tracks the latest stable release. dev tracks the development tag.
-    currentTarget: 'Current target: {{target}}'
+    selectorHint: Desktop больше не устанавливает отдельный hagiscript CLI. Эти подписи сохранены только для совместимости со старыми интерфейсами.
+    currentTarget: 'Устаревшая цель: {{target}}'
     customVersionLabel: Custom version
     customVersionPlaceholder: Enter a version such as 0.2.3
-    customVersionDescription: Enter an exact hagiscript version. The leading v is optional.
+    customVersionDescription: Отдельные версии hagiscript больше не используются в потоках зависимостей, управляемых Desktop.
     targetOptions:
       latest: Latest stable
       dev: Development build
       version: Exact version
   dependencyGate:
-    title: Сначала установите Hagiscript
-    missing: Другие действия с зависимостями отключены до тех пор, пока не будет установлен hagiscript.
-    unknown: Desktop не может проверить hagiscript прямо сейчас. Обновите или переустановите hagiscript перед изменением других зависимостей.
+    title: SDK Desktop еще не готов
+    missing: Остальные действия с зависимостями останутся отключенными, пока Desktop не завершит подготовку управляемой npm-среды.
+    unknown: Desktop сейчас не может проверить управляемую npm-среду. Сначала обновите или восстановите управляемые зависимости, а уже потом меняйте другие инструменты.
   packageTable:
     title: Зависимости командной строки
-    description: Выберите агент CLI и зависимости рабочего процесса для установки через hagiscript npm-sync.
+    description: Выберите зависимости Agent CLI и workflow для установки через поток npm-синхронизации SDK Desktop.
     tool: Инструмент
     status: Статус
     action: Действие
@@ -460,6 +478,14 @@ system:
       portable-mode: Портативный режим пропускает фоновые обновления и сохраняет текущую среду выполнения только для чтения.
       steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: Активный источник пакета не настроен, поэтому запуск фоновых обновлений невозможен.
+    progress:
+      confirming: Waiting for confirmation
+      stoppingService: Stopping service
+      confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
+      stoppingServiceDescription: 'The current service is stopping now, then the new version will continue downloading and installing.'
+      switchingDescription: 'Installation finished. Switching the active runtime to {{version}} now.'
+      completedDescription: '{{version}} is installed and the homepage status is already synced.'
+      activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
     actions:
       openVersionPage: Открытое управление версиями
       installLatest: Установить последнюю версию
@@ -495,6 +521,7 @@ system:
     port: 'Port: {{port}}'
     notReady: Not ready
     installRequired: Installation required
+    enableRequired: Enable runtime
     startFailed: Failed to start the service
     stopFailed: Failed to stop the service
     restartFailed: Failed to restart the service

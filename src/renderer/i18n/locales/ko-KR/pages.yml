@@ -214,6 +214,7 @@ versionManagement:
     flow: '흐름: 토렌트 가져오기 -> 토렌트 우선 다운로드 -> 대체 백필(필요한 경우) -> 확인 -> 추출 -> 완료'
     flowActive: '전류 흐름: {{stage}}'
   progressMessage:
+    queued: Queued
     direct-http: HTTP/WebSeed 이상 다운로드 중
     fetching-torrent-metadata: 토렌트 메타데이터를 가져오는 중
     torrent-metadata-ready: 토렌트 준비 완료, 공유 가속 시작 중
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: 패키지 무결성 확인
     sha256-verified: 확인 완료
     extracting-package: 패키지 추출 중
+    switching-active-version: Switching the active version
     installation-complete: 설치 완료
 installProgressDialog:
   title: 종속성 설치

@@ -93,6 +93,16 @@ webServiceStatus:
     unknown: Unbekannter Status
   startButton: Dienst starten
   dependencyReadinessButton: Öffnen Sie das Abhängigkeitsmanagement
+  managedStartup:
+    label: Managed service startup
+    description: Choose which managed services should start together when you launch Hagicode.
+    options:
+      codeServer:
+        label: Start code-server together
+        description: Automatically start code-server when launching Hagicode.
+    errors:
+      codeServerUnavailable: code-server is enabled for joint startup, but its runtime is not ready.
+      codeServerStartFailed: Failed to start code-server together with Hagicode.
   dependencyReadinessAlert:
     title: Abhängigkeiten sind noch nicht bereit
     message: Installieren Sie die erforderlichen vom Desktop verwalteten Abhängigkeiten, bevor Sie mit Hagicode beginnen. Optionale Abhängigkeiten blockieren den Start des Basisdienstes nicht.

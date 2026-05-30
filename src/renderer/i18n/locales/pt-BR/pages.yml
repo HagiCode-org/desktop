@@ -214,6 +214,7 @@ versionManagement:
     flow: 'Fluxo: Buscar torrent -> Download do primeiro torrent -> Preenchimento substituto (se necessário) -> Verificar -> Extrair -> Concluir'
     flowActive: 'Fluxo atual: {{stage}}'
   progressMessage:
+    queued: Queued
     direct-http: Baixando mais de HTTP/WebSeed
     fetching-torrent-metadata: Buscando metadados de torrent
     torrent-metadata-ready: Torrent pronto, iniciando aceleração compartilhada
@@ -227,6 +228,7 @@ versionManagement:
     sha256-verifying: Verificando a integridade do pacote
     sha256-verified: Verificação concluída
     extracting-package: Extraindo pacote
+    switching-active-version: Switching the active version
     installation-complete: Instalação concluída
 installProgressDialog:
   title: Instalando Dependências

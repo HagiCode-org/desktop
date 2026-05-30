@@ -93,6 +93,16 @@ webServiceStatus:
     unknown: 알 수 없는 상태
   startButton: 서비스 시작
   dependencyReadinessButton: 개방형 종속성 관리
+  managedStartup:
+    label: Managed service startup
+    description: Choose which managed services should start together when you launch Hagicode.
+    options:
+      codeServer:
+        label: Start code-server together
+        description: Automatically start code-server when launching Hagicode.
+    errors:
+      codeServerUnavailable: code-server is enabled for joint startup, but its runtime is not ready.
+      codeServerStartFailed: Failed to start code-server together with Hagicode.
   dependencyReadinessAlert:
     title: 종속성이 준비되지 않았습니다.
     message: Hagicode을 시작하기 전에 필수 데스크탑 관리 종속성을 설치하십시오. 선택적 종속성은 기본 서비스 시작을 차단하지 않습니다.

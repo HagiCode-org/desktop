@@ -182,17 +182,22 @@ dependencyManagement:
     managedByDesktop: Managed directly by Desktop
     runtimeState: 運行狀態
     runtimeRoot: Runtime root
+    packagedRoot: 打包來源目錄
+    packagedArchivePath: 打包封存檔
+    packagedMarkerPath: 打包標記
     metadataPath: Metadata path
     healthUrl: Local URL
     diagnostics: Diagnostics
     reinstallHint: This vendored runtime ships with Desktop packaging. Reinstall Desktop to restore a damaged packaged copy.
     primaryDescriptions:
-      installed: 執行階段檔案已安裝，並符合最新的 hagiscript 執行階段契約。
+      installed: 執行階段檔案已安裝，並符合最新的 Desktop 執行階段契約。
+      packaged: 打包封存檔已就緒，但可寫入的執行階段尚未啟用。
       not-installed: Desktop 託管位置中尚未安裝該執行階段檔案。
       removed: 執行階段檔案已從 Desktop 託管位置移除。
       failed: 執行階段檔案不完整，或未通過驗證。
     installStatus:
       installed: 已安裝
+      packaged: 已打包
       not-installed: 未安裝
       removed: 已移除
       failed: 驗證失敗
@@ -202,7 +207,10 @@ dependencyManagement:
       stopped: Stopped
       missing: Missing
       damaged: Damaged
+      enable-required: 需要啟用
+      extracting: 解壓中
     actions:
+      enable: 啟用執行階段
       start: Start
       stop: Stop
       restart: Restart
@@ -211,6 +219,16 @@ dependencyManagement:
       openRuntimeRoot: Open runtime root
       openUrl: Open local URL
       reinstallDesktop: Reinstall Desktop
+    activationInline: 正在解壓執行階段... {{percent}}%
+    activationStage:
+      idle: 閒置
+      validating-source: 正在驗證打包來源
+      preparing-staging: 正在準備 staging 目錄
+      extracting: 正在解壓封存檔
+      validating-runtime: 正在驗證解壓後的執行階段
+      swapping-runtime: 正在切換到目前執行階段
+      completed: 啟用完成
+      failed: 啟用失敗
   vendoredRuntimes:
     codeServer:
       description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
@@ -227,7 +245,7 @@ dependencyManagement:
     unknown: 未知
   packages:
     hagiscript:
-      description: 必要的依賴編排 CLI，用於同步 Desktop 管理的命令列工具。
+      description: 為相容舊介面而保留的獨立 CLI 中繼資料。Desktop 現在透過內建 SDK 同步託管工具。
     openspec:
       description: OpenSpec 提案、規格與任務流程 CLI。
     skills:
@@ -251,29 +269,29 @@ dependencyManagement:
     impeccable:
       description: 為 AI 編碼代理提供設計技能、命令與反模式檢測的 Impeccable 工具。
   categories:
-    bootstrap: 引導依賴
+    bootstrap: 舊版相容
     workflow: 工作流程
     agent-cli: Agent CLI
     developer-tool: 開發工具
   bootstrap:
-    title: 必要
+    title: 舊版 CLI
     selectorLabel: 安裝目標
-    selectorHint: latest 會跟隨最新穩定版，dev 會跟隨開發標籤。
-    currentTarget: 目前目標：{{target}}
+    selectorHint: Desktop 已不再安裝獨立 hagiscript CLI。這些文案僅為相容舊介面而保留。
+    currentTarget: 舊版目標：{{target}}
     customVersionLabel: 自訂版本
     customVersionPlaceholder: 輸入版本號，例如 0.2.3
-    customVersionDescription: 輸入 hagiscript 的精確版本號，前導 v 可省略。
+    customVersionDescription: Desktop 託管的依賴流程已不再使用獨立 hagiscript 版本。
     targetOptions:
       latest: 最新穩定版
       dev: 開發版
       version: 精確版本
   dependencyGate:
-    title: 請先安裝 hagiscript
-    missing: 安裝 hagiscript 之前，其他依賴項操作會保持停用。
-    unknown: Desktop 目前無法驗證 hagiscript。刷新或重新安裝 hagiscript 後再修改其他依賴項。
+    title: Desktop SDK 尚未就緒
+    missing: 在 Desktop 完成託管 npm 環境準備前，其他依賴項操作會繼續保持停用。
+    unknown: Desktop 目前無法驗證託管 npm 環境。請先刷新或修復託管依賴，再修改其他工具。
   packageTable:
     title: 命令列依賴項
-    description: 選擇 Agent CLI 與工作流程依賴項，透過 hagiscript npm-sync 安裝。
+    description: 選擇 Agent CLI 與工作流程依賴項，透過 Desktop SDK 的 npm 同步流程安裝。
     tool: 工具
     status: 狀態
     action: 操作
@@ -460,6 +478,14 @@ system:
       portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
       steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
       no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
+    progress:
+      confirming: 等待確認
+      stoppingService: 正在停止服務
+      confirmingDescription: 即將安裝 {{version}}，請先確認是否允許停止目前服務。
+      stoppingServiceDescription: 目前執行中的服務正在停止，隨後會繼續下載並安裝新版本。
+      switchingDescription: 安裝已完成，正在切換到 {{version}}。
+      completedDescription: '{{version}} 已安裝完成，首頁狀態已同步。'
+      activeDescription: 正在處理 {{version}}，目前階段：{{stage}}。
     actions:
       openVersionPage: 開啟版本管理
       installLatest: 安裝最新版本
@@ -495,6 +521,7 @@ system:
     port: 'Port: {{port}}'
     notReady: Not ready
     installRequired: Installation required
+    enableRequired: 啟用執行階段
     startFailed: Failed to start the service
     stopFailed: Failed to stop the service
     restartFailed: Failed to restart the service
@@ -557,7 +584,7 @@ codeServer:
       service-error: 服務錯誤
   dependencyGuidance:
     title: 請先修復 Desktop 託管依賴項
-    description: Code Server 透過 hagiscript pm2 執行，而 hagiscript pm2 使用 Desktop 託管的內建 PM2。請先在相依性管理中安裝或修復 hagiscript，再啟動 Code Server。
+    description: Code Server 透過 Desktop 託管的 PM2 執行。啟動 Code Server 之前，請先在相依性管理中安裝或修復相關執行階段依賴。
     openDependencyManagement: 開啟相依性管理
   errors:
     title: Code Server 操作失敗
