@@ -49,8 +49,6 @@ describe('embedded runtime packaging configuration', () => {
     assert.equal(pkg.scripts['build:mac'], 'node scripts/build-macos.js');
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
-    assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/ci-build\.js --platform mac/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/ci-build\.js --platform mac/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);

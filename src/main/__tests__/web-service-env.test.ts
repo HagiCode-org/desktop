@@ -21,7 +21,6 @@ import {
 import {
   collectPortableToolchainPathEntries,
   dedupePathEntries,
-  injectCodeServerRuntimeEnv,
   injectManagedCliPathEnv,
   injectPortableToolchainEnv,
   resolveManagedCliCommandDirectory,
@@ -55,59 +54,6 @@ describe('web-service-env', () => {
     assert.equal(result.injectedEnv.HAGICODE_STEAM_INTEGRATION_ENABLED, 'false');
     assert.equal(result.injectedEnv.HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED, 'false');
     assert.equal(result.snapshot.some(entry => entry.key === 'Database__Provider'), false);
-  });
-
-  it('injects desktop-managed code-server bootstrap settings for the backend child process', () => {
-    const result = buildManagedServiceEnv({
-      host: '127.0.0.1',
-      port: 36556,
-      dataDir: '/tmp/hagicode-data',
-      currentDesktopLanguage: 'zh-CN',
-      codeServer: {
-        host: '127.0.0.1',
-        port: 37667,
-        password: 'desktop-secret',
-      },
-      yamlConfig: null,
-      existingEnv: {
-        VsCodeServer__Host: 'legacy-host',
-        VsCodeServer__Port: '3000',
-      },
-    });
-
-    assert.equal(result.errors.length, 0);
-    assert.equal(result.injectedEnv.VsCodeServer__Host, '127.0.0.1');
-    assert.equal(result.injectedEnv.VsCodeServer__Port, '37667');
-    assert.equal(result.injectedEnv.VsCodeServer__AuthMode, 'password');
-    assert.equal(result.injectedEnv.VsCodeServer__Secret, 'desktop-secret');
-    assert.equal(result.injectedEnv.VsCodeServer__SecretSource, 'bootstrap');
-    assert.equal(result.injectedEnv.VsCodeServer__Source, 'desktop-managed');
-    assert.equal(result.injectedEnv.VsCodeServer__SourceLocked, 'true');
-  });
-
-
-  it('injects bundled Node PATH entries only for vendored code-server launches', () => {
-    const result = injectCodeServerRuntimeEnv(
-      {
-        PATH: '/usr/bin:/bin',
-      },
-      {
-        getPortableToolchainRoot: () => '/managed/toolchain',
-        getPortableToolchainBinRoot: () => '/managed/toolchain/bin',
-        getPortableNodeBinRoot: () => '/managed/toolchain/node/bin',
-        getPortableNpmGlobalBinRoot: () => '/managed/toolchain/npm-global/bin',
-        getCodeServerRuntimeRoot: () => '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current',
-      },
-      {
-        platform: 'linux',
-        existsSync: () => true,
-      },
-    );
-
-    assert.equal(result.runtimeRoot, '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current');
-    assert.equal(result.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT, '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current');
-    assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, '/managed/toolchain');
-    assert.match(result.env.PATH || '', /^\/managed\/toolchain\/bin:\/managed\/toolchain\/node\/bin:\/managed\/toolchain\/npm-global\/bin:/);
   });
 
   it('resolves Steam integration from distribution mode and hagicode env sync option', () => {
@@ -532,11 +478,6 @@ describe('web-service-env', () => {
       port: 36556,
       dataDir: '/tmp/hagicode-integration',
       currentDesktopLanguage: 'en-US',
-      codeServer: {
-        host: '127.0.0.1',
-        port: 37667,
-        password: 'desktop-secret',
-      },
       systemVaultEnvEntries: {
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Name`]: 'Desktop Logs',
@@ -560,11 +501,6 @@ describe('web-service-env', () => {
         process.env.DATADIR,
         process.env.HAGICODE_LANGUAGE,
         process.env.AI__Providers__DefaultProvider,
-        process.env.VsCodeServer__Host,
-        process.env.VsCodeServer__Port,
-        process.env.VsCodeServer__AuthMode,
-        process.env.VsCodeServer__Source,
-        process.env.VsCodeServer__SourceLocked,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id,
         process.env.${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__PhysicalPath
       ].join('|'))`,
@@ -573,7 +509,7 @@ describe('web-service-env', () => {
     assert.equal(child.status, 0);
     assert.equal(
       child.stdout,
-      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|127.0.0.1|37667|password|desktop-managed|true|desktoplogs|/tmp/hagicode/logs',
+      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
     );
   });
 

@@ -48,7 +48,7 @@ describe('source mode bundled node runtime contract', () => {
     assert.equal(packageJson.scripts['install:dev-node-runtime'], undefined);
     assert.equal(
       packageJson.scripts.predev,
-      'cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:runtime:optional && cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:bundled-toolchain:optional && cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:code-server-runtime:optional',
+      'cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:runtime:optional && cross-env HAGICODE_DESKTOP_INSTANCE_NAME=hagicode_dev npm run prepare:bundled-toolchain:optional',
     );
   });
 });

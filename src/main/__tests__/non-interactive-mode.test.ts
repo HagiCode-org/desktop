@@ -19,7 +19,6 @@ import type { CliDependencyInstallResult } from '../dependency-management-servic
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
 const bootstrapPath = path.resolve(process.cwd(), 'src/main/bootstrap.ts');
 const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
-const runtimeLifecyclePath = path.resolve(process.cwd(), 'src/main/non-interactive-runtime-lifecycle.ts');
 
 function createSnapshot(): DependencyManagementSnapshot {
   return {
@@ -127,9 +126,6 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
       data: '/tmp/Hagi Code/userData/runtimeData/data',
       state: '/tmp/Hagi Code/userData/runtimeData/state',
     },
-    serviceDataHomes: {
-      codeServer: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
-    },
     components: {
       dotnet: {
         ok,
@@ -153,15 +149,6 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         governedNodeVersion: '22.0.0',
         issues: ok ? [] : ['bundled Node runtime metadata is missing or invalid'],
       },
-      codeServer: {
-        ok,
-        status: ok ? 'ok' : 'damaged',
-        root: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current',
-        wrapperPath: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current/bin/code-server',
-        entryScriptPath: '/tmp/Hagi Code/userData/runtimeData/runtimeComponents/code_server/4.99.0/current/out/node/entry.js',
-        version: '4.99.0',
-        issues: ok ? [] : ['code-server wrapper missing'],
-      },
     },
     issues: ok ? [] : ['dotnet runtime missing metadata', 'bundled Node runtime metadata is missing or invalid'],
   };
@@ -182,18 +169,6 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
       pm2ExecutableUnderManagedBin: true,
     },
     services: {
-      codeServer: {
-        pm2Home: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/pm2/7',
-        runtimeDataHome: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server',
-        runtimeFilesDir: '/tmp/Hagi Code/userData/runtimeData/components/services/code-server/runtime',
-        launchScriptPath: '/tmp/hagicode-desktop-path-alias/desktop-code-server-script-123456789abc',
-        launchWorkingDirectory: '/tmp/hagicode-desktop-path-alias/desktop-code-server-working-directory-123456789abc',
-        startSuccess: ok,
-        statusAfterStart: ok ? 'online' : 'errored',
-        stopSuccess: ok,
-        statusAfterStop: 'stopped',
-        diagnostics: ok ? [] : ['code-server diagnostic: start failed'],
-      },
       backend: {
         pm2Home: '/tmp/Hagi Code/userData/apps/data/.pm2',
         runtimeDataHome: '/tmp/Hagi Code/userData/apps/data',
@@ -340,7 +315,6 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(result.exitCode, nonInteractiveExitCodes.success);
     assert.equal(stderr.length, 0);
     assert.match(stdout.join('\n'), /standalone pm2 package managed: true/);
-    assert.match(stdout.join('\n'), /code-server status after start: online/);
     assert.match(stdout.join('\n'), /backend status after restart: online/);
     assert.match(stdout.join('\n'), /result: success/);
   });
@@ -407,18 +381,6 @@ describe('main-process entrypoint contract', () => {
     assert.match(source, /parseNonInteractiveCommand\(process\.argv\)/);
     assert.match(source, /runNonInteractiveBootstrap\(\)/);
     assert.match(source, /await import\('\.\/main\.js'\)/);
-  });
-});
-
-describe('runtime lifecycle harness contract', () => {
-  it('validates Code Server through the Desktop-managed runtime context instead of the legacy process name', async () => {
-    const source = await fs.readFile(runtimeLifecyclePath, 'utf8');
-
-    assert.match(source, /inspectVendoredCodeServerRuntime/);
-    assert.match(source, /resolveBundledRuntime\(\{\s*service: 'code-server'/);
-    assert.match(source, /collectHagiscriptManagedDiagnostics/);
-    assert.match(source, /runtimeContext\.pm2LogsDirectory/);
-    assert.doesNotMatch(source, /CODE_SERVER_PROCESS_NAME/);
   });
 });
 
