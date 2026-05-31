@@ -23,7 +23,6 @@ env:
   NODE_VERSION: '22'
   HAGISCRIPT_VERSION: 'latest'
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
-  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
   build-platform-artifacts:
@@ -174,7 +173,6 @@ jobs:
         with:
           path: |
             .cache/electron
-            .cache/electron-builder
             build/embedded-runtime/downloads
             build/embedded-node-runtime/downloads
             .generated/code-server-runtime/downloads

@@ -304,7 +304,6 @@ jobs:
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.zip
-            release-assets/windows/**/*.appx
             release-assets/windows/**/*.msix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -475,7 +474,7 @@ jobs:
           if [ "${WINDOWS_STATUS}" = 'success' ]; then
             platforms+=("Windows Portable")
             platforms+=("Windows NSIS")
-            platforms+=("Windows AppX")
+            platforms+=("Windows MSIX")
           fi
           if [ "${UNIX_STATUS}" = 'success' ]; then
             platforms+=("Linux AppImage")

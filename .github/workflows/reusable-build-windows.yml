@@ -27,7 +27,6 @@ env:
   NODE_VERSION: '22'
   HAGISCRIPT_VERSION: 'latest'
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
-  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
   build-windows:
@@ -52,12 +51,6 @@ jobs:
             report_suffix: nsis
             requires_zip: false
             artifact_path: pkg/*Setup*.exe
-          - id: appx
-            name: AppX
-            builder_target: appx
-            report_suffix: appx
-            requires_zip: false
-            artifact_path: pkg/*.appx
           - id: msix
             name: MSIX
             report_suffix: store
@@ -150,7 +143,6 @@ jobs:
         with:
           path: |
             .cache/electron
-            .cache/electron-builder
             build/embedded-runtime/downloads
             build/embedded-node-runtime/downloads
             .generated/code-server-runtime/downloads
@@ -170,6 +162,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve Windows SDK for MSIX packaging
+        if: success() && matrix.target.id == 'msix'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $windowsKitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
+          if (-not (Test-Path $windowsKitsRoot)) {
+            throw "Windows Kits bin directory not found: $windowsKitsRoot"
+          }
+
+          $sdkDirectory = Get-ChildItem -Path $windowsKitsRoot -Directory |
+            Where-Object {
+              $_.Name -match '^\d+\.\d+\.\d+\.\d+$' -and
+              (Test-Path (Join-Path $_.FullName 'x64\makeappx.exe')) -and
+              (Test-Path (Join-Path $_.FullName 'x64\makepri.exe'))
+            } |
+            Sort-Object { [version] $_.Name } -Descending |
+            Select-Object -First 1
+
+          if (-not $sdkDirectory) {
+            throw "No Windows SDK with makeappx.exe and makepri.exe was found under $windowsKitsRoot"
+          }
+
+          "WINDOWS_KIT_VERSION=$($sdkDirectory.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build Windows ${{ matrix.target.name }} package
         if: matrix.target.id != 'msix'
         shell: bash
@@ -186,7 +203,7 @@ jobs:
           npm run build:win:store -- \
             --artifact-output-dir pkg \
             --metadata-output-path pkg/store-build-metadata.json \
-            --overlay-output-path electron-builder.store.yml \
+            --overlay-output-path forge.store-config.json \
             --platform-id win-x64
           npm run package:smoke-test
         env:
@@ -218,12 +235,10 @@ jobs:
           $allFiles = Get-ChildItem -Path $pkgDir -File
           $nsis = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -like '*Setup*' } | Sort-Object FullName -Unique)
           $portable = @($allFiles | Where-Object { $_.Extension -ieq '.exe' -and $_.Name -notlike '*Setup*' } | Sort-Object FullName -Unique)
-          $appx = @($allFiles | Where-Object { $_.Extension -ieq '.appx' } | Sort-Object FullName -Unique)
           $msix = @($allFiles | Where-Object { $_.Extension -ieq '.msix' } | Sort-Object FullName -Unique)
           $selectedFiles = switch ('${{ matrix.target.id }}') {
             'portable' { $portable }
             'nsis' { $nsis }
-            'appx' { $appx }
             'msix' { $msix }
             default { @() }
           }
