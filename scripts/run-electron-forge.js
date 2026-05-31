@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import makeDistributablesModule from '@electron-forge/core/dist/api/make.js';
 import packageApplicationModule from '@electron-forge/core/dist/api/package.js';
+import { stageForgePackagingResources } from './forge-packaging-hooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -165,6 +166,8 @@ async function stagePackagedApplication(platform, arch, packagedPath) {
   }
 
   await fsp.cp(packagedPath, destination, { recursive: true });
+
+  await stageForgePackagingResources(destination, null, platform, arch);
   return destination;
 }
 
