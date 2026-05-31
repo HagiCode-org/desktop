@@ -233,8 +233,7 @@ export default function DependencyManagementPage() {
     }
   };
 
-  const runBatchInstall = async () => {
-    const packageIds = selectedEligibleIds;
+  const runBatchInstall = async (packageIds: ManagedNpmPackageId[]) => {
     if (packageIds.length === 0) {
       return;
     }
@@ -259,7 +258,7 @@ export default function DependencyManagementPage() {
         setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
           ? { ...current, status: 'completed', error: undefined }
           : current);
-        setSelectedPackageIds([]);
+        setSelectedPackageIds((current) => current.filter((id) => !packageIds.includes(id)));
         return;
       }
 
@@ -314,9 +313,19 @@ export default function DependencyManagementPage() {
   const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
-  const selectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, selectablePackageIds);
-  const selectAllChecked = getSelectAllChecked(selectedPackageIds, selectablePackageIds);
   const batchSyncPackageIds = new Set(batchSyncState?.packageIds ?? []);
+  const basePackages = prioritizedManagedPackages.filter((item) => item.definition.category !== 'agent-cli');
+  const agentCliPackages = prioritizedManagedPackages.filter((item) => item.definition.category === 'agent-cli');
+  const basePackageIdSet = new Set(basePackages.map((item) => item.id));
+  const agentCliPackageIdSet = new Set(agentCliPackages.map((item) => item.id));
+  const baseHighlightedPackageIds = highlightedPackageIds.filter((id) => basePackageIdSet.has(id));
+  const agentCliHighlightedPackageIds = highlightedPackageIds.filter((id) => agentCliPackageIdSet.has(id));
+  const baseSelectablePackageIds = selectablePackageIds.filter((id) => basePackageIdSet.has(id));
+  const agentCliSelectablePackageIds = selectablePackageIds.filter((id) => agentCliPackageIdSet.has(id));
+  const baseSelectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, baseSelectablePackageIds);
+  const agentCliSelectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, agentCliSelectablePackageIds);
+  const baseSelectAllChecked = getSelectAllChecked(selectedPackageIds, baseSelectablePackageIds);
+  const agentCliSelectAllChecked = getSelectAllChecked(selectedPackageIds, agentCliSelectablePackageIds);
 
   const runVendoredRuntimeAction = async (
     runtimeId: VendoredRuntimeId,
@@ -363,8 +372,8 @@ export default function DependencyManagementPage() {
     setSelectedPackageIds((current) => updateSelectedPackageIds(current, packageId, checked));
   };
 
-  const toggleSelectAll = (checked: boolean) => {
-    setSelectedPackageIds((current) => updateSelectAllPackageIds(current, selectablePackageIds, checked));
+  const toggleSelectAll = (checked: boolean, eligiblePackageIds: readonly ManagedNpmPackageId[]) => {
+    setSelectedPackageIds((current) => updateSelectAllPackageIds(current, eligiblePackageIds, checked));
   };
 
   const runRepairCompletionCheck = async () => {
@@ -433,24 +442,49 @@ export default function DependencyManagementPage() {
 
       {pageStatus === 'ready' && snapshot && (
         <>
-          <NpmPackageTable
-            packages={prioritizedManagedPackages}
-            highlightedPackageIds={highlightedPackageIds}
-            selectedPackageIds={selectedPackageIds}
-            selectablePackageIds={selectablePackageIds}
-            selectAllChecked={selectAllChecked}
-            selectedEligibleCount={selectedEligibleIds.length}
-            batchSyncPackageIds={batchSyncPackageIds}
-            isBatchSyncRunning={isBatchSyncRunning}
-            progressByPackageId={progress}
-            activeOperation={snapshot.activeOperation}
-            operationErrorByPackageId={operationError}
-            actionsDisabled={actionsDisabled}
-            onTogglePackage={togglePackageSelection}
-            onToggleAll={toggleSelectAll}
-            onInstallSelected={() => void runBatchInstall()}
-            onRunOperation={(packageId, action) => void runOperation(packageId, action)}
-          />
+          <div className="space-y-5">
+            <NpmPackageTable
+              titleKey="dependencyManagement.packageTable.groups.base.title"
+              descriptionKey="dependencyManagement.packageTable.groups.base.description"
+              packages={basePackages}
+              highlightedPackageIds={baseHighlightedPackageIds}
+              selectedPackageIds={selectedPackageIds}
+              selectablePackageIds={baseSelectablePackageIds}
+              selectAllChecked={baseSelectAllChecked}
+              selectedEligibleCount={baseSelectedEligibleIds.length}
+              batchSyncPackageIds={batchSyncPackageIds}
+              isBatchSyncRunning={isBatchSyncRunning}
+              progressByPackageId={progress}
+              activeOperation={snapshot.activeOperation}
+              operationErrorByPackageId={operationError}
+              actionsDisabled={actionsDisabled}
+              onTogglePackage={togglePackageSelection}
+              onToggleAll={(checked) => toggleSelectAll(checked, baseSelectablePackageIds)}
+              onInstallSelected={() => void runBatchInstall(baseSelectedEligibleIds)}
+              onRunOperation={(packageId, action) => void runOperation(packageId, action)}
+            />
+
+            <NpmPackageTable
+              titleKey="dependencyManagement.packageTable.groups.agentCli.title"
+              descriptionKey="dependencyManagement.packageTable.groups.agentCli.description"
+              packages={agentCliPackages}
+              highlightedPackageIds={agentCliHighlightedPackageIds}
+              selectedPackageIds={selectedPackageIds}
+              selectablePackageIds={agentCliSelectablePackageIds}
+              selectAllChecked={agentCliSelectAllChecked}
+              selectedEligibleCount={agentCliSelectedEligibleIds.length}
+              batchSyncPackageIds={batchSyncPackageIds}
+              isBatchSyncRunning={isBatchSyncRunning}
+              progressByPackageId={progress}
+              activeOperation={snapshot.activeOperation}
+              operationErrorByPackageId={operationError}
+              actionsDisabled={actionsDisabled}
+              onTogglePackage={togglePackageSelection}
+              onToggleAll={(checked) => toggleSelectAll(checked, agentCliSelectablePackageIds)}
+              onInstallSelected={() => void runBatchInstall(agentCliSelectedEligibleIds)}
+              onRunOperation={(packageId, action) => void runOperation(packageId, action)}
+            />
+          </div>
 
           <Card>
             <CardHeader>

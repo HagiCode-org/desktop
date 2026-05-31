@@ -291,6 +291,8 @@ export function PackageProgress({ item, progress, error }: PackageProgressProps)
 }
 
 interface NpmPackageTableProps {
+  titleKey?: string;
+  descriptionKey?: string;
   packages: ManagedNpmPackageStatusSnapshot[];
   highlightedPackageIds?: ManagedNpmPackageId[];
   selectedPackageIds: ManagedNpmPackageId[];
@@ -310,6 +312,8 @@ interface NpmPackageTableProps {
 }
 
 export function NpmPackageTable({
+  titleKey = 'dependencyManagement.packageTable.title',
+  descriptionKey = 'dependencyManagement.packageTable.description',
   packages,
   highlightedPackageIds = [],
   selectedPackageIds,
@@ -335,8 +339,8 @@ export function NpmPackageTable({
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-lg">{t('dependencyManagement.packageTable.title')}</CardTitle>
-            <CardDescription>{t('dependencyManagement.packageTable.description')}</CardDescription>
+            <CardTitle className="text-lg">{t(titleKey)}</CardTitle>
+            <CardDescription>{t(descriptionKey)}</CardDescription>
           </div>
           <Button onClick={onInstallSelected} disabled={actionsDisabled || isBatchSyncRunning || selectedEligibleCount === 0}>
             {isBatchSyncRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
@@ -348,22 +352,25 @@ export function NpmPackageTable({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Table>
+        <Table className="min-w-[860px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={selectAllChecked}
-                  onCheckedChange={(checked) => onToggleAll(checked === true)}
-                  disabled={actionsDisabled || selectablePackageIds.length === 0}
-                  aria-label={t('dependencyManagement.selection.selectAll')}
-                />
+              <TableHead className="w-20 px-3 text-center">
+                <div className="flex justify-center">
+                  <Checkbox
+                    checked={selectAllChecked}
+                    onCheckedChange={(checked) => onToggleAll(checked === true)}
+                    disabled={actionsDisabled || selectablePackageIds.length === 0}
+                    aria-label={t('dependencyManagement.selection.selectAll')}
+                    className="h-6 w-6 rounded-md border-2 shadow-sm"
+                  />
+                </div>
               </TableHead>
-              <TableHead>{t('dependencyManagement.packageTable.tool')}</TableHead>
+              <TableHead className="min-w-[240px]">{t('dependencyManagement.packageTable.tool')}</TableHead>
               <TableHead>{t('dependencyManagement.package.category')}</TableHead>
               <TableHead>{t('dependencyManagement.package.version')}</TableHead>
-              <TableHead>{t('dependencyManagement.package.packageName')}</TableHead>
-              <TableHead className="text-right">{t('dependencyManagement.packageTable.action')}</TableHead>
+              <TableHead className="min-w-[220px]">{t('dependencyManagement.package.packageName')}</TableHead>
+              <TableHead className="min-w-[220px] text-right">{t('dependencyManagement.packageTable.action')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -393,16 +400,19 @@ export function NpmPackageTable({
                     selectedPackageIds.includes(item.id) && 'ring-1 ring-primary/30',
                   )}
                 >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedPackageIds.includes(item.id)}
-                      onCheckedChange={(checked) => onTogglePackage(item.id, checked === true)}
-                      disabled={rowDisabled}
-                      aria-label={t('dependencyManagement.selection.selectPackage', { name: item.definition.displayName })}
-                      aria-describedby={disabledReason ? `${item.id}-disabled-reason` : undefined}
-                    />
+                  <TableCell className="w-20 px-3 align-top">
+                    <div className="flex justify-center pt-1">
+                      <Checkbox
+                        checked={selectedPackageIds.includes(item.id)}
+                        onCheckedChange={(checked) => onTogglePackage(item.id, checked === true)}
+                        disabled={rowDisabled}
+                        aria-label={t('dependencyManagement.selection.selectPackage', { name: item.definition.displayName })}
+                        aria-describedby={disabledReason ? `${item.id}-disabled-reason` : undefined}
+                        className="h-6 w-6 rounded-md border-2 shadow-sm"
+                      />
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-medium">{item.definition.displayName}</div>
                       <Badge variant={packageBadgeVariant(item)}>
@@ -412,10 +422,10 @@ export function NpmPackageTable({
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
                     {disabledReason && <div id={`${item.id}-disabled-reason`} className="sr-only">{disabledReason}</div>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top">
                     <Badge variant="secondary">{t(`dependencyManagement.categories.${item.definition.category}`)}</Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-top">
                     <div>{item.version ?? t('dependencyManagement.unavailable')}</div>
                     {displayStatus === 'outdated' ? (
                       <div className="text-xs text-amber-700 dark:text-amber-300">
@@ -426,8 +436,8 @@ export function NpmPackageTable({
                       </div>
                     ) : null}
                   </TableCell>
-                  <TableCell className="max-w-[220px] break-all text-muted-foreground">{item.definition.packageName}</TableCell>
-                  <TableCell className="space-y-2 text-right">
+                  <TableCell className="max-w-[220px] break-all align-top text-muted-foreground">{item.definition.packageName}</TableCell>
+                  <TableCell className="space-y-2 align-top text-right">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" onClick={() => onRunOperation(item.id, 'install')} disabled={rowDisabled}>
                         {isActive ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}

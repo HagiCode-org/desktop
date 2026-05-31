@@ -24,7 +24,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(appSource, /\{currentView === 'dependency-management' && <DependencyManagementPage \/>\}/);
   });
 
-  it('loads snapshots, wires repair intent handling, and renders the package table with shared helpers', async () => {
+  it('loads snapshots, wires repair intent handling, and renders grouped package tables with shared helpers', async () => {
     const [pageSource, modelSource, packageGroupsSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
       fs.readFile(modelPath, 'utf8'),
@@ -37,9 +37,13 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /dispatch\(setDependencyManagementIntent\(null\)\)/);
     assert.match(pageSource, /dispatch\(switchView\(repairIntent\.returnView\)\)/);
     assert.match(pageSource, /getSelectablePackageIds\(managedPackages, \{ actionsDisabled \}\)/);
-    assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, selectablePackageIds\)/);
-    assert.match(pageSource, /getSelectAllChecked\(selectedPackageIds, selectablePackageIds\)/);
     assert.match(pageSource, /pruneSelectedPackageIds\(current, snapshot\.packages\)/);
+    assert.match(pageSource, /const basePackages = prioritizedManagedPackages\.filter\(\(item\) => item\.definition\.category !== 'agent-cli'\);/);
+    assert.match(pageSource, /const agentCliPackages = prioritizedManagedPackages\.filter\(\(item\) => item\.definition\.category === 'agent-cli'\);/);
+    assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, baseSelectablePackageIds\)/);
+    assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, agentCliSelectablePackageIds\)/);
+    assert.match(pageSource, /titleKey="dependencyManagement\.packageTable\.groups\.base\.title"/);
+    assert.match(pageSource, /titleKey="dependencyManagement\.packageTable\.groups\.agentCli\.title"/);
 
     assert.match(modelSource, /export function appendBatchSyncLog/);
     assert.match(modelSource, /export function getSelectablePackageIds/);
@@ -49,7 +53,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(modelSource, /item\.status !== 'unknown'/);
 
     assert.match(packageGroupsSource, /export function NpmPackageTable/);
-    assert.match(packageGroupsSource, /dependencyManagement\.packageTable\.title/);
+    assert.match(packageGroupsSource, /titleKey = 'dependencyManagement\.packageTable\.title'/);
     assert.match(packageGroupsSource, /dependencyManagement\.selection\.selectPackage/);
     assert.match(packageGroupsSource, /dependencyManagement\.actions\.\$\{actionKey\}/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
@@ -63,7 +67,7 @@ describe('dependency management renderer wiring', () => {
     ]);
 
     assert.match(pageSource, /setBatchSyncState\(\{\s*packageIds: \[packageId\],\s*status: 'running',\s*logs: \[\],\s*\}\);/);
-    assert.match(pageSource, /const packageIds = selectedEligibleIds;/);
+    assert.match(pageSource, /const runBatchInstall = async \(packageIds: ManagedNpmPackageId\[\]\) => \{/);
     assert.match(pageSource, /getDependencyManagementBridge\(\)\.syncPackages\(\{ packageIds \}\)/);
     assert.match(pageSource, /current && current\.packageIds\.length === 1 && current\.packageIds\[0\] === packageId/);
     assert.match(modelSource, /batchSyncState\s*&& batchSyncState\.packageIds\.includes\(event\.packageId\)/);
@@ -123,6 +127,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /disabled=\{actionsDisabled \|\| isBatchSyncRunning \|\| selectedEligibleCount === 0\}/);
     assert.match(packageGroupsSource, /const rowDisabled = actionsDisabled \|\| item\.status === 'unknown';/);
     assert.match(packageGroupsSource, /disabled=\{actionsDisabled \|\| selectablePackageIds\.length === 0\}/);
+    assert.match(packageGroupsSource, /className="h-6 w-6 rounded-md border-2 shadow-sm"/);
     assert.doesNotMatch(packageGroupsSource, /disabled=\{!hagiscriptGateOpen/);
   });
 
@@ -163,8 +168,10 @@ describe('dependency management renderer wiring', () => {
 
     assert.equal(zhJson.sidebar.dependencyManagement, '依赖项管理');
     assert.equal(enJson.sidebar.dependencyManagement, 'Dependency Management');
-    assert.equal(zhJson.dependencyManagement.packageTable.description, '选择 Agent CLI 与工作流依赖项，通过 Desktop SDK 的 npm 同步流程安装。');
-    assert.equal(enJson.dependencyManagement.packageTable.description, 'Select Agent CLI and workflow dependencies to install through the Desktop SDK npm sync flow.');
+    assert.equal(zhJson.dependencyManagement.packageTable.groups.base.title, '基础依赖');
+    assert.equal(zhJson.dependencyManagement.packageTable.groups.agentCli.title, 'Agent CLI');
+    assert.equal(enJson.dependencyManagement.packageTable.groups.base.title, 'Base dependencies');
+    assert.equal(enJson.dependencyManagement.packageTable.groups.agentCli.description, 'Choose the Agent CLI tools you want to connect, then install them through the Desktop SDK npm sync flow.');
     assert.equal(zhJson.dependencyManagement.vendoredRuntime.primaryDescriptions.installed, '运行时文件已安装，并且符合最新的 Desktop 运行时契约。');
     assert.equal(enJson.dependencyManagement.vendoredRuntime.primaryDescriptions.installed, 'Runtime files are installed and matched the latest Desktop runtime contract.');
     assert.match(enJson.codeServer.dependencyGuidance.description, /Desktop-managed PM2/);
