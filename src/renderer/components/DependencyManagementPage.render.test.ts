@@ -174,7 +174,5 @@ describe('dependency management renderer wiring', () => {
     assert.equal(enJson.dependencyManagement.packageTable.groups.agentCli.description, 'Choose the Agent CLI tools you want to connect, then install them through the Desktop SDK npm sync flow.');
     assert.equal(zhJson.dependencyManagement.vendoredRuntime.primaryDescriptions.installed, '运行时文件已安装，并且符合最新的 Desktop 运行时契约。');
     assert.equal(enJson.dependencyManagement.vendoredRuntime.primaryDescriptions.installed, 'Runtime files are installed and matched the latest Desktop runtime contract.');
-    assert.match(enJson.codeServer.dependencyGuidance.description, /Desktop-managed PM2/);
-    assert.match(zhJson.codeServer.dependencyGuidance.description, /Desktop 托管的 PM2/);
   });
 });

@@ -34,7 +34,6 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -57,7 +56,6 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import HagicodeActionButton from './HagicodeActionButton';
-import type { CodeServerBridge } from '../../types/code-server-management.js';
 import {
   buildAccessUrl,
   DEFAULT_WEB_SERVICE_HOST,
@@ -79,26 +77,11 @@ declare global {
     electronAPI: {
       getWebServiceVersion: () => Promise<string>;
       logDirectory: LogDirectoryBridge;
-      codeServer: CodeServerBridge;
     };
   }
 }
 
 const WEB_APP_LOG_DIRECTORY_TARGET: LogDirectoryTarget = 'web-app';
-const AUTO_START_CODE_SERVER_STORAGE_KEY = 'webService.autoStart.codeServer';
-
-function readStoredStartupPreference(key: string, fallback: boolean): boolean {
-  if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
-    return fallback;
-  }
-
-  const raw = globalThis.localStorage.getItem(key);
-  if (raw === null) {
-    return fallback;
-  }
-
-  return raw === 'true';
-}
 
 const WebServiceStatusCard: React.FC = () => {
   const { t } = useTranslation(['components', 'common', 'pages']);
@@ -123,9 +106,6 @@ const WebServiceStatusCard: React.FC = () => {
   const [networkConfigError, setNetworkConfigError] = useState<string | null>(null);
   const [dependencyReadiness, setDependencyReadiness] = useState<DependencyReadinessSummary | null>(null);
   const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
-  const [autoStartCodeServer, setAutoStartCodeServer] = useState(() =>
-    readStoredStartupPreference(AUTO_START_CODE_SERVER_STORAGE_KEY, true)
-  );
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isRunning = webServiceInfo.status === 'running';
@@ -208,14 +188,6 @@ const WebServiceStatusCard: React.FC = () => {
     setNetworkConfigError(null);
   }, [webServiceInfo.host, webServiceInfo.port]);
 
-  useEffect(() => {
-    if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) {
-      return;
-    }
-
-    globalThis.localStorage.setItem(AUTO_START_CODE_SERVER_STORAGE_KEY, String(autoStartCodeServer));
-  }, [autoStartCodeServer]);
-
   const persistNetworkConfig = async () => {
     const port = parseInt(portInputValue, 10);
     const candidateHost = selectedListenPreset === 'custom' ? customListenHost.trim() : selectedListenPreset;
@@ -269,37 +241,7 @@ const WebServiceStatusCard: React.FC = () => {
       return;
     }
 
-    const ensureCodeServerStarted = async () => {
-      try {
-        const status = await window.electronAPI.codeServer.getStatus();
-        if (status.status === 'running') {
-          return;
-        }
-
-        if (!status.pm2Available || status.runtime.installStatus !== 'installed') {
-          toast.error(t('webServiceStatus.managedStartup.errors.codeServerUnavailable'));
-          return;
-        }
-
-        const result = await window.electronAPI.codeServer.start();
-        if (!result.success) {
-          toast.error(t('webServiceStatus.managedStartup.errors.codeServerStartFailed'), {
-            description: result.error,
-          });
-        }
-      } catch {
-        toast.error(t('webServiceStatus.managedStartup.errors.codeServerStartFailed'));
-      }
-    };
-
-    const startHagicodePromise = dispatch(startWebService());
-    const managedStartupTasks: Promise<void>[] = [];
-
-    if (autoStartCodeServer) {
-      managedStartupTasks.push(ensureCodeServerStarted());
-    }
-
-    await Promise.allSettled([startHagicodePromise, ...managedStartupTasks]);
+    await dispatch(startWebService());
   };
 
   const handleStop = async () => {
@@ -823,23 +765,6 @@ const WebServiceStatusCard: React.FC = () => {
                   {normalizedPendingHost === '0.0.0.0'
                     ? t('webServiceStatus.listenAddress.wildcardHint')
                     : t('webServiceStatus.listenAddress.localOnlyHint')}
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-xl border border-border/60 bg-background/80 p-4">
-                <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">{t('webServiceStatus.managedStartup.label')}</div>
-                  <p className="text-xs text-muted-foreground">{t('webServiceStatus.managedStartup.description')}</p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-3">
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium text-foreground">{t('webServiceStatus.managedStartup.options.codeServer.label')}</div>
-                      <p className="text-xs text-muted-foreground">{t('webServiceStatus.managedStartup.options.codeServer.description')}</p>
-                    </div>
-                    <Switch checked={autoStartCodeServer} onCheckedChange={setAutoStartCodeServer} />
-                  </div>
                 </div>
               </div>
 

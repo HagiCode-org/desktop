@@ -7,7 +7,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
-import { CodeServerMiniCard } from './ManagedServiceMiniCard';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -567,21 +566,6 @@ export default function SystemManagementView({
           <div {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'service-card' }}>
             <WebServiceStatusCard />
           </div>
-
-          {/* Managed services overview */}
-          <section
-            className="rounded-[28px] border border-border/80 bg-card px-6 py-6 shadow-sm lg:px-8"
-            {...{ [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'hero' }}
-          >
-            <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">{t('system.services.title')}</h2>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <CodeServerMiniCard />
-            </div>
-          </section>
 
           <section
             className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"

@@ -13,7 +13,6 @@ import {
   Info,
   LoaderCircle,
   PackageOpen,
-  Server,
   Settings,
   Stethoscope,
 } from 'lucide-react';
@@ -49,7 +48,6 @@ const navigationItems: NavigationItem[] = [
   { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
   { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
   { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen },
-  { id: 'code-server', labelKey: 'sidebar.codeServer', icon: Server },
   { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
 ];
 
