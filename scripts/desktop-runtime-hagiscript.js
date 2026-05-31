@@ -42,8 +42,6 @@ export function resolveManagedDesktopRuntimeComponentName(componentId) {
       return `dotnet/runtime/${process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform()}`;
     case 'node':
       return NODE_COMPONENT_NAME;
-    case 'code-server':
-      return 'code-server';
     default:
       throw new Error(`Unsupported Desktop runtime component: ${componentId}`);
   }
