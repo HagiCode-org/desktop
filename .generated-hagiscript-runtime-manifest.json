@@ -36,27 +36,17 @@
       "version": "10.0.5",
       "channelVersion": "10.0",
       "installScript": "/home/newbe36524/repos/hagicode-mono/repos/hagicode-desktop/scripts/prepare-embedded-runtime.js"
-    },
-    {
-      "name": "code-server",
-      "type": "bundled-runtime",
-      "source": "desktop-vendored-runtime",
-      "version": "2026.0509.0034",
-      "runtimeDataDir": "components/services/code-server",
-      "installScript": "/home/newbe36524/repos/hagicode-mono/repos/hagicode-desktop/scripts/prepare-code-server-runtime.js"
     }
   ],
   "phases": {
     "install": {
       "order": [
         "node/runtime",
-        "dotnet/runtime/linux-x64",
-        "code-server"
+        "dotnet/runtime/linux-x64"
       ]
     },
     "remove": {
       "order": [
-        "code-server",
         "dotnet/runtime/linux-x64",
         "node/runtime"
       ]
@@ -64,8 +54,7 @@
     "update": {
       "order": [
         "node/runtime",
-        "dotnet/runtime/linux-x64",
-        "code-server"
+        "dotnet/runtime/linux-x64"
       ]
     }
   }
