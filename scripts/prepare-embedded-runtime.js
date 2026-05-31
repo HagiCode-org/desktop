@@ -25,7 +25,7 @@ const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const dotnetExecutableName = getDotnetExecutableName(runtimePlatform);
 const managedExecution = isManagedDesktopRuntimeComponentExecution();
-const managedComponentRoot = resolveManagedDesktopRuntimeComponentRoot();
+const managedComponentRoot = managedExecution ? resolveManagedDesktopRuntimeComponentRoot() : null;
 const stagedRuntimeRoot = managedComponentRoot
   ? path.join(managedComponentRoot, 'current')
   : resolveStagedDesktopRuntimeComponentRoot('dotnet', {

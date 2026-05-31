@@ -136,55 +136,69 @@ function resolveInstalledHagiscript(minimumVersion = '0.1.8') {
     return envProvided;
   }
 
-  let result = null;
-  let resolvedCommand = null;
-  let resolvedScope = 'global';
-
-  for (const command of resolveDirectHagiscriptCommands()) {
-    result = runHagiscriptVersion(command);
-    if (!result.error || result.error.code !== 'ENOENT') {
-      resolvedCommand = command;
-      resolvedScope = 'global';
-      break;
-    }
-  }
-
-  if (result?.error?.code === 'ENOENT') {
-    const fallbackCommand = resolveFallbackHagiscriptCommand();
-    if (fallbackCommand) {
-      result = runHagiscriptVersion(fallbackCommand);
-      resolvedCommand = fallbackCommand;
-      resolvedScope = 'global';
-    }
-  }
-
-  if (!resolvedCommand) {
-    resolvedCommand = process.platform === 'win32' ? 'hagiscript.cmd' : 'hagiscript';
-  }
-
-  if (result.error) {
-    throw new Error(`Required hagiscript installation is missing: ${result.error.message}`);
-  }
-  if ((result.status ?? 1) !== 0) {
-    throw new Error(`hagiscript prerequisite check failed: ${(result.stderr || result.stdout || '').trim() || 'unknown error'}`);
-  }
-
-  const actual = parseVersion(result.stdout || result.stderr || '');
   const required = parseVersion(minimumVersion);
-  if (!actual || !required) {
-    throw new Error('hagiscript prerequisite check could not determine a semantic version.');
+  if (!required) {
+    throw new Error('hagiscript prerequisite check could not determine the required semantic version.');
   }
 
-  if (compareVersions(actual, required) < 0) {
-    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${actual.join('.')} is installed globally.`);
+  const candidateCommands = [...resolveDirectHagiscriptCommands()];
+  const fallbackCommand = resolveFallbackHagiscriptCommand();
+  if (fallbackCommand && !candidateCommands.includes(fallbackCommand)) {
+    candidateCommands.push(fallbackCommand);
   }
 
-  return {
-    command: resolvedCommand,
-    version: actual.join('.'),
-    scope: resolvedScope,
-    packageRoot: null,
-  };
+  let missingError = null;
+  let failedResult = null;
+  let closestVersion = null;
+
+  for (const command of candidateCommands) {
+    const result = runHagiscriptVersion(command);
+
+    if (result.error) {
+      if (result.error.code === 'ENOENT') {
+        missingError = result.error;
+        continue;
+      }
+
+      throw new Error(`Required hagiscript installation is missing: ${result.error.message}`);
+    }
+
+    if ((result.status ?? 1) !== 0) {
+      failedResult = result;
+      continue;
+    }
+
+    const actual = parseVersion(result.stdout || result.stderr || '');
+    if (!actual) {
+      failedResult = result;
+      continue;
+    }
+
+    if (compareVersions(actual, required) >= 0) {
+      return {
+        command,
+        version: actual.join('.'),
+        scope: 'global',
+        packageRoot: null,
+      };
+    }
+
+    closestVersion = actual.join('.');
+  }
+
+  if (failedResult) {
+    throw new Error(`hagiscript prerequisite check failed: ${(failedResult.stderr || failedResult.stdout || '').trim() || 'unknown error'}`);
+  }
+
+  if (closestVersion) {
+    throw new Error(`hagiscript ${minimumVersion}+ is required, but ${closestVersion} is installed globally.`);
+  }
+
+  if (missingError) {
+    throw new Error(`Required hagiscript installation is missing: ${missingError.message}`);
+  }
+
+  throw new Error('Required hagiscript installation is missing.');
 }
 
 function resolveGlobalNodeModulesRoot() {

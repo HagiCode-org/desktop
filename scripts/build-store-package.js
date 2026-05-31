@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 import AdmZip from 'adm-zip';
 import { execa } from 'execa';
 
-import { packageMsix } from './package-msix.js';
 import {
   DEFAULT_STORE_CONFIG_PATH,
   loadStorePackageConfig,
@@ -17,7 +16,7 @@ import {
   resolveRuntimeRoot,
   toWindowsPackageVersion,
   validateServerPayloadRoot,
-  writeStoreElectronBuilderConfig,
+  writeStoreForgeConfigOverlay,
 } from './store-package-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +26,7 @@ function parseArgs(argv) {
     artifactOutputDir: null,
     dryRun: false,
     metadataOutputPath: null,
-    overlayOutputPath: path.join(projectRoot, 'electron-builder.store.yml'),
+    overlayOutputPath: path.join(projectRoot, 'forge.store-config.json'),
     platformId: process.arch === 'arm64' ? 'win-arm64' : process.arch === 'ia32' ? 'win-ia32' : 'win-x64',
     runtimeInjectionPath: null,
     serverPayloadPath: null,
@@ -75,7 +74,7 @@ Options:
   --runtime-injection-path <dir>  Override runtime injection path (default: resources/portable-fixed/current)
   --artifact-output-dir <dir>     Output directory for Store artifacts
   --metadata-output-path <path>   Metadata output path
-  --overlay-output-path <path>    Generated electron-builder overlay path
+  --overlay-output-path <path>    Generated Forge overlay path
   --platform-id <id>              Workflow platform id (default: win-x64 on x64 hosts)
   --dry-run                       Emit a synthetic Store package without Windows packaging tools
   --verbose                       Print verbose MSIX packaging output
@@ -128,13 +127,26 @@ function buildStepScripts(scripts) {
   ].filter(Boolean);
 }
 
-async function runCommand(command, args, cwd = projectRoot) {
+async function runCommand(command, args, cwd = projectRoot, env = process.env) {
   await execa(command, args, {
     cwd,
+    env,
     stdin: 'inherit',
     stdout: 'inherit',
     stderr: 'inherit',
   });
+}
+
+async function listMsixArtifacts(directory) {
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  const entries = await fsp.readdir(directory, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.msix'))
+    .map((entry) => path.join(directory, entry.name))
+    .sort((left, right) => left.localeCompare(right));
 }
 
 async function withInjectedPayload(serverPayloadPath, runtimeInjectionPath, callback) {
@@ -193,7 +205,7 @@ async function createSyntheticStorePackage({ artifactPath, runtimeInjectionPath,
         {
           desktopVersion,
           packageIdentity: storeConfig.packageIdentity,
-          appx: storeConfig.appx,
+          msix: storeConfig.msix,
         },
         null,
         2
@@ -251,9 +263,9 @@ export function createStoreBuildMetadata({
       publisher: storeConfig.packageIdentity.publisher,
       identityName: storeConfig.packageIdentity.identityName,
       languages: [...storeConfig.packageIdentity.languages],
-      capabilities: [...storeConfig.appx.capabilities],
-      minVersion: storeConfig.appx.minVersion,
-      maxVersionTested: storeConfig.appx.maxVersionTested,
+      capabilities: [...storeConfig.msix.capabilities],
+      minVersion: storeConfig.msix.minVersion,
+      maxVersionTested: storeConfig.msix.maxVersionTested,
     },
     artifacts: artifacts.map((artifactPath) => ({
       path: artifactPath,
@@ -270,7 +282,7 @@ export async function buildStorePackage(rawOptions = {}) {
   const packageJson = JSON.parse(await fsp.readFile(path.join(projectRoot, 'package.json'), 'utf8'));
   const scripts = packageJson.scripts ?? {};
   const buildVersion = toWindowsPackageVersion(packageJson.version);
-  const overlayConfig = await writeStoreElectronBuilderConfig({
+  const overlayConfig = await writeStoreForgeConfigOverlay({
     storeConfigPath,
     outputPath: options.overlayOutputPath,
     buildVersion,
@@ -284,9 +296,6 @@ export async function buildStorePackage(rawOptions = {}) {
   const runtimeInjectionPath = options.runtimeInjectionPath
     ? path.resolve(options.runtimeInjectionPath)
     : path.resolve(projectRoot, storeConfig.runtimeInjectionPath);
-  const msixStagePath = path.resolve(projectRoot, storeConfig.stageDirectory);
-  const inputDirectory = path.resolve(projectRoot, storeConfig.inputDirectory);
-  const assetsDirectory = path.resolve(projectRoot, storeConfig.assetsDirectory);
   const desktopSourceRef = await resolveDesktopSourceRef(projectRoot);
 
   const artifactPaths = await withInjectedPayload(options.serverPayloadPath, runtimeInjectionPath, async ({
@@ -336,27 +345,38 @@ export async function buildStorePackage(rawOptions = {}) {
       await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', scriptName], projectRoot);
     }
 
+    const existingMsixArtifacts = new Set(await listMsixArtifacts(artifactOutputDirectory));
     await runCommand(process.execPath, [
-      'scripts/run-electron-builder.js',
-      '--win',
-      'dir',
-      '--publish',
-      'never',
-      '--config',
-      path.relative(projectRoot, overlayConfig.outputPath),
-    ], projectRoot);
-
-    const packagedMsix = await packageMsix({
-      assets: assetsDirectory,
-      input: inputDirectory,
-      output: artifactOutputDirectory,
-      stage: msixStagePath,
-      storeConfigPath,
-      verbose: options.verbose,
+      'scripts/run-electron-forge.js',
+      '--platform',
+      'win32',
+      '--arch',
+      resolveWindowsArch(options.platformId),
+      '--targets',
+      'msix',
+    ], projectRoot, {
+      ...process.env,
+      HAGICODE_PACKAGE_OUTPUT_DIR: artifactOutputDirectory,
+      HAGICODE_STORE_CONFIG_PATH: storeConfigPath,
+      HAGICODE_STORE_FORGE_CONFIG: overlayConfig.outputPath,
+      WINDOWS_PACKAGE_VERSION: buildVersion,
     });
 
+    const packagedMsixArtifacts = (await listMsixArtifacts(artifactOutputDirectory))
+      .filter((artifactPath) => !existingMsixArtifacts.has(artifactPath));
+
+    if (packagedMsixArtifacts.length === 0) {
+      throw new Error(`Forge MSIX packaging completed without producing a new .msix artifact in ${artifactOutputDirectory}`);
+    }
+
+    if (packagedMsixArtifacts.length > 1) {
+      throw new Error(`Expected one MSIX artifact from Forge Store packaging, received ${packagedMsixArtifacts.length}: ${packagedMsixArtifacts.join(', ')}`);
+    }
+
+    const packagedMsixPath = packagedMsixArtifacts[0];
+
     const buildMetadata = createStoreBuildMetadata({
-      artifacts: [packagedMsix.artifactPath],
+      artifacts: [packagedMsixPath],
       buildMode: 'desktop-store-build-command',
       desktopSourceRef,
       desktopVersion: packageJson.version,
@@ -373,7 +393,7 @@ export async function buildStorePackage(rawOptions = {}) {
     });
     await fsp.mkdir(path.dirname(metadataOutputPath), { recursive: true });
     await fsp.writeFile(metadataOutputPath, `${JSON.stringify(buildMetadata, null, 2)}\n`, 'utf8');
-    return [packagedMsix.artifactPath];
+    return [packagedMsixPath];
   });
 
   return {

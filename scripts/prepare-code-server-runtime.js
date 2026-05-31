@@ -23,8 +23,9 @@ main().catch((error) => {
 
 async function main() {
   const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
+  const managedExecution = isManagedDesktopRuntimeComponentExecution(['code-server']);
 
-  if (!isManagedDesktopRuntimeComponentExecution(['code-server'])) {
+  if (!managedExecution) {
     await updateDesktopRuntimeComponents(['code-server'], {
       force: process.env.HAGICODE_FORCE_CODE_SERVER_RUNTIME_RESTAGE === '1',
     });
@@ -32,7 +33,7 @@ async function main() {
 
   const config = readCodeServerRuntimeConfig();
   const platformKey = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
-  const runtimeRoot = resolveManagedDesktopRuntimeComponentRoot()
+  const runtimeRoot = (managedExecution ? resolveManagedDesktopRuntimeComponentRoot() : null)
     || resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
   const validation = validateCodeServerRuntimePayload(runtimeRoot, { platformKey, config });
   const errors = [...validation.missingEntries, ...validation.diagnostics];

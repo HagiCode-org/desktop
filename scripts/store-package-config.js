@@ -61,42 +61,6 @@ function normalizeStringArray(value, label) {
   return requireNonEmptyArray(value, label).map((entry, index) => requireNonEmptyString(entry, `${label}[${index}]`));
 }
 
-function yamlScalar(value) {
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
-  }
-
-  const normalized = String(value);
-  if (
-    normalized.length === 0 ||
-    normalized.startsWith('!') ||
-    normalized.startsWith('&') ||
-    normalized.startsWith('*') ||
-    normalized.startsWith('[') ||
-    normalized.startsWith('{') ||
-    normalized.startsWith('#') ||
-    normalized.startsWith('|') ||
-    normalized.startsWith('>') ||
-    /^[-?:](?:\s|$)/.test(normalized) ||
-    /^\s|\s$/.test(normalized)
-  ) {
-    return JSON.stringify(normalized);
-  }
-
-  return normalized;
-}
-
-function renderYamlList(key, values, indent = '    ') {
-  if (!Array.isArray(values) || values.length === 0) {
-    return [];
-  }
-
-  return [
-    `  ${key}:`,
-    ...values.map((value) => `${indent}- ${yamlScalar(value)}`),
-  ];
-}
-
 export function toWindowsPackageVersion(version) {
   const normalized = String(version || '').trim();
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(normalized);
@@ -113,13 +77,13 @@ export function toWindowsPackageVersion(version) {
 export function validateStorePackageConfig(config) {
   requireObject(config, 'storePackageConfig');
   const packageIdentity = requireObject(config.packageIdentity, 'storePackageConfig.packageIdentity');
-  const appx = requireObject(config.appx, 'storePackageConfig.appx');
+  const msix = requireObject(config.msix, 'storePackageConfig.msix');
 
   return {
     schemaVersion: Number(config.schemaVersion || 1),
-    sourceElectronBuilderConfigPath: normalizeRelativePath(
-      config.sourceElectronBuilderConfigPath,
-      'storePackageConfig.sourceElectronBuilderConfigPath'
+    sourceForgeConfigPath: normalizeRelativePath(
+      config.sourceForgeConfigPath,
+      'storePackageConfig.sourceForgeConfigPath'
     ),
     inputDirectory: normalizeRelativePath(config.inputDirectory, 'storePackageConfig.inputDirectory'),
     outputDirectory: normalizeRelativePath(config.outputDirectory, 'storePackageConfig.outputDirectory'),
@@ -148,13 +112,13 @@ export function validateStorePackageConfig(config) {
         'storePackageConfig.packageIdentity.addAutoLaunchExtension'
       ),
     },
-    appx: {
-      minVersion: requireNonEmptyString(appx.minVersion, 'storePackageConfig.appx.minVersion'),
+    msix: {
+      minVersion: requireNonEmptyString(msix.minVersion, 'storePackageConfig.msix.minVersion'),
       maxVersionTested: requireNonEmptyString(
-        appx.maxVersionTested,
-        'storePackageConfig.appx.maxVersionTested'
+        msix.maxVersionTested,
+        'storePackageConfig.msix.maxVersionTested'
       ),
-      capabilities: normalizeStringArray(appx.capabilities, 'storePackageConfig.appx.capabilities'),
+      capabilities: normalizeStringArray(msix.capabilities, 'storePackageConfig.msix.capabilities'),
     },
   };
 }
@@ -173,56 +137,46 @@ export async function loadStorePackageConfig(storeConfigPath = DEFAULT_STORE_CON
   };
 }
 
-export function renderStoreElectronBuilderConfig({
+export function renderStoreForgeConfigOverlay({
   sourceConfigPath,
   storeConfig,
   buildVersion,
   publisherOverride = null,
 }) {
-  const packageJsonVersion = String(buildVersion).split('.').slice(0, 3).join('.');
-  const lines = [
-    `extends: ${yamlScalar(sourceConfigPath)}`,
-    `buildVersion: ${yamlScalar(buildVersion)}`,
-    'extraMetadata:',
-    `  version: ${yamlScalar(packageJsonVersion)}`,
-    'appx:',
-    '  artifactName: ${productName} ${version}.appx',
-    `  displayName: ${yamlScalar(storeConfig.packageIdentity.displayName)}`,
-    `  publisherDisplayName: ${yamlScalar(storeConfig.packageIdentity.publisherDisplayName)}`,
-    `  publisher: ${yamlScalar(publisherOverride ?? storeConfig.packageIdentity.publisher)}`,
-    `  identityName: ${yamlScalar(storeConfig.packageIdentity.identityName)}`,
-    `  backgroundColor: ${yamlScalar(storeConfig.packageIdentity.backgroundColor)}`,
-    ...renderYamlList('languages', storeConfig.packageIdentity.languages),
-    `  addAutoLaunchExtension: ${yamlScalar(storeConfig.packageIdentity.addAutoLaunchExtension)}`,
-    ...renderYamlList('capabilities', storeConfig.appx.capabilities),
-    `  minVersion: ${yamlScalar(storeConfig.appx.minVersion)}`,
-    `  maxVersionTested: ${yamlScalar(storeConfig.appx.maxVersionTested)}`,
-  ];
-
-  return `${lines.join('\n')}\n`;
+  return `${JSON.stringify({
+    extends: sourceConfigPath,
+    buildVersion,
+    packageIdentity: {
+      ...storeConfig.packageIdentity,
+      publisher: publisherOverride ?? storeConfig.packageIdentity.publisher,
+    },
+    msix: {
+      ...storeConfig.msix,
+    },
+  }, null, 2)}\n`;
 }
 
-export async function writeStoreElectronBuilderConfig({
+export async function writeStoreForgeConfigOverlay({
   storeConfigPath = DEFAULT_STORE_CONFIG_PATH,
   outputPath,
   buildVersion,
   publisherOverride = null,
 }) {
   const { storeConfig, storeConfigPath: resolvedStoreConfigPath } = await loadStorePackageConfig(storeConfigPath);
-  const sourceConfigPath = path.resolve(projectRoot, storeConfig.sourceElectronBuilderConfigPath);
+  const sourceConfigPath = path.resolve(projectRoot, storeConfig.sourceForgeConfigPath);
   const resolvedOutputPath = path.isAbsolute(outputPath)
     ? outputPath
     : path.resolve(projectRoot, outputPath);
 
   if (!fs.existsSync(sourceConfigPath)) {
-    throw new Error(`Desktop electron-builder config does not exist: ${sourceConfigPath}`);
+    throw new Error(`Desktop forge config does not exist: ${sourceConfigPath}`);
   }
 
   const relativeSourceConfigPath = path.relative(path.dirname(resolvedOutputPath), sourceConfigPath).replaceAll(path.sep, '/');
   await fsp.mkdir(path.dirname(resolvedOutputPath), { recursive: true });
   await fsp.writeFile(
     resolvedOutputPath,
-    renderStoreElectronBuilderConfig({
+    renderStoreForgeConfigOverlay({
       sourceConfigPath: relativeSourceConfigPath || path.basename(sourceConfigPath),
       storeConfig,
       buildVersion,

@@ -10,6 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'node:url';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
   detectRuntimePlatform,
@@ -67,8 +68,8 @@ const globalHagiscriptVersion = (() => {
     return error instanceof Error ? error.message : String(error);
   }
 })();
-const appxAssetDir = path.join(process.cwd(), 'resources', 'appx');
-const requiredAppxAssets = [
+const msixAssetDir = path.join(process.cwd(), 'resources', 'msix');
+const requiredMsixAssets = [
   { fileName: 'StoreLogo.png', width: 50, height: 50 },
   { fileName: 'Square44x44Logo.png', width: 44, height: 44 },
   { fileName: 'Square150x150Logo.png', width: 150, height: 150 },
@@ -462,80 +463,49 @@ test('main.js has content', () => {
   logVerbose(`main.js size: ${stats.size} bytes`);
 });
 
-test('electron-builder configuration is valid', async () => {
-  const yamlPath = path.join(process.cwd(), 'electron-builder.yml');
-  const pkgPath = path.join(process.cwd(), 'package.json');
+test('electron-forge configuration is valid', async () => {
+  const forgeConfigPath = path.join(process.cwd(), 'forge.config.js');
 
-  let buildConfig = null;
-  let configSource = '';
-
-  if (fs.existsSync(yamlPath)) {
-    try {
-      const yaml = await import('js-yaml');
-      const content = fs.readFileSync(yamlPath, 'utf8');
-      buildConfig = yaml.load(content);
-      configSource = 'electron-builder.yml';
-    } catch (error) {
-      assert(false, `electron-builder.yml is valid YAML: ${error.message}`);
-      return;
-    }
-  } else if (fs.existsSync(pkgPath)) {
-    try {
-      const content = fs.readFileSync(pkgPath, 'utf8');
-      const pkg = JSON.parse(content);
-      buildConfig = pkg.build;
-      configSource = 'package.json';
-    } catch (error) {
-      assert(false, `package.json is valid JSON: ${error.message}`);
-      return;
-    }
-  } else {
+  if (!fs.existsSync(forgeConfigPath)) {
     results.skipped++;
     return;
   }
 
-  if (!buildConfig) {
-    assert(false, `build configuration exists in ${configSource}`);
+  let forgeConfig = null;
+  const forgeConfigSource = fs.readFileSync(forgeConfigPath, 'utf8');
+  try {
+    forgeConfig = (await import(`${pathToFileURL(forgeConfigPath).href}?t=${Date.now()}`)).default;
+  } catch (error) {
+    assert(false, `forge.config.js is a valid module: ${error.message}`);
     return;
   }
 
-  const hasAsar = buildConfig?.asar === true;
-  const files = Array.isArray(buildConfig?.files) ? buildConfig.files : [];
-  const hasFiles = files.length > 0;
-  const extraResources = Array.isArray(buildConfig?.extraResources) ? buildConfig.extraResources : [];
-  const linuxExtraFiles = Array.isArray(buildConfig?.linux?.extraFiles) ? buildConfig.linux.extraFiles : [];
-  const windowIconExtraResource = extraResources.find((entry) => entry.from === 'resources/icon.png');
-  const runtimeExtraResource = extraResources.find((entry) => entry.from === 'resources' && entry.to === 'extra/runtime');
-  const steamWrapperExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-wrapper.sh');
-  const steamSandboxExtraFile = linuxExtraFiles.find((entry) => entry.from === 'resources/linux/hagicode-steam-sandbox.sh');
-  const macToolchainSigningHook = 'scripts/macos-toolchain-signing-hook.cjs';
-  const windowIconOutsideAsar = typeof windowIconExtraResource?.to === 'string' && !windowIconExtraResource.to.includes('app.asar');
-  const runtimeOutsideAsar = typeof runtimeExtraResource?.to === 'string' && !runtimeExtraResource.to.includes('app.asar');
-  const runtimeCanonicalPath = runtimeExtraResource?.to === 'extra/runtime';
-  const runtimeExtraResourceFilter = Array.isArray(runtimeExtraResource?.filter) ? runtimeExtraResource.filter : [];
-  const runtimeGeneratedPathsExcludedFromAsar = files.includes('!resources/bin/**/*')
-    && files.includes('!resources/components/**/*');
-  const runtimeGeneratedPathsPackagedOutsideAsar = runtimeExtraResourceFilter.includes('bin/**/*')
-    && runtimeExtraResourceFilter.includes('components/**/*');
-  const legacyToolchainExtraResource = extraResources.find((entry) => entry.from === 'resources/toolchain' || entry.to === 'extra/toolchain');
-  const legacyCodeServerExtraResource = extraResources.find((entry) => entry.from === 'resources/code-server/current' || entry.to === 'extra/code-server/current');
-  const macSignIgnore = Array.isArray(buildConfig?.mac?.signIgnore)
-    ? buildConfig.mac.signIgnore
-    : (buildConfig?.mac?.signIgnore ? [buildConfig.mac.signIgnore] : []);
-  const runtimeSkippedByMacSigning = macSignIgnore.some((pattern) => String(pattern).includes('extra/runtime'));
-  const legacyRuntimeSigningPattern = macSignIgnore.some((pattern) => String(pattern).includes('extra/toolchain') || String(pattern).includes('extra/code-server/current') );
-  const toolchainStashedDuringMacSigning = buildConfig?.afterPack === macToolchainSigningHook && buildConfig?.afterSign === macToolchainSigningHook;
-  const linuxTargets = Array.isArray(buildConfig?.linux?.target)
-    ? buildConfig.linux.target
-      .map((entry) => (typeof entry === 'string' ? entry : entry?.target))
-      .filter(Boolean)
-    : [];
-  const missingAppxAssets = requiredAppxAssets
-    .filter((asset) => !fs.existsSync(path.join(appxAssetDir, asset.fileName)))
+  const packagerConfig = forgeConfig?.packagerConfig || {};
+  const makerNames = Array.isArray(forgeConfig?.makers) ? forgeConfig.makers.map((maker) => maker?.name).filter(Boolean) : [];
+  const ignorePatterns = Array.isArray(packagerConfig.ignore) ? packagerConfig.ignore.map((pattern) => String(pattern)) : [];
+  const extraResources = Array.isArray(packagerConfig.extraResource) ? packagerConfig.extraResource : [];
+  const windowIconExtraResource = extraResources.find((entry) => String(entry).endsWith(path.join('resources', 'icon.png')));
+  const runtimeGeneratedPathsExcludedFromAsar = ignorePatterns.some((pattern) => pattern.includes('resources\\/bin') || pattern.includes('resources/bin'))
+    && ignorePatterns.some((pattern) => pattern.includes('resources\\/components') || pattern.includes('resources/components'));
+  const portableFixedExcludedFromAsar = ignorePatterns.some((pattern) => pattern.includes('portable-fixed'));
+  const runtimeCopyHookRegistered = Array.isArray(packagerConfig.afterCopyExtraResources) && packagerConfig.afterCopyExtraResources.length > 0;
+  const runtimeRestoreHookRegistered = Array.isArray(packagerConfig.afterComplete) && packagerConfig.afterComplete.length > 0;
+  const macSignIgnore = packagerConfig?.osxSign?.ignore;
+  const runtimeSkippedByMacSigning = typeof macSignIgnore === 'function'
+    ? macSignIgnore('/Applications/Hagicode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime/node')
+    : String(macSignIgnore || '').includes('extra/runtime') || forgeConfigSource.includes('extra/runtime');
+  const forgeIncludesAppImage = makerNames.includes('@reforged/maker-appimage');
+  const forgeIncludesZip = makerNames.includes('@electron-forge/maker-zip');
+  const forgeIncludesPortable = makerNames.includes('@rabbitholesyndrome/electron-forge-maker-portable');
+  const forgeIncludesNsis = makerNames.includes('@electron-addons/electron-forge-maker-nsis');
+  const forgeIncludesMsix = makerNames.includes('@electron-forge/maker-msix');
+  const forgeIncludesDmg = makerNames.includes('@electron-forge/maker-dmg');
+  const missingMsixAssets = requiredMsixAssets
+    .filter((asset) => !fs.existsSync(path.join(msixAssetDir, asset.fileName)))
     .map((asset) => asset.fileName);
-  const invalidAppxAssets = requiredAppxAssets
+  const invalidMsixAssets = requiredMsixAssets
     .filter((asset) => {
-      const assetPath = path.join(appxAssetDir, asset.fileName);
+      const assetPath = path.join(msixAssetDir, asset.fileName);
       if (!fs.existsSync(assetPath)) {
         return false;
       }
@@ -549,37 +519,27 @@ test('electron-builder configuration is valid', async () => {
     })
     .map((asset) => asset.fileName);
 
-  logVerbose(`config source: ${configSource}`);
-  logVerbose(`asar enabled: ${hasAsar}`);
-  logVerbose(`appx asset directory: ${appxAssetDir}`);
-  logVerbose(`runtime extraResources entries: ${extraResources.length}`);
-  logVerbose(`linux targets: ${linuxTargets.join(', ') || 'none'}`);
+  logVerbose(`asar enabled: ${packagerConfig?.asar === true}`);
+  logVerbose(`msix asset directory: ${msixAssetDir}`);
+  logVerbose(`forge makers: ${makerNames.join(', ') || 'none'}`);
+  logVerbose(`runtime extraResource entries: ${extraResources.length}`);
 
-  assert(true, `build configuration exists (${configSource})`);
-  assert(hasAsar, 'asar packaging is enabled');
-  assert(hasFiles, 'files to include are specified');
-  assert(missingAppxAssets.length === 0, 'appx tile assets override electron-builder default samples');
-  assert(invalidAppxAssets.length === 0, 'appx tile assets use the expected Store dimensions');
-  assert(Boolean(windowIconExtraResource), 'window icon is shipped via extraResources');
-  assert(windowIconOutsideAsar, 'window icon is staged outside app.asar');
-  assert(Boolean(runtimeExtraResource), 'desktop runtime is shipped via extraResources');
-  assert(runtimeOutsideAsar, 'embedded runtime is staged outside app.asar');
-  assert(runtimeCanonicalPath, 'desktop runtime is staged at extra/runtime');
+  assert(Boolean(forgeConfig), 'forge configuration exists');
+  assert(packagerConfig?.asar === true, 'asar packaging is enabled');
+  assert(missingMsixAssets.length === 0, 'msix tile assets override the default MSIX sample assets');
+  assert(invalidMsixAssets.length === 0, 'msix tile assets use the expected Store dimensions');
+  assert(Boolean(windowIconExtraResource), 'window icon is staged through Forge extraResource');
   assert(runtimeGeneratedPathsExcludedFromAsar, 'generated runtime directories are excluded from app.asar source files');
-  assert(runtimeGeneratedPathsPackagedOutsideAsar, 'desktop runtime extraResources only ships generated runtime directories');
-  assert(!legacyToolchainExtraResource, 'legacy split packaged toolchain root is no longer shipped');
-  assert(!legacyCodeServerExtraResource, 'legacy split packaged code-server root is no longer shipped');
-  assert(Boolean(steamWrapperExtraFile), 'steam Linux wrapper is shipped via extraFiles');
-  assert(steamWrapperExtraFile?.to === 'hagicode-steam-wrapper.sh', 'steam Linux wrapper is staged at the package root');
-  assert(Boolean(steamSandboxExtraFile), 'steam Linux sandbox helper is shipped via extraFiles');
-  assert(steamSandboxExtraFile?.to === 'hagicode-steam-sandbox.sh', 'steam Linux sandbox helper is staged at the package root');
+  assert(portableFixedExcludedFromAsar, 'portable fixed payload is excluded from app.asar source files');
+  assert(runtimeCopyHookRegistered, 'desktop runtime staging hook is registered before packaging completes');
+  assert(runtimeRestoreHookRegistered, 'macOS runtime restore hook is registered after packaging completes');
   assert(runtimeSkippedByMacSigning, 'desktop runtime is excluded from recursive macOS code signing');
-  assert(!legacyRuntimeSigningPattern, 'macOS signing ignore no longer targets legacy split runtime roots');
-  assert(toolchainStashedDuringMacSigning, 'bundled Node toolchain is stashed outside the macOS app during code signing');
-  assert(linuxTargets.includes('AppImage'), 'linux packaging keeps AppImage output');
-  assert(linuxTargets.includes('tar.gz'), 'linux packaging keeps tar.gz output');
-  assert(linuxTargets.includes('zip'), 'linux packaging adds ZIP output');
-  assert(!linuxTargets.includes('deb'), 'linux packaging no longer emits deb output');
+  assert(forgeIncludesAppImage, 'linux packaging keeps AppImage output');
+  assert(forgeIncludesZip, 'Forge keeps ZIP packaging for Linux and macOS');
+  assert(forgeIncludesPortable, 'windows packaging keeps the portable target');
+  assert(forgeIncludesNsis, 'windows packaging keeps the NSIS target');
+  assert(forgeIncludesMsix, 'windows packaging keeps the MSIX target');
+  assert(forgeIncludesDmg, 'macOS packaging keeps the DMG target');
 });
 
 test('desktop build workflow uses reusable ZIP-aware packaging workflows and split release publication steps', () => {

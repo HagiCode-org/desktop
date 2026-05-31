@@ -158,29 +158,40 @@ function resolveWindowsPackageTargets() {
   const targets = resolveConfiguredTargets();
   if (targets.length === 0) {
     return {
-      electronBuilderTargets: [],
-      packageMsix: false,
+      forgeTargets: ['portable', 'nsis', 'msix'],
+      packageOnly: false,
     };
   }
 
-  const supportedTargets = new Set(['portable', 'nsis', 'appx', 'dir', 'msix']);
+  const supportedTargets = new Set(['portable', 'nsis', 'msix']);
   const normalizedTargets = targets.map((target) => String(target).trim().toLowerCase()).filter(Boolean);
   const unsupportedTargets = normalizedTargets.filter((target) => !supportedTargets.has(target));
 
   if (unsupportedTargets.length > 0) {
-    throw new Error(`Unsupported Windows package target(s): ${unsupportedTargets.join(', ')}. Supported targets: portable, nsis, appx, dir, msix.`);
-  }
-
-  const packageMsix = normalizedTargets.includes('msix');
-  const electronBuilderTargets = normalizedTargets.filter((target) => target !== 'msix');
-  if (packageMsix && !electronBuilderTargets.includes('dir')) {
-    electronBuilderTargets.push('dir');
+    throw new Error(`Unsupported Windows package target(s): ${unsupportedTargets.join(', ')}. Supported targets: portable, nsis, msix.`);
   }
 
   return {
-    electronBuilderTargets: [...new Set(electronBuilderTargets)],
-    packageMsix,
+    forgeTargets: [...new Set(normalizedTargets)],
+    packageOnly: false,
   };
+}
+
+function resolveLinuxPackageTargets() {
+  const targets = resolveConfiguredTargets();
+  if (targets.length === 0) {
+    return ['appimage', 'tar.gz', 'zip'];
+  }
+
+  const supportedTargets = new Set(['appimage', 'tar.gz', 'zip']);
+  const normalizedTargets = targets.map((target) => String(target).trim().toLowerCase()).filter(Boolean);
+  const unsupportedTargets = normalizedTargets.filter((target) => !supportedTargets.has(target));
+
+  if (unsupportedTargets.length > 0) {
+    throw new Error(`Unsupported Linux package target(s): ${unsupportedTargets.join(', ')}. Supported targets: appimage, tar.gz, zip.`);
+  }
+
+  return [...new Set(normalizedTargets)];
 }
 
 function formatConfiguredTargets() {
@@ -417,7 +428,6 @@ function printBuildSummary(stepResults = [], reportPath = null) {
       artifact.path.endsWith('.exe') ||
       artifact.path.endsWith('.dmg') ||
       artifact.path.endsWith('.AppImage') ||
-      artifact.path.endsWith('.appx') ||
       artifact.path.endsWith('.msix') ||
       artifact.path.endsWith('.rpm') ||
       artifact.path.endsWith('.tar.gz') ||
@@ -495,7 +505,7 @@ function resolveMacBuildArchs() {
 function resolveMacPackageTargets() {
   const targets = resolveConfiguredTargets();
   if (targets.length === 0) {
-    return [];
+    return ['dmg', 'zip'];
   }
 
   const supportedTargets = new Set(['dmg', 'zip']);
@@ -520,7 +530,7 @@ function buildStep(command, commandArgs, name) {
 
 function getBuildSteps() {
   if (config.platform === 'win') {
-    const { electronBuilderTargets, packageMsix } = resolveWindowsPackageTargets();
+    const { forgeTargets } = resolveWindowsPackageTargets();
     const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
@@ -531,32 +541,36 @@ function getBuildSteps() {
     steps.push(
       buildStep(
         'node',
-        ['scripts/run-electron-builder.js', '--win', ...electronBuilderTargets, '--publish', 'never'],
-        `Package Windows artifacts${electronBuilderTargets.length > 0 ? ` (${electronBuilderTargets.join(', ')})` : ''}`,
+        [
+          'scripts/run-electron-forge.js',
+          '--platform',
+          'win32',
+          '--arch',
+          process.arch,
+          '--targets',
+          forgeTargets.join(','),
+        ],
+        `Package Windows artifacts (${forgeTargets.join(', ')})`,
       ),
     );
-
-    if (packageMsix) {
-      steps.push(buildStep('node', ['scripts/package-msix.js'], 'Package Windows MSIX artifact'));
-    }
 
     steps.push(buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'));
     return steps;
   }
 
   if (config.platform === 'linux') {
-    const targets = resolveConfiguredTargets();
+    const targets = resolveLinuxPackageTargets();
     const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
       buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
-      buildStep('node', ['scripts/run-electron-builder.js', '--linux', ...targets, '--publish', 'never'], `Package Linux artifacts${targets.length > 0 ? ` (${targets.join(', ')})` : ''}`),
+      buildStep('node', ['scripts/run-electron-forge.js', '--platform', 'linux', '--arch', process.arch, '--targets', targets.join(',')], `Package Linux artifacts (${targets.join(', ')})`),
       buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
     ];
 
-    if (targets.length === 0 || targets.some((target) => target === 'zip' || target === 'tar.gz')) {
+    if (targets.some((target) => target === 'zip' || target === 'tar.gz')) {
       steps.push(buildStep('npm', ['run', 'package:verify-release-archives'], 'Verify release archives'));
     }
 
@@ -570,12 +584,7 @@ function getBuildSteps() {
     }
 
     const targets = resolveMacPackageTargets();
-    if (targets.length === 0) {
-      return archs.map((arch) => buildStep('npm', ['run', `build:mac:${arch}`], `Build macOS (${arch})`));
-    }
-
     return archs.flatMap((arch) => {
-      const archFlag = arch === 'arm64' ? '--arm64' : '--x64';
       const steps = [
         buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
         buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
@@ -583,8 +592,8 @@ function getBuildSteps() {
         buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
         buildStep(
           'node',
-          ['scripts/run-electron-builder.js', '--mac', ...targets, archFlag, '--publish', 'never'],
-          `Package macOS artifacts (${arch}${targets.length > 0 ? ` / ${targets.join(', ')}` : ''})`,
+          ['scripts/run-electron-forge.js', '--platform', 'darwin', '--arch', arch, '--targets', targets.join(',')],
+          `Package macOS artifacts (${arch} / ${targets.join(', ')})`,
         ),
         buildStep('npm', ['run', `package:smoke-test:mac:${arch}`], `Run packaged smoke test (${arch})`),
       ];

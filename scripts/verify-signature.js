@@ -37,7 +37,7 @@ const config = {
   strictMode: process.env.VERIFY_STRICT === 'true',
 };
 
-const SIGNABLE_EXTENSIONS = ['.exe', '.dll', '.appx', '.msix', '.msi'];
+const SIGNABLE_EXTENSIONS = ['.exe', '.dll', '.msix', '.msi'];
 
 function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
@@ -84,7 +84,6 @@ Environment Variables:
 Supported file types:
   - .exe
   - .dll
-  - .appx
   - .msix
   - .msi
 `);

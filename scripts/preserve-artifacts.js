@@ -36,7 +36,7 @@ function compilePattern(pattern) {
 
 function withSuffix(fileName, suffix) {
   const lowerName = fileName.toLowerCase();
-  const knownExtensions = ['.tar.gz', '.appimage', '.deb', '.rpm', '.appx', '.msix', '.dmg', '.zip', '.exe'];
+  const knownExtensions = ['.tar.gz', '.appimage', '.deb', '.rpm', '.msix', '.dmg', '.zip', '.exe'];
 
   for (const extension of knownExtensions) {
     if (lowerName.endsWith(extension)) {

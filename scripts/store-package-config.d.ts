@@ -1,6 +1,6 @@
 export interface StorePackageConfig {
   schemaVersion: number;
-  sourceElectronBuilderConfigPath: string;
+  sourceForgeConfigPath: string;
   inputDirectory: string;
   outputDirectory: string;
   stageDirectory: string;
@@ -16,7 +16,7 @@ export interface StorePackageConfig {
     languages: string[];
     addAutoLaunchExtension: boolean;
   };
-  appx: {
+  msix: {
     minVersion: string;
     maxVersionTested: string;
     capabilities: string[];
@@ -29,7 +29,7 @@ export interface LoadedStorePackageConfig {
   relativeStoreConfigPath: string;
 }
 
-export type StoreElectronBuilderRenderConfig = Pick<StorePackageConfig, 'packageIdentity' | 'appx'>;
+export type StoreForgeRenderConfig = Pick<StorePackageConfig, 'packageIdentity' | 'msix'>;
 
 export const projectRoot: string;
 export const DEFAULT_STORE_CONFIG_PATH: string;
@@ -38,13 +38,13 @@ export const REQUIRED_SERVER_PAYLOAD_PATHS: string[];
 export function toWindowsPackageVersion(version: string): string;
 export function validateStorePackageConfig(config: unknown): StorePackageConfig;
 export function loadStorePackageConfig(storeConfigPath?: string): Promise<LoadedStorePackageConfig>;
-export function renderStoreElectronBuilderConfig(options: {
+export function renderStoreForgeConfigOverlay(options: {
   sourceConfigPath: string;
-  storeConfig: StoreElectronBuilderRenderConfig;
+  storeConfig: StoreForgeRenderConfig;
   buildVersion: string;
   publisherOverride?: string | null;
 }): string;
-export function writeStoreElectronBuilderConfig(options: {
+export function writeStoreForgeConfigOverlay(options: {
   storeConfigPath?: string;
   outputPath: string;
   buildVersion: string;
