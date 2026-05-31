@@ -26,11 +26,6 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
-import {
-  detectCodeServerRuntimePlatform,
-  readCodeServerRuntimeConfig,
-  validateCodeServerRuntimePayload,
-} from './code-server-runtime-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
 
@@ -40,7 +35,6 @@ const requireRuntimePayload = args.includes('--require-runtime') || process.env.
 const requirePackagedRuntimePayload = requireRuntimePayload || [
   process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT,
   process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT,
-  process.env.HAGICODE_SMOKE_TEST_PACKAGED_CODE_SERVER_ROOT,
 ].some((value) => typeof value === 'string' && value.trim().length > 0);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
@@ -54,11 +48,6 @@ const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detec
 const stagedToolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
 const packagedToolchainCandidates = resolvePackagedToolchainRoots();
 const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
-const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
-const codeServerConfig = readCodeServerRuntimeConfig();
-const stagedCodeServerRoot = resolveStagedDesktopRuntimeComponentRoot('code-server', { cwd: process.cwd() });
-const packagedCodeServerCandidates = resolvePackagedCodeServerRoots();
-const packagedCodeServerRoot = resolveExistingPackagedRuntimeRoot(packagedCodeServerCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
 const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
 const globalHagiscriptVersion = (() => {
@@ -150,29 +139,6 @@ function resolvePackagedToolchainRoots() {
       path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
       path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
       path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-    ];
-  }
-  return [];
-}
-
-function resolvePackagedCodeServerRoots() {
-  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_CODE_SERVER_ROOT?.trim();
-  if (override) {
-    return [path.resolve(process.cwd(), override)];
-  }
-
-  if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
-  }
-  if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'bundled', 'code-server')];
-  }
-  if (process.platform === 'darwin') {
-    return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'bundled', 'code-server'),
     ];
   }
   return [];
@@ -324,14 +290,6 @@ function validatePinnedRuntimeMetadata(runtimeRoot) {
   }
 
   return errors;
-}
-
-function validateVendoredCodeServerRuntime(runtimeRoot) {
-  const result = validateCodeServerRuntimePayload(runtimeRoot, {
-    platformKey: codeServerPlatform,
-    config: codeServerConfig,
-  });
-  return [...result.missingEntries, ...result.diagnostics];
 }
 
 function log(message, color = colors.reset) {
@@ -671,64 +629,6 @@ test('packaged bundled Node toolchain payload is complete', () => {
       : `packaged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
   );
 });
-
-test('staged vendored code-server payload is complete', () => {
-  if (!requireRuntimePayload && !fs.existsSync(stagedCodeServerRoot)) {
-    log('  - Skipping: staged vendored code-server runtime not required for this smoke-test run', colors.yellow);
-    results.skipped++;
-    return;
-  }
-
-  const exists = fs.existsSync(stagedCodeServerRoot);
-  if (!assert(exists, `staged vendored code-server runtime exists (${stagedCodeServerRoot})`)) {
-    return;
-  }
-
-  const errors = validateVendoredCodeServerRuntime(stagedCodeServerRoot);
-  assert(
-    errors.length === 0,
-    errors.length === 0
-      ? 'staged vendored code-server runtime matches the Desktop layout contract'
-      : `staged vendored code-server runtime mismatch: ${errors.join('; ')}`,
-  );
-});
-
-
-test('packaged vendored code-server payload is complete', () => {
-  if (!packagedCodeServerRoot) {
-    log('  - Skipping: packaged vendored code-server checks are not defined for this platform', colors.yellow);
-    results.skipped++;
-    return;
-  }
-
-  if (!requirePackagedRuntimePayload) {
-    log('  - Skipping: packaged vendored code-server runtime not required for this smoke-test run', colors.yellow);
-    results.skipped++;
-    return;
-  }
-
-  const exists = fs.existsSync(packagedCodeServerRoot);
-  if (!assert(exists, `packaged vendored code-server runtime exists (${packagedCodeServerRoot})`)) {
-    if (packagedCodeServerCandidates.length > 1) {
-      logVerbose(`checked packaged code-server candidates: ${packagedCodeServerCandidates.join(', ')}`);
-    }
-    return;
-  }
-
-  assert(!packagedCodeServerRoot.includes('app.asar'), 'packaged vendored code-server runtime resolves outside app.asar');
-  assert(packagedCodeServerRoot.includes(path.join('extra', 'runtime', 'components', 'bundled', 'code-server')), 'packaged vendored code-server runtime uses canonical extra/runtime/components/bundled/code-server path');
-  assert(!packagedCodeServerRoot.includes(path.join('extra', 'code-server', 'current')), 'packaged vendored code-server runtime does not use the legacy extra/code-server/current path');
-  assert(!packagedCodeServerRoot.endsWith(path.join('code-server', 'current')), 'packaged vendored code-server runtime no longer treats current as the packaged root');
-
-  const errors = validateVendoredCodeServerRuntime(packagedCodeServerRoot);
-  assert(
-    errors.length === 0,
-    errors.length === 0
-      ? 'packaged vendored code-server runtime matches the Desktop layout contract'
-      : `packaged vendored code-server runtime mismatch: ${errors.join('; ')}`,
-  );
-});
-
 
 test('staged embedded runtime payload is complete', () => {
   if (!requireRuntimePayload && !fs.existsSync(stagedRuntimeRoot)) {

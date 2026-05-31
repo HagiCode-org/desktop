@@ -20,11 +20,6 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
-import {
-  detectCodeServerRuntimePlatform,
-  readCodeServerRuntimeConfig,
-  validateCodeServerRuntimePayload,
-} from './code-server-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const archives = [];
@@ -32,8 +27,6 @@ const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectR
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
-const codeServerConfig = readCodeServerRuntimeConfig();
 
 function parseArgs() {
   for (let index = 0; index < args.length; index += 1) {
@@ -74,7 +67,6 @@ function resolveMacArchiveArch(options = {}) {
   const requestedPlatforms = [
     options.runtimePlatform ?? runtimePlatform,
     options.fallbackPlatform ?? fallbackPlatform,
-    options.codeServerPlatform ?? codeServerPlatform,
   ].filter(Boolean);
 
   if (requestedPlatforms.some((platform) => platform === 'osx-arm64')) {
@@ -422,15 +414,6 @@ function extractZip(archivePath, destinationRoot) {
     platform: runtimePlatform,
     validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: true }),
   });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
-    label: 'vendored code-server runtime',
-    suffixParts: ['code-server'],
-    platform: codeServerPlatform,
-    validate: (runtimeRoot) => {
-      const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
-      return [...result.missingEntries, ...result.diagnostics];
-    },
-  });
 }
 
 function extractTarGz(archivePath, destinationRoot) {
@@ -441,15 +424,6 @@ function extractTarGz(archivePath, destinationRoot) {
     suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],
     platform: runtimePlatform,
     validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: false }),
-  });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
-    label: 'vendored code-server runtime',
-    suffixParts: ['code-server'],
-    platform: codeServerPlatform,
-    validate: (runtimeRoot) => {
-      const result = validateCodeServerRuntimePayload(runtimeRoot, { platformKey: codeServerPlatform, config: codeServerConfig });
-      return [...result.missingEntries, ...result.diagnostics];
-    },
   });
 }
 

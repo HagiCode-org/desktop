@@ -534,7 +534,6 @@ function getBuildSteps() {
     const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
-      buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
     ];
 
@@ -563,7 +562,6 @@ function getBuildSteps() {
     const steps = [
       buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
-      buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
       buildStep('node', ['scripts/run-electron-forge.js', '--platform', 'linux', '--arch', process.arch, '--targets', targets.join(',')], `Package Linux artifacts (${targets.join(', ')})`),
       buildStep('npm', ['run', 'package:verify-linux-unpacked'], 'Verify Linux unpacked package'),
@@ -588,7 +586,6 @@ function getBuildSteps() {
       const steps = [
         buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
         buildStep('npm', ['run', 'prepare:bundled-toolchain'], 'Prepare bundled toolchain'),
-        buildStep('npm', ['run', 'prepare:code-server-runtime'], 'Prepare code-server runtime'),
         buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
         buildStep(
           'node',

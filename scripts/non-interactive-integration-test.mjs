@@ -581,29 +581,24 @@ function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir, he
   const dataHome = parseOutputValue(output, 'runtime data home');
   const dotnetRoot = parseOutputValue(output, 'runtime component dotnet root');
   const nodeRoot = parseOutputValue(output, 'runtime component node root');
-  const codeServerRoot = parseOutputValue(output, 'runtime component code-server root');
-  const codeServerDataHome = parseOutputValue(output, 'runtime service code-server data');
   const governedNodeVersion = parseOutputValue(output, 'runtime component node version');
 
-  if (!programHome || !dataHome || !dotnetRoot || !nodeRoot || !codeServerRoot || !codeServerDataHome || !governedNodeVersion) {
+  if (!programHome || !dataHome || !dotnetRoot || !nodeRoot || !governedNodeVersion) {
     fail('Runtime verification output did not include all required runtime structure diagnostics.');
   }
 
   assertOutputValue(output, 'runtime component dotnet status', 'ok');
   assertOutputValue(output, 'runtime component node status', 'ok');
-  assertOutputValue(output, 'runtime component code-server status', 'ok');
   assertOutputValue(output, 'result', 'success');
 
   assertPathWithinRoot(programHome, artifactRoot, 'runtime program home');
   assertPathWithinRoot(dotnetRoot, programHome, 'dotnet runtime root');
   assertPathWithinRoot(nodeRoot, programHome, 'node runtime root');
-  assertPathWithinRoot(codeServerRoot, programHome, 'code-server runtime root');
 
   const expectedDataHome = helpers.resolveDesktopRuntimeDataHome({ userDataPath: userDataDir });
   if (dataHome !== expectedDataHome) {
     fail(`Expected runtime data home to use the migrated userData/runtimeData contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
   }
-  assertPathWithinRoot(codeServerDataHome, expectedDataHome, 'code-server runtime data home');
   assertPathContainsSpaces(programHome, 'runtime program home');
   assertPathContainsSpaces(dataHome, 'runtime data home');
 
@@ -655,12 +650,9 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
   const managedNpmModules = parseOutputValue(output, 'managed npm modules');
   const pm2PackageRoot = parseOutputValue(output, 'standalone pm2 package root');
   const pm2Executable = parseOutputValue(output, 'bundled pm2 executable');
-  const codeServerLaunchScript = parseOutputValue(output, 'code-server launch script');
-  const codeServerLaunchCwd = parseOutputValue(output, 'code-server launch cwd');
   const desktopLogsDirectory = parseOutputValue(output, 'desktop logs directory');
   const backendRuntimeRoot = parseOutputValue(output, 'backend active runtime root');
   const backendPayloadDll = parseOutputValue(output, 'backend payload dll');
-  const codeServerPm2Home = parseOutputValue(output, 'code-server pm2 home');
   const backendPm2Home = parseOutputValue(output, 'backend pm2 home');
   const backendRuntimeData = parseOutputValue(output, 'backend runtime data');
   const backendLifecycleSkipped = parseOutputValue(output, 'backend lifecycle skipped') === 'true';
@@ -671,22 +663,15 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     ['managed npm bin', managedNpmBin],
     ['managed npm modules', managedNpmModules],
     ['bundled pm2 executable', pm2Executable],
-    ['code-server launch script', codeServerLaunchScript],
-    ['code-server launch cwd', codeServerLaunchCwd],
     ['desktop logs directory', desktopLogsDirectory],
     ['backend active runtime root', backendRuntimeRoot],
     ['backend payload dll', backendPayloadDll],
-    ['code-server pm2 home', codeServerPm2Home],
   ]) {
     if (!value) {
       fail(`Runtime lifecycle output did not include ${label}.`);
     }
   }
 
-  assertOutputValue(output, 'code-server start success', 'true');
-  assertOutputValue(output, 'code-server status after start', 'online');
-  assertOutputValue(output, 'code-server stop success', 'true');
-  assertOutputValue(output, 'code-server status after stop', 'stopped');
   assertOutputValue(output, 'result', 'success');
 
   for (const managedPath of [
@@ -694,16 +679,12 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     managedNpmBin,
     managedNpmModules,
     pm2Executable,
-    codeServerPm2Home,
   ]) {
     assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
     assertPathContainsSpaces(managedPath, 'managed PM2 path');
   }
   assertPathWithinRoot(desktopLogsDirectory, path.dirname(runtimeContext.dataHome), 'desktop logs directory');
   assertPathContainsSpaces(desktopLogsDirectory, 'desktop logs directory');
-
-  assertLaunchAliasPath(codeServerLaunchScript, 'code-server launch script', runtimeContext);
-  assertLaunchAliasPath(codeServerLaunchCwd, 'code-server launch cwd', runtimeContext);
 
   if (pm2PackageRoot && pm2PackageRoot !== '<missing>') {
     assertPathWithinRoot(pm2PackageRoot, runtimeContext.dataHome, 'standalone pm2 package root');

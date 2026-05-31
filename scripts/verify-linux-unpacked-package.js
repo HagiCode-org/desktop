@@ -16,19 +16,12 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
-import {
-  detectCodeServerRuntimePlatform,
-  readCodeServerRuntimeConfig,
-  validateCodeServerRuntimePayload,
-} from './code-server-runtime-contract.js';
 
 const args = process.argv.slice(2);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const codeServerPlatform = process.env.HAGICODE_CODE_SERVER_PLATFORM || detectCodeServerRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
-const codeServerConfig = readCodeServerRuntimeConfig();
 
 function parseArgs() {
   let unpackedRoot = path.join(process.cwd(), 'pkg', 'linux-unpacked');
@@ -181,19 +174,9 @@ function validateNodeToolchain(toolchainRoot) {
   return [...payloadErrors, ...manifestErrors];
 }
 
-function validateCodeServerRuntime(runtimeRoot) {
-  const result = validateCodeServerRuntimePayload(runtimeRoot, {
-    platformKey: codeServerPlatform,
-    config: codeServerConfig,
-  });
-  return [...result.missingEntries, ...result.diagnostics];
-}
-
-
 function main() {
   ensureLinuxPlatform(runtimePlatform, 'Embedded dotnet runtime platform');
   ensureLinuxPlatform(nodeRuntimePlatform, 'Bundled Node runtime platform');
-  ensureLinuxPlatform(codeServerPlatform, 'Vendored code-server platform');
 
   const unpackedRoot = parseArgs();
   const runtimeRoot = path.join(unpackedRoot, 'resources', 'extra', 'runtime');
@@ -211,11 +194,6 @@ function main() {
       label: 'embedded dotnet runtime',
       targetRoot: path.join(runtimeRoot, 'components', 'dotnet', 'runtime', runtimePlatform, 'current'),
       validate: validateDotnetRuntimePayload,
-    },
-    {
-      label: 'vendored code-server runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'bundled', 'code-server'),
-      validate: validateCodeServerRuntime,
     },
   ];
 
