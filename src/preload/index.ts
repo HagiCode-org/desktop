@@ -14,13 +14,6 @@ import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
-import type {
-  CodeServerBridge,
-  CodeServerConfigUpdatePayload,
-  CodeServerLogReadRequest,
-  CodeServerPathTarget,
-} from '../types/code-server-management.js';
-import { codeServerChannels } from '../types/code-server-management.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type {
@@ -189,43 +182,6 @@ export interface AboutWindowOpenResult {
   error?: string;
 }
 
-export type CodeServerWindowFailureStage =
-  | 'invalid-url'
-  | 'load-url'
-  | 'did-fail-load'
-  | 'render-timeout'
-  | 'probe-error'
-  | 'render-process-gone'
-  | 'unresponsive';
-
-export interface CodeServerWindowDiagnostics {
-  failureStage?: CodeServerWindowFailureStage;
-  lastUrl?: string;
-  lastConsoleErrors: string[];
-  failedLoads: string[];
-  rendererExit?: string;
-  unresponsive: boolean;
-}
-
-export type CodeServerWindowOpenResult =
-  | {
-    success: true;
-    state: 'render-ready';
-    lastUrl: string;
-    canOpenExternal: true;
-    diagnostics: CodeServerWindowDiagnostics;
-  }
-  | {
-    success: false;
-    state: 'render-failed';
-    error: string;
-    failureStage: CodeServerWindowFailureStage;
-    diagnosticsSummary: string;
-    diagnostics: CodeServerWindowDiagnostics;
-    canOpenExternal: boolean;
-    lastUrl?: string;
-  };
-
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
@@ -240,9 +196,6 @@ interface ElectronAPI {
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
-  // Renderer requests a desktop-managed BrowserWindow for Code Server launch URLs.
-  openCodeServerWindow: (url: string, password?: string) => Promise<CodeServerWindowOpenResult>;
-  openCodeServerExternal: (url: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
   languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
@@ -313,7 +266,6 @@ interface ElectronAPI {
   /** @deprecated Use dependencyManagement. */
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
-  codeServer: CodeServerBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -428,25 +380,6 @@ const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
   },
 });
 
-const codeServerBridge: CodeServerBridge = Object.freeze({
-  getStatus: () => ipcRenderer.invoke(codeServerChannels.status),
-  start: () => ipcRenderer.invoke(codeServerChannels.start),
-  stop: () => ipcRenderer.invoke(codeServerChannels.stop),
-  restart: () => ipcRenderer.invoke(codeServerChannels.restart),
-  repair: () => ipcRenderer.invoke(codeServerChannels.repair),
-  getConfig: () => ipcRenderer.invoke(codeServerChannels.getConfig),
-  setConfig: (payload: CodeServerConfigUpdatePayload) => ipcRenderer.invoke(codeServerChannels.setConfig, payload),
-  readLog: (request: CodeServerLogReadRequest) => ipcRenderer.invoke(codeServerChannels.readLog, request),
-  openPath: (target: CodeServerPathTarget) => ipcRenderer.invoke(codeServerChannels.openPath, target),
-  onStatusChange: (callback) => {
-    const listener = (_event, status) => {
-      callback(status);
-    };
-    ipcRenderer.on(codeServerChannels.statusChanged, listener);
-    return () => ipcRenderer.removeListener(codeServerChannels.statusChanged, listener);
-  },
-});
-
 const electronAPI: ElectronAPI = {
   bootstrap: {
     getCachedSnapshot: () => initialBootstrapSnapshot,
@@ -459,8 +392,6 @@ const electronAPI: ElectronAPI = {
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
-  openCodeServerWindow: (url: string, password?: string) => ipcRenderer.invoke('open-code-server-window', url, password),
-  openCodeServerExternal: (url: string, password?: string) => ipcRenderer.invoke('open-code-server-external', url, password),
   openAboutWindow: (url: string) => ipcRenderer.invoke('open-about-window', url),
   languageChanged: (language: string) => ipcRenderer.invoke('language-changed', language),
   onServerStatusChange: (callback) => {
@@ -597,7 +528,6 @@ const electronAPI: ElectronAPI = {
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   logDirectory: logDirectoryBridge,
-  codeServer: codeServerBridge,
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
@@ -649,7 +579,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'code-server' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {

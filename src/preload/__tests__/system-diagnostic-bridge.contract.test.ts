@@ -18,13 +18,4 @@ describe('system diagnostic preload contract', () => {
     assert.equal(source.includes('getDebugMode'), false);
     assert.equal(source.includes('onDebugModeChanged'), false);
   });
-
-  it('keeps the dedicated Code Server window bridge on electronAPI', async () => {
-    const source = await fs.readFile(preloadPath, 'utf8');
-
-    assert.match(source, /openCodeServerWindow: \(url: string, password\?: string\) => Promise<CodeServerWindowOpenResult>;/);
-    assert.match(source, /openCodeServerExternal: \(url: string, password\?: string\) => Promise<\{ success: boolean; error\?: string \}>;/);
-    assert.match(source, /openCodeServerWindow: \(url: string, password\?: string\) => ipcRenderer\.invoke\('open-code-server-window', url, password\),/);
-    assert.match(source, /openCodeServerExternal: \(url: string, password\?: string\) => ipcRenderer\.invoke\('open-code-server-external', url, password\),/);
-  });
 });
