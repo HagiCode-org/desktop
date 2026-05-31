@@ -40,9 +40,6 @@ export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from '
 // Dependency management handlers
 export { registerDependencyManagementHandlers, initDependencyManagementHandlers } from './dependencyManagementHandlers.js';
 
-// Code Server handlers
-export { registerCodeServerHandlers, initCodeServerHandlers, emitCodeServerStatus } from './codeServerHandlers.js';
-
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 
