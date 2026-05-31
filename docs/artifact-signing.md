@@ -18,16 +18,16 @@ The Windows build in `repos/hagicode-desktop/.github/workflows/build.yml` now us
 10. Create the Windows ZIP from the signed staged unpacked payload before upload.
 11. Upload build bundles first, then publish GitHub Release assets in parallel jobs, including unsigned fallbacks when retained.
 
-The workflow now aligns AppX/MSIX manifest publisher metadata with the signing certificate subject through `WINDOWS_PACKAGE_PUBLISHER` so store-style packages and signature identity stay consistent.
+The workflow now aligns MSIX manifest publisher metadata with the signing certificate subject through `WINDOWS_PACKAGE_PUBLISHER` so store-style packages and signature identity stay consistent.
 Signed Windows artifacts are the primary release outputs, while unsigned counterparts are preserved with a `-unsigned` suffix for recovery and audit scenarios.
 
 ## Store Packaging Boundary
 
-Desktop now builds Windows `.appx` and `.msix` artifacts in its own repository workflows alongside the existing installer outputs.
+Desktop now builds Windows `.msix` artifacts in its own repository workflows alongside the existing installer outputs.
 MSIX signing is attempted through the same Artifact Signing v2 path as the other Windows artifacts. If a given run still cannot sign MSIX successfully, the workflow retains only the unsigned MSIX fallback for that target instead of blocking the whole release.
 The dedicated `repos/win_store_packer` repository remains the place for any downstream Store-specific repackaging, submission, or policy-specific adjustments that should not live in the Desktop release pipeline.
 
-Desktop still keeps the Store tile assets under `resources/appx/` because `win_store_packer` depends on those assets when it generates Store-ready packages.
+Desktop keeps the Store tile assets under `resources/msix/` so the Forge MSIX build and downstream Store tooling use the same visual payload.
 
 ## Production Environment Scope
 
@@ -91,7 +91,7 @@ Add these repository secrets:
 | `AZURE_CODESIGN_ENDPOINT` | Azure Artifact Signing endpoint URL |
 | `AZURE_CODESIGN_ACCOUNT_NAME` | Signing account name |
 | `AZURE_CODESIGN_CERTIFICATE_PROFILE_NAME` | Certificate profile name |
-| `WINDOWS_PACKAGE_PUBLISHER` | Certificate subject string used to override AppX/MSIX `Publisher` metadata |
+| `WINDOWS_PACKAGE_PUBLISHER` | Certificate subject string used to override MSIX `Publisher` metadata |
 | `FEISHU_WEBHOOK_URL` | Existing build/signing failure notification webhook |
 
 ## Signing Policy Switches
@@ -173,7 +173,7 @@ If a release still needs Windows Store packaging work:
 
 1. Check `repos/win_store_packer` instead of the Desktop workflow.
 2. Confirm Desktop release assets and metadata are available to the Store packer workflow.
-3. Keep `resources/appx/` assets in sync with the Store visual requirements used by `win_store_packer`.
+3. Keep `resources/msix/` assets in sync with the Store visual requirements used by `win_store_packer`.
 
 ## References
 

@@ -31,7 +31,6 @@ npm install
 npm run dev
 npm run build:prod
 npm run build:win:portable
-npm run build:win:appx
 npm run build:win:msix
 npm run build:win:store
 npm run build:linux:appimage

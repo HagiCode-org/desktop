@@ -133,7 +133,7 @@ node scripts/verify-native-libs.js --platform osx-arm64
 
 ## Build Configuration
 
-### electron-builder.yml
+### forge.config.js
 
 Ensure macOS ARM64 is properly configured:
 

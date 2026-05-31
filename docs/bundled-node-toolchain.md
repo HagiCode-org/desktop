@@ -56,7 +56,7 @@ Desktop no longer guarantees that the managed CLI packages are preinstalled when
 
 ## Packaging
 
-The platform packaging scripts run toolchain staging before `electron-builder`:
+The platform packaging scripts run toolchain staging before `electron-forge`:
 
 ```bash
 npm run build:linux
@@ -65,7 +65,7 @@ npm run build:mac:x64
 npm run build:mac:arm64
 ```
 
-`electron-builder.yml` ships the generated `resources/bin` and `resources/components` trees to the canonical packaged `extra/runtime` location outside `app.asar`.
+`forge.config.js` and `scripts/forge-packaging-hooks.js` ship the generated `resources/bin` and `resources/components` trees to the canonical packaged `extra/runtime` location outside `app.asar`.
 
 When vendored runtimes are staged, they live inside that same packaged runtime tree:
 

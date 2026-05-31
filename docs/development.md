@@ -123,7 +123,7 @@ npm run build:win:store -- \
   --server-payload-path /abs/path/to/server-runtime \
   --artifact-output-dir /abs/path/to/output \
   --metadata-output-path /abs/path/to/store-build-metadata.json \
-  --overlay-output-path /abs/path/to/electron-builder.store.yml \
+  --overlay-output-path /abs/path/to/forge.store-config.json \
   --platform-id win-x64
 ```
 
@@ -132,9 +132,9 @@ Supported parameters:
 - `--store-config-path`: override the Desktop Store config source
 - `--server-payload-path`: validate and inject an external Server payload
 - `--runtime-injection-path`: override the default injection root
-- `--artifact-output-dir`: choose where `.appx` or `.msix` outputs are written
+- `--artifact-output-dir`: choose where `.msix` outputs are written
 - `--metadata-output-path`: write workflow-consumable Desktop build metadata
-- `--overlay-output-path`: write the generated Store electron-builder overlay
+- `--overlay-output-path`: write the generated Store Forge overlay
 - `--platform-id`: record the workflow platform identity in metadata
 - `--dry-run`: emit a synthetic Store artifact without Windows packaging tools
 
@@ -173,7 +173,7 @@ npm run build:all
 npm run build:prod
 ```
 
-Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop runtime inputs through hagiscript before `electron-builder`: the embedded .NET runtime, the bundled Node toolchain, the vendored `code-server` runtime, and the vendored OmniRoute runtime.
+Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop runtime inputs through hagiscript before `electron-forge`: the embedded .NET runtime, the bundled Node toolchain, the vendored `code-server` runtime, and the vendored OmniRoute runtime.
 
 ### Running Smoke Tests
 
@@ -411,7 +411,7 @@ The staging script, smoke tests, and GitHub Actions cache key all read from this
 
 ### Expected staged layout
 
-Packaging expects the staged runtime layout below before `electron-builder` runs:
+Packaging expects the staged runtime layout below before `electron-forge` runs:
 
 ```
 build/embedded-runtime/current/
@@ -459,7 +459,7 @@ The `.env` file can contain sensitive runtime values. Desktop logs generated fil
 
 ### Portable version payload contract
 
-Steam-style portable-version builds can optionally bundle a fixed server payload under `resources/portable-fixed/current/` before `electron-builder` runs.
+Steam-style portable-version builds can optionally bundle a fixed server payload under `resources/portable-fixed/current/` before `electron-forge` runs.
 
 Expected layout:
 
@@ -583,7 +583,7 @@ Behavior:
 
 ### Packaged runtime location
 
-`electron-builder.yml` ships the generated `resources/bin` and `resources/components` trees through `extraResources`, so the packaged runtime remains outside `app.asar`:
+`forge.config.js` and `scripts/forge-packaging-hooks.js` ship the generated `resources/bin` and `resources/components` trees into `extra/runtime`, so the packaged runtime remains outside `app.asar`:
 
 - Packaged Linux: `pkg/linux-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
 - Packaged Windows: `pkg/win-unpacked/resources/extra/runtime/components/dotnet/runtime/<rid>`
@@ -683,7 +683,7 @@ The harness fails hard when the packaged backend payload contract is broken. In 
 Desktop release packaging now publishes extractable ZIP archives alongside the existing platform installers:
 
 - Linux keeps the native Electron Builder outputs (`.AppImage`, `.tar.gz`) and now also emits a `.zip` from the same packaging workspace.
-- Windows keeps the portable `.exe`, NSIS installer, AppX package, and now also emits an MSIX package from the same `win-unpacked` payload. It still stages the unpacked app directory into a ZIP payload so the release ZIP behaves as an extract-and-run package instead of a zipped single-file launcher.
+- Windows keeps the portable `.exe`, NSIS installer, and MSIX package, and still stages the unpacked app directory into a ZIP payload so the release ZIP behaves as an extract-and-run package instead of a zipped single-file launcher.
 - Non-tag CI runs upload the Windows and Linux ZIP files as workflow artifacts.
 - Tagged builds attach the ZIP files to the GitHub Release, and the downstream Azure sync continues mirroring them with the rest of the release asset set.
 

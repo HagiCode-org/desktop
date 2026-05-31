@@ -58,7 +58,7 @@ Any code directly referencing `darwin-arm64` should be updated to use `osx-arm64
 
 ### Build Tools
 - **Vite**: 6.0.7 (bundler for renderer process)
-- **electron-builder**: 26.0.12 (packaging)
+- **electron-forge**: 7.x (packaging)
 
 ### Styling
 - **Tailwind CSS**: 4.0.0
