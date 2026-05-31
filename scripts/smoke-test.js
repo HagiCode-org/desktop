@@ -94,12 +94,9 @@ function resolvePackagedRuntimeRoots(platform) {
     return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current')];
   }
   if (platform.startsWith('osx-')) {
-    return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'),
-    ];
+    const preferredArch = platform === 'osx-arm64' ? 'arm64' : platform === 'osx-x64' ? 'x64' : null;
+    return resolvePackagedMacResourceRoots(preferredArch)
+      .map((resourceRoot) => path.join(resourceRoot, 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'));
   }
   return [];
 }
@@ -121,27 +118,33 @@ function resolvePackagedToolchainRoots() {
     return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
   }
   if (process.platform === 'darwin') {
-    if (nodeRuntimePlatform === 'osx-x64') {
-      return [
-          path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-          path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-      ];
-    }
-    if (nodeRuntimePlatform === 'osx-arm64') {
-      return [
-          path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-          path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-      ];
-    }
+    const preferredArch = nodeRuntimePlatform === 'osx-arm64'
+      ? 'arm64'
+      : nodeRuntimePlatform === 'osx-x64'
+        ? 'x64'
+        : null;
 
-    return [
-      path.join(process.cwd(), 'pkg', 'mac', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-      path.join(process.cwd(), 'pkg', 'mac-x64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-      path.join(process.cwd(), 'pkg', 'mac-arm64', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-      path.join(process.cwd(), 'pkg', 'mac-universal', 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'runtime', 'components', 'node', 'runtime'),
-    ];
+    return resolvePackagedMacResourceRoots(preferredArch)
+      .map((resourceRoot) => path.join(resourceRoot, 'extra', 'runtime', 'components', 'node', 'runtime'));
   }
   return [];
+}
+
+function resolvePackagedMacResourceRoots(preferredArch) {
+  return resolvePackagedMacRootNames(preferredArch)
+    .map((rootName) => path.join(process.cwd(), 'pkg', rootName, 'Hagicode Desktop.app', 'Contents', 'Resources'));
+}
+
+function resolvePackagedMacRootNames(preferredArch) {
+  if (preferredArch === 'arm64') {
+    return ['mac-arm64', 'mac-universal', 'mac', 'mac-x64'];
+  }
+
+  if (preferredArch === 'x64') {
+    return ['mac', 'mac-x64', 'mac-universal', 'mac-arm64'];
+  }
+
+  return ['mac', 'mac-arm64', 'mac-universal', 'mac-x64'];
 }
 
 function resolvePackagedSteamWrapperPath() {

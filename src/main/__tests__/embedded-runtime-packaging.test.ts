@@ -33,7 +33,11 @@ describe('embedded runtime packaging configuration', () => {
   it('smoke test inspects packaged macOS app resources outside app.asar', async () => {
     const source = await fs.readFile(smokeTestPath, 'utf-8');
 
-    assert.match(source, /Contents', 'Resources', 'extra', 'runtime'/);
+    assert.match(source, /Hagicode Desktop\.app', 'Contents', 'Resources'/);
+    assert.match(source, /'extra', 'runtime'/);
+    assert.match(source, /resolvePackagedMacRootNames/);
+    assert.match(source, /return \['mac', 'mac-x64', 'mac-universal', 'mac-arm64'\]/);
+    assert.match(source, /return \['mac-arm64', 'mac-universal', 'mac', 'mac-x64'\]/);
     assert.match(source, /mac-arm64/);
     assert.match(source, /mac-x64/);
     assert.match(source, /not executable/);
