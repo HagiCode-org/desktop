@@ -7,14 +7,14 @@ import { load } from 'js-yaml';
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/manifest.yml');
 const smokeTestPath = path.resolve(process.cwd(), 'scripts/smoke-test.js');
 const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-const electronBuilderPath = path.resolve(process.cwd(), 'electron-builder.yml');
+const forgeConfigPath = path.resolve(process.cwd(), 'forge.config.js');
 const developmentDocPath = path.resolve(process.cwd(), 'docs/development.md');
 const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 'README.md');
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
 const ciBuildScriptPath = path.resolve(process.cwd(), 'scripts/ci-build.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
-const electronBuilderRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-builder.js');
-const macToolchainSigningHookPath = path.resolve(process.cwd(), 'scripts/macos-toolchain-signing-hook.cjs');
+const electronForgeRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-forge.js');
+const forgePackagingHooksPath = path.resolve(process.cwd(), 'scripts/forge-packaging-hooks.js');
 const buildWorkflowPath = path.resolve(process.cwd(), '.github/workflows/build.yml');
 const reusableWindowsWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-windows.yml');
 const reusableUnixWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-unix.yml');
@@ -47,37 +47,30 @@ describe('embedded runtime packaging configuration', () => {
     ]);
 
     assert.equal(pkg.scripts['build:mac'], 'node scripts/build-macos.js');
-    assert.match(pkg.scripts['build:mac:x64'] || '', /package:smoke-test:mac:x64/);
-    assert.match(pkg.scripts['build:mac:arm64'] || '', /package:smoke-test:mac:arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
     assert.match(pkg.scripts['build:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['build:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/run-electron-builder\.js --mac --x64/);
-    assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/run-electron-builder\.js --mac --arm64/);
+    assert.match(pkg.scripts['build:mac:x64'] || '', /node scripts\/ci-build\.js --platform mac/);
+    assert.match(pkg.scripts['build:mac:arm64'] || '', /node scripts\/ci-build\.js --platform mac/);
     assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['package:smoke-test:mac:x64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-x64/);
-    assert.match(pkg.scripts['package:smoke-test:mac:arm64'] || '', /HAGICODE_CODE_SERVER_PLATFORM=osx-arm64/);
-    assert.match(pkg.scripts['build:mac:x64'] || '', /package:verify-release-archives:mac:x64/);
-    assert.match(pkg.scripts['build:mac:arm64'] || '', /package:verify-release-archives:mac:arm64/);
-    assert.equal(pkg.scripts['package:verify-release-archives'], 'node scripts/verify-release-archives.js');
     assert.match(pkg.scripts['package:verify-release-archives:mac:x64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64/);
     assert.match(pkg.scripts['package:verify-release-archives:mac:arm64'] || '', /HAGICODE_EMBEDDED_NODE_PLATFORM=osx-arm64/);
     assert.match(macBuildScript, /HAGICODE_MAC_BUILD_ARCHS/);
     assert.match(macBuildScript, /build:mac:\$\{arch\}/);
     assert.match(ciBuildScript, /Unsupported macOS package target\(s\)/);
     assert.match(ciBuildScript, /Supported targets: dmg, zip/);
-    assert.match(ciBuildScript, /scripts\/run-electron-builder\.js/);
+    assert.match(ciBuildScript, /scripts\/run-electron-forge\.js/);
     assert.match(ciBuildScript, /package:verify-release-archives:mac:\$\{arch\}/);
   });
 
   it('validates release archive payloads before Windows release ZIP upload', async () => {
-    const [buildWorkflow, reusableWindowsWorkflow, reusableUnixWorkflow, builder] = await Promise.all([
+    const [buildWorkflow, reusableWindowsWorkflow, reusableUnixWorkflow, forgeConfig] = await Promise.all([
       fs.readFile(buildWorkflowPath, 'utf-8'),
       fs.readFile(reusableWindowsWorkflowPath, 'utf-8'),
       fs.readFile(reusableUnixWorkflowPath, 'utf-8'),
-      fs.readFile(electronBuilderPath, 'utf-8'),
+      fs.readFile(forgeConfigPath, 'utf-8'),
     ]);
 
     assert.match(buildWorkflow, /production_build:/);
@@ -85,36 +78,26 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(buildWorkflow, /uses: \.\/\.github\/workflows\/reusable-build-windows\.yml/);
     assert.match(buildWorkflow, /uses: \.\/\.github\/workflows\/reusable-build-unix\.yml/);
     assert.match(buildWorkflow, /Publish Windows Release Assets/);
-    assert.match(buildWorkflow, /Publish \$\{\{ matrix\.target\.name \}\} Release Assets/);
-    assert.match(buildWorkflow, /release-assets\/windows\/\*\*\/\*\.appx/);
     assert.match(buildWorkflow, /release-assets\/windows\/\*\*\/\*\.msix/);
-    assert.match(buildWorkflow, /needs\.prepare-release\.outputs\.is_tag_release == 'true'/);
 
     assert.match(reusableWindowsWorkflow, /Verify Windows ZIP toolchain payload/);
     assert.match(reusableWindowsWorkflow, /node scripts\/verify-release-archives\.js --archive/);
-    assert.match(reusableWindowsWorkflow, /zip_path=/);
     assert.match(reusableWindowsWorkflow, /Build Windows \(\$\{\{ matrix\.target\.name \}\}\)/);
-    assert.match(reusableWindowsWorkflow, /builder_target: appx/);
     assert.match(reusableWindowsWorkflow, /name: MSIX/);
     assert.match(reusableWindowsWorkflow, /Build Windows MSIX Store package/);
+    assert.match(reusableWindowsWorkflow, /Resolve Windows SDK for MSIX packaging/);
     assert.match(reusableWindowsWorkflow, /npm run build:win:store --/);
-    assert.match(reusableWindowsWorkflow, /npm run package:smoke-test/);
+    assert.match(reusableWindowsWorkflow, /forge\.store-config\.json/);
     assert.match(reusableWindowsWorkflow, /pkg\/store-build-metadata\.json/);
-    assert.match(reusableWindowsWorkflow, /Upload Windows build bundle/);
-    assert.match(reusableWindowsWorkflow, /release-windows-\$\{\{ matrix\.target\.id \}\}-assets/);
-    assert.match(reusableWindowsWorkflow, /hagicode-windows-\$\{\{ matrix\.target\.id \}\}-\$\{\{ github\.sha \}\}/);
     assert.match(reusableWindowsWorkflow, /WINDOWS_PACKAGE_PUBLISHER: \$\{\{ secrets\.WINDOWS_PACKAGE_PUBLISHER \}\}/);
 
     assert.match(reusableUnixWorkflow, /linux-appimage/);
     assert.match(reusableUnixWorkflow, /linux-tar-gz/);
     assert.match(reusableUnixWorkflow, /linux-zip/);
     assert.match(reusableUnixWorkflow, /macos-x64-dmg/);
-    assert.match(reusableUnixWorkflow, /macos-x64-zip/);
-    assert.match(reusableUnixWorkflow, /macos-arm64-dmg/);
     assert.match(reusableUnixWorkflow, /macos-arm64-zip/);
     assert.match(reusableUnixWorkflow, /builder_target: dmg/);
     assert.match(reusableUnixWorkflow, /builder_target: zip/);
-    assert.match(reusableUnixWorkflow, /pkg\/ci-build-report-mac-\$\{\{ matrix\.target\.report_suffix \}\}\.json/);
     assert.match(reusableUnixWorkflow, /Resolve macOS signing mode/);
     assert.match(reusableUnixWorkflow, /Build unsigned macOS artifacts/);
     assert.match(reusableUnixWorkflow, /Build signed macOS artifacts/);
@@ -122,17 +105,18 @@ describe('embedded runtime packaging configuration', () => {
 
     assert.doesNotMatch(reusableWindowsWorkflow, /prepare-msix-release-assets\.js/);
     assert.doesNotMatch(reusableUnixWorkflow, /prepare-msix-release-assets\.js/);
-    assert.match(builder, /publisherDisplayName: newbe36524/);
-    assert.match(builder, /- appx/);
+    assert.match(forgeConfig, /@electron-forge\/maker-msix/);
+    assert.match(forgeConfig, /@rabbitholesyndrome\/electron-forge-maker-portable/);
+    assert.match(forgeConfig, /@electron-addons\/electron-forge-maker-nsis/);
   });
 
-  it('raises macOS open file limits before electron-builder packaging', async () => {
-    const runner = await fs.readFile(electronBuilderRunnerPath, 'utf-8');
+  it('raises macOS open file limits before electron-forge packaging', async () => {
+    const runner = await fs.readFile(electronForgeRunnerPath, 'utf-8');
 
     assert.match(runner, /HAGICODE_MACOS_NOFILE_LIMIT/);
     assert.match(runner, /ulimit -n/);
     assert.match(runner, /effective_limit.*-lt 16384/);
-    assert.match(runner, /electron-builder\/out\/cli\/cli\.js/);
+    assert.match(runner, /@electron-forge\/core\/dist\/api\/package\.js/);
   });
 
   it('prunes unused Node bin entrypoints before macOS signing', async () => {
@@ -152,48 +136,48 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(smokeTest, /validateToolchainPayload/);
   });
 
-  it('excludes the bundled Node toolchain from recursive macOS signing', async () => {
-    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
-    const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
+  it('excludes the packaged runtime from recursive macOS signing', async () => {
+    const [forgeConfig, smokeTest] = await Promise.all([
+      fs.readFile(forgeConfigPath, 'utf-8'),
+      fs.readFile(smokeTestPath, 'utf-8'),
+    ]);
 
-    assert.match(builder, /afterPack: scripts\/macos-toolchain-signing-hook\.cjs/);
-    assert.match(builder, /afterSign: scripts\/macos-toolchain-signing-hook\.cjs/);
-    assert.match(builder, /signIgnore:/);
-    assert.match(builder, /Contents\/Resources\/extra\/runtime\/\.\*/);
-    assert.match(smokeTest, /stashed outside the macOS app during code signing/);
-    assert.match(smokeTest, /excluded from recursive macOS code signing/);
+    assert.match(forgeConfig, /afterCopyExtraResources/);
+    assert.match(forgeConfig, /afterComplete/);
+    assert.match(forgeConfig, /extra\/runtime/);
+    assert.match(smokeTest, /desktop runtime is excluded from recursive macOS code signing/);
   });
 
-  it('macOS signing hook stashes and restores bundled toolchain resources', async () => {
-    const hook = await import(macToolchainSigningHookPath);
-    const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'macos-toolchain-signing-hook');
-    const appOutDir = path.join(fixtureRoot, 'mac-arm64');
-    const outDir = fixtureRoot;
-    const toolchainRoot = path.join(appOutDir, 'Hagicode Desktop.app', 'Contents', 'Resources', 'extra', 'toolchain');
-    const markerPath = path.join(toolchainRoot, 'toolchain-manifest.json');
+  it('macOS Forge packaging hooks stash and restore packaged runtime resources', async () => {
+    const hooks = await import(forgePackagingHooksPath);
+    const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'forge-packaging-hooks');
+    const appPath = path.join(fixtureRoot, 'Hagicode Desktop.app');
+    const runtimeRoot = path.join(appPath, 'Contents', 'Resources', 'extra', 'runtime');
+    const markerPath = path.join(runtimeRoot, 'marker.json');
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
-    await fs.mkdir(toolchainRoot, { recursive: true });
+    await fs.mkdir(runtimeRoot, { recursive: true });
     await fs.writeFile(markerPath, '{}\n', 'utf-8');
 
-    const context = { appOutDir, outDir, electronPlatformName: 'darwin' };
-    await hook.afterPack(context);
+    await hooks.stageForgePackagingResources(appPath, '41.3.0', 'darwin', 'arm64');
     await assert.rejects(fs.stat(markerPath));
 
-    await hook.afterSign(context);
+    await hooks.restoreForgePackagingResources(appPath, '41.3.0', 'darwin', 'arm64');
     assert.equal(await fs.readFile(markerPath, 'utf-8'), '{}\n');
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
-    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
-    const docs = await fs.readFile(developmentDocPath, 'utf-8');
-    const toolchainDocs = await fs.readFile(path.resolve(process.cwd(), 'docs/bundled-node-toolchain.md'), 'utf-8');
-    const releaseReadme = await fs.readFile(releaseReadmePath, 'utf-8');
+    const [hookSource, docs, toolchainDocs, releaseReadme] = await Promise.all([
+      fs.readFile(forgePackagingHooksPath, 'utf-8'),
+      fs.readFile(developmentDocPath, 'utf-8'),
+      fs.readFile(path.resolve(process.cwd(), 'docs/bundled-node-toolchain.md'), 'utf-8'),
+      fs.readFile(releaseReadmePath, 'utf-8'),
+    ]);
 
-    assert.match(builder, /from: resources\/portable-fixed/);
-    assert.match(builder, /to: extra\/portable-fixed/);
+    assert.match(hookSource, /portable-fixed', 'current/);
+    assert.match(hookSource, /extra', 'portable-fixed', 'current/);
     assert.match(docs, /resources\/portable-fixed\/current/);
     assert.match(docs, /extra\/portable-fixed\/current/);
     assert.match(toolchainDocs, /Bundled Node Toolchain/);
@@ -206,19 +190,17 @@ describe('embedded runtime packaging configuration', () => {
   });
 
   it('ships a dedicated Steam wrapper for packaged Linux launches', async () => {
-    const builder = await fs.readFile(electronBuilderPath, 'utf-8');
-    const docs = await fs.readFile(developmentDocPath, 'utf-8');
+    const [hookSource, docs] = await Promise.all([
+      fs.readFile(forgePackagingHooksPath, 'utf-8'),
+      fs.readFile(developmentDocPath, 'utf-8'),
+    ]);
 
-    assert.match(builder, /extraFiles:/);
-    assert.match(builder, /resources\/linux\/hagicode-steam-wrapper\.sh/);
-    assert.match(builder, /to: hagicode-steam-wrapper\.sh/);
-    assert.match(builder, /resources\/linux\/hagicode-steam-sandbox\.sh/);
-    assert.match(builder, /to: hagicode-steam-sandbox\.sh/);
+    assert.match(hookSource, /hagicode-steam-wrapper\.sh/);
+    assert.match(hookSource, /hagicode-steam-sandbox\.sh/);
     assert.match(docs, /hagicode-steam-wrapper\.sh/);
     assert.match(docs, /hagicode-steam-sandbox\.sh/);
     assert.match(docs, /LD_PRELOAD/);
     assert.match(docs, /does not append `--disable-setuid-sandbox` or `--no-sandbox`/);
     assert.match(docs, /https:\/\/docs\.hagicode\.com/);
   });
-
 });

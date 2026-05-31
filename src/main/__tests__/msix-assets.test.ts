@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-const appxAssetsRoot = path.resolve(process.cwd(), 'resources', 'appx');
+const msixAssetsRoot = path.resolve(process.cwd(), 'resources', 'msix');
 const requiredAssets = [
   { fileName: 'StoreLogo.png', width: 50, height: 50 },
   { fileName: 'Square44x44Logo.png', width: 44, height: 44 },
@@ -24,11 +24,11 @@ function readPngDimensions(targetPath: string): { width: number; height: number 
   };
 }
 
-describe('appx tile assets', () => {
-  it('provides dedicated Store tile images so electron-builder does not fall back to sample assets', () => {
+describe('msix tile assets', () => {
+  it('provides dedicated Store tile images so Forge MSIX packaging does not fall back to sample assets', () => {
     for (const asset of requiredAssets) {
-      const assetPath = path.join(appxAssetsRoot, asset.fileName);
-      assert(fs.existsSync(assetPath), 'expected AppX asset to exist: ' + asset.fileName);
+      const assetPath = path.join(msixAssetsRoot, asset.fileName);
+      assert(fs.existsSync(assetPath), 'expected MSIX asset to exist: ' + asset.fileName);
 
       const dimensions = readPngDimensions(assetPath);
       assert.equal(dimensions.width, asset.width, 'expected ' + asset.fileName + ' width to be ' + asset.width);
