@@ -166,6 +166,34 @@ describe('embedded runtime packaging configuration', () => {
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
+  it('Forge packaging hooks remain compatible with callback-style Electron Packager hooks', async () => {
+    const hooks = await import(forgePackagingHooksPath);
+    const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'forge-packaging-hooks-callback');
+    const appPath = path.join(fixtureRoot, 'Hagicode Desktop');
+    const resourcesRoot = path.join(appPath, 'resources');
+    const runtimeRoot = path.join(resourcesRoot, 'extra', 'runtime');
+    const nodeRuntimePath = path.join(runtimeRoot, 'components', 'node', 'runtime');
+    const wrapperPath = path.join(appPath, 'hagicode-steam-wrapper.sh');
+
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
+    await fs.mkdir(resourcesRoot, { recursive: true });
+
+    await new Promise<void>((resolve, reject) => {
+      hooks.stageForgePackagingResources(appPath, '41.3.0', 'linux', 'x64', (error?: Error | null) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    await fs.stat(nodeRuntimePath);
+    await fs.stat(wrapperPath);
+    await fs.rm(fixtureRoot, { recursive: true, force: true });
+  });
+
   it('ships the optional portable fixed payload through the dedicated extra directory contract', async () => {
     const [hookSource, docs, toolchainDocs, releaseReadme] = await Promise.all([
       fs.readFile(forgePackagingHooksPath, 'utf-8'),

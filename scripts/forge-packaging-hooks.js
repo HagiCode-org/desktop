@@ -59,50 +59,65 @@ async function makeExecutableIfPresent(targetPath) {
   await fsp.chmod(targetPath, 0o755);
 }
 
-export async function stageForgePackagingResources(buildPath, _electronVersion, platform, arch) {
-  const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
+function runForgeHook(work, done) {
+  const promise = work();
 
-  await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'bin'), path.join(runtimeRoot, 'bin'));
-  await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'components'), path.join(runtimeRoot, 'components'));
-  await copyDirectoryIfExists(
-    path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
-    resolvePortableFixedRoot(buildPath, platform),
-  );
-
-  if (platform === 'linux') {
-    const wrapperPath = path.join(buildPath, 'hagicode-steam-wrapper.sh');
-    const sandboxPath = path.join(buildPath, 'hagicode-steam-sandbox.sh');
-
-    await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-wrapper.sh'), wrapperPath);
-    await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-sandbox.sh'), sandboxPath);
-    await makeExecutableIfPresent(wrapperPath);
-    await makeExecutableIfPresent(sandboxPath);
-  }
-
-  if (platform !== 'darwin' || !fs.existsSync(runtimeRoot)) {
+  if (typeof done === 'function') {
+    promise.then(() => done(), done);
     return;
   }
 
-  const signingPaths = resolveSigningPaths(buildPath, platform, arch);
-  await fsp.rm(signingPaths.stashPath, { recursive: true, force: true });
-  await fsp.mkdir(signingPaths.stashRoot, { recursive: true });
-  await fsp.rename(signingPaths.runtimeRoot, signingPaths.stashPath);
-  console.log(`[forge-packaging-hooks] Stashed packaged runtime before macOS signing: ${signingPaths.stashPath}`);
+  return promise;
 }
 
-export async function restoreForgePackagingResources(finalPath, _electronVersion, platform, arch) {
-  if (platform !== 'darwin') {
-    return;
-  }
+export function stageForgePackagingResources(buildPath, _electronVersion, platform, arch, done) {
+  return runForgeHook(async () => {
+    const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
 
-  const signingPaths = resolveSigningPaths(finalPath, platform, arch);
-  if (!fs.existsSync(signingPaths.stashPath)) {
-    return;
-  }
+    await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'bin'), path.join(runtimeRoot, 'bin'));
+    await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'components'), path.join(runtimeRoot, 'components'));
+    await copyDirectoryIfExists(
+      path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
+      resolvePortableFixedRoot(buildPath, platform),
+    );
 
-  await fsp.rm(signingPaths.runtimeRoot, { recursive: true, force: true });
-  await fsp.mkdir(path.dirname(signingPaths.runtimeRoot), { recursive: true });
-  await fsp.rename(signingPaths.stashPath, signingPaths.runtimeRoot);
-  await fsp.rm(signingStashRoot, { recursive: true, force: true });
-  console.log(`[forge-packaging-hooks] Restored packaged runtime after macOS signing: ${signingPaths.runtimeRoot}`);
+    if (platform === 'linux') {
+      const wrapperPath = path.join(buildPath, 'hagicode-steam-wrapper.sh');
+      const sandboxPath = path.join(buildPath, 'hagicode-steam-sandbox.sh');
+
+      await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-wrapper.sh'), wrapperPath);
+      await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-sandbox.sh'), sandboxPath);
+      await makeExecutableIfPresent(wrapperPath);
+      await makeExecutableIfPresent(sandboxPath);
+    }
+
+    if (platform !== 'darwin' || !fs.existsSync(runtimeRoot)) {
+      return;
+    }
+
+    const signingPaths = resolveSigningPaths(buildPath, platform, arch);
+    await fsp.rm(signingPaths.stashPath, { recursive: true, force: true });
+    await fsp.mkdir(signingPaths.stashRoot, { recursive: true });
+    await fsp.rename(signingPaths.runtimeRoot, signingPaths.stashPath);
+    console.log(`[forge-packaging-hooks] Stashed packaged runtime before macOS signing: ${signingPaths.stashPath}`);
+  }, done);
+}
+
+export function restoreForgePackagingResources(finalPath, _electronVersion, platform, arch, done) {
+  return runForgeHook(async () => {
+    if (platform !== 'darwin') {
+      return;
+    }
+
+    const signingPaths = resolveSigningPaths(finalPath, platform, arch);
+    if (!fs.existsSync(signingPaths.stashPath)) {
+      return;
+    }
+
+    await fsp.rm(signingPaths.runtimeRoot, { recursive: true, force: true });
+    await fsp.mkdir(path.dirname(signingPaths.runtimeRoot), { recursive: true });
+    await fsp.rename(signingPaths.stashPath, signingPaths.runtimeRoot);
+    await fsp.rm(signingStashRoot, { recursive: true, force: true });
+    console.log(`[forge-packaging-hooks] Restored packaged runtime after macOS signing: ${signingPaths.runtimeRoot}`);
+  }, done);
 }
