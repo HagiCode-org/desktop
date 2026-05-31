@@ -6,8 +6,8 @@ import {
   type ResolveRuntimeManifestPathOptions,
 } from './runtime-manifest-store.js';
 
-export type DesktopRuntimeComponentId = 'dotnet' | 'node' | 'code-server';
-export type DesktopRuntimeServiceId = Extract<DesktopRuntimeComponentId, 'code-server'>;
+export type DesktopRuntimeComponentId = 'dotnet' | 'node';
+export type DesktopRuntimeServiceId = never;
 
 export interface DesktopRuntimeManifest {
   schemaVersion: number;
@@ -130,52 +130,6 @@ function resolveDesktopRuntimeComponentRuntimeSuffix(componentId: DesktopRuntime
   }
 
   return ['current'];
-}
-
-export function resolveDesktopRuntimeServiceDataHome(
-  serviceId: DesktopRuntimeServiceId,
-  runtimeDataHome: string,
-  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
-): string {
-  const service = manifest.services[serviceId];
-  if (!service) {
-    throw new Error(`Desktop runtime service is not configured: ${serviceId}`);
-  }
-
-  return path.join(runtimeDataHome, service.dataRelativePath);
-}
-
-export function resolveDesktopRuntimeServiceRuntimeHome(
-  serviceId: DesktopRuntimeServiceId,
-  runtimeDataHome: string,
-  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
-): string {
-  return path.join(
-    resolveDesktopRuntimeServiceDataHome(serviceId, runtimeDataHome, manifest),
-    'runtime',
-  );
-}
-
-export function resolveDesktopRuntimeServiceActiveRuntimeRoot(
-  serviceId: DesktopRuntimeServiceId,
-  runtimeDataHome: string,
-  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
-): string {
-  return path.join(
-    resolveDesktopRuntimeServiceRuntimeHome(serviceId, runtimeDataHome, manifest),
-    'current',
-  );
-}
-
-export function resolveDesktopRuntimeServiceStagingRuntimeRoot(
-  serviceId: DesktopRuntimeServiceId,
-  runtimeDataHome: string,
-  manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
-): string {
-  return path.join(
-    resolveDesktopRuntimeServiceRuntimeHome(serviceId, runtimeDataHome, manifest),
-    'staging',
-  );
 }
 
 export function resolveDesktopRuntimeSharedDataPaths(

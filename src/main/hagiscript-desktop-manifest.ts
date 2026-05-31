@@ -8,18 +8,12 @@ import {
 } from './embedded-runtime-config.js';
 import { readPinnedNodeRuntimeConfig } from './embedded-node-runtime-config.js';
 import {
-  detectCodeServerRuntimePlatform,
-  readCodeServerRuntimeConfig,
-} from './code-server-runtime.js';
-import {
   readDesktopRuntimeManifest,
   type DesktopRuntimeManifest,
-  type DesktopRuntimeServiceId,
 } from './desktop-runtime-paths.js';
 
 export const DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME = 'node';
 export const DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME = 'server';
-export const DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME = 'code-server';
 export const DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR = '.pm2';
 export const DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR = 'pm2-runtime';
 export const DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE = 'versions-state.json';
@@ -27,68 +21,9 @@ export const DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV = 'hagicode_instance';
 export const DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME = 'hagicode_dev';
 export const DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME = 'hagicode_prod';
 export const DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME = 'hagicode-server';
-export const DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME = 'hagicode-code-server';
 
 const DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME = 'hagiscript-runtime-scripts';
 const DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE = 'noop-install-node.mjs';
-
-function normalizeComponentRuntimeDataDir(relativePath: string): string {
-  return relativePath.replace(/^components[\\/]/u, '');
-}
-
-function resolveBundledRuntimePackagedRoot(
-  runtimeHome: string,
-  desktopRuntimeManifest: DesktopRuntimeManifest,
-  serviceId: DesktopRuntimeServiceId,
-): string {
-  return path.resolve(runtimeHome, desktopRuntimeManifest.components[serviceId].relativePath);
-}
-
-function readBundledRuntimeMarkerVersion(packagedRoot: string): string | undefined {
-  const markerPath = path.join(packagedRoot, '.hagicode-runtime.json');
-
-  try {
-    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as { version?: unknown };
-    const version = typeof marker.version === 'string' ? marker.version.trim() : '';
-    return version.length > 0 ? version : undefined;
-  } catch (error) {
-    const errno = error as NodeJS.ErrnoException;
-    if (errno.code !== 'ENOENT') {
-      log.warn('[hagiscript-desktop-manifest] failed to read bundled runtime marker version', {
-        packagedRoot,
-        markerPath,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-    return undefined;
-  }
-}
-
-function resolveBundledRuntimeComponentVersion(input: {
-  runtimeHome: string;
-  desktopRuntimeManifest: DesktopRuntimeManifest;
-  serviceId: DesktopRuntimeServiceId;
-  configuredVersion: string | undefined;
-}): string | undefined {
-  const packagedRoot = resolveBundledRuntimePackagedRoot(
-    input.runtimeHome,
-    input.desktopRuntimeManifest,
-    input.serviceId,
-  );
-  const markerVersion = readBundledRuntimeMarkerVersion(packagedRoot);
-  const configuredVersion = input.configuredVersion?.trim() || undefined;
-
-  if (markerVersion && configuredVersion && markerVersion !== configuredVersion) {
-    log.warn('[hagiscript-desktop-manifest] bundled runtime version mismatch; preferring packaged marker', {
-      serviceId: input.serviceId,
-      packagedRoot,
-      markerVersion,
-      configuredVersion,
-    });
-  }
-
-  return markerVersion ?? configuredVersion;
-}
 
 export interface DesktopHagiscriptManifestServerOptions {
   servicePayloadPath: string;
@@ -107,18 +42,6 @@ export interface DesktopHagiscriptManifestOptions {
   dotnetRuntimeRoot?: string;
   desktopRuntimeManifest?: DesktopRuntimeManifest;
   dotnetPlatform?: string;
-  codeServerPlatform?: string;
-  bundledRuntimeOverrides?: Partial<Record<DesktopRuntimeServiceId, {
-    runtimeDataDir?: string;
-    pm2?: {
-      appName?: string;
-      cwd?: string;
-      script?: string;
-      args?: string[];
-      env?: Record<string, string>;
-      pm2Home?: string;
-    };
-  }>>;
   server?: DesktopHagiscriptManifestServerOptions;
 }
 
@@ -147,12 +70,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
   const instanceName = resolveDesktopHagiscriptInstanceName();
   const desktopRuntimeManifest = options.desktopRuntimeManifest ?? readDesktopRuntimeManifest();
   const dotnetPlatform = options.dotnetPlatform ?? detectPinnedRuntimePlatform();
-  const codeServerPlatform = options.codeServerPlatform ?? detectCodeServerRuntimePlatform();
   const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
   const dotnetRuntimeConfig = readPinnedRuntimeManifest();
-  const codeServerRuntimeConfig = readCodeServerRuntimeConfig();
-  const bundledRuntimeOverrides = options.bundledRuntimeOverrides ?? {};
-  const codeServerOverride = bundledRuntimeOverrides['code-server'];
   const paths = {
     runtimeRoot: options.runtimeRoot,
     runtimeHome: options.runtimeHome,
@@ -171,9 +90,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
     nodeRuntime: desktopRuntimeManifest.components.node.relativePath,
     dotnetRuntime: options.dotnetRuntimeRoot
       ?? desktopRuntimeManifest.components.dotnet.relativePath.replace('{platform}', dotnetPlatform),
-    vendoredRoot: desktopRuntimeManifest.components['code-server'].relativePath
-      .split('/code-server')
-      .join(''),
   };
 
   const nodeComponent = {
@@ -195,39 +111,9 @@ export function buildDesktopHagiscriptRuntimeManifest(
     installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-dotnet.mjs'),
     verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-dotnet.mjs'),
   };
-  const codeServerComponent = {
-    name: DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME,
-    type: 'bundled-runtime',
-    required: false,
-    source: 'desktop-vendored-runtime',
-    version: resolveBundledRuntimeComponentVersion({
-      runtimeHome: options.runtimeHome,
-      desktopRuntimeManifest,
-      serviceId: 'code-server',
-      configuredVersion: resolveReleaseVersion(
-        codeServerPlatform,
-        codeServerRuntimeConfig.releaseVersionByPlatform,
-        codeServerRuntimeConfig.releaseVersion,
-      ),
-    }),
-    bundledInstallMode: codeServerRuntimeConfig.packagedLayout.installMode,
-    runtimeDataDir: codeServerOverride?.runtimeDataDir
-      ?? normalizeComponentRuntimeDataDir(desktopRuntimeManifest.services['code-server'].dataRelativePath),
-    lifecycleDependencies: [DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME],
-    installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-code-server.mjs'),
-    configureScript: path.join(desktopRuntimeScriptsRoot, 'noop-configure-code-server.mjs'),
-    pm2: {
-      appName: DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
-      nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
-      cwd: 'current',
-      ...(codeServerOverride?.pm2 ?? {}),
-    },
-  };
-
   const components: Array<Record<string, unknown>> = [
     nodeComponent,
     dotnetComponent,
-    codeServerComponent,
   ];
 
   const installOrder = [
@@ -235,7 +121,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
     dotnetComponentName,
   ];
   const removeOrder = [
-    'code-server',
     dotnetComponentName,
     DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
   ];
@@ -254,9 +139,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
     removeOrder.splice(2, 0, DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME);
     updateOrder.push(DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME);
   }
-
-  installOrder.push('code-server');
-  updateOrder.push('code-server');
 
   return {
     runtime: {
@@ -381,20 +263,6 @@ function buildDesktopHagiscriptServerComponent(input: {
       activeVersion: normalizeOptionalString(input.server.activeVersion),
     },
   };
-}
-
-function resolveReleaseVersion(
-  platform: string,
-  releaseVersionByPlatform: Record<string, string> | undefined,
-  releaseVersion: string | undefined,
-): string | undefined {
-  const perPlatform = releaseVersionByPlatform?.[platform]?.trim();
-  if (perPlatform) {
-    return perPlatform;
-  }
-
-  const sharedVersion = releaseVersion?.trim();
-  return sharedVersion || undefined;
 }
 
 function normalizeOptionalString(value: string | null | undefined): string | undefined {

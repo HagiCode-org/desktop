@@ -348,7 +348,6 @@ function printRuntimeVerificationReport(output: NonInteractiveOutput, report: No
   output.stdout(`runtime shared logs: ${report.sharedPaths.logs}`);
   output.stdout(`runtime shared data: ${report.sharedPaths.data}`);
   output.stdout(`runtime shared state: ${report.sharedPaths.state}`);
-  output.stdout(`runtime service code-server data: ${report.serviceDataHomes.codeServer}`);
   output.stdout(`runtime component dotnet root: ${report.components.dotnet.root}`);
   output.stdout(`runtime component dotnet status: ${report.components.dotnet.status}`);
   output.stdout(`runtime component dotnet executable: ${report.components.dotnet.executablePath}`);
@@ -365,12 +364,6 @@ function printRuntimeVerificationReport(output: NonInteractiveOutput, report: No
   output.stdout(`runtime component npm executable: ${report.components.node.npmExecutablePath ?? '<missing>'}`);
   output.stdout(`runtime component node version: ${report.components.node.governedNodeVersion ?? '<missing>'}`);
   output.stdout(`runtime component node issues: ${formatRuntimeVerificationIssues(report.components.node.issues)}`);
-  output.stdout(`runtime component code-server root: ${report.components.codeServer.root}`);
-  output.stdout(`runtime component code-server status: ${report.components.codeServer.status}`);
-  output.stdout(`runtime component code-server wrapper: ${report.components.codeServer.wrapperPath ?? '<missing>'}`);
-  output.stdout(`runtime component code-server entry: ${report.components.codeServer.entryScriptPath ?? '<missing>'}`);
-  output.stdout(`runtime component code-server version: ${report.components.codeServer.version ?? '<missing>'}`);
-  output.stdout(`runtime component code-server issues: ${formatRuntimeVerificationIssues(report.components.codeServer.issues)}`);
 }
 
 function printRuntimeVerificationFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeVerificationReport): void {
@@ -394,16 +387,6 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout(`standalone pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);
   output.stdout(`standalone pm2 package managed: ${report.tooling.pm2PackageUnderManagedModules}`);
   output.stdout(`standalone pm2 executable managed: ${report.tooling.pm2ExecutableUnderManagedBin}`);
-
-  output.stdout(`code-server pm2 home: ${report.services.codeServer.pm2Home}`);
-  output.stdout(`code-server runtime data: ${report.services.codeServer.runtimeDataHome}`);
-  output.stdout(`code-server runtime files: ${report.services.codeServer.runtimeFilesDir ?? '<missing>'}`);
-  output.stdout(`code-server launch script: ${report.services.codeServer.launchScriptPath ?? '<missing>'}`);
-  output.stdout(`code-server launch cwd: ${report.services.codeServer.launchWorkingDirectory ?? '<missing>'}`);
-  output.stdout(`code-server start success: ${report.services.codeServer.startSuccess}`);
-  output.stdout(`code-server status after start: ${report.services.codeServer.statusAfterStart}`);
-  output.stdout(`code-server stop success: ${report.services.codeServer.stopSuccess}`);
-  output.stdout(`code-server status after stop: ${report.services.codeServer.statusAfterStop}`);
 
   output.stdout(`backend active runtime root: ${report.services.backend.activeRuntimeRoot ?? '<missing>'}`);
   output.stdout(`backend payload dll: ${report.services.backend.serviceDllPath ?? '<missing>'}`);

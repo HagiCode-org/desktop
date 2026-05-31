@@ -19,7 +19,6 @@ import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
-import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import {
   buildNpmGlobalCommandArtifactPaths,
   type NodeMajorNpmGlobalPaths,
@@ -38,7 +37,6 @@ import {
   getActiveVendoredRuntimeActivation,
   onVendoredRuntimeActivationProgress,
 } from './vendored-runtime-activation-state.js';
-import { findVendoredRuntime } from '../shared/vendored-runtimes.js';
 import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
@@ -53,7 +51,6 @@ import type {
   DependencyManagementOperationProgress,
   DependencyManagementOperationResult,
   DependencyManagementSnapshot,
-  VendoredRuntimeId,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
@@ -225,7 +222,6 @@ export class DependencyManagementService {
   private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
   private readonly events = new EventEmitter();
   private activeOperation: DependencyManagementOperationProgress | null = null;
-  private vendoredRuntimeInspector: (() => Promise<VendoredRuntimeStatusSnapshot[]>) | null = null;
 
   constructor(options: DependencyManagementServiceOptions = {}) {
     this.pathManager = options.pathManager ?? PathManager.getInstance();
@@ -249,10 +245,6 @@ export class DependencyManagementService {
     return onVendoredRuntimeActivationProgress(listener);
   }
 
-  setVendoredRuntimeInspector(inspector: (() => Promise<VendoredRuntimeStatusSnapshot[]>) | null): void {
-    this.vendoredRuntimeInspector = inspector;
-  }
-
   async getSnapshot(): Promise<DependencyManagementSnapshot> {
     const environment = await this.detectEnvironment();
     const packages = await Promise.all(
@@ -273,65 +265,7 @@ export class DependencyManagementService {
   }
 
   private async getVendoredRuntimeSnapshots(): Promise<VendoredRuntimeStatusSnapshot[]> {
-    if (this.vendoredRuntimeInspector) {
-      return await this.vendoredRuntimeInspector();
-    }
-
-    return await Promise.all([
-      this.inspectVendoredRuntimeSafely('code-server', () => inspectVendoredCodeServerRuntime(this.pathManager), this.pathManager.getCodeServerRuntimeRoot()),
-    ]);
-  }
-
-  private async inspectVendoredRuntimeSafely(
-    runtimeId: VendoredRuntimeId,
-    inspector: () => Promise<VendoredRuntimeStatusSnapshot>,
-    runtimeRoot: string,
-  ): Promise<VendoredRuntimeStatusSnapshot> {
-    try {
-      return await inspector();
-    } catch (error) {
-      const definition = findVendoredRuntime(runtimeId);
-      if (!definition) {
-        throw error;
-      }
-
-      const message = error instanceof Error ? error.message : String(error);
-      log.warn('[DependencyManagementService] Vendored runtime inspection failed:', {
-        runtimeId,
-        message,
-      });
-
-      return {
-        id: runtimeId,
-        definition,
-        installStatus: 'failed',
-        status: 'damaged',
-        sourceStatus: 'missing',
-        version: null,
-        runtimeRoot,
-        stagingRoot: this.pathManager.getCodeServerRuntimeStagingRoot(),
-        packagedRoot: this.pathManager.getCodeServerPackagedRuntimeRoot(),
-        packagedArchivePath: this.pathManager.getCodeServerPackagedArchivePath(),
-        packagedMarkerPath: this.pathManager.getVendoredRuntimePackagedMarkerPath('code-server'),
-        metadataPath: null,
-        wrapperPath: null,
-        entryScriptPath: null,
-        packageId: runtimeId,
-        schemaVersion: null,
-        bundledNodeRuntime: false,
-        managedByDesktop: true,
-        primaryAction: process.env.NODE_ENV === 'development' ? 'repair' : 'reinstall-desktop',
-        diagnostics: [message],
-        activation: null,
-        health: {
-          reachable: false,
-          url: null,
-          lastCheckedAt: null,
-          message,
-        },
-        message,
-      };
-    }
+    return [];
   }
 
   getMirrorSettings(): NpmMirrorSettings {

@@ -191,11 +191,8 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
   const desktopExtensions = asRecord(manifest.desktopExtensions);
   const distribution = asRecord(desktopExtensions?.distribution);
   const programHomes = asRecord(distribution?.programHomes);
-  const codeServerComponent = findRuntimeComponent(manifest, 'code-server');
-  const componentDataRoot = normalizeRelativePath(readString(paths?.componentDataRoot)) ?? 'components';
   const nodeRuntime = normalizeRelativePath(readString(paths?.nodeRuntime)) ?? 'components/node/runtime';
   const dotnetRuntime = normalizeRelativePath(readString(paths?.dotnetRuntime)) ?? 'components/dotnet/runtime';
-  const vendoredRoot = normalizeRelativePath(readString(paths?.vendoredRoot)) ?? 'components/bundled';
   const runtimeDataRelativePath = normalizeRelativePath(readString(distribution?.runtimeDataRelativePath)) ?? 'runtimeData';
 
   return {
@@ -225,42 +222,10 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
       node: {
         relativePath: nodeRuntime,
       },
-      'code-server': {
-        relativePath: joinRelativePath(vendoredRoot, 'code-server'),
-      },
     },
-    services: {
-      'code-server': {
-        dataRelativePath: joinRelativePath(
-          componentDataRoot,
-          normalizeRelativePath(readString(codeServerComponent?.runtimeDataDir)) ?? 'services/code-server',
-        ),
-      },
-    },
+    services: {},
     npmSync: asRecord(manifest.npmSync) ?? undefined,
   };
-}
-
-function findRuntimeComponent(
-  manifest: RuntimeManifestStore,
-  componentName: string,
-): Record<string, unknown> | null {
-  const components = Array.isArray(manifest.components) ? manifest.components : [];
-  for (const component of components) {
-    const componentRecord = asRecord(component);
-    if (componentRecord && readString(componentRecord.name) === componentName) {
-      return componentRecord;
-    }
-  }
-
-  return null;
-}
-
-function joinRelativePath(...parts: Array<string | undefined>): string {
-  return parts
-    .filter((part): part is string => typeof part === 'string' && part.length > 0)
-    .join('/')
-    .replace(/\/+/gu, '/');
 }
 
 function normalizeRelativePath(value: string | undefined): string | undefined {

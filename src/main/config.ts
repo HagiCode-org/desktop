@@ -1,11 +1,6 @@
-import crypto from 'node:crypto';
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
-import {
-  CODE_SERVER_DEFAULT_PORT,
-  type CodeServerConfigSnapshot,
-} from '../types/code-server-management.js';
 
 export interface AppSettings {
   language: string;
@@ -18,10 +13,6 @@ export interface VersionAutoUpdateSettings {
 
 export interface AppConfig {
   server: ServerConfig;
-  codeServer?: {
-    port?: number;
-    password?: string;
-  };
   versionAutoUpdate: VersionAutoUpdateSettings;
   startOnStartup: boolean;
   minimizeToTray: boolean;
@@ -36,37 +27,6 @@ export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
   enabled: true,
   retainedArchiveCount: 5,
 };
-
-const CODE_SERVER_MIN_PASSWORD_LENGTH = 4;
-const CODE_SERVER_MAX_PASSWORD_LENGTH = 200;
-const CODE_SERVER_MIN_PORT = 1024;
-const CODE_SERVER_MAX_PORT = 65535;
-
-function buildCodeServerBaseUrl(port: number): string {
-  return `http://127.0.0.1:${port}`;
-}
-
-function normalizeCodeServerPassword(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const password = value.trim();
-  return password.length >= CODE_SERVER_MIN_PASSWORD_LENGTH && password.length <= CODE_SERVER_MAX_PASSWORD_LENGTH
-    ? password
-    : null;
-}
-
-function generateDefaultCodeServerPassword(): string {
-  return crypto.randomBytes(18).toString('base64url');
-}
-
-function normalizeCodeServerPort(value: unknown): number | null {
-  const port = Number.parseInt(String(value ?? ''), 10);
-  return Number.isInteger(port) && port >= CODE_SERVER_MIN_PORT && port <= CODE_SERVER_MAX_PORT
-    ? port
-    : null;
-}
 
 export function normalizeRetainedArchiveCount(value: unknown, fallback: number = DEFAULT_VERSION_AUTO_UPDATE_SETTINGS.retainedArchiveCount): number {
   const parsed = typeof value === 'string'
@@ -194,26 +154,6 @@ export class ConfigManager {
   setServerConfig(config: Partial<ServerConfig>): void {
     const current = this.getServerConfig();
     this.set('server', { ...current, ...config });
-  }
-
-  getCodeServerConfig(): CodeServerConfigSnapshot {
-    const configured = this.store.get('codeServer');
-    const port = normalizeCodeServerPort(configured?.port) ?? CODE_SERVER_DEFAULT_PORT;
-    const password = normalizeCodeServerPassword(configured?.password) ?? generateDefaultCodeServerPassword();
-
-    if (configured?.port !== port || configured?.password !== password) {
-      this.store.set('codeServer', {
-        ...(configured ?? {}),
-        port,
-        password,
-      });
-    }
-
-    return {
-      port,
-      baseUrl: buildCodeServerBaseUrl(port),
-      password,
-    };
   }
 
   /**

@@ -26,7 +26,6 @@ import {
   type PortableRuntimeMacosPlatform,
 } from './portable-runtime-layout.js';
 import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
-import { getCodeServerRuntimeConfigPath as resolveCodeServerRuntimeConfigPath } from './code-server-runtime-config-path.js';
 import {
   getDesktopRuntimeManifestPath,
   readDesktopRuntimeManifest,
@@ -34,9 +33,7 @@ import {
   resolveDesktopRuntimeComponentProgramRoot,
   resolveDesktopRuntimeDataHome,
   resolveDesktopRuntimeProgramHome,
-  resolveDesktopRuntimeServiceDataHome,
   resolveDesktopRuntimeSharedDataPaths,
-  type DesktopRuntimeServiceId,
 } from './desktop-runtime-paths.js';
 import {
   registerRuntimeManifestUserDataPath,
@@ -49,154 +46,6 @@ import type {
 } from '../types/bootstrap.js';
 
 const { app } = electron;
-
-function resolveVendoredRuntimeOverrideRoot(overrideRoot: string): string {
-  const resolvedOverride = path.resolve(overrideRoot);
-  return path.basename(resolvedOverride) === 'current'
-    ? resolvedOverride
-    : path.join(resolvedOverride, 'current');
-}
-
-interface VendoredExtractedRuntimeState {
-  version?: unknown;
-  versionedRoot?: unknown;
-  currentRoot?: unknown;
-}
-
-function resolveVendoredRuntimeDirectoryName(serviceId: DesktopRuntimeServiceId): string {
-  return 'code_server';
-}
-
-function readVendoredExtractedRuntimeState(
-  serviceDataHome: string,
-): VendoredExtractedRuntimeState | null {
-  const statePath = path.join(serviceDataHome, 'extracted-runtime.json');
-
-  try {
-    return JSON.parse(fsSync.readFileSync(statePath, 'utf8')) as VendoredExtractedRuntimeState;
-  } catch (error) {
-    const errno = error as NodeJS.ErrnoException;
-    if (errno.code === 'ENOENT') {
-      return null;
-    }
-
-    log.warn('[PathManager] failed to read vendored extracted runtime state', {
-      serviceDataHome,
-      statePath,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
-function readVendoredPackagedRuntimeVersion(packagedRoot: string): string | null {
-  const markerPath = path.join(packagedRoot, '.hagicode-runtime.json');
-
-  try {
-    const marker = JSON.parse(fsSync.readFileSync(markerPath, 'utf8')) as { version?: unknown };
-    return typeof marker.version === 'string' && marker.version.trim().length > 0
-      ? marker.version.trim()
-      : null;
-  } catch (error) {
-    const errno = error as NodeJS.ErrnoException;
-    if (errno.code === 'ENOENT') {
-      return null;
-    }
-
-    log.warn('[PathManager] failed to read vendored packaged runtime marker', {
-      packagedRoot,
-      markerPath,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
-function resolveVendoredRuntimeVersionOverride(serviceId: DesktopRuntimeServiceId): string | null {
-  const envKey = 'HAGICODE_CODE_SERVER_RUNTIME_VERSION';
-  const override = process.env[envKey]?.trim();
-  return override && override.length > 0 ? override : null;
-}
-
-function normalizeStoredRuntimePath(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0
-    ? path.resolve(value)
-    : null;
-}
-
-function buildVendoredRuntimeVersionedRoot(
-  runtimeDataHome: string,
-  serviceId: DesktopRuntimeServiceId,
-  version: string,
-): string {
-  return path.join(
-    runtimeDataHome,
-    'runtimeComponents',
-    resolveVendoredRuntimeDirectoryName(serviceId),
-    version,
-  );
-}
-
-export function resolveVendoredRuntimeVersionRootPath(input: {
-  runtimeDataHome: string;
-  serviceDataHome: string;
-  packagedRoot: string;
-  serviceId: DesktopRuntimeServiceId;
-}): string {
-  const extractedState = readVendoredExtractedRuntimeState(input.serviceDataHome);
-  const expectedVersion = resolveVendoredRuntimeVersionOverride(input.serviceId)
-    ?? readVendoredPackagedRuntimeVersion(input.packagedRoot);
-  const storedVersion = typeof extractedState?.version === 'string' && extractedState.version.trim().length > 0
-    ? extractedState.version.trim()
-    : null;
-  const storedVersionedRoot = normalizeStoredRuntimePath(extractedState?.versionedRoot);
-
-  if (storedVersion && storedVersionedRoot && (!expectedVersion || storedVersion === expectedVersion)) {
-    return storedVersionedRoot;
-  }
-
-  if (expectedVersion) {
-    return buildVendoredRuntimeVersionedRoot(input.runtimeDataHome, input.serviceId, expectedVersion);
-  }
-
-  if (storedVersionedRoot) {
-    return storedVersionedRoot;
-  }
-
-  const unresolvedVersionRoot = buildVendoredRuntimeVersionedRoot(
-    input.runtimeDataHome,
-    input.serviceId,
-    'unresolved',
-  );
-  log.warn('[PathManager] vendored runtime version is unresolved; using placeholder extracted runtime root', {
-    serviceId: input.serviceId,
-    serviceDataHome: input.serviceDataHome,
-    packagedRoot: input.packagedRoot,
-    unresolvedVersionRoot,
-  });
-  return unresolvedVersionRoot;
-}
-
-export function resolveVendoredRuntimeCurrentRootPath(input: {
-  runtimeDataHome: string;
-  serviceDataHome: string;
-  packagedRoot: string;
-  serviceId: DesktopRuntimeServiceId;
-}): string {
-  const extractedState = readVendoredExtractedRuntimeState(input.serviceDataHome);
-  const storedCurrentRoot = normalizeStoredRuntimePath(extractedState?.currentRoot);
-  const storedVersion = typeof extractedState?.version === 'string' && extractedState.version.trim().length > 0
-    ? extractedState.version.trim()
-    : null;
-  const expectedVersion = resolveVendoredRuntimeVersionOverride(input.serviceId)
-    ?? readVendoredPackagedRuntimeVersion(input.packagedRoot);
-
-  if (storedCurrentRoot && (!expectedVersion || (storedVersion && storedVersion === expectedVersion))) {
-    return storedCurrentRoot;
-  }
-
-  return path.join(resolveVendoredRuntimeVersionRootPath(input), 'current');
-}
 
 export {
   buildNodeMajorNpmGlobalPaths,
@@ -594,53 +443,6 @@ export class PathManager {
     return resolveDesktopRuntimeSharedDataPaths(this.getRuntimeDataHome(), readDesktopRuntimeManifest());
   }
 
-  getCodeServerRuntimeDataHome(): string {
-    return resolveDesktopRuntimeServiceDataHome('code-server', this.getRuntimeDataHome(), readDesktopRuntimeManifest());
-  }
-
-  getVendoredRuntimeDataHome(serviceId: DesktopRuntimeServiceId): string {
-    return resolveDesktopRuntimeServiceDataHome(serviceId, this.getRuntimeDataHome(), readDesktopRuntimeManifest());
-  }
-
-  getVendoredRuntimePackagedRoot(serviceId: DesktopRuntimeServiceId): string {
-    return resolveDesktopRuntimeComponentContainerRoot(serviceId, this.getRuntimeProgramHome(), this.getCurrentPlatform(), readDesktopRuntimeManifest());
-  }
-
-  getVendoredRuntimePackagedMarkerPath(serviceId: DesktopRuntimeServiceId): string {
-    return path.join(this.getVendoredRuntimePackagedRoot(serviceId), '.hagicode-runtime.json');
-  }
-
-  getVendoredRuntimePackagedArchivePath(serviceId: DesktopRuntimeServiceId): string {
-    const archiveFileName = 'code-server.7z';
-    return path.join(this.getVendoredRuntimePackagedRoot(serviceId), 'archives', archiveFileName);
-  }
-
-  private getVendoredRuntimeVersionRoot(serviceId: DesktopRuntimeServiceId): string {
-    return resolveVendoredRuntimeVersionRootPath({
-      runtimeDataHome: this.getRuntimeDataHome(),
-      serviceDataHome: this.getVendoredRuntimeDataHome(serviceId),
-      packagedRoot: this.getVendoredRuntimePackagedRoot(serviceId),
-      serviceId,
-    });
-  }
-
-  getVendoredRuntimeHome(serviceId: DesktopRuntimeServiceId): string {
-    return this.getVendoredRuntimeVersionRoot(serviceId);
-  }
-
-  getVendoredRuntimeRoot(serviceId: DesktopRuntimeServiceId): string {
-    return resolveVendoredRuntimeCurrentRootPath({
-      runtimeDataHome: this.getRuntimeDataHome(),
-      serviceDataHome: this.getVendoredRuntimeDataHome(serviceId),
-      packagedRoot: this.getVendoredRuntimePackagedRoot(serviceId),
-      serviceId,
-    });
-  }
-
-  getVendoredRuntimeStagingRoot(serviceId: DesktopRuntimeServiceId): string {
-    return path.join(this.getVendoredRuntimeVersionRoot(serviceId), 'staging');
-  }
-
   getNodeMajorNpmGlobalPaths(
     input: Omit<NodeMajorNpmGlobalPathOptions, 'userDataPath'> = {},
   ): NodeMajorNpmGlobalPaths {
@@ -973,35 +775,6 @@ export class PathManager {
     }
 
     return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
-  }
-
-  getCodeServerPackagedRuntimeRoot(): string {
-    return this.getVendoredRuntimePackagedRoot('code-server');
-  }
-
-  getCodeServerPackagedArchivePath(): string {
-    return this.getVendoredRuntimePackagedArchivePath('code-server');
-  }
-
-  getCodeServerRuntimeHome(): string {
-    return this.getVendoredRuntimeHome('code-server');
-  }
-
-  getCodeServerRuntimeRoot(): string {
-    const overrideRoot = process.env.HAGICODE_CODE_SERVER_RUNTIME_ROOT?.trim();
-    if (overrideRoot) {
-      return resolveVendoredRuntimeOverrideRoot(overrideRoot);
-    }
-
-    return this.getVendoredRuntimeRoot('code-server');
-  }
-
-  getCodeServerRuntimeStagingRoot(): string {
-    return this.getVendoredRuntimeStagingRoot('code-server');
-  }
-
-  getCodeServerRuntimeConfigPath(): string {
-    return resolveCodeServerRuntimeConfigPath();
   }
 
   getPortableNodeRoot(): string {

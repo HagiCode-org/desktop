@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import log from 'electron-log';
+import { path7z } from '7zip-bin-full';
 import { executeCliStreaming } from './utils/cli-executor.js';
 
 export interface Extract7zArchiveOptions {
@@ -12,7 +13,7 @@ export interface Extract7zArchiveOptions {
 }
 
 export function resolveDesktopOwned7zExecutablePath(): string {
-  return path7za;
+  return path7z;
 }
 
 function extractPercent(message: string): number | undefined {

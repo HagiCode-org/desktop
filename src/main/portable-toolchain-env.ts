@@ -43,24 +43,12 @@ export interface ManagedCliPathEnvResult {
   npmGlobalPaths?: NodeMajorNpmGlobalPaths | null;
 }
 
-export interface CodeServerRuntimeEnvResult extends PortableToolchainEnvResult {
-  runtimeProgramHome: string;
-  runtimeDataHome: string;
-  runtimeRoot: string;
-}
-
 function resolveRuntimeProgramHome(pathAccessor: PortableToolchainPathAccessor): string {
   return pathAccessor.getRuntimeProgramHome?.() ?? process.env.HAGICODE_RUNTIME_HOME ?? '';
 }
 
 function resolveRuntimeDataHome(pathAccessor: PortableToolchainPathAccessor): string {
   return pathAccessor.getRuntimeDataHome?.() ?? process.env.HAGICODE_RUNTIME_DATA_HOME ?? '';
-}
-
-function resolveCodeServerRuntimeDataHome(
-  pathAccessor: PortableToolchainPathAccessor & { getCodeServerRuntimeDataHome?(): string },
-): string {
-  return pathAccessor.getCodeServerRuntimeDataHome?.() ?? resolveRuntimeDataHome(pathAccessor);
 }
 
 const SERVER_NODE_ENV_KEYS = [
@@ -316,31 +304,6 @@ export function injectManagedCliPathEnv(
     managedNpmGlobalPath,
     inheritedPathValue: resolvedPathEntries.inheritedPathValue,
     npmGlobalPaths: activeNpmGlobalPaths,
-  };
-}
-
-export function injectCodeServerRuntimeEnv(
-  baseEnv: NodeJS.ProcessEnv,
-  pathAccessor: PortableToolchainPathAccessor & {
-    getCodeServerRuntimeRoot(): string;
-    getCodeServerRuntimeDataHome?(): string;
-  },
-  options: InjectPortableToolchainEnvOptions = {},
-): CodeServerRuntimeEnvResult {
-  const portableEnv = injectPortableToolchainEnv(baseEnv, pathAccessor, options);
-  const env: NodeJS.ProcessEnv = {
-    ...portableEnv.env,
-    HAGICODE_RUNTIME_HOME: resolveRuntimeProgramHome(pathAccessor),
-    HAGICODE_RUNTIME_DATA_HOME: resolveCodeServerRuntimeDataHome(pathAccessor),
-    HAGICODE_CODE_SERVER_RUNTIME_ROOT: pathAccessor.getCodeServerRuntimeRoot(),
-  };
-
-  return {
-    ...portableEnv,
-    env,
-    runtimeProgramHome: resolveRuntimeProgramHome(pathAccessor),
-    runtimeDataHome: resolveCodeServerRuntimeDataHome(pathAccessor),
-    runtimeRoot: pathAccessor.getCodeServerRuntimeRoot(),
   };
 }
 

@@ -1,7 +1,6 @@
 import fsSync from 'node:fs';
 import path from 'node:path';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
-import { validateCodeServerRuntime } from './code-server-runtime.js';
 import { validateBundledRuntimeForPlatform } from './embedded-runtime.js';
 import { PathManager } from './path-manager.js';
 
@@ -26,9 +25,6 @@ export interface NonInteractiveRuntimeVerificationReport {
     data: string;
     state: string;
   };
-  serviceDataHomes: {
-    codeServer: string;
-  };
   components: {
     dotnet: NonInteractiveRuntimeComponentReport & {
       executablePath: string;
@@ -43,11 +39,6 @@ export interface NonInteractiveRuntimeVerificationReport {
       nodeExecutablePath: string | null;
       npmExecutablePath: string | null;
       governedNodeVersion: string | null;
-    };
-    codeServer: NonInteractiveRuntimeComponentReport & {
-      wrapperPath: string | null;
-      entryScriptPath: string | null;
-      version: string | null;
     };
   };
   issues: string[];
@@ -74,21 +65,12 @@ export async function verifyDesktopRuntimeStructure(
   const programHome = pathManager.getRuntimeProgramHome();
   const dataHome = pathManager.getRuntimeDataHome();
   const sharedPaths = pathManager.getRuntimeSharedPaths();
-  const serviceDataHomes = {
-    codeServer: pathManager.getCodeServerRuntimeDataHome(),
-  };
-
   const dotnetValidation = await validateBundledRuntimeForPlatform({
     platform: pathManager.getCurrentPlatform(),
     runtimeRoot: pathManager.getEmbeddedRuntimeRoot(),
     executableName: pathManager.getEmbeddedDotnetExecutableName(),
   });
   const nodeValidation = await new BundledNodeRuntimeManager(pathManager).verify();
-  const codeServerRoot = pathManager.getCodeServerRuntimeRoot();
-  const codeServerValidation = await validateCodeServerRuntime({
-    runtimeRoot: codeServerRoot,
-    pathManager,
-  });
 
   const dotnetIssues = flattenIssues([
     !dotnetValidation.valid && dotnetValidation.message,
@@ -103,17 +85,9 @@ export async function verifyDesktopRuntimeStructure(
     npmRuntimeComponent.integrity !== 'ok' && (npmRuntimeComponent.message ?? npmRuntimeComponent.componentId),
     !isWithinRoot(nodeValidation.toolchainRoot, programHome) && `node runtime root is outside runtime program home: ${nodeValidation.toolchainRoot}`,
   ]);
-  const codeServerIssues = flattenIssues([
-    codeServerValidation.missingEntries,
-    codeServerValidation.diagnostics,
-    !isWithinRoot(codeServerRoot, dataHome)
-      && `code-server extracted runtime root is outside runtime data home: ${codeServerRoot}`,
-  ]);
-
   const report: NonInteractiveRuntimeVerificationReport = {
     ok: dotnetIssues.length === 0
-      && nodeIssues.length === 0
-      && codeServerIssues.length === 0,
+      && nodeIssues.length === 0,
     mode: process.env.NODE_ENV === 'development' ? 'development' : 'packaged',
     manifestPath,
     programHome,
@@ -121,7 +95,6 @@ export async function verifyDesktopRuntimeStructure(
     dataHome,
     dataHomeExists: fsSync.existsSync(dataHome),
     sharedPaths,
-    serviceDataHomes,
     components: {
       dotnet: {
         ok: dotnetIssues.length === 0,
@@ -145,22 +118,11 @@ export async function verifyDesktopRuntimeStructure(
         governedNodeVersion: nodeValidation.manifest?.node?.version ?? null,
         issues: nodeIssues,
       },
-      codeServer: {
-        ok: codeServerIssues.length === 0,
-        status: codeServerIssues.length === 0 ? 'ok' : codeServerValidation.status,
-        root: codeServerRoot,
-        wrapperPath: codeServerValidation.wrapperPath,
-        entryScriptPath: codeServerValidation.entryScriptPath,
-        version: codeServerValidation.metadata?.version ?? null,
-        issues: codeServerIssues,
-      },
     },
     issues: flattenIssues([
       !fsSync.existsSync(manifestPath) && `desktop runtime manifest is missing: ${manifestPath}`,
-      !isWithinRoot(serviceDataHomes.codeServer, dataHome) && `code-server runtime data home is outside runtime data home: ${serviceDataHomes.codeServer}`,
       dotnetIssues,
       nodeIssues,
-      codeServerIssues,
     ]),
   };
 

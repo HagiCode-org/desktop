@@ -911,16 +911,6 @@ export class PCodeWebServiceManager {
     const consoleEnv = await loadConsoleEnvironment();
     const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
     const dataDir = this.pathManager.getDataDirectory();
-    const desktopManagedCodeServer = this.configManager
-      ? (() => {
-        const config = this.configManager.getCodeServerConfig();
-        return {
-          host: new URL(config.baseUrl).hostname,
-          port: config.port,
-          password: config.password,
-        };
-      })()
-      : null;
     const systemVaultEnv = await buildDesktopSystemVaultEnv({
       pathResolver: createDesktopSystemVaultPathResolver(this.pathManager),
     });
@@ -944,7 +934,6 @@ export class PCodeWebServiceManager {
         : 'disabled-non-steam',
       steamAchievementSyncEnabled: steamIntegration.achievementSyncEnabled,
       steamAchievementSyncSource: steamIntegration.achievementSyncSource,
-      codeServer: desktopManagedCodeServer,
       systemVaultEnvEntries: systemVaultEnv.envEntries,
       yamlConfig: existingConfig,
       existingEnv,

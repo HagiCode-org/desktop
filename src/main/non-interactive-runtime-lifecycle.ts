@@ -12,11 +12,8 @@ import {
 } from './hagiscript-server-manager.js';
 import { PackageSourceConfigManager } from './package-source-config-manager.js';
 import { PathManager } from './path-manager.js';
-import { extractPm2MajorVersion } from './portable-toolchain-paths.js';
 import { VersionManager } from './version-manager.js';
 import { resolveManagedLaunchContextForRuntimeRoot } from './web-service-manager.js';
-import { CodeServerManager } from './code-server-manager.js';
-import { inspectVendoredCodeServerRuntime } from './code-server-runtime.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
 const { app } = electron;
@@ -66,7 +63,6 @@ export interface NonInteractiveRuntimeLifecycleReport {
   desktopLogsDirectory: string;
   tooling: ManagedRuntimeToolingReport;
   services: {
-    codeServer: ManagedServiceStageReport;
     backend: BackendLifecycleReport;
   };
   issues: string[];
@@ -245,127 +241,6 @@ function buildEmbeddedRuntimeDescriptor(pathManager: PathManager): ActiveRuntime
     displayName: 'embedded-runtime',
     isReadOnly: true,
   };
-}
-
-async function verifyCodeServerLifecycle(input: {
-  manager: CodeServerManager;
-  pm2Home: string;
-  timeoutMs: number;
-  runtimeContextResolver: HagiscriptRuntimeContextResolver;
-  pathManager: PathManager;
-}): Promise<ManagedServiceStageReport> {
-  const status = await input.manager.getStatus();
-  const report = createEmptyServiceReport(input.pm2Home, status.paths.root, status.paths.runtime);
-  let runtimeContext: HagiscriptRuntimeContext | null = null;
-
-  try {
-    try {
-      const runtime = await inspectVendoredCodeServerRuntime(input.pathManager);
-      if (!runtime.wrapperPath && !runtime.entryScriptPath) {
-        throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
-      }
-
-      const launchScriptPath = runtime.wrapperPath ?? runtime.entryScriptPath ?? null;
-      if (!launchScriptPath) {
-        throw new Error(runtime.message ?? 'Vendored code-server runtime is not ready.');
-      }
-      const launchWorkingDirectory = input.pathManager.getCodeServerRuntimeRoot();
-      runtimeContext = await input.runtimeContextResolver.resolveBundledRuntime({
-        service: 'code-server',
-        launchScriptPath,
-        launchWorkingDirectory,
-        launchArgs: [
-          '--bind-addr',
-          `127.0.0.1:${status.config.port}`,
-          '--auth',
-          'password',
-          '--user-data-dir',
-          status.paths.data,
-          '--extensions-dir',
-          status.paths.extensions,
-          '--disable-telemetry',
-        ],
-        serviceEnv: {
-          PASSWORD: status.config.password,
-          PORT: String(status.config.port),
-          CODE_SERVER_BIND_HOST: '127.0.0.1',
-          CODE_SERVER_BIND_PORT: String(status.config.port),
-          HAGICODE_CODE_SERVER_DESKTOP_MANAGED: 'true',
-          HAGICODE_RUNTIME_HOME: input.pathManager.getRuntimeProgramHome(),
-          HAGICODE_RUNTIME_DATA_HOME: status.paths.root,
-          HAGICODE_CODE_SERVER_RUNTIME_ROOT: input.pathManager.getCodeServerRuntimeRoot(),
-          HAGICODE_CODE_SERVER_DATA_DIR: status.paths.data,
-          HAGICODE_CODE_SERVER_EXTENSIONS_DIR: status.paths.extensions,
-        },
-      });
-      report.pm2Home = runtimeContext.pm2Home;
-      report.runtimeDataHome = runtimeContext.serviceDataHome;
-      report.runtimeFilesDir = runtimeContext.runtimeFilesDir;
-      report.launchScriptPath = runtimeContext.servicePayloadPath;
-      report.launchWorkingDirectory = runtimeContext.serviceWorkingDirectory;
-    } catch (error) {
-      report.diagnostics.push(`code-server runtime context: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    const startResult = await input.manager.start();
-    report.startSuccess = startResult.success;
-    if (!startResult.success) {
-      report.error = startResult.error ?? 'code-server start failed.';
-      report.statusAfterStart = (await input.manager.getStatus()).process.status;
-      return report;
-    }
-
-    const online = await waitForResult(
-      'code-server PM2 status',
-      () => input.manager.getStatus(),
-      (value) => value.process.status === 'online',
-      input.timeoutMs,
-    );
-    if (online.ok) {
-      report.statusAfterStart = online.value.process.status;
-    } else {
-      report.statusAfterStart = online.value?.process.status ?? 'unknown';
-      report.error = report.error ?? online.error;
-    }
-
-    const stopResult = await input.manager.stop();
-    report.stopSuccess = stopResult.success;
-    if (!stopResult.success) {
-      report.error = report.error ?? stopResult.error ?? 'code-server stop failed.';
-      report.statusAfterStop = (await input.manager.getStatus()).process.status;
-      return report;
-    }
-
-    const stopped = await waitForResult(
-      'code-server stopped status',
-      () => input.manager.getStatus(),
-      (value) => value.process.status === 'stopped',
-      input.timeoutMs,
-    );
-    if (stopped.ok) {
-      report.statusAfterStop = stopped.value.process.status;
-    } else {
-      report.statusAfterStop = stopped.value?.process.status ?? 'unknown';
-      report.error = report.error ?? stopped.error;
-    }
-  } finally {
-    const cleanupManager = new HagiscriptServerManager();
-    report.diagnostics.push(
-      ...await collectHagiscriptManagedDiagnostics({
-        manager: cleanupManager,
-        runtimeContext,
-        fallbackPaths: [
-          path.join(status.paths.logs, 'code-server-error.log'),
-          path.join(status.paths.logs, 'code-server-out.log'),
-          status.paths.ecosystemFile,
-        ],
-        serviceLabel: 'code-server',
-      }),
-    );
-    await runtimeContext?.cleanup();
-  }
-
-  return report;
 }
 
 function normalizeBackendStatus(result: HagiscriptServerLifecycleResult | null): string {
@@ -547,19 +422,11 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     ),
   };
 
-  const codeServerManager = new CodeServerManager({
-    dependencyManagementService,
-    configManager,
-  });
-  const pm2MajorVersion = extractPm2MajorVersion(null);
-  const codeServerPm2Home = path.join(pathManager.getCodeServerRuntimeDataHome(), 'pm2', pm2MajorVersion);
-
   const report: NonInteractiveRuntimeLifecycleReport = {
     ok: false,
     desktopLogsDirectory: app.getPath('logs'),
     tooling: toolingReport,
     services: {
-      codeServer: createEmptyServiceReport(codeServerPm2Home, pathManager.getCodeServerRuntimeDataHome(), path.join(pathManager.getCodeServerRuntimeDataHome(), 'runtime')),
       backend: createEmptyBackendReport(),
     },
     issues: [],
@@ -574,13 +441,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   if (!toolingReport.pm2ExecutableUnderManagedBin) {
     report.issues.push(`PM2 executable is outside the Desktop-managed npm bin root: ${toolingReport.pm2ExecutablePath ?? '<missing>'}`);
   }
-  report.services.codeServer = await verifyCodeServerLifecycle({
-    manager: codeServerManager,
-    pm2Home: codeServerPm2Home,
-    timeoutMs,
-    runtimeContextResolver,
-    pathManager,
-  });
   report.services.backend = await verifyBackendLifecycle({
     pathManager,
     configManager,
@@ -588,8 +448,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
     timeoutMs,
   });
 
-  const codeServerStatus = await codeServerManager.getStatus().catch(() => null);
-  toolingReport.pm2ExecutablePath = codeServerStatus?.pm2ExecutablePath ?? toolingReport.pm2ExecutablePath;
   toolingReport.pm2ExecutableUnderManagedBin = isPathUnder(toolingReport.npmGlobalBinRoot, toolingReport.pm2ExecutablePath);
 
   for (const [serviceName, serviceReport] of Object.entries(report.services)) {

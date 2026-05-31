@@ -15,7 +15,6 @@ import { MenuManager } from './menu-manager.js';
 import { RegionDetector } from './region-detector.js';
 import { SystemDiagnosticManager } from './system-diagnostic-manager.js';
 import DependencyManagementService from './dependency-management-service.js';
-import { CodeServerManager } from './code-server-manager.js';
 import { PromptResourceResolver } from './prompt-resource-resolver.js';
 import { DistributionModeError, VersionManager, type InstalledVersion } from './version-manager.js';
 import { VersionUpdateManager } from './version-update-manager.js';
@@ -36,8 +35,6 @@ import {
 import { RSSFeedManager, DEFAULT_RSS_FEED_URL } from './rss-feed-manager.js';
 import {
   openAboutWindow,
-  openCodeServerExternal,
-  openCodeServerWindow,
   openHagicodeInAppWindow,
   WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY,
 } from './hagicode-url.js';
@@ -59,9 +56,6 @@ import {
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
-  registerCodeServerHandlers,
-  initCodeServerHandlers,
-  emitCodeServerStatus,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
@@ -282,20 +276,16 @@ let versionUpdateManager: VersionUpdateManager | null = null;
 let packageSourceConfigManager: PackageSourceConfigManager | null = null;
 let webServicePollingInterval: NodeJS.Timeout | null = null;
 let webServicePollingInFlight = false;
-let codeServerPollingInterval: NodeJS.Timeout | null = null;
-let codeServerPollingInFlight = false;
 let menuManager: MenuManager | null = null;
 let regionDetector: RegionDetector | null = null;
 let systemDiagnosticManager: SystemDiagnosticManager | null = null;
 let dependencyManagementService: DependencyManagementService | null = null;
-let codeServerManager: CodeServerManager | null = null;
 let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
 let pathManager: PathManager | null = null;
 let yamlConfigManager: YamlConfigManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
-const CODE_SERVER_SESSION_PARTITION = 'persist:hagicode-code-server';
 let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
 let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
 
@@ -568,10 +558,6 @@ function createWindow(): void {
   });
   wireDesktopWindowClipboard(mainWindow);
 
-  // These handler modules are registered before the BrowserWindow exists.
-  // Rebind them here so lifecycle/status events can reach the renderer.
-  initCodeServerHandlers(codeServerManager, mainWindow);
-
   // Set global reference for IPC communication
   (global as any).mainWindow = mainWindow;
 
@@ -651,30 +637,6 @@ function createManagedChildWindow(): BrowserWindow {
   return childWindow;
 }
 
-function createCodeServerWindow(): BrowserWindow {
-  const appRoot = getAppRootPath();
-  const { icon } = loadWindowIcon(appRoot);
-
-  const childWindow = new ElectronBrowserWindow({
-    minWidth: 960,
-    minHeight: 640,
-    show: false,
-    autoHideMenuBar: true,
-    icon,
-    title: 'HagiCode Code Server',
-    webPreferences: {
-      partition: CODE_SERVER_SESSION_PARTITION,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      devTools: !app.isPackaged,
-    },
-  });
-
-  wireDesktopWindowClipboard(childWindow);
-  return childWindow;
-}
-
 function createAboutPopupWindow(): BrowserWindow {
   const distRoot = getDistRootPath();
   const appRoot = getAppRootPath();
@@ -740,41 +702,11 @@ ipcMain.handle('show-window', () => {
   activateMainWindow('ipc-show-window');
 });
 
-async function writeCodeServerLauncherFile(contents: string): Promise<string> {
-  const launcherDirectory = path.join(app.getPath('userData'), '.generated', 'code-server');
-  const launcherPath = path.join(launcherDirectory, 'auto-login.html');
-  await fs.mkdir(launcherDirectory, { recursive: true });
-  await fs.writeFile(launcherPath, contents, { encoding: 'utf8', mode: 0o600 });
-  return launcherPath;
-}
-
 ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   return await openHagicodeInAppWindow({
     url,
     logScope: 'Main',
     createWindow: createManagedChildWindow,
-  });
-});
-
-ipcMain.handle('open-code-server-window', async (_, url: string, password?: string) => {
-  return await openCodeServerWindow({
-    url,
-    password,
-    logScope: 'Main',
-    createWindow: createCodeServerWindow,
-    writeLauncherFile: writeCodeServerLauncherFile,
-  });
-});
-
-ipcMain.handle('open-code-server-external', async (_, url: string, password?: string) => {
-  return await openCodeServerExternal({
-    url,
-    password,
-    logScope: 'Main',
-    writeLauncherFile: writeCodeServerLauncherFile,
-    openExternal: async (targetUrl) => {
-      await shell.openExternal(targetUrl, { activate: true });
-    },
   });
 });
 
@@ -2251,27 +2183,6 @@ function startWebServiceStatusPolling(): void {
   }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
 }
 
-function startCodeServerStatusPolling(): void {
-  if (codeServerPollingInterval) {
-    clearInterval(codeServerPollingInterval);
-  }
-
-  codeServerPollingInterval = setInterval(async () => {
-    if (!codeServerManager || !mainWindow) return;
-    if (codeServerPollingInFlight) return;
-
-    try {
-      codeServerPollingInFlight = true;
-      const status = await codeServerManager.getStatus();
-      emitCodeServerStatus(status);
-    } catch (error) {
-      console.error('Failed to poll code-server status:', error);
-    } finally {
-      codeServerPollingInFlight = false;
-    }
-  }, MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS);
-}
-
 /**
  * Handle second-instance event
  *
@@ -2448,26 +2359,11 @@ app.whenReady().then(async () => {
 
   dependencyManagementService = new DependencyManagementService();
   webServiceManager?.setDependencyManagementService(dependencyManagementService);
-  codeServerManager = new CodeServerManager({
-    dependencyManagementService,
-    configManager,
-    pathManager: pathManager ?? PathManager.getInstance(),
-  });
-  dependencyManagementService.setVendoredRuntimeInspector(async () => [
-    ...(await codeServerManager!.getRuntimeSnapshots()),
-  ]);
   registerDependencyManagementHandlers({
     dependencyManagementService,
-    codeServerManager,
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
-
-  registerCodeServerHandlers({
-    manager: codeServerManager,
-    mainWindow,
-  });
-  log.info('[App] Code Server IPC handlers registered');
   ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
   ipcMain.handle('bootstrap:refresh', async () => {
     bootstrapSnapshotCache = null;
@@ -2525,14 +2421,6 @@ app.whenReady().then(async () => {
 
   startWebServiceStatusPolling();
 
-  try {
-    emitCodeServerStatus(await codeServerManager.getStatus());
-  } catch (error) {
-    console.error('Failed to get initial code-server status:', error);
-  }
-
-  startCodeServerStatusPolling();
-
   // Initialize Menu Manager
   if (mainWindow) {
     menuManager = new MenuManager(mainWindow);
@@ -2577,10 +2465,6 @@ app.on('before-quit', async (event) => {
     if (webServicePollingInterval) {
       clearInterval(webServicePollingInterval);
       webServicePollingInterval = null;
-    }
-    if (codeServerPollingInterval) {
-      clearInterval(codeServerPollingInterval);
-      codeServerPollingInterval = null;
     }
     if (webServiceManager) {
       await webServiceManager.cleanup();

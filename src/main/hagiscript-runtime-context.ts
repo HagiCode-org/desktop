@@ -6,7 +6,6 @@ import type { DependencyManagementService } from './dependency-management-servic
 import {
   buildDesktopHagiscriptRuntimeManifest,
   buildDesktopManagedServerVersionState,
-  DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME,
   DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
   DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR,
   DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
@@ -16,17 +15,8 @@ import {
 import { ensureNoSpacePathAlias } from './pm2-home-alias.js';
 import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
-import { extractPm2MajorVersion } from './portable-toolchain-paths.js';
 
-export type HagiscriptManagedPm2Service = 'server' | 'code-server';
-
-interface HagiscriptBundledRuntimeContextInput {
-  service: Extract<HagiscriptManagedPm2Service, 'code-server'>;
-  launchScriptPath?: string;
-  launchWorkingDirectory?: string;
-  launchArgs?: string[];
-  serviceEnv?: NodeJS.ProcessEnv;
-}
+export type HagiscriptManagedPm2Service = 'server';
 
 export interface HagiscriptRuntimeContext {
   readonly serviceName: HagiscriptManagedPm2Service;
@@ -63,8 +53,6 @@ export class HagiscriptRuntimeContextResolver {
     | 'getUserDataPath'
     | 'getManagedServerProgramHome'
     | 'getManagedServerDataHome'
-    | 'getCodeServerRuntimeDataHome'
-    | 'getCodeServerRuntimeRoot'
     | 'getEmbeddedRuntimeContainerRoot'
     | 'getEmbeddedRuntimeRoot'
     | 'getCurrentPlatform'
@@ -79,8 +67,6 @@ export class HagiscriptRuntimeContextResolver {
       | 'getUserDataPath'
       | 'getManagedServerProgramHome'
       | 'getManagedServerDataHome'
-      | 'getCodeServerRuntimeDataHome'
-      | 'getCodeServerRuntimeRoot'
       | 'getEmbeddedRuntimeContainerRoot'
       | 'getEmbeddedRuntimeRoot'
       | 'getCurrentPlatform'
@@ -176,111 +162,6 @@ export class HagiscriptRuntimeContextResolver {
     };
   }
 
-  async resolveBundledRuntime(input: HagiscriptBundledRuntimeContextInput): Promise<HagiscriptRuntimeContext> {
-    const shared = await this.resolveSharedContext();
-    const serviceDataHome = path.resolve(this.pathManager.getCodeServerRuntimeDataHome());
-    const pm2MajorVersion = extractPm2MajorVersion(null);
-    const pm2Home = path.join(serviceDataHome, 'pm2', pm2MajorVersion);
-    const runtimeFilesDir = path.join(serviceDataHome, 'runtime');
-    const pm2LogsDirectory = path.join(pm2Home, 'logs');
-    const componentBaseAppName = DESKTOP_HAGISCRIPT_CODE_SERVER_BASE_APP_NAME;
-    const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), `hagicode-desktop-hagiscript-${input.service}-`));
-    const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
-    const launchScriptPath = input.launchScriptPath
-      ? await ensureNoSpacePathAlias(
-          path.resolve(input.launchScriptPath),
-          `desktop-${input.service}-script`,
-        )
-      : null;
-    const launchWorkingDirectory = input.launchWorkingDirectory
-      ? await ensureNoSpacePathAlias(
-          path.resolve(input.launchWorkingDirectory),
-          `desktop-${input.service}-working-directory`,
-        )
-      : null;
-
-    await Promise.all([
-      fs.mkdir(serviceDataHome, { recursive: true }),
-      fs.mkdir(pm2Home, { recursive: true }),
-      fs.mkdir(pm2LogsDirectory, { recursive: true }),
-      fs.mkdir(runtimeFilesDir, { recursive: true }),
-    ]);
-
-    const pm2Override: {
-      appName: string;
-      args?: string[];
-      env: Record<string, string>;
-      pm2Home: string;
-      cwd?: string;
-      script?: string;
-    } = {
-      appName: componentBaseAppName,
-      env: normalizeStringEnv(input.serviceEnv ?? {}),
-      pm2Home,
-    };
-
-    if (input.launchArgs && input.launchArgs.length > 0) {
-      pm2Override.args = input.launchArgs;
-    }
-    if (launchWorkingDirectory) {
-      pm2Override.cwd = launchWorkingDirectory;
-    }
-    if (launchScriptPath) {
-      pm2Override.script = launchScriptPath;
-    }
-
-    const manifest = buildDesktopHagiscriptRuntimeManifest({
-      runtimeRoot: shared.runtimeRoot,
-      runtimeHome: shared.runtimeHome,
-      runtimeDataRoot: shared.runtimeDataRoot,
-      serverProgramRoot: shared.serverProgramRoot,
-      serverDataRoot: shared.serverDataRoot,
-      npmPrefix: shared.npmPrefix,
-      dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
-      bundledRuntimeOverrides: {
-        [input.service]: {
-          pm2: {
-            ...pm2Override,
-          },
-        },
-      },
-    });
-
-    await fs.writeFile(
-      manifestPath,
-      dump(manifest, { noRefs: true, lineWidth: 120 }),
-      'utf8',
-    );
-
-    return {
-      serviceName: input.service,
-      activeRuntime: {
-        kind: 'portable-fixed',
-        rootPath: this.pathManager.getCodeServerRuntimeRoot(),
-        versionLabel: input.service,
-        displayName: input.service,
-        isReadOnly: true,
-      },
-      runtimeRoot: shared.runtimeRoot,
-      runtimeHome: shared.runtimeHome,
-      runtimeDataRoot: shared.runtimeDataRoot,
-      runtimeLogsDirectory: shared.runtimeLogsDirectory,
-      runtimeStateFilePath: shared.runtimeStateFilePath,
-      serviceDataHome,
-      pm2Home,
-      pm2LogsDirectory,
-      runtimeFilesDir,
-      manifestPath,
-      manifestDirectory,
-      appName: resolveDesktopManagedPm2AppName(componentBaseAppName),
-      servicePayloadPath: launchScriptPath ?? this.pathManager.getCodeServerRuntimeRoot(),
-      serviceWorkingDirectory: launchWorkingDirectory ?? this.pathManager.getCodeServerRuntimeRoot(),
-      cleanup: async () => {
-        await fs.rm(manifestDirectory, { recursive: true, force: true });
-      },
-    };
-  }
-
   private async resolveSharedContext(): Promise<{
     runtimeRoot: string;
     runtimeHome: string;
@@ -316,15 +197,4 @@ export class HagiscriptRuntimeContextResolver {
       dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
     };
   }
-}
-
-function normalizeStringEnv(serviceEnv: NodeJS.ProcessEnv): Record<string, string> {
-  const normalized: Record<string, string> = {};
-  for (const [key, value] of Object.entries(serviceEnv)) {
-    if (typeof value === 'string' && key.trim().length > 0) {
-      normalized[key] = value;
-    }
-  }
-
-  return normalized;
 }
