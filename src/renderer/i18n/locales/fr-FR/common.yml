@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: Dépendances de ligne de commande
     description: Sélectionnez les dépendances Agent CLI et workflow à installer via le flux de synchronisation npm du SDK Desktop.
+    groups:
+      base:
+        title: Dépendances de base
+        description: Installez OpenSpec, Skills, PM2 et les autres fondations du flux Desktop au même endroit.
+      agentCli:
+        title: Agent CLI
+        description: Choisissez les outils Agent CLI à connecter, puis installez-les via le flux de synchronisation npm du SDK Desktop.
     tool: Outil
     status: Statut
     action: Action

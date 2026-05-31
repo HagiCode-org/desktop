@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: 命令列依賴項
     description: 選擇 Agent CLI 與工作流程依賴項，透過 Desktop SDK 的 npm 同步流程安裝。
+    groups:
+      base:
+        title: 基礎相依性
+        description: 在同一處安裝 OpenSpec、Skills、PM2 與其他 Desktop 工作流程基礎工具。
+      agentCli:
+        title: Agent CLI
+        description: 依需求選擇要接入的 Agent CLI，並透過 Desktop SDK 的 npm 同步流程統一安裝。
     tool: 工具
     status: 狀態
     action: 操作

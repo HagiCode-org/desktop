@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: 명령줄 종속성
     description: Desktop SDK npm 동기화 흐름을 통해 설치할 에이전트 CLI 및 워크플로 의존성을 선택합니다.
+    groups:
+      base:
+        title: 기본 의존성
+        description: OpenSpec, Skills, PM2 등 Desktop 워크플로 기반 도구를 한 곳에서 설치합니다.
+      agentCli:
+        title: Agent CLI
+        description: 연결할 Agent CLI 도구를 선택하고 Desktop SDK npm 동기화 흐름으로 설치합니다.
     tool: 도구
     status: 상태
     action: 액션

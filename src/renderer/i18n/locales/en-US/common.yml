@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: Command-line dependencies
     description: Select Agent CLI and workflow dependencies to install through the Desktop SDK npm sync flow.
+    groups:
+      base:
+        title: Base dependencies
+        description: Install OpenSpec, Skills, PM2, and other Desktop workflow foundations in one place.
+      agentCli:
+        title: Agent CLI
+        description: Choose the Agent CLI tools you want to connect, then install them through the Desktop SDK npm sync flow.
     tool: Tool
     status: Status
     action: Action

@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: Зависимости командной строки
     description: Выберите зависимости Agent CLI и workflow для установки через поток npm-синхронизации SDK Desktop.
+    groups:
+      base:
+        title: Базовые зависимости
+        description: Установите OpenSpec, Skills, PM2 и другие базовые инструменты рабочего процесса Desktop в одном месте.
+      agentCli:
+        title: Agent CLI
+        description: Выберите нужные Agent CLI и установите их через npm-sync поток Desktop SDK.
     tool: Инструмент
     status: Статус
     action: Действие

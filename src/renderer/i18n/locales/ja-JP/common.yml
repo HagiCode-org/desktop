@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: コマンドラインの依存関係
     description: Desktop SDK の npm 同期フローでインストールする Agent CLI とワークフロー依存関係を選択します。
+    groups:
+      base:
+        title: 基本依存関係
+        description: OpenSpec、Skills、PM2 など、Desktop ワークフローの基盤ツールをまとめてインストールします。
+      agentCli:
+        title: Agent CLI
+        description: 接続したい Agent CLI を選択し、Desktop SDK の npm 同期フローでまとめてインストールします。
     tool: ツール
     status: ステータス
     action: アクション

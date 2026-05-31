@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: Befehlszeilenabhängigkeiten
     description: Wählen Sie Agent-CLI- und Workflow-Abhängigkeiten aus, die über den npm-Synchronisierungsablauf des Desktop SDK installiert werden sollen.
+    groups:
+      base:
+        title: Grundabhängigkeiten
+        description: Installieren Sie OpenSpec, Skills, PM2 und weitere Desktop-Grundlagen für Workflows an einem Ort.
+      agentCli:
+        title: Agent CLI
+        description: Wählen Sie die Agent-CLI-Tools aus, die Sie anbinden möchten, und installieren Sie sie über den npm-Sync-Ablauf des Desktop SDK.
     tool: Werkzeug
     status: Status
     action: Aktion

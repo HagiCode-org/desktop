@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: Dependências de linha de comando
     description: Selecione as dependências de Agent CLI e fluxo de trabalho para instalar pelo fluxo de sincronização npm do SDK do Desktop.
+    groups:
+      base:
+        title: Dependências básicas
+        description: Instale OpenSpec, Skills, PM2 e outras bases de fluxo de trabalho do Desktop em um só lugar.
+      agentCli:
+        title: Agent CLI
+        description: Escolha as ferramentas Agent CLI que deseja conectar e instale-as pelo fluxo de sincronização npm do SDK Desktop.
     tool: Ferramenta
     status: Estado
     action: Ação

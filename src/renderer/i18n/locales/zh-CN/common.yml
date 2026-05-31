@@ -292,6 +292,13 @@ dependencyManagement:
   packageTable:
     title: 命令行依赖项
     description: 选择 Agent CLI 与工作流依赖项，通过 Desktop SDK 的 npm 同步流程安装。
+    groups:
+      base:
+        title: 基础依赖
+        description: 安装 OpenSpec、Skills、PM2 与 Impeccable 等 Desktop 工作流基础工具。
+      agentCli:
+        title: Agent CLI
+        description: 按需选择要接入的 Agent CLI，并通过 Desktop SDK 的 npm 同步流程统一安装。
     tool: 工具
     status: 状态
     action: 操作
