@@ -63,14 +63,17 @@ describe('script runtime manifest store data scope resolution', () => {
 });
 
 describe('bundled runtime manifest component contracts', () => {
-  it('keeps omniroute optional and delegated to hagiscript built-in lifecycle scripts', () => {
+  it('keeps bundled runtime services optional in the default lifecycle plan', () => {
     const manifest = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
     const omniroute = manifest.components.find((component) => component.name === 'omniroute');
+    const codeServer = manifest.components.find((component) => component.name === 'code-server');
 
     assert.equal(omniroute?.required, false);
     assert.equal(omniroute?.installScript, undefined);
     assert.equal(omniroute?.configureScript, undefined);
     assert.deepEqual(omniroute?.lifecycleDependencies, ['node']);
+    assert.equal(codeServer?.required, false);
+    assert.deepEqual(codeServer?.lifecycleDependencies, ['node']);
   });
 });
 

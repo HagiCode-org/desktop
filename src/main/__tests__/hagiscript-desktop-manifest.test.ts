@@ -109,6 +109,7 @@ describe('hagiscript desktop manifest builder', () => {
       (codeServerComponent.pm2 as { nameIdentifierEnv?: string }).nameIdentifierEnv,
       DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
     );
+    assert.equal(codeServerComponent.required, false);
     assert.equal(codeServerComponent.runtimeDataDir, 'services/code-server');
     assert.equal(codeServerComponent.bundledInstallMode, 'archive-7z-only');
     assert.equal(

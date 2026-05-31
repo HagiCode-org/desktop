@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createRequire } from 'node:module';
 import log from 'electron-log';
-import { path7za } from '7zip-bin';
 import { executeCliStreaming } from './utils/cli-executor.js';
 
 export interface Extract7zArchiveOptions {

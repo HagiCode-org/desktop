@@ -198,6 +198,7 @@ export function buildDesktopHagiscriptRuntimeManifest(
   const codeServerComponent = {
     name: DESKTOP_HAGISCRIPT_CODE_SERVER_COMPONENT_NAME,
     type: 'bundled-runtime',
+    required: false,
     source: 'desktop-vendored-runtime',
     version: resolveBundledRuntimeComponentVersion({
       runtimeHome: options.runtimeHome,
