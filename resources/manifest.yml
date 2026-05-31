@@ -98,21 +98,6 @@ components:
       appName: hagicode-omniroute
       cwd: current
 
-  - name: code-server
-    type: bundled-runtime
-    required: false
-    source: desktop-vendored-runtime
-    version: *vendoredRuntimeVersion
-    bundledInstallMode: archive-7z-only
-    runtimeDataDir: services/code-server
-    lifecycleDependencies:
-      - node
-    installScript: ../scripts/hagiscript/install-code-server.mjs
-    configureScript: ../scripts/hagiscript/configure-code-server.mjs
-    pm2:
-      appName: hagicode-code-server
-      cwd: current
-
 phases:
   install:
     order:
@@ -122,10 +107,8 @@ phases:
       - dotnet/runtime/osx-arm64
       - dotnet/runtime/win-x64
       - omniroute
-      - code-server
   remove:
     order:
-      - code-server
       - omniroute
       - dotnet/runtime/win-x64
       - dotnet/runtime/osx-arm64
@@ -140,7 +123,6 @@ phases:
       - dotnet/runtime/osx-arm64
       - dotnet/runtime/win-x64
       - omniroute
-      - code-server
 
 npmSync:
   packages:
@@ -293,56 +275,6 @@ desktopExtensions:
         installMode: manual
         installState: pending
         manualActionId: install-bundled-node-cli
-
-  codeServerRuntime:
-    schemaVersion: 1
-    runtime: code-server
-    packageId: code-server
-    releaseVersion: *vendoredRuntimeVersion
-    releaseVersionByPlatform: *vendoredRuntimeReleaseVersionByPlatform
-    defaultPort: 37667
-    source:
-      generatedRootSubdir: code-server-runtime
-      localArtifactDir: null
-      indexUrl: null
-      releaseUrlsByPlatform: *vendoredRuntimeReleaseUrlsByPlatform
-      allowedDownloadHosts:
-        - github.com
-        - release-assets.githubusercontent.com
-        - objects.githubusercontent.com
-        - githubusercontent.com
-        - index.hagicode.com
-    packagedLayout:
-      markerFile: .hagicode-runtime.json
-      archiveRelativePath: archives/code-server.7z
-      installMode: archive-7z-only
-    platforms:
-      linux-x64:
-        platform: linux
-        arch: amd64
-        archiveExtension: .7z
-      osx-x64:
-        platform: macos
-        arch: amd64
-        archiveExtension: .7z
-      osx-arm64:
-        platform: macos
-        arch: arm64
-        archiveExtension: .7z
-      win-x64:
-        platform: windows
-        arch: amd64
-        archiveExtension: .7z
-    expectedLayout:
-      requiredEntries:
-        - metadata.json|../.hagicode-runtime.json
-        - out/node/entry.js
-        - bin/code-server|bin/code-server.cmd|bin/code-server.ps1
-      wrapperCandidates:
-        - bin/code-server
-        - bin/code-server.cmd
-        - bin/code-server.ps1
-      entryScript: out/node/entry.js
 
   omniRouteRuntime:
     schemaVersion: 1
