@@ -135,7 +135,6 @@ sidebar:
   versionManagement: 版本管理
   diagnostic: 診斷
   dependencyManagement: 依賴項管理
-  codeServer: Code Server
   settings: 設定
   desktopVersion: Desktop 版本
   webVersion: Web 版本
@@ -229,9 +228,6 @@ dependencyManagement:
       swapping-runtime: 正在切換到目前執行階段
       completed: 啟用完成
       failed: 啟用失敗
-  vendoredRuntimes:
-    codeServer:
-      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: 版本
     requiredVersion: Required version
@@ -535,67 +531,3 @@ system:
 themeToggle:
   switchToLight: 切換到亮色模式
   switchToDark: 切換到暗色模式
-codeServer:
-  title: Code Server
-  description: 管理 Desktop 託管的 code-server 執行階段，包括啟停、本機存取位址、密碼驗證、託管路徑與近期日誌。
-  loading: 正在讀取 Code Server 狀態...
-  actions:
-    refresh: 重新整理
-    start: 啟動
-    stop: 停止
-    restart: 重新啟動
-    repair: 修復執行階段
-    working: 處理中...
-    openDesktop: 在 Desktop 中開啟
-    openBrowser: 在瀏覽器中開啟
-    save: 儲存
-    open: 開啟
-    refreshLogs: 重新整理日誌
-  status:
-    title: 狀態
-    running: 執行中
-    stopped: 已停止
-    missing: 缺失
-    damaged: 已損壞
-    error: 錯誤
-    baseUrl: 存取位址
-    pm2: 內建 PM2 可執行檔
-    pm2Missing: 內建 PM2 無法使用
-    runtimeStatus: 執行階段安裝狀態
-    passwordMode: 驗證方式
-    passwordModeValue: 需要密碼
-    diagnostics: 診斷資訊
-  config:
-    title: 執行配置
-    description: Code Server 使用 Desktop 託管的本機連接埠。儲存設定後，如服務正在執行會自動重新啟動以套用變更。
-    portLabel: 連接埠
-    passwordLabel: 登入密碼
-    passwordDescription: Desktop 會為 code-server 儲存本機密碼，並在服務啟動時透過 PASSWORD 環境變數注入。
-  validation:
-    numeric: 請輸入數字連接埠。
-    range: 連接埠範圍必須在 1024 到 65535 之間。
-    passwordLength: 密碼長度必須在 4 到 200 個字元之間。
-  paths:
-    title: 託管路徑
-    description: 執行資料、擴充功能與日誌皆保存在 Electron userData/CodeServer 下。
-    runtime-root: 執行階段目錄
-    data: 資料
-    extensions: 擴充功能
-    logs: 日誌
-  logs:
-    title: 近期日誌
-    description: 從 Desktop 託管的 code-server 日誌中讀取有限行數。
-    empty: 暫無日誌輸出。
-    targets:
-      service-out: 服務輸出
-      service-error: 服務錯誤
-  dependencyGuidance:
-    title: 請先修復 Desktop 託管依賴項
-    description: Code Server 透過 Desktop 託管的 PM2 執行。啟動 Code Server 之前，請先在相依性管理中安裝或修復相關執行階段依賴。
-    openDependencyManagement: 開啟相依性管理
-  errors:
-    title: Code Server 操作失敗
-    operationFailed: 操作失敗。
-    saveFailed: 儲存 Code Server 配置失敗。
-    openPathFailed: 無法開啟託管路徑。
-    openWindowFailed: 無法開啟 Desktop 託管的 Code Server 視窗。

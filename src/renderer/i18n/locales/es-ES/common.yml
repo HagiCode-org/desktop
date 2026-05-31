@@ -135,7 +135,6 @@ sidebar:
   versionManagement: Gestión de versiones
   diagnostic: Diagnóstico
   dependencyManagement: Gestión de dependencias
-  codeServer: Code Server
   settings: Configuración
   desktopVersion: Versión de escritorio
   webVersion: Versión web
@@ -229,9 +228,6 @@ dependencyManagement:
       swapping-runtime: Promoting extracted runtime
       completed: Activation complete
       failed: Activation failed
-  vendoredRuntimes:
-    codeServer:
-      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: Versión
     requiredVersion: Required version
@@ -535,67 +531,3 @@ system:
 themeToggle:
   switchToLight: Cambiar al modo de luz
   switchToDark: Cambiar al modo oscuro
-codeServer:
-  title: Code Server
-  description: Administra el runtime de code-server gestionado por Desktop, incluyendo ciclo de vida, dirección local, acceso con contraseña, rutas gestionadas y registros recientes.
-  loading: Cargando el estado de Code Server...
-  actions:
-    refresh: Actualizar
-    start: Iniciar
-    stop: Detener
-    restart: Reiniciar
-    repair: Reparar runtime
-    working: Procesando...
-    openDesktop: Abrir en Desktop
-    openBrowser: Abrir en el navegador
-    save: Guardar
-    open: Abrir
-    refreshLogs: Actualizar registros
-  status:
-    title: Estado
-    running: En ejecución
-    stopped: Detenido
-    missing: Falta
-    damaged: Dañado
-    error: Error
-    baseUrl: URL de acceso
-    pm2: Ejecutable de PM2
-    pm2Missing: PM2 no está instalado
-    runtimeStatus: Estado de instalación del runtime
-    passwordMode: Autenticación
-    passwordModeValue: Contraseña obligatoria
-    diagnostics: Diagnóstico
-  config:
-    title: Configuración del runtime
-    description: Code Server escucha en un puerto local administrado por Desktop. Al guardar, el servicio en ejecución se reinicia automáticamente cuando hace falta aplicar los cambios.
-    portLabel: Puerto
-    passwordLabel: Contraseña de acceso
-    passwordDescription: Desktop guarda una contraseña local para code-server y la inyecta como PASSWORD al iniciar el servicio.
-  validation:
-    numeric: Introduce un puerto numérico.
-    range: Usa un puerto entre 1024 y 65535.
-    passwordLength: Usa una contraseña entre 4 y 200 caracteres.
-  paths:
-    title: Rutas gestionadas
-    description: Los datos del runtime, las extensiones y los registros se guardan en Electron userData/CodeServer.
-    runtime-root: Raíz del runtime
-    data: Datos
-    extensions: Extensiones
-    logs: Registros
-  logs:
-    title: Registros recientes
-    description: Lee un número limitado de líneas recientes de los registros de code-server gestionados por Desktop.
-    empty: Todavía no hay salida de registros.
-    targets:
-      service-out: Salida del servicio
-      service-error: Error del servicio
-  dependencyGuidance:
-    title: Instala primero el PM2 gestionado por Desktop
-    description: Code Server usa el gestor de procesos PM2 gestionado por Desktop. Instala o repara PM2 en Gestión de dependencias antes de iniciar Code Server.
-    openDependencyManagement: Abrir gestión de dependencias
-  errors:
-    title: La operación de Code Server falló
-    operationFailed: La operación falló.
-    saveFailed: No se pudo guardar la configuración de Code Server.
-    openPathFailed: No se pudo abrir la ruta gestionada.
-    openWindowFailed: No se pudo abrir la ventana de Code Server gestionada por Desktop.

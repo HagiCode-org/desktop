@@ -135,7 +135,6 @@ sidebar:
   versionManagement: Управление версиями
   diagnostic: Диагностика
   dependencyManagement: Управление зависимостями
-  codeServer: Code Server
   settings: Настройки
   desktopVersion: Настольная версия
   webVersion: Веб-версия
@@ -229,9 +228,6 @@ dependencyManagement:
       swapping-runtime: Promoting extracted runtime
       completed: Activation complete
       failed: Activation failed
-  vendoredRuntimes:
-    codeServer:
-      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: Версия
     requiredVersion: Required version
@@ -535,67 +531,3 @@ system:
 themeToggle:
   switchToLight: Переключиться в светлый режим
   switchToDark: Переключиться в темный режим
-codeServer:
-  title: Code Server
-  description: 'Управляйте runtime code-server, которым владеет Desktop: запуск и остановка, локальный адрес, доступ по паролю, управляемые пути и последние журналы.'
-  loading: Загрузка состояния Code Server...
-  actions:
-    refresh: Обновить
-    start: Запустить
-    stop: Остановить
-    restart: Перезапустить
-    repair: Восстановить runtime
-    working: Выполняется...
-    openDesktop: Открыть в Desktop
-    openBrowser: Открыть в браузере
-    save: Сохранить
-    open: Открыть
-    refreshLogs: Обновить журналы
-  status:
-    title: Состояние
-    running: Работает
-    stopped: Остановлен
-    missing: Отсутствует
-    damaged: Поврежден
-    error: Ошибка
-    baseUrl: URL доступа
-    pm2: Исполняемый файл PM2
-    pm2Missing: PM2 не установлено
-    runtimeStatus: Состояние установки runtime
-    passwordMode: Аутентификация
-    passwordModeValue: Требуется пароль
-    diagnostics: Диагностика
-  config:
-    title: Конфигурация runtime
-    description: Code Server использует локальный порт, которым управляет Desktop. После сохранения запущенный сервис автоматически перезапускается, если это нужно для применения изменений.
-    portLabel: Порт
-    passwordLabel: Пароль входа
-    passwordDescription: Desktop сохраняет локальный пароль для code-server и передает его через переменную окружения PASSWORD при запуске сервиса.
-  validation:
-    numeric: Введите числовой порт.
-    range: Используйте порт от 1024 до 65535.
-    passwordLength: Используйте пароль длиной от 4 до 200 символов.
-  paths:
-    title: Управляемые пути
-    description: Данные runtime, расширения и журналы хранятся в Electron userData/CodeServer.
-    runtime-root: Корень runtime
-    data: Данные
-    extensions: Расширения
-    logs: Журналы
-  logs:
-    title: Последние журналы
-    description: Читайте ограниченное количество последних строк из журналов code-server, которыми управляет Desktop.
-    empty: Журналы пока пусты.
-    targets:
-      service-out: Вывод сервиса
-      service-error: Ошибка сервиса
-  dependencyGuidance:
-    title: Сначала установите PM2 под управлением Desktop
-    description: Code Server использует менеджер процессов PM2, которым управляет Desktop. Перед запуском Code Server установите или восстановите PM2 в разделе управления зависимостями.
-    openDependencyManagement: Открыть управление зависимостями
-  errors:
-    title: Ошибка операции Code Server
-    operationFailed: Операция завершилась ошибкой.
-    saveFailed: Не удалось сохранить конфигурацию Code Server.
-    openPathFailed: Не удалось открыть управляемый путь.
-    openWindowFailed: Не удалось открыть окно Code Server под управлением Desktop.

@@ -135,7 +135,6 @@ sidebar:
   versionManagement: バージョン管理
   diagnostic: 診断
   dependencyManagement: 依存関係の管理
-  codeServer: Code Server
   settings: 設定
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
@@ -229,9 +228,6 @@ dependencyManagement:
       swapping-runtime: Promoting extracted runtime
       completed: Activation complete
       failed: Activation failed
-  vendoredRuntimes:
-    codeServer:
-      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: バージョン
     requiredVersion: Required version
@@ -535,67 +531,3 @@ system:
 themeToggle:
   switchToLight: ライトモードに切り替える
   switchToDark: ダークモードに切り替える
-codeServer:
-  title: Code Server
-  description: Desktop が管理する code-server ランタイムを管理します。起動と停止、ローカルアドレス、パスワード認証、管理パス、最近のログを確認できます。
-  loading: Code Server の状態を読み込んでいます...
-  actions:
-    refresh: 更新
-    start: 開始
-    stop: 停止
-    restart: 再起動
-    repair: ランタイムを修復
-    working: 処理中...
-    openDesktop: Desktop で開く
-    openBrowser: ブラウザーで開く
-    save: 保存
-    open: 開く
-    refreshLogs: ログを更新
-  status:
-    title: 状態
-    running: 稼働中
-    stopped: 停止
-    missing: 不足
-    damaged: 破損
-    error: エラー
-    baseUrl: アクセス URL
-    pm2: PM2 実行ファイル
-    pm2Missing: PM2 はインストールされていません
-    runtimeStatus: ランタイムのインストール状態
-    passwordMode: 認証方式
-    passwordModeValue: パスワード必須
-    diagnostics: 診断情報
-  config:
-    title: ランタイム構成
-    description: Code Server は Desktop 管理のローカルポートで待機します。設定を保存すると、必要に応じて実行中のサービスが自動で再起動します。
-    portLabel: ポート
-    passwordLabel: ログインパスワード
-    passwordDescription: Desktop は code-server 用のローカルパスワードを保存し、サービス起動時に PASSWORD として注入します。
-  validation:
-    numeric: 数値のポートを入力してください。
-    range: 1024 から 65535 のポートを使用してください。
-    passwordLength: 4 から 200 文字のパスワードを使用してください。
-  paths:
-    title: 管理パス
-    description: ランタイムデータ、拡張機能、ログは Electron userData/CodeServer に保存されます。
-    runtime-root: ランタイム ルート
-    data: データ
-    extensions: 拡張機能
-    logs: ログ
-  logs:
-    title: 最近のログ
-    description: Desktop が管理する code-server ログから最新の行を制限付きで読み取ります。
-    empty: まだログ出力はありません。
-    targets:
-      service-out: サービス出力
-      service-error: サービスエラー
-  dependencyGuidance:
-    title: 先に Desktop 管理の PM2 をインストールしてください
-    description: Code Server は Desktop 管理の PM2 プロセスマネージャーを使用します。Code Server を起動する前に、依存関係管理で PM2 をインストールまたは修復してください。
-    openDependencyManagement: 依存関係管理を開く
-  errors:
-    title: Code Server の操作に失敗しました
-    operationFailed: 操作に失敗しました。
-    saveFailed: Code Server の設定を保存できませんでした。
-    openPathFailed: 管理パスを開けませんでした。
-    openWindowFailed: Desktop 管理の Code Server ウィンドウを開けませんでした。

@@ -96,13 +96,6 @@ webServiceStatus:
   managedStartup:
     label: Managed service startup
     description: Choose which managed services should start together when you launch Hagicode.
-    options:
-      codeServer:
-        label: Start code-server together
-        description: Automatically start code-server when launching Hagicode.
-    errors:
-      codeServerUnavailable: code-server is enabled for joint startup, but its runtime is not ready.
-      codeServerStartFailed: Failed to start code-server together with Hagicode.
   dependencyReadinessAlert:
     title: Las dependencias no están listas
     message: Instale las dependencias requeridas administradas por el escritorio antes de iniciar Hagicode; las dependencias opcionales no bloquean el inicio del servicio base.

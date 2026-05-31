@@ -135,7 +135,6 @@ sidebar:
   versionManagement: Versionsverwaltung
   diagnostic: Diagnose
   dependencyManagement: Abhängigkeitsmanagement
-  codeServer: Code Server
   settings: Einstellungen
   desktopVersion: Desktop-Version
   webVersion: Webversion
@@ -229,9 +228,6 @@ dependencyManagement:
       swapping-runtime: Promoting extracted runtime
       completed: Activation complete
       failed: Activation failed
-  vendoredRuntimes:
-    codeServer:
-      description: Desktop-managed code-server runtime staged from vendored artifacts and launched with the bundled Node toolchain.
   package:
     version: Version
     requiredVersion: Required version
@@ -535,67 +531,3 @@ system:
 themeToggle:
   switchToLight: Wechseln Sie in den Lichtmodus
   switchToDark: Wechseln Sie in den Dunkelmodus
-codeServer:
-  title: Code Server
-  description: Verwalte die von Desktop bereitgestellte code-server-Laufzeit, einschließlich Start und Stopp, lokaler Adresse, passwortgeschütztem Zugriff, verwalteten Pfaden und aktuellen Logs.
-  loading: Code Server-Status wird geladen...
-  actions:
-    refresh: Aktualisieren
-    start: Starten
-    stop: Stoppen
-    restart: Neu starten
-    repair: Laufzeit reparieren
-    working: Wird verarbeitet...
-    openDesktop: In Desktop öffnen
-    openBrowser: Im Browser öffnen
-    save: Speichern
-    open: Öffnen
-    refreshLogs: Logs aktualisieren
-  status:
-    title: Status
-    running: Aktiv
-    stopped: Gestoppt
-    missing: Fehlt
-    damaged: Beschädigt
-    error: Fehler
-    baseUrl: Zugriffs-URL
-    pm2: PM2-Ausführungsdatei
-    pm2Missing: PM2 ist nicht installiert
-    runtimeStatus: Installationsstatus der Laufzeit
-    passwordMode: Authentifizierung
-    passwordModeValue: Passwort erforderlich
-    diagnostics: Diagnoseinformationen
-  config:
-    title: Laufzeitkonfiguration
-    description: Code Server lauscht auf einem von Desktop verwalteten lokalen Port. Beim Speichern werden Änderungen bei Bedarf durch einen automatischen Neustart des laufenden Dienstes übernommen.
-    portLabel: Port
-    passwordLabel: Anmeldepasswort
-    passwordDescription: Desktop speichert ein lokales Passwort für code-server und übergibt es beim Start des Dienstes als PASSWORD.
-  validation:
-    numeric: Gib einen numerischen Port ein.
-    range: Verwende einen Port zwischen 1024 und 65535.
-    passwordLength: Verwende ein Passwort mit 4 bis 200 Zeichen.
-  paths:
-    title: Verwaltete Pfade
-    description: Laufzeitdaten, Erweiterungen und Logs werden unter Electron userData/CodeServer gespeichert.
-    runtime-root: Laufzeitwurzel
-    data: Daten
-    extensions: Erweiterungen
-    logs: Logs
-  logs:
-    title: Aktuelle Logs
-    description: Lies eine begrenzte Anzahl aktueller Zeilen aus den von Desktop verwalteten code-server-Logs.
-    empty: Es gibt noch keine Logausgabe.
-    targets:
-      service-out: Dienstausgabe
-      service-error: Dienstfehler
-  dependencyGuidance:
-    title: Zuerst Desktop-verwaltetes PM2 installieren
-    description: Code Server verwendet den von Desktop verwalteten PM2-Prozessmanager. Installiere oder repariere PM2 in der Abhängigkeitsverwaltung, bevor du Code Server startest.
-    openDependencyManagement: Abhängigkeitsverwaltung öffnen
-  errors:
-    title: Code Server-Vorgang fehlgeschlagen
-    operationFailed: Der Vorgang ist fehlgeschlagen.
-    saveFailed: Die Code Server-Konfiguration konnte nicht gespeichert werden.
-    openPathFailed: Der verwaltete Pfad konnte nicht geöffnet werden.
-    openWindowFailed: Das von Desktop verwaltete Code Server-Fenster konnte nicht geöffnet werden.
