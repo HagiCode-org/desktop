@@ -1,10 +1,8 @@
 import { electron } from '../../../electron-api.js';
 import type { BrowserWindow } from 'electron';
-import type { CodeServerManager } from '../../code-server-manager.js';
 import type DependencyManagementService from '../../dependency-management-service.js';
 import {
   type DependencyManagementBatchSyncRequest,
-  type VendoredRuntimeId,
   dependencyManagementChannels,
   legacyDependencyManagementChannels,
   type NpmMirrorSettingsInput,
@@ -14,7 +12,6 @@ const { BrowserWindow: ElectronBrowserWindow, ipcMain } = electron;
 
 interface DependencyManagementHandlerState {
   dependencyManagementService: DependencyManagementService | null;
-  codeServerManager: CodeServerManager | null;
   mainWindow: BrowserWindow | null;
   unsubscribeProgress: (() => void) | null;
   unsubscribeActivationProgress: (() => void) | null;
@@ -22,7 +19,6 @@ interface DependencyManagementHandlerState {
 
 const state: DependencyManagementHandlerState = {
   dependencyManagementService: null,
-  codeServerManager: null,
   mainWindow: null,
   unsubscribeProgress: null,
   unsubscribeActivationProgress: null,
@@ -30,21 +26,17 @@ const state: DependencyManagementHandlerState = {
 
 export function initDependencyManagementHandlers(
   dependencyManagementService: DependencyManagementService | null,
-  codeServerManager: CodeServerManager | null,
   mainWindow: BrowserWindow | null,
 ): void {
   state.dependencyManagementService = dependencyManagementService;
-  state.codeServerManager = codeServerManager;
   state.mainWindow = mainWindow;
 }
 
 export function registerDependencyManagementHandlers(deps: {
   dependencyManagementService: DependencyManagementService | null;
-  codeServerManager: CodeServerManager | null;
   mainWindow: BrowserWindow | null;
 }): void {
   state.dependencyManagementService = deps.dependencyManagementService;
-  state.codeServerManager = deps.codeServerManager;
   state.mainWindow = deps.mainWindow;
 
   if (state.unsubscribeProgress) {
@@ -135,56 +127,7 @@ export function registerDependencyManagementHandlers(deps: {
     return state.dependencyManagementService.syncPackages(request);
   };
 
-  const requireCodeServerManager = (): CodeServerManager => {
-    if (!state.codeServerManager) {
-      throw new Error('CodeServerManager is not initialized');
-    }
-    return state.codeServerManager;
-  };
-
-  const handleEnableVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().enable();
-    }
-    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
-  };
-
-  const handleStartVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().start();
-    }
-    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
-  };
-
-  const handleStopVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().stop();
-    }
-    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
-  };
-
-  const handleRestartVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().restart();
-    }
-    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
-  };
-
-  const handleRepairVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: VendoredRuntimeId) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().repair();
-    }
-    throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
-  };
-
-  const handleOpenVendoredRuntimePath = async (
-    _event: Electron.IpcMainInvokeEvent,
-    runtimeId: VendoredRuntimeId,
-    target: 'logs' | 'runtime-root',
-  ) => {
-    if (runtimeId === 'code-server') {
-      return requireCodeServerManager().openPath(target);
-    }
+  const handleUnsupportedVendoredRuntime = async (_event: Electron.IpcMainInvokeEvent, runtimeId: string) => {
     throw new Error(`Unsupported vendored runtime: ${runtimeId}`);
   };
 
@@ -195,12 +138,12 @@ export function registerDependencyManagementHandlers(deps: {
   ipcMain.handle(dependencyManagementChannels.install, handleInstall);
   ipcMain.handle(dependencyManagementChannels.uninstall, handleUninstall);
   ipcMain.handle(dependencyManagementChannels.syncPackages, handleSyncPackages);
-  ipcMain.handle(dependencyManagementChannels.enableVendoredRuntime, handleEnableVendoredRuntime);
-  ipcMain.handle(dependencyManagementChannels.startVendoredRuntime, handleStartVendoredRuntime);
-  ipcMain.handle(dependencyManagementChannels.stopVendoredRuntime, handleStopVendoredRuntime);
-  ipcMain.handle(dependencyManagementChannels.restartVendoredRuntime, handleRestartVendoredRuntime);
-  ipcMain.handle(dependencyManagementChannels.repairVendoredRuntime, handleRepairVendoredRuntime);
-  ipcMain.handle(dependencyManagementChannels.openVendoredRuntimePath, handleOpenVendoredRuntimePath);
+  ipcMain.handle(dependencyManagementChannels.enableVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(dependencyManagementChannels.startVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(dependencyManagementChannels.stopVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(dependencyManagementChannels.restartVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(dependencyManagementChannels.repairVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(dependencyManagementChannels.openVendoredRuntimePath, handleUnsupportedVendoredRuntime);
 
   ipcMain.handle(legacyDependencyManagementChannels.snapshot, handleSnapshot);
   ipcMain.handle(legacyDependencyManagementChannels.refresh, handleRefresh);
@@ -209,10 +152,10 @@ export function registerDependencyManagementHandlers(deps: {
   ipcMain.handle(legacyDependencyManagementChannels.install, handleInstall);
   ipcMain.handle(legacyDependencyManagementChannels.uninstall, handleUninstall);
   ipcMain.handle(legacyDependencyManagementChannels.syncPackages, handleSyncPackages);
-  ipcMain.handle(legacyDependencyManagementChannels.enableVendoredRuntime, handleEnableVendoredRuntime);
-  ipcMain.handle(legacyDependencyManagementChannels.startVendoredRuntime, handleStartVendoredRuntime);
-  ipcMain.handle(legacyDependencyManagementChannels.stopVendoredRuntime, handleStopVendoredRuntime);
-  ipcMain.handle(legacyDependencyManagementChannels.restartVendoredRuntime, handleRestartVendoredRuntime);
-  ipcMain.handle(legacyDependencyManagementChannels.repairVendoredRuntime, handleRepairVendoredRuntime);
-  ipcMain.handle(legacyDependencyManagementChannels.openVendoredRuntimePath, handleOpenVendoredRuntimePath);
+  ipcMain.handle(legacyDependencyManagementChannels.enableVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(legacyDependencyManagementChannels.startVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(legacyDependencyManagementChannels.stopVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(legacyDependencyManagementChannels.restartVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(legacyDependencyManagementChannels.repairVendoredRuntime, handleUnsupportedVendoredRuntime);
+  ipcMain.handle(legacyDependencyManagementChannels.openVendoredRuntimePath, handleUnsupportedVendoredRuntime);
 }

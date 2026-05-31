@@ -4,11 +4,6 @@ import type {
 } from '../types/dependency-management.js';
 
 export const vendoredRuntimes: readonly VendoredRuntimeDefinition[] = [
-  {
-    id: 'code-server',
-    displayName: 'code-server',
-    descriptionKey: 'dependencyManagement.vendoredRuntimes.codeServer.description',
-  },
 ] as const;
 
 export function findVendoredRuntime(id: string): VendoredRuntimeDefinition | null {
