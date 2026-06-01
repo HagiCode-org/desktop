@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
   detectRuntimePlatform,
@@ -17,11 +18,37 @@ import {
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
 
+const require = createRequire(import.meta.url);
+const asar = require('@electron/asar');
+
 const args = process.argv.slice(2);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
+const forbiddenAsarPrefixes = [
+  '/.github/',
+  '/build/',
+  '/docs/',
+  '/nukeBuild/',
+  '/nukeBuild.Tests/',
+  '/out/',
+  '/pkg/',
+  '/src/',
+  '/resources/bin/',
+  '/resources/components/',
+  '/resources/toolchain/',
+  '/resources/portable-fixed/current/',
+  '/scripts/__tests__/',
+];
+const forbiddenAsarEntries = [
+  '/AGENTS.md',
+  '/CLAUDE.md',
+  '/DESIGN.md',
+  '/PRODUCT.md',
+  '/README.md',
+  '/README_cn.md',
+];
 
 function parseArgs() {
   let unpackedRoot = path.join(process.cwd(), 'pkg', 'linux-unpacked');
@@ -174,7 +201,43 @@ function validateNodeToolchain(toolchainRoot) {
   return [...payloadErrors, ...manifestErrors];
 }
 
-function main() {
+async function validatePackagedAsar(unpackedRoot) {
+  const asarPath = path.join(unpackedRoot, 'resources', 'app.asar');
+  if (!fs.existsSync(asarPath)) {
+    return [`missing packaged app.asar: ${asarPath}`];
+  }
+
+  const entries = await asar.listPackage(asarPath);
+  const failures = [];
+
+  for (const prefix of forbiddenAsarPrefixes) {
+    if (entries.some((entry) => entry.startsWith(prefix))) {
+      failures.push(`app.asar unexpectedly contains forbidden prefix ${prefix}`);
+    }
+  }
+
+  for (const entry of forbiddenAsarEntries) {
+    if (entries.includes(entry)) {
+      failures.push(`app.asar unexpectedly contains forbidden entry ${entry}`);
+    }
+  }
+
+  if (!entries.includes('/resources/manifest.yml')) {
+    failures.push('app.asar is missing required bundled runtime manifest /resources/manifest.yml');
+  }
+
+  if (!entries.some((entry) => entry.startsWith('/resources/hagiscript-runtime-scripts/'))) {
+    failures.push('app.asar is missing required resources/hagiscript-runtime-scripts payload');
+  }
+
+  if (!entries.includes('/dist/main/bootstrap.js')) {
+    failures.push('app.asar is missing required dist/main/bootstrap.js entry');
+  }
+
+  return failures;
+}
+
+async function main() {
   ensureLinuxPlatform(runtimePlatform, 'Embedded dotnet runtime platform');
   ensureLinuxPlatform(nodeRuntimePlatform, 'Bundled Node runtime platform');
 
@@ -214,6 +277,9 @@ function main() {
     console.log(`[linux-unpacked-verify] ${validation.label} OK -> ${validation.targetRoot}`);
   }
 
+  const asarFailures = await validatePackagedAsar(unpackedRoot);
+  failures.push(...asarFailures.map((message) => `app.asar audit: ${message}`));
+
   if (failures.length > 0) {
     throw new Error(`linux-unpacked package verification failed:\n- ${failures.join('\n- ')}`);
   }
@@ -221,4 +287,7 @@ function main() {
   console.log(`[linux-unpacked-verify] Verified packaged runtime payloads under ${unpackedRoot}`);
 }
 
-main();
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  process.exit(1);
+});

@@ -79,8 +79,13 @@ function renderResourceTags(languages) {
 }
 
 function renderCapabilityTags(capabilities) {
+  const restrictedCapabilities = new Set([
+    'runFullTrust',
+    'unvirtualizedResources',
+  ]);
+
   return capabilities
-    .map((capability) => capability === 'runFullTrust'
+    .map((capability) => restrictedCapabilities.has(capability)
       ? `    <rescap:Capability Name="${escapeXml(capability)}" />`
       : `    <Capability Name="${escapeXml(capability)}" />`)
     .join('\n');
