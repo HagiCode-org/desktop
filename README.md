@@ -64,7 +64,6 @@ Managed npm packages are installed into Desktop-owned writable runtime data unde
 
 Desktop does not execute those packaged roots directly. The first `Enable Runtime` action extracts the bundled archive into `userData/runtimeData/components/services/<service>/runtime/current`, validates the extracted layout there, and keeps `runtime/staging` under the same service home for atomic swaps and repair flows.
 
-Extraction uses Desktop's bundled `7zip-bin` dependency. Do not rely on an operating-system `7z` installation when testing or debugging Desktop-managed vendored runtimes.
 
 ### Development runtime troubleshooting
 
