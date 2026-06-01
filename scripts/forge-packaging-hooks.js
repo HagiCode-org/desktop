@@ -99,12 +99,23 @@ function runForgeHook(work, done) {
   return promise;
 }
 
+async function stageRequiredRuntimeComponents(runtimeRoot) {
+  await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'bin'), path.join(runtimeRoot, 'bin'));
+  await copyDirectoryIfExists(
+    path.join(runtimeSourceRoot, 'components', 'node'),
+    path.join(runtimeRoot, 'components', 'node'),
+  );
+  await copyDirectoryIfExists(
+    path.join(runtimeSourceRoot, 'components', 'dotnet'),
+    path.join(runtimeRoot, 'components', 'dotnet'),
+  );
+}
+
 export function stageForgePackagingResources(buildPath, _electronVersion, platform, arch, done) {
   return runForgeHook(async () => {
     const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
 
-    await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'bin'), path.join(runtimeRoot, 'bin'));
-    await copyDirectoryIfExists(path.join(runtimeSourceRoot, 'components'), path.join(runtimeRoot, 'components'));
+    await stageRequiredRuntimeComponents(runtimeRoot);
     await copyDirectoryIfExists(
       path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
       resolvePortableFixedRoot(buildPath, platform),

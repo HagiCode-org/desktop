@@ -36,7 +36,7 @@ describe('msix packaging helpers', () => {
       packageMinOsVersion: '10.0.19041.0',
       packageMaxOsVersionTested: '10.0.19041.0',
       languages: ['en-US', 'zh-CN'],
-      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust'],
+      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust', 'unvirtualizedResources'],
     });
 
     assert.match(manifest, /Windows\.FullTrustApplication/);
@@ -45,6 +45,7 @@ describe('msix packaging helpers', () => {
     assert.match(manifest, /<Capability Name="internetClient" \/>/);
     assert.match(manifest, /<Capability Name="privateNetworkClientServer" \/>/);
     assert.match(manifest, /<rescap:Capability Name="runFullTrust" \/>/);
+    assert.match(manifest, /<rescap:Capability Name="unvirtualizedResources" \/>/);
   });
 
   it('validates the desktop-owned Store config schema', () => {
@@ -69,13 +70,13 @@ describe('msix packaging helpers', () => {
       msix: {
         minVersion: '10.0.17763.0',
         maxVersionTested: '10.0.19045.0',
-        capabilities: ['runFullTrust', 'internetClient'],
+        capabilities: ['runFullTrust', 'unvirtualizedResources', 'internetClient'],
       },
     });
 
     assert.equal(config.packageIdentity.identityName, 'newbe36524.Hagicode');
     assert.equal(config.runtimeInjectionPath, 'resources/portable-fixed/current');
-    assert.deepEqual(config.msix.capabilities, ['runFullTrust', 'internetClient']);
+    assert.deepEqual(config.msix.capabilities, ['runFullTrust', 'unvirtualizedResources', 'internetClient']);
   });
 
   it('renders the Store overlay from the desktop-owned Store config', () => {

@@ -779,12 +779,32 @@ export class DependencyManagementService {
   ): NodeJS.ProcessEnv {
     const env = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
 
+    this.applyManagedNpmConfigEnv(env, environment);
+
+    return env;
+  }
+
+  private applyManagedNpmConfigEnv(
+    env: NodeJS.ProcessEnv,
+    environment: Pick<DependencyManagementEnvironmentStatus, 'npmGlobalPrefix' | 'npmCacheRoot'>,
+  ): void {
+    const npmTmpRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npmTmp');
+    const npmUserConfigPath = path.join(path.dirname(environment.npmGlobalPrefix), 'npmrc');
+
     env.npm_config_prefix = environment.npmGlobalPrefix;
     env.NPM_CONFIG_PREFIX = environment.npmGlobalPrefix;
     env.npm_config_global_prefix = environment.npmGlobalPrefix;
     env.NPM_CONFIG_GLOBAL_PREFIX = environment.npmGlobalPrefix;
-
-    return env;
+    env.npm_config_global = 'true';
+    env.npm_config_location = 'global';
+    env.npm_config_cache = environment.npmCacheRoot;
+    env.NPM_CONFIG_CACHE = environment.npmCacheRoot;
+    env.npm_config_tmp = npmTmpRoot;
+    env.NPM_CONFIG_TMP = npmTmpRoot;
+    env.TMP = npmTmpRoot;
+    env.TEMP = npmTmpRoot;
+    env.npm_config_userconfig = npmUserConfigPath;
+    env.NPM_CONFIG_USERCONFIG = npmUserConfigPath;
   }
 
   private buildSdkSyncManifest(
@@ -923,6 +943,9 @@ export class DependencyManagementService {
     delete env.NPM_CONFIG_GLOBALCONFIG;
     delete env.NPM_CONFIG_GLOBAL_CONFIG;
 
+    const environment = this.buildCommandEnvNpmEnvironment(nodeVersion);
+    this.applyManagedNpmConfigEnv(env, environment);
+
     // npm must see the selected Desktop-owned Node/npm even when the user's PATH contains another Node/npm.
     if (envResult.markerInjected) {
       env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = this.pathManager.getPortableToolchainRoot();
@@ -937,6 +960,17 @@ export class DependencyManagementService {
     }
 
     return env;
+  }
+
+  private buildCommandEnvNpmEnvironment(
+    nodeVersion?: string | null,
+  ): Pick<DependencyManagementEnvironmentStatus, 'npmGlobalPrefix' | 'npmCacheRoot'> {
+    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
+
+    return {
+      npmGlobalPrefix: npmGlobalPaths.npmGlobalPrefix,
+      npmCacheRoot: npmGlobalPaths.npmCacheRoot,
+    };
   }
 
   private async getDesktopActivationPolicy(): Promise<BundledNodeRuntimePolicyDecision> {

@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { load } from 'js-yaml';
 import {
-  ensureRuntimeManifestPath,
   getUserDataRuntimeManifestPath,
   materializeRuntimeManifestContent,
   resolveRuntimeManifestDataScopePath,
@@ -63,13 +61,18 @@ describe('script runtime manifest store data scope resolution', () => {
 });
 
 describe('bundled runtime manifest component contracts', () => {
-  it('keeps bundled runtime services optional in the default lifecycle plan', () => {
+  it('keeps only the active Desktop runtime components', () => {
     const manifest = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
-    const omniroute = manifest.components.find((component) => component.name === 'omniroute');
+    const componentNames = Array.isArray(manifest.components)
+      ? manifest.components.map((component) => component?.name).filter(Boolean)
+      : [];
 
-    assert.equal(omniroute?.required, false);
-    assert.equal(omniroute?.installScript, undefined);
-    assert.equal(omniroute?.configureScript, undefined);
-    assert.deepEqual(omniroute?.lifecycleDependencies, ['node']);
+    assert.deepEqual(componentNames, [
+      'node',
+      'dotnet/runtime/linux-x64',
+      'dotnet/runtime/osx-x64',
+      'dotnet/runtime/osx-arm64',
+      'dotnet/runtime/win-x64',
+    ]);
   });
 });

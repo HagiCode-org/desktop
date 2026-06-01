@@ -121,7 +121,6 @@ function buildStepScripts(scripts) {
   return [
     selectScript('prepare:runtime:optional', 'prepare:runtime'),
     selectScript('prepare:bundled-toolchain:optional', 'prepare:bundled-toolchain'),
-    selectScript('prepare:omniroute-runtime:optional', 'prepare:omniroute-runtime'),
     typeof scripts['build:prod'] === 'string' ? 'build:prod' : null,
   ].filter(Boolean);
 }
