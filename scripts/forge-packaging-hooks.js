@@ -8,10 +8,31 @@ const projectRoot = path.resolve(__dirname, '..');
 const runtimeSourceRoot = path.join(projectRoot, 'resources');
 const signingStashRoot = path.join(projectRoot, 'build', '.forge-signing-stash');
 
+function resolveDarwinBundlePath(buildPath) {
+  if (buildPath.endsWith('.app')) {
+    return buildPath;
+  }
+
+  try {
+    const bundleEntry = fs.readdirSync(buildPath, { withFileTypes: true })
+      .find((entry) => entry.isDirectory() && entry.name.endsWith('.app'));
+
+    if (bundleEntry) {
+      return path.join(buildPath, bundleEntry.name);
+    }
+  } catch {
+    // Fall back to the provided path so hook failures stay tied to the real I/O operation.
+  }
+
+  return buildPath;
+}
+
 function resolveResourcesPath(buildPath, platform) {
-  return platform === 'darwin'
-    ? path.join(buildPath, 'Contents', 'Resources')
-    : path.join(buildPath, 'resources');
+  if (platform === 'darwin') {
+    return path.join(resolveDarwinBundlePath(buildPath), 'Contents', 'Resources');
+  }
+
+  return path.join(buildPath, 'resources');
 }
 
 function resolveRuntimeRoot(buildPath, platform) {
@@ -22,9 +43,17 @@ function resolvePortableFixedRoot(buildPath, platform) {
   return path.join(resolveResourcesPath(buildPath, platform), 'extra', 'portable-fixed', 'current');
 }
 
+function resolveSigningStashKey(buildPath, platform) {
+  if (platform === 'darwin') {
+    return path.basename(resolveDarwinBundlePath(buildPath));
+  }
+
+  return path.basename(buildPath);
+}
+
 function resolveSigningPaths(buildPath, platform, arch) {
   const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
-  const stashPath = path.join(signingStashRoot, `${platform}-${arch}`, path.basename(buildPath), 'runtime');
+  const stashPath = path.join(signingStashRoot, `${platform}-${arch}`, resolveSigningStashKey(buildPath, platform), 'runtime');
   return {
     runtimeRoot,
     stashPath,

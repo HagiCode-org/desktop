@@ -157,22 +157,27 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(smokeTest, /desktop runtime is excluded from recursive macOS code signing/);
   });
 
-  it('macOS Forge packaging hooks stash and restore packaged runtime resources', async () => {
+  it('macOS Forge packaging hooks stash and restore packaged runtime resources across staging and final output paths', async () => {
     const hooks = await import(forgePackagingHooksPath);
     const fixtureRoot = path.join(process.cwd(), 'build', 'test-fixtures', 'forge-packaging-hooks');
-    const appPath = path.join(fixtureRoot, 'Hagicode Desktop.app');
+    const stagingRoot = path.join(fixtureRoot, 'tmp-L9hezS');
+    const finalRoot = path.join(fixtureRoot, 'Hagicode Desktop-darwin-arm64');
+    const appPath = path.join(stagingRoot, 'Hagicode Desktop.app');
+    const finalAppPath = path.join(finalRoot, 'Hagicode Desktop.app');
     const runtimeRoot = path.join(appPath, 'Contents', 'Resources', 'extra', 'runtime');
     const markerPath = path.join(runtimeRoot, 'marker.json');
+    const finalMarkerPath = path.join(finalAppPath, 'Contents', 'Resources', 'extra', 'runtime', 'marker.json');
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
     await fs.mkdir(runtimeRoot, { recursive: true });
     await fs.writeFile(markerPath, '{}\n', 'utf-8');
 
-    await hooks.stageForgePackagingResources(appPath, '41.3.0', 'darwin', 'arm64');
+    await hooks.stageForgePackagingResources(stagingRoot, '41.3.0', 'darwin', 'arm64');
     await assert.rejects(fs.stat(markerPath));
 
-    await hooks.restoreForgePackagingResources(appPath, '41.3.0', 'darwin', 'arm64');
-    assert.equal(await fs.readFile(markerPath, 'utf-8'), '{}\n');
+    await fs.rename(stagingRoot, finalRoot);
+    await hooks.restoreForgePackagingResources(finalRoot, '41.3.0', 'darwin', 'arm64');
+    assert.equal(await fs.readFile(finalMarkerPath, 'utf-8'), '{}\n');
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
