@@ -1,4 +1,0 @@
-runtimeHome: {{RUNTIME_ROOT}}
-listen: {{LISTEN_ADDR}}
-dataDir: {{DATA_DIR}}
-logDir: {{LOGS_DIR}}
