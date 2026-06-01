@@ -302,6 +302,7 @@ export default function DependencyManagementPage() {
 
   const managedPackages = snapshot?.packages ?? [];
   const vendoredRuntimes = snapshot?.vendoredRuntimes ?? [];
+  const hasVendoredRuntimes = vendoredRuntimes.length > 0;
   const highlightedPackageIds = repairIntent?.targetPackageIds ?? [];
   const highlightedRuntimeIds = repairIntent?.targetRuntimeIds ?? [];
   const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
@@ -486,35 +487,37 @@ export default function DependencyManagementPage() {
             />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t('dependencyManagement.vendoredRuntime.title')}</CardTitle>
-              <CardDescription>{t('dependencyManagement.vendoredRuntime.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 xl:grid-cols-2">
-              {prioritizedVendoredRuntimes.map((runtime) => (
-                <VendoredRuntimeCard
-                  key={runtime.id}
-                  item={runtime}
-                  highlighted={highlightedRuntimeIds.includes(runtime.id)}
-                  pendingAction={runtimeActionState[runtime.id] ?? null}
-                  error={runtimeOperationError[runtime.id] ?? null}
-                  refreshDisabled={pageStatus === 'loading' || isPending}
-                  onPrimaryAction={(item) => {
-                    if (item.primaryAction === 'reinstall-desktop' || item.primaryAction === 'none') {
-                      return;
-                    }
-                    void runVendoredRuntimeAction(item.id, item.primaryAction);
-                  }}
-                  onRestart={(runtimeId) => void runVendoredRuntimeAction(runtimeId, 'restart')}
-                  onRefresh={() => void refreshSnapshot()}
-                  onOpenLogs={(runtimeId) => void getDependencyManagementBridge().openVendoredRuntimePath(runtimeId, 'logs')}
-                  onOpenRuntimeRoot={(runtimeId) => void getDependencyManagementBridge().openVendoredRuntimePath(runtimeId, 'runtime-root')}
-                  onOpenUrl={(url) => void window.electronAPI.openExternal(url)}
-                />
-              ))}
-            </CardContent>
-          </Card>
+          {hasVendoredRuntimes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('dependencyManagement.vendoredRuntime.title')}</CardTitle>
+                <CardDescription>{t('dependencyManagement.vendoredRuntime.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 xl:grid-cols-2">
+                {prioritizedVendoredRuntimes.map((runtime) => (
+                  <VendoredRuntimeCard
+                    key={runtime.id}
+                    item={runtime}
+                    highlighted={highlightedRuntimeIds.includes(runtime.id)}
+                    pendingAction={runtimeActionState[runtime.id] ?? null}
+                    error={runtimeOperationError[runtime.id] ?? null}
+                    refreshDisabled={pageStatus === 'loading' || isPending}
+                    onPrimaryAction={(item) => {
+                      if (item.primaryAction === 'reinstall-desktop' || item.primaryAction === 'none') {
+                        return;
+                      }
+                      void runVendoredRuntimeAction(item.id, item.primaryAction);
+                    }}
+                    onRestart={(runtimeId) => void runVendoredRuntimeAction(runtimeId, 'restart')}
+                    onRefresh={() => void refreshSnapshot()}
+                    onOpenLogs={(runtimeId) => void getDependencyManagementBridge().openVendoredRuntimePath(runtimeId, 'logs')}
+                    onOpenRuntimeRoot={(runtimeId) => void getDependencyManagementBridge().openVendoredRuntimePath(runtimeId, 'runtime-root')}
+                    onOpenUrl={(url) => void window.electronAPI.openExternal(url)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {batchSyncState && (
             <BatchSyncLogPanel ref={batchLogPanelRef} batchSyncState={batchSyncState} />

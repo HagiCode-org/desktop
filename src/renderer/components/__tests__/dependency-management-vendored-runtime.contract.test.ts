@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 const pagePath = path.resolve(process.cwd(), 'src/renderer/components/DependencyManagementPage.tsx');
 
 describe('dependency management runtime separation contract', () => {
-  it('renders Desktop-managed vendored runtime cards separately from npm package operations', async () => {
+  it('keeps Desktop-managed runtime UI separate from npm package operations and hides it when empty', async () => {
     const pageSource = await fs.readFile(pagePath, 'utf8');
 
     assert.match(pageSource, /vendoredRuntimes = snapshot\?\.vendoredRuntimes \?\? \[\]/);
@@ -18,6 +18,8 @@ describe('dependency management runtime separation contract', () => {
     assert.match(pageSource, /bridge\.repairVendoredRuntime\(runtimeId\)/);
     assert.match(pageSource, /openVendoredRuntimePath\(runtimeId, 'logs'\)/);
     assert.match(pageSource, /openVendoredRuntimePath\(runtimeId, 'runtime-root'\)/);
+    assert.match(pageSource, /const hasVendoredRuntimes = vendoredRuntimes\.length > 0;/);
+    assert.match(pageSource, /\{hasVendoredRuntimes && \(/);
     assert.match(pageSource, /<VendoredRuntimeCard/);
     assert.match(pageSource, /dependencyManagement\.vendoredRuntime\.title/);
     assert.match(pageSource, /onVendoredRuntimeActivationProgress/);

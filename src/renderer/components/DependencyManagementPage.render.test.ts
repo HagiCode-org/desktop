@@ -77,7 +77,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /export const BatchSyncLogPanel = forwardRef/);
   });
 
-  it('renders vendored runtime cards with Desktop-managed actions and activation progress', async () => {
+  it('guards vendored runtime cards behind available Desktop-managed runtime entries', async () => {
     const [pageSource, packageGroupsSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
       fs.readFile(packageGroupsPath, 'utf8'),
@@ -89,6 +89,8 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /stopVendoredRuntime\(runtimeId\)/);
     assert.match(pageSource, /restartVendoredRuntime\(runtimeId\)/);
     assert.match(pageSource, /repairVendoredRuntime\(runtimeId\)/);
+    assert.match(pageSource, /const hasVendoredRuntimes = vendoredRuntimes\.length > 0;/);
+    assert.match(pageSource, /\{hasVendoredRuntimes && \(/);
     assert.match(pageSource, /<VendoredRuntimeCard/);
 
     assert.match(packageGroupsSource, /dependencyManagement\.vendoredRuntime\.actions\.enable/);
