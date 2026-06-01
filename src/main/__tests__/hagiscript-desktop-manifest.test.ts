@@ -84,7 +84,18 @@ describe('hagiscript desktop manifest builder', () => {
     );
     assert.deepEqual(
       Object.keys((manifest as { npmSync?: { packages: Record<string, unknown> } }).npmSync?.packages ?? {}),
-      ['@anthropic-ai/claude-code', '@fission-ai/openspec', '@openai/codex', 'impeccable', 'skills'],
+      [
+        '@anthropic-ai/claude-code',
+        '@github/copilot',
+        '@google/gemini-cli',
+        '@qoder-ai/qodercli',
+        '@tencent-ai/codebuddy-code',
+        '@fission-ai/openspec',
+        '@openai/codex',
+        'impeccable',
+        'opencode-ai',
+        'skills',
+      ],
     );
   });
 
