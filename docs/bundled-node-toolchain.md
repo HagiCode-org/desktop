@@ -2,7 +2,7 @@
 
 HagiCode Desktop owns the portable Node/toolchain contract used by Desktop, portable-version, and steam_packer.
 
-Desktop also uses this bundled Node toolchain to launch the vendored `code-server` and `omniroute` runtimes. That PATH injection stays scoped to Desktop-owned runtime startup and does not change the general web-service startup contract.
+Desktop uses this bundled Node toolchain for Desktop-managed npm commands and packaged runtime startup. That PATH injection stays scoped to Desktop-owned processes and does not change the general web-service startup contract.
 
 ## Contract
 
@@ -67,11 +67,6 @@ npm run build:mac:arm64
 
 `forge.config.js` and `scripts/forge-packaging-hooks.js` ship the generated `resources/bin` and `resources/components` trees to the canonical packaged `extra/runtime` location outside `app.asar`.
 
-When vendored runtimes are staged, they live inside that same packaged runtime tree:
-
-- `extra/runtime/components/bundled/code-server`
-- `extra/runtime/components/bundled/omniroute`
-
 ## Verification
 
 Run the desktop smoke test after staging or packaging:
@@ -82,11 +77,9 @@ npm run smoke-test:verbose
 
 Packaged builds call `package:smoke-test`, which requires the bundled .NET runtime and Node toolchain. The smoke test verifies `node`, `npm`, and the deferred package metadata contract in `toolchain-manifest.json` for both staged and packaged locations when present. For `node` and `npm`, smoke validation follows the manifest-resolved command paths first and only falls back to deterministic platform candidates when the manifest is unavailable.
 
-The same smoke test now validates the staged and packaged vendored `code-server` and `omniroute` layouts when those runtimes are present.
-
 Release archives now have a second gate:
 
-- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/runtime/components/node/runtime`, `extra/runtime/components/bundled/code-server`, and `extra/runtime/components/bundled/omniroute` payloads before upload.
+- `npm run package:verify-release-archives` extracts the generated Linux/macOS release archives from `pkg/` and validates the packaged `extra/runtime/components/node/runtime` payload before upload.
 - Windows workflows run the same verifier against the staged release ZIP that is built from `win-unpacked`, so the uploaded extractable archive is checked in the same way.
 
 ## Downstream Consumers

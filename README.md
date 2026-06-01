@@ -49,7 +49,7 @@ npm run build:mac:arm64:zip
 
 Source-mode development uses the shared Desktop runtime tree under `resources/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.
 
-`npm run dev` runs `predev`, which stages the governed Desktop runtime payloads for supported platforms: the embedded .NET runtime, the bundled Node toolchain, the vendored code-server runtime, and the vendored OmniRoute runtime.
+`npm run dev` runs `predev`, which stages the governed Desktop runtime payloads for supported platforms: the embedded .NET runtime and the bundled Node toolchain.
 
 Those `prepare:*` commands now delegate the staging workflow to `hagiscript runtime install` with a Desktop-specific manifest, so the runtime layout now lands under `resources/components/...` while the install orchestration stays inside hagiscript.
 
@@ -57,13 +57,6 @@ Managed npm packages are installed into Desktop-owned writable runtime data unde
 
 - Unix-like platforms: `userData/runtimeData/node/node<major>/npmGlobal/bin` and `userData/runtimeData/node/node<major>/npmGlobal/lib/node_modules`
 - Windows: `userData/runtimeData/node/node<major>/npmGlobal` and `userData/runtimeData/node/node<major>/npmGlobal/node_modules`
-
-### Vendored service runtime activation
-
-`code-server` and `omniroute` now use an archive-only packaged contract. Development staging places `.7z` payloads plus `.hagicode-runtime.json` markers under `resources/components/bundled/<service>/`, and packaged builds ship the same contract under `resources/extra/runtime/components/bundled/<service>/`.
-
-Desktop does not execute those packaged roots directly. The first `Enable Runtime` action extracts the bundled archive into `userData/runtimeData/components/services/<service>/runtime/current`, validates the extracted layout there, and keeps `runtime/staging` under the same service home for atomic swaps and repair flows.
-
 
 ### Development runtime troubleshooting
 
