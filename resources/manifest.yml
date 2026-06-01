@@ -85,19 +85,6 @@ components:
     installScript: ../scripts/hagiscript/install-dotnet.mjs
     verifyScript: ../scripts/hagiscript/verify-dotnet.mjs
 
-  - name: omniroute
-    type: bundled-runtime
-    required: false
-    source: desktop-vendored-runtime
-    version: *vendoredRuntimeVersion
-    bundledInstallMode: archive-7z-only
-    runtimeDataDir: services/omniroute
-    lifecycleDependencies:
-      - node
-    pm2:
-      appName: hagicode-omniroute
-      cwd: current
-
 phases:
   install:
     order:
@@ -106,10 +93,8 @@ phases:
       - dotnet/runtime/osx-x64
       - dotnet/runtime/osx-arm64
       - dotnet/runtime/win-x64
-      - omniroute
   remove:
     order:
-      - omniroute
       - dotnet/runtime/win-x64
       - dotnet/runtime/osx-arm64
       - dotnet/runtime/osx-x64
@@ -122,7 +107,6 @@ phases:
       - dotnet/runtime/osx-x64
       - dotnet/runtime/osx-arm64
       - dotnet/runtime/win-x64
-      - omniroute
 
 npmSync:
   packages:
@@ -290,56 +274,3 @@ desktopExtensions:
         installMode: manual
         installState: pending
         manualActionId: install-bundled-node-cli
-
-  omniRouteRuntime:
-    schemaVersion: 1
-    runtime: omniroute
-    packageId: omniroute
-    releaseVersion: *vendoredRuntimeVersion
-    releaseVersionByPlatform: *vendoredRuntimeReleaseVersionByPlatform
-    source:
-      generatedRootSubdir: omniroute-runtime
-      localArtifactDir: null
-      indexUrl: null
-      releaseUrlsByPlatform: *vendoredRuntimeReleaseUrlsByPlatform
-      allowedDownloadHosts:
-        - github.com
-        - release-assets.githubusercontent.com
-        - objects.githubusercontent.com
-        - githubusercontent.com
-        - index.hagicode.com
-    packagedLayout:
-      markerFile: .hagicode-runtime.json
-      archiveRelativePath: archives/omniroute.7z
-      installMode: archive-7z-only
-    platforms:
-      linux-x64:
-        platform: linux
-        arch: amd64
-        archiveExtension: .7z
-      osx-x64:
-        platform: macos
-        arch: amd64
-        archiveExtension: .7z
-      osx-arm64:
-        platform: macos
-        arch: arm64
-        archiveExtension: .7z
-      win-x64:
-        platform: windows
-        arch: amd64
-        archiveExtension: .7z
-    expectedLayout:
-      requiredEntries:
-        - metadata.json|../.hagicode-runtime.json
-        - bin/omniroute.mjs
-        - omniroute.sh|omniroute.cmd|omniroute.bat|omniroute.ps1|bin/omniroute|bin/omniroute.cmd|bin/omniroute.ps1
-      wrapperCandidates:
-        - omniroute.sh
-        - omniroute.cmd
-        - omniroute.bat
-        - omniroute.ps1
-        - bin/omniroute
-        - bin/omniroute.cmd
-        - bin/omniroute.ps1
-      entryScript: bin/omniroute.mjs
