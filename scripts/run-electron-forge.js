@@ -160,8 +160,7 @@ async function stagePackagedApplication(platform, arch, packagedPath) {
   await fsp.mkdir(path.dirname(destination), { recursive: true });
 
   if (platform === 'darwin') {
-    await fsp.mkdir(destination, { recursive: true });
-    await fsp.cp(packagedPath, path.join(destination, path.basename(packagedPath)), { recursive: true });
+    await fsp.cp(packagedPath, destination, { recursive: true });
     return destination;
   }
 

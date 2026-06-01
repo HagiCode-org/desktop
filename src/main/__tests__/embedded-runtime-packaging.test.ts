@@ -121,6 +121,13 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(runner, /@electron-forge\/core\/dist\/api\/package\.js/);
   });
 
+  it('stages macOS unpacked artifacts without nesting the Electron Packager output directory', async () => {
+    const runner = await fs.readFile(electronForgeRunnerPath, 'utf-8');
+
+    assert.match(runner, /fsp\.cp\(packagedPath, destination, \{ recursive: true \}\)/);
+    assert.doesNotMatch(runner, /path\.join\(destination, path\.basename\(packagedPath\)\)/);
+  });
+
   it('prunes unused Node bin entrypoints before macOS signing', async () => {
     const stagingScript = await fs.readFile(bundledToolchainScriptPath, 'utf-8');
     const smokeTest = await fs.readFile(smokeTestPath, 'utf-8');
