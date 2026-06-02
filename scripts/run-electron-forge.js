@@ -192,6 +192,73 @@ function mapForgeTargets(platform, targets) {
     .map(target => targetMap[platform]?.[target] || target);
 }
 
+function getExpectedForgeArtifactPaths(platform, arch, targets) {
+  const normalizedTargets = unique(targets.map(target => String(target).trim().toLowerCase()).filter(Boolean));
+
+  if (platform !== 'darwin') {
+    return [];
+  }
+
+  const makeDir = path.join(outDir, 'make');
+  const expected = [];
+
+  if (normalizedTargets.includes('dmg')) {
+    expected.push(path.join(makeDir, `${packageJson.productName || packageJson.name}-${packageJson.version}-${arch}.dmg`));
+  }
+
+  if (normalizedTargets.includes('zip')) {
+    expected.push(path.join(makeDir, 'zip', 'darwin', arch, `${packageJson.productName || packageJson.name}-${platform}-${arch}-${packageJson.version}.zip`));
+  }
+
+  return expected;
+}
+
+function isMacDmgDetachRaceError(error, options) {
+  if (options.platform !== 'darwin') {
+    return false;
+  }
+
+  const normalizedTargets = unique(options.targets.map(target => String(target).trim().toLowerCase()).filter(Boolean));
+  if (normalizedTargets.length !== 1 || normalizedTargets[0] !== 'dmg') {
+    return false;
+  }
+
+  const message = error instanceof Error ? error.message : String(error || '');
+  return message.includes('hdiutil detach') && message.includes('No such file or directory');
+}
+
+async function recoverMacDmgDetachRace(error, options) {
+  if (!isMacDmgDetachRaceError(error, options)) {
+    return null;
+  }
+
+  const expectedArtifacts = getExpectedForgeArtifactPaths(options.platform, options.arch, options.targets);
+  const recoveredArtifacts = [];
+
+  for (const artifactPath of expectedArtifacts) {
+    try {
+      const stats = await fsp.stat(artifactPath);
+      if (stats.isFile()) {
+        recoveredArtifacts.push(artifactPath);
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  if (recoveredArtifacts.length === 0) {
+    return null;
+  }
+
+  console.warn('[electron-forge] Ignoring macOS DMG detach race after artifact creation completed');
+  return [{
+    artifacts: recoveredArtifacts,
+    packageJSON: packageJson,
+    platform: options.platform,
+    arch: options.arch,
+  }];
+}
+
 async function collectArtifacts(makeResults) {
   const artifactPaths = unique(makeResults.flatMap(result => result.artifacts));
 
@@ -242,14 +309,25 @@ async function main() {
 
   const forgeTargets = mapForgeTargets(options.platform, options.targets);
   if (forgeTargets.length > 0) {
-    const makeResults = await makeDistributables({
-      dir: projectRoot,
-      platform: options.platform,
-      arch: options.arch,
-      outDir,
-      skipPackage: true,
-      overrideTargets: forgeTargets,
-    });
+    let makeResults;
+    try {
+      makeResults = await makeDistributables({
+        dir: projectRoot,
+        platform: options.platform,
+        arch: options.arch,
+        outDir,
+        skipPackage: true,
+        overrideTargets: forgeTargets,
+      });
+    } catch (error) {
+      const recoveredResults = await recoverMacDmgDetachRace(error, options);
+      if (!recoveredResults) {
+        throw error;
+      }
+
+      makeResults = recoveredResults;
+    }
+
     await collectArtifacts(makeResults);
   }
 
@@ -258,7 +336,24 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error(`[electron-forge] ${error.message}`);
-  process.exit(1);
-});
+function isCliEntrypoint() {
+  const invokedPath = process.argv[1];
+  if (!invokedPath) {
+    return false;
+  }
+
+  return path.resolve(invokedPath) === __filename;
+}
+
+export {
+  getExpectedForgeArtifactPaths,
+  isMacDmgDetachRaceError,
+  recoverMacDmgDetachRace,
+};
+
+if (isCliEntrypoint()) {
+  main().catch(error => {
+    console.error(`[electron-forge] ${error.message}`);
+    process.exit(1);
+  });
+}
