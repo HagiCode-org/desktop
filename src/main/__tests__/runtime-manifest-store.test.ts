@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { load } from 'js-yaml';
@@ -69,8 +70,9 @@ describe('runtime manifest store data scope resolution', () => {
       };
     };
 
-    assert.equal(parsed.paths.runtimeDataRoot, path.join('/tmp/hagicode-user-data/dev', 'runtimeData'));
-    assert.equal(parsed.paths.serverProgramRoot, path.join('/tmp/hagicode-user-data/dev', 'apps', 'installed'));
-    assert.equal(parsed.paths.serverDataRoot, path.join('/tmp/hagicode-user-data/dev', 'apps', 'data'));
+    const runtimeDataRoot = path.join(homedir(), '.hagicode', 'runtime-data');
+    assert.equal(parsed.paths.runtimeDataRoot, runtimeDataRoot);
+    assert.equal(parsed.paths.serverProgramRoot, path.join(runtimeDataRoot, 'apps', 'installed'));
+    assert.equal(parsed.paths.serverDataRoot, path.join(runtimeDataRoot, 'apps', 'data'));
   });
 });

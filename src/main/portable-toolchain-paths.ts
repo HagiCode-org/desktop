@@ -28,7 +28,8 @@ export interface PortableToolchainPaths {
 }
 
 export interface NodeMajorNpmGlobalPathOptions {
-  userDataPath: string;
+  runtimeDataRoot?: string;
+  userDataPath?: string;
   nodeVersion?: string | null;
   nodeMajorVersion?: string | number | null;
   platform?: NodeJS.Platform;
@@ -44,7 +45,8 @@ export interface NodeMajorNpmGlobalPaths {
 }
 
 export interface Pm2MajorHomePathOptions {
-  userDataPath: string;
+  runtimeDataRoot?: string;
+  userDataPath?: string;
   pm2Version?: string | null;
   pm2MajorVersion?: string | number | null;
   platform?: NodeJS.Platform;
@@ -57,23 +59,28 @@ export interface Pm2MajorHomePaths {
 }
 
 export function resolvePortableToolchainRoot(options: PortableToolchainPathOptions): string {
+  const overrideRoot = options.overrideRoot?.trim();
+  if (overrideRoot) {
+    return path.resolve(overrideRoot);
+  }
+
   const programHome = resolveDesktopRuntimeProgramHome({
     cwd: options.cwd,
     resourcesPath: options.resourcesPath,
     isPackaged: options.isPackaged,
-    overrideRoot: options.overrideRoot,
   });
   return resolveDesktopRuntimeComponentProgramRoot('node', programHome, 'unused');
 }
 
 export function buildPortableToolchainPaths(options: PortableToolchainPathOptions): PortableToolchainPaths {
   const platform = options.platform ?? process.platform;
+  const pathModule = getPathModuleForPlatform(platform);
   const toolchainRoot = resolvePortableToolchainRoot(options);
   const nodeRoot = toolchainRoot;
-  const toolchainBinRoot = platform === 'win32' ? toolchainRoot : path.join(toolchainRoot, 'bin');
+  const toolchainBinRoot = platform === 'win32' ? toolchainRoot : pathModule.join(toolchainRoot, 'bin');
   const nodeBinRoot = toolchainBinRoot;
-  const nodeExecutablePath = path.join(toolchainRoot, getNodeExecutableRelativePath(platform));
-  const npmExecutablePath = path.join(
+  const nodeExecutablePath = pathModule.join(toolchainRoot, getNodeExecutableRelativePath(platform));
+  const npmExecutablePath = pathModule.join(
     toolchainRoot,
     resolveExistingNpmExecutableRelativePath(toolchainRoot, platform, fsSync.existsSync),
   );
@@ -83,7 +90,7 @@ export function buildPortableToolchainPaths(options: PortableToolchainPathOption
     nodeRoot,
     toolchainBinRoot,
     nodeBinRoot,
-    toolchainManifestPath: path.join(toolchainRoot, 'toolchain-manifest.json'),
+    toolchainManifestPath: pathModule.join(toolchainRoot, 'toolchain-manifest.json'),
     nodeExecutablePath,
     npmExecutablePath,
   };
@@ -93,9 +100,16 @@ function getPathModuleForPlatform(platform: NodeJS.Platform): typeof path.posix 
   return platform === 'win32' ? path.win32 : path.posix;
 }
 
-function getRuntimeDataRoot(userDataPath: string, platform: NodeJS.Platform): string {
+function getRuntimeDataRoot(
+  options: { runtimeDataRoot?: string; userDataPath?: string },
+  platform: NodeJS.Platform,
+): string {
   const pathModule = getPathModuleForPlatform(platform);
-  return pathModule.join(userDataPath, 'runtimeData');
+  const configuredRoot = options.runtimeDataRoot?.trim() || options.userDataPath?.trim();
+  if (!configuredRoot) {
+    throw new Error('runtimeDataRoot is required to resolve managed npm and PM2 paths.');
+  }
+  return pathModule.normalize(configuredRoot);
 }
 
 export function extractNodeMajorVersion(
@@ -132,7 +146,7 @@ export function buildNodeMajorNpmGlobalPaths(options: NodeMajorNpmGlobalPathOpti
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
   const nodeMajorVersion = extractNodeMajorVersion(options.nodeMajorVersion ?? options.nodeVersion);
-  const runtimeDataRoot = getRuntimeDataRoot(options.userDataPath, platform);
+  const runtimeDataRoot = getRuntimeDataRoot(options, platform);
   const npmGlobalPrefix = pathModule.join(runtimeDataRoot, 'node', `node${nodeMajorVersion}`, 'npmGlobal');
 
   return {
@@ -151,7 +165,7 @@ export function buildPm2MajorHomePaths(options: Pm2MajorHomePathOptions): Pm2Maj
   const platform = options.platform ?? process.platform;
   const pathModule = getPathModuleForPlatform(platform);
   const pm2MajorVersion = extractPm2MajorVersion(options.pm2MajorVersion ?? options.pm2Version);
-  const runtimeDataRoot = getRuntimeDataRoot(options.userDataPath, platform);
+  const runtimeDataRoot = getRuntimeDataRoot(options, platform);
 
   return {
     pm2Version: options.pm2Version?.trim() || null,

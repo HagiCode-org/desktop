@@ -19,10 +19,10 @@ describe('hagiscript desktop manifest builder', () => {
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: '/tmp/hagicode-user-data',
       runtimeHome: '/opt/HagiCode/resources/extra/runtime',
-      runtimeDataRoot: '/tmp/hagicode-user-data/runtimeData',
-      serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
-      serverDataRoot: '/tmp/hagicode-user-data/apps/data',
-      npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
+      runtimeDataRoot: '/tmp/home/.hagicode/runtime-data',
+      serverProgramRoot: '/tmp/home/.hagicode/runtime-data/apps/installed',
+      serverDataRoot: '/tmp/home/.hagicode/runtime-data/apps/data',
+      npmPrefix: '/tmp/home/.hagicode/runtime-data/node/node22/npmGlobal',
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       server: {
@@ -40,12 +40,12 @@ describe('hagiscript desktop manifest builder', () => {
       components: Array<Record<string, unknown>>;
     };
 
-    assert.equal(manifest.paths.runtimeDataRoot, '/tmp/hagicode-user-data/runtimeData');
-    assert.equal(manifest.paths.serverProgramRoot, '/tmp/hagicode-user-data/apps/installed');
-    assert.equal(manifest.paths.serverDataRoot, '/tmp/hagicode-user-data/apps/data');
+    assert.equal(manifest.paths.runtimeDataRoot, '/tmp/home/.hagicode/runtime-data');
+    assert.equal(manifest.paths.serverProgramRoot, '/tmp/home/.hagicode/runtime-data/apps/installed');
+    assert.equal(manifest.paths.serverDataRoot, '/tmp/home/.hagicode/runtime-data/apps/data');
     assert.equal(
       manifest.paths.componentDataRoot,
-      '/tmp/hagicode-user-data/runtimeData/components',
+      '/tmp/home/.hagicode/runtime-data/components',
     );
     assert.deepEqual(manifest.phases.install.order.slice(0, 3), [
       DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
@@ -129,10 +129,10 @@ describe('hagiscript desktop manifest builder', () => {
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: '/tmp/hagicode-user-data',
       runtimeHome: '/opt/HagiCode/resources/extra/runtime',
-      runtimeDataRoot: '/tmp/hagicode-user-data/runtimeData',
-      serverProgramRoot: '/tmp/hagicode-user-data/apps/installed',
-      serverDataRoot: '/tmp/hagicode-user-data/apps/data',
-      npmPrefix: '/tmp/hagicode-user-data/runtimeData/node/node22/npmGlobal',
+      runtimeDataRoot: '/tmp/home/.hagicode/runtime-data',
+      serverProgramRoot: '/tmp/home/.hagicode/runtime-data/apps/installed',
+      serverDataRoot: '/tmp/home/.hagicode/runtime-data/apps/data',
+      npmPrefix: '/tmp/home/.hagicode/runtime-data/node/node22/npmGlobal',
       dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/linux-x64',
       dotnetPlatform: 'linux-x64',
       server: {

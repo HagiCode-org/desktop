@@ -525,7 +525,7 @@ describe('web-service-env', () => {
       npm_node_execpath: '/portable/toolchain/node/bin/node',
       npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
       HAGICODE_PORTABLE_TOOLCHAIN_ROOT: '/portable/toolchain',
-      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/runtimeData/node/node22/npmGlobal',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
     };
     const result = injectManagedCliPathEnv(runtimeEnv, {
       platform: 'linux',
@@ -580,10 +580,10 @@ describe('web-service-env', () => {
     const npmGlobalPaths = {
       nodeVersion: '22.12.0',
       nodeMajorVersion: '22',
-      npmGlobalPrefix: '/userData/runtimeData/node/node22/npmGlobal',
-      npmGlobalBinRoot: '/userData/runtimeData/node/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
-      npmCacheRoot: '/userData/runtimeData/node/node22/npmCache',
+      npmGlobalPrefix: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
+      npmGlobalBinRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/home/test/.hagicode/runtime-data/node/node22/npmCache',
     };
     const result = injectPortableToolchainEnv(baseEnv, {
       getPortableToolchainRoot: () => '/portable/toolchain',
@@ -592,18 +592,18 @@ describe('web-service-env', () => {
       getPortableNpmGlobalBinRoot: () => '/portable/toolchain/node/bin',
     }, {
       platform: 'linux',
-      existsSync: target => target !== '/userData/runtimeData/node/node22/npmGlobal/bin',
+      existsSync: target => target !== '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
       npmGlobalPaths,
     });
 
     assert.equal(
       result.env.PATH,
-      '/portable/toolchain/bin:/portable/toolchain/node/bin:/userData/runtimeData/node/node22/npmGlobal/bin:/system/bin',
+      '/portable/toolchain/bin:/portable/toolchain/node/bin:/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin:/system/bin',
     );
-    assert.equal(result.env.NODE_PATH, '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules:/system/node_modules');
-    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PREFIX, '/userData/runtimeData/node/node22/npmGlobal');
-    assert.equal(result.env.HAGICODE_NPM_GLOBAL_BIN_ROOT, '/userData/runtimeData/node/node22/npmGlobal/bin');
-    assert.equal(result.env.HAGICODE_NPM_GLOBAL_MODULES_ROOT, '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules');
+    assert.equal(result.env.NODE_PATH, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules:/system/node_modules');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PREFIX, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_BIN_ROOT, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_MODULES_ROOT, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules');
     assert.equal(result.env.HAGICODE_NODE_MAJOR_VERSION, '22');
     assert.equal(baseEnv.PATH, '/system/bin');
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
@@ -611,25 +611,25 @@ describe('web-service-env', () => {
 
   it('prepends the managed POSIX CLI command directory and removes Node/npm marker vars for managed server startup', () => {
     const baseEnv = {
-      PATH: '/system/bin:/userData/runtimeData/node/node22/npmGlobal/bin:/usr/local/bin',
+      PATH: '/system/bin:/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin:/usr/local/bin',
       NODE_PATH: '/system/node_modules',
       NODE: '/portable/toolchain/node/bin/node',
       npm_node_execpath: '/portable/toolchain/node/bin/node',
       npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
       HAGICODE_PORTABLE_TOOLCHAIN_ROOT: '/portable/toolchain',
-      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/runtimeData/node/node22/npmGlobal',
-      HAGICODE_NPM_GLOBAL_BIN_ROOT: '/userData/runtimeData/node/node22/npmGlobal/bin',
-      HAGICODE_NPM_GLOBAL_MODULES_ROOT: '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
-      HAGICODE_NPM_CACHE_ROOT: '/userData/runtimeData/node/node22/npmCache',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
+      HAGICODE_NPM_GLOBAL_BIN_ROOT: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
+      HAGICODE_NPM_GLOBAL_MODULES_ROOT: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
+      HAGICODE_NPM_CACHE_ROOT: '/home/test/.hagicode/runtime-data/node/node22/npmCache',
       HAGICODE_NODE_MAJOR_VERSION: '22',
     };
     const npmGlobalPaths = {
       nodeVersion: '22.12.0',
       nodeMajorVersion: '22',
-      npmGlobalPrefix: '/userData/runtimeData/node/node22/npmGlobal',
-      npmGlobalBinRoot: '/userData/runtimeData/node/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
-      npmCacheRoot: '/userData/runtimeData/node/node22/npmCache',
+      npmGlobalPrefix: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
+      npmGlobalBinRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/home/test/.hagicode/runtime-data/node/node22/npmCache',
     };
 
     const result = injectManagedCliPathEnv(baseEnv, {
@@ -638,16 +638,16 @@ describe('web-service-env', () => {
     });
 
     assert.equal(result.pathKey, 'PATH');
-    assert.equal(result.managedCliPath, '/userData/runtimeData/node/node22/npmGlobal/bin');
-    assert.equal(result.managedNpmGlobalPath, '/userData/runtimeData/node/node22/npmGlobal');
-    assert.equal(result.env.PATH, '/userData/runtimeData/node/node22/npmGlobal/bin:/system/bin:/usr/local/bin');
-    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, '/userData/runtimeData/node/node22/npmGlobal/bin');
-    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, '/userData/runtimeData/node/node22/npmGlobal');
+    assert.equal(result.managedCliPath, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin');
+    assert.equal(result.managedNpmGlobalPath, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal');
+    assert.equal(result.env.PATH, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin:/system/bin:/usr/local/bin');
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, '/home/test/.hagicode/runtime-data/node/node22/npmGlobal');
     assert.equal(result.env.NODE_PATH, undefined);
     assert.equal(result.env.NODE, undefined);
     assert.equal(result.env.npm_execpath, undefined);
     assert.equal(result.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT, undefined);
-    assert.equal(baseEnv.PATH, '/system/bin:/userData/runtimeData/node/node22/npmGlobal/bin:/usr/local/bin');
+    assert.equal(baseEnv.PATH, '/system/bin:/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin:/usr/local/bin');
     assert.equal(baseEnv.NODE_PATH, '/system/node_modules');
   });
 
@@ -655,46 +655,46 @@ describe('web-service-env', () => {
     assert.equal(resolveManagedCliCommandDirectory({
       nodeVersion: '22.12.0',
       nodeMajorVersion: '22',
-      npmGlobalPrefix: '/userData/runtimeData/node/node22/npmGlobal',
-      npmGlobalBinRoot: '/userData/runtimeData/node/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
-      npmCacheRoot: '/userData/runtimeData/node/node22/npmCache',
-    }, 'linux'), '/userData/runtimeData/node/node22/npmGlobal/bin');
+      npmGlobalPrefix: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
+      npmGlobalBinRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
+      npmGlobalModulesRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
+      npmCacheRoot: '/home/test/.hagicode/runtime-data/node/node22/npmCache',
+    }, 'linux'), '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin');
 
     assert.equal(resolveManagedCliCommandDirectory({
       nodeVersion: '22.12.0',
       nodeMajorVersion: '22',
-      npmGlobalPrefix: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal',
-      npmGlobalBinRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal',
-      npmGlobalModulesRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\node_modules',
-      npmCacheRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmCache',
-    }, 'win32'), 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal');
+      npmGlobalPrefix: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal',
+      npmGlobalBinRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal',
+      npmGlobalModulesRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\node_modules',
+      npmCacheRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmCache',
+    }, 'win32'), 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
 
     assert.equal(resolveManagedCliCommandDirectory(null, 'linux'), null);
   });
 
   it('uses the effective managed command wrapper root for Windows server startup', () => {
     const result = injectManagedCliPathEnv({
-      Path: 'C:\\Windows\\System32;C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal;C:\\Windows',
+      Path: 'C:\\Windows\\System32;C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal;C:\\Windows',
       NODE: 'C:\\portable\\toolchain\\node\\node.exe',
     }, {
       platform: 'win32',
       npmGlobalPaths: {
         nodeVersion: '22.12.0',
         nodeMajorVersion: '22',
-        npmGlobalPrefix: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
-        npmGlobalBinRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal',
-        npmGlobalModulesRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal\\node_modules',
-        npmCacheRoot: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmCache',
+        npmGlobalPrefix: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal',
+        npmGlobalBinRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal',
+        npmGlobalModulesRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\node_modules',
+        npmCacheRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmCache',
       },
     });
 
     assert.equal(result.pathKey, 'Path');
-    assert.equal(result.managedCliPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
-    assert.equal(result.managedNpmGlobalPath, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
-    assert.equal(result.env.Path, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal;C:\\Windows\\System32;C:\\Windows');
-    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
-    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\node22\\npmGlobal');
+    assert.equal(result.managedCliPath, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
+    assert.equal(result.managedNpmGlobalPath, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
+    assert.equal(result.env.Path, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal;C:\\Windows\\System32;C:\\Windows');
+    assert.equal(result.env.HAGICODE_AGENT_CLI_PATH, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
+    assert.equal(result.env.HAGICODE_NPM_GLOBAL_PATH, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
     assert.equal(result.env.NODE, undefined);
   });
 
@@ -705,7 +705,7 @@ describe('web-service-env', () => {
     });
     const result = injectManagedCliPathEnv({
       PATH: '/system/bin:/usr/local/bin',
-      HAGICODE_NPM_GLOBAL_PREFIX: '/userData/runtimeData/node/node22/npmGlobal',
+      HAGICODE_NPM_GLOBAL_PREFIX: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
       NODE: '/portable/toolchain/node/bin/node',
       npm_execpath: '/portable/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
     }, {
@@ -714,10 +714,10 @@ describe('web-service-env', () => {
       npmGlobalPaths: {
         nodeVersion: '22.12.0',
         nodeMajorVersion: '22',
-        npmGlobalPrefix: '/userData/runtimeData/node/node22/npmGlobal',
-        npmGlobalBinRoot: '/userData/runtimeData/node/node22/npmGlobal/bin',
-        npmGlobalModulesRoot: '/userData/runtimeData/node/node22/npmGlobal/lib/node_modules',
-        npmCacheRoot: '/userData/runtimeData/node/node22/npmCache',
+        npmGlobalPrefix: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal',
+        npmGlobalBinRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/bin',
+        npmGlobalModulesRoot: '/home/test/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
+        npmCacheRoot: '/home/test/.hagicode/runtime-data/node/node22/npmCache',
       },
     });
 

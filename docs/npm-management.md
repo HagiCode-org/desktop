@@ -13,9 +13,9 @@ To add a future Desktop-managed npm CLI tool:
 - Extend the `ManagedNpmPackageId` union in `src/types/npm-management.ts`.
 - Add or update tests that cover status detection, install/uninstall rejection for invalid ids, and renderer row display.
 
-All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable. Mutable global packages are stored in the Electron `userData[/dev]/runtimeData/node/node<major>/npmGlobal` directory, where `<major>` is derived from the active Desktop-managed Node runtime.
+All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable. Mutable global packages are stored in the canonical Desktop runtime data root `~/.hagicode/runtime-data/node/node<major>/npmGlobal`, where `<major>` is derived from the active Desktop-managed Node runtime.
 
-The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands. It is not the active npm global package prefix. Dependency snapshots only inspect the active Node-major `userData` prefix for managed package state.
+The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands. It is not the active npm global package prefix. Dependency snapshots only inspect the active Node-major Desktop-managed prefix for managed package state.
 
 ## First-Run Preparation
 

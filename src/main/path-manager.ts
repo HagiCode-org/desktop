@@ -80,6 +80,7 @@ export type Platform = 'linux-x64' | 'linux-arm64' | 'win-x64' | 'osx-x64' | 'os
 export interface AppPaths {
   // Base paths
   userData: string;
+  runtimeDataRoot: string;
 
   // Apps/versions paths (new structure)
   appsInstalled: string;
@@ -371,6 +372,7 @@ export class PathManager {
       '[PathManager] Initialized. Dev scope:',
       process.env.HAGICODE_DESKTOP_INSTANCE_NAME === 'hagicode_dev',
       '| runtimeDataScope:', this.runtimeDataScopePath,
+      '| runtimeDataRoot:', this.paths.runtimeDataRoot,
       '| appsInstalled:', this.paths.appsInstalled,
     );
   }
@@ -390,16 +392,19 @@ export class PathManager {
    */
   private buildPaths(): AppPaths {
     const userData = this.userDataPath;
-    const runtimeDataScopePath = this.runtimeDataScopePath;
+    const runtimeDataRoot = resolveDesktopRuntimeDataHome({
+      overrideRoot: process.env.HAGICODE_RUNTIME_DATA_HOME,
+    });
     const configDir = path.join(userData, 'config');
 
     return {
       // Base paths
       userData,
+      runtimeDataRoot,
 
       // Apps/versions paths (new structure)
-      appsInstalled: path.join(runtimeDataScopePath, 'apps', 'installed'),
-      appsData: path.join(runtimeDataScopePath, 'apps', 'data'),
+      appsInstalled: path.join(runtimeDataRoot, 'apps', 'installed'),
+      appsData: path.join(runtimeDataRoot, 'apps', 'data'),
 
       // Config paths
       config: configDir,
@@ -433,10 +438,7 @@ export class PathManager {
   }
 
   getRuntimeDataHome(): string {
-    return resolveDesktopRuntimeDataHome({
-      userDataPath: this.runtimeDataScopePath,
-      overrideRoot: process.env.HAGICODE_RUNTIME_DATA_HOME,
-    });
+    return this.paths.runtimeDataRoot;
   }
 
   getRuntimeSharedPaths(): ReturnType<typeof resolveDesktopRuntimeSharedDataPaths> {
@@ -444,20 +446,20 @@ export class PathManager {
   }
 
   getNodeMajorNpmGlobalPaths(
-    input: Omit<NodeMajorNpmGlobalPathOptions, 'userDataPath'> = {},
+    input: Omit<NodeMajorNpmGlobalPathOptions, 'runtimeDataRoot' | 'userDataPath'> = {},
   ): NodeMajorNpmGlobalPaths {
     return buildNodeMajorNpmGlobalPaths({
       ...input,
-      userDataPath: this.runtimeDataScopePath,
+      runtimeDataRoot: this.paths.runtimeDataRoot,
     });
   }
 
   getPm2MajorHomePaths(
-    input: Omit<Pm2MajorHomePathOptions, 'userDataPath'> = {},
+    input: Omit<Pm2MajorHomePathOptions, 'runtimeDataRoot' | 'userDataPath'> = {},
   ): Pm2MajorHomePaths {
     return buildPm2MajorHomePaths({
       ...input,
-      userDataPath: this.runtimeDataScopePath,
+      runtimeDataRoot: this.paths.runtimeDataRoot,
     });
   }
 
@@ -927,6 +929,7 @@ export class PathManager {
    */
   async ensureDirectories(): Promise<void> {
     const directoriesToCreate = [
+      this.paths.runtimeDataRoot,
       this.paths.appsInstalled,
       this.paths.appsData,
       this.paths.config,

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dump, load } from 'js-yaml';
+import { resolveDesktopCanonicalRuntimeDataRoot } from './runtime-data-root.js';
 
 export const RUNTIME_MANIFEST_FILE = 'manifest.yml';
 const DESKTOP_DEV_INSTANCE_NAME = 'hagicode_dev';
@@ -247,7 +248,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 export function materializeRuntimeManifestContent(
   manifestContent: string,
-  dataScopePath: string,
+  _dataScopePath: string,
   manifestDirectory?: string,
 ): string {
   const parsed = load(manifestContent);
@@ -261,10 +262,10 @@ export function materializeRuntimeManifestContent(
     throw new Error('Bundled runtime manifest is missing the paths section.');
   }
 
-  const normalizedScopePath = path.resolve(dataScopePath);
-  paths.runtimeDataRoot = path.join(normalizedScopePath, 'runtimeData');
-  paths.serverProgramRoot = path.join(normalizedScopePath, 'apps', 'installed');
-  paths.serverDataRoot = path.join(normalizedScopePath, 'apps', 'data');
+  const runtimeDataRoot = resolveDesktopCanonicalRuntimeDataRoot();
+  paths.runtimeDataRoot = runtimeDataRoot;
+  paths.serverProgramRoot = path.join(runtimeDataRoot, 'apps', 'installed');
+  paths.serverDataRoot = path.join(runtimeDataRoot, 'apps', 'data');
   rebaseManifestLifecycleScripts(manifest, manifestDirectory);
 
   return dump(manifest, {

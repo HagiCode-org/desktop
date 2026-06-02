@@ -597,7 +597,7 @@ function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir, he
 
   const expectedDataHome = helpers.resolveDesktopRuntimeDataHome({ userDataPath: userDataDir });
   if (dataHome !== expectedDataHome) {
-    fail(`Expected runtime data home to use the migrated userData/runtimeData contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
+    fail(`Expected runtime data home to use the migrated ~/.hagicode/runtime-data contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
   }
   assertPathContainsSpaces(programHome, 'runtime program home');
   assertPathContainsSpaces(dataHome, 'runtime data home');
@@ -618,7 +618,7 @@ function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, he
   }
 
   const expectedPaths = helpers.buildNodeMajorNpmGlobalPaths({
-    userDataPath: userDataDir,
+    runtimeDataRoot: runtimeContext.dataHome,
     nodeVersion: runtimeContext.nodeVersion,
   });
   if (installRoot !== expectedPaths.npmGlobalPrefix) {

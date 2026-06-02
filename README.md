@@ -53,10 +53,12 @@ Source-mode development uses the shared Desktop runtime tree under `resources/co
 
 Those `prepare:*` commands now delegate the staging workflow to `hagiscript runtime install` with a Desktop-specific manifest, so the runtime layout now lands under `resources/components/...` while the install orchestration stays inside hagiscript.
 
-Managed npm packages are installed into Desktop-owned writable runtime data under `userData[/dev]/runtimeData/node/`:
+Managed npm packages are installed into the canonical Desktop runtime data root under `~/.hagicode/runtime-data/node/`:
 
-- Unix-like platforms: `userData/runtimeData/node/node<major>/npmGlobal/bin` and `userData/runtimeData/node/node<major>/npmGlobal/lib/node_modules`
-- Windows: `userData/runtimeData/node/node<major>/npmGlobal` and `userData/runtimeData/node/node<major>/npmGlobal/node_modules`
+- Unix-like platforms: `~/.hagicode/runtime-data/node/node<major>/npmGlobal/bin` and `~/.hagicode/runtime-data/node/node<major>/npmGlobal/lib/node_modules`
+- Windows: `~/.hagicode/runtime-data/node/node<major>/npmGlobal` and `~/.hagicode/runtime-data/node/node<major>/npmGlobal/node_modules`
+
+This is a **breaking change**. New Desktop builds do not migrate, alias, or fall back to the previous `userData/runtimeData` layout; the old and new writable runtime data trees are fully separate.
 
 ### Development runtime troubleshooting
 

@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { resolveDesktopCanonicalRuntimeDataRoot } from './runtime-data-root.js';
 import {
   getRuntimeManifestPath,
   readRuntimeManifestSection,
@@ -44,8 +45,54 @@ export interface ResolveDesktopRuntimeProgramHomeOptions {
 }
 
 export interface ResolveDesktopRuntimeDataHomeOptions {
-  userDataPath: string;
+  userDataPath?: string;
+  homeDirectory?: string;
   overrideRoot?: string | null;
+}
+
+function resolvePortableAbsolutePath(value: string): string | undefined {
+  if (path.posix.isAbsolute(value)) {
+    return path.posix.normalize(value);
+  }
+
+  if (path.win32.isAbsolute(value)) {
+    return path.win32.normalize(value);
+  }
+
+  return undefined;
+}
+
+function resolvePortablePath(pathValue: string, baseRoot?: string): string {
+  const absolutePath = resolvePortableAbsolutePath(pathValue);
+  if (absolutePath) {
+    return absolutePath;
+  }
+
+  if (!baseRoot) {
+    return path.resolve(pathValue);
+  }
+
+  if (path.posix.isAbsolute(baseRoot)) {
+    return path.posix.resolve(baseRoot, pathValue);
+  }
+
+  if (path.win32.isAbsolute(baseRoot)) {
+    return path.win32.resolve(baseRoot, pathValue);
+  }
+
+  return path.resolve(baseRoot, pathValue);
+}
+
+function getPathModuleForRoot(rootPath: string): typeof path.posix | typeof path.win32 | typeof path {
+  if (path.posix.isAbsolute(rootPath)) {
+    return path.posix;
+  }
+
+  if (path.win32.isAbsolute(rootPath)) {
+    return path.win32;
+  }
+
+  return path;
 }
 
 export function resolveDesktopRuntimeManifestCandidates(
@@ -71,7 +118,7 @@ export function resolveDesktopRuntimeProgramHome(
 ): string {
   const overrideRoot = options.overrideRoot?.trim();
   if (overrideRoot) {
-    return path.resolve(overrideRoot);
+    return resolvePortablePath(overrideRoot);
   }
 
   const manifest = readDesktopRuntimeManifest();
@@ -83,19 +130,16 @@ export function resolveDesktopRuntimeProgramHome(
     ? manifest.programHomes.packaged
     : manifest.programHomes.development;
 
-  return path.resolve(baseRoot, relativeRoot);
+  return resolvePortablePath(relativeRoot, baseRoot);
 }
 
 export function resolveDesktopRuntimeDataHome(
   options: ResolveDesktopRuntimeDataHomeOptions,
 ): string {
-  const overrideRoot = options.overrideRoot?.trim();
-  if (overrideRoot) {
-    return path.resolve(overrideRoot);
-  }
-
-  const manifest = readDesktopRuntimeManifest();
-  return path.join(options.userDataPath, manifest.dataHome.defaultRelativePath);
+  return resolveDesktopCanonicalRuntimeDataRoot({
+    overrideRoot: options.overrideRoot,
+    homeDirectory: options.homeDirectory,
+  });
 }
 
 export function resolveDesktopRuntimeComponentProgramRoot(
@@ -104,7 +148,8 @@ export function resolveDesktopRuntimeComponentProgramRoot(
   platform: string,
   manifest: DesktopRuntimeManifest = readDesktopRuntimeManifest(),
 ): string {
-  return path.join(
+  const pathModule = getPathModuleForRoot(programHome);
+  return pathModule.join(
     resolveDesktopRuntimeComponentContainerRoot(componentId, programHome, platform, manifest),
     ...resolveDesktopRuntimeComponentRuntimeSuffix(componentId),
   );
@@ -121,7 +166,10 @@ export function resolveDesktopRuntimeComponentContainerRoot(
     throw new Error(`Desktop runtime component is not configured: ${componentId}`);
   }
 
-  return path.join(programHome, component.relativePath.split('{platform}').join(platform));
+  return getPathModuleForRoot(programHome).join(
+    programHome,
+    component.relativePath.split('{platform}').join(platform),
+  );
 }
 
 function resolveDesktopRuntimeComponentRuntimeSuffix(componentId: DesktopRuntimeComponentId): string[] {

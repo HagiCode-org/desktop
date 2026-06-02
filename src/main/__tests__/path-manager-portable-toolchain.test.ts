@@ -37,11 +37,11 @@ describe('path-manager portable toolchain paths', () => {
       platform: 'win32',
     });
 
-    assert.equal(paths.toolchainRoot, path.join('C:/Program Files/HagiCode/resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
+    assert.equal(paths.toolchainRoot, path.win32.join('C:/Program Files/HagiCode/resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
     assert.equal(paths.nodeRoot, paths.toolchainRoot);
     assert.equal(paths.nodeBinRoot, paths.toolchainRoot);
-    assert.equal(paths.nodeExecutablePath, path.join(paths.toolchainRoot, 'node.exe'));
-    assert.equal(paths.npmExecutablePath, path.join(paths.toolchainRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+    assert.equal(paths.nodeExecutablePath, path.win32.join(paths.toolchainRoot, 'node.exe'));
+    assert.equal(paths.npmExecutablePath, path.win32.join(paths.toolchainRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
     assert.equal('openspecExecutablePath' in paths, false);
   });
 
@@ -83,66 +83,66 @@ describe('path-manager portable toolchain paths', () => {
 
   it('resolves Node-major npm global paths under userData on linux and macOS', () => {
     const node22 = buildNodeMajorNpmGlobalPaths({
-      userDataPath: '/home/user/.config/HagiCode Desktop',
+      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
       nodeVersion: 'v22.12.0',
       platform: 'linux',
     });
     const node24 = buildNodeMajorNpmGlobalPaths({
-      userDataPath: '/home/user/.config/HagiCode Desktop',
+      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
       nodeVersion: '24.1.0',
       platform: 'linux',
     });
     const mac = buildNodeMajorNpmGlobalPaths({
-      userDataPath: '/Users/user/Library/Application Support/HagiCode Desktop',
+      runtimeDataRoot: '/Users/user/.hagicode/runtime-data',
       nodeVersion: '22.12.0',
       platform: 'darwin',
     });
 
-    assert.equal(node22.npmGlobalPrefix, '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal');
-    assert.equal(node22.npmGlobalBinRoot, '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal/bin');
-    assert.equal(node22.npmGlobalModulesRoot, '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmGlobal/lib/node_modules');
-    assert.equal(node22.npmCacheRoot, '/home/user/.config/HagiCode Desktop/runtimeData/node/node22/npmCache');
-    assert.equal(node24.npmGlobalPrefix, '/home/user/.config/HagiCode Desktop/runtimeData/node/node24/npmGlobal');
+    assert.equal(node22.npmGlobalPrefix, '/home/user/.hagicode/runtime-data/node/node22/npmGlobal');
+    assert.equal(node22.npmGlobalBinRoot, '/home/user/.hagicode/runtime-data/node/node22/npmGlobal/bin');
+    assert.equal(node22.npmGlobalModulesRoot, '/home/user/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules');
+    assert.equal(node22.npmCacheRoot, '/home/user/.hagicode/runtime-data/node/node22/npmCache');
+    assert.equal(node24.npmGlobalPrefix, '/home/user/.hagicode/runtime-data/node/node24/npmGlobal');
     assert.notEqual(node24.npmGlobalPrefix, node22.npmGlobalPrefix);
-    assert.equal(mac.npmGlobalPrefix, '/Users/user/Library/Application Support/HagiCode Desktop/runtimeData/node/node22/npmGlobal');
+    assert.equal(mac.npmGlobalPrefix, '/Users/user/.hagicode/runtime-data/node/node22/npmGlobal');
   });
 
   it('resolves Windows npm global paths and command wrapper artifacts under prefix root', () => {
     const paths = buildNodeMajorNpmGlobalPaths({
-      userDataPath: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop',
+      runtimeDataRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data',
       nodeVersion: '22.12.0',
       platform: 'win32',
     });
 
-    assert.equal(paths.npmGlobalPrefix, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal');
+    assert.equal(paths.npmGlobalPrefix, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal');
     assert.equal(paths.npmGlobalBinRoot, paths.npmGlobalPrefix);
-    assert.equal(paths.npmGlobalModulesRoot, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\node_modules');
+    assert.equal(paths.npmGlobalModulesRoot, 'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\node_modules');
     assert.deepEqual(buildNpmGlobalCommandArtifactPaths(paths.npmGlobalBinRoot, 'hagiscript', 'win32'), [
-      'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\hagiscript',
-      'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\hagiscript.cmd',
-      'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\node\\node22\\npmGlobal\\hagiscript.ps1',
+      'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\hagiscript',
+      'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\hagiscript.cmd',
+      'C:\\Users\\Test\\.hagicode\\runtime-data\\node\\node22\\npmGlobal\\hagiscript.ps1',
     ]);
   });
 
   it('derives Desktop-managed PM2 homes under userData by PM2 major version', () => {
     const linuxPaths = buildPm2MajorHomePaths({
-      userDataPath: '/home/user/.config/HagiCode Desktop',
+      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
       pm2Version: '6.0.14',
       platform: 'linux',
     });
     const windowsPaths = buildPm2MajorHomePaths({
-      userDataPath: 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop',
+      runtimeDataRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data',
       pm2Version: '7.0.1',
       platform: 'win32',
     });
 
-    assert.equal(linuxPaths.pm2Home, '/home/user/.config/HagiCode Desktop/runtimeData/pm2/6');
-    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\AppData\\Roaming\\HagiCode Desktop\\runtimeData\\pm2\\7');
+    assert.equal(linuxPaths.pm2Home, '/home/user/.hagicode/runtime-data/pm2/6');
+    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\.hagicode\\runtime-data\\pm2\\7');
   });
 
   it('falls back to a deterministic PM2 home when the PM2 version is invalid', () => {
     const paths = buildPm2MajorHomePaths({
-      userDataPath: '/home/user/.config/HagiCode Desktop',
+      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
       pm2Version: 'not-a-version',
       pm2MajorVersion: 'bad-input',
       platform: 'linux',
@@ -150,7 +150,7 @@ describe('path-manager portable toolchain paths', () => {
 
     assert.equal(
       paths.pm2Home,
-      '/home/user/.config/HagiCode Desktop/runtimeData/pm2/7',
+      '/home/user/.hagicode/runtime-data/pm2/7',
     );
   });
 });
