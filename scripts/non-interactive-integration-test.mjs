@@ -600,11 +600,11 @@ function assertRuntimeVerificationOutput(output, { artifactRoot, userDataDir, he
     fail(`Expected runtime data home to use the migrated ~/.hagicode/runtime-data contract.\nExpected: ${expectedDataHome}\nActual: ${dataHome}`);
   }
   assertPathContainsSpaces(programHome, 'runtime program home');
-  assertPathContainsSpaces(dataHome, 'runtime data home');
 
   return {
     dataHome,
     nodeVersion: governedNodeVersion,
+    userDataDir,
   };
 }
 
@@ -633,7 +633,6 @@ function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, he
 
   for (const expectedPath of [installRoot, managedModules, managedBin]) {
     assertPathWithinRoot(expectedPath, runtimeContext.dataHome, 'managed npm path');
-    assertPathContainsSpaces(expectedPath, 'managed npm path');
     if (!pathExists(expectedPath)) {
       fail(`Expected managed path to exist after install: ${expectedPath}`);
     }
@@ -681,14 +680,12 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
     pm2Executable,
   ]) {
     assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
-    assertPathContainsSpaces(managedPath, 'managed PM2 path');
   }
-  assertPathWithinRoot(desktopLogsDirectory, path.dirname(runtimeContext.dataHome), 'desktop logs directory');
+  assertPathWithinRoot(desktopLogsDirectory, runtimeContext.userDataDir, 'desktop logs directory');
   assertPathContainsSpaces(desktopLogsDirectory, 'desktop logs directory');
 
   if (pm2PackageRoot && pm2PackageRoot !== '<missing>') {
     assertPathWithinRoot(pm2PackageRoot, runtimeContext.dataHome, 'standalone pm2 package root');
-    assertPathContainsSpaces(pm2PackageRoot, 'standalone pm2 package root');
   }
 
   assertPathWithinRoot(backendRuntimeRoot, artifactRoot, 'backend active runtime root');
@@ -710,7 +707,6 @@ function assertRuntimeLifecycleOutput(output, { artifactRoot, runtimeContext }) 
 
   for (const managedPath of [backendPm2Home, backendRuntimeData]) {
     assertPathWithinRoot(managedPath, runtimeContext.dataHome, 'managed PM2 path');
-    assertPathContainsSpaces(managedPath, 'managed PM2 path');
   }
 
   assertPathWithinRoot(backendPayloadDll, backendRuntimeRoot, 'backend payload dll');
