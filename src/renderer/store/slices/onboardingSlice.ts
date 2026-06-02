@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
+  type OnboardingShowPayload,
   OnboardingMode,
   OnboardingStep,
   type DownloadProgress,
@@ -85,6 +86,7 @@ function readDependencyOperationRejectedPayload(payload: unknown): OnboardingDep
 const initialState: OnboardingState = {
   isActive: false,
   mode: 'none',
+  runtimeProvisioned: false,
   currentStep: OnboardingStep.LanguageSelection,
   isSkipped: false,
   isCompleted: false,
@@ -185,10 +187,11 @@ export const onboardingSlice = createSlice({
     clearScriptOutput: (state) => {
       state.scriptOutputLogs = [];
     },
-    restartOnboardingFlow: (_state, action: PayloadAction<Exclude<OnboardingMode, 'none'> | undefined>) => ({
+    restartOnboardingFlow: (_state, action: PayloadAction<OnboardingShowPayload | undefined>) => ({
       ...initialState,
       isActive: true,
-      mode: action.payload ?? 'full',
+      mode: action.payload?.mode ?? 'full',
+      runtimeProvisioned: action.payload?.runtimeProvisioned ?? false,
       currentStep: OnboardingStep.LanguageSelection,
     }),
   },
@@ -198,17 +201,20 @@ export const onboardingSlice = createSlice({
         if (action.payload.shouldShow) {
           state.isActive = true;
           state.mode = action.payload.mode;
+          state.runtimeProvisioned = action.payload.runtimeProvisioned;
           state.currentStep = OnboardingStep.LanguageSelection;
           state.legalMetadataSource = action.payload.metadataSource;
           state.error = null;
         } else {
           state.isActive = false;
           state.mode = 'none';
+          state.runtimeProvisioned = false;
         }
       })
       .addCase(checkOnboardingTrigger.rejected, (state, action) => {
         state.isActive = false;
         state.mode = 'none';
+        state.runtimeProvisioned = false;
         state.error = action.payload as string || 'Failed to check onboarding trigger';
       });
 
@@ -491,6 +497,7 @@ export const {
 export const selectOnboardingState = (state: { onboarding: OnboardingState }) => state.onboarding;
 export const selectIsActive = (state: { onboarding: OnboardingState }) => state.onboarding.isActive;
 export const selectOnboardingMode = (state: { onboarding: OnboardingState }) => state.onboarding.mode;
+export const selectOnboardingRuntimeProvisioned = (state: { onboarding: OnboardingState }) => state.onboarding.runtimeProvisioned;
 export const selectCurrentStep = (state: { onboarding: OnboardingState }) => state.onboarding.currentStep;
 export const selectIsSkipped = (state: { onboarding: OnboardingState }) => state.onboarding.isSkipped;
 export const selectIsCompleted = (state: { onboarding: OnboardingState }) => state.onboarding.isCompleted;
@@ -515,7 +522,7 @@ export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingS
 export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, isDependencyOperationActive } = state.onboarding;
+  const { currentStep, downloadProgress, isDependencyOperationActive, runtimeProvisioned } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.LanguageSelection:
@@ -529,7 +536,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
     case OnboardingStep.DependencyPreparation:
       return !isDependencyOperationActive;
     case OnboardingStep.Download:
-      return downloadProgress?.progress === 100 && Boolean(downloadProgress.version);
+      return runtimeProvisioned || (downloadProgress?.progress === 100 && Boolean(downloadProgress.version));
     default:
       return false;
   }

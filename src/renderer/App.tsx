@@ -151,7 +151,7 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
     });
 
     const unsubscribeOnboardingShow = window.electronAPI.onOnboardingShow((payload) => {
-      dispatch(restartOnboardingFlow(payload?.mode));
+      dispatch(restartOnboardingFlow(payload));
     });
 
     const unsubscribeOnboardingOpenHagicode = window.electronAPI.onOnboardingOpenHagicode(async (data) => {

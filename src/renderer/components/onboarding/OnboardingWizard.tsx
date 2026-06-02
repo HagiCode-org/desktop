@@ -9,6 +9,7 @@ import {
   selectDownloadProgress,
   selectIsActive,
   selectOnboardingMode,
+  selectOnboardingRuntimeProvisioned,
   setDownloadProgress,
 } from '../../store/slices/onboardingSlice';
 import { OnboardingStep } from '../../../types/onboarding';
@@ -42,6 +43,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const dispatch = useDispatch<AppDispatch>();
   const isActive = useSelector((state: RootState) => selectIsActive(state));
   const mode = useSelector((state: RootState) => selectOnboardingMode(state));
+  const runtimeProvisioned = useSelector((state: RootState) => selectOnboardingRuntimeProvisioned(state));
   const currentStep = useSelector((state: RootState) => selectCurrentStep(state));
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
@@ -116,6 +118,23 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       dispatch(completeOnboarding(downloadProgress.version));
       dispatch(fetchActiveVersion());
       onComplete?.();
+      return;
+    }
+
+    if (currentStep === OnboardingStep.DependencyPreparation && runtimeProvisioned) {
+      if (isDependencyOperationActive) {
+        return;
+      }
+
+      void dispatch(fetchActiveVersion()).unwrap().then((activeVersion) => {
+        if (!activeVersion?.id) {
+          return;
+        }
+
+        dispatch(completeOnboarding(activeVersion.id));
+        dispatch(fetchActiveVersion());
+        onComplete?.();
+      });
       return;
     }
 
@@ -199,8 +218,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return t('actions.finish');
     }
 
+    if (currentStep === OnboardingStep.DependencyPreparation && runtimeProvisioned) {
+      return t('actions.finish');
+    }
+
     return undefined;
-  }, [currentStep, downloadCompleted, languageStepPending, selectedLanguage, t]);
+  }, [currentStep, downloadCompleted, languageStepPending, runtimeProvisioned, selectedLanguage, t]);
 
   const effectiveCanGoNext = currentStep === OnboardingStep.LanguageSelection
     ? !languageStepPending

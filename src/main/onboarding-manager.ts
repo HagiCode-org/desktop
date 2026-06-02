@@ -137,7 +137,7 @@ export class OnboardingManager {
       const legalAccepted = this.hasAcceptedCurrentLegalDocuments(legalConsent, legalMetadata.payload);
 
       if (!legalAccepted) {
-        const mode = runtimeProvisioned ? 'legal-only' : 'full';
+        const mode = this.versionManager.isPortableVersionMode() ? 'full' : runtimeProvisioned ? 'legal-only' : 'full';
         return {
           shouldShow: true,
           mode,
@@ -147,7 +147,7 @@ export class OnboardingManager {
         };
       }
 
-      if (runtimeProvisioned) {
+      if (runtimeProvisioned && storedState.isCompleted) {
         return {
           shouldShow: false,
           mode: 'none',
@@ -866,8 +866,10 @@ export class OnboardingManager {
   async completeOnboarding(versionId: string): Promise<void> {
     log.info('[OnboardingManager] Completing onboarding for version:', versionId);
 
-    // Switch to the newly installed version as active
-    await this.versionManager.switchVersion(versionId);
+    if (!this.versionManager.isPortableVersionMode()) {
+      // Switch to the newly installed version as active when version management is mutable.
+      await this.versionManager.switchVersion(versionId);
+    }
 
     // Store onboarding completion state
     this.setStoredState({
@@ -893,7 +895,11 @@ export class OnboardingManager {
   }
 
   getResetOnboardingMode(): Exclude<OnboardingMode, 'none'> {
-    return this.versionManager.isPortableVersionMode() ? 'legal-only' : 'full';
+    return 'full';
+  }
+
+  isRuntimeProvisioned(): boolean {
+    return this.versionManager.isPortableVersionMode();
   }
 
   /**

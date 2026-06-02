@@ -285,6 +285,7 @@ export function registerOnboardingHandlers(deps: {
       await state.onboardingManager.resetOnboarding();
       state.mainWindow?.webContents.send('onboarding:show', {
         mode: state.onboardingManager.getResetOnboardingMode(),
+        runtimeProvisioned: state.onboardingManager.isRuntimeProvisioned(),
       });
       return { success: true };
     } catch (error) {

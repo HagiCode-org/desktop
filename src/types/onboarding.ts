@@ -25,6 +25,7 @@ export type LegalMetadataSource = 'remote' | 'cache' | 'unavailable';
 export type OnboardingMode = 'full' | 'legal-only' | 'none';
 export interface OnboardingShowPayload {
   mode: Exclude<OnboardingMode, 'none'>;
+  runtimeProvisioned?: boolean;
 }
 
 export interface PublishedLegalDocumentLocale {
@@ -215,6 +216,7 @@ export interface ScriptOutput {
 export interface OnboardingState {
   isActive: boolean;
   mode: OnboardingMode;
+  runtimeProvisioned: boolean;
   currentStep: OnboardingStep;
   isSkipped: boolean;
   isCompleted: boolean;

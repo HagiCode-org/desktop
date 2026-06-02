@@ -20,6 +20,8 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /dispatch\(completeOnboarding\(downloadProgress\.version\)\);/);
     assert.match(source, /dispatch\(fetchActiveVersion\(\)\);/);
     assert.match(source, /onComplete\?\.\(\);/);
+    assert.match(source, /currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned/);
+    assert.match(source, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
   });
 
   it('does not open Hagicode automatically when onboarding is completed', async () => {

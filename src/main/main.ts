@@ -2076,6 +2076,7 @@ ipcMain.handle('onboarding:reset', async () => {
     await onboardingManager.resetOnboarding();
     mainWindow?.webContents.send('onboarding:show', {
       mode: onboardingManager.getResetOnboardingMode(),
+      runtimeProvisioned: onboardingManager.isRuntimeProvisioned(),
     });
     return { success: true };
   } catch (error) {

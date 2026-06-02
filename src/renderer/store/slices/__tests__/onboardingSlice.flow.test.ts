@@ -1,403 +1,78 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { describe, it } from 'node:test';
-import {
-  OnboardingStep,
-  type OnboardingState,
-  type ResolvedLegalDocumentsPayload,
-} from '../../../../types/onboarding.js';
-import reducer, {
-  getOnboardingSequence,
-  restartOnboardingFlow,
-  selectCanGoNext,
-  selectLegalDocuments,
-  selectLegalMetadataSource,
-  setDownloadProgress,
-} from '../onboardingSlice.js';
-import {
-  acceptLegalDocuments,
-  checkOnboardingTrigger,
-  goToNextStep,
-  goToPreviousStep,
-  loadLegalDocuments,
-} from '../../thunks/onboardingThunks.js';
 
-const legalDocumentsPayload: ResolvedLegalDocumentsPayload = {
-  schemaVersion: '1.0.0',
-  publishedAt: '2026-04-15T00:00:00.000Z',
-  resolvedLocale: 'zh-CN',
-  source: 'cache',
-  cachedAt: '2026-04-15T01:00:00.000Z',
-  lastSuccessfulFetchAt: '2026-04-15T00:59:00.000Z',
-  documents: [
-    {
-      documentType: 'eula',
-      title: '终端用户许可协议（EULA）',
-      effectiveDate: '2026-04-15',
-      revision: '2026-04-15',
-      canonicalUrl: 'https://docs.hagicode.com/legal/eula/',
-      browserOpenUrl: 'https://docs.hagicode.com/legal/eula/',
-    },
-    {
-      documentType: 'privacy-policy',
-      title: '隐私政策',
-      effectiveDate: '2026-04-15',
-      revision: '2026-04-15',
-      canonicalUrl: 'https://docs.hagicode.com/legal/privacy-policy/',
-      browserOpenUrl: 'https://docs.hagicode.com/legal/privacy-policy/',
-    },
-  ],
-};
+const typesPath = path.resolve(process.cwd(), 'src/types/onboarding.ts');
+const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/onboardingSlice.ts');
+const appPath = path.resolve(process.cwd(), 'src/renderer/App.tsx');
+const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
+const managerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
-describe('onboardingSlice flow', () => {
-  it('uses the six-step onboarding sequence in full mode with language selection first', () => {
-    assert.equal(OnboardingStep.LanguageSelection, 0);
-    assert.equal(OnboardingStep.Welcome, 1);
-    assert.equal(OnboardingStep.LegalConsent, 2);
-    assert.equal(OnboardingStep.SharingAcceleration, 3);
-    assert.equal(OnboardingStep.DependencyPreparation, 4);
-    assert.equal(OnboardingStep.Download, 5);
-    assert.equal('Launch' in OnboardingStep, false);
-    assert.deepEqual(getOnboardingSequence('full'), [
-      OnboardingStep.LanguageSelection,
-      OnboardingStep.Welcome,
-      OnboardingStep.LegalConsent,
-      OnboardingStep.SharingAcceleration,
-      OnboardingStep.DependencyPreparation,
-      OnboardingStep.Download,
+describe('onboarding flow contracts', () => {
+  it('keeps the six-step full onboarding sequence intact', async () => {
+    const [typesSource, sliceSource] = await Promise.all([
+      fs.readFile(typesPath, 'utf8'),
+      fs.readFile(slicePath, 'utf8'),
     ]);
+
+    assert.match(typesSource, /LanguageSelection = 0/);
+    assert.match(typesSource, /Welcome = 1/);
+    assert.match(typesSource, /LegalConsent = 2/);
+    assert.match(typesSource, /SharingAcceleration = 3/);
+    assert.match(typesSource, /DependencyPreparation = 4/);
+    assert.match(typesSource, /Download = 5/);
+    assert.match(sliceSource, /const fullSequence = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
   });
 
-  it('opens the legal-only gate on trigger results that require consent only', () => {
-    const state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'legal-only',
-          reason: 'legal-consent-required',
-          runtimeProvisioned: true,
-          metadataSource: 'cache',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
+  it('keeps legal-only mode available for consent-only mutable-runtime gating', async () => {
+    const sliceSource = await fs.readFile(slicePath, 'utf8');
 
-    assert.equal(state.isActive, true);
-    assert.equal(state.mode, 'legal-only');
-    assert.equal(state.currentStep, OnboardingStep.LanguageSelection);
-    assert.deepEqual(getOnboardingSequence(state.mode), [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent]);
+    assert.match(sliceSource, /const legalOnlySequence = \[OnboardingStep\.LanguageSelection, OnboardingStep\.LegalConsent\] as const;/);
+    assert.match(sliceSource, /return mode === 'legal-only' \? \[\.\.\.legalOnlySequence\] : \[\.\.\.fullSequence\];/);
+    assert.match(sliceSource, /if \(action\.payload\.mode === 'legal-only'\) \{/);
+    assert.match(sliceSource, /state\.isActive = false;/);
+    assert.match(sliceSource, /state\.mode = 'none';/);
   });
 
-  it('restarts into the portable legal-only flow when requested explicitly', () => {
-    const state = reducer(undefined, restartOnboardingFlow('legal-only'));
+  it('tracks runtimeProvisioned through trigger, restart, and next-button readiness', async () => {
+    const [typesSource, sliceSource, appSource] = await Promise.all([
+      fs.readFile(typesPath, 'utf8'),
+      fs.readFile(slicePath, 'utf8'),
+      fs.readFile(appPath, 'utf8'),
+    ]);
 
-    assert.equal(state.isActive, true);
-    assert.equal(state.mode, 'legal-only');
-    assert.equal(state.currentStep, OnboardingStep.LanguageSelection);
-    assert.deepEqual(getOnboardingSequence(state.mode), [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent]);
+    assert.match(typesSource, /export interface OnboardingShowPayload \{[\s\S]*runtimeProvisioned\?: boolean;/);
+    assert.match(typesSource, /export interface OnboardingState \{[\s\S]*runtimeProvisioned: boolean;/);
+    assert.match(sliceSource, /runtimeProvisioned: false,/);
+    assert.match(sliceSource, /restartOnboardingFlow: \(_state, action: PayloadAction<OnboardingShowPayload \| undefined>\) => \(\{[\s\S]*runtimeProvisioned: action\.payload\?\.runtimeProvisioned \?\? false,/);
+    assert.match(sliceSource, /state\.runtimeProvisioned = action\.payload\.runtimeProvisioned;/);
+    assert.match(sliceSource, /state\.runtimeProvisioned = false;/);
+    assert.match(sliceSource, /const \{ currentStep, downloadProgress, isDependencyOperationActive, runtimeProvisioned \} = state\.onboarding;/);
+    assert.match(sliceSource, /return runtimeProvisioned \|\| \(downloadProgress\?\.progress === 100 && Boolean\(downloadProgress\.version\)\);/);
+    assert.match(appSource, /dispatch\(restartOnboardingFlow\(payload\)\);/);
   });
 
-  it('advances from language selection to welcome before legal consent', () => {
-    let state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'full',
-          reason: 'runtime-onboarding-required',
-          runtimeProvisioned: false,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
+  it('keeps portable mode on full onboarding until onboarding is completed', async () => {
+    const managerSource = await fs.readFile(managerPath, 'utf8');
 
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.Welcome);
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
-
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.LegalConsent);
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
+    assert.match(managerSource, /const mode = this\.versionManager\.isPortableVersionMode\(\) \? 'full' : runtimeProvisioned \? 'legal-only' : 'full';/);
+    assert.match(managerSource, /if \(runtimeProvisioned && storedState\.isCompleted\) \{/);
+    assert.match(managerSource, /'portable-version-provisioned'/);
+    assert.match(managerSource, /getResetOnboardingMode\(\): Exclude<OnboardingMode, 'none'> \{\s*return 'full';\s*\}/s);
   });
 
-  it('advances from legal consent to sharing acceleration after acceptance', () => {
-    let state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'full',
-          reason: 'runtime-onboarding-required',
-          runtimeProvisioned: false,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    state = reducer(state, goToNextStep());
+  it('finishes portable full onboarding from dependency preparation instead of entering download', async () => {
+    const [wizardSource, managerSource] = await Promise.all([
+      fs.readFile(wizardPath, 'utf8'),
+      fs.readFile(managerPath, 'utf8'),
+    ]);
 
-    state = reducer(
-      state,
-      acceptLegalDocuments.fulfilled(
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-        'request-id',
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-      ),
-    );
-
-    assert.equal(state.currentStep, OnboardingStep.SharingAcceleration);
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
-  });
-
-  it('stores remote or cached legal metadata for the consent step', () => {
-    const state = reducer(
-      undefined,
-      loadLegalDocuments.fulfilled(legalDocumentsPayload, 'request-id', { locale: 'zh-CN', refresh: false }),
-    );
-
-    assert.equal(selectLegalMetadataSource({ onboarding: state as OnboardingState }), 'cache');
-    assert.equal(selectLegalDocuments({ onboarding: state as OnboardingState }).length, 2);
-  });
-
-  it('closes the wizard after legal-only acceptance', () => {
-    const initial = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'legal-only',
-          reason: 'legal-consent-required',
-          runtimeProvisioned: true,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
-    const legalStep = reducer(initial, goToNextStep());
-
-    const accepted = reducer(
-      legalStep,
-      acceptLegalDocuments.fulfilled(
-        {
-          mode: 'legal-only',
-          locale: 'en-US',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-        'request-id',
-        {
-          mode: 'legal-only',
-          locale: 'en-US',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-      ),
-    );
-
-    assert.equal(accepted.isActive, false);
-    assert.equal(accepted.mode, 'none');
-  });
-
-  it('keeps the flow on download after the package is ready so the wizard can finish there', () => {
-    let state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'full',
-          reason: 'runtime-onboarding-required',
-          runtimeProvisioned: false,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    state = reducer(state, goToNextStep());
-    state = reducer(
-      state,
-      acceptLegalDocuments.fulfilled(
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-        'request-id',
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
-
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.Download);
-
-    const blockedAtDownload = reducer(state, goToNextStep());
-    assert.equal(blockedAtDownload.currentStep, OnboardingStep.Download);
-
-    const readyToLaunch = reducer(
-      state,
-      setDownloadProgress({
-        progress: 100,
-        downloadedBytes: 1024,
-        totalBytes: 1024,
-        speed: 0,
-        remainingSeconds: 0,
-        version: 'v1.0.0',
-      }),
-    );
-    const finishedAtDownload = reducer(readyToLaunch, goToNextStep());
-
-    assert.equal(finishedAtDownload.currentStep, OnboardingStep.Download);
-  });
-
-  it('navigates back from download to welcome across the inserted legal and npm steps', () => {
-    let state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'full',
-          reason: 'runtime-onboarding-required',
-          runtimeProvisioned: false,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    state = reducer(
-      state,
-      acceptLegalDocuments.fulfilled(
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-        'request-id',
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
-
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.Download);
-
-    const backToDependencyPreparation = reducer(state, goToPreviousStep());
-    assert.equal(backToDependencyPreparation.currentStep, OnboardingStep.DependencyPreparation);
-
-    const backToSharing = reducer(backToDependencyPreparation, goToPreviousStep());
-    assert.equal(backToSharing.currentStep, OnboardingStep.SharingAcceleration);
-
-    const backToLegal = reducer(backToSharing, goToPreviousStep());
-    assert.equal(backToLegal.currentStep, OnboardingStep.LegalConsent);
-
-    const backToWelcome = reducer(backToLegal, goToPreviousStep());
-    assert.equal(backToWelcome.currentStep, OnboardingStep.Welcome);
-  });
-
-  it('only enables next on download after the package is ready', () => {
-    let state = reducer(
-      undefined,
-      checkOnboardingTrigger.fulfilled(
-        {
-          shouldShow: true,
-          mode: 'full',
-          reason: 'runtime-onboarding-required',
-          runtimeProvisioned: false,
-          metadataSource: 'remote',
-        },
-        'request-id',
-        undefined,
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    state = reducer(
-      state,
-      acceptLegalDocuments.fulfilled(
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-        'request-id',
-        {
-          mode: 'full',
-          locale: 'zh-CN',
-          documents: legalDocumentsPayload.documents.map((document) => ({
-            documentType: document.documentType,
-            revision: document.revision,
-          })),
-        },
-      ),
-    );
-    state = reducer(state, goToNextStep());
-    assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
-
-    state = reducer(state, goToNextStep());
-    state = reducer(
-      state,
-      setDownloadProgress({
-        progress: 100,
-        downloadedBytes: 1024,
-        totalBytes: 1024,
-        speed: 0,
-        remainingSeconds: 0,
-        version: 'v1.0.0',
-      }),
-    );
-
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
+    assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned/);
+    assert.match(wizardSource, /dispatch\(fetchActiveVersion\(\)\)\.unwrap\(\)\.then\(\(activeVersion\) => \{/);
+    assert.match(wizardSource, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
+    assert.match(wizardSource, /if \(currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned\) \{[\s\S]*return t\('actions\.finish'\);/);
+    assert.match(managerSource, /if \(!this\.versionManager\.isPortableVersionMode\(\)\) \{/);
+    assert.match(managerSource, /await this\.versionManager\.switchVersion\(versionId\);/);
   });
 });

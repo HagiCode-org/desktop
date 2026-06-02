@@ -18,11 +18,11 @@ describe('onboarding-manager legal consent gating', () => {
     assert.match(source, /DEFAULT_LEGAL_METADATA_URL = 'https:\/\/index\.hagicode\.com\/legal-documents\.json'/);
   });
 
-  it('distinguishes full onboarding from legal-only compliance gating', async () => {
+  it('keeps portable mode on the full onboarding flow while retaining legal-only gating for already-installed mutable runtimes', async () => {
     const source = await readSource();
 
     assert.match(source, /const runtimeProvisioned = this\.versionManager\.isPortableVersionMode\(\) \|\| installedVersions\.length > 0/);
-    assert.match(source, /const mode = runtimeProvisioned \? 'legal-only' : 'full'/);
+    assert.match(source, /const mode = this\.versionManager\.isPortableVersionMode\(\) \? 'full' : runtimeProvisioned \? 'legal-only' : 'full'/);
     assert.match(source, /reason: legalMetadata\.payload \? 'legal-consent-required' : 'legal-metadata-unavailable'/);
     assert.match(source, /mode: 'full'/);
   });
@@ -46,11 +46,21 @@ describe('onboarding-manager legal consent gating', () => {
     assert.match(source, /source: 'unavailable'/);
   });
 
-  it('treats portable version mode as already provisioned after consent succeeds', async () => {
+  it('treats portable version mode as already provisioned only after onboarding is completed', async () => {
     const source = await readSource();
 
+    assert.match(source, /if \(runtimeProvisioned && storedState\.isCompleted\)/);
     assert.match(source, /reason: this\.versionManager\.isPortableVersionMode\(\)/);
     assert.match(source, /'portable-version-provisioned'/);
+  });
+
+  it('skips mutable version switching when onboarding completes in portable mode and resets back into full onboarding', async () => {
+    const source = await readSource();
+
+    assert.match(source, /if \(!this\.versionManager\.isPortableVersionMode\(\)\) \{/);
+    assert.match(source, /await this\.versionManager\.switchVersion\(versionId\);/);
+    assert.match(source, /getResetOnboardingMode\(\): Exclude<OnboardingMode, 'none'> \{\s*return 'full';\s*\}/s);
+    assert.match(source, /isRuntimeProvisioned\(\): boolean \{\s*return this\.versionManager\.isPortableVersionMode\(\);\s*\}/s);
   });
 
   it('returns a manual-action-required handoff instead of auto-installing dependencies during onboarding', async () => {
