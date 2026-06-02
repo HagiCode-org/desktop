@@ -8,16 +8,55 @@ import type {
   DependencyReadinessSummary,
 } from '../types/dependency-management.js';
 import { isVendoredRuntimeId } from './vendored-runtimes.js';
+import {
+  runtimeManagedPackageManifestPackages,
+  type RuntimeManagedPackageManifestEntry,
+} from './generated/managed-package-manifest.js';
 
-export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
+type ManagedNpmPackageStaticDefinition = Omit<ManagedNpmPackageDefinition, 'installSpec' | 'requiredVersionRange'> & {
+  installSpec: string;
+  requiredVersionRange?: string;
+};
+
+function buildInstallSpecFromManifest(
+  packageName: string,
+  override: RuntimeManagedPackageManifestEntry,
+): string {
+  const target = override.target?.trim();
+  if (!target) {
+    return packageName;
+  }
+
+  if (target.startsWith('@') || /[@/:]/.test(target)) {
+    return target;
+  }
+
+  return `${packageName}@${target}`;
+}
+
+function applyRuntimeManagedPackageOverride(
+  definition: ManagedNpmPackageStaticDefinition,
+): ManagedNpmPackageDefinition {
+  const override = runtimeManagedPackageManifestPackages[definition.packageName];
+  if (!override) {
+    return definition;
+  }
+
+  return {
+    ...definition,
+    installSpec: buildInstallSpecFromManifest(definition.packageName, override),
+    requiredVersionRange: override.version,
+  };
+}
+
+const staticManagedNpmPackages = [
   {
     id: 'openspec',
     packageName: '@fission-ai/openspec',
     displayName: 'OpenSpec',
     descriptionKey: 'dependencyManagement.packages.openspec.description',
     binName: 'openspec',
-    installSpec: '@fission-ai/openspec@1.3.1',
-    requiredVersionRange: '>=1.3.1',
+    installSpec: '@fission-ai/openspec',
     category: 'workflow',
     installMode: 'sdk-sync',
     required: true,
@@ -28,8 +67,7 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'Skills',
     descriptionKey: 'dependencyManagement.packages.skills.description',
     binName: 'skills',
-    installSpec: 'skills@1.5.1',
-    requiredVersionRange: '>=1.5.1',
+    installSpec: 'skills',
     category: 'workflow',
     installMode: 'sdk-sync',
     required: true,
@@ -134,12 +172,14 @@ export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = [
     displayName: 'Impeccable',
     descriptionKey: 'dependencyManagement.packages.impeccable.description',
     binName: 'impeccable',
-    installSpec: 'impeccable@2.1.9',
-    requiredVersionRange: '>=2.1.9',
+    installSpec: 'impeccable',
     category: 'developer-tool',
     installMode: 'sdk-sync',
   },
-] as const;
+] as const satisfies readonly ManagedNpmPackageStaticDefinition[];
+
+export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = staticManagedNpmPackages
+  .map(applyRuntimeManagedPackageOverride);
 
 export const managedAgentCliPackages = managedNpmPackages.filter(
   (definition) => definition.category === 'agent-cli',

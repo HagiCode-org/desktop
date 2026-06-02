@@ -1,5 +1,6 @@
 import type { NpmSyncManifest } from '@hagicode/hagiscript-sdk';
 import type { ManagedNpmPackageDefinition } from '../types/dependency-management.js';
+import { getManagedPackageRequiredVersionRange } from '../shared/npm-managed-packages.js';
 
 function looksLikeSemverRange(selector: string): boolean {
   return /^[vV0-9*<>=~^xX|.\-\s]+$/.test(selector.trim());
@@ -26,7 +27,9 @@ export function buildDesktopNpmSyncManifest(
 ): NpmSyncManifest {
   const packages = Object.fromEntries(definitions.map((definition) => {
     const target = getManagedPackageInstallTarget(definition);
-    const version = looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*';
+    const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
+    const version = requiredVersionRange
+      ?? (looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*');
     return [definition.packageName, { version, target }];
   }));
 
