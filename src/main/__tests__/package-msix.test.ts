@@ -79,6 +79,39 @@ describe('msix packaging helpers', () => {
     assert.deepEqual(config.msix.capabilities, ['runFullTrust', 'unvirtualizedResources', 'internetClient']);
   });
 
+  it('always includes runFullTrust in the effective desktop Store config', () => {
+    const config = validateStorePackageConfig({
+      schemaVersion: 1,
+      sourceForgeConfigPath: 'forge.config.js',
+      inputDirectory: 'pkg/win-unpacked',
+      outputDirectory: 'pkg',
+      stageDirectory: 'build/msix-stage',
+      assetsDirectory: 'resources/msix',
+      metadataOutputPath: 'pkg/store-build-metadata.json',
+      runtimeInjectionPath: 'resources/portable-fixed/current',
+      packageIdentity: {
+        displayName: 'Hagicode',
+        publisherDisplayName: 'newbe36524',
+        publisher: 'CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F',
+        identityName: 'newbe36524.Hagicode',
+        backgroundColor: 'transparent',
+        languages: ['en-US', 'zh-CN'],
+        addAutoLaunchExtension: false,
+      },
+      msix: {
+        minVersion: '10.0.17763.0',
+        maxVersionTested: '10.0.19045.0',
+        capabilities: ['internetClient', 'privateNetworkClientServer'],
+      },
+    });
+
+    assert.deepEqual(config.msix.capabilities, [
+      'runFullTrust',
+      'internetClient',
+      'privateNetworkClientServer',
+    ]);
+  });
+
   it('renders the Store overlay from the desktop-owned Store config', () => {
     const overlay = JSON.parse(renderStoreForgeConfigOverlay({
       sourceConfigPath: 'forge.config.js',

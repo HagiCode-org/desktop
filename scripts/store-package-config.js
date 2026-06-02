@@ -61,6 +61,10 @@ function normalizeStringArray(value, label) {
   return requireNonEmptyArray(value, label).map((entry, index) => requireNonEmptyString(entry, `${label}[${index}]`));
 }
 
+function normalizeMsixCapabilities(value, label) {
+  return [...new Set(['runFullTrust', ...normalizeStringArray(value, label)])];
+}
+
 export function toWindowsPackageVersion(version) {
   const normalized = String(version || '').trim();
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(normalized);
@@ -118,7 +122,7 @@ export function validateStorePackageConfig(config) {
         msix.maxVersionTested,
         'storePackageConfig.msix.maxVersionTested'
       ),
-      capabilities: normalizeStringArray(msix.capabilities, 'storePackageConfig.msix.capabilities'),
+      capabilities: normalizeMsixCapabilities(msix.capabilities, 'storePackageConfig.msix.capabilities'),
     },
   };
 }
