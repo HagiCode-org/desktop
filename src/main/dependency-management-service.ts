@@ -131,6 +131,15 @@ const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
 
+const WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES = new Set([
+  '@fission-ai/openspec',
+]);
+
+function matchesManagedPackageSelector(value: string, packageName: string): boolean {
+  const normalizedValue = value.trim();
+  return normalizedValue === packageName || normalizedValue.startsWith(`${packageName}@`);
+}
+
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
 }
@@ -901,19 +910,50 @@ export class DependencyManagementService {
       env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
       platform: this.platform,
       runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const result = await this.runCommand(command, args, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
+        const rewrittenArgs = this.rewriteManagedNpmArgsForWindowsStore(args);
+        const result = await this.runCommand(command, rewrittenArgs, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
           shell: launchOptions?.shell,
           timeoutMs,
         });
 
         return {
           command,
-          args,
+          args: rewrittenArgs,
           stdout: result.stdout,
           stderr: result.stderr,
         };
       },
     };
+  }
+
+  private rewriteManagedNpmArgsForWindowsStore(args: readonly string[]): string[] {
+    if (!(this.platform === 'win32' && process.windowsStore)) {
+      return [...args];
+    }
+
+    const installIndex = args.findIndex((value) => value === 'install');
+    if (installIndex === -1) {
+      return [...args];
+    }
+
+    const selector = args.find((value) => [...WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES].some((packageName) =>
+      matchesManagedPackageSelector(value, packageName)));
+    if (!selector) {
+      return [...args];
+    }
+
+    if (args.includes('--ignore-scripts')) {
+      return [...args];
+    }
+
+    log.info('[DependencyManagementService] Applying Windows Store npm install override', {
+      selector,
+      override: '--ignore-scripts',
+    });
+
+    const rewrittenArgs = [...args];
+    rewrittenArgs.splice(installIndex + 1, 0, '--ignore-scripts');
+    return rewrittenArgs;
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
@@ -1510,6 +1550,13 @@ export class DependencyManagementService {
     let errorMessage: string | undefined;
     let manifestDirectory: string | null = null;
     try {
+      log.info('[DependencyManagementService] Starting managed package sync', {
+        packageIds,
+        packageNames: definitions.map((definition) => definition.packageName),
+        windowsStore: this.platform === 'win32' && process.windowsStore,
+        registryMirror: mirrorSettings.registryUrl ?? null,
+      });
+
       const manifest = await this.writeSdkSyncManifest(definitions, mirrorSettings.registryUrl);
       manifestDirectory = manifest.manifestDirectory;
       const manifestValue = this.buildSdkSyncManifest(definitions, mirrorSettings.registryUrl);
@@ -1538,6 +1585,10 @@ export class DependencyManagementService {
       success = true;
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
+      log.warn('[DependencyManagementService] Managed package sync failed', {
+        packageIds,
+        error: errorMessage,
+      });
     } finally {
       if (manifestDirectory) {
         await fs.rm(manifestDirectory, { recursive: true, force: true }).catch(() => undefined);
@@ -1615,6 +1666,12 @@ export class DependencyManagementService {
     } = {},
   ): Promise<CommandResult> {
     const launch = resolveCommandLaunch(command, this.platform);
+    log.info('[DependencyManagementService] Launching managed npm command', {
+      command,
+      args,
+      shell: options.shell ?? launch.shell,
+      windowsStore: this.platform === 'win32' && process.windowsStore,
+    });
     return executeCliStreaming({
       command: launch.command,
       args,
@@ -1629,6 +1686,16 @@ export class DependencyManagementService {
     }).then((result) => {
       if (result.error?.kind === 'spawn') {
         log.warn('[DependencyManagementService] npm command failed to launch:', result.error.message);
+      }
+
+      if (result.exitCode !== 0) {
+        log.warn('[DependencyManagementService] Managed npm command exited with failure', {
+          command,
+          args,
+          exitCode: result.exitCode,
+          stderrPreview: firstMeaningfulLine(result.stderr),
+          stdoutPreview: firstMeaningfulLine(result.stdout),
+        });
       }
 
       return {

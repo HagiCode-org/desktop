@@ -1,5 +1,6 @@
 import { electron } from '../../../electron-api.js';
 import type { BrowserWindow } from 'electron';
+import log from 'electron-log';
 import type DependencyManagementService from '../../dependency-management-service.js';
 import {
   type DependencyManagementBatchSyncRequest,
@@ -123,6 +124,10 @@ export function registerDependencyManagementHandlers(deps: {
     if (!state.dependencyManagementService) {
       throw new Error('DependencyManagementService is not initialized');
     }
+
+    log.info('[DependencyManagementHandlers] syncPackages requested', {
+      packageIds: request.packageIds,
+    });
 
     return state.dependencyManagementService.syncPackages(request);
   };

@@ -82,6 +82,7 @@ const staticManagedNpmPackages = [
     requiredVersionRange: '>=7.0.1',
     category: 'workflow',
     installMode: 'sdk-sync',
+    required: true,
   },
   {
     id: 'claude-code',

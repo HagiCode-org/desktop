@@ -62,9 +62,32 @@ describe('dependency management service contract', () => {
     assert.match(source, /id: 'openspec'/);
     assert.match(source, /id: 'skills'/);
     assert.match(source, /id: 'pm2'/);
+    assert.match(source, /id: 'pm2'[\s\S]*required: true,/);
     assert.match(source, /installMode: 'sdk-sync'/);
     assert.match(source, /runtimeManagedPackageManifestPackages/);
     assert.match(source, /applyRuntimeManagedPackageOverride/);
+  });
+
+  it('adds Windows Store openspec install overrides and sync diagnostics in the main service', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES/);
+    assert.match(source, /@fission-ai\/openspec/);
+    assert.match(source, /--ignore-scripts/);
+    assert.match(source, /Applying Windows Store npm install override/);
+    assert.match(source, /Starting managed package sync/);
+    assert.match(source, /Launching managed npm command/);
+    assert.match(source, /Managed npm command exited with failure/);
+    assert.match(source, /matchesManagedPackageSelector/);
+  });
+
+  it('logs syncPackages IPC entrypoints for dependency management requests', async () => {
+    const handlersSource = await fs.readFile(
+      path.resolve(process.cwd(), 'src/main/ipc/handlers/dependencyManagementHandlers.ts'),
+      'utf8',
+    );
+
+    assert.match(handlersSource, /\[DependencyManagementHandlers\] syncPackages requested/);
   });
 });
 
