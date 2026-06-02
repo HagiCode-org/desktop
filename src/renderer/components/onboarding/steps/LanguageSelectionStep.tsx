@@ -23,7 +23,7 @@ function LanguageSelectionStep({
   const { t } = useTranslation('onboarding');
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="space-y-3 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Languages className="h-7 w-7" />
@@ -36,7 +36,7 @@ function LanguageSelectionStep({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {DESKTOP_LANGUAGES.map((language) => {
           const isSelected = language.code === selectedLanguage;
           const isRecommended = language.code === DEFAULT_DESKTOP_LANGUAGE;
@@ -49,7 +49,7 @@ function LanguageSelectionStep({
               disabled={isPending}
               onClick={() => onSelect(language.code)}
               className={cn(
-                'group flex min-h-44 flex-col rounded-2xl border bg-card p-5 text-left transition-all',
+                'group flex min-h-36 flex-col rounded-2xl border bg-card p-4 text-left transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 isPending && 'cursor-not-allowed opacity-70',
                 isSelected
@@ -57,29 +57,29 @@ function LanguageSelectionStep({
                   : 'border-border hover:border-primary/40 hover:bg-muted/20',
               )}
             >
-              <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="text-lg font-semibold">{language.nativeName}</div>
-                  <div className="text-sm text-muted-foreground">{language.name}</div>
+                  <div className="text-base font-semibold leading-tight">{language.nativeName}</div>
+                  <div className="text-xs text-muted-foreground sm:text-sm">{language.name}</div>
                 </div>
-                <div className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                <div className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                   {language.shortLabel}
                 </div>
               </div>
 
-              <div className="mb-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 px-2.5 py-1 text-xs text-muted-foreground">
-                  <Globe2 className="h-3.5 w-3.5" />
+              <div className="mb-3 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 px-2 py-0.5 text-[11px] text-muted-foreground sm:text-xs">
+                  <Globe2 className="h-3 w-3" />
                   {language.code}
                 </span>
                 {isRecommended && (
-                  <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                  <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary sm:text-xs">
                     {t('languageSelection.recommended')}
                   </span>
                 )}
               </div>
 
-              <div className="mt-auto flex items-center justify-between text-sm">
+              <div className="mt-auto flex items-center justify-between text-xs sm:text-sm">
                 <span className={cn('text-muted-foreground', isSelected && 'text-primary')}>
                   {isSelected ? t('languageSelection.selected') : t('languageSelection.choose')}
                 </span>

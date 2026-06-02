@@ -23,13 +23,13 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(sliceSource, /OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download/);
     assert.match(sliceSource, /selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds/);
     assert.match(sliceSource, /state\.currentStep = OnboardingStep\.DependencyPreparation;/);
-    assert.match(sliceSource, /if \(state\.isDependencyPreparationComplete\) \{\s*state\.currentStep = OnboardingStep\.Download;/);
+    assert.match(sliceSource, /case OnboardingStep\.DependencyPreparation:\s*state\.currentStep = OnboardingStep\.Download;/);
     assert.match(wizardSource, /case OnboardingStep\.DependencyPreparation:[\s\S]*<DependencyPreparationStep \/>/);
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
     assert.match(wizardSource, /canGoNext=\{effectiveCanGoNext\}/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
-    assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*!isDependencyPreparationComplete[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
+    assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
 
   it('loads snapshots, subscribes to progress, batch-syncs selected packages, and recomputes shared readiness', async () => {
@@ -83,6 +83,8 @@ describe('onboarding dependency preparation integration', () => {
     assert.equal(en.dependencyPreparation.environment.faqUrl, 'https://docs.hagicode.com/en/faq/desktop-node-environment/');
     assert.equal(zh.dependencyPreparation.environment.faqLinkLabel, '查看 Node 环境 FAQ');
     assert.equal(en.dependencyPreparation.environment.faqLinkLabel, 'View Node environment FAQ');
+    assert.equal(typeof zh.dependencyPreparation.skip.description, 'string');
+    assert.match(en.dependencyPreparation.skip.title, /skip/i);
     assert.equal(typeof zh.dependencyPreparation.blocking['agent-cli-not-selected'].description, 'string');
     assert.equal(typeof en.dependencyPreparation.complete.description, 'string');
   });

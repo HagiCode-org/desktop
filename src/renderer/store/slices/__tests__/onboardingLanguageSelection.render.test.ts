@@ -36,6 +36,9 @@ describe('onboarding language selection renderer wiring', () => {
     assert.match(stepSource, /DEFAULT_DESKTOP_LANGUAGE/);
     assert.match(stepSource, /language\.nativeName/);
     assert.match(stepSource, /language\.code/);
+    assert.match(stepSource, /grid gap-3 md:grid-cols-2 xl:grid-cols-3/);
+    assert.match(stepSource, /group flex min-h-36 flex-col rounded-2xl border bg-card p-4 text-left transition-all/);
+    assert.match(stepSource, /text-base font-semibold leading-tight/);
     assert.match(desktopLanguagesSource, /export const DESKTOP_LANGUAGES/);
   });
 
@@ -49,4 +52,3 @@ describe('onboarding language selection renderer wiring', () => {
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
   });
 });
-

@@ -392,9 +392,7 @@ export const onboardingSlice = createSlice({
             state.currentStep = OnboardingStep.DependencyPreparation;
             break;
           case OnboardingStep.DependencyPreparation:
-            if (state.isDependencyPreparationComplete) {
-              state.currentStep = OnboardingStep.Download;
-            }
+            state.currentStep = OnboardingStep.Download;
             break;
           case OnboardingStep.Download:
             break;
@@ -517,7 +515,7 @@ export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingS
 export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, isDependencyPreparationComplete } = state.onboarding;
+  const { currentStep, downloadProgress, isDependencyOperationActive } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.LanguageSelection:
@@ -529,7 +527,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
     case OnboardingStep.SharingAcceleration:
       return true;
     case OnboardingStep.DependencyPreparation:
-      return isDependencyPreparationComplete;
+      return !isDependencyOperationActive;
     case OnboardingStep.Download:
       return downloadProgress?.progress === 100 && Boolean(downloadProgress.version);
     default:

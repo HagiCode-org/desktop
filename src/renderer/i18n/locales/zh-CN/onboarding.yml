@@ -231,8 +231,11 @@ sharingAcceleration:
     portable: portable mode 下此能力强制关闭，不会隐式做种
 dependencyPreparation:
   title: 准备依赖项
-  description: 安装 HagiCode Desktop 必需的命令行依赖项，并选择至少一个用于编码会话的 Agent CLI。
+  description: 你可以在这里安装 HagiCode Desktop 托管的命令行依赖项，并为后续编码会话选择 Agent CLI；如果暂时不安装，也可以直接点击下一步。
   loading: 正在检查 Desktop 托管的依赖项...
+  skip:
+    title: 可跳过此步骤
+    description: 不安装依赖项也可以继续下载。安装按钮会把所选依赖项装到 Desktop 托管的 Node/npm 环境中，后续也能在应用里再执行安装。
   environment:
     title: Desktop 托管的 Node/npm 环境
     description: Desktop 会在自己的 Node/npm 环境中安装并检测托管 CLI 包。路径、包管理和排障细节请阅读 FAQ。
@@ -240,13 +243,13 @@ dependencyPreparation:
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
   required:
     title: 必需依赖项
-    description: 这些依赖项必须安装完成后才能继续引导。
+    description: 建议在开始使用前安装这些依赖项；如果暂时跳过，后续仍可在 Desktop 中补装。
   optional:
     title: 可选依赖项
     description: 可选依赖项不会阻塞引导。
   agentCli:
     title: Agent CLI 选择
-    description: 请选择至少一个 Agent CLI。被选中的 CLI 必须安装在 Desktop 托管 npm 环境中。
+    description: 可先选择常用 Agent CLI 并立即安装；如果暂时不装，也可以先继续引导，后续再回到 Desktop 补装。
   blocking:
     environment-unavailable:
       title: Node/npm 环境不可用

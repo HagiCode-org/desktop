@@ -5,8 +5,8 @@ import { describe, it } from 'node:test';
 
 const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
 const welcomePath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/WelcomeIntro.tsx');
-const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/onboarding.json');
-const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/onboarding.json');
+const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/onboarding.json');
+const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/onboarding.json');
 const onboardingManagerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
 describe('onboarding wizard manual handoff integration', () => {
@@ -33,6 +33,15 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(completeOnboardingBody, /version:activeVersionChanged/);
     assert.doesNotMatch(completeOnboardingBody, /getStatus\(/);
     assert.doesNotMatch(completeOnboardingBody, /onboarding:open-hagicode/);
+  });
+
+  it('keeps the onboarding shell within the viewport and lets the step body scroll', async () => {
+    const source = await fs.readFile(wizardPath, 'utf8');
+
+    assert.match(source, /fixed inset-0 z-50 overflow-hidden bg-background\/95 px-4 py-4 sm:px-6 sm:py-6/);
+    assert.match(source, /mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-4/);
+    assert.match(source, /flex flex-shrink-0 flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm/);
+    assert.match(source, /<div className="flex-1 overflow-y-auto p-6 sm:p-8">\{renderStep\(\)\}<\/div>/);
   });
 
   it('updates welcome and download copy to describe a six-step flow with manual startup after returning home', async () => {

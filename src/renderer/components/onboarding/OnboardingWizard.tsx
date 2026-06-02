@@ -7,7 +7,6 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
-  selectIsDependencyPreparationComplete,
   selectIsActive,
   selectOnboardingMode,
   setDownloadProgress,
@@ -47,8 +46,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
-  const isDependencyPreparationComplete = useSelector((state: RootState) => selectIsDependencyPreparationComplete(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
+  const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
   const [sharingStepReady, setSharingStepReady] = useState(false);
@@ -121,7 +120,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
 
     if (currentStep === OnboardingStep.DependencyPreparation) {
-      if (!isDependencyPreparationComplete) {
+      if (isDependencyOperationActive) {
         return;
       }
 
@@ -208,7 +207,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     : currentStep === OnboardingStep.SharingAcceleration
       ? sharingStepReady
       : currentStep === OnboardingStep.DependencyPreparation
-        ? isDependencyPreparationComplete
+        ? !isDependencyOperationActive
         : canGoNext;
 
   if (!isActive) {
@@ -216,9 +215,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4">
-        <div className="flex flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm md:flex-row md:items-start md:justify-between">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-background/95 px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-4">
+        <div className="flex flex-shrink-0 flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <h1 className="text-sm font-semibold tracking-[0.08em] text-muted-foreground">
               {t('title')}

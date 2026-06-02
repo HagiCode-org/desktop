@@ -263,18 +263,9 @@ describe('onboardingSlice flow', () => {
     );
     state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
-    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), false);
+    assert.equal(selectCanGoNext({ onboarding: state as OnboardingState }), true);
 
-    const blockedAtDependencyPreparation = reducer(state, goToNextStep());
-    assert.equal(blockedAtDependencyPreparation.currentStep, OnboardingStep.DependencyPreparation);
-
-    state = reducer(
-      {
-        ...state,
-        isDependencyPreparationComplete: true,
-      },
-      goToNextStep(),
-    );
+    state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.Download);
 
     const blockedAtDownload = reducer(state, goToNextStep());
@@ -337,13 +328,7 @@ describe('onboardingSlice flow', () => {
     state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
 
-    state = reducer(
-      {
-        ...state,
-        isDependencyPreparationComplete: true,
-      },
-      goToNextStep(),
-    );
+    state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.Download);
 
     const backToDependencyPreparation = reducer(state, goToPreviousStep());
@@ -400,13 +385,7 @@ describe('onboardingSlice flow', () => {
     state = reducer(state, goToNextStep());
     assert.equal(state.currentStep, OnboardingStep.DependencyPreparation);
 
-    state = reducer(
-      {
-        ...state,
-        isDependencyPreparationComplete: true,
-      },
-      goToNextStep(),
-    );
+    state = reducer(state, goToNextStep());
     state = reducer(
       state,
       setDownloadProgress({

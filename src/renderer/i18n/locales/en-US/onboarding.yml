@@ -231,8 +231,11 @@ sharingAcceleration:
     portable: Portable mode forces this feature off and never seeds implicitly
 dependencyPreparation:
   title: Prepare Dependencies
-  description: Install the command-line dependencies required by HagiCode Desktop and select at least one Agent CLI to use with coding sessions.
+  description: Install Desktop-managed command-line dependencies here and choose Agent CLI packages for later coding sessions, or skip installation for now and continue with setup.
   loading: Checking Desktop-managed dependencies...
+  skip:
+    title: This step can be skipped
+    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
   environment:
     title: Desktop-managed Node/npm environment
     description: Desktop installs and checks managed CLI packages in its own Node/npm environment. Read the FAQ for current path, package, and troubleshooting details.
@@ -240,13 +243,13 @@ dependencyPreparation:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
   required:
     title: Required dependencies
-    description: These dependencies must be installed before setup can continue.
+    description: Install these dependencies before first use when possible; if you skip them now, you can still come back and install them later in Desktop.
   optional:
     title: Optional dependencies
     description: Optional dependencies do not block setup.
   agentCli:
     title: Agent CLI selection
-    description: Select at least one Agent CLI. The selected CLI must be installed in Desktop's managed npm environment.
+    description: Pick the Agent CLI packages you expect to use and install them now, or continue setup first and install them later in Desktop.
   blocking:
     environment-unavailable:
       title: Node/npm environment unavailable

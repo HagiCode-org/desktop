@@ -89,6 +89,11 @@ export default function DependencyPreparationStep() {
       <div className="space-y-3">
         <p className="text-muted-foreground">{t('onboarding:dependencyPreparation.description')}</p>
         <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>{t('onboarding:dependencyPreparation.skip.title')}</AlertTitle>
+          <AlertDescription>{t('onboarding:dependencyPreparation.skip.description')}</AlertDescription>
+        </Alert>
+        <Alert>
           <PackageOpen className="h-4 w-4" />
           <AlertTitle>{t('onboarding:dependencyPreparation.environment.title')}</AlertTitle>
           <AlertDescription className="space-y-3">
