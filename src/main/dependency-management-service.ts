@@ -85,6 +85,11 @@ interface ManagedNpmPackagePaths {
   commandArtifacts: string[];
 }
 
+interface InstalledPackageInventoryEntry {
+  version: string | null;
+  packageRoot: string | null;
+}
+
 type ProgressListener = (event: DependencyManagementOperationProgress) => void;
 
 type SdkNpmSyncOptions = Parameters<typeof syncNpmGlobals>[0];
@@ -152,6 +157,28 @@ function extractPercent(message: string): number | undefined {
 function normalizeVersionOutput(value: string): string | null {
   const line = firstMeaningfulLine(value);
   return line ? line.replace(/^v/, '') : null;
+}
+
+function parseInstalledPackageInventoryEntry(
+  rawInventory: string,
+  packageName: string,
+): InstalledPackageInventoryEntry | null {
+  try {
+    const parsed = JSON.parse(rawInventory) as {
+      dependencies?: Record<string, { version?: unknown; path?: unknown } | undefined>;
+    };
+    const dependency = parsed.dependencies?.[packageName];
+    if (!dependency || typeof dependency !== 'object') {
+      return null;
+    }
+
+    return {
+      version: typeof dependency.version === 'string' ? dependency.version : null,
+      packageRoot: typeof dependency.path === 'string' ? dependency.path : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function formatNpmSyncLogEvent(event: NpmSyncLogEvent): { message: string; percentage?: number } | null {
@@ -1185,6 +1212,21 @@ export class DependencyManagementService {
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'ENOENT') {
+        const inventoryEntry = await this.detectInstalledPackageFromInventory(definition, environment);
+        if (inventoryEntry) {
+          return {
+            id: definition.id,
+            definition,
+            status: 'installed',
+            version: inventoryEntry.version,
+            packageRoot: inventoryEntry.packageRoot ?? packageRoot,
+            executablePath: this.existsSync(executablePath) ? executablePath : null,
+            message: inventoryEntry.packageRoot
+              ? `Installed package was resolved from npm inventory at ${inventoryEntry.packageRoot}`
+              : 'Installed package was resolved from npm inventory',
+          };
+        }
+
         return {
           id: definition.id,
           definition,
@@ -1204,6 +1246,36 @@ export class DependencyManagementService {
         executablePath: this.existsSync(executablePath) ? executablePath : null,
         message: error instanceof Error ? error.message : String(error),
       };
+    }
+  }
+
+  private async detectInstalledPackageFromInventory(
+    definition: ManagedNpmPackageDefinition,
+    environment: DependencyManagementEnvironmentStatus,
+  ): Promise<InstalledPackageInventoryEntry | null> {
+    try {
+      const activationPolicy = await this.getDesktopActivationPolicy();
+      const result = await this.runNpmCommand(
+        activationPolicy,
+        [
+          'list',
+          '-g',
+          '--prefix',
+          environment.npmGlobalPrefix,
+          '--json',
+          '--long',
+          '--depth=0',
+          definition.packageName,
+        ],
+        undefined,
+        this.buildCommandEnv(activationPolicy, environment.nodeVersion),
+      );
+      const inventoryEntry = parseInstalledPackageInventoryEntry(result.stdout, definition.packageName);
+      return inventoryEntry && (inventoryEntry.version || inventoryEntry.packageRoot)
+        ? inventoryEntry
+        : null;
+    } catch {
+      return null;
     }
   }
 
