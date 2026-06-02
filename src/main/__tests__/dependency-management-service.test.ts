@@ -68,17 +68,14 @@ describe('dependency management service contract', () => {
     assert.match(source, /applyRuntimeManagedPackageOverride/);
   });
 
-  it('adds Windows Store openspec install overrides and sync diagnostics in the main service', async () => {
+  it('keeps sync diagnostics in the main service without Windows Store install rewrites', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
-    assert.match(source, /WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES/);
-    assert.match(source, /@fission-ai\/openspec/);
-    assert.match(source, /--ignore-scripts/);
-    assert.match(source, /Applying Windows Store npm install override/);
     assert.match(source, /Starting managed package sync/);
     assert.match(source, /Launching managed npm command/);
     assert.match(source, /Managed npm command exited with failure/);
-    assert.match(source, /matchesManagedPackageSelector/);
+    assert.doesNotMatch(source, /Applying Windows Store npm install override/);
+    assert.doesNotMatch(source, /--ignore-scripts/);
   });
 
   it('logs syncPackages IPC entrypoints for dependency management requests', async () => {

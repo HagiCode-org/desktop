@@ -131,15 +131,6 @@ const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
 
-const WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES = new Set([
-  '@fission-ai/openspec',
-]);
-
-function matchesManagedPackageSelector(value: string, packageName: string): boolean {
-  const normalizedValue = value.trim();
-  return normalizedValue === packageName || normalizedValue.startsWith(`${packageName}@`);
-}
-
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
 }
@@ -910,50 +901,19 @@ export class DependencyManagementService {
       env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
       platform: this.platform,
       runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const rewrittenArgs = this.rewriteManagedNpmArgsForWindowsStore(args);
-        const result = await this.runCommand(command, rewrittenArgs, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
+        const result = await this.runCommand(command, [...args], undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
           shell: launchOptions?.shell,
           timeoutMs,
         });
 
         return {
           command,
-          args: rewrittenArgs,
+          args: [...args],
           stdout: result.stdout,
           stderr: result.stderr,
         };
       },
     };
-  }
-
-  private rewriteManagedNpmArgsForWindowsStore(args: readonly string[]): string[] {
-    if (!(this.platform === 'win32' && process.windowsStore)) {
-      return [...args];
-    }
-
-    const installIndex = args.findIndex((value) => value === 'install');
-    if (installIndex === -1) {
-      return [...args];
-    }
-
-    const selector = args.find((value) => [...WINDOWS_STORE_IGNORE_SCRIPTS_PACKAGE_NAMES].some((packageName) =>
-      matchesManagedPackageSelector(value, packageName)));
-    if (!selector) {
-      return [...args];
-    }
-
-    if (args.includes('--ignore-scripts')) {
-      return [...args];
-    }
-
-    log.info('[DependencyManagementService] Applying Windows Store npm install override', {
-      selector,
-      override: '--ignore-scripts',
-    });
-
-    const rewrittenArgs = [...args];
-    rewrittenArgs.splice(installIndex + 1, 0, '--ignore-scripts');
-    return rewrittenArgs;
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
