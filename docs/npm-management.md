@@ -13,9 +13,18 @@ To add a future Desktop-managed npm CLI tool:
 - Extend the `ManagedNpmPackageId` union in `src/types/npm-management.ts`.
 - Add or update tests that cover status detection, install/uninstall rejection for invalid ids, and renderer row display.
 
-All install and uninstall operations are executed by `src/main/dependency-management-service.ts` with the embedded Desktop Node/npm executable. Mutable global packages are stored in the canonical Desktop runtime data root `~/.hagicode/runtime-data/node/node<major>/npmGlobal`, where `<major>` is derived from the active Desktop-managed Node runtime.
+Desktop dependency management now supports two modes:
 
-The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands. It is not the active npm global package prefix. Dependency snapshots only inspect the active Node-major Desktop-managed prefix for managed package state.
+- **internal**: Desktop uses its embedded Node/npm runtime, keeps package mutations enabled, and stores mutable global packages in the canonical Desktop runtime data root `~/.hagicode/runtime-data/node/node<major>/npmGlobal`, where `<major>` is derived from the active Desktop-managed Node runtime.
+- **external**: Desktop inspects the current global Node/npm environment in read-only mode. Package install, uninstall, and batch sync actions are rejected before npm or SDK sync execution.
+
+All mutation operations still run through `src/main/dependency-management-service.ts` and only remain available in internal mode.
+
+The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands in internal mode. It is not the active npm global package prefix. In external mode, Desktop does not inject its managed PATH or npm prefix overrides and instead reports the paths returned by the inspected global environment.
+
+## Windows Store default
+
+Windows Store packaging always forces the **effective** dependency management mode to `external`. Desktop keeps the user's configured preference unchanged for future non-Store runs, but the active Store session is locked to read-only global npm inspection.
 
 ## First-Run Preparation
 

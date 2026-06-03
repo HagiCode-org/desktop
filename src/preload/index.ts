@@ -17,6 +17,7 @@ import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, Ver
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type {
+  DependencyManagementMode,
   ManagedNpmPackageId,
   DependencyManagementBatchSyncRequest,
   DependencyManagementBridge,
@@ -340,6 +341,8 @@ const rendererEventTarget = globalThis as unknown as {
 const dependencyManagementBridge: DependencyManagementBridge = {
   getSnapshot: () => ipcRenderer.invoke(dependencyManagementChannels.snapshot),
   refresh: () => ipcRenderer.invoke(dependencyManagementChannels.refresh),
+  getModeSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getModeSettings),
+  setMode: (mode: DependencyManagementMode) => ipcRenderer.invoke(dependencyManagementChannels.setMode, mode),
   getMirrorSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getMirrorSettings),
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(dependencyManagementChannels.setMirrorSettings, settings),
   install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),

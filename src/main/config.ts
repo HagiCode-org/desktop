@@ -1,6 +1,7 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
+import type { DependencyManagementMode } from '../types/dependency-management.js';
 
 export interface AppSettings {
   language: string;
@@ -14,6 +15,7 @@ export interface VersionAutoUpdateSettings {
 export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
+  dependencyManagementMode: DependencyManagementMode;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -53,6 +55,7 @@ const defaultConfig: AppConfig = {
     port: 36546,
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
+  dependencyManagementMode: 'internal',
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
@@ -255,5 +258,25 @@ export class ConfigManager {
     });
     this.store.set('versionAutoUpdate', merged);
     return merged;
+  }
+
+  getDependencyManagementMode(): DependencyManagementMode {
+    const current = this.store.get('dependencyManagementMode');
+    const normalized: DependencyManagementMode = current === 'external' ? 'external' : 'internal';
+
+    if (current !== normalized) {
+      this.store.set('dependencyManagementMode', normalized);
+    }
+
+    return normalized;
+  }
+
+  setDependencyManagementMode(mode: DependencyManagementMode): DependencyManagementMode {
+    if (mode !== 'internal' && mode !== 'external') {
+      throw new Error(`Unsupported dependency management mode: ${String(mode)}`);
+    }
+
+    this.store.set('dependencyManagementMode', mode);
+    return mode;
   }
 }

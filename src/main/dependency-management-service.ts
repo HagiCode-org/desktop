@@ -38,6 +38,8 @@ import {
   onVendoredRuntimeActivationProgress,
 } from './vendored-runtime-activation-state.js';
 import type {
+  DependencyManagementMode,
+  DependencyManagementModeSettings,
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
@@ -270,6 +272,15 @@ export class DependencyManagementService {
     });
   }
 
+  getModeSettings(): DependencyManagementModeSettings {
+    return this.resolveModeSettings();
+  }
+
+  async setMode(mode: DependencyManagementMode): Promise<DependencyManagementSnapshot> {
+    this.configManager.setDependencyManagementMode(mode);
+    return this.getSnapshot();
+  }
+
   onProgress(listener: ProgressListener): () => void {
     this.events.on('progress', listener);
     return () => this.events.off('progress', listener);
@@ -282,7 +293,8 @@ export class DependencyManagementService {
   }
 
   async getSnapshot(): Promise<DependencyManagementSnapshot> {
-    const environment = await this.detectEnvironment();
+    const mode = this.resolveModeSettings();
+    const environment = await this.detectEnvironment(mode);
     const packages = await Promise.all(
       managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)),
     );
@@ -290,6 +302,7 @@ export class DependencyManagementService {
     const mirrorSettings = this.getMirrorSettings();
 
     return {
+      mode,
       environment,
       packages,
       vendoredRuntimes,
@@ -471,9 +484,12 @@ export class DependencyManagementService {
   }
 
   async getManagedCommandContext(packageId: ManagedNpmPackageId): Promise<ManagedNpmCommandContext> {
-    const activationPolicy = await this.getDesktopActivationPolicy();
-    const environment = await this.detectEnvironment(activationPolicy);
-    const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
+    const mode = this.resolveModeSettings();
+    const activationPolicy = await this.getActivationPolicy(mode);
+    const environment = await this.detectEnvironment(mode, activationPolicy);
+    const commandEnv = environment.source === 'desktop-managed'
+      ? this.buildCommandEnv(activationPolicy, environment.nodeVersion)
+      : this.buildExternalCommandEnv();
     const definition = findManagedNpmPackage(packageId);
 
     if (!definition) {
@@ -856,6 +872,61 @@ export class DependencyManagementService {
     return looksLikeWindowsStoreInstallPath(process.execPath);
   }
 
+  private resolveModeSettings(): DependencyManagementModeSettings {
+    const configuredMode = this.configManager.getDependencyManagementMode();
+    const lockedByRuntime = this.isWindowsStoreExecutionEnvironment();
+    const effectiveMode: DependencyManagementMode = lockedByRuntime ? 'external' : configuredMode;
+
+    return {
+      configuredMode,
+      effectiveMode,
+      lockedByRuntime,
+      mutationsAvailable: effectiveMode === 'internal',
+      readOnlyReason: lockedByRuntime
+        ? 'Windows Store packaging requires external read-only dependency management.'
+        : effectiveMode === 'external'
+          ? 'External dependency mode is read-only and only inspects the current global Node/npm environment.'
+          : undefined,
+    };
+  }
+
+  private createExternalActivationPolicy(): BundledNodeRuntimePolicyDecision {
+    return {
+      consumer: 'desktop-external',
+      enabled: false,
+      source: 'override',
+      explicitEnabled: false,
+      manifestDefault: null,
+      legacyFallbackEnabled: true,
+    };
+  }
+
+  private async getActivationPolicy(
+    mode: DependencyManagementModeSettings,
+  ): Promise<BundledNodeRuntimePolicyDecision> {
+    return mode.effectiveMode === 'internal'
+      ? this.getDesktopActivationPolicy()
+      : this.createExternalActivationPolicy();
+  }
+
+  private buildExternalCommandEnv(): NodeJS.ProcessEnv {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+
+    delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
+    delete env.NODE;
+    delete env.npm_execpath;
+    delete env.npm_node_execpath;
+    delete env.npm_config_prefix;
+    delete env.NPM_CONFIG_PREFIX;
+    delete env.npm_config_global_prefix;
+    delete env.NPM_CONFIG_GLOBAL_PREFIX;
+    delete env.npm_config_globalconfig;
+    delete env.NPM_CONFIG_GLOBALCONFIG;
+    delete env.NPM_CONFIG_GLOBAL_CONFIG;
+
+    return env;
+  }
+
   private buildSdkSyncManifest(
     definitions: readonly ManagedNpmPackageDefinition[],
     registryUrl?: string | null,
@@ -1096,6 +1167,15 @@ export class DependencyManagementService {
   }
 
   private async detectEnvironment(
+    mode: DependencyManagementModeSettings,
+    activationPolicy?: BundledNodeRuntimePolicyDecision,
+  ): Promise<DependencyManagementEnvironmentStatus> {
+    return mode.effectiveMode === 'internal'
+      ? this.detectInternalEnvironment(activationPolicy)
+      : this.detectExternalEnvironment();
+  }
+
+  private async detectInternalEnvironment(
     activationPolicy?: BundledNodeRuntimePolicyDecision,
   ): Promise<DependencyManagementEnvironmentStatus> {
     const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
@@ -1107,10 +1187,11 @@ export class DependencyManagementService {
     const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
     const commandEnv = this.buildCommandEnv(effectivePolicy, nodeVersion);
     const npm = await this.detectNpmVersion(effectivePolicy, commandEnv);
-    const available = node.status === 'available';
+    const available = node.status === 'available' && npm.status !== 'unavailable';
 
     return {
       available,
+      source: 'desktop-managed',
       toolchainRoot,
       nodeRuntimeRoot,
       nodeVersion,
@@ -1121,8 +1202,122 @@ export class DependencyManagementService {
       npmCacheRoot: npmGlobalPaths.npmCacheRoot,
       node,
       npm,
-      error: available ? undefined : node.message ?? 'Embedded Node environment is unavailable',
+      error: available
+        ? undefined
+        : node.message ?? npm.message ?? 'Desktop-managed Node/npm environment is unavailable',
     };
+  }
+
+  private async detectExternalEnvironment(): Promise<DependencyManagementEnvironmentStatus> {
+    const activationPolicy = this.createExternalActivationPolicy();
+    const commandEnv = this.buildExternalCommandEnv();
+    const inheritedNodeExecutable = process.env.npm_node_execpath?.trim() || 'node';
+    const node = await this.detectExecutableVersion('node', inheritedNodeExecutable, ['--version'], commandEnv);
+    const resolvedNodeExecutablePath = await this.resolveExternalNodeExecutablePath(commandEnv, inheritedNodeExecutable);
+    const nodeVersion = node.version;
+    const npm = await this.detectNpmVersion(activationPolicy, commandEnv);
+    const npmGlobalPrefix = await this.resolveExternalNpmGlobalPrefix(activationPolicy, commandEnv);
+    const npmGlobalModulesRoot = await this.resolveExternalNpmGlobalModulesRoot(
+      activationPolicy,
+      commandEnv,
+      npmGlobalPrefix,
+      nodeVersion,
+    );
+    const npmCacheRoot = await this.resolveExternalNpmCacheRoot(activationPolicy, commandEnv, npmGlobalPrefix);
+    const npmGlobalBinRoot = npmGlobalPrefix
+      ? this.getNpmGlobalBinRoot(npmGlobalPrefix, nodeVersion)
+      : '';
+    const nodeRuntimeRoot = resolvedNodeExecutablePath
+      ? this.resolveNodeRuntimeRootFromExecutable(resolvedNodeExecutablePath)
+      : '';
+    const toolchainRoot = nodeRuntimeRoot;
+    const available = node.status === 'available' && npm.status !== 'unavailable';
+
+    return {
+      available,
+      source: 'externally-managed',
+      toolchainRoot,
+      nodeRuntimeRoot,
+      nodeVersion,
+      nodeMajorVersion: nodeVersion ? this.getNodeMajorNpmGlobalPaths(nodeVersion).nodeMajorVersion : '',
+      npmGlobalPrefix,
+      npmGlobalBinRoot,
+      npmGlobalModulesRoot,
+      npmCacheRoot,
+      node: {
+        ...node,
+        executablePath: resolvedNodeExecutablePath ?? node.executablePath,
+      },
+      npm,
+      error: available
+        ? undefined
+        : node.message ?? npm.message ?? 'External dependency mode is read-only and no usable global Node/npm environment was found.',
+    };
+  }
+
+  private resolveNodeRuntimeRootFromExecutable(executablePath: string): string {
+    return this.platform === 'win32'
+      ? path.dirname(executablePath)
+      : path.dirname(path.dirname(executablePath));
+  }
+
+  private async resolveExternalNodeExecutablePath(
+    env: NodeJS.ProcessEnv,
+    executablePath: string,
+  ): Promise<string | null> {
+    if (path.isAbsolute(executablePath)) {
+      return executablePath;
+    }
+
+    try {
+      const result = await this.runCommand(executablePath, ['-p', 'process.execPath'], undefined, env);
+      if (result.exitCode !== 0) {
+        return null;
+      }
+
+      return firstMeaningfulLine(result.stdout);
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveExternalNpmGlobalPrefix(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    env: NodeJS.ProcessEnv,
+  ): Promise<string> {
+    try {
+      const result = await this.runNpmCommand(activationPolicy, ['prefix', '-g'], undefined, env);
+      return firstMeaningfulLine(result.stdout) ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  private async resolveExternalNpmGlobalModulesRoot(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    env: NodeJS.ProcessEnv,
+    npmGlobalPrefix: string,
+    nodeVersion?: string | null,
+  ): Promise<string> {
+    try {
+      const result = await this.runNpmCommand(activationPolicy, ['root', '-g'], undefined, env);
+      return firstMeaningfulLine(result.stdout) ?? this.getNpmGlobalModulesRoot(npmGlobalPrefix, nodeVersion);
+    } catch {
+      return npmGlobalPrefix ? this.getNpmGlobalModulesRoot(npmGlobalPrefix, nodeVersion) : '';
+    }
+  }
+
+  private async resolveExternalNpmCacheRoot(
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    env: NodeJS.ProcessEnv,
+    npmGlobalPrefix: string,
+  ): Promise<string> {
+    try {
+      const result = await this.runNpmCommand(activationPolicy, ['config', 'get', 'cache'], undefined, env);
+      return firstMeaningfulLine(result.stdout) ?? '';
+    } catch {
+      return npmGlobalPrefix ? path.join(path.dirname(npmGlobalPrefix), 'npm-cache') : '';
+    }
   }
 
   private async detectExecutableVersion(
@@ -1307,7 +1502,9 @@ export class DependencyManagementService {
     environment: DependencyManagementEnvironmentStatus,
   ): Promise<InstalledPackageInventoryEntry | null> {
     try {
-      const activationPolicy = await this.getDesktopActivationPolicy();
+      const activationPolicy = environment.source === 'desktop-managed'
+        ? await this.getDesktopActivationPolicy()
+        : this.createExternalActivationPolicy();
       const result = await this.runNpmCommand(
         activationPolicy,
         [
@@ -1321,7 +1518,9 @@ export class DependencyManagementService {
           definition.packageName,
         ],
         undefined,
-        this.buildCommandEnv(activationPolicy, environment.nodeVersion),
+        environment.source === 'desktop-managed'
+          ? this.buildCommandEnv(activationPolicy, environment.nodeVersion)
+          : this.buildExternalCommandEnv(),
       );
       const inventoryEntry = parseInstalledPackageInventoryEntry(result.stdout, definition.packageName);
       return inventoryEntry && (inventoryEntry.version || inventoryEntry.packageRoot)
@@ -1420,15 +1619,27 @@ export class DependencyManagementService {
       };
     }
 
-    const activationPolicy = await this.getDesktopActivationPolicy();
-    const environment = await this.detectEnvironment(activationPolicy);
+    const mode = this.resolveModeSettings();
+    if (!mode.mutationsAvailable) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageId: definition.id,
+        operation,
+        error: mode.readOnlyReason ?? 'External dependency mode is read-only.',
+        snapshot,
+      };
+    }
+
+    const activationPolicy = await this.getActivationPolicy(mode);
+    const environment = await this.detectEnvironment(mode, activationPolicy);
     if (!environment.available) {
       const snapshot = await this.getSnapshot();
       return {
         success: false,
         packageId: definition.id,
         operation,
-        error: environment.error ?? 'Embedded Node/npm environment is unavailable',
+        error: environment.error ?? 'Desktop-managed Node/npm environment is unavailable',
         snapshot,
       };
     }
@@ -1537,8 +1748,21 @@ export class DependencyManagementService {
       };
     }
 
-    const activationPolicy = await this.getDesktopActivationPolicy();
-    const environment = await this.detectEnvironment(activationPolicy);
+    const mode = this.resolveModeSettings();
+    if (!mode.mutationsAvailable) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageIds,
+        operation: 'sync',
+        statuses: [],
+        error: mode.readOnlyReason ?? 'External dependency mode is read-only.',
+        snapshot,
+      };
+    }
+
+    const activationPolicy = await this.getActivationPolicy(mode);
+    const environment = await this.detectEnvironment(mode, activationPolicy);
     if (!environment.available) {
       const snapshot = await this.getSnapshot();
       return {
@@ -1546,7 +1770,7 @@ export class DependencyManagementService {
         packageIds,
         operation: 'sync',
         statuses: [],
-        error: environment.error ?? 'Embedded Node/npm environment is unavailable',
+        error: environment.error ?? 'Desktop-managed Node/npm environment is unavailable',
         snapshot,
       };
     }

@@ -19,6 +19,8 @@ export type ManagedNpmPackageCategory = 'workflow' | 'agent-cli' | 'developer-to
 export type ManagedNpmPackageInstallMode = 'sdk-sync';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
+export type DependencyManagementMode = 'internal' | 'external';
+export type DependencyManagementEnvironmentSource = 'desktop-managed' | 'externally-managed';
 export type VendoredRuntimeId = never;
 export type VendoredRuntimeInstallStatus = 'installed' | 'not-installed' | 'removed' | 'failed' | 'packaged';
 export type VendoredRuntimeStatus = 'ready' | 'running' | 'stopped' | 'missing' | 'damaged' | 'enable-required' | 'extracting';
@@ -147,6 +149,7 @@ export interface NpmEnvironmentComponent {
 
 export interface DependencyManagementEnvironmentStatus {
   available: boolean;
+   source: DependencyManagementEnvironmentSource;
   toolchainRoot: string;
   nodeRuntimeRoot: string;
   nodeVersion: string | null;
@@ -158,6 +161,14 @@ export interface DependencyManagementEnvironmentStatus {
   node: NpmEnvironmentComponent;
   npm: NpmEnvironmentComponent;
   error?: string;
+}
+
+export interface DependencyManagementModeSettings {
+  configuredMode: DependencyManagementMode;
+  effectiveMode: DependencyManagementMode;
+  lockedByRuntime: boolean;
+  mutationsAvailable: boolean;
+  readOnlyReason?: string;
 }
 
 export interface ManagedNpmPackageStatusSnapshot {
@@ -180,6 +191,7 @@ export interface NpmMirrorSettingsInput {
 }
 
 export interface DependencyManagementSnapshot {
+  mode: DependencyManagementModeSettings;
   environment: DependencyManagementEnvironmentStatus;
   packages: ManagedNpmPackageStatusSnapshot[];
   vendoredRuntimes: VendoredRuntimeStatusSnapshot[];
@@ -265,6 +277,8 @@ export interface DependencyManagementBatchSyncResult {
 export interface DependencyManagementBridge {
   getSnapshot: () => Promise<DependencyManagementSnapshot>;
   refresh: () => Promise<DependencyManagementSnapshot>;
+  getModeSettings: () => Promise<DependencyManagementModeSettings>;
+  setMode: (mode: DependencyManagementMode) => Promise<DependencyManagementSnapshot>;
   getMirrorSettings: () => Promise<NpmMirrorSettings>;
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => Promise<DependencyManagementSnapshot>;
   install: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
@@ -283,6 +297,8 @@ export interface DependencyManagementBridge {
 export const dependencyManagementChannels = {
   snapshot: 'dependency-management:snapshot',
   refresh: 'dependency-management:refresh',
+  getModeSettings: 'dependency-management:get-mode-settings',
+  setMode: 'dependency-management:set-mode',
   getMirrorSettings: 'dependency-management:get-mirror-settings',
   setMirrorSettings: 'dependency-management:set-mirror-settings',
   install: 'dependency-management:install',
@@ -303,6 +319,8 @@ export type DependencyManagementChannelMap = typeof dependencyManagementChannels
 export const legacyDependencyManagementChannels = {
   snapshot: 'npm-management:snapshot',
   refresh: 'npm-management:refresh',
+  getModeSettings: 'npm-management:get-mode-settings',
+  setMode: 'npm-management:set-mode',
   getMirrorSettings: 'npm-management:get-mirror-settings',
   setMirrorSettings: 'npm-management:set-mirror-settings',
   install: 'npm-management:install',

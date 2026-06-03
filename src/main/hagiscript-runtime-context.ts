@@ -193,7 +193,9 @@ export class HagiscriptRuntimeContextResolver {
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
       serverDataRoot,
-      npmPrefix: path.resolve(managedContext.environment.npmGlobalPrefix),
+      npmPrefix: managedContext.environment.source === 'desktop-managed'
+        ? path.resolve(managedContext.environment.npmGlobalPrefix)
+        : managedContext.environment.npmGlobalPrefix,
       dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
     };
   }

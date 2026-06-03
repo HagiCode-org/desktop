@@ -93,6 +93,22 @@ export function registerDependencyManagementHandlers(deps: {
     return state.dependencyManagementService.getMirrorSettings();
   };
 
+  const handleGetModeSettings = async () => {
+    if (!state.dependencyManagementService) {
+      throw new Error('DependencyManagementService is not initialized');
+    }
+
+    return state.dependencyManagementService.getModeSettings();
+  };
+
+  const handleSetMode = async (_event: Electron.IpcMainInvokeEvent, mode: 'internal' | 'external') => {
+    if (!state.dependencyManagementService) {
+      throw new Error('DependencyManagementService is not initialized');
+    }
+
+    return state.dependencyManagementService.setMode(mode);
+  };
+
   const handleSetMirrorSettings = async (_event: Electron.IpcMainInvokeEvent, settings: NpmMirrorSettingsInput) => {
     if (!state.dependencyManagementService) {
       throw new Error('DependencyManagementService is not initialized');
@@ -138,6 +154,8 @@ export function registerDependencyManagementHandlers(deps: {
 
   ipcMain.handle(dependencyManagementChannels.snapshot, handleSnapshot);
   ipcMain.handle(dependencyManagementChannels.refresh, handleRefresh);
+  ipcMain.handle(dependencyManagementChannels.getModeSettings, handleGetModeSettings);
+  ipcMain.handle(dependencyManagementChannels.setMode, handleSetMode);
   ipcMain.handle(dependencyManagementChannels.getMirrorSettings, handleGetMirrorSettings);
   ipcMain.handle(dependencyManagementChannels.setMirrorSettings, handleSetMirrorSettings);
   ipcMain.handle(dependencyManagementChannels.install, handleInstall);
@@ -152,6 +170,8 @@ export function registerDependencyManagementHandlers(deps: {
 
   ipcMain.handle(legacyDependencyManagementChannels.snapshot, handleSnapshot);
   ipcMain.handle(legacyDependencyManagementChannels.refresh, handleRefresh);
+  ipcMain.handle(legacyDependencyManagementChannels.getModeSettings, handleGetModeSettings);
+  ipcMain.handle(legacyDependencyManagementChannels.setMode, handleSetMode);
   ipcMain.handle(legacyDependencyManagementChannels.getMirrorSettings, handleGetMirrorSettings);
   ipcMain.handle(legacyDependencyManagementChannels.setMirrorSettings, handleSetMirrorSettings);
   ipcMain.handle(legacyDependencyManagementChannels.install, handleInstall);
