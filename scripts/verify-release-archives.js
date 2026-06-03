@@ -20,6 +20,7 @@ import {
   validateToolchainManifest,
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
+import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
 const args = process.argv.slice(2);
 const archives = [];
@@ -27,6 +28,7 @@ const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectR
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
+const bundledNodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
 
 function parseArgs() {
   for (let index = 0; index < args.length; index += 1) {
@@ -351,6 +353,19 @@ function describeToolchainRoots(rootPath) {
     .join(', ');
 }
 
+function resolveToolchainValidation(rootPath, options = {}) {
+  const toolchainRoots = options.toolchainRoots ?? collectToolchainRoots(rootPath);
+  const requireBundledNodePayload = options.requireBundledNodePayload ?? bundledNodePolicy.required;
+  const skipReason = options.skipReason ?? bundledNodePolicy.reason;
+
+  return {
+    toolchainRoots,
+    requireBundledNodePayload,
+    skipReason,
+    shouldValidate: requireBundledNodePayload || toolchainRoots.length > 0,
+  };
+}
+
 function validateVendoredRuntimeRoots(archivePath, extractionRoot, options) {
   const runtimeRoots = findExtraRoots(extractionRoot, options.suffixParts);
   if (runtimeRoots.length === 0) {
@@ -372,7 +387,7 @@ function validateVendoredRuntimeRoots(archivePath, extractionRoot, options) {
 }
 
 function validateExtractedToolchain(archivePath, extractionRoot, options = {}) {
-  const toolchainRoots = collectToolchainRoots(extractionRoot);
+  const toolchainRoots = options.toolchainRoots ?? collectToolchainRoots(extractionRoot);
   if (toolchainRoots.length === 0) {
     const available = describeToolchainRoots(extractionRoot);
     throw new Error(
@@ -404,27 +419,35 @@ function validateExtractedToolchain(archivePath, extractionRoot, options = {}) {
   throw new Error(`Archive ${archivePath} failed toolchain validation: ${failures.join(' | ')}`);
 }
 
-function extractZip(archivePath, destinationRoot) {
-  const archive = new AdmZip(archivePath);
-  archive.extractAllTo(destinationRoot, true);
-  validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: true });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
+function validateExtractedArchiveContents(archivePath, extractionRoot, options = {}) {
+  const toolchainValidation = resolveToolchainValidation(extractionRoot, options);
+  if (toolchainValidation.shouldValidate) {
+    validateExtractedToolchain(archivePath, extractionRoot, {
+      extractedFromZip: options.extractedFromZip,
+      toolchainRoots: toolchainValidation.toolchainRoots,
+    });
+  } else {
+    const reasonSuffix = toolchainValidation.skipReason ? ` (${toolchainValidation.skipReason})` : '';
+    console.log(`[archive-verify] ${path.basename(archivePath)} -> skipping bundled Node toolchain validation${reasonSuffix}`);
+  }
+
+  validateVendoredRuntimeRoots(archivePath, extractionRoot, {
     label: 'embedded dotnet runtime',
     suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],
     platform: runtimePlatform,
-    validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: true }),
+    validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: options.extractedFromZip }),
   });
+}
+
+function extractZip(archivePath, destinationRoot) {
+  const archive = new AdmZip(archivePath);
+  archive.extractAllTo(destinationRoot, true);
+  validateExtractedArchiveContents(archivePath, destinationRoot, { extractedFromZip: true });
 }
 
 function extractTarGz(archivePath, destinationRoot) {
   execFileSync('tar', ['-xzf', archivePath, '-C', destinationRoot], { stdio: 'inherit' });
-  validateExtractedToolchain(archivePath, destinationRoot, { extractedFromZip: false });
-  validateVendoredRuntimeRoots(archivePath, destinationRoot, {
-    label: 'embedded dotnet runtime',
-    suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],
-    platform: runtimePlatform,
-    validate: (runtimeRoot) => validateDotnetRuntimePayload(runtimeRoot, { extractedFromZip: false }),
-  });
+  validateExtractedArchiveContents(archivePath, destinationRoot, { extractedFromZip: false });
 }
 
 function verifyArchive(archivePath) {
@@ -463,6 +486,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 }
 
 export {
+  resolveToolchainValidation,
   resolveMacArchiveArch,
   selectDiscoveredArchives,
 };
