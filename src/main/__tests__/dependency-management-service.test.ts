@@ -69,14 +69,11 @@ describe('dependency management service contract', () => {
     assert.match(source, /applyRuntimeManagedPackageOverride/);
   });
 
-  it('keeps sync diagnostics and Windows Store npm install overrides in the main service', async () => {
+  it('keeps sync failure diagnostics and Windows Store npm install overrides in the main service', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /Starting managed package sync/);
-    assert.match(source, /Launching managed npm command/);
     assert.match(source, /Managed npm command exited with failure/);
-    assert.match(source, /const inspectionCommand = isRoutineManagedNpmInspection\(command, args\);/);
-    assert.match(source, /const logLaunch = inspectionCommand \? log\.debug : log\.info;/);
     assert.match(source, /const expectedInspectionMiss = isExpectedMissingPackageInspectionResult\(command, args, result\);/);
     assert.match(source, /const logFailure = expectedInspectionMiss \? log\.debug : log\.warn;/);
     assert.match(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);

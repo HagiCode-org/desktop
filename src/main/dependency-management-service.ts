@@ -186,35 +186,6 @@ function isSinglePackageGlobalListCommand(command: string, args: readonly string
     && args[7].trim().length > 0;
 }
 
-function isRoutineManagedNpmInspection(command: string, args: readonly string[]): boolean {
-  const normalizedCommand = normalizeCommandName(command);
-  if ((normalizedCommand === 'node' || normalizedCommand === 'node.exe') && args.length === 1 && args[0] === '--version') {
-    return true;
-  }
-
-  if (normalizedCommand !== 'npm') {
-    return false;
-  }
-
-  if (args.length === 1 && args[0] === '--version') {
-    return true;
-  }
-
-  if (args.length === 2 && args[0] === 'prefix' && args[1] === '-g') {
-    return true;
-  }
-
-  if (args.length === 2 && args[0] === 'root' && args[1] === '-g') {
-    return true;
-  }
-
-  if (args.length === 3 && args[0] === 'config' && args[1] === 'get' && args[2] === 'cache') {
-    return true;
-  }
-
-  return isSinglePackageGlobalListCommand(command, args);
-}
-
 function isExpectedMissingPackageInspectionResult(
   command: string,
   args: readonly string[],
@@ -1954,14 +1925,6 @@ export class DependencyManagementService {
     } = {},
   ): Promise<CommandResult> {
     const launch = resolveCommandLaunch(command, this.platform);
-    const inspectionCommand = isRoutineManagedNpmInspection(command, args);
-    const logLaunch = inspectionCommand ? log.debug : log.info;
-    logLaunch('[DependencyManagementService] Launching managed npm command', {
-      command,
-      args,
-      shell: options.shell ?? launch.shell,
-      windowsStore: this.isWindowsStoreExecutionEnvironment(),
-    });
     return executeCliStreaming({
       command: launch.command,
       args,
