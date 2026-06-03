@@ -28,6 +28,7 @@ import {
 } from './bundled-toolchain-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
+import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -36,6 +37,9 @@ const requirePackagedRuntimePayload = requireRuntimePayload || [
   process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT,
   process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT,
 ].some((value) => typeof value === 'string' && value.trim().length > 0);
+const bundledNodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
+const requireBundledNodePayload = requireRuntimePayload && bundledNodePolicy.required;
+const requirePackagedBundledNodePayload = requirePackagedRuntimePayload && bundledNodePolicy.required;
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
@@ -546,6 +550,8 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableWindowsContent.includes('Build Windows MSIX Store package'), 'reusable Windows workflow uses a dedicated Store build step for MSIX artifacts');
   assert(reusableWindowsContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
   assert(reusableWindowsContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
+  assert(reusableWindowsContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
+  assert(reusableWindowsContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed'), 'reusable Windows workflow passes the Store dependency-management mode into packaged smoke validation');
   assert(reusableWindowsContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
 
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
@@ -563,8 +569,10 @@ test('global hagiscript prerequisite is available', () => {
 });
 
 test('staged bundled Node toolchain payload is complete', () => {
-  if (!requireRuntimePayload && !fs.existsSync(stagedToolchainRoot)) {
+  if (!requireBundledNodePayload && !fs.existsSync(stagedToolchainRoot)) {
+    const reasonSuffix = bundledNodePolicy.reason ? ` (${bundledNodePolicy.reason})` : '';
     log('  - Skipping: staged bundled Node toolchain not required for this smoke-test run', colors.yellow);
+    logVerbose(`staged bundled Node toolchain skipped${reasonSuffix}`);
     results.skipped++;
     return;
   }
@@ -598,8 +606,10 @@ test('packaged bundled Node toolchain payload is complete', () => {
     return;
   }
 
-  if (!requirePackagedRuntimePayload) {
+  if (!requirePackagedBundledNodePayload) {
+    const reasonSuffix = bundledNodePolicy.reason ? ` (${bundledNodePolicy.reason})` : '';
     log('  - Skipping: packaged bundled Node toolchain not required for this smoke-test run', colors.yellow);
+    logVerbose(`packaged bundled Node toolchain skipped${reasonSuffix}`);
     results.skipped++;
     return;
   }
