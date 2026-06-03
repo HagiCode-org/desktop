@@ -68,7 +68,9 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /npmPrefix: path\.resolve\(managedContext\.environment\.npmGlobalPrefix\)/);
+    assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.source === 'desktop-managed'/);
+    assert.match(runtimeContextSource, /\? path\.resolve\(managedContext\.environment\.npmGlobalPrefix\)/);
+    assert.match(runtimeContextSource, /: managedContext\.environment\.npmGlobalPrefix,/);
     assert.match(runtimeContextSource, /servicePayloadPath,/);
     assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);

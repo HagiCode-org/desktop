@@ -67,6 +67,7 @@ describe('desktop telemetry retirement', () => {
         enabled: false,
         retainedArchiveCount: 9,
       },
+      dependencyManagementMode: 'external',
     });
     const manager = new DesktopConfigManager(store as never);
 
@@ -76,6 +77,9 @@ describe('desktop telemetry retirement', () => {
       enabled: false,
       retainedArchiveCount: 9,
     });
+    assert.equal(manager.getDependencyManagementMode(), 'external');
+    assert.equal(manager.setDependencyManagementMode('internal'), 'internal');
+    assert.equal(manager.getDependencyManagementMode(), 'internal');
     assert.equal('telemetry' in manager.getAll(), false);
     assert.equal('remoteMode' in manager.getAll(), false);
   });

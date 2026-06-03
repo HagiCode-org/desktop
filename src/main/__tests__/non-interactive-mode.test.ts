@@ -22,8 +22,15 @@ const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-
 
 function createSnapshot(): DependencyManagementSnapshot {
   return {
+    mode: {
+      configuredMode: 'internal',
+      effectiveMode: 'internal',
+      lockedByRuntime: false,
+      mutationsAvailable: true,
+    },
     environment: {
       available: true,
+      source: 'desktop-managed',
       toolchainRoot: '/tmp/Hagi Code/toolchain',
       nodeRuntimeRoot: '/tmp/Hagi Code/toolchain/node',
       nodeVersion: '22.0.0',

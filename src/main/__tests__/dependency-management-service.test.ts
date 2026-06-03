@@ -14,6 +14,7 @@ import { resolveCommandLaunch } from '../toolchain-launch.js';
 const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
 const catalogPath = path.resolve(process.cwd(), 'src/shared/npm-managed-packages.ts');
 const runtimeManifestPath = path.resolve(process.cwd(), 'resources/manifest.yml');
+const preloadPath = path.resolve(process.cwd(), 'src/preload/index.ts');
 
 describe('dependency management service contract', () => {
   it('keeps portable Node/npm activation policy handling in the main service', async () => {
@@ -88,6 +89,50 @@ describe('dependency management service contract', () => {
     assert.doesNotMatch(source, /NPM_CONFIG_SCRIPT_SHELL =/);
     assert.doesNotMatch(source, /env\.ComSpec =/);
     assert.doesNotMatch(source, /env\.COMSPEC =/);
+  });
+
+  it('adds configurable internal and external dependency management modes to the snapshot contract', async () => {
+    const [source, typesSource] = await Promise.all([
+      fs.readFile(servicePath, 'utf8'),
+      fs.readFile(path.resolve(process.cwd(), 'src/types/dependency-management.ts'), 'utf8'),
+    ]);
+
+    assert.match(typesSource, /export type DependencyManagementMode = 'internal' \| 'external';/);
+    assert.match(typesSource, /export interface DependencyManagementModeSettings/);
+    assert.match(typesSource, /configuredMode: DependencyManagementMode;/);
+    assert.match(typesSource, /effectiveMode: DependencyManagementMode;/);
+    assert.match(typesSource, /lockedByRuntime: boolean;/);
+    assert.match(typesSource, /mutationsAvailable: boolean;/);
+    assert.match(typesSource, /mode: DependencyManagementModeSettings;/);
+    assert.match(typesSource, /getModeSettings: \(\) => Promise<DependencyManagementModeSettings>;/);
+    assert.match(typesSource, /setMode: \(mode: DependencyManagementMode\) => Promise<DependencyManagementSnapshot>;/);
+    assert.match(source, /private resolveModeSettings\(\): DependencyManagementModeSettings/);
+    assert.match(source, /const effectiveMode: DependencyManagementMode = lockedByRuntime \? 'external' : configuredMode;/);
+    assert.match(source, /mutationsAvailable: effectiveMode === 'internal'/);
+    assert.match(source, /const mode = this\.resolveModeSettings\(\);/);
+    assert.match(source, /return this\.getSnapshot\(\);/);
+  });
+
+  it('uses external global npm inspection and rejects mutations in external mode', async () => {
+    const [source, handlersSource, preloadSource] = await Promise.all([
+      fs.readFile(servicePath, 'utf8'),
+      fs.readFile(path.resolve(process.cwd(), 'src/main/ipc/handlers/dependencyManagementHandlers.ts'), 'utf8'),
+      fs.readFile(preloadPath, 'utf8'),
+    ]);
+
+    assert.match(source, /private buildExternalCommandEnv\(\): NodeJS\.ProcessEnv/);
+    assert.match(source, /private async detectExternalEnvironment\(\): Promise<DependencyManagementEnvironmentStatus>/);
+    assert.match(source, /source: 'externally-managed'/);
+    assert.match(source, /resolveExternalNpmGlobalPrefix/);
+    assert.match(source, /resolveExternalNpmGlobalModulesRoot/);
+    assert.match(source, /resolveExternalNpmCacheRoot/);
+    assert.match(source, /if \(!mode\.mutationsAvailable\) \{/);
+    assert.match(source, /error: mode\.readOnlyReason \?\? 'External dependency mode is read-only\.'/);
+    assert.match(source, /environment\.source === 'desktop-managed'/);
+    assert.match(handlersSource, /dependencyManagementChannels\.getModeSettings/);
+    assert.match(handlersSource, /dependencyManagementChannels\.setMode/);
+    assert.match(preloadSource, /getModeSettings: \(\) => ipcRenderer\.invoke\(dependencyManagementChannels\.getModeSettings\)/);
+    assert.match(preloadSource, /setMode: \(mode: DependencyManagementMode\) => ipcRenderer\.invoke\(dependencyManagementChannels\.setMode, mode\)/);
   });
 
   it('logs syncPackages IPC entrypoints for dependency management requests', async () => {

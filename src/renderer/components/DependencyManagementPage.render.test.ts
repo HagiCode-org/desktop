@@ -44,6 +44,9 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /getSelectedEligiblePackageIds\(selectedPackageIds, agentCliSelectablePackageIds\)/);
     assert.match(pageSource, /titleKey="dependencyManagement\.packageTable\.groups\.base\.title"/);
     assert.match(pageSource, /titleKey="dependencyManagement\.packageTable\.groups\.agentCli\.title"/);
+    assert.match(pageSource, /dependencyManagement\.mode\.title/);
+    assert.match(pageSource, /dependencyManagement\.mode\.readOnlyTitle/);
+    assert.match(pageSource, /dependencyManagement\.environment\.sourceLabel\.\$\{snapshot\.environment\.source\}/);
 
     assert.match(modelSource, /export function appendBatchSyncLog/);
     assert.match(modelSource, /export function getSelectablePackageIds/);
@@ -133,6 +136,17 @@ describe('dependency management renderer wiring', () => {
     assert.doesNotMatch(packageGroupsSource, /disabled=\{!hagiscriptGateOpen/);
   });
 
+  it('disables mutation controls in external mode while keeping refresh and inspection available', async () => {
+    const source = await fs.readFile(pagePath, 'utf8');
+
+    assert.match(source, /const mutationsAvailable = snapshot\?\.mode\.mutationsAvailable ?? false;/);
+    assert.match(source, /const actionsDisabled = !environmentAvailable \|\| !mutationsAvailable \|\| isPending \|\| Boolean\(activePackageId\) \|\| isRepairCompletionRunning;/);
+    assert.match(source, /snapshot\.mode\.lockedByRuntime/);
+    assert.match(source, /dependencyManagement\.mode\.windowsStoreLocked/);
+    assert.match(source, /dependencyManagement\.mode\.externalReadOnly/);
+    assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\) \|\| !mutationsAvailable;/);
+  });
+
   it('renders mirror acceleration controls with optimistic updates and rollback on failure', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
@@ -170,6 +184,8 @@ describe('dependency management renderer wiring', () => {
 
     assert.equal(zhJson.sidebar.dependencyManagement, '依赖项管理');
     assert.equal(enJson.sidebar.dependencyManagement, 'Dependency Management');
+    assert.equal(zhJson.dependencyManagement.mode.lockedBadge, 'Windows Store 已锁定');
+    assert.equal(enJson.dependencyManagement.mode.lockedBadge, 'Windows Store locked');
     assert.equal(zhJson.dependencyManagement.packageTable.groups.base.title, '基础依赖');
     assert.equal(zhJson.dependencyManagement.packageTable.groups.agentCli.title, 'Agent CLI');
     assert.equal(enJson.dependencyManagement.packageTable.groups.base.title, 'Base dependencies');
