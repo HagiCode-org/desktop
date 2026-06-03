@@ -67,6 +67,7 @@ export default function DependencyManagementPage() {
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [repairCompletionState, setRepairCompletionState] = useState<RepairCompletionState>('idle');
+  const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
   const [isPending, startTransition] = useTransition();
   const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -84,12 +85,15 @@ export default function DependencyManagementPage() {
 
   const refreshSnapshot = async () => {
     setErrorMessage(null);
+    setIsRefreshingSnapshot(true);
     try {
       const nextSnapshot = await getDependencyManagementBridge().refresh();
       applySnapshot(nextSnapshot);
     } catch (error) {
       setPageStatus('error');
       setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsRefreshingSnapshot(false);
     }
   };
 
@@ -311,7 +315,8 @@ export default function DependencyManagementPage() {
   const activePackageId = snapshot?.activeOperation?.packageId;
   const environmentAvailable = snapshot?.environment.available ?? false;
   const mutationsAvailable = snapshot?.mode.mutationsAvailable ?? false;
-  const actionsDisabled = !environmentAvailable || !mutationsAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
+  const showMutationActions = mutationsAvailable;
+  const actionsDisabled = !environmentAvailable || !mutationsAvailable || isRefreshingSnapshot || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
   const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId) || !mutationsAvailable;
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
@@ -417,8 +422,8 @@ export default function DependencyManagementPage() {
               </CardTitle>
               <CardDescription>{t('dependencyManagement.description')}</CardDescription>
             </div>
-            <Button variant="outline" onClick={() => void refreshSnapshot()} disabled={pageStatus === 'loading' || isPending}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={() => void refreshSnapshot()} disabled={pageStatus === 'loading' || isRefreshingSnapshot || isPending}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingSnapshot ? 'animate-spin' : ''}`} />
               {t('dependencyManagement.actions.refresh')}
             </Button>
           </div>
@@ -484,6 +489,7 @@ export default function DependencyManagementPage() {
               descriptionKey="dependencyManagement.packageTable.groups.base.description"
               packages={basePackages}
               highlightedPackageIds={baseHighlightedPackageIds}
+              showMutationActions={showMutationActions}
               selectedPackageIds={selectedPackageIds}
               selectablePackageIds={baseSelectablePackageIds}
               selectAllChecked={baseSelectAllChecked}
@@ -505,6 +511,7 @@ export default function DependencyManagementPage() {
               descriptionKey="dependencyManagement.packageTable.groups.agentCli.description"
               packages={agentCliPackages}
               highlightedPackageIds={agentCliHighlightedPackageIds}
+              showMutationActions={showMutationActions}
               selectedPackageIds={selectedPackageIds}
               selectablePackageIds={agentCliSelectablePackageIds}
               selectAllChecked={agentCliSelectAllChecked}
@@ -536,7 +543,8 @@ export default function DependencyManagementPage() {
                     highlighted={highlightedRuntimeIds.includes(runtime.id)}
                     pendingAction={runtimeActionState[runtime.id] ?? null}
                     error={runtimeOperationError[runtime.id] ?? null}
-                    refreshDisabled={pageStatus === 'loading' || isPending}
+                    refreshDisabled={pageStatus === 'loading' || isRefreshingSnapshot || isPending}
+                    refreshLoading={isRefreshingSnapshot}
                     onPrimaryAction={(item) => {
                       if (item.primaryAction === 'reinstall-desktop' || item.primaryAction === 'none') {
                         return;

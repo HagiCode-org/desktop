@@ -60,6 +60,8 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /dependencyManagement\.selection\.selectPackage/);
     assert.match(packageGroupsSource, /dependencyManagement\.actions\.\$\{actionKey\}/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
+    assert.match(packageGroupsSource, /const globalInstallCommand = `npm install -g \$\{item\.definition\.installSpec\}`;/);
+    assert.match(packageGroupsSource, /dependencyManagement\.details\.manualCommand', \{ ns: 'pages' \}/);
   });
 
   it('routes single-package and batch sync output into the shared log panel', async () => {
@@ -129,6 +131,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(modelSource, /displayStatus === 'installed'\s*\)\s*\{\s*return 'bg-emerald-500\/10 hover:bg-emerald-500\/15';/);
     assert.match(modelSource, /displayStatus === 'outdated'\s*\)\s*\{\s*return 'bg-amber-500\/10 hover:bg-amber-500\/15';/);
     assert.match(modelSource, /return 'bg-red-500\/10 hover:bg-red-500\/15';/);
+    assert.match(packageGroupsSource, /showMutationActions \? \(/);
     assert.match(packageGroupsSource, /disabled=\{actionsDisabled \|\| isBatchSyncRunning \|\| selectedEligibleCount === 0\}/);
     assert.match(packageGroupsSource, /const rowDisabled = actionsDisabled \|\| item\.status === 'unknown';/);
     assert.match(packageGroupsSource, /disabled=\{actionsDisabled \|\| selectablePackageIds\.length === 0\}/);
@@ -139,8 +142,10 @@ describe('dependency management renderer wiring', () => {
   it('disables mutation controls in external mode while keeping refresh and inspection available', async () => {
     const source = await fs.readFile(pagePath, 'utf8');
 
-    assert.match(source, /const mutationsAvailable = snapshot\?\.mode\.mutationsAvailable ?? false;/);
-    assert.match(source, /const actionsDisabled = !environmentAvailable \|\| !mutationsAvailable \|\| isPending \|\| Boolean\(activePackageId\) \|\| isRepairCompletionRunning;/);
+    assert.match(source, /const mutationsAvailable = snapshot\?\.mode\.mutationsAvailable \?\? false;/);
+    assert.match(source, /const showMutationActions = mutationsAvailable;/);
+    assert.match(source, /const actionsDisabled = !environmentAvailable \|\| !mutationsAvailable \|\| isRefreshingSnapshot \|\| isPending \|\| Boolean\(activePackageId\) \|\| isRepairCompletionRunning;/);
+    assert.match(source, /showMutationActions=\{showMutationActions\}/);
     assert.match(source, /snapshot\.mode\.lockedByRuntime/);
     assert.match(source, /dependencyManagement\.mode\.windowsStoreLocked/);
     assert.match(source, /dependencyManagement\.mode\.externalReadOnly/);
@@ -170,6 +175,20 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /batchLogPanelRef\.current\?\.scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\);/);
     assert.match(pageSource, /<BatchSyncLogPanel ref=\{batchLogPanelRef\} batchSyncState=\{batchSyncState\}/);
     assert.match(packageGroupsSource, /<Card ref=\{ref\}>/);
+  });
+
+  it('animates refresh actions while the dependency snapshot is reloading', async () => {
+    const [pageSource, packageGroupsSource] = await Promise.all([
+      fs.readFile(pagePath, 'utf8'),
+      fs.readFile(packageGroupsPath, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /const \[isRefreshingSnapshot, setIsRefreshingSnapshot\] = useState\(false\);/);
+    assert.match(pageSource, /setIsRefreshingSnapshot\(true\);/);
+    assert.match(pageSource, /setIsRefreshingSnapshot\(false\);/);
+    assert.match(pageSource, /RefreshCw className=\{`mr-2 h-4 w-4 \$\{isRefreshingSnapshot \? 'animate-spin' : ''\}`\}/);
+    assert.match(packageGroupsSource, /refreshLoading\?: boolean;/);
+    assert.match(packageGroupsSource, /RefreshCw className=\{cn\('mr-2 h-4 w-4', refreshLoading && 'animate-spin'\)\}/);
   });
 
   it('generates updated localized dependency management strings', async () => {
