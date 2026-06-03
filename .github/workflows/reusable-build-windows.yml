@@ -456,6 +456,9 @@ jobs:
       - name: Verify Windows ZIP toolchain payload
         if: success() && matrix.target.requires_zip && steps.windows_zip.outputs.zip_path != ''
         shell: bash
+        env:
+          HAGICODE_RUNTIME_CONSUMER: windows-store
+          HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed
         run: |
           node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
 

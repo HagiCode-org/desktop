@@ -540,6 +540,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   const reusableWindowsContent = fs.readFileSync(reusableWindowsWorkflowPath, 'utf8');
   const reusableUnixContent = fs.readFileSync(reusableUnixWorkflowPath, 'utf8');
   const msixStoreStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Build Windows MSIX Store package');
+  const windowsZipVerifyStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Verify Windows ZIP toolchain payload');
 
   assert(buildContent.includes('production_build'), 'build workflow exposes a manual production_build input');
   assert(buildContent.includes('is_production_build'), 'build workflow resolves production build metadata');
@@ -565,6 +566,10 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
   assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed'), 'reusable Windows workflow passes the Store dependency-management mode into packaged smoke validation');
   assert(msixStoreStepContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
+  assert(Boolean(windowsZipVerifyStepContent), 'reusable Windows workflow includes a dedicated Windows ZIP archive verification step');
+  assert(windowsZipVerifyStepContent.includes('node scripts/verify-release-archives.js'), 'reusable Windows workflow validates Windows ZIP archives before upload');
+  assert(windowsZipVerifyStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into Windows ZIP archive validation');
+  assert(windowsZipVerifyStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed'), 'reusable Windows workflow passes the Store dependency-management mode into Windows ZIP archive validation');
 
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
