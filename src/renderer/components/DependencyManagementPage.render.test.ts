@@ -60,7 +60,15 @@ describe('dependency management renderer wiring', () => {
     assert.match(packageGroupsSource, /dependencyManagement\.selection\.selectPackage/);
     assert.match(packageGroupsSource, /dependencyManagement\.actions\.\$\{actionKey\}/);
     assert.match(packageGroupsSource, /const canUninstall = item\.status === 'installed' && item\.definition\.required !== true;/);
-    assert.match(packageGroupsSource, /const globalInstallCommand = `npm install -g \$\{item\.definition\.installSpec\}`;/);
+    assert.match(pageSource, /const showSuggestedCommand = snapshot\?\.mode\.effectiveMode === 'external';/);
+    assert.match(pageSource, /const suggestedCommandRegistryUrl = snapshot\?\.mirrorSettings\.enabled \? mirrorRegistryUrl : null;/);
+    assert.match(pageSource, /showSuggestedCommand=\{showSuggestedCommand\}/);
+    assert.match(pageSource, /suggestedCommandRegistryUrl=\{suggestedCommandRegistryUrl\}/);
+    assert.match(packageGroupsSource, /showSuggestedCommand\?: boolean;/);
+    assert.match(packageGroupsSource, /suggestedCommandRegistryUrl\?: string \| null;/);
+    assert.match(packageGroupsSource, /const globalInstallCommand = suggestedCommandRegistryUrl/);
+    assert.match(packageGroupsSource, /`npm install -g --registry \$\{suggestedCommandRegistryUrl\} \$\{item\.definition\.installSpec\}`/);
+    assert.match(packageGroupsSource, /\{showSuggestedCommand \? \(/);
     assert.match(packageGroupsSource, /dependencyManagement\.details\.manualCommand', \{ ns: 'pages' \}/);
   });
 

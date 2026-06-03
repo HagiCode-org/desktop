@@ -316,9 +316,11 @@ export default function DependencyManagementPage() {
   const environmentAvailable = snapshot?.environment.available ?? false;
   const mutationsAvailable = snapshot?.mode.mutationsAvailable ?? false;
   const showMutationActions = mutationsAvailable;
+  const showSuggestedCommand = snapshot?.mode.effectiveMode === 'external';
   const actionsDisabled = !environmentAvailable || !mutationsAvailable || isRefreshingSnapshot || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
   const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId) || !mutationsAvailable;
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
+  const suggestedCommandRegistryUrl = snapshot?.mirrorSettings.enabled ? mirrorRegistryUrl : null;
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
   const batchSyncPackageIds = new Set(batchSyncState?.packageIds ?? []);
   const basePackages = prioritizedManagedPackages.filter((item) => item.definition.category !== 'agent-cli');
@@ -490,6 +492,8 @@ export default function DependencyManagementPage() {
               packages={basePackages}
               highlightedPackageIds={baseHighlightedPackageIds}
               showMutationActions={showMutationActions}
+              showSuggestedCommand={showSuggestedCommand}
+              suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
               selectedPackageIds={selectedPackageIds}
               selectablePackageIds={baseSelectablePackageIds}
               selectAllChecked={baseSelectAllChecked}
@@ -512,6 +516,8 @@ export default function DependencyManagementPage() {
               packages={agentCliPackages}
               highlightedPackageIds={agentCliHighlightedPackageIds}
               showMutationActions={showMutationActions}
+              showSuggestedCommand={showSuggestedCommand}
+              suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
               selectedPackageIds={selectedPackageIds}
               selectablePackageIds={agentCliSelectablePackageIds}
               selectAllChecked={agentCliSelectAllChecked}

@@ -298,6 +298,8 @@ interface NpmPackageTableProps {
   packages: ManagedNpmPackageStatusSnapshot[];
   highlightedPackageIds?: ManagedNpmPackageId[];
   showMutationActions?: boolean;
+  showSuggestedCommand?: boolean;
+  suggestedCommandRegistryUrl?: string | null;
   selectedPackageIds: ManagedNpmPackageId[];
   selectablePackageIds: ManagedNpmPackageId[];
   selectAllChecked: boolean | 'indeterminate';
@@ -320,6 +322,8 @@ export function NpmPackageTable({
   packages,
   highlightedPackageIds = [],
   showMutationActions = true,
+  showSuggestedCommand = false,
+  suggestedCommandRegistryUrl = null,
   selectedPackageIds,
   selectablePackageIds,
   selectAllChecked,
@@ -401,7 +405,9 @@ export function NpmPackageTable({
                 ? undefined
                 : operationErrorByPackageId[item.id] ?? (item.status === 'unknown' ? item.message : undefined);
               const disabledReason = item.status === 'unknown' ? t('dependencyManagement.disabled.unknown') : undefined;
-              const globalInstallCommand = `npm install -g ${item.definition.installSpec}`;
+              const globalInstallCommand = suggestedCommandRegistryUrl
+                ? `npm install -g --registry ${suggestedCommandRegistryUrl} ${item.definition.installSpec}`
+                : `npm install -g ${item.definition.installSpec}`;
 
               return (
                 <TableRow
@@ -435,12 +441,14 @@ export function NpmPackageTable({
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
-                    <div className="mt-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-left">
-                      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {t('dependencyManagement.details.manualCommand', { ns: 'pages' })}
+                    {showSuggestedCommand ? (
+                      <div className="mt-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-left">
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {t('dependencyManagement.details.manualCommand', { ns: 'pages' })}
+                        </div>
+                        <code className="mt-1 block break-all font-mono text-xs text-foreground">{globalInstallCommand}</code>
                       </div>
-                      <code className="mt-1 block break-all font-mono text-xs text-foreground">{globalInstallCommand}</code>
-                    </div>
+                    ) : null}
                     {disabledReason && <div id={`${item.id}-disabled-reason`} className="sr-only">{disabledReason}</div>}
                   </TableCell>
                   <TableCell className="align-top">
