@@ -1,0 +1,35 @@
+{
+  "extends": "forge.config.js",
+  "buildVersion": "0.1.0.0",
+  "packageIdentity": {
+    "displayName": "Hagicode",
+    "publisherDisplayName": "newbe36524",
+    "publisher": "CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F",
+    "identityName": "newbe36524.Hagicode",
+    "backgroundColor": "transparent",
+    "languages": [
+      "en-US",
+      "zh-CN",
+      "zh-Hant",
+      "ja-JP",
+      "ko-KR",
+      "de-DE",
+      "fr-FR",
+      "es-ES",
+      "pt-BR",
+      "ru-RU"
+    ],
+    "addAutoLaunchExtension": false
+  },
+  "msix": {
+    "minVersion": "10.0.17763.0",
+    "maxVersionTested": "10.0.19045.0",
+    "capabilities": [
+      "runFullTrust",
+      "unvirtualizedResources",
+      "internetClient",
+      "internetClientServer",
+      "privateNetworkClientServer"
+    ]
+  }
+}

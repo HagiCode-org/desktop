@@ -13,6 +13,7 @@ import {
   validateToolchainPayload,
 } from './bundled-toolchain-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
+import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const toolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
@@ -64,6 +65,13 @@ try {
   resolvePinnedNodeRuntimeTarget(runtimePlatform);
 } catch (error) {
   console.log(`[bundled-toolchain] Skipping Node toolchain staging for unsupported platform ${runtimePlatform}: ${error.message}`);
+  process.exit(0);
+}
+
+const nodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
+if (!nodePolicy.required) {
+  fs.rmSync(toolchainRoot, { recursive: true, force: true });
+  console.log(`[bundled-toolchain] Skipping Node toolchain staging by policy: ${nodePolicy.reason}`);
   process.exit(0);
 }
 

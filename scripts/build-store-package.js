@@ -18,6 +18,11 @@ import {
   validateServerPayloadRoot,
   writeStoreForgeConfigOverlay,
 } from './store-package-config.js';
+import {
+  resolveBundledNodePolicy,
+  RUNTIME_CONSUMER_ENV,
+  RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV,
+} from './runtime-node-policy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -107,7 +112,7 @@ function resolveWindowsArch(platformId) {
   return 'x64';
 }
 
-function buildStepScripts(scripts) {
+export function buildStepScripts(scripts) {
   const selectScript = (preferred, fallback) => {
     if (typeof scripts[preferred] === 'string') {
       return preferred;
@@ -123,6 +128,18 @@ function buildStepScripts(scripts) {
     selectScript('prepare:bundled-toolchain:optional', 'prepare:bundled-toolchain'),
     typeof scripts['build:prod'] === 'string' ? 'build:prod' : null,
   ].filter(Boolean);
+}
+
+function resolveStoreRuntimePolicyEnvironment(baseEnv = process.env) {
+  const runtimeConsumer = baseEnv[RUNTIME_CONSUMER_ENV]?.trim() || 'windows-store';
+  const dependencyManagementMode =
+    baseEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim() || 'external-managed';
+
+  return {
+    ...baseEnv,
+    [RUNTIME_CONSUMER_ENV]: runtimeConsumer,
+    [RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]: dependencyManagementMode,
+  };
 }
 
 async function runCommand(command, args, cwd = projectRoot, env = process.env) {
@@ -229,6 +246,7 @@ export function createStoreBuildMetadata({
   restoredWorkspacePayload,
   serverPayloadPath,
   serverPayloadRoot,
+  nodePreparation,
   storeConfig,
   storeConfigPath,
 }) {
@@ -246,6 +264,7 @@ export function createStoreBuildMetadata({
     serverPayloadPath,
     serverPayloadRoot,
     restoredWorkspacePayload,
+    nodePreparation,
     payloadValidation: payloadValidation
       ? {
           requiredPaths: payloadValidation.requiredPaths,
@@ -295,6 +314,25 @@ export async function buildStorePackage(rawOptions = {}) {
     ? path.resolve(options.runtimeInjectionPath)
     : path.resolve(projectRoot, storeConfig.runtimeInjectionPath);
   const desktopSourceRef = await resolveDesktopSourceRef(projectRoot);
+  const buildStepEnv = resolveStoreRuntimePolicyEnvironment(process.env);
+  const nodePolicy = resolveBundledNodePolicy({
+    cwd: projectRoot,
+    env: buildStepEnv,
+  });
+  const nodePreparation =
+    nodePolicy.required
+      ? {
+          status: options.dryRun ? 'not-run-dry-run' : 'prepared',
+          reason: null,
+          consumer: buildStepEnv[RUNTIME_CONSUMER_ENV],
+          dependencyManagementMode: buildStepEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV],
+        }
+      : {
+          status: 'skipped-by-policy',
+          reason: nodePolicy.reason,
+          consumer: buildStepEnv[RUNTIME_CONSUMER_ENV],
+          dependencyManagementMode: buildStepEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV],
+        };
 
   const artifactPaths = await withInjectedPayload(options.serverPayloadPath, runtimeInjectionPath, async ({
     payloadRoot,
@@ -327,6 +365,7 @@ export async function buildStorePackage(rawOptions = {}) {
         restoredWorkspacePayload,
         serverPayloadPath: options.serverPayloadPath,
         serverPayloadRoot: payloadRoot,
+        nodePreparation,
         storeConfig,
         storeConfigPath,
       });
@@ -340,7 +379,12 @@ export async function buildStorePackage(rawOptions = {}) {
     }
 
     for (const scriptName of buildStepScripts(scripts)) {
-      await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', scriptName], projectRoot);
+      await runCommand(
+        process.platform === 'win32' ? 'npm.cmd' : 'npm',
+        ['run', scriptName],
+        projectRoot,
+        buildStepEnv,
+      );
     }
 
     const existingMsixArtifacts = new Set(await listMsixArtifacts(artifactOutputDirectory));
@@ -358,6 +402,9 @@ export async function buildStorePackage(rawOptions = {}) {
       HAGICODE_STORE_CONFIG_PATH: storeConfigPath,
       HAGICODE_STORE_FORGE_CONFIG: overlayConfig.outputPath,
       WINDOWS_PACKAGE_VERSION: buildVersion,
+      [RUNTIME_CONSUMER_ENV]: buildStepEnv[RUNTIME_CONSUMER_ENV],
+      [RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]:
+        buildStepEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV],
     });
 
     const packagedMsixArtifacts = (await listMsixArtifacts(artifactOutputDirectory))
@@ -386,6 +433,7 @@ export async function buildStorePackage(rawOptions = {}) {
       restoredWorkspacePayload,
       serverPayloadPath: options.serverPayloadPath,
       serverPayloadRoot: payloadRoot,
+      nodePreparation,
       storeConfig,
       storeConfigPath,
     });
