@@ -6,6 +6,7 @@ import { load } from 'js-yaml';
 import {
   getUserDataRuntimeManifestPath,
   materializeRuntimeManifestContent,
+  readRuntimeManifestSection,
   resolveRuntimeManifestDataScopePath,
 } from '../runtime-manifest-store.js';
 
@@ -74,5 +75,29 @@ describe('runtime manifest store data scope resolution', () => {
     assert.equal(parsed.paths.runtimeDataRoot, runtimeDataRoot);
     assert.equal(parsed.paths.serverProgramRoot, path.join(runtimeDataRoot, 'apps', 'installed'));
     assert.equal(parsed.paths.serverDataRoot, path.join(runtimeDataRoot, 'apps', 'data'));
+  });
+
+  it('surfaces the synthesized node optional policy in desktopRuntime', () => {
+    const desktopRuntime = readRuntimeManifestSection<{
+      components: {
+        node: {
+          optionalPolicy?: {
+            rules: Array<{
+              id?: string;
+              dependencyManagementModes?: string[];
+            }>;
+          };
+        };
+      };
+    }>('desktopRuntime');
+
+    assert.deepEqual(desktopRuntime.components.node.optionalPolicy, {
+      rules: [
+        {
+          id: 'external-managed',
+          dependencyManagementModes: ['external-managed'],
+        },
+      ],
+    });
   });
 });

@@ -10,6 +10,16 @@ import {
 export type DesktopRuntimeComponentId = 'dotnet' | 'node';
 export type DesktopRuntimeServiceId = never;
 
+export interface DesktopRuntimeOptionalPolicyRule {
+  id?: string;
+  consumers?: string[];
+  dependencyManagementModes?: string[];
+}
+
+export interface DesktopRuntimeOptionalPolicy {
+  rules: DesktopRuntimeOptionalPolicyRule[];
+}
+
 export interface DesktopRuntimeManifest {
   schemaVersion: number;
   runtimeVersion: string;
@@ -30,7 +40,10 @@ export interface DesktopRuntimeManifest {
       state: string;
     };
   };
-  components: Record<DesktopRuntimeComponentId, { relativePath: string }>;
+  components: Record<DesktopRuntimeComponentId, {
+    relativePath: string;
+    optionalPolicy?: DesktopRuntimeOptionalPolicy;
+  }>;
   services: Record<DesktopRuntimeServiceId, { dataRelativePath: string }>;
   npmSync?: {
     packages: Record<string, { version: string; target?: string }>;

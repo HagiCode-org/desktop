@@ -98,6 +98,7 @@ export function buildDesktopHagiscriptRuntimeManifest(
     source: 'desktop-bundled-node',
     version: nodeRuntimeConfig.releaseVersion,
     channelVersion: nodeRuntimeConfig.channelVersion,
+    optionalPolicy: desktopRuntimeManifest.components.node.optionalPolicy,
     installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-node.mjs'),
     verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-node.mjs'),
   };

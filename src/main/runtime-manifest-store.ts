@@ -192,6 +192,7 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
   const desktopExtensions = asRecord(manifest.desktopExtensions);
   const distribution = asRecord(desktopExtensions?.distribution);
   const programHomes = asRecord(distribution?.programHomes);
+  const nodeComponent = resolveManifestComponentByName(manifest, 'node');
   const nodeRuntime = normalizeRelativePath(readString(paths?.nodeRuntime)) ?? 'components/node/runtime';
   const dotnetRuntime = normalizeRelativePath(readString(paths?.dotnetRuntime)) ?? 'components/dotnet/runtime';
   const runtimeDataRelativePath = normalizeRelativePath(readString(distribution?.runtimeDataRelativePath)) ?? 'runtimeData';
@@ -222,6 +223,7 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
       },
       node: {
         relativePath: nodeRuntime,
+        optionalPolicy: asRecord(nodeComponent?.optionalPolicy) ?? undefined,
       },
     },
     services: {},
@@ -244,6 +246,19 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && !Array.isArray(value) && typeof value === 'object'
     ? value as Record<string, unknown>
     : null;
+}
+
+function resolveManifestComponentByName(
+  manifest: RuntimeManifestStore,
+  componentName: string,
+): Record<string, unknown> | null {
+  if (!Array.isArray(manifest.components)) {
+    return null;
+  }
+
+  return manifest.components
+    .map((entry) => asRecord(entry))
+    .find((entry) => readString(entry?.name) === componentName) ?? null;
 }
 
 export function materializeRuntimeManifestContent(
