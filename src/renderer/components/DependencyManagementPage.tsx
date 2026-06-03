@@ -310,8 +310,9 @@ export default function DependencyManagementPage() {
   const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], snapshot?.vendoredRuntimes ?? [], repairIntent);
   const activePackageId = snapshot?.activeOperation?.packageId;
   const environmentAvailable = snapshot?.environment.available ?? false;
-  const actionsDisabled = !environmentAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
-  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
+  const mutationsAvailable = snapshot?.mode.mutationsAvailable ?? false;
+  const actionsDisabled = !environmentAvailable || !mutationsAvailable || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
+  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId) || !mutationsAvailable;
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
   const batchSyncPackageIds = new Set(batchSyncState?.packageIds ?? []);
@@ -444,6 +445,40 @@ export default function DependencyManagementPage() {
       {pageStatus === 'ready' && snapshot && (
         <>
           <div className="space-y-5">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('dependencyManagement.mode.title')}</CardTitle>
+                <CardDescription>{t('dependencyManagement.mode.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={snapshot.mode.effectiveMode === 'internal' ? 'default' : 'secondary'}>
+                    {t('dependencyManagement.mode.active', {
+                      mode: t(`dependencyManagement.mode.options.${snapshot.mode.effectiveMode}.label`),
+                    })}
+                  </Badge>
+                  <Badge variant="outline">
+                    {t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}
+                  </Badge>
+                  {snapshot.mode.lockedByRuntime ? (
+                    <Badge variant="secondary">{t('dependencyManagement.mode.lockedBadge')}</Badge>
+                  ) : null}
+                </div>
+
+                {!snapshot.mode.mutationsAvailable ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{t('dependencyManagement.mode.readOnlyTitle')}</AlertTitle>
+                    <AlertDescription>
+                      {snapshot.mode.lockedByRuntime
+                        ? t('dependencyManagement.mode.windowsStoreLocked')
+                        : t('dependencyManagement.mode.externalReadOnly')}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+              </CardContent>
+            </Card>
+
             <NpmPackageTable
               titleKey="dependencyManagement.packageTable.groups.base.title"
               descriptionKey="dependencyManagement.packageTable.groups.base.description"
@@ -534,7 +569,11 @@ export default function DependencyManagementPage() {
             <CardContent className="space-y-4">
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="text-sm font-medium">{t('dependencyManagement.environment.rationaleTitle')}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{t('dependencyManagement.environment.managedNotice')}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {snapshot.environment.source === 'desktop-managed'
+                    ? t('dependencyManagement.environment.managedNotice')
+                    : t('dependencyManagement.environment.externalNotice')}
+                </p>
                 <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" onClick={openNodeEnvironmentFaq}>
                   <ExternalLink className="h-4 w-4" />
                   {t('dependencyManagement.environment.faqLinkLabel')}
@@ -559,6 +598,10 @@ export default function DependencyManagementPage() {
                 );
               })}
               <div className="rounded-lg border p-4 md:col-span-2">
+                <p className="text-sm font-medium">{t('dependencyManagement.environment.source')}</p>
+                <p className="break-all text-sm text-muted-foreground">
+                  {t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}
+                </p>
                 <p className="text-sm font-medium">{t('dependencyManagement.environment.toolchainRoot')}</p>
                 <p className="break-all text-sm text-muted-foreground">{snapshot.environment.toolchainRoot}</p>
                 <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.nodeRuntimeRoot')}</p>
@@ -596,7 +639,9 @@ export default function DependencyManagementPage() {
                     {t('dependencyManagement.mirror.registryUrl')}: {mirrorRegistryUrl}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {snapshot.mirrorSettings.enabled
+                    {!snapshot.mode.mutationsAvailable
+                      ? t('dependencyManagement.mirror.readOnlyHelp')
+                      : snapshot.mirrorSettings.enabled
                       ? t('dependencyManagement.mirror.enabledHelp')
                       : t('dependencyManagement.mirror.disabledHelp')}
                   </p>

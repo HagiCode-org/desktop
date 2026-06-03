@@ -1,9 +1,28 @@
 settings:
   title: 设置
   tabs:
+    dependencyManagement: 依赖管理模式
     onboarding: 启动向导
     sharingAcceleration: 下载与共享加速
     updates: 后台更新
+  dependencyManagementMode:
+    title: 依赖管理模式
+    description: 选择由 Desktop 自行管理 CLI 依赖，或仅只读检查当前全局 Node/npm 环境。
+    effectiveMode: 当前生效模式：{{mode}}
+    lockedBadge: Windows Store 已锁定
+    lockedHint: 当前发行包基于 Windows Store 打包，必须使用外部只读依赖管理模式。
+    options:
+      internal:
+        label: 内部模式（Desktop 托管）
+        description: Desktop 使用内置 Node/npm 工具链，并允许安装、卸载和批量同步操作。
+      external:
+        label: 外部模式（只读）
+        description: Desktop 仅检查当前全局 Node/npm 环境，不改动包，也不会覆盖 npm 前缀路径。
+    messages:
+      saveSuccess: 依赖管理模式已保存
+      saveFailed: 保存依赖管理模式失败
+    errors:
+      saveErrorDetail: 保存失败：{{error}}
   smartConfig:
     title: 智能配置提示指引
     description: 查看 Desktop 解析出的提示词，复制到任意受支持的 AI CLI 中，并手动完成配置流程。

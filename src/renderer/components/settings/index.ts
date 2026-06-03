@@ -1,5 +1,6 @@
 import type { DistributionMode } from '../../../types/distribution-mode';
 
+export { DependencyManagementModeSettings } from './DependencyManagementModeSettings';
 export { LanguageSelector } from './LanguageSelector';
 export { OnboardingSettings } from './OnboardingSettings';
 export { SharingAccelerationSettings } from './SharingAccelerationSettings';

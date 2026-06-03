@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  DependencyManagementModeSettings,
   OnboardingSettings,
   SharingAccelerationSettings,
   shouldShowSharingAccelerationSettings,
@@ -34,6 +35,12 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
               {t('settings.tabs.onboarding')}
             </TabsTrigger>
             <TabsTrigger
+              value="dependencyManagement"
+              className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.dependencyManagement')}
+            </TabsTrigger>
+            <TabsTrigger
               value="updates"
               className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
@@ -52,6 +59,10 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
           <div className="mt-4 min-w-0 flex-1 lg:mt-0">
             <TabsContent value="onboarding" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
               <OnboardingSettings />
+            </TabsContent>
+
+            <TabsContent value="dependencyManagement" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
+              <DependencyManagementModeSettings />
             </TabsContent>
 
             <TabsContent value="updates" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">

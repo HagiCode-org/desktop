@@ -147,19 +147,37 @@ dependencyManagement:
   description: Manage required and optional command-line dependencies for HagiCode launch readiness, and inspect Desktop's embedded Node/npm environment.
   loading: Reading dependency status...
   unavailable: Unavailable
+  mode:
+    title: Active dependency mode
+    description: The dependency page always shows the current effective mode and whether package mutations are allowed.
+    active: 'Mode: {{mode}}'
+    lockedBadge: Windows Store locked
+    readOnlyTitle: Read-only mode
+    externalReadOnly: Desktop is inspecting an externally managed global Node/npm environment. Install, uninstall, and batch sync actions are unavailable.
+    windowsStoreLocked: Windows Store packaging forces Desktop into external read-only dependency management.
+    options:
+      internal:
+        label: Internal
+      external:
+        label: External
   environment:
     title: Node Environment
     description: Desktop uses its own Node/npm runtime for managed CLI packages.
     managedNotice: Read the FAQ for current details about Desktop's Node/npm runtime, PATH isolation, package locations, and troubleshooting.
+    externalNotice: Desktop is currently inspecting the global Node/npm environment that already exists on this system.
     rationaleTitle: Desktop-managed Node/npm environment
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Version
+    source: Environment source
     toolchainRoot: Toolchain root
     nodeRuntimeRoot: Bundled Node runtime root
     nodeMajorVersion: Node major package tree
     globalPrefix: Global prefix
     globalModulesRoot: Global modules root
+    sourceLabel:
+      desktop-managed: Desktop-managed environment
+      externally-managed: Externally managed global environment
     status:
       available: Available
       unavailable: Unavailable
@@ -174,6 +192,7 @@ dependencyManagement:
     saving: Saving
     enabledHelp: Upcoming sync/install operations will use the npmmirror.com registry mirror.
     disabledHelp: Upcoming npm operations will use the default npm registry behavior.
+    readOnlyHelp: Mirror settings have no effect while dependency management is in external read-only mode.
     saveFailed: Failed to save mirror setting
   vendoredRuntime:
     title: Desktop-managed runtimes

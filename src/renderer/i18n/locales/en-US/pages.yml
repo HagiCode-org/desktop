@@ -1,9 +1,28 @@
 settings:
   title: Settings
   tabs:
+    dependencyManagement: Dependency Management
     onboarding: Onboarding
     sharingAcceleration: Download & Sharing
     updates: Background Updates
+  dependencyManagementMode:
+    title: Dependency management mode
+    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
+    effectiveMode: 'Effective mode: {{mode}}'
+    lockedBadge: Windows Store locked
+    lockedHint: Windows Store packaging requires external read-only dependency management in this distribution.
+    options:
+      internal:
+        label: Internal (Desktop-managed)
+        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+      external:
+        label: External (read-only)
+        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+    messages:
+      saveSuccess: Dependency management mode saved
+      saveFailed: Failed to save dependency management mode
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
   smartConfig:
     title: Smart Config prompt guidance
     description: Review the resolved prompt, copy it into any supported AI CLI, and complete the configuration flow manually.

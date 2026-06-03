@@ -147,19 +147,37 @@ dependencyManagement:
   description: 管理 HagiCode 启动所需与可选的命令行依赖，并查看 Desktop 内置 Node/npm 环境。
   loading: 正在读取依赖项状态...
   unavailable: 不可用
+  mode:
+    title: 当前依赖管理模式
+    description: 依赖管理页会显示当前实际生效的模式，以及是否允许修改包。
+    active: 模式：{{mode}}
+    lockedBadge: Windows Store 已锁定
+    readOnlyTitle: 只读模式
+    externalReadOnly: Desktop 当前只是在检查外部托管的全局 Node/npm 环境，无法执行安装、卸载或批量同步。
+    windowsStoreLocked: Windows Store 打包会强制 Desktop 使用外部只读依赖管理模式。
+    options:
+      internal:
+        label: 内部模式
+      external:
+        label: 外部模式
   environment:
     title: Node 环境
     description: Desktop 使用自己的 Node/npm 运行时来承载托管 CLI 包。
     managedNotice: 关于 Desktop 的 Node/npm 运行时、PATH 隔离、包位置和排障方式，请阅读 FAQ 中的最新说明。
+    externalNotice: Desktop 当前正在检查这台机器上已经存在的全局 Node/npm 环境。
     rationaleTitle: Desktop 托管的 Node/npm 环境
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     version: 版本
+    source: 环境来源
     toolchainRoot: 工具链目录
     nodeRuntimeRoot: 内置 Node 运行时目录
     nodeMajorVersion: Node 主版本包目录
     globalPrefix: 全局安装目录
     globalModulesRoot: 全局模块目录
+    sourceLabel:
+      desktop-managed: Desktop 托管环境
+      externally-managed: 外部托管的全局环境
     status:
       available: 可用
       unavailable: 不可用
@@ -174,6 +192,7 @@ dependencyManagement:
     saving: 保存中
     enabledHelp: 后续同步/安装操作将使用 npmmirror.com registry 镜像。
     disabledHelp: 后续 npm 操作将使用 npm 默认 registry 行为。
+    readOnlyHelp: 当前处于外部只读模式，镜像设置不会影响依赖管理行为。
     saveFailed: 保存镜像设置失败
   vendoredRuntime:
     title: Desktop 托管运行时
