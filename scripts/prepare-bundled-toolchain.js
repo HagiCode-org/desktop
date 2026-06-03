@@ -29,8 +29,9 @@ import {
   assertGlobalHagiscriptAvailable,
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
+import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.2.10';
+const MINIMUM_HAGISCRIPT_VERSION = '0.3.3';
 const managedExecution = isManagedDesktopRuntimeComponentExecution();
 
 if (!managedExecution) {
@@ -61,6 +62,14 @@ main().catch((error) => {
 });
 
 async function main() {
+  const nodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
+  if (!nodePolicy.required) {
+    await rm(toolchainRoot, { recursive: true, force: true });
+    console.log(`[bundled-toolchain] Skipping Node toolchain staging: ${nodePolicy.reason}`);
+    console.log(`[bundled-toolchain] Cleared staged toolchain root: ${toolchainRoot}`);
+    return;
+  }
+
   const hagiscriptVersion = assertGlobalHagiscriptAvailable(MINIMUM_HAGISCRIPT_VERSION);
   const sourceUrl = ensureOfficialNodeDownloadUrl(runtimeTarget.downloadUrl, runtimeConfig.source?.allowedDownloadHosts || []);
 

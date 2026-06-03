@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolveGlobalHagiscriptPackageRoot } from '../global-hagiscript.js';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.2.10';
+const MINIMUM_HAGISCRIPT_VERSION = '0.3.3';
 
 function applyVendoredRuntimeEnvironmentOverrides() {
   const componentType = process.env.HAGISCRIPT_RUNTIME_COMPONENT_TYPE?.trim();
