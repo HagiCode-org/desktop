@@ -25,6 +25,7 @@ The bundled portable toolchain root remains the immutable runtime source for `no
 ## Windows Store default
 
 Windows Store packaging always forces the **effective** dependency management mode to `external`. Desktop keeps the user's configured preference unchanged for future non-Store runs, but the active Store session is locked to read-only global npm inspection.
+Standard development runs, portable builds, NSIS installs, and other non-Store launches must keep the configured internal/external mode switch available.
 
 ## First-Run Preparation
 

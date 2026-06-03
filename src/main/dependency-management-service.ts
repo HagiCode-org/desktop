@@ -19,6 +19,8 @@ import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCliStreaming } from './utils/cli-executor.js';
 import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
 import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
+import { electron } from '../electron-api.js';
+import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 import {
   buildNpmGlobalCommandArtifactPaths,
   type NodeMajorNpmGlobalPaths,
@@ -97,6 +99,7 @@ type ProgressListener = (event: DependencyManagementOperationProgress) => void;
 type SdkNpmSyncOptions = Parameters<typeof syncNpmGlobals>[0];
 type SdkNpmGlobalCommandOptions = NonNullable<SdkNpmSyncOptions['npmOptions']>;
 type NpmSyncLogEvent = Parameters<NonNullable<SdkNpmSyncOptions['onLog']>>[0];
+const { app } = electron;
 
 export type CliDependencyInstallStage =
   | 'environment'
@@ -133,17 +136,14 @@ const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
 
-function looksLikeWindowsStoreInstallPath(executablePath: string | null | undefined): boolean {
-  const normalized = String(executablePath ?? '').trim();
-  if (!normalized) {
-    return false;
-  }
-
-  return normalized.replace(/\//g, '\\').toLowerCase().includes('\\windowsapps\\');
-}
-
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+}
+
+function normalizeCommandName(command: string): string {
+  const normalized = command.replace(/\//g, '\\');
+  const segments = normalized.split('\\');
+  return (segments.length > 0 ? segments[segments.length - 1] : normalized).toLowerCase();
 }
 
 function firstMeaningfulLine(input: string): string | null {
@@ -168,6 +168,59 @@ function extractPercent(message: string): number | undefined {
 function normalizeVersionOutput(value: string): string | null {
   const line = firstMeaningfulLine(value);
   return line ? line.replace(/^v/, '') : null;
+}
+
+function isSinglePackageGlobalListCommand(command: string, args: readonly string[]): boolean {
+  if (normalizeCommandName(command) !== 'npm') {
+    return false;
+  }
+
+  return args.length >= 8
+    && args[0] === 'list'
+    && args[1] === '-g'
+    && args[2] === '--prefix'
+    && args[4] === '--json'
+    && args[5] === '--long'
+    && args[6] === '--depth=0'
+    && typeof args[7] === 'string'
+    && args[7].trim().length > 0;
+}
+
+function isRoutineManagedNpmInspection(command: string, args: readonly string[]): boolean {
+  const normalizedCommand = normalizeCommandName(command);
+  if ((normalizedCommand === 'node' || normalizedCommand === 'node.exe') && args.length === 1 && args[0] === '--version') {
+    return true;
+  }
+
+  if (normalizedCommand !== 'npm') {
+    return false;
+  }
+
+  if (args.length === 1 && args[0] === '--version') {
+    return true;
+  }
+
+  if (args.length === 2 && args[0] === 'prefix' && args[1] === '-g') {
+    return true;
+  }
+
+  if (args.length === 2 && args[0] === 'root' && args[1] === '-g') {
+    return true;
+  }
+
+  if (args.length === 3 && args[0] === 'config' && args[1] === 'get' && args[2] === 'cache') {
+    return true;
+  }
+
+  return isSinglePackageGlobalListCommand(command, args);
+}
+
+function isExpectedMissingPackageInspectionResult(
+  command: string,
+  args: readonly string[],
+  result: CommandResult,
+): boolean {
+  return result.exitCode === 1 && isSinglePackageGlobalListCommand(command, args);
 }
 
 function parseInstalledPackageInventoryEntry(
@@ -860,16 +913,14 @@ export class DependencyManagementService {
   }
 
   private isWindowsStoreExecutionEnvironment(): boolean {
-    if (this.platform !== 'win32') {
-      return false;
-    }
-
-    const inheritedFlag = String(process.env.HAGICODE_DESKTOP_WINDOWS_STORE ?? '').trim().toLowerCase();
-    if (process.windowsStore || inheritedFlag === '1' || inheritedFlag === 'true') {
-      return true;
-    }
-
-    return looksLikeWindowsStoreInstallPath(process.execPath);
+    return isWindowsStoreRuntime({
+      platform: this.platform,
+      inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
+      processWindowsStore: Boolean((process as NodeJS.Process & { windowsStore?: boolean }).windowsStore),
+      execPath: process.execPath,
+      isPackaged: app.isPackaged,
+      defaultApp: (process as NodeJS.Process & { defaultApp?: boolean }).defaultApp,
+    });
   }
 
   private resolveModeSettings(): DependencyManagementModeSettings {
@@ -1903,7 +1954,9 @@ export class DependencyManagementService {
     } = {},
   ): Promise<CommandResult> {
     const launch = resolveCommandLaunch(command, this.platform);
-    log.info('[DependencyManagementService] Launching managed npm command', {
+    const inspectionCommand = isRoutineManagedNpmInspection(command, args);
+    const logLaunch = inspectionCommand ? log.debug : log.info;
+    logLaunch('[DependencyManagementService] Launching managed npm command', {
       command,
       args,
       shell: options.shell ?? launch.shell,
@@ -1926,7 +1979,9 @@ export class DependencyManagementService {
       }
 
       if (result.exitCode !== 0) {
-        log.warn('[DependencyManagementService] Managed npm command exited with failure', {
+        const expectedInspectionMiss = isExpectedMissingPackageInspectionResult(command, args, result);
+        const logFailure = expectedInspectionMiss ? log.debug : log.warn;
+        logFailure('[DependencyManagementService] Managed npm command exited with failure', {
           command,
           args,
           exitCode: result.exitCode,

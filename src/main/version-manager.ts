@@ -15,6 +15,7 @@ import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
 import { DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE } from './hagiscript-desktop-manifest.js';
+import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 import {
   type ActiveRuntimeDescriptor,
   type DistributionMode,
@@ -237,9 +238,17 @@ export class VersionManager {
   }
 
   async initializeDistributionMode(): Promise<DistributionModeState> {
-    const isWindowsStorePackage = process.platform === 'win32' && process.windowsStore;
+    const runtimeProcess = process as NodeJS.Process & { windowsStore?: boolean; defaultApp?: boolean };
+    const isWindowsStorePackage = isWindowsStoreRuntime({
+      platform: process.platform,
+      inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
+      processWindowsStore: Boolean(runtimeProcess.windowsStore),
+      execPath: process.execPath,
+      isPackaged: app.isPackaged,
+      defaultApp: runtimeProcess.defaultApp,
+    });
     if (isWindowsStorePackage) {
-      log.info('[VersionManager] Windows Store/MSIX package detected, checking packaged portable-fixed payload.');
+      log.info('[VersionManager] Windows Store runtime detected, checking packaged portable-fixed payload.');
     }
 
     const portableSelection = this.pathManager.getPortableRuntimeSelection();
