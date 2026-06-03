@@ -211,6 +211,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
+          HAGICODE_RUNTIME_CONSUMER: windows-store
+          HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
 
       - name: Preserve unsigned Windows artifacts

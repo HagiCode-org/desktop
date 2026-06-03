@@ -167,6 +167,17 @@ function resolvePackagedSteamSandboxPath() {
   return null;
 }
 
+function extractWorkflowStepBlock(workflowContent, stepName) {
+  const marker = `- name: ${stepName}`;
+  const startIndex = workflowContent.indexOf(marker);
+  if (startIndex === -1) {
+    return '';
+  }
+
+  const nextStepIndex = workflowContent.indexOf('\n      - name:', startIndex + marker.length);
+  return workflowContent.slice(startIndex, nextStepIndex === -1 ? undefined : nextStepIndex);
+}
+
 function isExecutable(targetPath) {
   try {
     fs.accessSync(targetPath, fs.constants.X_OK);
@@ -528,6 +539,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   const buildContent = fs.readFileSync(buildWorkflowPath, 'utf8');
   const reusableWindowsContent = fs.readFileSync(reusableWindowsWorkflowPath, 'utf8');
   const reusableUnixContent = fs.readFileSync(reusableUnixWorkflowPath, 'utf8');
+  const msixStoreStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Build Windows MSIX Store package');
 
   assert(buildContent.includes('production_build'), 'build workflow exposes a manual production_build input');
   assert(buildContent.includes('is_production_build'), 'build workflow resolves production build metadata');
@@ -547,12 +559,12 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableWindowsContent.includes('unsigned-artifacts/*'), 'reusable Windows workflow preserves unsigned artifacts alongside signed outputs');
   assert(reusableWindowsContent.includes('Upload Windows build bundle'), 'reusable Windows workflow uploads a Windows build bundle after packaging');
   assert(reusableWindowsContent.includes('name: MSIX'), 'reusable Windows workflow includes a dedicated MSIX matrix target');
-  assert(reusableWindowsContent.includes('Build Windows MSIX Store package'), 'reusable Windows workflow uses a dedicated Store build step for MSIX artifacts');
-  assert(reusableWindowsContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
-  assert(reusableWindowsContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
-  assert(reusableWindowsContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
-  assert(reusableWindowsContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed'), 'reusable Windows workflow passes the Store dependency-management mode into packaged smoke validation');
-  assert(reusableWindowsContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
+  assert(Boolean(msixStoreStepContent), 'reusable Windows workflow uses a dedicated Store build step for MSIX artifacts');
+  assert(msixStoreStepContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
+  assert(msixStoreStepContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
+  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
+  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external-managed'), 'reusable Windows workflow passes the Store dependency-management mode into packaged smoke validation');
+  assert(msixStoreStepContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
 
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
