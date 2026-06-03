@@ -126,10 +126,6 @@ export interface CliDependencyInstallResult {
 
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 export const NPM_DEFAULT_REGISTRY_URL = 'https://registry.npmjs.org/';
-const WINDOWS_STORE_NPM_SCRIPT_SHELL = 'powershell.exe';
-const WINDOWS_STORE_SCRIPT_SHELL_PACKAGE_NAMES = new Set([
-  '@fission-ai/openspec',
-]);
 
 const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
@@ -142,11 +138,6 @@ function looksLikeWindowsStoreInstallPath(executablePath: string | null | undefi
   }
 
   return normalized.replace(/\//g, '\\').toLowerCase().includes('\\windowsapps\\');
-}
-
-function matchesManagedPackageSelector(value: string, packageName: string): boolean {
-  const normalizedValue = value.trim();
-  return normalizedValue === packageName || normalizedValue.startsWith(`${packageName}@`);
 }
 
 function stripAnsi(input: string): string {
@@ -932,7 +923,7 @@ export class DependencyManagementService {
       env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
       platform: this.platform,
       runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const rewrittenArgs = this.rewriteManagedNpmArgsForWindowsStore(args);
+        const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
         const result = await this.runCommand(command, rewrittenArgs, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
           shell: launchOptions?.shell,
           timeoutMs,
@@ -948,7 +939,7 @@ export class DependencyManagementService {
     };
   }
 
-  private rewriteManagedNpmArgsForWindowsStore(args: readonly string[]): string[] {
+  private rewriteNpmInstallArgsForWindowsStore(args: readonly string[]): string[] {
     if (!this.isWindowsStoreExecutionEnvironment()) {
       return [...args];
     }
@@ -958,23 +949,17 @@ export class DependencyManagementService {
       return [...args];
     }
 
-    const selector = args.find((value) => [...WINDOWS_STORE_SCRIPT_SHELL_PACKAGE_NAMES].some((packageName) =>
-      matchesManagedPackageSelector(value, packageName)));
-    if (!selector) {
+    if (args.includes('--ignore-scripts')) {
       return [...args];
     }
 
-    if (args.some((value) => value === '--script-shell' || value.startsWith('--script-shell='))) {
-      return [...args];
-    }
-
-    log.info('[DependencyManagementService] Applying Windows Store npm lifecycle shell override', {
-      selector,
-      override: `--script-shell=${WINDOWS_STORE_NPM_SCRIPT_SHELL}`,
+    log.info('[DependencyManagementService] Applying Windows Store npm install override', {
+      override: '--ignore-scripts',
+      args,
     });
 
     const rewrittenArgs = [...args];
-    rewrittenArgs.splice(installIndex + 1, 0, `--script-shell=${WINDOWS_STORE_NPM_SCRIPT_SHELL}`);
+    rewrittenArgs.splice(installIndex + 1, 0, '--ignore-scripts');
     return rewrittenArgs;
   }
 
@@ -1050,18 +1035,10 @@ export class DependencyManagementService {
   private applyWindowsStoreNpmOverrides(env: NodeJS.ProcessEnv): void {
     if (this.isWindowsStoreExecutionEnvironment()) {
       env.HAGICODE_DESKTOP_WINDOWS_STORE = '1';
-      env.npm_config_script_shell = WINDOWS_STORE_NPM_SCRIPT_SHELL;
-      env.NPM_CONFIG_SCRIPT_SHELL = WINDOWS_STORE_NPM_SCRIPT_SHELL;
-      env.ComSpec = WINDOWS_STORE_NPM_SCRIPT_SHELL;
-      env.COMSPEC = WINDOWS_STORE_NPM_SCRIPT_SHELL;
       return;
     }
 
     delete env.HAGICODE_DESKTOP_WINDOWS_STORE;
-    delete env.npm_config_script_shell;
-    delete env.NPM_CONFIG_SCRIPT_SHELL;
-    delete env.ComSpec;
-    delete env.COMSPEC;
   }
 
   private buildCommandEnvNpmEnvironment(
@@ -1193,18 +1170,19 @@ export class DependencyManagementService {
     activationPolicy: BundledNodeRuntimePolicyDecision,
     args: string[],
   ): { command: string; args: string[]; executablePath: string } {
+    const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
     const executablePath = this.getNpmExecutablePath(activationPolicy);
     if (activationPolicy.enabled) {
       return {
         command: this.getNodeExecutablePath(activationPolicy),
-        args: [executablePath, ...args],
+        args: [executablePath, ...rewrittenArgs],
         executablePath,
       };
     }
 
     return {
       command: executablePath,
-      args,
+      args: rewrittenArgs,
       executablePath,
     };
   }
