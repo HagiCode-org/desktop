@@ -126,10 +126,28 @@ export interface CliDependencyInstallResult {
 
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
 export const NPM_DEFAULT_REGISTRY_URL = 'https://registry.npmjs.org/';
+const WINDOWS_STORE_NPM_SCRIPT_SHELL = 'powershell.exe';
+const WINDOWS_STORE_SCRIPT_SHELL_PACKAGE_NAMES = new Set([
+  '@fission-ai/openspec',
+]);
 
 const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
+
+function looksLikeWindowsStoreInstallPath(executablePath: string | null | undefined): boolean {
+  const normalized = String(executablePath ?? '').trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized.replace(/\//g, '\\').toLowerCase().includes('\\windowsapps\\');
+}
+
+function matchesManagedPackageSelector(value: string, packageName: string): boolean {
+  const normalizedValue = value.trim();
+  return normalizedValue === packageName || normalizedValue.startsWith(`${packageName}@`);
+}
 
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
@@ -834,6 +852,19 @@ export class DependencyManagementService {
     env.NPM_CONFIG_USERCONFIG = npmUserConfigPath;
   }
 
+  private isWindowsStoreExecutionEnvironment(): boolean {
+    if (this.platform !== 'win32') {
+      return false;
+    }
+
+    const inheritedFlag = String(process.env.HAGICODE_DESKTOP_WINDOWS_STORE ?? '').trim().toLowerCase();
+    if (process.windowsStore || inheritedFlag === '1' || inheritedFlag === 'true') {
+      return true;
+    }
+
+    return looksLikeWindowsStoreInstallPath(process.execPath);
+  }
+
   private buildSdkSyncManifest(
     definitions: readonly ManagedNpmPackageDefinition[],
     registryUrl?: string | null,
@@ -901,19 +932,50 @@ export class DependencyManagementService {
       env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
       platform: this.platform,
       runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const result = await this.runCommand(command, [...args], undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
+        const rewrittenArgs = this.rewriteManagedNpmArgsForWindowsStore(args);
+        const result = await this.runCommand(command, rewrittenArgs, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
           shell: launchOptions?.shell,
           timeoutMs,
         });
 
         return {
           command,
-          args: [...args],
+          args: rewrittenArgs,
           stdout: result.stdout,
           stderr: result.stderr,
         };
       },
     };
+  }
+
+  private rewriteManagedNpmArgsForWindowsStore(args: readonly string[]): string[] {
+    if (!this.isWindowsStoreExecutionEnvironment()) {
+      return [...args];
+    }
+
+    const installIndex = args.findIndex((value) => value === 'install');
+    if (installIndex === -1) {
+      return [...args];
+    }
+
+    const selector = args.find((value) => [...WINDOWS_STORE_SCRIPT_SHELL_PACKAGE_NAMES].some((packageName) =>
+      matchesManagedPackageSelector(value, packageName)));
+    if (!selector) {
+      return [...args];
+    }
+
+    if (args.some((value) => value === '--script-shell' || value.startsWith('--script-shell='))) {
+      return [...args];
+    }
+
+    log.info('[DependencyManagementService] Applying Windows Store npm lifecycle shell override', {
+      selector,
+      override: `--script-shell=${WINDOWS_STORE_NPM_SCRIPT_SHELL}`,
+    });
+
+    const rewrittenArgs = [...args];
+    rewrittenArgs.splice(installIndex + 1, 0, `--script-shell=${WINDOWS_STORE_NPM_SCRIPT_SHELL}`);
+    return rewrittenArgs;
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
@@ -980,13 +1042,26 @@ export class DependencyManagementService {
       delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
     }
 
-    if (this.platform === 'win32' && process.windowsStore) {
-      env.HAGICODE_DESKTOP_WINDOWS_STORE = '1';
-    } else {
-      delete env.HAGICODE_DESKTOP_WINDOWS_STORE;
-    }
+    this.applyWindowsStoreNpmOverrides(env);
 
     return env;
+  }
+
+  private applyWindowsStoreNpmOverrides(env: NodeJS.ProcessEnv): void {
+    if (this.isWindowsStoreExecutionEnvironment()) {
+      env.HAGICODE_DESKTOP_WINDOWS_STORE = '1';
+      env.npm_config_script_shell = WINDOWS_STORE_NPM_SCRIPT_SHELL;
+      env.NPM_CONFIG_SCRIPT_SHELL = WINDOWS_STORE_NPM_SCRIPT_SHELL;
+      env.ComSpec = WINDOWS_STORE_NPM_SCRIPT_SHELL;
+      env.COMSPEC = WINDOWS_STORE_NPM_SCRIPT_SHELL;
+      return;
+    }
+
+    delete env.HAGICODE_DESKTOP_WINDOWS_STORE;
+    delete env.npm_config_script_shell;
+    delete env.NPM_CONFIG_SCRIPT_SHELL;
+    delete env.ComSpec;
+    delete env.COMSPEC;
   }
 
   private buildCommandEnvNpmEnvironment(
@@ -1513,7 +1588,7 @@ export class DependencyManagementService {
       log.info('[DependencyManagementService] Starting managed package sync', {
         packageIds,
         packageNames: definitions.map((definition) => definition.packageName),
-        windowsStore: this.platform === 'win32' && process.windowsStore,
+        windowsStore: this.isWindowsStoreExecutionEnvironment(),
         registryMirror: mirrorSettings.registryUrl ?? null,
       });
 
@@ -1630,7 +1705,7 @@ export class DependencyManagementService {
       command,
       args,
       shell: options.shell ?? launch.shell,
-      windowsStore: this.platform === 'win32' && process.windowsStore,
+      windowsStore: this.isWindowsStoreExecutionEnvironment(),
     });
     return executeCliStreaming({
       command: launch.command,

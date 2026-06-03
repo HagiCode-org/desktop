@@ -68,13 +68,26 @@ describe('dependency management service contract', () => {
     assert.match(source, /applyRuntimeManagedPackageOverride/);
   });
 
-  it('keeps sync diagnostics in the main service without Windows Store install rewrites', async () => {
+  it('keeps sync diagnostics and Windows Store lifecycle shell overrides in the main service', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /Starting managed package sync/);
     assert.match(source, /Launching managed npm command/);
     assert.match(source, /Managed npm command exited with failure/);
-    assert.doesNotMatch(source, /Applying Windows Store npm install override/);
+    assert.match(source, /WINDOWS_STORE_SCRIPT_SHELL_PACKAGE_NAMES/);
+    assert.match(source, /@fission-ai\/openspec/);
+    assert.match(source, /rewriteManagedNpmArgsForWindowsStore\(args: readonly string\[\]\)/);
+    assert.match(source, /Applying Windows Store npm lifecycle shell override/);
+    assert.match(source, /--script-shell=\$\{WINDOWS_STORE_NPM_SCRIPT_SHELL\}/);
+    assert.match(source, /matchesManagedPackageSelector/);
+    assert.match(source, /looksLikeWindowsStoreInstallPath\(process\.execPath\)/);
+    assert.match(source, /process\.windowsStore \|\| inheritedFlag === '1' \|\| inheritedFlag === 'true'/);
+    assert.match(source, /applyWindowsStoreNpmOverrides\(env: NodeJS\.ProcessEnv\)/);
+    assert.match(source, /npm_config_script_shell = WINDOWS_STORE_NPM_SCRIPT_SHELL/);
+    assert.match(source, /NPM_CONFIG_SCRIPT_SHELL = WINDOWS_STORE_NPM_SCRIPT_SHELL/);
+    assert.match(source, /env\.ComSpec = WINDOWS_STORE_NPM_SCRIPT_SHELL/);
+    assert.match(source, /env\.COMSPEC = WINDOWS_STORE_NPM_SCRIPT_SHELL/);
+    assert.match(source, /const WINDOWS_STORE_NPM_SCRIPT_SHELL = 'powershell\.exe'/);
     assert.doesNotMatch(source, /--ignore-scripts/);
   });
 
