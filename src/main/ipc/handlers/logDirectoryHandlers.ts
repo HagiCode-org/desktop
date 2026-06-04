@@ -2,6 +2,7 @@ import { electron } from '../../../electron-api.js';
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { createLogDirectoryService } from '../../log-directory-service.js';
+import { PathManager } from '../../path-manager.js';
 import { VersionManager } from '../../version-manager.js';
 import type { LogDirectoryOpenResult, LogDirectoryTarget } from '../../../types/log-directory.js';
 
@@ -16,16 +17,11 @@ const state: LogDirectoryHandlerState = {
 };
 
 function createService() {
+  const pathManager = PathManager.getInstance();
+
   return createLogDirectoryService({
     getDesktopLogsPath: () => app.getPath('logs'),
-    getActiveVersion: async () => state.versionManager?.getActiveVersion() ?? null,
-    getVersionLogsPath: (versionId) => {
-      if (!state.versionManager) {
-        throw new Error('Version manager not initialized');
-      }
-
-      return state.versionManager.getLogsPath(versionId);
-    },
+    getWebAppLogsPath: () => pathManager.getManagedServerLogsDirectory(),
     access: (targetPath) => fs.access(targetPath),
     openPath: (targetPath) => shell.openPath(targetPath),
     logger: log,

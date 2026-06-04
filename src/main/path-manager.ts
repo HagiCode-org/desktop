@@ -41,6 +41,10 @@ import {
   registerRuntimeManifestRuntimeDataRoot,
   resolveRuntimeManifestDataScopePath,
 } from './runtime-manifest-store.js';
+import {
+  resolveManagedServerDataHome,
+  resolveManagedServerLogsDirectory,
+} from './managed-server-paths.js';
 import type {
   BootstrapDataDirectoryContext,
   DataDirectoryDiagnostic,
@@ -545,7 +549,11 @@ export class PathManager {
   }
 
   getManagedServerDataHome(): string {
-    return this.paths.appsData;
+    return resolveManagedServerDataHome(this.paths.appsData) ?? path.dirname(this.paths.appsData);
+  }
+
+  getManagedServerLogsDirectory(): string {
+    return resolveManagedServerLogsDirectory(this.paths.appsData) ?? path.join(path.dirname(this.paths.appsData), 'logs');
   }
 
   getDesktopConfigDirectory(): string {

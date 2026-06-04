@@ -5,10 +5,6 @@ import {
   type LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
 
-interface ActiveVersionLike {
-  id: string;
-}
-
 interface LoggerLike {
   info?: (...args: unknown[]) => void;
   warn?: (...args: unknown[]) => void;
@@ -17,8 +13,7 @@ interface LoggerLike {
 
 export interface LogDirectoryServiceDeps {
   getDesktopLogsPath: () => string;
-  getActiveVersion: () => Promise<ActiveVersionLike | null>;
-  getVersionLogsPath: (versionId: string) => string;
+  getWebAppLogsPath: () => string;
   access: (path: string) => Promise<unknown>;
   openPath: (path: string) => Promise<string>;
   logger?: LoggerLike;
@@ -56,17 +51,7 @@ async function resolveTarget(
     };
   }
 
-  const activeVersion = await deps.getActiveVersion();
-  if (!activeVersion) {
-    return {
-      target,
-      path: null,
-      exists: false,
-      error: 'no_active_version',
-    };
-  }
-
-  const webAppLogsPath = deps.getVersionLogsPath(activeVersion.id);
+  const webAppLogsPath = deps.getWebAppLogsPath();
   const exists = await pathExists(deps.access, webAppLogsPath);
 
   return {

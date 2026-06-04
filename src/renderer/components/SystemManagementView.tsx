@@ -74,7 +74,7 @@ const createDefaultLogTarget = (target: LogDirectoryTarget): LogDirectoryTargetS
   available: false,
   exists: false,
   path: null,
-  reason: target === 'web-app' ? 'no_active_version' : 'logs_not_found',
+  reason: 'logs_not_found',
 });
 
 const createDefaultLogTargetMap = (): LogTargetStateMap => ({

@@ -3,19 +3,15 @@ import { describe, it } from 'node:test';
 import { createLogDirectoryService } from '../log-directory-service.js';
 
 function createService(options?: {
-  activeVersionId?: string | null;
   existingPaths?: string[];
   openResult?: string;
 }) {
   const openCalls: string[] = [];
-  const existingPaths = new Set(options?.existingPaths ?? ['/desktop-logs', '/versions/v1/logs']);
+  const existingPaths = new Set(options?.existingPaths ?? ['/desktop-logs', '/managed-server/logs']);
 
   const service = createLogDirectoryService({
     getDesktopLogsPath: () => '/desktop-logs',
-    getActiveVersion: async () => options?.activeVersionId === null
-      ? null
-      : { id: options?.activeVersionId ?? 'v1' },
-    getVersionLogsPath: (versionId) => `/versions/${versionId}/logs`,
+    getWebAppLogsPath: () => '/managed-server/logs',
     access: async (targetPath) => {
       if (!existingPaths.has(targetPath)) {
         throw new Error('missing');
@@ -34,8 +30,8 @@ function createService(options?: {
 }
 
 describe('log directory service', () => {
-  it('marks web-app target unavailable when no active version exists', async () => {
-    const { service } = createService({ activeVersionId: null });
+  it('marks web-app target unavailable when the managed backend logs folder is missing', async () => {
+    const { service } = createService({ existingPaths: ['/desktop-logs'] });
 
     const targets = await service.listTargets();
     const webAppTarget = targets.find((target) => target.target === 'web-app');
@@ -44,8 +40,8 @@ describe('log directory service', () => {
       target: 'web-app',
       available: false,
       exists: false,
-      path: null,
-      reason: 'no_active_version',
+      path: '/managed-server/logs',
+      reason: 'logs_not_found',
     });
   });
 
@@ -70,21 +66,9 @@ describe('log directory service', () => {
 
     assert.deepEqual(result, {
       success: true,
-      path: '/versions/v1/logs',
+      path: '/managed-server/logs',
     });
-    assert.deepEqual(openCalls, ['/versions/v1/logs']);
-  });
-
-  it('returns no_active_version when opening web-app logs without an active version', async () => {
-    const { service, openCalls } = createService({ activeVersionId: null });
-
-    const result = await service.open('web-app');
-
-    assert.deepEqual(result, {
-      success: false,
-      error: 'no_active_version',
-    });
-    assert.deepEqual(openCalls, []);
+    assert.deepEqual(openCalls, ['/managed-server/logs']);
   });
 
   it('returns logs_not_found for web-app when the active-version logs folder is missing', async () => {
@@ -123,8 +107,8 @@ describe('log directory service', () => {
     assert.deepEqual(result, {
       success: false,
       error: 'open_failed',
-      path: '/versions/v1/logs',
+      path: '/managed-server/logs',
     });
-    assert.deepEqual(openCalls, ['/versions/v1/logs']);
+    assert.deepEqual(openCalls, ['/managed-server/logs']);
   });
 });
