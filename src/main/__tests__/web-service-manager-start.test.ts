@@ -66,6 +66,9 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /getManagedCommandContext\('pm2'\)/);
     assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
     assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
+    assert.match(runtimeContextSource, /dependencyManagementMode: shared\.dependencyManagementMode/);
+    assert.match(runtimeContextSource, /externalNodePath: shared\.externalNodePath/);
+    assert.match(runtimeContextSource, /managedContext\.environment\.source === 'externally-managed'/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
     assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.source === 'desktop-managed'/);
@@ -81,6 +84,8 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /restartManagedServer/);
     assert.match(serverManagerSource, /stopManagedServer/);
     assert.match(serverManagerSource, /getManagedServerStatus/);
+    assert.match(serverManagerSource, /dependencyManagementMode: context\.dependencyManagementMode/);
+    assert.match(serverManagerSource, /externalNodePath: context\.externalNodePath/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 

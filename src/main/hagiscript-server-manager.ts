@@ -113,6 +113,10 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', 'exact', {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
+        ...(context.dependencyManagementMode
+          ? { dependencyManagementMode: context.dependencyManagementMode }
+          : {}),
+        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
       if (result.action !== 'exact') {
@@ -167,6 +171,9 @@ export class HagiscriptPm2Manager {
       const report = await queryRuntimeState({
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
+        ...(context.dependencyManagementMode
+          ? { dependencyManagementMode: context.dependencyManagementMode }
+          : {}),
       });
 
       return {
@@ -253,6 +260,10 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', action, {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
+        ...(context.dependencyManagementMode
+          ? { dependencyManagementMode: context.dependencyManagementMode }
+          : {}),
+        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
       if (!this.isLifecycleComponentResult(result)) {
@@ -272,6 +283,10 @@ export class HagiscriptPm2Manager {
     const options = {
       manifestPath: context.manifestPath,
       runtimeRoot: context.runtimeRoot,
+      ...(context.dependencyManagementMode
+        ? { dependencyManagementMode: context.dependencyManagementMode }
+        : {}),
+      ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
     };
 
     switch (action) {

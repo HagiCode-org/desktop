@@ -21,6 +21,8 @@ export type HagiscriptManagedPm2Service = 'server';
 export interface HagiscriptRuntimeContext {
   readonly serviceName: HagiscriptManagedPm2Service;
   readonly activeRuntime: ActiveRuntimeDescriptor;
+  readonly dependencyManagementMode?: string;
+  readonly externalNodePath: string | null;
   readonly runtimeRoot: string;
   readonly runtimeHome: string;
   readonly runtimeDataRoot: string;
@@ -142,6 +144,8 @@ export class HagiscriptRuntimeContextResolver {
     return {
       serviceName: 'server',
       activeRuntime: input.activeRuntime,
+      dependencyManagementMode: shared.dependencyManagementMode,
+      externalNodePath: shared.externalNodePath,
       runtimeRoot: shared.runtimeRoot,
       runtimeHome: shared.runtimeHome,
       runtimeDataRoot: shared.runtimeDataRoot,
@@ -163,6 +167,8 @@ export class HagiscriptRuntimeContextResolver {
   }
 
   private async resolveSharedContext(): Promise<{
+    dependencyManagementMode?: string;
+    externalNodePath: string | null;
     runtimeRoot: string;
     runtimeHome: string;
     runtimeDataRoot: string;
@@ -184,8 +190,16 @@ export class HagiscriptRuntimeContextResolver {
     const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-runtime-root');
     const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeContainerRoot(this.pathManager.getCurrentPlatform()));
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
+    const externalNodePath = managedContext.environment.source === 'externally-managed'
+      && path.isAbsolute(managedContext.environment.node.executablePath)
+      ? path.resolve(managedContext.environment.node.executablePath)
+      : null;
 
     return {
+      dependencyManagementMode: managedContext.environment.source === 'externally-managed'
+        ? 'external-managed'
+        : undefined,
+      externalNodePath,
       runtimeRoot: aliasedRuntimeRoot,
       runtimeHome: aliasedRuntimeHome,
       runtimeDataRoot,
