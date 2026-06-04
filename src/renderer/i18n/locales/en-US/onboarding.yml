@@ -1,7 +1,7 @@
 title: First-Time Setup
 welcome:
   title: Welcome to Hagicode Desktop
-  description: Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in six steps.
+  description: Hagicode Desktop is the local launcher for Hagicode. We will finish first-time setup and compliance confirmation in {{count}} steps.
   features:
     manage:
       title: Version Management
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: Dependency Management
       description: View and manage system dependencies
-  processTitle: 'The first-time setup has 6 steps:'
+  processTitle: 'The first-time setup has {{count}} steps:'
   steps:
     languageSelection: Choose the Desktop language used during setup
     welcome: Review the setup and what will happen next
@@ -277,7 +277,7 @@ legal:
   title: End User License Agreement and Privacy Policy
   descriptionFull: Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.
   descriptionLegalOnly: The current legal revisions have not been accepted yet. Review the official documents in your default browser, then return to Desktop to confirm.
-  progressFull: 'Full setup: Language -> Welcome -> Legal Consent -> Sharing Acceleration -> Dependency Preparation -> Download'
+  progressFull: 'Full setup: {{steps}}'
   progressLegalOnly: 'Compliance gate mode: language selection appears before the current legal consent step'
   browserInstruction: Open the official documents in your default browser before you accept. Desktop only shows the revision summary, not the full legal text.
   cacheHint: You are currently seeing the most recent successfully cached legal summary. Refresh after network recovery to confirm whether a newer revision exists.

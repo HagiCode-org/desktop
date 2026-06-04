@@ -1,7 +1,7 @@
 title: 初回セットアップ
 welcome:
   title: Hagicode Desktopへようこそ
-  description: Hagicode Desktop は Hagicode のローカル ランチャーです。初回セットアップと適合確認は6つのステップで完了します。
+  description: Hagicode Desktop は Hagicode のローカル ランチャーです。初回セットアップと適合確認は {{count}} のステップで完了します。
   features:
     manage:
       title: バージョン管理
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: 依存関係の管理
       description: システムの依存関係を表示および管理する
-  processTitle: 初回セットアップには 6 つの手順があります。
+  processTitle: 初回セットアップには {{count}} つの手順があります。
   steps:
     welcome: セットアップと次に何が起こるかを確認してください
     download: 最新の Hagicode Server パッケージをダウンロード
@@ -267,7 +267,7 @@ legal:
   title: エンドユーザーライセンス契約とプライバシーポリシー
   descriptionFull: HagiCode サーバーをダウンロードする前に、現在の EULA とプライバシー ポリシーの改訂を確認してください。公式ドキュメントはデフォルトのブラウザで開きます。
   descriptionLegalOnly: 現在の法改正はまだ受け入れられていません。デフォルトのブラウザで公式ドキュメントを確認し、デスクトップに戻って確認します。
-  progressFull: '完全なセットアップ: 言語選択 -> ようこそ -> 法的同意 -> 共有アクセラレーション -> 依存関係の準備 -> ダウンロード'
+  progressFull: '完全なセットアップ: {{steps}}'
   progressLegalOnly: 'コンプライアンスゲートモード: 現在の法的同意の前に言語選択が表示されます'
   browserInstruction: 同意する前に、デフォルトのブラウザで公式ドキュメントを開いてください。デスクトップには改訂の概要のみが表示され、法的な全文は表示されません。
   cacheHint: 現在、正常にキャッシュされた最新の法的概要が表示されています。ネットワークの回復後に更新して、新しいリビジョンが存在するかどうかを確認します。

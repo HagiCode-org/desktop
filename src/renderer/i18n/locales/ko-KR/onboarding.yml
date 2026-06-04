@@ -1,7 +1,7 @@
 title: 최초 설정
 welcome:
   title: Hagicode Desktop에 오신 것을 환영합니다
-  description: Hagicode Desktop은 Hagicode의 로컬 실행 프로그램입니다. 6단계에 걸쳐 최초 설정 및 규정 준수 확인을 완료하겠습니다.
+  description: Hagicode Desktop은 Hagicode의 로컬 실행 프로그램입니다. {{count}}단계에 걸쳐 최초 설정 및 규정 준수 확인을 완료하겠습니다.
   features:
     manage:
       title: 버전 관리
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: 종속성 관리
       description: 시스템 종속성 보기 및 관리
-  processTitle: 최초 설정에는 6단계가 있습니다.
+  processTitle: 최초 설정에는 {{count}}단계가 있습니다.
   steps:
     welcome: 설정과 다음에 일어날 일을 검토하세요.
     download: 최신 Hagicode Server 패키지 다운로드
@@ -267,7 +267,7 @@ legal:
   title: 최종 사용자 라이센스 계약 및 개인정보 보호정책
   descriptionFull: HagiCode Server를 다운로드하기 전에 현재 EULA 및 개인정보 보호정책 개정을 확인하세요. 공식 문서는 기본 브라우저에서 열립니다.
   descriptionLegalOnly: 현재의 법적 개정은 아직 승인되지 않았습니다. 기본 브라우저에서 공식 문서를 검토한 다음 데스크톱으로 돌아가 확인하세요.
-  progressFull: '전체 설정: 언어 선택 -> 환영 -> 법적 동의 -> 공유 가속 -> 의존성 준비 -> 다운로드'
+  progressFull: '전체 설정: {{steps}}'
   progressLegalOnly: '컴플라이언스 게이트 모드: 현재 법적 동의 전에 언어 선택 단계가 표시됩니다.'
   browserInstruction: 수락하기 전에 기본 브라우저에서 공식 문서를 엽니다. 데스크톱에는 전체 법률 텍스트가 아닌 개정 요약만 표시됩니다.
   cacheHint: 현재 성공적으로 캐시된 가장 최근의 법적 요약을 보고 계십니다. 네트워크 복구 후 새로 고쳐 최신 버전이 있는지 확인하세요.

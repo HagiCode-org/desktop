@@ -1,7 +1,7 @@
 title: Configuration initiale
 welcome:
   title: Bienvenue à Hagicode Desktop
-  description: Hagicode Desktop est le lanceur local pour Hagicode. Nous terminerons la première configuration et la confirmation de conformité en six étapes.
+  description: Hagicode Desktop est le lanceur local pour Hagicode. Nous terminerons la première configuration et la confirmation de conformité en {{count}} étapes.
   features:
     manage:
       title: Gestion des versions
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: Gestion des dépendances
       description: Afficher et gérer les dépendances du système
-  processTitle: 'La première configuration comporte 6 étapes:'
+  processTitle: 'La première configuration comporte {{count}} étapes:'
   steps:
     welcome: Passez en revue la configuration et ce qui va se passer ensuite
     download: Téléchargez le dernier package Hagicode Server
@@ -264,7 +264,7 @@ legal:
   title: Contrat de licence utilisateur final et politique de confidentialité
   descriptionFull: Avant de télécharger HagiCode Server, confirmez les révisions actuelles du CLUF et de la politique de confidentialité. Les documents officiels s'ouvrent dans votre navigateur par défaut.
   descriptionLegalOnly: Les révisions juridiques actuelles n’ont pas encore été acceptées. Consultez les documents officiels dans votre navigateur par défaut, puis revenez au bureau pour confirmer.
-  progressFull: 'Configuration complète: Langue -> Bienvenue -> Consentement légal -> Accélération du partage -> Préparation des dépendances -> Télécharger'
+  progressFull: 'Configuration complète: {{steps}}'
   progressLegalOnly: 'Mode Compliance Gate: la sélection de langue apparaît avant l''étape actuelle de consentement légal'
   browserInstruction: Ouvrez les documents officiels dans votre navigateur par défaut avant d'accepter. Desktop affiche uniquement le résumé de la révision, pas le texte juridique complet.
   cacheHint: Vous voyez actuellement le résumé juridique le plus récent mis en cache avec succès. Actualisez après la récupération du réseau pour confirmer si une révision plus récente existe.

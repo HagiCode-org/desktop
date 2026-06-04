@@ -7,6 +7,7 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
+  selectOnboardingDependencySnapshot,
   selectIsActive,
   selectOnboardingMode,
   selectOnboardingRuntimeProvisioned,
@@ -19,6 +20,7 @@ import {
   goToNextStep,
   goToPreviousStep,
   loadLegalDocuments,
+  loadOnboardingDependencySnapshot,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
@@ -38,6 +40,25 @@ interface OnboardingWizardProps {
   onComplete?: () => void;
 }
 
+function getStepLabel(t: ReturnType<typeof useTranslation<'onboarding'>>['t'], step: OnboardingStep) {
+  switch (step) {
+    case OnboardingStep.LanguageSelection:
+      return t('languageSelection.title');
+    case OnboardingStep.Welcome:
+      return t('welcome.title');
+    case OnboardingStep.LegalConsent:
+      return t('legal.title');
+    case OnboardingStep.SharingAcceleration:
+      return t('sharingAcceleration.title');
+    case OnboardingStep.DependencyPreparation:
+      return t('dependencyPreparation.title');
+    case OnboardingStep.Download:
+      return t('download.title');
+    default:
+      return '';
+  }
+}
+
 function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const { t } = useTranslation('onboarding');
   const dispatch = useDispatch<AppDispatch>();
@@ -48,6 +69,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
+  const dependencySnapshot = useSelector((state: RootState) => selectOnboardingDependencySnapshot(state));
+  const dependencySnapshotStatus = useSelector((state: RootState) => state.onboarding.dependencySnapshotStatus);
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
@@ -90,7 +113,15 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     dispatch(loadLegalDocuments({ locale }));
   }, [isActive, locale, dispatch]);
 
-  const stepSequence = getOnboardingSequence(mode);
+  useEffect(() => {
+    if (!isActive || mode !== 'full' || dependencySnapshotStatus !== 'idle') {
+      return;
+    }
+
+    void dispatch(loadOnboardingDependencySnapshot());
+  }, [dependencySnapshotStatus, dispatch, isActive, mode]);
+
+  const stepSequence = useMemo(() => getOnboardingSequence(mode, dependencySnapshot), [dependencySnapshot, mode]);
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
 
@@ -173,7 +204,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           />
         );
       case OnboardingStep.Welcome:
-        return <WelcomeIntro onNext={handleNext} />;
+        return <WelcomeIntro onNext={handleNext} stepSequence={stepSequence} />;
       case OnboardingStep.LegalConsent:
         return <LegalConsentStep />;
       case OnboardingStep.SharingAcceleration:
@@ -187,24 +218,11 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   };
 
-  const currentStepLabel = useMemo(() => {
-    switch (currentStep) {
-      case OnboardingStep.LanguageSelection:
-        return t('languageSelection.title');
-      case OnboardingStep.Welcome:
-        return t('welcome.title');
-      case OnboardingStep.LegalConsent:
-        return t('legal.title');
-      case OnboardingStep.SharingAcceleration:
-        return t('sharingAcceleration.title');
-      case OnboardingStep.DependencyPreparation:
-        return t('dependencyPreparation.title');
-      case OnboardingStep.Download:
-        return t('download.title');
-      default:
-        return '';
-    }
-  }, [currentStep, t]);
+  const currentStepLabel = useMemo(() => getStepLabel(t, currentStep), [currentStep, t]);
+  const fullProgressLabel = useMemo(
+    () => t('legal.progressFull', { steps: stepSequence.map((step) => getStepLabel(t, step)).join(' -> ') }),
+    [stepSequence, t],
+  );
 
   const nextLabel = useMemo(() => {
     if (currentStep === OnboardingStep.LanguageSelection) {
@@ -246,7 +264,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               {t('title')}
             </h1>
             <p className="max-w-3xl text-sm text-muted-foreground">
-              {t(mode === 'legal-only' ? 'legal.progressLegalOnly' : 'legal.progressFull')}
+              {mode === 'legal-only' ? t('legal.progressLegalOnly') : fullProgressLabel}
             </p>
           </div>
           <OnboardingProgress

@@ -1,7 +1,7 @@
 title: Configuração inicial
 welcome:
   title: Bem-vindo ao Hagicode Desktop
-  description: Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em seis etapas.
+  description: Hagicode Desktop é o lançador local para Hagicode. Concluiremos a configuração inicial e a confirmação de conformidade em {{count}} etapas.
   features:
     manage:
       title: Gerenciamento de versão
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: Gerenciamento de Dependências
       description: Visualize e gerencie dependências do sistema
-  processTitle: 'A configuração inicial tem 6 etapas:'
+  processTitle: 'A configuração inicial tem {{count}} etapas:'
   steps:
     welcome: Revise a configuração e o que acontecerá a seguir
     download: Baixe o pacote Hagicode Server mais recente
@@ -267,7 +267,7 @@ legal:
   title: Contrato de licença de usuário final e política de privacidade
   descriptionFull: Antes de baixar o HagiCode Server, confirme as revisões atuais do EULA e da Política de Privacidade. Os documentos oficiais são abertos no seu navegador padrão.
   descriptionLegalOnly: As revisões legais atuais ainda não foram aceitas. Revise os documentos oficiais em seu navegador padrão e retorne ao Desktop para confirmar.
-  progressFull: 'Configuração completa: Idioma -> Bem-vindo -> Consentimento legal -> Aceleração de compartilhamento -> Preparação de dependências -> Download'
+  progressFull: 'Configuração completa: {{steps}}'
   progressLegalOnly: 'Modo de compliance: a seleção de idioma aparece antes da etapa legal atual'
   browserInstruction: Abra os documentos oficiais em seu navegador padrão antes de aceitar. Desktop mostra apenas o resumo da revisão, não o texto jurídico completo.
   cacheHint: No momento, você está vendo o resumo jurídico mais recente armazenado em cache com sucesso. Atualize após a recuperação da rede para confirmar se existe uma revisão mais recente.

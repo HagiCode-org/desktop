@@ -1,13 +1,34 @@
 import { useTranslation } from 'react-i18next';
 import { Rocket, CheckCircle2, Download, Zap } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { OnboardingStep } from '../../../../types/onboarding';
 
 interface WelcomeIntroProps {
   onNext: () => void;
   onSkip?: () => void;
+  stepSequence: OnboardingStep[];
 }
 
-function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
+function getWelcomeStepTranslationKey(step: OnboardingStep) {
+  switch (step) {
+    case OnboardingStep.LanguageSelection:
+      return 'welcome.steps.languageSelection';
+    case OnboardingStep.Welcome:
+      return 'welcome.steps.welcome';
+    case OnboardingStep.LegalConsent:
+      return 'welcome.steps.legalConsent';
+    case OnboardingStep.SharingAcceleration:
+      return 'welcome.steps.sharingAcceleration';
+    case OnboardingStep.DependencyPreparation:
+      return 'welcome.steps.dependencyPreparation';
+    case OnboardingStep.Download:
+      return 'welcome.steps.download';
+    default:
+      return 'welcome.steps.welcome';
+  }
+}
+
+function WelcomeIntro({ onNext, onSkip, stepSequence }: WelcomeIntroProps) {
   const { t } = useTranslation('onboarding');
 
   const features = [
@@ -28,14 +49,10 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
     },
   ];
 
-  const steps = [
-    { number: 1, text: t('welcome.steps.languageSelection') },
-    { number: 2, text: t('welcome.steps.welcome') },
-    { number: 3, text: t('welcome.steps.legalConsent') },
-    { number: 4, text: t('welcome.steps.sharingAcceleration') },
-    { number: 5, text: t('welcome.steps.dependencyPreparation') },
-    { number: 6, text: t('welcome.steps.download') },
-  ];
+  const steps = stepSequence.map((step, index) => ({
+    number: index + 1,
+    text: t(getWelcomeStepTranslationKey(step)),
+  }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -48,14 +65,14 @@ function WelcomeIntro({ onNext, onSkip }: WelcomeIntroProps) {
             <div className="space-y-3">
               <h2 className="text-3xl font-semibold tracking-tight">{t('welcome.title')}</h2>
               <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-                {t('welcome.description')}
+                {t('welcome.description', { count: steps.length })}
               </p>
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl border bg-card p-6 sm:p-7">
-          <h3 className="text-sm font-medium text-muted-foreground">{t('welcome.processTitle')}</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">{t('welcome.processTitle', { count: steps.length })}</h3>
           <div className="mt-4 space-y-3">
             {steps.map((step) => (
               <div key={step.number} className="flex items-start gap-3 rounded-xl border bg-muted/20 px-4 py-3">

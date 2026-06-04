@@ -1,7 +1,7 @@
 title: Erstmalige Einrichtung
 welcome:
   title: Willkommen bei Hagicode Desktop
-  description: Hagicode Desktop ist der lokale Launcher für Hagicode. Wir werden die Ersteinrichtung und die Konformitätsbestätigung in sechs Schritten abschließen.
+  description: Hagicode Desktop ist der lokale Launcher für Hagicode. Wir werden die Ersteinrichtung und die Konformitätsbestätigung in {{count}} Schritten abschließen.
   features:
     manage:
       title: Versionsverwaltung
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: Abhängigkeitsmanagement
       description: Systemabhängigkeiten anzeigen und verwalten
-  processTitle: 'Die Ersteinrichtung besteht aus 6 Schritten:'
+  processTitle: 'Die Ersteinrichtung besteht aus {{count}} Schritten:'
   steps:
     welcome: Überprüfen Sie die Einrichtung und was als nächstes passieren wird
     download: Laden Sie das neueste Hagicode Server-Paket herunter
@@ -267,7 +267,7 @@ legal:
   title: Endbenutzer-Lizenzvereinbarung und Datenschutzrichtlinie
   descriptionFull: Bestätigen Sie vor dem Herunterladen des HagiCode-Servers die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie. Die offiziellen Dokumente werden in Ihrem Standardbrowser geöffnet.
   descriptionLegalOnly: Die aktuellen Gesetzesänderungen wurden noch nicht übernommen. Überprüfen Sie die offiziellen Dokumente in Ihrem Standardbrowser und kehren Sie dann zur Bestätigung zum Desktop zurück.
-  progressFull: 'Vollständige Einrichtung: Sprache -> Willkommen -> Rechtliche Einwilligung -> Freigabebeschleunigung -> Abhängigkeitsvorbereitung -> Herunterladen'
+  progressFull: 'Vollständige Einrichtung: {{steps}}'
   progressLegalOnly: 'Compliance-Gate-Modus: Vor der aktuellen rechtlichen Einwilligung wird zuerst die Sprachauswahl angezeigt'
   browserInstruction: Öffnen Sie die offiziellen Dokumente in Ihrem Standardbrowser, bevor Sie sie akzeptieren. Desktop zeigt nur die Revisionszusammenfassung an, nicht den vollständigen Gesetzestext.
   cacheHint: Sie sehen derzeit die letzte erfolgreich zwischengespeicherte rechtliche Zusammenfassung. Aktualisieren Sie nach der Netzwerkwiederherstellung, um zu bestätigen, ob eine neuere Revision vorhanden ist.

@@ -10,7 +10,7 @@ const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboardi
 const managerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
 describe('onboarding flow contracts', () => {
-  it('keeps the six-step full onboarding sequence intact', async () => {
+  it('keeps the full onboarding sequence intact and adds an external-mode variant', async () => {
     const [typesSource, sliceSource] = await Promise.all([
       fs.readFile(typesPath, 'utf8'),
       fs.readFile(slicePath, 'utf8'),
@@ -23,16 +23,27 @@ describe('onboarding flow contracts', () => {
     assert.match(typesSource, /DependencyPreparation = 4/);
     assert.match(typesSource, /Download = 5/);
     assert.match(sliceSource, /const fullSequence = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
+    assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
+    assert.match(sliceSource, /return mode === 'full' && dependencySnapshot\?\.mode\.effectiveMode === 'external';/);
   });
 
   it('keeps legal-only mode available for consent-only mutable-runtime gating', async () => {
     const sliceSource = await fs.readFile(slicePath, 'utf8');
 
     assert.match(sliceSource, /const legalOnlySequence = \[OnboardingStep\.LanguageSelection, OnboardingStep\.LegalConsent\] as const;/);
-    assert.match(sliceSource, /return mode === 'legal-only' \? \[\.\.\.legalOnlySequence\] : \[\.\.\.fullSequence\];/);
+    assert.match(sliceSource, /if \(mode === 'legal-only'\) \{\s*return \[\.\.\.legalOnlySequence\];\s*\}/s);
     assert.match(sliceSource, /if \(action\.payload\.mode === 'legal-only'\) \{/);
     assert.match(sliceSource, /state\.isActive = false;/);
     assert.match(sliceSource, /state\.mode = 'none';/);
+  });
+
+  it('skips dependency preparation when dependency management is in external mode', async () => {
+    const sliceSource = await fs.readFile(slicePath, 'utf8');
+
+    assert.match(sliceSource, /return shouldHideDependencyPreparationStep\(mode, dependencySnapshot\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
+    assert.match(sliceSource, /state\.currentStep === OnboardingStep\.DependencyPreparation[\s\S]*state\.currentStep = OnboardingStep\.Download;/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, state\.dependencySnapshot\);/);
+    assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, state\.dependencySnapshot\);/);
   });
 
   it('tracks runtimeProvisioned through trigger, restart, and next-button readiness', async () => {

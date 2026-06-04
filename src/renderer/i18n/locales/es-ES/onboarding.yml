@@ -1,7 +1,7 @@
 title: Configuración por primera vez
 welcome:
   title: Bienvenido a Hagicode Desktop
-  description: Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en seis pasos.
+  description: Hagicode Desktop es el iniciador local de Hagicode. Terminaremos la configuración inicial y la confirmación de cumplimiento en {{count}} pasos.
   features:
     manage:
       title: Gestión de versiones
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: Gestión de dependencias
       description: Ver y administrar dependencias del sistema
-  processTitle: 'La configuración inicial tiene 6 pasos:'
+  processTitle: 'La configuración inicial tiene {{count}} pasos:'
   steps:
     welcome: Revise la configuración y lo que sucederá a continuación.
     download: Descargue el último paquete Hagicode Server
@@ -267,7 +267,7 @@ legal:
   title: Acuerdo de licencia de usuario final y política de privacidad
   descriptionFull: Antes de descargar HagiCode Server, confirme las revisiones actuales del EULA y la Política de privacidad. Los documentos oficiales se abren en su navegador predeterminado.
   descriptionLegalOnly: Las revisiones legales actuales aún no han sido aceptadas. Revise los documentos oficiales en su navegador predeterminado, luego regrese al Escritorio para confirmar.
-  progressFull: 'Configuración completa: Idioma -> Bienvenido -> Consentimiento legal -> Aceleración de uso compartido -> Preparación de dependencias -> Descargar'
+  progressFull: 'Configuración completa: {{steps}}'
   progressLegalOnly: 'Modo de puerta de cumplimiento: la selección de idioma aparece antes del paso legal actual'
   browserInstruction: Abra los documentos oficiales en su navegador predeterminado antes de aceptar. Desktop solo muestra el resumen de la revisión, no el texto legal completo.
   cacheHint: Actualmente estás viendo el resumen legal más reciente almacenado en caché con éxito. Actualice después de la recuperación de la red para confirmar si existe una revisión más reciente.

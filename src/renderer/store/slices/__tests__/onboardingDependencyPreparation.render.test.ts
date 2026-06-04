@@ -21,10 +21,15 @@ describe('onboarding dependency preparation integration', () => {
 
     assert.match(typesSource, /DependencyPreparation = 4/);
     assert.match(sliceSource, /OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download/);
+    assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[/);
     assert.match(sliceSource, /selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds/);
-    assert.match(sliceSource, /state\.currentStep = OnboardingStep\.DependencyPreparation;/);
-    assert.match(sliceSource, /case OnboardingStep\.DependencyPreparation:\s*state\.currentStep = OnboardingStep\.Download;/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, state\.dependencySnapshot\);/);
+    assert.match(sliceSource, /case OnboardingStep\.DependencyPreparation:\s*state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.DependencyPreparation, state\.dependencySnapshot\);/);
+    assert.match(sliceSource, /case OnboardingStep\.Download:\s*state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, state\.dependencySnapshot\);/);
     assert.match(wizardSource, /case OnboardingStep\.DependencyPreparation:[\s\S]*<DependencyPreparationStep \/>/);
+    assert.match(wizardSource, /if \(!isActive \|\| mode !== 'full' \|\| dependencySnapshotStatus !== 'idle'\) \{/);
+    assert.match(wizardSource, /dispatch\(loadOnboardingDependencySnapshot\(\)\)/);
+    assert.match(wizardSource, /<WelcomeIntro onNext=\{handleNext\} stepSequence=\{stepSequence\} \/>/);
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
     assert.match(wizardSource, /canGoNext=\{effectiveCanGoNext\}/);
@@ -87,5 +92,9 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(en.dependencyPreparation.skip.title, /skip/i);
     assert.equal(typeof zh.dependencyPreparation.blocking['agent-cli-not-selected'].description, 'string');
     assert.equal(typeof en.dependencyPreparation.complete.description, 'string');
+    assert.match(String(zh.welcome.description), /\{\{count\}\}/);
+    assert.match(String(en.welcome.description), /\{\{count\}\}/);
+    assert.match(String(zh.legal.progressFull), /\{\{steps\}\}/);
+    assert.match(String(en.legal.progressFull), /\{\{steps\}\}/);
   });
 });

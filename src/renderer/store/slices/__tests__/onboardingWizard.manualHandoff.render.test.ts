@@ -46,7 +46,7 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /<div className="flex-1 overflow-y-auto p-6 sm:p-8">\{renderStep\(\)\}<\/div>/);
   });
 
-  it('updates welcome and download copy to describe a six-step flow with manual startup after returning home', async () => {
+  it('updates welcome and progress copy to support variable step counts while keeping manual startup messaging', async () => {
     const [welcomeSource, zhRaw, enRaw] = await Promise.all([
       fs.readFile(welcomePath, 'utf8'),
       fs.readFile(zhOnboardingPath, 'utf8'),
@@ -58,17 +58,18 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.equal(welcomeSource.includes("welcome.steps.launch"), false);
     assert.match(welcomeSource, /welcome\.steps\.languageSelection/);
     assert.match(welcomeSource, /welcome\.steps\.dependencyPreparation/);
-    assert.match(zhOnboarding.welcome.description, /六个步骤/);
-    assert.match(enOnboarding.welcome.description, /six steps/i);
+    assert.match(welcomeSource, /const steps = stepSequence\.map\(\(step, index\) => \(\{/);
+    assert.match(welcomeSource, /t\('welcome\.description', \{ count: steps\.length \}\)/);
+    assert.match(welcomeSource, /t\('welcome\.processTitle', \{ count: steps\.length \}\)/);
+    assert.match(String(zhOnboarding.welcome.description), /\{\{count\}\}/);
+    assert.match(String(enOnboarding.welcome.description), /\{\{count\}\}/);
     assert.match(String(zhOnboarding.download.complete.message), /返回首页/);
     assert.match(String(zhOnboarding.download.complete.message), /手动启动服务/);
     assert.match(String(enOnboarding.download.complete.message), /return to the homepage/i);
     assert.match(String(enOnboarding.download.complete.message), /start the service manually/i);
     assert.equal(String(zhOnboarding.actions.finish), '进入 Hagicode Desktop');
     assert.equal(String(enOnboarding.actions.finish), 'Enter Hagicode Desktop');
-    assert.match(String(zhOnboarding.legal.progressFull), /语言选择/);
-    assert.match(String(enOnboarding.legal.progressFull), /Language/);
-    assert.equal(String(zhOnboarding.legal.progressFull).includes('启动'), false);
-    assert.equal(String(enOnboarding.legal.progressFull).includes('Launch'), false);
+    assert.match(String(zhOnboarding.legal.progressFull), /\{\{steps\}\}/);
+    assert.match(String(enOnboarding.legal.progressFull), /\{\{steps\}\}/);
   });
 });

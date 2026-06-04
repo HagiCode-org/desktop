@@ -1,7 +1,7 @@
 title: 首次使用引導
 welcome:
   title: 歡迎使用 Hagicode Desktop
-  description: Hagicode Desktop 是 Hagicode 的本地啟動器，接下來會用六個步驟完成首次安裝與合規確認。
+  description: Hagicode Desktop 是 Hagicode 的本地啟動器，接下來會用 {{count}} 個步驟完成首次安裝與合規確認。
   features:
     manage:
       title: 版本管理
@@ -12,7 +12,7 @@ welcome:
     dependencies:
       title: 依賴管理
       description: 檢視和管理系統相依性
-  processTitle: 首次安裝共 6 個步驟：
+  processTitle: 首次安裝共 {{count}} 個步驟：
   steps:
     welcome: 了解本次引導會完成的準備工作
     download: 下載最新的 Hagicode Server 包
@@ -267,7 +267,7 @@ legal:
   title: 終端使用者許可協議與隱私權政策
   descriptionFull: 在繼續下載 HagiCode Server 之前，請先確認目前 EULA 與隱私權政策版本。正式文件會在預設瀏覽器中開啟。
   descriptionLegalOnly: 偵測到目前協議版本尚未確認。請先在預設瀏覽器中查看正式文檔，然後返回 Desktop 完成確認。
-  progressFull: 完整引導：語言選擇 -> 歡迎 -> 協議確認 -> 共享加速 -> 依賴準備 -> 下載
+  progressFull: 完整引導：{{steps}}
   progressLegalOnly: 合規攔截模式：會先顯示語言選擇，再進入目前協定確認步驟
   browserInstruction: 請先點選下方按鈕在預設瀏覽器中查看正式文件。 Desktop 只展示版本摘要，不內嵌協定全文。
   cacheHint: 目前顯示的是最近一次成功取得的協定版本摘要。建議在網路恢復後刷新並再次確認是否有更新。

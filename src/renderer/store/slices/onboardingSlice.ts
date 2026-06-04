@@ -43,24 +43,45 @@ const fullSequence = [
   OnboardingStep.Download,
 ] as const;
 
+const fullSequenceWithoutDependencyPreparation = [
+  OnboardingStep.LanguageSelection,
+  OnboardingStep.Welcome,
+  OnboardingStep.LegalConsent,
+  OnboardingStep.SharingAcceleration,
+  OnboardingStep.Download,
+] as const;
+
 const legalOnlySequence = [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent] as const;
 
-export function getOnboardingSequence(mode: OnboardingMode) {
-  return mode === 'legal-only' ? [...legalOnlySequence] : [...fullSequence];
+function shouldHideDependencyPreparationStep(
+  mode: OnboardingMode,
+  dependencySnapshot?: DependencyManagementSnapshot | null,
+) {
+  return mode === 'full' && dependencySnapshot?.mode.effectiveMode === 'external';
 }
 
-function getStepIndex(mode: OnboardingMode, step: OnboardingStep) {
-  return getOnboardingSequence(mode).indexOf(step);
+export function getOnboardingSequence(mode: OnboardingMode, dependencySnapshot?: DependencyManagementSnapshot | null) {
+  if (mode === 'legal-only') {
+    return [...legalOnlySequence];
+  }
+
+  return shouldHideDependencyPreparationStep(mode, dependencySnapshot)
+    ? [...fullSequenceWithoutDependencyPreparation]
+    : [...fullSequence];
 }
 
-function getNextStep(mode: OnboardingMode, step: OnboardingStep) {
-  const sequence = getOnboardingSequence(mode);
+function getStepIndex(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
+  return getOnboardingSequence(mode, dependencySnapshot).indexOf(step);
+}
+
+function getNextStep(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
+  const sequence = getOnboardingSequence(mode, dependencySnapshot);
   const index = sequence.indexOf(step);
   return index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : step;
 }
 
-function getPreviousStep(mode: OnboardingMode, step: OnboardingStep) {
-  const sequence = getOnboardingSequence(mode);
+function getPreviousStep(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
+  const sequence = getOnboardingSequence(mode, dependencySnapshot);
   const index = sequence.indexOf(step);
   return index > 0 ? sequence[index - 1] : step;
 }
@@ -71,6 +92,11 @@ function applyDependencySnapshot(state: OnboardingState, snapshot: DependencyMan
   state.dependencySnapshot = snapshot;
   state.dependencyReadiness = evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds);
   state.isDependencyPreparationComplete = state.dependencyReadiness.ready;
+
+  if (state.currentStep === OnboardingStep.DependencyPreparation
+    && shouldHideDependencyPreparationStep(state.mode, snapshot)) {
+    state.currentStep = OnboardingStep.Download;
+  }
 }
 
 function readDependencyOperationRejectedPayload(payload: unknown): OnboardingDependencyOperationRejectedPayload {
@@ -387,18 +413,18 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_NEXT_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.LanguageSelection:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection, state.dependencySnapshot);
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome, state.dependencySnapshot);
             break;
           case OnboardingStep.LegalConsent:
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = OnboardingStep.DependencyPreparation;
+            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, state.dependencySnapshot);
             break;
           case OnboardingStep.DependencyPreparation:
-            state.currentStep = OnboardingStep.Download;
+            state.currentStep = getNextStep(state.mode, OnboardingStep.DependencyPreparation, state.dependencySnapshot);
             break;
           case OnboardingStep.Download:
             break;
@@ -407,19 +433,19 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_PREVIOUS_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.Download:
-            state.currentStep = OnboardingStep.DependencyPreparation;
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, state.dependencySnapshot);
             break;
           case OnboardingStep.DependencyPreparation:
-            state.currentStep = OnboardingStep.SharingAcceleration;
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.DependencyPreparation, state.dependencySnapshot);
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, state.dependencySnapshot);
             break;
           case OnboardingStep.LegalConsent:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, state.dependencySnapshot);
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome, state.dependencySnapshot);
             break;
           default:
             break;
@@ -543,7 +569,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
 };
 
 export const selectCanGoPrevious = (state: { onboarding: OnboardingState }) => {
-  return getStepIndex(state.onboarding.mode, state.onboarding.currentStep) > 0;
+  return getStepIndex(state.onboarding.mode, state.onboarding.currentStep, state.onboarding.dependencySnapshot) > 0;
 };
 
 export default onboardingSlice.reducer;
