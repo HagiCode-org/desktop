@@ -14,6 +14,7 @@ const runtimeVerifyArgs = ['runtime', 'verify'];
 const dependencyInstallArgs = ['deps', 'install', '--claude-code', '--codex'];
 const runtimeLifecycleArgs = ['runtime', 'lifecycle'];
 const defaultCommandTimeoutMs = 240_000;
+export const expectedInstalledPackageIds = ['pm2', 'claude-code', 'codex'];
 const interestingDiagnosticBasenames = new Set([
   'non-interactive-startup.log',
   'launch-contract.json',
@@ -644,7 +645,7 @@ function assertDependencyInstallOutput(output, { userDataDir, runtimeContext, he
     }
   }
 
-  for (const packageId of ['hagiscript', 'claude-code', 'codex']) {
+  for (const packageId of expectedInstalledPackageIds) {
     assertOutputContainsPackage(output, packageId);
   }
 }

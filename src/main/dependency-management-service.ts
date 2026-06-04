@@ -98,6 +98,9 @@ type ProgressListener = (event: DependencyManagementOperationProgress) => void;
 
 type SdkNpmSyncOptions = Parameters<typeof syncNpmGlobals>[0];
 type SdkNpmGlobalCommandOptions = NonNullable<SdkNpmSyncOptions['npmOptions']>;
+type SdkVerifyNodeRuntime = NonNullable<SdkNpmSyncOptions['verifyRuntime']>;
+type SdkVerifyNodeRuntimeOptions = Parameters<SdkVerifyNodeRuntime>[1];
+type SdkNodeRuntimeVerificationResult = Awaited<ReturnType<SdkVerifyNodeRuntime>>;
 type NpmSyncLogEvent = Parameters<NonNullable<SdkNpmSyncOptions['onLog']>>[0];
 const { app } = electron;
 
@@ -168,6 +171,10 @@ function extractPercent(message: string): number | undefined {
 function normalizeVersionOutput(value: string): string | null {
   const line = firstMeaningfulLine(value);
   return line ? line.replace(/^v/, '') : null;
+}
+
+function isJavaScriptCommandPath(command: string): boolean {
+  return /\.(?:c|m)?js$/i.test(command);
 }
 
 function isSinglePackageGlobalListCommand(command: string, args: readonly string[]): boolean {
@@ -1012,21 +1019,122 @@ export class DependencyManagementService {
       prefix: environment.npmGlobalPrefix,
       env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
       platform: this.platform,
+      nodePath: environment.node.executablePath ?? undefined,
       runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
-        const result = await this.runCommand(command, rewrittenArgs, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
+        const execution = this.resolveSdkNpmCommandExecution(command, args, activationPolicy, environment);
+        const result = await this.runCommand(execution.command, execution.args, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
           shell: launchOptions?.shell,
           timeoutMs,
         });
 
         return {
-          command,
-          args: rewrittenArgs,
+          command: execution.command,
+          args: execution.args,
           stdout: result.stdout,
           stderr: result.stderr,
         };
       },
     };
+  }
+
+  private resolveSdkNpmCommandExecution(
+    command: string,
+    args: readonly string[],
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    environment: DependencyManagementEnvironmentStatus,
+  ): { command: string; args: string[] } {
+    const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
+
+    if (!isJavaScriptCommandPath(command)) {
+      return {
+        command,
+        args: rewrittenArgs,
+      };
+    }
+
+    const nodeExecutablePath = environment.node.executablePath ?? this.getNodeExecutablePath(activationPolicy);
+    return {
+      command: nodeExecutablePath,
+      args: [command, ...rewrittenArgs],
+    };
+  }
+
+  private buildInvalidSdkNodeRuntimeResult(
+    runtimePath: string,
+    nodePath: string,
+    npmPath: string,
+    failureReason: string,
+  ): SdkNodeRuntimeVerificationResult {
+    return {
+      valid: false,
+      targetDirectory: runtimePath,
+      nodePath,
+      npmPath,
+      failureReason,
+    };
+  }
+
+  private async verifySdkNodeRuntime(
+    runtimePath: string,
+    activationPolicy: BundledNodeRuntimePolicyDecision,
+    environment: DependencyManagementEnvironmentStatus,
+    options?: SdkVerifyNodeRuntimeOptions,
+  ): Promise<SdkNodeRuntimeVerificationResult> {
+    const nodePath = environment.node.executablePath ?? this.getNodeExecutablePath(activationPolicy);
+    const npmPath = environment.npm.executablePath ?? this.getNpmExecutablePath(activationPolicy);
+
+    if (!this.existsSync(nodePath)) {
+      return this.buildInvalidSdkNodeRuntimeResult(runtimePath, nodePath, npmPath, `Node executable not found: ${nodePath}`);
+    }
+
+    if (!this.existsSync(npmPath)) {
+      return this.buildInvalidSdkNodeRuntimeResult(runtimePath, nodePath, npmPath, `npm executable not found: ${npmPath}`);
+    }
+
+    const commandEnv = this.buildSdkSyncCommandEnv(activationPolicy, environment);
+
+    try {
+      const nodeResult = await this.runCommand(nodePath, ['--version'], undefined, commandEnv, {
+        timeoutMs: options?.timeoutMs,
+      });
+      if (nodeResult.exitCode !== 0) {
+        return this.buildInvalidSdkNodeRuntimeResult(
+          runtimePath,
+          nodePath,
+          npmPath,
+          firstMeaningfulLine(nodeResult.stderr || nodeResult.stdout) ?? `node exited with code ${nodeResult.exitCode}`,
+        );
+      }
+
+      const npmExecution = this.resolveSdkNpmCommandExecution(npmPath, ['--version'], activationPolicy, environment);
+      const npmResult = await this.runCommand(npmExecution.command, npmExecution.args, undefined, commandEnv, {
+        timeoutMs: options?.timeoutMs,
+      });
+      if (npmResult.exitCode !== 0) {
+        return this.buildInvalidSdkNodeRuntimeResult(
+          runtimePath,
+          nodePath,
+          npmPath,
+          firstMeaningfulLine(npmResult.stderr || npmResult.stdout) ?? `npm exited with code ${npmResult.exitCode}`,
+        );
+      }
+
+      return {
+        valid: true,
+        targetDirectory: runtimePath,
+        nodePath,
+        npmPath,
+        nodeVersion: normalizeVersionOutput(nodeResult.stdout || nodeResult.stderr) ?? undefined,
+        npmVersion: normalizeVersionOutput(npmResult.stdout || npmResult.stderr) ?? undefined,
+      };
+    } catch (error) {
+      return this.buildInvalidSdkNodeRuntimeResult(
+        runtimePath,
+        nodePath,
+        npmPath,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   private rewriteNpmInstallArgsForWindowsStore(args: readonly string[]): string[] {
@@ -1828,6 +1936,7 @@ export class DependencyManagementService {
         runtimePath: environment.nodeRuntimeRoot,
         manifestPath: manifest.manifestPath,
         registryMirror: mirrorSettings.registryUrl ?? undefined,
+        verifyRuntime: (runtimePath, options) => this.verifySdkNodeRuntime(runtimePath, activationPolicy, environment, options),
         npmOptions: this.buildSdkSyncNpmCommandOptions(activationPolicy, environment),
         onLog: (event) => {
           const formatted = formatNpmSyncLogEvent(event);

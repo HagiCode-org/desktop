@@ -38,6 +38,10 @@ describe('dependency management service contract', () => {
     assert.match(source, /buildDesktopNpmSyncManifest/);
     assert.match(source, /buildInstalledGlobalPackagesFromDefinitions/);
     assert.match(source, /buildSdkSyncNpmCommandOptions/);
+    assert.match(source, /private async verifySdkNodeRuntime\(/);
+    assert.match(source, /verifyRuntime: \(runtimePath, options\) => this\.verifySdkNodeRuntime\(runtimePath, activationPolicy, environment, options\)/);
+    assert.match(source, /if \(!isJavaScriptCommandPath\(command\)\) \{/);
+    assert.match(source, /args: \[command, \.\.\.rewrittenArgs\]/);
     assert.match(source, /detectInstalledPackageFromInventory/);
     assert.match(source, /parseInstalledPackageInventoryEntry/);
     assert.match(source, /if \(!environment\.npmGlobalPrefix \|\| !this\.existsSync\(environment\.npmGlobalPrefix\)\) \{/);
@@ -81,6 +85,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /--ignore-scripts/);
     assert.match(source, /const installIndex = args\.findIndex\(\(value\) => value === 'install'\)/);
     assert.match(source, /const rewrittenArgs = this\.rewriteNpmInstallArgsForWindowsStore\(args\);/);
+    assert.match(source, /const execution = this\.resolveSdkNpmCommandExecution\(command, args, activationPolicy, environment\);/);
     assert.match(source, /return isWindowsStoreRuntime\(\{/);
     assert.match(source, /processWindowsStore: Boolean\(\(process as NodeJS\.Process & \{ windowsStore\?: boolean \}\)\.windowsStore\)/);
     assert.match(source, /defaultApp: \(process as NodeJS\.Process & \{ defaultApp\?: boolean \}\)\.defaultApp/);

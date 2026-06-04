@@ -51,3 +51,9 @@ test('findTarGzArtifact discovers nested workflow artifacts under pkg/', async (
     await fs.rm(projectRoot, { recursive: true, force: true });
   }
 });
+
+test('uses the current Desktop-managed package set for dependency install assertions', async () => {
+  const { expectedInstalledPackageIds } = await importHarnessWithProjectRoot(process.cwd(), `expected-packages=${Date.now()}`);
+
+  assert.deepEqual(expectedInstalledPackageIds, ['pm2', 'claude-code', 'codex']);
+});
