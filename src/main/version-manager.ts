@@ -14,7 +14,10 @@ import type { RegionDetector } from './region-detector.js';
 import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
-import { DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE } from './hagiscript-desktop-manifest.js';
+import {
+  DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
+  DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE,
+} from './hagiscript-desktop-manifest.js';
 import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 import {
   type ActiveRuntimeDescriptor,
@@ -1067,8 +1070,8 @@ export class VersionManager {
       this.stateManager.getInstalledVersions(),
       this.stateManager.getActiveVersion(),
     ]);
-    const serverDataHome = this.pathManager.getManagedServerDataHome();
-    const statePath = path.join(serverDataHome, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
+    const pm2Home = path.join(this.pathManager.getRuntimeDataHome(), DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
+    const statePath = path.join(pm2Home, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
     const versions = Object.fromEntries(
       installedVersions.map((version) => [
         version.id,
@@ -1085,7 +1088,7 @@ export class VersionManager {
       ]),
     );
 
-    await fs.mkdir(serverDataHome, { recursive: true });
+    await fs.mkdir(pm2Home, { recursive: true });
     await fs.writeFile(
       statePath,
       `${JSON.stringify(

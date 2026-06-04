@@ -78,14 +78,12 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /dependencyManagementMode: shared\.dependencyManagementMode/);
     assert.match(runtimeContextSource, /externalNodePath: shared\.externalNodePath/);
     assert.match(runtimeContextSource, /managedContext\.environment\.source === 'externally-managed'/);
+    assert.match(runtimeContextSource, /const serviceDataHome = pm2Home;/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /serverDataRootForManifest/);
     assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.source === 'desktop-managed'/);
     assert.match(runtimeContextSource, /\? path\.resolve\(managedContext\.environment\.npmGlobalPrefix\)/);
     assert.match(runtimeContextSource, /: managedContext\.environment\.npmGlobalPrefix,/);
-    assert.match(runtimeContextSource, /ensurePm2HomeAlias\(serverDataRoot, 'desktop-server-data-root'\)/);
-    assert.match(runtimeContextSource, /serverDataRoot: shared\.serverDataRootForManifest,/);
     assert.match(runtimeContextSource, /servicePayloadPath,/);
     assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);

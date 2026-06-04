@@ -50,19 +50,3 @@ export async function ensureNoSpacePathAlias(targetPath: string, label: string):
     type: stats.isDirectory() ? 'dir' : 'file',
   });
 }
-
-export async function ensurePm2HomeAlias(targetPath: string, label: string): Promise<string> {
-  await fs.mkdir(targetPath, { recursive: true });
-  if (!targetPath.includes(' ')) {
-    return targetPath;
-  }
-
-  return ensureSymlinkAlias({
-    targetPath,
-    label,
-    aliasRoot: process.platform === 'win32'
-    ? path.join(path.parse(targetPath).root, 'hagicode-desktop-pm2-home')
-    : path.join('/tmp', 'hagicode-desktop-pm2-home'),
-    type: 'dir',
-  });
-}

@@ -12,7 +12,7 @@ import {
   DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE,
   resolveDesktopManagedPm2AppName,
 } from './hagiscript-desktop-manifest.js';
-import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
+import { ensureNoSpacePathAlias } from './pm2-home-alias.js';
 import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
@@ -54,7 +54,6 @@ export class HagiscriptRuntimeContextResolver {
     | 'getRuntimeDataHome'
     | 'getUserDataPath'
     | 'getManagedServerProgramHome'
-    | 'getManagedServerDataHome'
     | 'getEmbeddedRuntimeContainerRoot'
     | 'getEmbeddedRuntimeRoot'
     | 'getCurrentPlatform'
@@ -68,7 +67,6 @@ export class HagiscriptRuntimeContextResolver {
       | 'getRuntimeDataHome'
       | 'getUserDataPath'
       | 'getManagedServerProgramHome'
-      | 'getManagedServerDataHome'
       | 'getEmbeddedRuntimeContainerRoot'
       | 'getEmbeddedRuntimeRoot'
       | 'getCurrentPlatform'
@@ -88,10 +86,10 @@ export class HagiscriptRuntimeContextResolver {
       serviceWorkingDirectory,
       'desktop-service-working-directory',
     );
-    const serviceDataHome = shared.serverDataRoot;
     const pm2Home = path.join(shared.runtimeDataRoot, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
+    const serviceDataHome = pm2Home;
     const pm2LogsDirectory = path.join(pm2Home, 'logs');
-    const runtimeFilesDir = path.join(serviceDataHome, DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR);
+    const runtimeFilesDir = path.join(pm2Home, DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR);
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-hagiscript-server-'));
     const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
     const versionsStatePath = path.join(serviceDataHome, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
@@ -126,10 +124,7 @@ export class HagiscriptRuntimeContextResolver {
           runtimeHome: shared.runtimeHome,
           runtimeDataRoot: shared.runtimeDataRoot,
           serverProgramRoot: shared.serverProgramRoot,
-          // PM2 behaves unreliably on Windows Store paths with spaces, so the
-          // manifest uses a stable alias while Desktop diagnostics keep the
-          // canonical path for log discovery and user-facing output.
-          serverDataRoot: shared.serverDataRootForManifest,
+          serverDataRoot: pm2Home,
           npmPrefix: shared.npmPrefix,
           dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
           server: {
@@ -178,8 +173,6 @@ export class HagiscriptRuntimeContextResolver {
     runtimeLogsDirectory: string;
     runtimeStateFilePath: string;
     serverProgramRoot: string;
-    serverDataRoot: string;
-    serverDataRootForManifest: string;
     npmPrefix: string;
     dotnetRuntimeRoot: string;
   }> {
@@ -189,10 +182,8 @@ export class HagiscriptRuntimeContextResolver {
     const runtimeDataRoot = path.resolve(this.pathManager.getRuntimeDataHome());
     const runtimeRoot = path.resolve(this.pathManager.getUserDataPath());
     const serverProgramRoot = path.resolve(this.pathManager.getManagedServerProgramHome());
-    const serverDataRoot = path.resolve(this.pathManager.getManagedServerDataHome());
     const aliasedRuntimeHome = await ensureNoSpacePathAlias(runtimeHome, 'desktop-runtime-home');
     const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-runtime-root');
-    const aliasedServerDataRoot = await ensurePm2HomeAlias(serverDataRoot, 'desktop-server-data-root');
     const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeContainerRoot(this.pathManager.getCurrentPlatform()));
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
     const externalNodePath = managedContext.environment.source === 'externally-managed'
@@ -211,8 +202,6 @@ export class HagiscriptRuntimeContextResolver {
       runtimeLogsDirectory: path.join(runtimeDataRoot, 'logs'),
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
-      serverDataRoot,
-      serverDataRootForManifest: aliasedServerDataRoot,
       npmPrefix: managedContext.environment.source === 'desktop-managed'
         ? path.resolve(managedContext.environment.npmGlobalPrefix)
         : managedContext.environment.npmGlobalPrefix,
