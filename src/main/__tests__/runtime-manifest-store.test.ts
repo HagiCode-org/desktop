@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { homedir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { load } from 'js-yaml';
@@ -35,7 +34,7 @@ describe('runtime manifest store data scope resolution', () => {
     );
   });
 
-  it('rewrites runtime and server data roots into the active data scope', () => {
+  it('rewrites runtime and server data roots into the configured Electron userData scope by default', () => {
     const materialized = materializeRuntimeManifestContent(
       [
         'runtime:',
@@ -61,6 +60,8 @@ describe('runtime manifest store data scope resolution', () => {
         '  vendoredRoot: components/bundled',
       ].join('\n'),
       '/tmp/hagicode-user-data/dev',
+      undefined,
+      '/tmp/hagicode-user-data/runtime-data',
     );
 
     const parsed = load(materialized) as {
@@ -71,7 +72,7 @@ describe('runtime manifest store data scope resolution', () => {
       };
     };
 
-    const runtimeDataRoot = path.join(homedir(), '.hagicode', 'runtime-data');
+    const runtimeDataRoot = '/tmp/hagicode-user-data/runtime-data';
     assert.equal(parsed.paths.runtimeDataRoot, runtimeDataRoot);
     assert.equal(parsed.paths.serverProgramRoot, path.join(runtimeDataRoot, 'apps', 'installed'));
     assert.equal(parsed.paths.serverDataRoot, path.join(runtimeDataRoot, 'apps', 'data'));

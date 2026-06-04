@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dump, load } from 'js-yaml';
 import { resolveDesktopCanonicalRuntimeDataRoot } from './runtime-data-root.js';
+import { DEFAULT_RUNTIME_DATA_PATH_PRESET } from './config.js';
 
 export const RUNTIME_MANIFEST_FILE = 'manifest.yml';
 const DESKTOP_DEV_INSTANCE_NAME = 'hagicode_dev';
@@ -20,6 +21,7 @@ export interface RuntimeManifestStore {
 export interface ResolveRuntimeManifestPathOptions {
   manifestPath?: string;
   userDataPath?: string | null;
+  runtimeDataRoot?: string | null;
   cwd?: string;
   moduleDirectory?: string;
   env?: NodeJS.ProcessEnv;
@@ -30,9 +32,14 @@ export interface ResolveRuntimeManifestPathOptions {
 }
 
 let registeredUserDataPath: string | null = null;
+let registeredRuntimeDataRoot: string | null = null;
 
 export function registerRuntimeManifestUserDataPath(userDataPath: string): void {
   registeredUserDataPath = path.resolve(userDataPath);
+}
+
+export function registerRuntimeManifestRuntimeDataRoot(runtimeDataRoot: string): void {
+  registeredRuntimeDataRoot = path.resolve(runtimeDataRoot);
 }
 
 export function resolveRuntimeManifestDataScopePath(
@@ -107,6 +114,12 @@ function ensureUserDataRuntimeManifest(
     sourceContent,
     resolveRuntimeManifestDataScopePath(userDataPath, options.env),
     path.dirname(sourcePath),
+    options.runtimeDataRoot
+      ?? registeredRuntimeDataRoot
+      ?? resolveDesktopCanonicalRuntimeDataRoot({
+        preset: DEFAULT_RUNTIME_DATA_PATH_PRESET,
+        userDataPath,
+      }),
   );
   const currentContent = existsSync(targetPath) ? readFileSync(targetPath, 'utf8') : null;
 
@@ -265,6 +278,7 @@ export function materializeRuntimeManifestContent(
   manifestContent: string,
   _dataScopePath: string,
   manifestDirectory?: string,
+  runtimeDataRootOverride?: string,
 ): string {
   const parsed = load(manifestContent);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
@@ -277,7 +291,12 @@ export function materializeRuntimeManifestContent(
     throw new Error('Bundled runtime manifest is missing the paths section.');
   }
 
-  const runtimeDataRoot = resolveDesktopCanonicalRuntimeDataRoot();
+  const runtimeDataRoot = runtimeDataRootOverride
+    ? path.resolve(runtimeDataRootOverride)
+    : resolveDesktopCanonicalRuntimeDataRoot({
+      preset: DEFAULT_RUNTIME_DATA_PATH_PRESET,
+      userDataPath: registeredUserDataPath ?? path.resolve(process.cwd(), '.runtime-manifest-user-data'),
+    });
   paths.runtimeDataRoot = runtimeDataRoot;
   paths.serverProgramRoot = path.join(runtimeDataRoot, 'apps', 'installed');
   paths.serverDataRoot = path.join(runtimeDataRoot, 'apps', 'data');

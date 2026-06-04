@@ -90,6 +90,8 @@ describe('desktop telemetry retirement', () => {
 
     assert.equal(firstRunManager.getDependencyManagementMode(true), 'internal');
     assert.equal(firstRunStore.get('dependencyManagementMode'), 'internal');
+    assert.equal(firstRunManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
+    assert.equal(firstRunStore.get('runtimeDataPath'), 'userData-runtime-data');
     assert.equal(firstRunManager.getDependencyManagementMode(false), 'internal');
 
     const existingStore = new MockStore({
@@ -105,6 +107,18 @@ describe('desktop telemetry retirement', () => {
 
     assert.equal(nonWinStoreManager.getDependencyManagementMode(false), 'internal');
     assert.equal(nonWinStoreStore.get('dependencyManagementMode'), 'internal');
+  });
+
+  it('normalizes persisted runtime data path presets and keeps the supported values stable', () => {
+    const invalidStore = new MockStore({
+      runtimeDataPath: 'custom-folder',
+    });
+    const invalidManager = new DesktopConfigManager(invalidStore as never);
+
+    assert.equal(invalidManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
+    assert.equal(invalidStore.get('runtimeDataPath'), 'userData-runtime-data');
+    assert.equal(invalidManager.setRuntimeDataPathPreset('home-runtime-data'), 'home-runtime-data');
+    assert.equal(invalidManager.getRuntimeDataPathPreset(), 'home-runtime-data');
   });
 
   it('keeps existing Telemetry YAML blocks untouched while unrelated DataDir sync still works', async () => {
