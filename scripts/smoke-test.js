@@ -539,6 +539,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   const buildContent = fs.readFileSync(buildWorkflowPath, 'utf8');
   const reusableWindowsContent = fs.readFileSync(reusableWindowsWorkflowPath, 'utf8');
   const reusableUnixContent = fs.readFileSync(reusableUnixWorkflowPath, 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
   const msixStoreStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Build Windows MSIX Store package');
   const windowsZipVerifyStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Verify Windows ZIP toolchain payload');
 
@@ -552,6 +553,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(buildContent.includes("needs.prepare-release.outputs.is_tag_release == 'true'"), 'build workflow only publishes GitHub release assets for tag releases');
   assert(buildContent.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
   assert(!buildContent.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
+  assert(packageJson.build?.publish === 'never', 'package.json disables electron-builder auto-publish for Forge-backed makers');
 
   assert(reusableWindowsContent.includes('Prepare Windows unpacked ZIP payload workspace'), 'reusable Windows workflow stages the unpacked Windows ZIP payload before compression');
   assert(reusableWindowsContent.includes('Create Windows ZIP artifact'), 'reusable Windows workflow creates Windows ZIP artifacts after staging');

@@ -6,6 +6,9 @@
   "packageManager": "npm@10.9.2",
   "description": "Desktop client for Hagicode Server management and monitoring",
   "main": "dist/main/bootstrap.js",
+  "build": {
+    "publish": "never"
+  },
   "scripts": {
     "prepare:about-snapshot": "node scripts/generate-about-snapshot.js",
     "prepare:managed-npm-packages": "node scripts/generate-managed-npm-packages.js",
