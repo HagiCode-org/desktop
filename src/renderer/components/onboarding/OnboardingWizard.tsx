@@ -73,6 +73,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const dependencyModeSettingsStatus = useSelector((state: RootState) => state.onboarding.dependencyModeSettingsStatus);
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
+  const onboardingError = useSelector((state: RootState) => state.onboarding.error);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
   const [sharingStepReady, setSharingStepReady] = useState(false);
@@ -120,6 +121,18 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
     void dispatch(loadOnboardingDependencyModeSettings());
   }, [dependencyModeSettingsStatus, dispatch, isActive, mode]);
+
+  useEffect(() => {
+    if (currentStep !== OnboardingStep.Download || runtimeProvisioned || isDownloading || downloadCompleted) {
+      return;
+    }
+
+    if (downloadProgress || onboardingError) {
+      return;
+    }
+
+    void dispatch(downloadPackage());
+  }, [currentStep, dispatch, downloadCompleted, downloadProgress, isDownloading, onboardingError, runtimeProvisioned]);
 
   const stepSequence = useMemo(() => getOnboardingSequence(mode, dependencyModeSettings), [dependencyModeSettings, mode]);
   const totalSteps = stepSequence.length;

@@ -31,6 +31,9 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /dispatch\(loadOnboardingDependencyModeSettings\(\)\)/);
     assert.match(wizardSource, /if \(currentStep === OnboardingStep\.SharingAcceleration && mode === 'full' && dependencyModeSettingsStatus !== 'ready'\) \{/);
     assert.match(wizardSource, /await dispatch\(loadOnboardingDependencyModeSettings\(\)\)\.unwrap\(\);/);
+    assert.match(wizardSource, /if \(currentStep !== OnboardingStep\.Download \|\| runtimeProvisioned \|\| isDownloading \|\| downloadCompleted\) \{/);
+    assert.match(wizardSource, /if \(downloadProgress \|\| onboardingError\) \{/);
+    assert.match(wizardSource, /void dispatch\(downloadPackage\(\)\);/);
     assert.match(wizardSource, /<WelcomeIntro onNext=\{handleNext\} stepSequence=\{stepSequence\} \/>/);
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
