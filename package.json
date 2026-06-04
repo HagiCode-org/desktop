@@ -7,7 +7,15 @@
   "description": "Desktop client for Hagicode Server management and monitoring",
   "main": "dist/main/bootstrap.js",
   "build": {
-    "publish": "never"
+    "win": {
+      "publish": null
+    },
+    "nsis": {
+      "publish": null
+    },
+    "portable": {
+      "publish": null
+    }
   },
   "scripts": {
     "prepare:about-snapshot": "node scripts/generate-about-snapshot.js",
