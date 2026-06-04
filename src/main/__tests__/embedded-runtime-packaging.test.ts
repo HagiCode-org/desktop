@@ -15,6 +15,9 @@ const ciBuildScriptPath = path.resolve(process.cwd(), 'scripts/ci-build.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
 const electronForgeRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-forge.js');
 const forgePackagingHooksPath = path.resolve(process.cwd(), 'scripts/forge-packaging-hooks.js');
+const prepareMsixScriptPath = path.resolve(process.cwd(), 'scripts/prepare-msix.js');
+const psfSupportScriptPath = path.resolve(process.cwd(), 'scripts/psf-support.js');
+const psfTemplatePath = path.resolve(process.cwd(), 'resources/psf/config.template.json');
 const buildWorkflowPath = path.resolve(process.cwd(), '.github/workflows/build.yml');
 const reusableWindowsWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-windows.yml');
 const reusableUnixWorkflowPath = path.resolve(process.cwd(), '.github/workflows/reusable-build-unix.yml');
@@ -155,6 +158,30 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(forgeConfig, /afterComplete/);
     assert.match(forgeConfig, /extra\/runtime/);
     assert.match(smokeTest, /desktop runtime is excluded from recursive macOS code signing/);
+  });
+
+  it('wires optional PSF injection into the Windows MSIX packaging pipeline', async () => {
+    const [forgeConfig, prepareMsixSource, psfSupportSource, psfTemplate, readme, docs] = await Promise.all([
+      fs.readFile(forgeConfigPath, 'utf-8'),
+      fs.readFile(prepareMsixScriptPath, 'utf-8'),
+      fs.readFile(psfSupportScriptPath, 'utf-8'),
+      fs.readFile(psfTemplatePath, 'utf-8'),
+      fs.readFile(path.resolve(process.cwd(), 'README.md'), 'utf-8'),
+      fs.readFile(developmentDocPath, 'utf-8'),
+    ]);
+
+    assert.match(forgeConfig, /injectPsfIntoPackagedOutputs/);
+    assert.match(forgeConfig, /async postPackage\(/);
+    assert.match(prepareMsixSource, /resolvePsfBuildConfig/);
+    assert.match(prepareMsixSource, /manifest entry redirected to/);
+    assert.match(psfSupportSource, /HAGICODE_ENABLE_PSF/);
+    assert.match(psfSupportSource, /HAGICODE_PSF_DIR/);
+    assert.match(psfSupportSource, /ProcessLauncherFixup64\.dll/);
+    assert.match(psfSupportSource, /FileRedirectionFixup64\.dll/);
+    assert.match(psfTemplate, /preventBreakaway/);
+    assert.match(psfTemplate, /inheritPackageIdentity/);
+    assert.match(readme, /HAGICODE_ENABLE_PSF/);
+    assert.match(docs, /HAGICODE_PSF_DIR/);
   });
 
   it('macOS Forge packaging hooks stash and restore packaged runtime resources across staging and final output paths', async () => {

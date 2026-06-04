@@ -45,6 +45,18 @@ npm run build:mac:arm64:zip
 - `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it loads `config/store-package.json`, accepts payload injection arguments, and emits machine-readable build metadata for downstream signing/publication
 - platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
 
+### Optional PSF injection for MSIX
+
+When Windows Store packaging needs Package Support Framework process fixups, enable the same injection path validated in `electron_demo`:
+
+```bash
+HAGICODE_ENABLE_PSF=true \
+HAGICODE_PSF_DIR=/absolute/path/to/psf \
+npm run build:win:store -- --server-payload-path /abs/path/to/server-runtime
+```
+
+`HAGICODE_PSF_DIR` must contain `PsfLauncher64.exe`, `PsfRuntime64.dll`, `ProcessLauncherFixup64.dll`, and `FileRedirectionFixup64.dll`. When enabled, the Store manifest entry is redirected to `PsfLauncher64.exe`, and the packaged MSIX root receives the rendered `config.json` plus the required PSF binaries.
+
 ### Development bundled Node runtime
 
 Source-mode development uses the shared Desktop runtime tree under `resources/components/node/runtime/`, matching the packaged Desktop layout under `resources/extra/runtime/components/node/runtime/`. There is no separate `.runtime/node-dev/` runtime or `bundled-dev` dependency source.

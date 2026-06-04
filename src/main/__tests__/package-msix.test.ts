@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { normalizeWindowsVersion } from '../../../scripts/msix-config.js';
+import { resolvePsfBuildConfig } from '../../../scripts/psf-support.js';
 import { renderMsixManifest } from '../../../scripts/prepare-msix.js';
 import {
   renderStoreForgeConfigOverlay,
@@ -46,6 +47,76 @@ describe('msix packaging helpers', () => {
     assert.match(manifest, /<Capability Name="privateNetworkClientServer" \/>/);
     assert.match(manifest, /<rescap:Capability Name="runFullTrust" \/>/);
     assert.match(manifest, /<rescap:Capability Name="unvirtualizedResources" \/>/);
+  });
+
+  it('renders a PSF launcher entry when Store packaging redirects the executable', async () => {
+    const templatePath = path.resolve(process.cwd(), 'resources', 'msix', 'Package.appxmanifest.template.xml');
+    const template = await readFile(templatePath, 'utf8');
+    const manifest = renderMsixManifest(template, {
+      packageIdentity: 'newbe36524.HagicodeDesktop',
+      publisher: 'CN=8B6C8A94-AAE5-4C8B-9202-A29EA42B042F',
+      packageVersion: '0.1.0.0',
+      processorArchitecture: 'x64',
+      packageDisplayName: 'Hagicode Desktop',
+      publisherDisplayName: 'newbe36524',
+      packageDescription: 'Desktop client for Hagicode Server management and monitoring',
+      appExecutable: 'PsfLauncher64.exe',
+      appDisplayName: 'Hagicode Desktop',
+      packageBackgroundColor: 'transparent',
+      packageMinOsVersion: '10.0.19041.0',
+      packageMaxOsVersionTested: '10.0.19041.0',
+      languages: ['en-US', 'zh-CN'],
+      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust', 'unvirtualizedResources'],
+    });
+
+    assert.match(manifest, /Executable="app\\PsfLauncher64\.exe"/);
+    assert.match(manifest, /EntryPoint="Windows\.FullTrustApplication"/);
+  });
+
+  it('resolves the optional PSF build config against the desktop MSIX executable contract', async () => {
+    const psfDir = await mkdtemp(path.join(os.tmpdir(), 'desktop-psf-'));
+    const previousEnable = process.env.HAGICODE_ENABLE_PSF;
+    const previousPsfDir = process.env.HAGICODE_PSF_DIR;
+
+    try {
+      for (const fileName of [
+        'PsfLauncher64.exe',
+        'PsfRuntime64.dll',
+        'ProcessLauncherFixup64.dll',
+        'FileRedirectionFixup64.dll',
+      ]) {
+        await writeFile(path.join(psfDir, fileName), 'fixture');
+      }
+
+      process.env.HAGICODE_ENABLE_PSF = 'true';
+      process.env.HAGICODE_PSF_DIR = psfDir;
+
+      const config = resolvePsfBuildConfig(process.cwd(), 'x64');
+
+      assert.equal(config.enabled, true);
+      if (!config.enabled) {
+        throw new Error('Expected PSF build config to be enabled for this test.');
+      }
+
+      assert.equal(config.launcherName, 'PsfLauncher64.exe');
+      assert.equal(config.appExecutable, 'app\\Hagicode Desktop.exe');
+      assert.equal(config.workingDirectory, 'app');
+      assert.ok(config.templatePath.endsWith(path.join('resources', 'psf', 'config.template.json')));
+    } finally {
+      if (previousEnable === undefined) {
+        delete process.env.HAGICODE_ENABLE_PSF;
+      } else {
+        process.env.HAGICODE_ENABLE_PSF = previousEnable;
+      }
+
+      if (previousPsfDir === undefined) {
+        delete process.env.HAGICODE_PSF_DIR;
+      } else {
+        process.env.HAGICODE_PSF_DIR = previousPsfDir;
+      }
+
+      await rm(psfDir, { recursive: true, force: true });
+    }
   });
 
   it('validates the desktop-owned Store config schema', () => {

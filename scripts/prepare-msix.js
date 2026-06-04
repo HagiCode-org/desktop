@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getMsixPaths, resolveMsixManifestConfig } from './msix-config.js';
+import { resolvePsfBuildConfig } from './psf-support.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,8 +134,12 @@ export async function prepareMsixArtifacts({ arch, platform = 'win32' }) {
     version: packageJson.version,
     arch,
   });
+  const psfConfig = resolvePsfBuildConfig(projectRoot, arch);
   const template = await fsp.readFile(paths.manifestTemplatePath, 'utf8');
-  const manifest = renderMsixManifest(template, manifestConfig);
+  const manifest = renderMsixManifest(template, {
+    ...manifestConfig,
+    appExecutable: psfConfig.enabled ? psfConfig.launcherName : manifestConfig.appExecutable,
+  });
 
   await copyMsixAssets(paths);
   await fsp.mkdir(path.dirname(paths.manifestOutputPath), { recursive: true });
@@ -142,6 +147,10 @@ export async function prepareMsixArtifacts({ arch, platform = 'win32' }) {
 
   console.log(`[msix] prepared manifest ${path.relative(projectRoot, paths.manifestOutputPath)}`);
   console.log(`[msix] prepared assets ${path.relative(projectRoot, paths.generatedAssetsPath)}`);
+
+  if (psfConfig.enabled) {
+    console.log(`[psf] manifest entry redirected to ${psfConfig.launcherName}`);
+  }
 }
 
 async function main() {

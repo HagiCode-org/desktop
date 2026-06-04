@@ -1,0 +1,43 @@
+{
+  "applications": [
+    {
+      "id": "app",
+      "executable": "{{APP_EXECUTABLE}}",
+      "workingDirectory": "{{WORKING_DIRECTORY}}"
+    }
+  ],
+  "processes": [
+    {
+      "executable": ".*",
+      "fixups": [
+        {
+          "dll": "{{PROCESS_LAUNCHER_DLL}}",
+          "config": {
+            "preventBreakaway": true,
+            "inheritPackageIdentity": true
+          }
+        },
+        {
+          "dll": "{{FILE_REDIRECTION_DLL}}",
+          "config": {
+            "redirectedPaths": {
+              "packageRelative": [
+                {
+                  "base": "resources",
+                  "patterns": [
+                    ".*\\\\.js",
+                    ".*\\\\.cjs",
+                    ".*\\\\.mjs",
+                    ".*\\\\.node",
+                    ".*\\\\.json",
+                    ".*\\\\.dll"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

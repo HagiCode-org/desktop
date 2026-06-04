@@ -141,6 +141,17 @@ Supported parameters:
 - `--platform-id`: record the workflow platform identity in metadata
 - `--dry-run`: emit a synthetic Store artifact without Windows packaging tools
 
+Optional PSF injection for MSIX child-process containment uses environment flags rather than extra CLI switches:
+
+```bash
+HAGICODE_ENABLE_PSF=true \
+HAGICODE_PSF_DIR=/absolute/path/to/psf \
+npm run build:win:store -- \
+  --server-payload-path /abs/path/to/server-runtime
+```
+
+The PSF directory must provide `PsfLauncher64.exe`, `PsfRuntime64.dll`, `ProcessLauncherFixup64.dll`, and `FileRedirectionFixup64.dll`. Desktop will then rewrite the MSIX manifest entry to `PsfLauncher64.exe` during `prepare-msix`, and Forge will inject the PSF binaries plus the generated `config.json` into each packaged Windows output during `postPackage`.
+
 ### Expected outputs
 
 The Store build writes:
