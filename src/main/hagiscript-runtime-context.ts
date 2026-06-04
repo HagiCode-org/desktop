@@ -12,7 +12,7 @@ import {
   DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE,
   resolveDesktopManagedPm2AppName,
 } from './hagiscript-desktop-manifest.js';
-import { ensureNoSpacePathAlias } from './pm2-home-alias.js';
+import { ensureNoSpacePathAlias, ensurePm2HomeAlias } from './pm2-home-alias.js';
 import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
 
@@ -126,7 +126,10 @@ export class HagiscriptRuntimeContextResolver {
           runtimeHome: shared.runtimeHome,
           runtimeDataRoot: shared.runtimeDataRoot,
           serverProgramRoot: shared.serverProgramRoot,
-          serverDataRoot: shared.serverDataRoot,
+          // PM2 behaves unreliably on Windows Store paths with spaces, so the
+          // manifest uses a stable alias while Desktop diagnostics keep the
+          // canonical path for log discovery and user-facing output.
+          serverDataRoot: shared.serverDataRootForManifest,
           npmPrefix: shared.npmPrefix,
           dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
           server: {
@@ -176,6 +179,7 @@ export class HagiscriptRuntimeContextResolver {
     runtimeStateFilePath: string;
     serverProgramRoot: string;
     serverDataRoot: string;
+    serverDataRootForManifest: string;
     npmPrefix: string;
     dotnetRuntimeRoot: string;
   }> {
@@ -188,6 +192,7 @@ export class HagiscriptRuntimeContextResolver {
     const serverDataRoot = path.resolve(this.pathManager.getManagedServerDataHome());
     const aliasedRuntimeHome = await ensureNoSpacePathAlias(runtimeHome, 'desktop-runtime-home');
     const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-runtime-root');
+    const aliasedServerDataRoot = await ensurePm2HomeAlias(serverDataRoot, 'desktop-server-data-root');
     const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeContainerRoot(this.pathManager.getCurrentPlatform()));
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
     const externalNodePath = managedContext.environment.source === 'externally-managed'
@@ -207,6 +212,7 @@ export class HagiscriptRuntimeContextResolver {
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
       serverDataRoot,
+      serverDataRootForManifest: aliasedServerDataRoot,
       npmPrefix: managedContext.environment.source === 'desktop-managed'
         ? path.resolve(managedContext.environment.npmGlobalPrefix)
         : managedContext.environment.npmGlobalPrefix,

@@ -49,6 +49,7 @@ assertCandidateContract('win-x64', {
   npmCompatibility: 'npm.cmd',
   npmCandidates: [
     'npm.cmd',
+    'node_modules/npm/bin/npm-cli.js',
     'npm',
   ],
 });
@@ -78,7 +79,7 @@ assert.throws(() => resolvePinnedNodeRuntimeTarget('linux-arm64', manifest), /no
 
 const prepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain.js', import.meta.url), 'utf8');
 const optionalPrepareScript = fs.readFileSync(new URL('./prepare-bundled-toolchain-if-supported.js', import.meta.url), 'utf8');
-assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['node'\]\)/, 'prepare script delegates top-level staging to hagiscript update');
+assert.match(prepareScript, /updateDesktopRuntimeComponents\(\['node'\](?:,\s*\{[\s\S]*?\})?\)/, 'prepare script delegates top-level staging to hagiscript update');
 assert.match(prepareScript, /installNodeRuntime\(/, 'prepare script uses hagiscript Node installer for the runtime payload');
 assert.match(prepareScript, /materializeNpmCompatibilityPath/, 'prepare script materializes the Desktop npm compatibility path');
 assert.match(prepareScript, /pathExistsOrIsSymlink/, 'prepare script detects dangling compatibility-path symlinks');

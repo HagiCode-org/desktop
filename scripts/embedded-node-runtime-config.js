@@ -79,8 +79,8 @@ export function getNodeExecutableRelativePath(platform) {
 
 export function getNpmExecutableRelativePath(platform) {
   return platform.startsWith('win-')
-    ? path.join('node_modules', 'npm', 'bin', 'npm-cli.js')
-    : path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
+    ? 'npm.cmd'
+    : path.join('bin', 'npm');
 }
 
 export function getNpmExecutableRelativePathCandidates(platform) {
@@ -88,16 +88,15 @@ export function getNpmExecutableRelativePathCandidates(platform) {
   if (platform.startsWith('win-')) {
     return [
       compatibilityPath,
-      path.join('node_modules', 'npm', 'bin', 'npm'),
+      path.join('node_modules', 'npm', 'bin', 'npm-cli.js'),
       'npm',
-      'npm.cmd',
     ];
   }
 
   return [
     compatibilityPath,
+    path.join('lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
     path.join('lib', 'node_modules', 'npm', 'bin', 'npm'),
-    path.join('bin', 'npm'),
   ];
 }
 

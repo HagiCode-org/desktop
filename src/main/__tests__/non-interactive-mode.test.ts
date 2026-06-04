@@ -152,7 +152,7 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         manifestPath: '/artifact/resources/manifest.yml',
         activeForDesktop: true,
         nodeExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/bin/node',
-        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/lib/node_modules/npm/bin/npm-cli.js',
+        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/bin/npm',
         governedNodeVersion: '22.0.0',
         issues: ok ? [] : ['bundled Node runtime metadata is missing or invalid'],
       },

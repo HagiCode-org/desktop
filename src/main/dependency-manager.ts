@@ -213,6 +213,39 @@ export class DependencyManager {
     return `'${segment.replace(/'/g, `'\\''`)}'`;
   }
 
+  private buildBundledInstallCommand(
+    nodeExecutablePath: string | undefined,
+    npmExecutablePath: string | undefined,
+    installSpec: string,
+  ): string | undefined {
+    if (!npmExecutablePath) {
+      return undefined;
+    }
+
+    const quotedArgs = [
+      'install',
+      '-g',
+      this.quoteManualCommandSegment(installSpec),
+    ];
+
+    if (/\.js$/i.test(npmExecutablePath)) {
+      if (!nodeExecutablePath) {
+        return undefined;
+      }
+
+      return [
+        this.quoteManualCommandSegment(nodeExecutablePath),
+        this.quoteManualCommandSegment(npmExecutablePath),
+        ...quotedArgs,
+      ].join(' ');
+    }
+
+    return [
+      this.quoteManualCommandSegment(npmExecutablePath),
+      ...quotedArgs,
+    ].join(' ');
+  }
+
   private buildBundledCliManualAction(
     componentId: Exclude<BundledToolchainComponentId, 'node' | 'npm'>,
     component: BundledToolchainComponentStatus,
@@ -225,15 +258,11 @@ export class DependencyManager {
       return undefined;
     }
 
-    const command = nodeExecutablePath && npmExecutablePath
-      ? [
-        this.quoteManualCommandSegment(nodeExecutablePath),
-        this.quoteManualCommandSegment(npmExecutablePath),
-        'install',
-        '-g',
-        this.quoteManualCommandSegment(packageRecord.installSpec),
-      ].join(' ')
-      : undefined;
+    const command = this.buildBundledInstallCommand(
+      nodeExecutablePath,
+      npmExecutablePath,
+      packageRecord.installSpec,
+    );
 
     return {
       logicalName: componentId,

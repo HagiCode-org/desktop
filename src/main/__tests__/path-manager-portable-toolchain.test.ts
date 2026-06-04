@@ -23,7 +23,7 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
     assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
     assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/bin/node');
-    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/lib/node_modules/npm/bin/npm-cli.js');
+    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/bin/npm');
     assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/components/node/runtime/toolchain-manifest.json');
     assert.notEqual(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/toolchain');
     assert.equal('openspecExecutablePath' in paths, false);
@@ -41,7 +41,7 @@ describe('path-manager portable toolchain paths', () => {
     assert.equal(paths.nodeRoot, paths.toolchainRoot);
     assert.equal(paths.nodeBinRoot, paths.toolchainRoot);
     assert.equal(paths.nodeExecutablePath, path.win32.join(paths.toolchainRoot, 'node.exe'));
-    assert.equal(paths.npmExecutablePath, path.win32.join(paths.toolchainRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+    assert.equal(paths.npmExecutablePath, path.win32.join(paths.toolchainRoot, 'npm.cmd'));
     assert.equal('openspecExecutablePath' in paths, false);
   });
 
