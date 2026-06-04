@@ -387,7 +387,7 @@ export class PCodeWebServiceManager {
     const warningKey = `${result.action}:${result.status}:${result.summary}`;
     if (this.lastPm2StatusWarningKey === warningKey) {
       if (!this.repeatedPm2StatusWarningSuppressed) {
-        log.info('[WebService] Suppressing repeated hagiscript PM2 status warnings after the initial failure:', {
+        log.info('[WebService] Suppressing repeated Desktop SDK PM2 status warnings after the initial failure:', {
           action: result.action,
           status: result.status,
           summary: result.summary,
@@ -399,7 +399,7 @@ export class PCodeWebServiceManager {
 
     this.lastPm2StatusWarningKey = warningKey;
     this.repeatedPm2StatusWarningSuppressed = false;
-    log.warn('[WebService] hagiscript PM2 status unavailable:', {
+    log.warn('[WebService] Desktop SDK PM2 status unavailable:', {
       action: result.action,
       status: result.status,
       summary: result.summary,
@@ -474,9 +474,9 @@ export class PCodeWebServiceManager {
     stderr: string;
     logPaths: readonly string[];
   }): Promise<void> {
-    this.appendStartupLogLine(`hagiscript failure summary: ${input.summary}`);
-    this.appendDiagnosticOutput('hagiscript stdout', input.stdout);
-    this.appendDiagnosticOutput('hagiscript stderr', input.stderr);
+    this.appendStartupLogLine('Desktop SDK failure summary: ' + input.summary);
+    this.appendDiagnosticOutput('Desktop SDK stdout', input.stdout);
+    this.appendDiagnosticOutput('Desktop SDK stderr', input.stderr);
     for (const logPath of input.logPaths) {
       await this.appendDiagnosticFile(logPath);
     }
@@ -1075,7 +1075,7 @@ export class PCodeWebServiceManager {
       }
 
       if (!stopResult.success && !['missing', 'stopped'].includes(stopResult.status)) {
-        log.error('[WebService] hagiscript stop failed:', {
+        log.error('[WebService] Desktop SDK stop failed:', {
           status: stopResult.status,
           summary: stopResult.summary,
         });
@@ -1196,8 +1196,8 @@ export class PCodeWebServiceManager {
         this.currentPhase = StartupPhase.Error;
         this.appendStartupLogLine(
           releasedServiceReady === false
-            ? 'hagiscript PM2 reports the server online, but the released-service payload is not ready.'
-            : 'hagiscript PM2 reports the server online, but Desktop health verification failed.',
+            ? 'Desktop SDK PM2 reports the server online, but the released-service payload is not ready.'
+            : 'Desktop SDK PM2 reports the server online, but Desktop health verification failed.',
         );
         this.startTime = lifecycleResult.pmUptime ?? this.startTime;
         this.restartCount = lifecycleResult.restartCount;
@@ -1291,8 +1291,8 @@ export class PCodeWebServiceManager {
         this.emitPhase(
           StartupPhase.Spawning,
           action === 'restart'
-            ? 'Restarting service via hagiscript PM2...'
-            : 'Starting service via hagiscript PM2...',
+            ? 'Restarting service via Desktop SDK PM2...'
+            : 'Starting service via Desktop SDK PM2...',
         );
         this.appendStartupLogLine(`runtime manifest override: ${context.manifestPath}`);
         this.appendStartupLogLine(`runtime home: ${context.runtimeHome}`);
@@ -1301,10 +1301,12 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`runtime files directory: ${context.runtimeFilesDir}`);
 
         if (await this.isManagedServiceReachable(this.config.port)) {
-          log.warn('[WebService] Target port is reachable before hagiscript start; lifecycle start may fail if another process owns it:', {
+          log.warn('[WebService] Target port is reachable before Desktop SDK start; lifecycle start may fail if another process owns it:', {
             port: this.config.port,
           });
-          this.appendStartupLogLine(`Target port ${this.config.port} is already reachable before hagiscript PM2 action`);
+          this.appendStartupLogLine(
+            'Target port ' + this.config.port + ' is already reachable before Desktop SDK PM2 action',
+          );
         }
 
         lifecycleResult = action === 'restart'
@@ -1334,7 +1336,7 @@ export class PCodeWebServiceManager {
             ? {
                 ...lifecycleResult,
                 success: false,
-                summary: `hagiscript PM2 reported ${lifecycleResult.status} during ${action}.`,
+                summary: 'Desktop SDK PM2 reported ' + lifecycleResult.status + ' during ' + action + '.',
               }
             : lifecycleResult,
         );
