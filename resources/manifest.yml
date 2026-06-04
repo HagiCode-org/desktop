@@ -45,11 +45,6 @@ components:
     source: desktop-bundled-node
     version: 22.22.2
     channelVersion: "22"
-    optionalPolicy:
-      rules:
-        - id: external-managed
-          dependencyManagementModes:
-            - external-managed
     lifecycleDependencies: []
     installScript: ../scripts/hagiscript/install-node.mjs
     verifyScript: ../scripts/hagiscript/verify-node.mjs

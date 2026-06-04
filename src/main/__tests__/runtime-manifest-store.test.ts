@@ -77,7 +77,7 @@ describe('runtime manifest store data scope resolution', () => {
     assert.equal(parsed.paths.serverDataRoot, path.join(runtimeDataRoot, 'apps', 'data'));
   });
 
-  it('surfaces the synthesized node optional policy in desktopRuntime', () => {
+  it('keeps the synthesized desktopRuntime node component required by default', () => {
     const desktopRuntime = readRuntimeManifestSection<{
       components: {
         node: {
@@ -91,13 +91,6 @@ describe('runtime manifest store data scope resolution', () => {
       };
     }>('desktopRuntime');
 
-    assert.deepEqual(desktopRuntime.components.node.optionalPolicy, {
-      rules: [
-        {
-          id: 'external-managed',
-          dependencyManagementModes: ['external-managed'],
-        },
-      ],
-    });
+    assert.equal(desktopRuntime.components.node.optionalPolicy, undefined);
   });
 });

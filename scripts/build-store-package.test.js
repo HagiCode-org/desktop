@@ -24,7 +24,7 @@ test('buildStepScripts prefers optional runtime preparation entrypoints for Stor
   ]);
 });
 
-test('createStoreBuildMetadata records skipped Node preparation distinctly from failures', () => {
+test('createStoreBuildMetadata records Node preparation as required for Store builds', () => {
   const metadata = createStoreBuildMetadata({
     artifacts: ['/tmp/Hagicode-Desktop.msix'],
     buildMode: 'desktop-store-build-dry-run',
@@ -39,8 +39,8 @@ test('createStoreBuildMetadata records skipped Node preparation distinctly from 
     serverPayloadPath: null,
     serverPayloadRoot: null,
     nodePreparation: {
-      status: 'skipped-by-policy',
-      reason: 'optional policy matched (external-managed): consumer=windows-store, dependencyManagementMode=external-managed',
+      status: 'not-run-dry-run',
+      reason: null,
       consumer: 'windows-store',
       dependencyManagementMode: 'external-managed',
     },
@@ -62,8 +62,8 @@ test('createStoreBuildMetadata records skipped Node preparation distinctly from 
   });
 
   assert.deepEqual(metadata.nodePreparation, {
-    status: 'skipped-by-policy',
-    reason: 'optional policy matched (external-managed): consumer=windows-store, dependencyManagementMode=external-managed',
+    status: 'not-run-dry-run',
+    reason: null,
     consumer: 'windows-store',
     dependencyManagementMode: 'external-managed',
   });

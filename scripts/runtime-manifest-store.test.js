@@ -74,16 +74,9 @@ describe('bundled runtime manifest component contracts', () => {
       'dotnet/runtime/osx-arm64',
       'dotnet/runtime/win-x64',
     ]);
-    assert.deepEqual(
+    assert.equal(
       manifest.components.find((component) => component?.name === 'node')?.optionalPolicy,
-      {
-        rules: [
-          {
-            id: 'external-managed',
-            dependencyManagementModes: ['external-managed'],
-          },
-        ],
-      },
+      undefined,
     );
   });
 });

@@ -65,14 +65,7 @@ describe('hagiscript desktop manifest builder', () => {
     ) as Record<string, unknown> | undefined;
     assert.ok(nodeComponent);
     assert.ok(serverComponent);
-    assert.deepEqual(nodeComponent.optionalPolicy, {
-      rules: [
-        {
-          id: 'external-managed',
-          dependencyManagementModes: ['external-managed'],
-        },
-      ],
-    });
+    assert.equal(nodeComponent.optionalPolicy, undefined);
     assert.deepEqual(serverComponent.lifecycleDependencies, [
       DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       'dotnet/runtime/linux-x64',
