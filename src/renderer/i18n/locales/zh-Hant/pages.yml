@@ -67,7 +67,7 @@ settings:
       snapshotModel: 首頁提醒依賴主程序持久化快照，重新啟動 Desktop 後仍會恢復最近一次更新狀態。
       retentionPolicy: 保留策略只會清理快取歸檔文件，不會刪除已經安裝完成的版本目錄。
 footer:
-  copyright: © 2025 Hagicode Desktop。使用 Electron + React + TypeScript 建造 ❤️
+  copyright: © 2026 Hagicode Desktop。使用 Electron + React + TypeScript 建造 ❤️
   testBuild: 測試應用程式 - 開發版本
 quickStart:
   title: 快速開始

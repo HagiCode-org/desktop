@@ -67,7 +67,7 @@ settings:
       snapshotModel: O lembrete do painel é acionado por um instantâneo persistente do processo principal, de modo que o último estado de atualização conhecido sobrevive às recargas do Desktop.
       retentionPolicy: A limpeza de retenção remove apenas arquivos e metadados armazenados em cache. Os diretórios de versões instaladas permanecem intactos.
 footer:
-  copyright: © 2025 Hagicode Desktop. Construído com ❤️ usando Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Construído com ❤️ usando Electron + React + TypeScript.
   testBuild: Aplicativo de teste – build de desenvolvimento
 quickStart:
   title: Início rápido

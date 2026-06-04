@@ -67,7 +67,7 @@ settings:
       snapshotModel: ダッシュボードのリマインダーは、永続化されたメインプロセスのスナップショットによって駆動されるため、デスクトップのリロード後も、最後に知られた更新状態が残ります。
       retentionPolicy: 保持クリーンアップでは、キャッシュされたアーカイブとメタデータのみが削除されます。インストールされたバージョンのディレクトリはそのまま残ります。
 footer:
-  copyright: © 2025 Hagicode Desktop. Electron + React + TypeScript を使用して ❤️ で構築されています。
+  copyright: © 2026 Hagicode Desktop. Electron + React + TypeScript を使用して ❤️ で構築されています。
   testBuild: テスト アプリケーション - 開発ビルド
 quickStart:
   title: クイックスタート

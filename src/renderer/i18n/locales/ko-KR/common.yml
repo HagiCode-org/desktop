@@ -59,7 +59,7 @@ settings:
     description: 애플리케이션 인터페이스 언어 선택
   embeddedWebServicePort: 내장형 웹 서비스 포트
 footer:
-  copyright: © 2025 Hagicode Desktop. Electron + React + TypeScript를 사용하여 ❤️으로 제작되었습니다.
+  copyright: © 2026 Hagicode Desktop. Electron + React + TypeScript를 사용하여 ❤️으로 제작되었습니다.
   testBuild: 테스트 애플리케이션 - 개발 빌드
 menu:
   systemManagement: 시스템 관리

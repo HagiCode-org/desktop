@@ -86,7 +86,7 @@ settings:
       snapshotModel: The dashboard reminder is driven by a persisted main-process snapshot, so the last known update state survives Desktop reloads.
       retentionPolicy: Retention cleanup only removes cached archives and metadata. Installed version directories stay untouched.
 footer:
-  copyright: © 2025 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
   testBuild: Test application - Development build
 quickStart:
   title: Quick Start

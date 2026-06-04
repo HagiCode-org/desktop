@@ -59,7 +59,7 @@ settings:
     description: Select application interface language
   embeddedWebServicePort: Embedded Web Service Port
 footer:
-  copyright: © 2025 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
   testBuild: Test application - Development build
 menu:
   systemManagement: System Management

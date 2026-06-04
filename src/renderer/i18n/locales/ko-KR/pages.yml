@@ -67,7 +67,7 @@ settings:
       snapshotModel: 대시보드 미리 알림은 지속되는 기본 프로세스 스냅샷에 의해 구동되므로 마지막으로 알려진 업데이트 상태는 데스크톱을 다시 로드해도 유지됩니다.
       retentionPolicy: 보존 정리는 캐시된 아카이브와 메타데이터만 제거합니다. 설치된 버전 디렉토리는 그대로 유지됩니다.
 footer:
-  copyright: © 2025 Hagicode Desktop. Electron + React + TypeScript를 사용하여 ❤️으로 제작되었습니다.
+  copyright: © 2026 Hagicode Desktop. Electron + React + TypeScript를 사용하여 ❤️으로 제작되었습니다.
   testBuild: 테스트 애플리케이션 - 개발 빌드
 quickStart:
   title: 빠른 시작

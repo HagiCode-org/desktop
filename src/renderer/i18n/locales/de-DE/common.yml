@@ -59,7 +59,7 @@ settings:
     description: Wählen Sie die Sprache der Anwendungsoberfläche aus
   embeddedWebServicePort: Eingebetteter Webdienst-Port
 footer:
-  copyright: © 2025 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.
   testBuild: Testanwendung – Entwicklungsbuild
 menu:
   systemManagement: Systemmanagement

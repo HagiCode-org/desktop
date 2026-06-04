@@ -59,7 +59,7 @@ settings:
     description: 选择应用程序界面语言
   embeddedWebServicePort: Hagicode 服务端口
 footer:
-  copyright: © 2025 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️
+  copyright: © 2026 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️
   testBuild: 测试应用程序 - 开发版本
 menu:
   systemManagement: 系统管理

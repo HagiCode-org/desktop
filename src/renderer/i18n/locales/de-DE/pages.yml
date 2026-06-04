@@ -67,7 +67,7 @@ settings:
       snapshotModel: Die Dashboard-Erinnerung wird durch einen persistenten Hauptprozess-Snapshot gesteuert, sodass der letzte bekannte Aktualisierungsstatus auch nach dem Neuladen des Desktops erhalten bleibt.
       retentionPolicy: Bei der Aufbewahrungsbereinigung werden nur zwischengespeicherte Archive und Metadaten entfernt. Installierte Versionsverzeichnisse bleiben unberührt.
 footer:
-  copyright: © 2025 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Gebaut mit ❤️ mit Electron + React + TypeScript.
   testBuild: Testanwendung – Entwicklungsbuild
 quickStart:
   title: Schnellstart

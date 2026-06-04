@@ -67,7 +67,7 @@ settings:
       snapshotModel: El recordatorio del panel está impulsado por una instantánea persistente del proceso principal, por lo que el último estado de actualización conocido sobrevive a las recargas del escritorio.
       retentionPolicy: La limpieza de retención solo elimina archivos y metadatos almacenados en caché. Los directorios de las versiones instaladas permanecen intactos.
 footer:
-  copyright: © 2025 Hagicode Desktop. Construido con ❤️ usando Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Construido con ❤️ usando Electron + React + TypeScript.
   testBuild: 'Aplicación de prueba: compilación de desarrollo'
 quickStart:
   title: Inicio rápido

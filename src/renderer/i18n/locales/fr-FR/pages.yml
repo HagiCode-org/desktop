@@ -67,7 +67,7 @@ settings:
       snapshotModel: Le rappel du tableau de bord est piloté par un instantané persistant du processus principal, de sorte que le dernier état de mise à jour connu survit aux rechargements du bureau.
       retentionPolicy: Le nettoyage de rétention supprime uniquement les archives et les métadonnées mises en cache. Les répertoires des versions installées restent intacts.
 footer:
-  copyright: © 2025 Hagicode Desktop. Construit avec ❤️ en utilisant Electron + React + TypeScript.
+  copyright: © 2026 Hagicode Desktop. Construit avec ❤️ en utilisant Electron + React + TypeScript.
   testBuild: Application de test - Version de développement
 quickStart:
   title: Démarrage rapide
