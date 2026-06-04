@@ -1520,6 +1520,10 @@ export class DependencyManagementService {
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
   ): Promise<InstalledPackageInventoryEntry | null> {
+    if (!environment.npmGlobalPrefix || !this.existsSync(environment.npmGlobalPrefix)) {
+      return null;
+    }
+
     try {
       const activationPolicy = environment.source === 'desktop-managed'
         ? await this.getDesktopActivationPolicy()

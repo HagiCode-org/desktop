@@ -40,6 +40,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /buildSdkSyncNpmCommandOptions/);
     assert.match(source, /detectInstalledPackageFromInventory/);
     assert.match(source, /parseInstalledPackageInventoryEntry/);
+    assert.match(source, /if \(!environment\.npmGlobalPrefix \|\| !this\.existsSync\(environment\.npmGlobalPrefix\)\) \{/);
     assert.match(source, /--json',\s*'--long',\s*'--depth=0'/);
     assert.doesNotMatch(source, /runHagiscriptSync/);
     assert.doesNotMatch(source, /buildHagiscriptSyncArgs/);

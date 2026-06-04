@@ -148,6 +148,12 @@ function walkFiles(root) {
   return files;
 }
 
+function findFilesWithExtension(root, extension) {
+  return walkFiles(root)
+    .filter((targetPath) => targetPath.toLowerCase().endsWith(extension))
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+}
+
 function findUnpackedArtifactRoot() {
   const platformRoots = process.platform === 'win32'
     ? ['win-unpacked']
@@ -169,13 +175,18 @@ function findUnpackedArtifactRoot() {
   return null;
 }
 
-function findZipArtifact() {
+export function findZipArtifact() {
   if (!pathExists(pkgRoot)) {
     return null;
   }
 
   const scoreZipArtifact = (zipPath) => {
     const name = path.basename(zipPath).toLowerCase();
+    if (process.platform === 'win32') {
+      if (name.includes('unpacked')) return 200;
+      return 0;
+    }
+
     if (process.platform === 'darwin') {
       if (process.arch === 'arm64') {
         if (name.includes('universal')) return 300;
@@ -193,9 +204,7 @@ function findZipArtifact() {
     return 0;
   };
 
-  const zips = fs.readdirSync(pkgRoot)
-    .filter((entry) => entry.toLowerCase().endsWith('.zip'))
-    .map((entry) => path.join(pkgRoot, entry))
+  const zips = findFilesWithExtension(pkgRoot, '.zip')
     .sort((a, b) => {
       const scoreDelta = scoreZipArtifact(b) - scoreZipArtifact(a);
       if (scoreDelta !== 0) {
@@ -208,15 +217,12 @@ function findZipArtifact() {
   return zips[0] ?? null;
 }
 
-function findTarGzArtifact() {
+export function findTarGzArtifact() {
   if (!pathExists(pkgRoot)) {
     return null;
   }
 
-  const tarballs = fs.readdirSync(pkgRoot)
-    .filter((entry) => entry.toLowerCase().endsWith('.tar.gz'))
-    .map((entry) => path.join(pkgRoot, entry))
-    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  const tarballs = findFilesWithExtension(pkgRoot, '.tar.gz');
 
   return tarballs[0] ?? null;
 }
@@ -842,8 +848,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[non-interactive-integration] failed');
-  console.error(error instanceof Error ? error.stack || error.message : String(error));
-  process.exit(1);
-});
+if (
+  process.env.HAGICODE_SKIP_NON_INTERACTIVE_MAIN !== '1'
+  && process.argv[1]
+  && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  main().catch((error) => {
+    console.error('[non-interactive-integration] failed');
+    console.error(error instanceof Error ? error.stack || error.message : String(error));
+    process.exit(1);
+  });
+}
