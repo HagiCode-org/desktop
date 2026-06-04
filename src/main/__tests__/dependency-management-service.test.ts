@@ -108,8 +108,12 @@ describe('dependency management service contract', () => {
     assert.match(typesSource, /getModeSettings: \(\) => Promise<DependencyManagementModeSettings>;/);
     assert.match(typesSource, /setMode: \(mode: DependencyManagementMode\) => Promise<DependencyManagementSnapshot>;/);
     assert.match(source, /private resolveModeSettings\(\): DependencyManagementModeSettings/);
-    assert.match(source, /const effectiveMode: DependencyManagementMode = lockedByRuntime \? 'external' : configuredMode;/);
+    assert.match(source, /const isWinStore = this\.isWindowsStoreExecutionEnvironment\(\);/);
+    assert.match(source, /const configuredMode = this\.configManager\.getDependencyManagementMode\(isWinStore\);/);
+    assert.match(source, /const effectiveMode: DependencyManagementMode = configuredMode;/);
     assert.match(source, /mutationsAvailable: effectiveMode === 'internal'/);
+    assert.match(source, /readOnlyReason: effectiveMode === 'external'/);
+    assert.doesNotMatch(source, /Windows Store packaging requires external read-only dependency management\./);
     assert.match(source, /const mode = this\.resolveModeSettings\(\);/);
     assert.match(source, /return this\.getSnapshot\(\);/);
   });

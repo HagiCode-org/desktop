@@ -21,11 +21,15 @@ describe('dependency management settings renderer wiring', () => {
     assert.match(settingsPageSource, /value="dependencyManagement"/);
     assert.match(settingsPageSource, /settings\.tabs\.dependencyManagement/);
     assert.match(settingsPageSource, /<DependencyManagementModeSettings \/>/);
-    assert.match(modeSettingsSource, /getDependencyManagementBridge\(\)\.getModeSettings\(\)/);
+    assert.match(modeSettingsSource, /getDependencyManagementBridge\(\)\s*\.getModeSettings\(\)/);
     assert.match(modeSettingsSource, /getDependencyManagementBridge\(\)\.setMode\(nextMode\)/);
-    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.lockedHint/);
-    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.internal\.label/);
-    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.external\.label/);
+    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{effectiveMode\}\.label/);
+    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{mode\}\.label/);
+    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{mode\}\.description/);
+    assert.match(modeSettingsSource, /if \(!settings \|\| isSaving\) \{/);
+    assert.match(modeSettingsSource, /const controlDisabled = !settings \|\| isSaving;/);
+    assert.doesNotMatch(modeSettingsSource, /settings\?\.lockedByRuntime/);
+    assert.doesNotMatch(modeSettingsSource, /settings\.lockedByRuntime/);
   });
 
   it('adds localized settings copy for mode locking and read-only explanations', async () => {

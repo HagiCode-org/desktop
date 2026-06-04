@@ -84,6 +84,29 @@ describe('desktop telemetry retirement', () => {
     assert.equal('remoteMode' in manager.getAll(), false);
   });
 
+  it('defaults dependency management mode to external only on first Win Store launch', () => {
+    const firstRunStore = new MockStore();
+    const firstRunManager = new DesktopConfigManager(firstRunStore as never);
+
+    assert.equal(firstRunManager.getDependencyManagementMode(true), 'external');
+    assert.equal(firstRunStore.get('dependencyManagementMode'), 'external');
+    assert.equal(firstRunManager.getDependencyManagementMode(false), 'external');
+
+    const existingStore = new MockStore({
+      dependencyManagementMode: 'internal',
+    });
+    const existingManager = new DesktopConfigManager(existingStore as never);
+
+    assert.equal(existingManager.getDependencyManagementMode(true), 'internal');
+    assert.equal(existingStore.get('dependencyManagementMode'), 'internal');
+
+    const nonWinStoreStore = new MockStore();
+    const nonWinStoreManager = new DesktopConfigManager(nonWinStoreStore as never);
+
+    assert.equal(nonWinStoreManager.getDependencyManagementMode(false), 'internal');
+    assert.equal(nonWinStoreStore.get('dependencyManagementMode'), 'internal');
+  });
+
   it('keeps existing Telemetry YAML blocks untouched while unrelated DataDir sync still works', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-config-'));
     tempDirectories.push(tempRoot);

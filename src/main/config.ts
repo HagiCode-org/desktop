@@ -260,8 +260,14 @@ export class ConfigManager {
     return merged;
   }
 
-  getDependencyManagementMode(): DependencyManagementMode {
+  getDependencyManagementMode(isWinStore?: boolean): DependencyManagementMode {
     const current = this.store.get('dependencyManagementMode');
+
+    if (current === undefined && isWinStore === true) {
+      this.store.set('dependencyManagementMode', 'external');
+      return 'external';
+    }
+
     const normalized: DependencyManagementMode = current === 'external' ? 'external' : 'internal';
 
     if (current !== normalized) {

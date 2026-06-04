@@ -49,7 +49,7 @@ export function DependencyManagementModeSettings() {
   }, []);
 
   const handleValueChange = async (value: string) => {
-    if (!settings || settings.lockedByRuntime || isSaving) {
+    if (!settings || isSaving) {
       return;
     }
 
@@ -75,7 +75,7 @@ export function DependencyManagementModeSettings() {
 
   const configuredMode = settings?.configuredMode ?? 'internal';
   const effectiveMode = settings?.effectiveMode ?? configuredMode;
-  const controlDisabled = !settings || settings.lockedByRuntime || isSaving;
+  const controlDisabled = !settings || isSaving;
 
   return (
     <Card className="max-w-3xl">
@@ -93,9 +93,6 @@ export function DependencyManagementModeSettings() {
               mode: t(`settings.dependencyManagementMode.options.${effectiveMode}.label`),
             })}
           </Badge>
-          {settings?.lockedByRuntime ? (
-            <Badge variant="secondary">{t('settings.dependencyManagementMode.lockedBadge')}</Badge>
-          ) : null}
         </div>
 
         <RadioGroup
@@ -123,9 +120,7 @@ export function DependencyManagementModeSettings() {
 
         {settings?.readOnlyReason ? (
           <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-            {settings.lockedByRuntime
-              ? t('settings.dependencyManagementMode.lockedHint')
-              : settings.readOnlyReason}
+            {settings.readOnlyReason}
           </div>
         ) : null}
 

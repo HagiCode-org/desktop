@@ -895,20 +895,18 @@ export class DependencyManagementService {
   }
 
   private resolveModeSettings(): DependencyManagementModeSettings {
-    const configuredMode = this.configManager.getDependencyManagementMode();
-    const lockedByRuntime = this.isWindowsStoreExecutionEnvironment();
-    const effectiveMode: DependencyManagementMode = lockedByRuntime ? 'external' : configuredMode;
+    const isWinStore = this.isWindowsStoreExecutionEnvironment();
+    const configuredMode = this.configManager.getDependencyManagementMode(isWinStore);
+    const effectiveMode: DependencyManagementMode = configuredMode;
 
     return {
       configuredMode,
       effectiveMode,
-      lockedByRuntime,
+      lockedByRuntime: isWinStore,
       mutationsAvailable: effectiveMode === 'internal',
-      readOnlyReason: lockedByRuntime
-        ? 'Windows Store packaging requires external read-only dependency management.'
-        : effectiveMode === 'external'
-          ? 'External dependency mode is read-only and only inspects the current global Node/npm environment.'
-          : undefined,
+      readOnlyReason: effectiveMode === 'external'
+        ? 'External dependency mode is read-only and only inspects the current global Node/npm environment.'
+        : undefined,
     };
   }
 
