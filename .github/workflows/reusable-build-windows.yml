@@ -31,7 +31,7 @@ env:
 jobs:
   build-windows:
     name: Build Windows (${{ matrix.target.name }})
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     environment:
       name: ${{ inputs.is_production_build && 'production' || 'ci' }}
       deployment: false
