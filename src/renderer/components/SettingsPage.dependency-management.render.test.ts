@@ -32,17 +32,15 @@ describe('dependency management settings renderer wiring', () => {
     assert.doesNotMatch(modeSettingsSource, /settings\.lockedByRuntime/);
   });
 
-  it('adds localized settings copy for mode locking and read-only explanations', async () => {
+  it('adds localized settings copy for dependency management mode labels and read-only explanations', async () => {
     const [enPagesSource, zhPagesSource] = await Promise.all([
       fs.readFile(enPagesPath, 'utf8'),
       fs.readFile(zhPagesPath, 'utf8'),
     ]);
 
     assert.match(enPagesSource, /dependencyManagement:\s*Dependency Management/);
-    assert.match(enPagesSource, /lockedBadge: Windows Store locked/);
     assert.match(enPagesSource, /label: External \(read-only\)/);
     assert.match(zhPagesSource, /dependencyManagement:\s*依赖管理模式/);
-    assert.match(zhPagesSource, /lockedBadge: Windows Store 已锁定/);
     assert.match(zhPagesSource, /label: 外部模式（只读）/);
   });
 });

@@ -166,7 +166,6 @@ export interface DependencyManagementEnvironmentStatus {
 export interface DependencyManagementModeSettings {
   configuredMode: DependencyManagementMode;
   effectiveMode: DependencyManagementMode;
-  lockedByRuntime: boolean;
   mutationsAvailable: boolean;
   readOnlyReason?: string;
 }

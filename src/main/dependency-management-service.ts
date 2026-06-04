@@ -902,7 +902,6 @@ export class DependencyManagementService {
     return {
       configuredMode,
       effectiveMode,
-      lockedByRuntime: isWinStore,
       mutationsAvailable: effectiveMode === 'internal',
       readOnlyReason: effectiveMode === 'external'
         ? 'External dependency mode is read-only and only inspects the current global Node/npm environment.'

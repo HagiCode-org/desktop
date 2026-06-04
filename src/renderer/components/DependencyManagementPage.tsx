@@ -467,20 +467,13 @@ export default function DependencyManagementPage() {
                   <Badge variant="outline">
                     {t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}
                   </Badge>
-                  {snapshot.mode.lockedByRuntime ? (
-                    <Badge variant="secondary">{t('dependencyManagement.mode.lockedBadge')}</Badge>
-                  ) : null}
                 </div>
 
                 {!snapshot.mode.mutationsAvailable ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{t('dependencyManagement.mode.readOnlyTitle')}</AlertTitle>
-                    <AlertDescription>
-                      {snapshot.mode.lockedByRuntime
-                        ? t('dependencyManagement.mode.windowsStoreLocked')
-                        : t('dependencyManagement.mode.externalReadOnly')}
-                    </AlertDescription>
+                    <AlertDescription>{t('dependencyManagement.mode.externalReadOnly')}</AlertDescription>
                   </Alert>
                 ) : null}
               </CardContent>

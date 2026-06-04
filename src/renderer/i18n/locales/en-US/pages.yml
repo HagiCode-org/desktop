@@ -9,8 +9,6 @@ settings:
     title: Dependency management mode
     description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
     effectiveMode: 'Effective mode: {{mode}}'
-    lockedBadge: Windows Store locked
-    lockedHint: Windows Store packaging requires external read-only dependency management in this distribution.
     options:
       internal:
         label: Internal (Desktop-managed)

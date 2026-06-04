@@ -151,10 +151,8 @@ dependencyManagement:
     title: 当前依赖管理模式
     description: 依赖管理页会显示当前实际生效的模式，以及是否允许修改包。
     active: 模式：{{mode}}
-    lockedBadge: Windows Store 已锁定
     readOnlyTitle: 只读模式
     externalReadOnly: Desktop 当前只是在检查外部托管的全局 Node/npm 环境，无法执行安装、卸载或批量同步。
-    windowsStoreLocked: Windows Store 打包会强制 Desktop 使用外部只读依赖管理模式。
     options:
       internal:
         label: 内部模式

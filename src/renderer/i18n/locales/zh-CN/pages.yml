@@ -9,8 +9,6 @@ settings:
     title: 依赖管理模式
     description: 选择由 Desktop 自行管理 CLI 依赖，或仅只读检查当前全局 Node/npm 环境。
     effectiveMode: 当前生效模式：{{mode}}
-    lockedBadge: Windows Store 已锁定
-    lockedHint: 当前发行包基于 Windows Store 打包，必须使用外部只读依赖管理模式。
     options:
       internal:
         label: 内部模式（Desktop 托管）

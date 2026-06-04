@@ -154,8 +154,8 @@ describe('dependency management renderer wiring', () => {
     assert.match(source, /const showMutationActions = mutationsAvailable;/);
     assert.match(source, /const actionsDisabled = !environmentAvailable \|\| !mutationsAvailable \|\| isRefreshingSnapshot \|\| isPending \|\| Boolean\(activePackageId\) \|\| isRepairCompletionRunning;/);
     assert.match(source, /showMutationActions=\{showMutationActions\}/);
-    assert.match(source, /snapshot\.mode\.lockedByRuntime/);
-    assert.match(source, /dependencyManagement\.mode\.windowsStoreLocked/);
+    assert.doesNotMatch(source, /snapshot\.mode\.lockedByRuntime/);
+    assert.doesNotMatch(source, /dependencyManagement\.mode\.windowsStoreLocked/);
     assert.match(source, /dependencyManagement\.mode\.externalReadOnly/);
     assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\) \|\| !mutationsAvailable;/);
   });
@@ -211,8 +211,8 @@ describe('dependency management renderer wiring', () => {
 
     assert.equal(zhJson.sidebar.dependencyManagement, '依赖项管理');
     assert.equal(enJson.sidebar.dependencyManagement, 'Dependency Management');
-    assert.equal(zhJson.dependencyManagement.mode.lockedBadge, 'Windows Store 已锁定');
-    assert.equal(enJson.dependencyManagement.mode.lockedBadge, 'Windows Store locked');
+    assert.equal(zhJson.dependencyManagement.mode.externalReadOnly, 'Desktop 当前只是在检查外部托管的全局 Node/npm 环境，无法执行安装、卸载或批量同步。');
+    assert.equal(enJson.dependencyManagement.mode.externalReadOnly, 'Desktop is inspecting an externally managed global Node/npm environment. Install, uninstall, and batch sync actions are unavailable.');
     assert.equal(zhJson.dependencyManagement.packageTable.groups.base.title, '基础依赖');
     assert.equal(zhJson.dependencyManagement.packageTable.groups.agentCli.title, 'Agent CLI');
     assert.equal(enJson.dependencyManagement.packageTable.groups.base.title, 'Base dependencies');
