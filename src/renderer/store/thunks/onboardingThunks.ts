@@ -12,6 +12,7 @@ import type {
 } from '../../../types/onboarding';
 import { OnboardingStep } from '../../../types/onboarding';
 import type { ManagedNpmPackageId, DependencyManagementBridge, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
+import type { DependencyManagementModeSettings } from '../../../types/dependency-management.js';
 
 declare global {
   interface Window {
@@ -215,6 +216,17 @@ export const loadOnboardingDependencySnapshot = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await window.electronAPI.dependencyManagement.getSnapshot();
+    } catch (error: unknown) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  }
+);
+
+export const loadOnboardingDependencyModeSettings = createAsyncThunk(
+  'onboarding/loadDependencyModeSettings',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await window.electronAPI.dependencyManagement.getModeSettings();
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }

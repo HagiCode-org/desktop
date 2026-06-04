@@ -7,7 +7,7 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
-  selectOnboardingDependencySnapshot,
+  selectOnboardingDependencyModeSettings,
   selectIsActive,
   selectOnboardingMode,
   selectOnboardingRuntimeProvisioned,
@@ -20,7 +20,7 @@ import {
   goToNextStep,
   goToPreviousStep,
   loadLegalDocuments,
-  loadOnboardingDependencySnapshot,
+  loadOnboardingDependencyModeSettings,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
@@ -69,8 +69,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
-  const dependencySnapshot = useSelector((state: RootState) => selectOnboardingDependencySnapshot(state));
-  const dependencySnapshotStatus = useSelector((state: RootState) => state.onboarding.dependencySnapshotStatus);
+  const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
+  const dependencyModeSettingsStatus = useSelector((state: RootState) => state.onboarding.dependencyModeSettingsStatus);
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
@@ -114,14 +114,14 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }, [isActive, locale, dispatch]);
 
   useEffect(() => {
-    if (!isActive || mode !== 'full' || dependencySnapshotStatus !== 'idle') {
+    if (!isActive || mode !== 'full' || dependencyModeSettingsStatus !== 'idle') {
       return;
     }
 
-    void dispatch(loadOnboardingDependencySnapshot());
-  }, [dependencySnapshotStatus, dispatch, isActive, mode]);
+    void dispatch(loadOnboardingDependencyModeSettings());
+  }, [dependencyModeSettingsStatus, dispatch, isActive, mode]);
 
-  const stepSequence = useMemo(() => getOnboardingSequence(mode, dependencySnapshot), [dependencySnapshot, mode]);
+  const stepSequence = useMemo(() => getOnboardingSequence(mode, dependencyModeSettings), [dependencyModeSettings, mode]);
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
 
@@ -179,6 +179,17 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       if (!isDownloading && !downloadCompleted) {
         dispatch(downloadPackage());
       }
+      return;
+    }
+
+    if (currentStep === OnboardingStep.SharingAcceleration && mode === 'full' && dependencyModeSettingsStatus !== 'ready') {
+      try {
+        await dispatch(loadOnboardingDependencyModeSettings()).unwrap();
+      } catch {
+        // Fall back to the existing full flow if the mode settings cannot be loaded.
+      }
+
+      dispatch(goToNextStep());
       return;
     }
 

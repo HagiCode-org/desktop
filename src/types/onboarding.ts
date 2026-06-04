@@ -3,6 +3,7 @@
  */
 import type {
   ManagedNpmPackageId,
+  DependencyManagementModeSettings,
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
   DependencyReadinessSummary,
@@ -243,6 +244,8 @@ export interface OnboardingState {
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
   selectedAgentCliPackageIds: ManagedNpmPackageId[];
+  dependencyModeSettings: DependencyManagementModeSettings | null;
+  dependencyModeSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   dependencySnapshot: DependencyManagementSnapshot | null;
   dependencyReadiness: DependencyReadinessSummary | null;
   dependencySnapshotStatus: 'idle' | 'loading' | 'ready' | 'error';

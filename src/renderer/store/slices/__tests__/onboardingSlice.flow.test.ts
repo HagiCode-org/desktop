@@ -24,7 +24,7 @@ describe('onboarding flow contracts', () => {
     assert.match(typesSource, /Download = 5/);
     assert.match(sliceSource, /const fullSequence = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
     assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
-    assert.match(sliceSource, /return mode === 'full' && dependencySnapshot\?\.mode\.effectiveMode === 'external';/);
+    assert.match(sliceSource, /return mode === 'full' && dependencyModeSettings\?\.effectiveMode === 'external';/);
   });
 
   it('keeps legal-only mode available for consent-only mutable-runtime gating', async () => {
@@ -40,10 +40,10 @@ describe('onboarding flow contracts', () => {
   it('skips dependency preparation when dependency management is in external mode', async () => {
     const sliceSource = await fs.readFile(slicePath, 'utf8');
 
-    assert.match(sliceSource, /return shouldHideDependencyPreparationStep\(mode, dependencySnapshot\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
+    assert.match(sliceSource, /return shouldHideDependencyPreparationStep\(mode, dependencyModeSettings\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
     assert.match(sliceSource, /state\.currentStep === OnboardingStep\.DependencyPreparation[\s\S]*state\.currentStep = OnboardingStep\.Download;/);
-    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, state\.dependencySnapshot\);/);
-    assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, state\.dependencySnapshot\);/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\)\);/);
+    assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\)\);/);
   });
 
   it('tracks runtimeProvisioned through trigger, restart, and next-button readiness', async () => {
@@ -56,6 +56,8 @@ describe('onboarding flow contracts', () => {
     assert.match(typesSource, /export interface OnboardingShowPayload \{[\s\S]*runtimeProvisioned\?: boolean;/);
     assert.match(typesSource, /export interface OnboardingState \{[\s\S]*runtimeProvisioned: boolean;/);
     assert.match(sliceSource, /runtimeProvisioned: false,/);
+    assert.match(sliceSource, /dependencyModeSettings: null,/);
+    assert.match(sliceSource, /dependencyModeSettingsStatus: 'idle',/);
     assert.match(sliceSource, /restartOnboardingFlow: \(_state, action: PayloadAction<OnboardingShowPayload \| undefined>\) => \(\{[\s\S]*runtimeProvisioned: action\.payload\?\.runtimeProvisioned \?\? false,/);
     assert.match(sliceSource, /state\.runtimeProvisioned = action\.payload\.runtimeProvisioned;/);
     assert.match(sliceSource, /state\.runtimeProvisioned = false;/);

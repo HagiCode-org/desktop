@@ -13,7 +13,7 @@ import {
   type ScriptOutput,
 } from '../../../types/onboarding';
 import { evaluateDependencyReadiness, npmInstallableAgentCliPackages } from '../../../shared/npm-managed-packages.js';
-import type { ManagedNpmPackageId, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
+import type { ManagedNpmPackageId, DependencyManagementModeSettings, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
 import {
   type OnboardingDependencyOperationRejectedPayload,
   acceptLegalDocuments,
@@ -23,6 +23,7 @@ import {
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
   loadLegalDocuments,
+  loadOnboardingDependencyModeSettings,
   loadOnboardingDependencySnapshot,
   completeOnboarding,
   installOnboardingDependencyPackages,
@@ -55,33 +56,37 @@ const legalOnlySequence = [OnboardingStep.LanguageSelection, OnboardingStep.Lega
 
 function shouldHideDependencyPreparationStep(
   mode: OnboardingMode,
-  dependencySnapshot?: DependencyManagementSnapshot | null,
+  dependencyModeSettings?: DependencyManagementModeSettings | null,
 ) {
-  return mode === 'full' && dependencySnapshot?.mode.effectiveMode === 'external';
+  return mode === 'full' && dependencyModeSettings?.effectiveMode === 'external';
 }
 
-export function getOnboardingSequence(mode: OnboardingMode, dependencySnapshot?: DependencyManagementSnapshot | null) {
+function resolveDependencyModeSettings(state: Pick<OnboardingState, 'dependencyModeSettings' | 'dependencySnapshot'>) {
+  return state.dependencyModeSettings ?? state.dependencySnapshot?.mode ?? null;
+}
+
+export function getOnboardingSequence(mode: OnboardingMode, dependencyModeSettings?: DependencyManagementModeSettings | null) {
   if (mode === 'legal-only') {
     return [...legalOnlySequence];
   }
 
-  return shouldHideDependencyPreparationStep(mode, dependencySnapshot)
+  return shouldHideDependencyPreparationStep(mode, dependencyModeSettings)
     ? [...fullSequenceWithoutDependencyPreparation]
     : [...fullSequence];
 }
 
-function getStepIndex(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
-  return getOnboardingSequence(mode, dependencySnapshot).indexOf(step);
+function getStepIndex(mode: OnboardingMode, step: OnboardingStep, dependencyModeSettings?: DependencyManagementModeSettings | null) {
+  return getOnboardingSequence(mode, dependencyModeSettings).indexOf(step);
 }
 
-function getNextStep(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
-  const sequence = getOnboardingSequence(mode, dependencySnapshot);
+function getNextStep(mode: OnboardingMode, step: OnboardingStep, dependencyModeSettings?: DependencyManagementModeSettings | null) {
+  const sequence = getOnboardingSequence(mode, dependencyModeSettings);
   const index = sequence.indexOf(step);
   return index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : step;
 }
 
-function getPreviousStep(mode: OnboardingMode, step: OnboardingStep, dependencySnapshot?: DependencyManagementSnapshot | null) {
-  const sequence = getOnboardingSequence(mode, dependencySnapshot);
+function getPreviousStep(mode: OnboardingMode, step: OnboardingStep, dependencyModeSettings?: DependencyManagementModeSettings | null) {
+  const sequence = getOnboardingSequence(mode, dependencyModeSettings);
   const index = sequence.indexOf(step);
   return index > 0 ? sequence[index - 1] : step;
 }
@@ -89,12 +94,14 @@ function getPreviousStep(mode: OnboardingMode, step: OnboardingStep, dependencyS
 const defaultSelectedAgentCliPackageIds = [npmInstallableAgentCliPackages[0]?.id].filter(Boolean) as ManagedNpmPackageId[];
 
 function applyDependencySnapshot(state: OnboardingState, snapshot: DependencyManagementSnapshot) {
+  state.dependencyModeSettings = snapshot.mode;
+  state.dependencyModeSettingsStatus = 'ready';
   state.dependencySnapshot = snapshot;
   state.dependencyReadiness = evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds);
   state.isDependencyPreparationComplete = state.dependencyReadiness.ready;
 
   if (state.currentStep === OnboardingStep.DependencyPreparation
-    && shouldHideDependencyPreparationStep(state.mode, snapshot)) {
+    && shouldHideDependencyPreparationStep(state.mode, snapshot.mode)) {
     state.currentStep = OnboardingStep.Download;
   }
 }
@@ -137,6 +144,8 @@ const initialState: OnboardingState = {
   isRecoveringFromStartupFailure: false,
   dependencyCheckResults: [],
   selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds,
+  dependencyModeSettings: null,
+  dependencyModeSettingsStatus: 'idle',
   dependencySnapshot: null,
   dependencyReadiness: null,
   dependencySnapshotStatus: 'idle',
@@ -413,18 +422,18 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_NEXT_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.LanguageSelection:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection, state.dependencySnapshot);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome, state.dependencySnapshot);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.LegalConsent:
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, state.dependencySnapshot);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.DependencyPreparation:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.DependencyPreparation, state.dependencySnapshot);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.DependencyPreparation, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.Download:
             break;
@@ -433,23 +442,40 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_PREVIOUS_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.Download:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, state.dependencySnapshot);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.DependencyPreparation:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.DependencyPreparation, state.dependencySnapshot);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.DependencyPreparation, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, state.dependencySnapshot);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.LegalConsent:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, state.dependencySnapshot);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, resolveDependencyModeSettings(state));
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome, state.dependencySnapshot);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome, resolveDependencyModeSettings(state));
             break;
           default:
             break;
         }
+      });
+
+    builder
+      .addCase(loadOnboardingDependencyModeSettings.pending, (state) => {
+        state.dependencyModeSettingsStatus = 'loading';
+      })
+      .addCase(loadOnboardingDependencyModeSettings.fulfilled, (state, action: PayloadAction<DependencyManagementModeSettings>) => {
+        state.dependencyModeSettings = action.payload;
+        state.dependencyModeSettingsStatus = 'ready';
+
+        if (state.currentStep === OnboardingStep.DependencyPreparation
+          && shouldHideDependencyPreparationStep(state.mode, action.payload)) {
+          state.currentStep = OnboardingStep.Download;
+        }
+      })
+      .addCase(loadOnboardingDependencyModeSettings.rejected, (state) => {
+        state.dependencyModeSettingsStatus = 'error';
       });
 
     builder
@@ -537,6 +563,7 @@ export const selectIsRecoveringFromStartupFailure = (state: { onboarding: Onboar
   state.onboarding.isRecoveringFromStartupFailure;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
+export const selectOnboardingDependencyModeSettings = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyModeSettings;
 export const selectOnboardingDependencySnapshot = (state: { onboarding: OnboardingState }) => state.onboarding.dependencySnapshot;
 export const selectOnboardingDependencyReadiness = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyReadiness;
 export const selectOnboardingSelectedAgentCliPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedAgentCliPackageIds;
@@ -569,7 +596,7 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
 };
 
 export const selectCanGoPrevious = (state: { onboarding: OnboardingState }) => {
-  return getStepIndex(state.onboarding.mode, state.onboarding.currentStep, state.onboarding.dependencySnapshot) > 0;
+  return getStepIndex(state.onboarding.mode, state.onboarding.currentStep, resolveDependencyModeSettings(state.onboarding)) > 0;
 };
 
 export default onboardingSlice.reducer;
