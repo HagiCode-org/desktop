@@ -40,6 +40,9 @@ export { registerSystemDiagnosticHandlers, initSystemDiagnosticHandlers } from '
 // Dependency management handlers
 export { registerDependencyManagementHandlers, initDependencyManagementHandlers } from './dependencyManagementHandlers.js';
 
+// Runtime data path handlers
+export { registerRuntimeDataPathHandlers } from './runtimeDataPathHandlers.js';
+
 // RSS handlers
 export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 
