@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   buildStepScripts,
   createStoreBuildMetadata,
+  resolveStoreRuntimePolicyEnvironment,
 } from './build-store-package.js';
 
 test('buildStepScripts prefers optional runtime preparation entrypoints for Store builds', () => {
@@ -24,7 +25,14 @@ test('buildStepScripts prefers optional runtime preparation entrypoints for Stor
   ]);
 });
 
-test('createStoreBuildMetadata records Node preparation as required for Store builds', () => {
+test('resolveStoreRuntimePolicyEnvironment defaults Store builds to internal dependency management', () => {
+  assert.deepEqual(resolveStoreRuntimePolicyEnvironment({}), {
+    HAGICODE_RUNTIME_CONSUMER: 'windows-store',
+    HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: 'internal',
+  });
+});
+
+test('createStoreBuildMetadata records Node preparation as internal by default for Store builds', () => {
   const metadata = createStoreBuildMetadata({
     artifacts: ['/tmp/Hagicode-Desktop.msix'],
     buildMode: 'desktop-store-build-dry-run',
@@ -42,7 +50,7 @@ test('createStoreBuildMetadata records Node preparation as required for Store bu
       status: 'not-run-dry-run',
       reason: null,
       consumer: 'windows-store',
-      dependencyManagementMode: 'external-managed',
+      dependencyManagementMode: 'internal',
     },
     storeConfig: {
       packageIdentity: {
@@ -65,6 +73,6 @@ test('createStoreBuildMetadata records Node preparation as required for Store bu
     status: 'not-run-dry-run',
     reason: null,
     consumer: 'windows-store',
-    dependencyManagementMode: 'external-managed',
+    dependencyManagementMode: 'internal',
   });
 });

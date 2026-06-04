@@ -133,7 +133,7 @@ export function buildStepScripts(scripts) {
 function resolveStoreRuntimePolicyEnvironment(baseEnv = process.env) {
   const runtimeConsumer = baseEnv[RUNTIME_CONSUMER_ENV]?.trim() || 'windows-store';
   const dependencyManagementMode =
-    baseEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim() || 'external-managed';
+    baseEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim() || 'internal';
 
   return {
     ...baseEnv,
@@ -141,6 +141,8 @@ function resolveStoreRuntimePolicyEnvironment(baseEnv = process.env) {
     [RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]: dependencyManagementMode,
   };
 }
+
+export { resolveStoreRuntimePolicyEnvironment };
 
 async function runCommand(command, args, cwd = projectRoot, env = process.env) {
   await execa(command, args, {
