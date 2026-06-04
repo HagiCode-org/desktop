@@ -2,8 +2,7 @@ import {
   DEFAULT_DESKTOP_LANGUAGE,
   normalizeDesktopLanguageCode,
 } from '../shared/desktop-languages.js';
-
-export type WebServiceConfigMode = 'env' | 'legacy-yaml';
+import { resolveManagedServerDataHome } from './managed-server-paths.js';
 
 export type EnvSnapshotLogLevel = 'off' | 'summary' | 'detailed';
 
@@ -65,12 +64,10 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     sensitive: false,
   },
   {
-    key: 'DATADIR',
-    sourceConfig: 'DataDir',
+    key: 'ServerData__Home',
+    sourceConfig: 'derived from Desktop managed data root',
     required: true,
     sensitive: false,
-    defaultValue: './data',
-    yamlPath: 'DataDir',
   },
   {
     key: 'ConnectionStrings__Default',
@@ -112,14 +109,6 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     sensitive: false,
   },
 ] as const;
-
-export function resolveWebServiceConfigMode(value?: string | null): WebServiceConfigMode {
-  const normalized = (value ?? '').trim().toLowerCase();
-  if (normalized === 'legacy-yaml' || normalized === 'legacy' || normalized === 'yaml') {
-    return 'legacy-yaml';
-  }
-  return 'env';
-}
 
 export function resolveEnvSnapshotLogLevel(value?: string | null): EnvSnapshotLogLevel {
   const normalized = (value ?? '').trim().toLowerCase();
@@ -237,10 +226,10 @@ function resolveValue(
     };
   }
 
-  if (definition.key === 'DATADIR') {
-    const runtimeDataDir = sanitizeString(input.dataDir);
-    if (runtimeDataDir) {
-      return { value: runtimeDataDir, source: 'runtime' };
+  if (definition.key === 'ServerData__Home') {
+    const runtimeServerDataHome = resolveManagedServerDataHome(input.dataDir);
+    if (runtimeServerDataHome) {
+      return { value: runtimeServerDataHome, source: 'runtime' };
     }
   }
 

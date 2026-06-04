@@ -10,9 +10,7 @@ import {
   buildManagedServiceEnv,
   MANAGED_ENV_VAR_DEFINITIONS,
   resolveEnvSnapshotLogLevel,
-  resolveWebServiceConfigMode,
   type ManagedEnvSnapshotEntry,
-  type WebServiceConfigMode,
 } from './web-service-env.js';
 import {
   buildDesktopSystemVaultEnv,
@@ -103,7 +101,6 @@ interface WebServiceStateFile {
 }
 
 interface PreparedServiceEnvironment {
-  mode: WebServiceConfigMode;
   mergedEnv: NodeJS.ProcessEnv;
   managedSnapshot: ManagedEnvSnapshotEntry[];
 }
@@ -1032,10 +1029,6 @@ export class PCodeWebServiceManager {
     return false;
   }
 
-  private getConfigMode(): WebServiceConfigMode {
-    return resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE);
-  }
-
   private getEnvSnapshotLogLevel(mergedEnv: NodeJS.ProcessEnv): 'off' | 'summary' | 'detailed' {
     return resolveEnvSnapshotLogLevel(mergedEnv.HAGICODE_WEB_SERVICE_ENV_LOG_LEVEL);
   }
@@ -1058,14 +1051,14 @@ export class PCodeWebServiceManager {
     }
   }
 
-  private logManagedEnvSnapshot(mode: WebServiceConfigMode, mergedEnv: NodeJS.ProcessEnv, entries: ManagedEnvSnapshotEntry[]): void {
+  private logManagedEnvSnapshot(mergedEnv: NodeJS.ProcessEnv, entries: ManagedEnvSnapshotEntry[]): void {
     const level = this.getEnvSnapshotLogLevel(mergedEnv);
     if (level === 'off') {
       return;
     }
 
     log.info('[WebService] Injected environment snapshot:', {
-      mode,
+      mode: 'env',
       total: entries.length,
       required: MANAGED_ENV_VAR_DEFINITIONS.filter(item => item.required).length,
     });
@@ -1077,12 +1070,6 @@ export class PCodeWebServiceManager {
   }
 
   private async prepareServiceEnvironment(): Promise<PreparedServiceEnvironment> {
-    const mode = this.getConfigMode();
-    if (mode === 'legacy-yaml') {
-      log.warn('[WebService] Running in legacy-yaml mode (HAGICODE_WEB_SERVICE_CONFIG_MODE).');
-      await this.syncConfigToFile();
-    }
-
     const existingConfig = await this.readExistingServiceConfig();
     const consoleEnv = await loadConsoleEnvironment();
     const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
@@ -1141,7 +1128,11 @@ export class PCodeWebServiceManager {
     // Desktop owns this env contract and injects it only into the managed
     // backend child process, so inherited process-level values must not leak.
     for (const key of Object.keys(mergedEnv)) {
-      if (key.startsWith(SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX)) {
+      if (
+        key.startsWith(SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX)
+        || key === 'DATADIR'
+        || key === 'DataDir'
+      ) {
         delete mergedEnv[key];
       }
     }
@@ -1156,10 +1147,9 @@ export class PCodeWebServiceManager {
     }
 
     this.lastManagedEnvSnapshot = buildResult.snapshot;
-    this.logManagedEnvSnapshot(mode, mergedEnv, buildResult.snapshot);
+    this.logManagedEnvSnapshot(mergedEnv, buildResult.snapshot);
 
     return {
-      mode,
       mergedEnv,
       managedSnapshot: buildResult.snapshot,
     };
@@ -1442,11 +1432,9 @@ export class PCodeWebServiceManager {
       }
 
       let preparedEnv: NodeJS.ProcessEnv;
-      let envMode: WebServiceConfigMode = 'env';
       try {
         const prepared = await this.prepareServiceEnvironment();
         preparedEnv = this.buildHagiscriptServiceEnvironment(prepared.mergedEnv);
-        envMode = prepared.mode;
         this.lastResolvedServiceEnv = preparedEnv;
         this.appendStartupLogLine(`ASPNETCORE_URLS=${preparedEnv.ASPNETCORE_URLS}`);
         this.appendStartupLogLine(`ASPNETCORE_ENVIRONMENT=${preparedEnv.ASPNETCORE_ENVIRONMENT}`);
@@ -1578,7 +1566,7 @@ export class PCodeWebServiceManager {
 
       log.info('[WebService] Service started successfully on port:', this.config.port);
       log.info('[WebService] Environment injection confirmed:', {
-        mode: envMode,
+        mode: 'env',
         managedVariableCount: this.lastManagedEnvSnapshot.length,
       });
       this.emitPhase(StartupPhase.Running, 'Service is running');
@@ -1678,19 +1666,9 @@ export class PCodeWebServiceManager {
       await this.saveConfig(this.config.host, this.config.port);
     }
 
-    // Keep legacy YAML sync path behind a compatibility switch.
-    const shouldSyncLegacyYaml = this.getConfigMode() === 'legacy-yaml';
-    if (shouldSyncLegacyYaml && ((config.port !== undefined && config.port !== oldPort) ||
-        (nextHost !== undefined && nextHost !== oldHost))) {
-      try {
-        await this.syncConfigToFile();
-      } catch (error) {
-        log.error('[WebService] Config sync failed, continuing with in-memory config');
-        // Don't throw - allow in-memory config to work
-      }
-    } else if (!shouldSyncLegacyYaml && ((config.port !== undefined && config.port !== oldPort) ||
-        (nextHost !== undefined && nextHost !== oldHost))) {
-      log.info('[WebService] Host/port updated in memory, YAML sync skipped (env mode).');
+    if ((config.port !== undefined && config.port !== oldPort) ||
+        (nextHost !== undefined && nextHost !== oldHost)) {
+      log.info('[WebService] Host/port updated in memory.');
     }
   }
 
@@ -1823,79 +1801,6 @@ export class PCodeWebServiceManager {
       }
     } catch (error) {
       log.error('[WebService] Failed to load saved bind config:', error);
-    }
-  }
-
-  /**
-   * Sync configuration to file (legacy compatibility path)
-   * Creates the config file if it doesn't exist.
-   */
-  private async syncConfigToFile(): Promise<void> {
-    try {
-      const configPath = this.getConfigFilePath();
-      const yaml = await import('js-yaml');
-
-      log.info('[WebService] Syncing config to file:', configPath);
-      log.info('[WebService] New config will be:', `http://${this.config.host}:${this.config.port}`);
-
-      let config: any;
-
-      try {
-        // Try to read existing config
-        const content = await fs.readFile(configPath, 'utf-8');
-        config = yaml.load(content) as any;
-        log.info('[WebService] Current config URLs:', config.Urls);
-      } catch (readError) {
-        if ((readError as NodeJS.ErrnoException).code === 'ENOENT') {
-          // Config file doesn't exist, create a new one
-          log.info('[WebService] Config file does not exist, creating new one');
-          config = {
-            Urls: `http://${this.config.host}:${this.config.port}`,
-            Logging: {
-              LogLevel: {
-                Default: 'Information'
-              }
-            }
-          };
-        } else {
-          throw readError; // Re-throw other errors
-        }
-      }
-
-      // Update URLs
-      config.Urls = `http://${this.config.host}:${this.config.port}`;
-
-      // Sync data directory path to appsettings.yml
-      // This ensures PCode service uses the configured data directory
-      const dataDir = this.pathManager.getDataDirectory();
-      if (dataDir) {
-        config.DataDir = dataDir;
-        log.info('[WebService] Syncing data directory to config:', dataDir);
-      }
-
-      // Ensure directory exists
-      const configDir = path.dirname(configPath);
-      await fs.mkdir(configDir, { recursive: true });
-
-      // Write back
-      const newContent = yaml.dump(config, {
-        lineWidth: -1, // Don't wrap lines
-        noRefs: true,
-      });
-      await fs.writeFile(configPath, newContent, 'utf-8');
-
-      log.info('[WebService] Config synced successfully to file:', configPath);
-      log.info('[WebService] New URLs:', config.Urls);
-
-      // Persist successful bind config for next startup
-      await this.saveLastSuccessfulConfig();
-    } catch (error) {
-      log.error('[WebService] Failed to sync config to file');
-      log.error('[WebService] Error details:', error instanceof Error ? error.message : String(error));
-      if (error instanceof Error && error.stack) {
-        log.error('[WebService] Stack trace:', error.stack);
-      }
-      throw error; // Re-throw for caller to handle
     }
   }
 

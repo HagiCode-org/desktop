@@ -6,12 +6,10 @@ import { manifestReader } from './manifest-reader.js';
 import { DependencyManager, type DependencyCheckResult } from './dependency-manager.js';
 import { StateManager, type InstalledVersionInfo, type InstalledVersionStatus, type InstalledVersionValidation } from './state-manager.js';
 import { PathManager } from './path-manager.js';
-import { ConfigManager } from './config-manager.js';
 import { HybridDownloadCoordinator } from './distribution/hybrid-download-coordinator.js';
 import { PackageSourceConfigManager, type StoredPackageSourceConfig } from './package-source-config-manager.js';
 import { createPackageSource, type PackageSource, type PackageSourceConfig, type LocalFolderConfig, type HttpIndexConfig, type DownloadProgressCallback, type PackageSourceType, type SharingAccelerationSettingsInput, type SharingAccelerationSettings } from './package-sources/index.js';
 import type { RegionDetector } from './region-detector.js';
-import { resolveWebServiceConfigMode } from './web-service-env.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
 import {
@@ -130,7 +128,6 @@ export class VersionManager {
   private dependencyManager: DependencyManager;
   private stateManager: StateManager;
   private pathManager: PathManager;
-  private configManager: ConfigManager;
   private packageSourceConfigManager: PackageSourceConfigManager;
   private hybridDownloadCoordinator: HybridDownloadCoordinator;
 
@@ -146,7 +143,6 @@ export class VersionManager {
     this.dependencyManager = dependencyManager;
     this.stateManager = new StateManager();
     this.pathManager = PathManager.getInstance();
-    this.configManager = new ConfigManager(this.pathManager);
     this.hybridDownloadCoordinator = new HybridDownloadCoordinator({ regionDetector });
 
     // Initialize package source configuration manager
@@ -744,18 +740,7 @@ export class VersionManager {
         log.info('[VersionManager] Created data directory:', dataDir);
       }
 
-      // Keep DataDir YAML sync behind a compatibility switch.
-      if (resolveWebServiceConfigMode(process.env.HAGICODE_WEB_SERVICE_CONFIG_MODE) === 'legacy-yaml') {
-        try {
-          await this.configManager.updateDataDir(versionId, dataDir);
-          log.info('[VersionManager] DataDir configured via legacy YAML sync:', dataDir);
-        } catch (error) {
-          log.warn('[VersionManager] Failed to configure DataDir via YAML sync:', error);
-          // Configuration failure doesn't block installation
-        }
-      } else {
-        log.info('[VersionManager] Skipped DataDir YAML sync (env mode).');
-      }
+      log.info('[VersionManager] Managed server data directory ready:', dataDir);
 
       // Store installation info
       const versionInfo = await this.applyRuntimeValidation({

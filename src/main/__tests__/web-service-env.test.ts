@@ -8,7 +8,6 @@ import {
   buildManagedServiceEnv,
   maskEnvValue,
   resolveEnvSnapshotLogLevel,
-  resolveWebServiceConfigMode,
 } from '../web-service-env.js';
 import {
   buildDesktopSystemVaultEnv,
@@ -31,13 +30,18 @@ import {
   normalizeSteamAchievementSyncEnvValue,
   resolveSteamIntegration,
 } from '../steam-integration-env.js';
+import {
+  resolveManagedServerDataHome,
+  resolveManagedServerDefaultDataDirectory,
+  resolveManagedServerLogsDirectory,
+} from '../managed-server-paths.js';
 
 describe('web-service-env', () => {
   it('builds managed env vars with runtime and defaults', () => {
     const result = buildManagedServiceEnv({
       host: '127.0.0.1',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
@@ -46,7 +50,7 @@ describe('web-service-env', () => {
     assert.equal(result.errors.length, 0);
     assert.equal(result.injectedEnv.ASPNETCORE_URLS, 'http://127.0.0.1:36556');
     assert.equal(result.injectedEnv.Urls, 'http://127.0.0.1:36556');
-    assert.equal(result.injectedEnv.DATADIR, '/tmp/hagicode-data');
+    assert.equal(result.injectedEnv.ServerData__Home, '/tmp/hagicode');
     assert.equal(result.injectedEnv.Database__Provider, undefined);
     assert.equal(result.injectedEnv.AI__Providers__DefaultProvider, 'ClaudeCodeCli');
     assert.equal(result.injectedEnv.HAGICODE_LANGUAGE, 'zh-CN');
@@ -67,7 +71,7 @@ describe('web-service-env', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'distribution-mode',
@@ -100,7 +104,7 @@ describe('web-service-env', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'distribution-mode',
@@ -125,7 +129,7 @@ describe('web-service-env', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       steamIntegrationEnabled: resolution.integrationEnabled,
       steamIntegrationSource: 'disabled-non-steam',
@@ -161,7 +165,7 @@ describe('web-service-env', () => {
     const wildcard = buildManagedServiceEnv({
       host: '0.0.0.0',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
@@ -169,7 +173,7 @@ describe('web-service-env', () => {
     const custom = buildManagedServiceEnv({
       host: '192.168.1.24',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {},
@@ -177,8 +181,16 @@ describe('web-service-env', () => {
 
     assert.equal(wildcard.injectedEnv.ASPNETCORE_URLS, 'http://0.0.0.0:36556');
     assert.equal(wildcard.injectedEnv.Urls, 'http://0.0.0.0:36556');
+    assert.equal(wildcard.injectedEnv.ServerData__Home, '/tmp/hagicode');
     assert.equal(custom.injectedEnv.ASPNETCORE_URLS, 'http://192.168.1.24:36556');
     assert.equal(custom.injectedEnv.Urls, 'http://192.168.1.24:36556');
+    assert.equal(custom.injectedEnv.ServerData__Home, '/tmp/hagicode');
+  });
+
+  it('derives server data home and companion managed paths from the legacy data root', () => {
+    assert.equal(resolveManagedServerDataHome('/runtime/apps/data'), '/runtime/apps');
+    assert.equal(resolveManagedServerDefaultDataDirectory('/runtime/apps'), '/runtime/apps/data');
+    assert.equal(resolveManagedServerLogsDirectory('/runtime/apps/data'), '/runtime/apps/logs');
   });
 
   it('uses SQLite data file overrides from yaml when provided', () => {
@@ -289,7 +301,7 @@ describe('web-service-env', () => {
     const chinese = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-Hant',
       yamlConfig: null,
       existingEnv: {},
@@ -297,7 +309,7 @@ describe('web-service-env', () => {
     const english = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'en-US',
       yamlConfig: null,
       existingEnv: {},
@@ -305,7 +317,7 @@ describe('web-service-env', () => {
     const fallback = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'ja-JP',
       yamlConfig: null,
       existingEnv: {},
@@ -332,7 +344,7 @@ describe('web-service-env', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       currentDesktopLanguage: 'zh-CN',
       yamlConfig: null,
       existingEnv: {
@@ -379,11 +391,7 @@ describe('web-service-env', () => {
     assert.equal(lines[1].includes('Data Source=/runtime/data/hagicode.db'), true);
   });
 
-  it('resolves config mode and log level with safe defaults', () => {
-    assert.equal(resolveWebServiceConfigMode(undefined), 'env');
-    assert.equal(resolveWebServiceConfigMode('legacy-yaml'), 'legacy-yaml');
-    assert.equal(resolveWebServiceConfigMode('yaml'), 'legacy-yaml');
-
+  it('resolves env snapshot log level with safe defaults', () => {
     assert.equal(resolveEnvSnapshotLogLevel(undefined), 'summary');
     assert.equal(resolveEnvSnapshotLogLevel('off'), 'off');
     assert.equal(resolveEnvSnapshotLogLevel('detailed'), 'detailed');
@@ -458,7 +466,7 @@ describe('web-service-env', () => {
     const result = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-data',
+      dataDir: '/tmp/hagicode/data',
       systemVaultEnvEntries: systemVaultEnv.envEntries,
       yamlConfig: null,
       existingEnv: {},
@@ -476,7 +484,7 @@ describe('web-service-env', () => {
     const buildResult = buildManagedServiceEnv({
       host: 'localhost',
       port: 36556,
-      dataDir: '/tmp/hagicode-integration',
+      dataDir: '/tmp/hagicode-integration/data',
       currentDesktopLanguage: 'en-US',
       systemVaultEnvEntries: {
         [`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`]: 'desktoplogs',
@@ -492,12 +500,15 @@ describe('web-service-env', () => {
 
     assert.equal(buildResult.errors.length, 0);
     const env = { ...process.env, ...buildResult.injectedEnv };
+    delete env.DATADIR;
+    delete env.DataDir;
     assert.equal(process.env[`${SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX}0__Id`], undefined);
     const child = spawnSync(process.execPath, [
       '-e',
       `process.stdout.write([
         process.env.ASPNETCORE_URLS,
         process.env.Urls,
+        process.env.ServerData__Home,
         process.env.DATADIR,
         process.env.HAGICODE_LANGUAGE,
         process.env.AI__Providers__DefaultProvider,
@@ -509,7 +520,7 @@ describe('web-service-env', () => {
     assert.equal(child.status, 0);
     assert.equal(
       child.stdout,
-      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration|en-US|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
+      'http://localhost:36556|http://localhost:36556|/tmp/hagicode-integration||en-US|ClaudeCodeCli|desktoplogs|/tmp/hagicode/logs',
     );
   });
 
@@ -876,21 +887,18 @@ describe('web-service-env', () => {
     const migrated = buildManagedServiceEnv({
       host: 'localhost',
       port: 5000,
-      dataDir: '/tmp/hagicode-migrate',
+      dataDir: '/tmp/hagicode-migrate/data',
       currentDesktopLanguage: 'zh-CN',
       yamlConfig: {
         Database: { Provider: 'postgresql' },
-        ConnectionStrings: { Default: 'Data Source=/tmp/hagicode-migrate/hagicode.db' },
+        ConnectionStrings: { Default: 'Data Source=/tmp/hagicode-migrate/data/hagicode.db' },
         AI: { Service: { DefaultExecutorType: 'ClaudeCodeCli' } },
       },
       existingEnv: {},
     });
     assert.equal(migrated.errors.length, 0);
     assert.equal(migrated.injectedEnv.Database__Provider, undefined);
-    assert.equal(migrated.injectedEnv.ConnectionStrings__Default, 'Data Source=/tmp/hagicode-migrate/hagicode.db');
-
-    // Rollback scenario: compatibility switch should fall back to legacy mode.
-    assert.equal(resolveWebServiceConfigMode('legacy-yaml'), 'legacy-yaml');
+    assert.equal(migrated.injectedEnv.ConnectionStrings__Default, 'Data Source=/tmp/hagicode-migrate/data/hagicode.db');
 
     // Error branch: oversized required env values should fail validation.
     const invalid = buildManagedServiceEnv({

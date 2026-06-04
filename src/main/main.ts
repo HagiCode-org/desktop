@@ -61,7 +61,6 @@ import {
   registerViewHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager } from './path-manager.js';
-import { ConfigManager as YamlConfigManager } from './config-manager.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
@@ -285,7 +284,6 @@ let promptResourceResolver: PromptResourceResolver | null = null;
 let onboardingManager: OnboardingManager | null = null;
 let rssFeedManager: RSSFeedManager | null = null;
 let pathManager: PathManager | null = null;
-let yamlConfigManager: YamlConfigManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
 let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
@@ -2235,9 +2233,6 @@ app.whenReady().then(async () => {
   const resolvedDataRootPath = initialBootstrapSnapshot.dataDirectory?.normalizedPath
     ?? pathManager.getDefaultDataDirectory();
   log.info('[Bootstrap] Initial Desktop bootstrap snapshot resolved:', initialBootstrapSnapshot);
-
-  // Initialize YamlConfigManager
-  yamlConfigManager = new YamlConfigManager(pathManager);
 
   // Initialize Region Detector
   regionDetector = new RegionDetector(configManager.getStore() as unknown as Store<Record<string, unknown>>);
