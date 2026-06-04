@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DependencyManagementModeSettings,
   OnboardingSettings,
+  RuntimeDataPathSettings,
   SharingAccelerationSettings,
   shouldShowSharingAccelerationSettings,
   VersionUpdateSettings,
@@ -46,6 +47,12 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             >
               {t('settings.tabs.updates')}
             </TabsTrigger>
+            <TabsTrigger
+              value="runtimeData"
+              className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.runtimeData')}
+            </TabsTrigger>
             {showSharingAccelerationSettings ? (
               <TabsTrigger
                 value="sharingAcceleration"
@@ -67,6 +74,10 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
 
             <TabsContent value="updates" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
               <VersionUpdateSettings distributionMode={distributionMode} />
+            </TabsContent>
+
+            <TabsContent value="runtimeData" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
+              <RuntimeDataPathSettings />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (
