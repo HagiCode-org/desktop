@@ -1941,16 +1941,8 @@ export class DependencyManagementService {
         log.warn('[DependencyManagementService] npm command failed to launch:', result.error.message);
       }
 
-      if (result.exitCode !== 0) {
-        const expectedInspectionMiss = isExpectedMissingPackageInspectionResult(command, args, result);
-        const logFailure = expectedInspectionMiss ? log.debug : log.warn;
-        logFailure('[DependencyManagementService] Managed npm command exited with failure', {
-          command,
-          args,
-          exitCode: result.exitCode,
-          stderrPreview: firstMeaningfulLine(result.stderr),
-          stdoutPreview: firstMeaningfulLine(result.stdout),
-        });
+      if (result.exitCode !== 0 && !isExpectedMissingPackageInspectionResult(command, args, result)) {
+        log.warn('[DependencyManagementService] npm command exited with code %d: %s %s', result.exitCode, command, args[0] ?? '');
       }
 
       return {

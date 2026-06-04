@@ -177,7 +177,7 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
     },
     services: {
       backend: {
-        pm2Home: '/tmp/Hagi Code/.hagicode/runtime-data/apps/data/.pm2',
+        pm2Home: '/tmp/Hagi Code/.hagicode/runtime-data/pm2',
         runtimeDataHome: '/tmp/Hagi Code/.hagicode/runtime-data/apps/data',
         runtimeFilesDir: '/tmp/Hagi Code/.hagicode/runtime-data/apps/data/pm2-runtime',
         launchScriptPath: null,

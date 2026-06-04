@@ -73,9 +73,8 @@ describe('dependency management service contract', () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /Starting managed package sync/);
-    assert.match(source, /Managed npm command exited with failure/);
-    assert.match(source, /const expectedInspectionMiss = isExpectedMissingPackageInspectionResult\(command, args, result\);/);
-    assert.match(source, /const logFailure = expectedInspectionMiss \? log\.debug : log\.warn;/);
+    assert.match(source, /npm command exited with code/);
+    assert.match(source, /!isExpectedMissingPackageInspectionResult\(command, args, result\)/);
     assert.match(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
     assert.match(source, /Applying Windows Store npm install override/);
     assert.match(source, /--ignore-scripts/);

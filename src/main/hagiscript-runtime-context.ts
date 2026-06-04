@@ -89,7 +89,7 @@ export class HagiscriptRuntimeContextResolver {
       'desktop-service-working-directory',
     );
     const serviceDataHome = shared.serverDataRoot;
-    const pm2Home = path.join(serviceDataHome, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
+    const pm2Home = path.join(shared.runtimeDataRoot, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
     const pm2LogsDirectory = path.join(pm2Home, 'logs');
     const runtimeFilesDir = path.join(serviceDataHome, DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR);
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-hagiscript-server-'));

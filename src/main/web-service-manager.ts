@@ -36,6 +36,7 @@ import {
   type HagiscriptRuntimeStateResult,
   type HagiscriptServerLifecycleAction,
   type HagiscriptServerLifecycleResult,
+  type HagiscriptServerStartupEnvironmentResult,
 } from './hagiscript-server-manager.js';
 import {
   buildAccessUrl,
@@ -49,8 +50,19 @@ import {
   resolveSteamIntegration,
   HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY,
 } from './steam-integration-env.js';
+import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 
 const { app } = electron;
+
+const MANAGED_PM2_ONLINE_SETTLE_TIMEOUT_MS = 8_000;
+const MANAGED_PM2_ONLINE_POLL_INTERVAL_MS = 500;
+const PM2_PERMISSION_DENIED_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
+  { pattern: /access is denied/i, label: 'Access is denied' },
+  { pattern: /\bEACCES\b/i, label: 'EACCES' },
+  { pattern: /\bEPERM\b/i, label: 'EPERM' },
+  { pattern: /permission denied/i, label: 'permission denied' },
+  { pattern: /operation not permitted/i, label: 'operation not permitted' },
+];
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -513,6 +525,138 @@ export class PCodeWebServiceManager {
     };
   }
 
+  private isWindowsStoreExecutionEnvironment(): boolean {
+    const runtimeProcess = process as NodeJS.Process & { windowsStore?: boolean; defaultApp?: boolean };
+    return isWindowsStoreRuntime({
+      platform: process.platform,
+      inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
+      processWindowsStore: Boolean(runtimeProcess.windowsStore),
+      execPath: process.execPath,
+      isPackaged: app.isPackaged,
+      defaultApp: runtimeProcess.defaultApp,
+    });
+  }
+
+  private async appendManagedPm2InvocationPlan(
+    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
+    result: HagiscriptServerStartupEnvironmentResult,
+  ): Promise<void> {
+    const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
+    this.appendStartupLogLine(
+      `Desktop runtime packaging: ${windowsStoreRuntime ? 'Windows Store/MSIX' : 'standard'}`,
+    );
+
+    if (!result.success || !result.environment) {
+      this.appendStartupLogLine(
+        `Desktop SDK PM2 ${action} launch plan could not be resolved: ${result.summary}`,
+      );
+
+      for (const logPath of result.logPaths) {
+        await this.appendDiagnosticFile(logPath);
+      }
+
+      return;
+    }
+
+    const environment = result.environment;
+    log.info('[WebService] Desktop SDK PM2 launch plan:', {
+      action,
+      windowsStoreRuntime,
+      appName: environment.appName,
+      cwd: environment.cwd,
+      script: environment.script,
+      args: environment.args,
+      pathKey: environment.pathKey,
+      pathEntries: environment.pathEntries,
+      pm2Home: environment.pm2Home,
+      pm2BinaryPath: environment.pm2BinaryPath,
+      nodePath: environment.nodePath,
+      runtimeFilesDir: environment.runtimeFilesDir,
+      envFilePath: environment.envFilePath,
+    });
+
+    this.appendStartupLogLine(`Desktop SDK PM2 ${action} invocation requested for ${environment.appName}`);
+    this.appendStartupLogLine(`Desktop SDK PM2 node path: ${environment.nodePath}`);
+    this.appendStartupLogLine(`Desktop SDK PM2 binary path: ${environment.pm2BinaryPath}`);
+    this.appendStartupLogLine(`Desktop SDK PM2 cwd: ${environment.cwd}`);
+    this.appendStartupLogLine(`Desktop SDK PM2 script: ${environment.script}`);
+    this.appendStartupLogLine(`Desktop SDK PM2 args: ${environment.args.join(' ') || '(none)'}`);
+    this.appendStartupLogLine(
+      `Desktop SDK PM2 ${environment.pathKey} entries: ${environment.pathEntries.length}`,
+    );
+    this.appendStartupLogLine(`Desktop SDK PM2 home (resolved): ${environment.pm2Home}`);
+    if (environment.runtimeFilesDir) {
+      this.appendStartupLogLine(`Desktop SDK PM2 runtime files dir: ${environment.runtimeFilesDir}`);
+    }
+    if (environment.envFilePath) {
+      this.appendStartupLogLine(`Desktop SDK PM2 env file: ${environment.envFilePath}`);
+    }
+  }
+
+  private appendManagedPm2InvocationResult(
+    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
+    result: HagiscriptServerLifecycleResult,
+  ): void {
+    const pid = result.pid ?? 'n/a';
+    const exitCode = result.exitCode ?? 'n/a';
+    const pm2BinaryPath = result.pm2BinaryPath ?? 'unknown';
+    this.appendStartupLogLine(
+      `Desktop SDK PM2 ${action} returned status ${result.status} (exists=${result.exists}, pid=${pid}, exitCode=${exitCode}, pm2=${pm2BinaryPath})`,
+    );
+  }
+
+  private findPm2PermissionDeniedMarker(values: Array<string | null | undefined>): string | null {
+    const content = values
+      .map(value => value?.trim() ?? '')
+      .filter(Boolean)
+      .join('\n');
+
+    if (!content) {
+      return null;
+    }
+
+    for (const candidate of PM2_PERMISSION_DENIED_PATTERNS) {
+      if (candidate.pattern.test(content)) {
+        return candidate.label;
+      }
+    }
+
+    return null;
+  }
+
+  private appendManagedPm2PermissionFailureHint(input: {
+    action: HagiscriptServerLifecycleAction;
+    lifecycleResult: HagiscriptServerLifecycleResult;
+    runtimeStateResult?: HagiscriptRuntimeStateResult | null;
+  }): void {
+    const marker = this.findPm2PermissionDeniedMarker([
+      input.lifecycleResult.summary,
+      input.lifecycleResult.stdout,
+      input.lifecycleResult.stderr,
+      input.runtimeStateResult?.summary,
+      input.runtimeStateResult?.stdout,
+      input.runtimeStateResult?.stderr,
+    ]);
+
+    if (!marker) {
+      return;
+    }
+
+    const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
+    const message = windowsStoreRuntime
+      ? `Desktop SDK PM2 invocation appears blocked by Windows Store/MSIX permissions (${marker}).`
+      : `Desktop SDK PM2 invocation appears blocked by operating-system permissions (${marker}).`;
+
+    this.appendStartupLogLine(message);
+    log.warn('[WebService] Desktop SDK PM2 permission failure detected:', {
+      action: input.action,
+      status: input.lifecycleResult.status,
+      summary: input.lifecycleResult.summary,
+      windowsStoreRuntime,
+      marker,
+    });
+  }
+
   private async resolveManagedLaunchContext(): Promise<ManagedLaunchContext> {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
@@ -528,6 +672,38 @@ export class PCodeWebServiceManager {
       context,
     };
     return context;
+  }
+
+  private async awaitManagedPm2OnlineStatus(
+    context: HagiscriptRuntimeContext,
+    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
+    initialResult: HagiscriptServerLifecycleResult,
+  ): Promise<HagiscriptServerLifecycleResult> {
+    if (!initialResult.success || initialResult.status === 'online') {
+      return initialResult;
+    }
+
+    this.appendStartupLogLine(
+      `Desktop SDK PM2 initially reported ${initialResult.status} during ${action}; waiting for managed status to settle`,
+    );
+
+    const deadline = Date.now() + Math.min(this.startTimeout, MANAGED_PM2_ONLINE_SETTLE_TIMEOUT_MS);
+    let lastResult = initialResult;
+
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, MANAGED_PM2_ONLINE_POLL_INTERVAL_MS));
+      const statusResult = await this.hagiscriptServerManager.status(context);
+      if (!statusResult.success) {
+        return statusResult;
+      }
+
+      lastResult = statusResult;
+      if (statusResult.status === 'online' || statusResult.status === 'errored') {
+        return statusResult;
+      }
+    }
+
+    return lastResult;
   }
 
   private async resolveManagedLaunchContextForLifecycleTransition(): Promise<ManagedLaunchContext> {
@@ -1231,6 +1407,9 @@ export class PCodeWebServiceManager {
 
   private async runLifecycleTransition(action: HagiscriptServerLifecycleAction): Promise<StartResult> {
     try {
+      const lifecycleAction: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'> = action === 'restart'
+        ? 'restart'
+        : 'start';
       this.status = 'starting';
       this.lastHealthCheckLogState = null;
       log.info('[WebService] Starting with configured host/port:', {
@@ -1290,7 +1469,7 @@ export class PCodeWebServiceManager {
       try {
         this.emitPhase(
           StartupPhase.Spawning,
-          action === 'restart'
+          lifecycleAction === 'restart'
             ? 'Restarting service via Desktop SDK PM2...'
             : 'Starting service via Desktop SDK PM2...',
         );
@@ -1299,6 +1478,9 @@ export class PCodeWebServiceManager {
         this.appendStartupLogLine(`runtime data root: ${context.runtimeDataRoot}`);
         this.appendStartupLogLine(`PM2 home: ${context.pm2Home}`);
         this.appendStartupLogLine(`runtime files directory: ${context.runtimeFilesDir}`);
+
+        const startupEnvironmentResult = await this.hagiscriptServerManager.resolveStartupEnvironment(context);
+        await this.appendManagedPm2InvocationPlan(lifecycleAction, startupEnvironmentResult);
 
         if (await this.isManagedServiceReachable(this.config.port)) {
           log.warn('[WebService] Target port is reachable before Desktop SDK start; lifecycle start may fail if another process owns it:', {
@@ -1309,9 +1491,12 @@ export class PCodeWebServiceManager {
           );
         }
 
-        lifecycleResult = action === 'restart'
+        const initialLifecycleResult = lifecycleAction === 'restart'
           ? await this.hagiscriptServerManager.restart(context)
           : await this.hagiscriptServerManager.start(context);
+        this.appendManagedPm2InvocationResult(lifecycleAction, initialLifecycleResult);
+
+        lifecycleResult = await this.awaitManagedPm2OnlineStatus(context, lifecycleAction, initialLifecycleResult);
 
         if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
           runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(context);
@@ -1321,6 +1506,11 @@ export class PCodeWebServiceManager {
       }
 
       if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
+        this.appendManagedPm2PermissionFailureHint({
+          action,
+          lifecycleResult,
+          runtimeStateResult,
+        });
         if (runtimeStateResult) {
           await this.appendHagiscriptDiagnostics({
             summary: runtimeStateResult.summary,

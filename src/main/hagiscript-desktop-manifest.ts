@@ -14,7 +14,7 @@ import {
 
 export const DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME = 'node';
 export const DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME = 'server';
-export const DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR = '.pm2';
+export const DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR = 'pm2';
 export const DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR = 'pm2-runtime';
 export const DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE = 'versions-state.json';
 export const DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV = 'hagicode_instance';
@@ -135,6 +135,7 @@ export function buildDesktopHagiscriptRuntimeManifest(
       server: options.server,
       nodeComponentName: DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       dotnetComponentName,
+      runtimeDataRoot: options.runtimeDataRoot,
     }));
     installOrder.push(DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME);
     removeOrder.splice(2, 0, DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME);
@@ -236,6 +237,7 @@ function buildDesktopHagiscriptServerComponent(input: {
   server: DesktopHagiscriptManifestServerOptions;
   nodeComponentName: string;
   dotnetComponentName: string;
+  runtimeDataRoot: string;
 }): Record<string, unknown> {
   const serverScriptsRoot = resolveDesktopRuntimeScriptsRoot();
 
@@ -253,7 +255,7 @@ function buildDesktopHagiscriptServerComponent(input: {
     pm2: {
       appName: DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
       nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
-      pm2Home: DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
+      pm2Home: path.join(input.runtimeDataRoot, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR),
       env: normalizeManifestEnv(input.server.serviceEnv ?? {}),
     },
     releasedService: {

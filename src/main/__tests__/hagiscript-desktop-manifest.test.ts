@@ -77,7 +77,10 @@ describe('hagiscript desktop manifest builder', () => {
       DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       'dotnet/runtime/linux-x64',
     ]);
-    assert.equal((serverComponent.pm2 as { pm2Home?: string }).pm2Home, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
+    assert.equal(
+      (serverComponent.pm2 as { pm2Home?: string }).pm2Home,
+      '/tmp/home/.hagicode/runtime-data/pm2',
+    );
     assert.equal(
       (serverComponent.pm2 as { nameIdentifierEnv?: string }).nameIdentifierEnv,
       DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,

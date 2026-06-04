@@ -58,6 +58,15 @@ describe('web-service startup flow', () => {
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.start\(context\)/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.restart\(context\)/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.status\(context\)/);
+    assert.match(webServiceSource, /this\.hagiscriptServerManager\.resolveStartupEnvironment\(context\)/);
+    assert.match(webServiceSource, /awaitManagedPm2OnlineStatus\(/);
+    assert.match(webServiceSource, /Desktop SDK PM2 initially reported .* waiting for managed status to settle/);
+    assert.match(webServiceSource, /private isWindowsStoreExecutionEnvironment\(\): boolean/);
+    assert.match(webServiceSource, /isWindowsStoreRuntime\(\{/);
+    assert.match(webServiceSource, /Desktop SDK PM2 launch plan:/);
+    assert.match(webServiceSource, /Desktop SDK PM2 invocation appears blocked by Windows Store\/MSIX permissions/);
+    assert.match(webServiceSource, /appendManagedPm2InvocationResult\(/);
+    assert.match(webServiceSource, /appendManagedPm2PermissionFailureHint\(/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.getRuntimeState\(context\)/);
     assert.match(webServiceSource, /runtime manifest override:/);
     assert.match(webServiceSource, /ASPNETCORE_URLS=/);
@@ -89,6 +98,7 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /getManagedServerStatus/);
     assert.match(serverManagerSource, /dependencyManagementMode: context\.dependencyManagementMode/);
     assert.match(serverManagerSource, /externalNodePath: context\.externalNodePath/);
+    assert.match(serverManagerSource, /response\?\.pm2Home \? path\.join\(response\.pm2Home, 'logs'\) : null/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
   });
 

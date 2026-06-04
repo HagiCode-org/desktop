@@ -3,10 +3,12 @@ import {
   executeComponentServiceAction,
   getManagedServerStatus,
   queryRuntimeState,
+  resolveManagedServerStartupEnvironment,
   restartManagedServer,
   startManagedServer,
   stopManagedServer,
   type ComponentServiceResult,
+  type ManagedPm2EnvironmentResult,
   type ManagedPm2CommandResult,
   type RuntimeStateReport,
 } from '@hagicode/hagiscript-sdk';
@@ -83,6 +85,25 @@ export interface HagiscriptBundledRuntimeExactResult {
   archivePath: string | null;
   extractedRuntimeRoot: string | null;
   currentRoot: string | null;
+  logPaths: string[];
+}
+
+export interface HagiscriptServerStartupEnvironmentResult {
+  success: boolean;
+  summary: string;
+  environment: {
+    appName: string;
+    cwd: string;
+    script: string;
+    args: string[];
+    pathKey: 'PATH' | 'Path';
+    pathEntries: string[];
+    pm2Home: string;
+    pm2BinaryPath: string;
+    nodePath: string;
+    runtimeFilesDir: string | null;
+    envFilePath: string | null;
+  } | null;
   logPaths: string[];
 }
 
@@ -247,6 +268,34 @@ export class HagiscriptPm2Manager {
     return this.runLifecycleAction(context, 'status');
   }
 
+  async resolveStartupEnvironment(context: HagiscriptRuntimeContext): Promise<HagiscriptServerStartupEnvironmentResult> {
+    try {
+      const environment = await resolveManagedServerStartupEnvironment({
+        manifestPath: context.manifestPath,
+        runtimeRoot: context.runtimeRoot,
+        ...(context.dependencyManagementMode
+          ? { dependencyManagementMode: context.dependencyManagementMode }
+          : {}),
+        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
+      });
+
+      return {
+        success: true,
+        summary: 'Desktop SDK managed server startup environment resolved.',
+        environment: this.mapManagedServerStartupEnvironment(environment),
+        logPaths: this.buildStartupEnvironmentLogPaths(context, environment),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        summary: message,
+        environment: null,
+        logPaths: this.buildStartupEnvironmentLogPaths(context, null),
+      };
+    }
+  }
+
   private async runLifecycleAction(
     context: HagiscriptRuntimeContext,
     action: HagiscriptServerLifecycleAction,
@@ -338,6 +387,22 @@ export class HagiscriptPm2Manager {
     };
   }
 
+  private mapManagedServerStartupEnvironment(environment: ManagedPm2EnvironmentResult): HagiscriptServerStartupEnvironmentResult['environment'] {
+    return {
+      appName: environment.appName,
+      cwd: environment.cwd,
+      script: environment.script,
+      args: [...environment.args],
+      pathKey: environment.pathKey,
+      pathEntries: [...environment.pathEntries],
+      pm2Home: environment.pm2Home,
+      pm2BinaryPath: environment.pm2Binary,
+      nodePath: environment.nodePath,
+      runtimeFilesDir: environment.runtimeFilesDir ?? null,
+      envFilePath: environment.envFilePath ?? null,
+    };
+  }
+
   private buildLifecycleFailure(
     context: HagiscriptRuntimeContext,
     action: HagiscriptServerLifecycleAction,
@@ -375,12 +440,27 @@ export class HagiscriptPm2Manager {
     ]);
   }
 
+  private buildStartupEnvironmentLogPaths(
+    context: HagiscriptRuntimeContext,
+    environment: ManagedPm2EnvironmentResult | null,
+  ): string[] {
+    return this.uniquePaths([
+      environment?.runtimeFilesDir ? path.join(environment.runtimeFilesDir, 'ecosystem.config.cjs') : null,
+      environment?.envFilePath ?? null,
+      path.join(context.runtimeFilesDir, 'launch-contract.json'),
+      context.runtimeStateFilePath,
+    ]);
+  }
+
   private buildLifecycleLogPaths(
     context: HagiscriptRuntimeContext,
     response: ManagedPm2CommandResult | null,
   ): string[] {
     const appName = response?.appName ?? context.appName;
+    const responsePm2LogsDirectory = response?.pm2Home ? path.join(response.pm2Home, 'logs') : null;
     return this.uniquePaths([
+      responsePm2LogsDirectory ? path.join(responsePm2LogsDirectory, `${appName}-error.log`) : null,
+      responsePm2LogsDirectory ? path.join(responsePm2LogsDirectory, `${appName}-out.log`) : null,
       path.join(context.pm2LogsDirectory, `${appName}-error.log`),
       path.join(context.pm2LogsDirectory, `${appName}-out.log`),
       path.join(context.runtimeFilesDir, 'launch-contract.json'),
