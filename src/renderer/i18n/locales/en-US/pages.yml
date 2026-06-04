@@ -4,6 +4,7 @@ settings:
     dependencyManagement: Dependency Management
     onboarding: Onboarding
     sharingAcceleration: Download & Sharing
+    runtimeData: Runtime Data
     updates: Background Updates
   dependencyManagementMode:
     title: Dependency management mode
@@ -83,6 +84,36 @@ settings:
     notes:
       snapshotModel: The dashboard reminder is driven by a persisted main-process snapshot, so the last known update state survives Desktop reloads.
       retentionPolicy: Retention cleanup only removes cached archives and metadata. Installed version directories stay untouched.
+  runtimeDataPath:
+    title: Runtime data storage path
+    description: Choose where Desktop stores runtime-managed files, PM2 state, logs, and other runtime data.
+    activePreset: 'Current effective preset: {{preset}}'
+    environmentOverrideBadge: Environment override active
+    paths:
+      configuredRoot: 'Configured root: {{path}}'
+      effectiveRoot: 'Effective root: {{path}}'
+      environmentOverride: 'Environment override root: {{path}}'
+    options:
+      userData-runtime-data:
+        label: userData/runtime-data (default)
+        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
+      home-runtime-data:
+        label: ~/.hagicode/runtime-data
+        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
+    warnings:
+      noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
+      restart: Saving a changed preset stops and starts managed PM2 services so the new runtime data root takes effect immediately.
+    actions:
+      save: Save Changes
+      saving: Saving...
+      cancel: Cancel
+    messages:
+      unchanged: Runtime data path is already using this preset
+      saveSuccess: Runtime data path saved
+      restartSuccess: Runtime data path saved and managed services restarted
+      saveFailed: Failed to save runtime data path
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
   testBuild: Test application - Development build

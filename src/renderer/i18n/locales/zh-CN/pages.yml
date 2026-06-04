@@ -4,6 +4,7 @@ settings:
     dependencyManagement: 依赖管理模式
     onboarding: 启动向导
     sharingAcceleration: 下载与共享加速
+    runtimeData: 运行时数据
     updates: 后台更新
   dependencyManagementMode:
     title: 依赖管理模式
@@ -83,6 +84,36 @@ settings:
     notes:
       snapshotModel: 首页提醒依赖主进程持久化快照，重启 Desktop 后仍会恢复最近一次更新状态。
       retentionPolicy: 保留策略只会清理缓存归档文件，不会删除已经安装完成的版本目录。
+  runtimeDataPath:
+    title: 运行时数据存储路径
+    description: 选择 Desktop 运行时文件、PM2 状态、日志和其他运行时数据的存储根目录。
+    activePreset: 当前生效预设：{{preset}}
+    environmentOverrideBadge: 环境变量覆盖已启用
+    paths:
+      configuredRoot: 配置目标路径：{{path}}
+      effectiveRoot: 当前生效路径：{{path}}
+      environmentOverride: 环境变量覆盖路径：{{path}}
+    options:
+      userData-runtime-data:
+        label: userData/runtime-data（默认）
+        description: 保存到 Desktop 的 Electron userData 目录下，适合默认单机安装场景。
+      home-runtime-data:
+        label: ~/.hagicode/runtime-data
+        description: 保存到当前用户主目录下，适合需要固定共享路径的部署方式。
+    warnings:
+      noMigration: 切换此设置只会修改目标路径，Desktop 不会自动迁移已有运行时数据。
+      restart: 保存新的预设后，Desktop 会停止并重新启动受管 PM2 服务，让新的运行时数据根目录立即生效。
+    actions:
+      save: 保存更改
+      saving: 保存中...
+      cancel: 取消
+    messages:
+      unchanged: 当前已经在使用该运行时数据路径预设
+      saveSuccess: 运行时数据路径已保存
+      restartSuccess: 运行时数据路径已保存，并已重启受管 PM2 服务
+      saveFailed: 保存运行时数据路径失败
+    errors:
+      saveErrorDetail: 保存失败：{{error}}
 footer:
   copyright: © 2026 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️
   testBuild: 测试应用程序 - 开发版本
