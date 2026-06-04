@@ -84,13 +84,13 @@ describe('desktop telemetry retirement', () => {
     assert.equal('remoteMode' in manager.getAll(), false);
   });
 
-  it('defaults dependency management mode to external only on first Win Store launch', () => {
+  it('keeps dependency management mode internal by default, including on first Win Store launch', () => {
     const firstRunStore = new MockStore();
     const firstRunManager = new DesktopConfigManager(firstRunStore as never);
 
-    assert.equal(firstRunManager.getDependencyManagementMode(true), 'external');
-    assert.equal(firstRunStore.get('dependencyManagementMode'), 'external');
-    assert.equal(firstRunManager.getDependencyManagementMode(false), 'external');
+    assert.equal(firstRunManager.getDependencyManagementMode(true), 'internal');
+    assert.equal(firstRunStore.get('dependencyManagementMode'), 'internal');
+    assert.equal(firstRunManager.getDependencyManagementMode(false), 'internal');
 
     const existingStore = new MockStore({
       dependencyManagementMode: 'internal',
