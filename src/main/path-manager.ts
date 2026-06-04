@@ -4,6 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import yaml from 'js-yaml';
 import log from 'electron-log';
+import { ConfigManager as DesktopConfigManager } from './config.js';
 import {
   buildNodeMajorNpmGlobalPaths,
   buildPm2MajorHomePaths,
@@ -37,6 +38,7 @@ import {
 } from './desktop-runtime-paths.js';
 import {
   registerRuntimeManifestUserDataPath,
+  registerRuntimeManifestRuntimeDataRoot,
   resolveRuntimeManifestDataScopePath,
 } from './runtime-manifest-store.js';
 import type {
@@ -368,6 +370,7 @@ export class PathManager {
     this.runtimeDataScopePath = resolveRuntimeManifestDataScopePath(this.userDataPath);
     registerRuntimeManifestUserDataPath(this.userDataPath);
     this.paths = this.buildPaths();
+    registerRuntimeManifestRuntimeDataRoot(this.paths.runtimeDataRoot);
     log.info(
       '[PathManager] Initialized. Dev scope:',
       process.env.HAGICODE_DESKTOP_INSTANCE_NAME === 'hagicode_dev',
@@ -392,8 +395,11 @@ export class PathManager {
    */
   private buildPaths(): AppPaths {
     const userData = this.userDataPath;
+    const runtimeDataPathPreset = new DesktopConfigManager().getRuntimeDataPathPreset();
     const runtimeDataRoot = resolveDesktopRuntimeDataHome({
+      preset: runtimeDataPathPreset,
       overrideRoot: process.env.HAGICODE_RUNTIME_DATA_HOME,
+      userDataPath: userData,
     });
     const configDir = path.join(userData, 'config');
 
@@ -417,6 +423,22 @@ export class PathManager {
    * Get all paths
    */
   getPaths(): Readonly<AppPaths> {
+    return this.paths;
+  }
+
+  refreshRuntimeDataPaths(): Readonly<AppPaths> {
+    const previousDefaultDataDirectory = this.getDefaultDataDirectory();
+    const currentDataDirectory = this.paths.appsData;
+    this.paths = this.buildPaths();
+    if (currentDataDirectory !== previousDefaultDataDirectory) {
+      this.paths.appsData = currentDataDirectory;
+    }
+    registerRuntimeManifestRuntimeDataRoot(this.paths.runtimeDataRoot);
+    log.info('[PathManager] Refreshed runtime data paths', {
+      runtimeDataRoot: this.paths.runtimeDataRoot,
+      appsInstalled: this.paths.appsInstalled,
+      appsData: this.paths.appsData,
+    });
     return this.paths;
   }
 

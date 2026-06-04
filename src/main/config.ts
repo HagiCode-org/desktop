@@ -2,6 +2,7 @@ import Store from 'electron-store';
 import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 import type { DependencyManagementMode } from '../types/dependency-management.js';
+import type { RuntimeDataPathPreset } from '../types/runtime-data-path.js';
 
 export interface AppSettings {
   language: string;
@@ -16,6 +17,7 @@ export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
   dependencyManagementMode: DependencyManagementMode;
+  runtimeDataPath: RuntimeDataPathPreset;
   startOnStartup: boolean;
   minimizeToTray: boolean;
   checkForUpdates: boolean;
@@ -29,6 +31,15 @@ export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
   enabled: true,
   retainedArchiveCount: 5,
 };
+
+export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
+
+export function normalizeRuntimeDataPathPreset(
+  value: unknown,
+  fallback: RuntimeDataPathPreset = DEFAULT_RUNTIME_DATA_PATH_PRESET,
+): RuntimeDataPathPreset {
+  return value === 'home-runtime-data' ? value : fallback;
+}
 
 export function normalizeRetainedArchiveCount(value: unknown, fallback: number = DEFAULT_VERSION_AUTO_UPDATE_SETTINGS.retainedArchiveCount): number {
   const parsed = typeof value === 'string'
@@ -56,6 +67,7 @@ const defaultConfig: AppConfig = {
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
   dependencyManagementMode: 'internal',
+  runtimeDataPath: DEFAULT_RUNTIME_DATA_PATH_PRESET,
   startOnStartup: false,
   minimizeToTray: true,
   checkForUpdates: true,
@@ -165,6 +177,23 @@ export class ConfigManager {
    */
   getStore(): Store<AppConfig> {
     return this.store;
+  }
+
+  getRuntimeDataPathPreset(): RuntimeDataPathPreset {
+    const current = this.store.get('runtimeDataPath');
+    const normalized = normalizeRuntimeDataPathPreset(current);
+
+    if (current !== normalized) {
+      this.store.set('runtimeDataPath', normalized);
+    }
+
+    return normalized;
+  }
+
+  setRuntimeDataPathPreset(preset: RuntimeDataPathPreset): RuntimeDataPathPreset {
+    const normalized = normalizeRuntimeDataPathPreset(preset);
+    this.store.set('runtimeDataPath', normalized);
+    return normalized;
   }
 
   /**

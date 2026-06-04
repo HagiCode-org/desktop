@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { resolveDesktopCanonicalRuntimeDataRoot } from './runtime-data-root.js';
+import type { RuntimeDataPathPreset } from '../types/runtime-data-path.js';
 import {
   getRuntimeManifestPath,
   readRuntimeManifestSection,
@@ -61,6 +62,7 @@ export interface ResolveDesktopRuntimeDataHomeOptions {
   userDataPath?: string;
   homeDirectory?: string;
   overrideRoot?: string | null;
+  preset?: RuntimeDataPathPreset | null;
 }
 
 function resolvePortableAbsolutePath(value: string): string | undefined {
@@ -150,7 +152,9 @@ export function resolveDesktopRuntimeDataHome(
   options: ResolveDesktopRuntimeDataHomeOptions,
 ): string {
   return resolveDesktopCanonicalRuntimeDataRoot({
+    preset: options.preset,
     overrideRoot: options.overrideRoot,
+    userDataPath: options.userDataPath,
     homeDirectory: options.homeDirectory,
   });
 }
