@@ -33,6 +33,8 @@ import type {
   LogDirectoryTarget,
   LogDirectoryTargetStatus,
 } from '../types/log-directory.js';
+import type { RuntimeDataPathBridge, RuntimeDataPathPreset } from '../types/runtime-data-path.js';
+import { runtimeDataPathChannels } from '../types/runtime-data-path.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -267,6 +269,7 @@ interface ElectronAPI {
   /** @deprecated Use dependencyManagement. */
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
+  runtimeDataPath: RuntimeDataPathBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -368,6 +371,11 @@ const dependencyManagementBridge: DependencyManagementBridge = {
     ipcRenderer.on(dependencyManagementChannels.vendoredRuntimeActivationProgress, listener);
     return () => ipcRenderer.removeListener(dependencyManagementChannels.vendoredRuntimeActivationProgress, listener);
   },
+};
+
+const runtimeDataPathBridge: RuntimeDataPathBridge = {
+  getSettings: () => ipcRenderer.invoke(runtimeDataPathChannels.get),
+  setPreset: (preset: RuntimeDataPathPreset) => ipcRenderer.invoke(runtimeDataPathChannels.set, preset),
 };
 
 const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
@@ -531,6 +539,7 @@ const electronAPI: ElectronAPI = {
   versionOpenLogs: (versionId) => ipcRenderer.invoke('version:openLogs', versionId),
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   logDirectory: logDirectoryBridge,
+  runtimeDataPath: runtimeDataPathBridge,
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);

@@ -56,6 +56,7 @@ import {
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
+  registerRuntimeDataPathHandlers,
   registerRssHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
@@ -2365,6 +2366,15 @@ app.whenReady().then(async () => {
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
+  registerRuntimeDataPathHandlers({
+    configManager,
+    pathManager,
+    webServiceManager,
+    mainWindow,
+    setServerStatus,
+    setServiceUrl,
+  });
+  log.info('[App] runtime data path IPC handlers registered');
   ipcMain.handle('bootstrap:get-snapshot', async () => resolveBootstrapSnapshot(false));
   ipcMain.handle('bootstrap:refresh', async () => {
     bootstrapSnapshotCache = null;
