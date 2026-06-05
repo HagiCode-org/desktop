@@ -2,6 +2,7 @@ import Store from 'electron-store';
 import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
 import type { DependencyManagementMode } from '../types/dependency-management.js';
+import type { DebugOptionsSettings } from '../types/debug-options.js';
 import type { RuntimeDataPathPreset } from '../types/runtime-data-path.js';
 
 export interface AppSettings {
@@ -13,10 +14,13 @@ export interface VersionAutoUpdateSettings {
   retainedArchiveCount: number;
 }
 
+export interface DebugOptionsConfig extends DebugOptionsSettings {}
+
 export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
   dependencyManagementMode: DependencyManagementMode;
+  debugOptions: DebugOptionsConfig;
   runtimeDataPath: RuntimeDataPathPreset;
   startOnStartup: boolean;
   minimizeToTray: boolean;
@@ -30,6 +34,10 @@ export interface AppConfig {
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
   enabled: true,
   retainedArchiveCount: 5,
+};
+
+export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
+  usePsfForManagedServer: false,
 };
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
@@ -60,6 +68,14 @@ export function normalizeVersionAutoUpdateSettings(
   };
 }
 
+export function normalizeDebugOptionsSettings(
+  settings?: Partial<DebugOptionsConfig> | null,
+): DebugOptionsConfig {
+  return {
+    usePsfForManagedServer: settings?.usePsfForManagedServer ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.usePsfForManagedServer,
+  };
+}
+
 const defaultConfig: AppConfig = {
   server: {
     host: 'localhost',
@@ -67,6 +83,7 @@ const defaultConfig: AppConfig = {
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
   dependencyManagementMode: 'internal',
+  debugOptions: DEFAULT_DEBUG_OPTIONS_SETTINGS,
   runtimeDataPath: DEFAULT_RUNTIME_DATA_PATH_PRESET,
   startOnStartup: false,
   minimizeToTray: true,
@@ -286,6 +303,26 @@ export class ConfigManager {
       ...nextSettings,
     });
     this.store.set('versionAutoUpdate', merged);
+    return merged;
+  }
+
+  getDebugOptionsSettings(): DebugOptionsConfig {
+    const current = this.store.get('debugOptions');
+    const normalized = normalizeDebugOptionsSettings(current);
+
+    if (current?.usePsfForManagedServer !== normalized.usePsfForManagedServer) {
+      this.store.set('debugOptions', normalized);
+    }
+
+    return normalized;
+  }
+
+  setDebugOptionsSettings(nextSettings: Partial<DebugOptionsConfig>): DebugOptionsConfig {
+    const merged = normalizeDebugOptionsSettings({
+      ...this.getDebugOptionsSettings(),
+      ...nextSettings,
+    });
+    this.store.set('debugOptions', merged);
     return merged;
   }
 
