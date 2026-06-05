@@ -36,7 +36,7 @@ import {
 } from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
 import { PackageSourceSelector } from './PackageSourceSelector';
-import type { DistributionMode } from '../../types/distribution-mode';
+import type { DistributionModeState } from '../../types/distribution-mode';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 
 
@@ -117,7 +117,7 @@ declare global {
 }
 
 interface VersionManagementPageProps {
-  distributionMode: DistributionMode;
+  distributionState: DistributionModeState;
 }
 
 function SummaryTile({
@@ -147,7 +147,7 @@ function SummaryTile({
   );
 }
 
-export default function VersionManagementPage({ distributionMode }: VersionManagementPageProps) {
+export default function VersionManagementPage({ distributionState }: VersionManagementPageProps) {
   const { t, i18n } = useTranslation(['pages', 'common']);
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
@@ -532,7 +532,7 @@ export default function VersionManagementPage({ distributionMode }: VersionManag
     );
   }
 
-  if (distributionMode === 'steam') {
+  if (distributionState.fusionMode) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6">
         <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-sm">

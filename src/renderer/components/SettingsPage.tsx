@@ -9,15 +9,15 @@ import {
   shouldShowSharingAccelerationSettings,
   VersionUpdateSettings,
 } from './settings';
-import type { DistributionMode } from '../../types/distribution-mode';
+import type { DistributionModeState } from '../../types/distribution-mode';
 
 interface SettingsPageProps {
-  distributionMode: DistributionMode;
+  distributionState: DistributionModeState;
 }
 
-export default function SettingsPage({ distributionMode }: SettingsPageProps) {
+export default function SettingsPage({ distributionState }: SettingsPageProps) {
   const { t } = useTranslation('pages');
-  const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings(distributionMode);
+  const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings(distributionState);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
@@ -80,7 +80,7 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             </TabsContent>
 
             <TabsContent value="updates" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
-              <VersionUpdateSettings distributionMode={distributionMode} />
+              <VersionUpdateSettings distributionState={distributionState} />
             </TabsContent>
 
             <TabsContent value="runtimeData" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
@@ -93,7 +93,7 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
 
             {showSharingAccelerationSettings ? (
               <TabsContent value="sharingAcceleration" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
-                <SharingAccelerationSettings distributionMode={distributionMode} />
+                <SharingAccelerationSettings distributionState={distributionState} />
               </TabsContent>
             ) : null}
           </div>

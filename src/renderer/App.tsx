@@ -15,12 +15,16 @@ import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
 import { Button } from './components/ui/button';
 import { switchView } from './store/slices/viewSlice';
-import { restartOnboardingFlow } from './store/slices/onboardingSlice';
+import { restartOnboardingFlow, setOnboardingDistributionState } from './store/slices/onboardingSlice';
 import { selectWebServiceInfo } from './store/slices/webServiceSlice';
 import { runCriticalStartupInitialization, startBackgroundStartupInitialization } from './store';
 import type { RootState, AppDispatch } from './store';
 import { buildAccessUrl, DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network';
-import type { DistributionMode } from '../types/distribution-mode';
+import {
+  createDefaultDistributionModeState,
+  type DistributionMode,
+  type DistributionModeState,
+} from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OnboardingShowPayload } from '../types/onboarding';
@@ -75,6 +79,7 @@ declare global {
       getAppVersion: () => Promise<string>;
       getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
       getDistributionMode: () => Promise<DistributionMode>;
+      getDistributionModeState: () => Promise<DistributionModeState>;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;
       onServerStatusChange: (callback: (status: 'running' | 'stopped' | 'error') => void) => void;
@@ -137,7 +142,7 @@ function buildRendererBootstrapErrorSnapshot(
   };
 }
 
-function DesktopAppContent({ distributionMode }: { distributionMode: DistributionMode }) {
+function DesktopAppContent({ distributionState }: { distributionState: DistributionModeState }) {
   const dispatch = useDispatch<AppDispatch>();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const webServiceUrl = useSelector((state: RootState) => state.view.webServiceUrl);
@@ -178,23 +183,27 @@ function DesktopAppContent({ distributionMode }: { distributionMode: Distributio
   }, [dispatch]);
 
   useEffect(() => {
-    if (distributionMode === 'steam' && currentView === 'version') {
+    dispatch(setOnboardingDistributionState(distributionState));
+  }, [dispatch, distributionState]);
+
+  useEffect(() => {
+    if (distributionState.fusionMode && currentView === 'version') {
       dispatch(switchView('system'));
     }
-  }, [currentView, dispatch, distributionMode]);
+  }, [currentView, dispatch, distributionState]);
 
   return (
     <div className="desktop-shell-background min-h-screen bg-background text-foreground">
-      <SidebarNavigation distributionMode={distributionMode} />
+      <SidebarNavigation distributionState={distributionState} />
 
       <div className="ml-64 min-h-screen transition-all duration-200 ease-out">
         <div className="min-h-screen px-6 py-6 lg:px-8">
-          {currentView === 'system' && <SystemManagementView distributionMode={distributionMode} />}
+          {currentView === 'system' && <SystemManagementView distributionState={distributionState} />}
           {currentView === 'web' && <WebView src={webServiceUrl || fallbackWebServiceUrl} />}
-          {currentView === 'version' && <VersionManagementPage distributionMode={distributionMode} />}
+          {currentView === 'version' && <VersionManagementPage distributionState={distributionState} />}
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
           {currentView === 'dependency-management' && <DependencyManagementPage />}
-          {currentView === 'settings' && <SettingsPage distributionMode={distributionMode} />}
+          {currentView === 'settings' && <SettingsPage distributionState={distributionState} />}
         </div>
       </div>
 
@@ -341,7 +350,7 @@ function BootstrapErrorShell({
 
 function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppProps) {
   const { t } = useTranslation('common');
-  const [distributionMode, setDistributionMode] = useState<DistributionMode>('normal');
+  const [distributionState, setDistributionState] = useState<DistributionModeState>(createDefaultDistributionModeState());
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('loading');
   const [bootstrapSnapshot, setBootstrapSnapshot] = useState<DesktopBootstrapSnapshot | null>(null);
   const [pendingAction, setPendingAction] = useState<'retry' | 'logs' | null>(null);
@@ -467,13 +476,13 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
           runCriticalStartupInitialization(),
           'critical startup initialization',
         );
-        const resolvedMode = await withTimeout(
-          window.electronAPI.getDistributionMode(),
-          'distribution mode lookup',
+        const resolvedState = await withTimeout(
+          window.electronAPI.getDistributionModeState(),
+          'distribution state lookup',
         );
 
         if (!cancelled && mountedRef.current) {
-          setDistributionMode(resolvedMode);
+          setDistributionState(resolvedState);
         }
       } catch (error) {
         console.error('[App] Post-shell startup initialization failed:', error);
@@ -544,7 +553,7 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
     );
   }
 
-  return <DesktopAppContent distributionMode={distributionMode} />;
+  return <DesktopAppContent distributionState={distributionState} />;
 }
 
 export default App;

@@ -38,7 +38,7 @@ import type {
   LogDirectoryTargetStatus,
 } from '@types/log-directory';
 import type { DependencyReadinessSummary } from '../../types/dependency-management';
-import type { DistributionMode } from '../../types/distribution-mode';
+import { createDefaultDistributionModeState, type DistributionModeState } from '../../types/distribution-mode';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
 
 interface InstalledVersion {
@@ -66,7 +66,7 @@ declare global {
 type LogTargetStateMap = Record<LogDirectoryTarget, LogDirectoryTargetStatus>;
 
 interface SystemManagementViewProps {
-  distributionMode?: DistributionMode;
+  distributionState?: DistributionModeState;
 }
 
 const createDefaultLogTarget = (target: LogDirectoryTarget): LogDirectoryTargetStatus => ({
@@ -93,7 +93,7 @@ const toLogTargetStateMap = (targets: LogDirectoryTargetStatus[]): LogTargetStat
 };
 
 export default function SystemManagementView({
-  distributionMode = 'normal',
+  distributionState = createDefaultDistributionModeState(),
 }: SystemManagementViewProps) {
   const { t, i18n } = useTranslation(['common', 'components']);
   const { navigateTo } = useNavigate();
@@ -104,7 +104,7 @@ export default function SystemManagementView({
   const installingVersionId = useSelector((state: RootState) => selectInstallingVersionId(state));
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const onboardingActive = useSelector((state: RootState) => state.onboarding.isActive);
-  const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean(versionUpdateReminder);
+  const shouldShowVersionUpdateReminder = !distributionState.fusionMode && Boolean(versionUpdateReminder);
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);

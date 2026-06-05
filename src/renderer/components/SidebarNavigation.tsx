@@ -23,7 +23,7 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
-import type { DistributionMode } from '../../types/distribution-mode';
+import type { DistributionModeState } from '../../types/distribution-mode';
 import type { DesktopVersionInfoPayload } from '../../types/version-info';
 import {
   createLoadingSidebarAboutFetchState,
@@ -70,7 +70,7 @@ const remainingExternalLinkItems: NavigationItem[] = [
 ];
 
 interface SidebarNavigationProps {
-  distributionMode: DistributionMode;
+  distributionState: DistributionModeState;
 }
 
 const ABOUT_BRAND_DOMAIN_OVERRIDES: Partial<Record<SidebarAboutEntry['id'], string>> = {
@@ -162,12 +162,12 @@ function AboutBrandLogo({ entry }: { entry: SidebarAboutEntry }) {
   );
 }
 
-export default function SidebarNavigation({ distributionMode }: SidebarNavigationProps) {
+export default function SidebarNavigation({ distributionState }: SidebarNavigationProps) {
   const { t, i18n } = useTranslation('common');
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
-  const isPortableMode = distributionMode === 'steam';
-  const visibleNavigationItems = isPortableMode
+  const isFusionMode = distributionState.fusionMode;
+  const visibleNavigationItems = isFusionMode
     ? navigationItems.filter((item) => item.id !== 'version')
     : navigationItems;
   const aboutLocale = useMemo(
@@ -203,7 +203,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   }, []);
 
   useEffect(() => {
-    if (!isPortableMode) {
+    if (!isFusionMode) {
       setWebVersion(null);
       return;
     }
@@ -219,7 +219,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
     };
 
     void fetchWebVersion();
-  }, [isPortableMode]);
+  }, [isFusionMode]);
 
   useEffect(() => {
     setAboutModel(bundledAboutModel);
@@ -697,10 +697,10 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className={isPortableMode ? 'flex items-start gap-2 px-3 py-2' : 'flex items-center gap-2 px-3 py-2'}
+              className={isFusionMode ? 'flex items-start gap-2 px-3 py-2' : 'flex items-center gap-2 px-3 py-2'}
             >
-              <Info className={`w-4 h-4 text-muted-foreground shrink-0 ${isPortableMode ? 'mt-0.5' : ''}`} />
-              {isPortableMode ? (
+              <Info className={`w-4 h-4 text-muted-foreground shrink-0 ${isFusionMode ? 'mt-0.5' : ''}`} />
+              {isFusionMode ? (
                 <div className="min-w-0 space-y-2">
                   <div>
                     <p className="text-[11px] text-muted-foreground">

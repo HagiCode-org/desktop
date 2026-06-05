@@ -7,6 +7,7 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
+  selectOnboardingDistributionState,
   selectOnboardingDependencyModeSettings,
   selectIsActive,
   selectOnboardingMode,
@@ -64,6 +65,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const dispatch = useDispatch<AppDispatch>();
   const isActive = useSelector((state: RootState) => selectIsActive(state));
   const mode = useSelector((state: RootState) => selectOnboardingMode(state));
+  const distributionState = useSelector((state: RootState) => selectOnboardingDistributionState(state));
   const runtimeProvisioned = useSelector((state: RootState) => selectOnboardingRuntimeProvisioned(state));
   const currentStep = useSelector((state: RootState) => selectCurrentStep(state));
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
@@ -134,7 +136,10 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     void dispatch(downloadPackage());
   }, [currentStep, dispatch, downloadCompleted, downloadProgress, isDownloading, onboardingError, runtimeProvisioned]);
 
-  const stepSequence = useMemo(() => getOnboardingSequence(mode, dependencyModeSettings), [dependencyModeSettings, mode]);
+  const stepSequence = useMemo(
+    () => getOnboardingSequence(mode, dependencyModeSettings, distributionState),
+    [dependencyModeSettings, distributionState, mode],
+  );
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
 
