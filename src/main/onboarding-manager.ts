@@ -122,7 +122,7 @@ export class OnboardingManager {
       log.info('[OnboardingManager] Stored onboarding state:', storedState);
 
       const installedVersions = await this.versionManager.getInstalledVersions();
-      const runtimeProvisioned = this.versionManager.isPortableVersionMode() || installedVersions.length > 0;
+      const runtimeProvisioned = this.versionManager.isFusionMode() || installedVersions.length > 0;
 
       if (storedState.isCompleted && storedState.version) {
         const versionStillExists = installedVersions.some((version) => version.id === storedState.version);
@@ -137,7 +137,7 @@ export class OnboardingManager {
       const legalAccepted = this.hasAcceptedCurrentLegalDocuments(legalConsent, legalMetadata.payload);
 
       if (!legalAccepted) {
-        const mode = this.versionManager.isPortableVersionMode() ? 'full' : runtimeProvisioned ? 'legal-only' : 'full';
+        const mode = this.versionManager.isFusionMode() ? 'full' : runtimeProvisioned ? 'legal-only' : 'full';
         return {
           shouldShow: true,
           mode,
@@ -151,7 +151,7 @@ export class OnboardingManager {
         return {
           shouldShow: false,
           mode: 'none',
-          reason: this.versionManager.isPortableVersionMode()
+          reason: this.versionManager.isFusionMode()
             ? 'portable-version-provisioned'
             : 'runtime-already-provisioned',
           runtimeProvisioned,
@@ -344,7 +344,7 @@ export class OnboardingManager {
   async downloadLatestPackage(
     onProgress?: (progress: DownloadProgress) => void
   ): Promise<{ success: boolean; version?: string; error?: string }> {
-    if (this.versionManager.isPortableVersionMode()) {
+    if (this.versionManager.isFusionMode()) {
       log.info('[OnboardingManager] Skipping package download in portable version mode');
       return { success: false, error: OnboardingManager.PORTABLE_VERSION_ONBOARDING_ERROR };
     }
@@ -747,7 +747,7 @@ export class OnboardingManager {
     versionId: string,
     onProgress?: (progress: ServiceLaunchProgress) => void
   ): Promise<OnboardingStartServiceResult> {
-    if (this.versionManager.isPortableVersionMode()) {
+    if (this.versionManager.isFusionMode()) {
       log.info('[OnboardingManager] Onboarding service start skipped in portable version mode');
       return {
         success: false,
@@ -866,7 +866,7 @@ export class OnboardingManager {
   async completeOnboarding(versionId: string): Promise<void> {
     log.info('[OnboardingManager] Completing onboarding for version:', versionId);
 
-    if (!this.versionManager.isPortableVersionMode()) {
+    if (!this.versionManager.isFusionMode()) {
       // Switch to the newly installed version as active when version management is mutable.
       await this.versionManager.switchVersion(versionId);
     }
@@ -899,7 +899,7 @@ export class OnboardingManager {
   }
 
   isRuntimeProvisioned(): boolean {
-    return this.versionManager.isPortableVersionMode();
+    return this.versionManager.isFusionMode();
   }
 
   /**

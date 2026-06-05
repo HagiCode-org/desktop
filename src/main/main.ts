@@ -63,7 +63,7 @@ import {
 } from './ipc/handlers/index.js';
 import { PathManager } from './path-manager.js';
 import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../types/web-service-network.js';
-import type { DistributionMode } from '../types/distribution-mode.js';
+import type { DistributionMode, DistributionModeState } from '../types/distribution-mode.js';
 import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
@@ -443,8 +443,19 @@ function getDistributionMode(): DistributionMode {
   return versionManager?.getDistributionMode() ?? 'normal';
 }
 
-function isPortableVersionMode(): boolean {
-  return versionManager?.isPortableVersionMode() ?? false;
+function getDistributionModeState(): DistributionModeState {
+  return versionManager?.getDistributionModeState() ?? {
+    mode: 'normal',
+    fusionMode: false,
+    steamMode: false,
+    winStoreMode: false,
+    activeRuntime: null,
+    metadata: null,
+  };
+}
+
+function isFusionDistributionMode(): boolean {
+  return versionManager?.isFusionMode() ?? false;
 }
 
 async function applyActiveRuntimeToWebServiceManager(): Promise<InstalledVersion | null> {
@@ -709,6 +720,10 @@ ipcMain.handle('version-info', () => {
 
 ipcMain.handle('get-distribution-mode', () => {
   return getDistributionMode();
+});
+
+ipcMain.handle('get-distribution-mode-state', () => {
+  return getDistributionModeState();
 });
 
 ipcMain.handle('show-window', () => {
@@ -1185,7 +1200,7 @@ ipcMain.handle('version:uninstall', async (_, versionId: string) => {
     return false;
   }
   try {
-    if (isPortableVersionMode()) {
+    if (isFusionDistributionMode()) {
       throw new DistributionModeError();
     }
 
@@ -1217,7 +1232,7 @@ ipcMain.handle('version:reinstall', async (_, versionId: string) => {
     return false;
   }
   try {
-    if (isPortableVersionMode()) {
+    if (isFusionDistributionMode()) {
       throw new DistributionModeError();
     }
 
@@ -1373,7 +1388,7 @@ ipcMain.handle('install-web-service-package', async (_, version: string, options
     };
   }
   try {
-    if (isPortableVersionMode()) {
+    if (isFusionDistributionMode()) {
       throw new DistributionModeError();
     }
 
@@ -1701,7 +1716,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
   console.log('[Main] Switch view requested:', view);
 
-  if (view === 'version' && isPortableVersionMode()) {
+  if (view === 'version' && isFusionDistributionMode()) {
     return {
       success: false,
       reason: 'portable-version-mode',
