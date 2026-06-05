@@ -48,6 +48,8 @@ export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stop
 
 export enum StartupPhase {
   Idle = 'idle',
+  CheckingVersion = 'checking_version',
+  CheckingDependencies = 'checking_dependencies',
   Spawning = 'spawning',
   WaitingListening = 'waiting_listening',
   HealthCheck = 'health_check',
@@ -448,6 +450,8 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   restartCount: state.webService.restartCount,
   isOperating: state.webService.isOperating,
   lastError: state.webService.lastError,
+  phase: state.webService.phase,
+  phaseMessage: state.webService.phaseMessage,
   host: state.webService.host,
   port: state.webService.port,
 });

@@ -106,7 +106,7 @@ function registerRealtimeListeners(): void {
     onTrayStopService?: (callback: () => void) => (() => void) | void;
     onWebServiceStartupPhaseChange?: (
       callback: (payload: {
-        phase: 'idle' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
+        phase: 'idle' | 'checking_version' | 'checking_dependencies' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
         message?: string;
         timestamp: number;
       }) => void,
