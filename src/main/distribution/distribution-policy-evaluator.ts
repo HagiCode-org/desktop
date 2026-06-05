@@ -1,12 +1,12 @@
 import type { Version } from '../version-manager.js';
 import type { HybridDownloadPolicy, SharingAccelerationSettings } from '../../types/sharing-acceleration.js';
-import type { DistributionMode } from '../../types/distribution-mode.js';
+import type { DistributionModeState } from '../../types/distribution-mode.js';
 
 export class DistributionPolicyEvaluator {
   evaluate(
     version: Version,
     settings: SharingAccelerationSettings,
-    options?: { distributionMode?: DistributionMode },
+    options?: { distributionState?: Pick<DistributionModeState, 'fusionMode'> },
   ): HybridDownloadPolicy {
     const thresholdBytes = version.hybrid?.thresholdBytes ?? 0;
     const serviceScope = version.hybrid?.serviceScope ?? 'local-cache';
@@ -20,7 +20,7 @@ export class DistributionPolicyEvaluator {
     if (!version.hybrid.hasTorrentMetadata || !version.hybrid.eligible || version.hybrid.legacyHttpFallback) {
       return { useHybrid: false, preferTorrent: false, reason: 'legacy-http', thresholdBytes, serviceScope, seedEligible };
     }
-    if (options?.distributionMode === 'steam') {
+    if (options?.distributionState?.fusionMode) {
       return { useHybrid: false, preferTorrent: false, reason: 'portable-mode', thresholdBytes, serviceScope, seedEligible };
     }
     if (!settings.enabled) {

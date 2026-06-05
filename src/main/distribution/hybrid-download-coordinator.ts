@@ -12,7 +12,7 @@ import type {
   StructuredFallbackSourceKind,
   VersionDownloadMode,
 } from '../../types/sharing-acceleration.js';
-import type { DistributionMode } from '../../types/distribution-mode.js';
+import type { DistributionModeState } from '../../types/distribution-mode.js';
 import { CacheRetentionManager } from './cache-retention-manager.js';
 import type { DownloadEngineAdapter } from './download-engine-adapter.js';
 import { DistributionPolicyEvaluator } from './distribution-policy-evaluator.js';
@@ -72,8 +72,8 @@ export class HybridDownloadCoordinator {
     return this.cacheRetentionManager;
   }
 
-  async prepare(settings: SharingAccelerationSettings, distributionMode?: DistributionMode): Promise<void> {
-    if (!settings.enabled || distributionMode === 'steam') {
+  async prepare(settings: SharingAccelerationSettings, distributionState?: Pick<DistributionModeState, 'fusionMode'>): Promise<void> {
+    if (!settings.enabled || distributionState?.fusionMode) {
       await this.cacheRetentionManager.stopAllSeeding();
       await this.engine.stopAll();
     }
@@ -87,15 +87,15 @@ export class HybridDownloadCoordinator {
     onProgress?: DownloadProgressCallback,
     options?: {
       settings?: SharingAccelerationSettings;
-      distributionMode?: DistributionMode;
+      distributionState?: DistributionModeState;
     },
   ): Promise<HybridDownloadResult> {
     const settings = options?.settings ?? this.settingsStore.getSettings();
-    const distributionMode = options?.distributionMode;
+    const distributionState = options?.distributionState;
     const policy = this.policyEvaluator.evaluate(version, settings, {
-      distributionMode,
+      distributionState,
     });
-    await this.prepare(settings, distributionMode);
+    await this.prepare(settings, distributionState);
     let finalMode: VersionDownloadMode = policy.useHybrid ? 'shared-acceleration' : 'http-direct';
 
     if (policy.useHybrid) {
@@ -126,7 +126,7 @@ export class HybridDownloadCoordinator {
         );
       }
     } else {
-      if (distributionMode === 'steam') {
+      if (distributionState?.fusionMode) {
         onProgress?.({
           current: 0,
           total: version.size ?? 0,
@@ -139,7 +139,7 @@ export class HybridDownloadCoordinator {
       }
       const hasStructuredFallbackSources = this.hasStructuredFallbackSources(version);
       const preferStructuredFallback = this.hasMultipleStructuredFallbackSources(version);
-      const useSourceFallbackMode = distributionMode === 'steam' || preferStructuredFallback;
+      const useSourceFallbackMode = Boolean(distributionState?.fusionMode) || preferStructuredFallback;
       if (hasStructuredFallbackSources || useSourceFallbackMode) {
         await this.downloadViaHttpSources(
           version,
@@ -149,7 +149,7 @@ export class HybridDownloadCoordinator {
           useSourceFallbackMode
             ? this.createSourceFallbackProgress(version, policy.serviceScope, onProgress)
             : onProgress,
-          distributionMode === 'steam'
+          distributionState?.fusionMode
             ? 'portable mode skipped torrent'
             : preferStructuredFallback
               ? `policy ${policy.reason}`

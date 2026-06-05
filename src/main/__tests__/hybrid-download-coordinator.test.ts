@@ -17,6 +17,15 @@ const baseSettings = {
   onboardingChoiceRecorded: true,
 };
 
+const fusionSteamDistributionState = {
+  mode: 'steam' as const,
+  fusionMode: true,
+  steamMode: true,
+  winStoreMode: false,
+  activeRuntime: null,
+  metadata: null,
+};
+
 function sha256(value: string) {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -287,7 +296,7 @@ describe('HybridDownloadCoordinator', () => {
           ...baseSettings,
           enabled: false,
         },
-        distributionMode: 'steam',
+        distributionState: fusionSteamDistributionState,
       },
     );
 
@@ -738,7 +747,7 @@ describe('HybridDownloadCoordinator', () => {
           ...baseSettings,
           enabled: false,
         },
-        distributionMode: 'steam',
+        distributionState: fusionSteamDistributionState,
       },
     );
 
