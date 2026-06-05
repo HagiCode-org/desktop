@@ -25,6 +25,7 @@ function createSnapshot(): DependencyManagementSnapshot {
     mode: {
       configuredMode: 'internal',
       effectiveMode: 'internal',
+      lockedByRuntime: false,
       mutationsAvailable: true,
     },
     environment: {
