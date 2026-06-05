@@ -8,6 +8,7 @@ import {
   createStoreBuildMetadata,
   resolveStoreRuntimePolicyEnvironment,
 } from './build-store-package.js';
+import { toWindowsPackageVersion } from './store-package-config.js';
 
 test('buildStepScripts prefers optional runtime preparation entrypoints for Store builds', () => {
   const scripts = {
@@ -30,6 +31,11 @@ test('resolveStoreRuntimePolicyEnvironment defaults Store builds to internal dep
     HAGICODE_RUNTIME_CONSUMER: 'windows-store',
     HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: 'internal',
   });
+});
+
+test('toWindowsPackageVersion accepts tagged Windows Store versions from win_store_packer', () => {
+  assert.equal(toWindowsPackageVersion('v0.2.1'), '0.2.1.0');
+  assert.equal(toWindowsPackageVersion('V0.2.1-beta.7'), '0.2.1.7');
 });
 
 test('createStoreBuildMetadata records Node preparation as internal by default for Store builds', () => {

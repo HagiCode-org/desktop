@@ -66,7 +66,7 @@ function normalizeMsixCapabilities(value, label) {
 }
 
 export function toWindowsPackageVersion(version) {
-  const normalized = String(version || '').trim();
+  const normalized = String(version || '').trim().replace(/^v/i, '');
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(normalized);
   if (!match) {
     throw new Error(`Unsupported package version for MSIX packaging: ${version}`);
