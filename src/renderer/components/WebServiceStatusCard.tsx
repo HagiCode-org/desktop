@@ -13,6 +13,7 @@ import {
   selectLaunchBlockingReason,
   hideStartupFailureDialog,
   showStartupFailureDialog,
+  StartupPhase,
   type ProcessStatus,
 } from '../store/slices/webServiceSlice';
 import { writeTextToClipboard } from '../lib/clipboard.js';
@@ -36,6 +37,9 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
+  getStartupPhaseSummary,
+} from '@/lib/webServiceStartupProgress';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -45,6 +49,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import WebServiceStartupProgressDialog from './WebServiceStartupProgressDialog';
 import {
   Server,
   Square,
@@ -107,6 +112,9 @@ const WebServiceStatusCard: React.FC = () => {
   const [dependencyReadiness, setDependencyReadiness] = useState<DependencyReadinessSummary | null>(null);
   const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startupDialogCloseTimeoutRef = useRef<number | null>(null);
+  const lastStartupPhaseRef = useRef<StartupPhase>(StartupPhase.CheckingVersion);
+  const [showStartupProgressDialog, setShowStartupProgressDialog] = useState(false);
 
   const isRunning = webServiceInfo.status === 'running';
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
@@ -142,6 +150,19 @@ const WebServiceStatusCard: React.FC = () => {
     (!Number.isNaN(pendingPort) && pendingPort !== webServiceInfo.port)
   );
   const accessUrlPreview = buildAccessUrl(normalizedPendingHost || normalizedCurrentHost, Number.isNaN(pendingPort) ? webServiceInfo.port : pendingPort);
+  const startupSummary = getStartupPhaseSummary(
+    t,
+    webServiceInfo.status,
+    webServiceInfo.phase,
+    lastStartupPhaseRef.current,
+  );
+
+  const clearStartupDialogCloseTimeout = () => {
+    if (startupDialogCloseTimeoutRef.current !== null) {
+      window.clearTimeout(startupDialogCloseTimeoutRef.current);
+      startupDialogCloseTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     // Fetch version on mount
@@ -149,6 +170,36 @@ const WebServiceStatusCard: React.FC = () => {
     // Fetch active version on mount
     dispatch(fetchActiveVersion());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (webServiceInfo.phase !== StartupPhase.Idle && webServiceInfo.phase !== StartupPhase.Error) {
+      lastStartupPhaseRef.current = webServiceInfo.phase;
+    }
+
+    if (webServiceInfo.status === 'starting') {
+      clearStartupDialogCloseTimeout();
+      setShowStartupProgressDialog(true);
+      return;
+    }
+
+    if (webServiceInfo.phase === StartupPhase.Running && webServiceInfo.status === 'running') {
+      clearStartupDialogCloseTimeout();
+      startupDialogCloseTimeoutRef.current = window.setTimeout(() => {
+        setShowStartupProgressDialog(false);
+        startupDialogCloseTimeoutRef.current = null;
+      }, 1100);
+      return;
+    }
+
+    if (webServiceInfo.status === 'stopped' && !startupFailure) {
+      clearStartupDialogCloseTimeout();
+      setShowStartupProgressDialog(false);
+    }
+
+    if (webServiceInfo.phase === StartupPhase.Error) {
+      clearStartupDialogCloseTimeout();
+    }
+  }, [startupFailure, webServiceInfo.phase, webServiceInfo.status]);
 
   useEffect(() => {
     let disposed = false;
@@ -241,6 +292,8 @@ const WebServiceStatusCard: React.FC = () => {
       return;
     }
 
+    lastStartupPhaseRef.current = StartupPhase.CheckingVersion;
+    setShowStartupProgressDialog(true);
     await dispatch(startWebService());
   };
 
@@ -338,6 +391,21 @@ const WebServiceStatusCard: React.FC = () => {
       toast.error(t('webServiceStatus.startupFailureDialog.copyError'));
     }
   };
+
+  const handleStartupProgressDialogOpenChange = (open: boolean) => {
+    if (webServiceInfo.status === 'starting') {
+      return;
+    }
+
+    clearStartupDialogCloseTimeout();
+    setShowStartupProgressDialog(open);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearStartupDialogCloseTimeout();
+    };
+  }, []);
 
   const getStatusVariant = (status: ProcessStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -512,7 +580,7 @@ const WebServiceStatusCard: React.FC = () => {
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {webServiceInfo.phaseMessage?.trim() || getStatusDescription(webServiceInfo.status)}
+                    {startupSummary}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {isRunning ? (webServiceInfo.url || 'N/A') : accessUrlPreview}
@@ -542,7 +610,7 @@ const WebServiceStatusCard: React.FC = () => {
                     canLaunchService={canLaunchService}
                     isWaitingForPort={isWaitingForPort}
                     waitingPort={webServiceInfo.port}
-                    waitingPhaseMessage={webServiceInfo.phaseMessage}
+                    waitingPhaseMessage={startupSummary}
                     onStart={handleStart}
                     onOpenApp={handleOpenHagicode}
                     onOpenBrowser={handleOpenInBrowser}
@@ -833,6 +901,20 @@ const WebServiceStatusCard: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <WebServiceStartupProgressDialog
+            open={showStartupProgressDialog}
+            status={webServiceInfo.status}
+            phase={webServiceInfo.phase}
+            failurePhase={lastStartupPhaseRef.current}
+            activeVersionLabel={activeVersion?.version ?? null}
+            accessUrl={isRunning ? webServiceInfo.url : accessUrlPreview}
+            port={webServiceInfo.port}
+            errorMessage={error}
+            startupFailure={startupFailure}
+            onOpenChange={handleStartupProgressDialogOpenChange}
+            onOpenFailureLog={handleOpenStartupFailure}
+          />
 
           <Dialog open={showStartupFailure} onOpenChange={(open) => {
             if (!open) {

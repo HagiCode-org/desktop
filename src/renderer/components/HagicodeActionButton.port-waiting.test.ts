@@ -20,7 +20,8 @@ describe('hagicode action button port waiting state', () => {
     assert.match(source, /&& !hasReadyWebUrl/);
     assert.match(source, /isWaitingForPort=\{isWaitingForPort\}/);
     assert.match(source, /waitingPort=\{webServiceInfo\.port\}/);
-    assert.match(source, /waitingPhaseMessage=\{webServiceInfo\.phaseMessage\}/);
+    assert.match(source, /const startupSummary = getStartupPhaseSummary\(/);
+    assert.match(source, /waitingPhaseMessage=\{startupSummary\}/);
   });
 
   it('renders localized disabled waiting feedback before the open actions branch', async () => {
@@ -74,5 +75,21 @@ describe('hagicode action button port waiting state', () => {
     assert.equal(en.webServiceStatus.portWaiting.detailWithPort, 'Port {{port}} is not accessible yet');
     assert.doesNotMatch(buttonSource, /正在等待端口可用/);
     assert.doesNotMatch(buttonSource, /Waiting for port to become available/);
+  });
+
+  it('keeps startup progress copy localized through generated resources', async () => {
+    await ensureGeneratedLocales();
+
+    const [zhRaw, enRaw] = await Promise.all([
+      fs.readFile(zhComponentsPath, 'utf8'),
+      fs.readFile(enComponentsPath, 'utf8'),
+    ]);
+    const zh = JSON.parse(zhRaw);
+    const en = JSON.parse(enRaw);
+
+    assert.equal(zh.webServiceStatus.startupProgress.title, '正在启动服务');
+    assert.equal(zh.webServiceStatus.startupProgress.stepLabels.checkingVersion, '检查版本');
+    assert.equal(en.webServiceStatus.startupProgress.title, 'Starting service');
+    assert.equal(en.webServiceStatus.startupProgress.stepLabels.healthCheck, 'Run health check');
   });
 });
