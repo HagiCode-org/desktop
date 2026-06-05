@@ -138,6 +138,7 @@ sidebar:
   settings: Settings
   desktopVersion: Desktop version
   webVersion: Web version
+  windowsStoreVersion: Windows Store version
   unknownVersion: Unavailable
   toggle: Toggle Sidebar
   collapse: Collapse

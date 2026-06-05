@@ -138,6 +138,7 @@ sidebar:
   settings: Paramètres
   desktopVersion: Version de bureau
   webVersion: Version Internet
+  windowsStoreVersion: Version Windows Store
   unknownVersion: Indisponible
   toggle: Basculer la barre latérale
   collapse: Réduire

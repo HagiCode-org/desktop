@@ -138,6 +138,7 @@ sidebar:
   settings: Configurações
   desktopVersion: Versão para desktop
   webVersion: Versão web
+  windowsStoreVersion: Versao da Windows Store
   unknownVersion: Indisponível
   toggle: Alternar barra lateral
   collapse: Recolher

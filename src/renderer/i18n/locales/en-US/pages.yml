@@ -2,6 +2,7 @@ settings:
   title: Settings
   tabs:
     dependencyManagement: Dependency Management
+    debugOptions: Debug Options
     onboarding: Onboarding
     sharingAcceleration: Download & Sharing
     runtimeData: Runtime Data
@@ -112,6 +113,33 @@ settings:
       saveSuccess: Runtime data path saved
       restartSuccess: Runtime data path saved and managed services restarted
       saveFailed: Failed to save runtime data path
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
+  debugOptions:
+    title: Debug Options
+    description: Control Desktop-managed experimental launch behaviors for diagnosing Windows Store and MSIX startup issues.
+    launcherPath: 'Managed server launcher path: {{path}}'
+    runtimeHint: This switch only affects Desktop-managed server launches.
+    runtime:
+      windowsStore: Windows Store runtime detected
+      standard: Standard desktop runtime
+      launcherReady: Launcher path resolved
+    usePsfForManagedServer:
+      label: Use PSF for managed server
+      description: In Windows Store/MSIX mode, launch the managed server through the PSF-compatible launcher path instead of invoking dotnet directly.
+    notes:
+      scope: This setting only changes how Desktop starts the managed server through PM2.
+      restart: Saving a changed value restarts the managed service immediately when it is already running.
+      unavailable: This runtime is not running in Windows Store/MSIX mode, so the switch stays read-only here.
+    actions:
+      save: Save Changes
+      saving: Saving...
+      cancel: Cancel
+    messages:
+      unchanged: Debug option is already using this value
+      saveSuccess: Debug option saved
+      restartSuccess: Debug option saved and managed service restarted
+      saveFailed: Failed to save debug option
     errors:
       saveErrorDetail: 'Save failed: {{error}}'
 footer:

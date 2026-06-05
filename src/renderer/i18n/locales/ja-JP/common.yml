@@ -138,6 +138,7 @@ sidebar:
   settings: 設定
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
+  windowsStoreVersion: Windows Store 版
   unknownVersion: 利用不可
   toggle: サイドバーの切り替え
   collapse: 崩壊する

@@ -138,6 +138,7 @@ sidebar:
   settings: Настройки
   desktopVersion: Настольная версия
   webVersion: Веб-версия
+  windowsStoreVersion: Версия Windows Store
   unknownVersion: Недоступно
   toggle: Переключить боковую панель
   collapse: Свернуть

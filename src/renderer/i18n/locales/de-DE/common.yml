@@ -138,6 +138,7 @@ sidebar:
   settings: Einstellungen
   desktopVersion: Desktop-Version
   webVersion: Webversion
+  windowsStoreVersion: Windows Store-Version
   unknownVersion: Nicht verfügbar
   toggle: Seitenleiste umschalten
   collapse: Zusammenbruch

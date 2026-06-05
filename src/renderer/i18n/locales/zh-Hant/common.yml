@@ -138,6 +138,7 @@ sidebar:
   settings: 設定
   desktopVersion: Desktop 版本
   webVersion: Web 版本
+  windowsStoreVersion: Windows Store 版本
   unknownVersion: 不可用
   toggle: 切換側邊欄
   collapse: 收起

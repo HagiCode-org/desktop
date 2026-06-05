@@ -138,6 +138,7 @@ sidebar:
   settings: 설정
   desktopVersion: 데스크톱 버전
   webVersion: 웹 버전
+  windowsStoreVersion: Windows Store 버전
   unknownVersion: 이용 불가
   toggle: 사이드바 전환
   collapse: 접기
