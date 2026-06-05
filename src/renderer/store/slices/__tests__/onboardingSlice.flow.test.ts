@@ -25,6 +25,8 @@ describe('onboarding flow contracts', () => {
     assert.match(sliceSource, /const fullSequence = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
     assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
     assert.match(sliceSource, /return mode === 'full' && dependencyModeSettings\?\.effectiveMode === 'external';/);
+    assert.match(sliceSource, /function shouldHideSharingAccelerationStep\(distributionState: DistributionModeState\) \{\s*return distributionState\.fusionMode;\s*\}/s);
+    assert.match(sliceSource, /return shouldHideSharingAccelerationStep\(distributionState\)\s*\? sequence\.filter\(\(step\) => step !== OnboardingStep\.SharingAcceleration\)\s*:\s*sequence;/s);
   });
 
   it('keeps legal-only mode available for consent-only mutable-runtime gating', async () => {
@@ -40,10 +42,26 @@ describe('onboarding flow contracts', () => {
   it('skips dependency preparation when dependency management is in external mode', async () => {
     const sliceSource = await fs.readFile(slicePath, 'utf8');
 
-    assert.match(sliceSource, /return shouldHideDependencyPreparationStep\(mode, dependencyModeSettings\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
+    assert.match(sliceSource, /const sequence = shouldHideDependencyPreparationStep\(mode, dependencyModeSettings\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
     assert.match(sliceSource, /state\.currentStep === OnboardingStep\.DependencyPreparation[\s\S]*state\.currentStep = OnboardingStep\.Download;/);
-    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\)\);/);
-    assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\)\);/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
+    assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
+  });
+
+  it('skips sharing acceleration entirely in steam mode while preserving navigation state', async () => {
+    const [typesSource, sliceSource] = await Promise.all([
+      fs.readFile(typesPath, 'utf8'),
+      fs.readFile(slicePath, 'utf8'),
+    ]);
+
+    assert.match(typesSource, /import type \{ DistributionModeState \} from '\.\/distribution-mode\.js';/);
+    assert.match(typesSource, /distributionState: DistributionModeState;/);
+    assert.match(sliceSource, /distributionState: createDefaultDistributionModeState\(\),/);
+    assert.match(sliceSource, /setOnboardingDistributionState: \(state, action: PayloadAction<DistributionModeState>\) => \{/);
+    assert.match(sliceSource, /state\.currentStep === OnboardingStep\.SharingAcceleration && shouldHideSharingAccelerationStep\(action\.payload\)/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.LegalConsent, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
+    assert.match(sliceSource, /distributionState: state\.distributionState,/);
+    assert.match(sliceSource, /resetOnboarding\.fulfilled, \(state\) => \(\{ \.\.\.initialState, distributionState: state\.distributionState \}\)\)/);
   });
 
   it('tracks runtimeProvisioned through trigger, restart, and next-button readiness', async () => {
@@ -58,7 +76,7 @@ describe('onboarding flow contracts', () => {
     assert.match(sliceSource, /runtimeProvisioned: false,/);
     assert.match(sliceSource, /dependencyModeSettings: null,/);
     assert.match(sliceSource, /dependencyModeSettingsStatus: 'idle',/);
-    assert.match(sliceSource, /restartOnboardingFlow: \(_state, action: PayloadAction<OnboardingShowPayload \| undefined>\) => \(\{[\s\S]*runtimeProvisioned: action\.payload\?\.runtimeProvisioned \?\? false,/);
+    assert.match(sliceSource, /restartOnboardingFlow: \(state, action: PayloadAction<OnboardingShowPayload \| undefined>\) => \(\{[\s\S]*distributionState: state\.distributionState,[\s\S]*runtimeProvisioned: action\.payload\?\.runtimeProvisioned \?\? false,/);
     assert.match(sliceSource, /state\.runtimeProvisioned = action\.payload\.runtimeProvisioned;/);
     assert.match(sliceSource, /state\.runtimeProvisioned = false;/);
     assert.match(sliceSource, /const \{ currentStep, downloadProgress, isDependencyOperationActive, runtimeProvisioned \} = state\.onboarding;/);
@@ -69,7 +87,7 @@ describe('onboarding flow contracts', () => {
   it('keeps portable mode on full onboarding until onboarding is completed', async () => {
     const managerSource = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(managerSource, /const mode = this\.versionManager\.isPortableVersionMode\(\) \? 'full' : runtimeProvisioned \? 'legal-only' : 'full';/);
+    assert.match(managerSource, /const mode = this\.versionManager\.isFusionMode\(\) \? 'full' : runtimeProvisioned \? 'legal-only' : 'full';/);
     assert.match(managerSource, /if \(runtimeProvisioned && storedState\.isCompleted\) \{/);
     assert.match(managerSource, /'portable-version-provisioned'/);
     assert.match(managerSource, /getResetOnboardingMode\(\): Exclude<OnboardingMode, 'none'> \{\s*return 'full';\s*\}/s);
@@ -85,7 +103,7 @@ describe('onboarding flow contracts', () => {
     assert.match(wizardSource, /dispatch\(fetchActiveVersion\(\)\)\.unwrap\(\)\.then\(\(activeVersion\) => \{/);
     assert.match(wizardSource, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
     assert.match(wizardSource, /if \(currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned\) \{[\s\S]*return t\('actions\.finish'\);/);
-    assert.match(managerSource, /if \(!this\.versionManager\.isPortableVersionMode\(\)\) \{/);
+    assert.match(managerSource, /if \(!this\.versionManager\.isFusionMode\(\)\) \{/);
     assert.match(managerSource, /await this\.versionManager\.switchVersion\(versionId\);/);
   });
 });
