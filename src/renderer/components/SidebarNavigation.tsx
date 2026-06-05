@@ -24,6 +24,7 @@ import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import type { DistributionMode } from '../../types/distribution-mode';
+import type { DesktopVersionInfoPayload } from '../../types/version-info';
 import {
   createLoadingSidebarAboutFetchState,
   hasSidebarAboutEntries,
@@ -176,7 +177,7 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   const bundledAboutModel = useMemo(() => loadBundledSidebarAbout(aboutLocale), [aboutLocale]);
 
   const [collapsed, setCollapsed] = useState(false);
-  const [appVersion, setAppVersion] = useState<string>('');
+  const [versionInfo, setVersionInfo] = useState<DesktopVersionInfoPayload | null>(null);
   const [webVersion, setWebVersion] = useState<string | null>(null);
   const [aboutModel, setAboutModel] = useState<SidebarAboutModel | null>(bundledAboutModel);
   const [aboutFetchState, setAboutFetchState] = useState<SidebarAboutFetchState>(
@@ -185,8 +186,14 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   useEffect(() => {
     const fetchVersion = async () => {
       try {
-        const version = await window.electronAPI.getAppVersion();
-        setAppVersion(version);
+        const nextVersionInfo = typeof window.electronAPI.getVersionInfo === 'function'
+          ? await window.electronAPI.getVersionInfo()
+          : {
+              desktopVersion: await window.electronAPI.getAppVersion(),
+              windowsStoreVersion: null,
+            };
+
+        setVersionInfo(nextVersionInfo);
       } catch (error) {
         console.error('Failed to fetch app version:', error);
       }
@@ -249,6 +256,8 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
   const resolvedWebVersion = webVersion && webVersion !== 'unknown'
     ? webVersion
     : t('sidebar.unknownVersion');
+  const appVersion = versionInfo?.desktopVersion ?? '';
+  const windowsStoreVersion = versionInfo?.windowsStoreVersion ?? null;
 
   const hasAboutContent = hasSidebarAboutEntries(aboutModel);
 
@@ -709,6 +718,16 @@ export default function SidebarNavigation({ distributionMode }: SidebarNavigatio
                       {resolvedWebVersion}
                     </p>
                   </div>
+                  {windowsStoreVersion ? (
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {t('sidebar.windowsStoreVersion')}
+                      </p>
+                      <p className="text-xs text-foreground break-all">
+                        {windowsStoreVersion}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground">

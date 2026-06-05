@@ -24,6 +24,7 @@ import type { DistributionMode } from '../types/distribution-mode';
 import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OnboardingShowPayload } from '../types/onboarding';
+import type { DesktopVersionInfoPayload } from '../types/version-info';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap';
@@ -72,6 +73,7 @@ declare global {
         openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
       };
       getAppVersion: () => Promise<string>;
+      getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
       getDistributionMode: () => Promise<DistributionMode>;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;

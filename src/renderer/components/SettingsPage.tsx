@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DependencyManagementModeSettings,
+  DebugOptionsSettings,
   OnboardingSettings,
   RuntimeDataPathSettings,
   SharingAccelerationSettings,
@@ -53,6 +54,12 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
             >
               {t('settings.tabs.runtimeData')}
             </TabsTrigger>
+            <TabsTrigger
+              value="debugOptions"
+              className="justify-start rounded-xl px-4 py-3 text-left data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              {t('settings.tabs.debugOptions')}
+            </TabsTrigger>
             {showSharingAccelerationSettings ? (
               <TabsTrigger
                 value="sharingAcceleration"
@@ -78,6 +85,10 @@ export default function SettingsPage({ distributionMode }: SettingsPageProps) {
 
             <TabsContent value="runtimeData" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
               <RuntimeDataPathSettings />
+            </TabsContent>
+
+            <TabsContent value="debugOptions" className="mt-0 rounded-2xl border border-border/70 bg-background/40 p-1">
+              <DebugOptionsSettings />
             </TabsContent>
 
             {showSharingAccelerationSettings ? (
