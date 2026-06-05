@@ -87,7 +87,7 @@ export interface WebServiceProcessInfo {
   startTime: number | null;
   url: string | null;
   restartCount: number;
-  phase: 'idle' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
+  phase: 'idle' | 'checking_version' | 'checking_dependencies' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';
   phaseMessage?: string;
   host: string;
   port: number;

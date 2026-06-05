@@ -524,6 +524,14 @@ async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<
   };
 }
 
+function emitWebServiceStartupPhase(phase: StartupPhase, message?: string): void {
+  mainWindow?.webContents.send('web-service-startup-phase', {
+    phase,
+    message,
+    timestamp: Date.now(),
+  });
+}
+
 function createWindow(): void {
   console.log('[Hagicode] Creating window...');
 
@@ -843,21 +851,34 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
   }
 
   try {
+    emitWebServiceStartupPhase(
+      StartupPhase.CheckingVersion,
+      'Checking active version and startup metadata...'
+    );
     const activeVersion = await applyActiveRuntimeToWebServiceManager();
 
     if (!activeVersion) {
       log.warn('[Main] No active version found, cannot start web service');
+      emitWebServiceStartupPhase(StartupPhase.Error, 'No active version found');
       return {
         success: false,
         error: { type: 'no-active-version', details: 'No active version found. Please install and activate a version first.' }
       };
     }
 
+    emitWebServiceStartupPhase(
+      StartupPhase.CheckingDependencies,
+      'Checking required managed dependencies...'
+    );
     const dependencyValidation = await validateRequiredManagedDependenciesForWebServiceStart();
     if (!dependencyValidation.ok) {
       log.warn('[Main] Required managed dependencies are not ready for web service start', {
         details: dependencyValidation.details,
       });
+      emitWebServiceStartupPhase(
+        StartupPhase.Error,
+        dependencyValidation.details ?? buildDependencyReadinessFailureMessage(),
+      );
       return {
         success: false,
         error: {
