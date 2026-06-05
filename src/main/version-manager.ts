@@ -20,10 +20,13 @@ import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 import {
   type ActiveRuntimeDescriptor,
   type DistributionMode,
+  createDefaultDistributionModeState,
   type DistributionModeState,
+  resolveDistributionModeState,
   PORTABLE_VERSION_MODE_ERROR,
 } from '../types/distribution-mode.js';
 import type { HybridDistributionMetadata, VersionAssetKind, VersionDownloadProgress } from '../types/sharing-acceleration.js';
+import { loadDistributionMetadata } from './distribution/distribution-metadata-loader.js';
 
 const { app } = electron;
 
@@ -132,7 +135,7 @@ export class VersionManager {
   private hybridDownloadCoordinator: HybridDownloadCoordinator;
 
   private currentPackageSource: PackageSource | null;
-  private distributionMode: DistributionMode = 'normal';
+  private distributionState: DistributionModeState = createDefaultDistributionModeState();
   private activePortableRuntime: InstalledVersion | null = null;
 
   constructor(
@@ -250,14 +253,37 @@ export class VersionManager {
       log.info('[VersionManager] Windows Store runtime detected, checking packaged portable-fixed payload.');
     }
 
+    const metadataResult = await loadDistributionMetadata({
+      resourcesPath: process.resourcesPath,
+    });
+
+    if (metadataResult.sourcePath && metadataResult.metadata) {
+      log.info('[VersionManager] Loaded distribution metadata from resources:', {
+        sourcePath: metadataResult.sourcePath,
+        mode: metadataResult.metadata.mode,
+        channel: metadataResult.metadata.channel,
+      });
+    } else if (metadataResult.error) {
+      log.warn('[VersionManager] Distribution metadata could not be used, falling back to runtime detection:', {
+        sourcePath: metadataResult.sourcePath,
+        error: metadataResult.error,
+      });
+    } else {
+      log.info('[VersionManager] Distribution metadata not found, falling back to runtime detection.');
+    }
+
     const portableSelection = this.pathManager.getPortableRuntimeSelection();
     const portableRoot = portableSelection.runtimeRoot;
 
     try {
       const validation = await this.pathManager.validatePortableRuntimePayload(portableRoot);
       if (!validation.exists) {
-        this.distributionMode = 'normal';
         this.activePortableRuntime = null;
+        this.distributionState = resolveDistributionModeState({
+          metadata: metadataResult.metadata,
+          hasBundledRuntime: false,
+          isWindowsStoreRuntime: isWindowsStorePackage,
+        });
         if (portableSelection.selectionSource === 'bundle-member' && portableSelection.selectedPlatform) {
           log.warn('[VersionManager] Portable version bundle member not found, falling back to normal mode:', {
             bundleRoot: portableSelection.bundleRoot,
@@ -268,12 +294,16 @@ export class VersionManager {
         } else {
           log.info('[VersionManager] Portable version payload not found, using normal mode:', portableRoot);
         }
-        return { mode: this.distributionMode, activeRuntime: null };
+        return this.getDistributionModeState();
       }
 
       if (!validation.isValid) {
-        this.distributionMode = 'normal';
         this.activePortableRuntime = null;
+        this.distributionState = resolveDistributionModeState({
+          metadata: metadataResult.metadata,
+          hasBundledRuntime: false,
+          isWindowsStoreRuntime: isWindowsStorePackage,
+        });
         log.warn('[VersionManager] Portable version payload validation failed, falling back to normal mode:', {
           bundleRoot: portableSelection.bundleRoot,
           runtimeRoot: portableRoot,
@@ -282,11 +312,17 @@ export class VersionManager {
           selectionSource: portableSelection.selectionSource,
           missingFiles: validation.missingFiles,
         });
-        return { mode: this.distributionMode, activeRuntime: null };
+        return this.getDistributionModeState();
       }
 
       this.activePortableRuntime = await this.createPortableRuntimeDescriptor(validation.runtimeRoot);
-      this.distributionMode = 'steam';
+      const activeRuntime = this.toRuntimeDescriptor(this.activePortableRuntime);
+      this.distributionState = resolveDistributionModeState({
+        metadata: metadataResult.metadata,
+        hasBundledRuntime: true,
+        isWindowsStoreRuntime: isWindowsStorePackage,
+        activeRuntime,
+      });
       await this.hybridDownloadCoordinator.stopSharingActivity();
       log.info('[VersionManager] Portable version payload detected successfully:', {
         bundleRoot: portableSelection.bundleRoot,
@@ -296,26 +332,49 @@ export class VersionManager {
         selectionSource: portableSelection.selectionSource,
         versionId: this.activePortableRuntime.id,
         version: this.activePortableRuntime.version,
+        fusionMode: this.distributionState.fusionMode,
+        steamMode: this.distributionState.steamMode,
+        winStoreMode: this.distributionState.winStoreMode,
       });
 
-      return {
-        mode: this.distributionMode,
-        activeRuntime: this.toRuntimeDescriptor(this.activePortableRuntime),
-      };
+      return this.getDistributionModeState();
     } catch (error) {
-      this.distributionMode = 'normal';
       this.activePortableRuntime = null;
+      this.distributionState = resolveDistributionModeState({
+        metadata: metadataResult.metadata,
+        hasBundledRuntime: false,
+        isWindowsStoreRuntime: isWindowsStorePackage,
+      });
       log.error('[VersionManager] Portable version detection failed, falling back to normal mode:', error);
-      return { mode: this.distributionMode, activeRuntime: null };
+      return this.getDistributionModeState();
     }
   }
 
   getDistributionMode(): DistributionMode {
-    return this.distributionMode;
+    return this.distributionState.mode;
+  }
+
+  getDistributionModeState(): DistributionModeState {
+    return {
+      ...this.distributionState,
+      activeRuntime: this.distributionState.activeRuntime
+        ? { ...this.distributionState.activeRuntime }
+        : null,
+      metadata: this.distributionState.metadata
+        ? {
+            ...this.distributionState.metadata,
+            extensions: { ...this.distributionState.metadata.extensions },
+          }
+        : null,
+    };
+  }
+
+  isFusionMode(): boolean {
+    return this.distributionState.fusionMode;
   }
 
   isPortableVersionMode(): boolean {
-    return this.distributionMode === 'steam';
+    return this.isFusionMode();
   }
 
   getActivePortableRuntime(): InstalledVersion | null {
@@ -385,7 +444,7 @@ export class VersionManager {
   }
 
   private ensureMutableVersionManagementAllowed(): void {
-    if (this.isPortableVersionMode()) {
+    if (this.isFusionMode()) {
       throw new DistributionModeError();
     }
   }
@@ -530,7 +589,7 @@ export class VersionManager {
   async updateSharingAccelerationSettings(
     settings: SharingAccelerationSettingsInput & { enabled: boolean }
   ): Promise<SharingAccelerationSettings> {
-    if (this.isPortableVersionMode()) {
+    if (this.isFusionMode()) {
       await this.hybridDownloadCoordinator.stopSharingActivity();
       return this.getSharingAccelerationSettings();
     }
@@ -543,7 +602,7 @@ export class VersionManager {
   }
 
   async recordOnboardingSharingAccelerationChoice(enabled: boolean): Promise<SharingAccelerationSettings> {
-    if (this.isPortableVersionMode()) {
+    if (this.isFusionMode()) {
       await this.hybridDownloadCoordinator.stopSharingActivity();
       return this.getSharingAccelerationSettings();
     }
@@ -556,7 +615,7 @@ export class VersionManager {
   }
 
   private toEffectiveSharingAccelerationSettings(settings: SharingAccelerationSettings): SharingAccelerationSettings {
-    if (!this.isPortableVersionMode()) {
+    if (!this.isFusionMode()) {
       return settings;
     }
 
@@ -590,7 +649,7 @@ export class VersionManager {
    * Filters versions based on the current operating system
    */
   async listVersions(): Promise<Version[]> {
-    if (this.isPortableVersionMode()) {
+    if (this.isFusionMode()) {
       log.info('[VersionManager] Portable version mode active, available source versions are hidden');
       return [];
     }
@@ -993,7 +1052,7 @@ export class VersionManager {
         onProgress,
         {
           settings: effectiveSharingAccelerationSettings,
-          distributionMode: this.getDistributionMode(),
+          distributionState: this.getDistributionModeState(),
         },
       );
       const fileSize = (await fs.stat(cachePath)).size;
