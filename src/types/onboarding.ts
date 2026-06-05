@@ -8,6 +8,7 @@ import type {
   DependencyManagementSnapshot,
   DependencyReadinessSummary,
 } from './dependency-management.js';
+import type { DistributionModeState } from './distribution-mode.js';
 
 /**
  * Onboarding step enumeration
@@ -217,6 +218,7 @@ export interface ScriptOutput {
 export interface OnboardingState {
   isActive: boolean;
   mode: OnboardingMode;
+  distributionState: DistributionModeState;
   runtimeProvisioned: boolean;
   currentStep: OnboardingStep;
   isSkipped: boolean;

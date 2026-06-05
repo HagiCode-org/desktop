@@ -19,6 +19,8 @@ export interface RuntimeDataPathSettingsSnapshot {
   effectiveRootPath: string;
   environmentOverrideActive: boolean;
   environmentOverrideRoot: string | null;
+  lockedByRuntime: boolean;
+  readOnlyReason?: string;
 }
 
 export interface RuntimeDataPathSaveResult {
