@@ -23,10 +23,10 @@ describe('debug options settings renderer wiring', () => {
     assert.match(settingsPageSource, /<DebugOptionsSettings \/>/);
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\s*\.getSettings\(\)/);
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\.setSettings\(\{/);
-    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.usePsfForManagedServer\.label/);
-    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.runtime\.windowsStore/);
-    assert.match(debugOptionsSettingsSource, /const controlDisabled = !settings \|\| isSaving \|\| !settings\.windowsStoreRuntime;/);
-    assert.match(debugOptionsSettingsSource, /const hasPendingChanges = settings \? usePsfForManagedServer !== settings\.usePsfForManagedServer : false;/);
+    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.useIgnoreScriptsForManagedNpm\.label/);
+    assert.match(debugOptionsSettingsSource, /const npmControlDisabled = !settings \|\| isSaving;/);
+    assert.match(debugOptionsSettingsSource, /const hasPendingChanges = settings/);
+    assert.match(debugOptionsSettingsSource, /useIgnoreScriptsForManagedNpm !== settings\.useIgnoreScriptsForManagedNpm/);
   });
 
   it('adds localized debug options labels and feedback copy', async () => {
@@ -36,8 +36,8 @@ describe('debug options settings renderer wiring', () => {
     ]);
 
     assert.match(enPagesSource, /debugOptions: Debug Options/);
-    assert.match(enPagesSource, /label: Use PSF for managed server/);
+    assert.match(enPagesSource, /label: npm uses `--ignore-scripts`/);
     assert.match(zhPagesSource, /debugOptions: 调试选项/);
-    assert.match(zhPagesSource, /label: 受管 server 使用 PSF/);
+    assert.match(zhPagesSource, /label: npm 使用 `--ignore-scripts`/);
   });
 });

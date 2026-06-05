@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -23,7 +22,7 @@ function getDebugOptionsBridge(): DebugOptionsBridge {
 export function DebugOptionsSettings() {
   const { t } = useTranslation('pages');
   const [settings, setSettings] = useState<DebugOptionsSettingsSnapshot | null>(null);
-  const [usePsfForManagedServer, setUsePsfForManagedServer] = useState(false);
+  const [useIgnoreScriptsForManagedNpm, setUseIgnoreScriptsForManagedNpm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSaveResult, setLastSaveResult] = useState<DebugOptionsSaveResult | null>(null);
@@ -36,7 +35,7 @@ export function DebugOptionsSettings() {
       .then((snapshot) => {
         if (!disposed) {
           setSettings(snapshot);
-          setUsePsfForManagedServer(snapshot.usePsfForManagedServer);
+          setUseIgnoreScriptsForManagedNpm(snapshot.useIgnoreScriptsForManagedNpm);
           setError(null);
         }
       })
@@ -60,16 +59,14 @@ export function DebugOptionsSettings() {
     setError(null);
     try {
       const result = await getDebugOptionsBridge().setSettings({
-        usePsfForManagedServer,
+        useIgnoreScriptsForManagedNpm,
       });
       setSettings(result.settings);
-      setUsePsfForManagedServer(result.settings.usePsfForManagedServer);
+      setUseIgnoreScriptsForManagedNpm(result.settings.useIgnoreScriptsForManagedNpm);
       setLastSaveResult(result);
 
       if (result.status === 'unchanged') {
         toast.success(t('settings.debugOptions.messages.unchanged'));
-      } else if (result.status === 'saved' && result.restartCompleted) {
-        toast.success(t('settings.debugOptions.messages.restartSuccess'));
       } else if (result.status === 'saved') {
         toast.success(t('settings.debugOptions.messages.saveSuccess'));
       } else {
@@ -92,11 +89,13 @@ export function DebugOptionsSettings() {
 
     setError(null);
     setLastSaveResult(null);
-    setUsePsfForManagedServer(settings.usePsfForManagedServer);
+    setUseIgnoreScriptsForManagedNpm(settings.useIgnoreScriptsForManagedNpm);
   };
 
-  const controlDisabled = !settings || isSaving || !settings.windowsStoreRuntime;
-  const hasPendingChanges = settings ? usePsfForManagedServer !== settings.usePsfForManagedServer : false;
+  const npmControlDisabled = !settings || isSaving;
+  const hasPendingChanges = settings
+    ? useIgnoreScriptsForManagedNpm !== settings.useIgnoreScriptsForManagedNpm
+    : false;
 
   return (
     <Card className="max-w-3xl">
@@ -108,54 +107,30 @@ export function DebugOptionsSettings() {
         <CardDescription>{t('settings.debugOptions.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={settings?.windowsStoreRuntime ? 'default' : 'secondary'}>
-            {settings?.windowsStoreRuntime
-              ? t('settings.debugOptions.runtime.windowsStore')
-              : t('settings.debugOptions.runtime.standard')}
-          </Badge>
-          {settings?.managedServerLauncherPath ? (
-            <Badge variant="secondary">{t('settings.debugOptions.runtime.launcherReady')}</Badge>
-          ) : null}
-        </div>
-
-        <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-          <p>
-            {t('settings.debugOptions.launcherPath', {
-              path: settings?.managedServerLauncherPath ?? '—',
-            })}
-          </p>
-          <p>{t('settings.debugOptions.runtimeHint')}</p>
-        </div>
-
         <div className="rounded-xl border border-border bg-muted/20 p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <h3 className="font-medium text-foreground">
-                {t('settings.debugOptions.usePsfForManagedServer.label')}
+                {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {t('settings.debugOptions.usePsfForManagedServer.description')}
+                {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.description')}
               </p>
             </div>
             <Switch
-              checked={usePsfForManagedServer}
-              onCheckedChange={setUsePsfForManagedServer}
-              disabled={controlDisabled}
+              checked={useIgnoreScriptsForManagedNpm}
+              onCheckedChange={setUseIgnoreScriptsForManagedNpm}
+              disabled={npmControlDisabled}
             />
           </div>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
           <p>{t('settings.debugOptions.notes.scope')}</p>
-          <p className="mt-1">
-            {settings?.windowsStoreRuntime
-              ? t('settings.debugOptions.notes.restart')
-              : t('settings.debugOptions.notes.unavailable')}
-          </p>
+          <p className="mt-1">{t('settings.debugOptions.notes.npm')}</p>
         </div>
 
-        {lastSaveResult && lastSaveResult.status === 'saved' && !lastSaveResult.restartCompleted ? (
+        {lastSaveResult && lastSaveResult.status === 'saved' ? (
           <p className="text-sm text-muted-foreground">
             {t('settings.debugOptions.messages.saveSuccess')}
           </p>
@@ -171,7 +146,7 @@ export function DebugOptionsSettings() {
           <Button type="button" variant="outline" onClick={handleReset} disabled={isSaving || !hasPendingChanges}>
             {t('settings.debugOptions.actions.cancel')}
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={controlDisabled || !hasPendingChanges}>
+          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !settings || !hasPendingChanges}>
             {isSaving ? t('settings.debugOptions.actions.saving') : t('settings.debugOptions.actions.save')}
           </Button>
         </div>
