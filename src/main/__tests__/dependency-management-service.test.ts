@@ -80,6 +80,10 @@ describe('dependency management service contract', () => {
     assert.match(source, /Starting managed package sync/);
     assert.match(source, /npm command exited with code/);
     assert.match(source, /!isExpectedMissingPackageInspectionResult\(command, args, result\)/);
+    assert.match(source, /private applyManagedNpmDebugOptionsEnv\(env: NodeJS\.ProcessEnv\): void \{/);
+    assert.match(source, /configManager\.getDebugOptionsSettings\(\)/);
+    assert.match(source, /env\.npm_config_ignore_scripts = 'true';/);
+    assert.match(source, /env\.NPM_CONFIG_IGNORE_SCRIPTS = 'true';/);
     assert.doesNotMatch(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
     assert.doesNotMatch(source, /Applying Windows Store npm install override/);
     assert.doesNotMatch(source, /--ignore-scripts/);

@@ -28,8 +28,6 @@ describe('hagiscript desktop manifest builder', () => {
       server: {
         servicePayloadPath: '/tmp/hagicode-active/lib/PCode.Web.dll',
         serviceWorkingDirectory: '/tmp/hagicode-active/lib',
-        startScript: '/opt/HagiCode/PsfLauncher64.exe',
-        launcherArgs: ['--hagicode-managed-server-launcher'],
         serviceEnv: {
           ASPNETCORE_URLS: 'http://127.0.0.1:36556',
         },
@@ -80,10 +78,6 @@ describe('hagiscript desktop manifest builder', () => {
       (serverComponent.pm2 as { nameIdentifierEnv?: string }).nameIdentifierEnv,
       DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
     );
-    assert.deepEqual(
-      (serverComponent.pm2 as { args?: string[] }).args,
-      ['--hagicode-managed-server-launcher'],
-    );
     assert.equal(
       (serverComponent.pm2 as { env?: Record<string, string> }).env?.[DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV],
       undefined,
@@ -95,10 +89,6 @@ describe('hagiscript desktop manifest builder', () => {
     assert.equal(
       (serverComponent.releasedService as { activeVersion?: string }).activeVersion,
       'hagicode-0.1.0-linux-x64-nort',
-    );
-    assert.equal(
-      (serverComponent.releasedService as { startScript?: string }).startScript,
-      '/opt/HagiCode/PsfLauncher64.exe',
     );
     assert.deepEqual(
       Object.keys((manifest as { npmSync?: { packages: Record<string, unknown> } }).npmSync?.packages ?? {}),
