@@ -27,8 +27,11 @@ describe('runtime data path settings renderer wiring', () => {
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.warnings\.restart/);
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.paths\.effectiveRoot/);
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.messages\.restartSuccess/);
-    assert.match(runtimeDataSettingsSource, /const controlDisabled = !settings \|\| isSaving;/);
+    assert.match(runtimeDataSettingsSource, /const isLocked = settings\?\.lockedByRuntime \?\? false;/);
+    assert.match(runtimeDataSettingsSource, /const controlDisabled = !settings \|\| isSaving \|\| isLocked;/);
     assert.match(runtimeDataSettingsSource, /const hasPendingChanges = settings \? selectedPreset !== settings\.configuredPreset : false;/);
+    assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.lockedByRuntime/);
+    assert.match(runtimeDataSettingsSource, /settings\.readOnlyReason/);
   });
 
   it('adds localized runtime data path labels, warnings, and feedback copy', async () => {
