@@ -41,7 +41,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /private async verifySdkNodeRuntime\(/);
     assert.match(source, /verifyRuntime: \(runtimePath, options\) => this\.verifySdkNodeRuntime\(runtimePath, activationPolicy, environment, options\)/);
     assert.match(source, /if \(!isJavaScriptCommandPath\(command\)\) \{/);
-    assert.match(source, /args: \[command, \.\.\.rewrittenArgs\]/);
+    assert.match(source, /args: \[command, \.\.\.args\]/);
     assert.match(source, /detectInstalledPackageFromInventory/);
     assert.match(source, /parseInstalledPackageInventoryEntry/);
     assert.match(source, /if \(!environment\.npmGlobalPrefix \|\| !this\.existsSync\(environment\.npmGlobalPrefix\)\) \{/);
@@ -74,17 +74,17 @@ describe('dependency management service contract', () => {
     assert.match(source, /applyRuntimeManagedPackageOverride/);
   });
 
-  it('keeps sync failure diagnostics and Windows Store npm install overrides in the main service', async () => {
+  it('keeps sync failure diagnostics without forcing Windows Store npm install overrides', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /Starting managed package sync/);
     assert.match(source, /npm command exited with code/);
     assert.match(source, /!isExpectedMissingPackageInspectionResult\(command, args, result\)/);
-    assert.match(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
-    assert.match(source, /Applying Windows Store npm install override/);
-    assert.match(source, /--ignore-scripts/);
-    assert.match(source, /const installIndex = args\.findIndex\(\(value\) => value === 'install'\)/);
-    assert.match(source, /const rewrittenArgs = this\.rewriteNpmInstallArgsForWindowsStore\(args\);/);
+    assert.doesNotMatch(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
+    assert.doesNotMatch(source, /Applying Windows Store npm install override/);
+    assert.doesNotMatch(source, /--ignore-scripts/);
+    assert.doesNotMatch(source, /const installIndex = args\.findIndex\(\(value\) => value === 'install'\)/);
+    assert.doesNotMatch(source, /const rewrittenArgs = this\.rewriteNpmInstallArgsForWindowsStore\(args\);/);
     assert.match(source, /const execution = this\.resolveSdkNpmCommandExecution\(command, args, activationPolicy, environment\);/);
     assert.match(source, /return isWindowsStoreRuntime\(\{/);
     assert.match(source, /processWindowsStore: Boolean\(\(process as NodeJS\.Process & \{ windowsStore\?: boolean \}\)\.windowsStore\)/);

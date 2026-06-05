@@ -30,25 +30,32 @@ describe('portable version renderer integration', () => {
     assert.match(source, /navigationItems\.filter\(\(item\) => item\.id !== 'version'\)/);
     assert.match(source, /t\('sidebar\.desktopVersion'\)/);
     assert.match(source, /t\('sidebar\.webVersion'\)/);
+    assert.match(source, /t\('sidebar\.windowsStoreVersion'\)/);
   });
 
-  it('shows both desktop and web version fields in the portable sidebar footer', async () => {
+  it('shows desktop, web, and optional windows store version fields in the portable sidebar footer', async () => {
     const source = await fs.readFile(sidebarPath, 'utf-8');
 
+    assert.match(source, /const \[versionInfo, setVersionInfo\] = useState<DesktopVersionInfoPayload \| null>\(null\);/);
+    assert.match(source, /window\.electronAPI\.getVersionInfo\(\)/);
     assert.match(source, /const \[webVersion, setWebVersion\] = useState<string \| null>\(null\);/);
     assert.match(source, /window\.electronAPI\.getWebServiceVersion\(\)/);
     assert.match(source, /isPortableMode \? \(/);
     assert.match(source, /t\('sidebar\.desktopVersion'\)/);
     assert.match(source, /t\('sidebar\.webVersion'\)/);
+    assert.match(source, /t\('sidebar\.windowsStoreVersion'\)/);
+    assert.match(source, /\{windowsStoreVersion \? \(/);
   });
 
-  it('keeps the web version row visible with a deterministic fallback when the lookup is unresolved', async () => {
+  it('keeps the web version row visible and hides the windows store row when it is unresolved', async () => {
     const source = await fs.readFile(sidebarPath, 'utf-8');
 
     assert.match(source, /setWebVersion\('unknown'\)/);
     assert.match(source, /const resolvedWebVersion = webVersion && webVersion !== 'unknown'/);
     assert.match(source, /t\('sidebar\.unknownVersion'\)/);
+    assert.match(source, /const windowsStoreVersion = versionInfo\?\.windowsStoreVersion \?\? null;/);
     assert.match(source, /<p className="text-xs text-foreground break-all">\s*\{resolvedWebVersion\}\s*<\/p>/);
+    assert.doesNotMatch(source, /windowsStoreVersionUnavailable/);
   });
 
   it('replaces mutable version controls with a portable mode notice when forced open', async () => {

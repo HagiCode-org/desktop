@@ -385,6 +385,8 @@ describe('main-process entrypoint contract', () => {
     const source = await fs.readFile(bootstrapPath, 'utf8');
 
     assert.match(source, /parseNonInteractiveCommand\(process\.argv\)/);
+    assert.match(source, /isManagedServerLauncherInvocation\(process\.argv\)/);
+    assert.match(source, /runManagedServerLauncherBootstrap\(\)/);
     assert.match(source, /runNonInteractiveBootstrap\(\)/);
     assert.match(source, /await import\('\.\/main\.js'\)/);
   });
