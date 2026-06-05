@@ -24,7 +24,7 @@ type VersionUpdateManagerEventMap = {
 
 type VersionUpdateManagerLike = Pick<
   VersionManager,
-  'getActiveVersion' | 'getCurrentSourceConfig' | 'getDistributionMode' | 'isPortableVersionMode' | 'listVersions' | 'predownloadVersion'
+  'getActiveVersion' | 'getCurrentSourceConfig' | 'getDistributionModeState' | 'listVersions' | 'predownloadVersion'
 >;
 
 type StateManagerLike = Pick<StateManager, 'getVersionUpdateSnapshot' | 'setVersionUpdateSnapshot'>;
@@ -321,11 +321,13 @@ export class VersionUpdateManager {
   }
 
   private resolveManagedUpdatesDisabledReason(): Exclude<VersionUpdateDisabledReason, 'settings-disabled' | 'no-package-source' | null> | null {
-    if (this.versionManager.getDistributionMode() === 'steam') {
+    const distributionState = this.versionManager.getDistributionModeState();
+
+    if (distributionState.steamMode) {
       return 'steam-mode';
     }
 
-    if (this.versionManager.isPortableVersionMode()) {
+    if (distributionState.fusionMode) {
       return 'portable-mode';
     }
 

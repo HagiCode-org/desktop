@@ -171,7 +171,7 @@ export function registerVersionHandlers(deps: {
       return false;
     }
     try {
-      if (state.versionManager.isPortableVersionMode()) {
+      if (state.versionManager.isFusionMode()) {
         throw new DistributionModeError();
       }
 
@@ -200,7 +200,7 @@ export function registerVersionHandlers(deps: {
       return false;
     }
     try {
-      if (state.versionManager.isPortableVersionMode()) {
+      if (state.versionManager.isFusionMode()) {
         throw new DistributionModeError();
       }
 
@@ -351,7 +351,7 @@ export function registerVersionHandlers(deps: {
       };
     }
     try {
-      if (state.versionManager.isPortableVersionMode()) {
+      if (state.versionManager.isFusionMode()) {
         throw new DistributionModeError();
       }
 

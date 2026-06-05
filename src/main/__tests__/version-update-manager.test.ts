@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { after, afterEach, before, describe, it, mock } from 'node:test';
+import { afterEach, before, describe, it } from 'node:test';
 import type { VersionAutoUpdateSettings } from '../config.js';
 import type { Version } from '../version-manager.js';
 
@@ -11,25 +11,12 @@ type VersionUpdateSnapshot = import('../state-manager.js').VersionUpdateSnapshot
 let createEmptyVersionUpdateSnapshot: typeof import('../state-manager.js').createEmptyVersionUpdateSnapshot;
 let VersionUpdateManager: typeof import('../version-update-manager.js').VersionUpdateManager;
 let selectLatestCompatibleVersion: typeof import('../version-update-manager.js').selectLatestCompatibleVersion;
-let electronMock: { restore(): void } | undefined;
 
 const tempDirectories: string[] = [];
 
 before(async () => {
-  electronMock = mock.module('electron', {
-    namedExports: {
-      app: {
-        getPath: () => os.tmpdir(),
-      },
-    },
-  });
-
   ({ createEmptyVersionUpdateSnapshot } = await import('../state-manager.js'));
   ({ VersionUpdateManager, selectLatestCompatibleVersion } = await import('../version-update-manager.js'));
-});
-
-after(() => {
-  electronMock?.restore();
 });
 
 afterEach(async () => {
@@ -77,6 +64,17 @@ function createVersion(version: string): Version {
   };
 }
 
+function createDistributionState(mode: 'normal' | 'steam' | 'win-store') {
+  return {
+    mode,
+    fusionMode: mode !== 'normal',
+    steamMode: mode === 'steam',
+    winStoreMode: mode === 'win-store',
+    activeRuntime: null,
+    metadata: null,
+  };
+}
+
 describe('version update manager', () => {
   it('selects the newest compatible version above the current active version', () => {
     const selected = selectLatestCompatibleVersion([
@@ -104,8 +102,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
-        getDistributionMode: () => 'steam',
-        isPortableVersionMode: () => true,
+        getDistributionModeState: () => createDistributionState('steam'),
         listVersions: async () => {
           listCalls += 1;
           return [];
@@ -145,8 +142,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
-        getDistributionMode: () => 'normal',
-        isPortableVersionMode: () => false,
+        getDistributionModeState: () => createDistributionState('normal'),
         listVersions: async () => [createVersion('1.1.0')],
         predownloadVersion: async () => {
           predownloadCalls += 1;
@@ -187,8 +183,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
-        getDistributionMode: () => 'normal',
-        isPortableVersionMode: () => false,
+        getDistributionModeState: () => createDistributionState('normal'),
         listVersions: async () => {
           listCalls += 1;
           return [createVersion('1.1.0')];
@@ -263,8 +258,7 @@ describe('version update manager', () => {
           platform: 'linux-x64',
         }) as any,
         getCurrentSourceConfig: () => ({ id: 'source-1' }) as any,
-        getDistributionMode: () => 'normal',
-        isPortableVersionMode: () => false,
+        getDistributionModeState: () => createDistributionState('normal'),
         listVersions: async () => [createVersion('1.0.3')],
         predownloadVersion: async () => ({
           success: true,
