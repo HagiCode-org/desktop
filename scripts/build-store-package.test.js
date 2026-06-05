@@ -38,6 +38,7 @@ test('createStoreBuildMetadata records Node preparation as internal by default f
     buildMode: 'desktop-store-build-dry-run',
     desktopSourceRef: 'refs/heads/main',
     desktopVersion: '0.1.0',
+    windowsStoreVersion: 'v0.1.0',
     effectiveRuntimeInjectionPath: '/tmp/runtime',
     overlayConfigPath: '/tmp/forge.store-config.json',
     packageVersion: '1.0.0.0',
@@ -75,4 +76,5 @@ test('createStoreBuildMetadata records Node preparation as internal by default f
     consumer: 'windows-store',
     dependencyManagementMode: 'internal',
   });
+  assert.equal(metadata.windowsStoreVersion, 'v0.1.0');
 });

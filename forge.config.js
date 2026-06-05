@@ -16,6 +16,22 @@ import { injectPsfIntoPackagedOutputs } from './scripts/psf-support.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+const packageWindowsStoreVersion = String(
+  packageJson.hagicodeDesktop?.windowsStoreVersion || ''
+).trim();
+const configuredWindowsStoreVersion = String(
+  process.env.HAGICODE_WINDOWS_STORE_VERSION || packageWindowsStoreVersion
+).trim();
+const hagicodeDesktopMetadata = configuredWindowsStoreVersion
+  ? {
+      ...(typeof packageJson.hagicodeDesktop === 'object' && packageJson.hagicodeDesktop
+        ? packageJson.hagicodeDesktop
+        : {}),
+      windowsStoreVersion: configuredWindowsStoreVersion,
+    }
+  : (typeof packageJson.hagicodeDesktop === 'object' && packageJson.hagicodeDesktop
+      ? packageJson.hagicodeDesktop
+      : undefined);
 const productName = packageJson.productName || packageJson.name;
 const appId = 'com.newbe36524.hagicode';
 const iconBasePath = path.join(__dirname, 'resources', 'icon');
@@ -93,6 +109,7 @@ export default {
   packagerConfig: {
     asar: true,
     prune: true,
+    ...(hagicodeDesktopMetadata ? { extraMetadata: { hagicodeDesktop: hagicodeDesktopMetadata } } : {}),
     appBundleId: appId,
     appCategoryType: 'public.app-category.utilities',
     executableName: productName,

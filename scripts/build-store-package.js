@@ -101,6 +101,18 @@ function sanitizeArtifactNameSegment(value) {
     .replace(/-{2,}/g, '-');
 }
 
+function resolveWindowsStoreVersion(packageJson) {
+  const packageWindowsStoreVersion = typeof packageJson?.hagicodeDesktop?.windowsStoreVersion === 'string'
+    ? packageJson.hagicodeDesktop.windowsStoreVersion.trim()
+    : '';
+  const envWindowsStoreVersion = String(process.env.HAGICODE_WINDOWS_STORE_VERSION || '').trim();
+  if (envWindowsStoreVersion) {
+    return envWindowsStoreVersion;
+  }
+
+  return packageWindowsStoreVersion || null;
+}
+
 function resolveWindowsArch(platformId) {
   const normalizedPlatformId = String(platformId || '').trim().toLowerCase();
   if (normalizedPlatformId.endsWith('arm64')) {
@@ -207,7 +219,7 @@ async function withInjectedPayload(serverPayloadPath, runtimeInjectionPath, call
   }
 }
 
-async function createSyntheticStorePackage({ artifactPath, runtimeInjectionPath, storeConfig, desktopVersion }) {
+async function createSyntheticStorePackage({ artifactPath, runtimeInjectionPath, storeConfig, desktopVersion, windowsStoreVersion }) {
   const zip = new AdmZip();
   const resolvedRuntimeInjectionPath = path.resolve(runtimeInjectionPath);
 
@@ -221,6 +233,7 @@ async function createSyntheticStorePackage({ artifactPath, runtimeInjectionPath,
       JSON.stringify(
         {
           desktopVersion,
+          windowsStoreVersion,
           packageIdentity: storeConfig.packageIdentity,
           msix: storeConfig.msix,
         },
@@ -240,6 +253,7 @@ export function createStoreBuildMetadata({
   buildMode,
   desktopSourceRef,
   desktopVersion,
+  windowsStoreVersion,
   effectiveRuntimeInjectionPath,
   overlayConfigPath,
   packageVersion,
@@ -258,6 +272,7 @@ export function createStoreBuildMetadata({
     platform: platformId,
     buildMode,
     desktopVersion,
+    windowsStoreVersion,
     desktopSourceRef,
     storePackageVersion: packageVersion,
     storeConfigPath,
@@ -300,7 +315,9 @@ export async function buildStorePackage(rawOptions = {}) {
   const { storeConfig, storeConfigPath } = await loadStorePackageConfig(options.storeConfigPath);
   const packageJson = JSON.parse(await fsp.readFile(path.join(projectRoot, 'package.json'), 'utf8'));
   const scripts = packageJson.scripts ?? {};
-  const buildVersion = toWindowsPackageVersion(packageJson.version);
+  const windowsStoreVersion = resolveWindowsStoreVersion(packageJson);
+  const buildVersionSource = windowsStoreVersion || packageJson.version;
+  const buildVersion = toWindowsPackageVersion(buildVersionSource);
   const overlayConfig = await writeStoreForgeConfigOverlay({
     storeConfigPath,
     outputPath: options.overlayOutputPath,
@@ -352,6 +369,7 @@ export async function buildStorePackage(rawOptions = {}) {
         runtimeInjectionPath,
         storeConfig,
         desktopVersion: packageJson.version,
+        windowsStoreVersion,
       });
 
       const syntheticMetadata = createStoreBuildMetadata({
@@ -359,6 +377,7 @@ export async function buildStorePackage(rawOptions = {}) {
         buildMode: 'desktop-store-build-dry-run',
         desktopSourceRef,
         desktopVersion: packageJson.version,
+        windowsStoreVersion,
         effectiveRuntimeInjectionPath: runtimeInjectionPath,
         overlayConfigPath: overlayConfig.outputPath,
         packageVersion: buildVersion,
@@ -427,6 +446,7 @@ export async function buildStorePackage(rawOptions = {}) {
       buildMode: 'desktop-store-build-command',
       desktopSourceRef,
       desktopVersion: packageJson.version,
+      windowsStoreVersion,
       effectiveRuntimeInjectionPath: runtimeInjectionPath,
       overlayConfigPath: overlayConfig.outputPath,
       packageVersion: buildVersion,
