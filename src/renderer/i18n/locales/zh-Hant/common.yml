@@ -497,7 +497,7 @@ system:
       failed: 背景更新失敗：{{error}}
       settings-disabled: 你已關閉背景自動下載，可在設定頁重新啟用。
       portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
-      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
       no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
     progress:
       confirming: 等待確認

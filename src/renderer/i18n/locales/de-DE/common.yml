@@ -497,7 +497,7 @@ system:
       failed: 'Hintergrundaktualisierung fehlgeschlagen: {{error}}'
       settings-disabled: Hintergrund-Predownloads sind deaktiviert. Sie können sie in den Einstellungen wieder aktivieren.
       portable-mode: Im tragbaren Modus werden Hintergrundaktualisierungen übersprungen und die aktuelle Laufzeit bleibt schreibgeschützt.
-      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
       no-package-source: Es ist keine aktive Paketquelle konfiguriert, daher können Hintergrundaktualisierungen nicht gestartet werden.
     progress:
       confirming: Waiting for confirmation

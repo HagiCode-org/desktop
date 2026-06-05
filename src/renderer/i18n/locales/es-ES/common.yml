@@ -497,7 +497,7 @@ system:
       failed: 'Error en la actualización en segundo plano: {{error}}'
       settings-disabled: Las descargas previas en segundo plano están deshabilitadas. Puedes volver a activarlos en Configuración.
       portable-mode: El modo portátil omite las actualizaciones en segundo plano y mantiene el tiempo de ejecución actual como de solo lectura.
-      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
       no-package-source: No hay ninguna fuente de paquete activa configurada, por lo que las actualizaciones en segundo plano no pueden iniciarse.
     progress:
       confirming: Waiting for confirmation

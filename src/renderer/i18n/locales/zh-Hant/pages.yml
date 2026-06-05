@@ -63,9 +63,9 @@ settings:
   updates:
     title: 後台更新
     description: 管理自動檢查、背景預下載與已驗證歸檔保留策略。
-    steamMode:
-      title: Updates are managed by Steam
-      description: This build runs in Steam mode, so in-app background predownloads and auto-update controls are hidden here. Steam is responsible for delivering updates for this runtime.
+    managedInstall:
+      title: Auto-updates are disabled
+      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Windows Store or Steam.
     enabled:
       label: 啟用背景自動預先下載
       description: 偵測到相容新版本時，先在背景下載歸檔並保持目前執行版本不變。

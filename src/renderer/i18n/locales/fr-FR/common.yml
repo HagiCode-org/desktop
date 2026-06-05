@@ -497,7 +497,7 @@ system:
       failed: 'Échec de la mise à jour en arrière-plan: {{error}}'
       settings-disabled: Les prétéléchargements en arrière-plan sont désactivés. Vous pouvez les réactiver dans Paramètres.
       portable-mode: Le mode portable ignore les mises à jour en arrière-plan et conserve le runtime actuel en lecture seule.
-      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
       no-package-source: Aucune source de package actif n'est configurée, les mises à jour en arrière-plan ne peuvent donc pas démarrer.
     progress:
       confirming: Waiting for confirmation

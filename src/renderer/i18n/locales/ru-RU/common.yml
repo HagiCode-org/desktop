@@ -497,7 +497,7 @@ system:
       failed: 'Фоновое обновление не удалось: {{error}}'
       settings-disabled: Фоновая предварительная загрузка отключена. Вы можете снова включить их в настройках.
       portable-mode: Портативный режим пропускает фоновые обновления и сохраняет текущую среду выполнения только для чтения.
-      steam-mode: Steam mode skips app-managed background updates because Steam delivers runtime updates for this build.
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
       no-package-source: Активный источник пакета не настроен, поэтому запуск фоновых обновлений невозможен.
     progress:
       confirming: Waiting for confirmation
