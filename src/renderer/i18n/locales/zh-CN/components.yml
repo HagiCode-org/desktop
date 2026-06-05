@@ -143,6 +143,41 @@ webServiceStatus:
     copySuccess: 启动日志已复制
     copyError: 复制日志失败
     copyEmpty: 没有可复制的日志内容
+  startupProgress:
+    title: 正在启动服务
+    description: Desktop 正在按顺序检查版本、验证依赖项，并等待本地 Hagicode 服务完成启动。
+    successTitle: 服务已就绪
+    successDescription: 本地服务已经通过启动检查并可供访问。
+    failureTitle: 启动未完成
+    failureDescription: Desktop 在启动过程中遇到了问题。您可以查看失败日志，或关闭弹窗后继续排查。
+    currentStepLabel: 当前进度
+    waitingHint: 启动过程可能持续几十秒，Desktop 会持续更新当前位置和执行情况。
+    states:
+      pending: 等待中
+      active: 进行中
+      completed: 已完成
+      failed: 失败
+    actions:
+      close: 关闭
+      openFailureLog: 查看失败日志
+    meta:
+      version: 当前版本
+      port: 端口
+      accessUrl: 访问地址
+    stepLabels:
+      checkingVersion: 检查版本
+      checkingDependencies: 检查依赖项
+      spawning: 启动服务进程
+      waitingListening: 等待端口监听
+      healthCheck: 执行健康检查
+      running: 启动完成
+    stepDescriptions:
+      checkingVersion: 确认当前活动版本、入口点和启动元数据可以用于本次启动。
+      checkingDependencies: 检查 Desktop 托管的必需依赖项是否已经满足启动条件。
+      spawning: 通过 Desktop 托管运行时创建服务进程并注入运行环境。
+      waitingListening: 等待服务真正监听配置端口，并让本地访问地址可用。
+      healthCheck: 对已启动的服务执行健康检查，确认 Web API 已经准备完成。
+      running: 所有检查已通过，现在可以打开本地 Hagicode 服务。
   toast:
     noActiveVersion: 当前没有可打开 Web 日志的活动版本
     openLogsSuccess: 已打开活动版本的 Web 日志文件夹
