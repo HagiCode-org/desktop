@@ -12,7 +12,7 @@ import type {
 } from '../types/onboarding.js';
 import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
-import type { DistributionMode } from '../types/distribution-mode.js';
+import type { DistributionMode, DistributionModeState } from '../types/distribution-mode.js';
 import type { DesktopVersionInfoPayload } from '../types/version-info.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
@@ -200,6 +200,7 @@ interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
   getDistributionMode: () => Promise<DistributionMode>;
+  getDistributionModeState: () => Promise<DistributionModeState>;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
@@ -411,6 +412,7 @@ const electronAPI: ElectronAPI = {
   getAppVersion: () => ipcRenderer.invoke('app-version'),
   getVersionInfo: () => ipcRenderer.invoke('version-info'),
   getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
+  getDistributionModeState: () => ipcRenderer.invoke('get-distribution-mode-state'),
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
