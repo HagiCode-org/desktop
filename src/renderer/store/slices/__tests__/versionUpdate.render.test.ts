@@ -43,7 +43,7 @@ describe('version update renderer integration', () => {
 
     assert.match(sliceSource, /Keep this selector snapshot-focused; homepage portable-mode suppression happens in SystemManagementView\./);
     assert.match(dashboardSource, /selectVisibleVersionUpdateReminder/);
-    assert.match(dashboardSource, /const shouldShowVersionUpdateReminder = distributionMode !== 'steam' && Boolean\(versionUpdateReminder\);/);
+    assert.match(dashboardSource, /const shouldShowVersionUpdateReminder = !distributionState\.fusionMode && Boolean\(versionUpdateReminder\);/);
     assert.match(dashboardSource, /shouldShowVersionUpdateReminder \? \(/);
     assert.match(dashboardSource, /system\.updateReminder\.states/);
     assert.match(dashboardSource, /handleOpenVersionManagement/);
@@ -51,13 +51,13 @@ describe('version update renderer integration', () => {
     assert.match(dashboardSource, /navigateTo\('settings'\)/);
   });
 
-  it('replaces editable background update controls with a Steam-managed notice in Steam mode', async () => {
+  it('replaces editable background update controls with a managed-install notice for fusion distributions', async () => {
     const source = await fs.readFile(settingsPath, 'utf8');
 
-    assert.match(source, /distributionMode: DistributionMode/);
-    assert.match(source, /const isSteamMode = distributionMode === 'steam';/);
-    assert.match(source, /if \(isSteamMode\)/);
-    assert.match(source, /settings\.updates\.steamMode\.title/);
-    assert.match(source, /settings\.updates\.steamMode\.description/);
+    assert.match(source, /distributionState: DistributionModeState/);
+    assert.match(source, /const isManagedMode = distributionState\.fusionMode;/);
+    assert.match(source, /if \(isManagedMode\)/);
+    assert.match(source, /settings\.updates\.managedInstall\.title/);
+    assert.match(source, /settings\.updates\.managedInstall\.description/);
   });
 });
