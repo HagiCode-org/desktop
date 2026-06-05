@@ -13,6 +13,10 @@ import {
   collectBootstrapRuntimeEnvOverrides,
   formatHagicodeEnvDiagnostics,
 } from './startup/hagicode-env.js';
+import {
+  isManagedServerLauncherInvocation,
+  runManagedServerLauncher,
+} from './managed-server-launcher.js';
 
 const { app } = electron;
 
@@ -112,6 +116,20 @@ async function runNonInteractiveBootstrap(): Promise<void> {
   });
 }
 
+async function runManagedServerLauncherBootstrap(): Promise<void> {
+  try {
+    const exitCode = await runManagedServerLauncher();
+    app.exit(exitCode);
+    process.exit(exitCode);
+  } catch (error) {
+    const message = error instanceof Error ? error.stack || error.message : String(error);
+    console.error('[Bootstrap] Managed server launcher execution failed');
+    console.error(message);
+    app.exit(1);
+    process.exit(1);
+  }
+}
+
 async function runGuiBootstrap(): Promise<void> {
   if (nonInteractiveIntegrationMode) {
     writeBootstrapDiagnostic();
@@ -124,7 +142,9 @@ async function runGuiBootstrap(): Promise<void> {
   await import('./main.js');
 }
 
-if (nonInteractiveParseResult.handled) {
+if (isManagedServerLauncherInvocation(process.argv)) {
+  await runManagedServerLauncherBootstrap();
+} else if (nonInteractiveParseResult.handled) {
   await runNonInteractiveBootstrap();
 } else {
   await runGuiBootstrap();

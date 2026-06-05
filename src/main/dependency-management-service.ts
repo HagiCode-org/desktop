@@ -1043,19 +1043,17 @@ export class DependencyManagementService {
     activationPolicy: BundledNodeRuntimePolicyDecision,
     environment: DependencyManagementEnvironmentStatus,
   ): { command: string; args: string[] } {
-    const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
-
     if (!isJavaScriptCommandPath(command)) {
       return {
         command,
-        args: rewrittenArgs,
+        args: [...args],
       };
     }
 
     const nodeExecutablePath = environment.node.executablePath ?? this.getNodeExecutablePath(activationPolicy);
     return {
       command: nodeExecutablePath,
-      args: [command, ...rewrittenArgs],
+      args: [command, ...args],
     };
   }
 
@@ -1135,30 +1133,6 @@ export class DependencyManagementService {
         error instanceof Error ? error.message : String(error),
       );
     }
-  }
-
-  private rewriteNpmInstallArgsForWindowsStore(args: readonly string[]): string[] {
-    if (!this.isWindowsStoreExecutionEnvironment()) {
-      return [...args];
-    }
-
-    const installIndex = args.findIndex((value) => value === 'install');
-    if (installIndex === -1) {
-      return [...args];
-    }
-
-    if (args.includes('--ignore-scripts')) {
-      return [...args];
-    }
-
-    log.info('[DependencyManagementService] Applying Windows Store npm install override', {
-      override: '--ignore-scripts',
-      args,
-    });
-
-    const rewrittenArgs = [...args];
-    rewrittenArgs.splice(installIndex + 1, 0, '--ignore-scripts');
-    return rewrittenArgs;
   }
 
   private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
@@ -1492,19 +1466,18 @@ export class DependencyManagementService {
     activationPolicy: BundledNodeRuntimePolicyDecision,
     args: string[],
   ): { command: string; args: string[]; executablePath: string } {
-    const rewrittenArgs = this.rewriteNpmInstallArgsForWindowsStore(args);
     const executablePath = this.getNpmExecutablePath(activationPolicy);
     if (activationPolicy.enabled) {
       return {
         command: this.getNodeExecutablePath(activationPolicy),
-        args: [executablePath, ...rewrittenArgs],
+        args: [executablePath, ...args],
         executablePath,
       };
     }
 
     return {
       command: executablePath,
-      args: rewrittenArgs,
+      args: [...args],
       executablePath,
     };
   }
