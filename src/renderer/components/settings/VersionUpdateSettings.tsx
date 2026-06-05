@@ -18,30 +18,30 @@ import {
   selectVersionUpdateSaving,
   selectVersionUpdateSettingsLoading,
 } from '@/store/slices/versionUpdateSlice';
-import type { DistributionMode } from '../../../types/distribution-mode';
+import type { DistributionModeState } from '../../../types/distribution-mode';
 
 interface VersionUpdateSettingsProps {
-  distributionMode: DistributionMode;
+  distributionState: DistributionModeState;
 }
 
-export function VersionUpdateSettings({ distributionMode }: VersionUpdateSettingsProps) {
+export function VersionUpdateSettings({ distributionState }: VersionUpdateSettingsProps) {
   const { t } = useTranslation('pages');
   const dispatch = useDispatch<AppDispatch>();
   const settings = useSelector((state: RootState) => selectVersionAutoUpdateSettings(state));
   const isLoading = useSelector((state: RootState) => selectVersionUpdateSettingsLoading(state));
   const isSaving = useSelector((state: RootState) => selectVersionUpdateSaving(state));
   const saveError = useSelector((state: RootState) => selectVersionUpdateSaveError(state));
-  const isSteamMode = distributionMode === 'steam';
+  const isManagedMode = distributionState.fusionMode;
   const [localEnabled, setLocalEnabled] = useState(settings.enabled);
   const [localRetainedArchiveCount, setLocalRetainedArchiveCount] = useState(String(settings.retainedArchiveCount));
 
   useEffect(() => {
-    if (isSteamMode) {
+    if (isManagedMode) {
       return;
     }
 
     void dispatch(fetchVersionAutoUpdateSettings());
-  }, [dispatch, isSteamMode]);
+  }, [dispatch, isManagedMode]);
 
   useEffect(() => {
     setLocalEnabled(settings.enabled);
@@ -81,7 +81,7 @@ export function VersionUpdateSettings({ distributionMode }: VersionUpdateSetting
     setLocalRetainedArchiveCount(String(settings.retainedArchiveCount));
   };
 
-  if (isSteamMode) {
+  if (isManagedMode) {
     return (
       <Card className="max-w-3xl">
         <CardHeader>
@@ -93,8 +93,8 @@ export function VersionUpdateSettings({ distributionMode }: VersionUpdateSetting
         </CardHeader>
         <CardContent>
           <div className="rounded-xl border border-border bg-muted/30 p-4">
-            <h3 className="font-medium text-foreground">{t('settings.updates.steamMode.title')}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{t('settings.updates.steamMode.description')}</p>
+            <h3 className="font-medium text-foreground">{t('settings.updates.managedInstall.title')}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{t('settings.updates.managedInstall.description')}</p>
           </div>
         </CardContent>
       </Card>

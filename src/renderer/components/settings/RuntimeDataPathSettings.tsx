@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, HardDrive } from 'lucide-react';
+import { AlertTriangle, HardDrive, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -101,7 +101,8 @@ export function RuntimeDataPathSettings() {
   };
 
   const configuredPreset = settings?.configuredPreset ?? selectedPreset;
-  const controlDisabled = !settings || isSaving;
+  const isLocked = settings?.lockedByRuntime ?? false;
+  const controlDisabled = !settings || isSaving || isLocked;
   const hasPendingChanges = settings ? selectedPreset !== settings.configuredPreset : false;
   const activePreset = settings?.effectivePreset ?? configuredPreset;
   const activePresetLabel = t(`settings.runtimeDataPath.options.${activePreset}.label`);
@@ -123,6 +124,12 @@ export function RuntimeDataPathSettings() {
           {settings?.environmentOverrideActive ? (
             <Badge variant="secondary">
               {t('settings.runtimeDataPath.environmentOverrideBadge')}
+            </Badge>
+          ) : null}
+          {isLocked ? (
+            <Badge variant="secondary">
+              <Lock className="mr-1 h-3 w-3" />
+              {t('settings.runtimeDataPath.lockedByRuntime')}
             </Badge>
           ) : null}
         </div>
@@ -158,15 +165,21 @@ export function RuntimeDataPathSettings() {
           ))}
         </RadioGroup>
 
-        <div className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="space-y-1">
-              <p>{t('settings.runtimeDataPath.warnings.noMigration')}</p>
-              <p>{t('settings.runtimeDataPath.warnings.restart')}</p>
+        {isLocked && settings?.readOnlyReason ? (
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+            {settings.readOnlyReason}
+          </div>
+        ) : (
+          <div className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-1">
+                <p>{t('settings.runtimeDataPath.warnings.noMigration')}</p>
+                <p>{t('settings.runtimeDataPath.warnings.restart')}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {lastSaveResult && lastSaveResult.status === 'restarted' && !lastSaveResult.restartCompleted ? (
           <p className="text-sm text-muted-foreground">
@@ -180,14 +193,16 @@ export function RuntimeDataPathSettings() {
           </p>
         ) : null}
 
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={handleReset} disabled={controlDisabled || !hasPendingChanges}>
-            {t('settings.runtimeDataPath.actions.cancel')}
-          </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={controlDisabled || !hasPendingChanges}>
-            {isSaving ? t('settings.runtimeDataPath.actions.saving') : t('settings.runtimeDataPath.actions.save')}
-          </Button>
-        </div>
+        {!isLocked ? (
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={handleReset} disabled={controlDisabled || !hasPendingChanges}>
+              {t('settings.runtimeDataPath.actions.cancel')}
+            </Button>
+            <Button type="button" onClick={() => void handleSave()} disabled={controlDisabled || !hasPendingChanges}>
+              {isSaving ? t('settings.runtimeDataPath.actions.saving') : t('settings.runtimeDataPath.actions.save')}
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

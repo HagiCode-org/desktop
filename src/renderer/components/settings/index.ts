@@ -1,4 +1,4 @@
-import type { DistributionMode } from '../../../types/distribution-mode';
+import type { DistributionModeState } from '../../../types/distribution-mode';
 
 export { DependencyManagementModeSettings } from './DependencyManagementModeSettings';
 export { DebugOptionsSettings } from './DebugOptionsSettings';
@@ -8,6 +8,6 @@ export { RuntimeDataPathSettings } from './RuntimeDataPathSettings';
 export { SharingAccelerationSettings } from './SharingAccelerationSettings';
 export { VersionUpdateSettings } from './VersionUpdateSettings';
 
-export function shouldShowSharingAccelerationSettings(distributionMode: DistributionMode): boolean {
-  return distributionMode !== 'steam';
+export function shouldShowSharingAccelerationSettings(distributionState: Pick<DistributionModeState, 'fusionMode'>): boolean {
+  return !distributionState.fusionMode;
 }

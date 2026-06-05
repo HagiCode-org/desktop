@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import type { DistributionMode } from '../../../types/distribution-mode';
+import { createDefaultDistributionModeState, type DistributionModeState } from '../../../types/distribution-mode';
 
 interface SharingAccelerationFormState {
   enabled: boolean;
@@ -23,15 +23,15 @@ const defaultState: SharingAccelerationFormState = {
 };
 
 interface SharingAccelerationSettingsProps {
-  distributionMode?: DistributionMode;
+  distributionState?: DistributionModeState;
 }
 
-export function SharingAccelerationSettings({ distributionMode = 'normal' }: SharingAccelerationSettingsProps) {
+export function SharingAccelerationSettings({ distributionState = createDefaultDistributionModeState() }: SharingAccelerationSettingsProps) {
   const { t } = useTranslation('pages');
   const [state, setState] = useState<SharingAccelerationFormState>(defaultState);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const isPortableMode = distributionMode === 'steam';
+  const isPortableMode = distributionState.fusionMode;
 
   useEffect(() => {
     void (async () => {
