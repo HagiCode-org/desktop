@@ -4,6 +4,25 @@ settings:
     onboarding: Integração
     sharingAcceleration: Baixar e compartilhar
     updates: Atualizações em segundo plano
+    dependencyManagement: Dependency Management
+    debugOptions: Debug Options
+    runtimeData: Runtime Data
+  dependencyManagementMode:
+    title: Dependency management mode
+    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
+    effectiveMode: 'Effective mode: {{mode}}'
+    options:
+      internal:
+        label: Internal (Desktop-managed)
+        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+      external:
+        label: External (read-only)
+        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+    messages:
+      saveSuccess: Dependency management mode saved
+      saveFailed: Failed to save dependency management mode
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
   smartConfig:
     title: Orientação imediata do Smart Config
     description: Revise o prompt resolvido, copie-o em qualquer AI CLI compatível e conclua o fluxo de configuração manualmente.
@@ -66,6 +85,55 @@ settings:
     notes:
       snapshotModel: O lembrete do painel é acionado por um instantâneo persistente do processo principal, de modo que o último estado de atualização conhecido sobrevive às recargas do Desktop.
       retentionPolicy: A limpeza de retenção remove apenas arquivos e metadados armazenados em cache. Os diretórios de versões instaladas permanecem intactos.
+  runtimeDataPath:
+    title: Runtime data storage path
+    description: Choose where Desktop stores runtime-managed files, PM2 state, logs, and other runtime data.
+    activePreset: 'Current effective preset: {{preset}}'
+    environmentOverrideBadge: Environment override active
+    paths:
+      configuredRoot: 'Configured root: {{path}}'
+      effectiveRoot: 'Effective root: {{path}}'
+      environmentOverride: 'Environment override root: {{path}}'
+    options:
+      userData-runtime-data:
+        label: userData/runtime-data (default)
+        description: Stores runtime data under the Desktop Electron userData directory. Best for the default single-machine setup.
+      home-runtime-data:
+        label: ~/.hagicode/runtime-data
+        description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
+    warnings:
+      noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
+      restart: Saving a changed preset stops and starts managed PM2 services so the new runtime data root takes effect immediately.
+    actions:
+      save: Save Changes
+      saving: Saving...
+      cancel: Cancel
+    messages:
+      unchanged: Runtime data path is already using this preset
+      saveSuccess: Runtime data path saved
+      restartSuccess: Runtime data path saved and managed services restarted
+      saveFailed: Failed to save runtime data path
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
+  debugOptions:
+    title: Debug Options
+    description: Control Desktop-managed npm behaviors for diagnosing package installation issues.
+    useIgnoreScriptsForManagedNpm:
+      label: npm uses `--ignore-scripts`
+      description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+    notes:
+      scope: This setting only affects future Desktop-managed npm installs and sync operations.
+      npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
+    actions:
+      save: Save Changes
+      saving: Saving...
+      cancel: Cancel
+    messages:
+      unchanged: Debug options are already using these values
+      saveSuccess: Debug options saved
+      saveFailed: Failed to save debug options
+    errors:
+      saveErrorDetail: 'Save failed: {{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop. Construído com ❤️ usando Electron + React + TypeScript.
   testBuild: Aplicativo de teste – build de desenvolvimento

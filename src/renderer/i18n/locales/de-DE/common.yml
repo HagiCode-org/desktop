@@ -148,19 +148,35 @@ dependencyManagement:
   description: Verwalten Sie erforderliche und optionale Befehlszeilenabhängigkeiten für die Startbereitschaft von HagiCode und überprüfen Sie die eingebettete Node/npm-Umgebung von Desktop.
   loading: Abhängigkeitsstatus wird gelesen...
   unavailable: Nicht verfügbar
+  mode:
+    title: Aktiver Abhängigkeitsmodus
+    description: Die Abhängigkeitsseite zeigt immer den aktuell wirksamen Modus und ob Paketänderungen erlaubt sind.
+    active: 'Modus: {{mode}}'
+    readOnlyTitle: Nur-Lese-Modus
+    externalReadOnly: Desktop prüft derzeit eine extern verwaltete globale Node/npm-Umgebung. Installations-, Deinstallations- und Batch-Synchronisierungsvorgänge sind nicht verfügbar.
+    options:
+      internal:
+        label: Intern
+      external:
+        label: Extern
   environment:
     title: Knotenumgebung
     description: Desktop verwendet seine eigene Node/npm-Laufzeit für verwaltete CLI-Pakete.
     managedNotice: Lesen Sie die FAQ für aktuelle Details zur Node/npm-Laufzeit von Desktop, zur PATH-Isolation, zu Paketspeicherorten und zur Fehlerbehebung.
+    externalNotice: Desktop prüft derzeit die globale Node/npm-Umgebung, die auf diesem System bereits vorhanden ist.
     rationaleTitle: Desktop-verwaltete Node/npm-Umgebung
     faqLinkLabel: Häufig gestellte Fragen zur Knotenumgebung anzeigen
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Version
+    source: Umgebungsquelle
     toolchainRoot: Toolchain-Stamm
     nodeRuntimeRoot: Laufzeitstamm des gebündelten Knotens
     nodeMajorVersion: Knoten-Hauptpaketbaum
     globalPrefix: Globales Präfix
     globalModulesRoot: Stammverzeichnis globaler Module
+    sourceLabel:
+      desktop-managed: Von Desktop verwaltete Umgebung
+      externally-managed: Extern verwaltete globale Umgebung
     status:
       available: Verfügbar
       unavailable: Nicht verfügbar
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: Sparen
     enabledHelp: Zukünftige Synchronisierungs-/Installationsvorgänge werden den Registrierungsspiegel von npmmirror.com verwenden.
     disabledHelp: Kommende npm-Vorgänge verwenden das standardmäßige npm-Registrierungsverhalten.
+    readOnlyHelp: Spiegeleinstellungen haben keine Wirkung, solange sich das Abhängigkeitsmanagement im externen Nur-Lese-Modus befindet.
     saveFailed: Spiegeleinstellung konnte nicht gespeichert werden
   vendoredRuntime:
     title: Desktop-managed runtimes

@@ -226,6 +226,9 @@ dependencyPreparation:
   title: 準備依賴項
   description: 安裝 HagiCode Desktop 必要的命令列依賴項，並選擇至少一個用於編碼會話的 Agent CLI。
   loading: 正在檢查 Desktop 託管的依賴項...
+  skip:
+    title: 此步驟可以跳過
+    description: 您可以先繼續到下載步驟，暫時不安裝依賴。安裝操作會把所選套件加入 Desktop 託管的 Node/npm 環境，之後也可以在應用內再安裝。
   environment:
     title: Desktop 託管的 Node/npm 環境
     description: Desktop 會在自己的 Node/npm 環境中安裝並偵測託管 CLI 套件。路徑、套件管理和排障細節請閱讀 FAQ。

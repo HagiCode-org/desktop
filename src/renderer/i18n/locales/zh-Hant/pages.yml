@@ -4,6 +4,25 @@ settings:
     onboarding: 啟動精靈
     sharingAcceleration: 下載與分享加速
     updates: 後台更新
+    dependencyManagement: 依賴管理模式
+    debugOptions: 調試選項
+    runtimeData: 執行時資料
+  dependencyManagementMode:
+    title: 依賴管理模式
+    description: 選擇由 Desktop 自行管理 CLI 依賴，或僅唯讀檢查目前全域 Node/npm 環境。
+    effectiveMode: '目前生效模式：{{mode}}'
+    options:
+      internal:
+        label: 內部模式（Desktop 託管）
+        description: Desktop 使用內建 Node/npm 工具鏈，並允許安裝、解除安裝和批次同步操作。
+      external:
+        label: 外部模式（唯讀）
+        description: Desktop 僅檢查目前全域 Node/npm 環境，不改動套件，也不覆寫 npm 前綴路徑。
+    messages:
+      saveSuccess: 依賴管理模式已儲存
+      saveFailed: 儲存依賴管理模式失敗
+    errors:
+      saveErrorDetail: '儲存失敗：{{error}}'
   smartConfig:
     title: 智慧配置提示指引
     description: 查看 Desktop 解析出的提示詞，複製到任意支援的 AI CLI 中，並手動完成設定流程。
@@ -66,6 +85,55 @@ settings:
     notes:
       snapshotModel: 首頁提醒依賴主程序持久化快照，重新啟動 Desktop 後仍會恢復最近一次更新狀態。
       retentionPolicy: 保留策略只會清理快取歸檔文件，不會刪除已經安裝完成的版本目錄。
+  runtimeDataPath:
+    title: 執行時資料儲存路徑
+    description: 選擇 Desktop 執行時檔案、PM2 狀態、日誌和其他執行時資料的儲存根目錄。
+    activePreset: '目前生效預設：{{preset}}'
+    environmentOverrideBadge: 環境變數覆寫已啟用
+    paths:
+      configuredRoot: '設定目標路徑：{{path}}'
+      effectiveRoot: '目前生效路徑：{{path}}'
+      environmentOverride: '環境變數覆寫路徑：{{path}}'
+    options:
+      userData-runtime-data:
+        label: userData/runtime-data（預設）
+        description: 儲存到 Desktop 的 Electron userData 目錄下，適合預設單機安裝場景。
+      home-runtime-data:
+        label: ~/.hagicode/runtime-data
+        description: 儲存到目前使用者主目錄下，適合需要固定共用路徑的部署方式。
+    warnings:
+      noMigration: 切換此設定只會修改目標路徑，Desktop 不會自動遷移既有執行時資料。
+      restart: 儲存新的預設後，Desktop 會停止並重新啟動受管 PM2 服務，讓新的執行時資料根目錄立即生效。
+    actions:
+      save: 儲存變更
+      saving: 儲存中...
+      cancel: 取消
+    messages:
+      unchanged: 目前已在使用此執行時資料路徑預設
+      saveSuccess: 執行時資料路徑已儲存
+      restartSuccess: 執行時資料路徑已儲存，並已重新啟動受管 PM2 服務
+      saveFailed: 儲存執行時資料路徑失敗
+    errors:
+      saveErrorDetail: '儲存失敗：{{error}}'
+  debugOptions:
+    title: 調試選項
+    description: 控制 Desktop 託管 npm 行為中的調試選項，用於診斷套件安裝問題。
+    useIgnoreScriptsForManagedNpm:
+      label: npm 使用 `--ignore-scripts`
+      description: 讓 Desktop 託管的 npm 安裝與同步操作跳過 lifecycle scripts，便於排查 postinstall 等腳本導致的問題。
+    notes:
+      scope: 此設定只影響後續 Desktop 託管的 npm 安裝與同步操作。
+      npm: npm 開關只影響後續 Desktop 託管的 npm 安裝與同步操作，儲存後立即生效，不需要重新啟動受管服務。
+    actions:
+      save: 儲存變更
+      saving: 儲存中...
+      cancel: 取消
+    messages:
+      unchanged: 目前調試選項已經是這些值
+      saveSuccess: 調試選項已儲存
+      saveFailed: 儲存調試選項失敗
+    errors:
+      saveErrorDetail: '儲存失敗：{{error}}'
 footer:
   copyright: © 2026 Hagicode Desktop。使用 Electron + React + TypeScript 建造 ❤️
   testBuild: 測試應用程式 - 開發版本

@@ -148,19 +148,35 @@ dependencyManagement:
   description: Gérez les dépendances de ligne de commande obligatoires et facultatives pour la préparation au lancement HagiCode et inspectez l'environnement Node/npm intégré de Desktop.
   loading: Lecture du statut de dépendance...
   unavailable: Indisponible
+  mode:
+    title: Mode de dépendances actif
+    description: La page des dépendances affiche toujours le mode effectif actuel et si les modifications de paquets sont autorisées.
+    active: 'Mode : {{mode}}'
+    readOnlyTitle: Mode lecture seule
+    externalReadOnly: Desktop inspecte actuellement un environnement global Node/npm géré en externe. Les actions d'installation, de désinstallation et de synchronisation par lot ne sont pas disponibles.
+    options:
+      internal:
+        label: Interne
+      external:
+        label: Externe
   environment:
     title: Environnement de nœud
     description: Desktop utilise son propre environnement d'exécution Node/npm pour les packages CLI gérés.
     managedNotice: Lisez la FAQ pour plus de détails actuels sur le runtime Node/npm de Desktop, l'isolation PATH, les emplacements des packages et le dépannage.
+    externalNotice: Desktop inspecte actuellement l'environnement global Node/npm déjà présent sur ce système.
     rationaleTitle: Environnement Node/npm géré par ordinateur
     faqLinkLabel: Afficher la FAQ sur l'environnement de nœud
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Version
+    source: Source de l'environnement
     toolchainRoot: Racine de la chaîne d'outils
     nodeRuntimeRoot: Racine d'exécution du nœud groupé
     nodeMajorVersion: Arborescence des packages principaux du nœud
     globalPrefix: Préfixe global
     globalModulesRoot: Racine des modules globaux
+    sourceLabel:
+      desktop-managed: Environnement géré par Desktop
+      externally-managed: Environnement global géré en externe
     status:
       available: Disponible
       unavailable: Indisponible
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: Économiser
     enabledHelp: Les opérations de synchronisation/installation à venir utiliseront le miroir de registre npmmirror.com.
     disabledHelp: Les opérations npm à venir utiliseront le comportement de registre npm par défaut.
+    readOnlyHelp: Les paramètres de miroir n'ont aucun effet tant que la gestion des dépendances est en mode externe lecture seule.
     saveFailed: Échec de l'enregistrement des paramètres du miroir
   vendoredRuntime:
     title: Desktop-managed runtimes

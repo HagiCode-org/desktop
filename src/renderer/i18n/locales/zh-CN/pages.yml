@@ -117,28 +117,20 @@ settings:
       saveErrorDetail: 保存失败：{{error}}
   debugOptions:
     title: 调试选项
-    description: 控制 Desktop 托管启动链路中的实验性行为，用于诊断 Windows Store 与 MSIX 下的启动问题。
-    launcherPath: 受管 server 启动器路径：{{path}}
-    runtimeHint: 此开关只影响 Desktop 托管的 server 启动方式。
-    runtime:
-      windowsStore: 已检测到 Windows Store 运行时
-      standard: 标准桌面运行时
-      launcherReady: 已解析到启动器路径
-    usePsfForManagedServer:
-      label: 受管 server 使用 PSF
-      description: 在 Windows Store/MSIX 模式下，通过兼容 PSF 的启动器路径启动受管 server，而不是直接调用 dotnet。
+    description: 控制 Desktop 托管 npm 行为中的调试选项，用于诊断包安装问题。
+    useIgnoreScriptsForManagedNpm:
+      label: npm 使用 `--ignore-scripts`
+      description: 让 Desktop 托管的 npm 安装与同步操作跳过 lifecycle scripts，便于排查 postinstall 等脚本导致的问题。
     notes:
-      scope: 此设置只会改变 Desktop 通过 PM2 启动受管 server 的方式。
-      restart: 当受管服务当前正在运行时，保存新的值会立即触发一次重启。
-      unavailable: 当前运行时不在 Windows Store/MSIX 模式下，因此这里的开关保持只读。
+      scope: 此设置只影响后续 Desktop 托管的 npm 安装与同步操作。
+      npm: npm 开关只影响后续 Desktop 托管的 npm 安装与同步操作，保存后立即生效，不需要重启受管服务。
     actions:
       save: 保存更改
       saving: 保存中...
       cancel: 取消
     messages:
-      unchanged: 当前调试选项已经是这个值
+      unchanged: 当前调试选项已经是这些值
       saveSuccess: 调试选项已保存
-      restartSuccess: 调试选项已保存，并已重启受管服务
       saveFailed: 保存调试选项失败
     errors:
       saveErrorDetail: 保存失败：{{error}}

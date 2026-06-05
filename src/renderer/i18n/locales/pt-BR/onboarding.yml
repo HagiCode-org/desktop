@@ -226,6 +226,9 @@ dependencyPreparation:
   title: Preparar Dependências
   description: Instale as dependências de linha de comando exigidas pelo HagiCode Desktop e selecione pelo menos um Agente CLI para usar com sessões de codificação.
   loading: Verificando dependências gerenciadas pelo Desktop...
+  skip:
+    title: This step can be skipped
+    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
   environment:
     title: Ambiente Node/npm gerenciado por desktop
     description: O Desktop instala e verifica pacotes CLI gerenciados em seu próprio ambiente Node/npm. Leia o FAQ para obter detalhes sobre o caminho atual, o pacote e a solução de problemas.

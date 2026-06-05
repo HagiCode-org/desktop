@@ -226,6 +226,9 @@ dependencyPreparation:
   title: Abhängigkeiten vorbereiten
   description: Installieren Sie die für HagiCode Desktop erforderlichen Befehlszeilenabhängigkeiten und wählen Sie mindestens einen Agent CLI zur Verwendung mit Codierungssitzungen aus.
   loading: Vom Desktop verwaltete Abhängigkeiten werden überprüft...
+  skip:
+    title: This step can be skipped
+    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
   environment:
     title: Desktop-verwaltete Node/npm-Umgebung
     description: Desktop installiert und überprüft verwaltete CLI-Pakete in seiner eigenen Node/npm-Umgebung. Lesen Sie die FAQ für aktuelle Pfad-, Paket- und Fehlerbehebungsdetails.

@@ -226,6 +226,9 @@ dependencyPreparation:
   title: 依存関係の準備
   description: HagiCode Desktop に必要なコマンドラインの依存関係をインストールし、コーディング セッションで使用するエージェント CLI を少なくとも 1 つ選択します。
   loading: デスクトップ管理の依存関係を確認しています...
+  skip:
+    title: This step can be skipped
+    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
   environment:
     title: デスクトップ管理型ノード/npm環境
     description: デスクトップは、管理対象 CLI パッケージを独自の Node/npm 環境にインストールし、チェックします。現在のパス、パッケージ、トラブルシューティングの詳細については、FAQ を参照してください。

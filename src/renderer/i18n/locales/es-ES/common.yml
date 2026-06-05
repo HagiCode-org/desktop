@@ -148,19 +148,35 @@ dependencyManagement:
   description: Administre las dependencias de línea de comandos requeridas y opcionales para la preparación del lanzamiento de HagiCode e inspeccione el entorno integrado Node/npm del escritorio.
   loading: Leyendo el estado de dependencia...
   unavailable: No disponible
+  mode:
+    title: Modo de dependencias activo
+    description: La página de dependencias siempre muestra el modo efectivo actual y si se permiten cambios en los paquetes.
+    active: 'Modo: {{mode}}'
+    readOnlyTitle: Modo de solo lectura
+    externalReadOnly: Desktop está inspeccionando un entorno global de Node/npm gestionado externamente. Las acciones de instalar, desinstalar y sincronización por lotes no están disponibles.
+    options:
+      internal:
+        label: Interno
+      external:
+        label: Externo
   environment:
     title: Entorno de nodo
     description: Desktop utiliza su propio tiempo de ejecución Node/npm para los paquetes CLI administrados.
     managedNotice: Lea las preguntas frecuentes para obtener detalles actuales sobre el tiempo de ejecución Node/npm de Desktop, el aislamiento de PATH, las ubicaciones de los paquetes y la solución de problemas.
+    externalNotice: Desktop está inspeccionando actualmente el entorno global de Node/npm que ya existe en este sistema.
     rationaleTitle: Nodo/entorno npm administrado por escritorio
     faqLinkLabel: Ver preguntas frecuentes sobre el entorno de nodo
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Versión
+    source: Origen del entorno
     toolchainRoot: Raíz de la cadena de herramientas
     nodeRuntimeRoot: Raíz del tiempo de ejecución del nodo incluido
     nodeMajorVersion: Árbol de paquetes principales del nodo
     globalPrefix: Prefijo global
     globalModulesRoot: Raíz de módulos globales
+    sourceLabel:
+      desktop-managed: Entorno gestionado por Desktop
+      externally-managed: Entorno global gestionado externamente
     status:
       available: Disponible
       unavailable: No disponible
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: Ahorro
     enabledHelp: Las próximas operaciones de sincronización/instalación utilizarán el espejo de registro npmmirror.com.
     disabledHelp: Las próximas operaciones npm utilizarán el comportamiento de registro predeterminado npm.
+    readOnlyHelp: La configuración del espejo no tiene efecto mientras la gestión de dependencias esté en modo externo de solo lectura.
     saveFailed: No se pudo guardar la configuración del espejo
   vendoredRuntime:
     title: Desktop-managed runtimes

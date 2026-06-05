@@ -148,19 +148,35 @@ dependencyManagement:
   description: Управляйте необходимыми и дополнительными зависимостями командной строки для готовности к запуску HagiCode и проверяйте встроенную среду Node/npm рабочего стола.
   loading: Чтение статуса зависимости...
   unavailable: Недоступно
+  mode:
+    title: Текущий режим зависимостей
+    description: Страница зависимостей всегда показывает текущий фактический режим и то, разрешены ли изменения пакетов.
+    active: 'Режим: {{mode}}'
+    readOnlyTitle: Режим только для чтения
+    externalReadOnly: Desktop проверяет внешне управляемую глобальную среду Node/npm. Действия установки, удаления и пакетной синхронизации недоступны.
+    options:
+      internal:
+        label: Внутренний
+      external:
+        label: Внешний
   environment:
     title: Среда узла
     description: Desktop использует собственную среду выполнения Node/npm для управляемых пакетов CLI.
     managedNotice: Прочтите FAQ, чтобы получить актуальную информацию о среде выполнения Desktop Node/npm, изоляции PATH, расположении пакетов и устранении неполадок.
+    externalNotice: Desktop сейчас проверяет глобальную среду Node/npm, которая уже существует в этой системе.
     rationaleTitle: Управляемая настольным компьютером среда Node/npm
     faqLinkLabel: Посмотреть часто задаваемые вопросы по среде Node
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Версия
+    source: Источник среды
     toolchainRoot: Корень цепочки инструментов
     nodeRuntimeRoot: Корень среды выполнения связанного узла
     nodeMajorVersion: Основное дерево пакетов узла
     globalPrefix: Глобальный префикс
     globalModulesRoot: Глобальный корень модулей
+    sourceLabel:
+      desktop-managed: Среда, управляемая Desktop
+      externally-managed: Внешне управляемая глобальная среда
     status:
       available: Доступно
       unavailable: Недоступно
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: Сохранение
     enabledHelp: Предстоящие операции синхронизации/установки будут использовать зеркало реестра npmmirror.com.
     disabledHelp: Предстоящие операции npm будут использовать поведение реестра по умолчанию npm.
+    readOnlyHelp: Настройки зеркала не влияют на поведение, пока управление зависимостями находится во внешнем режиме только для чтения.
     saveFailed: Не удалось сохранить настройки зеркала.
   vendoredRuntime:
     title: Desktop-managed runtimes

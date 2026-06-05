@@ -226,6 +226,9 @@ dependencyPreparation:
   title: 종속성 준비
   description: HagiCode Desktop에 필요한 명령줄 종속성을 설치하고 코딩 세션에 사용할 하나 이상의 에이전트 CLI를 선택합니다.
   loading: 데스크톱 관리 종속성을 확인하는 중...
+  skip:
+    title: This step can be skipped
+    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
   environment:
     title: 데스크탑 관리 노드/npm 환경
     description: Desktop은 자체 Node/0 환경에서 관리되는 패키지를 설치하고 확인합니다. 현재 경로, 패키지 및 문제 해결 세부 정보는 FAQ를 읽어보세요.

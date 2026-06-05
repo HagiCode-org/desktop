@@ -148,19 +148,35 @@ dependencyManagement:
   description: 管理 HagiCode 啟動所需與可選的命令列依賴，並查看 Desktop 內建 Node/npm 環境。
   loading: 正在讀取依賴項狀態...
   unavailable: 不可用
+  mode:
+    title: 目前依賴管理模式
+    description: 依賴管理頁會顯示目前實際生效的模式，以及是否允許變更套件。
+    active: 模式：{{mode}}
+    readOnlyTitle: 唯讀模式
+    externalReadOnly: Desktop 目前只是在檢查外部託管的全域 Node/npm 環境，無法執行安裝、解除安裝或批次同步。
+    options:
+      internal:
+        label: 內部模式
+      external:
+        label: 外部模式
   environment:
     title: Node 環境
     description: Desktop 使用自己的 Node/npm 執行階段來承載託管 CLI 套件。
     managedNotice: 關於 Desktop 的 Node/npm 運行時、PATH 隔離、包位置和排障方式，請閱讀 FAQ 中的最新說明。
+    externalNotice: Desktop 目前正在檢查這台機器上已經存在的全域 Node/npm 環境。
     rationaleTitle: Desktop 託管的 Node/npm 環境
     faqLinkLabel: 查看 Node 環境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     version: 版本
+    source: 環境來源
     toolchainRoot: 工具鏈目錄
     nodeRuntimeRoot: 內建 Node 執行階段目錄
     nodeMajorVersion: Node 主版本包目錄
     globalPrefix: 全域安裝目錄
     globalModulesRoot: 全域模組目錄
+    sourceLabel:
+      desktop-managed: Desktop 託管環境
+      externally-managed: 外部託管的全域環境
     status:
       available: 可用
       unavailable: 不可用
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: 儲存中
     enabledHelp: 後續同步/安裝操作將使用 npmmirror.com registry 映像。
     disabledHelp: 後續 npm 操作將使用 npm 預設 registry 行為。
+    readOnlyHelp: 目前處於外部唯讀模式，鏡像設定不會影響依賴管理行為。
     saveFailed: 儲存鏡像設定失敗
   vendoredRuntime:
     title: Desktop-managed runtimes

@@ -148,19 +148,35 @@ dependencyManagement:
   description: HagiCode の起動準備のために必須およびオプションのコマンドライン依存関係を管理し、デスクトップの組み込み Node/npm 環境を検査します。
   loading: 依存関係ステータスを読み取り中...
   unavailable: 利用不可
+  mode:
+    title: 現在の依存関係モード
+    description: 依存関係ページでは、現在有効なモードとパッケージ変更が許可されているかどうかを常に表示します。
+    active: 'モード: {{mode}}'
+    readOnlyTitle: 読み取り専用モード
+    externalReadOnly: Desktop は外部で管理されているグローバル Node/npm 環境を確認しています。インストール、アンインストール、一括同期の操作は利用できません。
+    options:
+      internal:
+        label: 内部
+      external:
+        label: 外部
   environment:
     title: ノード環境
     description: Desktop は、管理対象 CLI パッケージに独自の Node/npm ランタイムを使用します。
     managedNotice: Desktop の Node/npm ランタイム、PATH 分離、パッケージの場所、トラブルシューティングに関する最新の詳細については、FAQ を参照してください。
+    externalNotice: Desktop は現在、このシステムに既に存在するグローバル Node/npm 環境を確認しています。
     rationaleTitle: デスクトップ管理型ノード/npm環境
     faqLinkLabel: ノード環境のよくある質問を見る
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: バージョン
+    source: 環境ソース
     toolchainRoot: ツールチェーンのルート
     nodeRuntimeRoot: バンドルされたノードのランタイム ルート
     nodeMajorVersion: ノードのメジャーパッケージツリー
     globalPrefix: グローバルプレフィックス
     globalModulesRoot: グローバルモジュールのルート
+    sourceLabel:
+      desktop-managed: Desktop 管理環境
+      externally-managed: 外部管理のグローバル環境
     status:
       available: 利用可能
       unavailable: 利用不可
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: 保存
     enabledHelp: 今後の同期/インストール操作では、npmmirror.com レジストリ ミラーが使用されます。
     disabledHelp: 今後の npm 操作では、デフォルトの npm レジストリ動作が使用されます。
+    readOnlyHelp: 依存関係管理が外部の読み取り専用モードの間は、ミラー設定は効果を持ちません。
     saveFailed: ミラー設定の保存に失敗しました
   vendoredRuntime:
     title: Desktop-managed runtimes

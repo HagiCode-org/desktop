@@ -148,19 +148,35 @@ dependencyManagement:
   description: 출시 준비를 위한 필수 및 선택적 명령줄 종속성을 관리하고 Desktop의 내장 Node/1 환경을 검사합니다.
   loading: 종속성 상태를 읽는 중...
   unavailable: 이용 불가
+  mode:
+    title: 현재 종속성 모드
+    description: 종속성 페이지에는 현재 실제로 적용 중인 모드와 패키지 변경 가능 여부가 항상 표시됩니다.
+    active: '모드: {{mode}}'
+    readOnlyTitle: 읽기 전용 모드
+    externalReadOnly: Desktop은 외부에서 관리되는 전역 Node/npm 환경을 검사하고 있습니다. 설치, 제거 및 일괄 동기화 작업은 사용할 수 없습니다.
+    options:
+      internal:
+        label: 내부
+      external:
+        label: 외부
   environment:
     title: 노드 환경
     description: Desktop은 관리되는 1개 패키지에 대해 자체 Node/00 런타임을 사용합니다.
     managedNotice: Desktop의 Node/npm 런타임, PATH 격리, 패키지 위치 및 문제 해결에 대한 최신 세부 정보를 보려면 FAQ를 읽어보세요.
+    externalNotice: Desktop은 현재 이 시스템에 이미 존재하는 전역 Node/npm 환경을 검사하고 있습니다.
     rationaleTitle: 데스크탑 관리 노드/npm 환경
     faqLinkLabel: 노드 환경 FAQ 보기
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: 버전
+    source: 환경 소스
     toolchainRoot: 툴체인 루트
     nodeRuntimeRoot: 번들 노드 런타임 루트
     nodeMajorVersion: 노드 주요 패키지 트리
     globalPrefix: 전역 접두사
     globalModulesRoot: 전역 모듈 루트
+    sourceLabel:
+      desktop-managed: Desktop 관리 환경
+      externally-managed: 외부 관리 전역 환경
     status:
       available: 가능
       unavailable: 이용 불가
@@ -175,6 +191,7 @@ dependencyManagement:
     saving: 저장 중
     enabledHelp: 향후 동기화/설치 작업에서는 npmmirror.com 레지스트리 미러를 사용합니다.
     disabledHelp: 다가오는 npm 작업은 기본 npm 레지스트리 동작을 사용합니다.
+    readOnlyHelp: 종속성 관리가 외부 읽기 전용 모드인 동안에는 미러 설정이 영향을 주지 않습니다.
     saveFailed: 미러 설정을 저장하지 못했습니다.
   vendoredRuntime:
     title: Desktop-managed runtimes
