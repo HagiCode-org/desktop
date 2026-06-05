@@ -42,8 +42,18 @@ npm run build:mac:arm64:zip
 - `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
-- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it loads `config/store-package.json`, accepts payload injection arguments, and emits machine-readable build metadata for downstream signing/publication
+- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it loads `config/store-package.json`, accepts payload injection arguments, and emits machine-readable build metadata for downstream signing/publication, including Desktop version, Windows Store version, and the normalized Store package version
 - platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
+
+## Version identity
+
+Store and portable builds can distinguish up to three version surfaces in the sidebar footer:
+
+- Desktop version: the packaged Desktop app version
+- Web version: the embedded Server/Web runtime version
+- Windows Store version: an optional additional version field injected by `win_store_packer` for Store-aligned packaging flows
+
+Desktop does not re-order or redefine its own app version because of Windows Store version support. `win_store_packer` injects the Windows Store version through `HAGICODE_WINDOWS_STORE_VERSION` and workspace package metadata, and Desktop only consumes that value for packaged metadata and optional UI display.
 
 ### Optional PSF injection for MSIX
 

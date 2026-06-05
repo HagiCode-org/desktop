@@ -141,6 +141,8 @@ Supported parameters:
 - `--platform-id`: record the workflow platform identity in metadata
 - `--dry-run`: emit a synthetic Store artifact without Windows packaging tools
 
+Release-facing Store runs can carry a Windows Store version injected by `win_store_packer`. Desktop resolves that value from `HAGICODE_WINDOWS_STORE_VERSION` or `package.json.hagicodeDesktop.windowsStoreVersion`, emits it in Store build metadata, and surfaces it in the sidebar footer beside the Desktop and Web versions only when the value exists, without changing Desktop's own version sequencing or meaning.
+
 Optional PSF injection for MSIX child-process containment uses environment flags rather than extra CLI switches:
 
 ```bash
@@ -158,7 +160,7 @@ The Store build writes:
 
 - a generated Store overlay config
 - one or more Store package artifacts
-- metadata that records the Store config source, Desktop source ref, payload source, effective injection path, and produced artifact paths
+- metadata that records the Store config source, Desktop source ref, Windows Store version, payload source, effective injection path, and produced artifact paths
 
 `win_store_packer` consumes that metadata directly during signing finalization and release publication. It should not re-derive Desktop packaging state independently.
 
