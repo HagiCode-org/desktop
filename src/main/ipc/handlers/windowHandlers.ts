@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { openHagicodeInAppWindow } from '../../hagicode-url.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from '../../clipboard-integration.js';
 import { resolveWindowIconPath } from '../../window-icon-path.js';
+import { getDesktopVersionInfo } from '../../version-info.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +64,10 @@ export function registerWindowHandlers(window: BrowserWindow | null): void {
   // Get version handler
   ipcMain.handle('app-version', () => {
     return app.getVersion();
+  });
+
+  ipcMain.handle('version-info', () => {
+    return getDesktopVersionInfo();
   });
 
   // Show window handler

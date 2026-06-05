@@ -56,6 +56,7 @@ import {
   registerLlmHandlers,
   registerSystemDiagnosticHandlers,
   registerDependencyManagementHandlers,
+  registerDebugOptionsHandlers,
   registerRuntimeDataPathHandlers,
   registerRssHandlers,
   registerViewHandlers,
@@ -67,6 +68,7 @@ import { createEmptyVersionUpdateSnapshot } from './state-manager.js';
 import type { InstallWebServicePackageOptions } from '../types/version-install.js';
 import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
+import { getDesktopVersionInfo } from './version-info.js';
 import { evaluateDependencyReadiness } from '../shared/npm-managed-packages.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
@@ -691,6 +693,10 @@ function markAboutPopupShown(shownAt: number): void {
 // IPC handlers
 ipcMain.handle('app-version', () => {
   return app.getVersion();
+});
+
+ipcMain.handle('version-info', () => {
+  return getDesktopVersionInfo();
 });
 
 ipcMain.handle('get-distribution-mode', () => {
@@ -2361,6 +2367,14 @@ app.whenReady().then(async () => {
     mainWindow,
   });
   log.info('[App] dependency management IPC handlers registered');
+  registerDebugOptionsHandlers({
+    configManager,
+    webServiceManager,
+    mainWindow,
+    setServerStatus,
+    setServiceUrl,
+  });
+  log.info('[App] debug options IPC handlers registered');
   registerRuntimeDataPathHandlers({
     configManager,
     pathManager,

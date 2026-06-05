@@ -13,6 +13,7 @@ import type {
 import { clipboardChannels } from '../types/clipboard.js';
 import type { PromptGuidanceResponse } from '../types/prompt-guidance.js';
 import type { DistributionMode } from '../types/distribution-mode.js';
+import type { DesktopVersionInfoPayload } from '../types/version-info.js';
 import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, VersionDownloadProgress } from '../types/sharing-acceleration.js';
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
@@ -35,6 +36,8 @@ import type {
 } from '../types/log-directory.js';
 import type { RuntimeDataPathBridge, RuntimeDataPathPreset } from '../types/runtime-data-path.js';
 import { runtimeDataPathChannels } from '../types/runtime-data-path.js';
+import type { DebugOptionsBridge, DebugOptionsSettings } from '../types/debug-options.js';
+import { debugOptionsChannels } from '../types/debug-options.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -195,6 +198,7 @@ interface ElectronAPI {
     openDesktopLogs: () => Promise<LogDirectoryOpenResult>;
   };
   getAppVersion: () => Promise<string>;
+  getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
   getDistributionMode: () => Promise<DistributionMode>;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
@@ -270,6 +274,7 @@ interface ElectronAPI {
   npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
   runtimeDataPath: RuntimeDataPathBridge;
+  debugOptions: DebugOptionsBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -378,6 +383,11 @@ const runtimeDataPathBridge: RuntimeDataPathBridge = {
   setPreset: (preset: RuntimeDataPathPreset) => ipcRenderer.invoke(runtimeDataPathChannels.set, preset),
 };
 
+const debugOptionsBridge: DebugOptionsBridge = {
+  getSettings: () => ipcRenderer.invoke(debugOptionsChannels.get),
+  setSettings: (settings: DebugOptionsSettings) => ipcRenderer.invoke(debugOptionsChannels.set, settings),
+};
+
 const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
   getMetadata: async (): Promise<HagiNodeRuntimeMetadata> => {
     const snapshot = await ipcRenderer.invoke(dependencyManagementChannels.snapshot);
@@ -399,6 +409,7 @@ const electronAPI: ElectronAPI = {
     openDesktopLogs: () => ipcRenderer.invoke('log-directory:open', 'desktop'),
   },
   getAppVersion: () => ipcRenderer.invoke('app-version'),
+  getVersionInfo: () => ipcRenderer.invoke('version-info'),
   getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
@@ -540,6 +551,7 @@ const electronAPI: ElectronAPI = {
   versionSetChannel: (channel) => ipcRenderer.invoke('version:setChannel', channel),
   logDirectory: logDirectoryBridge,
   runtimeDataPath: runtimeDataPathBridge,
+  debugOptions: debugOptionsBridge,
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
