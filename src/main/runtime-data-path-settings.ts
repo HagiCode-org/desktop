@@ -30,9 +30,11 @@ function createStartFailureMessage(result: StartResult): string {
 export function createRuntimeDataPathSettingsSnapshot(
   configManager: RuntimeDataConfigManager,
   pathManager: RuntimeDataPathManager,
+  options?: { isWindowsStore?: boolean },
 ): RuntimeDataPathSettingsSnapshot {
   const configuredPreset = configManager.getRuntimeDataPathPreset();
   const environmentOverrideRoot = resolveRuntimeDataRootOverridePath(process.env.HAGICODE_RUNTIME_DATA_HOME);
+  const isLocked = Boolean(options?.isWindowsStore);
   return {
     configuredPreset,
     effectivePreset: configuredPreset,
@@ -43,6 +45,10 @@ export function createRuntimeDataPathSettingsSnapshot(
     effectiveRootPath: pathManager.getRuntimeDataHome(),
     environmentOverrideActive: environmentOverrideRoot !== null,
     environmentOverrideRoot,
+    lockedByRuntime: isLocked,
+    readOnlyReason: isLocked
+      ? 'MSIX / Windows Store packaging locks the runtime data storage path to prevent configuration changes.'
+      : undefined,
   };
 }
 
@@ -51,7 +57,12 @@ export async function saveRuntimeDataPathPreset(options: {
   configManager: RuntimeDataConfigManager;
   pathManager: RuntimeDataPathManager;
   webServiceManager?: RuntimeDataWebServiceManager | null;
+  isWindowsStore?: boolean;
 }): Promise<RuntimeDataPathSaveResult> {
+  if (options.isWindowsStore) {
+    throw new Error('MSIX / Windows Store packaging locks the runtime data storage path to prevent configuration changes.');
+  }
+
   const previousPreset = options.configManager.getRuntimeDataPathPreset();
   const nextPreset = options.preset;
 

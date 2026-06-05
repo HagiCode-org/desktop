@@ -230,4 +230,49 @@ describe('runtime data path settings', () => {
       path.join('/tmp/electron-user-data', 'runtime-data'),
     );
   });
+
+  it('marks snapshot as locked when running in Windows Store mode', () => {
+    delete process.env.HAGICODE_RUNTIME_DATA_HOME;
+    const configManager = new MockConfigManager('userData-runtime-data');
+    const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
+
+    const snapshot = createRuntimeDataPathSettingsSnapshot(configManager, pathManager, {
+      isWindowsStore: true,
+    });
+
+    assert.equal(snapshot.lockedByRuntime, true);
+    assert.match(snapshot.readOnlyReason ?? '', /Windows Store/);
+  });
+
+  it('does not lock snapshot when not in Windows Store mode', () => {
+    delete process.env.HAGICODE_RUNTIME_DATA_HOME;
+    const configManager = new MockConfigManager('userData-runtime-data');
+    const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
+
+    const snapshot = createRuntimeDataPathSettingsSnapshot(configManager, pathManager);
+
+    assert.equal(snapshot.lockedByRuntime, false);
+    assert.equal(snapshot.readOnlyReason, undefined);
+  });
+
+  it('rejects save attempts when locked by Windows Store', async () => {
+    delete process.env.HAGICODE_RUNTIME_DATA_HOME;
+    const configManager = new MockConfigManager('userData-runtime-data');
+    const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
+
+    await assert.rejects(
+      saveRuntimeDataPathPreset({
+        preset: 'home-runtime-data',
+        configManager,
+        pathManager,
+        isWindowsStore: true,
+      }),
+      (error: Error) => {
+        assert.match(error.message, /Windows Store/);
+        return true;
+      },
+    );
+
+    assert.equal(configManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
+  });
 });

@@ -6,9 +6,21 @@ import type { PathManager } from '../../path-manager.js';
 import type { PCodeWebServiceManager } from '../../web-service-manager.js';
 import { createRuntimeDataPathSettingsSnapshot, saveRuntimeDataPathPreset } from '../../runtime-data-path-settings.js';
 import { runtimeDataPathChannels, type RuntimeDataPathPreset } from '../../../types/runtime-data-path.js';
+import { isWindowsStoreRuntime } from '../../windows-store-runtime.js';
 
-const { ipcMain } = electron;
+const { ipcMain, app } = electron;
 type WebServiceStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
+
+function detectWindowsStore(): boolean {
+  return isWindowsStoreRuntime({
+    platform: process.platform,
+    inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
+    processWindowsStore: Boolean((process as NodeJS.Process & { windowsStore?: boolean }).windowsStore),
+    execPath: process.execPath,
+    isPackaged: app.isPackaged,
+    defaultApp: (process as NodeJS.Process & { defaultApp?: boolean }).defaultApp,
+  });
+}
 
 interface RuntimeDataPathHandlerState {
   configManager: ConfigManager | null;
@@ -46,7 +58,9 @@ export function registerRuntimeDataPathHandlers(deps: {
       throw new Error('Runtime data path handlers are not initialized');
     }
 
-    return createRuntimeDataPathSettingsSnapshot(state.configManager, state.pathManager);
+    return createRuntimeDataPathSettingsSnapshot(state.configManager, state.pathManager, {
+      isWindowsStore: detectWindowsStore(),
+    });
   });
 
   ipcMain.handle(runtimeDataPathChannels.set, async (_event, preset: RuntimeDataPathPreset) => {
@@ -59,6 +73,7 @@ export function registerRuntimeDataPathHandlers(deps: {
       configManager: state.configManager,
       pathManager: state.pathManager,
       webServiceManager: state.webServiceManager,
+      isWindowsStore: detectWindowsStore(),
     });
 
     if (state.webServiceManager && result.restartAttempted) {
