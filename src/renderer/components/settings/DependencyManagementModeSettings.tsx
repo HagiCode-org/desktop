@@ -49,7 +49,7 @@ export function DependencyManagementModeSettings() {
   }, []);
 
   const handleValueChange = async (value: string) => {
-    if (!settings || isSaving) {
+    if (!settings || isSaving || settings.lockedByRuntime) {
       return;
     }
 
@@ -75,7 +75,7 @@ export function DependencyManagementModeSettings() {
 
   const configuredMode = settings?.configuredMode ?? 'internal';
   const effectiveMode = settings?.effectiveMode ?? configuredMode;
-  const controlDisabled = !settings || isSaving;
+  const controlDisabled = !settings || isSaving || settings?.lockedByRuntime;
 
   return (
     <Card className="max-w-3xl">

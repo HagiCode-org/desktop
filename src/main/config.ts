@@ -42,6 +42,17 @@ export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
 
+export function normalizeDependencyManagementMode(
+  value: unknown,
+  isWindowsStoreRuntime: boolean = false,
+): DependencyManagementMode {
+  if (isWindowsStoreRuntime) {
+    return 'external';
+  }
+
+  return value === 'external' ? 'external' : 'internal';
+}
+
 export function normalizeRuntimeDataPathPreset(
   value: unknown,
   fallback: RuntimeDataPathPreset = DEFAULT_RUNTIME_DATA_PATH_PRESET,
@@ -326,10 +337,9 @@ export class ConfigManager {
     return merged;
   }
 
-  getDependencyManagementMode(isWinStore?: boolean): DependencyManagementMode {
+  getDependencyManagementMode(isWinStore: boolean = false): DependencyManagementMode {
     const current = this.store.get('dependencyManagementMode');
-
-    const normalized: DependencyManagementMode = current === 'external' ? 'external' : 'internal';
+    const normalized = normalizeDependencyManagementMode(current, isWinStore);
 
     if (current !== normalized) {
       this.store.set('dependencyManagementMode', normalized);
@@ -338,12 +348,13 @@ export class ConfigManager {
     return normalized;
   }
 
-  setDependencyManagementMode(mode: DependencyManagementMode): DependencyManagementMode {
+  setDependencyManagementMode(mode: DependencyManagementMode, isWinStore: boolean = false): DependencyManagementMode {
     if (mode !== 'internal' && mode !== 'external') {
       throw new Error(`Unsupported dependency management mode: ${String(mode)}`);
     }
 
-    this.store.set('dependencyManagementMode', mode);
-    return mode;
+    const normalized = normalizeDependencyManagementMode(mode, isWinStore);
+    this.store.set('dependencyManagementMode', normalized);
+    return normalized;
   }
 }

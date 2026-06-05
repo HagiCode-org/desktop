@@ -26,10 +26,10 @@ test('buildStepScripts prefers optional runtime preparation entrypoints for Stor
   ]);
 });
 
-test('resolveStoreRuntimePolicyEnvironment defaults Store builds to internal dependency management', () => {
+test('resolveStoreRuntimePolicyEnvironment defaults Store builds to external dependency management', () => {
   assert.deepEqual(resolveStoreRuntimePolicyEnvironment({}), {
     HAGICODE_RUNTIME_CONSUMER: 'windows-store',
-    HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: 'internal',
+    HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: 'external',
   });
 });
 
@@ -38,7 +38,7 @@ test('toWindowsPackageVersion accepts tagged Windows Store versions from win_sto
   assert.equal(toWindowsPackageVersion('V0.2.1-beta.7'), '0.2.1.7');
 });
 
-test('createStoreBuildMetadata records Node preparation as internal by default for Store builds', () => {
+test('createStoreBuildMetadata records Node preparation as external by default for Store builds', () => {
   const metadata = createStoreBuildMetadata({
     artifacts: ['/tmp/Hagicode-Desktop.msix'],
     buildMode: 'desktop-store-build-dry-run',
@@ -57,7 +57,7 @@ test('createStoreBuildMetadata records Node preparation as internal by default f
       status: 'not-run-dry-run',
       reason: null,
       consumer: 'windows-store',
-      dependencyManagementMode: 'internal',
+      dependencyManagementMode: 'external',
     },
     storeConfig: {
       packageIdentity: {
@@ -80,7 +80,7 @@ test('createStoreBuildMetadata records Node preparation as internal by default f
     status: 'not-run-dry-run',
     reason: null,
     consumer: 'windows-store',
-    dependencyManagementMode: 'internal',
+    dependencyManagementMode: 'external',
   });
   assert.equal(metadata.windowsStoreVersion, 'v0.1.0');
 });

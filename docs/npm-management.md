@@ -24,8 +24,8 @@ The bundled portable toolchain root remains the immutable runtime source for `no
 
 ## Windows Store default
 
-Windows Store packaging now keeps the same default dependency management mode as every other Desktop release: `internal`.
-Standard development runs, Store builds, portable builds, and NSIS installs all start from the same internal default unless the user explicitly switches to `external` later.
+MSIX / Windows Store packaging now forces dependency management to `external` and keeps mutation controls locked off.
+Standard development runs, portable builds, and NSIS installs still start from the normal Desktop default and can switch between `internal` and `external` later.
 
 ## First-Run Preparation
 

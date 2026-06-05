@@ -139,6 +139,12 @@ const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
 
+const MSIX_EXTERNAL_MODE_LOCK_REASON =
+  'MSIX / Windows Store packaging requires external read-only dependency management and does not use Desktop-managed Node/npm.';
+
+const EXTERNAL_MODE_READ_ONLY_REASON =
+  'External dependency mode is read-only and only inspects the current global Node/npm environment.';
+
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
 }
@@ -308,7 +314,12 @@ export class DependencyManagementService {
   }
 
   async setMode(mode: DependencyManagementMode): Promise<DependencyManagementSnapshot> {
-    this.configManager.setDependencyManagementMode(mode);
+    const isWinStore = this.isWindowsStoreExecutionEnvironment();
+    if (isWinStore && mode !== 'external') {
+      throw new Error(MSIX_EXTERNAL_MODE_LOCK_REASON);
+    }
+
+    this.configManager.setDependencyManagementMode(mode, isWinStore);
     return this.getSnapshot();
   }
 
@@ -922,9 +933,12 @@ export class DependencyManagementService {
     return {
       configuredMode,
       effectiveMode,
+      lockedByRuntime: isWinStore,
       mutationsAvailable: effectiveMode === 'internal',
-      readOnlyReason: effectiveMode === 'external'
-        ? 'External dependency mode is read-only and only inspects the current global Node/npm environment.'
+      readOnlyReason: isWinStore
+        ? MSIX_EXTERNAL_MODE_LOCK_REASON
+        : effectiveMode === 'external'
+          ? EXTERNAL_MODE_READ_ONLY_REASON
         : undefined,
     };
   }

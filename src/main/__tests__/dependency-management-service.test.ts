@@ -112,6 +112,7 @@ describe('dependency management service contract', () => {
     assert.match(typesSource, /export interface DependencyManagementModeSettings/);
     assert.match(typesSource, /configuredMode: DependencyManagementMode;/);
     assert.match(typesSource, /effectiveMode: DependencyManagementMode;/);
+    assert.match(typesSource, /lockedByRuntime: boolean;/);
     assert.match(typesSource, /mutationsAvailable: boolean;/);
     assert.match(typesSource, /mode: DependencyManagementModeSettings;/);
     assert.match(typesSource, /getModeSettings: \(\) => Promise<DependencyManagementModeSettings>;/);
@@ -120,10 +121,10 @@ describe('dependency management service contract', () => {
     assert.match(source, /const isWinStore = this\.isWindowsStoreExecutionEnvironment\(\);/);
     assert.match(source, /const configuredMode = this\.configManager\.getDependencyManagementMode\(isWinStore\);/);
     assert.match(source, /const effectiveMode: DependencyManagementMode = configuredMode;/);
+    assert.match(source, /lockedByRuntime: isWinStore,/);
     assert.match(source, /mutationsAvailable: effectiveMode === 'internal'/);
-    assert.match(source, /readOnlyReason: effectiveMode === 'external'/);
-    assert.doesNotMatch(source, /lockedByRuntime:/);
-    assert.doesNotMatch(source, /Windows Store packaging requires external read-only dependency management\./);
+    assert.match(source, /readOnlyReason: isWinStore/);
+    assert.match(source, /MSIX \/ Windows Store packaging requires external read-only dependency management and does not use Desktop-managed Node\/npm\./);
     assert.match(source, /const mode = this\.resolveModeSettings\(\);/);
     assert.match(source, /return this\.getSnapshot\(\);/);
   });

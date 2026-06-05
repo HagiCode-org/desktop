@@ -26,10 +26,10 @@ describe('dependency management settings renderer wiring', () => {
     assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{effectiveMode\}\.label/);
     assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{mode\}\.label/);
     assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{mode\}\.description/);
-    assert.match(modeSettingsSource, /if \(!settings \|\| isSaving\) \{/);
-    assert.match(modeSettingsSource, /const controlDisabled = !settings \|\| isSaving;/);
-    assert.doesNotMatch(modeSettingsSource, /settings\?\.lockedByRuntime/);
-    assert.doesNotMatch(modeSettingsSource, /settings\.lockedByRuntime/);
+    assert.match(modeSettingsSource, /if \(!settings \|\| isSaving \|\| settings\.lockedByRuntime\) \{/);
+    assert.match(modeSettingsSource, /const controlDisabled = !settings \|\| isSaving \|\| settings\?\.lockedByRuntime;/);
+    assert.match(modeSettingsSource, /settings\?\.lockedByRuntime/);
+    assert.match(modeSettingsSource, /settings\.lockedByRuntime/);
   });
 
   it('adds localized settings copy for dependency management mode labels and read-only explanations', async () => {

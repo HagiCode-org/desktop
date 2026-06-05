@@ -145,7 +145,7 @@ export function buildStepScripts(scripts) {
 function resolveStoreRuntimePolicyEnvironment(baseEnv = process.env) {
   const runtimeConsumer = baseEnv[RUNTIME_CONSUMER_ENV]?.trim() || 'windows-store';
   const dependencyManagementMode =
-    baseEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim() || 'internal';
+    baseEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim() || 'external';
 
   return {
     ...baseEnv,

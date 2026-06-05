@@ -568,7 +568,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(msixStoreStepContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
   assert(msixStoreStepContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
   assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
-  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: internal'), 'reusable Windows workflow keeps the default internal dependency-management mode during packaged smoke validation');
+  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external'), 'reusable Windows workflow locks packaged MSIX smoke validation to external dependency management');
   assert(msixStoreStepContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
   assert(Boolean(windowsZipVerifyStepContent), 'reusable Windows workflow includes a dedicated Windows ZIP archive verification step');
   assert(windowsZipVerifyStepContent.includes('node scripts/verify-release-archives.js'), 'reusable Windows workflow validates Windows ZIP archives before upload');

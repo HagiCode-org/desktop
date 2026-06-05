@@ -56,7 +56,7 @@
     "build:win": "node scripts/ci-build.js --platform win",
     "build:win:portable": "node scripts/ci-build.js --platform win --target portable",
     "build:win:nsis": "node scripts/ci-build.js --platform win --target nsis",
-    "build:win:msix": "node scripts/ci-build.js --platform win --target msix",
+    "build:win:msix": "cross-env HAGICODE_RUNTIME_CONSUMER=windows-store HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE=external node scripts/ci-build.js --platform win --target msix",
     "build:win:store": "node scripts/build-store-package.js",
     "build:mac": "node scripts/build-macos.js",
     "build:mac:x64": "cross-env HAGICODE_MAC_BUILD_ARCHS=x64 HAGICODE_EMBEDDED_DOTNET_PLATFORM=osx-x64 HAGICODE_EMBEDDED_NODE_PLATFORM=osx-x64 node scripts/ci-build.js --platform mac",

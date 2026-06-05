@@ -103,8 +103,8 @@ Invalid configurations will fall back to the default HTTP index source with a wa
 
 Desktop owns the Windows Store packaging contract used by `repos/win_store_packer`.
 
-Windows Store runs now keep the same default dependency management mode as the other Desktop release channels: `internal`.
-Store and non-Store runs both continue to allow switching dependency management between internal and external modes.
+MSIX / Windows Store runs now force dependency management into `external` read-only mode and skip Desktop's bundled Node/npm toolchain.
+Standard development runs, portable builds, and NSIS installs still allow switching dependency management between internal and external modes.
 
 ### Store metadata source
 
