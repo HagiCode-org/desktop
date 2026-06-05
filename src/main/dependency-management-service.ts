@@ -890,6 +890,19 @@ export class DependencyManagementService {
     env.NPM_CONFIG_USERCONFIG = npmUserConfigPath;
   }
 
+  private applyManagedNpmDebugOptionsEnv(env: NodeJS.ProcessEnv): void {
+    const debugOptions = this.configManager.getDebugOptionsSettings();
+
+    if (debugOptions.useIgnoreScriptsForManagedNpm) {
+      env.npm_config_ignore_scripts = 'true';
+      env.NPM_CONFIG_IGNORE_SCRIPTS = 'true';
+      return;
+    }
+
+    delete env.npm_config_ignore_scripts;
+    delete env.NPM_CONFIG_IGNORE_SCRIPTS;
+  }
+
   private isWindowsStoreExecutionEnvironment(): boolean {
     return isWindowsStoreRuntime({
       platform: this.platform,
@@ -1191,6 +1204,7 @@ export class DependencyManagementService {
 
     const environment = this.buildCommandEnvNpmEnvironment(nodeVersion);
     this.applyManagedNpmConfigEnv(env, environment);
+    this.applyManagedNpmDebugOptionsEnv(env);
 
     // npm must see the selected Desktop-owned Node/npm even when the user's PATH contains another Node/npm.
     if (envResult.markerInjected) {

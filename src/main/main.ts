@@ -2369,10 +2369,6 @@ app.whenReady().then(async () => {
   log.info('[App] dependency management IPC handlers registered');
   registerDebugOptionsHandlers({
     configManager,
-    webServiceManager,
-    mainWindow,
-    setServerStatus,
-    setServiceUrl,
   });
   log.info('[App] debug options IPC handlers registered');
   registerRuntimeDataPathHandlers({

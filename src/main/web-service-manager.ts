@@ -230,7 +230,6 @@ export class PCodeWebServiceManager {
         ? new HagiscriptRuntimeContextResolver({
             pathManager: this.pathManager,
             dependencyManagementService: this.dependencyManagementService,
-            configManager: this.configManager,
           })
         : null);
     this.hagiscriptServerManager = deps.hagiscriptServerManager ?? new HagiscriptServerManager();
@@ -261,7 +260,6 @@ export class PCodeWebServiceManager {
       ? new HagiscriptRuntimeContextResolver({
           pathManager: this.pathManager,
           dependencyManagementService,
-          configManager: this.configManager,
         })
       : null;
   }

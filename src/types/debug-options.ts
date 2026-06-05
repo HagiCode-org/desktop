@@ -1,13 +1,10 @@
 export interface DebugOptionsSettings {
-  usePsfForManagedServer: boolean;
+  useIgnoreScriptsForManagedNpm: boolean;
 }
 
 export type DebugOptionsSaveStatus = 'unchanged' | 'saved' | 'failed';
 
-export interface DebugOptionsSettingsSnapshot extends DebugOptionsSettings {
-  windowsStoreRuntime: boolean;
-  managedServerLauncherPath: string | null;
-}
+export interface DebugOptionsSettingsSnapshot extends DebugOptionsSettings {}
 
 export interface DebugOptionsSaveResult {
   status: DebugOptionsSaveStatus;

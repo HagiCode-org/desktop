@@ -30,8 +30,6 @@ export interface DesktopHagiscriptManifestServerOptions {
   serviceWorkingDirectory: string;
   serviceEnv?: NodeJS.ProcessEnv;
   activeVersion?: string | null;
-  startScript?: string | null;
-  launcherArgs?: string[];
 }
 
 export interface DesktopHagiscriptManifestOptions {
@@ -258,34 +256,16 @@ function buildDesktopHagiscriptServerComponent(input: {
       appName: DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
       nameIdentifierEnv: DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
       pm2Home: path.join(input.runtimeDataRoot, DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR),
-      ...(normalizeManifestArgs(input.server.launcherArgs)
-        ? { args: normalizeManifestArgs(input.server.launcherArgs) }
-        : {}),
       env: normalizeManifestEnv(input.server.serviceEnv ?? {}),
     },
     releasedService: {
       dllPath: input.server.servicePayloadPath,
       workingDirectory: input.server.serviceWorkingDirectory,
       configRoot: input.server.serviceWorkingDirectory,
-      ...(normalizeOptionalString(input.server.startScript)
-        ? { startScript: normalizeOptionalString(input.server.startScript) }
-        : {}),
       runtimeFilesDir: DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR,
       activeVersion: normalizeOptionalString(input.server.activeVersion),
     },
   };
-}
-
-function normalizeManifestArgs(args: readonly string[] | undefined): string[] | undefined {
-  if (!args || args.length === 0) {
-    return undefined;
-  }
-
-  const normalized = args
-    .map((arg) => arg.trim())
-    .filter((arg) => arg.length > 0);
-
-  return normalized.length > 0 ? normalized : undefined;
 }
 
 function normalizeOptionalString(value: string | null | undefined): string | undefined {

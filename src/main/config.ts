@@ -37,7 +37,7 @@ export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
 };
 
 export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
-  usePsfForManagedServer: false,
+  useIgnoreScriptsForManagedNpm: false,
 };
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
@@ -72,7 +72,7 @@ export function normalizeDebugOptionsSettings(
   settings?: Partial<DebugOptionsConfig> | null,
 ): DebugOptionsConfig {
   return {
-    usePsfForManagedServer: settings?.usePsfForManagedServer ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.usePsfForManagedServer,
+    useIgnoreScriptsForManagedNpm: settings?.useIgnoreScriptsForManagedNpm ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.useIgnoreScriptsForManagedNpm,
   };
 }
 
@@ -310,7 +310,7 @@ export class ConfigManager {
     const current = this.store.get('debugOptions');
     const normalized = normalizeDebugOptionsSettings(current);
 
-    if (current?.usePsfForManagedServer !== normalized.usePsfForManagedServer) {
+    if (current?.useIgnoreScriptsForManagedNpm !== normalized.useIgnoreScriptsForManagedNpm) {
       this.store.set('debugOptions', normalized);
     }
 

@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { dump } from 'js-yaml';
-import type { ConfigManager } from './config.js';
 import type { DependencyManagementService } from './dependency-management-service.js';
 import {
   buildDesktopHagiscriptRuntimeManifest,
@@ -13,10 +12,6 @@ import {
   DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE,
   resolveDesktopManagedPm2AppName,
 } from './hagiscript-desktop-manifest.js';
-import {
-  buildManagedServerLauncherArgs,
-  resolveManagedServerLauncherPath as resolveManagedServerLauncherBinaryPath,
-} from './managed-server-launcher.js';
 import { ensureNoSpacePathAlias } from './pm2-home-alias.js';
 import type { PathManager } from './path-manager.js';
 import type { ActiveRuntimeDescriptor } from '../types/distribution-mode.js';
@@ -64,9 +59,6 @@ export class HagiscriptRuntimeContextResolver {
     | 'getCurrentPlatform'
   >;
   private readonly dependencyManagementService: DependencyManagementService;
-  private readonly configManager:
-    | Pick<ConfigManager, 'getDebugOptionsSettings'>
-    | null;
 
   constructor(options: {
     pathManager: Pick<
@@ -80,11 +72,9 @@ export class HagiscriptRuntimeContextResolver {
       | 'getCurrentPlatform'
     >;
     dependencyManagementService: DependencyManagementService;
-    configManager?: Pick<ConfigManager, 'getDebugOptionsSettings'> | null;
   }) {
     this.pathManager = options.pathManager;
     this.dependencyManagementService = options.dependencyManagementService;
-    this.configManager = options.configManager ?? null;
   }
 
   async resolve(input: ResolveHagiscriptRuntimeContextInput): Promise<HagiscriptRuntimeContext> {
@@ -103,7 +93,6 @@ export class HagiscriptRuntimeContextResolver {
     const manifestDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-desktop-hagiscript-server-'));
     const manifestPath = path.join(manifestDirectory, 'runtime-override.yml');
     const versionsStatePath = path.join(serviceDataHome, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
-    const managedServerLauncherPath = this.resolveManagedServerLauncherPath();
     const servicePayloadPath = path.join(
       aliasedServiceWorkingDirectory,
       path.basename(path.resolve(input.servicePayloadPath)),
@@ -143,8 +132,6 @@ export class HagiscriptRuntimeContextResolver {
             serviceWorkingDirectory: aliasedServiceWorkingDirectory,
             serviceEnv: input.serviceEnv ?? {},
             activeVersion,
-            startScript: managedServerLauncherPath,
-            launcherArgs: managedServerLauncherPath ? buildManagedServerLauncherArgs() : undefined,
           },
         }),
         { noRefs: true, lineWidth: 120 },
@@ -175,14 +162,6 @@ export class HagiscriptRuntimeContextResolver {
         await fs.rm(manifestDirectory, { recursive: true, force: true });
       },
     };
-  }
-
-  private resolveManagedServerLauncherPath(): string | null {
-    if (!this.configManager?.getDebugOptionsSettings().usePsfForManagedServer) {
-      return null;
-    }
-
-    return resolveManagedServerLauncherBinaryPath();
   }
 
   private async resolveSharedContext(): Promise<{
