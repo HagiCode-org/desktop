@@ -1,12 +1,59 @@
 settings:
   title: Settings
+  loading: Loading settings module...
   tabs:
+    notification: Notification Center
     dependencyManagement: Dependency Management
     debugOptions: Debug Options
+    language: Language Settings
     onboarding: Onboarding
     sharingAcceleration: Download & Sharing
+    theme: Theme Settings
     runtimeData: Runtime Data
     updates: Background Updates
+    advanced: Advanced Settings
+  notification:
+    title: Notification Center
+    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
+    testSectionTitle: Test Notification
+    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
+    testButton: Send Test Notification
+    sending: Sending...
+    testSuccess: Test notification sent
+    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
+    testError: Failed to send test notification
+    testErrorDescription: 'Error detail: {{error}}'
+    previewTitle: Default Payload Preview
+    previewDescription: These fields are sent to the main process when the test notification runs.
+    testTitle: Test Notification
+    testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
+    eventShown: Latest shown event
+    eventShownValue: 'Notification {{id}} was shown via {{transport}}'
+    eventClicked: Latest click event
+    eventClickedValue: 'Notification {{id}} was clicked with action {{action}} via {{transport}}'
+    eventPending: No notification events have been recorded yet.
+    values:
+      focusWindow: Focus main window
+      openUrl: Open URL
+    fields:
+      title: Title
+      body: Body
+      level: Level
+      clickAction: Click action
+      duration: Duration
+      silent: Silent
+  languageSettings:
+    title: Language Settings
+    description: Switch the active Desktop language and refresh labels immediately.
+    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
+  themeSettings:
+    title: Theme Settings
+    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
+  advancedSettings:
+    title: Advanced Settings
+    description: Reserve one place for logs, experiments, and advanced runtime controls.
+  placeholders:
+    comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
     title: Dependency management mode
     description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.

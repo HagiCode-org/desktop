@@ -1,12 +1,59 @@
 settings:
   title: 设置
+  loading: 正在加载设置模块...
   tabs:
+    notification: 通知管理
     dependencyManagement: 依赖管理模式
     debugOptions: 调试选项
+    language: 语言设置
     onboarding: 启动向导
     sharingAcceleration: 下载与共享加速
+    theme: 主题设置
     runtimeData: 运行时数据
     updates: 后台更新
+    advanced: 高级设置
+  notification:
+    title: 通知管理
+    description: 通过原生桌面通知验证客户端通知链路，并查看当前默认通知参数。
+    testSectionTitle: 测试通知
+    testSectionDescription: 发送一条测试通知，验证主进程 IPC 和系统通知中心已正常连通。
+    testButton: 发送测试通知
+    sending: 发送中...
+    testSuccess: 测试通知已发送
+    testSuccessDescription: 如果系统通知权限可用，桌面端应该已经收到了这条通知。
+    testError: 测试通知发送失败
+    testErrorDescription: '错误详情：{{error}}'
+    previewTitle: 默认参数预览
+    previewDescription: 这组参数会作为测试通知的默认载荷发送到主进程。
+    testTitle: 测试通知
+    testBody: 桌面通知功能已就绪，点击后会将 Hagicode Desktop 聚焦到前台。
+    eventShown: 最近一次显示事件
+    eventShownValue: '通知 {{id}} 已显示，通道：{{transport}}'
+    eventClicked: 最近一次点击事件
+    eventClickedValue: '通知 {{id}} 已点击，动作：{{action}}，通道：{{transport}}'
+    eventPending: 暂无事件记录
+    values:
+      focusWindow: 聚焦主窗口
+      openUrl: 打开链接
+    fields:
+      title: 标题
+      body: 正文
+      level: 等级
+      clickAction: 点击行为
+      duration: 显示时长
+      silent: 静音
+  languageSettings:
+    title: 语言设置
+    description: 切换 Desktop 当前使用的显示语言，并立即刷新界面文案。
+    helper: 语言切换会立即同步到菜单、托盘和设置页标签。
+  themeSettings:
+    title: 主题设置
+    description: 主题配置入口已预留，后续会在这里集中管理明暗模式和视觉偏好。
+  advancedSettings:
+    title: 高级设置
+    description: 为日志、实验功能和高级运行参数预留统一入口。
+  placeholders:
+    comingSoon: 该设置模块已挂入新设置框架，具体配置将在后续 change 中补齐。
   dependencyManagementMode:
     title: 依赖管理模式
     description: 选择由 Desktop 自行管理 CLI 依赖，或仅只读检查当前全局 Node/npm 环境。
