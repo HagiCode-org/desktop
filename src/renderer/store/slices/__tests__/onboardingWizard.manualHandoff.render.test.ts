@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
 const welcomePath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/WelcomeIntro.tsx');
+const legalConsentPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/LegalConsentStep.tsx');
 const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/onboarding.json');
 const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/onboarding.json');
 const onboardingManagerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
@@ -71,5 +72,15 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.equal(String(enOnboarding.actions.finish), 'Enter Hagicode Desktop');
     assert.match(String(zhOnboarding.legal.progressFull), /\{\{steps\}\}/);
     assert.match(String(enOnboarding.legal.progressFull), /\{\{steps\}\}/);
+  });
+
+  it('completes consent immediately when fusion onboarding has no remaining post-legal steps', async () => {
+    const source = await fs.readFile(legalConsentPath, 'utf8');
+
+    assert.match(source, /const shouldCompleteAfterAccept = useMemo\(\(\) => \{/);
+    assert.match(source, /const sequence = getOnboardingSequence\(mode, dependencyModeSettings, distributionState\);/);
+    assert.match(source, /return sequence\[sequence\.length - 1\] === OnboardingStep\.LegalConsent;/);
+    assert.match(source, /await dispatch\(fetchActiveVersion\(\)\)\.unwrap\(\);/);
+    assert.match(source, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
   });
 });

@@ -8,21 +8,28 @@ import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
 import {
+  getOnboardingSequence,
   selectIsAcceptingLegalDocuments,
   selectIsDecliningLegalDocuments,
   selectIsLoadingLegalMetadata,
   selectLegalDocuments,
   selectLegalMetadataSource,
+  selectOnboardingDependencyModeSettings,
+  selectOnboardingDistributionState,
   selectOnboardingError,
   selectOnboardingMode,
+  selectOnboardingRuntimeProvisioned,
 } from '../../../store/slices/onboardingSlice';
 import {
   acceptLegalDocuments,
   buildAcceptLegalDocumentsPayload,
+  completeOnboarding,
   declineLegalDocuments,
   loadLegalDocuments,
   openLegalDocument,
 } from '../../../store/thunks/onboardingThunks';
+import { fetchActiveVersion } from '../../../store/thunks/webServiceThunks';
+import { OnboardingStep } from '../../../../types/onboarding';
 import type { AppDispatch, RootState } from '../../../store';
 
 function LegalConsentStep() {
@@ -30,6 +37,9 @@ function LegalConsentStep() {
   const dispatch = useDispatch<AppDispatch>();
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
   const mode = useSelector((state: RootState) => selectOnboardingMode(state));
+  const distributionState = useSelector((state: RootState) => selectOnboardingDistributionState(state));
+  const runtimeProvisioned = useSelector((state: RootState) => selectOnboardingRuntimeProvisioned(state));
+  const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
   const documents = useSelector((state: RootState) => selectLegalDocuments(state));
   const source = useSelector((state: RootState) => selectLegalMetadataSource(state));
   const error = useSelector((state: RootState) => selectOnboardingError(state));
@@ -44,6 +54,15 @@ function LegalConsentStep() {
     return 'legal.metadata.unavailable';
   }, [source]);
 
+  const shouldCompleteAfterAccept = useMemo(() => {
+    if (mode !== 'full' || !runtimeProvisioned) {
+      return false;
+    }
+
+    const sequence = getOnboardingSequence(mode, dependencyModeSettings, distributionState);
+    return sequence[sequence.length - 1] === OnboardingStep.LegalConsent;
+  }, [dependencyModeSettings, distributionState, mode, runtimeProvisioned]);
+
   const canAccept = isChecked && documents.length >= 2 && !isLoading && !isAccepting && !isDeclining;
 
   const handleRefresh = () => {
@@ -54,16 +73,32 @@ function LegalConsentStep() {
     dispatch(openLegalDocument({ documentType, locale }));
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (mode === 'none' || documents.length === 0) {
       return;
     }
 
-    dispatch(
-      acceptLegalDocuments(
-        buildAcceptLegalDocumentsPayload(mode, locale, documents),
-      ),
-    );
+    try {
+      await dispatch(
+        acceptLegalDocuments(
+          buildAcceptLegalDocumentsPayload(mode, locale, documents),
+        ),
+      ).unwrap();
+
+      if (!shouldCompleteAfterAccept) {
+        return;
+      }
+
+      const activeVersion = await dispatch(fetchActiveVersion()).unwrap();
+      if (!activeVersion?.id) {
+        return;
+      }
+
+      dispatch(completeOnboarding(activeVersion.id));
+      dispatch(fetchActiveVersion());
+    } catch {
+      // Slice error state already captures accept and completion failures.
+    }
   };
 
   const handleDecline = () => {

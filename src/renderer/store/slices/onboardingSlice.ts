@@ -69,6 +69,10 @@ function shouldHideSharingAccelerationStep(distributionState: DistributionModeSt
   return distributionState.fusionMode;
 }
 
+function shouldHideDownloadStep(distributionState: DistributionModeState) {
+  return distributionState.fusionMode;
+}
+
 function resolveDependencyModeSettings(state: Pick<OnboardingState, 'dependencyModeSettings' | 'dependencySnapshot'>) {
   return state.dependencyModeSettings ?? state.dependencySnapshot?.mode ?? null;
 }
@@ -82,13 +86,19 @@ export function getOnboardingSequence(
     return [...legalOnlySequence];
   }
 
-  const sequence = shouldHideDependencyPreparationStep(mode, dependencyModeSettings)
+  let sequence = shouldHideDependencyPreparationStep(mode, dependencyModeSettings)
     ? [...fullSequenceWithoutDependencyPreparation]
     : [...fullSequence];
 
-  return shouldHideSharingAccelerationStep(distributionState)
-    ? sequence.filter((step) => step !== OnboardingStep.SharingAcceleration)
-    : sequence;
+  if (shouldHideSharingAccelerationStep(distributionState)) {
+    sequence = sequence.filter((step) => step !== OnboardingStep.SharingAcceleration);
+  }
+
+  if (shouldHideDownloadStep(distributionState)) {
+    sequence = sequence.filter((step) => step !== OnboardingStep.Download);
+  }
+
+  return sequence;
 }
 
 function getStepIndex(

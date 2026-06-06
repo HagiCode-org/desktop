@@ -10,7 +10,7 @@ const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboardi
 const managerPath = path.resolve(process.cwd(), 'src/main/onboarding-manager.ts');
 
 describe('onboarding flow contracts', () => {
-  it('keeps the full onboarding sequence intact and adds an external-mode variant', async () => {
+  it('keeps the full onboarding sequence intact, adds an external-mode variant, and hides fusion-only steps', async () => {
     const [typesSource, sliceSource] = await Promise.all([
       fs.readFile(typesPath, 'utf8'),
       fs.readFile(slicePath, 'utf8'),
@@ -26,7 +26,9 @@ describe('onboarding flow contracts', () => {
     assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[[\s\S]*OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.Download,[\s\S]*\] as const;/);
     assert.match(sliceSource, /return mode === 'full' && dependencyModeSettings\?\.effectiveMode === 'external';/);
     assert.match(sliceSource, /function shouldHideSharingAccelerationStep\(distributionState: DistributionModeState\) \{\s*return distributionState\.fusionMode;\s*\}/s);
-    assert.match(sliceSource, /return shouldHideSharingAccelerationStep\(distributionState\)\s*\? sequence\.filter\(\(step\) => step !== OnboardingStep\.SharingAcceleration\)\s*:\s*sequence;/s);
+    assert.match(sliceSource, /function shouldHideDownloadStep\(distributionState: DistributionModeState\) \{\s*return distributionState\.fusionMode;\s*\}/s);
+    assert.match(sliceSource, /if \(shouldHideSharingAccelerationStep\(distributionState\)\) \{\s*sequence = sequence\.filter\(\(step\) => step !== OnboardingStep\.SharingAcceleration\);\s*\}/s);
+    assert.match(sliceSource, /if \(shouldHideDownloadStep\(distributionState\)\) \{\s*sequence = sequence\.filter\(\(step\) => step !== OnboardingStep\.Download\);\s*\}/s);
   });
 
   it('keeps legal-only mode available for consent-only mutable-runtime gating', async () => {
@@ -42,7 +44,7 @@ describe('onboarding flow contracts', () => {
   it('skips dependency preparation when dependency management is in external mode', async () => {
     const sliceSource = await fs.readFile(slicePath, 'utf8');
 
-    assert.match(sliceSource, /const sequence = shouldHideDependencyPreparationStep\(mode, dependencyModeSettings\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
+    assert.match(sliceSource, /let sequence = shouldHideDependencyPreparationStep\(mode, dependencyModeSettings\)\s*\? \[\.\.\.fullSequenceWithoutDependencyPreparation\]\s*:\s*\[\.\.\.fullSequence\];/s);
     assert.match(sliceSource, /state\.currentStep === OnboardingStep\.DependencyPreparation[\s\S]*state\.currentStep = OnboardingStep\.Download;/);
     assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
     assert.match(sliceSource, /state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
