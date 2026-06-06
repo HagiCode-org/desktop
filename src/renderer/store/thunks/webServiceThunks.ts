@@ -23,6 +23,7 @@ import {
   setShowDependencyWarning,
   setInstallState,
   InstallState,
+  StartupPhase,
   type ProcessInfo,
   type PackageInfo,
   type InstallProgress,
@@ -30,7 +31,6 @@ import {
   type StartupFailurePayload,
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
-import { DEFAULT_WEB_SERVICE_HOST, DEFAULT_WEB_SERVICE_PORT } from '../../../types/web-service-network';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../../../types/version-install.js';
 
 // Types for window electronAPI
@@ -626,19 +626,7 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
  */
 export const initializeWebService = createAsyncThunk(
   'webService/initialize',
-  async (_, { dispatch }) => {
-    // Set a minimal bootstrap state; real status is fetched immediately after.
-    dispatch(setStatus('stopped'));
-    dispatch(setPlatform('linux-x64'));
-    dispatch(setAvailableVersions([]));
-    dispatch(setPackageInfo({
-      version: 'none',
-      platform: 'linux-x64',
-      installedPath: '',
-      isInstalled: false,
-    }));
-    dispatch(setVersion('unknown'));
-
+  async (_, { dispatch, getState }) => {
     // Try to fetch initial data
     try {
       const platform: string = await window.electronAPI.getPlatform();
@@ -658,19 +646,27 @@ export const initializeWebService = createAsyncThunk(
     // Hydrate from main-process recovered status to avoid startup false negatives.
     try {
       const status: ProcessInfo = await window.electronAPI.getWebServiceStatus();
-      dispatch(setProcessInfo(status));
+      const currentState = (getState() as {
+        webService: {
+          status: ProcessStatus;
+          isOperating: boolean;
+          phase: StartupPhase;
+        };
+      }).webService;
+      const shouldSkipStaleHydration = currentState.isOperating
+        || currentState.status === 'starting'
+        || currentState.status === 'running'
+        || currentState.phase === StartupPhase.CheckingVersion
+        || currentState.phase === StartupPhase.CheckingDependencies
+        || currentState.phase === StartupPhase.Spawning
+        || currentState.phase === StartupPhase.WaitingListening
+        || currentState.phase === StartupPhase.HealthCheck;
+
+      if (!shouldSkipStaleHydration) {
+        dispatch(setProcessInfo(status));
+      }
     } catch (error) {
       console.error('Initialize web service status error:', error);
-      dispatch(setProcessInfo({
-        status: 'stopped',
-        uptime: 0,
-        startTime: null,
-        url: null,
-        restartCount: 0,
-        phase: 'idle' as any,
-        host: DEFAULT_WEB_SERVICE_HOST,
-        port: DEFAULT_WEB_SERVICE_PORT,
-      }));
     }
   }
 );

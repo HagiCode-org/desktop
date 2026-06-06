@@ -14,6 +14,7 @@ describe('web service startup progress dialog contracts', () => {
     assert.match(source, /emitWebServiceStartupPhase\(\s*StartupPhase\.CheckingVersion,/);
     assert.match(source, /emitWebServiceStartupPhase\(\s*StartupPhase\.CheckingDependencies,/);
     assert.match(source, /emitWebServiceStartupPhase\(StartupPhase\.Error, 'No active version found'\);/);
+    assert.match(source, /webServiceManager\.syncExternalStartupPhase\(phase, message\);/);
   });
 
   it('opens a dedicated startup progress dialog from the homepage service card', async () => {
