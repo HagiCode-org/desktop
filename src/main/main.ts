@@ -536,6 +536,11 @@ async function validateRequiredManagedDependenciesForWebServiceStart(): Promise<
 }
 
 function emitWebServiceStartupPhase(phase: StartupPhase, message?: string): void {
+  if (webServiceManager) {
+    webServiceManager.syncExternalStartupPhase(phase, message);
+    return;
+  }
+
   mainWindow?.webContents.send('web-service-startup-phase', {
     phase,
     message,

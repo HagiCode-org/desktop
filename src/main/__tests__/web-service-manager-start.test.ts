@@ -34,9 +34,21 @@ describe('web-service startup flow', () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
     assert.match(source, /private isStartupTransitionActive\(\): boolean/);
+    assert.match(source, /this\.currentPhase === StartupPhase\.CheckingVersion/);
+    assert.match(source, /this\.currentPhase === StartupPhase\.CheckingDependencies/);
     assert.match(source, /const startupTransitionActive = this\.isStartupTransitionActive\(\);/);
     assert.match(source, /if \(startupTransitionActive && this\.currentPhase !== StartupPhase\.Error\) {\s*this\.status = 'starting';/);
     assert.match(source, /this\.currentPhase = StartupPhase\.HealthCheck;/);
+  });
+
+  it('accepts externally emitted prelaunch phases as part of the startup transition', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /syncExternalStartupPhase\(phase: StartupPhase, message\?: string\): void/);
+    assert.match(source, /case StartupPhase\.CheckingVersion:/);
+    assert.match(source, /case StartupPhase\.CheckingDependencies:/);
+    assert.match(source, /this\.status = 'starting';/);
+    assert.match(source, /this\.emitPhase\(phase, message\);/);
   });
 
   it('resets stale restart counters for manual start and stop flows', async () => {

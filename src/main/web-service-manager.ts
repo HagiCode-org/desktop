@@ -768,9 +768,38 @@ export class PCodeWebServiceManager {
 
   private isStartupTransitionActive(): boolean {
     return this.status === 'starting'
+      || this.currentPhase === StartupPhase.CheckingVersion
+      || this.currentPhase === StartupPhase.CheckingDependencies
       || this.currentPhase === StartupPhase.Spawning
       || this.currentPhase === StartupPhase.WaitingListening
       || this.currentPhase === StartupPhase.HealthCheck;
+  }
+
+  syncExternalStartupPhase(phase: StartupPhase, message?: string): void {
+    switch (phase) {
+      case StartupPhase.Idle:
+        this.status = 'stopped';
+        this.startTime = null;
+        this.restartCount = 0;
+        break;
+      case StartupPhase.CheckingVersion:
+      case StartupPhase.CheckingDependencies:
+      case StartupPhase.Spawning:
+      case StartupPhase.WaitingListening:
+      case StartupPhase.HealthCheck:
+        this.status = 'starting';
+        break;
+      case StartupPhase.Running:
+        this.status = 'running';
+        break;
+      case StartupPhase.Error:
+        this.status = 'error';
+        break;
+      default:
+        break;
+    }
+
+    this.emitPhase(phase, message);
   }
 
   /**
