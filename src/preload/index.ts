@@ -41,6 +41,12 @@ import { debugOptionsChannels } from '../types/debug-options.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
+import type {
+  HagihubApi,
+  NotificationClickedPayload,
+  NotificationParams,
+  NotificationShownPayload,
+} from '../shared/api.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 
@@ -48,6 +54,12 @@ const { contextBridge, ipcRenderer } = electron;
 export type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
+export type {
+  HagihubApi,
+  NotificationClickedPayload,
+  NotificationParams,
+  NotificationShownPayload,
+} from '../shared/api.js';
 
 function readInitialBootstrapSnapshot(): DesktopBootstrapSnapshot | null {
   const argPrefix = '--desktop-bootstrap-snapshot=';
@@ -387,6 +399,24 @@ const runtimeDataPathBridge: RuntimeDataPathBridge = {
 const debugOptionsBridge: DebugOptionsBridge = {
   getSettings: () => ipcRenderer.invoke(debugOptionsChannels.get),
   setSettings: (settings: DebugOptionsSettings) => ipcRenderer.invoke(debugOptionsChannels.set, settings),
+};
+
+const hagihubApi: HagihubApi = {
+  sendNotification: (params: NotificationParams) => ipcRenderer.invoke('hagihub:send-notification', params),
+  onNotificationClicked: (callback) => {
+    const listener = (_event, payload: NotificationClickedPayload) => {
+      callback(payload);
+    };
+    ipcRenderer.on('hagihub:notification-clicked', listener);
+    return () => ipcRenderer.removeListener('hagihub:notification-clicked', listener);
+  },
+  onNotificationShown: (callback) => {
+    const listener = (_event, payload: NotificationShownPayload) => {
+      callback(payload);
+    };
+    ipcRenderer.on('hagihub:notification-shown', listener);
+    return () => ipcRenderer.removeListener('hagihub:notification-shown', listener);
+  },
 };
 
 const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
@@ -742,5 +772,18 @@ ipcRenderer.on('webview-devtools', () => {
   rendererEventTarget.dispatchEvent(new rendererEventTarget.CustomEvent('webview-devtools'));
 });
 
+ipcRenderer.on('hagihub:notification-clicked', (_event, payload: NotificationClickedPayload) => {
+  rendererEventTarget.dispatchEvent(
+    new rendererEventTarget.CustomEvent('hagihub:notification-clicked', { detail: payload }),
+  );
+});
+
+ipcRenderer.on('hagihub:notification-shown', (_event, payload: NotificationShownPayload) => {
+  rendererEventTarget.dispatchEvent(
+    new rendererEventTarget.CustomEvent('hagihub:notification-shown', { detail: payload }),
+  );
+});
+
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 contextBridge.exposeInMainWorld('hagiNode', hagiNodeBridge);
+contextBridge.exposeInMainWorld('hagihub', hagihubApi);
