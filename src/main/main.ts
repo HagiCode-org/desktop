@@ -70,6 +70,8 @@ import type { DesktopBootstrapSnapshot } from '../types/bootstrap.js';
 import { resolveWindowIconPath } from './window-icon-path.js';
 import { getDesktopVersionInfo } from './version-info.js';
 import { evaluateDependencyReadiness } from '../shared/npm-managed-packages.js';
+import NotificationService from './notifications/notificationService.js';
+import type { NotificationParams } from '../shared/api.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -289,6 +291,13 @@ let pathManager: PathManager | null = null;
 let aboutWindow: BrowserWindow | null = null;
 let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
 let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
+const notificationService = new NotificationService({
+  getMainWindow: () => mainWindow,
+  activateMainWindow,
+  openExternal: async (url: string) => {
+    await shell.openExternal(url, { activate: true });
+  },
+});
 
 export function activateMainWindow(reason: string): void {
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -761,6 +770,10 @@ ipcMain.handle('hide-window', () => {
   if (mainWindow) {
     mainWindow.hide();
   }
+});
+
+ipcMain.handle('hagihub:send-notification', async (_, params: NotificationParams) => {
+  return await notificationService.send(params);
 });
 
 registerClipboardHandlers();
