@@ -5,22 +5,28 @@ import { describe, it } from 'node:test';
 
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const settingsIndexPath = path.resolve(process.cwd(), 'src/renderer/components/settings/index.ts');
+const settingsHookPath = path.resolve(process.cwd(), 'src/renderer/features/settings/hooks/useSettingsTab.ts');
+const builtInTabsPath = path.resolve(process.cwd(), 'src/renderer/features/settings/components/tabs/builtInTabs.tsx');
 const runtimeDataSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/RuntimeDataPathSettings.tsx');
 const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/pages.yml');
 const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/pages.yml');
 
 describe('runtime data path settings renderer wiring', () => {
   it('adds a dedicated settings tab and runtime data settings card', async () => {
-    const [settingsPageSource, settingsIndexSource, runtimeDataSettingsSource] = await Promise.all([
+    const [settingsPageSource, settingsIndexSource, settingsHookSource, builtInTabsSource, runtimeDataSettingsSource] = await Promise.all([
       fs.readFile(settingsPagePath, 'utf8'),
       fs.readFile(settingsIndexPath, 'utf8'),
+      fs.readFile(settingsHookPath, 'utf8'),
+      fs.readFile(builtInTabsPath, 'utf8'),
       fs.readFile(runtimeDataSettingsPath, 'utf8'),
     ]);
 
     assert.match(settingsIndexSource, /export \{ RuntimeDataPathSettings \} from '\.\/RuntimeDataPathSettings';/);
-    assert.match(settingsPageSource, /value="runtimeData"/);
-    assert.match(settingsPageSource, /settings\.tabs\.runtimeData/);
-    assert.match(settingsPageSource, /<RuntimeDataPathSettings \/>/);
+    assert.match(settingsPageSource, /<SettingsTabContent activeTab=\{activeTabConfig\} distributionState=\{distributionState\} \/>/);
+    assert.match(settingsHookSource, /id: 'runtimeData'/);
+    assert.match(settingsHookSource, /labelKey: 'settings\.tabs\.runtimeData'/);
+    assert.match(builtInTabsSource, /export function RuntimeDataSettingsTab\(\)/);
+    assert.match(builtInTabsSource, /<RuntimeDataPathSettings \/>/);
     assert.match(runtimeDataSettingsSource, /getRuntimeDataPathBridge\(\)\s*\.getSettings\(\)/);
     assert.match(runtimeDataSettingsSource, /getRuntimeDataPathBridge\(\)\.setPreset\(selectedPreset\)/);
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.warnings\.noMigration/);

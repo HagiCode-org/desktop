@@ -5,21 +5,24 @@ import { describe, it } from 'node:test';
 
 const settingsComponentPath = path.resolve(process.cwd(), 'src/renderer/components/settings/SharingAccelerationSettings.tsx');
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
+const settingsHookPath = path.resolve(process.cwd(), 'src/renderer/features/settings/hooks/useSettingsTab.ts');
 const sharingStepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/SharingAccelerationStep.tsx');
 const versionPagePath = path.resolve(process.cwd(), 'src/renderer/components/VersionManagementPage.tsx');
-const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/pages.json');
-const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/pages.json');
-const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/onboarding.json');
+const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/pages.json');
+const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/pages.json');
+const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/onboarding.json');
 
 describe('sharing acceleration renderer wiring', () => {
   it('keeps the settings entry and install telemetry projection in place', async () => {
-    const [settingsPage, sharingStep, versionPage] = await Promise.all([
+    const [settingsPage, settingsHook, sharingStep, versionPage] = await Promise.all([
       fs.readFile(settingsPagePath, 'utf8'),
+      fs.readFile(settingsHookPath, 'utf8'),
       fs.readFile(sharingStepPath, 'utf8'),
       fs.readFile(versionPagePath, 'utf8'),
     ]);
 
-    assert.match(settingsPage, /sharingAcceleration/);
+    assert.match(settingsPage, /showSharingAccelerationSettings/);
+    assert.match(settingsHook, /id: 'sharingAcceleration'/);
     assert.match(sharingStep, /recordOnboardingChoice/);
     assert.match(versionPage, /installTelemetry/);
     assert.match(versionPage, /downloadMode/);

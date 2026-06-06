@@ -9,6 +9,8 @@ const dashboardPath = path.resolve(process.cwd(), 'src/renderer/components/Syste
 const versionPagePath = path.resolve(process.cwd(), 'src/renderer/components/VersionManagementPage.tsx');
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const settingsIndexPath = path.resolve(process.cwd(), 'src/renderer/components/settings/index.ts');
+const settingsHookPath = path.resolve(process.cwd(), 'src/renderer/features/settings/hooks/useSettingsTab.ts');
+const builtInTabsPath = path.resolve(process.cwd(), 'src/renderer/features/settings/components/tabs/builtInTabs.tsx');
 const updateSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/VersionUpdateSettings.tsx');
 const sharingSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/SharingAccelerationSettings.tsx');
 const onboardingWizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
@@ -80,23 +82,27 @@ describe('portable version renderer integration', () => {
   });
 
   it('hides the sharing acceleration settings entry in portable mode while keeping the standard mode helper', async () => {
-    const settingsPageSource = await fs.readFile(settingsPagePath, 'utf-8');
-    const settingsIndexSource = await fs.readFile(settingsIndexPath, 'utf-8');
+    const [settingsPageSource, settingsIndexSource, settingsHookSource] = await Promise.all([
+      fs.readFile(settingsPagePath, 'utf-8'),
+      fs.readFile(settingsIndexPath, 'utf-8'),
+      fs.readFile(settingsHookPath, 'utf-8'),
+    ]);
 
     assert.match(settingsIndexSource, /shouldShowSharingAccelerationSettings\(distributionState: Pick<DistributionModeState, 'fusionMode'>\)/);
     assert.match(settingsIndexSource, /return !distributionState\.fusionMode;/);
     assert.match(settingsPageSource, /const showSharingAccelerationSettings = shouldShowSharingAccelerationSettings\(distributionState\)/);
-    assert.match(settingsPageSource, /showSharingAccelerationSettings \? \(/);
-    assert.match(settingsPageSource, /<TabsTrigger\s+value="sharingAcceleration"/s);
+    assert.match(settingsHookSource, /if \(showSharingAccelerationSettings\) \{/);
+    assert.match(settingsHookSource, /id: 'sharingAcceleration'/);
   });
 
   it('passes fusion distribution state into background update settings and keeps managed update copy there', async () => {
-    const [settingsPageSource, updateSettingsSource] = await Promise.all([
-      fs.readFile(settingsPagePath, 'utf-8'),
+    const [builtInTabsSource, updateSettingsSource] = await Promise.all([
+      fs.readFile(builtInTabsPath, 'utf-8'),
       fs.readFile(updateSettingsPath, 'utf-8'),
     ]);
 
-    assert.match(settingsPageSource, /<VersionUpdateSettings distributionState=\{distributionState\} \/>/);
+    assert.match(builtInTabsSource, /export function VersionUpdateSettingsTab\(\{ distributionState \}: SettingsTabComponentProps\)/);
+    assert.match(builtInTabsSource, /<VersionUpdateSettings distributionState=\{distributionState\} \/>/);
     assert.match(updateSettingsSource, /const isManagedMode = distributionState\.fusionMode;/);
     assert.match(updateSettingsSource, /settings\.updates\.managedInstall\.title/);
   });

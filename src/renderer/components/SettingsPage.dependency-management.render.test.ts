@@ -5,22 +5,28 @@ import { describe, it } from 'node:test';
 
 const settingsPagePath = path.resolve(process.cwd(), 'src/renderer/components/SettingsPage.tsx');
 const settingsIndexPath = path.resolve(process.cwd(), 'src/renderer/components/settings/index.ts');
+const settingsHookPath = path.resolve(process.cwd(), 'src/renderer/features/settings/hooks/useSettingsTab.ts');
+const builtInTabsPath = path.resolve(process.cwd(), 'src/renderer/features/settings/components/tabs/builtInTabs.tsx');
 const modeSettingsPath = path.resolve(process.cwd(), 'src/renderer/components/settings/DependencyManagementModeSettings.tsx');
 const enPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en-US/pages.yml');
 const zhPagesPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh-CN/pages.yml');
 
 describe('dependency management settings renderer wiring', () => {
   it('adds the dependency management tab and dedicated settings card', async () => {
-    const [settingsPageSource, settingsIndexSource, modeSettingsSource] = await Promise.all([
+    const [settingsPageSource, settingsIndexSource, settingsHookSource, builtInTabsSource, modeSettingsSource] = await Promise.all([
       fs.readFile(settingsPagePath, 'utf8'),
       fs.readFile(settingsIndexPath, 'utf8'),
+      fs.readFile(settingsHookPath, 'utf8'),
+      fs.readFile(builtInTabsPath, 'utf8'),
       fs.readFile(modeSettingsPath, 'utf8'),
     ]);
 
     assert.match(settingsIndexSource, /export \{ DependencyManagementModeSettings \} from '\.\/DependencyManagementModeSettings';/);
-    assert.match(settingsPageSource, /value="dependencyManagement"/);
-    assert.match(settingsPageSource, /settings\.tabs\.dependencyManagement/);
-    assert.match(settingsPageSource, /<DependencyManagementModeSettings \/>/);
+    assert.match(settingsPageSource, /useSettingsTab\(\{/);
+    assert.match(settingsHookSource, /id: 'dependencyManagement'/);
+    assert.match(settingsHookSource, /labelKey: 'settings\.tabs\.dependencyManagement'/);
+    assert.match(builtInTabsSource, /export function DependencyManagementSettingsTab\(\)/);
+    assert.match(builtInTabsSource, /<DependencyManagementModeSettings \/>/);
     assert.match(modeSettingsSource, /getDependencyManagementBridge\(\)\s*\.getModeSettings\(\)/);
     assert.match(modeSettingsSource, /getDependencyManagementBridge\(\)\.setMode\(nextMode\)/);
     assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.options\.\$\{effectiveMode\}\.label/);
