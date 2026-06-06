@@ -7,6 +7,10 @@ import packageSourceReducer from './slices/packageSourceSlice';
 import onboardingReducer from './slices/onboardingSlice';
 import rssFeedReducer from './slices/rssFeedSlice';
 import claudeConfigReducer from './slices/claudeConfigSlice';
+import settingsReducer, {
+  setNotificationClicked,
+  setNotificationShown,
+} from './slices/settingsSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -24,6 +28,7 @@ import { initializeWebService, startWebService, stopWebService } from './thunks/
 import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
+import type { HagihubApi } from '../../shared/api.js';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -44,6 +49,7 @@ export const store = configureStore({
     onboarding: onboardingReducer,
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
+    settings: settingsReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -112,6 +118,7 @@ function registerRealtimeListeners(): void {
       }) => void,
     ) => (() => void) | void;
   };
+  const hagihub = (window as Window & { hagihub?: HagihubApi }).hagihub;
 
   electronAPI.onActiveVersionChanged?.((version: any) => {
     store.dispatch({ type: 'webService/setActiveVersion', payload: version });
@@ -140,6 +147,14 @@ function registerRealtimeListeners(): void {
 
   electronAPI.onVersionUpdateChanged?.((snapshot: any) => {
     store.dispatch(setVersionUpdateSnapshotFromEvent(snapshot));
+  });
+
+  hagihub?.onNotificationShown?.((payload) => {
+    store.dispatch(setNotificationShown(payload));
+  });
+
+  hagihub?.onNotificationClicked?.((payload) => {
+    store.dispatch(setNotificationClicked(payload));
   });
 
   electronAPI.onPackageInstallProgress?.((progress: any) => {
