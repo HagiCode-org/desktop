@@ -30,7 +30,13 @@ export function buildDesktopNpmSyncManifest(
     const requiredVersionRange = getManagedPackageRequiredVersionRange(definition);
     const version = requiredVersionRange
       ?? (looksLikeSemverRange(target) ? target.replace(/^v(?=\d)/, '') : '*');
-    return [definition.packageName, { version, target }];
+    return [definition.packageName, {
+      version,
+      target,
+      ...(definition.installArgs && definition.installArgs.length > 0
+        ? { installArgs: [...definition.installArgs] }
+        : {}),
+    }];
   }));
 
   return {

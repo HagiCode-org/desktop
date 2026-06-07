@@ -4,7 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import log from 'electron-log';
 import type { DetectionResult, Region, RegionDetector } from './region-detector.js';
-import { findManagedNpmPackage } from '../shared/npm-managed-packages.js';
+import {
+  buildManagedPackageGlobalInstallCommand,
+  findManagedNpmPackage,
+} from '../shared/npm-managed-packages.js';
 import type { PromptGuidanceSource } from '../types/prompt-guidance.js';
 import type { Dependency, DependencyVersionWithRuntime, Manifest } from './manifest-reader.js';
 
@@ -82,7 +85,7 @@ function resolveInstallCommand(name: string, dependency: Dependency, region: Reg
 
   const managedPackage = findManagedNpmPackage(name);
   if (managedPackage?.installSpec) {
-    return `npm install -g ${managedPackage.installSpec}`;
+    return buildManagedPackageGlobalInstallCommand(managedPackage);
   }
 
   if (dependency.installHint?.trim()) {

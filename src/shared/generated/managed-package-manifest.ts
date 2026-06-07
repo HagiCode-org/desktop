@@ -4,12 +4,18 @@
 export interface RuntimeManagedPackageManifestEntry {
   version: string;
   target?: string;
+  installArgs?: string[];
 }
 
 export const runtimeManagedPackageManifestPackages: Readonly<Record<string, RuntimeManagedPackageManifestEntry>> = {
   "@anthropic-ai/claude-code": {
     version: "2.1.159",
     target: "2.1.159",
+  },
+  "@earendil-works/pi-coding-agent": {
+    version: "0.78.1",
+    target: "0.78.1",
+    installArgs: ["--ignore-scripts"],
   },
   "@fission-ai/openspec": {
     version: "1.3.1",
@@ -42,6 +48,10 @@ export const runtimeManagedPackageManifestPackages: Readonly<Record<string, Runt
   "opencode-ai": {
     version: "1.15.13",
     target: "1.15.13",
+  },
+  "reasonix": {
+    version: "1.2.0",
+    target: "1.2.0",
   },
   "skills": {
     version: "1.5.1",

@@ -31,6 +31,7 @@ import {
 } from './hagiscript-sync.js';
 import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
 import {
+  getManagedPackageInstallArgs,
   managedNpmPackages,
   findManagedNpmPackage,
   isVendoredRuntimeMutationId,
@@ -858,10 +859,7 @@ export class DependencyManagementService {
     const prefixArgs = ['--prefix', environment.npmGlobalPrefix];
 
     if (operation === 'install') {
-      const registryArgs = registryUrl
-        ? ['--registry', registryUrl]
-        : [];
-      return ['install', '-g', ...prefixArgs, ...registryArgs, definition.installSpec];
+      return [...getManagedPackageInstallArgs(definition, registryUrl), ...prefixArgs];
     }
 
     return ['uninstall', '-g', ...prefixArgs, definition.packageName];

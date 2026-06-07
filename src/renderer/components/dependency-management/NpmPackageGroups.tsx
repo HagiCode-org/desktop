@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
 import {
   getManagedPackageActionKey,
   getManagedPackageDisplayStatus,
@@ -405,9 +406,10 @@ export function NpmPackageTable({
                 ? undefined
                 : operationErrorByPackageId[item.id] ?? (item.status === 'unknown' ? item.message : undefined);
               const disabledReason = item.status === 'unknown' ? t('dependencyManagement.disabled.unknown') : undefined;
-              const globalInstallCommand = suggestedCommandRegistryUrl
-                ? `npm install -g --registry ${suggestedCommandRegistryUrl} ${item.definition.installSpec}`
-                : `npm install -g ${item.definition.installSpec}`;
+              const globalInstallCommand = buildManagedPackageGlobalInstallCommand(
+                item.definition,
+                suggestedCommandRegistryUrl,
+              );
 
               return (
                 <TableRow

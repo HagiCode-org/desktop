@@ -6,6 +6,8 @@ export type ManagedNpmPackageId =
   | 'pm2'
   | 'claude-code'
   | 'codex'
+  | 'pi'
+  | 'reasonix'
   | 'github-copilot'
   | 'codebuddy'
   | 'opencode'
@@ -44,6 +46,7 @@ export interface ManagedNpmPackageDefinition {
   descriptionKey: string;
   binName: string;
   installSpec: string;
+  installArgs?: string[];
   requiredVersionRange?: string;
   category: ManagedNpmPackageCategory;
   installMode: ManagedNpmPackageInstallMode;

@@ -15,6 +15,7 @@ import {
 
 type ManagedNpmPackageStaticDefinition = Omit<ManagedNpmPackageDefinition, 'installSpec' | 'requiredVersionRange'> & {
   installSpec: string;
+  installArgs?: string[];
   requiredVersionRange?: string;
 };
 
@@ -45,6 +46,7 @@ function applyRuntimeManagedPackageOverride(
   return {
     ...definition,
     installSpec: buildInstallSpecFromManifest(definition.packageName, override),
+    installArgs: override.installArgs,
     requiredVersionRange: override.version,
   };
 }
@@ -107,6 +109,31 @@ const staticManagedNpmPackages = [
     installMode: 'sdk-sync',
     agentCliId: 'codex',
     docsLinkId: 'codexSetup',
+  },
+  {
+    id: 'pi',
+    packageName: '@earendil-works/pi-coding-agent',
+    displayName: 'PI',
+    descriptionKey: 'dependencyManagement.packages.pi.description',
+    binName: 'pi',
+    installSpec: '@earendil-works/pi-coding-agent@0.78.1',
+    installArgs: ['--ignore-scripts'],
+    requiredVersionRange: '0.78.1',
+    category: 'agent-cli',
+    installMode: 'sdk-sync',
+    agentCliId: 'pi',
+  },
+  {
+    id: 'reasonix',
+    packageName: 'reasonix',
+    displayName: 'Reasonix',
+    descriptionKey: 'dependencyManagement.packages.reasonix.description',
+    binName: 'reasonix',
+    installSpec: 'reasonix@1.2.0',
+    requiredVersionRange: '1.2.0',
+    category: 'agent-cli',
+    installMode: 'sdk-sync',
+    agentCliId: 'reasonix',
   },
   {
     id: 'github-copilot',
@@ -257,6 +284,26 @@ export function getManagedPackageRequiredVersionRange(
   }
 
   return validRange(selector, { includePrerelease: true }) ?? null;
+}
+
+export function getManagedPackageInstallArgs(
+  definition: ManagedNpmPackageDefinition,
+  registryUrl?: string | null,
+): string[] {
+  return [
+    'install',
+    '-g',
+    ...(definition.installArgs ?? []),
+    ...(registryUrl ? ['--registry', registryUrl] : []),
+    definition.installSpec,
+  ];
+}
+
+export function buildManagedPackageGlobalInstallCommand(
+  definition: ManagedNpmPackageDefinition,
+  registryUrl?: string | null,
+): string {
+  return `npm ${getManagedPackageInstallArgs(definition, registryUrl).join(' ')}`;
 }
 
 export function isManagedPackageVersionSatisfied(

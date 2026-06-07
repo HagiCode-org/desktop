@@ -24,6 +24,12 @@ function validateManifestPackages(rawPackages) {
 
       const version = typeof rawEntry.version === 'string' ? rawEntry.version.trim() : '';
       const targetValue = typeof rawEntry.target === 'string' ? rawEntry.target.trim() : '';
+      const installArgs = Array.isArray(rawEntry.installArgs)
+        ? rawEntry.installArgs
+          .filter((value) => typeof value === 'string')
+          .map((value) => value.trim())
+          .filter(Boolean)
+        : undefined;
       if (!version) {
         throw new Error(`npmSync.packages.${packageName}.version must be a non-empty string.`);
       }
@@ -32,6 +38,7 @@ function validateManifestPackages(rawPackages) {
         packageName,
         version,
         target: targetValue || undefined,
+        installArgs: installArgs && installArgs.length > 0 ? installArgs : undefined,
       };
     });
 
@@ -48,6 +55,10 @@ function renderEntry(entry) {
     lines.push(`    target: ${JSON.stringify(entry.target)},`);
   }
 
+  if (entry.installArgs) {
+    lines.push(`    installArgs: ${JSON.stringify(entry.installArgs)},`);
+  }
+
   lines.push('  },');
   return lines.join('\n');
 }
@@ -59,6 +70,7 @@ function renderOutput(entries) {
 export interface RuntimeManagedPackageManifestEntry {
   version: string;
   target?: string;
+  installArgs?: string[];
 }
 
 export const runtimeManagedPackageManifestPackages: Readonly<Record<string, RuntimeManagedPackageManifestEntry>> = {
