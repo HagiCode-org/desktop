@@ -1,6 +1,8 @@
 export type AgentCliId =
   | 'claude-code'
   | 'codex'
+  | 'pi'
+  | 'reasonix'
   | 'copilot'
   | 'codebuddy'
   | 'opencode'
