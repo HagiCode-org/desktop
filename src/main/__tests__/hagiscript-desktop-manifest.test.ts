@@ -100,8 +100,10 @@ describe('hagiscript desktop manifest builder', () => {
         '@tencent-ai/codebuddy-code',
         '@fission-ai/openspec',
         '@openai/codex',
+        '@earendil-works/pi-coding-agent',
         'impeccable',
         'opencode-ai',
+        'reasonix',
         'skills',
       ],
     );

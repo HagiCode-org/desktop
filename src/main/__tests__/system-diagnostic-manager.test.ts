@@ -23,6 +23,8 @@ describe('system-diagnostic-manager bundled toolchain reporting', () => {
 
     assert.match(source, /desktopAgentCliCatalog\.map/);
     assert.match(source, /copilot: \[\['--version'\], \['version'\], \['-v'\]\]/);
+    assert.match(source, /pi: \[\['--version'\], \['version'\], \['-v'\]\]/);
+    assert.match(source, /reasonix: \[\['--version'\], \['version'\], \['-v'\]\]/);
     assert.match(source, /'kiro-cli': \[\['--version'\], \['version'\], \['-v'\]\]/);
     assert.match(source, /kimi: \[\['--version'\], \['version'\], \['-v'\]\]/);
     assert.match(source, /deepagents: \[\['--version'\], \['version'\], \['-v'\]\]/);

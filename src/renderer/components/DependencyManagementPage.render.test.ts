@@ -66,8 +66,7 @@ describe('dependency management renderer wiring', () => {
     assert.match(pageSource, /suggestedCommandRegistryUrl=\{suggestedCommandRegistryUrl\}/);
     assert.match(packageGroupsSource, /showSuggestedCommand\?: boolean;/);
     assert.match(packageGroupsSource, /suggestedCommandRegistryUrl\?: string \| null;/);
-    assert.match(packageGroupsSource, /const globalInstallCommand = suggestedCommandRegistryUrl/);
-    assert.match(packageGroupsSource, /`npm install -g --registry \$\{suggestedCommandRegistryUrl\} \$\{item\.definition\.installSpec\}`/);
+    assert.match(packageGroupsSource, /buildManagedPackageGlobalInstallCommand\(/);
     assert.match(packageGroupsSource, /\{showSuggestedCommand \? \(/);
     assert.match(packageGroupsSource, /dependencyManagement\.details\.manualCommand', \{ ns: 'pages' \}/);
   });

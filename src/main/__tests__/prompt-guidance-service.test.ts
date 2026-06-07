@@ -40,6 +40,8 @@ describe('PromptGuidanceService', () => {
       assert.deepEqual(result.supportedTools.map((tool) => tool.cliType), [
         'claude-code',
         'codex',
+        'pi',
+        'reasonix',
         'copilot',
         'opencode',
         'qoder',

@@ -165,18 +165,22 @@ describe('Desktop npm sync manifest helpers', () => {
   it('reads manifest-backed package versions from resources/manifest.yml', async () => {
     const manifest = load(await fs.readFile(runtimeManifestPath, 'utf8')) as {
       npmSync?: {
-        packages?: Record<string, { version?: string; target?: string }>;
+        packages?: Record<string, { version?: string; target?: string; installArgs?: string[] }>;
       };
     };
     const manifestPackages = manifest.npmSync?.packages ?? {};
 
     const claude = managedNpmPackages.find((item) => item.id === 'claude-code');
     const codex = managedNpmPackages.find((item) => item.id === 'codex');
+    const pi = managedNpmPackages.find((item) => item.id === 'pi');
+    const reasonix = managedNpmPackages.find((item) => item.id === 'reasonix');
     const openspec = managedNpmPackages.find((item) => item.id === 'openspec');
     const skills = managedNpmPackages.find((item) => item.id === 'skills');
 
     assert.ok(claude);
     assert.ok(codex);
+    assert.ok(pi);
+    assert.ok(reasonix);
     assert.ok(openspec);
     assert.ok(skills);
 
@@ -184,6 +188,10 @@ describe('Desktop npm sync manifest helpers', () => {
     assert.equal(claude.requiredVersionRange, manifestPackages['@anthropic-ai/claude-code']?.version);
     assert.equal(codex.installSpec, `@openai/codex@${manifestPackages['@openai/codex']?.target}`);
     assert.equal(codex.requiredVersionRange, manifestPackages['@openai/codex']?.version);
+    assert.equal(pi.installSpec, `@earendil-works/pi-coding-agent@${manifestPackages['@earendil-works/pi-coding-agent']?.target}`);
+    assert.deepEqual(pi.installArgs, manifestPackages['@earendil-works/pi-coding-agent']?.installArgs);
+    assert.equal(reasonix.installSpec, `reasonix@${manifestPackages.reasonix?.target}`);
+    assert.equal(reasonix.requiredVersionRange, manifestPackages.reasonix?.version);
     assert.equal(openspec.installSpec, `@fission-ai/openspec@${manifestPackages['@fission-ai/openspec']?.target}`);
     assert.equal(openspec.requiredVersionRange, manifestPackages['@fission-ai/openspec']?.version);
     assert.equal(skills.installSpec, `skills@${manifestPackages.skills?.target}`);
@@ -205,7 +213,7 @@ describe('Desktop npm sync manifest helpers', () => {
 
   it('builds an SDK-compatible sync manifest from managed package definitions', () => {
     const definitions = managedNpmPackages.filter((item) =>
-      item.id === 'openspec' || item.id === 'claude-code' || item.id === 'pm2' || item.id === 'codex');
+      item.id === 'openspec' || item.id === 'claude-code' || item.id === 'pm2' || item.id === 'codex' || item.id === 'pi');
     const manifest = buildDesktopNpmSyncManifest(definitions, 'https://registry.npmmirror.com/');
 
     assert.equal(manifest.syncMode, 'packages');
@@ -214,6 +222,7 @@ describe('Desktop npm sync manifest helpers', () => {
     assert.deepEqual(manifest.packages['@anthropic-ai/claude-code'], { version: '2.1.159', target: '2.1.159' });
     assert.deepEqual(manifest.packages.pm2, { version: '>=7.0.1', target: '7.0.1' });
     assert.deepEqual(manifest.packages['@openai/codex'], { version: '0.135.0', target: '0.135.0' });
+    assert.deepEqual(manifest.packages['@earendil-works/pi-coding-agent'], { version: '0.78.1', target: '0.78.1', installArgs: ['--ignore-scripts'] });
   });
 
   it('maps installed package snapshots into the SDK inventory shape', () => {
