@@ -131,12 +131,20 @@ npmSync:
     "@openai/codex":
       version: 0.135.0
       target: 0.135.0
+    "@earendil-works/pi-coding-agent":
+      version: 0.78.1
+      target: 0.78.1
+      installArgs:
+        - --ignore-scripts
     impeccable:
       version: 2.1.9
       target: 2.1.9
     opencode-ai:
       version: 1.15.13
       target: 1.15.13
+    reasonix:
+      version: 1.2.0
+      target: 1.2.0
     skills:
       version: 1.5.1
       target: 1.5.1

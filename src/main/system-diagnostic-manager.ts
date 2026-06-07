@@ -59,6 +59,8 @@ const RUNTIME_VERSION_ARGS = [['--version']] as const;
 const AGENT_CLI_VERSION_ARGS: Partial<Record<AgentCliId, string[][]>> = {
   'claude-code': [['--version'], ['version'], ['-v']],
   codex: [['--version'], ['version'], ['-v']],
+  pi: [['--version'], ['version'], ['-v']],
+  reasonix: [['--version'], ['version'], ['-v']],
   copilot: [['--version'], ['version'], ['-v']],
   codebuddy: [['--version'], ['version'], ['-v']],
   opencode: [['--version'], ['version'], ['-v']],

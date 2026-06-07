@@ -20,6 +20,22 @@ export const desktopAgentCliCatalog: readonly AgentCliDefinition[] = [
     docsLinkId: 'codexSetup',
   },
   {
+    id: 'pi',
+    displayName: 'PI',
+    descriptionKey: 'dependencyManagement.packages.pi.description',
+    commandName: 'pi',
+    commandCandidates: ['pi'],
+    providerId: 'pi',
+  },
+  {
+    id: 'reasonix',
+    displayName: 'Reasonix',
+    descriptionKey: 'dependencyManagement.packages.reasonix.description',
+    commandName: 'reasonix',
+    commandCandidates: ['reasonix', 'dsnix'],
+    providerId: 'reasonix',
+  },
+  {
     id: 'copilot',
     displayName: 'GitHub Copilot',
     descriptionKey: 'dependencyManagement.packages.githubCopilot.description',
