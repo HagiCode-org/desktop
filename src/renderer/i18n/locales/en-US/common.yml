@@ -270,6 +270,10 @@ dependencyManagement:
       description: Claude Code Agent CLI for AI-assisted coding sessions.
     codex:
       description: OpenAI Codex Agent CLI for coding workflows.
+    pi:
+      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+    reasonix:
+      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
     githubCopilot:
       description: GitHub Copilot CLI distributed through the official @github/copilot npm package.
     codebuddy:
