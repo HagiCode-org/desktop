@@ -1,0 +1,9 @@
+action_recommendations:
+  - id: build
+    watch: true
+    include: true
+    reason: "build desktop release artifacts"
+  - id: sync-azure-storage
+    watch: true
+    include: true
+    reason: "publish desktop release assets"
