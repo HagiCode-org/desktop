@@ -82,7 +82,6 @@ function renderResourceTags(languages) {
 function renderCapabilityTags(capabilities) {
   const restrictedCapabilities = new Set([
     'runFullTrust',
-    'unvirtualizedResources',
   ]);
 
   return capabilities

@@ -110,6 +110,8 @@ Standard development runs, portable builds, and NSIS installs still allow switch
 
 Store-specific identity and capability metadata lives in `config/store-package.json`.
 
+The Desktop MSIX contract now keeps the default package virtualization behavior; `runFullTrust` remains required, but `unvirtualizedResources` is no longer part of the supported capability set.
+
 That file is the source of truth for:
 
 - package identity fields such as `displayName`, `publisher`, and `identityName`

@@ -20,7 +20,7 @@ describe('msix packaging helpers', () => {
     assert.equal(normalizeWindowsVersion('1.2.3-rc.12'), '1.2.3.12');
   });
 
-  it('renders a full-trust MSIX manifest with desktop assets and capabilities', async () => {
+  it('renders a full-trust MSIX manifest with desktop assets and the current Store capabilities', async () => {
     const templatePath = path.resolve(process.cwd(), 'resources', 'msix', 'Package.appxmanifest.template.xml');
     const template = await readFile(templatePath, 'utf8');
     const manifest = renderMsixManifest(template, {
@@ -37,7 +37,7 @@ describe('msix packaging helpers', () => {
       packageMinOsVersion: '10.0.19041.0',
       packageMaxOsVersionTested: '10.0.19041.0',
       languages: ['en-US', 'zh-CN'],
-      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust', 'unvirtualizedResources'],
+      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust'],
     });
 
     assert.match(manifest, /Windows\.FullTrustApplication/);
@@ -46,7 +46,7 @@ describe('msix packaging helpers', () => {
     assert.match(manifest, /<Capability Name="internetClient" \/>/);
     assert.match(manifest, /<Capability Name="privateNetworkClientServer" \/>/);
     assert.match(manifest, /<rescap:Capability Name="runFullTrust" \/>/);
-    assert.match(manifest, /<rescap:Capability Name="unvirtualizedResources" \/>/);
+    assert.doesNotMatch(manifest, /unvirtualizedResources/);
   });
 
   it('renders a PSF launcher entry when Store packaging redirects the executable', async () => {
@@ -66,7 +66,7 @@ describe('msix packaging helpers', () => {
       packageMinOsVersion: '10.0.19041.0',
       packageMaxOsVersionTested: '10.0.19041.0',
       languages: ['en-US', 'zh-CN'],
-      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust', 'unvirtualizedResources'],
+      capabilities: ['internetClient', 'privateNetworkClientServer', 'runFullTrust'],
     });
 
     assert.match(manifest, /Executable="app\\PsfLauncher64\.exe"/);
@@ -141,13 +141,13 @@ describe('msix packaging helpers', () => {
       msix: {
         minVersion: '10.0.17763.0',
         maxVersionTested: '10.0.19045.0',
-        capabilities: ['runFullTrust', 'unvirtualizedResources', 'internetClient'],
+        capabilities: ['runFullTrust', 'internetClient'],
       },
     });
 
     assert.equal(config.packageIdentity.identityName, 'newbe36524.Hagicode');
     assert.equal(config.runtimeInjectionPath, 'resources/portable-fixed/current');
-    assert.deepEqual(config.msix.capabilities, ['runFullTrust', 'unvirtualizedResources', 'internetClient']);
+    assert.deepEqual(config.msix.capabilities, ['runFullTrust', 'internetClient']);
   });
 
   it('always includes runFullTrust in the effective desktop Store config', () => {
