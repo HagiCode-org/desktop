@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module';
 import {
   HAGICODE_SPONSOR_PLAN_STORE_ID,
   type SubscriptionPurchaseOutcome,
@@ -53,36 +52,45 @@ export interface SubscriptionPlatformBroker {
   dispose(): void;
 }
 
-type NodeRtStoreModule = {
+export interface MicrosoftStoreSubscriptionBrokerOptions {
+  windowHandle?: Buffer | bigint | null;
+  adapterFactory?: (windowHandle: bigint | null) => Promise<SubscriptionPlatformBroker>;
+}
+
+type DynWinRtRuntimeModule = {
+  roInitialize?: (mode?: number) => void;
+};
+
+type DynWinRtStoreContext = {
+  getAppLicenseAsync(signal?: AbortSignal): Promise<unknown>;
+  getStoreProductsForProductKindsAsync(
+    productKinds: string[],
+    storeIds: string[],
+    signal?: AbortSignal,
+  ): Promise<unknown>;
+  getUserCollectionAsync(productKinds: string[], signal?: AbortSignal): Promise<unknown>;
+  canAcquireStoreLicenseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
+  requestPurchaseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
+};
+
+type DynWinRtStoreModule = DynWinRtRuntimeModule & {
   StoreCanLicenseStatus: Record<string, number>;
   StoreContext: {
-    getDefault(): {
-      getAppLicenseAsync(callback: (error: Error | null, result: unknown) => void): void;
-      getStoreProductsAsync(
-        productKinds: string[],
-        storeIds: string[],
-        callback: (error: Error | null, result: unknown) => void,
-      ): void;
-      getUserCollectionAsync(
-        productKinds: string[],
-        callback: (error: Error | null, result: unknown) => void,
-      ): void;
-      canAcquireStoreLicenseAsync(
-        productStoreId: string,
-        callback: (error: Error | null, result: unknown) => void,
-      ): void;
-      requestPurchaseAsync(
-        storeId: string,
-        callback: (error: Error | null, result: unknown) => void,
-      ): void;
-      off?(type: string, listener: (event: Event) => void): void;
-    };
+    getDefault(): DynWinRtStoreContext;
   };
   StorePurchaseStatus: Record<string, number>;
+  InitializeWithWindow?: {
+    initialize?: (target: unknown, hwnd: bigint | number) => void;
+    Initialize?: (target: unknown, hwnd: bigint | number) => void;
+  };
+  IClosable?: {
+    from(value: unknown): { close(): void };
+  };
 };
 
 const STORE_PRODUCT_KINDS = ['Durable', 'Consumable', 'UnmanagedConsumable'];
-const require = createRequire(import.meta.url);
+const DYNWINRT_RUNTIME_SPECIFIER = '@microsoft/dynwinrt';
+const DYNWINRT_BINDINGS_SPECIFIER = './generated-js/index.js';
 
 function toIsoDate(value: unknown): string | null {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -121,61 +129,70 @@ function firstMatchingValue(
     ?? null;
 }
 
-function getNamedNumber(enumObject: Record<string, number>, key: string): number | undefined {
-  return typeof enumObject[key] === 'number' ? enumObject[key] : undefined;
+function getFirstNamedNumber(enumObject: Record<string, number>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    if (typeof enumObject[key] === 'number') {
+      return enumObject[key];
+    }
+  }
+
+  return undefined;
 }
 
-function mapPurchaseOutcome(storeModule: NodeRtStoreModule, statusValue: unknown): SubscriptionPurchaseOutcome {
+function mapPurchaseOutcome(statusEnum: Record<string, number>, statusValue: unknown): SubscriptionPurchaseOutcome {
   const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
 
   switch (statusNumber) {
-    case getNamedNumber(storeModule.StorePurchaseStatus, 'succeeded'):
+    case getFirstNamedNumber(statusEnum, ['succeeded', 'Succeeded']):
       return 'succeeded';
-    case getNamedNumber(storeModule.StorePurchaseStatus, 'alreadyPurchased'):
+    case getFirstNamedNumber(statusEnum, ['alreadyPurchased', 'AlreadyPurchased']):
       return 'already-purchased';
-    case getNamedNumber(storeModule.StorePurchaseStatus, 'notPurchased'):
+    case getFirstNamedNumber(statusEnum, ['notPurchased', 'NotPurchased']):
       return 'canceled';
-    case getNamedNumber(storeModule.StorePurchaseStatus, 'networkError'):
+    case getFirstNamedNumber(statusEnum, ['networkError', 'NetworkError']):
       return 'network-error';
-    case getNamedNumber(storeModule.StorePurchaseStatus, 'serverError'):
+    case getFirstNamedNumber(statusEnum, ['serverError', 'ServerError']):
       return 'server-error';
     default:
       return 'failed';
   }
 }
 
-function mapPurchaseEligibility(storeModule: NodeRtStoreModule, statusValue: unknown): RawStoreSubscriptionState['purchaseEligibility'] {
+function mapPurchaseEligibility(
+  statusEnum: Record<string, number>,
+  statusValue: unknown,
+): RawStoreSubscriptionState['purchaseEligibility'] {
   const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
 
   switch (statusNumber) {
-    case getNamedNumber(storeModule.StoreCanLicenseStatus, 'licensable'):
+    case getFirstNamedNumber(statusEnum, ['licensable', 'Licensable']):
       return 'licensable';
-    case getNamedNumber(storeModule.StoreCanLicenseStatus, 'notLicensableToUser'):
+    case getFirstNamedNumber(statusEnum, ['notLicensableToUser', 'NotLicensableToUser']):
       return 'not-licensable';
-    case getNamedNumber(storeModule.StoreCanLicenseStatus, 'licenseActionNotApplicableToProduct'):
+    case getFirstNamedNumber(statusEnum, ['licenseActionNotApplicableToProduct', 'LicenseActionNotApplicableToProduct']):
       return 'license-action-not-applicable';
-    case getNamedNumber(storeModule.StoreCanLicenseStatus, 'networkError'):
+    case getFirstNamedNumber(statusEnum, ['networkError', 'NetworkError']):
       return 'network-error';
-    case getNamedNumber(storeModule.StoreCanLicenseStatus, 'serverError'):
+    case getFirstNamedNumber(statusEnum, ['serverError', 'ServerError']):
       return 'server-error';
     default:
       return 'unknown';
   }
 }
 
-function promisifyNodeRt<T>(
-  runner: (callback: (error: Error | null, result: T) => void) => void,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    runner((error, result) => {
-      if (error) {
-        reject(error);
-        return;
-      }
+function normalizeThrownError(error: unknown): { errorCode: string | null; errorMessage: string | null } {
+  if (error instanceof Error) {
+    const errorWithCode = error as Error & { code?: unknown };
+    return {
+      errorCode: normalizeErrorCode(errorWithCode.code) ?? error.name,
+      errorMessage: error.message,
+    };
+  }
 
-      resolve(result);
-    });
-  });
+  return {
+    errorCode: null,
+    errorMessage: error == null ? null : String(error),
+  };
 }
 
 function findMatchingProduct(productsResult: unknown, storeId: string): Record<string, unknown> | null {
@@ -224,28 +241,123 @@ function findMatchingLicense(appLicense: unknown): RawStoreSubscriptionLicense |
   };
 }
 
-function loadNodeRtStoreModule(): NodeRtStoreModule {
-  return require('@nodert-win10-rs4/windows.services.store') as NodeRtStoreModule;
+function buildUnavailableState(fetchedAt: string, error: unknown): RawStoreSubscriptionState {
+  const { errorCode, errorMessage } = normalizeThrownError(error);
+
+  return {
+    fetchedAt,
+    availability: 'store-unavailable',
+    appLicenseActive: false,
+    product: null,
+    sku: null,
+    license: null,
+    purchaseEligibility: 'unknown',
+    errorCode,
+    errorMessage,
+  };
 }
 
-export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBroker {
-  private readonly storeModule: NodeRtStoreModule;
-  private readonly context: ReturnType<NodeRtStoreModule['StoreContext']['getDefault']>;
+function buildUnsupportedPurchaseResult(error: unknown): RawStorePurchaseResult {
+  const { errorCode, errorMessage } = normalizeThrownError(error);
 
-  constructor() {
-    this.storeModule = loadNodeRtStoreModule();
-    this.context = this.storeModule.StoreContext.getDefault();
+  return {
+    outcome: 'not-supported',
+    errorCode,
+    errorMessage,
+  };
+}
+
+function readNativeWindowHandle(rawHandle: Buffer | bigint | null | undefined): bigint | null {
+  if (typeof rawHandle === 'bigint') {
+    return rawHandle;
   }
+
+  if (!rawHandle || rawHandle.length === 0) {
+    return null;
+  }
+
+  if (rawHandle.length >= 8) {
+    return rawHandle.readBigUInt64LE(0);
+  }
+
+  if (rawHandle.length >= 4) {
+    return BigInt(rawHandle.readUInt32LE(0));
+  }
+
+  let value = 0n;
+  for (let index = 0; index < rawHandle.length; index += 1) {
+    value |= BigInt(rawHandle[index]) << BigInt(index * 8);
+  }
+
+  return value;
+}
+
+function initializeOwnerWindow(
+  storeModule: DynWinRtStoreModule,
+  context: DynWinRtStoreContext,
+  windowHandle: bigint | null,
+): void {
+  if (windowHandle == null) {
+    return;
+  }
+
+  const initializer = storeModule.InitializeWithWindow;
+  const initialize = initializer?.initialize ?? initializer?.Initialize;
+
+  if (typeof initialize !== 'function') {
+    return;
+  }
+
+  initialize.call(initializer, context, windowHandle);
+}
+
+async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
+  const runtimeSpecifier = DYNWINRT_RUNTIME_SPECIFIER;
+  const bindingsSpecifier = DYNWINRT_BINDINGS_SPECIFIER;
+  const [runtimeModule, bindingsModule] = await Promise.all([
+    import(runtimeSpecifier),
+    import(bindingsSpecifier),
+  ]);
+
+  return {
+    ...(bindingsModule as Record<string, unknown>),
+    ...(runtimeModule as Record<string, unknown>),
+  } as DynWinRtStoreModule;
+}
+
+async function createDynWinRtBroker(windowHandle: bigint | null): Promise<SubscriptionPlatformBroker> {
+  return DynWinRtStoreSubscriptionBroker.create(windowHandle);
+}
+
+class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
+  static async create(windowHandle: bigint | null): Promise<DynWinRtStoreSubscriptionBroker> {
+    const storeModule = await loadDynWinRtStoreModule();
+
+    try {
+      storeModule.roInitialize?.(1);
+    } catch {
+      // Electron may have already initialized COM for this thread.
+    }
+
+    const context = storeModule.StoreContext.getDefault();
+    initializeOwnerWindow(storeModule, context, windowHandle);
+    return new DynWinRtStoreSubscriptionBroker(storeModule, context);
+  }
+
+  private constructor(
+    private readonly storeModule: DynWinRtStoreModule,
+    private readonly context: DynWinRtStoreContext,
+  ) {}
 
   async queryStatus(): Promise<RawStoreSubscriptionState> {
     const fetchedAt = new Date().toISOString();
 
     try {
       const [appLicense, productsResult, collectionResult, canAcquireResult] = await Promise.all([
-        promisifyNodeRt((callback) => this.context.getAppLicenseAsync(callback)),
-        promisifyNodeRt((callback) => this.context.getStoreProductsAsync(STORE_PRODUCT_KINDS, [HAGICODE_SPONSOR_PLAN_STORE_ID], callback)),
-        promisifyNodeRt((callback) => this.context.getUserCollectionAsync(STORE_PRODUCT_KINDS, callback)),
-        promisifyNodeRt((callback) => this.context.canAcquireStoreLicenseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID, callback)),
+        this.context.getAppLicenseAsync(),
+        this.context.getStoreProductsForProductKindsAsync(STORE_PRODUCT_KINDS, [HAGICODE_SPONSOR_PLAN_STORE_ID]),
+        this.context.getUserCollectionAsync(STORE_PRODUCT_KINDS),
+        this.context.canAcquireStoreLicenseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID),
       ]);
 
       const product = findMatchingProduct(productsResult, HAGICODE_SPONSOR_PLAN_STORE_ID)
@@ -263,44 +375,107 @@ export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBro
         } : null,
         sku,
         license,
-        purchaseEligibility: mapPurchaseEligibility(this.storeModule, (canAcquireResult as { status?: unknown }).status),
+        purchaseEligibility: mapPurchaseEligibility(this.storeModule.StoreCanLicenseStatus, (canAcquireResult as { status?: unknown }).status),
         errorCode: normalizeErrorCode((productsResult as { extendedError?: unknown } | null)?.extendedError),
         errorMessage: null,
       };
     } catch (error) {
-      return {
-        fetchedAt,
-        availability: 'store-unavailable',
-        appLicenseActive: false,
-        product: null,
-        sku: null,
-        license: null,
-        purchaseEligibility: 'unknown',
-        errorCode: error instanceof Error ? error.name : null,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      };
+      return buildUnavailableState(fetchedAt, error);
     }
   }
 
   async purchase(): Promise<RawStorePurchaseResult> {
     try {
-      const result = await promisifyNodeRt((callback) => this.context.requestPurchaseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID, callback));
+      const result = await this.context.requestPurchaseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID);
 
       return {
-        outcome: mapPurchaseOutcome(this.storeModule, (result as { status?: unknown }).status),
+        outcome: mapPurchaseOutcome(this.storeModule.StorePurchaseStatus, (result as { status?: unknown }).status),
         errorCode: normalizeErrorCode((result as { extendedError?: unknown } | null)?.extendedError),
         errorMessage: null,
       };
     } catch (error) {
       return {
         outcome: 'failed',
-        errorCode: error instanceof Error ? error.name : null,
-        errorMessage: error instanceof Error ? error.message : String(error),
+        ...normalizeThrownError(error),
       };
     }
   }
 
   dispose(): void {
-    // NodeRT store context does not expose explicit disposal semantics here.
+    try {
+      this.storeModule.IClosable?.from(this.context).close();
+    } catch {
+      // StoreContext does not always expose IClosable in generated bindings.
+    }
+  }
+}
+
+class UnavailableSubscriptionPlatformBroker implements SubscriptionPlatformBroker {
+  constructor(private readonly error: unknown) {}
+
+  async queryStatus(): Promise<RawStoreSubscriptionState> {
+    return buildUnavailableState(new Date().toISOString(), this.error);
+  }
+
+  async purchase(): Promise<RawStorePurchaseResult> {
+    return buildUnsupportedPurchaseResult(this.error);
+  }
+
+  dispose(): void {}
+}
+
+export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBroker {
+  private readonly adapterFactory: (windowHandle: bigint | null) => Promise<SubscriptionPlatformBroker>;
+  private readonly windowHandle: bigint | null;
+  private brokerPromise: Promise<SubscriptionPlatformBroker> | null = null;
+  private broker: SubscriptionPlatformBroker | null = null;
+  private disposed = false;
+
+  constructor(options: MicrosoftStoreSubscriptionBrokerOptions = {}) {
+    this.windowHandle = readNativeWindowHandle(options.windowHandle ?? null);
+    this.adapterFactory = options.adapterFactory ?? createDynWinRtBroker;
+  }
+
+  private async resolveBroker(): Promise<SubscriptionPlatformBroker> {
+    if (this.broker) {
+      return this.broker;
+    }
+
+    if (!this.brokerPromise) {
+      this.brokerPromise = this.initializeBroker();
+    }
+
+    return this.brokerPromise;
+  }
+
+  private async initializeBroker(): Promise<SubscriptionPlatformBroker> {
+    try {
+      return this.setBroker(await this.adapterFactory(this.windowHandle));
+    } catch (error) {
+      return this.setBroker(new UnavailableSubscriptionPlatformBroker(error));
+    }
+  }
+
+  private setBroker(broker: SubscriptionPlatformBroker): SubscriptionPlatformBroker {
+    this.broker = broker;
+
+    if (this.disposed) {
+      broker.dispose();
+    }
+
+    return broker;
+  }
+
+  async queryStatus(): Promise<RawStoreSubscriptionState> {
+    return (await this.resolveBroker()).queryStatus();
+  }
+
+  async purchase(): Promise<RawStorePurchaseResult> {
+    return (await this.resolveBroker()).purchase();
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.broker?.dispose();
   }
 }

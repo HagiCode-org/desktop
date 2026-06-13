@@ -2380,7 +2380,9 @@ app.whenReady().then(async () => {
 
   if (subscriptionFeatureEnabled) {
     subscriptionService = new SubscriptionService({
-      broker: new MicrosoftStoreSubscriptionBroker(),
+      broker: new MicrosoftStoreSubscriptionBroker({
+        windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
+      }),
       snapshotStore: new SubscriptionSnapshotStore(),
       entitlementEvaluator: new EntitlementEvaluator(),
     });

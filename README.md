@@ -59,7 +59,9 @@ Desktop does not re-order or redefine its own app version because of Windows Sto
 
 The `Hagicode 赞助者计划` workspace is registered only when Desktop resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels do not register the subscription main-process service, preload bridge, IPC handlers, or sidebar entry.
 
-The Microsoft Store broker depends on `@nodert-win10-rs4/windows.services.store`, so local verification of purchase and refresh flows must happen from a packaged Windows Store/MSIX runtime. Use `npm run build:win:msix` or `npm run build:win:store` on Windows before attempting Store purchase validation for product `9N0BTGWV23M1`.
+The Microsoft Store broker uses `dynwinrt` bindings generated into `src/main/subscription/generated-js/`. Windows Store/MSIX packaging copies those bindings into `dist/main/subscription/generated-js/` so the packaged main process can load them directly.
+
+Run `npm run generate:store-bindings` on Windows after installing the optional `dynwinrt` toolchain, or let `npm run build:win:msix` / `npm run build:win:store` generate those bindings before packaging. Local verification of purchase and refresh flows must still happen from a packaged Windows Store/MSIX runtime for product `9N0BTGWV23M1`.
 
 ### Optional PSF injection for MSIX
 
