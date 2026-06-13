@@ -20,11 +20,11 @@ function splitCommand(command) {
 
 function run(args) {
   const [bin, ...binArgs] = splitCommand(codegenCommand);
+  const resolvedBin = process.platform === 'win32' && bin.toLowerCase() === 'npx' ? 'npx.cmd' : bin;
   const rendered = `${codegenCommand} ${args.join(' ')}`;
   console.log(`> ${rendered}`);
-  execFileSync(bin, [...binArgs, ...args], {
+  execFileSync(resolvedBin, [...binArgs, ...args], {
     stdio: 'inherit',
-    shell: true,
   });
 }
 
