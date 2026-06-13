@@ -136,6 +136,13 @@ sidebar:
   diagnostic: Diagnóstico
   dependencyManagement: Gerenciamento de Dependências
   settings: Configurações
+  subscription: Hagicode 赞助者计划
+  subscriptionStatus:
+    loading: Loading
+    active: Active
+    inactive: Inactive
+    stale: Stale
+    unavailable: Unavailable
   desktopVersion: Versão para desktop
   webVersion: Versão web
   windowsStoreVersion: Versao da Windows Store

@@ -258,8 +258,6 @@ versionManagement:
     incomplete: 缺少依赖项
     installed: 已安装
     payloadInvalid: 软件包无效
-    runtimeIncompatible: 运行时不兼容
-    desktopIncompatible: Desktop 不兼容
   actions:
     refresh: 刷新
     install: 安装版本
@@ -359,3 +357,88 @@ installProgressDialog:
   buttons:
     close: 关闭
     retry: 重试
+subscription:
+  eyebrow: Microsoft Store 赞助计划
+  title: Hagicode 赞助者计划
+  description: 查看 Microsoft Store 赞助计划状态、刷新本地快照，并让后续高级功能可复用稳定的权益标识。
+  loading: 正在读取最近一次缓存的订阅快照...
+  errorTitle: 无法读取订阅快照
+  errorDescription: 'Desktop 无法加载订阅快照：{{error}}'
+  staleBadge: 已使用缓存快照
+  renewalOrExpiry: 续费 / 到期 {{value}}
+  messages:
+    refreshSuccess: 订阅状态已刷新。
+    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存订阅快照。
+    refreshFailed: '刷新订阅快照失败：{{error}}'
+    refreshFailedFallback: Microsoft Store 刷新失败。
+    purchaseFailed: '购买流程失败：{{error}}'
+    purchaseFailedFallback: Microsoft Store 购买失败。
+  status:
+    loading: 加载中
+    active: 已激活
+    inactive: 未激活
+    expired: 已过期
+    canceled: 已取消
+    grace-period: 宽限期
+    pending: 待处理
+    unknown: 未知
+    stale: 缓存状态
+    unsupported: 商店不可用
+  actions:
+    refresh: 刷新状态
+    refreshing: 刷新中...
+    buy: 购买 / 管理
+    manage: 购买 / 管理
+    processing: 处理中...
+  summary:
+    planLabel: 计划
+    planName: Hagicode Sponsor Plan
+    lastSyncLabel: 最近一次成功同步
+    entitlementsLabel: 已启用权益
+    entitlementsHint: 这些能力标识可以直接提供给后续 Desktop 订阅功能使用。
+    source: '来源：{{value}}'
+  sourceValue:
+    cache: 本地缓存
+    store: Microsoft Store
+    fallback: 回退快照
+  fields:
+    status: 当前状态
+    planStoreId: Store ID
+    lastCheckedAt: 最近检查时间
+    expirationDate: 续费 / 到期
+  stateCard:
+    title: 订阅状态
+    description: Desktop 会把 Microsoft Store 返回结果和本地缓存统一归一化为桌面端自有状态模型。
+  entitlements:
+    title: 权益摘要
+    description: 这些稳定标识是后续赞助者专属 Desktop 功能应当依赖的权限模型。
+    enabled: 已启用
+    disabled: 未启用
+    names:
+      sponsorBadge: sponsorBadge
+      premiumFeatureGate: premiumFeatureGate
+    details:
+      sponsorBadge: 可用于 Desktop 内展示赞助者身份标识。
+      premiumFeatureGate: 为后续赞助者专属 Desktop 功能预留的权限开关。
+  diagnostics:
+    title: 诊断信息
+    description: 即使刷新失败，也会继续展示缓存恢复状态，避免用户误以为权益已丢失。
+    lastSuccessfulSync: 最近一次成功同步
+    source: 快照来源
+    empty: 暂无诊断信息。
+  stale:
+    title: 当前正在使用缓存状态
+    description: 因为 Store 刷新失败或尚未完成，Desktop 暂时保留了最近一次已知订阅快照。
+  unsupported:
+    title: 需要 Windows Store 运行环境
+    description: 购买和管理操作仅在 Hagicode Desktop 的 Microsoft Store 版本中可用。
+  purchaseOutcome:
+    title: 购买结果
+    succeeded: 购买已完成，订阅快照也已刷新。
+    already-purchased: 当前 Microsoft Store 账户已经拥有该赞助计划。
+    canceled: Microsoft Store 购买窗口已取消。
+    not-purchased: 购买流程已结束，但未完成支付。
+    network-error: Microsoft Store 在购买过程中报告了网络错误。
+    server-error: Microsoft Store 在购买过程中报告了服务端错误。
+    not-supported: 当前运行环境不支持购买。
+    failed: Microsoft Store 购买失败。

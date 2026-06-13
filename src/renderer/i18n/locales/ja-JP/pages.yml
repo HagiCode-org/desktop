@@ -312,3 +312,88 @@ installProgressDialog:
   buttons:
     close: 閉じる
     retry: 再試行
+subscription:
+  eyebrow: Microsoft Store sponsor plan
+  title: Hagicode 赞助者计划
+  description: Review the Microsoft Store sponsor plan status, refresh the local snapshot, and keep entitlement flags visible for future premium Desktop features.
+  loading: Reading the latest cached subscription snapshot...
+  errorTitle: Subscription snapshot unavailable
+  errorDescription: 'Desktop could not load the subscription snapshot: {{error}}'
+  staleBadge: Cached snapshot
+  renewalOrExpiry: Renewal / expiry {{value}}
+  messages:
+    refreshSuccess: Subscription status refreshed.
+    refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
+    refreshFailed: 'Failed to refresh the subscription snapshot: {{error}}'
+    refreshFailedFallback: Microsoft Store refresh failed.
+    purchaseFailed: 'Purchase flow failed: {{error}}'
+    purchaseFailedFallback: Microsoft Store purchase failed.
+  status:
+    loading: Loading
+    active: Active
+    inactive: Inactive
+    expired: Expired
+    canceled: Canceled
+    grace-period: Grace period
+    pending: Pending
+    unknown: Unknown
+    stale: Stale cached state
+    unsupported: Store unavailable
+  actions:
+    refresh: Refresh status
+    refreshing: Refreshing...
+    buy: Buy / Manage
+    manage: Buy / Manage
+    processing: Processing...
+  summary:
+    planLabel: Plan
+    planName: Hagicode Sponsor Plan
+    lastSyncLabel: Last successful sync
+    entitlementsLabel: Enabled entitlements
+    entitlementsHint: Derived capability flags are ready for future Desktop consumers.
+    source: 'Source: {{value}}'
+  sourceValue:
+    cache: Local cache
+    store: Microsoft Store
+    fallback: Fallback snapshot
+  fields:
+    status: Current status
+    planStoreId: Store ID
+    lastCheckedAt: Last checked
+    expirationDate: Renewal / expiry
+  stateCard:
+    title: Subscription state
+    description: Desktop-owned status and dates are normalized from the Microsoft Store runtime and local cache.
+  entitlements:
+    title: Entitlement summary
+    description: These stable flags are what later sponsor-only Desktop features should consume.
+    enabled: Enabled
+    disabled: Disabled
+    names:
+      sponsorBadge: sponsorBadge
+      premiumFeatureGate: premiumFeatureGate
+    details:
+      sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
+      premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
+  diagnostics:
+    title: Diagnostics
+    description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
+    lastSuccessfulSync: Last successful sync
+    source: Snapshot source
+    empty: No diagnostics recorded.
+  stale:
+    title: Cached state is being used
+    description: Desktop preserved the last known snapshot because the Store refresh failed or has not completed yet.
+  unsupported:
+    title: Windows Store runtime required
+    description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
+  purchaseOutcome:
+    title: Purchase result
+    succeeded: Purchase completed and the subscription snapshot was refreshed.
+    already-purchased: This Microsoft Store account already owns the sponsor plan.
+    canceled: The Microsoft Store purchase dialog was canceled.
+    not-purchased: The purchase flow closed without completing.
+    network-error: Microsoft Store reported a network error during purchase.
+    server-error: Microsoft Store reported a server error during purchase.
+    not-supported: Purchase is unavailable in this runtime.
+    failed: Microsoft Store purchase failed.

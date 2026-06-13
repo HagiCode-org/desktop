@@ -38,6 +38,8 @@ import type { RuntimeDataPathBridge, RuntimeDataPathPreset } from '../types/runt
 import { runtimeDataPathChannels } from '../types/runtime-data-path.js';
 import type { DebugOptionsBridge, DebugOptionsSettings } from '../types/debug-options.js';
 import { debugOptionsChannels } from '../types/debug-options.js';
+import type { SubscriptionBridge } from '../types/subscription.js';
+import { subscriptionChannels } from '../types/subscription.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -51,6 +53,7 @@ import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 
 const { contextBridge, ipcRenderer } = electron;
+const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
 export type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -78,6 +81,7 @@ function readInitialBootstrapSnapshot(): DesktopBootstrapSnapshot | null {
 }
 
 const initialBootstrapSnapshot = readInitialBootstrapSnapshot();
+const subscriptionFeatureEnabled = process.argv.includes(SUBSCRIPTION_FEATURE_ARG);
 
 // Validation result interface
 export interface ValidationResult {
@@ -288,6 +292,7 @@ interface ElectronAPI {
   dependencyManagement: DependencyManagementBridge;
   runtimeDataPath: RuntimeDataPathBridge;
   debugOptions: DebugOptionsBridge;
+  subscription?: SubscriptionBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -399,6 +404,19 @@ const runtimeDataPathBridge: RuntimeDataPathBridge = {
 const debugOptionsBridge: DebugOptionsBridge = {
   getSettings: () => ipcRenderer.invoke(debugOptionsChannels.get),
   setSettings: (settings: DebugOptionsSettings) => ipcRenderer.invoke(debugOptionsChannels.set, settings),
+};
+
+const subscriptionBridge: SubscriptionBridge = {
+  getSnapshot: (options) => ipcRenderer.invoke(subscriptionChannels.getSnapshot, options),
+  refresh: () => ipcRenderer.invoke(subscriptionChannels.refresh),
+  purchase: () => ipcRenderer.invoke(subscriptionChannels.purchase),
+  onDidChange: (callback) => {
+    const listener = (_event, snapshot) => {
+      callback(snapshot);
+    };
+    ipcRenderer.on(subscriptionChannels.changed, listener);
+    return () => ipcRenderer.removeListener(subscriptionChannels.changed, listener);
+  },
 };
 
 const hagihubApi: HagihubApi = {
@@ -584,6 +602,7 @@ const electronAPI: ElectronAPI = {
   logDirectory: logDirectoryBridge,
   runtimeDataPath: runtimeDataPathBridge,
   debugOptions: debugOptionsBridge,
+  ...(subscriptionFeatureEnabled ? { subscription: subscriptionBridge } : {}),
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);

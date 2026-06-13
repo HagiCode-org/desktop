@@ -136,6 +136,13 @@ sidebar:
   diagnostic: 診断
   dependencyManagement: 依存関係の管理
   settings: 設定
+  subscription: Hagicode 赞助者计划
+  subscriptionStatus:
+    loading: Loading
+    active: Active
+    inactive: Inactive
+    stale: Stale
+    unavailable: Unavailable
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
   windowsStoreVersion: Windows Store 版

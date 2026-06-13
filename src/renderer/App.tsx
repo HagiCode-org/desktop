@@ -10,6 +10,7 @@ import WebView from './components/WebView';
 import VersionManagementPage from './components/VersionManagementPage';
 import DependencyManagementPage from './components/DependencyManagementPage';
 import SettingsPage from './components/SettingsPage';
+import SubscriptionPage from './components/subscription/SubscriptionPage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
@@ -33,6 +34,7 @@ import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap';
 import type { LogDirectoryOpenResult } from '../types/log-directory';
+import type { SubscriptionBridge } from '../types/subscription';
 
 type BootstrapPhase = 'loading' | 'ready' | 'error';
 
@@ -86,9 +88,9 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => void) => () => void;
       languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       rss: {
@@ -116,6 +118,7 @@ declare global {
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
       onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => () => void;
       dependencyManagement: DependencyManagementBridge;
+      subscription?: SubscriptionBridge;
       hagiNode: HagiNodeRuntimeBridge;
     };
     hagiNode: HagiNodeRuntimeBridge;
@@ -152,8 +155,10 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
     webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT
   );
 
+  const subscriptionFeatureEnabled = distributionState.winStoreMode && typeof window.electronAPI.subscription?.getSnapshot === 'function';
+
   useEffect(() => {
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => {
       dispatch(switchView(view));
     });
 
@@ -192,6 +197,12 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
     }
   }, [currentView, dispatch, distributionState]);
 
+  useEffect(() => {
+    if (!subscriptionFeatureEnabled && currentView === 'subscription') {
+      dispatch(switchView('system'));
+    }
+  }, [currentView, dispatch, subscriptionFeatureEnabled]);
+
   return (
     <div className="desktop-shell-background min-h-screen bg-background text-foreground">
       <SidebarNavigation distributionState={distributionState} />
@@ -204,6 +215,7 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
           {currentView === 'dependency-management' && <DependencyManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionState={distributionState} />}
+          {subscriptionFeatureEnabled && currentView === 'subscription' && <SubscriptionPage />}
         </div>
       </div>
 

@@ -52,5 +52,8 @@ export { registerRssHandlers, initRssHandlers } from './rssHandlers.js';
 // View handlers
 export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
 
+// Subscription handlers
+export { registerSubscriptionHandlers, disposeSubscriptionHandlers } from './subscriptionHandlers.js';
+
 // Types
 export type { HandlerSuccess, HandlerError, HandlerResponse, IpcHandler } from './types.js';

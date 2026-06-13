@@ -11,6 +11,10 @@ import settingsReducer, {
   setNotificationClicked,
   setNotificationShown,
 } from './slices/settingsSlice';
+import subscriptionReducer, {
+  loadSubscriptionSnapshot,
+  setSubscriptionSnapshotFromEvent,
+} from './slices/subscriptionSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -29,6 +33,9 @@ import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import type { HagihubApi } from '../../shared/api.js';
+
+const subscriptionFeatureEnabled = typeof window !== 'undefined'
+  && typeof window.electronAPI?.subscription?.getSnapshot === 'function';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -50,6 +57,7 @@ export const store = configureStore({
     rssFeed: rssFeedReducer,
     claudeConfig: claudeConfigReducer,
     settings: settingsReducer,
+    subscription: subscriptionReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -117,6 +125,9 @@ function registerRealtimeListeners(): void {
         timestamp: number;
       }) => void,
     ) => (() => void) | void;
+    subscription?: {
+      onDidChange: (callback: (snapshot: any) => void) => (() => void) | void;
+    };
   };
   const hagihub = (window as Window & { hagihub?: HagihubApi }).hagihub;
 
@@ -168,6 +179,12 @@ function registerRealtimeListeners(): void {
       },
     });
   });
+
+  if (subscriptionFeatureEnabled) {
+    electronAPI.subscription?.onDidChange?.((snapshot: any) => {
+      store.dispatch(setSubscriptionSnapshotFromEvent(snapshot));
+    });
+  }
 }
 
 export async function runCriticalStartupInitialization(): Promise<void> {
@@ -202,6 +219,7 @@ export function startBackgroundStartupInitialization(): void {
     store.dispatch(fetchVersionUpdateSnapshot()),
     store.dispatch(fetchVersionAutoUpdateSettings()),
     store.dispatch(initializeWebService()),
+    ...(subscriptionFeatureEnabled ? [store.dispatch(loadSubscriptionSnapshot())] : []),
   ]);
 }
 
