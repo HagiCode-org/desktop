@@ -6,6 +6,7 @@ import path from 'node:path';
 const projectRoot = process.cwd();
 const outputDir = path.join(projectRoot, 'src', 'main', 'subscription', 'generated-js');
 const codegenCommand = process.env.DYNWINRT_CODEGEN || 'npx dynwinrt-codegen';
+const packagedCodegenCliPath = path.join(projectRoot, 'node_modules', '@microsoft', 'dynwinrt-codegen', 'cli.js');
 const windowsSdkRoot = process.env.WindowsSdkDir
   ? path.resolve(process.env.WindowsSdkDir)
   : path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Windows Kits', '10');
@@ -19,11 +20,15 @@ function splitCommand(command) {
 }
 
 function run(args) {
-  const [bin, ...binArgs] = splitCommand(codegenCommand);
-  const resolvedBin = process.platform === 'win32' && bin.toLowerCase() === 'npx' ? 'npx.cmd' : bin;
-  const rendered = `${codegenCommand} ${args.join(' ')}`;
+  const usePackagedCli = fs.existsSync(packagedCodegenCliPath);
+  const [bin, ...binArgs] = usePackagedCli
+    ? [process.execPath, packagedCodegenCliPath]
+    : splitCommand(codegenCommand);
+  const rendered = usePackagedCli
+    ? `${process.execPath} ${packagedCodegenCliPath} ${args.join(' ')}`
+    : `${codegenCommand} ${args.join(' ')}`;
   console.log(`> ${rendered}`);
-  execFileSync(resolvedBin, [...binArgs, ...args], {
+  execFileSync(bin, [...binArgs, ...args], {
     stdio: 'inherit',
   });
 }
