@@ -55,6 +55,12 @@ Store and portable builds can distinguish up to three version surfaces in the si
 
 Desktop does not re-order or redefine its own app version because of Windows Store version support. `win_store_packer` injects the Windows Store version through `HAGICODE_WINDOWS_STORE_VERSION` and workspace package metadata, and Desktop only consumes that value for packaged metadata and optional UI display.
 
+## Windows Store subscription support
+
+The `Hagicode 赞助者计划` workspace is registered only when Desktop resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels do not register the subscription main-process service, preload bridge, IPC handlers, or sidebar entry.
+
+The Microsoft Store broker depends on `@nodert-win10-rs4/windows.services.store`, so local verification of purchase and refresh flows must happen from a packaged Windows Store/MSIX runtime. Use `npm run build:win:msix` or `npm run build:win:store` on Windows before attempting Store purchase validation for product `9N0BTGWV23M1`.
+
 ### Optional PSF injection for MSIX
 
 When Windows Store packaging needs Package Support Framework process fixups, enable the same injection path validated in `electron_demo`:
