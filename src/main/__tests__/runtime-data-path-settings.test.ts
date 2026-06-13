@@ -142,10 +142,12 @@ describe('runtime data path settings', () => {
     const snapshot = createRuntimeDataPathSettingsSnapshot(configManager, pathManager);
 
     assert.equal(snapshot.configuredPreset, 'home-runtime-data');
-    assert.equal(snapshot.configuredRootPath, path.join(homedir(), '.hagicode', 'runtime-data'));
-    assert.equal(snapshot.effectiveRootPath, path.resolve('/tmp/runtime-override'));
+    assert.equal(snapshot.configuredRoot.logicalPath, path.join(homedir(), '.hagicode', 'runtime-data'));
+    assert.equal(snapshot.configuredRoot.displayPath, path.join(homedir(), '.hagicode', 'runtime-data'));
+    assert.equal(snapshot.effectiveRoot.logicalPath, path.resolve('/tmp/runtime-override'));
+    assert.equal(snapshot.effectiveRoot.displayPath, path.resolve('/tmp/runtime-override'));
     assert.equal(snapshot.environmentOverrideActive, true);
-    assert.equal(snapshot.environmentOverrideRoot, path.resolve('/tmp/runtime-override'));
+    assert.equal(snapshot.environmentOverride?.logicalPath, path.resolve('/tmp/runtime-override'));
   });
 
   it('keeps unchanged saves side-effect free', async () => {
@@ -182,7 +184,7 @@ describe('runtime data path settings', () => {
     assert.equal(result.restartAttempted, false);
     assert.equal(result.restartCompleted, false);
     assert.equal(pathManager.refreshCalls, 1);
-    assert.equal(result.settings.effectiveRootPath, path.join(homedir(), '.hagicode', 'runtime-data'));
+    assert.equal(result.settings.effectiveRoot.logicalPath, path.join(homedir(), '.hagicode', 'runtime-data'));
   });
 
   it('stops running managed services before starting them again on the new preset', async () => {
@@ -204,7 +206,7 @@ describe('runtime data path settings', () => {
     assert.equal(webServiceManager.stopCalls, 1);
     assert.equal(webServiceManager.startCalls, 1);
     assert.equal(pathManager.refreshCalls, 1);
-    assert.equal(result.settings.effectiveRootPath, path.join(homedir(), '.hagicode', 'runtime-data'));
+    assert.equal(result.settings.effectiveRoot.logicalPath, path.join(homedir(), '.hagicode', 'runtime-data'));
   });
 
   it('reports stop failures without switching the effective in-process root', async () => {
@@ -226,9 +228,36 @@ describe('runtime data path settings', () => {
     assert.equal(pathManager.refreshCalls, 0);
     assert.match(result.error ?? '', /Failed to stop the running managed service/);
     assert.equal(
-      result.settings.effectiveRootPath,
+      result.settings.effectiveRoot.logicalPath,
       path.join('/tmp/electron-user-data', 'runtime-data'),
     );
+  });
+
+  it('resolves display paths to the package-private physical location when Windows Store virtualization is active', () => {
+    delete process.env.HAGICODE_RUNTIME_DATA_HOME;
+    const configManager = new MockConfigManager('userData-runtime-data');
+    const pathManager = new MockPathManager(
+      configManager,
+      'C:\\Users\\Tester\\AppData\\Roaming\\Hagicode Desktop',
+    );
+
+    const snapshot = createRuntimeDataPathSettingsSnapshot(configManager, pathManager, {
+      isWindowsStore: true,
+      pathDisplay: {
+        platform: 'win32',
+        execPath: 'C:\\Program Files\\WindowsApps\\newbe36524.Hagicode_0.1.0.0_x64__8wekyb3d8bbwe\\Hagicode Desktop.exe',
+        env: {
+          LOCALAPPDATA: 'C:\\Users\\Tester\\AppData\\Local',
+          APPDATA: 'C:\\Users\\Tester\\AppData\\Roaming',
+        },
+      },
+    });
+
+    assert.equal(
+      snapshot.configuredRoot.displayPath,
+      'C:\\Users\\Tester\\AppData\\Local\\Packages\\newbe36524.Hagicode_8wekyb3d8bbwe\\LocalCache\\Roaming\\Hagicode Desktop\\runtime-data',
+    );
+    assert.equal(snapshot.configuredRoot.virtualizationKind, 'windows-store-appdata');
   });
 
   it('marks snapshot as locked when running in Windows Store mode', () => {

@@ -2,6 +2,10 @@ import {
   resolveDesktopCanonicalRuntimeDataRoot,
   resolveRuntimeDataRootOverridePath,
 } from './runtime-data-root.js';
+import {
+  createPathDisplayInfo,
+  type ResolveWindowsStorePathDisplayOptions,
+} from './windows-store-path-display.js';
 import type { ConfigManager } from './config.js';
 import type { PathManager } from './path-manager.js';
 import type { PCodeWebServiceManager } from './web-service-manager.js';
@@ -30,21 +34,30 @@ function createStartFailureMessage(result: StartResult): string {
 export function createRuntimeDataPathSettingsSnapshot(
   configManager: RuntimeDataConfigManager,
   pathManager: RuntimeDataPathManager,
-  options?: { isWindowsStore?: boolean },
+  options?: { isWindowsStore?: boolean; pathDisplay?: ResolveWindowsStorePathDisplayOptions },
 ): RuntimeDataPathSettingsSnapshot {
   const configuredPreset = configManager.getRuntimeDataPathPreset();
   const environmentOverrideRoot = resolveRuntimeDataRootOverridePath(process.env.HAGICODE_RUNTIME_DATA_HOME);
   const isLocked = Boolean(options?.isWindowsStore);
+  const pathDisplayOptions: ResolveWindowsStorePathDisplayOptions = {
+    ...options?.pathDisplay,
+    isWindowsStore: isLocked,
+  };
+  const configuredRootPath = resolveDesktopCanonicalRuntimeDataRoot({
+    preset: configuredPreset,
+    userDataPath: pathManager.getUserDataPath(),
+  });
+  const effectiveRootPath = pathManager.getRuntimeDataHome();
+
   return {
     configuredPreset,
     effectivePreset: configuredPreset,
-    configuredRootPath: resolveDesktopCanonicalRuntimeDataRoot({
-      preset: configuredPreset,
-      userDataPath: pathManager.getUserDataPath(),
-    }),
-    effectiveRootPath: pathManager.getRuntimeDataHome(),
+    configuredRoot: createPathDisplayInfo(configuredRootPath, pathDisplayOptions),
+    effectiveRoot: createPathDisplayInfo(effectiveRootPath, pathDisplayOptions),
     environmentOverrideActive: environmentOverrideRoot !== null,
-    environmentOverrideRoot,
+    environmentOverride: environmentOverrideRoot
+      ? createPathDisplayInfo(environmentOverrideRoot, pathDisplayOptions)
+      : null,
     lockedByRuntime: isLocked,
     readOnlyReason: isLocked
       ? 'MSIX / Windows Store packaging locks the runtime data storage path to prevent configuration changes.'

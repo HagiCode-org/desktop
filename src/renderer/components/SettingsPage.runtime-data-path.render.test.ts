@@ -33,6 +33,8 @@ describe('runtime data path settings renderer wiring', () => {
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.warnings\.restart/);
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.paths\.effectiveRoot/);
     assert.match(runtimeDataSettingsSource, /settings\.runtimeDataPath\.messages\.restartSuccess/);
+    assert.match(runtimeDataSettingsSource, /const configuredRootDisplayPath = settings\?\.configuredRoot\.displayPath \?\? '—';/);
+    assert.match(runtimeDataSettingsSource, /const effectiveRootDisplayPath = settings\?\.effectiveRoot\.displayPath \?\? '—';/);
     assert.match(runtimeDataSettingsSource, /const isLocked = settings\?\.lockedByRuntime \?\? false;/);
     assert.match(runtimeDataSettingsSource, /const controlDisabled = !settings \|\| isSaving \|\| isLocked;/);
     assert.match(runtimeDataSettingsSource, /const hasPendingChanges = settings \? selectedPreset !== settings\.configuredPreset : false;/);

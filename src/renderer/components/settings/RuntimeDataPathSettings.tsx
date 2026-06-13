@@ -106,6 +106,9 @@ export function RuntimeDataPathSettings() {
   const hasPendingChanges = settings ? selectedPreset !== settings.configuredPreset : false;
   const activePreset = settings?.effectivePreset ?? configuredPreset;
   const activePresetLabel = t(`settings.runtimeDataPath.options.${activePreset}.label`);
+  const configuredRootDisplayPath = settings?.configuredRoot.displayPath ?? '—';
+  const effectiveRootDisplayPath = settings?.effectiveRoot.displayPath ?? '—';
+  const environmentOverrideDisplayPath = settings?.environmentOverride?.displayPath ?? null;
 
   return (
     <Card className="max-w-3xl">
@@ -135,10 +138,10 @@ export function RuntimeDataPathSettings() {
         </div>
 
         <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-          <p>{t('settings.runtimeDataPath.paths.configuredRoot', { path: settings?.configuredRootPath ?? '—' })}</p>
-          <p>{t('settings.runtimeDataPath.paths.effectiveRoot', { path: settings?.effectiveRootPath ?? '—' })}</p>
-          {settings?.environmentOverrideActive && settings.environmentOverrideRoot ? (
-            <p>{t('settings.runtimeDataPath.paths.environmentOverride', { path: settings.environmentOverrideRoot })}</p>
+          <p>{t('settings.runtimeDataPath.paths.configuredRoot', { path: configuredRootDisplayPath })}</p>
+          <p>{t('settings.runtimeDataPath.paths.effectiveRoot', { path: effectiveRootDisplayPath })}</p>
+          {settings?.environmentOverrideActive && environmentOverrideDisplayPath ? (
+            <p>{t('settings.runtimeDataPath.paths.environmentOverride', { path: environmentOverrideDisplayPath })}</p>
           ) : null}
         </div>
 

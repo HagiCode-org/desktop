@@ -1,3 +1,5 @@
+import type { PathDisplayInfo } from './path-display.js';
+
 export const runtimeDataPathPresets = [
   'userData-runtime-data',
   'home-runtime-data',
@@ -15,10 +17,10 @@ export type RuntimeDataPathSaveStatus = 'unchanged' | 'restarted' | 'failed';
 export interface RuntimeDataPathSettingsSnapshot {
   configuredPreset: RuntimeDataPathPreset;
   effectivePreset: RuntimeDataPathPreset;
-  configuredRootPath: string;
-  effectiveRootPath: string;
+  configuredRoot: PathDisplayInfo;
+  effectiveRoot: PathDisplayInfo;
   environmentOverrideActive: boolean;
-  environmentOverrideRoot: string | null;
+  environmentOverride: PathDisplayInfo | null;
   lockedByRuntime: boolean;
   readOnlyReason?: string;
 }
