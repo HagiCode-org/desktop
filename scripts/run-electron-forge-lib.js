@@ -5,8 +5,6 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import makeDistributablesModule from '@electron-forge/core/dist/api/make.js';
-import packageApplicationModule from '@electron-forge/core/dist/api/package.js';
 import { getMsixPaths } from './msix-config.js';
 import { loadStorePackageConfig } from './store-package-config.js';
 import { buildStorePurchaseAddon } from './build-store-purchase-addon.js';
@@ -23,8 +21,10 @@ const packageDir = configuredPackageOutputDir
     : path.resolve(projectRoot, configuredPackageOutputDir))
   : path.join(projectRoot, 'pkg');
 const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
-const makeDistributables = makeDistributablesModule.default ?? makeDistributablesModule;
-const packageApplication = packageApplicationModule.default ?? packageApplicationModule;
+
+function resolveForgeCliScriptPath() {
+  return path.join(projectRoot, 'node_modules', '@electron-forge', 'cli', 'dist', 'electron-forge.js');
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -39,7 +39,7 @@ function run(command, args, options = {}) {
   }
 
   if ((result.status ?? 0) !== 0) {
-    process.exit(result.status ?? 1);
+    throw new Error(`${command} ${args.join(' ')} failed with exit code ${result.status ?? 1}`);
   }
 }
 
@@ -441,6 +441,11 @@ async function createTarGzArtifact(unpackedDir, platform, arch) {
   console.log(`[electron-forge] collected ${path.relative(projectRoot, artifactPath)}`);
 }
 
+function runForgeCli(subcommand, args) {
+  const forgeCliScriptPath = resolveForgeCliScriptPath();
+  run(process.execPath, [forgeCliScriptPath, subcommand, ...args, projectRoot]);
+}
+
 async function main() {
   ensureDarwinFileLimit();
 
@@ -451,18 +456,14 @@ async function main() {
     await buildStorePurchaseAddon({ arch: options.arch });
   }
 
-  const packageResults = await packageApplication({
-    dir: projectRoot,
-    platform: options.platform,
-    arch: options.arch,
-    outDir,
-  });
+  runForgeCli('package', [
+    '--platform',
+    options.platform,
+    '--arch',
+    options.arch,
+  ]);
 
-  if (packageResults.length !== 1) {
-    throw new Error(`Expected one packaged application, received ${packageResults.length}`);
-  }
-
-  const unpackedDir = await stagePackagedApplication(options.platform, options.arch, packageResults[0].packagedPath);
+  const unpackedDir = await stagePackagedApplication(options.platform, options.arch, null);
 
   if (options.platform === 'win32' && options.targets.includes('msix')) {
     const { storeConfig } = await loadStorePackageConfig();
@@ -480,26 +481,24 @@ async function main() {
 
   const forgeTargets = mapForgeTargets(options.platform, options.targets);
   if (forgeTargets.length > 0) {
-    let makeResults;
     try {
-      makeResults = await makeDistributables({
-        dir: projectRoot,
-        platform: options.platform,
-        arch: options.arch,
-        outDir,
-        skipPackage: true,
-        overrideTargets: forgeTargets,
-      });
+      runForgeCli('make', [
+        '--platform',
+        options.platform,
+        '--arch',
+        options.arch,
+        '--skip-package',
+        '--targets',
+        forgeTargets.join(','),
+      ]);
     } catch (error) {
-      const recoveredResults = await recoverMacDmgDetachRace(error, options);
-      if (!recoveredResults) {
+      const recoveredArtifacts = await recoverMacDmgDetachRace(error, options);
+      if (!recoveredArtifacts) {
         throw error;
       }
-
-      makeResults = recoveredResults;
     }
 
-    await collectArtifacts(makeResults);
+    await collectArtifacts([]);
   }
 
   if (options.targets.includes('tar.gz')) {
