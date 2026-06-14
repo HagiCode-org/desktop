@@ -49,6 +49,34 @@ describe('distribution metadata loader', () => {
     assert.equal(state.mode, 'steam');
   });
 
+  it('falls back to execPath-adjacent resources when resourcesPath is unavailable', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-distribution-metadata-execpath-'));
+    const appRoot = path.join(tempRoot, 'package-root');
+    const resourcesRoot = path.join(appRoot, 'resources');
+    const execPath = path.join(appRoot, 'Hagicode Desktop.exe');
+    tempDirectories.push(tempRoot);
+    await fs.mkdir(resourcesRoot, { recursive: true });
+    await fs.writeFile(path.join(resourcesRoot, 'distribution-metadata.json'), JSON.stringify({
+      schemaVersion: 1,
+      channel: 'win-store',
+      extensions: {
+        packaging: 'msix-dev-register',
+      },
+    }), 'utf8');
+
+    const result = await loadDistributionMetadata({
+      cwd: tempRoot,
+      execPath,
+      moduleDirectory: tempRoot,
+      resourcesPath: null,
+    });
+
+    assert.equal(result.error, null);
+    assert.equal(result.sourcePath, path.join(resourcesRoot, 'distribution-metadata.json'));
+    assert.equal(result.metadata?.channel, 'win-store');
+    assert.equal(result.metadata?.mode, 'fusion');
+  });
+
   it('derives Windows Store fusion state without losing the store-only sub-channel', () => {
     const metadata = normalizeDistributionMetadata({
       schemaVersion: 1,

@@ -92,7 +92,8 @@
     "dev:embedded-runtime": "node scripts/dev-with-embedded-runtime.js",
     "dev:portable-version": "node scripts/dev-with-portable-runtime.js",
     "dev:steam-mode": "node scripts/dev-with-portable-runtime.js",
-    "prepare:runtime:optional": "node scripts/prepare-runtime-if-supported.js"
+    "prepare:runtime:optional": "node scripts/prepare-runtime-if-supported.js",
+    "test:win-store:local": "node scripts/run-local-win-store-test.js"
   },
   "keywords": [
     "hagicode",
@@ -128,6 +129,8 @@
     "concurrently": "^9.1.2",
     "cross-env": "^10.1.0",
     "electron": "^41.3.0",
+    "node-addon-api": "^8.8.0",
+    "node-gyp": "^12.4.0",
     "tailwindcss": "^4.0.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^6.0.3",

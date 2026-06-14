@@ -50,7 +50,7 @@ function deriveStatus(raw: RawStoreSubscriptionState): SubscriptionStatus {
   }
 
   if (raw.purchaseEligibility === 'license-action-not-applicable') {
-    return 'pending';
+    return isActive ? 'pending' : 'inactive';
   }
 
   return isActive ? 'active' : 'inactive';

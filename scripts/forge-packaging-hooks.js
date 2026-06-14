@@ -111,11 +111,24 @@ async function stageRequiredRuntimeComponents(runtimeRoot) {
   );
 }
 
+async function stageWindowsStorePurchaseAddon(resourcesPath, platform) {
+  if (platform !== 'win32') {
+    return;
+  }
+
+  await copyDirectoryIfExists(
+    path.join(runtimeSourceRoot, 'windows-store-purchase-addon'),
+    path.join(resourcesPath, 'extra', 'windows-store-purchase-addon'),
+  );
+}
+
 export function stageForgePackagingResources(buildPath, _electronVersion, platform, arch, done) {
   return runForgeHook(async () => {
+    const resourcesPath = resolveResourcesPath(buildPath, platform);
     const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
 
     await stageRequiredRuntimeComponents(runtimeRoot);
+    await stageWindowsStorePurchaseAddon(resourcesPath, platform);
     await copyDirectoryIfExists(
       path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
       resolvePortableFixedRoot(buildPath, platform),

@@ -7,6 +7,8 @@ const projectRoot = process.cwd();
 const outputDir = path.join(projectRoot, 'src', 'main', 'subscription', 'generated-js');
 const codegenCommand = process.env.DYNWINRT_CODEGEN || 'npx dynwinrt-codegen';
 const packagedCodegenCliPath = path.join(projectRoot, 'node_modules', '@microsoft', 'dynwinrt-codegen', 'cli.js');
+const bundledNpmCliPath = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const packageJsonPath = path.join(projectRoot, 'package.json');
 const windowsSdkRoot = process.env.WindowsSdkDir
   ? path.resolve(process.env.WindowsSdkDir)
   : path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Windows Kits', '10');
@@ -14,21 +16,55 @@ const unionMetadataDir = path.join(windowsSdkRoot, 'UnionMetadata');
 const interopWinmdPath = process.env.HAGICODE_WINDOWS_STORE_INTEROP_WINMD?.trim()
   ? path.resolve(process.env.HAGICODE_WINDOWS_STORE_INTEROP_WINMD.trim())
   : null;
+const optionalDependencies = fs.existsSync(packageJsonPath)
+  ? JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).optionalDependencies ?? {}
+  : {};
+const dynWinRtCodegenVersion = optionalDependencies['@microsoft/dynwinrt-codegen'] ?? null;
 
 function splitCommand(command) {
   return command.trim().split(/\s+/u);
 }
 
+function renderCommand(commandParts) {
+  return commandParts
+    .map((part) => (/\s/u.test(part) ? `"${part}"` : part))
+    .join(' ');
+}
+
+function resolveCommandInvocation(args) {
+  if (fs.existsSync(packagedCodegenCliPath)) {
+    return {
+      bin: process.execPath,
+      args: [packagedCodegenCliPath, ...args],
+      rendered: renderCommand([process.execPath, packagedCodegenCliPath, ...args]),
+    };
+  }
+
+  if (!process.env.DYNWINRT_CODEGEN && fs.existsSync(bundledNpmCliPath)) {
+    const packageSpecifier = dynWinRtCodegenVersion
+      ? `@microsoft/dynwinrt-codegen@${dynWinRtCodegenVersion}`
+      : '@microsoft/dynwinrt-codegen';
+    const npmArgs = ['exec', '--yes', '--package', packageSpecifier, 'dynwinrt-codegen', '--', ...args];
+
+    return {
+      bin: process.execPath,
+      args: [bundledNpmCliPath, ...npmArgs],
+      rendered: renderCommand([process.execPath, bundledNpmCliPath, ...npmArgs]),
+    };
+  }
+
+  const [bin, ...binArgs] = splitCommand(codegenCommand);
+  return {
+    bin,
+    args: [...binArgs, ...args],
+    rendered: renderCommand([bin, ...binArgs, ...args]),
+  };
+}
+
 function run(args) {
-  const usePackagedCli = fs.existsSync(packagedCodegenCliPath);
-  const [bin, ...binArgs] = usePackagedCli
-    ? [process.execPath, packagedCodegenCliPath]
-    : splitCommand(codegenCommand);
-  const rendered = usePackagedCli
-    ? `${process.execPath} ${packagedCodegenCliPath} ${args.join(' ')}`
-    : `${codegenCommand} ${args.join(' ')}`;
-  console.log(`> ${rendered}`);
-  execFileSync(bin, [...binArgs, ...args], {
+  const invocation = resolveCommandInvocation(args);
+  console.log(`> ${invocation.rendered}`);
+  execFileSync(invocation.bin, invocation.args, {
     stdio: 'inherit',
   });
 }

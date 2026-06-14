@@ -7,6 +7,7 @@ export const DISTRIBUTION_METADATA_FILE = 'distribution-metadata.json';
 
 export interface LoadDistributionMetadataOptions {
   cwd?: string;
+  execPath?: string | null;
   moduleDirectory?: string;
   resourcesPath?: string | null;
   readFile?: typeof fs.readFile;
@@ -53,12 +54,17 @@ export function normalizeDistributionMetadata(value: unknown): DistributionMetad
 export function resolveDistributionMetadataCandidates(
   options: LoadDistributionMetadataOptions = {},
 ): string[] {
+  const execPath = String(options.execPath ?? '').trim();
   const moduleDirectory = options.moduleDirectory ?? path.dirname(fileURLToPath(import.meta.url));
   const cwd = options.cwd ?? process.cwd();
   const candidates = new Set<string>();
 
   if (options.resourcesPath && options.resourcesPath.trim().length > 0) {
     candidates.add(path.resolve(options.resourcesPath, DISTRIBUTION_METADATA_FILE));
+  }
+
+  if (execPath) {
+    candidates.add(path.resolve(path.dirname(execPath), 'resources', DISTRIBUTION_METADATA_FILE));
   }
 
   candidates.add(path.resolve(cwd, 'resources', DISTRIBUTION_METADATA_FILE));

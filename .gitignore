@@ -55,6 +55,7 @@ build/portable-version-runtime/current/*
 !build/portable-version-runtime/current/.gitkeep
 .generated-hagiscript-runtime-manifest.yml
 resources/portable-fixed
+resources/windows-store-purchase-addon
 resources/toolchain
 resources/code-server
 resources/omniroute

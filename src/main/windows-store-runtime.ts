@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 export interface WindowsStoreRuntimeDetectionOptions {
   platform: NodeJS.Platform;
   inheritedFlag?: string | null | undefined;
@@ -7,13 +10,40 @@ export interface WindowsStoreRuntimeDetectionOptions {
   defaultApp?: boolean;
 }
 
+function normalizeExecutablePath(executablePath: string | null | undefined): string {
+  return String(executablePath ?? '').trim().replace(/\//g, '\\');
+}
+
 export function looksLikeWindowsStoreInstallPath(executablePath: string | null | undefined): boolean {
-  const normalized = String(executablePath ?? '').trim();
+  const normalized = normalizeExecutablePath(executablePath);
   if (!normalized) {
     return false;
   }
 
-  return normalized.replace(/\//g, '\\').toLowerCase().includes('\\windowsapps\\');
+  return normalized.toLowerCase().includes('\\windowsapps\\');
+}
+
+export function looksLikeWindowsStoreDevelopmentPackage(
+  executablePath: string | null | undefined,
+): boolean {
+  const normalized = normalizeExecutablePath(executablePath);
+  if (!normalized || looksLikeWindowsStoreInstallPath(normalized)) {
+    return false;
+  }
+
+  const installRoot = path.dirname(normalized);
+  const appxManifestPath = path.join(installRoot, 'AppxManifest.xml');
+  if (!fs.existsSync(appxManifestPath)) {
+    return false;
+  }
+
+  try {
+    const manifest = fs.readFileSync(appxManifestPath, 'utf8');
+    return /<Identity\b/i.test(manifest)
+      && /<Application\b[\s\S]*EntryPoint="Windows\.FullTrustApplication"/i.test(manifest);
+  } catch {
+    return false;
+  }
 }
 
 export function isWindowsStoreRuntime(options: WindowsStoreRuntimeDetectionOptions): boolean {
@@ -26,8 +56,13 @@ export function isWindowsStoreRuntime(options: WindowsStoreRuntimeDetectionOptio
     return true;
   }
 
-  return Boolean(options.processWindowsStore)
-    && options.isPackaged
-    && !Boolean(options.defaultApp)
-    && looksLikeWindowsStoreInstallPath(options.execPath);
+  if (!options.isPackaged || Boolean(options.defaultApp)) {
+    return false;
+  }
+
+  if (Boolean(options.processWindowsStore) && looksLikeWindowsStoreInstallPath(options.execPath)) {
+    return true;
+  }
+
+  return looksLikeWindowsStoreDevelopmentPackage(options.execPath);
 }

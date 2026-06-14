@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { HAGICODE_SPONSOR_PLAN_STORE_ID } from '../../types/subscription.js';
 import type {
   RawStorePurchaseResult,
   RawStoreSubscriptionState,
   SubscriptionPlatformBroker,
 } from '../subscription/subscription-broker.js';
-import { MicrosoftStoreSubscriptionBroker } from '../subscription/subscription-broker.js';
+import { buildSupportedStateFromMinimalStoreApis, MicrosoftStoreSubscriptionBroker } from '../subscription/subscription-broker.js';
 
 class MockPlatformBroker implements SubscriptionPlatformBroker {
   constructor(
@@ -22,6 +23,12 @@ class MockPlatformBroker implements SubscriptionPlatformBroker {
   }
 
   dispose(): void {}
+}
+
+function toWinRtDateTime(isoString: string): { universalTime: bigint } {
+  return {
+    universalTime: BigInt(Date.parse(isoString) + 11644473600000) * 10000n,
+  };
 }
 
 describe('subscription broker', () => {
@@ -73,5 +80,39 @@ describe('subscription broker', () => {
     assert.match(status.errorMessage ?? '', /dynwinrt bindings missing/);
     assert.equal(purchase.outcome, 'not-supported');
     assert.match(purchase.errorMessage ?? '', /dynwinrt bindings missing/);
+  });
+
+  it('builds a supported snapshot from license and eligibility APIs without product queries', () => {
+    const expirationDate = '2026-07-01T00:00:00.000Z';
+    const state = buildSupportedStateFromMinimalStoreApis({
+      fetchedAt: '2026-06-14T06:00:00.000Z',
+      appLicense: {
+        isActive: true,
+        addOnLicenses: {
+          hasKey: (key) => key === HAGICODE_SPONSOR_PLAN_STORE_ID,
+          get: (key) => (key === HAGICODE_SPONSOR_PLAN_STORE_ID
+            ? {
+                skuStoreId: HAGICODE_SPONSOR_PLAN_STORE_ID,
+                isActive: true,
+                expirationDate: toWinRtDateTime(expirationDate),
+              }
+            : undefined),
+        },
+      },
+      canAcquireResult: {
+        status: 1,
+        extendedError: 0,
+      },
+      canLicenseStatusEnum: {
+        Licensable: 1,
+      },
+    });
+
+    assert.equal(state.availability, 'supported');
+    assert.equal(state.product?.storeId, HAGICODE_SPONSOR_PLAN_STORE_ID);
+    assert.equal(state.license?.isActive, true);
+    assert.equal(state.license?.expirationDate, expirationDate);
+    assert.equal(state.purchaseEligibility, 'licensable');
+    assert.equal(state.errorCode, null);
   });
 });

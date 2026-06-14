@@ -89,6 +89,7 @@ const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 const MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS = 5000;
 const SUBSCRIPTION_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
+const SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG = '--desktop-subscription-purchase-smoke-test=1';
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));
@@ -304,6 +305,7 @@ let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
 let subscriptionService: SubscriptionService | null = null;
 let subscriptionSyncInterval: NodeJS.Timeout | null = null;
 let subscriptionFeatureEnabled = false;
+let subscriptionPurchaseSmokeTestStarted = false;
 const notificationService = new NotificationService({
   getMainWindow: () => mainWindow,
   activateMainWindow,
@@ -661,6 +663,59 @@ function createWindow(): void {
     console.log('[Hagicode] Window closed');
     mainWindow = null;
   });
+}
+
+function initializeSubscriptionService(): void {
+  if (!subscriptionFeatureEnabled || subscriptionService) {
+    return;
+  }
+
+  subscriptionService = new SubscriptionService({
+    broker: new MicrosoftStoreSubscriptionBroker({
+      windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
+    }),
+    snapshotStore: new SubscriptionSnapshotStore(),
+    entitlementEvaluator: new EntitlementEvaluator(),
+  });
+
+  registerSubscriptionHandlers({
+    subscriptionService,
+    getWindows: () => ElectronBrowserWindow.getAllWindows(),
+  });
+  log.info('[App] Subscription service and IPC handlers registered for Windows Store runtime');
+}
+
+function scheduleSubscriptionPurchaseSmokeTest(): void {
+  if (
+    !process.argv.includes(SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG)
+    || !subscriptionFeatureEnabled
+    || !subscriptionService
+    || subscriptionPurchaseSmokeTestStarted
+  ) {
+    return;
+  }
+
+  subscriptionPurchaseSmokeTestStarted = true;
+  setTimeout(() => {
+    if (!subscriptionService) {
+      return;
+    }
+
+    log.info('[SubscriptionSmokeTest] Starting packaged purchase smoke test.');
+    void subscriptionService.purchase()
+      .then((result) => {
+        log.info('[SubscriptionSmokeTest] Packaged purchase smoke test completed.', {
+          outcome: result.outcome,
+          message: result.message,
+          snapshotAvailability: result.snapshot.availability,
+          snapshotStatus: result.snapshot.status,
+          diagnostics: result.snapshot.diagnostics.map((diagnostic) => diagnostic.code),
+        });
+      })
+      .catch((error) => {
+        log.error('[SubscriptionSmokeTest] Packaged purchase smoke test failed.', error);
+      });
+  }, 1500);
 }
 
 function createManagedChildWindow(): BrowserWindow {
@@ -2378,22 +2433,6 @@ app.whenReady().then(async () => {
   });
   log.info('[App] Version Update Manager initialized');
 
-  if (subscriptionFeatureEnabled) {
-    subscriptionService = new SubscriptionService({
-      broker: new MicrosoftStoreSubscriptionBroker({
-        windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
-      }),
-      snapshotStore: new SubscriptionSnapshotStore(),
-      entitlementEvaluator: new EntitlementEvaluator(),
-    });
-
-    registerSubscriptionHandlers({
-      subscriptionService,
-      getWindows: () => ElectronBrowserWindow.getAllWindows(),
-    });
-    log.info('[App] Subscription service and IPC handlers registered for Windows Store runtime');
-  }
-
   registerPackageSourceHandlers({
     versionManager,
     mainWindow,
@@ -2509,6 +2548,7 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+  initializeSubscriptionService();
   createTray();
   setServerStatus('stopped');
   startStatusPolling();
@@ -2520,6 +2560,7 @@ app.whenReady().then(async () => {
     subscriptionSyncInterval = setInterval(() => {
       void subscriptionService?.refresh('scheduled');
     }, SUBSCRIPTION_SYNC_INTERVAL_MS);
+    scheduleSubscriptionPurchaseSmokeTest();
   }
 
   // Get initial web service status and update tray before starting polling

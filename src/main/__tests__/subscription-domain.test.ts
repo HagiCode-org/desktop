@@ -96,6 +96,26 @@ describe('subscription domain', () => {
     assert.deepEqual(inactiveEntitlements, []);
   });
 
+  it('treats non-owned subscriptions as inactive when Store license actions are not applicable', () => {
+    const snapshot = normalizeSubscriptionSnapshot({
+      fetchedAt: '2026-06-14T05:30:43.967Z',
+      availability: 'supported',
+      appLicenseActive: true,
+      product: {
+        storeId: '9N0BTGWV23M1',
+        title: null,
+      },
+      sku: null,
+      license: null,
+      purchaseEligibility: 'license-action-not-applicable',
+      errorCode: null,
+      errorMessage: null,
+    });
+
+    assert.equal(snapshot.status, 'inactive');
+    assert.equal(snapshot.isStale, false);
+  });
+
   it('falls back to a stale cached snapshot when a Store refresh fails', async () => {
     const cache = new MemoryElectronStore();
     const snapshotStore = new SubscriptionSnapshotStore(cache as never);

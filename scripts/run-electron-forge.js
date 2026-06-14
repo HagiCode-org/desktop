@@ -7,6 +7,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import makeDistributablesModule from '@electron-forge/core/dist/api/make.js';
 import packageApplicationModule from '@electron-forge/core/dist/api/package.js';
+import { getMsixPaths } from './msix-config.js';
+import { loadStorePackageConfig } from './store-package-config.js';
+import { buildStorePurchaseAddon } from './build-store-purchase-addon.js';
 import { stageForgePackagingResources } from './forge-packaging-hooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -170,6 +173,67 @@ async function stagePackagedApplication(platform, arch, packagedPath) {
   return destination;
 }
 
+function createDevMsixDistributionMetadata() {
+  return {
+    schemaVersion: 1,
+    mode: 'fusion',
+    channel: 'win-store',
+    extensions: {
+      source: 'msix-dev-registration-layout',
+    },
+  };
+}
+
+function createDevRegisterManifest(manifestContent) {
+  return String(manifestContent || '').replace(
+    /\bExecutable=(['"])app[\\/]/g,
+    'Executable=$1',
+  );
+}
+
+function resolveDevMsixRegistrationStageDir(stageDir) {
+  const resolvedStageDir = path.resolve(stageDir);
+  return path.join(
+    path.dirname(resolvedStageDir),
+    `${path.basename(resolvedStageDir)}-dev-registration`,
+  );
+}
+
+async function syncMsixDeveloperRegistrationLayout(unpackedDir, options = {}) {
+  const {
+    assetsPath,
+    manifestPath,
+    stageDir,
+  } = options;
+  const resolvedStageDir = stageDir ? path.resolve(stageDir) : null;
+  const resolvedManifestPath = manifestPath ? path.resolve(manifestPath) : null;
+  const resolvedAssetsPath = assetsPath ? path.resolve(assetsPath) : null;
+
+  if (!resolvedStageDir || !resolvedManifestPath || !resolvedAssetsPath) {
+    throw new Error('syncMsixDeveloperRegistrationLayout requires stageDir, manifestPath, and assetsPath.');
+  }
+
+  const stageAppDir = path.join(resolvedStageDir, 'app');
+  const manifestContent = await fsp.readFile(resolvedManifestPath, 'utf8');
+  await fsp.rm(resolvedStageDir, { recursive: true, force: true });
+  await fsp.mkdir(resolvedStageDir, { recursive: true });
+  await fsp.cp(unpackedDir, stageAppDir, { recursive: true });
+  await fsp.writeFile(
+    path.join(stageAppDir, 'AppxManifest.xml'),
+    createDevRegisterManifest(manifestContent),
+    'utf8',
+  );
+  await fsp.cp(resolvedAssetsPath, path.join(stageAppDir, 'Assets'), { recursive: true });
+  await fsp.mkdir(path.join(stageAppDir, 'resources'), { recursive: true });
+  await fsp.writeFile(
+    path.join(stageAppDir, 'resources', 'distribution-metadata.json'),
+    `${JSON.stringify(createDevMsixDistributionMetadata(), null, 2)}\n`,
+    'utf8',
+  );
+  console.log(`[electron-forge] synchronized dev MSIX registration layout ${path.relative(projectRoot, stageAppDir)}`);
+  return stageAppDir;
+}
+
 function mapForgeTargets(platform, targets) {
   const targetMap = {
     linux: {
@@ -290,6 +354,10 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   await resetOutputDirectories();
 
+  if (options.platform === 'win32') {
+    await buildStorePurchaseAddon({ arch: options.arch });
+  }
+
   const packageResults = await packageApplication({
     dir: projectRoot,
     platform: options.platform,
@@ -302,6 +370,16 @@ async function main() {
   }
 
   const unpackedDir = await stagePackagedApplication(options.platform, options.arch, packageResults[0].packagedPath);
+
+  if (options.platform === 'win32' && options.targets.includes('msix')) {
+    const { storeConfig } = await loadStorePackageConfig();
+    const { generatedAssetsPath, manifestOutputPath } = getMsixPaths(projectRoot);
+    await syncMsixDeveloperRegistrationLayout(unpackedDir, {
+      stageDir: resolveDevMsixRegistrationStageDir(path.resolve(projectRoot, storeConfig.stageDirectory)),
+      manifestPath: manifestOutputPath,
+      assetsPath: generatedAssetsPath,
+    });
+  }
 
   if (options.packageOnly) {
     return;
@@ -346,9 +424,12 @@ function isCliEntrypoint() {
 }
 
 export {
+  createDevRegisterManifest,
   getExpectedForgeArtifactPaths,
   isMacDmgDetachRaceError,
   recoverMacDmgDetachRace,
+  resolveDevMsixRegistrationStageDir,
+  syncMsixDeveloperRegistrationLayout,
 };
 
 if (isCliEntrypoint()) {

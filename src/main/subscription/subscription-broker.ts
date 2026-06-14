@@ -2,6 +2,10 @@ import {
   HAGICODE_SPONSOR_PLAN_STORE_ID,
   type SubscriptionPurchaseOutcome,
 } from '../../types/subscription.js';
+import {
+  executeWindowsStorePurchaseAddon,
+  resolveWindowsStorePurchaseAddonPath,
+} from './windows-store-purchase-addon.js';
 
 export interface RawStoreSubscriptionProduct {
   storeId: string;
@@ -58,24 +62,51 @@ export interface MicrosoftStoreSubscriptionBrokerOptions {
 }
 
 type DynWinRtRuntimeModule = {
+  DynWinRtMethodSig?: new () => { addIn(type: unknown): unknown };
+  DynWinRtType?: {
+    registerInterface: (name: string, iid: unknown) => {
+      addMethod: (name: string, signature: unknown) => {
+        method: (index: number) => {
+          invoke: (obj: unknown, args: unknown[]) => unknown;
+        };
+      };
+    };
+    u64: () => unknown;
+  };
+  DynWinRtValue?: {
+    u64: (value: number) => unknown;
+  };
+  WinGuid?: {
+    parse: (guid: string) => unknown;
+  };
   roInitialize?: (mode?: number) => void;
+};
+
+type DynWinRtStoreLicense = {
+  skuStoreId?: unknown;
+  isActive?: unknown;
+  expirationDate?: unknown;
+};
+
+type DynWinRtStoreLicenseMap = {
+  hasKey?: (key: string) => boolean;
+  get?: (key: string) => DynWinRtStoreLicense | undefined;
+};
+
+type DynWinRtStoreAppLicense = {
+  isActive?: unknown;
+  addOnLicenses?: DynWinRtStoreLicenseMap | null;
+};
+
+type DynWinRtCanAcquireLicenseResult = {
+  status?: unknown;
+  extendedError?: unknown;
 };
 
 type DynWinRtStoreContext = {
   getAppLicenseAsync(signal?: AbortSignal): Promise<unknown>;
-  getStoreProductsForProductKindsAsync(
-    productKinds: string[],
-    storeIds: string[],
-    signal?: AbortSignal,
-  ): Promise<unknown>;
-  getUserCollectionAsync(productKinds: string[], signal?: AbortSignal): Promise<unknown>;
   canAcquireStoreLicenseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
   requestPurchaseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
-};
-
-type DynWinRtStoreWindowInitializer = {
-  initialize?: (target: unknown, hwnd: bigint | number) => void;
-  Initialize?: (target: unknown, hwnd: bigint | number) => void;
 };
 
 type DynWinRtStoreModule = DynWinRtRuntimeModule & {
@@ -84,19 +115,33 @@ type DynWinRtStoreModule = DynWinRtRuntimeModule & {
     getDefault(): DynWinRtStoreContext;
   };
   StorePurchaseStatus: Record<string, number>;
-  InitializeWithWindow?: DynWinRtStoreWindowInitializer;
 };
 
-const STORE_PRODUCT_KINDS = ['Durable', 'Consumable', 'UnmanagedConsumable'];
 const DYNWINRT_RUNTIME_SPECIFIER = '@microsoft/dynwinrt';
 const DYNWINRT_STORE_CONTEXT_SPECIFIER = './generated-js/StoreContext.js';
 const DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER = './generated-js/StoreCanLicenseStatus.js';
 const DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER = './generated-js/StorePurchaseStatus.js';
-const DYNWINRT_INITIALIZE_WITH_WINDOW_SPECIFIER = './generated-js/InitializeWithWindow.js';
+const WINDOWS_EPOCH_OFFSET_MILLISECONDS = 11644473600000n;
+const HUNDRED_NANOSECONDS_PER_MILLISECOND = 10000n;
+const INITIALIZE_WITH_WINDOW_IID = '3E68D4BD-7135-4D10-8018-9FB6D9F33FA1';
 
 function toIsoDate(value: unknown): string | null {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
-    return null;
+    const universalTime = (value as { universalTime?: unknown } | null)?.universalTime;
+    const ticks = typeof universalTime === 'bigint'
+      ? universalTime
+      : typeof universalTime === 'number' && Number.isFinite(universalTime)
+        ? BigInt(Math.trunc(universalTime))
+        : null;
+
+    if (ticks == null) {
+      return null;
+    }
+
+    const unixMilliseconds = ticks / HUNDRED_NANOSECONDS_PER_MILLISECOND - WINDOWS_EPOCH_OFFSET_MILLISECONDS;
+    const date = new Date(Number(unixMilliseconds));
+
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
   return value.toISOString();
@@ -104,31 +149,18 @@ function toIsoDate(value: unknown): string | null {
 
 function normalizeErrorCode(value: unknown): string | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value);
+    return value === 0 ? null : String(value);
   }
 
   if (typeof value === 'string' && value.trim().length > 0) {
+    if (value.trim() === '0') {
+      return null;
+    }
+
     return value.trim();
   }
 
   return null;
-}
-
-function valuesFromUnknownRecord(value: unknown): unknown[] {
-  if (!value || typeof value !== 'object') {
-    return [];
-  }
-
-  return Object.values(value as Record<string, unknown>);
-}
-
-function firstMatchingValue(
-  value: unknown,
-  predicate: (candidate: Record<string, unknown>) => boolean,
-): Record<string, unknown> | null {
-  return valuesFromUnknownRecord(value)
-    .find((candidate) => candidate && typeof candidate === 'object' && predicate(candidate as Record<string, unknown>)) as Record<string, unknown> | undefined
-    ?? null;
 }
 
 function getFirstNamedNumber(enumObject: Record<string, number>, keys: string[]): number | undefined {
@@ -197,40 +229,20 @@ function normalizeThrownError(error: unknown): { errorCode: string | null; error
   };
 }
 
-function findMatchingProduct(productsResult: unknown, storeId: string): Record<string, unknown> | null {
-  return firstMatchingValue(
-    (productsResult as { products?: unknown } | null)?.products,
-    (candidate) => String(candidate.storeId ?? '').trim().toUpperCase() === storeId.toUpperCase(),
-  );
-}
+function findMatchingLicense(appLicense: DynWinRtStoreAppLicense | null): RawStoreSubscriptionLicense | null {
+  const addOnLicenses = appLicense?.addOnLicenses;
+  const hasKey = addOnLicenses?.hasKey;
+  const get = addOnLicenses?.get;
 
-function findMatchingSku(candidate: Record<string, unknown> | null): RawStoreSubscriptionSku | null {
-  const sku = firstMatchingValue(candidate?.skus, () => true);
-
-  if (!sku) {
+  if (typeof hasKey !== 'function' || typeof get !== 'function') {
     return null;
   }
 
-  const collectionData = sku.collectionData as Record<string, unknown> | undefined;
+  if (!hasKey.call(addOnLicenses, HAGICODE_SPONSOR_PLAN_STORE_ID)) {
+    return null;
+  }
 
-  return {
-    storeId: typeof sku.storeId === 'string' ? sku.storeId : null,
-    title: typeof sku.title === 'string' ? sku.title : null,
-    isSubscription: Boolean(sku.isSubscription),
-    isInUserCollection: Boolean(sku.isInUserCollection),
-    collectionEndDate: toIsoDate(collectionData?.endDate),
-  };
-}
-
-function findMatchingLicense(appLicense: unknown): RawStoreSubscriptionLicense | null {
-  const addOnLicenses = (appLicense as { addOnLicenses?: unknown } | null)?.addOnLicenses;
-  const license = firstMatchingValue(
-    addOnLicenses,
-    (candidate) => {
-      const skuStoreId = String(candidate.skuStoreId ?? '').trim().toUpperCase();
-      return skuStoreId.includes(HAGICODE_SPONSOR_PLAN_STORE_ID);
-    },
-  );
+  const license = get.call(addOnLicenses, HAGICODE_SPONSOR_PLAN_STORE_ID);
 
   if (!license) {
     return null;
@@ -240,6 +252,30 @@ function findMatchingLicense(appLicense: unknown): RawStoreSubscriptionLicense |
     storeId: typeof license.skuStoreId === 'string' ? license.skuStoreId : null,
     isActive: Boolean(license.isActive),
     expirationDate: toIsoDate(license.expirationDate),
+  };
+}
+
+export function buildSupportedStateFromMinimalStoreApis(options: {
+  fetchedAt: string;
+  appLicense: DynWinRtStoreAppLicense | null;
+  canAcquireResult: DynWinRtCanAcquireLicenseResult | null;
+  canLicenseStatusEnum: Record<string, number>;
+}): RawStoreSubscriptionState {
+  const license = findMatchingLicense(options.appLicense);
+
+  return {
+    fetchedAt: options.fetchedAt,
+    availability: 'supported',
+    appLicenseActive: Boolean(options.appLicense?.isActive),
+    product: {
+      storeId: HAGICODE_SPONSOR_PLAN_STORE_ID,
+      title: null,
+    },
+    sku: null,
+    license,
+    purchaseEligibility: mapPurchaseEligibility(options.canLicenseStatusEnum, options.canAcquireResult?.status),
+    errorCode: normalizeErrorCode(options.canAcquireResult?.extendedError),
+    errorMessage: null,
   };
 }
 
@@ -303,23 +339,28 @@ function initializeOwnerWindow(
     return;
   }
 
-  const initializer = storeModule.InitializeWithWindow;
-  const initialize = initializer?.initialize ?? initializer?.Initialize;
+  const runtimeModule = storeModule as DynWinRtRuntimeModule;
+  const DynWinRtType = runtimeModule.DynWinRtType;
+  const DynWinRtMethodSig = runtimeModule.DynWinRtMethodSig;
+  const DynWinRtValue = runtimeModule.DynWinRtValue;
+  const WinGuid = runtimeModule.WinGuid;
 
-  if (typeof initialize !== 'function') {
+  if (!DynWinRtType || !DynWinRtMethodSig || !DynWinRtValue || !WinGuid) {
     return;
   }
 
-  initialize.call(initializer, context, windowHandle);
-}
+  const initializeWithWindowType = DynWinRtType
+    .registerInterface('IInitializeWithWindow', WinGuid.parse(INITIALIZE_WITH_WINDOW_IID))
+    .addMethod('Initialize', new DynWinRtMethodSig().addIn(DynWinRtType.u64()));
+  const rawContext = (context as { _obj?: unknown } | null)?._obj ?? context;
+  const cast = (rawContext as { cast?: (iid: unknown) => unknown }).cast;
 
-function isGeneratedModuleMissing(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
+  if (typeof cast !== 'function') {
+    return;
   }
 
-  const errorWithCode = error as Error & { code?: unknown };
-  return errorWithCode.code === 'ERR_MODULE_NOT_FOUND';
+  const interopContext = cast.call(rawContext, WinGuid.parse(INITIALIZE_WITH_WINDOW_IID));
+  initializeWithWindowType.method(6).invoke(interopContext, [DynWinRtValue.u64(Number(windowHandle))]);
 }
 
 async function loadGeneratedExport<T>(specifier: string, exportName: string): Promise<T> {
@@ -332,30 +373,14 @@ async function loadGeneratedExport<T>(specifier: string, exportName: string): Pr
 
   return value as T;
 }
-
-async function loadOptionalGeneratedExport<T>(specifier: string, exportName: string): Promise<T | undefined> {
-  try {
-    const module = await import(specifier) as Record<string, unknown>;
-    const value = module[exportName];
-    return value == null ? undefined : value as T;
-  } catch (error) {
-    if (isGeneratedModuleMissing(error)) {
-      return undefined;
-    }
-
-    throw error;
-  }
-}
-
 async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
   // Avoid loading the generated namespace index, which eagerly evaluates the
   // full WinRT projection and can trigger unrelated circular-init failures.
-  const [runtimeModule, StoreContext, StoreCanLicenseStatus, StorePurchaseStatus, InitializeWithWindow] = await Promise.all([
+  const [runtimeModule, StoreContext, StoreCanLicenseStatus, StorePurchaseStatus] = await Promise.all([
     import(DYNWINRT_RUNTIME_SPECIFIER),
     loadGeneratedExport<DynWinRtStoreModule['StoreContext']>(DYNWINRT_STORE_CONTEXT_SPECIFIER, 'StoreContext'),
     loadGeneratedExport<DynWinRtStoreModule['StoreCanLicenseStatus']>(DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER, 'StoreCanLicenseStatus'),
     loadGeneratedExport<DynWinRtStoreModule['StorePurchaseStatus']>(DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER, 'StorePurchaseStatus'),
-    loadOptionalGeneratedExport<DynWinRtStoreWindowInitializer>(DYNWINRT_INITIALIZE_WITH_WINDOW_SPECIFIER, 'InitializeWithWindow'),
   ]);
 
   return {
@@ -363,7 +388,6 @@ async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
     StoreContext,
     StoreCanLicenseStatus,
     StorePurchaseStatus,
-    InitializeWithWindow,
   } as DynWinRtStoreModule;
 }
 
@@ -383,50 +407,56 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
 
     const context = storeModule.StoreContext.getDefault();
     initializeOwnerWindow(storeModule, context, windowHandle);
-    return new DynWinRtStoreSubscriptionBroker(storeModule, context);
+    return new DynWinRtStoreSubscriptionBroker(storeModule, context, windowHandle);
   }
 
   private constructor(
     private readonly storeModule: DynWinRtStoreModule,
     private readonly context: DynWinRtStoreContext,
+    private readonly windowHandle: bigint | null,
   ) {}
 
   async queryStatus(): Promise<RawStoreSubscriptionState> {
     const fetchedAt = new Date().toISOString();
 
     try {
-      const [appLicense, productsResult, collectionResult, canAcquireResult] = await Promise.all([
+      const [appLicense, canAcquireResult] = await Promise.all([
         this.context.getAppLicenseAsync(),
-        this.context.getStoreProductsForProductKindsAsync(STORE_PRODUCT_KINDS, [HAGICODE_SPONSOR_PLAN_STORE_ID]),
-        this.context.getUserCollectionAsync(STORE_PRODUCT_KINDS),
         this.context.canAcquireStoreLicenseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID),
       ]);
 
-      const product = findMatchingProduct(productsResult, HAGICODE_SPONSOR_PLAN_STORE_ID)
-        ?? findMatchingProduct(collectionResult, HAGICODE_SPONSOR_PLAN_STORE_ID);
-      const sku = findMatchingSku(product);
-      const license = findMatchingLicense(appLicense);
-
-      return {
+      // Current dynwinrt preview crashes when marshalling string IIterable<T>
+      // arguments, so store product collection queries are intentionally avoided
+      // here until the upstream vector binding is fixed.
+      return buildSupportedStateFromMinimalStoreApis({
         fetchedAt,
-        availability: 'supported',
-        appLicenseActive: Boolean((appLicense as { isActive?: boolean } | null)?.isActive),
-        product: product ? {
-          storeId: typeof product.storeId === 'string' ? product.storeId : HAGICODE_SPONSOR_PLAN_STORE_ID,
-          title: typeof product.title === 'string' ? product.title : null,
-        } : null,
-        sku,
-        license,
-        purchaseEligibility: mapPurchaseEligibility(this.storeModule.StoreCanLicenseStatus, (canAcquireResult as { status?: unknown }).status),
-        errorCode: normalizeErrorCode((productsResult as { extendedError?: unknown } | null)?.extendedError),
-        errorMessage: null,
-      };
+        appLicense: appLicense as DynWinRtStoreAppLicense | null,
+        canAcquireResult: canAcquireResult as DynWinRtCanAcquireLicenseResult | null,
+        canLicenseStatusEnum: this.storeModule.StoreCanLicenseStatus,
+      });
     } catch (error) {
       return buildUnavailableState(fetchedAt, error);
     }
   }
 
   async purchase(): Promise<RawStorePurchaseResult> {
+    const addonModulePath = resolveWindowsStorePurchaseAddonPath();
+    if (addonModulePath) {
+      const addonResult = await executeWindowsStorePurchaseAddon({
+        modulePath: addonModulePath,
+        storeId: HAGICODE_SPONSOR_PLAN_STORE_ID,
+        ownerWindowHandle: this.windowHandle,
+      });
+
+      if (
+        addonResult.outcome !== 'not-supported'
+        && addonResult.errorCode !== 'addon-load-failed'
+        && addonResult.errorCode !== 'addon-execution-failed'
+      ) {
+        return addonResult;
+      }
+    }
+
     try {
       const result = await this.context.requestPurchaseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID);
 

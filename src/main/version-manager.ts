@@ -254,6 +254,7 @@ export class VersionManager {
     }
 
     const metadataResult = await loadDistributionMetadata({
+      execPath: process.execPath,
       resourcesPath: process.resourcesPath,
     });
 

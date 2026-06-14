@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import log from 'electron-log';
 import type {
   SubscriptionGetSnapshotOptions,
   SubscriptionPurchaseResult,
@@ -6,7 +7,7 @@ import type {
 } from '../../types/subscription.js';
 import { createDefaultSubscriptionSnapshot } from '../../types/subscription.js';
 import { EntitlementEvaluator } from './entitlement-evaluator.js';
-import type { SubscriptionPlatformBroker } from './subscription-broker.js';
+import type { RawStorePurchaseResult, SubscriptionPlatformBroker } from './subscription-broker.js';
 import { buildPurchaseMessage, createStaleSnapshot, createUnavailableSnapshot, normalizeSubscriptionSnapshot } from './normalize.js';
 import { SubscriptionSnapshotStore } from './subscription-store.js';
 
@@ -42,6 +43,11 @@ export class SubscriptionService {
 
   async getSnapshot(options: SubscriptionGetSnapshotOptions = {}): Promise<SubscriptionSnapshot> {
     if (options.refreshIfStale && this.currentSnapshot.isStale) {
+      log.info('[SubscriptionService] Cached snapshot is stale, scheduling refresh.', {
+        lastCheckedAt: this.currentSnapshot.lastCheckedAt,
+        availability: this.currentSnapshot.availability,
+        status: this.currentSnapshot.status,
+      });
       void this.refresh('manual');
     }
 
@@ -50,8 +56,17 @@ export class SubscriptionService {
 
   async refresh(reason: SubscriptionRefreshReason): Promise<SubscriptionSnapshot> {
     if (this.refreshInFlight) {
+      log.info('[SubscriptionService] Reusing in-flight refresh.', { reason });
       return this.refreshInFlight;
     }
+
+    log.info('[SubscriptionService] Starting refresh.', {
+      reason,
+      cachedAvailability: this.currentSnapshot.availability,
+      cachedStatus: this.currentSnapshot.status,
+      cachedIsStale: this.currentSnapshot.isStale,
+      cachedLastCheckedAt: this.currentSnapshot.lastCheckedAt,
+    });
 
     this.refreshInFlight = (async () => {
       try {
@@ -61,6 +76,16 @@ export class SubscriptionService {
           ? this.snapshotStore.save(normalizedSnapshot)
           : normalizedSnapshot;
 
+        log.info('[SubscriptionService] Refresh completed.', {
+          reason,
+          availability: persistedSnapshot.availability,
+          status: persistedSnapshot.status,
+          source: persistedSnapshot.source,
+          isStale: persistedSnapshot.isStale,
+          lastCheckedAt: persistedSnapshot.lastCheckedAt,
+          lastSuccessfulSyncAt: persistedSnapshot.lastSuccessfulSyncAt,
+          diagnostics: persistedSnapshot.diagnostics.map((diagnostic) => diagnostic.code),
+        });
         this.setCurrentSnapshot(persistedSnapshot);
         return persistedSnapshot;
       } catch (error) {
@@ -68,6 +93,15 @@ export class SubscriptionService {
           ? this.withEntitlements(createStaleSnapshot(this.snapshotStore.load()!, error))
           : this.withEntitlements(createUnavailableSnapshot(error));
 
+        log.warn('[SubscriptionService] Refresh failed, using fallback snapshot.', {
+          reason,
+          error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+          fallbackAvailability: fallbackSnapshot.availability,
+          fallbackStatus: fallbackSnapshot.status,
+          fallbackSource: fallbackSnapshot.source,
+          fallbackIsStale: fallbackSnapshot.isStale,
+          fallbackDiagnostics: fallbackSnapshot.diagnostics.map((diagnostic) => diagnostic.code),
+        });
         this.setCurrentSnapshot(fallbackSnapshot);
         return fallbackSnapshot;
       } finally {
@@ -83,7 +117,15 @@ export class SubscriptionService {
   }
 
   async purchase(): Promise<SubscriptionPurchaseResult> {
-    const purchaseResult = await this.broker.purchase();
+    return this.completePurchase(await this.broker.purchase());
+  }
+
+  async completePurchase(purchaseResult: RawStorePurchaseResult): Promise<SubscriptionPurchaseResult> {
+    log.info('[SubscriptionService] Purchase completed.', {
+      outcome: purchaseResult.outcome,
+      errorCode: purchaseResult.errorCode,
+      errorMessage: purchaseResult.errorMessage,
+    });
 
     if (purchaseResult.outcome === 'not-supported') {
       return {

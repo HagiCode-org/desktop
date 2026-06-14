@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron';
 import { electron } from '../../../electron-api.js';
 import { subscriptionChannels } from '../../../types/subscription.js';
+import type { RawStorePurchaseResult } from '../../subscription/subscription-broker.js';
 import type { SubscriptionService } from '../../subscription/subscription-service.js';
 
 const { ipcMain } = electron;
@@ -54,12 +55,14 @@ export function registerSubscriptionHandlers(deps: {
     return state.subscriptionService.refresh('manual');
   });
 
-  ipcMain.handle(subscriptionChannels.purchase, async () => {
+  ipcMain.handle(subscriptionChannels.purchase, async (_event, purchaseResult?: RawStorePurchaseResult) => {
     if (!state.subscriptionService) {
       throw new Error('Subscription handlers are not initialized');
     }
 
-    return state.subscriptionService.purchase();
+    return purchaseResult
+      ? state.subscriptionService.completePurchase(purchaseResult)
+      : state.subscriptionService.purchase();
   });
 }
 
