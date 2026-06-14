@@ -49,6 +49,7 @@ function ensureDarwinFileLimit() {
   }
 
   const desiredLimit = process.env.HAGICODE_MACOS_NOFILE_LIMIT || '65536';
+  const reentryScriptPath = process.argv[1] ? path.resolve(process.argv[1]) : __filename;
   const result = spawnSync(
     '/bin/bash',
     [
@@ -56,7 +57,7 @@ function ensureDarwinFileLimit() {
       'ulimit -n "$HAGICODE_MACOS_NOFILE_LIMIT" 2>/dev/null || ulimit -n 16384 2>/dev/null || true; effective_limit=$(ulimit -n); echo "[electron-forge] effective macOS open file limit: $effective_limit"; if [ "$effective_limit" -lt 16384 ]; then echo "[electron-forge] macOS open file limit is too low for packaging" >&2; exit 1; fi; exec env HAGICODE_ELECTRON_FORGE_NOFILE_PREPARED=1 "$@"',
       'electron-forge-runner',
       process.execPath,
-      __filename,
+      reentryScriptPath,
       ...process.argv.slice(2),
     ],
     {
@@ -192,11 +193,12 @@ function resolveUnpackedDestination(platform, arch) {
 
 async function findFallbackPackagedPath(platform, arch) {
   if (platform === 'darwin') {
-    const bundles = await findPaths(outDir, async (candidatePath, entry) => entry.isDirectory() && entry.name.endsWith('.app'), 3);
+    const bundles = await findPaths(outDir, async (candidatePath, entry) => entry.isDirectory() && entry.name.endsWith('.app'), 5);
     return bundles[0] || null;
   }
 
   const executableName = platform === 'win32' ? `${packageJson.productName || packageJson.name}.exe` : null;
+  const fallbackExecutableName = platform === 'linux' ? `${packageJson.productName || packageJson.name}` : null;
   const directories = await findPaths(outDir, async (candidatePath, entry) => {
     if (!entry.isDirectory()) {
       return false;
@@ -211,8 +213,12 @@ async function findFallbackPackagedPath(platform, arch) {
       return pathExists(path.join(candidatePath, executableName));
     }
 
-    return entry.name.toLowerCase().includes(platform) || entry.name.toLowerCase().includes(arch);
-  }, 2);
+    if (fallbackExecutableName && await pathExists(path.join(candidatePath, fallbackExecutableName))) {
+      return true;
+    }
+
+    return true;
+  }, 5);
 
   return directories[0] || null;
 }
