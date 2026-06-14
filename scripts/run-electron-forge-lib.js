@@ -195,6 +195,29 @@ async function findPaths(rootPath, predicate, maxDepth = 4, depth = 0) {
   return matches;
 }
 
+async function describeDirectoryTree(rootPath, maxDepth = 3, depth = 0) {
+  let entries = [];
+
+  try {
+    entries = await fsp.readdir(rootPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const lines = [];
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const candidatePath = path.join(rootPath, entry.name);
+    const relativePath = path.relative(projectRoot, candidatePath) || path.basename(candidatePath);
+    lines.push(`${'  '.repeat(depth)}- ${relativePath}${entry.isDirectory() ? '/' : ''}`);
+
+    if (entry.isDirectory() && depth < maxDepth) {
+      lines.push(...await describeDirectoryTree(candidatePath, maxDepth, depth + 1));
+    }
+  }
+
+  return lines;
+}
+
 async function resetOutputDirectories() {
   await fsp.rm(outDir, { recursive: true, force: true });
   await fsp.rm(packageDir, { recursive: true, force: true });
@@ -266,6 +289,18 @@ async function resolvePackagedApplicationPath(platform, arch, packagedPath) {
 async function stagePackagedApplication(platform, arch, packagedPath) {
   const resolvedPackagedPath = await resolvePackagedApplicationPath(platform, arch, packagedPath);
   if (!resolvedPackagedPath) {
+    const outEntries = await describeDirectoryTree(outDir, 4);
+    const asarPaths = await findPaths(outDir, async (candidatePath, entry) => (
+      entry.isFile() && entry.name === 'app.asar'
+    ), 8);
+    if (outEntries.length > 0) {
+      console.warn(`[electron-forge] out directory contents:\n${outEntries.join('\n')}`);
+    } else {
+      console.warn('[electron-forge] out directory is empty or missing after packaging.');
+    }
+    if (asarPaths.length > 0) {
+      console.warn(`[electron-forge] discovered app.asar files:\n${asarPaths.map(candidatePath => `- ${path.relative(projectRoot, candidatePath)}`).join('\n')}`);
+    }
     throw new Error(`Unable to locate packaged application output for ${platform}/${arch} under ${outDir}`);
   }
 
