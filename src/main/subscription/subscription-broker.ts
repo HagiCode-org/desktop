@@ -73,24 +73,26 @@ type DynWinRtStoreContext = {
   requestPurchaseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
 };
 
+type DynWinRtStoreWindowInitializer = {
+  initialize?: (target: unknown, hwnd: bigint | number) => void;
+  Initialize?: (target: unknown, hwnd: bigint | number) => void;
+};
+
 type DynWinRtStoreModule = DynWinRtRuntimeModule & {
   StoreCanLicenseStatus: Record<string, number>;
   StoreContext: {
     getDefault(): DynWinRtStoreContext;
   };
   StorePurchaseStatus: Record<string, number>;
-  InitializeWithWindow?: {
-    initialize?: (target: unknown, hwnd: bigint | number) => void;
-    Initialize?: (target: unknown, hwnd: bigint | number) => void;
-  };
-  IClosable?: {
-    from(value: unknown): { close(): void };
-  };
+  InitializeWithWindow?: DynWinRtStoreWindowInitializer;
 };
 
 const STORE_PRODUCT_KINDS = ['Durable', 'Consumable', 'UnmanagedConsumable'];
 const DYNWINRT_RUNTIME_SPECIFIER = '@microsoft/dynwinrt';
-const DYNWINRT_BINDINGS_SPECIFIER = './generated-js/index.js';
+const DYNWINRT_STORE_CONTEXT_SPECIFIER = './generated-js/StoreContext.js';
+const DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER = './generated-js/StoreCanLicenseStatus.js';
+const DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER = './generated-js/StorePurchaseStatus.js';
+const DYNWINRT_INITIALIZE_WITH_WINDOW_SPECIFIER = './generated-js/InitializeWithWindow.js';
 
 function toIsoDate(value: unknown): string | null {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -311,17 +313,57 @@ function initializeOwnerWindow(
   initialize.call(initializer, context, windowHandle);
 }
 
+function isGeneratedModuleMissing(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const errorWithCode = error as Error & { code?: unknown };
+  return errorWithCode.code === 'ERR_MODULE_NOT_FOUND';
+}
+
+async function loadGeneratedExport<T>(specifier: string, exportName: string): Promise<T> {
+  const module = await import(specifier) as Record<string, unknown>;
+  const value = module[exportName];
+
+  if (value == null) {
+    throw new Error(`dynwinrt generated binding ${specifier} did not export ${exportName}`);
+  }
+
+  return value as T;
+}
+
+async function loadOptionalGeneratedExport<T>(specifier: string, exportName: string): Promise<T | undefined> {
+  try {
+    const module = await import(specifier) as Record<string, unknown>;
+    const value = module[exportName];
+    return value == null ? undefined : value as T;
+  } catch (error) {
+    if (isGeneratedModuleMissing(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
 async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
-  const runtimeSpecifier = DYNWINRT_RUNTIME_SPECIFIER;
-  const bindingsSpecifier = DYNWINRT_BINDINGS_SPECIFIER;
-  const [runtimeModule, bindingsModule] = await Promise.all([
-    import(runtimeSpecifier),
-    import(bindingsSpecifier),
+  // Avoid loading the generated namespace index, which eagerly evaluates the
+  // full WinRT projection and can trigger unrelated circular-init failures.
+  const [runtimeModule, StoreContext, StoreCanLicenseStatus, StorePurchaseStatus, InitializeWithWindow] = await Promise.all([
+    import(DYNWINRT_RUNTIME_SPECIFIER),
+    loadGeneratedExport<DynWinRtStoreModule['StoreContext']>(DYNWINRT_STORE_CONTEXT_SPECIFIER, 'StoreContext'),
+    loadGeneratedExport<DynWinRtStoreModule['StoreCanLicenseStatus']>(DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER, 'StoreCanLicenseStatus'),
+    loadGeneratedExport<DynWinRtStoreModule['StorePurchaseStatus']>(DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER, 'StorePurchaseStatus'),
+    loadOptionalGeneratedExport<DynWinRtStoreWindowInitializer>(DYNWINRT_INITIALIZE_WITH_WINDOW_SPECIFIER, 'InitializeWithWindow'),
   ]);
 
   return {
-    ...(bindingsModule as Record<string, unknown>),
     ...(runtimeModule as Record<string, unknown>),
+    StoreContext,
+    StoreCanLicenseStatus,
+    StorePurchaseStatus,
+    InitializeWithWindow,
   } as DynWinRtStoreModule;
 }
 
@@ -403,9 +445,9 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
 
   dispose(): void {
     try {
-      this.storeModule.IClosable?.from(this.context).close();
+      (this.context as { close?: () => void }).close?.();
     } catch {
-      // StoreContext does not always expose IClosable in generated bindings.
+      // StoreContext does not always expose a close path in generated bindings.
     }
   }
 }
