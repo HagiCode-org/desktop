@@ -513,7 +513,12 @@ function isCliEntrypoint() {
     return false;
   }
 
-  return path.resolve(invokedPath) === __filename;
+  const resolvedInvokedPath = path.resolve(invokedPath);
+  if (resolvedInvokedPath === __filename) {
+    return true;
+  }
+
+  return path.basename(resolvedInvokedPath).toLowerCase() === path.basename(__filename).toLowerCase();
 }
 
 export {
