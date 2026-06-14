@@ -286,8 +286,23 @@ async function resolvePackagedApplicationPath(platform, arch, packagedPath) {
   return fallbackPath;
 }
 
+async function waitForPackagedApplicationPath(platform, arch, packagedPath, timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  while ((Date.now() - startedAt) < timeoutMs) {
+    const resolvedPackagedPath = await resolvePackagedApplicationPath(platform, arch, packagedPath);
+    if (resolvedPackagedPath) {
+      return resolvedPackagedPath;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return null;
+}
+
 async function stagePackagedApplication(platform, arch, packagedPath) {
-  const resolvedPackagedPath = await resolvePackagedApplicationPath(platform, arch, packagedPath);
+  const resolvedPackagedPath = await waitForPackagedApplicationPath(platform, arch, packagedPath);
   if (!resolvedPackagedPath) {
     const outEntries = await describeDirectoryTree(outDir, 4);
     const asarPaths = await findPaths(outDir, async (candidatePath, entry) => (
