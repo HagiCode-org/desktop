@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+process.env.HAGICODE_SKIP_RUN_ELECTRON_FORGE_MAIN = '1';
 const helpers = await import(new URL('../run-electron-forge.js', import.meta.url));
 
 test('detects the macOS DMG detach race signature only for darwin dmg builds', () => {

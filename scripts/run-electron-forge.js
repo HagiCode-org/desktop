@@ -507,20 +507,6 @@ async function main() {
   }
 }
 
-function isCliEntrypoint() {
-  const invokedPath = process.argv[1];
-  if (!invokedPath) {
-    return false;
-  }
-
-  const resolvedInvokedPath = path.resolve(invokedPath);
-  if (resolvedInvokedPath === __filename) {
-    return true;
-  }
-
-  return path.basename(resolvedInvokedPath).toLowerCase() === path.basename(__filename).toLowerCase();
-}
-
 export {
   createDevRegisterManifest,
   getExpectedForgeArtifactPaths,
@@ -530,7 +516,7 @@ export {
   syncMsixDeveloperRegistrationLayout,
 };
 
-if (isCliEntrypoint()) {
+if (process.env.HAGICODE_SKIP_RUN_ELECTRON_FORGE_MAIN !== '1') {
   main().catch(error => {
     console.error(`[electron-forge] ${error.message}`);
     process.exit(1);
