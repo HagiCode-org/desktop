@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: "22"
   HAGISCRIPT_VERSION: "latest"
   HAGICODE_PM2_LIFECYCLE_TIMEOUT_MS: "90000"
 

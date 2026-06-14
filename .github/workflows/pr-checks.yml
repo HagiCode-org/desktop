@@ -10,7 +10,7 @@ permissions:
   pull-requests: read
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: "22"
 
 jobs:
   ################################################################################
