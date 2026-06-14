@@ -10,7 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
   detectRuntimePlatform,
@@ -85,6 +85,20 @@ const results = {
   tests: [],
 };
 
+function uniquePaths(paths) {
+  return [...new Set(paths.filter((candidate) => typeof candidate === 'string' && candidate.length > 0))];
+}
+
+function listImmediateChildDirectories(rootPath) {
+  try {
+    return fs.readdirSync(rootPath, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(rootPath, entry.name));
+  } catch {
+    return [];
+  }
+}
+
 function resolvePackagedRuntimeRoots(platform) {
   const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT?.trim();
   if (override) {
@@ -95,7 +109,8 @@ function resolvePackagedRuntimeRoots(platform) {
     return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current')];
   }
   if (platform.startsWith('linux-')) {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current')];
+    return resolvePackagedLinuxUnpackedRoots()
+      .map((unpackedRoot) => path.join(unpackedRoot, 'resources', 'extra', 'runtime', 'components', 'dotnet', 'runtime', platform, 'current'));
   }
   if (platform.startsWith('osx-')) {
     const preferredArch = platform === 'osx-arm64' ? 'arm64' : platform === 'osx-x64' ? 'x64' : null;
@@ -109,6 +124,19 @@ function resolveExistingPackagedRuntimeRoot(candidates) {
   return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0] || null;
 }
 
+function resolvePackagedLinuxUnpackedRoots() {
+  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_UNPACKED_ROOT?.trim();
+  if (override) {
+    return [path.resolve(process.cwd(), override)];
+  }
+
+  const defaultRoot = path.join(process.cwd(), 'pkg', 'linux-unpacked');
+  return uniquePaths([
+    defaultRoot,
+    ...listImmediateChildDirectories(defaultRoot),
+  ]);
+}
+
 function resolvePackagedToolchainRoots() {
   const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT?.trim();
   if (override) {
@@ -119,7 +147,8 @@ function resolvePackagedToolchainRoots() {
     return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
   }
   if (process.platform === 'linux') {
-    return [path.join(process.cwd(), 'pkg', 'linux-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
+    return resolvePackagedLinuxUnpackedRoots()
+      .map((unpackedRoot) => path.join(unpackedRoot, 'resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
   }
   if (process.platform === 'darwin') {
     const preferredArch = nodeRuntimePlatform === 'osx-arm64'
@@ -135,8 +164,17 @@ function resolvePackagedToolchainRoots() {
 }
 
 function resolvePackagedMacResourceRoots(preferredArch) {
-  return resolvePackagedMacRootNames(preferredArch)
-    .map((rootName) => path.join(process.cwd(), 'pkg', rootName, 'Hagicode Desktop.app', 'Contents', 'Resources'));
+  return uniquePaths(resolvePackagedMacRootNames(preferredArch)
+    .flatMap((rootName) => {
+      const rootPath = path.join(process.cwd(), 'pkg', rootName);
+      return [
+        path.join(rootPath, 'Hagicode Desktop.app', 'Contents', 'Resources'),
+        path.join(rootPath, 'Contents', 'Resources'),
+        ...listImmediateChildDirectories(rootPath)
+          .filter((candidate) => candidate.endsWith('.app'))
+          .map((bundlePath) => path.join(bundlePath, 'Contents', 'Resources')),
+      ];
+    }));
 }
 
 function resolvePackagedMacRootNames(preferredArch) {
@@ -153,7 +191,9 @@ function resolvePackagedMacRootNames(preferredArch) {
 
 function resolvePackagedSteamWrapperPath() {
   if (process.platform === 'linux') {
-    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'hagicode-steam-wrapper.sh');
+    const candidates = resolvePackagedLinuxUnpackedRoots()
+      .map((unpackedRoot) => path.join(unpackedRoot, 'hagicode-steam-wrapper.sh'));
+    return resolveExistingPackagedRuntimeRoot(candidates);
   }
 
   return null;
@@ -161,7 +201,9 @@ function resolvePackagedSteamWrapperPath() {
 
 function resolvePackagedSteamSandboxPath() {
   if (process.platform === 'linux') {
-    return path.join(process.cwd(), 'pkg', 'linux-unpacked', 'hagicode-steam-sandbox.sh');
+    const candidates = resolvePackagedLinuxUnpackedRoots()
+      .map((unpackedRoot) => path.join(unpackedRoot, 'hagicode-steam-sandbox.sh'));
+    return resolveExistingPackagedRuntimeRoot(candidates);
   }
 
   return null;
@@ -828,8 +870,19 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  log(`Fatal error: ${error.message}`, colors.red);
-  console.error(error);
-  process.exit(1);
-});
+function isCliEntrypoint() {
+  return process.argv[1] ? path.resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false;
+}
+
+export {
+  resolvePackagedLinuxUnpackedRoots,
+  resolvePackagedMacResourceRoots,
+};
+
+if (isCliEntrypoint()) {
+  main().catch((error) => {
+    log(`Fatal error: ${error.message}`, colors.red);
+    console.error(error);
+    process.exit(1);
+  });
+}

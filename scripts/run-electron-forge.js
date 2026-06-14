@@ -10,7 +10,7 @@ import packageApplicationModule from '@electron-forge/core/dist/api/package.js';
 import { getMsixPaths } from './msix-config.js';
 import { loadStorePackageConfig } from './store-package-config.js';
 import { buildStorePurchaseAddon } from './build-store-purchase-addon.js';
-import { stageForgePackagingResources } from './forge-packaging-hooks.js';
+import { materializeForgePackagingResources } from './forge-packaging-hooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,14 +162,8 @@ async function stagePackagedApplication(platform, arch, packagedPath) {
   await fsp.rm(destination, { recursive: true, force: true });
   await fsp.mkdir(path.dirname(destination), { recursive: true });
 
-  if (platform === 'darwin') {
-    await fsp.cp(packagedPath, destination, { recursive: true });
-    return destination;
-  }
-
   await fsp.cp(packagedPath, destination, { recursive: true });
-
-  await stageForgePackagingResources(destination, null, platform, arch);
+  await materializeForgePackagingResources(destination, platform);
   return destination;
 }
 

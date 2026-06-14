@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import {
   EMBEDDED_RUNTIME_METADATA_FILE,
   detectRuntimePlatform,
@@ -49,6 +50,7 @@ const forbiddenAsarEntries = [
   '/README.md',
   '/README_cn.md',
 ];
+const __filename = fileURLToPath(import.meta.url);
 
 function parseArgs() {
   let unpackedRoot = path.join(process.cwd(), 'pkg', 'linux-unpacked');
@@ -80,6 +82,35 @@ function ensureLinuxPlatform(platformKey, label) {
   if (!platformKey.startsWith('linux-')) {
     throw new Error(`${label} must resolve to a linux-* platform for linux-unpacked verification. Received: ${platformKey}`);
   }
+}
+
+function listImmediateChildDirectories(rootPath) {
+  try {
+    return fs.readdirSync(rootPath, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(rootPath, entry.name));
+  } catch {
+    return [];
+  }
+}
+
+export function resolveLinuxUnpackedRoot(rootPath) {
+  const candidates = [
+    path.resolve(rootPath),
+    ...listImmediateChildDirectories(path.resolve(rootPath)),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'resources', 'app.asar'))) {
+      return candidate;
+    }
+
+    if (fs.existsSync(path.join(candidate, 'resources', 'extra', 'runtime'))) {
+      return candidate;
+    }
+  }
+
+  return path.resolve(rootPath);
 }
 
 function isExecutable(targetPath) {
@@ -241,7 +272,7 @@ async function main() {
   ensureLinuxPlatform(runtimePlatform, 'Embedded dotnet runtime platform');
   ensureLinuxPlatform(nodeRuntimePlatform, 'Bundled Node runtime platform');
 
-  const unpackedRoot = parseArgs();
+  const unpackedRoot = resolveLinuxUnpackedRoot(parseArgs());
   const runtimeRoot = path.join(unpackedRoot, 'resources', 'extra', 'runtime');
   if (!fs.existsSync(runtimeRoot)) {
     throw new Error(`linux-unpacked runtime root does not exist: ${runtimeRoot}`);
@@ -287,7 +318,9 @@ async function main() {
   console.log(`[linux-unpacked-verify] Verified packaged runtime payloads under ${unpackedRoot}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.stack || error.message : String(error));
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.stack || error.message : String(error));
+    process.exit(1);
+  });
+}

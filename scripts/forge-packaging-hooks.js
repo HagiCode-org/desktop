@@ -122,28 +122,42 @@ async function stageWindowsStorePurchaseAddon(resourcesPath, platform) {
   );
 }
 
+async function stagePortableFixedPayload(buildPath, platform) {
+  await copyDirectoryIfExists(
+    path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
+    resolvePortableFixedRoot(buildPath, platform),
+  );
+}
+
+async function stageLinuxLaunchWrappers(buildPath, platform) {
+  if (platform !== 'linux') {
+    return;
+  }
+
+  const wrapperPath = path.join(buildPath, 'hagicode-steam-wrapper.sh');
+  const sandboxPath = path.join(buildPath, 'hagicode-steam-sandbox.sh');
+
+  await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-wrapper.sh'), wrapperPath);
+  await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-sandbox.sh'), sandboxPath);
+  await makeExecutableIfPresent(wrapperPath);
+  await makeExecutableIfPresent(sandboxPath);
+}
+
+export async function materializeForgePackagingResources(buildPath, platform) {
+  const resourcesPath = resolveResourcesPath(buildPath, platform);
+  const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
+
+  await stageRequiredRuntimeComponents(runtimeRoot);
+  await stageWindowsStorePurchaseAddon(resourcesPath, platform);
+  await stagePortableFixedPayload(buildPath, platform);
+  await stageLinuxLaunchWrappers(buildPath, platform);
+}
+
 export function stageForgePackagingResources(buildPath, _electronVersion, platform, arch, done) {
   return runForgeHook(async () => {
-    const resourcesPath = resolveResourcesPath(buildPath, platform);
+    await materializeForgePackagingResources(buildPath, platform);
+
     const runtimeRoot = resolveRuntimeRoot(buildPath, platform);
-
-    await stageRequiredRuntimeComponents(runtimeRoot);
-    await stageWindowsStorePurchaseAddon(resourcesPath, platform);
-    await copyDirectoryIfExists(
-      path.join(runtimeSourceRoot, 'portable-fixed', 'current'),
-      resolvePortableFixedRoot(buildPath, platform),
-    );
-
-    if (platform === 'linux') {
-      const wrapperPath = path.join(buildPath, 'hagicode-steam-wrapper.sh');
-      const sandboxPath = path.join(buildPath, 'hagicode-steam-sandbox.sh');
-
-      await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-wrapper.sh'), wrapperPath);
-      await copyFileIfExists(path.join(runtimeSourceRoot, 'linux', 'hagicode-steam-sandbox.sh'), sandboxPath);
-      await makeExecutableIfPresent(wrapperPath);
-      await makeExecutableIfPresent(sandboxPath);
-    }
-
     if (platform !== 'darwin' || !fs.existsSync(runtimeRoot)) {
       return;
     }

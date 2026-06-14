@@ -166,16 +166,38 @@ async function runCommand(command, args, cwd = projectRoot, env = process.env) {
   });
 }
 
+function createMsixArtifactSignature(stats) {
+  return `${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`;
+}
+
 async function listMsixArtifacts(directory) {
   if (!fs.existsSync(directory)) {
     return [];
   }
 
   const entries = await fsp.readdir(directory, { withFileTypes: true });
-  return entries
+  const artifacts = await Promise.all(entries
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.msix'))
-    .map((entry) => path.join(directory, entry.name))
-    .sort((left, right) => left.localeCompare(right));
+    .map(async (entry) => {
+      const artifactPath = path.join(directory, entry.name);
+      const stats = await fsp.stat(artifactPath);
+      return {
+        path: artifactPath,
+        signature: createMsixArtifactSignature(stats),
+      };
+    }));
+
+  return artifacts.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+export function resolveUpdatedMsixArtifacts(previousArtifacts, currentArtifacts) {
+  const previousArtifactsByPath = new Map(
+    previousArtifacts.map((artifact) => [artifact.path, artifact.signature]),
+  );
+
+  return currentArtifacts
+    .filter((artifact) => previousArtifactsByPath.get(artifact.path) !== artifact.signature)
+    .map((artifact) => artifact.path);
 }
 
 async function withInjectedPayload(serverPayloadPath, runtimeInjectionPath, callback) {
@@ -408,7 +430,7 @@ export async function buildStorePackage(rawOptions = {}) {
       );
     }
 
-    const existingMsixArtifacts = new Set(await listMsixArtifacts(artifactOutputDirectory));
+    const existingMsixArtifacts = await listMsixArtifacts(artifactOutputDirectory);
     await runCommand(process.execPath, [
       'scripts/run-electron-forge.js',
       '--platform',
@@ -428,8 +450,10 @@ export async function buildStorePackage(rawOptions = {}) {
         buildStepEnv[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV],
     });
 
-    const packagedMsixArtifacts = (await listMsixArtifacts(artifactOutputDirectory))
-      .filter((artifactPath) => !existingMsixArtifacts.has(artifactPath));
+    const packagedMsixArtifacts = resolveUpdatedMsixArtifacts(
+      existingMsixArtifacts,
+      await listMsixArtifacts(artifactOutputDirectory),
+    );
 
     if (packagedMsixArtifacts.length === 0) {
       throw new Error(`Forge MSIX packaging completed without producing a new .msix artifact in ${artifactOutputDirectory}`);
