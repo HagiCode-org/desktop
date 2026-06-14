@@ -500,7 +500,7 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-if (process.argv[1] === __filename) {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   main().catch((error) => {
     console.error(`[store-build] ${error.message}`);
     process.exit(1);
