@@ -19,10 +19,7 @@ import {
 } from 'lucide-react';
 import { switchView } from '../store/slices/viewSlice';
 import type { RootState } from '../store';
-import { selectSubscriptionSnapshot } from '../store/slices/subscriptionSlice';
 import type { ViewType } from '../store/slices/viewSlice';
-import type { SubscriptionSnapshot } from '../../types/subscription.js';
-import { Badge } from './ui/badge';
 import { ThemeToggle } from './ui/theme-toggle';
 import { LanguageToggle } from './ui/language-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -145,43 +142,6 @@ function getAboutEntryHint(entry: SidebarAboutEntry): string {
   return entry.detail;
 }
 
-function getSubscriptionBadgeVariant(snapshot: SubscriptionSnapshot | null): 'default' | 'secondary' | 'destructive' | 'outline' {
-  if (!snapshot) {
-    return 'outline';
-  }
-
-  if (snapshot.availability !== 'supported') {
-    return 'destructive';
-  }
-
-  if (snapshot.isStale) {
-    return 'secondary';
-  }
-
-  return snapshot.status === 'active' ? 'default' : 'outline';
-}
-
-function getSubscriptionBadgeLabel(
-  snapshot: SubscriptionSnapshot | null,
-  t: (key: string) => string,
-): string {
-  if (!snapshot) {
-    return t('sidebar.subscriptionStatus.loading');
-  }
-
-  if (snapshot.availability !== 'supported') {
-    return t('sidebar.subscriptionStatus.unavailable');
-  }
-
-  if (snapshot.isStale) {
-    return t('sidebar.subscriptionStatus.stale');
-  }
-
-  return snapshot.status === 'active'
-    ? t('sidebar.subscriptionStatus.active')
-    : t('sidebar.subscriptionStatus.inactive');
-}
-
 function AboutBrandLogo({ entry }: { entry: SidebarAboutEntry }) {
   const [imageFailed, setImageFailed] = useState(false);
   const domain = getAboutBrandDomain(entry);
@@ -213,7 +173,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   const { t, i18n } = useTranslation('common');
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
-  const subscriptionSnapshot = useSelector((state: RootState) => selectSubscriptionSnapshot(state));
   const isFusionMode = distributionState.fusionMode;
   const subscriptionFeatureEnabled = distributionState.winStoreMode
     && typeof window.electronAPI.subscription?.getSnapshot === 'function';
@@ -569,15 +528,6 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                         <span className="truncate font-medium text-sm whitespace-nowrap">
                           {t(item.labelKey)}
                         </span>
-
-                        {item.id === 'subscription' ? (
-                          <Badge
-                            variant={getSubscriptionBadgeVariant(subscriptionSnapshot)}
-                            className="rounded-md px-1.5 py-0 text-[10px] uppercase tracking-[0.14em]"
-                          >
-                            {getSubscriptionBadgeLabel(subscriptionSnapshot, t)}
-                          </Badge>
-                        ) : null}
                       </motion.div>
                     )}
                   </AnimatePresence>

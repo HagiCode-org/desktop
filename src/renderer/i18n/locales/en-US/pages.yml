@@ -360,7 +360,7 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store sponsor plan
   title: Hagicode Sponsor Plan
-  description: Support the continued evolution of Hagicode AI Agent and keep sponsor entitlements visible on the current device.
+  description: Support ongoing Hagicode updates and enable sponsor entitlements on this device.
   loading: Reading the latest cached sponsor snapshot...
   errorTitle: Sponsor snapshot unavailable
   errorDescription: 'Desktop could not load the sponsor snapshot: {{error}}'
@@ -385,13 +385,22 @@ subscription:
     unsupported: Store unavailable
   hero:
     inactive:
-      title: Keep Hagicode AI Agent moving forward
-      description: The sponsor plan is the most direct way to fund the time and token cost behind continuous AI Agent work in Desktop.
-      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
+      title: Make Hagicode better
+      description: The sponsor plan directly supports ongoing Hagicode maintenance, updates, and follow-up tracking.
+      note: If you want to support this work, the sponsor plan helps keep iteration moving.
     active:
-      title: Thank you for backing the next round of work
-      description: This device already carries an active sponsor plan, which means you are helping keep Hagicode AI Agent current while giving us room to ship more polished sponsor-facing touches.
-      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
+      title: Thank you for your support
+      description: Your support is already helping fund ongoing Hagicode maintenance, updates, and follow-up tracking.
+      note: This support is already helping the next round of iteration continue.
+  message:
+    ongoingTitle: Ongoing evolution needs real investment
+    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
+    perksTitle: Sponsors should receive thoughtful perks
+    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
+    unlockNoticeTitle: No feature unlocks included
+    unlockNoticeDescription: The sponsor plan currently does not unlock any product features. If you need other feature access, you must purchase the corresponding license separately.
+    inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
+    activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
     panelEyebrow: Sponsor actions
     buyTitle: Support ongoing creation
@@ -401,19 +410,19 @@ subscription:
     buy: Buy sponsor plan
     manage: Open Store purchase flow
     processing: Processing...
-    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
-    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
+    buyHint: Use Microsoft Store to support ongoing Hagicode maintenance and updates.
+    manageHint: Open Microsoft Store again to review or manage the current plan.
     unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
-    secondaryLabel: Before you decide
-    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
+    secondaryLabel: Need to confirm first?
+    secondaryHint: Refresh once before you decide to buy.
   summary:
     planLabel: Plan
     planName: Hagicode Sponsor Plan
     renewalLabel: Renewal or expiry
     lastSyncLabel: Last successful sync
     entitlementsLabel: Enabled entitlements
-    activeDetail: Sponsor entitlements are already available on this device.
-    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
+    activeDetail: Sponsor entitlements are already active on this device.
+    inactiveDetail: Purchase enables them on this device.
     source: 'Source: {{value}}'
   sourceValue:
     cache: Local cache
@@ -421,32 +430,32 @@ subscription:
     fallback: Fallback snapshot
   mission:
     eyebrow: Why sponsorship matters
-    title: Sponsorship keeps an evolving feature alive
-    description: Hagicode AI Agent is not a one-off capability. It needs continuous follow-up so the product can track changing models, tools, prompts, and supporting workflows.
+    title: Your purchase helps
+    description: Support ongoing maintenance and updates.
     points:
       evolution:
-        title: AI Agent keeps moving
-        description: Models, CLI behaviors, prompt strategies, and surrounding workflows keep changing. Staying useful means revisiting the feature repeatedly, not shipping it once.
+        title: Keep Hagicode maintained
+        description: Track changes in models, CLI behavior, and workflows.
       investment:
-        title: Time and token budget both matter
-        description: Keeping the experience current requires author attention, validation work, issue follow-up, and recurring token spend for research and iteration.
+        title: Support validation and updates
+        description: Keep fixes, validation, and iteration moving.
       rewards:
-        title: Support should become visible value
-        description: Beyond sustaining the core work, we plan to add sponsor-facing touches such as more refined themes and other carefully chosen benefits over time.
+        title: Enable sponsor entitlements
+        description: After purchase, this device keeps the matching sponsor access.
   gratitude:
     eyebrow: Sponsor message
-    title: Your support is already carrying real work
-    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
+    title: Thank you for supporting this work
+    description: Your support is already helping maintenance and updates continue.
     points:
       continuity:
-        title: Continued iteration stays possible
-        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
+        title: Maintenance can continue
+        description: Follow-up fixes and updates can keep shipping.
       benefits:
-        title: Sponsor-facing polish can grow next
-        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
+        title: The thanks can be visible in product
+        description: Sponsor entitlements are already active on this device.
       roadmap:
-        title: Future perks already have a delivery path
-        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
+        title: Future perks are prepared
+        description: New sponsor additions can plug in when they are ready.
   benefits:
     eyebrow: What this plan unlocks
     title: Built to support creation first, then reward supporters well
@@ -475,8 +484,8 @@ subscription:
       source: Snapshot source
   entitlements:
     title: Entitlement summary
-    activeDescription: These are the sponsor capability flags currently available on this device.
-    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
+    activeDescription: Sponsor entitlements currently active on this device.
+    inactiveDescription: Sponsor entitlements that become active after purchase.
     enabled: Enabled
     disabled: Not enabled
     names:

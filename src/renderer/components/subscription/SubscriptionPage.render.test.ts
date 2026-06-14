@@ -7,7 +7,7 @@ const pagePath = path.resolve(process.cwd(), 'src/renderer/components/subscripti
 const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/subscriptionSlice.ts');
 
 describe('subscription workspace renderer', () => {
-  it('renders loading, stale, unsupported, entitlement, and diagnostics states with thunk-driven actions', async () => {
+  it('renders a centered subscription card with thunk-driven actions and sponsor messaging', async () => {
     const [pageSource, sliceSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
       fs.readFile(slicePath, 'utf8'),
@@ -19,12 +19,16 @@ describe('subscription workspace renderer', () => {
     assert.match(pageSource, /dispatch\(refreshSubscriptionSnapshot\(\)\)/);
     assert.match(pageSource, /dispatch\(purchaseSubscription\(\)\)/);
     assert.match(pageSource, /subscription\.purchaseOutcome\./);
-    assert.match(pageSource, /subscriptionEntitlementNames\.map\(\(entitlement\) => \{/);
-    assert.match(pageSource, /subscription\.entitlements\.names\.\$\{entitlement\}/);
-    assert.match(pageSource, /subscription\.entitlements\.details\.\$\{entitlement\}/);
-    assert.match(pageSource, /subscription\.diagnostics\.title/);
-    assert.match(pageSource, /selectHasSubscriptionEntitlement\(state, 'sponsorBadge'\)/);
-    assert.match(pageSource, /selectHasSubscriptionEntitlement\(state, 'premiumFeatureGate'\)/);
+    assert.match(pageSource, /mx-auto max-w-2xl overflow-hidden rounded-\[36px\]/);
+    assert.match(pageSource, /subscription\.message\.ongoingTitle/);
+    assert.match(pageSource, /subscription\.message\.perksTitle/);
+    assert.match(pageSource, /subscription\.message\.unlockNoticeTitle/);
+    assert.match(pageSource, /subscription\.message\.unlockNoticeDescription/);
+    assert.match(pageSource, /subscription\.message\.activeThanks/);
+    assert.match(pageSource, /subscription\.message\.inactivePrompt/);
+    assert.doesNotMatch(pageSource, /subscriptionEntitlementNames\.map\(\(entitlement\) => \{/);
+    assert.doesNotMatch(pageSource, /selectHasSubscriptionEntitlement/);
+    assert.doesNotMatch(pageSource, /subscription\.snapshot\.fields\.lastCheckedAt/);
     assert.match(sliceSource, /createAsyncThunk\(/);
     assert.match(sliceSource, /'subscription\/loadSnapshot'/);
     assert.match(sliceSource, /'subscription\/refreshSnapshot'/);

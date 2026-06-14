@@ -22,7 +22,10 @@ describe('subscription sidebar and shell wiring', () => {
     assert.match(sidebarSource, /labelKey: 'sidebar\.subscription'/);
     assert.match(sidebarSource, /distributionState\.winStoreMode/);
     assert.match(sidebarSource, /typeof window\.electronAPI\.subscription\?\.getSnapshot === 'function'/);
-    assert.match(sidebarSource, /getSubscriptionBadgeLabel\(subscriptionSnapshot, t\)/);
+    assert.doesNotMatch(sidebarSource, /selectSubscriptionSnapshot/);
+    assert.doesNotMatch(sidebarSource, /getSubscriptionBadgeLabel/);
+    assert.doesNotMatch(sidebarSource, /getSubscriptionBadgeVariant/);
+    assert.doesNotMatch(sidebarSource, /item\.id === 'subscription'/);
     assert.match(appSource, /import SubscriptionPage from '\.\/components\/subscription\/SubscriptionPage';/);
     assert.match(appSource, /subscriptionFeatureEnabled && currentView === 'subscription' && <SubscriptionPage \/>/);
     assert.match(storeSource, /subscriptionFeatureEnabled \? \[store\.dispatch\(loadSubscriptionSnapshot\(\)\)\] : \[\]/);

@@ -360,7 +360,7 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store 赞助计划
   title: Hagicode 赞助者计划
-  description: 支持 Hagicode AI Agent 持续演进，并让当前设备上的赞助者权益保持可见。
+  description: 支持 Hagicode 持续更新，并启用当前设备的赞助者权益。
   loading: 正在读取最近一次缓存的赞助快照...
   errorTitle: 无法读取赞助快照
   errorDescription: 'Desktop 无法加载赞助快照：{{error}}'
@@ -385,13 +385,22 @@ subscription:
     unsupported: 商店不可用
   hero:
     inactive:
-      title: 让 Hagicode AI Agent 持续向前演进
-      description: 赞助者计划是支持 Desktop 中 AI Agent 持续迭代最直接的方式，它覆盖的不只是一次开发，而是后续长期的时间投入与 token 成本。
-      note: AI Agent 不是上线后就会稳定不变的功能。模型、提示词、CLI 行为和配套工作流都在快速变化，想让它保持可用，就需要持续追踪、更新和验证。
+      title: 让 Hagicode 变得更好
+      description: 赞助者计划会直接支持 Hagicode 的持续维护、更新与追踪。
+      note: 如果你愿意支持，这份购买会帮助后续迭代继续发生。
     active:
-      title: 感谢你支持下一轮持续创作
-      description: 当前设备已经拥有有效的赞助者计划，你的支持正在帮助 Hagicode AI Agent 持续跟进变化，也让我们有空间为赞助者打磨更细致的体验。
-      note: 这份购买不只是一次付款记录，它直接支撑了功能上线后的维护、迭代、追踪和后续补强工作。
+      title: 感谢你的支持
+      description: 你的支持正在帮助 Hagicode 持续维护、更新与追踪。
+      note: 这份支持已经在推动后续迭代继续进行。
+  message:
+    ongoingTitle: 持续演进需要投入
+    ongoingDescription: Hagicode 不是一次做完就结束的产品。为了保持可用，作者需要持续投入精力和 token 去更新、验证和追踪变化。
+    perksTitle: 赞助者也会获得回馈
+    perksDescription: 我们也会适时推出合适的配套权益，为赞助者提供更精美的主题和其他权益内容。
+    unlockNoticeTitle: 当前不提供功能解锁
+    unlockNoticeDescription: 目前赞助者计划不提供任何功能解锁支持。如果你需要解锁其他功能，需要另外购买对应的许可。
+    inactivePrompt: 如果你认可这件事，可以通过赞助者计划支持它继续发展。
+    activeThanks: 感谢你的支持，我们也会继续认真打磨适合赞助者的后续权益。
   actions:
     panelEyebrow: 赞助操作
     buyTitle: 支持持续创作
@@ -401,19 +410,19 @@ subscription:
     buy: 购买赞助者计划
     manage: 打开 Microsoft Store 购买流程
     processing: 处理中...
-    buyHint: 通过 Microsoft Store 发起购买，用实际支持帮助 AI Agent 持续迭代，并把赞助者权益绑定到当前设备。
-    manageHint: 如果你想确认当前赞助账户或重新进入管理流程，可以再次打开 Microsoft Store 购买流程。
+    buyHint: 通过 Microsoft Store 购买，支持 Hagicode 的持续维护与更新。
+    manageHint: 再次打开 Microsoft Store，查看或管理当前计划。
     unsupportedHint: 购买和管理仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
-    secondaryLabel: 购买前
-    secondaryHint: 如果你想先确认本地快照是不是最新状态，可以先刷新一次，再决定是否购买或查看计划。
+    secondaryLabel: 如需确认
+    secondaryHint: 可以先刷新一次，再决定是否购买。
   summary:
     planLabel: 计划
     planName: Hagicode Sponsor Plan
     renewalLabel: 续费 / 到期
     lastSyncLabel: 最近一次成功同步
     entitlementsLabel: 已启用权益
-    activeDetail: 当前设备已经拿到了赞助者权益标识。
-    inactiveDetail: 在这里完成购买后，后续赞助者权益就能在当前设备上生效。
+    activeDetail: 当前设备已启用赞助者权益。
+    inactiveDetail: 购买后会在当前设备上启用。
     source: '来源：{{value}}'
   sourceValue:
     cache: 本地缓存
@@ -421,32 +430,32 @@ subscription:
     fallback: 回退快照
   mission:
     eyebrow: 为什么需要赞助
-    title: 赞助让一个持续变化的功能能真正活下去
-    description: Hagicode AI Agent 不是一次性交付能力，它需要持续跟进模型、工具、提示词和配套工作流的变化，才能在 Desktop 里保持实际价值。
+    title: 你的购买会帮助
+    description: 支持后续维护与更新。
     points:
       evolution:
-        title: AI Agent 本身就在持续变化
-        description: 模型能力、CLI 行为、提示策略和周边工作流都会变。要保持好用，就必须反复回看、调整和更新，而不是做完一次就结束。
+        title: 持续维护 Hagicode
+        description: 跟进模型、CLI 和工作流的变化。
       investment:
-        title: 时间投入和 token 成本都是真实存在的
-        description: 要让体验持续可用，需要作者不断投入精力做验证、修复、跟进和实现，同时也要为研究与迭代支付持续的 token 成本。
+        title: 支持验证与更新
+        description: 让修复、验证和迭代可以继续进行。
       rewards:
-        title: 用户支持也应该转化成可感知的价值
-        description: 除了支撑核心创作工作，我们也会逐步为赞助者推出更精美的主题和其他合适的配套权益，让支持有明确回报。
+        title: 启用赞助者权益
+        description: 购买后，当前设备会显示并保留对应权益。
   gratitude:
     eyebrow: 给赞助者的话
-    title: 你的支持已经在推动真实的工作继续发生
-    description: 赞助者计划的核心意义，是让持续创作有更稳定的支点，同时也让支持者在 Desktop 里得到清晰、克制但可感知的回馈。
+    title: 感谢你在支持这项工作
+    description: 你的支持正在帮助后续维护与更新继续推进。
     points:
       continuity:
-        title: 持续迭代因此变得可持续
-        description: 有了赞助支持，我们就能继续跟进 AI Agent 的变化、响应工具侧调整，并把上线后的改进持续做下去，而不是让功能停在首发状态。
+        title: 维护可以继续
+        description: 后续更新与修复可以持续推进。
       benefits:
-        title: 赞助者体验可以继续被打磨
-        description: 这也给了我们空间，为赞助者逐步加入更精美的主题和其他合适的权益，让支持者看到更具体的成果。
+        title: 感谢会在产品里被看见
+        description: 当前设备已启用赞助者权益。
       roadmap:
-        title: 后续权益已经有了清晰的落地路径
-        description: 现在的权益模型已经接好线，之后新增赞助者专属能力时，不需要再推翻购买链路重做一遍。
+        title: 后续权益已有准备
+        description: 新的赞助者内容可以在成熟后接入。
   benefits:
     eyebrow: 这个计划会逐步带来什么
     title: 先支持创作，再把回馈做得更好
@@ -475,8 +484,8 @@ subscription:
       source: 快照来源
   entitlements:
     title: 权益摘要
-    activeDescription: 这些是当前设备已经拿到的赞助者能力标识。
-    inactiveDescription: 这些能力标识会作为后续赞助者专属 Desktop 体验的稳定开关，在购买后生效。
+    activeDescription: 当前设备已启用的赞助者权益。
+    inactiveDescription: 购买后会启用的赞助者权益。
     enabled: 已启用
     disabled: 未启用
     names:
