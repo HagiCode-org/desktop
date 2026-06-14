@@ -5,8 +5,6 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import makeDistributablesModule from '@electron-forge/core/dist/api/make.js';
-import packageApplicationModule from '@electron-forge/core/dist/api/package.js';
 import { getMsixPaths } from './msix-config.js';
 import { loadStorePackageConfig } from './store-package-config.js';
 import { buildStorePurchaseAddon } from './build-store-purchase-addon.js';
@@ -23,8 +21,10 @@ const packageDir = configuredPackageOutputDir
     : path.resolve(projectRoot, configuredPackageOutputDir))
   : path.join(projectRoot, 'pkg');
 const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
-const makeDistributables = makeDistributablesModule.default ?? makeDistributablesModule;
-const packageApplication = packageApplicationModule.default ?? packageApplicationModule;
+
+function resolveForgeCliScriptPath() {
+  return path.join(projectRoot, 'node_modules', '@electron-forge', 'cli', 'dist', 'electron-forge.js');
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -140,6 +140,84 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+function inferPackagedRootFromAsar(asarPath, platform) {
+  const asarDirectory = path.dirname(asarPath);
+
+  if (platform === 'darwin') {
+    const resourcesDirectory = path.basename(asarDirectory);
+    const contentsDirectory = path.basename(path.dirname(asarDirectory));
+    const bundlePath = path.dirname(path.dirname(asarDirectory));
+
+    if (resourcesDirectory === 'Resources' && contentsDirectory === 'Contents' && bundlePath.endsWith('.app')) {
+      return bundlePath;
+    }
+
+    return null;
+  }
+
+  if (path.basename(asarDirectory) !== 'resources') {
+    return null;
+  }
+
+  return path.dirname(asarDirectory);
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fsp.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findPaths(rootPath, predicate, maxDepth = 4, depth = 0) {
+  const matches = [];
+  let entries = [];
+
+  try {
+    entries = await fsp.readdir(rootPath, { withFileTypes: true });
+  } catch {
+    return matches;
+  }
+
+  for (const entry of entries) {
+    const candidatePath = path.join(rootPath, entry.name);
+    if (await predicate(candidatePath, entry, depth)) {
+      matches.push(candidatePath);
+    }
+
+    if (entry.isDirectory() && depth < maxDepth) {
+      matches.push(...await findPaths(candidatePath, predicate, maxDepth, depth + 1));
+    }
+  }
+
+  return matches;
+}
+
+async function describeDirectoryTree(rootPath, maxDepth = 3, depth = 0) {
+  let entries = [];
+
+  try {
+    entries = await fsp.readdir(rootPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const lines = [];
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const candidatePath = path.join(rootPath, entry.name);
+    const relativePath = path.relative(projectRoot, candidatePath) || path.basename(candidatePath);
+    lines.push(`${'  '.repeat(depth)}- ${relativePath}${entry.isDirectory() ? '/' : ''}`);
+
+    if (entry.isDirectory() && depth < maxDepth) {
+      lines.push(...await describeDirectoryTree(candidatePath, maxDepth, depth + 1));
+    }
+  }
+
+  return lines;
+}
+
 async function resetOutputDirectories() {
   await fsp.rm(outDir, { recursive: true, force: true });
   await fsp.rm(packageDir, { recursive: true, force: true });
@@ -158,16 +236,94 @@ function resolveUnpackedDestination(platform, arch) {
   return path.join(packageDir, arch === 'arm64' ? 'mac-arm64' : 'mac');
 }
 
+async function findFallbackPackagedPath(platform, arch) {
+  const executableName = platform === 'win32' ? `${packageJson.productName || packageJson.name}.exe` : null;
+  const fallbackExecutableName = platform === 'linux' ? `${packageJson.productName || packageJson.name}` : null;
+  const asarPaths = await findPaths(outDir, async (_candidatePath, entry) => (
+    entry.isFile() && entry.name === 'app.asar'
+  ), 8);
+  const candidateRoots = unique(
+    asarPaths
+      .map(asarPath => inferPackagedRootFromAsar(asarPath, platform))
+      .filter(Boolean),
+  ).sort((left, right) => left.localeCompare(right));
+
+  for (const candidateRoot of candidateRoots) {
+    if (platform === 'win32') {
+      if (await pathExists(path.join(candidateRoot, executableName))) {
+        return candidateRoot;
+      }
+      continue;
+    }
+
+    if (platform === 'linux' && fallbackExecutableName) {
+      if (await pathExists(path.join(candidateRoot, fallbackExecutableName))) {
+        return candidateRoot;
+      }
+    }
+
+    return candidateRoot;
+  }
+
+  if (platform === 'darwin') {
+    const bundles = await findPaths(outDir, async (_candidatePath, entry) => entry.isDirectory() && entry.name.endsWith('.app'), 8);
+    return bundles[0] || null;
+  }
+
+  return null;
+}
+
+async function resolvePackagedApplicationPath(platform, arch, packagedPath) {
+  if (packagedPath && await pathExists(packagedPath)) {
+    return packagedPath;
+  }
+
+  const fallbackPath = await findFallbackPackagedPath(platform, arch);
+  if (fallbackPath) {
+    console.warn(`[electron-forge] Using fallback packaged application path from ${path.relative(projectRoot, fallbackPath)}`);
+  }
+
+  return fallbackPath;
+}
+
+async function waitForPackagedApplicationPath(platform, arch, packagedPath, timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  while ((Date.now() - startedAt) < timeoutMs) {
+    const resolvedPackagedPath = await resolvePackagedApplicationPath(platform, arch, packagedPath);
+    if (resolvedPackagedPath) {
+      return resolvedPackagedPath;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return null;
+}
+
 async function stagePackagedApplication(platform, arch, packagedPath) {
-  if (!packagedPath) {
-    throw new Error(`Forge package() did not return a packagedPath for ${platform}/${arch}`);
+  const resolvedPackagedPath = await waitForPackagedApplicationPath(platform, arch, packagedPath);
+  if (!resolvedPackagedPath) {
+    const outEntries = await describeDirectoryTree(outDir, 4);
+    const asarPaths = await findPaths(outDir, async (_candidatePath, entry) => (
+      entry.isFile() && entry.name === 'app.asar'
+    ), 8);
+    if (outEntries.length > 0) {
+      console.warn(`[electron-forge] out directory contents:\n${outEntries.join('\n')}`);
+    } else {
+      console.warn('[electron-forge] out directory is empty or missing after packaging.');
+    }
+    if (asarPaths.length > 0) {
+      console.warn(`[electron-forge] discovered app.asar files:\n${asarPaths.map(candidatePath => `- ${path.relative(projectRoot, candidatePath)}`).join('\n')}`);
+    }
+    throw new Error(`Unable to locate packaged application output for ${platform}/${arch} under ${outDir}`);
   }
 
   const destination = resolveUnpackedDestination(platform, arch);
   await fsp.rm(destination, { recursive: true, force: true });
   await fsp.mkdir(path.dirname(destination), { recursive: true });
 
-  await fsp.cp(packagedPath, destination, { recursive: true });
+  await fsp.cp(resolvedPackagedPath, destination, { recursive: true });
   await materializeForgePackagingResources(destination, platform);
   console.log(`[electron-forge] staged unpacked application ${path.relative(projectRoot, destination)}`);
   return destination;
@@ -324,7 +480,13 @@ async function recoverMacDmgDetachRace(error, options) {
 }
 
 async function collectArtifacts(makeResults) {
-  const artifactPaths = unique(makeResults.flatMap(result => result.artifacts));
+  let artifactPaths = unique(makeResults.flatMap(result => result.artifacts));
+  if (artifactPaths.length === 0) {
+    artifactPaths = await findFallbackMakeArtifacts();
+    if (artifactPaths.length > 0) {
+      console.warn(`[electron-forge] Recovered Forge artifacts from ${path.relative(projectRoot, path.join(outDir, 'make'))}`);
+    }
+  }
 
   for (const artifactPath of artifactPaths) {
     const stats = await fsp.stat(artifactPath);
@@ -339,6 +501,20 @@ async function collectArtifacts(makeResults) {
   }
 }
 
+async function findFallbackMakeArtifacts() {
+  const makeRoot = path.join(outDir, 'make');
+  const supportedExtensions = new Set(['.appimage', '.dmg', '.exe', '.msix', '.zip']);
+  const artifactPaths = await findPaths(makeRoot, async (candidatePath, entry) => {
+    if (!entry.isFile()) {
+      return false;
+    }
+
+    return supportedExtensions.has(path.extname(candidatePath).toLowerCase());
+  }, 5);
+
+  return artifactPaths.sort((left, right) => left.localeCompare(right));
+}
+
 async function createTarGzArtifact(unpackedDir, platform, arch) {
   const artifactName = `${sanitizeArtifactNameSegment(packageJson.productName || packageJson.name)}-${packageJson.version}-${platform}-${arch}.tar.gz`;
   const artifactPath = path.join(packageDir, artifactName);
@@ -346,6 +522,11 @@ async function createTarGzArtifact(unpackedDir, platform, arch) {
   await fsp.rm(artifactPath, { force: true });
   run('tar', ['-C', path.dirname(unpackedDir), '-czf', artifactPath, path.basename(unpackedDir)]);
   console.log(`[electron-forge] collected ${path.relative(projectRoot, artifactPath)}`);
+}
+
+function runForgeCli(subcommand, args) {
+  const forgeCliScriptPath = resolveForgeCliScriptPath();
+  run(process.execPath, [forgeCliScriptPath, subcommand, ...args, projectRoot]);
 }
 
 async function main() {
@@ -358,19 +539,14 @@ async function main() {
     await buildStorePurchaseAddon({ arch: options.arch });
   }
 
-  const packageResults = await packageApplication({
-    dir: projectRoot,
-    platform: options.platform,
-    arch: options.arch,
-    outDir,
-    interactive: false,
-  });
+  runForgeCli('package', [
+    '--platform',
+    options.platform,
+    '--arch',
+    options.arch,
+  ]);
 
-  if (packageResults.length !== 1) {
-    throw new Error(`Expected one packaged application, received ${packageResults.length}`);
-  }
-
-  const unpackedDir = await stagePackagedApplication(options.platform, options.arch, packageResults[0].packagedPath);
+  const unpackedDir = await stagePackagedApplication(options.platform, options.arch, null);
 
   if (options.platform === 'win32' && options.targets.includes('msix')) {
     const { storeConfig } = await loadStorePackageConfig();
@@ -388,27 +564,24 @@ async function main() {
 
   const forgeTargets = mapForgeTargets(options.platform, options.targets);
   if (forgeTargets.length > 0) {
-    let makeResults;
     try {
-      makeResults = await makeDistributables({
-        dir: projectRoot,
-        platform: options.platform,
-        arch: options.arch,
-        outDir,
-        skipPackage: true,
-        overrideTargets: forgeTargets,
-        interactive: false,
-      });
+      runForgeCli('make', [
+        '--platform',
+        options.platform,
+        '--arch',
+        options.arch,
+        '--skip-package',
+        '--targets',
+        forgeTargets.join(','),
+      ]);
     } catch (error) {
-      const recoveredResults = await recoverMacDmgDetachRace(error, options);
-      if (!recoveredResults) {
+      const recoveredArtifacts = await recoverMacDmgDetachRace(error, options);
+      if (!recoveredArtifacts) {
         throw error;
       }
-
-      makeResults = recoveredResults;
     }
 
-    await collectArtifacts(makeResults);
+    await collectArtifacts([]);
   }
 
   if (options.targets.includes('tar.gz')) {
