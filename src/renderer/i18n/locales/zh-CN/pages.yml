@@ -360,16 +360,15 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store 赞助计划
   title: Hagicode 赞助者计划
-  description: 查看 Microsoft Store 赞助计划状态、刷新本地快照，并让后续高级功能可复用稳定的权益标识。
-  loading: 正在读取最近一次缓存的订阅快照...
-  errorTitle: 无法读取订阅快照
-  errorDescription: 'Desktop 无法加载订阅快照：{{error}}'
+  description: 支持 Hagicode AI Agent 持续演进，并让当前设备上的赞助者权益保持可见。
+  loading: 正在读取最近一次缓存的赞助快照...
+  errorTitle: 无法读取赞助快照
+  errorDescription: 'Desktop 无法加载赞助快照：{{error}}'
   staleBadge: 已使用缓存快照
-  renewalOrExpiry: 续费 / 到期 {{value}}
   messages:
-    refreshSuccess: 订阅状态已刷新。
-    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存订阅快照。
-    refreshFailed: '刷新订阅快照失败：{{error}}'
+    refreshSuccess: 赞助状态已刷新。
+    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存赞助快照。
+    refreshFailed: '刷新赞助快照失败：{{error}}'
     refreshFailedFallback: Microsoft Store 刷新失败。
     purchaseFailed: '购买流程失败：{{error}}'
     purchaseFailedFallback: Microsoft Store 购买失败。
@@ -384,57 +383,124 @@ subscription:
     unknown: 未知
     stale: 缓存状态
     unsupported: 商店不可用
+  hero:
+    inactive:
+      title: 让 Hagicode AI Agent 持续向前演进
+      description: 赞助者计划是支持 Desktop 中 AI Agent 持续迭代最直接的方式，它覆盖的不只是一次开发，而是后续长期的时间投入与 token 成本。
+      note: AI Agent 不是上线后就会稳定不变的功能。模型、提示词、CLI 行为和配套工作流都在快速变化，想让它保持可用，就需要持续追踪、更新和验证。
+    active:
+      title: 感谢你支持下一轮持续创作
+      description: 当前设备已经拥有有效的赞助者计划，你的支持正在帮助 Hagicode AI Agent 持续跟进变化，也让我们有空间为赞助者打磨更细致的体验。
+      note: 这份购买不只是一次付款记录，它直接支撑了功能上线后的维护、迭代、追踪和后续补强工作。
   actions:
+    panelEyebrow: 赞助操作
+    buyTitle: 支持持续创作
+    manageTitle: 查看或管理当前支持
     refresh: 刷新状态
     refreshing: 刷新中...
-    buy: 购买 / 管理
-    manage: 购买 / 管理
+    buy: 购买赞助者计划
+    manage: 打开 Microsoft Store 购买流程
     processing: 处理中...
+    buyHint: 通过 Microsoft Store 发起购买，用实际支持帮助 AI Agent 持续迭代，并把赞助者权益绑定到当前设备。
+    manageHint: 如果你想确认当前赞助账户或重新进入管理流程，可以再次打开 Microsoft Store 购买流程。
+    unsupportedHint: 购买和管理仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
+    secondaryLabel: 购买前
+    secondaryHint: 如果你想先确认本地快照是不是最新状态，可以先刷新一次，再决定是否购买或查看计划。
   summary:
     planLabel: 计划
     planName: Hagicode Sponsor Plan
+    renewalLabel: 续费 / 到期
     lastSyncLabel: 最近一次成功同步
     entitlementsLabel: 已启用权益
-    entitlementsHint: 这些能力标识可以直接提供给后续 Desktop 订阅功能使用。
+    activeDetail: 当前设备已经拿到了赞助者权益标识。
+    inactiveDetail: 在这里完成购买后，后续赞助者权益就能在当前设备上生效。
     source: '来源：{{value}}'
   sourceValue:
     cache: 本地缓存
     store: Microsoft Store
     fallback: 回退快照
-  fields:
-    status: 当前状态
-    planStoreId: Store ID
-    lastCheckedAt: 最近检查时间
-    expirationDate: 续费 / 到期
-  stateCard:
-    title: 订阅状态
-    description: Desktop 会把 Microsoft Store 返回结果和本地缓存统一归一化为桌面端自有状态模型。
+  mission:
+    eyebrow: 为什么需要赞助
+    title: 赞助让一个持续变化的功能能真正活下去
+    description: Hagicode AI Agent 不是一次性交付能力，它需要持续跟进模型、工具、提示词和配套工作流的变化，才能在 Desktop 里保持实际价值。
+    points:
+      evolution:
+        title: AI Agent 本身就在持续变化
+        description: 模型能力、CLI 行为、提示策略和周边工作流都会变。要保持好用，就必须反复回看、调整和更新，而不是做完一次就结束。
+      investment:
+        title: 时间投入和 token 成本都是真实存在的
+        description: 要让体验持续可用，需要作者不断投入精力做验证、修复、跟进和实现，同时也要为研究与迭代支付持续的 token 成本。
+      rewards:
+        title: 用户支持也应该转化成可感知的价值
+        description: 除了支撑核心创作工作，我们也会逐步为赞助者推出更精美的主题和其他合适的配套权益，让支持有明确回报。
+  gratitude:
+    eyebrow: 给赞助者的话
+    title: 你的支持已经在推动真实的工作继续发生
+    description: 赞助者计划的核心意义，是让持续创作有更稳定的支点，同时也让支持者在 Desktop 里得到清晰、克制但可感知的回馈。
+    points:
+      continuity:
+        title: 持续迭代因此变得可持续
+        description: 有了赞助支持，我们就能继续跟进 AI Agent 的变化、响应工具侧调整，并把上线后的改进持续做下去，而不是让功能停在首发状态。
+      benefits:
+        title: 赞助者体验可以继续被打磨
+        description: 这也给了我们空间，为赞助者逐步加入更精美的主题和其他合适的权益，让支持者看到更具体的成果。
+      roadmap:
+        title: 后续权益已经有了清晰的落地路径
+        description: 现在的权益模型已经接好线，之后新增赞助者专属能力时，不需要再推翻购买链路重做一遍。
+  benefits:
+    eyebrow: 这个计划会逐步带来什么
+    title: 先支持创作，再把回馈做得更好
+    description: 赞助者计划现在保持克制，是为了先把支持持续创作这件事做扎实，同时为后续更精细、更合适的权益留出空间。
+    items:
+      recognition:
+        title: Desktop 内的赞助者身份表达
+        description: 赞助状态可以在应用里提供明确但不过度喧宾夺主的身份标识，而不是依赖零散的临时判断。
+      theme:
+        title: 更精美的主题与视觉打磨
+        description: 有了赞助支持，我们能把更多精力放到高质量主题和视觉细节上，而不是只维持最低可用状态。
+      future:
+        title: 后续赞助者专属权益
+        description: 现有的权益模型已经为未来的赞助者专属能力预留了稳定入口，等内容成熟后就能顺畅上线。
+  snapshot:
+    eyebrow: 当前设备状态
+    title: 商店状态与本地权益详情
+    description: 这里保留了当前设备上的运行信息，方便你确认赞助状态到底同步到了什么程度。
+    fields:
+      status: 当前状态
+      planStoreId: Store ID
+      lastCheckedAt: 最近检查时间
+      renewalDate: 续费时间
+      expirationDate: 到期时间
+      lastSuccessfulSync: 最近一次成功同步
+      source: 快照来源
   entitlements:
     title: 权益摘要
-    description: 这些稳定标识是后续赞助者专属 Desktop 功能应当依赖的权限模型。
+    activeDescription: 这些是当前设备已经拿到的赞助者能力标识。
+    inactiveDescription: 这些能力标识会作为后续赞助者专属 Desktop 体验的稳定开关，在购买后生效。
     enabled: 已启用
     disabled: 未启用
     names:
-      sponsorBadge: sponsorBadge
-      premiumFeatureGate: premiumFeatureGate
+      sponsorBadge: 赞助者身份标识
+      premiumFeatureGate: 后续赞助者功能开关
     details:
-      sponsorBadge: 可用于 Desktop 内展示赞助者身份标识。
-      premiumFeatureGate: 为后续赞助者专属 Desktop 功能预留的权限开关。
+      sponsorBadge: 用于在 Desktop 里提供清晰的赞助者身份展示。
+      premiumFeatureGate: 为后续赞助者专属能力保留稳定的权限入口。
   diagnostics:
-    title: 诊断信息
-    description: 即使刷新失败，也会继续展示缓存恢复状态，避免用户误以为权益已丢失。
+    eyebrow: 技术轨迹
+    title: 诊断与恢复说明
+    description: 这里故意保留较技术化的信息，这样即使刷新失败，也不会让人误以为权益已经丢失，仍然可以核对最后一次已知状态。
     lastSuccessfulSync: 最近一次成功同步
     source: 快照来源
     empty: 暂无诊断信息。
   stale:
-    title: 当前正在使用缓存状态
-    description: 因为 Store 刷新失败或尚未完成，Desktop 暂时保留了最近一次已知订阅快照。
+    title: Desktop 当前展示的是缓存状态
+    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了最近一次已知的赞助快照，而不是直接清空状态。
   unsupported:
-    title: 需要 Windows Store 运行环境
-    description: 购买和管理操作仅在 Hagicode Desktop 的 Microsoft Store 版本中可用。
+    title: 需要 Microsoft Store 版本
+    description: 购买和管理操作仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
   purchaseOutcome:
     title: 购买结果
-    succeeded: 购买已完成，订阅快照也已刷新。
+    succeeded: 购买已完成，Desktop 也已刷新赞助快照。
     already-purchased: 当前 Microsoft Store 账户已经拥有该赞助计划。
     canceled: Microsoft Store 购买窗口已取消。
     not-purchased: 购买流程已结束，但未完成支付。

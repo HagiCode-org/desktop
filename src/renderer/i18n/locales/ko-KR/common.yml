@@ -277,6 +277,10 @@ dependencyManagement:
       description: Claude Code 에이전트 CLI는 AI 지원 코딩 세션을 위한 것입니다.
     codex:
       description: OpenAI Codex 코딩 작업흐름을 위한 에이전트 CLI.
+    pi:
+      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+    reasonix:
+      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
     githubCopilot:
       description: GitHub Copilot CLI 공식 @github/copilot npm 패키지를 통해 배포됩니다.
     codebuddy:
@@ -510,8 +514,8 @@ system:
       confirming: Waiting for confirmation
       stoppingService: Stopping service
       confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
-      stoppingServiceDescription: 'The current service is stopping now, then the new version will continue downloading and installing.'
-      switchingDescription: 'Installation finished. Switching the active runtime to {{version}} now.'
+      stoppingServiceDescription: The current service is stopping now, then the new version will continue downloading and installing.
+      switchingDescription: Installation finished. Switching the active runtime to {{version}} now.
       completedDescription: '{{version}} is installed and the homepage status is already synced.'
       activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
     actions:

@@ -143,6 +143,41 @@ webServiceStatus:
     copySuccess: Journal de démarrage copié
     copyError: Échec de la copie du journal de démarrage
     copyEmpty: Aucun contenu de journal à copier
+  startupProgress:
+    title: Starting service
+    description: Desktop is checking the active version, validating required dependencies, and waiting for the local Hagicode service to finish booting.
+    successTitle: Service is ready
+    successDescription: The local service completed startup checks and is ready to open.
+    failureTitle: Startup did not finish
+    failureDescription: Desktop hit a problem while starting the service. Review the failure log or close this dialog and continue troubleshooting.
+    currentStepLabel: Current progress
+    waitingHint: Startup can take several seconds. Desktop keeps this dialog updated with the current step and execution status.
+    states:
+      pending: Pending
+      active: In progress
+      completed: Completed
+      failed: Failed
+    actions:
+      close: Close
+      openFailureLog: View failure log
+    meta:
+      version: Active version
+      port: Port
+      accessUrl: Access URL
+    stepLabels:
+      checkingVersion: Check version
+      checkingDependencies: Check dependencies
+      spawning: Start service process
+      waitingListening: Wait for listening port
+      healthCheck: Run health check
+      running: Startup complete
+    stepDescriptions:
+      checkingVersion: Confirm that the active version, entry point, and startup metadata are ready for this launch.
+      checkingDependencies: Validate that Desktop-managed required dependencies are ready before the service starts.
+      spawning: Create the managed service process and inject the runtime environment prepared by Desktop.
+      waitingListening: Wait for the service to bind the configured port and make the local access address reachable.
+      healthCheck: Probe the booted service and confirm the Web API is ready to serve requests.
+      running: Every startup check passed and the local Hagicode service is ready to open.
   toast:
     noActiveVersion: Aucune version active n'est sélectionnée pour les journaux Web
     openLogsSuccess: Dossier des journaux Web de la version active ouvert

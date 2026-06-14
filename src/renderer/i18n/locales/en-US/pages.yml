@@ -359,85 +359,151 @@ installProgressDialog:
     retry: Retry
 subscription:
   eyebrow: Microsoft Store sponsor plan
-  title: Hagicode 赞助者计划
-  description: Review the Microsoft Store sponsor plan status, refresh the local snapshot, and keep entitlement flags visible for future premium Desktop features.
-  loading: Reading the latest cached subscription snapshot...
-  errorTitle: Subscription snapshot unavailable
-  errorDescription: 'Desktop could not load the subscription snapshot: {{error}}'
+  title: Hagicode Sponsor Plan
+  description: Support the continued evolution of Hagicode AI Agent and keep sponsor entitlements visible on the current device.
+  loading: Reading the latest cached sponsor snapshot...
+  errorTitle: Sponsor snapshot unavailable
+  errorDescription: 'Desktop could not load the sponsor snapshot: {{error}}'
   staleBadge: Cached snapshot
-  renewalOrExpiry: Renewal / expiry {{value}}
   messages:
-    refreshSuccess: Subscription status refreshed.
-    refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
-    refreshFailed: 'Failed to refresh the subscription snapshot: {{error}}'
+    refreshSuccess: Sponsor status refreshed.
+    refreshStale: Desktop kept the cached sponsor snapshot because the Microsoft Store refresh did not complete.
+    refreshFailed: 'Failed to refresh the sponsor snapshot: {{error}}'
     refreshFailedFallback: Microsoft Store refresh failed.
     purchaseFailed: 'Purchase flow failed: {{error}}'
     purchaseFailedFallback: Microsoft Store purchase failed.
   status:
     loading: Loading
     active: Active
-    inactive: Inactive
+    inactive: Not active
     expired: Expired
     canceled: Canceled
     grace-period: Grace period
     pending: Pending
     unknown: Unknown
-    stale: Stale cached state
+    stale: Cached state
     unsupported: Store unavailable
+  hero:
+    inactive:
+      title: Keep Hagicode AI Agent moving forward
+      description: The sponsor plan is the most direct way to fund the time and token cost behind continuous AI Agent work in Desktop.
+      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
+    active:
+      title: Thank you for backing the next round of work
+      description: This device already carries an active sponsor plan, which means you are helping keep Hagicode AI Agent current while giving us room to ship more polished sponsor-facing touches.
+      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   actions:
+    panelEyebrow: Sponsor actions
+    buyTitle: Support ongoing creation
+    manageTitle: Review or manage support
     refresh: Refresh status
     refreshing: Refreshing...
-    buy: Buy / Manage
-    manage: Buy / Manage
+    buy: Buy sponsor plan
+    manage: Open Store purchase flow
     processing: Processing...
+    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
+    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
+    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    secondaryLabel: Before you decide
+    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: Plan
     planName: Hagicode Sponsor Plan
+    renewalLabel: Renewal or expiry
     lastSyncLabel: Last successful sync
     entitlementsLabel: Enabled entitlements
-    entitlementsHint: Derived capability flags are ready for future Desktop consumers.
+    activeDetail: Sponsor entitlements are already available on this device.
+    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
     source: 'Source: {{value}}'
   sourceValue:
     cache: Local cache
     store: Microsoft Store
     fallback: Fallback snapshot
-  fields:
-    status: Current status
-    planStoreId: Store ID
-    lastCheckedAt: Last checked
-    expirationDate: Renewal / expiry
-  stateCard:
-    title: Subscription state
-    description: Desktop-owned status and dates are normalized from the Microsoft Store runtime and local cache.
+  mission:
+    eyebrow: Why sponsorship matters
+    title: Sponsorship keeps an evolving feature alive
+    description: Hagicode AI Agent is not a one-off capability. It needs continuous follow-up so the product can track changing models, tools, prompts, and supporting workflows.
+    points:
+      evolution:
+        title: AI Agent keeps moving
+        description: Models, CLI behaviors, prompt strategies, and surrounding workflows keep changing. Staying useful means revisiting the feature repeatedly, not shipping it once.
+      investment:
+        title: Time and token budget both matter
+        description: Keeping the experience current requires author attention, validation work, issue follow-up, and recurring token spend for research and iteration.
+      rewards:
+        title: Support should become visible value
+        description: Beyond sustaining the core work, we plan to add sponsor-facing touches such as more refined themes and other carefully chosen benefits over time.
+  gratitude:
+    eyebrow: Sponsor message
+    title: Your support is already carrying real work
+    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
+    points:
+      continuity:
+        title: Continued iteration stays possible
+        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
+      benefits:
+        title: Sponsor-facing polish can grow next
+        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
+      roadmap:
+        title: Future perks already have a delivery path
+        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
+  benefits:
+    eyebrow: What this plan unlocks
+    title: Built to support creation first, then reward supporters well
+    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
+    items:
+      recognition:
+        title: Sponsor identity in Desktop
+        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
+      theme:
+        title: More refined themes and visual polish
+        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
+      future:
+        title: Future sponsor-only benefits
+        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
+  snapshot:
+    eyebrow: Current device state
+    title: Store status and local entitlement details
+    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
+    fields:
+      status: Current status
+      planStoreId: Store ID
+      lastCheckedAt: Last checked
+      renewalDate: Renewal date
+      expirationDate: Expiry date
+      lastSuccessfulSync: Last successful sync
+      source: Snapshot source
   entitlements:
     title: Entitlement summary
-    description: These stable flags are what later sponsor-only Desktop features should consume.
+    activeDescription: These are the sponsor capability flags currently available on this device.
+    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
     enabled: Enabled
-    disabled: Disabled
+    disabled: Not enabled
     names:
-      sponsorBadge: sponsorBadge
-      premiumFeatureGate: premiumFeatureGate
+      sponsorBadge: Sponsor identity badge
+      premiumFeatureGate: Future sponsor feature gate
     details:
-      sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
-      premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
+      sponsorBadge: Enables clear sponsor recognition affordances in the Desktop experience.
+      premiumFeatureGate: Keeps a stable switch ready for future sponsor-only capabilities.
   diagnostics:
-    title: Diagnostics
-    description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
+    eyebrow: Technical trace
+    title: Diagnostics and recovery notes
+    description: This panel stays technical on purpose, so refresh failures do not look like entitlement loss and you can still verify the last known state.
     lastSuccessfulSync: Last successful sync
     source: Snapshot source
     empty: No diagnostics recorded.
   stale:
-    title: Cached state is being used
-    description: Desktop preserved the last known snapshot because the Store refresh failed or has not completed yet.
+    title: Desktop is showing the cached state
+    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent known sponsor snapshot instead of clearing it.
   unsupported:
-    title: Windows Store runtime required
+    title: Microsoft Store edition required
     description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
   purchaseOutcome:
     title: Purchase result
-    succeeded: Purchase completed and the subscription snapshot was refreshed.
+    succeeded: Purchase completed and Desktop refreshed the sponsor snapshot.
     already-purchased: This Microsoft Store account already owns the sponsor plan.
     canceled: The Microsoft Store purchase dialog was canceled.
-    not-purchased: The purchase flow closed without completing.
+    not-purchased: The purchase flow closed without completing payment.
     network-error: Microsoft Store reported a network error during purchase.
     server-error: Microsoft Store reported a server error during purchase.
     not-supported: Purchase is unavailable in this runtime.

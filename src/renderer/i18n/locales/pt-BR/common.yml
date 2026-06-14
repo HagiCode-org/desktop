@@ -277,6 +277,10 @@ dependencyManagement:
       description: Claude Code Agente CLI para sessões de codificação assistidas por AI.
     codex:
       description: OpenAI Codex Agente CLI para fluxos de trabalho de codificação.
+    pi:
+      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+    reasonix:
+      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
     githubCopilot:
       description: GitHub Copilot CLI distribuído através do pacote oficial @github/copilot npm.
     codebuddy:
@@ -510,8 +514,8 @@ system:
       confirming: Waiting for confirmation
       stoppingService: Stopping service
       confirmingDescription: '{{version}} is ready to install. Confirm first if the current service should be stopped.'
-      stoppingServiceDescription: 'The current service is stopping now, then the new version will continue downloading and installing.'
-      switchingDescription: 'Installation finished. Switching the active runtime to {{version}} now.'
+      stoppingServiceDescription: The current service is stopping now, then the new version will continue downloading and installing.
+      switchingDescription: Installation finished. Switching the active runtime to {{version}} now.
       completedDescription: '{{version}} is installed and the homepage status is already synced.'
       activeDescription: 'Processing {{version}}. Current stage: {{stage}}.'
     actions:

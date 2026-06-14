@@ -1,12 +1,59 @@
 settings:
   title: Paramètres
+  loading: Loading settings module...
   tabs:
-    onboarding: Intégration
-    sharingAcceleration: Télécharger et partager
-    updates: Mises à jour en arrière-plan
+    notification: Notification Center
     dependencyManagement: Dependency Management
     debugOptions: Debug Options
+    language: Language Settings
+    onboarding: Intégration
+    sharingAcceleration: Télécharger et partager
+    theme: Theme Settings
     runtimeData: Runtime Data
+    updates: Mises à jour en arrière-plan
+    advanced: Advanced Settings
+  notification:
+    title: Notification Center
+    description: Validate the desktop notification pipeline and review the default notification payload used by the client.
+    testSectionTitle: Test Notification
+    testSectionDescription: Send a native desktop notification to verify the IPC bridge and OS notification transport are working.
+    testButton: Send Test Notification
+    sending: Sending...
+    testSuccess: Test notification sent
+    testSuccessDescription: If OS notification permissions are available, the desktop should already have received it.
+    testError: Failed to send test notification
+    testErrorDescription: 'Error detail: {{error}}'
+    previewTitle: Default Payload Preview
+    previewDescription: These fields are sent to the main process when the test notification runs.
+    testTitle: Test Notification
+    testBody: Desktop notifications are ready. Clicking this notification focuses Hagicode Desktop.
+    eventShown: Latest shown event
+    eventShownValue: Notification {{id}} was shown via {{transport}}
+    eventClicked: Latest click event
+    eventClickedValue: Notification {{id}} was clicked with action {{action}} via {{transport}}
+    eventPending: No notification events have been recorded yet.
+    values:
+      focusWindow: Focus main window
+      openUrl: Open URL
+    fields:
+      title: Title
+      body: Body
+      level: Level
+      clickAction: Click action
+      duration: Duration
+      silent: Silent
+  languageSettings:
+    title: Language Settings
+    description: Switch the active Desktop language and refresh labels immediately.
+    helper: Language changes are applied to menus, tray labels, and settings tabs right away.
+  themeSettings:
+    title: Theme Settings
+    description: A dedicated theme surface is reserved here for future light, dark, and visual preference controls.
+  advancedSettings:
+    title: Advanced Settings
+    description: Reserve one place for logs, experiments, and advanced runtime controls.
+  placeholders:
+    comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
     title: Dependency management mode
     description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
@@ -211,8 +258,6 @@ versionManagement:
     incomplete: Dépendances manquantes
     installed: Installé
     payloadInvalid: Charge utile invalide
-    runtimeIncompatible: Runtime fourni incompatible
-    desktopIncompatible: Ordinateur de bureau incompatible
   actions:
     refresh: Actualiser
     install: Installer la version
@@ -320,7 +365,6 @@ subscription:
   errorTitle: Subscription snapshot unavailable
   errorDescription: 'Desktop could not load the subscription snapshot: {{error}}'
   staleBadge: Cached snapshot
-  renewalOrExpiry: Renewal / expiry {{value}}
   messages:
     refreshSuccess: Subscription status refreshed.
     refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
@@ -339,34 +383,100 @@ subscription:
     unknown: Unknown
     stale: Stale cached state
     unsupported: Store unavailable
+  hero:
+    inactive:
+      title: Keep Hagicode AI Agent moving forward
+      description: The sponsor plan is the most direct way to fund the time and token cost behind continuous AI Agent work in Desktop.
+      note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
+    active:
+      title: Thank you for backing the next round of work
+      description: This device already carries an active sponsor plan, which means you are helping keep Hagicode AI Agent current while giving us room to ship more polished sponsor-facing touches.
+      note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   actions:
+    panelEyebrow: Sponsor actions
+    buyTitle: Support ongoing creation
+    manageTitle: Review or manage support
     refresh: Refresh status
     refreshing: Refreshing...
     buy: Buy / Manage
     manage: Buy / Manage
     processing: Processing...
+    buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
+    manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
+    unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    secondaryLabel: Before you decide
+    secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: Plan
     planName: Hagicode Sponsor Plan
+    renewalLabel: Renewal or expiry
     lastSyncLabel: Last successful sync
     entitlementsLabel: Enabled entitlements
-    entitlementsHint: Derived capability flags are ready for future Desktop consumers.
+    activeDetail: Sponsor entitlements are already available on this device.
+    inactiveDetail: Purchasing here is what turns future sponsor benefits on for this device.
     source: 'Source: {{value}}'
   sourceValue:
     cache: Local cache
     store: Microsoft Store
     fallback: Fallback snapshot
-  fields:
-    status: Current status
-    planStoreId: Store ID
-    lastCheckedAt: Last checked
-    expirationDate: Renewal / expiry
-  stateCard:
-    title: Subscription state
-    description: Desktop-owned status and dates are normalized from the Microsoft Store runtime and local cache.
+  mission:
+    eyebrow: Why sponsorship matters
+    title: Sponsorship keeps an evolving feature alive
+    description: Hagicode AI Agent is not a one-off capability. It needs continuous follow-up so the product can track changing models, tools, prompts, and supporting workflows.
+    points:
+      evolution:
+        title: AI Agent keeps moving
+        description: Models, CLI behaviors, prompt strategies, and surrounding workflows keep changing. Staying useful means revisiting the feature repeatedly, not shipping it once.
+      investment:
+        title: Time and token budget both matter
+        description: Keeping the experience current requires author attention, validation work, issue follow-up, and recurring token spend for research and iteration.
+      rewards:
+        title: Support should become visible value
+        description: Beyond sustaining the core work, we plan to add sponsor-facing touches such as more refined themes and other carefully chosen benefits over time.
+  gratitude:
+    eyebrow: Sponsor message
+    title: Your support is already carrying real work
+    description: The sponsor plan is designed as a practical way to keep ongoing product work funded while giving supporters clear recognition inside Desktop.
+    points:
+      continuity:
+        title: Continued iteration stays possible
+        description: Active sponsorship gives us room to keep tracking AI Agent changes, respond to tool shifts, and ship follow-up improvements instead of freezing the feature after launch.
+      benefits:
+        title: Sponsor-facing polish can grow next
+        description: We can now keep shaping tasteful sponsor experiences, including more refined themes and other benefits that feel aligned with the product.
+      roadmap:
+        title: Future perks already have a delivery path
+        description: The entitlement model is in place, so later sponsor-only additions can land cleanly without rebuilding the purchase foundation.
+  benefits:
+    eyebrow: What this plan unlocks
+    title: Built to support creation first, then reward supporters well
+    description: The sponsor plan is intentionally simple today. It keeps the core mission clear while leaving room for polished, appropriate benefits as the product grows.
+    items:
+      recognition:
+        title: Sponsor identity in Desktop
+        description: Sponsor status can power visible recognition inside the app without depending on brittle one-off checks.
+      theme:
+        title: More refined themes and visual polish
+        description: Support gives us room to invest in better-crafted themes and other quality details that are easy to feel but expensive to maintain.
+      future:
+        title: Future sponsor-only benefits
+        description: The current entitlement model reserves a clean path for later sponsor perks when they are ready to ship.
+  snapshot:
+    eyebrow: Current device state
+    title: Store status and local entitlement details
+    description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
+    fields:
+      status: Current status
+      planStoreId: Store ID
+      lastCheckedAt: Last checked
+      renewalDate: Renewal date
+      expirationDate: Expiry date
+      lastSuccessfulSync: Last successful sync
+      source: Snapshot source
   entitlements:
     title: Entitlement summary
-    description: These stable flags are what later sponsor-only Desktop features should consume.
+    activeDescription: These are the sponsor capability flags currently available on this device.
+    inactiveDescription: These capability flags are reserved for sponsor-only Desktop experiences and become available after purchase.
     enabled: Enabled
     disabled: Disabled
     names:
@@ -376,6 +486,7 @@ subscription:
       sponsorBadge: Allows sponsor identity affordances in the Desktop experience.
       premiumFeatureGate: Reserved gate for future sponsor-only Desktop capabilities.
   diagnostics:
+    eyebrow: Technical trace
     title: Diagnostics
     description: Cached-state recovery details stay visible so refresh failures do not look like entitlement loss.
     lastSuccessfulSync: Last successful sync

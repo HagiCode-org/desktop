@@ -277,6 +277,10 @@ dependencyManagement:
       description: 用於 AI 輔助編碼會話的 Claude Code Agent CLI。
     codex:
       description: 用於編碼工作流程的 OpenAI Codex Agent CLI。
+    pi:
+      description: PI coding agent CLI distributed through the official @earendil-works/pi-coding-agent npm package.
+    reasonix:
+      description: Reasonix coding agent CLI distributed through the official reasonix npm package.
     githubCopilot:
       description: 透過官方 @github/copilot npm 包分發的 GitHub Copilot CLI。
     codebuddy:
