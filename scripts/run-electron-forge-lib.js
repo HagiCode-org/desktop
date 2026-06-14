@@ -140,6 +140,28 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+function inferPackagedRootFromAsar(asarPath, platform) {
+  const asarDirectory = path.dirname(asarPath);
+
+  if (platform === 'darwin') {
+    const resourcesDirectory = path.basename(asarDirectory);
+    const contentsDirectory = path.basename(path.dirname(asarDirectory));
+    const bundlePath = path.dirname(path.dirname(asarDirectory));
+
+    if (resourcesDirectory === 'Resources' && contentsDirectory === 'Contents' && bundlePath.endsWith('.app')) {
+      return bundlePath;
+    }
+
+    return null;
+  }
+
+  if (path.basename(asarDirectory) !== 'resources') {
+    return null;
+  }
+
+  return path.dirname(asarDirectory);
+}
+
 async function pathExists(targetPath) {
   try {
     await fsp.access(targetPath);
@@ -192,35 +214,40 @@ function resolveUnpackedDestination(platform, arch) {
 }
 
 async function findFallbackPackagedPath(platform, arch) {
+  const executableName = platform === 'win32' ? `${packageJson.productName || packageJson.name}.exe` : null;
+  const fallbackExecutableName = platform === 'linux' ? `${packageJson.productName || packageJson.name}` : null;
+  const asarPaths = await findPaths(outDir, async (candidatePath, entry) => (
+    entry.isFile() && entry.name === 'app.asar'
+  ), 8);
+  const candidateRoots = unique(
+    asarPaths
+      .map(asarPath => inferPackagedRootFromAsar(asarPath, platform))
+      .filter(Boolean),
+  ).sort((left, right) => left.localeCompare(right));
+
+  for (const candidateRoot of candidateRoots) {
+    if (platform === 'win32') {
+      if (await pathExists(path.join(candidateRoot, executableName))) {
+        return candidateRoot;
+      }
+      continue;
+    }
+
+    if (platform === 'linux' && fallbackExecutableName) {
+      if (await pathExists(path.join(candidateRoot, fallbackExecutableName))) {
+        return candidateRoot;
+      }
+    }
+
+    return candidateRoot;
+  }
+
   if (platform === 'darwin') {
-    const bundles = await findPaths(outDir, async (candidatePath, entry) => entry.isDirectory() && entry.name.endsWith('.app'), 5);
+    const bundles = await findPaths(outDir, async (candidatePath, entry) => entry.isDirectory() && entry.name.endsWith('.app'), 8);
     return bundles[0] || null;
   }
 
-  const executableName = platform === 'win32' ? `${packageJson.productName || packageJson.name}.exe` : null;
-  const fallbackExecutableName = platform === 'linux' ? `${packageJson.productName || packageJson.name}` : null;
-  const directories = await findPaths(outDir, async (candidatePath, entry) => {
-    if (!entry.isDirectory()) {
-      return false;
-    }
-
-    const resourcesAsarPath = path.join(candidatePath, 'resources', 'app.asar');
-    if (!await pathExists(resourcesAsarPath)) {
-      return false;
-    }
-
-    if (platform === 'win32') {
-      return pathExists(path.join(candidatePath, executableName));
-    }
-
-    if (fallbackExecutableName && await pathExists(path.join(candidatePath, fallbackExecutableName))) {
-      return true;
-    }
-
-    return true;
-  }, 5);
-
-  return directories[0] || null;
+  return null;
 }
 
 async function resolvePackagedApplicationPath(platform, arch, packagedPath) {
