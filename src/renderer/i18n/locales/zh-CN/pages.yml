@@ -372,6 +372,8 @@ subscription:
     refreshFailedFallback: Microsoft Store 刷新失败。
     purchaseFailed: '购买流程失败：{{error}}'
     purchaseFailedFallback: Microsoft Store 购买失败。
+    openStoreFailed: '打开 Microsoft Store 页面失败：{{error}}'
+    openStoreFailedFallback: Microsoft Store 页面暂时不可用。
   status:
     loading: 加载中
     active: 已激活
@@ -409,10 +411,13 @@ subscription:
     refreshing: 刷新中...
     buy: 购买赞助者计划
     manage: 打开 Microsoft Store 购买流程
+    subscribeViaStore: 前往 Microsoft Store 订阅
+    installStoreApp: 安装 Microsoft Store 版
     processing: 处理中...
     buyHint: 通过 Microsoft Store 购买，支持 Hagicode 的持续维护与更新。
     manageHint: 再次打开 Microsoft Store，查看或管理当前计划。
     unsupportedHint: 购买和管理仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
+    installHint: 请先在 Microsoft Store 中打开赞助者计划，然后安装或启动 Microsoft Store 版 Hagicode Desktop，以完成订阅和权益同步。
     secondaryLabel: 如需确认
     secondaryHint: 可以先刷新一次，再决定是否购买。
   summary:
@@ -507,6 +512,7 @@ subscription:
   unsupported:
     title: 需要 Microsoft Store 版本
     description: 购买和管理操作仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
+    nonStoreDescription: 当前运行的不是 Microsoft Store 版本。请使用下方按钮前往 Microsoft Store 打开赞助者计划，再安装或启动 Microsoft Store 版 Hagicode Desktop，以完成订阅和权益同步。
   purchaseOutcome:
     title: 购买结果
     succeeded: 购买已完成，Desktop 也已刷新赞助快照。

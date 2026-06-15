@@ -372,6 +372,8 @@ subscription:
     refreshFailedFallback: Microsoft Store refresh failed.
     purchaseFailed: 'Purchase flow failed: {{error}}'
     purchaseFailedFallback: Microsoft Store purchase failed.
+    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
+    openStoreFailedFallback: Microsoft Store page unavailable.
   status:
     loading: Loading
     active: Active
@@ -409,10 +411,13 @@ subscription:
     refreshing: Refreshing...
     buy: Buy sponsor plan
     manage: Open Store purchase flow
+    subscribeViaStore: Subscribe in Microsoft Store
+    installStoreApp: Install Store edition
     processing: Processing...
     buyHint: Use Microsoft Store to support ongoing Hagicode maintenance and updates.
     manageHint: Open Microsoft Store again to review or manage the current plan.
     unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Need to confirm first?
     secondaryHint: Refresh once before you decide to buy.
   summary:
@@ -507,6 +512,7 @@ subscription:
   unsupported:
     title: Microsoft Store edition required
     description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
+    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
   purchaseOutcome:
     title: Purchase result
     succeeded: Purchase completed and Desktop refreshed the sponsor snapshot.

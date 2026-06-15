@@ -372,6 +372,8 @@ subscription:
     refreshFailedFallback: Microsoft Store refresh failed.
     purchaseFailed: 'Purchase flow failed: {{error}}'
     purchaseFailedFallback: Microsoft Store purchase failed.
+    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
+    openStoreFailedFallback: Microsoft Store page unavailable.
   status:
     loading: Loading
     active: Active
@@ -392,6 +394,15 @@ subscription:
       title: Thank you for backing the next round of work
       description: This device already carries an active sponsor plan, which means you are helping keep Hagicode AI Agent current while giving us room to ship more polished sponsor-facing touches.
       note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
+  message:
+    ongoingTitle: Ongoing evolution needs real investment
+    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
+    perksTitle: Sponsors should receive thoughtful perks
+    perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
+    unlockNoticeTitle: No feature unlocks included
+    unlockNoticeDescription: The sponsor plan currently does not unlock any product features. If you need other feature access, you must purchase the corresponding license separately.
+    inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
+    activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
     panelEyebrow: Sponsor actions
     buyTitle: Support ongoing creation
@@ -400,10 +411,13 @@ subscription:
     refreshing: Refreshing...
     buy: Buy / Manage
     manage: Buy / Manage
+    subscribeViaStore: Subscribe in Microsoft Store
+    installStoreApp: Install Store edition
     processing: Processing...
     buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
     manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
     unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
+    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
     secondaryLabel: Before you decide
     secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
@@ -498,6 +512,7 @@ subscription:
   unsupported:
     title: Windows Store runtime required
     description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
+    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
   purchaseOutcome:
     title: Purchase result
     succeeded: Purchase completed and the subscription snapshot was refreshed.
