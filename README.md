@@ -57,7 +57,7 @@ Desktop does not re-order or redefine its own app version because of Windows Sto
 
 ## Windows Store subscription support
 
-The `Hagicode 赞助者计划` workspace is registered only when Desktop resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels do not register the subscription main-process service, preload bridge, IPC handlers, or sidebar entry.
+The `Hagicode 赞助者计划` workspace remains visible in the sidebar across runtimes. Desktop only registers the subscription main-process service, preload bridge, IPC handlers, and automatic snapshot refresh when it resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels keep the page as a Microsoft Store handoff surface for subscribing and installing the Store edition.
 
 The Microsoft Store broker uses `dynwinrt` bindings generated into `src/main/subscription/generated-js/` for license and availability queries. Windows Store/MSIX packaging copies those bindings into `dist/main/subscription/generated-js/` so the packaged main process can load them directly.
 
