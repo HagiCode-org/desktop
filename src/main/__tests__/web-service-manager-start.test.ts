@@ -115,6 +115,10 @@ describe('web-service startup flow', () => {
   it('keeps Desktop-managed environment injection authoritative over legacy config env values', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
+    assert.match(source, /resolveTurboEngineDlcProgramOption\?: \(\(\) => \{ enabled: boolean \| null; source: string \| null \} \| null\) \| null/);
+    assert.match(source, /const turboEngineDlcProgramOption = this\.resolveTurboEngineDlcProgramOption\?\.\(\) \?\? null;/);
+    assert.match(source, /turboEngineDlcEnabled: turboEngineDlcProgramOption\?\.enabled \?\? null,/);
+    assert.match(source, /turboEngineDlcSource: turboEngineDlcProgramOption\?\.source \?\? null,/);
     assert.match(source, /return \{\s*\.\.\.\(this\.config\.env \?\? \{\}\),\s*\.\.\.\(baseEnv \?\? \{\}\),/s);
     assert.doesNotMatch(source, /return \{\s*\.\.\.\(baseEnv \?\? \{\}\),\s*\.\.\.\(this\.config\.env \?\? \{\}\),/s);
   });

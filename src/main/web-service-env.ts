@@ -32,6 +32,8 @@ export interface BuildManagedEnvInput {
   port: number;
   dataDir?: string | null;
   currentDesktopLanguage?: string | null;
+  turboEngineDlcEnabled?: boolean | null;
+  turboEngineDlcSource?: string | null;
   steamIntegrationEnabled?: boolean;
   steamIntegrationSource?: SteamManagedEnvSource;
   steamAchievementSyncEnabled?: boolean;
@@ -106,6 +108,18 @@ export const MANAGED_ENV_VAR_DEFINITIONS: ReadonlyArray<ManagedEnvVarDefinition>
     key: 'HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENABLED',
     sourceConfig: 'Steam Mod hagicode.env achievement sync option',
     required: true,
+    sensitive: false,
+  },
+  {
+    key: 'DlcProgramOptions__TurboEngine__Enabled',
+    sourceConfig: 'desktop TurboEngine license snapshot',
+    required: false,
+    sensitive: false,
+  },
+  {
+    key: 'DlcProgramOptions__TurboEngine__Source',
+    sourceConfig: 'desktop TurboEngine license snapshot source',
+    required: false,
     sensitive: false,
   },
 ] as const;
@@ -211,6 +225,14 @@ function resolveSnapshotSourceConfig(
     return describeManagedDesktopLanguageSourceConfig(input.currentDesktopLanguage);
   }
 
+  if (definition.key === 'DlcProgramOptions__TurboEngine__Enabled') {
+    return 'desktop TurboEngine Microsoft Store license status';
+  }
+
+  if (definition.key === 'DlcProgramOptions__TurboEngine__Source') {
+    return 'desktop TurboEngine Microsoft Store license source';
+  }
+
   return definition.sourceConfig;
 }
 
@@ -251,6 +273,14 @@ function resolveValue(
     return resolveManagedDesktopLanguageEnv(input, existingEnv);
   }
 
+  if (definition.key === 'DlcProgramOptions__TurboEngine__Enabled') {
+    return resolveManagedTurboEngineDlcEnabledEnv(input, existingEnv);
+  }
+
+  if (definition.key === 'DlcProgramOptions__TurboEngine__Source') {
+    return resolveManagedTurboEngineDlcSourceEnv(input, existingEnv);
+  }
+
   const existingValue = sanitizeString(existingEnv[definition.key]);
   if (existingValue) {
     return normalizeResolvedValue(definition, existingValue, 'existing-env');
@@ -270,6 +300,18 @@ function resolveValue(
 
 function boolEnvValue(value: boolean | undefined): string {
   return value === true ? 'true' : 'false';
+}
+
+function optionalBoolEnvValue(value: boolean | null | undefined): string | undefined {
+  if (value === true) {
+    return 'true';
+  }
+
+  if (value === false) {
+    return 'false';
+  }
+
+  return undefined;
 }
 
 function resolveManagedDesktopLanguageEnv(
@@ -298,6 +340,36 @@ function resolveManagedDesktopLanguageEnv(
     value,
     source: 'runtime',
     warning,
+  };
+}
+
+function resolveManagedTurboEngineDlcEnabledEnv(
+  input: BuildManagedEnvInput,
+  existingEnv: Record<string, string | undefined>,
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  const inheritedValue = sanitizeString(existingEnv.DlcProgramOptions__TurboEngine__Enabled);
+
+  return {
+    value: optionalBoolEnvValue(input.turboEngineDlcEnabled),
+    source: 'runtime',
+    warning: inheritedValue
+      ? `Ignored inherited DlcProgramOptions__TurboEngine__Enabled='${inheritedValue}' because Desktop manages this value from the current TurboEngine license state.`
+      : undefined,
+  };
+}
+
+function resolveManagedTurboEngineDlcSourceEnv(
+  input: BuildManagedEnvInput,
+  existingEnv: Record<string, string | undefined>,
+): { value?: string; source: ManagedEnvSource; warning?: string } {
+  const inheritedValue = sanitizeString(existingEnv.DlcProgramOptions__TurboEngine__Source);
+
+  return {
+    value: sanitizeString(input.turboEngineDlcSource),
+    source: 'runtime',
+    warning: inheritedValue
+      ? `Ignored inherited DlcProgramOptions__TurboEngine__Source='${inheritedValue}' because Desktop manages this value from the current TurboEngine license state.`
+      : undefined,
   };
 }
 

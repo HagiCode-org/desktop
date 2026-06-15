@@ -161,6 +161,51 @@ describe('web-service-env', () => {
     assert.equal(resolution.achievementSyncSource, 'invalid-hagicode-env');
   });
 
+  it('injects TurboEngine DLC program options from the current desktop license state', () => {
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode/data',
+      currentDesktopLanguage: 'zh-CN',
+      turboEngineDlcEnabled: true,
+      turboEngineDlcSource: 'desktop-msstore-license',
+      yamlConfig: null,
+      existingEnv: {},
+    });
+
+    assert.equal(result.injectedEnv.DlcProgramOptions__TurboEngine__Enabled, 'true');
+    assert.equal(result.injectedEnv.DlcProgramOptions__TurboEngine__Source, 'desktop-msstore-license');
+    assert.equal(
+      result.snapshot.find(entry => entry.key === 'DlcProgramOptions__TurboEngine__Enabled')?.sourceConfig,
+      'desktop TurboEngine Microsoft Store license status',
+    );
+    assert.equal(
+      result.snapshot.find(entry => entry.key === 'DlcProgramOptions__TurboEngine__Source')?.sourceConfig,
+      'desktop TurboEngine Microsoft Store license source',
+    );
+  });
+
+  it('does not leak inherited TurboEngine DLC overrides when desktop has no current license decision', () => {
+    const result = buildManagedServiceEnv({
+      host: 'localhost',
+      port: 36556,
+      dataDir: '/tmp/hagicode/data',
+      currentDesktopLanguage: 'zh-CN',
+      turboEngineDlcEnabled: null,
+      turboEngineDlcSource: null,
+      yamlConfig: null,
+      existingEnv: {
+        DlcProgramOptions__TurboEngine__Enabled: 'true',
+        DlcProgramOptions__TurboEngine__Source: 'stale-shell-value',
+      },
+    });
+
+    assert.equal(result.injectedEnv.DlcProgramOptions__TurboEngine__Enabled, undefined);
+    assert.equal(result.injectedEnv.DlcProgramOptions__TurboEngine__Source, undefined);
+    assert.match(result.warnings.join('\n'), /Ignored inherited DlcProgramOptions__TurboEngine__Enabled='true'/);
+    assert.match(result.warnings.join('\n'), /Ignored inherited DlcProgramOptions__TurboEngine__Source='stale-shell-value'/);
+  });
+
   it('injects wildcard and custom IPv4 bind hosts without rewriting them', () => {
     const wildcard = buildManagedServiceEnv({
       host: '0.0.0.0',

@@ -16,6 +16,9 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /turboEngineLicenseFeatureEnabled = distributionModeState\.winStoreMode;/);
     assert.match(source, /subscriptionFeatureEnabled \? SUBSCRIPTION_FEATURE_ARG : null/);
     assert.match(source, /turboEngineLicenseFeatureEnabled \? TURBOENGINE_LICENSE_FEATURE_ARG : null/);
+    assert.match(source, /resolveTurboEngineDlcProgramOption,/);
+    assert.match(source, /resolveTurboEngineDlcProgramOption: \(\) => resolveTurboEngineDlcProgramOption\(/);
+    assert.match(source, /turboEngineLicenseService\?\.getCachedSnapshot\(\) \?\? null/);
     assert.match(source, /function initializeSubscriptionService\(\): void \{[\s\S]*subscriptionService = new SubscriptionService/);
     assert.match(source, /function initializeTurboEngineLicenseService\(\): void \{[\s\S]*turboEngineLicenseService = new TurboEngineLicenseService/);
     assert.match(source, /productConfig: turboEngineProductConfig/);

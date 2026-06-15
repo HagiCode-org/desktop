@@ -11,6 +11,7 @@ import {
 export const HAGICODE_TURBOENGINE_STORE_ID = '9NSD809W18Z6';
 export const HAGICODE_TURBOENGINE_PRODUCT_ID = 'Hagicode.TurboEngine';
 export const HAGICODE_TURBOENGINE_STORE_WEB_URL = `https://apps.microsoft.com/detail/${HAGICODE_TURBOENGINE_STORE_ID}`;
+export const TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE = 'desktop-msstore-license';
 
 export const turboEngineEntitlementNames = [
   'turboEngineAccess',
@@ -53,10 +54,41 @@ export interface TurboEngineLicenseBridge extends StoreLicenseBridge<
 
 export type TurboEngineLicenseGetSnapshotOptions = StoreLicenseGetSnapshotOptions;
 
+export interface TurboEngineDlcProgramOption {
+  enabled: boolean | null;
+  source: string | null;
+}
+
 export function createDefaultTurboEngineLicenseSnapshot(
   overrides: Partial<TurboEngineLicenseSnapshot> = {},
 ): TurboEngineLicenseSnapshot {
   return createDefaultStoreLicenseSnapshot(turboEngineProductConfig, overrides);
+}
+
+export function resolveTurboEngineDlcProgramOption(
+  snapshot: TurboEngineLicenseSnapshot | null | undefined,
+): TurboEngineDlcProgramOption {
+  if (!snapshot) {
+    return { enabled: null, source: null };
+  }
+
+  switch (snapshot.status) {
+    case 'active':
+      return {
+        enabled: true,
+        source: TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE,
+      };
+    case 'inactive':
+    case 'expired':
+    case 'canceled':
+    case 'pending':
+      return {
+        enabled: false,
+        source: TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE,
+      };
+    default:
+      return { enabled: null, source: null };
+  }
 }
 
 export {

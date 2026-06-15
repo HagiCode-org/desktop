@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createDefaultTurboEngineLicenseSnapshot } from '../../types/turboengine-license.js';
+import {
+  createDefaultTurboEngineLicenseSnapshot,
+  resolveTurboEngineDlcProgramOption,
+  TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE,
+} from '../../types/turboengine-license.js';
 import { TurboEngineEntitlementEvaluator } from '../subscription/turboengine-entitlement-evaluator.js';
 import { normalizeTurboEngineLicenseSnapshot } from '../subscription/normalize.js';
 import { TurboEngineLicenseService } from '../subscription/turboengine-license-service.js';
@@ -97,5 +101,30 @@ describe('TurboEngine license domain', () => {
     assert.equal(snapshot.source, 'fallback');
     assert.deepEqual(snapshot.entitlements, ['turboEngineAccess']);
     assert.equal(snapshot.diagnostics[snapshot.diagnostics.length - 1]?.code, 'store-refresh-failed');
+  });
+
+  it('maps known TurboEngine license states to managed DLC program options', () => {
+    const active = resolveTurboEngineDlcProgramOption(createDefaultTurboEngineLicenseSnapshot({
+      status: 'active',
+    }));
+    const inactive = resolveTurboEngineDlcProgramOption(createDefaultTurboEngineLicenseSnapshot({
+      status: 'inactive',
+    }));
+    const unknown = resolveTurboEngineDlcProgramOption(createDefaultTurboEngineLicenseSnapshot({
+      status: 'unknown',
+    }));
+
+    assert.deepEqual(active, {
+      enabled: true,
+      source: TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE,
+    });
+    assert.deepEqual(inactive, {
+      enabled: false,
+      source: TURBOENGINE_DLC_PROGRAM_OPTION_SOURCE,
+    });
+    assert.deepEqual(unknown, {
+      enabled: null,
+      source: null,
+    });
   });
 });

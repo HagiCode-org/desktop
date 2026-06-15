@@ -123,6 +123,7 @@ interface WebServiceManagerDeps {
   dependencyManagementService?: DependencyManagementService | null;
   hagiscriptServerManager?: HagiscriptServerManager;
   hagiscriptRuntimeContextResolver?: HagiscriptRuntimeContextResolver;
+  resolveTurboEngineDlcProgramOption?: (() => { enabled: boolean | null; source: string | null } | null) | null;
 }
 
 export interface StartupFailureInfo {
@@ -191,6 +192,7 @@ export class PCodeWebServiceManager {
   private dependencyManagementService: DependencyManagementService | null;
   private hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver | null;
   private readonly hagiscriptServerManager: HagiscriptServerManager;
+  private readonly resolveTurboEngineDlcProgramOption: (() => { enabled: boolean | null; source: string | null } | null) | null;
   private status: ProcessStatus = 'stopped';
   private startTime: number | null = null;
   private restartCount: number = 0;
@@ -235,6 +237,7 @@ export class PCodeWebServiceManager {
           })
         : null);
     this.hagiscriptServerManager = deps.hagiscriptServerManager ?? new HagiscriptServerManager();
+    this.resolveTurboEngineDlcProgramOption = deps.resolveTurboEngineDlcProgramOption ?? null;
 
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
       log.error('[WebService] Failed to initialize saved bind config:', error);
@@ -1112,6 +1115,7 @@ export class PCodeWebServiceManager {
       distributionMode: this.distributionMode,
       env: process.env,
     });
+    const turboEngineDlcProgramOption = this.resolveTurboEngineDlcProgramOption?.() ?? null;
 
     for (const warning of systemVaultEnv.warnings) {
       log.warn('[WebService][SystemVaultEnv]', warning);
@@ -1122,6 +1126,8 @@ export class PCodeWebServiceManager {
       port: this.config.port,
       dataDir,
       currentDesktopLanguage: this.configManager?.getCurrentLanguage() ?? null,
+      turboEngineDlcEnabled: turboEngineDlcProgramOption?.enabled ?? null,
+      turboEngineDlcSource: turboEngineDlcProgramOption?.source ?? null,
       steamIntegrationEnabled: steamIntegration.integrationEnabled,
       steamIntegrationSource: steamIntegration.integrationSource === 'distribution-mode'
         ? 'distribution-mode'

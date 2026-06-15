@@ -85,7 +85,10 @@ import {
   TurboEngineLicenseService,
   TurboEngineLicenseSnapshotStore,
 } from './subscription/index.js';
-import { turboEngineProductConfig } from '../types/turboengine-license.js';
+import {
+  resolveTurboEngineDlcProgramOption,
+  turboEngineProductConfig,
+} from '../types/turboengine-license.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2414,6 +2417,9 @@ app.whenReady().then(async () => {
   };
   webServiceManager = new PCodeWebServiceManager(webServiceConfig, {
     configManager,
+    resolveTurboEngineDlcProgramOption: () => resolveTurboEngineDlcProgramOption(
+      turboEngineLicenseService?.getCachedSnapshot() ?? null,
+    ),
   });
 
   // Set webServiceManager reference for tray
