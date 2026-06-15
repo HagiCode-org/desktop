@@ -3,13 +3,13 @@ import {
   type SubscriptionEntitlementName,
   type SubscriptionSnapshot,
 } from '../../types/subscription.js';
+import { StoreLicenseEntitlementEvaluator } from './store-license-entitlement-evaluator.js';
 
-export class EntitlementEvaluator {
-  evaluate(snapshot: SubscriptionSnapshot): SubscriptionEntitlementName[] {
-    if (snapshot.availability !== 'supported' || snapshot.status !== 'active') {
-      return [];
-    }
-
-    return [...subscriptionEntitlementNames];
+export class EntitlementEvaluator extends StoreLicenseEntitlementEvaluator<
+  SubscriptionSnapshot,
+  SubscriptionEntitlementName
+> {
+  constructor() {
+    super(subscriptionEntitlementNames);
   }
 }

@@ -523,3 +523,83 @@ subscription:
     server-error: Microsoft Store reported a server error during purchase.
     not-supported: Purchase is unavailable in this runtime.
     failed: Microsoft Store purchase failed.
+turboEngine:
+  eyebrow: Microsoft Store perpetual license
+  loadingTitle: Loading TurboEngine status
+  loading: Reading the latest cached TurboEngine snapshot...
+  verifyingTitle: Startup verification in progress
+  verifyingDescription: Desktop is checking Microsoft Store live at startup so cached TurboEngine data does not remain the final truth.
+  verifyingBadge: Verifying
+  staleBadge: Cached snapshot
+  errorTitle: TurboEngine snapshot unavailable
+  errorDescription: 'Desktop could not load the TurboEngine snapshot: {{error}}'
+  hero:
+    title: TurboEngine workspace
+    activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
+    inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
+  messages:
+    refreshSuccess: TurboEngine status refreshed.
+    refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
+    refreshFailed: 'Failed to refresh the TurboEngine snapshot: {{error}}'
+    refreshFailedFallback: Microsoft Store refresh failed.
+    purchaseFailed: 'Purchase flow failed: {{error}}'
+    purchaseFailedFallback: Microsoft Store purchase failed.
+    openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
+    openStoreFailedFallback: Microsoft Store page unavailable.
+  status:
+    loading: Loading
+    active: Active
+    inactive: Not active
+    expired: Expired
+    canceled: Canceled
+    grace-period: Grace period
+    pending: Pending
+    unknown: Unknown
+    stale: Cached state
+    unsupported: Store unavailable
+  summary:
+    productName: TurboEngine perpetual license
+    storeId: 'Store ID: {{storeId}}'
+    statusLabel: License status
+    lastCheckedLabel: Last checked
+    lastSuccessLabel: Last successful sync
+  actions:
+    sectionTitle: License actions
+    processing: Processing...
+    manage: Open Store purchase flow
+    buy: Buy TurboEngine license
+    refresh: Refresh status
+    refreshing: Refreshing...
+    openStoreProduct: Open TurboEngine in Store
+    installStoreApp: Install Store edition
+    manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
+    buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
+    handoffHint: In-app purchase and verification work only in the Windows Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
+  runtime:
+    sectionTitle: Runtime contract
+    supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
+    unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
+    runtimeLabel: Runtime
+    sourceLabel: Snapshot source
+    storeEdition: Windows Store edition
+    nonStoreEdition: Non-Store runtime
+  diagnostics:
+    sectionTitle: Diagnostics
+    empty: No diagnostics recorded.
+  stale:
+    title: Desktop is showing the cached TurboEngine state
+    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent known TurboEngine snapshot instead of clearing it.
+  unsupported:
+    title: Microsoft Store edition required
+    description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
+    nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
+  purchaseOutcome:
+    title: Purchase result
+    succeeded: Purchase completed and Desktop refreshed the TurboEngine license snapshot.
+    already-purchased: This Microsoft Store account already owns the TurboEngine license.
+    canceled: The Microsoft Store purchase dialog was canceled.
+    not-purchased: The purchase flow closed without completing payment.
+    network-error: Microsoft Store reported a network error during purchase.
+    server-error: Microsoft Store reported a server error during purchase.
+    not-supported: Purchase is unavailable in this runtime.
+    failed: Microsoft Store purchase failed.

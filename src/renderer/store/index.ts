@@ -15,6 +15,11 @@ import subscriptionReducer, {
   loadSubscriptionSnapshot,
   setSubscriptionSnapshotFromEvent,
 } from './slices/subscriptionSlice';
+import turboEngineLicenseReducer, {
+  loadTurboEngineLicenseSnapshot,
+  setTurboEngineLicenseSnapshotFromEvent,
+  verifyTurboEngineLicenseStartup,
+} from './slices/turboEngineLicenseSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -36,6 +41,8 @@ import type { HagihubApi } from '../../shared/api.js';
 
 const subscriptionFeatureEnabled = typeof window !== 'undefined'
   && typeof window.electronAPI?.subscription?.getSnapshot === 'function';
+const turboEngineLicenseFeatureEnabled = typeof window !== 'undefined'
+  && typeof window.electronAPI?.turboEngineLicense?.getSnapshot === 'function';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -58,6 +65,7 @@ export const store = configureStore({
     claudeConfig: claudeConfigReducer,
     settings: settingsReducer,
     subscription: subscriptionReducer,
+    turboEngineLicense: turboEngineLicenseReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -128,6 +136,9 @@ function registerRealtimeListeners(): void {
     subscription?: {
       onDidChange: (callback: (snapshot: any) => void) => (() => void) | void;
     };
+    turboEngineLicense?: {
+      onDidChange: (callback: (snapshot: any) => void) => (() => void) | void;
+    };
   };
   const hagihub = (window as Window & { hagihub?: HagihubApi }).hagihub;
 
@@ -185,6 +196,12 @@ function registerRealtimeListeners(): void {
       store.dispatch(setSubscriptionSnapshotFromEvent(snapshot));
     });
   }
+
+  if (turboEngineLicenseFeatureEnabled) {
+    electronAPI.turboEngineLicense?.onDidChange?.((snapshot: any) => {
+      store.dispatch(setTurboEngineLicenseSnapshotFromEvent(snapshot));
+    });
+  }
 }
 
 export async function runCriticalStartupInitialization(): Promise<void> {
@@ -220,6 +237,9 @@ export function startBackgroundStartupInitialization(): void {
     store.dispatch(fetchVersionAutoUpdateSettings()),
     store.dispatch(initializeWebService()),
     ...(subscriptionFeatureEnabled ? [store.dispatch(loadSubscriptionSnapshot())] : []),
+    ...(turboEngineLicenseFeatureEnabled
+      ? [store.dispatch(loadTurboEngineLicenseSnapshot()), store.dispatch(verifyTurboEngineLicenseStartup())]
+      : []),
   ]);
 }
 

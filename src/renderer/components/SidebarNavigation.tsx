@@ -8,6 +8,7 @@ import {
   Calculator,
   ChevronLeft,
   ChevronRight,
+  Cpu,
   ExternalLink,
   FileText,
   Globe as GlobeIcon,
@@ -65,6 +66,12 @@ const subscriptionNavigationItem: NavigationItem = {
   id: 'subscription',
   labelKey: 'sidebar.subscription',
   icon: BadgeCheck,
+};
+
+const turboEngineNavigationItem: NavigationItem = {
+  id: 'turboengine',
+  labelKey: 'sidebar.turboEngine',
+  icon: Cpu,
 };
 
 const remainingExternalLinkItems: NavigationItem[] = [
@@ -179,7 +186,7 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
       ? navigationItems.filter((item) => item.id !== 'version')
       : navigationItems;
 
-    return [...baseItems, subscriptionNavigationItem];
+    return [...baseItems, subscriptionNavigationItem, turboEngineNavigationItem];
   }, [isFusionMode]);
   const aboutLocale = useMemo(
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),

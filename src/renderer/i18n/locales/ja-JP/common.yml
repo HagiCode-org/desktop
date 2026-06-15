@@ -137,6 +137,7 @@ sidebar:
   dependencyManagement: 依存関係の管理
   settings: 設定
   subscription: Hagicode 赞助者计划
+  turboEngine: TurboEngine
   subscriptionStatus:
     loading: Loading
     active: Active

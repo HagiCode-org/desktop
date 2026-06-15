@@ -40,6 +40,8 @@ import type { DebugOptionsBridge, DebugOptionsSettings } from '../types/debug-op
 import { debugOptionsChannels } from '../types/debug-options.js';
 import type { SubscriptionBridge } from '../types/subscription.js';
 import { subscriptionChannels } from '../types/subscription.js';
+import type { TurboEngineLicenseBridge } from '../types/turboengine-license.js';
+import { turboEngineChannels } from '../types/turboengine-license.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -54,6 +56,7 @@ import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
 
 const { contextBridge, ipcRenderer } = electron;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
+const TURBOENGINE_LICENSE_FEATURE_ARG = '--desktop-turboengine-license-enabled=1';
 export type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -82,6 +85,7 @@ function readInitialBootstrapSnapshot(): DesktopBootstrapSnapshot | null {
 
 const initialBootstrapSnapshot = readInitialBootstrapSnapshot();
 const subscriptionFeatureEnabled = process.argv.includes(SUBSCRIPTION_FEATURE_ARG);
+const turboEngineLicenseFeatureEnabled = process.argv.includes(TURBOENGINE_LICENSE_FEATURE_ARG);
 
 // Validation result interface
 export interface ValidationResult {
@@ -293,6 +297,7 @@ interface ElectronAPI {
   runtimeDataPath: RuntimeDataPathBridge;
   debugOptions: DebugOptionsBridge;
   subscription?: SubscriptionBridge;
+  turboEngineLicense?: TurboEngineLicenseBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -416,6 +421,20 @@ const subscriptionBridge: SubscriptionBridge = {
     };
     ipcRenderer.on(subscriptionChannels.changed, listener);
     return () => ipcRenderer.removeListener(subscriptionChannels.changed, listener);
+  },
+};
+
+const turboEngineLicenseBridge: TurboEngineLicenseBridge = {
+  getSnapshot: () => ipcRenderer.invoke(turboEngineChannels.getSnapshot),
+  verifyStartup: () => ipcRenderer.invoke(turboEngineChannels.verifyStartup),
+  refresh: () => ipcRenderer.invoke(turboEngineChannels.refresh),
+  purchase: () => ipcRenderer.invoke(turboEngineChannels.purchase),
+  onDidChange: (callback) => {
+    const listener = (_event, snapshot) => {
+      callback(snapshot);
+    };
+    ipcRenderer.on(turboEngineChannels.changed, listener);
+    return () => ipcRenderer.removeListener(turboEngineChannels.changed, listener);
   },
 };
 
@@ -603,6 +622,7 @@ const electronAPI: ElectronAPI = {
   runtimeDataPath: runtimeDataPathBridge,
   debugOptions: debugOptionsBridge,
   ...(subscriptionFeatureEnabled ? { subscription: subscriptionBridge } : {}),
+  ...(turboEngineLicenseFeatureEnabled ? { turboEngineLicense: turboEngineLicenseBridge } : {}),
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
@@ -654,7 +674,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // View Management APIs
-  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => ipcRenderer.invoke('switch-view', view),
+  switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => ipcRenderer.invoke('switch-view', view),
   getCurrentView: () => ipcRenderer.invoke('get-current-view'),
   onViewChange: (callback) => {
     const listener = (_event, view) => {

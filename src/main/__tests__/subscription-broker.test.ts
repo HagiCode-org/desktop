@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { HAGICODE_SPONSOR_PLAN_STORE_ID } from '../../types/subscription.js';
+import { HAGICODE_TURBOENGINE_STORE_ID, turboEngineProductConfig } from '../../types/turboengine-license.js';
 import type {
   RawStorePurchaseResult,
   RawStoreSubscriptionState,
@@ -114,5 +115,35 @@ describe('subscription broker', () => {
     assert.equal(state.license?.expirationDate, expirationDate);
     assert.equal(state.purchaseEligibility, 'licensable');
     assert.equal(state.errorCode, null);
+  });
+
+  it('uses product-configured Store IDs when reading TurboEngine ownership', () => {
+    const state = buildSupportedStateFromMinimalStoreApis({
+      fetchedAt: '2026-06-14T06:00:00.000Z',
+      appLicense: {
+        isActive: true,
+        addOnLicenses: {
+          hasKey: (key) => key === HAGICODE_TURBOENGINE_STORE_ID,
+          get: (key) => (key === HAGICODE_TURBOENGINE_STORE_ID
+            ? {
+                skuStoreId: HAGICODE_TURBOENGINE_STORE_ID,
+                isActive: true,
+              }
+            : undefined),
+        },
+      },
+      canAcquireResult: {
+        status: 1,
+        extendedError: 0,
+      },
+      canLicenseStatusEnum: {
+        Licensable: 1,
+      },
+      productConfig: turboEngineProductConfig,
+    });
+
+    assert.equal(state.product?.storeId, HAGICODE_TURBOENGINE_STORE_ID);
+    assert.equal(state.product?.title, 'TurboEngine');
+    assert.equal(state.license?.isActive, true);
   });
 });

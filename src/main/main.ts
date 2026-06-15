@@ -61,6 +61,8 @@ import {
   registerRssHandlers,
   registerSubscriptionHandlers,
   disposeSubscriptionHandlers,
+  registerTurboEngineLicenseHandlers,
+  disposeTurboEngineLicenseHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager } from './path-manager.js';
@@ -79,7 +81,11 @@ import {
   MicrosoftStoreSubscriptionBroker,
   SubscriptionService,
   SubscriptionSnapshotStore,
+  TurboEngineEntitlementEvaluator,
+  TurboEngineLicenseService,
+  TurboEngineLicenseSnapshotStore,
 } from './subscription/index.js';
+import { turboEngineProductConfig } from '../types/turboengine-license.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,7 +94,9 @@ const DEV_RENDERER_PORT = 36598;
 const DEV_RENDERER_URL = `http://${DEV_RENDERER_HOST}:${DEV_RENDERER_PORT}`;
 const MANAGED_SERVICE_STATUS_POLL_INTERVAL_MS = 5000;
 const SUBSCRIPTION_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const TURBOENGINE_LICENSE_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
+const TURBOENGINE_LICENSE_FEATURE_ARG = '--desktop-turboengine-license-enabled=1';
 const SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG = '--desktop-subscription-purchase-smoke-test=1';
 
 function findRuntimeArgValue(prefix: string): string | null {
@@ -304,7 +312,10 @@ let bootstrapSnapshotCache: DesktopBootstrapSnapshot | null = null;
 let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
 let subscriptionService: SubscriptionService | null = null;
 let subscriptionSyncInterval: NodeJS.Timeout | null = null;
+let turboEngineLicenseService: TurboEngineLicenseService | null = null;
+let turboEngineLicenseSyncInterval: NodeJS.Timeout | null = null;
 let subscriptionFeatureEnabled = false;
+let turboEngineLicenseFeatureEnabled = false;
 let subscriptionPurchaseSmokeTestStarted = false;
 const notificationService = new NotificationService({
   getMainWindow: () => mainWindow,
@@ -586,6 +597,7 @@ function createWindow(): void {
   const additionalArguments = [
     bootstrapSnapshotArg,
     subscriptionFeatureEnabled ? SUBSCRIPTION_FEATURE_ARG : null,
+    turboEngineLicenseFeatureEnabled ? TURBOENGINE_LICENSE_FEATURE_ARG : null,
   ].filter((value): value is string => Boolean(value));
 
   console.log('[Hagicode] Using preload path:', preloadPath);
@@ -683,6 +695,27 @@ function initializeSubscriptionService(): void {
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
   });
   log.info('[App] Subscription service and IPC handlers registered for Windows Store runtime');
+}
+
+function initializeTurboEngineLicenseService(): void {
+  if (!turboEngineLicenseFeatureEnabled || turboEngineLicenseService) {
+    return;
+  }
+
+  turboEngineLicenseService = new TurboEngineLicenseService({
+    broker: new MicrosoftStoreSubscriptionBroker({
+      windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
+      productConfig: turboEngineProductConfig,
+    }),
+    snapshotStore: new TurboEngineLicenseSnapshotStore(),
+    entitlementEvaluator: new TurboEngineEntitlementEvaluator(),
+  });
+
+  registerTurboEngineLicenseHandlers({
+    turboEngineLicenseService,
+    getWindows: () => ElectronBrowserWindow.getAllWindows(),
+  });
+  log.info('[App] TurboEngine license service and IPC handlers registered for Windows Store runtime');
 }
 
 function scheduleSubscriptionPurchaseSmokeTest(): void {
@@ -1803,7 +1836,7 @@ ipcMain.handle('dependency:execute-commands', async (_, commands: string[], work
 });
 
 // View Management IPC Handlers
-ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings') => {
+ipcMain.handle('switch-view', async (_, view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => {
   console.log('[Main] Switch view requested:', view);
 
   if (view === 'version' && isFusionDistributionMode()) {
@@ -2413,11 +2446,13 @@ app.whenReady().then(async () => {
   versionManager = new VersionManager(dependencyManager, packageSourceConfigManager, regionDetector ?? undefined);
   const distributionModeState = await versionManager.initializeDistributionMode();
   subscriptionFeatureEnabled = distributionModeState.winStoreMode;
+  turboEngineLicenseFeatureEnabled = distributionModeState.winStoreMode;
   webServiceManager.setDistributionMode(distributionModeState.mode);
   webServiceManager.setActiveRuntime(distributionModeState.activeRuntime);
   log.info('[App] Distribution mode initialized:', {
     distributionMode: distributionModeState.mode,
     subscriptionFeatureEnabled,
+    turboEngineLicenseFeatureEnabled,
     portableRuntimeSource: distributionModeState.activeRuntime?.kind ?? null,
     portableRuntimeRoot: distributionModeState.activeRuntime?.rootPath ?? null,
     electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
@@ -2549,6 +2584,7 @@ app.whenReady().then(async () => {
 
   createWindow();
   initializeSubscriptionService();
+  initializeTurboEngineLicenseService();
   createTray();
   setServerStatus('stopped');
   startStatusPolling();
@@ -2561,6 +2597,13 @@ app.whenReady().then(async () => {
       void subscriptionService?.refresh('scheduled');
     }, SUBSCRIPTION_SYNC_INTERVAL_MS);
     scheduleSubscriptionPurchaseSmokeTest();
+  }
+
+  if (turboEngineLicenseFeatureEnabled && turboEngineLicenseService) {
+    await turboEngineLicenseService.refreshOnStartup();
+    turboEngineLicenseSyncInterval = setInterval(() => {
+      void turboEngineLicenseService?.refresh('scheduled');
+    }, TURBOENGINE_LICENSE_SYNC_INTERVAL_MS);
   }
 
   // Get initial web service status and update tray before starting polling
@@ -2623,6 +2666,10 @@ app.on('before-quit', async (event) => {
       clearInterval(subscriptionSyncInterval);
       subscriptionSyncInterval = null;
     }
+    if (turboEngineLicenseSyncInterval) {
+      clearInterval(turboEngineLicenseSyncInterval);
+      turboEngineLicenseSyncInterval = null;
+    }
     if (webServiceManager) {
       await webServiceManager.cleanup();
     }
@@ -2631,7 +2678,9 @@ app.on('before-quit', async (event) => {
     }
     versionUpdateManager?.dispose();
     subscriptionService?.dispose();
+    turboEngineLicenseService?.dispose();
     disposeSubscriptionHandlers();
+    disposeTurboEngineLicenseHandlers();
     destroyTray();
   } catch (error) {
     console.error('[App] Error during cleanup:', error);

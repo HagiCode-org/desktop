@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { ManagedNpmPackageId, VendoredRuntimeId } from '../../../types/dependency-management.js';
 
-export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription';
+export type ViewType = 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine';
 
 export interface DependencyManagementRepairIntent {
   sourceView: ViewType;

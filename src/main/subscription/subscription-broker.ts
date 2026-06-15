@@ -1,18 +1,19 @@
-import {
-  HAGICODE_SPONSOR_PLAN_STORE_ID,
-  type SubscriptionPurchaseOutcome,
-} from '../../types/subscription.js';
+import { sponsorPlanProductConfig } from '../../types/subscription.js';
+import type {
+  StoreLicenseProductConfig,
+  StoreLicensePurchaseOutcome,
+} from '../../types/store-license.js';
 import {
   executeWindowsStorePurchaseAddon,
   resolveWindowsStorePurchaseAddonPath,
 } from './windows-store-purchase-addon.js';
 
-export interface RawStoreSubscriptionProduct {
+export interface RawStoreLicenseProduct {
   storeId: string;
   title: string | null;
 }
 
-export interface RawStoreSubscriptionSku {
+export interface RawStoreLicenseSku {
   storeId: string | null;
   title: string | null;
   isSubscription: boolean;
@@ -20,19 +21,19 @@ export interface RawStoreSubscriptionSku {
   collectionEndDate: string | null;
 }
 
-export interface RawStoreSubscriptionLicense {
+export interface RawStoreLicense {
   storeId: string | null;
   isActive: boolean;
   expirationDate: string | null;
 }
 
-export interface RawStoreSubscriptionState {
+export interface RawStoreLicenseState {
   fetchedAt: string;
   availability: 'supported' | 'store-unavailable' | 'error';
   appLicenseActive: boolean;
-  product: RawStoreSubscriptionProduct | null;
-  sku: RawStoreSubscriptionSku | null;
-  license: RawStoreSubscriptionLicense | null;
+  product: RawStoreLicenseProduct | null;
+  sku: RawStoreLicenseSku | null;
+  license: RawStoreLicense | null;
   purchaseEligibility:
     | 'licensable'
     | 'not-licensable'
@@ -44,21 +45,32 @@ export interface RawStoreSubscriptionState {
   errorMessage: string | null;
 }
 
+export type RawStoreSubscriptionProduct = RawStoreLicenseProduct;
+export type RawStoreSubscriptionSku = RawStoreLicenseSku;
+export type RawStoreSubscriptionLicense = RawStoreLicense;
+export type RawStoreSubscriptionState = RawStoreLicenseState;
+
 export interface RawStorePurchaseResult {
-  outcome: SubscriptionPurchaseOutcome;
+  outcome: StoreLicensePurchaseOutcome;
   errorCode: string | null;
   errorMessage: string | null;
 }
 
-export interface SubscriptionPlatformBroker {
-  queryStatus(): Promise<RawStoreSubscriptionState>;
+export interface StoreLicensePlatformBroker {
+  queryStatus(): Promise<RawStoreLicenseState>;
   purchase(): Promise<RawStorePurchaseResult>;
   dispose(): void;
 }
 
+export type SubscriptionPlatformBroker = StoreLicensePlatformBroker;
+
 export interface MicrosoftStoreSubscriptionBrokerOptions {
   windowHandle?: Buffer | bigint | null;
-  adapterFactory?: (windowHandle: bigint | null) => Promise<SubscriptionPlatformBroker>;
+  adapterFactory?: (
+    windowHandle: bigint | null,
+    productConfig?: StoreLicenseProductConfig,
+  ) => Promise<StoreLicensePlatformBroker>;
+  productConfig?: StoreLicenseProductConfig;
 }
 
 type DynWinRtRuntimeModule = {
@@ -173,7 +185,7 @@ function getFirstNamedNumber(enumObject: Record<string, number>, keys: string[])
   return undefined;
 }
 
-function mapPurchaseOutcome(statusEnum: Record<string, number>, statusValue: unknown): SubscriptionPurchaseOutcome {
+function mapPurchaseOutcome(statusEnum: Record<string, number>, statusValue: unknown): StoreLicensePurchaseOutcome {
   const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
 
   switch (statusNumber) {
@@ -195,7 +207,7 @@ function mapPurchaseOutcome(statusEnum: Record<string, number>, statusValue: unk
 function mapPurchaseEligibility(
   statusEnum: Record<string, number>,
   statusValue: unknown,
-): RawStoreSubscriptionState['purchaseEligibility'] {
+): RawStoreLicenseState['purchaseEligibility'] {
   const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
 
   switch (statusNumber) {
@@ -229,7 +241,10 @@ function normalizeThrownError(error: unknown): { errorCode: string | null; error
   };
 }
 
-function findMatchingLicense(appLicense: DynWinRtStoreAppLicense | null): RawStoreSubscriptionLicense | null {
+function findMatchingLicense(
+  appLicense: DynWinRtStoreAppLicense | null,
+  storeId: string,
+): RawStoreLicense | null {
   const addOnLicenses = appLicense?.addOnLicenses;
   const hasKey = addOnLicenses?.hasKey;
   const get = addOnLicenses?.get;
@@ -238,11 +253,11 @@ function findMatchingLicense(appLicense: DynWinRtStoreAppLicense | null): RawSto
     return null;
   }
 
-  if (!hasKey.call(addOnLicenses, HAGICODE_SPONSOR_PLAN_STORE_ID)) {
+  if (!hasKey.call(addOnLicenses, storeId)) {
     return null;
   }
 
-  const license = get.call(addOnLicenses, HAGICODE_SPONSOR_PLAN_STORE_ID);
+  const license = get.call(addOnLicenses, storeId);
 
   if (!license) {
     return null;
@@ -260,16 +275,18 @@ export function buildSupportedStateFromMinimalStoreApis(options: {
   appLicense: DynWinRtStoreAppLicense | null;
   canAcquireResult: DynWinRtCanAcquireLicenseResult | null;
   canLicenseStatusEnum: Record<string, number>;
-}): RawStoreSubscriptionState {
-  const license = findMatchingLicense(options.appLicense);
+  productConfig?: StoreLicenseProductConfig;
+}): RawStoreLicenseState {
+  const productConfig = options.productConfig ?? sponsorPlanProductConfig;
+  const license = findMatchingLicense(options.appLicense, productConfig.storeId);
 
   return {
     fetchedAt: options.fetchedAt,
     availability: 'supported',
     appLicenseActive: Boolean(options.appLicense?.isActive),
     product: {
-      storeId: HAGICODE_SPONSOR_PLAN_STORE_ID,
-      title: null,
+      storeId: productConfig.storeId,
+      title: productConfig.productName,
     },
     sku: null,
     license,
@@ -279,7 +296,7 @@ export function buildSupportedStateFromMinimalStoreApis(options: {
   };
 }
 
-function buildUnavailableState(fetchedAt: string, error: unknown): RawStoreSubscriptionState {
+function buildUnavailableState(fetchedAt: string, error: unknown): RawStoreLicenseState {
   const { errorCode, errorMessage } = normalizeThrownError(error);
 
   return {
@@ -373,9 +390,8 @@ async function loadGeneratedExport<T>(specifier: string, exportName: string): Pr
 
   return value as T;
 }
+
 async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
-  // Avoid loading the generated namespace index, which eagerly evaluates the
-  // full WinRT projection and can trigger unrelated circular-init failures.
   const [runtimeModule, StoreContext, StoreCanLicenseStatus, StorePurchaseStatus] = await Promise.all([
     import(DYNWINRT_RUNTIME_SPECIFIER),
     loadGeneratedExport<DynWinRtStoreModule['StoreContext']>(DYNWINRT_STORE_CONTEXT_SPECIFIER, 'StoreContext'),
@@ -391,12 +407,18 @@ async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
   } as DynWinRtStoreModule;
 }
 
-async function createDynWinRtBroker(windowHandle: bigint | null): Promise<SubscriptionPlatformBroker> {
-  return DynWinRtStoreSubscriptionBroker.create(windowHandle);
+async function createDynWinRtBroker(
+  windowHandle: bigint | null,
+  productConfig: StoreLicenseProductConfig = sponsorPlanProductConfig,
+): Promise<StoreLicensePlatformBroker> {
+  return DynWinRtStoreSubscriptionBroker.create(windowHandle, productConfig);
 }
 
-class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
-  static async create(windowHandle: bigint | null): Promise<DynWinRtStoreSubscriptionBroker> {
+class DynWinRtStoreSubscriptionBroker implements StoreLicensePlatformBroker {
+  static async create(
+    windowHandle: bigint | null,
+    productConfig: StoreLicenseProductConfig,
+  ): Promise<DynWinRtStoreSubscriptionBroker> {
     const storeModule = await loadDynWinRtStoreModule();
 
     try {
@@ -407,32 +429,31 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
 
     const context = storeModule.StoreContext.getDefault();
     initializeOwnerWindow(storeModule, context, windowHandle);
-    return new DynWinRtStoreSubscriptionBroker(storeModule, context, windowHandle);
+    return new DynWinRtStoreSubscriptionBroker(storeModule, context, windowHandle, productConfig);
   }
 
   private constructor(
     private readonly storeModule: DynWinRtStoreModule,
     private readonly context: DynWinRtStoreContext,
     private readonly windowHandle: bigint | null,
+    private readonly productConfig: StoreLicenseProductConfig,
   ) {}
 
-  async queryStatus(): Promise<RawStoreSubscriptionState> {
+  async queryStatus(): Promise<RawStoreLicenseState> {
     const fetchedAt = new Date().toISOString();
 
     try {
       const [appLicense, canAcquireResult] = await Promise.all([
         this.context.getAppLicenseAsync(),
-        this.context.canAcquireStoreLicenseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID),
+        this.context.canAcquireStoreLicenseAsync(this.productConfig.storeId),
       ]);
 
-      // Current dynwinrt preview crashes when marshalling string IIterable<T>
-      // arguments, so store product collection queries are intentionally avoided
-      // here until the upstream vector binding is fixed.
       return buildSupportedStateFromMinimalStoreApis({
         fetchedAt,
         appLicense: appLicense as DynWinRtStoreAppLicense | null,
         canAcquireResult: canAcquireResult as DynWinRtCanAcquireLicenseResult | null,
         canLicenseStatusEnum: this.storeModule.StoreCanLicenseStatus,
+        productConfig: this.productConfig,
       });
     } catch (error) {
       return buildUnavailableState(fetchedAt, error);
@@ -444,7 +465,7 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
     if (addonModulePath) {
       const addonResult = await executeWindowsStorePurchaseAddon({
         modulePath: addonModulePath,
-        storeId: HAGICODE_SPONSOR_PLAN_STORE_ID,
+        storeId: this.productConfig.storeId,
         ownerWindowHandle: this.windowHandle,
       });
 
@@ -458,7 +479,7 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
     }
 
     try {
-      const result = await this.context.requestPurchaseAsync(HAGICODE_SPONSOR_PLAN_STORE_ID);
+      const result = await this.context.requestPurchaseAsync(this.productConfig.storeId);
 
       return {
         outcome: mapPurchaseOutcome(this.storeModule.StorePurchaseStatus, (result as { status?: unknown }).status),
@@ -482,10 +503,10 @@ class DynWinRtStoreSubscriptionBroker implements SubscriptionPlatformBroker {
   }
 }
 
-class UnavailableSubscriptionPlatformBroker implements SubscriptionPlatformBroker {
+class UnavailableSubscriptionPlatformBroker implements StoreLicensePlatformBroker {
   constructor(private readonly error: unknown) {}
 
-  async queryStatus(): Promise<RawStoreSubscriptionState> {
+  async queryStatus(): Promise<RawStoreLicenseState> {
     return buildUnavailableState(new Date().toISOString(), this.error);
   }
 
@@ -496,19 +517,24 @@ class UnavailableSubscriptionPlatformBroker implements SubscriptionPlatformBroke
   dispose(): void {}
 }
 
-export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBroker {
-  private readonly adapterFactory: (windowHandle: bigint | null) => Promise<SubscriptionPlatformBroker>;
+export class MicrosoftStoreSubscriptionBroker implements StoreLicensePlatformBroker {
+  private readonly adapterFactory: (
+    windowHandle: bigint | null,
+    productConfig?: StoreLicenseProductConfig,
+  ) => Promise<StoreLicensePlatformBroker>;
   private readonly windowHandle: bigint | null;
-  private brokerPromise: Promise<SubscriptionPlatformBroker> | null = null;
-  private broker: SubscriptionPlatformBroker | null = null;
+  private readonly productConfig: StoreLicenseProductConfig;
+  private brokerPromise: Promise<StoreLicensePlatformBroker> | null = null;
+  private broker: StoreLicensePlatformBroker | null = null;
   private disposed = false;
 
   constructor(options: MicrosoftStoreSubscriptionBrokerOptions = {}) {
     this.windowHandle = readNativeWindowHandle(options.windowHandle ?? null);
     this.adapterFactory = options.adapterFactory ?? createDynWinRtBroker;
+    this.productConfig = options.productConfig ?? sponsorPlanProductConfig;
   }
 
-  private async resolveBroker(): Promise<SubscriptionPlatformBroker> {
+  private async resolveBroker(): Promise<StoreLicensePlatformBroker> {
     if (this.broker) {
       return this.broker;
     }
@@ -520,15 +546,15 @@ export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBro
     return this.brokerPromise;
   }
 
-  private async initializeBroker(): Promise<SubscriptionPlatformBroker> {
+  private async initializeBroker(): Promise<StoreLicensePlatformBroker> {
     try {
-      return this.setBroker(await this.adapterFactory(this.windowHandle));
+      return this.setBroker(await this.adapterFactory(this.windowHandle, this.productConfig));
     } catch (error) {
       return this.setBroker(new UnavailableSubscriptionPlatformBroker(error));
     }
   }
 
-  private setBroker(broker: SubscriptionPlatformBroker): SubscriptionPlatformBroker {
+  private setBroker(broker: StoreLicensePlatformBroker): StoreLicensePlatformBroker {
     this.broker = broker;
 
     if (this.disposed) {
@@ -538,7 +564,7 @@ export class MicrosoftStoreSubscriptionBroker implements SubscriptionPlatformBro
     return broker;
   }
 
-  async queryStatus(): Promise<RawStoreSubscriptionState> {
+  async queryStatus(): Promise<RawStoreLicenseState> {
     return (await this.resolveBroker()).queryStatus();
   }
 

@@ -137,6 +137,7 @@ sidebar:
   dependencyManagement: 依赖项管理
   settings: 设置
   subscription: Hagicode 赞助者计划
+  turboEngine: TurboEngine
   subscriptionStatus:
     loading: 加载中
     active: 已激活

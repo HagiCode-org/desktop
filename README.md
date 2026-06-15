@@ -59,11 +59,15 @@ Desktop does not re-order or redefine its own app version because of Windows Sto
 
 The `Hagicode 赞助者计划` workspace remains visible in the sidebar across runtimes. Desktop only registers the subscription main-process service, preload bridge, IPC handlers, and automatic snapshot refresh when it resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels keep the page as a Microsoft Store handoff surface for subscribing and installing the Store edition.
 
+The `TurboEngine` workspace now follows the same runtime pattern while keeping its own product contract. It is always visible as a first-level sidebar entry, uses Microsoft Store ID `9NSD809W18Z6`, performs a live startup verification instead of trusting cache alone, and falls back to Store handoff guidance when the runtime is not the Windows Store edition.
+
 The Microsoft Store broker uses `dynwinrt` bindings generated into `src/main/subscription/generated-js/` for license and availability queries. Windows Store/MSIX packaging copies those bindings into `dist/main/subscription/generated-js/` so the packaged main process can load them directly.
 
 Purchase requests are handled by a packaged C++ Node-API addon built under `native/StorePurchaseAddon/` and staged into `resources/extra/windows-store-purchase-addon/`. This keeps Microsoft Store purchase UI on the packaged desktop process without shipping a separate helper executable.
 
 Run `npm run generate:store-bindings` on Windows after installing the optional `dynwinrt` toolchain, or let `npm run build:win:msix` / `npm run build:win:store` generate those bindings before packaging. Local verification of purchase and refresh flows must still happen from a packaged Windows Store/MSIX runtime for product `9N0BTGWV23M1`.
+
+When validating the new TurboEngine flow, verify the packaged Windows Store/MSIX runtime can complete all expected branches for `9NSD809W18Z6`: startup verification, manual refresh, purchase success, already-owned, cancellation, and unsupported-runtime handoff.
 
 ### Optional PSF injection for MSIX
 

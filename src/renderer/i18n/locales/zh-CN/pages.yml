@@ -523,3 +523,83 @@ subscription:
     server-error: Microsoft Store 在购买过程中报告了服务端错误。
     not-supported: 当前运行环境不支持购买。
     failed: Microsoft Store 购买失败。
+turboEngine:
+  eyebrow: Microsoft Store 永久许可证
+  loadingTitle: 正在加载 TurboEngine 状态
+  loading: 正在读取最近一次缓存的 TurboEngine 快照...
+  verifyingTitle: 启动校验进行中
+  verifyingDescription: Desktop 会在启动时直接向 Microsoft Store 做实时校验，避免把旧缓存当成 TurboEngine 的最终真值。
+  verifyingBadge: 校验中
+  staleBadge: 已使用缓存快照
+  errorTitle: 无法读取 TurboEngine 快照
+  errorDescription: 'Desktop 无法加载 TurboEngine 快照：{{error}}'
+  hero:
+    title: TurboEngine 工作区
+    activeDescription: 当前设备已经拥有 TurboEngine 许可证。你可以在这里确认 Microsoft Store 最新状态、查看诊断，并在需要时手动刷新。
+    inactiveDescription: TurboEngine 使用独立的 Microsoft Store 永久许可证。这个工作区会显示当前状态，并提供购买、刷新和诊断入口。
+  messages:
+    refreshSuccess: TurboEngine 状态已刷新。
+    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存的 TurboEngine 快照。
+    refreshFailed: '刷新 TurboEngine 快照失败：{{error}}'
+    refreshFailedFallback: Microsoft Store 刷新失败。
+    purchaseFailed: '购买流程失败：{{error}}'
+    purchaseFailedFallback: Microsoft Store 购买失败。
+    openStoreFailed: '打开 Microsoft Store 页面失败：{{error}}'
+    openStoreFailedFallback: Microsoft Store 页面暂时不可用。
+  status:
+    loading: 加载中
+    active: 已激活
+    inactive: 未激活
+    expired: 已过期
+    canceled: 已取消
+    grace-period: 宽限期
+    pending: 待处理
+    unknown: 未知
+    stale: 缓存状态
+    unsupported: 商店不可用
+  summary:
+    productName: TurboEngine 永久许可证
+    storeId: 'Store ID：{{storeId}}'
+    statusLabel: 许可证状态
+    lastCheckedLabel: 最近检查时间
+    lastSuccessLabel: 最近一次成功同步
+  actions:
+    sectionTitle: 许可证操作
+    processing: 处理中...
+    manage: 打开 Microsoft Store 购买流程
+    buy: 购买 TurboEngine 许可证
+    refresh: 刷新状态
+    refreshing: 刷新中...
+    openStoreProduct: 在 Microsoft Store 中打开 TurboEngine
+    installStoreApp: 安装 Microsoft Store 版
+    manageHint: 如果你需要确认当前账户的归属关系，或再次检查这台设备上的 TurboEngine 许可证，可以重新打开 Microsoft Store 购买流程。
+    buyHint: 启动 Microsoft Store 中的 `9NSD809W18Z6` 购买流程，完成后 Desktop 会在当前会话里刷新 TurboEngine 权限状态。
+    handoffHint: 应用内购买和实时校验仅在 Windows Store 版本里可用。当前运行时不支持时，Desktop 会改为提供 Microsoft Store 引导，而不是显示无效按钮。
+  runtime:
+    sectionTitle: 运行时契约
+    supported: 当前运行时可以直接查询 Microsoft Store，并使用打包后的 TurboEngine 购买路径处理 Store ID `9NSD809W18Z6`。
+    unsupported: 当前运行时无法直接完成 Microsoft Store 购买 API，所以 Desktop 会退回到 Microsoft Store 引导路径，而不是暴露失效的应用内购买按钮。
+    runtimeLabel: 运行时
+    sourceLabel: 快照来源
+    storeEdition: Windows Store 版本
+    nonStoreEdition: 非 Store 运行时
+  diagnostics:
+    sectionTitle: 诊断信息
+    empty: 暂无诊断信息。
+  stale:
+    title: Desktop 当前展示的是缓存的 TurboEngine 状态
+    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了最近一次已知的 TurboEngine 快照，而不是直接清空状态。
+  unsupported:
+    title: 需要 Microsoft Store 版本
+    description: 购买和实时校验仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
+    nonStoreDescription: 当前运行的不是 Microsoft Store 版本。请使用下方按钮前往 TurboEngine 的 Microsoft Store 页面，再安装或启动 Microsoft Store 版 Hagicode Desktop，以完成购买和校验。
+  purchaseOutcome:
+    title: 购买结果
+    succeeded: 购买已完成，Desktop 也已刷新 TurboEngine 许可证快照。
+    already-purchased: 当前 Microsoft Store 账户已经拥有 TurboEngine 许可证。
+    canceled: Microsoft Store 购买窗口已取消。
+    not-purchased: 购买流程已结束，但未完成支付。
+    network-error: Microsoft Store 在购买过程中报告了网络错误。
+    server-error: Microsoft Store 在购买过程中报告了服务端错误。
+    not-supported: 当前运行环境不支持购买。
+    failed: Microsoft Store 购买失败。

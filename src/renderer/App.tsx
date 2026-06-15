@@ -11,6 +11,7 @@ import VersionManagementPage from './components/VersionManagementPage';
 import DependencyManagementPage from './components/DependencyManagementPage';
 import SettingsPage from './components/SettingsPage';
 import SubscriptionPage from './components/subscription/SubscriptionPage';
+import TurboEnginePage from './components/turboengine/TurboEnginePage';
 import InstallConfirmDialog from './components/InstallConfirmDialog';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
@@ -35,6 +36,7 @@ import type {
 } from '../types/bootstrap';
 import type { LogDirectoryOpenResult } from '../types/log-directory';
 import type { SubscriptionBridge } from '../types/subscription';
+import type { TurboEngineLicenseBridge } from '../types/turboengine-license';
 
 type BootstrapPhase = 'loading' | 'ready' | 'error';
 
@@ -88,9 +90,9 @@ declare global {
       startServer: () => Promise<boolean>;
       stopServer: () => Promise<boolean>;
       getServerStatus: () => Promise<'running' | 'stopped' | 'error'>;
-      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => Promise<{ success: boolean; reason?: string; url?: string }>;
+      switchView: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => Promise<{ success: boolean; reason?: string; url?: string }>;
       getCurrentView: () => Promise<string>;
-      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => void) => () => void;
+      onViewChange: (callback: (view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => void) => () => void;
       languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
       rss: {
@@ -119,6 +121,7 @@ declare global {
       onOnboardingShow: (callback: (payload?: OnboardingShowPayload) => void) => () => void;
       dependencyManagement: DependencyManagementBridge;
       subscription?: SubscriptionBridge;
+      turboEngineLicense?: TurboEngineLicenseBridge;
       hagiNode: HagiNodeRuntimeBridge;
     };
     hagiNode: HagiNodeRuntimeBridge;
@@ -156,7 +159,7 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
   );
 
   useEffect(() => {
-    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => {
+    const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription' | 'turboengine') => {
       dispatch(switchView(view));
     });
 
@@ -208,6 +211,7 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
           {currentView === 'dependency-management' && <DependencyManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionState={distributionState} />}
           {currentView === 'subscription' && <SubscriptionPage />}
+          {currentView === 'turboengine' && <TurboEnginePage />}
         </div>
       </div>
 

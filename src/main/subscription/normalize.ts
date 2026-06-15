@@ -1,14 +1,24 @@
 import {
   createDefaultSubscriptionSnapshot,
-  HAGICODE_SPONSOR_PLAN_STORE_ID,
+  sponsorPlanProductConfig,
   type SubscriptionDiagnostic,
   type SubscriptionPurchaseOutcome,
   type SubscriptionSnapshot,
-  type SubscriptionStatus,
 } from '../../types/subscription.js';
-import type { RawStorePurchaseResult, RawStoreSubscriptionState } from './subscription-broker.js';
+import {
+  createDefaultTurboEngineLicenseSnapshot,
+  turboEngineProductConfig,
+  type TurboEngineLicenseSnapshot,
+} from '../../types/turboengine-license.js';
+import type {
+  StoreLicenseProductConfig,
+  StoreLicensePurchaseOutcome,
+  StoreLicenseSnapshot,
+  StoreLicenseStatus,
+} from '../../types/store-license.js';
+import type { RawStoreLicenseState, RawStorePurchaseResult } from './subscription-broker.js';
 
-function toDiagnostics(raw: RawStoreSubscriptionState): SubscriptionDiagnostic[] {
+function toDiagnostics(raw: RawStoreLicenseState): SubscriptionDiagnostic[] {
   if (!raw.errorCode && !raw.errorMessage) {
     return [];
   }
@@ -16,24 +26,23 @@ function toDiagnostics(raw: RawStoreSubscriptionState): SubscriptionDiagnostic[]
   return [
     {
       code: raw.errorCode ?? 'store-query-failed',
-      message: raw.errorMessage ?? 'Microsoft Store subscription query failed.',
+      message: raw.errorMessage ?? 'Microsoft Store license query failed.',
       recordedAt: raw.fetchedAt,
     },
   ];
 }
 
-function deriveStatus(raw: RawStoreSubscriptionState): SubscriptionStatus {
+function deriveStatus(raw: RawStoreLicenseState, productConfig: StoreLicenseProductConfig): StoreLicenseStatus {
   if (raw.availability !== 'supported') {
     return 'unknown';
   }
 
   const expirationDate = raw.license?.expirationDate ?? raw.sku?.collectionEndDate ?? null;
-  const now = Date.now();
   const expirationTime = expirationDate ? Date.parse(expirationDate) : Number.NaN;
-  const hasExpired = Number.isFinite(expirationTime) && expirationTime < now;
-  const isActive = Boolean(raw.license?.isActive || raw.sku?.isInUserCollection);
+  const hasExpired = Number.isFinite(expirationTime) && expirationTime < Date.now();
+  const isOwned = Boolean(raw.license?.isActive || raw.sku?.isInUserCollection);
 
-  if (isActive && !hasExpired) {
+  if (isOwned && !hasExpired) {
     return 'active';
   }
 
@@ -45,23 +54,31 @@ function deriveStatus(raw: RawStoreSubscriptionState): SubscriptionStatus {
     return 'inactive';
   }
 
-  if (raw.purchaseEligibility === 'not-licensable' && !isActive) {
+  if (raw.purchaseEligibility === 'not-licensable' && !isOwned) {
     return 'canceled';
   }
 
   if (raw.purchaseEligibility === 'license-action-not-applicable') {
-    return isActive ? 'pending' : 'inactive';
+    if (productConfig.licenseKind === 'perpetual') {
+      return isOwned ? 'active' : 'inactive';
+    }
+
+    return isOwned ? 'pending' : 'inactive';
   }
 
-  return isActive ? 'active' : 'inactive';
+  return isOwned ? 'active' : 'inactive';
 }
 
-export function normalizeSubscriptionSnapshot(raw: RawStoreSubscriptionState): SubscriptionSnapshot {
-  const status = deriveStatus(raw);
+function normalizeStoreLicenseSnapshot<TSnapshot extends StoreLicenseSnapshot>(options: {
+  raw: RawStoreLicenseState;
+  productConfig: StoreLicenseProductConfig;
+  createSnapshot: (overrides: Partial<TSnapshot>) => TSnapshot;
+}): TSnapshot {
+  const { raw, productConfig, createSnapshot } = options;
+  const status = deriveStatus(raw, productConfig);
   const diagnostics = toDiagnostics(raw);
 
-  return createDefaultSubscriptionSnapshot({
-    planStoreId: raw.product?.storeId ?? HAGICODE_SPONSOR_PLAN_STORE_ID,
+  return createSnapshot({
     availability: raw.availability,
     status,
     source: raw.availability === 'supported' ? 'store' : 'fallback',
@@ -71,26 +88,27 @@ export function normalizeSubscriptionSnapshot(raw: RawStoreSubscriptionState): S
     expirationDate: raw.license?.expirationDate ?? raw.sku?.collectionEndDate ?? null,
     renewalDate: raw.license?.expirationDate ?? raw.sku?.collectionEndDate ?? null,
     diagnostics,
-  });
+  } as Partial<TSnapshot>);
 }
 
-export function createStaleSnapshot(
-  previousSnapshot: SubscriptionSnapshot,
-  error: unknown,
-  checkedAt: string = new Date().toISOString(),
-): SubscriptionSnapshot {
-  const message = error instanceof Error ? error.message : String(error);
+function createGenericStaleSnapshot<TSnapshot extends StoreLicenseSnapshot>(options: {
+  previousSnapshot: TSnapshot;
+  error: unknown;
+  checkedAt?: string;
+}): TSnapshot {
+  const checkedAt = options.checkedAt ?? new Date().toISOString();
+  const message = options.error instanceof Error ? options.error.message : String(options.error);
 
   return {
-    ...previousSnapshot,
+    ...options.previousSnapshot,
     source: 'fallback',
     isStale: true,
     lastCheckedAt: checkedAt,
     diagnostics: [
-      ...previousSnapshot.diagnostics.filter((diagnostic) => diagnostic.code !== 'store-refresh-failed'),
+      ...options.previousSnapshot.diagnostics.filter((diagnostic) => diagnostic.code !== 'store-refresh-failed'),
       {
         code: 'store-refresh-failed',
-        message: 'Microsoft Store subscription refresh failed.',
+        message: 'Microsoft Store license refresh failed.',
         detail: message,
         recordedAt: checkedAt,
       },
@@ -98,10 +116,16 @@ export function createStaleSnapshot(
   };
 }
 
-export function createUnavailableSnapshot(error: unknown, checkedAt: string = new Date().toISOString()): SubscriptionSnapshot {
-  const message = error instanceof Error ? error.message : String(error);
+function createGenericUnavailableSnapshot<TSnapshot extends StoreLicenseSnapshot>(options: {
+  error: unknown;
+  checkedAt?: string;
+  productConfig: StoreLicenseProductConfig;
+  createSnapshot: (overrides: Partial<TSnapshot>) => TSnapshot;
+}): TSnapshot {
+  const checkedAt = options.checkedAt ?? new Date().toISOString();
+  const message = options.error instanceof Error ? options.error.message : String(options.error);
 
-  return createDefaultSubscriptionSnapshot({
+  return options.createSnapshot({
     availability: 'store-unavailable',
     status: 'unknown',
     source: 'fallback',
@@ -110,20 +134,23 @@ export function createUnavailableSnapshot(error: unknown, checkedAt: string = ne
     diagnostics: [
       {
         code: 'store-unavailable',
-        message: 'Microsoft Store subscription is unavailable in the current runtime.',
+        message: options.productConfig.unavailableMessage,
         detail: message,
         recordedAt: checkedAt,
       },
     ],
-  });
+  } as Partial<TSnapshot>);
 }
 
-export function buildPurchaseMessage(outcome: SubscriptionPurchaseOutcome): string {
+function buildGenericPurchaseMessage(
+  productConfig: StoreLicenseProductConfig,
+  outcome: StoreLicensePurchaseOutcome,
+): string {
   switch (outcome) {
     case 'succeeded':
-      return 'Purchase completed and subscription status was refreshed.';
+      return `Purchase completed and ${productConfig.statusLabel} was refreshed.`;
     case 'already-purchased':
-      return 'This Microsoft Store account already owns the sponsor plan.';
+      return `This Microsoft Store account already owns the ${productConfig.purchaseLabel}.`;
     case 'canceled':
       return 'Purchase was canceled before activation completed.';
     case 'not-purchased':
@@ -139,13 +166,71 @@ export function buildPurchaseMessage(outcome: SubscriptionPurchaseOutcome): stri
   }
 }
 
+export function normalizeSubscriptionSnapshot(raw: RawStoreLicenseState): SubscriptionSnapshot {
+  return normalizeStoreLicenseSnapshot({
+    raw,
+    productConfig: sponsorPlanProductConfig,
+    createSnapshot: createDefaultSubscriptionSnapshot,
+  });
+}
+
+export function normalizeTurboEngineLicenseSnapshot(raw: RawStoreLicenseState): TurboEngineLicenseSnapshot {
+  return normalizeStoreLicenseSnapshot({
+    raw,
+    productConfig: turboEngineProductConfig,
+    createSnapshot: createDefaultTurboEngineLicenseSnapshot,
+  });
+}
+
+export function createStaleSnapshot(
+  previousSnapshot: SubscriptionSnapshot,
+  error: unknown,
+  checkedAt?: string,
+): SubscriptionSnapshot {
+  return createGenericStaleSnapshot({ previousSnapshot, error, checkedAt });
+}
+
+export function createTurboEngineStaleSnapshot(
+  previousSnapshot: TurboEngineLicenseSnapshot,
+  error: unknown,
+  checkedAt?: string,
+): TurboEngineLicenseSnapshot {
+  return createGenericStaleSnapshot({ previousSnapshot, error, checkedAt });
+}
+
+export function createUnavailableSnapshot(error: unknown, checkedAt?: string): SubscriptionSnapshot {
+  return createGenericUnavailableSnapshot({
+    error,
+    checkedAt,
+    productConfig: sponsorPlanProductConfig,
+    createSnapshot: createDefaultSubscriptionSnapshot,
+  });
+}
+
+export function createTurboEngineUnavailableSnapshot(error: unknown, checkedAt?: string): TurboEngineLicenseSnapshot {
+  return createGenericUnavailableSnapshot({
+    error,
+    checkedAt,
+    productConfig: turboEngineProductConfig,
+    createSnapshot: createDefaultTurboEngineLicenseSnapshot,
+  });
+}
+
+export function buildPurchaseMessage(outcome: SubscriptionPurchaseOutcome): string {
+  return buildGenericPurchaseMessage(sponsorPlanProductConfig, outcome);
+}
+
+export function buildTurboEnginePurchaseMessage(outcome: StoreLicensePurchaseOutcome): string {
+  return buildGenericPurchaseMessage(turboEngineProductConfig, outcome);
+}
+
 export function createPurchaseFailureResult(
   rawResult: RawStorePurchaseResult,
   snapshot: SubscriptionSnapshot,
 ): { outcome: SubscriptionPurchaseOutcome; message: string; snapshot: SubscriptionSnapshot } {
   return {
-    outcome: rawResult.outcome,
-    message: buildPurchaseMessage(rawResult.outcome),
+    outcome: rawResult.outcome as SubscriptionPurchaseOutcome,
+    message: buildPurchaseMessage(rawResult.outcome as SubscriptionPurchaseOutcome),
     snapshot,
   };
 }

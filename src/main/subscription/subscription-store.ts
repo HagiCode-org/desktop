@@ -1,25 +1,14 @@
 import Store from 'electron-store';
 import type { SubscriptionSnapshot } from '../../types/subscription.js';
+import { sponsorPlanProductConfig } from '../../types/subscription.js';
+import { StoreLicenseSnapshotStore } from './store-license-store.js';
 
 interface SubscriptionStoreSchema {
   snapshot?: SubscriptionSnapshot;
 }
 
-export class SubscriptionSnapshotStore {
-  private readonly store: Store<SubscriptionStoreSchema>;
-
+export class SubscriptionSnapshotStore extends StoreLicenseSnapshotStore<SubscriptionSnapshot> {
   constructor(store?: Store<SubscriptionStoreSchema>) {
-    this.store = store ?? new Store<SubscriptionStoreSchema>({
-      name: 'hagicode-desktop-subscription',
-    });
-  }
-
-  load(): SubscriptionSnapshot | null {
-    return this.store.get('snapshot') ?? null;
-  }
-
-  save(snapshot: SubscriptionSnapshot): SubscriptionSnapshot {
-    this.store.set('snapshot', snapshot);
-    return snapshot;
+    super({ name: sponsorPlanProductConfig.snapshotStoreName }, store as never);
   }
 }
