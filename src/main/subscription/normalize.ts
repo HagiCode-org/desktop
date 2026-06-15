@@ -40,7 +40,7 @@ function deriveStatus(raw: RawStoreLicenseState, productConfig: StoreLicenseProd
   const expirationDate = raw.license?.expirationDate ?? raw.sku?.collectionEndDate ?? null;
   const expirationTime = expirationDate ? Date.parse(expirationDate) : Number.NaN;
   const hasExpired = Number.isFinite(expirationTime) && expirationTime < Date.now();
-  const isOwned = Boolean(raw.license?.isActive || raw.sku?.isInUserCollection);
+  const isOwned = Boolean(raw.license?.isActive || raw.sku?.isInUserCollection || raw.product?.isInUserCollection);
 
   if (isOwned && !hasExpired) {
     return 'active';
@@ -59,11 +59,7 @@ function deriveStatus(raw: RawStoreLicenseState, productConfig: StoreLicenseProd
   }
 
   if (raw.purchaseEligibility === 'license-action-not-applicable') {
-    if (productConfig.licenseKind === 'perpetual') {
-      return isOwned ? 'active' : 'inactive';
-    }
-
-    return isOwned ? 'pending' : 'inactive';
+    return isOwned ? 'active' : 'inactive';
   }
 
   return isOwned ? 'active' : 'inactive';

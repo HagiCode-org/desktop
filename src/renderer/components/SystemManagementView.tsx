@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
+import HomeStoreOfferPanel from './HomeStoreOfferPanel';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -56,7 +57,9 @@ interface InstalledVersion {
 declare global {
   interface Window {
     electronAPI: {
+      versionGetInstalled: () => Promise<InstalledVersion[]>;
       versionGetActive: () => Promise<InstalledVersion | null>;
+      onInstalledVersionsChanged: (callback: (versions: InstalledVersion[]) => void) => (() => void) | void;
       onActiveVersionChanged: (callback: (version: InstalledVersion | null) => void) => (() => void) | void;
       logDirectory: LogDirectoryBridge;
     };
@@ -107,6 +110,7 @@ export default function SystemManagementView({
   const shouldShowVersionUpdateReminder = !distributionState.fusionMode && Boolean(versionUpdateReminder);
 
   const [activeVersion, setActiveVersion] = useState<InstalledVersion | null>(null);
+  const [installedVersions, setInstalledVersions] = useState<InstalledVersion[]>([]);
   const [logTargets, setLogTargets] = useState<LogTargetStateMap>(createDefaultLogTargetMap);
   const [isLogTargetsLoading, setIsLogTargetsLoading] = useState(true);
   const [openingTarget, setOpeningTarget] = useState<LogDirectoryTarget | null>(null);
@@ -157,8 +161,9 @@ export default function SystemManagementView({
 
     const loadInitialState = async () => {
       try {
-        const [version, targets] = await Promise.all([
+        const [version, installed, targets] = await Promise.all([
           window.electronAPI.versionGetActive(),
+          window.electronAPI.versionGetInstalled(),
           window.electronAPI.logDirectory.listTargets(),
         ]);
 
@@ -167,6 +172,7 @@ export default function SystemManagementView({
         }
 
         setActiveVersion(version);
+        setInstalledVersions(installed);
         setLogTargets(toLogTargetStateMap(targets));
       } catch (error) {
         if (isDisposed) {
@@ -184,6 +190,10 @@ export default function SystemManagementView({
 
     void loadInitialState();
 
+    const unsubscribeInstalled = window.electronAPI.onInstalledVersionsChanged((versions) => {
+      setInstalledVersions(versions);
+    });
+
     const unsubscribeVersion = window.electronAPI.onActiveVersionChanged((version) => {
       setActiveVersion(version);
       void loadLogTargets(false);
@@ -191,6 +201,9 @@ export default function SystemManagementView({
 
     return () => {
       isDisposed = true;
+      if (typeof unsubscribeInstalled === 'function') {
+        unsubscribeInstalled();
+      }
       if (typeof unsubscribeVersion === 'function') {
         unsubscribeVersion();
       }
@@ -388,6 +401,7 @@ export default function SystemManagementView({
     installState === InstallState.Confirming ||
     installState === InstallState.StoppingService ||
     isLatestVersionInstalling;
+  const hasInstalledVersions = installedVersions.length > 0;
 
   const getHomepageInstallStageLabel = () => {
     if (installState === InstallState.Confirming) {
@@ -651,6 +665,8 @@ export default function SystemManagementView({
         </div>
 
         <div className="space-y-6">
+          <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
+
           {activeVersion ? (
             <section
               className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
@@ -691,6 +707,24 @@ export default function SystemManagementView({
                     <span className="text-sm font-medium text-foreground">{item.value}</span>
                   </div>
                 ))}
+              </div>
+            </section>
+          ) : hasInstalledVersions ? (
+            <section
+              className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm"
+              {...{
+                [HOMEPAGE_TOUR_ANCHOR_ATTRIBUTE]: 'version-section',
+              }}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                <Package className="h-6 w-6" />
+              </div>
+              <h2 className="mt-4 text-xl font-semibold text-foreground">{t('system.noActiveVersion.title')}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{t('system.noActiveVersion.description')}</p>
+              <div className="mt-5">
+                <Button type="button" onClick={handleOpenVersionManagement}>
+                  {t('system.noActiveVersion.manageVersions')}
+                </Button>
               </div>
             </section>
           ) : (

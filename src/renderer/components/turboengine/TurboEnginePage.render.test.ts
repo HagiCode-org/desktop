@@ -8,7 +8,7 @@ const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/turboEn
 const typesPath = path.resolve(process.cwd(), 'src/types/turboengine-license.ts');
 
 describe('TurboEngine workspace renderer', () => {
-  it('renders TurboEngine status, diagnostics, refresh, purchase, and Store handoff paths', async () => {
+  it('renders a summary-first TurboEngine workspace with diagnostics, refresh, purchase, and Store handoff paths', async () => {
     const [pageSource, sliceSource, typesSource] = await Promise.all([
       fs.readFile(pagePath, 'utf8'),
       fs.readFile(slicePath, 'utf8'),
@@ -16,14 +16,31 @@ describe('TurboEngine workspace renderer', () => {
     ]);
 
     assert.match(pageSource, /HAGICODE_TURBOENGINE_STORE_ID/);
-    assert.match(pageSource, /snapshot\?\.diagnostics\.length/);
+    assert.match(pageSource, /effectiveSnapshot\?\.diagnostics\.length/);
     assert.match(pageSource, /dispatch\(refreshTurboEngineLicenseSnapshot\(\)\)/);
     assert.match(pageSource, /dispatch\(purchaseTurboEngineLicense\(\)\)/);
     assert.match(pageSource, /dispatch\(verifyTurboEngineLicenseStartup\(\)\)/);
     assert.match(pageSource, /turboEngine\.purchaseOutcome\./);
     assert.match(pageSource, /turboEngine\.unsupported\.nonStoreDescription/);
-    assert.match(pageSource, /openStorePage\(HAGICODE_TURBOENGINE_STORE_WEB_URL\)/);
+    assert.match(pageSource, /mx-auto max-w-5xl space-y-8 pb-12/);
+    assert.match(pageSource, /flex max-w-3xl flex-col items-center text-center/);
+    assert.match(pageSource, /commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10/);
+    assert.match(pageSource, /useCommercePreviewDebug/);
+    assert.match(pageSource, /createDefaultTurboEngineLicenseSnapshot/);
+    assert.match(pageSource, /const shouldShowPurchaseAction = bridgeAndStoreAvailable && !isActive/);
+    assert.match(pageSource, /const canRefresh = effectiveBridgeAvailable && !effectiveIsRefreshing && !effectiveIsStartupVerifying && !effectiveIsLoading/);
+    assert.match(pageSource, /turboEngine\.runtime\.sectionTitle/);
+    assert.match(pageSource, /turboEngine\.diagnostics\.sectionTitle/);
+    assert.match(pageSource, /turboEngine\.summary\.storeId/);
+    assert.match(pageSource, /turboEngine\.actions\.activeHint/);
+    assert.match(pageSource, /system\.commercePanel\.debug\.previewBadge/);
+    assert.match(pageSource, /commerce-premium-button justify-between/);
+    assert.doesNotMatch(pageSource, /turboEngine\.summary\.lastCheckedLabel/);
+    assert.doesNotMatch(pageSource, /turboEngine\.summary\.lastSuccessLabel/);
+    assert.match(pageSource, /effectiveBridgeAvailable \? \(\s*<Button variant="outline" className="commerce-premium-button-secondary justify-between" onClick=\{\(\) => void handleRefresh\(\)\}/s);
     assert.match(pageSource, /openStorePage\(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL\)/);
+    assert.doesNotMatch(pageSource, /openStorePage\(HAGICODE_TURBOENGINE_STORE_WEB_URL\)/);
+    assert.doesNotMatch(pageSource, /lg:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(320px,0\.95fr\)\]/);
     assert.match(sliceSource, /'turboEngineLicense\/loadSnapshot'/);
     assert.match(sliceSource, /'turboEngineLicense\/verifyStartup'/);
     assert.match(sliceSource, /'turboEngineLicense\/refreshSnapshot'/);

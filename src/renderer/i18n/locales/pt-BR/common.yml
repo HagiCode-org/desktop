@@ -456,6 +456,26 @@ system:
   dashboard:
     title: Central de controle do Desktop
     description: Reúne o estado do serviço, as ações de iniciar e parar, a versão ativa, o acesso aos logs e as atualizações recomendadas em uma única área de trabalho.
+  commercePanel:
+    title: Licenças da Store e acesso de patrocinador
+    storeDescription: Revise aqui rapidamente o status atual do TurboEngine e do plano de patrocinador; abra a área detalhada apenas quando precisar comprar, gerenciar ou atualizar.
+    nonStoreDescription: Este runtime não é a edição da Microsoft Store. Use estes links para abrir as páginas dos produtos e mudar para a versão da Store quando necessário.
+    actions:
+      viewDetails: Ver detalhes
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Registrar acesso rápido
     description: Abra as pastas de log do Desktop e do Web App diretamente para reduzir o tempo de diagnóstico.
@@ -481,6 +501,10 @@ system:
     title: Nenhuma versão instalada ainda
     description: A maneira mais fácil de começar a usar Hagicode Desktop é através do nosso assistente de configuração guiado. Conclua a instalação e configuração em apenas algumas etapas.
     startWizard: Assistente de inicialização
+  noActiveVersion:
+    title: Um runtime está instalado, mas nenhuma versão ativa foi selecionada
+    description: Um runtime local foi encontrado, mas o apontador da versão ativa está ausente ou inválido. Abra o gerenciamento de versões e selecione primeiro uma versão utilizável.
+    manageVersions: Abrir gerenciamento de versões
   activeVersion:
     actions:
       manage: Gerenciar versões

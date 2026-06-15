@@ -80,10 +80,8 @@ import {
   EntitlementEvaluator,
   MicrosoftStoreSubscriptionBroker,
   SubscriptionService,
-  SubscriptionSnapshotStore,
   TurboEngineEntitlementEvaluator,
   TurboEngineLicenseService,
-  TurboEngineLicenseSnapshotStore,
 } from './subscription/index.js';
 import {
   resolveTurboEngineDlcProgramOption,
@@ -689,7 +687,6 @@ function initializeSubscriptionService(): void {
     broker: new MicrosoftStoreSubscriptionBroker({
       windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
     }),
-    snapshotStore: new SubscriptionSnapshotStore(),
     entitlementEvaluator: new EntitlementEvaluator(),
   });
 
@@ -710,7 +707,6 @@ function initializeTurboEngineLicenseService(): void {
       windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
       productConfig: turboEngineProductConfig,
     }),
-    snapshotStore: new TurboEngineLicenseSnapshotStore(),
     entitlementEvaluator: new TurboEngineEntitlementEvaluator(),
   });
 
@@ -719,6 +715,24 @@ function initializeTurboEngineLicenseService(): void {
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
   });
   log.info('[App] TurboEngine license service and IPC handlers registered for Windows Store runtime');
+}
+
+function triggerStartupStoreLicenseRefresh(): void {
+  if (subscriptionFeatureEnabled && subscriptionService) {
+    void subscriptionService.refreshOnStartup().catch((error) => {
+      log.warn('[App] Subscription startup refresh failed.', {
+        error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+      });
+    });
+  }
+
+  if (turboEngineLicenseFeatureEnabled && turboEngineLicenseService) {
+    void turboEngineLicenseService.verifyOnStartup().catch((error) => {
+      log.warn('[App] TurboEngine startup refresh failed.', {
+        error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+      });
+    });
+  }
 }
 
 function scheduleSubscriptionPurchaseSmokeTest(): void {
@@ -2418,7 +2432,7 @@ app.whenReady().then(async () => {
   webServiceManager = new PCodeWebServiceManager(webServiceConfig, {
     configManager,
     resolveTurboEngineDlcProgramOption: () => resolveTurboEngineDlcProgramOption(
-      turboEngineLicenseService?.getCachedSnapshot() ?? null,
+      turboEngineLicenseService?.getCurrentSnapshot() ?? null,
     ),
   });
 
@@ -2591,6 +2605,7 @@ app.whenReady().then(async () => {
   createWindow();
   initializeSubscriptionService();
   initializeTurboEngineLicenseService();
+  triggerStartupStoreLicenseRefresh();
   createTray();
   setServerStatus('stopped');
   startStatusPolling();
@@ -2598,7 +2613,6 @@ app.whenReady().then(async () => {
   versionUpdateManager.startScheduledRefresh();
 
   if (subscriptionFeatureEnabled && subscriptionService) {
-    await subscriptionService.refreshOnStartup();
     subscriptionSyncInterval = setInterval(() => {
       void subscriptionService?.refresh('scheduled');
     }, SUBSCRIPTION_SYNC_INTERVAL_MS);
@@ -2606,7 +2620,6 @@ app.whenReady().then(async () => {
   }
 
   if (turboEngineLicenseFeatureEnabled && turboEngineLicenseService) {
-    await turboEngineLicenseService.refreshOnStartup();
     turboEngineLicenseSyncInterval = setInterval(() => {
       void turboEngineLicenseService?.refresh('scheduled');
     }, TURBOENGINE_LICENSE_SYNC_INTERVAL_MS);

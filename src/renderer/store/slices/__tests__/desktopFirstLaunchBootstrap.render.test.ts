@@ -21,6 +21,7 @@ describe('desktop first-launch renderer bootstrap integration', () => {
     assert.match(source, /setBootstrapPhase\('ready'\)/);
     assert.match(source, /const animationFrame = window\.requestAnimationFrame\(revealShell\);/);
     assert.match(source, /const revealTimeout = window\.setTimeout\(revealShell, 160\);/);
+    assert.doesNotMatch(source, /startPostShellStoreLiveVerify\(\);/);
   });
 
   it('hands the static loading container off to the renderer bootstrap shell, then removes it after shell-ready', async () => {
@@ -44,7 +45,7 @@ describe('desktop first-launch renderer bootstrap integration', () => {
     assert.match(source, /const postShellInitializationStartedRef = useRef\(false\);/);
     assert.match(source, /if \(bootstrapPhase !== 'ready' \|\| postShellInitializationStartedRef\.current\)/);
     assert.match(source, /await withTimeout\(\s*runCriticalStartupInitialization\(\),\s*'critical startup initialization',/s);
-    assert.match(source, /await withTimeout\(\s*window\.electronAPI\.getDistributionMode\(\),\s*'distribution mode lookup',/s);
+    assert.match(source, /await withTimeout\(\s*window\.electronAPI\.getDistributionModeState\(\),\s*'distribution state lookup',/s);
   });
 
   it('stages renderer initialization so background work starts after the critical shell bootstrap', async () => {
@@ -69,5 +70,8 @@ describe('desktop first-launch renderer bootstrap integration', () => {
     assert.match(backgroundSection, /initializeDependency\(\)/);
     assert.match(backgroundSection, /initializeRSSFeed\(\)/);
     assert.match(backgroundSection, /initializeWebService\(\)/);
+    assert.match(backgroundSection, /verifySubscriptionStartup\(\)/);
+    assert.match(backgroundSection, /verifyTurboEngineLicenseStartup\(\)/);
+    assert.doesNotMatch(source, /export function startPostShellStoreLiveVerify\(\): void/);
   });
 });

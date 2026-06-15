@@ -18,11 +18,13 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.equal(source.includes('onServiceProgress'), false);
     assert.equal(source.includes('startService('), false);
     assert.match(source, /currentStep === OnboardingStep\.Download && downloadCompleted && downloadProgress\?\.version/);
-    assert.match(source, /dispatch\(completeOnboarding\(downloadProgress\.version\)\);/);
-    assert.match(source, /dispatch\(fetchActiveVersion\(\)\);/);
+    assert.match(source, /await dispatch\(completeOnboarding\(downloadProgress\.version\)\)\.unwrap\(\);/);
+    assert.match(source, /void dispatch\(fetchActiveVersion\(\)\);/);
     assert.match(source, /onComplete\?\.\(\);/);
     assert.match(source, /currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned/);
-    assert.match(source, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
+    assert.match(source, /await dispatch\(completeOnboarding\(activeVersion\.id\)\)\.unwrap\(\);/);
+    assert.match(source, /window\.electronAPI\.versionGetInstalled\(\)/);
+    assert.match(source, /await dispatch\(completeOnboarding\(fallbackVersion\.id\)\)\.unwrap\(\);/);
   });
 
   it('does not open Hagicode automatically when onboarding is completed', async () => {
@@ -81,6 +83,8 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /const sequence = getOnboardingSequence\(mode, dependencyModeSettings, distributionState\);/);
     assert.match(source, /return sequence\[sequence\.length - 1\] === OnboardingStep\.LegalConsent;/);
     assert.match(source, /await dispatch\(fetchActiveVersion\(\)\)\.unwrap\(\);/);
-    assert.match(source, /dispatch\(completeOnboarding\(activeVersion\.id\)\);/);
+    assert.match(source, /await dispatch\(completeOnboarding\(activeVersion\.id\)\)\.unwrap\(\);/);
+    assert.match(source, /window\.electronAPI\.versionGetInstalled\(\)/);
+    assert.match(source, /await dispatch\(completeOnboarding\(fallbackVersion\.id\)\)\.unwrap\(\);/);
   });
 });

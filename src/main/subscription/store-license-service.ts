@@ -8,9 +8,13 @@ import type {
   StoreLicenseSnapshot,
 } from '../../types/store-license.js';
 import type { RawStoreLicenseState, RawStorePurchaseResult, StoreLicensePlatformBroker } from './subscription-broker.js';
-import type { StoreLicenseSnapshotStore } from './store-license-store.js';
 
 export type StoreLicenseRefreshReason = 'startup' | 'manual' | 'purchase' | 'scheduled';
+
+export interface StoreLicenseRetryPolicy {
+  maxAttempts: number;
+  retryDelayMs: number;
+}
 
 interface StoreLicenseServiceOptions<
   TSnapshot extends StoreLicenseSnapshot<TEntitlement>,
@@ -18,14 +22,19 @@ interface StoreLicenseServiceOptions<
 > {
   productConfig: StoreLicenseProductConfig<TEntitlement>;
   broker: StoreLicensePlatformBroker;
-  snapshotStore: StoreLicenseSnapshotStore<TSnapshot>;
   entitlementEvaluator: { evaluate(snapshot: TSnapshot): TEntitlement[] };
   createDefaultSnapshot: () => TSnapshot;
   normalizeSnapshot: (raw: RawStoreLicenseState) => TSnapshot;
   createStaleSnapshot: (previousSnapshot: TSnapshot, error: unknown) => TSnapshot;
   createUnavailableSnapshot: (error: unknown) => TSnapshot;
   buildPurchaseMessage: (outcome: StoreLicensePurchaseOutcome) => string;
+  retryPolicy?: Partial<StoreLicenseRetryPolicy>;
 }
+
+const defaultRetryPolicy: StoreLicenseRetryPolicy = {
+  maxAttempts: 3,
+  retryDelayMs: 350,
+};
 
 export class StoreLicenseService<
   TSnapshot extends StoreLicenseSnapshot<TEntitlement>,
@@ -33,13 +42,13 @@ export class StoreLicenseService<
 > {
   private readonly productConfig: StoreLicenseProductConfig<TEntitlement>;
   private readonly broker: StoreLicensePlatformBroker;
-  private readonly snapshotStore: StoreLicenseSnapshotStore<TSnapshot>;
   private readonly entitlementEvaluator: { evaluate(snapshot: TSnapshot): TEntitlement[] };
   private readonly createDefaultSnapshot: () => TSnapshot;
   private readonly normalizeSnapshot: (raw: RawStoreLicenseState) => TSnapshot;
   private readonly createStaleSnapshot: (previousSnapshot: TSnapshot, error: unknown) => TSnapshot;
   private readonly createUnavailableSnapshot: (error: unknown) => TSnapshot;
   private readonly buildPurchaseMessage: (outcome: StoreLicensePurchaseOutcome) => string;
+  private readonly retryPolicy: StoreLicenseRetryPolicy;
   private readonly events = new EventEmitter();
   private currentSnapshot: TSnapshot;
   private refreshInFlight: Promise<TSnapshot> | null = null;
@@ -47,33 +56,25 @@ export class StoreLicenseService<
   constructor(options: StoreLicenseServiceOptions<TSnapshot, TEntitlement>) {
     this.productConfig = options.productConfig;
     this.broker = options.broker;
-    this.snapshotStore = options.snapshotStore;
     this.entitlementEvaluator = options.entitlementEvaluator;
     this.createDefaultSnapshot = options.createDefaultSnapshot;
     this.normalizeSnapshot = options.normalizeSnapshot;
     this.createStaleSnapshot = options.createStaleSnapshot;
     this.createUnavailableSnapshot = options.createUnavailableSnapshot;
     this.buildPurchaseMessage = options.buildPurchaseMessage;
+    this.retryPolicy = {
+      maxAttempts: Math.max(1, Math.trunc(options.retryPolicy?.maxAttempts ?? defaultRetryPolicy.maxAttempts)),
+      retryDelayMs: Math.max(0, Math.trunc(options.retryPolicy?.retryDelayMs ?? defaultRetryPolicy.retryDelayMs)),
+    };
 
-    const cachedSnapshot = this.snapshotStore.load();
-    this.currentSnapshot = this.withEntitlements(cachedSnapshot ?? this.createDefaultSnapshot());
+    this.currentSnapshot = this.withEntitlements(this.createDefaultSnapshot());
   }
 
-  getCachedSnapshot(): TSnapshot {
+  getCurrentSnapshot(): TSnapshot {
     return this.currentSnapshot;
   }
 
-  async getSnapshot(options: StoreLicenseGetSnapshotOptions = {}): Promise<TSnapshot> {
-    if (options.refreshIfStale && this.currentSnapshot.isStale) {
-      log.info('[StoreLicenseService] Cached snapshot is stale, scheduling refresh.', {
-        productKey: this.productConfig.key,
-        lastCheckedAt: this.currentSnapshot.lastCheckedAt,
-        availability: this.currentSnapshot.availability,
-        status: this.currentSnapshot.status,
-      });
-      void this.refresh('manual');
-    }
-
+  async getSnapshot(_options: StoreLicenseGetSnapshotOptions = {}): Promise<TSnapshot> {
     return this.currentSnapshot;
   }
 
@@ -89,37 +90,34 @@ export class StoreLicenseService<
     log.info('[StoreLicenseService] Starting refresh.', {
       productKey: this.productConfig.key,
       reason,
-      cachedAvailability: this.currentSnapshot.availability,
-      cachedStatus: this.currentSnapshot.status,
-      cachedIsStale: this.currentSnapshot.isStale,
-      cachedLastCheckedAt: this.currentSnapshot.lastCheckedAt,
+      currentAvailability: this.currentSnapshot.availability,
+      currentStatus: this.currentSnapshot.status,
+      currentIsStale: this.currentSnapshot.isStale,
+      currentLastCheckedAt: this.currentSnapshot.lastCheckedAt,
     });
 
     this.refreshInFlight = (async () => {
+      const recoverySnapshot = this.getRecoverySnapshot();
+
       try {
-        const rawSnapshot = await this.broker.queryStatus();
-        const normalizedSnapshot = this.withEntitlements(this.normalizeSnapshot(rawSnapshot));
-        const persistedSnapshot = normalizedSnapshot.availability === 'supported'
-          ? this.snapshotStore.save(normalizedSnapshot)
-          : normalizedSnapshot;
+        const refreshedSnapshot = await this.querySnapshotWithTolerance(reason, recoverySnapshot);
 
         log.info('[StoreLicenseService] Refresh completed.', {
           productKey: this.productConfig.key,
           reason,
-          availability: persistedSnapshot.availability,
-          status: persistedSnapshot.status,
-          source: persistedSnapshot.source,
-          isStale: persistedSnapshot.isStale,
-          lastCheckedAt: persistedSnapshot.lastCheckedAt,
-          lastSuccessfulSyncAt: persistedSnapshot.lastSuccessfulSyncAt,
-          diagnostics: persistedSnapshot.diagnostics.map((diagnostic) => diagnostic.code),
+          availability: refreshedSnapshot.availability,
+          status: refreshedSnapshot.status,
+          source: refreshedSnapshot.source,
+          isStale: refreshedSnapshot.isStale,
+          lastCheckedAt: refreshedSnapshot.lastCheckedAt,
+          lastSuccessfulSyncAt: refreshedSnapshot.lastSuccessfulSyncAt,
+          diagnostics: refreshedSnapshot.diagnostics.map((diagnostic) => diagnostic.code),
         });
-        this.setCurrentSnapshot(persistedSnapshot);
-        return persistedSnapshot;
+        this.setCurrentSnapshot(refreshedSnapshot);
+        return refreshedSnapshot;
       } catch (error) {
-        const cachedSnapshot = this.snapshotStore.load();
-        const fallbackSnapshot = cachedSnapshot
-          ? this.withEntitlements(this.createStaleSnapshot(cachedSnapshot, error))
+        const fallbackSnapshot = recoverySnapshot
+          ? this.withEntitlements(this.createStaleSnapshot(recoverySnapshot, error))
           : this.withEntitlements(this.createUnavailableSnapshot(error));
 
         log.warn('[StoreLicenseService] Refresh failed, using fallback snapshot.', {
@@ -170,7 +168,7 @@ export class StoreLicenseService<
       };
     }
 
-    const snapshot = purchaseResult.outcome === 'canceled'
+    const snapshot = purchaseResult.outcome === 'canceled' || purchaseResult.outcome === 'not-purchased'
       ? this.currentSnapshot
       : await this.refresh('purchase');
 
@@ -211,5 +209,98 @@ export class StoreLicenseService<
       ...snapshot,
       entitlements: this.entitlementEvaluator.evaluate(snapshot),
     };
+  }
+
+  private async querySnapshotWithTolerance(
+    reason: StoreLicenseRefreshReason,
+    recoverySnapshot: TSnapshot | null,
+  ): Promise<TSnapshot> {
+    let lastKnownIssue: unknown = null;
+
+    for (let attempt = 1; attempt <= this.retryPolicy.maxAttempts; attempt += 1) {
+      try {
+        const rawSnapshot = await this.broker.queryStatus();
+        const normalizedSnapshot = this.withEntitlements(this.normalizeSnapshot(rawSnapshot));
+        const retryReason = this.getRetryReason(normalizedSnapshot, recoverySnapshot);
+
+        if (retryReason && attempt < this.retryPolicy.maxAttempts) {
+          lastKnownIssue = this.createRetryError(normalizedSnapshot, retryReason);
+          log.warn('[StoreLicenseService] Refresh returned a transient snapshot; retrying.', {
+            productKey: this.productConfig.key,
+            reason,
+            attempt,
+            maxAttempts: this.retryPolicy.maxAttempts,
+            retryReason,
+            availability: normalizedSnapshot.availability,
+            status: normalizedSnapshot.status,
+            isStale: normalizedSnapshot.isStale,
+          });
+          await this.delayBeforeRetry();
+          continue;
+        }
+
+        if (normalizedSnapshot.availability !== 'supported' && recoverySnapshot) {
+          throw this.createRetryError(normalizedSnapshot, retryReason ?? 'store-unavailable');
+        }
+
+        return normalizedSnapshot;
+      } catch (error) {
+        lastKnownIssue = error;
+
+        if (attempt < this.retryPolicy.maxAttempts) {
+          log.warn('[StoreLicenseService] Refresh attempt failed; retrying.', {
+            productKey: this.productConfig.key,
+            reason,
+            attempt,
+            maxAttempts: this.retryPolicy.maxAttempts,
+            error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+          });
+          await this.delayBeforeRetry();
+          continue;
+        }
+      }
+    }
+
+    throw lastKnownIssue ?? new Error('Microsoft Store refresh failed.');
+  }
+
+  private getRetryReason(snapshot: TSnapshot, recoverySnapshot: TSnapshot | null): 'store-unavailable' | 'status-regression' | null {
+    if (snapshot.availability !== 'supported') {
+      return 'store-unavailable';
+    }
+
+    if (recoverySnapshot?.status === 'active' && snapshot.status !== 'active') {
+      return 'status-regression';
+    }
+
+    return null;
+  }
+
+  private createRetryError(snapshot: TSnapshot, retryReason: 'store-unavailable' | 'status-regression'): Error {
+    const primaryDiagnostic = snapshot.diagnostics[0];
+    const detail = primaryDiagnostic?.detail ?? primaryDiagnostic?.message;
+    const summary = retryReason === 'status-regression'
+      ? `Microsoft Store refresh temporarily regressed ${this.productConfig.statusLabel}.`
+      : `Microsoft Store refresh reported ${snapshot.availability}.`;
+
+    return new Error(detail ? `${summary} ${detail}` : summary);
+  }
+
+  private getRecoverySnapshot(): TSnapshot | null {
+    if (this.currentSnapshot.lastSuccessfulSyncAt || this.currentSnapshot.availability === 'supported') {
+      return this.currentSnapshot;
+    }
+
+    return null;
+  }
+
+  private async delayBeforeRetry(): Promise<void> {
+    if (this.retryPolicy.retryDelayMs <= 0) {
+      return;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, this.retryPolicy.retryDelayMs);
+    });
   }
 }

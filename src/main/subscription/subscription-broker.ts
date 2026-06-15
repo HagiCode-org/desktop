@@ -3,14 +3,17 @@ import type {
   StoreLicenseProductConfig,
   StoreLicensePurchaseOutcome,
 } from '../../types/store-license.js';
+import log from 'electron-log';
 import {
   executeWindowsStorePurchaseAddon,
+  executeWindowsStoreStatusAddon,
   resolveWindowsStorePurchaseAddonPath,
 } from './windows-store-purchase-addon.js';
 
 export interface RawStoreLicenseProduct {
   storeId: string;
   title: string | null;
+  isInUserCollection: boolean;
 }
 
 export interface RawStoreLicenseSku {
@@ -73,69 +76,44 @@ export interface MicrosoftStoreSubscriptionBrokerOptions {
   productConfig?: StoreLicenseProductConfig;
 }
 
-type DynWinRtRuntimeModule = {
-  DynWinRtMethodSig?: new () => { addIn(type: unknown): unknown };
-  DynWinRtType?: {
-    registerInterface: (name: string, iid: unknown) => {
-      addMethod: (name: string, signature: unknown) => {
-        method: (index: number) => {
-          invoke: (obj: unknown, args: unknown[]) => unknown;
-        };
-      };
-    };
-    u64: () => unknown;
-  };
-  DynWinRtValue?: {
-    u64: (value: number) => unknown;
-  };
-  WinGuid?: {
-    parse: (guid: string) => unknown;
-  };
-  roInitialize?: (mode?: number) => void;
+type DynWinRtStoreCollectionData = {
+  endDate?: unknown;
 };
 
-type DynWinRtStoreLicense = {
-  skuStoreId?: unknown;
-  isActive?: unknown;
-  expirationDate?: unknown;
+type DynWinRtStoreSku = {
+  storeId?: unknown;
+  title?: unknown;
+  isSubscription?: unknown;
+  isInUserCollection?: unknown;
+  collectionData?: DynWinRtStoreCollectionData | null;
 };
 
-type DynWinRtStoreLicenseMap = {
+type DynWinRtStoreSkuCollection = {
+  toArray?: () => DynWinRtStoreSku[];
+  length?: number;
+  getAt?: (index: number) => DynWinRtStoreSku;
+};
+
+type DynWinRtStoreProduct = {
+  storeId?: unknown;
+  title?: unknown;
+  isInUserCollection?: unknown;
+  skus?: DynWinRtStoreSkuCollection | DynWinRtStoreSku[] | null;
+};
+
+type DynWinRtStoreProductMap = {
   hasKey?: (key: string) => boolean;
-  get?: (key: string) => DynWinRtStoreLicense | undefined;
+  has?: (key: string) => boolean;
+  get?: (key: string) => DynWinRtStoreProduct | undefined;
 };
 
-type DynWinRtStoreAppLicense = {
-  isActive?: unknown;
-  addOnLicenses?: DynWinRtStoreLicenseMap | null;
-};
-
-type DynWinRtCanAcquireLicenseResult = {
-  status?: unknown;
+type DynWinRtStoreProductQueryResult = {
+  products?: DynWinRtStoreProductMap | null;
   extendedError?: unknown;
 };
 
-type DynWinRtStoreContext = {
-  getAppLicenseAsync(signal?: AbortSignal): Promise<unknown>;
-  canAcquireStoreLicenseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
-  requestPurchaseAsync(storeId: string, signal?: AbortSignal): Promise<unknown>;
-};
-
-type DynWinRtStoreModule = DynWinRtRuntimeModule & {
-  StoreCanLicenseStatus: Record<string, number>;
-  StoreContext: {
-    getDefault(): DynWinRtStoreContext;
-  };
-  StorePurchaseStatus: Record<string, number>;
-};
-
-const DYNWINRT_RUNTIME_SPECIFIER = '@microsoft/dynwinrt';
-const DYNWINRT_STORE_CONTEXT_SPECIFIER = './generated-js/StoreContext.js';
-const DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER = './generated-js/StoreCanLicenseStatus.js';
-const DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER = './generated-js/StorePurchaseStatus.js';
 const WINDOWS_EPOCH_OFFSET_MILLISECONDS = 11644473600000n;
 const HUNDRED_NANOSECONDS_PER_MILLISECOND = 10000n;
-const INITIALIZE_WITH_WINDOW_IID = '3E68D4BD-7135-4D10-8018-9FB6D9F33FA1';
 
 function toIsoDate(value: unknown): string | null {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -175,57 +153,6 @@ function normalizeErrorCode(value: unknown): string | null {
   return null;
 }
 
-function getFirstNamedNumber(enumObject: Record<string, number>, keys: string[]): number | undefined {
-  for (const key of keys) {
-    if (typeof enumObject[key] === 'number') {
-      return enumObject[key];
-    }
-  }
-
-  return undefined;
-}
-
-function mapPurchaseOutcome(statusEnum: Record<string, number>, statusValue: unknown): StoreLicensePurchaseOutcome {
-  const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
-
-  switch (statusNumber) {
-    case getFirstNamedNumber(statusEnum, ['succeeded', 'Succeeded']):
-      return 'succeeded';
-    case getFirstNamedNumber(statusEnum, ['alreadyPurchased', 'AlreadyPurchased']):
-      return 'already-purchased';
-    case getFirstNamedNumber(statusEnum, ['notPurchased', 'NotPurchased']):
-      return 'canceled';
-    case getFirstNamedNumber(statusEnum, ['networkError', 'NetworkError']):
-      return 'network-error';
-    case getFirstNamedNumber(statusEnum, ['serverError', 'ServerError']):
-      return 'server-error';
-    default:
-      return 'failed';
-  }
-}
-
-function mapPurchaseEligibility(
-  statusEnum: Record<string, number>,
-  statusValue: unknown,
-): RawStoreLicenseState['purchaseEligibility'] {
-  const statusNumber = typeof statusValue === 'number' ? statusValue : Number.NaN;
-
-  switch (statusNumber) {
-    case getFirstNamedNumber(statusEnum, ['licensable', 'Licensable']):
-      return 'licensable';
-    case getFirstNamedNumber(statusEnum, ['notLicensableToUser', 'NotLicensableToUser']):
-      return 'not-licensable';
-    case getFirstNamedNumber(statusEnum, ['licenseActionNotApplicableToProduct', 'LicenseActionNotApplicableToProduct']):
-      return 'license-action-not-applicable';
-    case getFirstNamedNumber(statusEnum, ['networkError', 'NetworkError']):
-      return 'network-error';
-    case getFirstNamedNumber(statusEnum, ['serverError', 'ServerError']):
-      return 'server-error';
-    default:
-      return 'unknown';
-  }
-}
-
 function normalizeThrownError(error: unknown): { errorCode: string | null; errorMessage: string | null } {
   if (error instanceof Error) {
     const errorWithCode = error as Error & { code?: unknown };
@@ -241,58 +168,151 @@ function normalizeThrownError(error: unknown): { errorCode: string | null; error
   };
 }
 
-function findMatchingLicense(
-  appLicense: DynWinRtStoreAppLicense | null,
+function toStoreSkuArray(value: DynWinRtStoreSkuCollection | DynWinRtStoreSku[] | null | undefined): DynWinRtStoreSku[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (!value) {
+    return [];
+  }
+
+  if (typeof value.toArray === 'function') {
+    return value.toArray();
+  }
+
+  const length = typeof value.length === 'number' ? value.length : 0;
+  const getAt = value.getAt;
+  if (typeof getAt !== 'function' || length <= 0) {
+    return [];
+  }
+
+  const items: DynWinRtStoreSku[] = [];
+  for (let index = 0; index < length; index += 1) {
+    items.push(getAt.call(value, index));
+  }
+  return items;
+}
+
+function findMatchingStoreProduct(
+  queryResult: DynWinRtStoreProductQueryResult | null,
   storeId: string,
-): RawStoreLicense | null {
-  const addOnLicenses = appLicense?.addOnLicenses;
-  const hasKey = addOnLicenses?.hasKey;
-  const get = addOnLicenses?.get;
-
-  if (typeof hasKey !== 'function' || typeof get !== 'function') {
+): DynWinRtStoreProduct | null {
+  const products = queryResult?.products;
+  if (!products) {
     return null;
   }
 
-  if (!hasKey.call(addOnLicenses, storeId)) {
+  const hasKey = typeof products.hasKey === 'function'
+    ? products.hasKey.bind(products)
+    : typeof products.has === 'function'
+      ? products.has.bind(products)
+      : null;
+  const get = typeof products.get === 'function' ? products.get.bind(products) : null;
+
+  if (!hasKey || !get || !hasKey(storeId)) {
     return null;
   }
 
-  const license = get.call(addOnLicenses, storeId);
+  return get(storeId) ?? null;
+}
 
-  if (!license) {
+function normalizeStoreSku(value: DynWinRtStoreSku | null | undefined): RawStoreLicenseSku | null {
+  if (!value) {
     return null;
   }
 
   return {
-    storeId: typeof license.skuStoreId === 'string' ? license.skuStoreId : null,
-    isActive: Boolean(license.isActive),
-    expirationDate: toIsoDate(license.expirationDate),
+    storeId: typeof value.storeId === 'string' ? value.storeId : null,
+    title: typeof value.title === 'string' ? value.title : null,
+    isSubscription: Boolean(value.isSubscription),
+    isInUserCollection: Boolean(value.isInUserCollection),
+    collectionEndDate: toIsoDate(value.collectionData?.endDate),
   };
 }
 
-export function buildSupportedStateFromMinimalStoreApis(options: {
+function findOwnedSku(storeProduct: DynWinRtStoreProduct | null): RawStoreLicenseSku | null {
+  if (!storeProduct) {
+    return null;
+  }
+
+  const skus = toStoreSkuArray(storeProduct.skus);
+  const ownedSku = skus.find((sku) => Boolean(sku?.isInUserCollection)) ?? null;
+  if (ownedSku) {
+    return normalizeStoreSku(ownedSku);
+  }
+
+  if (Boolean(storeProduct.isInUserCollection) && skus.length > 0) {
+    const fallbackSku = normalizeStoreSku(skus[0]);
+    return fallbackSku
+      ? {
+          ...fallbackSku,
+          isInUserCollection: true,
+        }
+      : null;
+  }
+
+  return null;
+}
+
+function getStoreProductKinds(productConfig: StoreLicenseProductConfig): string[] {
+  return productConfig.licenseKind === 'subscription'
+    ? ['Subscription', 'Durable']
+    : ['Durable', 'Subscription'];
+}
+
+function getQueryResultErrorCode(queryResult: DynWinRtStoreProductQueryResult | null | undefined): string | null {
+  return normalizeErrorCode(queryResult?.extendedError);
+}
+
+function getQueryResultErrorMessage(errorCode: string | null, context: string): string | null {
+  if (!errorCode) {
+    return null;
+  }
+
+  return `${context} failed with ${errorCode}.`;
+}
+
+function normalizeStoreProduct(
+  product: DynWinRtStoreProduct | null,
+  fallbackStoreId: string,
+  fallbackTitle: string,
+  isOwned: boolean,
+): RawStoreLicenseProduct {
+  return {
+    storeId: typeof product?.storeId === 'string' ? product.storeId : fallbackStoreId,
+    title: typeof product?.title === 'string' ? product.title : fallbackTitle,
+    isInUserCollection: isOwned || Boolean(product?.isInUserCollection),
+  };
+}
+
+export function buildSupportedStateFromProductQueries(options: {
   fetchedAt: string;
-  appLicense: DynWinRtStoreAppLicense | null;
-  canAcquireResult: DynWinRtCanAcquireLicenseResult | null;
-  canLicenseStatusEnum: Record<string, number>;
+  associatedQueryResult: DynWinRtStoreProductQueryResult | null;
+  collectionQueryResult: DynWinRtStoreProductQueryResult | null;
   productConfig?: StoreLicenseProductConfig;
 }): RawStoreLicenseState {
   const productConfig = options.productConfig ?? sponsorPlanProductConfig;
-  const license = findMatchingLicense(options.appLicense, productConfig.storeId);
+  const associatedProduct = findMatchingStoreProduct(options.associatedQueryResult, productConfig.storeId);
+  const collectionProduct = findMatchingStoreProduct(options.collectionQueryResult, productConfig.storeId);
+  const sku = findOwnedSku(collectionProduct) ?? findOwnedSku(associatedProduct);
+  const isOwned = Boolean(collectionProduct?.isInUserCollection || associatedProduct?.isInUserCollection || sku?.isInUserCollection);
+  const errorCode = getQueryResultErrorCode(options.collectionQueryResult) ?? getQueryResultErrorCode(options.associatedQueryResult);
 
   return {
     fetchedAt: options.fetchedAt,
     availability: 'supported',
-    appLicenseActive: Boolean(options.appLicense?.isActive),
-    product: {
-      storeId: productConfig.storeId,
-      title: productConfig.productName,
-    },
-    sku: null,
-    license,
-    purchaseEligibility: mapPurchaseEligibility(options.canLicenseStatusEnum, options.canAcquireResult?.status),
-    errorCode: normalizeErrorCode(options.canAcquireResult?.extendedError),
-    errorMessage: null,
+    appLicenseActive: false,
+    product: normalizeStoreProduct(associatedProduct ?? collectionProduct, productConfig.storeId, productConfig.productName, isOwned),
+    sku,
+    license: null,
+    purchaseEligibility: isOwned
+      ? 'license-action-not-applicable'
+      : associatedProduct
+        ? 'licensable'
+        : 'unknown',
+    errorCode,
+    errorMessage: getQueryResultErrorMessage(errorCode, 'Microsoft Store product query'),
   };
 }
 
@@ -347,160 +367,74 @@ function readNativeWindowHandle(rawHandle: Buffer | bigint | null | undefined): 
   return value;
 }
 
-function initializeOwnerWindow(
-  storeModule: DynWinRtStoreModule,
-  context: DynWinRtStoreContext,
-  windowHandle: bigint | null,
-): void {
-  if (windowHandle == null) {
-    return;
-  }
-
-  const runtimeModule = storeModule as DynWinRtRuntimeModule;
-  const DynWinRtType = runtimeModule.DynWinRtType;
-  const DynWinRtMethodSig = runtimeModule.DynWinRtMethodSig;
-  const DynWinRtValue = runtimeModule.DynWinRtValue;
-  const WinGuid = runtimeModule.WinGuid;
-
-  if (!DynWinRtType || !DynWinRtMethodSig || !DynWinRtValue || !WinGuid) {
-    return;
-  }
-
-  const initializeWithWindowType = DynWinRtType
-    .registerInterface('IInitializeWithWindow', WinGuid.parse(INITIALIZE_WITH_WINDOW_IID))
-    .addMethod('Initialize', new DynWinRtMethodSig().addIn(DynWinRtType.u64()));
-  const rawContext = (context as { _obj?: unknown } | null)?._obj ?? context;
-  const cast = (rawContext as { cast?: (iid: unknown) => unknown }).cast;
-
-  if (typeof cast !== 'function') {
-    return;
-  }
-
-  const interopContext = cast.call(rawContext, WinGuid.parse(INITIALIZE_WITH_WINDOW_IID));
-  initializeWithWindowType.method(6).invoke(interopContext, [DynWinRtValue.u64(Number(windowHandle))]);
-}
-
-async function loadGeneratedExport<T>(specifier: string, exportName: string): Promise<T> {
-  const module = await import(specifier) as Record<string, unknown>;
-  const value = module[exportName];
-
-  if (value == null) {
-    throw new Error(`dynwinrt generated binding ${specifier} did not export ${exportName}`);
-  }
-
-  return value as T;
-}
-
-async function loadDynWinRtStoreModule(): Promise<DynWinRtStoreModule> {
-  const [runtimeModule, StoreContext, StoreCanLicenseStatus, StorePurchaseStatus] = await Promise.all([
-    import(DYNWINRT_RUNTIME_SPECIFIER),
-    loadGeneratedExport<DynWinRtStoreModule['StoreContext']>(DYNWINRT_STORE_CONTEXT_SPECIFIER, 'StoreContext'),
-    loadGeneratedExport<DynWinRtStoreModule['StoreCanLicenseStatus']>(DYNWINRT_STORE_CAN_LICENSE_STATUS_SPECIFIER, 'StoreCanLicenseStatus'),
-    loadGeneratedExport<DynWinRtStoreModule['StorePurchaseStatus']>(DYNWINRT_STORE_PURCHASE_STATUS_SPECIFIER, 'StorePurchaseStatus'),
-  ]);
-
-  return {
-    ...(runtimeModule as Record<string, unknown>),
-    StoreContext,
-    StoreCanLicenseStatus,
-    StorePurchaseStatus,
-  } as DynWinRtStoreModule;
-}
-
-async function createDynWinRtBroker(
+async function createNativeAddonBroker(
   windowHandle: bigint | null,
   productConfig: StoreLicenseProductConfig = sponsorPlanProductConfig,
 ): Promise<StoreLicensePlatformBroker> {
-  return DynWinRtStoreSubscriptionBroker.create(windowHandle, productConfig);
-}
-
-class DynWinRtStoreSubscriptionBroker implements StoreLicensePlatformBroker {
-  static async create(
-    windowHandle: bigint | null,
-    productConfig: StoreLicenseProductConfig,
-  ): Promise<DynWinRtStoreSubscriptionBroker> {
-    const storeModule = await loadDynWinRtStoreModule();
-
-    try {
-      storeModule.roInitialize?.(1);
-    } catch {
-      // Electron may have already initialized COM for this thread.
-    }
-
-    const context = storeModule.StoreContext.getDefault();
-    initializeOwnerWindow(storeModule, context, windowHandle);
-    return new DynWinRtStoreSubscriptionBroker(storeModule, context, windowHandle, productConfig);
+  const addonModulePath = resolveWindowsStorePurchaseAddonPath();
+  if (!addonModulePath) {
+    throw new Error('Windows Store native addon is unavailable.');
   }
 
-  private constructor(
-    private readonly storeModule: DynWinRtStoreModule,
-    private readonly context: DynWinRtStoreContext,
+  return new NativeAddonStoreSubscriptionBroker(
+    addonModulePath,
+    windowHandle,
+    productConfig,
+  );
+}
+
+class NativeAddonStoreSubscriptionBroker implements StoreLicensePlatformBroker {
+  constructor(
+    private readonly addonModulePath: string,
     private readonly windowHandle: bigint | null,
     private readonly productConfig: StoreLicenseProductConfig,
   ) {}
 
   async queryStatus(): Promise<RawStoreLicenseState> {
-    const fetchedAt = new Date().toISOString();
+    const productKinds = getStoreProductKinds(this.productConfig);
+    const state = await executeWindowsStoreStatusAddon({
+      modulePath: this.addonModulePath,
+      storeId: this.productConfig.storeId,
+      productName: this.productConfig.productName,
+      productKinds,
+    });
+    const isOwned = Boolean(state.license?.isActive || state.sku?.isInUserCollection || state.product?.isInUserCollection);
 
-    try {
-      const [appLicense, canAcquireResult] = await Promise.all([
-        this.context.getAppLicenseAsync(),
-        this.context.canAcquireStoreLicenseAsync(this.productConfig.storeId),
-      ]);
-
-      return buildSupportedStateFromMinimalStoreApis({
-        fetchedAt,
-        appLicense: appLicense as DynWinRtStoreAppLicense | null,
-        canAcquireResult: canAcquireResult as DynWinRtCanAcquireLicenseResult | null,
-        canLicenseStatusEnum: this.storeModule.StoreCanLicenseStatus,
-        productConfig: this.productConfig,
+    if (state.availability === 'supported') {
+      log.info('[MicrosoftStoreSubscriptionBroker] Store status query completed.', {
+        productKey: this.productConfig.key,
+        storeId: this.productConfig.storeId,
+        productKinds,
+        productFound: Boolean(state.product),
+        owned: isOwned,
+        skuStoreId: state.sku?.storeId ?? null,
+        skuCollectionEndDate: state.sku?.collectionEndDate ?? null,
+        resolvedAvailability: state.availability,
+        resolvedPurchaseEligibility: state.purchaseEligibility,
+        resolvedErrorCode: state.errorCode,
       });
-    } catch (error) {
-      return buildUnavailableState(fetchedAt, error);
+    } else {
+      log.warn('[MicrosoftStoreSubscriptionBroker] Store status query failed.', {
+        productKey: this.productConfig.key,
+        storeId: this.productConfig.storeId,
+        productKinds,
+        errorCode: state.errorCode,
+        errorMessage: state.errorMessage,
+      });
     }
+
+    return state;
   }
 
   async purchase(): Promise<RawStorePurchaseResult> {
-    const addonModulePath = resolveWindowsStorePurchaseAddonPath();
-    if (addonModulePath) {
-      const addonResult = await executeWindowsStorePurchaseAddon({
-        modulePath: addonModulePath,
-        storeId: this.productConfig.storeId,
-        ownerWindowHandle: this.windowHandle,
-      });
-
-      if (
-        addonResult.outcome !== 'not-supported'
-        && addonResult.errorCode !== 'addon-load-failed'
-        && addonResult.errorCode !== 'addon-execution-failed'
-      ) {
-        return addonResult;
-      }
-    }
-
-    try {
-      const result = await this.context.requestPurchaseAsync(this.productConfig.storeId);
-
-      return {
-        outcome: mapPurchaseOutcome(this.storeModule.StorePurchaseStatus, (result as { status?: unknown }).status),
-        errorCode: normalizeErrorCode((result as { extendedError?: unknown } | null)?.extendedError),
-        errorMessage: null,
-      };
-    } catch (error) {
-      return {
-        outcome: 'failed',
-        ...normalizeThrownError(error),
-      };
-    }
+    return executeWindowsStorePurchaseAddon({
+      modulePath: this.addonModulePath,
+      storeId: this.productConfig.storeId,
+      ownerWindowHandle: this.windowHandle,
+    });
   }
 
-  dispose(): void {
-    try {
-      (this.context as { close?: () => void }).close?.();
-    } catch {
-      // StoreContext does not always expose a close path in generated bindings.
-    }
-  }
+  dispose(): void {}
 }
 
 class UnavailableSubscriptionPlatformBroker implements StoreLicensePlatformBroker {
@@ -530,7 +464,7 @@ export class MicrosoftStoreSubscriptionBroker implements StoreLicensePlatformBro
 
   constructor(options: MicrosoftStoreSubscriptionBrokerOptions = {}) {
     this.windowHandle = readNativeWindowHandle(options.windowHandle ?? null);
-    this.adapterFactory = options.adapterFactory ?? createDynWinRtBroker;
+    this.adapterFactory = options.adapterFactory ?? createNativeAddonBroker;
     this.productConfig = options.productConfig ?? sponsorPlanProductConfig;
   }
 

@@ -47,6 +47,14 @@ export function registerSubscriptionHandlers(deps: {
     return state.subscriptionService.getSnapshot(options);
   });
 
+  ipcMain.handle(subscriptionChannels.verifyStartup, async () => {
+    if (!state.subscriptionService) {
+      throw new Error('Subscription handlers are not initialized');
+    }
+
+    return state.subscriptionService.verifyOnStartup();
+  });
+
   ipcMain.handle(subscriptionChannels.refresh, async () => {
     if (!state.subscriptionService) {
       throw new Error('Subscription handlers are not initialized');

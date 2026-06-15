@@ -360,14 +360,14 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store sponsor plan
   title: Hagicode Sponsor Plan
-  description: Support ongoing Hagicode updates and enable sponsor entitlements on this device.
-  loading: Reading the latest cached sponsor snapshot...
+  description: Review sponsor status, refresh the local snapshot, and confirm whether this device already has sponsor entitlements.
+  loading: Preparing sponsor status...
   errorTitle: Sponsor snapshot unavailable
   errorDescription: 'Desktop could not load the sponsor snapshot: {{error}}'
-  staleBadge: Cached snapshot
+  staleBadge: Last known state
   messages:
     refreshSuccess: Sponsor status refreshed.
-    refreshStale: Desktop kept the cached sponsor snapshot because the Microsoft Store refresh did not complete.
+    refreshStale: Desktop kept the last known sponsor state because the Microsoft Store refresh did not complete.
     refreshFailed: 'Failed to refresh the sponsor snapshot: {{error}}'
     refreshFailedFallback: Microsoft Store refresh failed.
     purchaseFailed: 'Purchase flow failed: {{error}}'
@@ -383,30 +383,30 @@ subscription:
     grace-period: Grace period
     pending: Pending
     unknown: Unknown
-    stale: Cached state
+    stale: Last known state
     unsupported: Store unavailable
   hero:
     inactive:
       title: Make Hagicode better
-      description: The sponsor plan directly supports ongoing Hagicode maintenance, updates, and follow-up tracking.
+      description: The sponsor plan supports ongoing Hagicode maintenance. This page keeps the current state, purchase entry point, and device outcome visible in one place.
       note: If you want to support this work, the sponsor plan helps keep iteration moving.
     active:
       title: Thank you for your support
-      description: Your support is already helping fund ongoing Hagicode maintenance, updates, and follow-up tracking.
+      description: Sponsor entitlements are already active on this device. Use this page to confirm status, reopen the Store flow, or refresh the snapshot.
       note: This support is already helping the next round of iteration continue.
   message:
     ongoingTitle: Ongoing evolution needs real investment
-    ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
+    ongoingDescription: The sponsor plan helps fund follow-up maintenance and updates, while keeping status, purchase result, and sync state visible on this device.
     perksTitle: Sponsors should receive thoughtful perks
     perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
     unlockNoticeTitle: No feature unlocks included
-    unlockNoticeDescription: The sponsor plan currently does not unlock any product features. If you need other feature access, you must purchase the corresponding license separately.
+    unlockNoticeDescription: The sponsor plan does not unlock other product features. Separate licensed capabilities still require their own purchase.
     inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
-    activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
+    activeThanks: Sponsor entitlements are already active on this device. If sponsor-facing benefits arrive later, they will build on this existing state.
   actions:
     panelEyebrow: Sponsor actions
-    buyTitle: Support ongoing creation
-    manageTitle: Review or manage support
+    buyTitle: Buy sponsor plan
+    manageTitle: Review current sponsor status
     refresh: Refresh status
     refreshing: Refreshing...
     buy: Buy sponsor plan
@@ -414,10 +414,11 @@ subscription:
     subscribeViaStore: Subscribe in Microsoft Store
     installStoreApp: Install Store edition
     processing: Processing...
-    buyHint: Use Microsoft Store to support ongoing Hagicode maintenance and updates.
-    manageHint: Open Microsoft Store again to review or manage the current plan.
+    buyHint: After purchase, this device syncs and shows the matching sponsor entitlements.
+    manageHint: Reopen Microsoft Store if you need to confirm account ownership or re-check the current plan.
+    activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
     unsupportedHint: Purchase and management work only in the Microsoft Store edition of Hagicode Desktop.
-    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Hagicode Desktop to complete subscription and sync entitlements.
+    installHint: Open the sponsor plan in Microsoft Store first, then install or launch the Store edition of Desktop to complete subscription and sync.
     secondaryLabel: Need to confirm first?
     secondaryHint: Refresh once before you decide to buy.
   summary:
@@ -430,9 +431,9 @@ subscription:
     inactiveDetail: Purchase enables them on this device.
     source: 'Source: {{value}}'
   sourceValue:
-    cache: Local cache
+    initial: Current session default state
     store: Microsoft Store
-    fallback: Fallback snapshot
+    fallback: Last known state
   mission:
     eyebrow: Why sponsorship matters
     title: Your purchase helps
@@ -507,8 +508,8 @@ subscription:
     source: Snapshot source
     empty: No diagnostics recorded.
   stale:
-    title: Desktop is showing the cached state
-    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent known sponsor snapshot instead of clearing it.
+    title: Desktop is showing the last known state
+    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent sponsor state confirmed in this session instead of clearing it.
   unsupported:
     title: Microsoft Store edition required
     description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
@@ -526,20 +527,20 @@ subscription:
 turboEngine:
   eyebrow: Microsoft Store perpetual license
   loadingTitle: Loading TurboEngine status
-  loading: Reading the latest cached TurboEngine snapshot...
+  loading: Preparing TurboEngine status...
   verifyingTitle: Startup verification in progress
-  verifyingDescription: Desktop is checking Microsoft Store live at startup so cached TurboEngine data does not remain the final truth.
+  verifyingDescription: Desktop verifies Microsoft Store live after the home shell loads so the current session default state does not remain the final TurboEngine result.
   verifyingBadge: Verifying
-  staleBadge: Cached snapshot
+  staleBadge: Last known state
   errorTitle: TurboEngine snapshot unavailable
   errorDescription: 'Desktop could not load the TurboEngine snapshot: {{error}}'
   hero:
     title: TurboEngine workspace
-    activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
-    inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
+    activeDescription: TurboEngine is already licensed on this device. Use this page to confirm store state, recent sync timestamps, and diagnostics.
+    inactiveDescription: TurboEngine uses a separate perpetual license. This page keeps the purchase, refresh, and diagnostic controls focused in one place.
   messages:
     refreshSuccess: TurboEngine status refreshed.
-    refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
+    refreshStale: Desktop kept the last known TurboEngine state because the Microsoft Store refresh did not complete.
     refreshFailed: 'Failed to refresh the TurboEngine snapshot: {{error}}'
     refreshFailedFallback: Microsoft Store refresh failed.
     purchaseFailed: 'Purchase flow failed: {{error}}'
@@ -555,7 +556,7 @@ turboEngine:
     grace-period: Grace period
     pending: Pending
     unknown: Unknown
-    stale: Cached state
+    stale: Last known state
     unsupported: Store unavailable
   summary:
     productName: TurboEngine perpetual license
@@ -572,23 +573,28 @@ turboEngine:
     refreshing: Refreshing...
     openStoreProduct: Open TurboEngine in Store
     installStoreApp: Install Store edition
-    manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
-    buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
-    handoffHint: In-app purchase and verification work only in the Windows Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
+    manageHint: Reopen Microsoft Store if you need to confirm ownership or re-check the current TurboEngine license on this device.
+    buyHint: Start the purchase flow for `9NSD809W18Z6`, then Desktop refreshes the license state in the same session.
+    activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
+    handoffHint: In-app purchase and verification only work in the Store edition, so this runtime falls back to direct Store handoff.
   runtime:
     sectionTitle: Runtime contract
-    supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
-    unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
+    supported: This runtime can query Microsoft Store directly and complete license verification or purchase in-app.
+    unsupported: This runtime cannot complete Store purchase APIs directly, so the page keeps only the Store handoff path.
     runtimeLabel: Runtime
     sourceLabel: Snapshot source
     storeEdition: Windows Store edition
     nonStoreEdition: Non-Store runtime
+  sourceValue:
+    initial: Current session default state
+    store: Microsoft Store
+    fallback: Last known state
   diagnostics:
     sectionTitle: Diagnostics
     empty: No diagnostics recorded.
   stale:
-    title: Desktop is showing the cached TurboEngine state
-    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent known TurboEngine snapshot instead of clearing it.
+    title: Desktop is showing the last known TurboEngine state
+    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent TurboEngine state confirmed in this session instead of clearing it.
   unsupported:
     title: Microsoft Store edition required
     description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.

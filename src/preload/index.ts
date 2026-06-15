@@ -413,6 +413,7 @@ const debugOptionsBridge: DebugOptionsBridge = {
 
 const subscriptionBridge: SubscriptionBridge = {
   getSnapshot: (options) => ipcRenderer.invoke(subscriptionChannels.getSnapshot, options),
+  verifyStartup: () => ipcRenderer.invoke(subscriptionChannels.verifyStartup),
   refresh: () => ipcRenderer.invoke(subscriptionChannels.refresh),
   purchase: () => ipcRenderer.invoke(subscriptionChannels.purchase),
   onDidChange: (callback) => {

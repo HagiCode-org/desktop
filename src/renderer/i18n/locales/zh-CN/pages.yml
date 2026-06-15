@@ -360,14 +360,14 @@ installProgressDialog:
 subscription:
   eyebrow: Microsoft Store 赞助计划
   title: Hagicode 赞助者计划
-  description: 支持 Hagicode 持续更新，并启用当前设备的赞助者权益。
-  loading: 正在读取最近一次缓存的赞助快照...
+  description: 查看赞助状态、刷新本地快照，并确认当前设备是否已启用赞助权益。
+  loading: 正在准备赞助状态...
   errorTitle: 无法读取赞助快照
   errorDescription: 'Desktop 无法加载赞助快照：{{error}}'
-  staleBadge: 已使用缓存快照
+  staleBadge: 已使用上次已知状态
   messages:
     refreshSuccess: 赞助状态已刷新。
-    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存赞助快照。
+    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用上次已知的赞助状态。
     refreshFailed: '刷新赞助快照失败：{{error}}'
     refreshFailedFallback: Microsoft Store 刷新失败。
     purchaseFailed: '购买流程失败：{{error}}'
@@ -383,30 +383,30 @@ subscription:
     grace-period: 宽限期
     pending: 待处理
     unknown: 未知
-    stale: 缓存状态
+    stale: 上次已知状态
     unsupported: 商店不可用
   hero:
     inactive:
       title: 让 Hagicode 变得更好
-      description: 赞助者计划会直接支持 Hagicode 的持续维护、更新与追踪。
+      description: 赞助计划用于支持 Hagicode 的持续维护。这个页面只展示当前状态、购买入口，以及这台设备上会发生什么。
       note: 如果你愿意支持，这份购买会帮助后续迭代继续发生。
     active:
       title: 感谢你的支持
-      description: 你的支持正在帮助 Hagicode 持续维护、更新与追踪。
+      description: 当前设备已启用赞助权益。你可以在这里确认状态、重新打开购买流程，或手动刷新快照。
       note: 这份支持已经在推动后续迭代继续进行。
   message:
     ongoingTitle: 持续演进需要投入
-    ongoingDescription: Hagicode 不是一次做完就结束的产品。为了保持可用，作者需要持续投入精力和 token 去更新、验证和追踪变化。
+    ongoingDescription: 赞助计划用于支持后续维护与更新；状态、购买结果和同步情况都会保留在当前设备上。
     perksTitle: 赞助者也会获得回馈
     perksDescription: 我们也会适时推出合适的配套权益，为赞助者提供更精美的主题和其他权益内容。
     unlockNoticeTitle: 当前不提供功能解锁
-    unlockNoticeDescription: 目前赞助者计划不提供任何功能解锁支持。如果你需要解锁其他功能，需要另外购买对应的许可。
+    unlockNoticeDescription: 赞助计划本身不解锁其他产品功能；其他独立能力仍需单独购买许可。
     inactivePrompt: 如果你认可这件事，可以通过赞助者计划支持它继续发展。
-    activeThanks: 感谢你的支持，我们也会继续认真打磨适合赞助者的后续权益。
+    activeThanks: 当前设备已启用赞助权益。后续如果有合适的赞助回馈，也会在这套状态基础上继续扩展。
   actions:
     panelEyebrow: 赞助操作
-    buyTitle: 支持持续创作
-    manageTitle: 查看或管理当前支持
+    buyTitle: 购买赞助计划
+    manageTitle: 查看当前赞助状态
     refresh: 刷新状态
     refreshing: 刷新中...
     buy: 购买赞助者计划
@@ -414,10 +414,11 @@ subscription:
     subscribeViaStore: 前往 Microsoft Store 订阅
     installStoreApp: 安装 Microsoft Store 版
     processing: 处理中...
-    buyHint: 通过 Microsoft Store 购买，支持 Hagicode 的持续维护与更新。
-    manageHint: 再次打开 Microsoft Store，查看或管理当前计划。
+    buyHint: 购买后，这台设备会同步并显示对应的赞助权益。
+    manageHint: 如果你要确认账户归属或重新检查状态，可以再次打开 Microsoft Store 购买流程。
+    activeHint: 当前设备已经启用了赞助权益。如需重新确认最新 Microsoft Store 状态，可以手动刷新一次。
     unsupportedHint: 购买和管理仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
-    installHint: 请先在 Microsoft Store 中打开赞助者计划，然后安装或启动 Microsoft Store 版 Hagicode Desktop，以完成订阅和权益同步。
+    installHint: 请先在 Microsoft Store 中打开赞助计划，再安装或启动 Store 版 Desktop 完成订阅与同步。
     secondaryLabel: 如需确认
     secondaryHint: 可以先刷新一次，再决定是否购买。
   summary:
@@ -430,9 +431,9 @@ subscription:
     inactiveDetail: 购买后会在当前设备上启用。
     source: '来源：{{value}}'
   sourceValue:
-    cache: 本地缓存
+    initial: 当前会话初始状态
     store: Microsoft Store
-    fallback: 回退快照
+    fallback: 上次已知状态
   mission:
     eyebrow: 为什么需要赞助
     title: 你的购买会帮助
@@ -507,8 +508,8 @@ subscription:
     source: 快照来源
     empty: 暂无诊断信息。
   stale:
-    title: Desktop 当前展示的是缓存状态
-    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了最近一次已知的赞助快照，而不是直接清空状态。
+    title: Desktop 当前展示的是上次已知状态
+    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了本次会话里最近一次成功确认的赞助状态，而不是直接清空状态。
   unsupported:
     title: 需要 Microsoft Store 版本
     description: 购买和管理操作仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。
@@ -526,20 +527,20 @@ subscription:
 turboEngine:
   eyebrow: Microsoft Store 永久许可证
   loadingTitle: 正在加载 TurboEngine 状态
-  loading: 正在读取最近一次缓存的 TurboEngine 快照...
+  loading: 正在准备 TurboEngine 状态...
   verifyingTitle: 启动校验进行中
-  verifyingDescription: Desktop 会在启动时直接向 Microsoft Store 做实时校验，避免把旧缓存当成 TurboEngine 的最终真值。
+  verifyingDescription: Desktop 会在首页载入后向 Microsoft Store 发起实时校验，避免把当前会话的初始状态当成 TurboEngine 的最终结果。
   verifyingBadge: 校验中
-  staleBadge: 已使用缓存快照
+  staleBadge: 已使用上次已知状态
   errorTitle: 无法读取 TurboEngine 快照
   errorDescription: 'Desktop 无法加载 TurboEngine 快照：{{error}}'
   hero:
     title: TurboEngine 工作区
-    activeDescription: 当前设备已经拥有 TurboEngine 许可证。你可以在这里确认 Microsoft Store 最新状态、查看诊断，并在需要时手动刷新。
-    inactiveDescription: TurboEngine 使用独立的 Microsoft Store 永久许可证。这个工作区会显示当前状态，并提供购买、刷新和诊断入口。
+    activeDescription: 当前设备已经拥有 TurboEngine 许可证。你可以在这里确认商店状态、最近同步时间，以及诊断信息。
+    inactiveDescription: TurboEngine 使用独立的永久许可证。这个页面只保留购买、刷新和诊断所需的信息。
   messages:
     refreshSuccess: TurboEngine 状态已刷新。
-    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用缓存的 TurboEngine 快照。
+    refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用上次已知的 TurboEngine 状态。
     refreshFailed: '刷新 TurboEngine 快照失败：{{error}}'
     refreshFailedFallback: Microsoft Store 刷新失败。
     purchaseFailed: '购买流程失败：{{error}}'
@@ -555,7 +556,7 @@ turboEngine:
     grace-period: 宽限期
     pending: 待处理
     unknown: 未知
-    stale: 缓存状态
+    stale: 上次已知状态
     unsupported: 商店不可用
   summary:
     productName: TurboEngine 永久许可证
@@ -572,23 +573,28 @@ turboEngine:
     refreshing: 刷新中...
     openStoreProduct: 在 Microsoft Store 中打开 TurboEngine
     installStoreApp: 安装 Microsoft Store 版
-    manageHint: 如果你需要确认当前账户的归属关系，或再次检查这台设备上的 TurboEngine 许可证，可以重新打开 Microsoft Store 购买流程。
-    buyHint: 启动 Microsoft Store 中的 `9NSD809W18Z6` 购买流程，完成后 Desktop 会在当前会话里刷新 TurboEngine 权限状态。
-    handoffHint: 应用内购买和实时校验仅在 Windows Store 版本里可用。当前运行时不支持时，Desktop 会改为提供 Microsoft Store 引导，而不是显示无效按钮。
+    manageHint: 如果你要确认账户归属或重新检查许可证，可以再次打开 Microsoft Store 购买流程。
+    buyHint: 启动 `9NSD809W18Z6` 的购买流程后，Desktop 会在当前会话里刷新许可证状态。
+    activeHint: 当前设备已经拥有 TurboEngine 许可证。如需重新确认最新 Microsoft Store 状态，可以手动刷新一次。
+    handoffHint: 应用内购买和实时校验仅在 Store 版里可用；当前运行时会改为提供商店跳转入口。
   runtime:
     sectionTitle: 运行时契约
-    supported: 当前运行时可以直接查询 Microsoft Store，并使用打包后的 TurboEngine 购买路径处理 Store ID `9NSD809W18Z6`。
-    unsupported: 当前运行时无法直接完成 Microsoft Store 购买 API，所以 Desktop 会退回到 Microsoft Store 引导路径，而不是暴露失效的应用内购买按钮。
+    supported: 当前运行时可以直接查询 Microsoft Store，并在应用内完成许可证校验与购买流程。
+    unsupported: 当前运行时不能直接完成商店购买 API，所以这里只保留商店跳转路径。
     runtimeLabel: 运行时
     sourceLabel: 快照来源
     storeEdition: Windows Store 版本
     nonStoreEdition: 非 Store 运行时
+  sourceValue:
+    initial: 当前会话初始状态
+    store: Microsoft Store
+    fallback: 上次已知状态
   diagnostics:
     sectionTitle: 诊断信息
     empty: 暂无诊断信息。
   stale:
-    title: Desktop 当前展示的是缓存的 TurboEngine 状态
-    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了最近一次已知的 TurboEngine 快照，而不是直接清空状态。
+    title: Desktop 当前展示的是上次已知的 TurboEngine 状态
+    description: Microsoft Store 没有完成最近一次刷新，所以 Desktop 保留了本次会话里最近一次成功确认的 TurboEngine 状态，而不是直接清空状态。
   unsupported:
     title: 需要 Microsoft Store 版本
     description: 购买和实时校验仅在 Microsoft Store 版本的 Hagicode Desktop 中可用。

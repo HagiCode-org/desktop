@@ -64,10 +64,13 @@ export type SubscriptionPurchaseOutcome = StoreLicensePurchaseOutcome;
 
 export interface SubscriptionPurchaseResult extends StoreLicensePurchaseResult<SubscriptionSnapshot> {}
 
-export interface SubscriptionBridge extends StoreLicenseBridge<SubscriptionSnapshot, SubscriptionPurchaseResult> {}
+export interface SubscriptionBridge extends StoreLicenseBridge<SubscriptionSnapshot, SubscriptionPurchaseResult> {
+  verifyStartup: () => Promise<SubscriptionSnapshot>;
+}
 
 export const subscriptionChannels = {
   getSnapshot: 'subscription:get-snapshot',
+  verifyStartup: 'subscription:verify-startup',
   refresh: 'subscription:refresh',
   purchase: 'subscription:purchase',
   changed: 'subscription:changed',

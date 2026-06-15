@@ -32,6 +32,7 @@ import {
 } from '../slices/webServiceSlice';
 import type { ProcessStatus } from '../slices/webServiceSlice';
 import type { InstallWebServicePackageOptions, InstallWebServicePackageResult } from '../../../types/version-install.js';
+import { waitForStartupStoreLicenseVerification } from '../startupStoreLicenseVerification.js';
 
 // Types for window electronAPI
 declare global {
@@ -115,6 +116,7 @@ export const startWebService = createAsyncThunk(
       dispatch(setStatus('starting'));
       dispatch(setError(null));
       dispatch(setStartupFailure(null));
+      await waitForStartupStoreLicenseVerification();
 
       const result: {
         success: boolean;
@@ -179,6 +181,7 @@ export const confirmStartWithWarning = createAsyncThunk(
       dispatch(setError(null));
       dispatch(setStartupFailure(null));
       dispatch(hideStartConfirmDialog());
+      await waitForStartupStoreLicenseVerification();
 
       // Call startWebService with force=true
       const result: {

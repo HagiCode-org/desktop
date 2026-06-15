@@ -11,7 +11,7 @@ const turboEngineTypesPath = path.resolve(process.cwd(), 'src/types/turboengine-
 const viewSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/viewSlice.ts');
 
 describe('TurboEngine sidebar and shell wiring', () => {
-  it('keeps TurboEngine visible beside the sponsor workspace and wires startup verification into the shell', async () => {
+  it('keeps TurboEngine visible beside the sponsor workspace and wires cached snapshot loading into the shell', async () => {
     const [sidebarSource, appSource, storeSource, turboPageSource, turboTypesSource, viewSliceSource] = await Promise.all([
       fs.readFile(sidebarPath, 'utf8'),
       fs.readFile(appPath, 'utf8'),
@@ -28,7 +28,6 @@ describe('TurboEngine sidebar and shell wiring', () => {
     assert.match(appSource, /import TurboEnginePage from '\.\/components\/turboengine\/TurboEnginePage';/);
     assert.match(appSource, /currentView === 'turboengine' && <TurboEnginePage \/>/);
     assert.match(turboPageSource, /const turboEngineBridgeAvailable = typeof window\.electronAPI\.turboEngineLicense\?\.getSnapshot === 'function';/);
-    assert.match(turboPageSource, /dispatch\(verifyTurboEngineLicenseStartup\(\)\)/);
     assert.match(turboPageSource, /openStorePage\(HAGICODE_TURBOENGINE_STORE_WEB_URL\)/);
     assert.match(turboPageSource, /openStorePage\(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL\)/);
     assert.match(turboTypesSource, /export const HAGICODE_TURBOENGINE_STORE_ID = '9NSD809W18Z6';/);

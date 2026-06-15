@@ -11,15 +11,18 @@ import {
 import { EntitlementEvaluator } from './entitlement-evaluator.js';
 import type { RawStorePurchaseResult, SubscriptionPlatformBroker } from './subscription-broker.js';
 import { buildPurchaseMessage, createStaleSnapshot, createUnavailableSnapshot, normalizeSubscriptionSnapshot } from './normalize.js';
-import { StoreLicenseService, type StoreLicenseRefreshReason } from './store-license-service.js';
-import { SubscriptionSnapshotStore } from './subscription-store.js';
+import {
+  StoreLicenseService,
+  type StoreLicenseRefreshReason,
+  type StoreLicenseRetryPolicy,
+} from './store-license-service.js';
 
 export type SubscriptionRefreshReason = StoreLicenseRefreshReason;
 
 interface SubscriptionServiceOptions {
   broker: SubscriptionPlatformBroker;
-  snapshotStore: SubscriptionSnapshotStore;
   entitlementEvaluator: EntitlementEvaluator;
+  retryPolicy?: Partial<StoreLicenseRetryPolicy>;
 }
 
 export class SubscriptionService {
@@ -29,18 +32,18 @@ export class SubscriptionService {
     this.service = new StoreLicenseService<SubscriptionSnapshot, SubscriptionEntitlementName>({
       productConfig: sponsorPlanProductConfig,
       broker: options.broker,
-      snapshotStore: options.snapshotStore,
       entitlementEvaluator: options.entitlementEvaluator,
       createDefaultSnapshot: createDefaultSubscriptionSnapshot,
       normalizeSnapshot: normalizeSubscriptionSnapshot,
       createStaleSnapshot,
       createUnavailableSnapshot,
       buildPurchaseMessage,
+      retryPolicy: options.retryPolicy,
     });
   }
 
-  getCachedSnapshot(): SubscriptionSnapshot {
-    return this.service.getCachedSnapshot();
+  getCurrentSnapshot(): SubscriptionSnapshot {
+    return this.service.getCurrentSnapshot();
   }
 
   async getSnapshot(options: SubscriptionGetSnapshotOptions = {}): Promise<SubscriptionSnapshot> {
@@ -53,6 +56,10 @@ export class SubscriptionService {
 
   async refreshOnStartup(): Promise<SubscriptionSnapshot> {
     return this.service.refreshOnStartup();
+  }
+
+  async verifyOnStartup(): Promise<SubscriptionSnapshot> {
+    return this.service.verifyOnStartup();
   }
 
   async purchase(): Promise<SubscriptionPurchaseResult> {

@@ -13,12 +13,13 @@ import settingsReducer, {
 } from './slices/settingsSlice';
 import subscriptionReducer, {
   loadSubscriptionSnapshot,
+  verifySubscriptionStartup,
   setSubscriptionSnapshotFromEvent,
 } from './slices/subscriptionSlice';
 import turboEngineLicenseReducer, {
   loadTurboEngineLicenseSnapshot,
-  setTurboEngineLicenseSnapshotFromEvent,
   verifyTurboEngineLicenseStartup,
+  setTurboEngineLicenseSnapshotFromEvent,
 } from './slices/turboEngineLicenseSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
@@ -38,6 +39,7 @@ import { initializeDependency } from './thunks/dependencyThunks';
 import { initializeRSSFeed } from './thunks/rssFeedThunks';
 import { checkOnboardingTrigger } from './thunks/onboardingThunks';
 import type { HagihubApi } from '../../shared/api.js';
+import { setStartupStoreLicenseVerificationPromise } from './startupStoreLicenseVerification';
 
 const subscriptionFeatureEnabled = typeof window !== 'undefined'
   && typeof window.electronAPI?.subscription?.getSnapshot === 'function';
@@ -228,6 +230,16 @@ export function startBackgroundStartupInitialization(): void {
   backgroundInitializationStarted = true;
   registerRealtimeListeners();
 
+  const startupStoreLicenseChecks = [
+    ...(subscriptionFeatureEnabled ? [store.dispatch(verifySubscriptionStartup())] : []),
+    ...(turboEngineLicenseFeatureEnabled ? [store.dispatch(verifyTurboEngineLicenseStartup())] : []),
+  ];
+  setStartupStoreLicenseVerificationPromise(
+    startupStoreLicenseChecks.length > 0
+      ? Promise.allSettled(startupStoreLicenseChecks)
+      : null,
+  );
+
   void Promise.allSettled([
     store.dispatch(checkOnboardingTrigger()),
     store.dispatch(initializePackageSource()),
@@ -238,8 +250,9 @@ export function startBackgroundStartupInitialization(): void {
     store.dispatch(initializeWebService()),
     ...(subscriptionFeatureEnabled ? [store.dispatch(loadSubscriptionSnapshot())] : []),
     ...(turboEngineLicenseFeatureEnabled
-      ? [store.dispatch(loadTurboEngineLicenseSnapshot()), store.dispatch(verifyTurboEngineLicenseStartup())]
+      ? [store.dispatch(loadTurboEngineLicenseSnapshot())]
       : []),
+    ...startupStoreLicenseChecks,
   ]);
 }
 

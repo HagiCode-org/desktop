@@ -7,21 +7,26 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarClock,
-  Cpu,
   Loader2,
   RefreshCcw,
   ShieldCheck,
   Store,
 } from 'lucide-react';
 import {
+  createDefaultTurboEngineLicenseSnapshot,
   HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL,
   HAGICODE_TURBOENGINE_STORE_ID,
-  HAGICODE_TURBOENGINE_STORE_WEB_URL,
+  turboEngineEntitlementNames,
   type TurboEngineLicenseSnapshot,
 } from '../../../types/turboengine-license.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  CommercePreviewDebugDialog,
+  getCommercePreviewScenarioLabel,
+  useCommercePreviewDebug,
+} from '@/components/commerce/CommercePreviewDebug';
 import type { AppDispatch, RootState } from '@/store';
 import {
   clearTurboEngineLicensePurchaseResult,
@@ -81,8 +86,9 @@ function formatTimestamp(value: string | null): string {
 }
 
 export default function TurboEnginePage() {
-  const { t } = useTranslation('pages');
+  const { t } = useTranslation(['pages', 'common']);
   const dispatch = useDispatch<AppDispatch>();
+  const previewDebug = useCommercePreviewDebug();
   const turboEngineBridgeAvailable = typeof window.electronAPI.turboEngineLicense?.getSnapshot === 'function';
   const {
     snapshot,
@@ -165,231 +171,269 @@ export default function TurboEnginePage() {
     toast.error(toastMessage);
   };
 
-  const statusKey = turboEngineBridgeAvailable ? getStatusKey(snapshot) : 'unsupported';
-  const bridgeAndStoreAvailable = turboEngineBridgeAvailable && snapshot?.availability === 'supported';
-  const isActive = snapshot?.status === 'active';
+  const isPreviewing = previewDebug.isPreviewing;
+  const effectiveBridgeAvailable = previewDebug.scenario === 'live'
+    ? turboEngineBridgeAvailable
+    : previewDebug.scenario !== 'non-store';
+  const effectiveSnapshot = previewDebug.scenario === 'live'
+    ? snapshot
+    : (previewDebug.scenario === 'non-store'
+      ? null
+      : createDefaultTurboEngineLicenseSnapshot({
+        entitlements: previewDebug.scenario === 'active' ? [...turboEngineEntitlementNames] : [],
+        source: 'store',
+        status: previewDebug.scenario === 'active' ? 'active' : 'inactive',
+      }));
+  const effectiveLastPurchase = previewDebug.scenario === 'live' ? lastPurchase : null;
+  const effectiveError = previewDebug.scenario === 'live' ? error : null;
+  const effectiveIsLoading = previewDebug.scenario === 'live' ? isLoading : false;
+  const effectiveIsRefreshing = previewDebug.scenario === 'live' ? isRefreshing : false;
+  const effectiveIsPurchasing = previewDebug.scenario === 'live' ? isPurchasing : false;
+  const effectiveIsStartupVerifying = previewDebug.scenario === 'live' ? isStartupVerifying : false;
+
+  const statusKey = effectiveBridgeAvailable ? getStatusKey(effectiveSnapshot) : 'unsupported';
+  const sourceKey = effectiveSnapshot?.source ?? 'initial';
+  const bridgeAndStoreAvailable = effectiveBridgeAvailable && effectiveSnapshot?.availability === 'supported';
+  const isActive = effectiveSnapshot?.status === 'active';
+  const canRefresh = effectiveBridgeAvailable && !effectiveIsRefreshing && !effectiveIsStartupVerifying && !effectiveIsLoading;
+  const shouldShowPurchaseAction = bridgeAndStoreAvailable && !isActive;
+  const heroDescription = isActive
+    ? t('turboEngine.hero.activeDescription')
+    : t('turboEngine.hero.inactiveDescription');
+  const actionHint = bridgeAndStoreAvailable
+    ? (isActive ? t('turboEngine.actions.activeHint') : t('turboEngine.actions.buyHint'))
+    : t('turboEngine.actions.handoffHint');
 
   return (
-    <div className="mx-auto max-w-5xl pb-10">
-      <section className="relative overflow-hidden rounded-[36px] border border-border/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] p-6 shadow-[0_20px_56px_rgba(20,28,40,0.08)] dark:bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_34%),linear-gradient(180deg,rgba(15,21,37,0.98),rgba(22,30,49,0.96))] sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Badge variant="outline" className="rounded-full border-border/80 bg-background/80 px-3 py-1 text-[10px] uppercase tracking-[0.24em]">
-                {t('turboEngine.eyebrow')}
-              </Badge>
-              <h1 className="max-w-[12ch] text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                {t('turboEngine.hero.title')}
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                {isActive ? t('turboEngine.hero.activeDescription') : t('turboEngine.hero.inactiveDescription')}
-              </p>
-            </div>
+    <div className="mx-auto max-w-5xl space-y-8 pb-12">
+      <header className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <div className="flex flex-wrap justify-center gap-2">
+          <Badge variant="outline" className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em]">
+            {t('turboEngine.summary.productName')}
+          </Badge>
+          <Badge variant={getStatusBadgeVariant(effectiveSnapshot)} className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.14em]">
+            {t(`turboEngine.status.${statusKey}`)}
+          </Badge>
+          {effectiveSnapshot?.isStale ? (
+            <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+              {t('turboEngine.staleBadge')}
+            </Badge>
+          ) : null}
+          {effectiveIsStartupVerifying ? (
+            <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+              {t('turboEngine.verifyingBadge')}
+            </Badge>
+          ) : null}
+          {isPreviewing ? (
+            <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+              {t('common:system.commercePanel.debug.previewBadge', {
+                mode: getCommercePreviewScenarioLabel(t, previewDebug.scenario),
+              })}
+            </Badge>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="mt-5 max-w-3xl cursor-default bg-transparent p-0 text-3xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] sm:text-4xl lg:text-5xl"
+          onClick={previewDebug.handleDebugTitleClick}
+        >
+          {t('turboEngine.hero.title')}
+        </button>
+        <p className="mt-4 max-w-[70ch] text-sm leading-7 text-muted-foreground sm:text-base">
+          {heroDescription}
+        </p>
+      </header>
 
-            <div className="flex flex-wrap gap-2">
-              <Badge variant={getStatusBadgeVariant(snapshot)} className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em]">
-                {t(`turboEngine.status.${statusKey}`)}
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                {t('turboEngine.summary.productName')}
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                {t('turboEngine.summary.storeId', { storeId: HAGICODE_TURBOENGINE_STORE_ID })}
-              </Badge>
-              {snapshot?.isStale ? (
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                  {t('turboEngine.staleBadge')}
-                </Badge>
-              ) : null}
-              {isStartupVerifying ? (
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                  {t('turboEngine.verifyingBadge')}
-                </Badge>
-              ) : null}
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t('turboEngine.summary.statusLabel')}
-                </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  {t(`turboEngine.status.${statusKey}`)}
-                </p>
-              </div>
-              <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t('turboEngine.summary.lastCheckedLabel')}
-                </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  {formatTimestamp(snapshot?.lastCheckedAt ?? null)}
-                </p>
-              </div>
-              <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t('turboEngine.summary.lastSuccessLabel')}
-                </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  {formatTimestamp(snapshot?.lastSuccessfulSyncAt ?? null)}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-border/70 bg-background/70 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {t('turboEngine.actions.sectionTitle')}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-foreground/85">
-                    {bridgeAndStoreAvailable
-                      ? (isActive ? t('turboEngine.actions.manageHint') : t('turboEngine.actions.buyHint'))
-                      : t('turboEngine.actions.handoffHint')}
-                  </p>
-                </div>
-                <Cpu className="h-5 w-5 text-amber-500" />
-              </div>
-
-              {bridgeAndStoreAvailable ? (
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <Button className="h-11 min-w-[220px] justify-between" onClick={() => void handlePurchase()} disabled={isPurchasing}>
-                    <span className="inline-flex items-center gap-2">
-                      {isPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                      {isPurchasing
-                        ? t('turboEngine.actions.processing')
-                        : (isActive ? t('turboEngine.actions.manage') : t('turboEngine.actions.buy'))}
-                    </span>
-                    {!isPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
-                  </Button>
-                  <Button variant="outline" className="h-11 min-w-[220px] justify-between" onClick={() => void handleRefresh()} disabled={isRefreshing || isStartupVerifying || isLoading}>
-                    <span className="inline-flex items-center gap-2">
-                      {isRefreshing || isStartupVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                      {isRefreshing || isStartupVerifying ? t('turboEngine.actions.refreshing') : t('turboEngine.actions.refresh')}
-                    </span>
-                    {!(isRefreshing || isStartupVerifying) ? <ArrowRight className="h-4 w-4" /> : null}
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <Button className="h-11 min-w-[220px] justify-between" onClick={() => void openStorePage(HAGICODE_TURBOENGINE_STORE_WEB_URL)}>
-                    <span className="inline-flex items-center gap-2">
-                      <Store className="h-4 w-4" />
-                      {t('turboEngine.actions.openStoreProduct')}
-                    </span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="h-11 min-w-[220px] justify-between" onClick={() => void openStorePage(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL)}>
-                    <span className="inline-flex items-center gap-2">
-                      <BadgeCheck className="h-4 w-4" />
-                      {t('turboEngine.actions.installStoreApp')}
-                    </span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+      <section className="commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10">
+        <div className="relative z-10">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.2em]">
+              {t('turboEngine.runtime.sectionTitle')}
+            </p>
+            <h2 className="commerce-premium-heading mt-4 text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
+              {t('turboEngine.summary.productName')}
+            </h2>
+            <p className="commerce-premium-copy mx-auto mt-4 max-w-[64ch] text-sm leading-7 sm:text-base">
+              {actionHint}
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-3xl border border-border/70 bg-background/80 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {t('turboEngine.runtime.sectionTitle')}
-              </p>
-              <p className="mt-3 text-sm leading-6 text-foreground/85">
-                {bridgeAndStoreAvailable
-                  ? t('turboEngine.runtime.supported')
-                  : t('turboEngine.runtime.unsupported')}
-              </p>
-              <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-center justify-between gap-4">
-                  <span>{t('turboEngine.runtime.runtimeLabel')}</span>
-                  <span className="font-medium text-foreground">{bridgeAndStoreAvailable ? t('turboEngine.runtime.storeEdition') : t('turboEngine.runtime.nonStoreEdition')}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>{t('turboEngine.runtime.sourceLabel')}</span>
-                  <span className="font-medium text-foreground">{snapshot?.source ?? 'cache'}</span>
-                </div>
+          <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+            {effectiveIsLoading && !effectiveSnapshot ? (
+              <div className="commerce-premium-panel flex flex-col items-center gap-3 rounded-3xl px-6 py-10 lg:col-span-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="commerce-premium-copy text-sm leading-6">{t('turboEngine.loading')}</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="commerce-premium-panel rounded-3xl p-5">
+                    <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
+                      {t('turboEngine.summary.statusLabel')}
+                    </p>
+                    <p className="commerce-premium-heading mt-3 text-lg font-medium">{t(`turboEngine.status.${statusKey}`)}</p>
+                    <p className="commerce-premium-copy mt-3 text-sm leading-6">{heroDescription}</p>
+                  </div>
 
-            <div className="rounded-3xl border border-border/70 bg-background/80 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {t('turboEngine.diagnostics.sectionTitle')}
-              </p>
-              {snapshot?.diagnostics.length ? (
-                <div className="mt-3 space-y-3">
-                  {snapshot.diagnostics.map((diagnostic) => (
-                    <div key={`${diagnostic.code}-${diagnostic.recordedAt}`} className="rounded-2xl border border-border/70 bg-background/80 p-3">
-                      <p className="text-sm font-medium text-foreground">{diagnostic.code}</p>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{diagnostic.message}</p>
-                      {diagnostic.detail ? (
-                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{diagnostic.detail}</p>
-                      ) : null}
-                      <p className="mt-2 text-xs text-muted-foreground">{formatTimestamp(diagnostic.recordedAt)}</p>
+                  <div className="commerce-premium-panel rounded-3xl p-5">
+                    <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
+                      {t('turboEngine.runtime.sectionTitle')}
+                    </p>
+                    <p className="commerce-premium-copy mt-3 text-sm leading-6">
+                      {bridgeAndStoreAvailable
+                        ? t('turboEngine.runtime.supported')
+                        : t('turboEngine.runtime.unsupported')}
+                    </p>
+                    <div className="commerce-premium-copy mt-4 space-y-1 text-sm leading-6">
+                      <p>
+                        <span>{t('turboEngine.runtime.runtimeLabel')}</span>
+                        {' '}
+                        <span className="commerce-premium-heading font-medium">
+                          {bridgeAndStoreAvailable ? t('turboEngine.runtime.storeEdition') : t('turboEngine.runtime.nonStoreEdition')}
+                        </span>
+                      </p>
+                      <p>
+                        <span>{t('turboEngine.runtime.sourceLabel')}</span>
+                        {' '}
+                        <span className="commerce-premium-heading font-medium">
+                          {t(`turboEngine.sourceValue.${sourceKey}`, { defaultValue: sourceKey })}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="commerce-premium-heading font-medium">
+                          {t('turboEngine.summary.storeId', { storeId: HAGICODE_TURBOENGINE_STORE_ID })}
+                        </span>
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{t('turboEngine.diagnostics.empty')}</p>
-              )}
-            </div>
+
+                <aside className="commerce-premium-panel rounded-3xl p-5 sm:p-6">
+                  <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.16em]">
+                    {t('turboEngine.actions.sectionTitle')}
+                  </p>
+                  <p className="commerce-premium-copy mt-3 text-sm leading-7">{actionHint}</p>
+
+                  <div className="mt-6 flex flex-col gap-3">
+                    {shouldShowPurchaseAction ? (
+                      <Button className="commerce-premium-button justify-between" onClick={() => void handlePurchase()} disabled={effectiveIsPurchasing || isPreviewing}>
+                        <span className="inline-flex items-center gap-2">
+                          {effectiveIsPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                          {effectiveIsPurchasing
+                            ? t('turboEngine.actions.processing')
+                            : t('turboEngine.actions.buy')}
+                        </span>
+                        {!effectiveIsPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
+                      </Button>
+                    ) : null}
+
+                    {!bridgeAndStoreAvailable ? (
+                      <Button className="commerce-premium-button justify-between" onClick={() => void openStorePage(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL)} disabled={isPreviewing}>
+                        <span className="inline-flex items-center gap-2">
+                          <BadgeCheck className="h-4 w-4" />
+                          {t('turboEngine.actions.installStoreApp')}
+                        </span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+
+                    {effectiveBridgeAvailable ? (
+                      <Button variant="outline" className="commerce-premium-button-secondary justify-between" onClick={() => void handleRefresh()} disabled={!canRefresh || isPreviewing}>
+                        <span className="inline-flex items-center gap-2">
+                          {canRefresh ? <RefreshCcw className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+                          {canRefresh ? t('turboEngine.actions.refresh') : t('turboEngine.actions.refreshing')}
+                        </span>
+                        {canRefresh ? <ArrowRight className="h-4 w-4" /> : null}
+                      </Button>
+                    ) : null}
+                  </div>
+                </aside>
+              </>
+            )}
           </div>
         </div>
       </section>
 
-      <div className="mt-4 space-y-3">
-        {!snapshot && isLoading ? (
-          <Alert>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <AlertTitle>{t('turboEngine.loadingTitle')}</AlertTitle>
-            <AlertDescription>{t('turboEngine.loading')}</AlertDescription>
-          </Alert>
-        ) : null}
+      {effectiveSnapshot?.diagnostics.length ? (
+        <section className="commerce-premium-shell rounded-3xl px-5 py-7 sm:px-8">
+          <div className="relative z-10">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="commerce-premium-heading text-2xl font-semibold">{t('turboEngine.diagnostics.sectionTitle')}</h2>
+              <p className="commerce-premium-copy mt-3 text-sm leading-6">
+                {t('turboEngine.runtime.sourceLabel')} {t(`turboEngine.sourceValue.${sourceKey}`, { defaultValue: sourceKey })}
+              </p>
+            </div>
 
-        {isStartupVerifying ? (
-          <Alert>
+            <div className="mt-6 space-y-3">
+              {effectiveSnapshot.diagnostics.map((diagnostic) => (
+                <div key={`${diagnostic.code}-${diagnostic.recordedAt}`} className="commerce-premium-panel rounded-3xl p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <p className="commerce-premium-heading text-sm font-medium">{diagnostic.code}</p>
+                    <p className="commerce-premium-copy text-xs">{formatTimestamp(diagnostic.recordedAt)}</p>
+                  </div>
+                  <p className="commerce-premium-copy mt-3 text-sm leading-6">{diagnostic.message}</p>
+                  {diagnostic.detail ? (
+                    <p className="commerce-premium-copy mt-2 text-xs leading-5">{diagnostic.detail}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <div className="mx-auto max-w-3xl space-y-3">
+        {effectiveIsStartupVerifying ? (
+          <Alert className="commerce-premium-alert">
             <CalendarClock className="h-4 w-4" />
             <AlertTitle>{t('turboEngine.verifyingTitle')}</AlertTitle>
             <AlertDescription>{t('turboEngine.verifyingDescription')}</AlertDescription>
           </Alert>
         ) : null}
 
-        {!snapshot && error ? (
+        {!effectiveSnapshot && effectiveError ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('turboEngine.errorTitle')}</AlertTitle>
-            <AlertDescription>{t('turboEngine.errorDescription', { error })}</AlertDescription>
+            <AlertDescription>{t('turboEngine.errorDescription', { error: effectiveError })}</AlertDescription>
           </Alert>
         ) : null}
 
         {!bridgeAndStoreAvailable ? (
-          <Alert>
+          <Alert className="commerce-premium-alert">
             <Store className="h-4 w-4" />
             <AlertTitle>{t('turboEngine.unsupported.title')}</AlertTitle>
             <AlertDescription>
-              {turboEngineBridgeAvailable
+              {effectiveBridgeAvailable
                 ? t('turboEngine.unsupported.description')
                 : t('turboEngine.unsupported.nonStoreDescription')}
             </AlertDescription>
           </Alert>
         ) : null}
 
-        {snapshot?.isStale ? (
-          <Alert>
+        {effectiveSnapshot?.isStale ? (
+          <Alert className="commerce-premium-alert">
             <CalendarClock className="h-4 w-4" />
             <AlertTitle>{t('turboEngine.stale.title')}</AlertTitle>
             <AlertDescription>{t('turboEngine.stale.description')}</AlertDescription>
           </Alert>
         ) : null}
 
-        {lastPurchase ? (
-          <Alert>
+        {effectiveLastPurchase ? (
+          <Alert className="commerce-premium-alert">
             <BadgeCheck className="h-4 w-4" />
             <AlertTitle>{t('turboEngine.purchaseOutcome.title')}</AlertTitle>
-            <AlertDescription>{t(`turboEngine.purchaseOutcome.${lastPurchase.outcome}`)}</AlertDescription>
+            <AlertDescription>{t(`turboEngine.purchaseOutcome.${effectiveLastPurchase.outcome}`)}</AlertDescription>
           </Alert>
         ) : null}
       </div>
+
+      <CommercePreviewDebugDialog
+        open={previewDebug.dialogOpen}
+        onOpenChange={previewDebug.setDialogOpen}
+        scenario={previewDebug.scenario}
+        onScenarioChange={previewDebug.setScenario}
+      />
     </div>
   );
 }

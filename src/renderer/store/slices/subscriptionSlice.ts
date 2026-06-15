@@ -18,6 +18,7 @@ export interface SubscriptionState {
   snapshot: SubscriptionSnapshot | null;
   lastPurchase: SubscriptionPurchaseResult | null;
   isLoading: boolean;
+  isStartupVerifying: boolean;
   isRefreshing: boolean;
   isPurchasing: boolean;
   error: string | null;
@@ -36,7 +37,18 @@ export const loadSubscriptionSnapshot = createAsyncThunk(
   'subscription/loadSnapshot',
   async (_, { rejectWithValue }) => {
     try {
-      return await getSubscriptionBridge().getSnapshot({ refreshIfStale: true });
+      return await getSubscriptionBridge().getSnapshot();
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : String(error));
+    }
+  },
+);
+
+export const verifySubscriptionStartup = createAsyncThunk(
+  'subscription/verifyStartup',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getSubscriptionBridge().verifyStartup();
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
@@ -69,6 +81,7 @@ const initialState: SubscriptionState = {
   snapshot: null,
   lastPurchase: null,
   isLoading: false,
+  isStartupVerifying: false,
   isRefreshing: false,
   isPurchasing: false,
   error: null,
@@ -99,6 +112,18 @@ const subscriptionSlice = createSlice({
       .addCase(loadSubscriptionSnapshot.rejected, (state, action) => {
         state.isLoading = false;
         state.error = typeof action.payload === 'string' ? action.payload : 'load-failed';
+      })
+      .addCase(verifySubscriptionStartup.pending, (state) => {
+        state.isStartupVerifying = true;
+        state.error = null;
+      })
+      .addCase(verifySubscriptionStartup.fulfilled, (state, action) => {
+        state.isStartupVerifying = false;
+        state.snapshot = action.payload;
+      })
+      .addCase(verifySubscriptionStartup.rejected, (state, action) => {
+        state.isStartupVerifying = false;
+        state.error = typeof action.payload === 'string' ? action.payload : 'verify-startup-failed';
       })
       .addCase(refreshSubscriptionSnapshot.pending, (state) => {
         state.isRefreshing = true;

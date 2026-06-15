@@ -456,6 +456,26 @@ system:
   dashboard:
     title: Desktop Control Center
     description: Keep service health, lifecycle actions, active version, log access, and recommended updates in one focused workspace.
+  commercePanel:
+    title: Store Licenses and Sponsor Access
+    storeDescription: Review TurboEngine and sponsor-plan status here, then open the detailed workspace only when you need to buy, manage, or refresh.
+    nonStoreDescription: This runtime is not the Microsoft Store edition. Use these links to open the product pages and switch over to the Store build when needed.
+    actions:
+      viewDetails: View Details
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Log Quick Access
     description: Open the Desktop and Web App log folders directly to shorten diagnostics time.
@@ -481,6 +501,10 @@ system:
     title: No Versions Installed Yet
     description: The easiest way to get started with Hagicode Desktop is through our guided setup wizard. Complete installation and configuration in just a few steps.
     startWizard: Launch Wizard
+  noActiveVersion:
+    title: A runtime is installed, but no active version is selected
+    description: A local runtime was found, but the active-version pointer is missing or invalid. Open version management and select a usable version first.
+    manageVersions: Open Version Management
   activeVersion:
     actions:
       manage: Manage Versions

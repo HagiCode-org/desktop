@@ -456,6 +456,26 @@ system:
   dashboard:
     title: 控制台总览
     description: 在一个页面内聚焦服务状态、启停维护、活动版本、日志入口以及推荐消息。
+  commercePanel:
+    title: 商店许可与赞助
+    storeDescription: 在这里快速查看 TurboEngine 与赞助计划的当前状态；需要时再进入详情页处理购买、管理或刷新。
+    nonStoreDescription: 当前不是 Microsoft Store 版。这里保留产品入口和安装引导，方便你完成购买跳转与 Store 版切换。
+    actions:
+      viewDetails: 查看详情
+    debug:
+      title: 商业区预览调试
+      description: 这里的切换只影响当前窗口里的页面呈现，不会修改真实的 Microsoft Store 许可状态，也不会触发实际购买。
+      previewBadge: '预览：{{mode}}'
+      modes:
+        live: 跟随真实状态
+        nonStore: 非 Microsoft Store 运行时
+        inactive: Store 版，未购买
+        active: Store 版，已激活
+      descriptions:
+        live: 按当前运行时和真实快照渲染页面。
+        nonStore: 模拟非 Microsoft Store 运行时，只展示安装 Store 版的引导。
+        inactive: 模拟 Store 版但尚未购买的状态，方便预览购买前页面。
+        active: 模拟 Store 版且已激活的状态，方便预览购买后页面。
   logQuickAccess:
     title: 日志快捷访问
     description: 直接打开 Desktop 与 Web App 的日志目录，减少排障时的路径查找成本。
@@ -481,6 +501,10 @@ system:
     title: 未安装任何版本
     description: 开始使用 Hagicode Desktop 的最简单方法是通过我们的引导向导。只需几步即可完成安装和配置。
     startWizard: 启动向导
+  noActiveVersion:
+    title: 已安装版本，但当前没有活动版本
+    description: 检测到本地已经存在运行时，但当前活动版本指针无效或已丢失。请先进入版本管理页，重新选择一个可用版本。
+    manageVersions: 打开版本管理
   activeVersion:
     actions:
       manage: 管理版本

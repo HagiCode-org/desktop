@@ -9,17 +9,57 @@ export interface WindowsStorePurchaseAddonResult {
   errorMessage: string | null;
 }
 
+export interface WindowsStoreLicenseQueryAddonResult {
+  fetchedAt: string;
+  availability: 'supported' | 'store-unavailable' | 'error';
+  appLicenseActive: boolean;
+  product: {
+    storeId: string;
+    title: string | null;
+    isInUserCollection: boolean;
+  } | null;
+  sku: {
+    storeId: string | null;
+    title: string | null;
+    isSubscription: boolean;
+    isInUserCollection: boolean;
+    collectionEndDate: string | null;
+  } | null;
+  license: {
+    storeId: string | null;
+    isActive: boolean;
+    expirationDate: string | null;
+  } | null;
+  purchaseEligibility:
+    | 'licensable'
+    | 'not-licensable'
+    | 'license-action-not-applicable'
+    | 'network-error'
+    | 'server-error'
+    | 'unknown';
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
 interface WindowsStorePurchaseAddonOptions {
   modulePath: string;
   storeId?: string;
   ownerWindowHandle?: bigint | null;
 }
 
-interface NativePurchaseAddon {
-  requestPurchase(storeId: string, ownerWindowHandle?: string | null): Promise<Record<string, unknown>>;
+interface WindowsStoreStatusAddonOptions {
+  modulePath: string;
+  storeId: string;
+  productName: string;
+  productKinds: string[];
 }
 
-type LoadPurchaseAddon = (modulePath: string) => NativePurchaseAddon;
+interface NativeWindowsStoreAddon {
+  requestPurchase(storeId: string, ownerWindowHandle?: string | null): Promise<Record<string, unknown>>;
+  queryStoreStatus(storeId: string, productName: string, productKinds: string[]): Promise<Record<string, unknown>>;
+}
+
+type LoadPurchaseAddon = (modulePath: string) => NativeWindowsStoreAddon;
 
 const require = createRequire(import.meta.url);
 const ADDON_DIRECTORY = 'windows-store-purchase-addon';
@@ -38,6 +78,29 @@ function normalizeErrorCode(value: unknown): string | null {
 }
 
 function normalizeErrorMessage(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeAvailability(value: unknown): WindowsStoreLicenseQueryAddonResult['availability'] {
+  return value === 'supported' || value === 'store-unavailable' || value === 'error'
+    ? value
+    : 'store-unavailable';
+}
+
+function normalizePurchaseEligibility(value: unknown): WindowsStoreLicenseQueryAddonResult['purchaseEligibility'] {
+  return [
+    'licensable',
+    'not-licensable',
+    'license-action-not-applicable',
+    'network-error',
+    'server-error',
+    'unknown',
+  ].includes(String(value))
+    ? value as WindowsStoreLicenseQueryAddonResult['purchaseEligibility']
+    : 'unknown';
+}
+
+function normalizeIsoDate(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
@@ -109,8 +172,97 @@ export function parseWindowsStorePurchaseAddonResult(value: Record<string, unkno
   };
 }
 
-function defaultLoadPurchaseAddon(modulePath: string): NativePurchaseAddon {
-  return require(modulePath) as NativePurchaseAddon;
+function defaultLoadPurchaseAddon(modulePath: string): NativeWindowsStoreAddon {
+  return require(modulePath) as NativeWindowsStoreAddon;
+}
+
+function parseQueryProduct(
+  value: unknown,
+  fallbackStoreId: string,
+  fallbackTitle: string,
+): WindowsStoreLicenseQueryAddonResult['product'] {
+  if (!value || typeof value !== 'object') {
+    return {
+      storeId: fallbackStoreId,
+      title: fallbackTitle,
+      isInUserCollection: false,
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    storeId: typeof record.storeId === 'string' && record.storeId.trim().length > 0 ? record.storeId.trim() : fallbackStoreId,
+    title: typeof record.title === 'string' && record.title.trim().length > 0 ? record.title.trim() : fallbackTitle,
+    isInUserCollection: Boolean(record.isInUserCollection),
+  };
+}
+
+function parseQuerySku(value: unknown): WindowsStoreLicenseQueryAddonResult['sku'] {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    storeId: typeof record.storeId === 'string' && record.storeId.trim().length > 0 ? record.storeId.trim() : null,
+    title: typeof record.title === 'string' && record.title.trim().length > 0 ? record.title.trim() : null,
+    isSubscription: Boolean(record.isSubscription),
+    isInUserCollection: Boolean(record.isInUserCollection),
+    collectionEndDate: normalizeIsoDate(record.collectionEndDate),
+  };
+}
+
+function parseQueryLicense(value: unknown): WindowsStoreLicenseQueryAddonResult['license'] {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    storeId: typeof record.storeId === 'string' && record.storeId.trim().length > 0 ? record.storeId.trim() : null,
+    isActive: Boolean(record.isActive),
+    expirationDate: normalizeIsoDate(record.expirationDate),
+  };
+}
+
+function buildUnavailableStatusResult(
+  options: Pick<WindowsStoreStatusAddonOptions, 'storeId' | 'productName'>,
+  errorCode: string | null,
+  errorMessage: string | null,
+): WindowsStoreLicenseQueryAddonResult {
+  return {
+    fetchedAt: new Date().toISOString(),
+    availability: 'store-unavailable',
+    appLicenseActive: false,
+    product: null,
+    sku: null,
+    license: null,
+    purchaseEligibility: 'unknown',
+    errorCode,
+    errorMessage,
+  };
+}
+
+export function parseWindowsStoreLicenseQueryAddonResult(
+  value: Record<string, unknown>,
+  options: Pick<WindowsStoreStatusAddonOptions, 'storeId' | 'productName'>,
+): WindowsStoreLicenseQueryAddonResult {
+  const availability = normalizeAvailability(value.availability);
+  return {
+    fetchedAt: normalizeIsoDate(value.fetchedAt) ?? new Date().toISOString(),
+    availability,
+    appLicenseActive: Boolean(value.appLicenseActive),
+    product: availability === 'supported'
+      ? parseQueryProduct(value.product, options.storeId, options.productName)
+      : value.product && typeof value.product === 'object'
+        ? parseQueryProduct(value.product, options.storeId, options.productName)
+        : null,
+    sku: parseQuerySku(value.sku),
+    license: parseQueryLicense(value.license),
+    purchaseEligibility: normalizePurchaseEligibility(value.purchaseEligibility),
+    errorCode: normalizeErrorCode(value.errorCode),
+    errorMessage: normalizeErrorMessage(value.errorMessage),
+  };
 }
 
 export async function executeWindowsStorePurchaseAddon(
@@ -126,7 +278,7 @@ export async function executeWindowsStorePurchaseAddon(
     };
   }
 
-  let nativeAddon: NativePurchaseAddon;
+  let nativeAddon: NativeWindowsStoreAddon;
   try {
     nativeAddon = loadPurchaseAddon(modulePath);
   } catch (error) {
@@ -150,5 +302,38 @@ export async function executeWindowsStorePurchaseAddon(
       errorCode: errorCode ?? 'addon-execution-failed',
       errorMessage,
     };
+  }
+}
+
+export async function executeWindowsStoreStatusAddon(
+  options: WindowsStoreStatusAddonOptions,
+  loadPurchaseAddon: LoadPurchaseAddon = defaultLoadPurchaseAddon,
+): Promise<WindowsStoreLicenseQueryAddonResult> {
+  const modulePath = String(options.modulePath || '').trim();
+  if (!modulePath) {
+    return buildUnavailableStatusResult(options, 'addon-missing', 'Windows Store status addon is unavailable.');
+  }
+
+  let nativeAddon: NativeWindowsStoreAddon;
+  try {
+    nativeAddon = loadPurchaseAddon(modulePath);
+  } catch (error) {
+    return buildUnavailableStatusResult(
+      options,
+      'addon-load-failed',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  try {
+    const rawResult = await nativeAddon.queryStoreStatus(
+      options.storeId,
+      options.productName,
+      options.productKinds,
+    );
+    return parseWindowsStoreLicenseQueryAddonResult(rawResult, options);
+  } catch (error) {
+    const { errorCode, errorMessage } = normalizeThrownError(error);
+    return buildUnavailableStatusResult(options, errorCode ?? 'addon-execution-failed', errorMessage);
   }
 }

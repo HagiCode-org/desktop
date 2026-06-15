@@ -15,6 +15,7 @@ describe('subscription preload bridge contract', () => {
     assert.match(source, /const subscriptionFeatureEnabled = process\.argv\.includes\(SUBSCRIPTION_FEATURE_ARG\);/);
     assert.match(source, /const subscriptionBridge: SubscriptionBridge = \{/);
     assert.match(source, /getSnapshot: \(options\) => ipcRenderer\.invoke\(subscriptionChannels\.getSnapshot, options\)/);
+    assert.match(source, /verifyStartup: \(\) => ipcRenderer\.invoke\(subscriptionChannels\.verifyStartup\)/);
     assert.match(source, /refresh: \(\) => ipcRenderer\.invoke\(subscriptionChannels\.refresh\)/);
     assert.match(source, /purchase: \(\) => ipcRenderer\.invoke\(subscriptionChannels\.purchase\)/);
     assert.match(source, /ipcRenderer\.on\(subscriptionChannels\.changed, listener\)/);

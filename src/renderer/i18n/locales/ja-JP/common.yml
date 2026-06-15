@@ -456,6 +456,26 @@ system:
   dashboard:
     title: デスクトップ制御センター
     description: サービス状態、開始と停止、アクティブなバージョン、ログ導線、推奨アップデートを 1 つの作業面にまとめます。
+  commercePanel:
+    title: Store ライセンスとスポンサー アクセス
+    storeDescription: ここで TurboEngine とスポンサー プランの現在の状態をすばやく確認し、購入、管理、更新が必要なときだけ詳細画面を開きます。
+    nonStoreDescription: このランタイムは Microsoft Store 版ではありません。必要に応じて製品ページを開き、Store 版に切り替えるためのリンクをここに残しています。
+    actions:
+      viewDetails: 詳細を表示
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: ログのクイックアクセス
     description: 診断時間を短縮するには、デスクトップおよび Web アプリのログ フォルダーを直接開きます。
@@ -481,6 +501,10 @@ system:
     title: まだバージョンがインストールされていません
     description: Hagicode Desktop を開始する最も簡単な方法は、ガイド付きセットアップ ウィザードを使用することです。わずか数ステップでインストールと構成を完了します。
     startWizard: 起動ウィザード
+  noActiveVersion:
+    title: ランタイムはインストールされていますが、アクティブなバージョンが選択されていません
+    description: ローカル ランタイムは見つかりましたが、アクティブ バージョンの参照が見つからないか無効です。先にバージョン管理を開いて使用できるバージョンを選択してください。
+    manageVersions: バージョン管理を開く
   activeVersion:
     actions:
       manage: バージョンの管理

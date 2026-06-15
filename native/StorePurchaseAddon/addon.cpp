@@ -3,27 +3,69 @@
 #include <windows.h>
 #include <shobjidl_core.h>
 
-#include <optional>
+#include <iomanip>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Services.Store.h>
 
 namespace
 {
     using winrt::Windows::Foundation::AsyncStatus;
     using winrt::Windows::Services::Store::StoreContext;
+    using winrt::Windows::Services::Store::StoreProduct;
+    using winrt::Windows::Services::Store::StoreProductQueryResult;
     using winrt::Windows::Services::Store::StorePurchaseResult;
     using winrt::Windows::Services::Store::StorePurchaseStatus;
+    using winrt::Windows::Services::Store::StoreSku;
 
     struct PurchaseCompletion
     {
         std::string outcome{ "failed" };
+        std::optional<std::string> errorCode;
+        std::optional<std::string> errorMessage;
+    };
+
+    struct StoreStatusProduct
+    {
+        std::string storeId;
+        std::optional<std::string> title;
+        bool isInUserCollection{ false };
+    };
+
+    struct StoreStatusSku
+    {
+        std::optional<std::string> storeId;
+        std::optional<std::string> title;
+        bool isSubscription{ false };
+        bool isInUserCollection{ false };
+        std::optional<std::string> collectionEndDate;
+    };
+
+    struct StoreStatusLicense
+    {
+        std::optional<std::string> storeId;
+        bool isActive{ false };
+        std::optional<std::string> expirationDate;
+    };
+
+    struct StoreStatusCompletion
+    {
+        std::string fetchedAt;
+        std::string availability{ "supported" };
+        bool appLicenseActive{ false };
+        std::optional<StoreStatusProduct> product;
+        std::optional<StoreStatusSku> sku;
+        std::optional<StoreStatusLicense> license;
+        std::string purchaseEligibility{ "unknown" };
         std::optional<std::string> errorCode;
         std::optional<std::string> errorMessage;
     };
@@ -63,6 +105,48 @@ namespace
         return converted;
     }
 
+    std::wstring Utf8ToWide(std::string const& value)
+    {
+        if (value.empty())
+        {
+            return {};
+        }
+
+        auto const size = ::MultiByteToWideChar(
+            CP_UTF8,
+            0,
+            value.c_str(),
+            static_cast<int>(value.size()),
+            nullptr,
+            0);
+
+        if (size <= 0)
+        {
+            return std::wstring{ value.begin(), value.end() };
+        }
+
+        std::wstring converted(static_cast<std::size_t>(size), L'\0');
+        ::MultiByteToWideChar(
+            CP_UTF8,
+            0,
+            value.c_str(),
+            static_cast<int>(value.size()),
+            converted.data(),
+            size);
+        return converted;
+    }
+
+    std::optional<std::string> NormalizeHString(winrt::hstring const& value)
+    {
+        if (value.empty())
+        {
+            return std::nullopt;
+        }
+
+        auto const converted = WideToUtf8(std::wstring{ value.c_str() });
+        return converted.empty() ? std::nullopt : std::optional<std::string>{ converted };
+    }
+
     std::string FormatHresult(HRESULT hr)
     {
         std::ostringstream stream;
@@ -92,6 +176,51 @@ namespace
         return converted.empty() ? std::optional<std::string>{ FormatHresult(error.code()) } : std::optional<std::string>{ converted };
     }
 
+    std::string SystemTimeToIso(SYSTEMTIME const& value)
+    {
+        std::ostringstream stream;
+        stream << std::setfill('0')
+               << std::setw(4) << value.wYear << '-'
+               << std::setw(2) << value.wMonth << '-'
+               << std::setw(2) << value.wDay << 'T'
+               << std::setw(2) << value.wHour << ':'
+               << std::setw(2) << value.wMinute << ':'
+               << std::setw(2) << value.wSecond << '.'
+               << std::setw(3) << value.wMilliseconds << 'Z';
+        return stream.str();
+    }
+
+    std::string CurrentTimestampIso()
+    {
+        SYSTEMTIME value{};
+        ::GetSystemTime(&value);
+        return SystemTimeToIso(value);
+    }
+
+    std::optional<std::string> DateTimeToIso(winrt::Windows::Foundation::DateTime const& value)
+    {
+        auto const ticks = value.time_since_epoch().count();
+        if (ticks <= 0)
+        {
+            return std::nullopt;
+        }
+
+        ULARGE_INTEGER rawValue{};
+        rawValue.QuadPart = static_cast<ULONGLONG>(ticks);
+
+        FILETIME fileTime{};
+        fileTime.dwLowDateTime = rawValue.LowPart;
+        fileTime.dwHighDateTime = rawValue.HighPart;
+
+        SYSTEMTIME systemTime{};
+        if (!::FileTimeToSystemTime(&fileTime, &systemTime))
+        {
+            return std::nullopt;
+        }
+
+        return SystemTimeToIso(systemTime);
+    }
+
     std::string MapOutcome(StorePurchaseStatus const status)
     {
         switch (status)
@@ -101,7 +230,7 @@ namespace
         case StorePurchaseStatus::AlreadyPurchased:
             return "already-purchased";
         case StorePurchaseStatus::NotPurchased:
-            return "canceled";
+            return "not-purchased";
         case StorePurchaseStatus::NetworkError:
             return "network-error";
         case StorePurchaseStatus::ServerError:
@@ -126,6 +255,193 @@ namespace
         }
 
         return reinterpret_cast<HWND>(rawValue);
+    }
+
+    StoreProduct FindMatchingStoreProduct(StoreProductQueryResult const& queryResult, winrt::hstring const& storeId)
+    {
+        auto const products = queryResult.Products();
+        if (!products || !products.HasKey(storeId))
+        {
+            return nullptr;
+        }
+
+        return products.Lookup(storeId);
+    }
+
+    std::optional<StoreStatusSku> NormalizeSku(StoreSku const& sku)
+    {
+        if (!sku)
+        {
+            return std::nullopt;
+        }
+
+        std::optional<std::string> collectionEndDate = std::nullopt;
+
+        try
+        {
+            auto const collectionData = sku.CollectionData();
+            if (collectionData)
+            {
+                collectionEndDate = DateTimeToIso(collectionData.EndDate());
+            }
+        }
+        catch (...)
+        {
+            collectionEndDate = std::nullopt;
+        }
+
+        return StoreStatusSku{
+            NormalizeHString(sku.StoreId()),
+            NormalizeHString(sku.Title()),
+            sku.IsSubscription(),
+            sku.IsInUserCollection(),
+            collectionEndDate,
+        };
+    }
+
+    std::optional<StoreStatusSku> FindOwnedSku(StoreProduct const& product)
+    {
+        if (!product)
+        {
+            return std::nullopt;
+        }
+
+        auto const skus = product.Skus();
+        for (StoreSku const& sku : skus)
+        {
+            if (sku && sku.IsInUserCollection())
+            {
+                return NormalizeSku(sku);
+            }
+        }
+
+        if (product.IsInUserCollection() && skus.Size() > 0)
+        {
+            auto fallbackSku = NormalizeSku(skus.GetAt(0));
+            if (fallbackSku)
+            {
+                fallbackSku->isInUserCollection = true;
+            }
+            return fallbackSku;
+        }
+
+        return std::nullopt;
+    }
+
+    StoreStatusProduct NormalizeProduct(
+        StoreProduct const& product,
+        std::wstring const& fallbackStoreId,
+        std::wstring const& fallbackTitle,
+        bool isOwned)
+    {
+        auto const fallbackStoreIdUtf8 = WideToUtf8(fallbackStoreId);
+        auto const fallbackTitleUtf8 = WideToUtf8(fallbackTitle);
+
+        return StoreStatusProduct{
+            product ? NormalizeHString(product.StoreId()).value_or(fallbackStoreIdUtf8) : fallbackStoreIdUtf8,
+            product ? NormalizeHString(product.Title()).value_or(fallbackTitleUtf8) : std::optional<std::string>{ fallbackTitleUtf8 },
+            isOwned || (product && product.IsInUserCollection()),
+        };
+    }
+
+    std::optional<std::string> GetQueryResultErrorCode(StoreProductQueryResult const& queryResult)
+    {
+        return NormalizeErrorCodeValue(queryResult.ExtendedError());
+    }
+
+    StoreStatusCompletion BuildSupportedStatusCompletion(
+        std::string fetchedAt,
+        std::wstring const& storeId,
+        std::wstring const& productName,
+        StoreProductQueryResult const& associatedQueryResult,
+        StoreProductQueryResult const& collectionQueryResult)
+    {
+        auto const associatedProduct = FindMatchingStoreProduct(associatedQueryResult, winrt::hstring{ storeId });
+        auto const collectionProduct = FindMatchingStoreProduct(collectionQueryResult, winrt::hstring{ storeId });
+        auto sku = FindOwnedSku(collectionProduct);
+        if (!sku)
+        {
+            sku = FindOwnedSku(associatedProduct);
+        }
+
+        auto const isOwned = (collectionProduct && collectionProduct.IsInUserCollection())
+            || (associatedProduct && associatedProduct.IsInUserCollection())
+            || (sku && sku->isInUserCollection);
+
+        auto errorCode = GetQueryResultErrorCode(collectionQueryResult);
+        if (!errorCode)
+        {
+            errorCode = GetQueryResultErrorCode(associatedQueryResult);
+        }
+
+        StoreStatusCompletion completion;
+        completion.fetchedAt = std::move(fetchedAt);
+        completion.availability = "supported";
+        completion.product = NormalizeProduct(
+            associatedProduct ? associatedProduct : collectionProduct,
+            storeId,
+            productName,
+            isOwned);
+        completion.sku = std::move(sku);
+        completion.purchaseEligibility = isOwned
+            ? "license-action-not-applicable"
+            : associatedProduct
+                ? "licensable"
+                : "unknown";
+        completion.errorCode = errorCode;
+        completion.errorMessage = errorCode
+            ? std::optional<std::string>{ "Microsoft Store product query failed with " + *errorCode + "." }
+            : std::nullopt;
+        return completion;
+    }
+
+    StoreStatusCompletion BuildUnavailableStatusCompletion(
+        std::string fetchedAt,
+        std::optional<std::string> errorCode,
+        std::optional<std::string> errorMessage)
+    {
+        StoreStatusCompletion completion;
+        completion.fetchedAt = std::move(fetchedAt);
+        completion.availability = "store-unavailable";
+        completion.appLicenseActive = false;
+        completion.purchaseEligibility = "unknown";
+        completion.errorCode = std::move(errorCode);
+        completion.errorMessage = std::move(errorMessage);
+        return completion;
+    }
+
+    Napi::Value ToNullableString(Napi::Env env, std::optional<std::string> const& value)
+    {
+        return value ? Napi::String::New(env, *value) : env.Null();
+    }
+
+    Napi::Object ToProductObject(Napi::Env env, StoreStatusProduct const& value)
+    {
+        auto result = Napi::Object::New(env);
+        result.Set("storeId", Napi::String::New(env, value.storeId));
+        result.Set("title", ToNullableString(env, value.title));
+        result.Set("isInUserCollection", Napi::Boolean::New(env, value.isInUserCollection));
+        return result;
+    }
+
+    Napi::Object ToSkuObject(Napi::Env env, StoreStatusSku const& value)
+    {
+        auto result = Napi::Object::New(env);
+        result.Set("storeId", ToNullableString(env, value.storeId));
+        result.Set("title", ToNullableString(env, value.title));
+        result.Set("isSubscription", Napi::Boolean::New(env, value.isSubscription));
+        result.Set("isInUserCollection", Napi::Boolean::New(env, value.isInUserCollection));
+        result.Set("collectionEndDate", ToNullableString(env, value.collectionEndDate));
+        return result;
+    }
+
+    Napi::Object ToLicenseObject(Napi::Env env, StoreStatusLicense const& value)
+    {
+        auto result = Napi::Object::New(env);
+        result.Set("storeId", ToNullableString(env, value.storeId));
+        result.Set("isActive", Napi::Boolean::New(env, value.isActive));
+        result.Set("expirationDate", ToNullableString(env, value.expirationDate));
+        return result;
     }
 
     class PurchaseRequest : public std::enable_shared_from_this<PurchaseRequest>
@@ -242,8 +558,8 @@ namespace
         {
             auto result = Napi::Object::New(env);
             result.Set("outcome", completion.outcome);
-            result.Set("errorCode", completion.errorCode ? Napi::String::New(env, *completion.errorCode) : env.Null());
-            result.Set("errorMessage", completion.errorMessage ? Napi::String::New(env, *completion.errorMessage) : env.Null());
+            result.Set("errorCode", ToNullableString(env, completion.errorCode));
+            result.Set("errorMessage", ToNullableString(env, completion.errorMessage));
             deferred_.Resolve(result);
         }
 
@@ -252,8 +568,8 @@ namespace
             std::optional<std::string> const& errorMessage) const
         {
             auto error = Napi::Object::New(env_);
-            error.Set("code", errorCode ? Napi::String::New(env_, *errorCode) : env_.Null());
-            error.Set("message", errorMessage ? Napi::String::New(env_, *errorMessage) : env_.Null());
+            error.Set("code", ToNullableString(env_, errorCode));
+            error.Set("message", ToNullableString(env_, errorMessage));
             return error;
         }
 
@@ -262,6 +578,172 @@ namespace
         Napi::ThreadSafeFunction threadsafeFunction_;
         std::wstring storeId_;
         HWND ownerWindow_{ nullptr };
+    };
+
+    class QueryStatusRequest : public std::enable_shared_from_this<QueryStatusRequest>
+    {
+    public:
+        QueryStatusRequest(
+            Napi::Env env,
+            std::wstring storeId,
+            std::wstring productName,
+            std::vector<std::wstring> productKinds)
+            : env_(env)
+            , deferred_(Napi::Promise::Deferred::New(env))
+            , storeId_(std::move(storeId))
+            , productName_(std::move(productName))
+            , productKinds_(std::move(productKinds))
+        {
+        }
+
+        Napi::Promise Start()
+        {
+            try
+            {
+                try
+                {
+                    winrt::init_apartment(winrt::apartment_type::single_threaded);
+                }
+                catch (...)
+                {
+                    // Electron may have already initialized COM for this thread.
+                }
+
+                threadsafeFunction_ = Napi::ThreadSafeFunction::New(
+                    env_,
+                    Napi::Function::New(env_, [](Napi::CallbackInfo const&) {}),
+                    "HagicodeStoreStatusAddon",
+                    0,
+                    1);
+
+                queryAction_ = RunQueryAsync();
+                auto self = shared_from_this();
+                queryAction_.Completed([self](auto const& operation, AsyncStatus status)
+                {
+                    if (status == AsyncStatus::Completed)
+                    {
+                        self->QueueCompletion(std::move(self->completion_));
+                        return;
+                    }
+
+                    auto const errorCode = status == AsyncStatus::Canceled
+                        ? std::optional<std::string>{ "canceled" }
+                        : NormalizeErrorCodeValue(operation.ErrorCode());
+                    auto const errorMessage = status == AsyncStatus::Canceled
+                        ? std::optional<std::string>{ "Microsoft Store status query was canceled." }
+                        : std::optional<std::string>{ FormatHresult(operation.ErrorCode()) };
+
+                    self->QueueCompletion(BuildUnavailableStatusCompletion(
+                        CurrentTimestampIso(),
+                        errorCode,
+                        errorMessage));
+                });
+            }
+            catch (winrt::hresult_error const& error)
+            {
+                deferred_.Reject(BuildErrorValue(
+                    NormalizeErrorCodeValue(error.code()),
+                    ParseErrorMessage(error)));
+            }
+            catch (std::exception const& error)
+            {
+                deferred_.Reject(BuildErrorValue(std::nullopt, std::string{ error.what() }));
+            }
+
+            return deferred_.Promise();
+        }
+
+    private:
+        winrt::Windows::Foundation::IAsyncAction RunQueryAsync()
+        {
+            auto const fetchedAt = CurrentTimestampIso();
+
+            try
+            {
+                StoreContext const context = StoreContext::GetDefault();
+                std::vector<winrt::hstring> queryKinds;
+                queryKinds.reserve(productKinds_.size());
+                for (auto const& productKind : productKinds_)
+                {
+                    queryKinds.emplace_back(productKind);
+                }
+
+                auto const kinds = winrt::single_threaded_vector<winrt::hstring>(std::move(queryKinds));
+                auto const associatedQueryResult = co_await context.GetAssociatedStoreProductsAsync(kinds);
+                auto const collectionQueryResult = co_await context.GetUserCollectionAsync(kinds);
+
+                completion_ = BuildSupportedStatusCompletion(
+                    fetchedAt,
+                    storeId_,
+                    productName_,
+                    associatedQueryResult,
+                    collectionQueryResult);
+            }
+            catch (winrt::hresult_error const& error)
+            {
+                completion_ = BuildUnavailableStatusCompletion(
+                    fetchedAt,
+                    NormalizeErrorCodeValue(error.code()),
+                    ParseErrorMessage(error));
+            }
+            catch (std::exception const& error)
+            {
+                completion_ = BuildUnavailableStatusCompletion(
+                    fetchedAt,
+                    std::nullopt,
+                    std::string{ error.what() });
+            }
+        }
+
+        void QueueCompletion(StoreStatusCompletion completion)
+        {
+            auto payload = new StoreStatusCompletion(std::move(completion));
+            auto self = shared_from_this();
+            auto const status = threadsafeFunction_.BlockingCall(payload, [self](Napi::Env env, Napi::Function, StoreStatusCompletion* data)
+            {
+                std::unique_ptr<StoreStatusCompletion> ownedData{ data };
+                self->ResolveOnJs(env, *ownedData);
+            });
+
+            if (status == napi_ok)
+            {
+                threadsafeFunction_.Release();
+            }
+        }
+
+        void ResolveOnJs(Napi::Env env, StoreStatusCompletion const& completion)
+        {
+            auto result = Napi::Object::New(env);
+            result.Set("fetchedAt", Napi::String::New(env, completion.fetchedAt));
+            result.Set("availability", Napi::String::New(env, completion.availability));
+            result.Set("appLicenseActive", Napi::Boolean::New(env, completion.appLicenseActive));
+            result.Set("product", completion.product ? ToProductObject(env, *completion.product) : env.Null());
+            result.Set("sku", completion.sku ? ToSkuObject(env, *completion.sku) : env.Null());
+            result.Set("license", completion.license ? ToLicenseObject(env, *completion.license) : env.Null());
+            result.Set("purchaseEligibility", Napi::String::New(env, completion.purchaseEligibility));
+            result.Set("errorCode", ToNullableString(env, completion.errorCode));
+            result.Set("errorMessage", ToNullableString(env, completion.errorMessage));
+            deferred_.Resolve(result);
+        }
+
+        Napi::Value BuildErrorValue(
+            std::optional<std::string> const& errorCode,
+            std::optional<std::string> const& errorMessage) const
+        {
+            auto error = Napi::Object::New(env_);
+            error.Set("code", ToNullableString(env_, errorCode));
+            error.Set("message", ToNullableString(env_, errorMessage));
+            return error;
+        }
+
+        Napi::Env env_;
+        Napi::Promise::Deferred deferred_;
+        Napi::ThreadSafeFunction threadsafeFunction_;
+        std::wstring storeId_;
+        std::wstring productName_;
+        std::vector<std::wstring> productKinds_;
+        StoreStatusCompletion completion_{};
+        winrt::Windows::Foundation::IAsyncAction queryAction_{ nullptr };
     };
 
     Napi::Value RequestPurchase(Napi::CallbackInfo const& info)
@@ -273,8 +755,7 @@ namespace
             throw Napi::TypeError::New(env, "requestPurchase requires a Store ID string.");
         }
 
-        auto const storeIdUtf8 = info[0].As<Napi::String>().Utf8Value();
-        std::wstring const storeId(storeIdUtf8.begin(), storeIdUtf8.end());
+        auto const storeId = Utf8ToWide(info[0].As<Napi::String>().Utf8Value());
         HWND ownerWindow = nullptr;
 
         if (info.Length() >= 2 && !info[1].IsNull() && !info[1].IsUndefined())
@@ -289,11 +770,45 @@ namespace
 
         return std::make_shared<PurchaseRequest>(env, storeId, ownerWindow)->Start();
     }
+
+    Napi::Value QueryStoreStatus(Napi::CallbackInfo const& info)
+    {
+        auto env = info.Env();
+
+        if (info.Length() < 3 || !info[0].IsString() || !info[1].IsString() || !info[2].IsArray())
+        {
+            throw Napi::TypeError::New(env, "queryStoreStatus requires storeId, productName, and productKinds.");
+        }
+
+        auto const storeId = Utf8ToWide(info[0].As<Napi::String>().Utf8Value());
+        auto const productName = Utf8ToWide(info[1].As<Napi::String>().Utf8Value());
+        auto const productKindsArray = info[2].As<Napi::Array>();
+
+        std::vector<std::wstring> productKinds;
+        productKinds.reserve(productKindsArray.Length());
+        for (uint32_t index = 0; index < productKindsArray.Length(); ++index)
+        {
+            auto const value = productKindsArray.Get(index);
+            if (!value.IsString())
+            {
+                throw Napi::TypeError::New(env, "queryStoreStatus productKinds must contain only strings.");
+            }
+
+            productKinds.emplace_back(Utf8ToWide(value.As<Napi::String>().Utf8Value()));
+        }
+
+        return std::make_shared<QueryStatusRequest>(
+            env,
+            storeId,
+            productName,
+            std::move(productKinds))->Start();
+    }
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set("requestPurchase", Napi::Function::New(env, RequestPurchase));
+    exports.Set("queryStoreStatus", Napi::Function::New(env, QueryStoreStatus));
     return exports;
 }
 

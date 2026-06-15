@@ -90,12 +90,28 @@ function LegalConsentStep() {
       }
 
       const activeVersion = await dispatch(fetchActiveVersion()).unwrap();
-      if (!activeVersion?.id) {
+      if (activeVersion?.id) {
+        await dispatch(completeOnboarding(activeVersion.id)).unwrap();
+        void dispatch(fetchActiveVersion());
         return;
       }
 
-      dispatch(completeOnboarding(activeVersion.id));
-      dispatch(fetchActiveVersion());
+      const fallbackVersion = [...await window.electronAPI.versionGetInstalled()]
+        .sort((left, right) => {
+          if (left.isActive !== right.isActive) {
+            return Number(right.isActive) - Number(left.isActive);
+          }
+
+          const leftInstalledAt = Number.isFinite(Date.parse(left.installedAt)) ? Date.parse(left.installedAt) : 0;
+          const rightInstalledAt = Number.isFinite(Date.parse(right.installedAt)) ? Date.parse(right.installedAt) : 0;
+          return rightInstalledAt - leftInstalledAt;
+        })[0];
+      if (!fallbackVersion?.id) {
+        return;
+      }
+
+      await dispatch(completeOnboarding(fallbackVersion.id)).unwrap();
+      void dispatch(fetchActiveVersion());
     } catch {
       // Slice error state already captures accept and completion failures.
     }

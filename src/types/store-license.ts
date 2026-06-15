@@ -23,7 +23,7 @@ export const storeLicenseStatusValues = [
 export type StoreLicenseStatus = (typeof storeLicenseStatusValues)[number];
 
 export const storeLicenseSyncSources = [
-  'cache',
+  'initial',
   'store',
   'fallback',
 ] as const;
@@ -122,7 +122,7 @@ export function createDefaultStoreLicenseSnapshot<TEntitlement extends string>(
     availability: 'supported',
     status: 'unknown',
     entitlements: [],
-    source: 'cache',
+    source: 'initial',
     isStale: false,
     lastCheckedAt: null,
     lastSuccessfulSyncAt: null,

@@ -456,6 +456,26 @@ system:
   dashboard:
     title: Centro de control de Desktop
     description: Reúne el estado del servicio, las acciones de inicio y detención, la versión activa, el acceso a registros y las actualizaciones recomendadas en un único espacio de trabajo.
+  commercePanel:
+    title: Licencias de Store y acceso de patrocinio
+    storeDescription: Revise aquí rápidamente el estado actual de TurboEngine y del plan de patrocinio; abra el espacio detallado solo cuando necesite comprar, administrar o actualizar.
+    nonStoreDescription: Este entorno no es la edición de Microsoft Store. Use estos enlaces para abrir las páginas del producto y cambiar a la versión de Store cuando sea necesario.
+    actions:
+      viewDetails: Ver detalles
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Registrar acceso rápido
     description: Abra las carpetas de registro de la aplicación web y del escritorio directamente para acortar el tiempo de diagnóstico.
@@ -481,6 +501,10 @@ system:
     title: Aún no hay versiones instaladas
     description: La forma más sencilla de comenzar con Hagicode Desktop es a través de nuestro asistente de configuración guiada. Complete la instalación y configuración en solo unos pocos pasos.
     startWizard: Asistente de lanzamiento
+  noActiveVersion:
+    title: Hay un runtime instalado, pero no hay una versión activa seleccionada
+    description: Se encontró un runtime local, pero la referencia de la versión activa falta o no es válida. Abra primero la administración de versiones y seleccione una versión utilizable.
+    manageVersions: Abrir administración de versiones
   activeVersion:
     actions:
       manage: Administrar versiones

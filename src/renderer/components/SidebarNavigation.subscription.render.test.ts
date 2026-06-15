@@ -40,6 +40,7 @@ describe('subscription sidebar and shell wiring', () => {
     assert.match(subscriptionTypesSource, /export const HAGICODE_SPONSOR_PLAN_STORE_WEB_URL = `https:\/\/apps\.microsoft\.com\/detail\/\$\{HAGICODE_SPONSOR_PLAN_STORE_ID\}`;/);
     assert.match(subscriptionTypesSource, /export \{\s*HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL,\s*\};/);
     assert.match(storeSource, /subscriptionFeatureEnabled \? \[store\.dispatch\(loadSubscriptionSnapshot\(\)\)\] : \[\]/);
+    assert.match(storeSource, /subscriptionFeatureEnabled \? \[store\.dispatch\(verifySubscriptionStartup\(\)\)\] : \[\]/);
     assert.match(storeSource, /setSubscriptionSnapshotFromEvent/);
     assert.match(viewSliceSource, /'subscription'/);
   });

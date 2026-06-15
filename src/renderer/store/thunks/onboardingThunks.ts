@@ -31,6 +31,11 @@ declare global {
       recoverServiceStartup: (versionId: string) => Promise<OnboardingRecoveryResult>;
       completeOnboarding: (versionId: string) => Promise<{ success: boolean; error?: string }>;
       resetOnboarding: () => Promise<{ success: boolean; error?: string }>;
+      versionGetInstalled: () => Promise<Array<{
+        id: string;
+        installedAt: string;
+        isActive: boolean;
+      }>>;
       dependencyManagement: DependencyManagementBridge;
       onDownloadProgress: (callback: (progress: unknown) => void) => (() => void) | void;
       onDependencyProgress: (callback: (status: unknown) => void) => (() => void) | void;

@@ -14,16 +14,19 @@ import {
   createTurboEngineUnavailableSnapshot,
   normalizeTurboEngineLicenseSnapshot,
 } from './normalize.js';
-import { StoreLicenseService, type StoreLicenseRefreshReason } from './store-license-service.js';
+import {
+  StoreLicenseService,
+  type StoreLicenseRefreshReason,
+  type StoreLicenseRetryPolicy,
+} from './store-license-service.js';
 import type { TurboEngineEntitlementEvaluator } from './turboengine-entitlement-evaluator.js';
-import type { TurboEngineLicenseSnapshotStore } from './turboengine-license-store.js';
 
 export type TurboEngineLicenseRefreshReason = StoreLicenseRefreshReason;
 
 interface TurboEngineLicenseServiceOptions {
   broker: SubscriptionPlatformBroker;
-  snapshotStore: TurboEngineLicenseSnapshotStore;
   entitlementEvaluator: TurboEngineEntitlementEvaluator;
+  retryPolicy?: Partial<StoreLicenseRetryPolicy>;
 }
 
 export class TurboEngineLicenseService {
@@ -33,18 +36,18 @@ export class TurboEngineLicenseService {
     this.service = new StoreLicenseService<TurboEngineLicenseSnapshot, TurboEngineEntitlementName>({
       productConfig: turboEngineProductConfig,
       broker: options.broker,
-      snapshotStore: options.snapshotStore,
       entitlementEvaluator: options.entitlementEvaluator,
       createDefaultSnapshot: createDefaultTurboEngineLicenseSnapshot,
       normalizeSnapshot: normalizeTurboEngineLicenseSnapshot,
       createStaleSnapshot: createTurboEngineStaleSnapshot,
       createUnavailableSnapshot: createTurboEngineUnavailableSnapshot,
       buildPurchaseMessage: buildTurboEnginePurchaseMessage,
+      retryPolicy: options.retryPolicy,
     });
   }
 
-  getCachedSnapshot(): TurboEngineLicenseSnapshot {
-    return this.service.getCachedSnapshot();
+  getCurrentSnapshot(): TurboEngineLicenseSnapshot {
+    return this.service.getCurrentSnapshot();
   }
 
   async getSnapshot(): Promise<TurboEngineLicenseSnapshot> {

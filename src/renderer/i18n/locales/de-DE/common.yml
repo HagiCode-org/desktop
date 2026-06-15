@@ -456,6 +456,26 @@ system:
   dashboard:
     title: Desktop-Kontrollzentrum
     description: Bündelt Servicestatus, Start- und Stopp-Aktionen, aktive Version, Log-Zugänge und empfohlene Updates in einer fokussierten Arbeitsfläche.
+  commercePanel:
+    title: Store-Lizenzen und Sponsorzugang
+    storeDescription: Überprüfen Sie hier schnell den aktuellen Status von TurboEngine und dem Sponsorplan. Öffnen Sie den Detailbereich nur dann, wenn Sie kaufen, verwalten oder aktualisieren müssen.
+    nonStoreDescription: Diese Laufzeit ist nicht die Microsoft-Store-Edition. Nutzen Sie die Links hier, um die Produktseiten zu öffnen und bei Bedarf zur Store-Version zu wechseln.
+    actions:
+      viewDetails: Details anzeigen
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Schnellzugriff protokollieren
     description: Öffnen Sie die Desktop- und Web-App-Protokollordner direkt, um die Diagnosezeit zu verkürzen.
@@ -481,6 +501,10 @@ system:
     title: Noch keine Versionen installiert
     description: Der einfachste Weg, mit Hagicode Desktop zu beginnen, ist unser geführter Einrichtungsassistent. Komplette Installation und Konfiguration in nur wenigen Schritten.
     startWizard: Assistent starten
+  noActiveVersion:
+    title: Eine Laufzeit ist installiert, aber keine aktive Version ist ausgewählt
+    description: Es wurde eine lokale Laufzeit gefunden, aber der Zeiger auf die aktive Version fehlt oder ist ungültig. Öffnen Sie zuerst die Versionsverwaltung und wählen Sie eine nutzbare Version aus.
+    manageVersions: Versionsverwaltung öffnen
   activeVersion:
     actions:
       manage: Versionen verwalten

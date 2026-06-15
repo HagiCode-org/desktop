@@ -18,7 +18,7 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /turboEngineLicenseFeatureEnabled \? TURBOENGINE_LICENSE_FEATURE_ARG : null/);
     assert.match(source, /resolveTurboEngineDlcProgramOption,/);
     assert.match(source, /resolveTurboEngineDlcProgramOption: \(\) => resolveTurboEngineDlcProgramOption\(/);
-    assert.match(source, /turboEngineLicenseService\?\.getCachedSnapshot\(\) \?\? null/);
+    assert.match(source, /turboEngineLicenseService\?\.getCurrentSnapshot\(\) \?\? null/);
     assert.match(source, /function initializeSubscriptionService\(\): void \{[\s\S]*subscriptionService = new SubscriptionService/);
     assert.match(source, /function initializeTurboEngineLicenseService\(\): void \{[\s\S]*turboEngineLicenseService = new TurboEngineLicenseService/);
     assert.match(source, /productConfig: turboEngineProductConfig/);
@@ -27,8 +27,10 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /registerSubscriptionHandlers\(\{[\s\S]*subscriptionService,[\s\S]*\}\);/);
     assert.match(source, /registerTurboEngineLicenseHandlers\(\{[\s\S]*turboEngineLicenseService,[\s\S]*\}\);/);
     assert.match(source, /createWindow\(\);\s+initializeSubscriptionService\(\);\s+initializeTurboEngineLicenseService\(\);/);
-    assert.match(source, /if \(subscriptionFeatureEnabled && subscriptionService\) \{[\s\S]*await subscriptionService\.refreshOnStartup\(\);/);
-    assert.match(source, /if \(turboEngineLicenseFeatureEnabled && turboEngineLicenseService\) \{[\s\S]*await turboEngineLicenseService\.refreshOnStartup\(\);/);
+    assert.match(source, /function triggerStartupStoreLicenseRefresh\(\): void \{/);
+    assert.match(source, /void subscriptionService\.refreshOnStartup\(\)\.catch/);
+    assert.match(source, /void turboEngineLicenseService\.verifyOnStartup\(\)\.catch/);
+    assert.match(source, /triggerStartupStoreLicenseRefresh\(\);/);
     assert.match(source, /subscriptionSyncInterval = setInterval\(\(\) => \{[\s\S]*subscriptionService\?\.refresh\('scheduled'\);/);
     assert.match(source, /turboEngineLicenseSyncInterval = setInterval\(\(\) => \{[\s\S]*turboEngineLicenseService\?\.refresh\('scheduled'\);/);
     assert.match(source, /scheduleSubscriptionPurchaseSmokeTest\(\);/);

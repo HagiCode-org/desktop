@@ -456,6 +456,26 @@ system:
   dashboard:
     title: Центр управления Desktop
     description: Собирает состояние сервиса, команды запуска и остановки, активную версию, доступ к журналам и рекомендуемые обновления в одном рабочем пространстве.
+  commercePanel:
+    title: Лицензии Store и спонсорский доступ
+    storeDescription: Здесь можно быстро проверить текущий статус TurboEngine и спонсорского плана, а подробное рабочее пространство открывать только тогда, когда нужно купить, управлять или обновить.
+    nonStoreDescription: Эта среда выполнения не является версией Microsoft Store. Используйте эти ссылки, чтобы открыть страницы продуктов и при необходимости перейти на версию Store.
+    actions:
+      viewDetails: Подробнее
+    debug:
+      title: Commerce Preview Debugger
+      description: These switches only affect the current window preview. They do not modify the real Microsoft Store license state and they never trigger an actual purchase.
+      previewBadge: 'Preview: {{mode}}'
+      modes:
+        live: Follow live state
+        nonStore: Non-Store runtime
+        inactive: Store edition, not purchased
+        active: Store edition, activated
+      descriptions:
+        live: Render the page from the current runtime and the real license snapshot.
+        nonStore: Simulate a non-Store runtime and keep only the Store-install handoff path visible.
+        inactive: Simulate the Store edition before purchase so you can review the pre-purchase layout.
+        active: Simulate the Store edition after activation so you can review the post-purchase layout.
   logQuickAccess:
     title: Быстрый доступ к журналу
     description: Откройте папки журналов рабочего стола и веб-приложения напрямую, чтобы сократить время диагностики.
@@ -481,6 +501,10 @@ system:
     title: Версии еще не установлены
     description: Самый простой способ начать работу с Hagicode Desktop — воспользоваться нашим мастером пошаговой настройки. Полная установка и настройка всего за несколько шагов.
     startWizard: Мастер запуска
+  noActiveVersion:
+    title: Среда выполнения установлена, но активная версия не выбрана
+    description: Локальная среда выполнения найдена, но указатель активной версии отсутствует или недействителен. Сначала откройте управление версиями и выберите пригодную версию.
+    manageVersions: Открыть управление версиями
   activeVersion:
     actions:
       manage: Управление версиями
