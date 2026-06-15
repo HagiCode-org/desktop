@@ -155,8 +155,6 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
     webServiceInfo.port || DEFAULT_WEB_SERVICE_PORT
   );
 
-  const subscriptionFeatureEnabled = distributionState.winStoreMode && typeof window.electronAPI.subscription?.getSnapshot === 'function';
-
   useEffect(() => {
     const unsubscribeViewChange = window.electronAPI.onViewChange((view: 'system' | 'web' | 'version' | 'diagnostic' | 'dependency-management' | 'settings' | 'subscription') => {
       dispatch(switchView(view));
@@ -197,12 +195,6 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
     }
   }, [currentView, dispatch, distributionState]);
 
-  useEffect(() => {
-    if (!subscriptionFeatureEnabled && currentView === 'subscription') {
-      dispatch(switchView('system'));
-    }
-  }, [currentView, dispatch, subscriptionFeatureEnabled]);
-
   return (
     <div className="desktop-shell-background min-h-screen bg-background text-foreground">
       <SidebarNavigation distributionState={distributionState} />
@@ -215,7 +207,7 @@ function DesktopAppContent({ distributionState }: { distributionState: Distribut
           {currentView === 'diagnostic' && <SystemDiagnosticPage />}
           {currentView === 'dependency-management' && <DependencyManagementPage />}
           {currentView === 'settings' && <SettingsPage distributionState={distributionState} />}
-          {subscriptionFeatureEnabled && currentView === 'subscription' && <SubscriptionPage />}
+          {currentView === 'subscription' && <SubscriptionPage />}
         </div>
       </div>
 

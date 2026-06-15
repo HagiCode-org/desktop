@@ -13,6 +13,8 @@ import {
   Store,
 } from 'lucide-react';
 import {
+  HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL,
+  HAGICODE_SPONSOR_PLAN_STORE_WEB_URL,
   type SubscriptionPurchaseOutcome,
   type SubscriptionSnapshot,
 } from '../../../types/subscription.js';
@@ -76,6 +78,7 @@ function getPurchaseToastKind(outcome: SubscriptionPurchaseOutcome): 'success' |
 export default function SubscriptionPage() {
   const { t } = useTranslation('pages');
   const dispatch = useDispatch<AppDispatch>();
+  const subscriptionBridgeAvailable = typeof window.electronAPI.subscription?.getSnapshot === 'function';
   const {
     snapshot,
     lastPurchase,
@@ -86,16 +89,20 @@ export default function SubscriptionPage() {
   } = useSelector((state: RootState) => selectSubscriptionState(state));
 
   useEffect(() => {
-    if (!snapshot && !isLoading) {
+    if (subscriptionBridgeAvailable && !snapshot && !isLoading) {
       void dispatch(loadSubscriptionSnapshot());
     }
-  }, [dispatch, isLoading, snapshot]);
+  }, [dispatch, isLoading, snapshot, subscriptionBridgeAvailable]);
 
   useEffect(() => () => {
     dispatch(clearSubscriptionPurchaseResult());
   }, [dispatch]);
 
   const handleRefresh = async () => {
+    if (!subscriptionBridgeAvailable) {
+      return;
+    }
+
     const resultAction = await dispatch(refreshSubscriptionSnapshot());
     if (refreshSubscriptionSnapshot.fulfilled.match(resultAction)) {
       const nextSnapshot = resultAction.payload;
@@ -115,6 +122,10 @@ export default function SubscriptionPage() {
   };
 
   const handlePurchase = async () => {
+    if (!subscriptionBridgeAvailable) {
+      return;
+    }
+
     const resultAction = await dispatch(purchaseSubscription());
     if (!purchaseSubscription.fulfilled.match(resultAction)) {
       const message = typeof resultAction.payload === 'string'
@@ -140,8 +151,17 @@ export default function SubscriptionPage() {
     }
   };
 
-  const statusKey = getStatusKey(snapshot);
-  const canPurchase = snapshot?.availability === 'supported';
+  const openStorePage = async (url: string) => {
+    const result = await window.electronAPI.openExternal(url);
+    if (!result.success) {
+      toast.error(t('subscription.messages.openStoreFailed', {
+        error: result.error || t('subscription.messages.openStoreFailedFallback'),
+      }));
+    }
+  };
+
+  const statusKey = subscriptionBridgeAvailable ? getStatusKey(snapshot) : 'unsupported';
+  const canPurchase = subscriptionBridgeAvailable && snapshot?.availability === 'supported';
   const isActive = snapshot?.status === 'active';
 
   return (
@@ -214,30 +234,57 @@ export default function SubscriptionPage() {
                 {isActive ? t('subscription.message.activeThanks') : t('subscription.message.inactivePrompt')}
               </p>
 
-              <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                <Button className="h-11 min-w-[220px] justify-between" onClick={() => void handlePurchase()} disabled={!canPurchase || isPurchasing}>
-                  <span className="inline-flex items-center gap-2">
-                    {isPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                    {isPurchasing
-                      ? t('subscription.actions.processing')
-                      : (isActive ? t('subscription.actions.manage') : t('subscription.actions.buy'))}
-                  </span>
-                  {!isPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
-                </Button>
-                <Button variant="outline" className="h-11 min-w-[220px] justify-between" onClick={() => void handleRefresh()} disabled={isRefreshing || isLoading}>
-                  <span className="inline-flex items-center gap-2">
-                    {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                    {isRefreshing ? t('subscription.actions.refreshing') : t('subscription.actions.refresh')}
-                  </span>
-                  {!isRefreshing ? <ArrowRight className="h-4 w-4" /> : null}
-                </Button>
-              </div>
+              {subscriptionBridgeAvailable ? (
+                <>
+                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                    <Button className="h-11 min-w-[220px] justify-between" onClick={() => void handlePurchase()} disabled={!canPurchase || isPurchasing}>
+                      <span className="inline-flex items-center gap-2">
+                        {isPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                        {isPurchasing
+                          ? t('subscription.actions.processing')
+                          : (isActive ? t('subscription.actions.manage') : t('subscription.actions.buy'))}
+                      </span>
+                      {!isPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
+                    </Button>
+                    <Button variant="outline" className="h-11 min-w-[220px] justify-between" onClick={() => void handleRefresh()} disabled={isRefreshing || isLoading}>
+                      <span className="inline-flex items-center gap-2">
+                        {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                        {isRefreshing ? t('subscription.actions.refreshing') : t('subscription.actions.refresh')}
+                      </span>
+                      {!isRefreshing ? <ArrowRight className="h-4 w-4" /> : null}
+                    </Button>
+                  </div>
 
-              <p className="text-sm leading-6 text-muted-foreground">
-                {canPurchase
-                  ? (isActive ? t('subscription.actions.manageHint') : t('subscription.actions.buyHint'))
-                  : t('subscription.actions.unsupportedHint')}
-              </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {canPurchase
+                      ? (isActive ? t('subscription.actions.manageHint') : t('subscription.actions.buyHint'))
+                      : t('subscription.actions.unsupportedHint')}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                    <Button className="h-11 min-w-[220px] justify-between" onClick={() => void openStorePage(HAGICODE_SPONSOR_PLAN_STORE_WEB_URL)}>
+                      <span className="inline-flex items-center gap-2">
+                        <Store className="h-4 w-4" />
+                        {t('subscription.actions.subscribeViaStore')}
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" className="h-11 min-w-[220px] justify-between" onClick={() => void openStorePage(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL)}>
+                      <span className="inline-flex items-center gap-2">
+                        <BadgeCheck className="h-4 w-4" />
+                        {t('subscription.actions.installStoreApp')}
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {t('subscription.actions.installHint')}
+                  </p>
+                </>
+              )}
             </>
           )}
         </div>
@@ -252,11 +299,15 @@ export default function SubscriptionPage() {
           </Alert>
         ) : null}
 
-        {snapshot?.availability !== 'supported' ? (
+        {!subscriptionBridgeAvailable || snapshot?.availability !== 'supported' ? (
           <Alert>
             <Store className="h-4 w-4" />
             <AlertTitle>{t('subscription.unsupported.title')}</AlertTitle>
-            <AlertDescription>{t('subscription.unsupported.description')}</AlertDescription>
+            <AlertDescription>
+              {subscriptionBridgeAvailable
+                ? t('subscription.unsupported.description')
+                : t('subscription.unsupported.nonStoreDescription')}
+            </AlertDescription>
           </Alert>
         ) : null}
 

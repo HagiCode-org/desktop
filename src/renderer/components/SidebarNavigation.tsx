@@ -174,17 +174,13 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const isFusionMode = distributionState.fusionMode;
-  const subscriptionFeatureEnabled = distributionState.winStoreMode
-    && typeof window.electronAPI.subscription?.getSnapshot === 'function';
   const visibleNavigationItems = useMemo(() => {
     const baseItems = isFusionMode
       ? navigationItems.filter((item) => item.id !== 'version')
       : navigationItems;
 
-    return subscriptionFeatureEnabled
-      ? [...baseItems, subscriptionNavigationItem]
-      : baseItems;
-  }, [isFusionMode, subscriptionFeatureEnabled]);
+    return [...baseItems, subscriptionNavigationItem];
+  }, [isFusionMode]);
   const aboutLocale = useMemo(
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],

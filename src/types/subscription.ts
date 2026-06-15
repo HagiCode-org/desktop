@@ -1,5 +1,8 @@
 export const HAGICODE_SPONSOR_PLAN_STORE_ID = '9N0BTGWV23M1';
 export const HAGICODE_SPONSOR_PLAN_PRODUCT_ID = 'Hagicode.SponserPlan';
+export const HAGICODE_SPONSOR_PLAN_STORE_WEB_URL = `https://apps.microsoft.com/detail/${HAGICODE_SPONSOR_PLAN_STORE_ID}`;
+export const HAGICODE_DESKTOP_WINDOWS_STORE_ID = '9N3PM0N3SVDW';
+export const HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL = `https://apps.microsoft.com/detail/${HAGICODE_DESKTOP_WINDOWS_STORE_ID}`;
 
 export const subscriptionAvailabilityValues = [
   'supported',
