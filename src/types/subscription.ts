@@ -44,7 +44,6 @@ export const sponsorPlanProductConfig: StoreLicenseProductConfig<SubscriptionEnt
   productName: 'Hagicode Sponsor Plan',
   storeWebUrl: HAGICODE_SPONSOR_PLAN_STORE_WEB_URL,
   licenseKind: 'subscription',
-  snapshotStoreName: 'hagicode-desktop-subscription',
   entitlementNames: subscriptionEntitlementNames,
   purchaseLabel: 'sponsor plan',
   statusLabel: 'subscription status',

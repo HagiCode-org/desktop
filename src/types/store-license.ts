@@ -102,7 +102,6 @@ export interface StoreLicenseProductConfig<TEntitlement extends string = string>
   productName: string;
   storeWebUrl: string;
   licenseKind: StoreLicenseKind;
-  snapshotStoreName: string;
   entitlementNames: readonly TEntitlement[];
   purchaseLabel: string;
   statusLabel: string;

@@ -34,7 +34,6 @@ export const turboEngineProductConfig: StoreLicenseProductConfig<TurboEngineEnti
   productName: 'TurboEngine',
   storeWebUrl: HAGICODE_TURBOENGINE_STORE_WEB_URL,
   licenseKind: 'perpetual',
-  snapshotStoreName: 'hagicode-desktop-turboengine-license',
   entitlementNames: turboEngineEntitlementNames,
   purchaseLabel: 'TurboEngine license',
   statusLabel: 'TurboEngine license status',
