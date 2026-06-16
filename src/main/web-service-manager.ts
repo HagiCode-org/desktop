@@ -1166,6 +1166,8 @@ export class PCodeWebServiceManager {
     // backend child process, so inherited process-level values must not leak.
     for (const key of Object.keys(mergedEnv)) {
       if (
+        MANAGED_ENV_VAR_DEFINITIONS.some(item => item.key === key)
+        ||
         key.startsWith(SYSTEM_MANAGED_VAULT_ADDITIONAL_DIRECTORIES_ENV_PREFIX)
         || key === 'DATADIR'
         || key === 'DataDir'

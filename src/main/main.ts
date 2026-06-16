@@ -315,9 +315,11 @@ let subscriptionService: SubscriptionService | null = null;
 let subscriptionSyncInterval: NodeJS.Timeout | null = null;
 let turboEngineLicenseService: TurboEngineLicenseService | null = null;
 let turboEngineLicenseSyncInterval: NodeJS.Timeout | null = null;
+let turboEngineBackendSyncInFlight: Promise<void> | null = null;
 let subscriptionFeatureEnabled = false;
 let turboEngineLicenseFeatureEnabled = false;
 let subscriptionPurchaseSmokeTestStarted = false;
+let lastAppliedTurboEngineDlcProgramOptionSignature = 'null|';
 const notificationService = new NotificationService({
   getMainWindow: () => mainWindow,
   activateMainWindow,
@@ -714,7 +716,88 @@ function initializeTurboEngineLicenseService(): void {
     turboEngineLicenseService,
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
   });
+  turboEngineLicenseService.onDidChange(() => {
+    scheduleTurboEngineBackendSync('license-changed');
+  });
   log.info('[App] TurboEngine license service and IPC handlers registered for Windows Store runtime');
+}
+
+function getTurboEngineDlcProgramOptionSignature(): string {
+  const option = resolveTurboEngineDlcProgramOption(turboEngineLicenseService?.getCurrentSnapshot() ?? null);
+  return `${option.enabled === null ? 'null' : String(option.enabled)}|${option.source ?? ''}`;
+}
+
+function scheduleTurboEngineBackendSync(reason: string): void {
+  if (turboEngineBackendSyncInFlight) {
+    return;
+  }
+
+  turboEngineBackendSyncInFlight = syncTurboEngineBackendState(reason)
+    .catch((error) => {
+      log.warn('[App] TurboEngine backend env sync failed.', {
+        reason,
+        error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+      });
+    })
+    .finally(() => {
+      turboEngineBackendSyncInFlight = null;
+    });
+}
+
+async function syncTurboEngineBackendState(reason: string): Promise<void> {
+  const nextSignature = getTurboEngineDlcProgramOptionSignature();
+  if (nextSignature === lastAppliedTurboEngineDlcProgramOptionSignature) {
+    return;
+  }
+
+  if (!webServiceManager) {
+    lastAppliedTurboEngineDlcProgramOptionSignature = nextSignature;
+    return;
+  }
+
+  const status = await webServiceManager.getStatus();
+  if (status.status === 'starting') {
+    log.info('[App] TurboEngine backend env sync deferred until managed backend leaves starting state.', {
+      reason,
+      status: status.status,
+      turboEngineDlcProgramOptionSignature: nextSignature,
+    });
+    setTimeout(() => {
+      scheduleTurboEngineBackendSync(`${reason}-after-startup`);
+    }, 1500);
+    return;
+  }
+
+  if (status.status !== 'running') {
+    lastAppliedTurboEngineDlcProgramOptionSignature = nextSignature;
+    log.info('[App] TurboEngine backend env sync skipped because managed backend is not running.', {
+      reason,
+      status: status.status,
+      turboEngineDlcProgramOptionSignature: nextSignature,
+    });
+    return;
+  }
+
+  log.info('[App] Restarting managed backend to apply updated TurboEngine DLC env state.', {
+    reason,
+    turboEngineDlcProgramOptionSignature: nextSignature,
+  });
+
+  const restartResult = await webServiceManager.restart();
+  if (restartResult.success) {
+    lastAppliedTurboEngineDlcProgramOptionSignature = nextSignature;
+    log.info('[App] Managed backend restarted after TurboEngine DLC env state changed.', {
+      reason,
+      turboEngineDlcProgramOptionSignature: nextSignature,
+    });
+    return;
+  }
+
+  log.warn('[App] Managed backend restart failed after TurboEngine DLC env state changed.', {
+    reason,
+    turboEngineDlcProgramOptionSignature: nextSignature,
+    errorMessage: restartResult.parsedResult.errorMessage ?? restartResult.resultSession.errorMessage ?? null,
+  });
 }
 
 function triggerStartupStoreLicenseRefresh(): void {

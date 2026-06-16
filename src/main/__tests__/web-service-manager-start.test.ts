@@ -119,6 +119,7 @@ describe('web-service startup flow', () => {
     assert.match(source, /const turboEngineDlcProgramOption = this\.resolveTurboEngineDlcProgramOption\?\.\(\) \?\? null;/);
     assert.match(source, /turboEngineDlcEnabled: turboEngineDlcProgramOption\?\.enabled \?\? null,/);
     assert.match(source, /turboEngineDlcSource: turboEngineDlcProgramOption\?\.source \?\? null,/);
+    assert.match(source, /MANAGED_ENV_VAR_DEFINITIONS\.some\(item => item\.key === key\)/);
     assert.match(source, /return \{\s*\.\.\.\(this\.config\.env \?\? \{\}\),\s*\.\.\.\(baseEnv \?\? \{\}\),/s);
     assert.doesNotMatch(source, /return \{\s*\.\.\.\(baseEnv \?\? \{\}\),\s*\.\.\.\(this\.config\.env \?\? \{\}\),/s);
   });
