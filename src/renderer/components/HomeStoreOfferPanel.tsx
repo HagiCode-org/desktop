@@ -41,54 +41,12 @@ interface HomeStoreOfferPanelProps {
   isWindowsStoreRuntime: boolean;
 }
 
-interface StoreSnapshotLike {
-  availability: string;
-  isStale: boolean;
-  status: string;
-}
-
 interface CommerceRowProps {
   actions: ReactNode;
   icon: LucideIcon;
-  isStale: boolean;
-  staleLabel: string;
-  statusLabel: string;
-  statusVariant: 'default' | 'secondary' | 'destructive' | 'outline';
-  subtitle: string;
+  isActive: boolean;
   summary: string;
   title: string;
-}
-
-function getStatusBadgeVariant(snapshot: StoreSnapshotLike | null): 'default' | 'secondary' | 'destructive' | 'outline' {
-  if (!snapshot) {
-    return 'outline';
-  }
-
-  if (snapshot.availability !== 'supported') {
-    return 'destructive';
-  }
-
-  if (snapshot.isStale) {
-    return 'secondary';
-  }
-
-  return snapshot.status === 'active' ? 'default' : 'outline';
-}
-
-function getStatusKey(snapshot: StoreSnapshotLike | null): string {
-  if (!snapshot) {
-    return 'loading';
-  }
-
-  if (snapshot.availability !== 'supported') {
-    return 'unsupported';
-  }
-
-  if (snapshot.isStale) {
-    return 'stale';
-  }
-
-  return snapshot.status;
 }
 
 function getPurchaseToastKind(outcome: string): 'success' | 'error' | 'message' {
@@ -107,33 +65,21 @@ function getPurchaseToastKind(outcome: string): 'success' | 'error' | 'message' 
 function CommerceRow({
   actions,
   icon: Icon,
-  isStale,
-  staleLabel,
-  statusLabel,
-  statusVariant,
-  subtitle,
+  isActive,
   summary,
   title,
 }: CommerceRowProps) {
   return (
     <div className="px-5 py-5">
       <div className="flex items-start gap-3">
-        <div className="commerce-premium-icon rounded-xl p-2.5">
+        <div className="commerce-premium-icon commerce-premium-home-icon rounded-xl p-2.5">
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="commerce-premium-heading font-medium">{title}</h3>
-            <Badge variant={statusVariant} className="commerce-premium-badge rounded-full px-2.5 py-1 text-[11px]">
-              {statusLabel}
-            </Badge>
-            {isStale ? (
-              <Badge variant="secondary" className="commerce-premium-badge rounded-full px-2.5 py-1 text-[11px]">
-                {staleLabel}
-              </Badge>
-            ) : null}
+            {isActive ? <BadgeCheck className="h-4 w-4 text-primary" /> : null}
           </div>
-          <p className="commerce-premium-kicker mt-1 text-sm">{subtitle}</p>
           <p className="commerce-premium-copy mt-2 max-w-[62ch] text-sm leading-6">{summary}</p>
 
           {actions ? (
@@ -265,14 +211,6 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
         status: previewDebug.scenario === 'active' ? 'active' : 'inactive',
       }));
 
-  const subscriptionStatusKey = effectiveSubscriptionBridgeAvailable ? getStatusKey(effectiveSubscriptionSnapshot) : 'unsupported';
-  const turboEngineStatusKey = effectiveTurboEngineBridgeAvailable ? getStatusKey(effectiveTurboEngineSnapshot) : 'unsupported';
-  const subscriptionBadgeSnapshot = effectiveSubscriptionBridgeAvailable
-    ? effectiveSubscriptionSnapshot
-    : { availability: 'unsupported', isStale: false, status: 'inactive' };
-  const turboEngineBadgeSnapshot = effectiveTurboEngineBridgeAvailable
-    ? effectiveTurboEngineSnapshot
-    : { availability: 'unsupported', isStale: false, status: 'inactive' };
   const subscriptionActive = effectiveSubscriptionSnapshot?.status === 'active';
   const turboEngineActive = effectiveTurboEngineSnapshot?.status === 'active';
   const subscriptionCanPurchase = effectiveWindowsStoreRuntime
@@ -283,17 +221,10 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
     && effectiveTurboEngineBridgeAvailable
     && effectiveTurboEngineSnapshot?.availability === 'supported'
     && !turboEngineActive;
-  const runtimeBadgeLabel = effectiveWindowsStoreRuntime
-    ? t('pages:turboEngine.runtime.storeEdition')
-    : t('pages:turboEngine.runtime.nonStoreEdition');
-  const subscriptionStatusLabel = t(`pages:subscription.status.${subscriptionStatusKey}`);
-  const turboEngineStatusLabel = t(`pages:turboEngine.status.${turboEngineStatusKey}`);
-  const nonStoreRuntimeHint = t('pages:subscription.actions.installHint');
-
   return (
     <section className="commerce-premium-shell rounded-3xl p-6 sm:p-7">
       <div className="relative z-10">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -311,20 +242,11 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
                 </Badge>
               ) : null}
             </div>
-            <p className="commerce-premium-copy mt-2 text-sm leading-6">
-              {effectiveWindowsStoreRuntime
-                ? t('system.commercePanel.storeDescription')
-                : t('system.commercePanel.nonStoreDescription')}
-            </p>
           </div>
-          <Badge variant="outline" className="commerce-premium-badge self-start rounded-full px-3 py-1 text-xs">
-            {runtimeBadgeLabel}
-          </Badge>
         </div>
 
         {!effectiveWindowsStoreRuntime ? (
           <div className="commerce-premium-panel mt-5 flex flex-col gap-3 rounded-2xl p-4">
-            <p className="commerce-premium-copy max-w-[68ch] text-sm leading-6">{nonStoreRuntimeHint}</p>
             <Button
               type="button"
               onClick={() => void openStorePage(
@@ -347,16 +269,8 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
         <div className="commerce-premium-panel mt-5 overflow-hidden rounded-2xl">
           <CommerceRow
             icon={ShieldCheck}
-            isStale={Boolean(effectiveTurboEngineSnapshot?.isStale)}
-            staleLabel={t('pages:turboEngine.staleBadge')}
-            statusLabel={turboEngineStatusLabel}
-            statusVariant={getStatusBadgeVariant(turboEngineBadgeSnapshot)}
-            subtitle={t('pages:turboEngine.summary.productName')}
-            summary={effectiveWindowsStoreRuntime
-              ? (turboEngineActive
-                ? t('pages:turboEngine.hero.activeDescription')
-                : t('pages:turboEngine.hero.inactiveDescription'))
-              : t('pages:turboEngine.actions.handoffHint')}
+            isActive={Boolean(turboEngineActive)}
+            summary={t('pages:turboEngine.article.unlockTitle')}
             title={t('common:sidebar.turboEngine')}
             actions={effectiveWindowsStoreRuntime ? (
               <>
@@ -392,16 +306,8 @@ export default function HomeStoreOfferPanel({ isWindowsStoreRuntime }: HomeStore
 
           <CommerceRow
             icon={Sparkles}
-            isStale={Boolean(effectiveSubscriptionSnapshot?.isStale)}
-            staleLabel={t('pages:subscription.staleBadge')}
-            statusLabel={subscriptionStatusLabel}
-            statusVariant={getStatusBadgeVariant(subscriptionBadgeSnapshot)}
-            subtitle={t('pages:subscription.summary.planName')}
-            summary={effectiveWindowsStoreRuntime
-              ? (subscriptionActive
-                ? t('pages:subscription.summary.activeDetail')
-                : t('pages:subscription.summary.inactiveDetail'))
-              : t('pages:subscription.actions.installHint')}
+            isActive={Boolean(subscriptionActive)}
+            summary={t('system.commercePanel.sponsorSummary')}
             title={t('common:sidebar.subscription')}
             actions={effectiveWindowsStoreRuntime ? (
               <>

@@ -136,14 +136,14 @@ sidebar:
   diagnostic: 診斷
   dependencyManagement: 依賴項管理
   settings: 設定
-  subscription: Hagicode 赞助者计划
+  subscription: Hagicode 贊助者計畫
   turboEngine: TurboEngine
   subscriptionStatus:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    stale: Stale
-    unavailable: Unavailable
+    loading: 載入中
+    active: 已啟用
+    inactive: 未啟用
+    stale: 快取狀態
+    unavailable: 無法使用
   desktopVersion: Desktop 版本
   webVersion: Web 版本
   windowsStoreVersion: Windows Store 版本
@@ -457,9 +457,10 @@ system:
     title: 控制台總覽
     description: 在同一個工作區中聚焦服務狀態、啟停維護、活動版本、日誌入口與推薦消息。
   commercePanel:
-    title: 商店授權與贊助
+    title: 許可與贊助
     storeDescription: 在這裡快速查看 TurboEngine 與贊助計畫的目前狀態；需要時再進入詳情頁處理購買、管理或刷新。
     nonStoreDescription: 目前不是 Microsoft Store 版。這裡保留產品入口與安裝引導，方便你完成購買跳轉與切換到 Store 版。
+    sponsorSummary: 您的支持才是我們保持更新的動力
     actions:
       viewDetails: 查看詳情
     debug:

@@ -457,9 +457,10 @@ system:
     title: 控制台总览
     description: 在一个页面内聚焦服务状态、启停维护、活动版本、日志入口以及推荐消息。
   commercePanel:
-    title: 商店许可与赞助
+    title: 许可与赞助
     storeDescription: 在这里快速查看 TurboEngine 与赞助计划的当前状态；需要时再进入详情页处理购买、管理或刷新。
     nonStoreDescription: 当前不是 Microsoft Store 版。这里保留产品入口和安装引导，方便你完成购买跳转与 Store 版切换。
+    sponsorSummary: 您的支持才是我们保持更新的动力
     actions:
       viewDetails: 查看详情
     debug:

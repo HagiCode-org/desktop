@@ -136,14 +136,14 @@ sidebar:
   diagnostic: Diagnose
   dependencyManagement: Abhängigkeitsmanagement
   settings: Einstellungen
-  subscription: Hagicode 赞助者计划
+  subscription: Hagicode Sponsorenplan
   turboEngine: TurboEngine
   subscriptionStatus:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    stale: Stale
-    unavailable: Unavailable
+    loading: Wird geladen
+    active: Aktiv
+    inactive: Nicht aktiv
+    stale: Zwischengespeicherter Stand
+    unavailable: Nicht verfügbar
   desktopVersion: Desktop-Version
   webVersion: Webversion
   windowsStoreVersion: Windows Store-Version
@@ -457,9 +457,10 @@ system:
     title: Desktop-Kontrollzentrum
     description: Bündelt Servicestatus, Start- und Stopp-Aktionen, aktive Version, Log-Zugänge und empfohlene Updates in einer fokussierten Arbeitsfläche.
   commercePanel:
-    title: Store-Lizenzen und Sponsorzugang
+    title: Lizenzen und Sponsoring
     storeDescription: Überprüfen Sie hier schnell den aktuellen Status von TurboEngine und dem Sponsorplan. Öffnen Sie den Detailbereich nur dann, wenn Sie kaufen, verwalten oder aktualisieren müssen.
     nonStoreDescription: Diese Laufzeit ist nicht die Microsoft-Store-Edition. Nutzen Sie die Links hier, um die Produktseiten zu öffnen und bei Bedarf zur Store-Version zu wechseln.
+    sponsorSummary: Ihre Unterstützung ist der Antrieb, der unsere Updates möglich macht
     actions:
       viewDetails: Details anzeigen
     debug:

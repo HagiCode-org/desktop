@@ -136,7 +136,7 @@ sidebar:
   diagnostic: Diagnostic
   dependencyManagement: Dependency Management
   settings: Settings
-  subscription: Hagicode 赞助者计划
+  subscription: Hagicode Sponsor Plan
   turboEngine: TurboEngine
   subscriptionStatus:
     loading: Loading
@@ -457,9 +457,10 @@ system:
     title: Desktop Control Center
     description: Keep service health, lifecycle actions, active version, log access, and recommended updates in one focused workspace.
   commercePanel:
-    title: Store Licenses and Sponsor Access
+    title: Licenses and Sponsorship
     storeDescription: Review TurboEngine and sponsor-plan status here, then open the detailed workspace only when you need to buy, manage, or refresh.
     nonStoreDescription: This runtime is not the Microsoft Store edition. Use these links to open the product pages and switch over to the Store build when needed.
+    sponsorSummary: Your support is what keeps us shipping updates
     actions:
       viewDetails: View Details
     debug:

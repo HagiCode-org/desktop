@@ -10,7 +10,6 @@ import {
   CreditCard,
   Loader2,
   RefreshCcw,
-  Store,
 } from 'lucide-react';
 import {
   createDefaultSubscriptionSnapshot,
@@ -20,7 +19,6 @@ import {
   type SubscriptionSnapshot,
 } from '../../../types/subscription.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   CommercePreviewDebugDialog,
@@ -35,22 +33,6 @@ import {
   refreshSubscriptionSnapshot,
   selectSubscriptionState,
 } from '@/store/slices/subscriptionSlice';
-
-function getStatusBadgeVariant(snapshot: SubscriptionSnapshot | null): 'default' | 'secondary' | 'destructive' | 'outline' {
-  if (!snapshot) {
-    return 'outline';
-  }
-
-  if (snapshot.availability !== 'supported') {
-    return 'destructive';
-  }
-
-  if (snapshot.isStale) {
-    return 'secondary';
-  }
-
-  return snapshot.status === 'active' ? 'default' : 'outline';
-}
 
 function getStatusKey(snapshot: SubscriptionSnapshot | null): string {
   if (!snapshot) {
@@ -80,6 +62,8 @@ function getPurchaseToastKind(outcome: SubscriptionPurchaseOutcome): 'success' |
       return 'error';
   }
 }
+
+const missionPointKeys = ['evolution', 'investment', 'rewards'] as const;
 
 export default function SubscriptionPage() {
   const { t } = useTranslation(['pages', 'common']);
@@ -189,148 +173,139 @@ export default function SubscriptionPage() {
   const statusKey = effectiveBridgeAvailable ? getStatusKey(effectiveSnapshot) : 'unsupported';
   const isActive = effectiveSnapshot?.status === 'active';
   const canPurchase = effectiveBridgeAvailable && effectiveSnapshot?.availability === 'supported' && !isActive;
-  const statusDetail = isActive
-    ? t('subscription.summary.activeDetail')
-    : t('subscription.summary.inactiveDetail');
-  const heroDescription = isActive
+  const canRefresh = effectiveBridgeAvailable && !effectiveIsRefreshing && !effectiveIsLoading;
+  const articleTitle = isActive
+    ? t('subscription.hero.active.title')
+    : t('subscription.hero.inactive.title');
+  const articleDescription = isActive
     ? t('subscription.hero.active.description')
     : t('subscription.hero.inactive.description');
-  const supportNote = isActive
-    ? t('subscription.message.activeThanks')
-    : t('subscription.message.ongoingDescription');
-  const actionTitle = isActive
-    ? t('subscription.actions.manageTitle')
-    : t('subscription.actions.buyTitle');
-  const actionHint = effectiveBridgeAvailable
-    ? (canPurchase
-      ? t('subscription.actions.buyHint')
-      : (isActive ? t('subscription.actions.activeHint') : t('subscription.actions.unsupportedHint')))
-    : t('subscription.actions.installHint');
+  const statusSummary = effectiveIsLoading && !effectiveSnapshot
+    ? t('subscription.status.loading')
+    : (effectiveBridgeAvailable && effectiveSnapshot?.availability === 'supported'
+      ? t(`subscription.status.${statusKey}`)
+      : t('subscription.unsupported.title'));
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-12">
-      <header className="mx-auto flex max-w-3xl flex-col items-center text-center">
-        <div className="flex flex-wrap justify-center gap-2">
-          <Badge variant="outline" className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em]">
-            {t('subscription.summary.planName')}
-          </Badge>
-          <Badge variant={getStatusBadgeVariant(effectiveSnapshot)} className="rounded-full px-3 py-1 text-xs uppercase tracking-[0.14em]">
-            {t(`subscription.status.${statusKey}`)}
-          </Badge>
-          {effectiveSnapshot?.isStale ? (
-            <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-              {t('subscription.staleBadge')}
-            </Badge>
-          ) : null}
-          {isPreviewing ? (
-            <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-              {t('common:system.commercePanel.debug.previewBadge', {
-                mode: getCommercePreviewScenarioLabel(t, previewDebug.scenario),
-              })}
-            </Badge>
-          ) : null}
-        </div>
+      <header className="mx-auto max-w-3xl text-center">
         <button
           type="button"
-          className="mt-5 max-w-3xl cursor-default bg-transparent p-0 text-3xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] sm:text-4xl lg:text-5xl"
+          className="max-w-3xl cursor-default bg-transparent p-0 text-3xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] sm:text-4xl lg:text-5xl"
           onClick={previewDebug.handleDebugTitleClick}
         >
-          {t('subscription.title')}
+          {t('subscription.summary.planName')}
         </button>
-        <p className="mt-4 max-w-[70ch] text-sm leading-7 text-muted-foreground sm:text-base">
-          {heroDescription}
-        </p>
+        {isPreviewing ? (
+          <p className="mt-4 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            {t('common:system.commercePanel.debug.previewBadge', {
+              mode: getCommercePreviewScenarioLabel(t, previewDebug.scenario),
+            })}
+          </p>
+        ) : null}
       </header>
 
       <section className="commerce-premium-shell rounded-3xl px-5 py-8 sm:px-8 sm:py-10">
         <div className="relative z-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.2em]">
-              {t('subscription.summary.planLabel')}
-            </p>
-            <h2 className="commerce-premium-heading mt-4 text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
-              {t('subscription.summary.planName')}
-            </h2>
-            <p className="commerce-premium-copy mx-auto mt-4 max-w-[64ch] text-sm leading-7 sm:text-base">
-              {supportNote}
-            </p>
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
-            {effectiveIsLoading && !effectiveSnapshot ? (
-              <div className="commerce-premium-panel flex flex-col items-center gap-3 rounded-3xl px-6 py-10 lg:col-span-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="commerce-premium-copy text-sm leading-6">{t('subscription.loading')}</p>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)]">
+            <article className="commerce-premium-panel rounded-3xl p-6 sm:p-8">
+              <div className="max-w-3xl">
+                <h2 className="commerce-premium-heading text-3xl font-semibold tracking-[-0.02em] [text-wrap:balance] sm:text-4xl">
+                  {articleTitle}
+                </h2>
+                <p className="commerce-premium-copy mt-4 text-sm leading-7 sm:text-base">
+                  {articleDescription}
+                </p>
               </div>
-            ) : (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="commerce-premium-panel rounded-3xl p-5">
-                    <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
-                      {t('subscription.summary.planLabel')}
-                    </p>
-                    <p className="commerce-premium-heading mt-3 text-lg font-medium">{t('subscription.summary.planName')}</p>
-                    <p className="commerce-premium-copy mt-3 text-sm leading-6">{statusDetail}</p>
-                  </div>
-                  <div className="commerce-premium-panel rounded-3xl p-5">
-                    <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
-                      {t('subscription.message.ongoingTitle')}
-                    </p>
-                    <p className="commerce-premium-copy mt-3 text-sm leading-6">{supportNote}</p>
-                  </div>
 
-                  <div className="commerce-premium-soft rounded-3xl p-5 sm:col-span-2">
-                    <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
-                      {t('subscription.message.unlockNoticeTitle')}
-                    </p>
-                    <p className="commerce-premium-heading mt-3 text-base font-medium">{actionTitle}</p>
-                    <p className="commerce-premium-copy mt-3 text-sm leading-6">
-                      {t('subscription.message.unlockNoticeDescription')}
-                    </p>
-                  </div>
-                </div>
-
-                <aside className="commerce-premium-panel rounded-3xl p-5 sm:p-6">
-                  <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.16em]">
-                    {actionTitle}
-                  </p>
-                  <p className="commerce-premium-copy mt-3 text-sm leading-7">{actionHint}</p>
-
-                  {effectiveBridgeAvailable ? (
-                    <div className="mt-6 flex flex-col gap-3">
-                      {canPurchase ? (
-                        <Button className="commerce-premium-button justify-between" onClick={() => void handlePurchase()} disabled={effectiveIsPurchasing || isPreviewing}>
-                          <span className="inline-flex items-center gap-2">
-                            {effectiveIsPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                            {effectiveIsPurchasing
-                              ? t('subscription.actions.processing')
-                              : t('subscription.actions.buy')}
-                          </span>
-                          {!effectiveIsPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
-                        </Button>
-                      ) : null}
-                      <Button variant="outline" className="commerce-premium-button-secondary justify-between" onClick={() => void handleRefresh()} disabled={effectiveIsRefreshing || effectiveIsLoading || isPreviewing}>
-                        <span className="inline-flex items-center gap-2">
-                          {effectiveIsRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                          {effectiveIsRefreshing ? t('subscription.actions.refreshing') : t('subscription.actions.refresh')}
+              <div className="mt-8">
+                <h3 className="commerce-premium-heading text-xl font-semibold">
+                  {t('subscription.mission.title')}
+                </h3>
+                <ol className="mt-5 space-y-5">
+                  {missionPointKeys.map((pointKey, index) => (
+                    <li
+                      key={pointKey}
+                      className="border-t border-border/50 pt-5 first:border-t-0 first:pt-0"
+                    >
+                      <p className="commerce-premium-heading flex items-center gap-3 text-base font-semibold sm:text-lg">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm text-primary">
+                          {index + 1}
                         </span>
-                        {!effectiveIsRefreshing ? <ArrowRight className="h-4 w-4" /> : null}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="mt-6 flex flex-col gap-3">
-                      <Button className="commerce-premium-button justify-between" onClick={() => void openStorePage(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL)} disabled={isPreviewing}>
+                        <span>{t(`subscription.mission.points.${pointKey}.title`)}</span>
+                      </p>
+                      <p className="commerce-premium-copy mt-3 pl-10 text-sm leading-7 sm:text-base">
+                        {t(`subscription.mission.points.${pointKey}.description`)}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="commerce-premium-soft mt-10 rounded-3xl p-5">
+                <p className="commerce-premium-kicker text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  {t('subscription.message.unlockNoticeTitle')}
+                </p>
+                <p className="commerce-premium-copy mt-3 text-sm leading-7 sm:text-base">
+                  {t('subscription.message.unlockNoticeDescription')}
+                </p>
+              </div>
+            </article>
+
+            <aside className="space-y-4">
+              <div className="commerce-premium-panel rounded-3xl p-5 sm:p-6">
+                <h2 className="commerce-premium-heading text-xl font-semibold">
+                  {t('subscription.actions.panelEyebrow')}
+                </h2>
+
+                {effectiveIsLoading && !effectiveSnapshot ? (
+                  <div className="mt-6 flex items-center gap-3 rounded-2xl border border-border/50 bg-background/55 px-4 py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <p className="commerce-premium-copy text-sm leading-6">{t('subscription.loading')}</p>
+                  </div>
+                ) : null}
+
+                <dl className="mt-6 space-y-3 text-sm leading-6">
+                  <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-3">
+                    <dt className="text-muted-foreground">{t('subscription.snapshot.fields.status')}</dt>
+                    <dd className="commerce-premium-heading text-right font-medium">{statusSummary}</dd>
+                  </div>
+                </dl>
+
+                {effectiveBridgeAvailable ? (
+                  <div className="mt-6 flex flex-col gap-3">
+                    {canPurchase ? (
+                      <Button className="commerce-premium-button justify-between" onClick={() => void handlePurchase()} disabled={effectiveIsPurchasing || isPreviewing}>
                         <span className="inline-flex items-center gap-2">
-                          <BadgeCheck className="h-4 w-4" />
-                          {t('subscription.actions.installStoreApp')}
+                          {effectiveIsPurchasing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                          {effectiveIsPurchasing
+                            ? t('subscription.actions.processing')
+                            : t('subscription.actions.buy')}
                         </span>
-                        <ArrowRight className="h-4 w-4" />
+                        {!effectiveIsPurchasing ? <ArrowRight className="h-4 w-4" /> : null}
                       </Button>
-                    </div>
-                  )}
-                </aside>
-              </>
-            )}
+                    ) : null}
+                    <Button variant="outline" className="commerce-premium-button-secondary justify-between" onClick={() => void handleRefresh()} disabled={!canRefresh || isPreviewing}>
+                      <span className="inline-flex items-center gap-2">
+                        {canRefresh ? <RefreshCcw className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+                        {canRefresh ? t('subscription.actions.refresh') : t('subscription.actions.refreshing')}
+                      </span>
+                      {canRefresh ? <ArrowRight className="h-4 w-4" /> : null}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-6 flex flex-col gap-3">
+                    <Button className="commerce-premium-button justify-between" onClick={() => void openStorePage(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL)} disabled={isPreviewing}>
+                      <span className="inline-flex items-center gap-2">
+                        <BadgeCheck className="h-4 w-4" />
+                        {t('subscription.actions.installStoreApp')}
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         </div>
       </section>
@@ -341,18 +316,6 @@ export default function SubscriptionPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('subscription.errorTitle')}</AlertTitle>
             <AlertDescription>{t('subscription.errorDescription', { error: effectiveError })}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {!effectiveBridgeAvailable || effectiveSnapshot?.availability !== 'supported' ? (
-          <Alert className="commerce-premium-alert">
-            <Store className="h-4 w-4" />
-            <AlertTitle>{t('subscription.unsupported.title')}</AlertTitle>
-            <AlertDescription>
-              {effectiveBridgeAvailable
-                ? t('subscription.unsupported.description')
-                : t('subscription.unsupported.nonStoreDescription')}
-            </AlertDescription>
           </Alert>
         ) : null}
 

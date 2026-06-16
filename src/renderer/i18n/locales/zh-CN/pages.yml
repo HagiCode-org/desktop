@@ -388,7 +388,7 @@ subscription:
   hero:
     inactive:
       title: 让 Hagicode 变得更好
-      description: 赞助计划用于支持 Hagicode 的持续维护。这个页面只展示当前状态、购买入口，以及这台设备上会发生什么。
+      description: 赞助计划用于支持 Hagicode 的持续维护。
       note: 如果你愿意支持，这份购买会帮助后续迭代继续发生。
     active:
       title: 感谢你的支持
@@ -436,7 +436,7 @@ subscription:
     fallback: 上次已知状态
   mission:
     eyebrow: 为什么需要赞助
-    title: 你的购买会帮助
+    title: 你的购买会帮助支持后续维护与更新。
     description: 支持后续维护与更新。
     points:
       evolution:
@@ -538,6 +538,34 @@ turboEngine:
     title: TurboEngine 工作区
     activeDescription: 当前设备已经拥有 TurboEngine 许可证。你可以在这里确认商店状态、最近同步时间，以及诊断信息。
     inactiveDescription: TurboEngine 使用独立的永久许可证。这个页面只保留购买、刷新和诊断所需的信息。
+  article:
+    unlockTitle: 一次购买，永久解锁
+    unlockLead: TurboEngine DLC 把高并发提案、品牌定制、主题扩展和头像资源整合成一个永久解锁包。买断后不需要订阅，功能会直接作用到你当前这套工作台体验。
+    featuresTitle: 主要解锁特性
+    purchaseNoticeTitle: 购买须知
+    purchaseNoticeItems:
+      channel: 不同销售渠道的授权许可并不互通。例如你在 Microsoft Store 购买的许可，也只能配套在 Microsoft Store 版本中使用。
+      restart: 购买之后，程序上也许不会立即生效。你需要尝试重新启动 Hagicode 服务和 Desktop 以便正确生效；必要时可能还需要重启计算机。
+      online: 授权并不支持离线使用。因此你需要确保在启动 Desktop 时，当前计算机处于正确的联网状态。
+    features:
+      proposalConcurrency:
+        title: 提案并发上限从 3 提升到 32
+        description: 这仍然是 Turbo Engine DLC 最核心、最有体感的升级。生成、执行、归档中的提案会共同占用并发位，所以高上限会直接改变你能不能稳定并行推进多条任务线。
+      documentThemes:
+        title: 扩展文档主题
+        description: 可以在 Agent 管理相关界面里切换扩展的 Document Theme，实时预览工作台、历史区和兜底编组在不同主题下的术语与文案表现。
+      composeCommitCoAuthor:
+        title: AI Compose Commit 的 Co-Authored-By 自定义
+        description: 在 Git 设置里，你可以保存默认的 Co-Authored-By 模式；在单次 AI Compose 运行里，也可以临时改成自定义协作者名称与邮箱，或者这一轮完全不追加该尾注。
+      branding:
+        title: 品牌自定义
+        description: Turbo Engine DLC 生效后，可以上传头部 Logo，设置应用标题、浏览器标题，以及品牌点击跳转链接。它不只是改一个左上角图标，而是把工作台头部品牌整块开放给你定制。
+      avatarUpload:
+        title: 自定义头像上传与共享复用
+        description: 现在已经支持上传当前 Agent 的自定义头像，也支持把共享自定义头像库复用到新建、编辑和批量创建流程里。
+      avatarPacks:
+        title: 更多头像资源
+        description: 内置了五套新的 Agent 头像可以选择。
   messages:
     refreshSuccess: TurboEngine 状态已刷新。
     refreshStale: Microsoft Store 刷新未完成，Desktop 已继续使用上次已知的 TurboEngine 状态。
@@ -561,6 +589,7 @@ turboEngine:
   summary:
     productName: TurboEngine 永久许可证
     storeId: 'Store ID：{{storeId}}'
+    storeIdLabel: Store ID
     statusLabel: 许可证状态
     lastCheckedLabel: 最近检查时间
     lastSuccessLabel: 最近一次成功同步

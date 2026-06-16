@@ -136,14 +136,14 @@ sidebar:
   diagnostic: Diagnostic
   dependencyManagement: Gestion des dépendances
   settings: Paramètres
-  subscription: Hagicode 赞助者计划
+  subscription: Programme de soutien Hagicode
   turboEngine: TurboEngine
   subscriptionStatus:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    stale: Stale
-    unavailable: Unavailable
+    loading: Chargement
+    active: Actif
+    inactive: Inactif
+    stale: État en cache
+    unavailable: Indisponible
   desktopVersion: Version de bureau
   webVersion: Version Internet
   windowsStoreVersion: Version Windows Store
@@ -457,9 +457,10 @@ system:
     title: Centre de contrôle Desktop
     description: Réunit l'état du service, les actions de démarrage et d'arrêt, la version active, l'accès aux journaux et les mises à jour recommandées dans un espace de travail unique.
   commercePanel:
-    title: Licences Store et accès sponsor
+    title: Licences et soutien
     storeDescription: Vérifiez ici rapidement l'état actuel de TurboEngine et du plan sponsor, puis ouvrez l'espace détaillé uniquement lorsque vous devez acheter, gérer ou actualiser.
     nonStoreDescription: Ce runtime n'est pas l'édition Microsoft Store. Utilisez ces liens pour ouvrir les pages produit et passer à la version Store si nécessaire.
+    sponsorSummary: Votre soutien est ce qui nous permet de continuer à publier des mises à jour
     actions:
       viewDetails: Voir les détails
     debug:

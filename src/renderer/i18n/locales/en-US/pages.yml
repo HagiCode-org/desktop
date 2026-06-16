@@ -538,6 +538,34 @@ turboEngine:
     title: TurboEngine workspace
     activeDescription: TurboEngine is already licensed on this device. Use this page to confirm store state, recent sync timestamps, and diagnostics.
     inactiveDescription: TurboEngine uses a separate perpetual license. This page keeps the purchase, refresh, and diagnostic controls focused in one place.
+  article:
+    unlockTitle: Buy once, unlock permanently
+    unlockLead: TurboEngine DLC packages the upgrades that most directly change how much parallel work, presentation control, and visual customization you can unlock inside Hagicode Desktop.
+    featuresTitle: Key unlocks
+    purchaseNoticeTitle: Purchase notes
+    purchaseNoticeItems:
+      channel: License entitlements do not carry across sales channels. For example, a license purchased from Microsoft Store only works with the Microsoft Store edition.
+      restart: After purchase, the entitlement may not become active immediately. Try restarting both the Hagicode service and Desktop, and restart the computer as well if necessary.
+      online: This entitlement does not support offline use. Make sure the computer is in a working online state when Desktop starts.
+    features:
+      proposalConcurrency:
+        title: Proposal concurrency limit increases from 3 to 32
+        description: This is still the core TurboEngine DLC upgrade with the strongest day-to-day impact. Proposals in generation, execution, and archive all occupy concurrency slots together, so the higher ceiling directly changes whether you can keep multiple workstreams moving in parallel.
+      documentThemes:
+        title: Extended document themes
+        description: Adventure-party management screens can switch between extended Document Theme options and preview how the workbench, history area, and fallback groupings read under different terminology and copy styles in real time.
+      composeCommitCoAuthor:
+        title: Custom Co-Authored-By for AI Compose Commit
+        description: In Git settings, you can save a default Co-Authored-By mode. During a single AI Compose run, you can also temporarily switch to a custom collaborator name and email, or omit the footer entirely for that round.
+      branding:
+        title: Brand customization
+        description: Once TurboEngine DLC is active, you can upload a header logo and configure the app title, browser title, and brand click-through link. It is not just a new top-left icon, it opens the whole workbench brand header for customization.
+      avatarUpload:
+        title: Custom avatar upload and shared reuse
+        description: You can now upload a custom avatar for the current agent, and the shared custom avatar library can also be reused across create, edit, and batch-create flows.
+      avatarPacks:
+        title: More avatar resources
+        description: Five new built-in agent avatar sets are included.
   messages:
     refreshSuccess: TurboEngine status refreshed.
     refreshStale: Desktop kept the last known TurboEngine state because the Microsoft Store refresh did not complete.
@@ -561,6 +589,7 @@ turboEngine:
   summary:
     productName: TurboEngine perpetual license
     storeId: 'Store ID: {{storeId}}'
+    storeIdLabel: Store ID
     statusLabel: License status
     lastCheckedLabel: Last checked
     lastSuccessLabel: Last successful sync

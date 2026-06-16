@@ -136,14 +136,14 @@ sidebar:
   diagnostic: 診断
   dependencyManagement: 依存関係の管理
   settings: 設定
-  subscription: Hagicode 赞助者计划
+  subscription: Hagicode スポンサープラン
   turboEngine: TurboEngine
   subscriptionStatus:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    stale: Stale
-    unavailable: Unavailable
+    loading: 読み込み中
+    active: 有効
+    inactive: 未有効
+    stale: キャッシュ状態
+    unavailable: 利用できません
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
   windowsStoreVersion: Windows Store 版
@@ -457,9 +457,10 @@ system:
     title: デスクトップ制御センター
     description: サービス状態、開始と停止、アクティブなバージョン、ログ導線、推奨アップデートを 1 つの作業面にまとめます。
   commercePanel:
-    title: Store ライセンスとスポンサー アクセス
+    title: ライセンスとスポンサー支援
     storeDescription: ここで TurboEngine とスポンサー プランの現在の状態をすばやく確認し、購入、管理、更新が必要なときだけ詳細画面を開きます。
     nonStoreDescription: このランタイムは Microsoft Store 版ではありません。必要に応じて製品ページを開き、Store 版に切り替えるためのリンクをここに残しています。
+    sponsorSummary: 皆さまの支援こそが、更新を続けるための原動力です
     actions:
       viewDetails: 詳細を表示
     debug:

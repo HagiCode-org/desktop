@@ -136,14 +136,14 @@ sidebar:
   diagnostic: Диагностика
   dependencyManagement: Управление зависимостями
   settings: Настройки
-  subscription: Hagicode 赞助者计划
+  subscription: План поддержки Hagicode
   turboEngine: TurboEngine
   subscriptionStatus:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    stale: Stale
-    unavailable: Unavailable
+    loading: Загрузка
+    active: Активно
+    inactive: Неактивно
+    stale: Состояние из кэша
+    unavailable: Недоступно
   desktopVersion: Настольная версия
   webVersion: Веб-версия
   windowsStoreVersion: Версия Windows Store
@@ -457,9 +457,10 @@ system:
     title: Центр управления Desktop
     description: Собирает состояние сервиса, команды запуска и остановки, активную версию, доступ к журналам и рекомендуемые обновления в одном рабочем пространстве.
   commercePanel:
-    title: Лицензии Store и спонсорский доступ
+    title: Лицензии и поддержка
     storeDescription: Здесь можно быстро проверить текущий статус TurboEngine и спонсорского плана, а подробное рабочее пространство открывать только тогда, когда нужно купить, управлять или обновить.
     nonStoreDescription: Эта среда выполнения не является версией Microsoft Store. Используйте эти ссылки, чтобы открыть страницы продуктов и при необходимости перейти на версию Store.
+    sponsorSummary: Именно ваша поддержка дает нам возможность продолжать выпускать обновления
     actions:
       viewDetails: Подробнее
     debug:

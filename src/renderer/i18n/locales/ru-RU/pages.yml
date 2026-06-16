@@ -359,12 +359,12 @@ installProgressDialog:
     retry: Повторить попытку
 subscription:
   eyebrow: Microsoft Store sponsor plan
-  title: Hagicode 赞助者计划
-  description: Review the Microsoft Store sponsor plan status, refresh the local snapshot, and keep entitlement flags visible for future premium Desktop features.
-  loading: Reading the latest cached subscription snapshot...
-  errorTitle: Subscription snapshot unavailable
-  errorDescription: 'Desktop could not load the subscription snapshot: {{error}}'
-  staleBadge: Cached snapshot
+  title: План поддержки Hagicode
+  description: Проверьте статус плана поддержки Microsoft Store, обновите локальный снимок и убедитесь, что права поддержки уже активны на этом устройстве.
+  loading: Чтение снимка поддержки из кэша...
+  errorTitle: Снимок поддержки недоступен
+  errorDescription: 'Desktop не удалось загрузить снимок поддержки: {{error}}'
+  staleBadge: Снимок из кэша
   messages:
     refreshSuccess: Subscription status refreshed.
     refreshStale: Desktop kept the cached subscription snapshot because the Microsoft Store refresh did not complete.
@@ -375,45 +375,45 @@ subscription:
     openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
     openStoreFailedFallback: Microsoft Store page unavailable.
   status:
-    loading: Loading
-    active: Active
-    inactive: Inactive
-    expired: Expired
-    canceled: Canceled
-    grace-period: Grace period
-    pending: Pending
-    unknown: Unknown
-    stale: Stale cached state
-    unsupported: Store unavailable
+    loading: Загрузка
+    active: Активно
+    inactive: Неактивно
+    expired: Истекло
+    canceled: Отменено
+    grace-period: Льготный период
+    pending: В ожидании
+    unknown: Неизвестно
+    stale: Устаревшее состояние из кэша
+    unsupported: Store недоступен
   hero:
     inactive:
-      title: Keep Hagicode AI Agent moving forward
-      description: The sponsor plan is the most direct way to fund the time and token cost behind continuous AI Agent work in Desktop.
+      title: Делать Hagicode лучше
+      description: План поддержки нужен для постоянного сопровождения Hagicode.
       note: AI Agent features do not stay useful on their own. They need ongoing tracking, prompt updates, implementation work, and token spend to stay aligned with fast-moving tools.
     active:
-      title: Thank you for backing the next round of work
-      description: This device already carries an active sponsor plan, which means you are helping keep Hagicode AI Agent current while giving us room to ship more polished sponsor-facing touches.
+      title: Спасибо за поддержку
+      description: На этом устройстве права поддержки уже активны. Здесь можно проверить статус, снова открыть покупку или вручную обновить снимок.
       note: Your purchase is more than a receipt. It directly supports the ongoing maintenance, iteration, and follow-up work that keeps the feature reliable after launch.
   message:
     ongoingTitle: Ongoing evolution needs real investment
     ongoingDescription: Hagicode is not a one-and-done product. Keeping it useful means continued author time and recurring token spend for updates, validation, and tracking change.
     perksTitle: Sponsors should receive thoughtful perks
     perksDescription: We also plan to introduce fitting sponsor benefits over time, including more refined themes and other perks as they become ready.
-    unlockNoticeTitle: No feature unlocks included
-    unlockNoticeDescription: The sponsor plan currently does not unlock any product features. If you need other feature access, you must purchase the corresponding license separately.
+    unlockNoticeTitle: Сейчас функций для разблокировки нет
+    unlockNoticeDescription: Сам план поддержки не открывает другие функции продукта. Для отдельных возможностей по-прежнему нужна отдельная покупка.
     inactivePrompt: If this direction matters to you, the sponsor plan is the direct way to support it.
     activeThanks: Thank you for the support. We will keep shaping sponsor-facing benefits with care as the product grows.
   actions:
-    panelEyebrow: Sponsor actions
+    panelEyebrow: Действия поддержки
     buyTitle: Support ongoing creation
     manageTitle: Review or manage support
-    refresh: Refresh status
-    refreshing: Refreshing...
-    buy: Buy / Manage
+    refresh: Обновить статус
+    refreshing: Обновление...
+    buy: Купить план поддержки
     manage: Buy / Manage
     subscribeViaStore: Subscribe in Microsoft Store
-    installStoreApp: Install Store edition
-    processing: Processing...
+    installStoreApp: Установить версию Store
+    processing: Обработка...
     buyHint: Start the Microsoft Store flow to support continued AI Agent iteration and attach sponsor entitlements to this device.
     manageHint: Open the Microsoft Store purchase flow again if you want to confirm the sponsoring account or manage the current plan.
     activeHint: Sponsor entitlements are already active on this device. Refresh once if you want to confirm the latest Microsoft Store state.
@@ -423,7 +423,7 @@ subscription:
     secondaryHint: Refresh first if you want Desktop to re-check Microsoft Store and confirm the latest local snapshot before you purchase or review the plan.
   summary:
     planLabel: Plan
-    planName: Hagicode Sponsor Plan
+    planName: План поддержки Hagicode
     renewalLabel: Renewal or expiry
     lastSyncLabel: Last successful sync
     entitlementsLabel: Enabled entitlements
@@ -436,18 +436,18 @@ subscription:
     fallback: Fallback snapshot
   mission:
     eyebrow: Why sponsorship matters
-    title: Sponsorship keeps an evolving feature alive
-    description: Hagicode AI Agent is not a one-off capability. It needs continuous follow-up so the product can track changing models, tools, prompts, and supporting workflows.
+    title: Ваша покупка помогает поддерживать сопровождение и обновления.
+    description: Это позволяет и дальше отслеживать изменения моделей, CLI и рабочих процессов.
     points:
       evolution:
-        title: AI Agent keeps moving
-        description: Models, CLI behaviors, prompt strategies, and surrounding workflows keep changing. Staying useful means revisiting the feature repeatedly, not shipping it once.
+        title: Поддерживать Hagicode в актуальном состоянии
+        description: Отслеживать изменения моделей, CLI и рабочих процессов.
       investment:
-        title: Time and token budget both matter
-        description: Keeping the experience current requires author attention, validation work, issue follow-up, and recurring token spend for research and iteration.
+        title: Поддерживать проверку и обновления
+        description: Давать исправлениям, проверке и итерациям двигаться дальше.
       rewards:
-        title: Support should become visible value
-        description: Beyond sustaining the core work, we plan to add sponsor-facing touches such as more refined themes and other carefully chosen benefits over time.
+        title: Активировать права поддержки
+        description: После покупки на этом устройстве будут показаны и сохранены соответствующие права.
   gratitude:
     eyebrow: Sponsor message
     title: Your support is already carrying real work
@@ -481,7 +481,7 @@ subscription:
     title: Store status and local entitlement details
     description: Operational details stay visible here so the sponsor plan remains auditable on the current device.
     fields:
-      status: Current status
+      status: Текущий статус
       planStoreId: Store ID
       lastCheckedAt: Last checked
       renewalDate: Renewal date
@@ -508,36 +508,64 @@ subscription:
     source: Snapshot source
     empty: No diagnostics recorded.
   stale:
-    title: Cached state is being used
-    description: Desktop preserved the last known snapshot because the Store refresh failed or has not completed yet.
+    title: Desktop сейчас показывает последнее подтвержденное состояние
+    description: Microsoft Store не завершил последнее обновление, поэтому Desktop сохранил последнее подтвержденное в этой сессии состояние поддержки вместо очистки.
   unsupported:
-    title: Windows Store runtime required
+    title: Требуется версия Microsoft Store
     description: Purchase and management actions only work in the Microsoft Store edition of Hagicode Desktop.
     nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the sponsor plan in Microsoft Store, then install or launch the Store edition of Hagicode Desktop to complete subscription and entitlement sync.
   purchaseOutcome:
-    title: Purchase result
-    succeeded: Purchase completed and the subscription snapshot was refreshed.
-    already-purchased: This Microsoft Store account already owns the sponsor plan.
-    canceled: The Microsoft Store purchase dialog was canceled.
-    not-purchased: The purchase flow closed without completing.
-    network-error: Microsoft Store reported a network error during purchase.
-    server-error: Microsoft Store reported a server error during purchase.
-    not-supported: Purchase is unavailable in this runtime.
-    failed: Microsoft Store purchase failed.
+    title: Результат покупки
+    succeeded: Покупка завершена, и Desktop обновил снимок поддержки.
+    already-purchased: Эта учетная запись Microsoft Store уже владеет планом поддержки.
+    canceled: Диалог покупки Microsoft Store был отменен.
+    not-purchased: Процесс покупки завершился без оплаты.
+    network-error: Microsoft Store сообщил об ошибке сети во время покупки.
+    server-error: Microsoft Store сообщил об ошибке сервера во время покупки.
+    not-supported: Покупка недоступна в этой среде выполнения.
+    failed: Покупка в Microsoft Store завершилась ошибкой.
 turboEngine:
-  eyebrow: Microsoft Store perpetual license
-  loadingTitle: Loading TurboEngine status
-  loading: Reading the latest cached TurboEngine snapshot...
-  verifyingTitle: Startup verification in progress
-  verifyingDescription: Desktop is checking Microsoft Store live at startup so cached TurboEngine data does not remain the final truth.
-  verifyingBadge: Verifying
-  staleBadge: Cached snapshot
-  errorTitle: TurboEngine snapshot unavailable
-  errorDescription: 'Desktop could not load the TurboEngine snapshot: {{error}}'
+  eyebrow: Постоянная лицензия Microsoft Store
+  loadingTitle: Загрузка статуса TurboEngine
+  loading: Чтение снимка TurboEngine из кэша...
+  verifyingTitle: Идет проверка при запуске
+  verifyingDescription: Desktop проверяет Microsoft Store при запуске, чтобы кэшированные данные TurboEngine не оставались окончательным состоянием.
+  verifyingBadge: Проверка
+  staleBadge: Снимок из кэша
+  errorTitle: Снимок TurboEngine недоступен
+  errorDescription: 'Desktop не удалось загрузить снимок TurboEngine: {{error}}'
   hero:
     title: TurboEngine workspace
     activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
     inactiveDescription: TurboEngine uses a separate perpetual Microsoft Store license. This workspace lets you verify the current state, buy the license, and confirm the latest runtime diagnostics.
+  article:
+    unlockTitle: Купите один раз и разблокируйте навсегда
+    unlockLead: DLC TurboEngine объединяет высокую параллельность предложений, настройку бренда, расширенные темы и ресурсы аватаров в один постоянный пакет. После покупки подписка не нужна, а возможности сразу влияют на ваш текущий рабочий стол.
+    featuresTitle: Основные разблокировки
+    purchaseNoticeTitle: Важная информация о покупке
+    purchaseNoticeItems:
+      channel: Лицензии не переносятся между разными каналами продаж. Например, лицензия, купленная в Microsoft Store, работает только с версией из Microsoft Store.
+      restart: После покупки право может активироваться не сразу. Попробуйте перезапустить сервис Hagicode и Desktop, а при необходимости также перезагрузите компьютер.
+      online: Эта лицензия не поддерживает офлайн-использование. Убедитесь, что при запуске Desktop компьютер находится в рабочем онлайн-состоянии.
+    features:
+      proposalConcurrency:
+        title: Лимит параллельности предложений увеличен с 3 до 32
+        description: Это по-прежнему главное и наиболее заметное обновление DLC TurboEngine. Предложения в генерации, выполнении и архиве занимают общие слоты параллельности, поэтому высокий лимит напрямую влияет на то, сможете ли вы стабильно вести несколько рабочих линий параллельно.
+      documentThemes:
+        title: Расширенные темы документов
+        description: На экранах управления агентами можно переключать расширенные варианты Document Theme и сразу смотреть, как меняются рабочая область, история и резервные группировки при другой терминологии и формулировках.
+      composeCommitCoAuthor:
+        title: Настраиваемый Co-Authored-By для AI Compose Commit
+        description: В настройках Git можно сохранить режим Co-Authored-By по умолчанию. Во время отдельного запуска AI Compose можно временно указать имя и почту соавтора вручную или вовсе не добавлять этот хвост в данном запуске.
+      branding:
+        title: Настройка бренда
+        description: После активации DLC TurboEngine можно загрузить логотип в шапку и настроить заголовок приложения, заголовок браузера и ссылку бренда. Это не просто замена значка слева сверху, а открытие всей брендовой области шапки рабочего пространства для настройки.
+      avatarUpload:
+        title: Загрузка собственных аватаров и общее повторное использование
+        description: Теперь можно загружать собственный аватар для текущего агента, а общую библиотеку пользовательских аватаров использовать повторно в сценариях создания, редактирования и пакетного создания.
+      avatarPacks:
+        title: Больше ресурсов аватаров
+        description: В комплект входят пять новых встроенных наборов аватаров для агента.
   messages:
     refreshSuccess: TurboEngine status refreshed.
     refreshStale: Desktop kept the cached TurboEngine snapshot because the Microsoft Store refresh did not complete.
@@ -548,31 +576,32 @@ turboEngine:
     openStoreFailed: 'Failed to open the Microsoft Store page: {{error}}'
     openStoreFailedFallback: Microsoft Store page unavailable.
   status:
-    loading: Loading
-    active: Active
-    inactive: Not active
-    expired: Expired
-    canceled: Canceled
-    grace-period: Grace period
-    pending: Pending
-    unknown: Unknown
-    stale: Cached state
-    unsupported: Store unavailable
+    loading: Загрузка
+    active: Активно
+    inactive: Неактивно
+    expired: Истекло
+    canceled: Отменено
+    grace-period: Льготный период
+    pending: В ожидании
+    unknown: Неизвестно
+    stale: Состояние из кэша
+    unsupported: Store недоступен
   summary:
-    productName: TurboEngine perpetual license
+    productName: Постоянная лицензия TurboEngine
     storeId: 'Store ID: {{storeId}}'
-    statusLabel: License status
+    storeIdLabel: Store ID
+    statusLabel: Статус лицензии
     lastCheckedLabel: Last checked
     lastSuccessLabel: Last successful sync
   actions:
-    sectionTitle: License actions
-    processing: Processing...
+    sectionTitle: Действия с лицензией
+    processing: Обработка...
     manage: Open Store purchase flow
-    buy: Buy TurboEngine license
-    refresh: Refresh status
-    refreshing: Refreshing...
+    buy: Купить лицензию TurboEngine
+    refresh: Обновить статус
+    refreshing: Обновление...
     openStoreProduct: Open TurboEngine in Store
-    installStoreApp: Install Store edition
+    installStoreApp: Установить версию Store
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
     activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
@@ -590,22 +619,22 @@ turboEngine:
     store: Microsoft Store
     fallback: Fallback snapshot
   diagnostics:
-    sectionTitle: Diagnostics
-    empty: No diagnostics recorded.
+    sectionTitle: Диагностика
+    empty: Диагностическая информация отсутствует.
   stale:
-    title: Desktop is showing the cached TurboEngine state
-    description: Microsoft Store did not complete the latest refresh, so Desktop kept the most recent known TurboEngine snapshot instead of clearing it.
+    title: Desktop сейчас показывает последнее подтвержденное состояние TurboEngine
+    description: Microsoft Store не завершил последнее обновление, поэтому Desktop сохранил последнее подтвержденное в этой сессии состояние TurboEngine вместо очистки.
   unsupported:
-    title: Microsoft Store edition required
+    title: Требуется версия Microsoft Store
     description: Purchase and live verification only work in the Microsoft Store edition of Hagicode Desktop.
     nonStoreDescription: This runtime is not the Microsoft Store edition. Use the buttons below to open the TurboEngine Store page, then install or launch the Store edition of Hagicode Desktop to complete purchase and verification.
   purchaseOutcome:
-    title: Purchase result
-    succeeded: Purchase completed and Desktop refreshed the TurboEngine license snapshot.
-    already-purchased: This Microsoft Store account already owns the TurboEngine license.
-    canceled: The Microsoft Store purchase dialog was canceled.
-    not-purchased: The purchase flow closed without completing payment.
-    network-error: Microsoft Store reported a network error during purchase.
-    server-error: Microsoft Store reported a server error during purchase.
-    not-supported: Purchase is unavailable in this runtime.
-    failed: Microsoft Store purchase failed.
+    title: Результат покупки
+    succeeded: Покупка завершена, и Desktop обновил снимок лицензии TurboEngine.
+    already-purchased: Эта учетная запись Microsoft Store уже владеет лицензией TurboEngine.
+    canceled: Диалог покупки Microsoft Store был отменен.
+    not-purchased: Процесс покупки завершился без оплаты.
+    network-error: Microsoft Store сообщил об ошибке сети во время покупки.
+    server-error: Microsoft Store сообщил об ошибке сервера во время покупки.
+    not-supported: Покупка недоступна в этой среде выполнения.
+    failed: Покупка в Microsoft Store завершилась ошибкой.
