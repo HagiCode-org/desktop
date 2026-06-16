@@ -59,8 +59,7 @@ settings:
     description: Выбор языка интерфейса приложения
   embeddedWebServicePort: Встроенный порт веб-службы
 footer:
-  copyright: © 2026 Hagicode Desktop. Создано с помощью ❤️ с использованием Electron + React + TypeScript.
-  testBuild: Тестовое приложение — сборка для разработки
+  copyright: © 2026 Hagicode Desktop
 menu:
   systemManagement: Управление системой
   hagicoWeb: Hagicode Web

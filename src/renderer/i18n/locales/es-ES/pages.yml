@@ -183,8 +183,7 @@ settings:
     errors:
       saveErrorDetail: 'Save failed: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop. Construido con ❤️ usando Electron + React + TypeScript.
-  testBuild: 'Aplicación de prueba: compilación de desarrollo'
+  copyright: © 2026 Hagicode Desktop
 quickStart:
   title: Inicio rápido
   description: Instale el paquete de servicio web integrado y comience a administrar su instancia PCode local.

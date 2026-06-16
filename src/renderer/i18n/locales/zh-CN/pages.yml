@@ -183,8 +183,7 @@ settings:
     errors:
       saveErrorDetail: 保存失败：{{error}}
 footer:
-  copyright: © 2026 Hagicode Desktop。使用 Electron + React + TypeScript 构建 ❤️
-  testBuild: 测试应用程序 - 开发版本
+  copyright: © 2026 Hagicode Desktop
 quickStart:
   title: 快速开始
   description: 安装 Hagicode 服务包并开始管理您的本地 PCode 实例。

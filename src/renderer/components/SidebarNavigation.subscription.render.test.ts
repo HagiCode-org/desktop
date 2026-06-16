@@ -24,7 +24,8 @@ describe('subscription sidebar and shell wiring', () => {
     assert.match(sidebarSource, /const subscriptionNavigationItem: NavigationItem = \{/);
     assert.match(sidebarSource, /id: 'subscription'/);
     assert.match(sidebarSource, /labelKey: 'sidebar\.subscription'/);
-    assert.match(sidebarSource, /return \[\.\.\.baseItems, subscriptionNavigationItem, turboEngineNavigationItem\];/);
+    assert.match(sidebarSource, /emphasis: 'sponsor'/);
+    assert.match(sidebarSource, /return \[\.\.\.baseItems, \.\.\.featuredNavigationItems, settingsNavigationItem\];/);
     assert.doesNotMatch(sidebarSource, /distributionState\.winStoreMode/);
     assert.doesNotMatch(sidebarSource, /typeof window\.electronAPI\.subscription\?\.getSnapshot === 'function'/);
     assert.doesNotMatch(sidebarSource, /selectSubscriptionSnapshot/);
@@ -35,7 +36,6 @@ describe('subscription sidebar and shell wiring', () => {
     assert.match(appSource, /currentView === 'subscription' && <SubscriptionPage \/>/);
     assert.match(subscriptionPageSource, /const subscriptionBridgeAvailable = typeof window\.electronAPI\.subscription\?\.getSnapshot === 'function';/);
     assert.match(subscriptionPageSource, /if \(subscriptionBridgeAvailable && !snapshot && !isLoading\) \{/);
-    assert.match(subscriptionPageSource, /openStorePage\(HAGICODE_SPONSOR_PLAN_STORE_WEB_URL\)/);
     assert.match(subscriptionPageSource, /openStorePage\(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL\)/);
     assert.match(subscriptionTypesSource, /export const HAGICODE_SPONSOR_PLAN_STORE_WEB_URL = `https:\/\/apps\.microsoft\.com\/detail\/\$\{HAGICODE_SPONSOR_PLAN_STORE_ID\}`;/);
     assert.match(subscriptionTypesSource, /export \{\s*HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL,\s*\};/);

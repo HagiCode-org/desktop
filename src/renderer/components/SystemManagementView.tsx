@@ -753,7 +753,6 @@ export default function SystemManagementView({
 
       <section className="rounded-3xl border border-transparent px-1 py-2 text-center">
         <p className="text-sm text-muted-foreground">{t('footer.copyright')}</p>
-        <p className="mt-2 text-xs text-muted-foreground/80">{t('footer.testBuild')}</p>
       </section>
     </div>
   );

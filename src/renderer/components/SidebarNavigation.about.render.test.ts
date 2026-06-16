@@ -21,7 +21,7 @@ describe('sidebar about section integration', () => {
     const source = await fs.readFile(sidebarPath, 'utf8');
 
     assert.match(source, /renderAboutSectionTitle\(section\.id\)/);
-    assert.match(source, /<ScrollArea className="h-full" type="always">/);
+    assert.match(source, /<ScrollArea\s+className="h-full"\s+type="scroll"\s+scrollBarClassName="w-1\.5 p-0\.5"\s+scrollThumbClassName="bg-border\/65"/);
     assert.match(source, /grid grid-cols-4 gap-2/);
     assert.match(source, /https:\/\/www\.google\.com\/s2\/favicons/);
     assert.match(source, /<PopoverContent className="w-64 space-y-3" align="start">/);

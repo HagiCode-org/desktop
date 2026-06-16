@@ -183,8 +183,7 @@ settings:
     errors:
       saveErrorDetail: 'Save failed: {{error}}'
 footer:
-  copyright: © 2026 Hagicode Desktop. Built with ❤️ using Electron + React + TypeScript.
-  testBuild: Test application - Development build
+  copyright: © 2026 Hagicode Desktop
 quickStart:
   title: Quick Start
   description: Install embedded web service package and start managing your local PCode instance.

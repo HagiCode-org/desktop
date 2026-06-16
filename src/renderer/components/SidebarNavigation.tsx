@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTheme } from 'next-themes';
 import {
   AlertCircle,
   BadgeCheck,
@@ -27,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import type { DistributionModeState } from '../../types/distribution-mode';
 import type { DesktopVersionInfoPayload } from '../../types/version-info';
+import { isDesktopTheme } from '../lib/desktop-theme';
 import {
   createLoadingSidebarAboutFetchState,
   hasSidebarAboutEntries,
@@ -38,21 +40,32 @@ import {
   type SidebarAboutModel,
   type SidebarAboutSectionId,
 } from '../lib/about-sidebar';
+import { cn } from '../lib/utils';
+
+type NavigationEmphasis = 'default' | 'sponsor' | 'turboengine';
+
 interface NavigationItem {
   id: ViewType | 'official-website' | 'cost-calculator';
   labelKey: string;
   descriptionKey?: string;
   icon: ComponentType<{ className?: string }>;
   url?: string;
+  emphasis: NavigationEmphasis;
 }
 
-const navigationItems: NavigationItem[] = [
-  { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings },
-  { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText },
-  { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope },
-  { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen },
-  { id: 'settings', labelKey: 'sidebar.settings', icon: Settings },
+const primaryNavigationItems: NavigationItem[] = [
+  { id: 'system', labelKey: 'sidebar.dashboard', icon: Settings, emphasis: 'default' },
+  { id: 'version', labelKey: 'sidebar.versionManagement', icon: FileText, emphasis: 'default' },
+  { id: 'diagnostic', labelKey: 'sidebar.diagnostic', icon: Stethoscope, emphasis: 'default' },
+  { id: 'dependency-management', labelKey: 'sidebar.dependencyManagement', icon: PackageOpen, emphasis: 'default' },
 ];
+
+const settingsNavigationItem: NavigationItem = {
+  id: 'settings',
+  labelKey: 'sidebar.settings',
+  icon: Settings,
+  emphasis: 'default',
+};
 
 const officialWebsiteItem: NavigationItem = {
   id: 'official-website',
@@ -60,19 +73,27 @@ const officialWebsiteItem: NavigationItem = {
   descriptionKey: 'navigation.officialWebsiteDesc',
   icon: GlobeIcon,
   url: 'https://hagicode.com/',
+  emphasis: 'default',
 };
 
 const subscriptionNavigationItem: NavigationItem = {
   id: 'subscription',
   labelKey: 'sidebar.subscription',
   icon: BadgeCheck,
+  emphasis: 'sponsor',
 };
 
 const turboEngineNavigationItem: NavigationItem = {
   id: 'turboengine',
   labelKey: 'sidebar.turboEngine',
   icon: Cpu,
+  emphasis: 'turboengine',
 };
+
+const featuredNavigationItems: NavigationItem[] = [
+  subscriptionNavigationItem,
+  turboEngineNavigationItem,
+];
 
 const remainingExternalLinkItems: NavigationItem[] = [
   {
@@ -80,6 +101,7 @@ const remainingExternalLinkItems: NavigationItem[] = [
     labelKey: 'navigation.costCalculator',
     url: 'https://cost.hagicode.com',
     icon: Calculator,
+    emphasis: 'default',
   },
 ];
 
@@ -176,17 +198,61 @@ function AboutBrandLogo({ entry }: { entry: SidebarAboutEntry }) {
   );
 }
 
+function getFeaturedNavigationPalette(
+  emphasis: Exclude<NavigationEmphasis, 'default'>,
+  isDarkTheme: boolean,
+) {
+  if (emphasis === 'sponsor') {
+    return {
+      button: 'border-transparent bg-transparent text-foreground shadow-none hover:bg-transparent',
+      activeButton: 'border-transparent bg-transparent shadow-none',
+      iconWrap: 'border-transparent bg-transparent',
+      iconClass: isDarkTheme
+        ? 'text-[#f1cb71] drop-shadow-[0_0_14px_rgba(241,203,113,0.38)] transition-all duration-300 group-hover:scale-110 group-hover:text-[#ffe09a]'
+        : 'text-[#6e4304] transition-all duration-300 group-hover:scale-110 group-hover:text-[#4d2d00]',
+      activeIconClass: isDarkTheme ? 'text-[#ffe8b8]' : 'text-[#4d2d00]',
+      labelClass: isDarkTheme
+        ? 'bg-[linear-gradient(90deg,#f7d882,#fff1c8,#e0a93a)] bg-clip-text text-transparent'
+        : 'bg-[linear-gradient(90deg,#a06b18_0%,#171717_48%,#171717_52%,#a06b18_100%)] bg-clip-text text-transparent',
+      activeLabelClass: isDarkTheme
+        ? 'bg-[linear-gradient(90deg,#ffe5a2,#fff6da,#f0bb52)] bg-clip-text text-transparent'
+        : 'bg-[linear-gradient(90deg,#7d4f0d_0%,#050505_48%,#050505_52%,#7d4f0d_100%)] bg-clip-text text-transparent',
+      focus: 'focus-visible:ring-[#f0cf80]/45',
+    };
+  }
+
+  return {
+    button: 'border-transparent bg-transparent text-foreground shadow-none hover:bg-transparent',
+    activeButton: 'border-transparent bg-transparent shadow-none',
+    iconWrap: 'border-transparent bg-transparent',
+    iconClass: isDarkTheme
+      ? 'text-[#ffbe57] drop-shadow-[0_0_14px_rgba(255,190,87,0.38)] transition-all duration-300 group-hover:scale-110 group-hover:text-[#ffd48c]'
+      : 'text-[#8a4300] transition-all duration-300 group-hover:scale-110 group-hover:text-[#682700]',
+    activeIconClass: isDarkTheme ? 'text-[#ffe0a2]' : 'text-[#682700]',
+    labelClass: isDarkTheme
+      ? 'bg-[linear-gradient(90deg,#ffca6e,#ffe6a8,#e89b2f)] bg-clip-text text-transparent'
+      : 'bg-[linear-gradient(90deg,#b46112_0%,#171717_48%,#171717_52%,#b46112_100%)] bg-clip-text text-transparent',
+    activeLabelClass: isDarkTheme
+      ? 'bg-[linear-gradient(90deg,#ffe0a2,#fff0c8,#f5b246)] bg-clip-text text-transparent'
+      : 'bg-[linear-gradient(90deg,#8b4308_0%,#050505_48%,#050505_52%,#8b4308_100%)] bg-clip-text text-transparent',
+    focus: 'focus-visible:ring-[#ffc86b]/45',
+  };
+}
+
 export default function SidebarNavigation({ distributionState }: SidebarNavigationProps) {
   const { t, i18n } = useTranslation('common');
+  const { resolvedTheme } = useTheme();
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView);
+  const activeTheme = isDesktopTheme(resolvedTheme) ? resolvedTheme : 'light';
+  const isDarkTheme = activeTheme === 'dark';
   const isFusionMode = distributionState.fusionMode;
   const visibleNavigationItems = useMemo(() => {
     const baseItems = isFusionMode
-      ? navigationItems.filter((item) => item.id !== 'version')
-      : navigationItems;
+      ? primaryNavigationItems.filter((item) => item.id !== 'version')
+      : primaryNavigationItems;
 
-    return [...baseItems, subscriptionNavigationItem, turboEngineNavigationItem];
+    return [...baseItems, ...featuredNavigationItems, settingsNavigationItem];
   }, [isFusionMode]);
   const aboutLocale = useMemo(
     () => normalizeSidebarAboutLocale(i18n.resolvedLanguage ?? i18n.language),
@@ -489,6 +555,10 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
             {visibleNavigationItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = isNavActive(item);
+              const featuredPalette = item.emphasis === 'default'
+                ? null
+                : getFeaturedNavigationPalette(item.emphasis, isDarkTheme);
+              const isFeatured = featuredPalette !== null;
 
               return (
                 <motion.button
@@ -497,18 +567,22 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
-                   whileHover={{ x: 0 }}
+                   whileHover={isFeatured ? { x: 0, y: -2 } : { x: 0 }}
                    whileTap={{ scale: 0.98 }}
-                   className={`
-                     relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left
-                     overflow-hidden group
-                     ${isActive
-                       ? 'border border-border/80 bg-accent text-foreground shadow-sm'
-                       : 'border border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground'
-                     }
-                   `}
+                   className={cn(
+                     'group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                     isFeatured
+                       ? cn(
+                         featuredPalette?.button,
+                         featuredPalette?.focus,
+                         isActive && featuredPalette?.activeButton,
+                       )
+                       : isActive
+                         ? 'border-border/80 bg-accent text-foreground shadow-sm focus-visible:ring-primary/35'
+                         : 'border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/55 hover:text-foreground focus-visible:ring-primary/25',
+                   )}
                  >
-                   {!isActive && (
+                   {!isFeatured && !isActive && (
                      <motion.div
                        initial={{ opacity: 0 }}
                        whileHover={{ opacity: 1 }}
@@ -517,7 +591,28 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                      />
                    )}
 
-                   <Icon className={`relative z-10 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} />
+                   <div
+                     className={cn(
+                       'relative z-10 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border transition-all duration-300',
+                       isFeatured
+                         ? featuredPalette?.iconWrap
+                         : isActive
+                           ? 'border-primary/25 bg-primary/10 text-primary'
+                           : 'border-border/60 bg-background/75 text-muted-foreground group-hover:border-border/80 group-hover:bg-background',
+                     )}
+                   >
+                     <Icon
+                       className={cn(
+                         'h-4 w-4',
+                         isFeatured
+                           ? cn(
+                             featuredPalette?.iconClass,
+                             isActive && featuredPalette?.activeIconClass,
+                           )
+                           : '',
+                       )}
+                     />
+                   </div>
 
                   <AnimatePresence mode="wait">
                     {!collapsed && (
@@ -526,9 +621,23 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
                         animate={{ opacity: 1, width: 'auto' }}
                         exit={{ opacity: 0, width: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="relative z-10 flex min-w-0 items-center gap-2"
+                        className={cn(
+                          'relative z-10 flex min-w-0 items-center gap-2',
+                          !isFeatured && 'pr-5',
+                        )}
                       >
-                        <span className="truncate font-medium text-sm whitespace-nowrap">
+                        <span
+                          className={cn(
+                            'truncate whitespace-nowrap text-sm',
+                            isFeatured
+                              ? cn(
+                                'font-semibold tracking-[0.01em]',
+                                featuredPalette?.labelClass,
+                                isActive && featuredPalette?.activeLabelClass,
+                              )
+                              : 'font-medium',
+                          )}
+                        >
                           {t(item.labelKey)}
                         </span>
                       </motion.div>
@@ -554,7 +663,12 @@ export default function SidebarNavigation({ distributionState }: SidebarNavigati
             transition={{ delay: 0.2, duration: 0.3 }}
             className="min-h-0 flex-1 overflow-hidden"
           >
-            <ScrollArea className="h-full" type="always">
+            <ScrollArea
+              className="h-full"
+              type="scroll"
+              scrollBarClassName="w-1.5 p-0.5"
+              scrollThumbClassName="bg-border/65"
+            >
               <div className="space-y-2 pb-6">
                 <motion.button
                   type="button"

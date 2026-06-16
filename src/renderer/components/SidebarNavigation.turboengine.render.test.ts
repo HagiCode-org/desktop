@@ -24,11 +24,11 @@ describe('TurboEngine sidebar and shell wiring', () => {
     assert.match(sidebarSource, /const turboEngineNavigationItem: NavigationItem = \{/);
     assert.match(sidebarSource, /id: 'turboengine'/);
     assert.match(sidebarSource, /labelKey: 'sidebar\.turboEngine'/);
-    assert.match(sidebarSource, /return \[\.\.\.baseItems, subscriptionNavigationItem, turboEngineNavigationItem\];/);
+    assert.match(sidebarSource, /emphasis: 'turboengine'/);
+    assert.match(sidebarSource, /return \[\.\.\.baseItems, \.\.\.featuredNavigationItems, settingsNavigationItem\];/);
     assert.match(appSource, /import TurboEnginePage from '\.\/components\/turboengine\/TurboEnginePage';/);
     assert.match(appSource, /currentView === 'turboengine' && <TurboEnginePage \/>/);
     assert.match(turboPageSource, /const turboEngineBridgeAvailable = typeof window\.electronAPI\.turboEngineLicense\?\.getSnapshot === 'function';/);
-    assert.match(turboPageSource, /openStorePage\(HAGICODE_TURBOENGINE_STORE_WEB_URL\)/);
     assert.match(turboPageSource, /openStorePage\(HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL\)/);
     assert.match(turboTypesSource, /export const HAGICODE_TURBOENGINE_STORE_ID = '9NSD809W18Z6';/);
     assert.match(storeSource, /setTurboEngineLicenseSnapshotFromEvent/);

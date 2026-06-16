@@ -31,7 +31,7 @@ describe('portable version renderer integration', () => {
     const source = await fs.readFile(sidebarPath, 'utf-8');
 
     assert.match(source, /const isFusionMode = distributionState\.fusionMode;/);
-    assert.match(source, /navigationItems\.filter\(\(item\) => item\.id !== 'version'\)/);
+    assert.match(source, /primaryNavigationItems\.filter\(\(item\) => item\.id !== 'version'\)/);
     assert.match(source, /t\('sidebar\.desktopVersion'\)/);
     assert.match(source, /t\('sidebar\.webVersion'\)/);
     assert.match(source, /t\('sidebar\.windowsStoreVersion'\)/);
