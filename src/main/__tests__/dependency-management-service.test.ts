@@ -74,7 +74,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /applyRuntimeManagedPackageOverride/);
   });
 
-  it('keeps sync failure diagnostics without forcing Windows Store npm install overrides', async () => {
+  it('keeps sync failure diagnostics without forcing Microsoft Store npm install overrides', async () => {
     const source = await fs.readFile(servicePath, 'utf8');
 
     assert.match(source, /Starting managed package sync/);
@@ -85,7 +85,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /env\.npm_config_ignore_scripts = 'true';/);
     assert.match(source, /env\.NPM_CONFIG_IGNORE_SCRIPTS = 'true';/);
     assert.doesNotMatch(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
-    assert.doesNotMatch(source, /Applying Windows Store npm install override/);
+    assert.doesNotMatch(source, /Applying Microsoft Store npm install override/);
     assert.doesNotMatch(source, /--ignore-scripts/);
     assert.doesNotMatch(source, /const installIndex = args\.findIndex\(\(value\) => value === 'install'\)/);
     assert.doesNotMatch(source, /const rewrittenArgs = this\.rewriteNpmInstallArgsForWindowsStore\(args\);/);
@@ -124,7 +124,7 @@ describe('dependency management service contract', () => {
     assert.match(source, /lockedByRuntime: isWinStore,/);
     assert.match(source, /mutationsAvailable: effectiveMode === 'internal'/);
     assert.match(source, /readOnlyReason: isWinStore/);
-    assert.match(source, /MSIX \/ Windows Store packaging requires external read-only dependency management and does not use Desktop-managed Node\/npm\./);
+    assert.match(source, /MSIX \/ Microsoft Store packaging requires external read-only dependency management and does not use Desktop-managed Node\/npm\./);
     assert.match(source, /const mode = this\.resolveModeSettings\(\);/);
     assert.match(source, /return this\.getSnapshot\(\);/);
   });

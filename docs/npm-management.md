@@ -22,9 +22,9 @@ All mutation operations still run through `src/main/dependency-management-servic
 
 The bundled portable toolchain root remains the immutable runtime source for `node` and `npm` commands in internal mode. It is not the active npm global package prefix. In external mode, Desktop does not inject its managed PATH or npm prefix overrides and instead reports the paths returned by the inspected global environment.
 
-## Windows Store default
+## Microsoft Store default
 
-MSIX / Windows Store packaging now forces dependency management to `external` and keeps mutation controls locked off.
+MSIX / Microsoft Store packaging now forces dependency management to `external` and keeps mutation controls locked off.
 Standard development runs, portable builds, and NSIS installs still start from the normal Desktop default and can switch between `internal` and `external` later.
 
 ## First-Run Preparation

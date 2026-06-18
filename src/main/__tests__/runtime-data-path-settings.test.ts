@@ -233,7 +233,7 @@ describe('runtime data path settings', () => {
     );
   });
 
-  it('resolves display paths to the package-private physical location when Windows Store virtualization is active', () => {
+  it('resolves display paths to the package-private physical location when Microsoft Store virtualization is active', () => {
     delete process.env.HAGICODE_RUNTIME_DATA_HOME;
     const configManager = new MockConfigManager('userData-runtime-data');
     const pathManager = new MockPathManager(
@@ -260,7 +260,7 @@ describe('runtime data path settings', () => {
     assert.equal(snapshot.configuredRoot.virtualizationKind, 'windows-store-appdata');
   });
 
-  it('marks snapshot as locked when running in Windows Store mode', () => {
+  it('marks snapshot as locked when running in Microsoft Store mode', () => {
     delete process.env.HAGICODE_RUNTIME_DATA_HOME;
     const configManager = new MockConfigManager('userData-runtime-data');
     const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
@@ -270,10 +270,10 @@ describe('runtime data path settings', () => {
     });
 
     assert.equal(snapshot.lockedByRuntime, true);
-    assert.match(snapshot.readOnlyReason ?? '', /Windows Store/);
+    assert.match(snapshot.readOnlyReason ?? '', /Microsoft Store/);
   });
 
-  it('does not lock snapshot when not in Windows Store mode', () => {
+  it('does not lock snapshot when not in Microsoft Store mode', () => {
     delete process.env.HAGICODE_RUNTIME_DATA_HOME;
     const configManager = new MockConfigManager('userData-runtime-data');
     const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
@@ -284,7 +284,7 @@ describe('runtime data path settings', () => {
     assert.equal(snapshot.readOnlyReason, undefined);
   });
 
-  it('rejects save attempts when locked by Windows Store', async () => {
+  it('rejects save attempts when locked by Microsoft Store', async () => {
     delete process.env.HAGICODE_RUNTIME_DATA_HOME;
     const configManager = new MockConfigManager('userData-runtime-data');
     const pathManager = new MockPathManager(configManager, '/tmp/electron-user-data');
@@ -297,7 +297,7 @@ describe('runtime data path settings', () => {
         isWindowsStore: true,
       }),
       (error: Error) => {
-        assert.match(error.message, /Windows Store/);
+        assert.match(error.message, /Microsoft Store/);
         return true;
       },
     );

@@ -250,7 +250,7 @@ export class VersionManager {
       defaultApp: runtimeProcess.defaultApp,
     });
     if (isWindowsStorePackage) {
-      log.info('[VersionManager] Windows Store runtime detected, checking packaged portable-fixed payload.');
+      log.info('[VersionManager] Microsoft Store runtime detected, checking packaged portable-fixed payload.');
     }
 
     const metadataResult = await loadDistributionMetadata({

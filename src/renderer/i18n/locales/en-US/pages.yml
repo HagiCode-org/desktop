@@ -112,7 +112,7 @@ settings:
     description: Manage automatic checks, background predownloads, and verified archive retention.
     managedInstall:
       title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Windows Store or Steam.
+      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
     enabled:
       label: Enable background predownloads
       description: When a compatible newer version is found, download the archive in the background without switching the current runtime.
@@ -137,7 +137,7 @@ settings:
     description: Choose where Desktop stores runtime-managed files, PM2 state, logs, and other runtime data.
     activePreset: 'Current effective preset: {{preset}}'
     environmentOverrideBadge: Environment override active
-    lockedByRuntime: Locked by Windows Store
+    lockedByRuntime: Locked by Microsoft Store
     paths:
       configuredRoot: 'Configured root: {{path}}'
       effectiveRoot: 'Effective root: {{path}}'
@@ -611,7 +611,7 @@ turboEngine:
     unsupported: This runtime cannot complete Store purchase APIs directly, so the page keeps only the Store handoff path.
     runtimeLabel: Runtime
     sourceLabel: Snapshot source
-    storeEdition: Windows Store edition
+    storeEdition: Microsoft Store edition
     nonStoreEdition: Non-Store runtime
   sourceValue:
     initial: Current session default state

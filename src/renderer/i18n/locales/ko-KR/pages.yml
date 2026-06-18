@@ -112,7 +112,7 @@ settings:
     description: 자동 검사, 백그라운드 사전 다운로드, 확인된 아카이브 보존을 관리합니다.
     managedInstall:
       title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Windows Store or Steam.
+      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
     enabled:
       label: 백그라운드 사전 다운로드 활성화
       description: 호환되는 최신 버전이 발견되면 현재 런타임을 전환하지 않고 백그라운드에서 아카이브를 다운로드하세요.
@@ -137,7 +137,7 @@ settings:
     description: Choose where Desktop stores runtime-managed files, PM2 state, logs, and other runtime data.
     activePreset: 'Current effective preset: {{preset}}'
     environmentOverrideBadge: Environment override active
-    lockedByRuntime: Locked by Windows Store
+    lockedByRuntime: Locked by Microsoft Store
     paths:
       configuredRoot: 'Configured root: {{path}}'
       effectiveRoot: 'Effective root: {{path}}'
@@ -604,14 +604,14 @@ turboEngine:
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
     activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    handoffHint: In-app purchase and verification work only in the Windows Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
+    handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
     sectionTitle: Runtime contract
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
     runtimeLabel: Runtime
     sourceLabel: Snapshot source
-    storeEdition: Windows Store edition
+    storeEdition: Microsoft Store edition
     nonStoreEdition: Non-Store runtime
   sourceValue:
     initial: Current session default state

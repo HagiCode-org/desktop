@@ -99,11 +99,11 @@ Invalid configurations will fall back to the default HTTP index source with a wa
 
 ## Development Workflow
 
-## Windows Store Packaging Contract
+## Microsoft Store Packaging Contract
 
-Desktop owns the Windows Store packaging contract used by `repos/win_store_packer`.
+Desktop owns the Microsoft Store packaging contract used by `repos/win_store_packer`.
 
-MSIX / Windows Store runs now force dependency management into `external` read-only mode and skip Desktop's bundled Node/npm toolchain.
+MSIX / Microsoft Store runs now force dependency management into `external` read-only mode and skip Desktop's bundled Node/npm toolchain.
 Standard development runs, portable builds, and NSIS installs still allow switching dependency management between internal and external modes.
 
 ### Store metadata source
@@ -143,7 +143,7 @@ Supported parameters:
 - `--platform-id`: record the workflow platform identity in metadata
 - `--dry-run`: emit a synthetic Store artifact without Windows packaging tools
 
-Release-facing Store runs can carry a Windows Store version injected by `win_store_packer`. Desktop resolves that value from `HAGICODE_WINDOWS_STORE_VERSION` or `package.json.hagicodeDesktop.windowsStoreVersion`, emits it in Store build metadata, and surfaces it in the sidebar footer beside the Desktop and Web versions only when the value exists, without changing Desktop's own version sequencing or meaning.
+Release-facing Store runs can carry a Microsoft Store version injected by `win_store_packer`. Desktop resolves that value from `HAGICODE_WINDOWS_STORE_VERSION` or `package.json.hagicodeDesktop.windowsStoreVersion`, emits it in Store build metadata, and surfaces it in the sidebar footer beside the Desktop and Web versions only when the value exists, without changing Desktop's own version sequencing or meaning.
 
 Optional PSF injection for MSIX child-process containment uses environment flags rather than extra CLI switches:
 
@@ -162,7 +162,7 @@ The Store build writes:
 
 - a generated Store overlay config
 - one or more Store package artifacts
-- metadata that records the Store config source, Desktop source ref, Windows Store version, payload source, effective injection path, and produced artifact paths
+- metadata that records the Store config source, Desktop source ref, Microsoft Store version, payload source, effective injection path, and produced artifact paths
 
 `win_store_packer` consumes that metadata directly during signing finalization and release publication. It should not re-derive Desktop packaging state independently.
 

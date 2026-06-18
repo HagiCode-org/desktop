@@ -35,13 +35,13 @@ npm run build:prod
 - `npm run dev` 启动渲染层、监听 Electron 相关进程并以开发模式运行应用
 - `npm run build:prod` 执行生产构建，并包含打包前的 smoke test
 
-## Windows Store 许可证支持
+## Microsoft Store 许可证支持
 
 `Hagicode 赞助者计划` 和新的 `TurboEngine` 工作区都会作为一级入口长期显示在侧边栏中。只有当 Desktop 解析为 `win-store` 运行模式时，才会注册 Microsoft Store 许可证查询、购买桥接、IPC 处理器和自动刷新逻辑；源码模式、便携模式和其他非 Store 渠道仍会显示页面，但会退回到 Microsoft Store 引导界面。
 
-TurboEngine 对应的 Microsoft Store ID 是 `9NSD809W18Z6`。Desktop 会在启动时对这个永久许可证做实时校验，而不是把本地缓存当作最终真值；如果当前运行时不是 Windows Store 版本，就会改为提示用户前往 Microsoft Store 页面完成购买和验证。
+TurboEngine 对应的 Microsoft Store ID 是 `9NSD809W18Z6`。Desktop 会在启动时对这个永久许可证做实时校验，而不是把本地缓存当作最终真值；如果当前运行时不是 Microsoft Store 版本，就会改为提示用户前往 Microsoft Store 页面完成购买和验证。
 
-如果要验证 TurboEngine 购买流程，必须在打包后的 Windows Store / MSIX 运行时里检查 `9NSD809W18Z6` 的启动校验、手动刷新、购买成功、已拥有、取消购买，以及非 Store 运行时引导这些分支。
+如果要验证 TurboEngine 购买流程，必须在打包后的 Microsoft Store / MSIX 运行时里检查 `9NSD809W18Z6` 的启动校验、手动刷新、购买成功、已拥有、取消购买，以及非 Store 运行时引导这些分支。
 
 ## 相关文档
 

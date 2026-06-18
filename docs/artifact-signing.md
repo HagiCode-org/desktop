@@ -169,7 +169,7 @@ If Artifact Signing completes but `scripts/verify-signature.js` fails:
 
 ### Store package issues
 
-If a release still needs Windows Store packaging work:
+If a release still needs Microsoft Store packaging work:
 
 1. Check `repos/win_store_packer` instead of the Desktop workflow.
 2. Confirm Desktop release assets and metadata are available to the Store packer workflow.

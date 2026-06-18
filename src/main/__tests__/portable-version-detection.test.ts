@@ -37,7 +37,7 @@ describe('portable version payload detection', () => {
     assert.match(source, /const metadataResult = await loadDistributionMetadata\(\{/);
     assert.match(source, /processWindowsStore: Boolean\(runtimeProcess\.windowsStore\)/);
     assert.match(source, /defaultApp: runtimeProcess\.defaultApp/);
-    assert.match(source, /Windows Store runtime detected, checking packaged portable-fixed payload/);
+    assert.match(source, /Microsoft Store runtime detected, checking packaged portable-fixed payload/);
     assert.match(source, /Loaded distribution metadata from resources/);
     assert.match(source, /Distribution metadata not found, falling back to runtime detection/);
     assert.match(source, /Portable version payload not found, using normal mode/);
@@ -48,7 +48,7 @@ describe('portable version payload detection', () => {
     assert.match(source, /fusionMode: this\.distributionState\.fusionMode/);
     assert.match(source, /steamMode: this\.distributionState\.steamMode/);
     assert.match(source, /winStoreMode: this\.distributionState\.winStoreMode/);
-    assert.doesNotMatch(source, /Windows Store\/MSIX package detected, using normal distribution mode/);
+    assert.doesNotMatch(source, /Microsoft Store\/MSIX package detected, using normal distribution mode/);
     assert.match(source, /selectedPlatform/);
     assert.match(source, /bundleRoot/);
     assert.match(source, /manifestPath/);

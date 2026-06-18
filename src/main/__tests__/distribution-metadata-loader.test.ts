@@ -77,7 +77,7 @@ describe('distribution metadata loader', () => {
     assert.equal(result.metadata?.mode, 'fusion');
   });
 
-  it('derives Windows Store fusion state without losing the store-only sub-channel', () => {
+  it('derives Microsoft Store fusion state without losing the store-only sub-channel', () => {
     const metadata = normalizeDistributionMetadata({
       schemaVersion: 1,
       channel: 'win-store',

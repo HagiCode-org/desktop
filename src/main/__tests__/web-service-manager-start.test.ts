@@ -76,7 +76,7 @@ describe('web-service startup flow', () => {
     assert.match(webServiceSource, /private isWindowsStoreExecutionEnvironment\(\): boolean/);
     assert.match(webServiceSource, /isWindowsStoreRuntime\(\{/);
     assert.match(webServiceSource, /Desktop SDK PM2 launch plan:/);
-    assert.match(webServiceSource, /Desktop SDK PM2 invocation appears blocked by Windows Store\/MSIX permissions/);
+    assert.match(webServiceSource, /Desktop SDK PM2 invocation appears blocked by Microsoft Store\/MSIX permissions/);
     assert.match(webServiceSource, /appendManagedPm2InvocationResult\(/);
     assert.match(webServiceSource, /appendManagedPm2PermissionFailureHint\(/);
     assert.match(webServiceSource, /this\.hagiscriptServerManager\.getRuntimeState\(context\)/);

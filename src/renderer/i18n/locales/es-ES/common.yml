@@ -145,7 +145,7 @@ sidebar:
     unavailable: No disponible
   desktopVersion: Versión de escritorio
   webVersion: Versión web
-  windowsStoreVersion: Version de Windows Store
+  windowsStoreVersion: Version de Microsoft Store
   unknownVersion: No disponible
   toggle: Alternar barra lateral
   collapse: Colapso
@@ -533,7 +533,7 @@ system:
       failed: 'Error en la actualización en segundo plano: {{error}}'
       settings-disabled: Las descargas previas en segundo plano están deshabilitadas. Puedes volver a activarlos en Configuración.
       portable-mode: El modo portátil omite las actualizaciones en segundo plano y mantiene el tiempo de ejecución actual como de solo lectura.
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
       no-package-source: No hay ninguna fuente de paquete activa configurada, por lo que las actualizaciones en segundo plano no pueden iniciarse.
     progress:
       confirming: Waiting for confirmation

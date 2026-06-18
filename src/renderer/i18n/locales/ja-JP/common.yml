@@ -145,7 +145,7 @@ sidebar:
     unavailable: 利用できません
   desktopVersion: デスクトップ版
   webVersion: ウェブ版
-  windowsStoreVersion: Windows Store 版
+  windowsStoreVersion: Microsoft Store 版
   unknownVersion: 利用不可
   toggle: サイドバーの切り替え
   collapse: 崩壊する
@@ -533,7 +533,7 @@ system:
       failed: 'バックグラウンド更新に失敗しました: {{error}}'
       settings-disabled: バックグラウンドのプリダウンロードは無効になっています。設定で再度オンにできます。
       portable-mode: ポータブル モードでは、バックグラウンド更新がスキップされ、現在のランタイムが読み取り専用に保たれます。
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
       no-package-source: アクティブなパッケージ ソースが構成されていないため、バックグラウンド更新を開始できません。
     progress:
       confirming: Waiting for confirmation

@@ -373,7 +373,7 @@ async function createNativeAddonBroker(
 ): Promise<StoreLicensePlatformBroker> {
   const addonModulePath = resolveWindowsStorePurchaseAddonPath();
   if (!addonModulePath) {
-    throw new Error('Windows Store native addon is unavailable.');
+    throw new Error('Microsoft Store native addon is unavailable.');
   }
 
   return new NativeAddonStoreSubscriptionBroker(

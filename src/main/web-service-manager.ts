@@ -545,7 +545,7 @@ export class PCodeWebServiceManager {
   ): Promise<void> {
     const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
     this.appendStartupLogLine(
-      `Desktop runtime packaging: ${windowsStoreRuntime ? 'Windows Store/MSIX' : 'standard'}`,
+      `Desktop runtime packaging: ${windowsStoreRuntime ? 'Microsoft Store/MSIX' : 'standard'}`,
     );
 
     if (!result.success || !result.environment) {
@@ -646,7 +646,7 @@ export class PCodeWebServiceManager {
 
     const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
     const message = windowsStoreRuntime
-      ? `Desktop SDK PM2 invocation appears blocked by Windows Store/MSIX permissions (${marker}).`
+      ? `Desktop SDK PM2 invocation appears blocked by Microsoft Store/MSIX permissions (${marker}).`
       : `Desktop SDK PM2 invocation appears blocked by operating-system permissions (${marker}).`;
 
     this.appendStartupLogLine(message);

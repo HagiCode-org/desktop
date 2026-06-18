@@ -112,7 +112,7 @@ settings:
     description: 管理自動檢查、背景預下載與已驗證歸檔保留策略。
     managedInstall:
       title: Auto-updates are disabled
-      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Windows Store or Steam.
+      description: The application does not update itself automatically. How updates are delivered depends on the channel you used to install it, such as Microsoft Store or Steam.
     enabled:
       label: 啟用背景自動預先下載
       description: 偵測到相容新版本時，先在背景下載歸檔並保持目前執行版本不變。
@@ -137,7 +137,7 @@ settings:
     description: 選擇 Desktop 執行時檔案、PM2 狀態、日誌和其他執行時資料的儲存根目錄。
     activePreset: 目前生效預設：{{preset}}
     environmentOverrideBadge: 環境變數覆寫已啟用
-    lockedByRuntime: Locked by Windows Store
+    lockedByRuntime: Locked by Microsoft Store
     paths:
       configuredRoot: 設定目標路徑：{{path}}
       effectiveRoot: 目前生效路徑：{{path}}
@@ -604,14 +604,14 @@ turboEngine:
     manageHint: Open Microsoft Store again if you need to confirm ownership or revisit the current TurboEngine license on this device.
     buyHint: Start the Microsoft Store flow for `9NSD809W18Z6`, then Desktop will refresh the TurboEngine entitlement state in the same session.
     activeHint: TurboEngine is already licensed on this device. Refresh once if you want to confirm the latest Microsoft Store state.
-    handoffHint: In-app purchase and verification work only in the Windows Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
+    handoffHint: In-app purchase and verification work only in the Microsoft Store edition. Use the Store handoff below when this runtime cannot complete the license flow itself.
   runtime:
     sectionTitle: Runtime contract
     supported: This runtime can query Microsoft Store directly and run the packaged TurboEngine purchase path for Store ID `9NSD809W18Z6`.
     unsupported: This runtime cannot complete Microsoft Store purchase APIs directly, so Desktop falls back to a Store handoff path instead of showing a broken in-app purchase button.
     runtimeLabel: Runtime
     sourceLabel: Snapshot source
-    storeEdition: Windows Store edition
+    storeEdition: Microsoft Store edition
     nonStoreEdition: Non-Store runtime
   sourceValue:
     initial: Current session default state

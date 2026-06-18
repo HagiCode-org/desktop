@@ -42,7 +42,7 @@ npm run build:mac:arm64:zip
 - `npm run dev` prepares the optional bundled portable toolchain, starts the renderer, watches Electron processes, and launches the app in development mode
 - `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
-- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it loads `config/store-package.json`, accepts payload injection arguments, and emits machine-readable build metadata for downstream signing/publication, including Desktop version, Windows Store version, and the normalized Store package version
+- `npm run build:win:store` is the workflow-facing Store packaging entrypoint used by `win_store_packer`; it loads `config/store-package.json`, accepts payload injection arguments, and emits machine-readable build metadata for downstream signing/publication, including Desktop version, Microsoft Store version, and the normalized Store package version
 - platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
 
 ## Version identity
@@ -51,27 +51,27 @@ Store and portable builds can distinguish up to three version surfaces in the si
 
 - Desktop version: the packaged Desktop app version
 - Web version: the embedded Server/Web runtime version
-- Windows Store version: an optional additional version field injected by `win_store_packer` for Store-aligned packaging flows
+- Microsoft Store version: an optional additional version field injected by `win_store_packer` for Store-aligned packaging flows
 
-Desktop does not re-order or redefine its own app version because of Windows Store version support. `win_store_packer` injects the Windows Store version through `HAGICODE_WINDOWS_STORE_VERSION` and workspace package metadata, and Desktop only consumes that value for packaged metadata and optional UI display.
+Desktop does not re-order or redefine its own app version because of Microsoft Store version support. `win_store_packer` injects the Microsoft Store version through `HAGICODE_WINDOWS_STORE_VERSION` and workspace package metadata, and Desktop only consumes that value for packaged metadata and optional UI display.
 
-## Windows Store subscription support
+## Microsoft Store subscription support
 
 The `Hagicode 赞助者计划` workspace remains visible in the sidebar across runtimes. Desktop only registers the subscription main-process service, preload bridge, IPC handlers, and automatic snapshot refresh when it resolves to the `win-store` distribution mode. Source-mode development, portable builds, and other non-Store channels keep the page as a Microsoft Store handoff surface for subscribing and installing the Store edition.
 
-The `TurboEngine` workspace now follows the same runtime pattern while keeping its own product contract. It is always visible as a first-level sidebar entry, uses Microsoft Store ID `9NSD809W18Z6`, performs a live startup verification instead of trusting cache alone, and falls back to Store handoff guidance when the runtime is not the Windows Store edition.
+The `TurboEngine` workspace now follows the same runtime pattern while keeping its own product contract. It is always visible as a first-level sidebar entry, uses Microsoft Store ID `9NSD809W18Z6`, performs a live startup verification instead of trusting cache alone, and falls back to Store handoff guidance when the runtime is not the Microsoft Store edition.
 
-The Microsoft Store broker uses `dynwinrt` bindings generated into `src/main/subscription/generated-js/` for license and availability queries. Windows Store/MSIX packaging copies those bindings into `dist/main/subscription/generated-js/` so the packaged main process can load them directly.
+The Microsoft Store broker uses `dynwinrt` bindings generated into `src/main/subscription/generated-js/` for license and availability queries. Microsoft Store/MSIX packaging copies those bindings into `dist/main/subscription/generated-js/` so the packaged main process can load them directly.
 
 Purchase requests are handled by a packaged C++ Node-API addon built under `native/StorePurchaseAddon/` and staged into `resources/extra/windows-store-purchase-addon/`. This keeps Microsoft Store purchase UI on the packaged desktop process without shipping a separate helper executable.
 
-Run `npm run generate:store-bindings` on Windows after installing the optional `dynwinrt` toolchain, or let `npm run build:win:msix` / `npm run build:win:store` generate those bindings before packaging. Local verification of purchase and refresh flows must still happen from a packaged Windows Store/MSIX runtime for product `9N0BTGWV23M1`.
+Run `npm run generate:store-bindings` on Windows after installing the optional `dynwinrt` toolchain, or let `npm run build:win:msix` / `npm run build:win:store` generate those bindings before packaging. Local verification of purchase and refresh flows must still happen from a packaged Microsoft Store/MSIX runtime for product `9N0BTGWV23M1`.
 
-When validating the new TurboEngine flow, verify the packaged Windows Store/MSIX runtime can complete all expected branches for `9NSD809W18Z6`: startup verification, manual refresh, purchase success, already-owned, cancellation, and unsupported-runtime handoff.
+When validating the new TurboEngine flow, verify the packaged Microsoft Store/MSIX runtime can complete all expected branches for `9NSD809W18Z6`: startup verification, manual refresh, purchase success, already-owned, cancellation, and unsupported-runtime handoff.
 
 ### Optional PSF injection for MSIX
 
-When Windows Store packaging needs Package Support Framework process fixups, enable the same injection path validated in `electron_demo`:
+When Microsoft Store packaging needs Package Support Framework process fixups, enable the same injection path validated in `electron_demo`:
 
 ```bash
 HAGICODE_ENABLE_PSF=true \

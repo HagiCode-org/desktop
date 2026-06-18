@@ -145,7 +145,7 @@ sidebar:
     unavailable: 当前不可用
   desktopVersion: Desktop 版本
   webVersion: Web 版本
-  windowsStoreVersion: Windows Store 版本
+  windowsStoreVersion: Microsoft Store 版本
   unknownVersion: 不可用
   toggle: 切换侧边栏
   collapse: 收起
@@ -533,7 +533,7 @@ system:
       failed: 后台更新失败：{{error}}
       settings-disabled: 你已关闭后台自动下载，可在设置页重新启用。
       portable-mode: portable mode 下已跳过后台更新，当前运行环境保持只读。
-      managed-install: 软件本体不会自动更新，更新方式取决于您的安装渠道（如 Windows Store、Steam 等）。
+      managed-install: 软件本体不会自动更新，更新方式取决于您的安装渠道（如 Microsoft Store、Steam 等）。
       no-package-source: 尚未配置有效的软件包源，无法执行后台更新。
     progress:
       confirming: 等待确认

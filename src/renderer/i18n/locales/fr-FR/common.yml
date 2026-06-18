@@ -145,7 +145,7 @@ sidebar:
     unavailable: Indisponible
   desktopVersion: Version de bureau
   webVersion: Version Internet
-  windowsStoreVersion: Version Windows Store
+  windowsStoreVersion: Version Microsoft Store
   unknownVersion: Indisponible
   toggle: Basculer la barre latérale
   collapse: Réduire
@@ -533,7 +533,7 @@ system:
       failed: 'Échec de la mise à jour en arrière-plan: {{error}}'
       settings-disabled: Les prétéléchargements en arrière-plan sont désactivés. Vous pouvez les réactiver dans Paramètres.
       portable-mode: Le mode portable ignore les mises à jour en arrière-plan et conserve le runtime actuel en lecture seule.
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
       no-package-source: Aucune source de package actif n'est configurée, les mises à jour en arrière-plan ne peuvent donc pas démarrer.
     progress:
       confirming: Waiting for confirmation

@@ -141,7 +141,7 @@ const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
 };
 
 const MSIX_EXTERNAL_MODE_LOCK_REASON =
-  'MSIX / Windows Store packaging requires external read-only dependency management and does not use Desktop-managed Node/npm.';
+  'MSIX / Microsoft Store packaging requires external read-only dependency management and does not use Desktop-managed Node/npm.';
 
 const EXTERNAL_MODE_READ_ONLY_REASON =
   'External dependency mode is read-only and only inspects the current global Node/npm environment.';

@@ -44,7 +44,7 @@ describe('windows store runtime detection', () => {
     }), true);
   });
 
-  it('does not treat arbitrary adjacent AppxManifest files as Windows Store runtime unless they describe a full-trust app', async () => {
+  it('does not treat arbitrary adjacent AppxManifest files as Microsoft Store runtime unless they describe a full-trust app', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-winstore-devpkg-invalid-'));
     const execPath = path.join(tempRoot, 'Hagicode Desktop.exe');
     tempDirectories.push(tempRoot);
@@ -64,7 +64,7 @@ describe('windows store runtime detection', () => {
     }), false);
   });
 
-  it('does not treat Electron default-app development runs as Windows Store runtime', () => {
+  it('does not treat Electron default-app development runs as Microsoft Store runtime', () => {
     const detected = isWindowsStoreRuntime({
       platform: 'win32',
       processWindowsStore: true,
@@ -76,7 +76,7 @@ describe('windows store runtime detection', () => {
     assert.equal(detected, false);
   });
 
-  it('treats packaged WindowsApps launches as Windows Store runtime', () => {
+  it('treats packaged WindowsApps launches as Microsoft Store runtime', () => {
     const detected = isWindowsStoreRuntime({
       platform: 'win32',
       processWindowsStore: true,

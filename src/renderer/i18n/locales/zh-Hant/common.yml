@@ -145,7 +145,7 @@ sidebar:
     unavailable: 無法使用
   desktopVersion: Desktop 版本
   webVersion: Web 版本
-  windowsStoreVersion: Windows Store 版本
+  windowsStoreVersion: Microsoft Store 版本
   unknownVersion: 不可用
   toggle: 切換側邊欄
   collapse: 收起
@@ -533,7 +533,7 @@ system:
       failed: 背景更新失敗：{{error}}
       settings-disabled: 你已關閉背景自動下載，可在設定頁重新啟用。
       portable-mode: portable mode 下已跳過背景更新，目前運行環境保持唯讀。
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
       no-package-source: 尚未配置有效的軟體包來源，無法執行後台更新。
     progress:
       confirming: 等待確認

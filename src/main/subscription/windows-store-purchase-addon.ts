@@ -274,7 +274,7 @@ export async function executeWindowsStorePurchaseAddon(
     return {
       outcome: 'not-supported',
       errorCode: 'addon-missing',
-      errorMessage: 'Windows Store purchase addon is unavailable.',
+      errorMessage: 'Microsoft Store purchase addon is unavailable.',
     };
   }
 
@@ -311,7 +311,7 @@ export async function executeWindowsStoreStatusAddon(
 ): Promise<WindowsStoreLicenseQueryAddonResult> {
   const modulePath = String(options.modulePath || '').trim();
   if (!modulePath) {
-    return buildUnavailableStatusResult(options, 'addon-missing', 'Windows Store status addon is unavailable.');
+    return buildUnavailableStatusResult(options, 'addon-missing', 'Microsoft Store status addon is unavailable.');
   }
 
   let nativeAddon: NativeWindowsStoreAddon;

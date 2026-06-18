@@ -145,7 +145,7 @@ sidebar:
     unavailable: Nicht verfügbar
   desktopVersion: Desktop-Version
   webVersion: Webversion
-  windowsStoreVersion: Windows Store-Version
+  windowsStoreVersion: Microsoft Store-Version
   unknownVersion: Nicht verfügbar
   toggle: Seitenleiste umschalten
   collapse: Zusammenbruch
@@ -533,7 +533,7 @@ system:
       failed: 'Hintergrundaktualisierung fehlgeschlagen: {{error}}'
       settings-disabled: Hintergrund-Predownloads sind deaktiviert. Sie können sie in den Einstellungen wieder aktivieren.
       portable-mode: Im tragbaren Modus werden Hintergrundaktualisierungen übersprungen und die aktuelle Laufzeit bleibt schreibgeschützt.
-      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Windows Store, Steam).
+      managed-install: Auto-updates are disabled. Update delivery depends on your installation channel (e.g. Microsoft Store, Steam).
       no-package-source: Es ist keine aktive Paketquelle konfiguriert, daher können Hintergrundaktualisierungen nicht gestartet werden.
     progress:
       confirming: Waiting for confirmation

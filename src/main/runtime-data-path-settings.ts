@@ -60,7 +60,7 @@ export function createRuntimeDataPathSettingsSnapshot(
       : null,
     lockedByRuntime: isLocked,
     readOnlyReason: isLocked
-      ? 'MSIX / Windows Store packaging locks the runtime data storage path to prevent configuration changes.'
+      ? 'MSIX / Microsoft Store packaging locks the runtime data storage path to prevent configuration changes.'
       : undefined,
   };
 }
@@ -73,7 +73,7 @@ export async function saveRuntimeDataPathPreset(options: {
   isWindowsStore?: boolean;
 }): Promise<RuntimeDataPathSaveResult> {
   if (options.isWindowsStore) {
-    throw new Error('MSIX / Windows Store packaging locks the runtime data storage path to prevent configuration changes.');
+    throw new Error('MSIX / Microsoft Store packaging locks the runtime data storage path to prevent configuration changes.');
   }
 
   const previousPreset = options.configManager.getRuntimeDataPathPreset();

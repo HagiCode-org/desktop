@@ -696,7 +696,7 @@ function initializeSubscriptionService(): void {
     subscriptionService,
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
   });
-  log.info('[App] Subscription service and IPC handlers registered for Windows Store runtime');
+  log.info('[App] Subscription service and IPC handlers registered for Microsoft Store runtime');
 }
 
 function initializeTurboEngineLicenseService(): void {
@@ -719,7 +719,7 @@ function initializeTurboEngineLicenseService(): void {
   turboEngineLicenseService.onDidChange(() => {
     scheduleTurboEngineBackendSync('license-changed');
   });
-  log.info('[App] TurboEngine license service and IPC handlers registered for Windows Store runtime');
+  log.info('[App] TurboEngine license service and IPC handlers registered for Microsoft Store runtime');
 }
 
 function getTurboEngineDlcProgramOptionSignature(): string {
