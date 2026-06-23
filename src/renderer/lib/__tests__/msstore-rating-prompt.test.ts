@@ -8,6 +8,18 @@ import {
 const NOW = new Date('2024-01-30T00:00:00.000Z');
 
 describe('shouldShowRatingPrompt', () => {
+  it('returns true in local development mode regardless of install date', () => {
+    assert.equal(
+      shouldShowRatingPrompt({ installDate: undefined, now: NOW, isDevMode: true }),
+      true,
+    );
+    const justNow = new Date(NOW.getTime() - 1000).toISOString();
+    assert.equal(
+      shouldShowRatingPrompt({ installDate: justNow, now: NOW, isDevMode: true }),
+      true,
+    );
+  });
+
   it('returns false when the install date is missing', () => {
     assert.equal(
       shouldShowRatingPrompt({ installDate: undefined, now: NOW }),

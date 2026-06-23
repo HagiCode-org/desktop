@@ -11,7 +11,7 @@ describe('HomeStoreRatingPrompt', () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
     assert.match(source, /import \{ shouldShowRatingPrompt \} from '\.\.\/lib\/msstore-rating-prompt\.js';/);
-    assert.match(source, /if \(!shouldShowRatingPrompt\(\{ installDate \}\)\)/);
+    assert.match(source, /if \(!shouldShowRatingPrompt\(\{ installDate, isDevMode: import\.meta\.env\.DEV \}\)\)/);
     assert.match(source, /return null;/);
   });
 

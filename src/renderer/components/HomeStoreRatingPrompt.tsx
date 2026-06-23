@@ -49,7 +49,7 @@ export default function HomeStoreRatingPrompt({}: HomeStoreRatingPromptProps = {
     return null;
   }
 
-  if (!shouldShowRatingPrompt({ installDate })) {
+  if (!shouldShowRatingPrompt({ installDate, isDevMode: import.meta.env.DEV })) {
     return null;
   }
 
