@@ -14,7 +14,7 @@ describe('homepage store offer panel wiring', () => {
     assert.match(source, /import HomeStoreRatingPrompt from '\.\/HomeStoreRatingPrompt';/);
     assert.match(
       source,
-      /<div className="space-y-6">\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*\{activeVersion \?/s,
+      /<div className="space-y-6">\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt \/>\s*\{activeVersion \?/s,
     );
   });
 

@@ -11,7 +11,7 @@ describe('HomeStoreRatingPrompt', () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
     assert.match(source, /import \{ shouldShowRatingPrompt \} from '\.\.\/lib\/msstore-rating-prompt\.js';/);
-    assert.match(source, /if \(!shouldShowRatingPrompt\(\{ isWindowsStoreRuntime, installDate \}\)\)/);
+    assert.match(source, /if \(!shouldShowRatingPrompt\(\{ installDate \}\)\)/);
     assert.match(source, /return null;/);
   });
 
@@ -50,8 +50,8 @@ describe('HomeStoreRatingPrompt', () => {
 
     // The public API surface takes no dismiss-related input.
     assert.match(libSource, /export interface ShouldShowRatingPromptInput \{/);
-    assert.match(libSource, /isWindowsStoreRuntime: boolean;/);
     assert.match(libSource, /installDate\?: string;/);
     assert.doesNotMatch(libSource, /ShouldShowRatingPromptInput[\s\S]*dismiss/);
+    assert.equal(libSource.includes('isWindowsStoreRuntime'), false);
   });
 });

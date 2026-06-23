@@ -667,7 +667,7 @@ export default function SystemManagementView({
 
         <div className="space-y-6">
           <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
-          <HomeStoreRatingPrompt isWindowsStoreRuntime={distributionState.winStoreMode} />
+          <HomeStoreRatingPrompt />
 
           {activeVersion ? (
             <section

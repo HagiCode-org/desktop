@@ -6,11 +6,9 @@ import { HAGICODE_DESKTOP_WINDOWS_STORE_REVIEW_URL } from '../../types/store-lic
 import { shouldShowRatingPrompt } from '../lib/msstore-rating-prompt.js';
 import { Button } from '@/components/ui/button';
 
-interface HomeStoreRatingPromptProps {
-  isWindowsStoreRuntime: boolean;
-}
+interface HomeStoreRatingPromptProps {}
 
-export default function HomeStoreRatingPrompt({ isWindowsStoreRuntime }: HomeStoreRatingPromptProps) {
+export default function HomeStoreRatingPrompt({}: HomeStoreRatingPromptProps = {}) {
   const { t } = useTranslation(['common', 'pages']);
   const [installDate, setInstallDate] = useState<string | undefined>(undefined);
   const [isReady, setIsReady] = useState(false);
@@ -51,7 +49,7 @@ export default function HomeStoreRatingPrompt({ isWindowsStoreRuntime }: HomeSto
     return null;
   }
 
-  if (!shouldShowRatingPrompt({ isWindowsStoreRuntime, installDate })) {
+  if (!shouldShowRatingPrompt({ installDate })) {
     return null;
   }
 
