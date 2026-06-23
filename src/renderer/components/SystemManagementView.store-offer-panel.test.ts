@@ -11,9 +11,10 @@ describe('homepage store offer panel wiring', () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
     assert.match(source, /import HomeStoreOfferPanel from '\.\/HomeStoreOfferPanel';/);
+    assert.match(source, /import HomeStoreRatingPrompt from '\.\/HomeStoreRatingPrompt';/);
     assert.match(
       source,
-      /<div className="space-y-6">\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*\{activeVersion \?/s,
+      /<div className="space-y-6">\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*\{activeVersion \?/s,
     );
   });
 

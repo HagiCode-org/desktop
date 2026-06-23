@@ -84,6 +84,7 @@ declare global {
       getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
       getDistributionMode: () => Promise<DistributionMode>;
       getDistributionModeState: () => Promise<DistributionModeState>;
+      getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;
       onServerStatusChange: (callback: (status: 'running' | 'stopped' | 'error') => void) => void;

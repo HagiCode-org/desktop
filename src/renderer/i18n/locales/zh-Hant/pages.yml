@@ -637,3 +637,13 @@ turboEngine:
     server-error: Microsoft Store 在購買過程中回報了伺服器錯誤。
     not-supported: 目前執行環境不支援購買。
     failed: Microsoft Store 購買失敗。
+
+
+ratingPrompt:
+  title: 喜歡 HagiCode？幫我們在 Microsoft Store 評分
+  description: 您的使用體驗對我們很重要，花一分鐘在 Microsoft Store 留下評價，幫更多人發現 HagiCode。
+  actions:
+    rate: 前往評分
+  errors:
+    openFailed: '無法開啟 Microsoft Store 評價頁面：{{error}}'
+    openFailedFallback: Microsoft Store 評價頁面暫時無法使用。

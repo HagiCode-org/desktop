@@ -16,6 +16,10 @@ export interface VersionAutoUpdateSettings {
 
 export interface DebugOptionsConfig extends DebugOptionsSettings {}
 
+export interface MsstoreRatingPromptState {
+  installDate?: string;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
@@ -29,6 +33,7 @@ export interface AppConfig {
   shutdownDirectory?: string;
   recordingDirectory?: string;
   logsDirectory?: string;
+  msstoreRatingPrompt?: MsstoreRatingPromptState;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -39,6 +44,8 @@ export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
 export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
   useIgnoreScriptsForManagedNpm: false,
 };
+
+export const DEFAULT_MSSTORE_RATING_PROMPT_STATE: MsstoreRatingPromptState = {};
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
 
@@ -85,6 +92,22 @@ export function normalizeDebugOptionsSettings(
   return {
     useIgnoreScriptsForManagedNpm: settings?.useIgnoreScriptsForManagedNpm ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.useIgnoreScriptsForManagedNpm,
   };
+}
+
+export function normalizeMsstoreRatingPromptState(
+  state?: Partial<MsstoreRatingPromptState> | null,
+): MsstoreRatingPromptState {
+  const rawInstallDate = state?.installDate;
+  const installDate = typeof rawInstallDate === 'string' && rawInstallDate.trim().length > 0
+    ? rawInstallDate.trim()
+    : undefined;
+
+  // Validate ISO date parses; otherwise drop the dirty value.
+  if (installDate !== undefined && Number.isNaN(Date.parse(installDate))) {
+    return {};
+  }
+
+  return installDate === undefined ? {} : { installDate };
 }
 
 const defaultConfig: AppConfig = {
@@ -356,5 +379,40 @@ export class ConfigManager {
     const normalized = normalizeDependencyManagementMode(mode, isWinStore);
     this.store.set('dependencyManagementMode', normalized);
     return normalized;
+  }
+
+  getMsstoreRatingPromptState(): MsstoreRatingPromptState {
+    const current = this.store.get('msstoreRatingPrompt');
+    const normalized = normalizeMsstoreRatingPromptState(current);
+
+    if (
+      normalized.installDate !== current?.installDate
+    ) {
+      this.store.set('msstoreRatingPrompt', normalized);
+    }
+
+    return normalized;
+  }
+
+  setMsstoreRatingPromptState(nextState: MsstoreRatingPromptState): MsstoreRatingPromptState {
+    const normalized = normalizeMsstoreRatingPromptState(nextState);
+    this.store.set('msstoreRatingPrompt', normalized);
+    return normalized;
+  }
+
+  /**
+   * Persist the install timestamp on first launch only. Returns the current
+   * (possibly freshly written) install date so callers can decide whether to
+   * act on it. Existing timestamps are never overwritten.
+   */
+  ensureMsstoreRatingPromptInstallDate(now: Date = new Date()): MsstoreRatingPromptState {
+    const current = this.getMsstoreRatingPromptState();
+    if (current.installDate) {
+      return current;
+    }
+
+    const next: MsstoreRatingPromptState = { installDate: now.toISOString() };
+    this.store.set('msstoreRatingPrompt', next);
+    return next;
   }
 }

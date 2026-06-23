@@ -637,3 +637,13 @@ turboEngine:
     server-error: Microsoft Store reported a server error during purchase.
     not-supported: Purchase is unavailable in this runtime.
     failed: Microsoft Store purchase failed.
+
+
+ratingPrompt:
+  title: Enjoying HagiCode? Rate us on the Microsoft Store
+  description: Your experience matters to us. Take a minute to leave a review on the Microsoft Store and help more people find HagiCode.
+  actions:
+    rate: Rate us
+  errors:
+    openFailed: 'Failed to open the Microsoft Store review page: {{error}}'
+    openFailedFallback: Microsoft Store review page unavailable.

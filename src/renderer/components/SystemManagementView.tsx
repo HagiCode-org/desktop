@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import HomeStoreOfferPanel from './HomeStoreOfferPanel';
+import HomeStoreRatingPrompt from './HomeStoreRatingPrompt';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -666,6 +667,7 @@ export default function SystemManagementView({
 
         <div className="space-y-6">
           <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
+          <HomeStoreRatingPrompt isWindowsStoreRuntime={distributionState.winStoreMode} />
 
           {activeVersion ? (
             <section

@@ -104,6 +104,26 @@
     --commerce-premium-text-strong: #24180b;
     --commerce-premium-muted: rgba(72, 52, 22, 0.78);
     --commerce-premium-shadow: 0 16px 34px rgba(71, 48, 16, 0.12);
+
+    --msstore-rating-prompt-shell-image:
+      radial-gradient(circle at top right, rgba(124, 58, 237, 0.22) 0%, transparent 38%),
+      radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.18) 0%, transparent 42%),
+      linear-gradient(135deg, #f5f3ff 0%, #ede9fe 55%, #e0f2fe 100%);
+    --msstore-rating-prompt-surface: rgba(245, 243, 255, 0.92);
+    --msstore-rating-prompt-border: rgba(109, 40, 217, 0.24);
+    --msstore-rating-prompt-border-strong: rgba(109, 40, 217, 0.4);
+    --msstore-rating-prompt-accent: #7c3aed;
+    --msstore-rating-prompt-accent-strong: #6d28d9;
+    --msstore-rating-prompt-text: #4c1d95;
+    --msstore-rating-prompt-text-strong: #2e1065;
+    --msstore-rating-prompt-muted: rgba(76, 29, 149, 0.74);
+    --msstore-rating-prompt-icon-image:
+      radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.36) 0%, transparent 48%),
+      linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+    --msstore-rating-prompt-icon-color: #ffffff;
+    --msstore-rating-prompt-button-image: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+    --msstore-rating-prompt-button-color: #ffffff;
+    --msstore-rating-prompt-shadow: 0 16px 34px rgba(76, 29, 149, 0.18);
 }
 
 .dark {
@@ -164,6 +184,26 @@
     --commerce-premium-text-strong: #fff8e5;
     --commerce-premium-muted: rgba(240, 216, 164, 0.76);
     --commerce-premium-shadow: 0 20px 44px rgba(3, 2, 1, 0.34);
+
+    --msstore-rating-prompt-shell-image:
+      radial-gradient(circle at top right, rgba(167, 139, 250, 0.26) 0%, transparent 38%),
+      radial-gradient(circle at bottom left, rgba(56, 189, 248, 0.2) 0%, transparent 42%),
+      linear-gradient(135deg, #1e1338 0%, #14102a 55%, #0c1e2e 100%);
+    --msstore-rating-prompt-surface: rgba(30, 19, 56, 0.86);
+    --msstore-rating-prompt-border: rgba(167, 139, 250, 0.26);
+    --msstore-rating-prompt-border-strong: rgba(196, 181, 253, 0.44);
+    --msstore-rating-prompt-accent: #a78bfa;
+    --msstore-rating-prompt-accent-strong: #c4b5fd;
+    --msstore-rating-prompt-text: #ddd6fe;
+    --msstore-rating-prompt-text-strong: #f5f3ff;
+    --msstore-rating-prompt-muted: rgba(221, 214, 254, 0.78);
+    --msstore-rating-prompt-icon-image:
+      radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.24) 0%, transparent 42%),
+      linear-gradient(180deg, rgba(139, 92, 246, 0.42) 0%, rgba(91, 33, 182, 0.62) 100%);
+    --msstore-rating-prompt-icon-color: #f5f3ff;
+    --msstore-rating-prompt-button-image: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+    --msstore-rating-prompt-button-color: #f5f3ff;
+    --msstore-rating-prompt-shadow: 0 20px 44px rgba(3, 2, 10, 0.4);
 }
 
 @theme inline {
@@ -389,6 +429,79 @@
     border-color: var(--commerce-premium-border);
     background: color-mix(in srgb, var(--commerce-premium-accent) 10%, transparent);
     color: var(--commerce-premium-text);
+  }
+
+  .msstore-rating-prompt-shell {
+    position: relative;
+    overflow: hidden;
+    background-image: var(--msstore-rating-prompt-shell-image);
+    background-color: var(--msstore-rating-prompt-surface);
+    border: 1px solid var(--msstore-rating-prompt-border);
+    box-shadow: var(--msstore-rating-prompt-shadow);
+  }
+
+  .msstore-rating-prompt-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 22%),
+      linear-gradient(90deg, transparent 0%, rgba(196, 181, 253, 0.12) 50%, transparent 100%);
+    opacity: 0.9;
+  }
+
+  .msstore-rating-prompt-icon {
+    background: var(--msstore-rating-prompt-icon-image);
+    border: 1px solid var(--msstore-rating-prompt-border-strong);
+    color: var(--msstore-rating-prompt-icon-color);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .msstore-rating-prompt-heading {
+    color: var(--msstore-rating-prompt-text-strong);
+  }
+
+  .msstore-rating-prompt-copy {
+    color: var(--msstore-rating-prompt-muted);
+  }
+
+  .msstore-rating-prompt-action {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-color: transparent;
+    background: var(--msstore-rating-prompt-button-image);
+    color: var(--msstore-rating-prompt-button-color) !important;
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      filter 180ms ease,
+      background 180ms ease;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 10px 24px rgba(76, 29, 149, 0.24);
+  }
+
+  .msstore-rating-prompt-action > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .msstore-rating-prompt-action:hover {
+    filter: saturate(1.08) brightness(1.04);
+    transform: translateY(-1px) scale(1.01);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 14px 30px rgba(76, 29, 149, 0.32);
+  }
+
+  .msstore-rating-prompt-action:focus-visible {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 0 0 2px color-mix(in srgb, var(--msstore-rating-prompt-accent) 60%, transparent),
+      0 14px 30px rgba(76, 29, 149, 0.32);
   }
 }
 

@@ -221,6 +221,7 @@ interface ElectronAPI {
   getVersionInfo: () => Promise<DesktopVersionInfoPayload>;
   getDistributionMode: () => Promise<DistributionMode>;
   getDistributionModeState: () => Promise<DistributionModeState>;
+  getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
@@ -481,6 +482,7 @@ const electronAPI: ElectronAPI = {
   getVersionInfo: () => ipcRenderer.invoke('version-info'),
   getDistributionMode: () => ipcRenderer.invoke('get-distribution-mode'),
   getDistributionModeState: () => ipcRenderer.invoke('get-distribution-mode-state'),
+  getMsstoreRatingPromptState: () => ipcRenderer.invoke('get-msstore-rating-prompt-state'),
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),

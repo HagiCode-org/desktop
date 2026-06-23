@@ -637,3 +637,13 @@ turboEngine:
     server-error: Microsoft Store informó de un error del servidor durante la compra.
     not-supported: La compra no está disponible en este entorno.
     failed: La compra en Microsoft Store falló.
+
+
+ratingPrompt:
+  title: ¿Te gusta HagiCode? Califícanos en Microsoft Store
+  description: Tu experiencia nos importa. Dedica un minuto a dejar una reseña en Microsoft Store y ayuda a más personas a descubrir HagiCode.
+  actions:
+    rate: Calificar
+  errors:
+    openFailed: 'No se pudo abrir la página de reseñas de Microsoft Store: {{error}}'
+    openFailedFallback: La página de reseñas de Microsoft Store no está disponible.

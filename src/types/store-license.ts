@@ -1,5 +1,6 @@
 export const HAGICODE_DESKTOP_WINDOWS_STORE_ID = '9N3PM0N3SVDW';
 export const HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL = `https://apps.microsoft.com/detail/${HAGICODE_DESKTOP_WINDOWS_STORE_ID}`;
+export const HAGICODE_DESKTOP_WINDOWS_STORE_REVIEW_URL = HAGICODE_DESKTOP_WINDOWS_STORE_WEB_URL;
 
 export const storeLicenseAvailabilityValues = [
   'supported',

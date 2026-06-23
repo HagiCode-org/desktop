@@ -945,6 +945,13 @@ ipcMain.handle('get-distribution-mode-state', () => {
   return getDistributionModeState();
 });
 
+ipcMain.handle('get-msstore-rating-prompt-state', () => {
+  if (!configManager) {
+    return {};
+  }
+  return configManager.getMsstoreRatingPromptState();
+});
+
 ipcMain.handle('show-window', () => {
   activateMainWindow('ipc-show-window');
 });
@@ -2478,6 +2485,7 @@ app.whenReady().then(async () => {
 
   configManager = new ConfigManager();
   (configManager.getStore() as unknown as Store<Record<string, unknown>>).delete('debugMode');
+  configManager.ensureMsstoreRatingPromptInstallDate();
   const serverConfig = configManager.getServerConfig();
   serverClient = new HagicoServerClient(serverConfig);
 

@@ -637,3 +637,13 @@ turboEngine:
     server-error: Microsoft Store が購入中にサーバー エラーを報告しました。
     not-supported: この実行環境では購入できません。
     failed: Microsoft Store での購入に失敗しました。
+
+
+ratingPrompt:
+  title: HagiCode を気に入っていただけましたか？Microsoft Store で評価をお願いします
+  description: あなたの体験は私たちにとって大切です。Microsoft Store でレビューを残して、より多くの方に HagiCode を届けるのにご協力ください。
+  actions:
+    rate: 評価する
+  errors:
+    openFailed: 'Microsoft Store のレビューページを開けませんでした：{{error}}'
+    openFailedFallback: Microsoft Store のレビューページは現在利用できません。
