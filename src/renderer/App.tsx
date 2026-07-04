@@ -30,6 +30,7 @@ import {
 import type { DependencyManagementBridge } from '../types/dependency-management';
 import type { HagiNodeRuntimeBridge } from '../types/node-runtime';
 import type { OnboardingShowPayload } from '../types/onboarding';
+import type { MsstoreDonationItemBridge } from '../types/msstore-donation-item.js';
 import type { DesktopVersionInfoPayload } from '../types/version-info';
 import type {
   DesktopBootstrapSnapshot,
@@ -85,6 +86,7 @@ declare global {
       getDistributionMode: () => Promise<DistributionMode>;
       getDistributionModeState: () => Promise<DistributionModeState>;
       getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
+      msstoreDonationItem?: MsstoreDonationItemBridge;
       showWindow: () => Promise<void>;
       hideWindow: () => Promise<void>;
       onServerStatusChange: (callback: (status: 'running' | 'stopped' | 'error') => void) => void;

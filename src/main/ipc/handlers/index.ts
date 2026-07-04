@@ -55,6 +55,7 @@ export { registerViewHandlers, initViewHandlers } from './viewHandlers.js';
 // Subscription handlers
 export { registerSubscriptionHandlers, disposeSubscriptionHandlers } from './subscriptionHandlers.js';
 export { registerTurboEngineLicenseHandlers, disposeTurboEngineLicenseHandlers } from './turboengineLicenseHandlers.js';
+export { registerMsstoreDonationItemHandlers, disposeMsstoreDonationItemHandlers } from './msstoreDonationItemHandlers.js';
 
 // Types
 export type { HandlerSuccess, HandlerError, HandlerResponse, IpcHandler } from './types.js';

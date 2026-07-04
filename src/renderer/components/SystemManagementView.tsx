@@ -9,6 +9,7 @@ import WebServiceStatusCard from './WebServiceStatusCard';
 import BlogFeedCard from './BlogFeedCard';
 import HomeStoreOfferPanel from './HomeStoreOfferPanel';
 import HomeStoreRatingPrompt from './HomeStoreRatingPrompt';
+import HomeStoreDonationItem from './HomeStoreDonationItem';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -666,6 +667,7 @@ export default function SystemManagementView({
         </div>
 
         <div className="space-y-6">
+          <HomeStoreDonationItem isWindowsStoreRuntime={distributionState.winStoreMode} />
           <HomeStoreOfferPanel isWindowsStoreRuntime={distributionState.winStoreMode} />
           <HomeStoreRatingPrompt />
 

@@ -5,16 +5,18 @@ import { describe, it } from 'node:test';
 
 const systemManagementViewPath = path.resolve(process.cwd(), 'src/renderer/components/SystemManagementView.tsx');
 const homeStoreOfferPanelPath = path.resolve(process.cwd(), 'src/renderer/components/HomeStoreOfferPanel.tsx');
+const homeStoreDonationItemPath = path.resolve(process.cwd(), 'src/renderer/components/HomeStoreDonationItem.tsx');
 
 describe('homepage store offer panel wiring', () => {
   it('renders the homepage store offer panel above the active version panel', async () => {
     const source = await fs.readFile(systemManagementViewPath, 'utf8');
 
+    assert.match(source, /import HomeStoreDonationItem from '\.\/HomeStoreDonationItem';/);
     assert.match(source, /import HomeStoreOfferPanel from '\.\/HomeStoreOfferPanel';/);
     assert.match(source, /import HomeStoreRatingPrompt from '\.\/HomeStoreRatingPrompt';/);
     assert.match(
       source,
-      /<div className="space-y-6">\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt \/>\s*\{activeVersion \?/s,
+      /<div className="space-y-6">\s*<HomeStoreDonationItem isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreOfferPanel isWindowsStoreRuntime=\{distributionState\.winStoreMode\} \/>\s*<HomeStoreRatingPrompt \/>\s*\{activeVersion \?/s,
     );
   });
 
@@ -37,5 +39,14 @@ describe('homepage store offer panel wiring', () => {
     assert.doesNotMatch(source, /HAGICODE_TURBOENGINE_STORE_WEB_URL/);
     assert.match(source, /commerce-premium-shell rounded-3xl p-6 sm:p-7/);
     assert.match(source, /commerce-premium-panel mt-5 flex flex-col gap-3 rounded-2xl p-4/);
+  });
+
+  it('loads donation state, purchases donation item, and gates dismiss on sponsor state', async () => {
+    const source = await fs.readFile(homeStoreDonationItemPath, 'utf8');
+
+    assert.match(source, /window\.electronAPI\.msstoreDonationItem\?\.getState\(\)/);
+    assert.match(source, /window\.electronAPI\.msstoreDonationItem\.purchase\(\)/);
+    assert.match(source, /window\.electronAPI\.msstoreDonationItem\.dismiss\(\)/);
+    assert.match(source, /subscriptionState\.snapshot\?\.status === 'active'/);
   });
 });

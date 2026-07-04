@@ -63,6 +63,8 @@ import {
   disposeSubscriptionHandlers,
   registerTurboEngineLicenseHandlers,
   disposeTurboEngineLicenseHandlers,
+  registerMsstoreDonationItemHandlers,
+  disposeMsstoreDonationItemHandlers,
   registerViewHandlers,
 } from './ipc/handlers/index.js';
 import { PathManager } from './path-manager.js';
@@ -87,6 +89,7 @@ import {
   resolveTurboEngineDlcProgramOption,
   turboEngineProductConfig,
 } from '../types/turboengine-license.js';
+import { sponsorPlanProductConfig } from '../types/subscription.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -99,6 +102,7 @@ const TURBOENGINE_LICENSE_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
 const TURBOENGINE_LICENSE_FEATURE_ARG = '--desktop-turboengine-license-enabled=1';
 const SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG = '--desktop-subscription-purchase-smoke-test=1';
+const MSSTORE_DONATION_ITEM_PRODUCT_ID = '9NC5T6VC1NQH';
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));
@@ -314,10 +318,12 @@ let bootstrapSnapshotPromise: Promise<DesktopBootstrapSnapshot> | null = null;
 let subscriptionService: SubscriptionService | null = null;
 let subscriptionSyncInterval: NodeJS.Timeout | null = null;
 let turboEngineLicenseService: TurboEngineLicenseService | null = null;
+let msstoreDonationPurchaseService: SubscriptionService | null = null;
 let turboEngineLicenseSyncInterval: NodeJS.Timeout | null = null;
 let turboEngineBackendSyncInFlight: Promise<void> | null = null;
 let subscriptionFeatureEnabled = false;
 let turboEngineLicenseFeatureEnabled = false;
+let msstoreDonationItemFeatureEnabled = false;
 let subscriptionPurchaseSmokeTestStarted = false;
 let lastAppliedTurboEngineDlcProgramOptionSignature = 'null|';
 const notificationService = new NotificationService({
@@ -720,6 +726,36 @@ function initializeTurboEngineLicenseService(): void {
     scheduleTurboEngineBackendSync('license-changed');
   });
   log.info('[App] TurboEngine license service and IPC handlers registered for Microsoft Store runtime');
+}
+
+function initializeMsstoreDonationItemService(): void {
+  if (!msstoreDonationItemFeatureEnabled || msstoreDonationPurchaseService || !configManager) {
+    return;
+  }
+
+  msstoreDonationPurchaseService = new SubscriptionService({
+    broker: new MicrosoftStoreSubscriptionBroker({
+      windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
+      productConfig: {
+        ...sponsorPlanProductConfig,
+        key: 'msstore-donation-item',
+        storeId: MSSTORE_DONATION_ITEM_PRODUCT_ID,
+        productId: MSSTORE_DONATION_ITEM_PRODUCT_ID,
+        productName: 'MS Store Donation Item',
+        purchaseLabel: 'MS Store donation item',
+        statusLabel: 'MS Store donation item status',
+      },
+    }),
+    entitlementEvaluator: new EntitlementEvaluator(),
+  });
+
+  registerMsstoreDonationItemHandlers({
+    configManager,
+    purchaseDonation: () => msstoreDonationPurchaseService!.purchase(),
+    canDismiss: () => subscriptionService?.getCurrentSnapshot().status === 'active',
+    getWindows: () => ElectronBrowserWindow.getAllWindows(),
+  });
+  log.info('[App] MS Store donation item service and IPC handlers registered for Microsoft Store runtime');
 }
 
 function getTurboEngineDlcProgramOptionSignature(): string {
@@ -2558,12 +2594,14 @@ app.whenReady().then(async () => {
   const distributionModeState = await versionManager.initializeDistributionMode();
   subscriptionFeatureEnabled = distributionModeState.winStoreMode;
   turboEngineLicenseFeatureEnabled = distributionModeState.winStoreMode;
+  msstoreDonationItemFeatureEnabled = distributionModeState.winStoreMode;
   webServiceManager.setDistributionMode(distributionModeState.mode);
   webServiceManager.setActiveRuntime(distributionModeState.activeRuntime);
   log.info('[App] Distribution mode initialized:', {
     distributionMode: distributionModeState.mode,
     subscriptionFeatureEnabled,
     turboEngineLicenseFeatureEnabled,
+    msstoreDonationItemFeatureEnabled,
     portableRuntimeSource: distributionModeState.activeRuntime?.kind ?? null,
     portableRuntimeRoot: distributionModeState.activeRuntime?.rootPath ?? null,
     electronSandboxOverrideEnabled: electronSandboxOverrideDecision.enabled,
@@ -2696,6 +2734,7 @@ app.whenReady().then(async () => {
   createWindow();
   initializeSubscriptionService();
   initializeTurboEngineLicenseService();
+  initializeMsstoreDonationItemService();
   triggerStartupStoreLicenseRefresh();
   createTray();
   setServerStatus('stopped');
@@ -2789,8 +2828,10 @@ app.on('before-quit', async (event) => {
     versionUpdateManager?.dispose();
     subscriptionService?.dispose();
     turboEngineLicenseService?.dispose();
+    msstoreDonationPurchaseService?.dispose();
     disposeSubscriptionHandlers();
     disposeTurboEngineLicenseHandlers();
+    disposeMsstoreDonationItemHandlers();
     destroyTray();
   } catch (error) {
     console.error('[App] Error during cleanup:', error);

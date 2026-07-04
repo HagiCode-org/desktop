@@ -20,6 +20,11 @@ export interface MsstoreRatingPromptState {
   installDate?: string;
 }
 
+export interface MsstoreDonationItemState {
+  purchaseCount: number;
+  dismissedAt?: string;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
@@ -34,6 +39,7 @@ export interface AppConfig {
   recordingDirectory?: string;
   logsDirectory?: string;
   msstoreRatingPrompt?: MsstoreRatingPromptState;
+  msstoreDonationItem?: MsstoreDonationItemState;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -46,6 +52,10 @@ export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
 };
 
 export const DEFAULT_MSSTORE_RATING_PROMPT_STATE: MsstoreRatingPromptState = {};
+
+export const DEFAULT_MSSTORE_DONATION_ITEM_STATE: MsstoreDonationItemState = {
+  purchaseCount: 0,
+};
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
 
@@ -108,6 +118,28 @@ export function normalizeMsstoreRatingPromptState(
   }
 
   return installDate === undefined ? {} : { installDate };
+}
+
+export function normalizeMsstoreDonationItemState(
+  state?: Partial<MsstoreDonationItemState> | null,
+): MsstoreDonationItemState {
+  const rawPurchaseCount = typeof state?.purchaseCount === 'number'
+    ? state.purchaseCount
+    : Number.NaN;
+  const purchaseCount = Number.isInteger(rawPurchaseCount) && rawPurchaseCount >= 0
+    ? rawPurchaseCount
+    : DEFAULT_MSSTORE_DONATION_ITEM_STATE.purchaseCount;
+
+  const rawDismissedAt = state?.dismissedAt;
+  const dismissedAt = typeof rawDismissedAt === 'string' && rawDismissedAt.trim().length > 0
+    ? rawDismissedAt.trim()
+    : undefined;
+
+  if (dismissedAt !== undefined && Number.isNaN(Date.parse(dismissedAt))) {
+    return { purchaseCount };
+  }
+
+  return dismissedAt === undefined ? { purchaseCount } : { purchaseCount, dismissedAt };
 }
 
 const defaultConfig: AppConfig = {
@@ -413,6 +445,35 @@ export class ConfigManager {
 
     const next: MsstoreRatingPromptState = { installDate: now.toISOString() };
     this.store.set('msstoreRatingPrompt', next);
+    return next;
+  }
+
+  getMsstoreDonationItemState(): MsstoreDonationItemState {
+    const current = this.store.get('msstoreDonationItem');
+    const normalized = normalizeMsstoreDonationItemState(current);
+
+    const shouldPersist = current?.purchaseCount !== normalized.purchaseCount
+      || current?.dismissedAt !== normalized.dismissedAt;
+    if (shouldPersist) {
+      this.store.set('msstoreDonationItem', normalized);
+    }
+
+    return normalized;
+  }
+
+  setMsstoreDonationItemState(nextState: MsstoreDonationItemState): MsstoreDonationItemState {
+    const normalized = normalizeMsstoreDonationItemState(nextState);
+    this.store.set('msstoreDonationItem', normalized);
+    return normalized;
+  }
+
+  incrementMsstoreDonationItemPurchaseCount(): MsstoreDonationItemState {
+    const current = this.getMsstoreDonationItemState();
+    const next = normalizeMsstoreDonationItemState({
+      ...current,
+      purchaseCount: current.purchaseCount + 1,
+    });
+    this.store.set('msstoreDonationItem', next);
     return next;
   }
 }

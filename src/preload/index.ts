@@ -42,6 +42,8 @@ import type { SubscriptionBridge } from '../types/subscription.js';
 import { subscriptionChannels } from '../types/subscription.js';
 import type { TurboEngineLicenseBridge } from '../types/turboengine-license.js';
 import { turboEngineChannels } from '../types/turboengine-license.js';
+import type { MsstoreDonationItemBridge } from '../types/msstore-donation-item.js';
+import { msstoreDonationItemChannels } from '../types/msstore-donation-item.js';
 import type {
   DesktopBootstrapSnapshot,
 } from '../types/bootstrap.js';
@@ -222,6 +224,7 @@ interface ElectronAPI {
   getDistributionMode: () => Promise<DistributionMode>;
   getDistributionModeState: () => Promise<DistributionModeState>;
   getMsstoreRatingPromptState: () => Promise<{ installDate?: string }>;
+  msstoreDonationItem: MsstoreDonationItemBridge;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
   openHagicodeInApp: (url: string) => Promise<void>;
@@ -299,6 +302,7 @@ interface ElectronAPI {
   debugOptions: DebugOptionsBridge;
   subscription?: SubscriptionBridge;
   turboEngineLicense?: TurboEngineLicenseBridge;
+  msstoreDonationItem?: MsstoreDonationItemBridge;
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
@@ -471,6 +475,19 @@ const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
   },
 });
 
+const msstoreDonationItemBridge: MsstoreDonationItemBridge = {
+  getState: () => ipcRenderer.invoke(msstoreDonationItemChannels.getState),
+  dismiss: () => ipcRenderer.invoke(msstoreDonationItemChannels.dismiss),
+  purchase: () => ipcRenderer.invoke(msstoreDonationItemChannels.purchase),
+  onDidChange: (callback) => {
+    const listener = (_event, snapshot) => {
+      callback(snapshot);
+    };
+    ipcRenderer.on(msstoreDonationItemChannels.changed, listener);
+    return () => ipcRenderer.removeListener(msstoreDonationItemChannels.changed, listener);
+  },
+};
+
 const electronAPI: ElectronAPI = {
   bootstrap: {
     getCachedSnapshot: () => initialBootstrapSnapshot,
@@ -626,6 +643,7 @@ const electronAPI: ElectronAPI = {
   debugOptions: debugOptionsBridge,
   ...(subscriptionFeatureEnabled ? { subscription: subscriptionBridge } : {}),
   ...(turboEngineLicenseFeatureEnabled ? { turboEngineLicense: turboEngineLicenseBridge } : {}),
+  ...(turboEngineLicenseFeatureEnabled ? { msstoreDonationItem: msstoreDonationItemBridge } : {}),
   onVersionInstallProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);

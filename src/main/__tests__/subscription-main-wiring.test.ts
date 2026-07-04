@@ -14,6 +14,7 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /const SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG = '--desktop-subscription-purchase-smoke-test=1';/);
     assert.match(source, /subscriptionFeatureEnabled = distributionModeState\.winStoreMode;/);
     assert.match(source, /turboEngineLicenseFeatureEnabled = distributionModeState\.winStoreMode;/);
+    assert.match(source, /msstoreDonationItemFeatureEnabled = distributionModeState\.winStoreMode;/);
     assert.match(source, /subscriptionFeatureEnabled \? SUBSCRIPTION_FEATURE_ARG : null/);
     assert.match(source, /turboEngineLicenseFeatureEnabled \? TURBOENGINE_LICENSE_FEATURE_ARG : null/);
     assert.match(source, /resolveTurboEngineDlcProgramOption,/);
@@ -22,6 +23,11 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /function initializeSubscriptionService\(\): void \{[\s\S]*subscriptionService = new SubscriptionService/);
     assert.match(source, /function initializeTurboEngineLicenseService\(\): void \{[\s\S]*turboEngineLicenseService = new TurboEngineLicenseService/);
     assert.match(source, /productConfig: turboEngineProductConfig/);
+    assert.match(source, /const MSSTORE_DONATION_ITEM_PRODUCT_ID = '9NC5T6VC1NQH';/);
+    assert.match(source, /function initializeMsstoreDonationItemService\(\): void \{[\s\S]*msstoreDonationPurchaseService = new SubscriptionService/);
+    assert.match(source, /registerMsstoreDonationItemHandlers\(\{[\s\S]*purchaseDonation: \(\) => msstoreDonationPurchaseService!\.purchase\(\),/);
+    assert.match(source, /storeId: MSSTORE_DONATION_ITEM_PRODUCT_ID,/);
+    assert.match(source, /productId: MSSTORE_DONATION_ITEM_PRODUCT_ID,/);
     assert.match(source, /turboEngineLicenseService\.onDidChange\(\(\) => \{[\s\S]*scheduleTurboEngineBackendSync\('license-changed'\);/);
     assert.match(source, /function scheduleTurboEngineBackendSync\(reason: string\): void \{/);
     assert.match(source, /async function syncTurboEngineBackendState\(reason: string\): Promise<void> \{/);
@@ -39,9 +45,12 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /subscriptionSyncInterval = setInterval\(\(\) => \{[\s\S]*subscriptionService\?\.refresh\('scheduled'\);/);
     assert.match(source, /turboEngineLicenseSyncInterval = setInterval\(\(\) => \{[\s\S]*turboEngineLicenseService\?\.refresh\('scheduled'\);/);
     assert.match(source, /scheduleSubscriptionPurchaseSmokeTest\(\);/);
+    assert.match(source, /createWindow\(\);\s*initializeSubscriptionService\(\);\s*initializeTurboEngineLicenseService\(\);\s*initializeMsstoreDonationItemService\(\);/s);
     assert.match(source, /subscriptionService\?\.dispose\(\);/);
     assert.match(source, /turboEngineLicenseService\?\.dispose\(\);/);
+    assert.match(source, /msstoreDonationPurchaseService\?\.dispose\(\);/);
     assert.match(source, /disposeSubscriptionHandlers\(\);/);
     assert.match(source, /disposeTurboEngineLicenseHandlers\(\);/);
+    assert.match(source, /disposeMsstoreDonationItemHandlers\(\);/);
   });
 });

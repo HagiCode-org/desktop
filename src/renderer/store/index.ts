@@ -21,6 +21,10 @@ import turboEngineLicenseReducer, {
   verifyTurboEngineLicenseStartup,
   setTurboEngineLicenseSnapshotFromEvent,
 } from './slices/turboEngineLicenseSlice';
+import msstoreDonationItemReducer, {
+  loadMsstoreDonationItemState,
+  setMsstoreDonationItemState,
+} from './slices/msstoreDonationItemSlice';
 import versionUpdateReducer, {
   fetchVersionAutoUpdateSettings,
   fetchVersionUpdateSnapshot,
@@ -45,6 +49,8 @@ const subscriptionFeatureEnabled = typeof window !== 'undefined'
   && typeof window.electronAPI?.subscription?.getSnapshot === 'function';
 const turboEngineLicenseFeatureEnabled = typeof window !== 'undefined'
   && typeof window.electronAPI?.turboEngineLicense?.getSnapshot === 'function';
+const msstoreDonationItemFeatureEnabled = typeof window !== 'undefined'
+  && typeof window.electronAPI?.msstoreDonationItem?.getState === 'function';
 
 // Redux logger to track all actions
 const reduxLogger = (store) => (next) => (action) => {
@@ -68,6 +74,7 @@ export const store = configureStore({
     settings: settingsReducer,
     subscription: subscriptionReducer,
     turboEngineLicense: turboEngineLicenseReducer,
+    msstoreDonationItem: msstoreDonationItemReducer,
     versionUpdate: versionUpdateReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -141,6 +148,9 @@ function registerRealtimeListeners(): void {
     turboEngineLicense?: {
       onDidChange: (callback: (snapshot: any) => void) => (() => void) | void;
     };
+    msstoreDonationItem?: {
+      onDidChange: (callback: (state: any) => void) => (() => void) | void;
+    };
   };
   const hagihub = (window as Window & { hagihub?: HagihubApi }).hagihub;
 
@@ -204,6 +214,12 @@ function registerRealtimeListeners(): void {
       store.dispatch(setTurboEngineLicenseSnapshotFromEvent(snapshot));
     });
   }
+
+  if (msstoreDonationItemFeatureEnabled) {
+    electronAPI.msstoreDonationItem?.onDidChange?.((state: any) => {
+      store.dispatch(setMsstoreDonationItemState(state));
+    });
+  }
 }
 
 export async function runCriticalStartupInitialization(): Promise<void> {
@@ -252,6 +268,7 @@ export function startBackgroundStartupInitialization(): void {
     ...(turboEngineLicenseFeatureEnabled
       ? [store.dispatch(loadTurboEngineLicenseSnapshot())]
       : []),
+    ...(msstoreDonationItemFeatureEnabled ? [store.dispatch(loadMsstoreDonationItemState())] : []),
     ...startupStoreLicenseChecks,
   ]);
 }
