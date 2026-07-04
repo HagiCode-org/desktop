@@ -1,10 +1,13 @@
 export interface DebugOptionsSettings {
   useIgnoreScriptsForManagedNpm: boolean;
+  msstoreInstallDateRaw?: string;
 }
 
 export type DebugOptionsSaveStatus = 'unchanged' | 'saved' | 'failed';
 
-export interface DebugOptionsSettingsSnapshot extends DebugOptionsSettings {}
+export interface DebugOptionsSettingsSnapshot extends DebugOptionsSettings {
+  msstoreInstallAgeDays: number | null;
+}
 
 export interface DebugOptionsSaveResult {
   status: DebugOptionsSaveStatus;

@@ -29,10 +29,11 @@ describe('debug options settings renderer wiring', () => {
     assert.match(builtInTabsSource, /<DebugOptionsSettings \/>/);
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\s*\.getSettings\(\)/);
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\.setSettings\(\{/);
-    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.useIgnoreScriptsForManagedNpm\.label/);
-    assert.match(debugOptionsSettingsSource, /const npmControlDisabled = !settings \|\| isSaving;/);
-    assert.match(debugOptionsSettingsSource, /const hasPendingChanges = settings/);
-    assert.match(debugOptionsSettingsSource, /useIgnoreScriptsForManagedNpm !== settings\.useIgnoreScriptsForManagedNpm/);
+    assert.match(debugOptionsSettingsSource, /useIgnoreScriptsForManagedNpm/);
+    assert.match(debugOptionsSettingsSource, /msstoreInstallDateRaw/);
+    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.label/);
+    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.description/);
+    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.ageDays/);
   });
 
   it('adds localized debug options labels and feedback copy', async () => {
@@ -41,9 +42,14 @@ describe('debug options settings renderer wiring', () => {
       fs.readFile(zhPagesPath, 'utf8'),
     ]);
 
-    assert.match(enPagesSource, /debugOptions: Debug Options/);
+    assert.match(enPagesSource, /debugOptions:\n[\s\S]*title: Debug Options/);
     assert.match(enPagesSource, /label: npm uses `--ignore-scripts`/);
-    assert.match(zhPagesSource, /debugOptions: 调试选项/);
+    assert.match(enPagesSource, /installDate:\n[\s\S]*Raw install date/);
+    assert.match(enPagesSource, /ageDays: 'Install age \(days\): \{\{value\}\}'/);
+
+    assert.match(zhPagesSource, /debugOptions:\n[\s\S]*title: 调试选项/);
     assert.match(zhPagesSource, /label: npm 使用 `--ignore-scripts`/);
+    assert.match(zhPagesSource, /installDate:\n[\s\S]*安装日期原始值/);
+    assert.match(zhPagesSource, /ageDays: '安装天数：\{\{value\}\}'/);
   });
 });

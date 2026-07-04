@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type {
   DebugOptionsBridge,
@@ -23,6 +24,7 @@ export function DebugOptionsSettings() {
   const { t } = useTranslation('pages');
   const [settings, setSettings] = useState<DebugOptionsSettingsSnapshot | null>(null);
   const [useIgnoreScriptsForManagedNpm, setUseIgnoreScriptsForManagedNpm] = useState(false);
+  const [msstoreInstallDateRaw, setMsstoreInstallDateRaw] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSaveResult, setLastSaveResult] = useState<DebugOptionsSaveResult | null>(null);
@@ -36,6 +38,7 @@ export function DebugOptionsSettings() {
         if (!disposed) {
           setSettings(snapshot);
           setUseIgnoreScriptsForManagedNpm(snapshot.useIgnoreScriptsForManagedNpm);
+          setMsstoreInstallDateRaw(snapshot.msstoreInstallDateRaw ?? '');
           setError(null);
         }
       })
@@ -60,18 +63,21 @@ export function DebugOptionsSettings() {
     try {
       const result = await getDebugOptionsBridge().setSettings({
         useIgnoreScriptsForManagedNpm,
+        msstoreInstallDateRaw,
       });
       setSettings(result.settings);
       setUseIgnoreScriptsForManagedNpm(result.settings.useIgnoreScriptsForManagedNpm);
+      setMsstoreInstallDateRaw(result.settings.msstoreInstallDateRaw ?? '');
       setLastSaveResult(result);
 
-      if (result.status === 'unchanged') {
-        toast.success(t('settings.debugOptions.messages.unchanged'));
-      } else if (result.status === 'saved') {
+      if (result.status === 'saved') {
         toast.success(t('settings.debugOptions.messages.saveSuccess'));
+      } else if (result.status === 'unchanged') {
+        toast.message(t('settings.debugOptions.messages.unchanged'));
       } else {
-        toast.error(t('settings.debugOptions.messages.saveFailed'));
-        setError(result.error ?? t('settings.debugOptions.messages.saveFailed'));
+        const message = result.error || t('settings.debugOptions.messages.saveFailed');
+        toast.error(message);
+        setError(message);
       }
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : String(saveError);
@@ -83,19 +89,20 @@ export function DebugOptionsSettings() {
   };
 
   const handleReset = () => {
-    if (!settings) {
+    if (!settings || isSaving) {
       return;
     }
 
+    setUseIgnoreScriptsForManagedNpm(settings.useIgnoreScriptsForManagedNpm);
+    setMsstoreInstallDateRaw(settings.msstoreInstallDateRaw ?? '');
     setError(null);
     setLastSaveResult(null);
-    setUseIgnoreScriptsForManagedNpm(settings.useIgnoreScriptsForManagedNpm);
   };
 
-  const npmControlDisabled = !settings || isSaving;
-  const hasPendingChanges = settings
-    ? useIgnoreScriptsForManagedNpm !== settings.useIgnoreScriptsForManagedNpm
-    : false;
+  const hasChanges = settings !== null && (
+    useIgnoreScriptsForManagedNpm !== settings.useIgnoreScriptsForManagedNpm
+    || msstoreInstallDateRaw !== (settings.msstoreInstallDateRaw ?? '')
+  );
 
   return (
     <Card className="max-w-3xl">
@@ -107,49 +114,88 @@ export function DebugOptionsSettings() {
         <CardDescription>{t('settings.debugOptions.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-medium text-foreground">
-                {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.description')}
-              </p>
+        {settings ? (
+          <>
+            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div>
+                <h4 className="text-sm font-medium">{t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('settings.debugOptions.useIgnoreScriptsForManagedNpm.description')}
+                </p>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-3 py-2">
+                <span className="text-sm">--ignore-scripts</span>
+                <Switch
+                  checked={useIgnoreScriptsForManagedNpm}
+                  onCheckedChange={setUseIgnoreScriptsForManagedNpm}
+                  disabled={isSaving || settings === null}
+                  aria-label={t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}
+                />
+              </div>
             </div>
-            <Switch
-              checked={useIgnoreScriptsForManagedNpm}
-              onCheckedChange={setUseIgnoreScriptsForManagedNpm}
-              disabled={npmControlDisabled}
-            />
-          </div>
-        </div>
 
-        <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-          <p>{t('settings.debugOptions.notes.scope')}</p>
-          <p className="mt-1">{t('settings.debugOptions.notes.npm')}</p>
-        </div>
+            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div>
+                <h4 className="text-sm font-medium">{t('settings.debugOptions.installDate.label')}</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('settings.debugOptions.installDate.description')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('settings.debugOptions.installDate.ageDays', {
+                    value: settings.msstoreInstallAgeDays == null
+                      ? t('settings.debugOptions.installDate.ageDaysUnknown')
+                      : settings.msstoreInstallAgeDays,
+                  })}
+                </p>
+              </div>
+              <Input
+                value={msstoreInstallDateRaw}
+                onChange={(event) => setMsstoreInstallDateRaw(event.target.value)}
+                disabled={isSaving || settings === null}
+                placeholder={t('settings.debugOptions.installDate.placeholder')}
+              />
+            </div>
 
-        {lastSaveResult && lastSaveResult.status === 'saved' ? (
-          <p className="text-sm text-muted-foreground">
-            {t('settings.debugOptions.messages.saveSuccess')}
-          </p>
-        ) : null}
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>{t('settings.debugOptions.notes.scope')}</p>
+              <p>{t('settings.debugOptions.notes.npm')}</p>
+            </div>
 
-        {error ? (
-          <p className="text-sm text-destructive">
-            {t('settings.debugOptions.errors.saveErrorDetail', { error })}
-          </p>
-        ) : null}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={!hasChanges || isSaving}
+              >
+                {isSaving ? t('settings.debugOptions.actions.saving') : t('settings.debugOptions.actions.save')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                disabled={!hasChanges || isSaving}
+              >
+                {t('settings.debugOptions.actions.cancel')}
+              </Button>
+            </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={handleReset} disabled={isSaving || !hasPendingChanges}>
-            {t('settings.debugOptions.actions.cancel')}
-          </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !settings || !hasPendingChanges}>
-            {isSaving ? t('settings.debugOptions.actions.saving') : t('settings.debugOptions.actions.save')}
-          </Button>
-        </div>
+            {lastSaveResult?.status === 'failed' ? (
+              <p className="text-sm text-destructive">
+                {t('settings.debugOptions.errors.saveErrorDetail', {
+                  error: lastSaveResult.error ?? t('settings.debugOptions.messages.saveFailed'),
+                })}
+              </p>
+            ) : null}
+
+            {error ? (
+              <p className="text-sm text-destructive">
+                {t('settings.debugOptions.errors.saveErrorDetail', { error })}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+        )}
       </CardContent>
     </Card>
   );
