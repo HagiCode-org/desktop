@@ -169,6 +169,12 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm 使用 `--ignore-scripts`
       description: 讓 Desktop 託管的 npm 安裝與同步操作跳過 lifecycle scripts，便於排查 postinstall 等腳本導致的問題。
+    installDate:
+      label: Raw install date (msstoreRatingPrompt.installDate)
+      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      ageDays: 'Install age (days): {{value}}'
+      ageDaysUnknown: unknown
     notes:
       scope: 此設定只影響後續 Desktop 託管的 npm 安裝與同步操作。
       npm: npm 開關只影響後續 Desktop 託管的 npm 安裝與同步操作，儲存後立即生效，不需要重新啟動受管服務。
@@ -362,7 +368,7 @@ subscription:
   description: 查看 Microsoft Store 贊助者計畫的狀態、刷新本機快照，並確認目前這台裝置是否已啟用贊助權益。
   loading: 正在讀取快取中的贊助快照...
   errorTitle: 無法讀取贊助快照
-  errorDescription: 'Desktop 無法載入贊助快照：{{error}}'
+  errorDescription: Desktop 無法載入贊助快照：{{error}}
   staleBadge: 快取快照
   messages:
     refreshSuccess: Subscription status refreshed.
@@ -532,7 +538,7 @@ turboEngine:
   verifyingBadge: 驗證中
   staleBadge: 快取快照
   errorTitle: 無法讀取 TurboEngine 快照
-  errorDescription: 'Desktop 無法載入 TurboEngine 快照：{{error}}'
+  errorDescription: Desktop 無法載入 TurboEngine 快照：{{error}}
   hero:
     title: TurboEngine workspace
     activeDescription: TurboEngine is already licensed on this device. You can confirm the current Microsoft Store state, review diagnostics, and refresh whenever needed.
@@ -637,13 +643,30 @@ turboEngine:
     server-error: Microsoft Store 在購買過程中回報了伺服器錯誤。
     not-supported: 目前執行環境不支援購買。
     failed: Microsoft Store 購買失敗。
-
-
 ratingPrompt:
   title: 喜歡 HagiCode？幫我們在 Microsoft Store 評分
   description: 您的使用體驗對我們很重要，花一分鐘在 Microsoft Store 留下評價，幫更多人發現 HagiCode。
   actions:
     rate: 前往評分
   errors:
-    openFailed: '無法開啟 Microsoft Store 評價頁面：{{error}}'
+    openFailed: 無法開啟 Microsoft Store 評價頁面：{{error}}
     openFailedFallback: Microsoft Store 評價頁面暫時無法使用。
+donationItem:
+  actions:
+    purchase: Donate now
+    purchasing: Processing...
+    close: Close donation item
+  purchaseCount: Donation count {{count}} (local record)
+  messages:
+    purchaseFailed: 'Donation failed: {{error}}'
+    dismissFailed: 'Failed to dismiss donation item: {{error}}'
+    dismissed: Donation item dismissed
+    purchaseOutcome:
+      succeeded: Donation completed. Thank you for supporting us!
+      already-purchased: Donation recorded. Thank you for your continued support!
+      canceled: Donation flow was canceled.
+      not-purchased: Donation flow ended without payment.
+      network-error: Donation failed due to a network error.
+      server-error: Donation failed due to a Microsoft Store service error.
+      not-supported: Donation is not supported in this runtime.
+      failed: Donation failed. Please try again later.

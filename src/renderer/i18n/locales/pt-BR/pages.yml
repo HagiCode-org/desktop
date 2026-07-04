@@ -169,6 +169,12 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm uses `--ignore-scripts`
       description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+    installDate:
+      label: Raw install date (msstoreRatingPrompt.installDate)
+      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      ageDays: 'Install age (days): {{value}}'
+      ageDaysUnknown: unknown
     notes:
       scope: This setting only affects future Desktop-managed npm installs and sync operations.
       npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
@@ -637,8 +643,6 @@ turboEngine:
     server-error: A Microsoft Store relatou um erro do servidor durante a compra.
     not-supported: A compra não está disponível neste ambiente.
     failed: A compra na Microsoft Store falhou.
-
-
 ratingPrompt:
   title: Gostando do HagiCode? Avalie-nos na Microsoft Store
   description: Sua experiência é importante para nós. Reserve um minuto para deixar uma avaliação na Microsoft Store e ajudar mais pessoas a encontrarem o HagiCode.
@@ -647,3 +651,22 @@ ratingPrompt:
   errors:
     openFailed: 'Falha ao abrir a página de avaliação da Microsoft Store: {{error}}'
     openFailedFallback: A página de avaliação da Microsoft Store não está disponível.
+donationItem:
+  actions:
+    purchase: Donate now
+    purchasing: Processing...
+    close: Close donation item
+  purchaseCount: Donation count {{count}} (local record)
+  messages:
+    purchaseFailed: 'Donation failed: {{error}}'
+    dismissFailed: 'Failed to dismiss donation item: {{error}}'
+    dismissed: Donation item dismissed
+    purchaseOutcome:
+      succeeded: Donation completed. Thank you for supporting us!
+      already-purchased: Donation recorded. Thank you for your continued support!
+      canceled: Donation flow was canceled.
+      not-purchased: Donation flow ended without payment.
+      network-error: Donation failed due to a network error.
+      server-error: Donation failed due to a Microsoft Store service error.
+      not-supported: Donation is not supported in this runtime.
+      failed: Donation failed. Please try again later.

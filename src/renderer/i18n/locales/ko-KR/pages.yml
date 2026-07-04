@@ -169,6 +169,12 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm uses `--ignore-scripts`
       description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+    installDate:
+      label: Raw install date (msstoreRatingPrompt.installDate)
+      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      ageDays: 'Install age (days): {{value}}'
+      ageDaysUnknown: unknown
     notes:
       scope: This setting only affects future Desktop-managed npm installs and sync operations.
       npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
@@ -637,8 +643,6 @@ turboEngine:
     server-error: Microsoft Store가 구매 중 서버 오류를 보고했습니다.
     not-supported: 현재 실행 환경에서는 구매를 지원하지 않습니다.
     failed: Microsoft Store 구매에 실패했습니다.
-
-
 ratingPrompt:
   title: HagiCode가 마음에 드시나요? Microsoft Store에서 평가해 주세요
   description: 여러분의 경험이 저희에게 중요합니다. Microsoft Store에서 리뷰를 남겨 더 많은 분이 HagiCode를 찾을 수 있도록 도와주세요.
@@ -647,3 +651,22 @@ ratingPrompt:
   errors:
     openFailed: 'Microsoft Store 리뷰 페이지를 여는 데 실패했습니다: {{error}}'
     openFailedFallback: Microsoft Store 리뷰 페이지를 사용할 수 없습니다.
+donationItem:
+  actions:
+    purchase: Donate now
+    purchasing: Processing...
+    close: Close donation item
+  purchaseCount: Donation count {{count}} (local record)
+  messages:
+    purchaseFailed: 'Donation failed: {{error}}'
+    dismissFailed: 'Failed to dismiss donation item: {{error}}'
+    dismissed: Donation item dismissed
+    purchaseOutcome:
+      succeeded: Donation completed. Thank you for supporting us!
+      already-purchased: Donation recorded. Thank you for your continued support!
+      canceled: Donation flow was canceled.
+      not-purchased: Donation flow ended without payment.
+      network-error: Donation failed due to a network error.
+      server-error: Donation failed due to a Microsoft Store service error.
+      not-supported: Donation is not supported in this runtime.
+      failed: Donation failed. Please try again later.

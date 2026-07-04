@@ -169,6 +169,12 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm uses `--ignore-scripts`
       description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+    installDate:
+      label: Raw install date (msstoreRatingPrompt.installDate)
+      description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
+      placeholder: e.g. 2024-01-01T00:00:00.000Z
+      ageDays: 'Install age (days): {{value}}'
+      ageDaysUnknown: unknown
     notes:
       scope: This setting only affects future Desktop-managed npm installs and sync operations.
       npm: The npm switch only affects future Desktop-managed npm installs and sync operations. Saving it takes effect immediately and does not restart the managed service.
@@ -637,13 +643,30 @@ turboEngine:
     server-error: Microsoft Store が購入中にサーバー エラーを報告しました。
     not-supported: この実行環境では購入できません。
     failed: Microsoft Store での購入に失敗しました。
-
-
 ratingPrompt:
   title: HagiCode を気に入っていただけましたか？Microsoft Store で評価をお願いします
   description: あなたの体験は私たちにとって大切です。Microsoft Store でレビューを残して、より多くの方に HagiCode を届けるのにご協力ください。
   actions:
     rate: 評価する
   errors:
-    openFailed: 'Microsoft Store のレビューページを開けませんでした：{{error}}'
+    openFailed: Microsoft Store のレビューページを開けませんでした：{{error}}
     openFailedFallback: Microsoft Store のレビューページは現在利用できません。
+donationItem:
+  actions:
+    purchase: Donate now
+    purchasing: Processing...
+    close: Close donation item
+  purchaseCount: Donation count {{count}} (local record)
+  messages:
+    purchaseFailed: 'Donation failed: {{error}}'
+    dismissFailed: 'Failed to dismiss donation item: {{error}}'
+    dismissed: Donation item dismissed
+    purchaseOutcome:
+      succeeded: Donation completed. Thank you for supporting us!
+      already-purchased: Donation recorded. Thank you for your continued support!
+      canceled: Donation flow was canceled.
+      not-purchased: Donation flow ended without payment.
+      network-error: Donation failed due to a network error.
+      server-error: Donation failed due to a Microsoft Store service error.
+      not-supported: Donation is not supported in this runtime.
+      failed: Donation failed. Please try again later.

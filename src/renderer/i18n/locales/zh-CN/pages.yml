@@ -169,6 +169,12 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm 使用 `--ignore-scripts`
       description: 让 Desktop 托管的 npm 安装与同步操作跳过 lifecycle scripts，便于排查 postinstall 等脚本导致的问题。
+    installDate:
+      label: 安装日期原始值（msstoreRatingPrompt.installDate）
+      description: 展示本地配置里持久化的原始安装日期字符串。可连续点击后直接编辑并保存。
+      placeholder: 例如 2024-01-01T00:00:00.000Z
+      ageDays: '安装天数：{{value}}'
+      ageDaysUnknown: 未知
     notes:
       scope: 此设置只影响后续 Desktop 托管的 npm 安装与同步操作。
       npm: npm 开关只影响后续 Desktop 托管的 npm 安装与同步操作，保存后立即生效，不需要重启受管服务。
@@ -647,3 +653,23 @@ ratingPrompt:
   errors:
     openFailed: '打开微软商店评价页失败：{{error}}'
     openFailedFallback: 微软商店评价页暂不可用。
+
+donationItem:
+  actions:
+    purchase: 立即续命
+    purchasing: 续命中...
+    close: 关闭捐助条目
+  purchaseCount: 已续命 {{count}} 次（本地记录）
+  messages:
+    purchaseFailed: '续命失败：{{error}}'
+    dismissFailed: '关闭捐助条目失败：{{error}}'
+    dismissed: 已关闭捐助条目
+    purchaseOutcome:
+      succeeded: 续命成功，感谢支持！
+      already-purchased: 已完成续命，感谢继续支持！
+      canceled: 已取消本次续命。
+      not-purchased: 续命流程结束，但未完成支付。
+      network-error: 续命失败，网络异常。
+      server-error: 续命失败，商店服务异常。
+      not-supported: 当前运行环境不支持续命。
+      failed: 续命失败，请稍后重试。
