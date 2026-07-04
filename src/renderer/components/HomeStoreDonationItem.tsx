@@ -183,11 +183,11 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
   };
 
   return (
-    <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
+    <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-orange-500/10 p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">作者快穷死了，救救作者</h2>
-          <p className="mt-2 text-sm text-muted-foreground">作者的 token 要耗尽了，快为作者续命</p>
+          <h2 className="text-xl font-semibold text-primary">作者快穷死了，救救作者</h2>
+          <p className="mt-2 text-sm text-foreground/80">作者的 token 要耗尽了，快为作者续命</p>
           <p className="mt-3 text-sm text-muted-foreground">
             {t('donationItem.purchaseCount', { ns: 'pages', count: state.purchaseCount })}
           </p>
@@ -200,6 +200,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
             aria-label={t('donationItem.actions.close', { ns: 'pages' })}
             onClick={() => void handleDismiss()}
             disabled={isDismissing}
+            className="text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -211,10 +212,10 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
           type="button"
           onClick={() => void handlePurchase()}
           disabled={isPurchasing}
-          className="gap-2"
+          className="group gap-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30"
         >
           {isPurchasing ? t('donationItem.actions.purchasing', { ns: 'pages' }) : t('donationItem.actions.purchase', { ns: 'pages' })}
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
         </Button>
       </div>
     </section>
