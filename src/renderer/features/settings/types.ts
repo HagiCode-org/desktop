@@ -10,9 +10,7 @@ export type SettingsTabId =
   | 'runtimeData'
   | 'debugOptions'
   | 'sharingAcceleration'
-  | 'language'
-  | 'theme'
-  | 'advanced';
+  | 'language';
 
 export interface SettingsTabComponentProps {
   distributionState: DistributionModeState;

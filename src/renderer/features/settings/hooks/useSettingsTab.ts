@@ -1,4 +1,4 @@
-import { BellRing, Bug, Gauge, Languages, Palette, Rocket, Settings2, SlidersHorizontal, Upload, HardDrive } from 'lucide-react';
+import { BellRing, Bug, Gauge, Languages, Rocket, SlidersHorizontal, Upload, HardDrive } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DistributionModeState } from '../../../../types/distribution-mode';
 import type { SettingsTabConfig, SettingsTabId } from '../types';
@@ -52,18 +52,6 @@ export function useSettingsTab({ distributionState, showSharingAccelerationSetti
         labelKey: 'settings.tabs.language',
         icon: Languages,
         loader: () => import('../components/tabs/builtInTabs').then((module) => ({ default: module.LanguageSettingsTab })),
-      },
-      {
-        id: 'theme',
-        labelKey: 'settings.tabs.theme',
-        icon: Palette,
-        loader: () => import('../components/tabs/placeholder').then((module) => ({ default: module.ThemeSettingsPlaceholderTab })),
-      },
-      {
-        id: 'advanced',
-        labelKey: 'settings.tabs.advanced',
-        icon: Settings2,
-        loader: () => import('../components/tabs/placeholder').then((module) => ({ default: module.AdvancedSettingsPlaceholderTab })),
       },
     ];
 

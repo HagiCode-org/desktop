@@ -63,9 +63,7 @@ describe('notification settings renderer wiring', () => {
 
     assert.match(enPagesSource, /notification: Notification Center/);
     assert.match(enPagesSource, /testButton: Send Test Notification/);
-    assert.match(enPagesSource, /theme: Theme Settings/);
     assert.match(zhPagesSource, /notification: 通知管理/);
     assert.match(zhPagesSource, /testButton: 发送测试通知/);
-    assert.match(zhPagesSource, /advanced: 高级设置/);
   });
 });
