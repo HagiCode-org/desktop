@@ -52,10 +52,14 @@ const turboEngineLicenseFeatureEnabled = typeof window !== 'undefined'
 const msstoreDonationItemFeatureEnabled = typeof window !== 'undefined'
   && typeof window.electronAPI?.msstoreDonationItem?.getState === 'function';
 
-// Redux logger to track all actions
+// Redux logger to track onboarding actions
 const reduxLogger = (store) => (next) => (action) => {
   if (action.type.startsWith('onboarding/')) {
-    console.log('[Redux] Action:', action.type, 'payload:', action.payload);
+    if (typeof action.payload === 'undefined') {
+      console.log('[Redux] Action:', action.type);
+    } else {
+      console.log('[Redux] Action:', action.type, 'payload:', action.payload);
+    }
   }
   return next(action);
 };
