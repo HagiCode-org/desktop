@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Download, Zap } from 'lucide-react';
+import { Rocket, CheckCircle2, Download, Zap } from 'lucide-react';
 import { OnboardingStep } from '../../../../types/onboarding';
 
 interface WelcomeIntroProps {
