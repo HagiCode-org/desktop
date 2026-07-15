@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, ExternalLink, PackageOpen } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, PackageOpen } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { npmInstallableAgentCliPackages } from '../../../../shared/npm-managed-packages.js';
 import type { ManagedNpmPackageId } from '../../../../types/dependency-management.js';
