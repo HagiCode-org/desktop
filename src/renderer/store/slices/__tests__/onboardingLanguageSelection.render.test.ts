@@ -31,6 +31,14 @@ describe('onboarding language selection renderer wiring', () => {
 
     assert.match(wizardSource, /case OnboardingStep\.LanguageSelection:/);
     assert.match(wizardSource, /<LanguageSelectionStep/);
+    assert.match(wizardSource, /<Sheet open=\{isActive\} onOpenChange=\{\(\) => undefined\}>/);
+    assert.match(wizardSource, /<SheetContent[\s\S]*side="right"/);
+    assert.match(wizardSource, /className="z-50 flex h-full w-\[80vw\] min-w-\[320px\] max-w-none flex-col overflow-hidden border-l bg-card p-0"/);
+    assert.match(wizardSource, /onPointerDownOutside=\{\(event\) => event\.preventDefault\(\)\}/);
+    assert.match(wizardSource, /onEscapeKeyDown=\{\(event\) => event\.preventDefault\(\)\}/);
+    assert.match(wizardSource, /<div className="flex min-h-0 flex-1 flex-col">/);
+    assert.match(wizardSource, /<div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">\{renderStep\(\)\}<\/div>/);
+    assert.match(wizardSource, /<div className="sticky bottom-0 flex-shrink-0 bg-card">/);
     assert.match(wizardSource, /t\('actions\.continueWithLanguage'/);
     assert.match(stepSource, /DESKTOP_LANGUAGES\.map/);
     assert.match(stepSource, /DEFAULT_DESKTOP_LANGUAGE/);

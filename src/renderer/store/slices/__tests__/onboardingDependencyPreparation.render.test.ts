@@ -23,9 +23,9 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(sliceSource, /OnboardingStep\.LanguageSelection,[\s\S]*OnboardingStep\.Welcome,[\s\S]*OnboardingStep\.LegalConsent,[\s\S]*OnboardingStep\.SharingAcceleration,[\s\S]*OnboardingStep\.DependencyPreparation,[\s\S]*OnboardingStep\.Download/);
     assert.match(sliceSource, /const fullSequenceWithoutDependencyPreparation = \[/);
     assert.match(sliceSource, /selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds/);
-    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\)\);/);
-    assert.match(sliceSource, /case OnboardingStep\.DependencyPreparation:\s*state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.DependencyPreparation, resolveDependencyModeSettings\(state\)\);/);
-    assert.match(sliceSource, /case OnboardingStep\.Download:\s*state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\)\);/);
+    assert.match(sliceSource, /state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.SharingAcceleration, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
+    assert.match(sliceSource, /case OnboardingStep\.DependencyPreparation:\s*state\.currentStep = getNextStep\(state\.mode, OnboardingStep\.DependencyPreparation, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
+    assert.match(sliceSource, /case OnboardingStep\.Download:\s*state\.currentStep = getPreviousStep\(state\.mode, OnboardingStep\.Download, resolveDependencyModeSettings\(state\), state\.distributionState\);/);
     assert.match(wizardSource, /case OnboardingStep\.DependencyPreparation:[\s\S]*<DependencyPreparationStep \/>/);
     assert.match(wizardSource, /if \(!isActive \|\| mode !== 'full' \|\| dependencyModeSettingsStatus !== 'idle'\) \{/);
     assert.match(wizardSource, /dispatch\(loadOnboardingDependencyModeSettings\(\)\)/);
@@ -38,6 +38,12 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
     assert.match(wizardSource, /canGoNext=\{effectiveCanGoNext\}/);
+    assert.match(wizardSource, /<Sheet open=\{isActive\} onOpenChange=\{\(\) => undefined\}>/);
+    assert.match(wizardSource, /<SheetContent[\s\S]*side="right"/);
+    assert.match(wizardSource, /className="z-50 flex h-full w-\[80vw\] min-w-\[320px\] max-w-none flex-col overflow-hidden border-l bg-card p-0"/);
+    assert.match(wizardSource, /onPointerDownOutside=\{\(event\) => event\.preventDefault\(\)\}/);
+    assert.match(wizardSource, /onEscapeKeyDown=\{\(event\) => event\.preventDefault\(\)\}/);
+    assert.match(wizardSource, /<div className="sticky bottom-0 flex-shrink-0 bg-card">/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
