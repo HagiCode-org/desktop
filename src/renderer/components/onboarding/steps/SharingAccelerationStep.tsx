@@ -25,7 +25,7 @@ function SharingAccelerationStep({ onReadyChange }: SharingAccelerationStepProps
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto w-full max-w-4xl space-y-8">
       <div className="space-y-3 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Share2 className="h-7 w-7" />

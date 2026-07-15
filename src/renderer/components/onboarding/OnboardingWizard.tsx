@@ -33,6 +33,7 @@ import PackageDownload from './steps/PackageDownload';
 import LanguageSelectionStep from './steps/LanguageSelectionStep';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
+import { Sheet, SheetContent } from '../ui/sheet';
 import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress } from '../../../types/onboarding';
 import { getDesktopLanguage, resolveDesktopLanguageCode } from '../../../shared/desktop-languages';
@@ -302,14 +303,19 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-background/95 px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-4">
-        <div className="flex flex-shrink-0 flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm md:flex-row md:items-start md:justify-between">
+    <Sheet open={isActive} onOpenChange={() => undefined}>
+      <SheetContent
+        side="right"
+        className="z-50 flex h-full w-[80vw] min-w-[320px] max-w-none flex-col overflow-hidden border-l bg-card p-0"
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => event.preventDefault()}
+      >
+        <div className="flex flex-shrink-0 flex-col gap-4 border-b bg-card px-6 py-5 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <h1 className="text-sm font-semibold tracking-[0.08em] text-muted-foreground">
               {t('title')}
             </h1>
-            <p className="max-w-3xl text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {mode === 'legal-only' ? t('legal.progressLegalOnly') : fullProgressLabel}
             </p>
           </div>
@@ -320,12 +326,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card shadow-lg">
-          <div className="flex-1 overflow-y-auto p-6 sm:p-8">{renderStep()}</div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{renderStep()}</div>
 
           {currentStep !== OnboardingStep.Welcome &&
             currentStep !== OnboardingStep.LegalConsent && (
-              <div className="flex-shrink-0">
+              <div className="sticky bottom-0 flex-shrink-0 bg-card">
                 <OnboardingActions
                   canGoNext={effectiveCanGoNext}
                   canGoPrevious={canGoPrevious}
@@ -336,8 +342,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </div>
             )}
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

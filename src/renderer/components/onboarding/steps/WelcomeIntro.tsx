@@ -55,7 +55,7 @@ function WelcomeIntro({ onNext, onSkip, stepSequence }: WelcomeIntroProps) {
   }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto w-full max-w-5xl space-y-8">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border bg-muted/20 p-6 sm:p-7">
           <div className="flex items-start gap-4">
