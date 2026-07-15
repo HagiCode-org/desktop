@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -7,8 +8,10 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
+  selectOnboardingDependencyReadiness,
   selectOnboardingDistributionState,
   selectOnboardingDependencyModeSettings,
+  selectOnboardingSelectedAgentCliPackageIds,
   selectIsActive,
   selectOnboardingMode,
   selectOnboardingRuntimeProvisioned,
@@ -20,8 +23,10 @@ import {
   downloadPackage,
   goToNextStep,
   goToPreviousStep,
+  installOnboardingDependencyPackages,
   loadLegalDocuments,
   loadOnboardingDependencyModeSettings,
+  refreshOnboardingDependencySnapshot,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
@@ -33,6 +38,7 @@ import PackageDownload from './steps/PackageDownload';
 import LanguageSelectionStep from './steps/LanguageSelectionStep';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
+import { Button } from '../ui/button';
 import { Sheet, SheetContent } from '../ui/sheet';
 import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress } from '../../../types/onboarding';
@@ -74,6 +80,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
   const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
   const dependencyModeSettingsStatus = useSelector((state: RootState) => state.onboarding.dependencyModeSettingsStatus);
+  const onboardingDependencyReadiness = useSelector((state: RootState) => selectOnboardingDependencyReadiness(state));
+  const onboardingSelectedAgentCliPackageIds = useSelector((state: RootState) => selectOnboardingSelectedAgentCliPackageIds(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const onboardingError = useSelector((state: RootState) => state.onboarding.error);
@@ -320,6 +328,73 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     : canGoPrevious;
   const skipLabel = currentStep === OnboardingStep.Welcome ? t('welcome.skip') : undefined;
 
+  const dependencyActionState = useMemo(() => {
+    if (currentStep !== OnboardingStep.DependencyPreparation) {
+      return null;
+    }
+
+    const readiness = onboardingDependencyReadiness;
+    const selectedAgentCliPackageIds = onboardingSelectedAgentCliPackageIds;
+
+    if (!readiness) {
+      return {
+        refreshDisabled: isDependencyOperationActive,
+        installDisabled: true,
+        installLabel: t('onboarding:dependencyPreparation.actions.install'),
+        installLoading: false,
+        packagesToInstall: [] as string[],
+      };
+    }
+
+    const requiredMissingPackageIds = readiness.requiredPackages
+      .filter((item) => item.status !== 'installed')
+      .map((item) => item.id);
+    const selectedAgentCliPackageIdSet = new Set(selectedAgentCliPackageIds);
+    const selectedAgentCliMissingPackageIds = readiness.agentCliPackages
+      .filter((item) => selectedAgentCliPackageIdSet.has(item.id) && item.status !== 'installed')
+      .map((item) => item.id);
+    const packagesToInstall = [...new Set([...requiredMissingPackageIds, ...selectedAgentCliMissingPackageIds])];
+    const hasSelectedAgentCli = selectedAgentCliPackageIds.length > 0;
+    const environmentAvailable = readiness.environment.status === 'ready';
+
+    return {
+      refreshDisabled: isDependencyOperationActive,
+      installDisabled: !environmentAvailable || isDependencyOperationActive || !hasSelectedAgentCli,
+      installLabel: readiness.ready
+        ? t('onboarding:dependencyPreparation.actions.recheck')
+        : t('onboarding:dependencyPreparation.actions.install'),
+      installLoading: isDependencyOperationActive,
+      packagesToInstall,
+    };
+  }, [
+    currentStep,
+    onboardingDependencyReadiness,
+    onboardingSelectedAgentCliPackageIds,
+    isDependencyOperationActive,
+    t,
+  ]);
+
+  const handleDependencyInstallOrRecheck = () => {
+    if (!dependencyActionState || dependencyActionState.installDisabled) {
+      return;
+    }
+
+    if (dependencyActionState.packagesToInstall.length === 0) {
+      void dispatch(refreshOnboardingDependencySnapshot());
+      return;
+    }
+
+    void dispatch(installOnboardingDependencyPackages(dependencyActionState.packagesToInstall));
+  };
+
+  const handleDependencyRefresh = () => {
+    if (!dependencyActionState || dependencyActionState.refreshDisabled) {
+      return;
+    }
+
+    void dispatch(refreshOnboardingDependencySnapshot());
+  };
+
   if (!isActive) {
     return null;
   }
@@ -352,14 +427,56 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{renderStep()}</div>
 
           <div className="sticky bottom-0 flex-shrink-0 bg-card">
-            <OnboardingActions
-              canGoNext={effectiveCanGoNext}
-              canGoPrevious={canGoPreviousInCommonActions}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              skipLabel={skipLabel}
-              nextLabel={nextLabel}
-            />
+            {currentStep === OnboardingStep.DependencyPreparation ? (
+              <div className="border-t bg-card/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:px-6">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-h-10 items-center">
+                    {canGoPreviousInCommonActions && (
+                      <Button
+                        variant="ghost"
+                        onClick={handlePrevious}
+                        className="w-full gap-2 sm:w-auto"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        {t('actions.previous')}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={handleDependencyRefresh}
+                      disabled={dependencyActionState?.refreshDisabled ?? true}
+                      className="w-full gap-2 sm:w-auto"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      {t('onboarding:dependencyPreparation.actions.refresh')}
+                    </Button>
+                    <Button
+                      onClick={handleDependencyInstallOrRecheck}
+                      disabled={dependencyActionState?.installDisabled ?? true}
+                      className="w-full min-w-40 justify-center gap-2 sm:w-auto"
+                    >
+                      {dependencyActionState?.installLoading
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <PackageOpen className="h-4 w-4" />}
+                      {dependencyActionState?.installLabel ?? t('onboarding:dependencyPreparation.actions.install')}
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <OnboardingActions
+                canGoNext={effectiveCanGoNext}
+                canGoPrevious={canGoPreviousInCommonActions}
+                onNext={handleNext}
+                onPrevious={handlePrevious}
+                skipLabel={skipLabel}
+                nextLabel={nextLabel}
+              />
+            )}
           </div>
         </div>
       </SheetContent>

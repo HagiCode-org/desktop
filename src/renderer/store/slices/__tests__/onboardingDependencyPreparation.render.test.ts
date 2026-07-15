@@ -51,15 +51,23 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /currentStep === OnboardingStep\.LegalConsent/);
     assert.match(wizardSource, /await legalConsentRef\.current\?\.accept\(\);/);
     assert.match(wizardSource, /\? legalConsentCanAccept/);
+    assert.match(wizardSource, /const dependencyActionState = useMemo\(\(\) => \{/);
+    assert.match(wizardSource, /onClick=\{handleDependencyRefresh\}/);
+    assert.match(wizardSource, /onClick=\{handleDependencyInstallOrRecheck\}/);
+    assert.match(wizardSource, /t\('onboarding:dependencyPreparation\.actions\.refresh'\)/);
+    assert.match(wizardSource, /t\('onboarding:dependencyPreparation\.actions\.install'\)/);
+    assert.match(wizardSource, /dispatch\(installOnboardingDependencyPackages\(dependencyActionState\.packagesToInstall\)\)/);
+    assert.match(wizardSource, /dispatch\(refreshOnboardingDependencySnapshot\(\)\)/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
 
   it('loads snapshots, subscribes to progress, batch-syncs selected packages, and recomputes shared readiness', async () => {
-    const [sliceSource, thunksSource, stepSource, legalStepSource, welcomeStepSource] = await Promise.all([
+    const [sliceSource, thunksSource, stepSource, wizardSource, legalStepSource, welcomeStepSource] = await Promise.all([
       fs.readFile(slicePath, 'utf8'),
       fs.readFile(thunksPath, 'utf8'),
       fs.readFile(stepPath, 'utf8'),
+      fs.readFile(wizardPath, 'utf8'),
       fs.readFile(legalStepPath, 'utf8'),
       fs.readFile(welcomeStepPath, 'utf8'),
     ]);
@@ -75,7 +83,10 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(thunksSource, /return latestSnapshot \?\? await window\.electronAPI\.dependencyManagement\.refresh\(\)/);
     assert.match(stepSource, /dependencyManagement\.onProgress/);
     assert.match(stepSource, /setOnboardingDependencyProgress\(event\)/);
-    assert.match(stepSource, /confirmDisabled = !environmentAvailable \|\| isDependencyOperationActive \|\| !hasSelectedAgentCli/);
+    assert.match(stepSource, /onboarding:dependencyPreparation\.refreshHint/);
+    assert.doesNotMatch(stepSource, /onboarding:dependencyPreparation\.actions\.install/);
+    assert.doesNotMatch(stepSource, /onboarding:dependencyPreparation\.actions\.refresh/);
+    assert.match(wizardSource, /const dependencyActionState = useMemo\(\(\) => \{/);
     assert.match(legalStepSource, /forwardRef<LegalConsentStepHandle, LegalConsentStepProps>/);
     assert.match(legalStepSource, /useImperativeHandle\(ref, \(\) => \(\{/);
     assert.match(legalStepSource, /accept: handleAccept/);

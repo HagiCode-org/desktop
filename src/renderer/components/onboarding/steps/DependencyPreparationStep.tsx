@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, PackageOpen } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { npmInstallableAgentCliPackages } from '../../../../shared/npm-managed-packages.js';
 import type { ManagedNpmPackageId } from '../../../../types/dependency-management.js';
@@ -18,11 +18,8 @@ import {
   setSelectedAgentCliPackageIds,
 } from '../../../store/slices/onboardingSlice';
 import {
-  installOnboardingDependencyPackages,
   loadOnboardingDependencySnapshot,
-  refreshOnboardingDependencySnapshot,
 } from '../../../store/thunks/onboardingThunks';
-
 function uniquePackageIds(ids: ManagedNpmPackageId[]): ManagedNpmPackageId[] {
   return Array.from(new Set(ids));
 }
@@ -74,14 +71,6 @@ export default function DependencyPreparationStep() {
         ? uniquePackageIds([...selectedAgentCliPackageIds, packageId])
         : selectedAgentCliPackageIds.filter((id) => id !== packageId),
     ));
-  };
-
-  const installMissing = () => {
-    if (packagesToInstall.length === 0) {
-      void dispatch(refreshOnboardingDependencySnapshot());
-      return;
-    }
-    void dispatch(installOnboardingDependencyPackages(packagesToInstall));
   };
 
   return (
@@ -201,15 +190,8 @@ export default function DependencyPreparationStep() {
         </Alert>
       )}
 
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={installMissing} disabled={confirmDisabled}>
-          {isDependencyOperationActive ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
-          {readiness?.ready ? t('onboarding:dependencyPreparation.actions.recheck') : t('onboarding:dependencyPreparation.actions.install')}
-        </Button>
-        <Button variant="outline" onClick={() => void dispatch(refreshOnboardingDependencySnapshot())} disabled={isDependencyOperationActive}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          {t('onboarding:dependencyPreparation.actions.refresh')}
-        </Button>
+      <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+        {t('onboarding:dependencyPreparation.refreshHint')}
       </div>
     </div>
   );
