@@ -8,6 +8,8 @@ const slicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/onboard
 const thunksPath = path.resolve(process.cwd(), 'src/renderer/store/thunks/onboardingThunks.ts');
 const wizardPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/OnboardingWizard.tsx');
 const stepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/DependencyPreparationStep.tsx');
+const legalStepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/LegalConsentStep.tsx');
+const welcomeStepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/WelcomeIntro.tsx');
 const zhOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/zh-CN/onboarding.json');
 const enOnboardingPath = path.resolve(process.cwd(), 'src/renderer/i18n/generated-locales/en-US/onboarding.json');
 
@@ -34,7 +36,7 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /if \(currentStep !== OnboardingStep\.Download \|\| runtimeProvisioned \|\| isDownloading \|\| downloadCompleted\) \{/);
     assert.match(wizardSource, /if \(downloadProgress \|\| onboardingError\) \{/);
     assert.match(wizardSource, /void dispatch\(downloadPackage\(\)\);/);
-    assert.match(wizardSource, /<WelcomeIntro onNext=\{handleNext\} stepSequence=\{stepSequence\} \/>/);
+    assert.match(wizardSource, /<WelcomeIntro stepSequence=\{stepSequence\} \/>/);
     assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection/);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation/);
     assert.match(wizardSource, /canGoNext=\{effectiveCanGoNext\}/);
@@ -44,15 +46,22 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /onPointerDownOutside=\{\(event\) => event\.preventDefault\(\)\}/);
     assert.match(wizardSource, /onEscapeKeyDown=\{\(event\) => event\.preventDefault\(\)\}/);
     assert.match(wizardSource, /<div className="sticky bottom-0 flex-shrink-0 bg-card">/);
+    assert.match(wizardSource, /const canGoPreviousInCommonActions = currentStep === OnboardingStep\.Welcome/);
+    assert.match(wizardSource, /const skipLabel = currentStep === OnboardingStep\.Welcome \? t\('welcome\.skip'\) : undefined;/);
+    assert.match(wizardSource, /currentStep === OnboardingStep\.LegalConsent/);
+    assert.match(wizardSource, /await legalConsentRef\.current\?\.accept\(\);/);
+    assert.match(wizardSource, /\? legalConsentCanAccept/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });
 
   it('loads snapshots, subscribes to progress, batch-syncs selected packages, and recomputes shared readiness', async () => {
-    const [sliceSource, thunksSource, stepSource] = await Promise.all([
+    const [sliceSource, thunksSource, stepSource, legalStepSource, welcomeStepSource] = await Promise.all([
       fs.readFile(slicePath, 'utf8'),
       fs.readFile(thunksPath, 'utf8'),
       fs.readFile(stepPath, 'utf8'),
+      fs.readFile(legalStepPath, 'utf8'),
+      fs.readFile(welcomeStepPath, 'utf8'),
     ]);
 
     assert.match(sliceSource, /evaluateDependencyReadiness\(snapshot, state\.selectedAgentCliPackageIds\)/);
@@ -67,6 +76,12 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(stepSource, /dependencyManagement\.onProgress/);
     assert.match(stepSource, /setOnboardingDependencyProgress\(event\)/);
     assert.match(stepSource, /confirmDisabled = !environmentAvailable \|\| isDependencyOperationActive \|\| !hasSelectedAgentCli/);
+    assert.match(legalStepSource, /forwardRef<LegalConsentStepHandle, LegalConsentStepProps>/);
+    assert.match(legalStepSource, /useImperativeHandle\(ref, \(\) => \(\{/);
+    assert.match(legalStepSource, /accept: handleAccept/);
+    assert.match(legalStepSource, /onCanAcceptChange\?\.\(canAccept\);/);
+    assert.doesNotMatch(legalStepSource, /\{isAccepting \? t\('legal\.accepting'\) : t\('legal\.accept'\)\}/);
+    assert.doesNotMatch(welcomeStepSource, /<Button/);
   });
 
   it('keeps failed dependency operation snapshots and error text for readiness reevaluation', async () => {

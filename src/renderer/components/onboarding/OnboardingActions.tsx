@@ -8,6 +8,7 @@ interface OnboardingActionsProps {
   onNext: () => void;
   onPrevious: () => void;
   onSkip?: () => void;
+  skipLabel?: string;
   nextLabel?: string;
 }
 
@@ -17,6 +18,7 @@ function OnboardingActions({
   onNext,
   onPrevious,
   onSkip,
+  skipLabel,
   nextLabel,
 }: OnboardingActionsProps) {
   const { t } = useTranslation('onboarding');
@@ -44,7 +46,7 @@ function OnboardingActions({
               onClick={onSkip}
               className="w-full text-muted-foreground sm:w-auto"
             >
-              {t('actions.skip')}
+              {skipLabel ?? t('actions.skip')}
             </Button>
           )}
           <Button

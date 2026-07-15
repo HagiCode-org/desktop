@@ -1,11 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Rocket, CheckCircle2, Download, Zap } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { CheckCircle2, Download, Zap } from 'lucide-react';
 import { OnboardingStep } from '../../../../types/onboarding';
 
 interface WelcomeIntroProps {
-  onNext: () => void;
-  onSkip?: () => void;
   stepSequence: OnboardingStep[];
 }
 
@@ -28,7 +25,7 @@ function getWelcomeStepTranslationKey(step: OnboardingStep) {
   }
 }
 
-function WelcomeIntro({ onNext, onSkip, stepSequence }: WelcomeIntroProps) {
+function WelcomeIntro({ stepSequence }: WelcomeIntroProps) {
   const { t } = useTranslation('onboarding');
 
   const features = [
@@ -103,16 +100,8 @@ function WelcomeIntro({ onNext, onSkip, stepSequence }: WelcomeIntroProps) {
         ))}
       </div>
 
-      <div className="flex justify-center gap-3 pt-4">
-        {onSkip && (
-          <Button variant="ghost" onClick={onSkip} className="text-muted-foreground">
-            {t('welcome.skip')}
-          </Button>
-        )}
-        <Button onClick={onNext} size="lg" className="min-w-44 gap-2 justify-center">
-          {t('welcome.start')}
-          <Rocket className="h-4 w-4" />
-        </Button>
+      <div className="border-t pt-6">
+        <p className="text-sm text-muted-foreground">{t('welcome.description', { count: steps.length })}</p>
       </div>
     </div>
   );

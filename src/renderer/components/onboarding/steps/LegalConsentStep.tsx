@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExternalLink, FileWarning, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -32,7 +32,19 @@ import { fetchActiveVersion } from '../../../store/thunks/webServiceThunks';
 import { OnboardingStep } from '../../../../types/onboarding';
 import type { AppDispatch, RootState } from '../../../store';
 
-function LegalConsentStep() {
+export interface LegalConsentStepHandle {
+  canAccept: boolean;
+  accept: () => Promise<void>;
+}
+
+interface LegalConsentStepProps {
+  onCanAcceptChange?: (value: boolean) => void;
+}
+
+const LegalConsentStep = forwardRef<LegalConsentStepHandle, LegalConsentStepProps>(function LegalConsentStep(
+  { onCanAcceptChange },
+  ref,
+) {
   const { t } = useTranslation('onboarding');
   const dispatch = useDispatch<AppDispatch>();
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
@@ -42,21 +54,19 @@ function LegalConsentStep() {
   const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
   const documents = useSelector((state: RootState) => selectLegalDocuments(state));
   const source = useSelector((state: RootState) => selectLegalMetadataSource(state));
-  const error = useSelector((state: RootState) => selectOnboardingError(state));
   const isLoading = useSelector((state: RootState) => selectIsLoadingLegalMetadata(state));
   const isAccepting = useSelector((state: RootState) => selectIsAcceptingLegalDocuments(state));
   const isDeclining = useSelector((state: RootState) => selectIsDecliningLegalDocuments(state));
+  const error = useSelector((state: RootState) => selectOnboardingError(state));
   const [isChecked, setIsChecked] = useState(false);
 
-  const sourceLabelKey = useMemo(() => {
-    if (source === 'remote') return 'legal.metadata.remote';
-    if (source === 'cache') return 'legal.metadata.cache';
-    return 'legal.metadata.unavailable';
-  }, [source]);
-
   const shouldCompleteAfterAccept = useMemo(() => {
-    if (mode !== 'full' || !runtimeProvisioned) {
-      return false;
+    if (mode === 'none' || mode === 'legal-only') {
+      return true;
+    }
+
+    if (runtimeProvisioned) {
+      return true;
     }
 
     const sequence = getOnboardingSequence(mode, dependencyModeSettings, distributionState);
@@ -73,7 +83,7 @@ function LegalConsentStep() {
     dispatch(openLegalDocument({ documentType, locale }));
   };
 
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     if (mode === 'none' || documents.length === 0) {
       return;
     }
@@ -106,6 +116,7 @@ function LegalConsentStep() {
           const rightInstalledAt = Number.isFinite(Date.parse(right.installedAt)) ? Date.parse(right.installedAt) : 0;
           return rightInstalledAt - leftInstalledAt;
         })[0];
+
       if (!fallbackVersion?.id) {
         return;
       }
@@ -113,13 +124,29 @@ function LegalConsentStep() {
       await dispatch(completeOnboarding(fallbackVersion.id)).unwrap();
       void dispatch(fetchActiveVersion());
     } catch {
-      // Slice error state already captures accept and completion failures.
+      // Error state already handled in slice.
     }
-  };
+  }, [dispatch, documents, locale, mode, shouldCompleteAfterAccept]);
 
   const handleDecline = () => {
     dispatch(declineLegalDocuments());
   };
+
+  useImperativeHandle(ref, () => ({
+    canAccept,
+    accept: handleAccept,
+  }), [canAccept, handleAccept]);
+
+  useEffect(() => {
+    onCanAcceptChange?.(canAccept);
+  }, [canAccept, onCanAcceptChange]);
+
+  const sourceLabelKey =
+    source === 'fresh'
+      ? 'legal.source.fresh'
+      : source === 'cache'
+        ? 'legal.source.cache'
+        : 'legal.source.unavailable';
 
   return (
     <div className="space-y-8">
@@ -168,34 +195,25 @@ function LegalConsentStep() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold">{document.title}</h3>
-                  <Badge variant="outline">{t(`legal.types.${document.documentType}`)}</Badge>
+                  {document.version && <Badge variant="outline">{document.version}</Badge>}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('legal.reviewPrompt')}
-                </p>
+                {document.lastUpdated && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('legal.lastUpdated', { date: document.lastUpdated })}
+                  </p>
+                )}
               </div>
-
-              <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-muted-foreground">{t('legal.effectiveDate')}</dt>
-                  <dd className="font-medium">{document.effectiveDate}</dd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-muted-foreground">{t('legal.revision')}</dt>
-                  <dd className="font-medium">{document.revision}</dd>
-                </div>
-              </dl>
 
               <Button variant="outline" className="w-full gap-2" onClick={() => handleOpenDocument(document.documentType)}>
                 <ExternalLink className="h-4 w-4" />
-                {t('legal.openInBrowser', { title: document.title })}
+                {document.documentType === 'eula' ? t('legal.openEula') : t('legal.openPrivacy')}
               </Button>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border bg-card p-5">
+      <div className="rounded-xl border bg-card p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <Checkbox
             id="legal-consent-checkbox"
@@ -220,16 +238,13 @@ function LegalConsentStep() {
         </Alert>
       )}
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex justify-start">
         <Button variant="outline" onClick={handleDecline} disabled={isAccepting || isDeclining}>
           {isDeclining ? t('legal.declining') : t('legal.decline')}
-        </Button>
-        <Button onClick={handleAccept} disabled={!canAccept}>
-          {isAccepting ? t('legal.accepting') : t('legal.accept')}
         </Button>
       </div>
     </div>
   );
-}
+});
 
 export default LegalConsentStep;

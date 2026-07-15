@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -26,7 +26,7 @@ import {
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
-import LegalConsentStep from './steps/LegalConsentStep';
+import LegalConsentStep, { type LegalConsentStepHandle } from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
 import DependencyPreparationStep from './steps/DependencyPreparationStep';
 import PackageDownload from './steps/PackageDownload';
@@ -80,6 +80,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
   const [sharingStepReady, setSharingStepReady] = useState(false);
+  const legalConsentRef = useRef<LegalConsentStepHandle>(null);
+  const [legalConsentCanAccept, setLegalConsentCanAccept] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(() => resolveDesktopLanguageCode(locale));
   const [languageStepPending, setLanguageStepPending] = useState(false);
   const [languageStepError, setLanguageStepError] = useState<string | null>(null);
@@ -218,6 +220,11 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return;
     }
 
+    if (currentStep === OnboardingStep.LegalConsent) {
+      await legalConsentRef.current?.accept();
+      return;
+    }
+
     if (currentStep === OnboardingStep.SharingAcceleration && mode === 'full' && dependencyModeSettingsStatus !== 'ready') {
       try {
         await dispatch(loadOnboardingDependencyModeSettings()).unwrap();
@@ -251,9 +258,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           />
         );
       case OnboardingStep.Welcome:
-        return <WelcomeIntro onNext={handleNext} stepSequence={stepSequence} />;
+        return <WelcomeIntro stepSequence={stepSequence} />;
       case OnboardingStep.LegalConsent:
-        return <LegalConsentStep />;
+        return <LegalConsentStep ref={legalConsentRef} onCanAcceptChange={setLegalConsentCanAccept} />;
       case OnboardingStep.SharingAcceleration:
         return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
       case OnboardingStep.DependencyPreparation:
@@ -279,6 +286,14 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         : t('actions.continueWithLanguage', { language: nativeLanguageName });
     }
 
+    if (currentStep === OnboardingStep.Welcome) {
+      return t('welcome.start');
+    }
+
+    if (currentStep === OnboardingStep.LegalConsent) {
+      return t('legal.accept');
+    }
+
     if (currentStep === OnboardingStep.Download && downloadCompleted) {
       return t('actions.finish');
     }
@@ -294,9 +309,16 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     ? !languageStepPending
     : currentStep === OnboardingStep.SharingAcceleration
       ? sharingStepReady
-      : currentStep === OnboardingStep.DependencyPreparation
-        ? !isDependencyOperationActive
-        : canGoNext;
+      : currentStep === OnboardingStep.LegalConsent
+        ? legalConsentCanAccept
+        : currentStep === OnboardingStep.DependencyPreparation
+          ? !isDependencyOperationActive
+          : canGoNext;
+
+  const canGoPreviousInCommonActions = currentStep === OnboardingStep.Welcome
+    ? false
+    : canGoPrevious;
+  const skipLabel = currentStep === OnboardingStep.Welcome ? t('welcome.skip') : undefined;
 
   if (!isActive) {
     return null;
@@ -329,18 +351,16 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{renderStep()}</div>
 
-          {currentStep !== OnboardingStep.Welcome &&
-            currentStep !== OnboardingStep.LegalConsent && (
-              <div className="sticky bottom-0 flex-shrink-0 bg-card">
-                <OnboardingActions
-                  canGoNext={effectiveCanGoNext}
-                  canGoPrevious={canGoPrevious}
-                  onNext={handleNext}
-                  onPrevious={handlePrevious}
-                  nextLabel={nextLabel}
-                />
-              </div>
-            )}
+          <div className="sticky bottom-0 flex-shrink-0 bg-card">
+            <OnboardingActions
+              canGoNext={effectiveCanGoNext}
+              canGoPrevious={canGoPreviousInCommonActions}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              skipLabel={skipLabel}
+              nextLabel={nextLabel}
+            />
+          </div>
         </div>
       </SheetContent>
     </Sheet>

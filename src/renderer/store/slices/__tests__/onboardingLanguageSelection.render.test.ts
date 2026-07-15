@@ -39,6 +39,7 @@ describe('onboarding language selection renderer wiring', () => {
     assert.match(wizardSource, /<div className="flex min-h-0 flex-1 flex-col">/);
     assert.match(wizardSource, /<div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">\{renderStep\(\)\}<\/div>/);
     assert.match(wizardSource, /<div className="sticky bottom-0 flex-shrink-0 bg-card">/);
+    assert.match(wizardSource, /const skipLabel = currentStep === OnboardingStep\.Welcome \? t\('welcome\.skip'\) : undefined;/);
     assert.match(wizardSource, /t\('actions\.continueWithLanguage'/);
     assert.match(stepSource, /DESKTOP_LANGUAGES\.map/);
     assert.match(stepSource, /DEFAULT_DESKTOP_LANGUAGE/);
