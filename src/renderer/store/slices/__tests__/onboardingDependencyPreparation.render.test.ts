@@ -53,12 +53,15 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /\? legalConsentCanAccept/);
     assert.match(wizardSource, /const dependencyActionState = useMemo\(\(\) => \{/);
     assert.match(wizardSource, /onClick=\{handleDependencyRefresh\}/);
+    assert.match(wizardSource, /dependencyActionState\?\.readinessReady/);
     assert.match(wizardSource, /onClick=\{handleDependencyInstallOrRecheck\}/);
+    assert.match(wizardSource, /onClick=\{handleNext\}/);
     assert.match(wizardSource, /t\('onboarding:dependencyPreparation\.actions\.refresh'\)/);
     assert.match(wizardSource, /t\('onboarding:dependencyPreparation\.actions\.install'\)/);
     assert.match(wizardSource, /dispatch\(installOnboardingDependencyPackages\(dependencyActionState\.packagesToInstall\)\)/);
     assert.match(wizardSource, /dispatch\(refreshOnboardingDependencySnapshot\(\)\)/);
     assert.match(wizardSource, /const environmentAvailable = readiness\.environmentAvailable;/);
+    assert.match(wizardSource, /readinessReady: readiness\.ready/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });

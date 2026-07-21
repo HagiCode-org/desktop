@@ -365,6 +365,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         : t('onboarding:dependencyPreparation.actions.install'),
       installLoading: isDependencyOperationActive,
       packagesToInstall,
+      readinessReady: readiness.ready,
     };
   }, [
     currentStep,
@@ -444,26 +445,52 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   </div>
 
                   <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={handleDependencyRefresh}
-                      disabled={dependencyActionState?.refreshDisabled ?? true}
-                      className="w-full gap-2 sm:w-auto"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      {t('onboarding:dependencyPreparation.actions.refresh')}
-                    </Button>
-                    <Button
-                      onClick={handleDependencyInstallOrRecheck}
-                      disabled={dependencyActionState?.installDisabled ?? true}
-                      className="w-full min-w-40 justify-center gap-2 sm:w-auto"
-                    >
-                      {dependencyActionState?.installLoading
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <PackageOpen className="h-4 w-4" />}
-                      {dependencyActionState?.installLabel ?? t('onboarding:dependencyPreparation.actions.install')}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    {dependencyActionState?.readinessReady
+                      ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={handleDependencyRefresh}
+                            disabled={dependencyActionState?.refreshDisabled ?? true}
+                            className="w-full gap-2 sm:w-auto"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            {t('onboarding:dependencyPreparation.actions.refresh')}
+                          </Button>
+                          <Button
+                            onClick={handleNext}
+                            disabled={!effectiveCanGoNext}
+                            className="w-full min-w-40 justify-center gap-2 sm:w-auto"
+                          >
+                            {nextLabel ?? t('actions.next')}
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )
+                      : (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={handleDependencyRefresh}
+                            disabled={dependencyActionState?.refreshDisabled ?? true}
+                            className="w-full gap-2 sm:w-auto"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            {t('onboarding:dependencyPreparation.actions.refresh')}
+                          </Button>
+                          <Button
+                            onClick={handleDependencyInstallOrRecheck}
+                            disabled={dependencyActionState?.installDisabled ?? true}
+                            className="w-full min-w-40 justify-center gap-2 sm:w-auto"
+                          >
+                            {dependencyActionState?.installLoading
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <PackageOpen className="h-4 w-4" />}
+                            {dependencyActionState?.installLabel ?? t('onboarding:dependencyPreparation.actions.install')}
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                   </div>
                 </div>
               </div>
