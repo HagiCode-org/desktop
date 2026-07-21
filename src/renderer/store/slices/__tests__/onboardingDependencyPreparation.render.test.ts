@@ -58,6 +58,7 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /t\('onboarding:dependencyPreparation\.actions\.install'\)/);
     assert.match(wizardSource, /dispatch\(installOnboardingDependencyPackages\(dependencyActionState\.packagesToInstall\)\)/);
     assert.match(wizardSource, /dispatch\(refreshOnboardingDependencySnapshot\(\)\)/);
+    assert.match(wizardSource, /const environmentAvailable = readiness\.environmentAvailable;/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });

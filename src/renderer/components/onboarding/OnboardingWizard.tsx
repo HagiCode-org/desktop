@@ -355,7 +355,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       .map((item) => item.id);
     const packagesToInstall = [...new Set([...requiredMissingPackageIds, ...selectedAgentCliMissingPackageIds])];
     const hasSelectedAgentCli = selectedAgentCliPackageIds.length > 0;
-    const environmentAvailable = readiness.environment.status === 'ready';
+    const environmentAvailable = readiness.environmentAvailable;
 
     return {
       refreshDisabled: isDependencyOperationActive,
