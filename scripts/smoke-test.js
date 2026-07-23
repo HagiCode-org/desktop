@@ -631,6 +631,45 @@ test('global hagiscript prerequisite is available', () => {
   assert(!globalHagiscriptVersion.includes('required') && !globalHagiscriptVersion.includes('missing'), `global hagiscript prerequisite resolved (${globalHagiscriptVersion})`);
 });
 
+test('azure sync build entry uses python invoke runtime', () => {
+  const syncWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'sync-azure-storage.yml');
+  const finalizeWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'finalize-azure-storage.yml');
+  const buildShellPath = path.join(process.cwd(), 'build.sh');
+  const buildPowerShellPath = path.join(process.cwd(), 'build.ps1');
+  const buildCmdPath = path.join(process.cwd(), 'build.cmd');
+
+  if (!assert(fs.existsSync(syncWorkflowPath), '.github/workflows/sync-azure-storage.yml exists')) {
+    return;
+  }
+
+  assert(fs.existsSync(finalizeWorkflowPath), '.github/workflows/finalize-azure-storage.yml exists');
+  assert(fs.existsSync(buildShellPath), 'build.sh exists');
+  assert(fs.existsSync(buildPowerShellPath), 'build.ps1 exists');
+  assert(fs.existsSync(buildCmdPath), 'build.cmd exists');
+
+  const syncContent = fs.readFileSync(syncWorkflowPath, 'utf8');
+  const finalizeContent = fs.readFileSync(finalizeWorkflowPath, 'utf8');
+  const buildShellContent = fs.readFileSync(buildShellPath, 'utf8');
+  const buildPowerShellContent = fs.readFileSync(buildPowerShellPath, 'utf8');
+  const buildCmdContent = fs.readFileSync(buildCmdPath, 'utf8');
+
+  assert(syncContent.includes('actions/setup-python@v5'), 'sync workflow provisions Python runtime');
+  assert(syncContent.includes('python-version: 3.11'), 'sync workflow pins Python 3.11');
+  assert(syncContent.includes('python -m pip install -r requirements.lock.txt'), 'sync workflow installs locked Python dependencies');
+  assert(!syncContent.includes('actions/setup-dotnet@v4'), 'sync workflow no longer provisions dotnet for build entry dispatch');
+
+  assert(finalizeContent.includes('actions/setup-python@v5'), 'finalize workflow provisions Python runtime');
+  assert(finalizeContent.includes('python-version: 3.11'), 'finalize workflow pins Python 3.11');
+  assert(finalizeContent.includes('python -m pip install -r requirements.lock.txt'), 'finalize workflow installs locked Python dependencies');
+  assert(!finalizeContent.includes('actions/setup-dotnet@v4'), 'finalize workflow no longer provisions dotnet for build entry dispatch');
+
+  assert(buildShellContent.includes('python -m pybuild.entry') || buildShellContent.includes('-m pybuild.entry'), 'build.sh dispatches to python pybuild entry module');
+  assert(buildPowerShellContent.includes('-m pybuild.entry'), 'build.ps1 dispatches to python pybuild entry module');
+  assert(!buildShellContent.includes('nukeBuild/_build.csproj'), 'build.sh no longer executes nuke _build.csproj directly');
+  assert(!buildPowerShellContent.includes('nukeBuild\\_build.csproj'), 'build.ps1 no longer executes nuke _build.csproj directly');
+  assert(buildCmdContent.includes('build.ps1'), 'build.cmd remains a compatibility forwarder to build.ps1');
+});
+
 test('staged bundled Node toolchain payload is complete', () => {
   if (!requireBundledNodePayload && !fs.existsSync(stagedToolchainRoot)) {
     const reasonSuffix = bundledNodePolicy.reason ? ` (${bundledNodePolicy.reason})` : '';

@@ -1,0 +1,15 @@
+[project]
+name = "hagicode-desktop-pybuild"
+version = "0.1.0"
+description = "Python Invoke build entry for hagicode-desktop"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "invoke==2.2.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pybuild"]
