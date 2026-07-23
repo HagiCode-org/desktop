@@ -9,6 +9,8 @@ The Hagicode Desktop project uses two reusable GitHub Actions workflows to synch
 - `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs
 - `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json`
 
+Build entry now routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`) instead of direct `dotnet run nukeBuild/_build.csproj`.
+
 This provides:
 
 - **Redundant backup**: Files stored in both GitHub Releases and Azure Storage
@@ -46,6 +48,27 @@ The pipeline now produces these intermediate artifacts:
 The dedicated `finalize` workflow reads `azure-upload-plan.json` from the same run so it uses the exact release metadata that the upload phase planned, instead of recalculating "latest release" at finalize time.
 
 These files are intended for workflow diagnostics and reruns. GitHub Release assets remain the source of truth for binary downloads.
+
+## Python Invoke Runtime Prerequisites
+
+`sync-azure-storage.yml` and `finalize-azure-storage.yml` now install Python and locked dependencies before calling build entry.
+
+Required local/CI runtime:
+
+- Python `3.11`
+- `pip install -r requirements.lock.txt`
+- Build entry scripts call `python -m pybuild.entry`
+
+Lock refresh process:
+
+1. Update dependency versions in `pyproject.toml`.
+2. Recreate lock file from clean virtualenv:
+   - `python -m venv .venv`
+   - `source .venv/bin/activate` (Linux/macOS) or `.\.venv\Scripts\Activate.ps1` (Windows)
+   - `python -m pip install --upgrade pip`
+   - `python -m pip install invoke==2.2.0`
+   - `pip freeze | sort > requirements.lock.txt`
+3. Commit `requirements.lock.txt` together with dependency change.
 
 ## Quick Setup (SAS URL Method)
 
@@ -273,6 +296,35 @@ https://<cdn-endpoint>.azureedge.net/<container-name>/<version>/<filename>
 4. **Rotate tokens**: Regenerate SAS tokens periodically
 5. **Monitor access**: Use Azure Monitor to track storage access
 6. **Enable HTTPS only**: Ensure your storage account requires secure transfer
+
+## Python Invoke Troubleshooting
+
+### `python executable not found`
+
+`build.sh` / `build.ps1` could not locate Python.
+
+Fix:
+
+- Install Python `3.11`
+- Or set `PYTHON_EXE` to explicit interpreter path
+
+### `No module named pybuild.entry`
+
+Current working directory not repo root, or `PYTHONPATH` not set by wrapper.
+
+Fix:
+
+- Run `./build.sh` or `./build.ps1` from `repos/hagicode-desktop`
+- Avoid calling `python -m pybuild.entry` from unrelated directory unless `PYTHONPATH` includes repo root
+
+### `pip install -r requirements.lock.txt` fails in CI
+
+Common cause: network timeout when resolving PyPI.
+
+Fix:
+
+- Retry runner job
+- Check outbound network policy for `pypi.org` / `files.pythonhosted.org`
 
 ## Troubleshooting
 
