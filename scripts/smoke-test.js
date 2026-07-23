@@ -654,12 +654,12 @@ test('azure sync build entry uses python invoke runtime', () => {
   const buildCmdContent = fs.readFileSync(buildCmdPath, 'utf8');
 
   assert(syncContent.includes('actions/setup-python@v5'), 'sync workflow provisions Python runtime');
-  assert(syncContent.includes('python-version: 3.11'), 'sync workflow pins Python 3.11');
+  assert(/python-version:\s*['"]?3\.11['"]?/.test(syncContent), 'sync workflow pins Python 3.11');
   assert(syncContent.includes('python -m pip install -r requirements.lock.txt'), 'sync workflow installs locked Python dependencies');
   assert(!syncContent.includes('actions/setup-dotnet@v4'), 'sync workflow no longer provisions dotnet for build entry dispatch');
 
   assert(finalizeContent.includes('actions/setup-python@v5'), 'finalize workflow provisions Python runtime');
-  assert(finalizeContent.includes('python-version: 3.11'), 'finalize workflow pins Python 3.11');
+  assert(/python-version:\s*['"]?3\.11['"]?/.test(finalizeContent), 'finalize workflow pins Python 3.11');
   assert(finalizeContent.includes('python -m pip install -r requirements.lock.txt'), 'finalize workflow installs locked Python dependencies');
   assert(!finalizeContent.includes('actions/setup-dotnet@v4'), 'finalize workflow no longer provisions dotnet for build entry dispatch');
 
