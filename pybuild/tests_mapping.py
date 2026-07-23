@@ -7,7 +7,7 @@ from pybuild.tasks import TARGET_HANDLERS
 
 
 class TargetMappingTests(unittest.TestCase):
-    def test_nuke_target_name_is_accepted(self) -> None:
+    def test_canonical_target_name_is_accepted(self) -> None:
         parsed = parse_build_args(["--target", "GenerateAzureUploadPlan", "--release-tag", "v1.2.3"])
         self.assertEqual(parsed.target, "GenerateAzureUploadPlan")
         self.assertEqual(parsed.passthrough, ["--release-tag", "v1.2.3"])

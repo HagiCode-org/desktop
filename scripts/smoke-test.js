@@ -665,8 +665,8 @@ test('azure sync build entry uses python invoke runtime', () => {
 
   assert(buildShellContent.includes('python -m pybuild.entry') || buildShellContent.includes('-m pybuild.entry'), 'build.sh dispatches to python pybuild entry module');
   assert(buildPowerShellContent.includes('-m pybuild.entry'), 'build.ps1 dispatches to python pybuild entry module');
-  assert(!buildShellContent.includes('nukeBuild/_build.csproj'), 'build.sh no longer executes nuke _build.csproj directly');
-  assert(!buildPowerShellContent.includes('nukeBuild\\_build.csproj'), 'build.ps1 no longer executes nuke _build.csproj directly');
+  assert(!buildShellContent.includes('dotnet run'), 'build.sh does not invoke dotnet for build entry');
+  assert(!buildPowerShellContent.includes('dotnet run'), 'build.ps1 does not invoke dotnet for build entry');
   assert(buildCmdContent.includes('build.ps1'), 'build.cmd remains a compatibility forwarder to build.ps1');
 });
 

@@ -1,1 +1,1 @@
-"""Native Python implementations of former Nuke Azure sync targets."""
+"""Native Python implementations of Azure sync/publish build targets."""

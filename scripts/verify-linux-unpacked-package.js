@@ -31,8 +31,6 @@ const forbiddenAsarPrefixes = [
   '/.github/',
   '/build/',
   '/docs/',
-  '/nukeBuild/',
-  '/nukeBuild.Tests/',
   '/out/',
   '/pkg/',
   '/src/',
