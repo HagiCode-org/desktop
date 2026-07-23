@@ -5,34 +5,25 @@ from typing import Callable, Iterable
 
 from invoke import Collection, task
 
+from .native.azure_index import run_generate_azure_index
+from .native.params import parse_passthrough
+from .native.publish import run_publish_to_azure_blob
+from .native.upload_plan import run_generate_azure_upload_plan
 from .runtime import BuildRuntime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = BuildRuntime(repo_root=REPO_ROOT)
 
 
-def _nuke_target_command(target_name: str, passthrough: Iterable[str]) -> list[str]:
-    command = [
-        "dotnet",
-        "run",
-        "--project",
-        "nukeBuild/_build.csproj",
-        "--target",
-        target_name,
-    ]
-    command.extend(passthrough)
-    return command
+def _warn_unrecognized(params) -> None:
+    if params.unrecognized:
+        joined = " ".join(params.unrecognized)
+        RUNTIME.log(f"unrecognized passthrough (ignored): {joined}")
 
 
-def _invoke_nuke_target(target_name: str, passthrough: Iterable[str]) -> int:
-    command = _nuke_target_command(target_name, passthrough)
-    RUNTIME.log_stage(target_name, "start")
-    RUNTIME.run_command(command, cwd=REPO_ROOT)
-    RUNTIME.log_stage(target_name, "done")
-    return 0
-
-
-def _run_setup(_: Iterable[str]) -> int:
+def _run_setup(passthrough: Iterable[str]) -> int:
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
     RUNTIME.log_stage("Setup", "start")
     print("[PYBUILD] setup completed")
     RUNTIME.log_stage("Setup", "done")
@@ -40,19 +31,37 @@ def _run_setup(_: Iterable[str]) -> int:
 
 
 def _run_generate_azure_upload_plan(passthrough: Iterable[str]) -> int:
-    return _invoke_nuke_target("GenerateAzureUploadPlan", passthrough)
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
+    RUNTIME.log_stage("GenerateAzureUploadPlan", "start")
+    try:
+        return run_generate_azure_upload_plan(REPO_ROOT, params)
+    finally:
+        RUNTIME.log_stage("GenerateAzureUploadPlan", "done")
 
 
 def _run_generate_azure_index(passthrough: Iterable[str]) -> int:
-    return _invoke_nuke_target("GenerateAzureIndex", passthrough)
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
+    RUNTIME.log_stage("GenerateAzureIndex", "start")
+    try:
+        return run_generate_azure_index(REPO_ROOT, params)
+    finally:
+        RUNTIME.log_stage("GenerateAzureIndex", "done")
 
 
 def _run_publish_to_azure_blob(passthrough: Iterable[str]) -> int:
-    return _invoke_nuke_target("PublishToAzureBlob", passthrough)
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
+    RUNTIME.log_stage("PublishToAzureBlob", "start")
+    try:
+        return run_publish_to_azure_blob(REPO_ROOT, params)
+    finally:
+        RUNTIME.log_stage("PublishToAzureBlob", "done")
 
 
 def _run_default(passthrough: Iterable[str]) -> int:
-    return _invoke_nuke_target("Default", passthrough)
+    return _run_publish_to_azure_blob(passthrough)
 
 
 TARGET_HANDLERS: dict[str, Callable[[Iterable[str]], int]] = {
@@ -68,47 +77,44 @@ def run_named_target(target_name: str, passthrough: Iterable[str]) -> int:
     handler = TARGET_HANDLERS.get(target_name)
     if handler is None:
         raise ValueError(f"unsupported target: {target_name}")
-    return handler(list(passthrough))
+    return handler(passthrough)
 
 
-@task(name="setup")
-def setup_task(c, passthrough: str = ""):
-    del c
-    args = [arg for arg in passthrough.split(" ") if arg]
-    return _run_setup(args)
+@task
+def setup(ctx, args=""):  # type: ignore[no-untyped-def]
+    """Placeholder setup target."""
+    tokens = args.split() if args else []
+    raise SystemExit(_run_setup(tokens))
 
 
-@task(name="generate-azure-upload-plan")
-def generate_azure_upload_plan_task(c, passthrough: str = ""):
-    del c
-    args = [arg for arg in passthrough.split(" ") if arg]
-    return _run_generate_azure_upload_plan(args)
+@task
+def generate_azure_upload_plan(ctx, args=""):  # type: ignore[no-untyped-def]
+    tokens = args.split() if args else []
+    raise SystemExit(_run_generate_azure_upload_plan(tokens))
 
 
-@task(name="generate-azure-index")
-def generate_azure_index_task(c, passthrough: str = ""):
-    del c
-    args = [arg for arg in passthrough.split(" ") if arg]
-    return _run_generate_azure_index(args)
+@task
+def generate_azure_index(ctx, args=""):  # type: ignore[no-untyped-def]
+    tokens = args.split() if args else []
+    raise SystemExit(_run_generate_azure_index(tokens))
 
 
-@task(name="publish-to-azure-blob")
-def publish_to_azure_blob_task(c, passthrough: str = ""):
-    del c
-    args = [arg for arg in passthrough.split(" ") if arg]
-    return _run_publish_to_azure_blob(args)
+@task
+def publish_to_azure_blob(ctx, args=""):  # type: ignore[no-untyped-def]
+    tokens = args.split() if args else []
+    raise SystemExit(_run_publish_to_azure_blob(tokens))
 
 
-@task(name="default")
-def default_task(c, passthrough: str = ""):
-    del c
-    args = [arg for arg in passthrough.split(" ") if arg]
-    return _run_default(args)
+@task
+def default(ctx, args=""):  # type: ignore[no-untyped-def]
+    tokens = args.split() if args else []
+    raise SystemExit(_run_default(tokens))
 
 
-ns = Collection()
-ns.add_task(setup_task)
-ns.add_task(generate_azure_upload_plan_task)
-ns.add_task(generate_azure_index_task)
-ns.add_task(publish_to_azure_blob_task)
-ns.add_task(default_task)
+ns = Collection(
+    setup,
+    generate_azure_upload_plan,
+    generate_azure_index,
+    publish_to_azure_blob,
+    default,
+)

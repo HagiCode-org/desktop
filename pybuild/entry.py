@@ -76,6 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as error:
         print(f"[PYBUILD] {error}", file=sys.stderr)
         return 2
+    except Exception as error:  # noqa: BLE001 - build entry maps any native failure to non-zero exit
+        print(f"[PYBUILD] {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
