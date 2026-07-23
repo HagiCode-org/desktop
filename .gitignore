@@ -40,7 +40,16 @@ coverage/
 resources/bin/
 resources/components/
 
-.claude/skills/ui-ux-pro-max/scripts/__pycache__/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
 
 bin/
 obj/
