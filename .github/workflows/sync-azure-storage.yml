@@ -53,7 +53,7 @@ on:
         default: '3'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   plan:

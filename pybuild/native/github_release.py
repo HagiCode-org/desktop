@@ -50,18 +50,29 @@ class GitHubReleaseClient:
 
         try:
             # Paginate a reasonable window; draft next-version usually near the top.
+            # Note: listing drafts requires a token with contents write (or equivalent).
             raw = self._run_gh(
                 "api",
                 f"repos/{self.github_repository}/releases?per_page=100",
             )
             releases = json.loads(raw)
             if not isinstance(releases, list):
+                print(f"[PYBUILD] unexpected releases list type: {type(releases).__name__}")
                 return None
             for release in releases:
                 if not isinstance(release, dict):
                     continue
                 if str(release.get("tag_name") or "") == tag:
                     return release
+            draft_tags = [
+                str(item.get("tag_name"))
+                for item in releases
+                if isinstance(item, dict) and item.get("draft")
+            ]
+            print(
+                f"[PYBUILD] tag={tag} not in first {len(releases)} releases "
+                f"(drafts visible={len(draft_tags)}: {', '.join(draft_tags[:5]) or 'none'})"
+            )
         except Exception as error:  # noqa: BLE001
             print(f"[PYBUILD] failed to list releases for draft lookup: {error}")
         return None
