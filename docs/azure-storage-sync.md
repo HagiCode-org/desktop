@@ -9,7 +9,7 @@ The Hagicode Desktop project uses two reusable GitHub Actions workflows to synch
 - `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs
 - `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json`
 
-Build entry now routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`) instead of direct `dotnet run nukeBuild/_build.csproj`.
+Build entry routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`). Azure sync targets (`GenerateAzureUploadPlan`, `GenerateAzureIndex`, `PublishToAzureBlob`, `Default`) run as native Python implementations under `pybuild/native/` (no Nuke / .NET SDK required for this path).
 
 This provides:
 
