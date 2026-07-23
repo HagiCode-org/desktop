@@ -1,37 +1,39 @@
-# Nuke Build Cleanup Follow-up (Post Python Invoke Migration)
+# Nuke Build Cleanup (Completed)
 
-This note tracks cleanup scope after build entry migration to Python Invoke.
+Azure sync targets are implemented natively in Python under `pybuild/native/`.
 
-## What remains in `nukeBuild/`
+## Removed
 
-Current Python tasks still forward Azure targets to existing Nuke logic:
+- `nukeBuild/`
+- `nukeBuild.Tests/`
+- `.nuke/`
 
+## Current entry
+
+```
+./build.sh | ./build.ps1 | build.cmd
+  → python -m pybuild.entry --target <Name> [passthrough...]
+  → pybuild.native.*
+```
+
+## Targets
+
+- `Setup`
 - `GenerateAzureUploadPlan`
 - `GenerateAzureIndex`
 - `PublishToAzureBlob`
-- `Default`
+- `Default` (alias of `PublishToAzureBlob`)
 
-So `nukeBuild/` remains runtime dependency for those targets in this change.
+## Output contracts (unchanged)
 
-## Safe next cleanup scope
+- `artifacts/azure-upload-plan.json`
+- `artifacts/azure-upload-matrix.json`
+- `artifacts/azure-index.json`
+- `artifacts/publish-result-*.json`
+- `artifacts/finalize-result.json`
 
-Do in follow-up change after Python tasks own Azure logic directly:
+## Runtime
 
-1. Move Azure upload plan/index/publish implementation from C# (`nukeBuild`) to `pybuild/tasks.py` + helper modules.
-2. Switch `pybuild/tasks.py` handlers from `dotnet run --project nukeBuild/_build.csproj` to native Python implementations.
-3. Keep output contracts unchanged:
-   - `artifacts/azure-upload-plan.json`
-   - `artifacts/azure-upload-matrix.json`
-   - `artifacts/azure-index.json`
-   - `artifacts/publish-result-*.json`
-   - `artifacts/finalize-result.json`
-4. Remove now-unused `nukeBuild` Azure targets and related adapters/tests.
-5. Remove any remaining `.NET SDK` requirement from Azure sync path if no longer needed.
-
-## Not removed in this change
-
-- `nukeBuild/` project files
-- `nukeBuild` Azure adapters and models
-- Existing C# tests under `nukeBuild.Tests/`
-
-Reason: this migration focuses on entry/runtime switch + workflow Python provisioning with minimal behavior risk.
+- Python `3.11` + `requirements.lock.txt` (`invoke`)
+- `gh` CLI for GitHub Release asset list/download
+- Azure Blob REST via container SAS URL (stdlib HTTP; no Azure SDK required)
