@@ -265,7 +265,7 @@ jobs:
       channel: ${{ needs.prepare-release.outputs.channel }}
       is_production_build: ${{ needs.prepare-release.outputs.is_production_build == 'true' }}
       sign_windows_release: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows_release == 'true' }}
-      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' }}
+      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' || github.ref == 'refs/heads/main' }}
     secrets: inherit
 
   build-unix:
@@ -276,7 +276,7 @@ jobs:
       version: ${{ needs.prepare-release.outputs.version }}
       channel: ${{ needs.prepare-release.outputs.channel }}
       is_production_build: ${{ needs.prepare-release.outputs.is_production_build == 'true' }}
-      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' }}
+      publish_release_assets: ${{ needs.prepare-release.outputs.is_tag_release == 'true' || github.ref == 'refs/heads/main' }}
     secrets: inherit
 
   publish-windows-release:
