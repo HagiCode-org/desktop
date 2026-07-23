@@ -159,8 +159,11 @@ class GitHubReleaseClient:
         release: dict,
         download_directory: Path,
         asset_names: Sequence[str] | None = None,
+        *,
+        retries: int = 4,
     ) -> None:
         import fnmatch
+        import time
         import urllib.error
         import urllib.request
 
@@ -183,7 +186,6 @@ class GitHubReleaseClient:
             if not name:
                 continue
             if wanted is not None and name not in wanted:
-                # also allow simple glob patterns if provided
                 if not any(fnmatch.fnmatch(name, pattern) for pattern in wanted):
                     continue
             asset_id = asset.get("id")
@@ -192,28 +194,52 @@ class GitHubReleaseClient:
             dest = download_directory / name
             url = f"https://api.github.com/repos/{self.github_repository}/releases/assets/{asset_id}"
             print(f"[PYBUILD] API download asset={name} -> {dest}")
-            request = urllib.request.Request(
-                url,
-                headers={
-                    "Authorization": f"Bearer {self.github_token}",
-                    "Accept": "application/octet-stream",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                    "User-Agent": "hagicode-desktop-pybuild",
-                },
-            )
-            try:
-                with urllib.request.urlopen(request, timeout=600) as response:
-                    with dest.open("wb") as handle:
-                        while True:
-                            chunk = response.read(1024 * 1024)
-                            if not chunk:
-                                break
-                            handle.write(chunk)
-            except urllib.error.HTTPError as error:
-                body = error.read().decode("utf-8", errors="replace") if hasattr(error, "read") else ""
-                raise RuntimeError(
-                    f"failed to download asset {name} (HTTP {error.code}): {body[:300]}"
-                ) from error
+
+            last_error: Exception | None = None
+            attempts = max(1, retries + 1)
+            for attempt in range(1, attempts + 1):
+                request = urllib.request.Request(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {self.github_token}",
+                        "Accept": "application/octet-stream",
+                        "X-GitHub-Api-Version": "2022-11-28",
+                        "User-Agent": "hagicode-desktop-pybuild",
+                    },
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=600) as response:
+                        with dest.open("wb") as handle:
+                            while True:
+                                chunk = response.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                handle.write(chunk)
+                    last_error = None
+                    break
+                except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ConnectionError, OSError) as error:
+                    last_error = error
+                    if dest.exists():
+                        try:
+                            dest.unlink()
+                        except OSError:
+                            pass
+                    if attempt < attempts:
+                        delay = min(2 * attempt, 15)
+                        print(
+                            f"[PYBUILD] API download attempt {attempt}/{attempts} "
+                            f"failed for {name}: {error}; retry in {delay}s"
+                        )
+                        time.sleep(delay)
+                    else:
+                        break
+
+            if last_error is not None:
+                detail = str(last_error)
+                if isinstance(last_error, urllib.error.HTTPError):
+                    body = last_error.read().decode("utf-8", errors="replace") if hasattr(last_error, "read") else ""
+                    detail = f"HTTP {last_error.code}: {body[:300]}"
+                raise RuntimeError(f"failed to download asset {name}: {detail}") from last_error
             matched += 1
 
         if wanted is not None and matched == 0:
@@ -221,6 +247,7 @@ class GitHubReleaseClient:
         if wanted is None and matched == 0:
             raise RuntimeError("draft release has no downloadable assets")
         print(f"[PYBUILD] downloaded {matched} draft asset(s)")
+
 
     def is_source_archive(self, asset_name: str, tag: str, version_prefix: str) -> bool:
         return is_github_generated_source_archive(
