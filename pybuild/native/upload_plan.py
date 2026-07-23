@@ -92,7 +92,10 @@ def resolve_effective_version(params: BuildParams, release_tag: str) -> str:
 
 
 def run_generate_azure_upload_plan(repo_root: Path, params: BuildParams) -> int:
-    print("[PYBUILD] === Generate Azure Upload Plan ===")
+    from .storage_publish import resolve_provider
+
+    provider = resolve_provider(params)
+    print(f"[PYBUILD] === Generate Azure Upload Plan (provider={provider}) ===")
     token = require_github_token(params)
     client = GitHubReleaseClient(repo_root, token, params.effective_github_repository)
 
@@ -113,6 +116,7 @@ def run_generate_azure_upload_plan(repo_root: Path, params: BuildParams) -> int:
     write_camel_json(plan_path, upload_plan, minify=False)
     write_camel_json(matrix_path, matrix_document, minify=False)
 
+    print(f"[PYBUILD] Storage provider: {provider}")
     print(f"[PYBUILD] Release tag: {release_tag}")
     print(f"[PYBUILD] Version prefix: {effective_version}")
     print(f"[PYBUILD] Eligible assets: {len(upload_plan['eligible_assets'])}")

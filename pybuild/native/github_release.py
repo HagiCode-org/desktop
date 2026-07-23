@@ -30,6 +30,43 @@ class GitHubReleaseClient:
         self.github_repository = normalize_github_repository(github_repository)
         self.github_repository_name = resolve_github_repository_name(self.github_repository)
 
+
+    def _find_release_by_tag(self, tag: str) -> dict | None:
+        """Resolve release JSON by tag, including draft releases.
+
+        GitHub's /releases/tags/{tag} endpoint does not return drafts; fall back to
+        listing releases and matching tag_name.
+        """
+        tag = (tag or "").strip()
+        if not tag:
+            return None
+        try:
+            raw = self._run_gh("api", f"repos/{self.github_repository}/releases/tags/{tag}")
+            document = json.loads(raw)
+            if isinstance(document, dict) and document.get("tag_name"):
+                return document
+        except Exception as error:  # noqa: BLE001
+            print(f"[PYBUILD] releases/tags/{tag} unavailable (may be draft): {error}")
+
+        try:
+            # Paginate a reasonable window; draft next-version usually near the top.
+            raw = self._run_gh(
+                "api",
+                f"repos/{self.github_repository}/releases?per_page=100",
+            )
+            releases = json.loads(raw)
+            if not isinstance(releases, list):
+                return None
+            for release in releases:
+                if not isinstance(release, dict):
+                    continue
+                if str(release.get("tag_name") or "") == tag:
+                    return release
+        except Exception as error:  # noqa: BLE001
+            print(f"[PYBUILD] failed to list releases for draft lookup: {error}")
+        return None
+
+
     def get_latest_release_tag(self) -> str | None:
         try:
             output = self._run_gh(
@@ -50,8 +87,12 @@ class GitHubReleaseClient:
 
     def get_release_assets(self, tag: str) -> list[GitHubReleaseAsset]:
         try:
-            raw = self._run_gh("api", f"repos/{self.github_repository}/releases/tags/{tag}")
-            document = json.loads(raw)
+            document = self._find_release_by_tag(tag)
+            if not document:
+                print(f"[PYBUILD] release not found for tag={tag} (including drafts)")
+                return []
+            if document.get("draft"):
+                print(f"[PYBUILD] listing assets from draft release tag={tag}")
             assets_element = document.get("assets")
             if not isinstance(assets_element, list):
                 return []
@@ -74,10 +115,15 @@ class GitHubReleaseClient:
         asset_names: Sequence[str] | None = None,
     ) -> None:
         download_directory.mkdir(parents=True, exist_ok=True)
+        release = self._find_release_by_tag(tag)
+        # Prefer release id for drafts: `gh release download <tag>` may miss draft releases.
+        target = str(release.get("id")) if release and release.get("id") else tag
+        if release and release.get("draft"):
+            print(f"[PYBUILD] downloading from draft release id={target} tag={tag}")
         arguments = [
             "release",
             "download",
-            tag,
+            str(target),
             "--repo",
             self.github_repository,
             "--dir",

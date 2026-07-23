@@ -44,6 +44,7 @@ def _to_int(value: str | int | None, default: int) -> int:
 @dataclass
 class BuildParams:
     verbose: bool = False
+    storage_provider: str = "r2"
     azure_blob_sas_url: str = ""
     azure_public_base_url: str = DEFAULT_PUBLIC_BASE_URL
     skip_azure_blob_publish: bool = False
@@ -61,6 +62,13 @@ class BuildParams:
     merged_publish_results_manifest: str = ""
     publish_shard_id: str = ""
     azure_max_parallel: int = DEFAULT_AZURE_MAX_PARALLEL
+    r2_endpoint: str = ""
+    r2_bucket: str = ""
+    r2_access_key: str = ""
+    r2_secret_key: str = ""
+    r2_region: str = "auto"
+    r2_public_base_url: str = ""
+    r2_path_style: bool = True
     github_token: str = ""
     github_repository: str = DEFAULT_GITHUB_REPOSITORY
     release_tag: str = ""
@@ -98,6 +106,7 @@ class BuildParams:
 
 PARAM_ALIASES: dict[str, str] = {
     "verbose": "verbose",
+    "storageprovider": "storage_provider",
     "azureblobsasurl": "azure_blob_sas_url",
     "azurepublicbaseurl": "azure_public_base_url",
     "skipazureblobpublish": "skip_azure_blob_publish",
@@ -115,6 +124,13 @@ PARAM_ALIASES: dict[str, str] = {
     "mergedpublishresultsmanifest": "merged_publish_results_manifest",
     "publishshardid": "publish_shard_id",
     "azuremaxparallel": "azure_max_parallel",
+    "r2endpoint": "r2_endpoint",
+    "r2bucket": "r2_bucket",
+    "r2accesskey": "r2_access_key",
+    "r2secretkey": "r2_secret_key",
+    "r2region": "r2_region",
+    "r2publicbaseurl": "r2_public_base_url",
+    "r2pathstyle": "r2_path_style",
     "githubtoken": "github_token",
     "githubrepository": "github_repository",
     "releasetag": "release_tag",
@@ -134,6 +150,7 @@ BOOL_FIELDS = {
     "minify_index_json",
     "upload_artifacts",
     "upload_index",
+    "r2_path_style",
 }
 
 INT_FIELDS = {
@@ -214,6 +231,27 @@ def parse_passthrough(args: Iterable[str]) -> BuildParams:
             or os.environ.get("AzureBlobSasUrl")
             or ""
         )
+    # storage provider: CLI already applied; env only if still default and env set
+    env_provider = (
+        os.environ.get("STORAGE_PROVIDER", "").strip()
+        or os.environ.get("HAGICODE_STORAGE_PROVIDER", "").strip()
+    )
+    if env_provider and params.storage_provider == "r2" and "storage_provider" not in values:
+        params.storage_provider = env_provider
+    if not params.r2_endpoint:
+        params.r2_endpoint = os.environ.get("R2_ENDPOINT", "").strip()
+    if not params.r2_bucket:
+        params.r2_bucket = os.environ.get("R2_BUCKET", "").strip()
+    if not params.r2_access_key:
+        params.r2_access_key = os.environ.get("R2_ACCESS_KEY", "").strip()
+    if not params.r2_secret_key:
+        params.r2_secret_key = os.environ.get("R2_SECRET_KEY", "").strip()
+    if params.r2_region == "auto":
+        env_region = os.environ.get("R2_REGION", "").strip()
+        if env_region:
+            params.r2_region = env_region
+    if not params.r2_public_base_url:
+        params.r2_public_base_url = os.environ.get("R2_PUBLIC_BASE_URL", "").strip()
     if params.github_repository == DEFAULT_GITHUB_REPOSITORY:
         env_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
         if env_repo:
@@ -257,3 +295,10 @@ def require_azure_sas(params: BuildParams) -> str:
     if sas:
         return sas
     raise ValueError("必须配置 Azure Blob SAS URL（--azure-blob-sas-url 或 AZURE_BLOB_SAS_URL）")
+
+
+def require_storage_credentials(params: BuildParams) -> str:
+    """Fail-fast credential check for resolved storage provider; returns provider."""
+    from .storage_publish import require_storage_credentials as _require
+
+    return _require(params)

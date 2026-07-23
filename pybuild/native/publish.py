@@ -6,17 +6,25 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import read_json, resolve_index_output_path, write_camel_json
-from .azure_blob import AzureBlobClient, AzureBlobPublishOptions, upload_artifacts, upload_index_json
+from .azure_blob import AzureBlobPublishOptions
 from .azure_index import IndexGenerationResult, generate_index_from_blobs_with_metadata
 from .github_release import GitHubReleaseClient
 from .hybrid_metadata import PublishedArtifact, build_hybrid_metadata
 from .params import (
     BuildParams,
-    require_azure_sas,
     require_github_token,
     resolve_github_repository_name,
 )
 from .path_utils import is_github_generated_source_archive, resolve_public_base_url
+from .storage_publish import (
+    StorageContext,
+    open_storage_context,
+    resolve_provider,
+    storage_label,
+    to_azure_options,
+    upload_artifacts as storage_upload_artifacts,
+    upload_index as storage_upload_index,
+)
 from .upload_plan import resolve_effective_version, resolve_release_tag
 
 
@@ -230,10 +238,17 @@ def orchestrate_publish(
     upload_index: bool,
     minify_index_json: bool,
     github_repository: str | None,
-    client: AzureBlobClient | None = None,
+    storage: StorageContext | None = None,
 ) -> ReleasePublishSummary:
+    """Upload artifacts (+ optional index) via resolved storage provider.
+
+    `options` still carries version_prefix / public_base_url / local_index_path for
+    metadata and index helpers. When `storage` is provided, upload/list go through it.
+    """
     summary = ReleasePublishSummary()
     container_base_url = resolve_public_base_url(options.sas_url, options.public_base_url)
+    if storage is not None and storage.public_base_url:
+        container_base_url = storage.public_base_url.rstrip("/") + "/"
     metadata_result = build_hybrid_metadata(
         downloaded_files,
         options.version_prefix,
@@ -260,7 +275,11 @@ def orchestrate_publish(
         seen.add(key)
         unique_files.append(path)
 
-    upload_result = upload_artifacts(unique_files, options, client=client)
+    if storage is None:
+        raise ValueError("storage context required for orchestrate_publish")
+    provider = storage.provider
+    label = storage_label(provider)
+    upload_result = storage_upload_artifacts(unique_files, storage)
     summary.uploaded_blob_count = len(upload_result.uploaded_blob_names)
     summary.skipped_blob_count = len(upload_result.skipped_blob_names)
     summary.missing_blob_count = len(upload_result.missing_blob_names)
@@ -273,16 +292,16 @@ def orchestrate_publish(
             {
                 "artifactName": Path(failed).name,
                 "code": "upload-failed",
-                "message": f"Azure Blob 上传失败：{failed}",
+                "message": f"{label} 上传失败：{failed}",
                 "stage": "UploadMissing",
             }
         )
 
     if not upload_result.success:
         if upload_result.errors:
-            summary.error_message = f"Azure Blob 产物上传失败: {'; '.join(upload_result.errors)}"
+            summary.error_message = f"{label} 产物上传失败: {'; '.join(upload_result.errors)}"
         else:
-            summary.error_message = f"Azure Blob 产物上传失败: {upload_result.error_message}"
+            summary.error_message = f"{label} 产物上传失败: {upload_result.error_message}"
         return summary
 
     uploaded_names = {name.lower() for name in upload_result.uploaded_blob_names + upload_result.skipped_blob_names}
@@ -296,7 +315,7 @@ def orchestrate_publish(
                     {
                         "artifactName": artifact.name,
                         "code": "sidecar-upload-missing",
-                        "message": "torrent sidecar 未成功上传到 Azure Blob，已降级为 HTTP-only。",
+                        "message": f"torrent sidecar 未成功上传到 {label}，已降级为 HTTP-only。",
                         "stage": "UploadMissing",
                     }
                 )
@@ -308,30 +327,25 @@ def orchestrate_publish(
         summary.success = True
         return summary
 
+    print(f"[PYBUILD] === Generating index.json (provider={provider}) ===")
     index_result = generate_index_from_blobs_with_metadata(
         options,
         options.local_index_path,
         summary.published_artifacts,
         minify=minify_index_json,
         github_repository=github_repository or "HagiCode-org/desktop",
-        client=client,
+        storage=storage,
     )
     summary.diagnostics.extend(index_result.diagnostics)
-    summary.http_only_fallback_count = max(summary.http_only_fallback_count, index_result.http_only_fallback_count)
+    summary.http_only_fallback_count = max(
+        summary.http_only_fallback_count, index_result.http_only_fallback_count
+    )
     if not index_result.index_json:
-        summary.diagnostics.append(
-            {
-                "artifactName": "index.json",
-                "code": "index-generation-failed",
-                "message": "索引生成阶段未返回有效的 index.json。",
-                "stage": "IndexWrite",
-            }
-        )
         summary.error_message = "生成 index.json 失败"
         return summary
 
     summary.index_json = index_result.index_json
-    uploaded = upload_index_json(options, index_result.index_json, client=client)
+    uploaded = storage_upload_index(storage, index_result.index_json)
     if not uploaded:
         summary.diagnostics.append(
             {
@@ -381,9 +395,11 @@ def report_index_diagnostics(result: IndexGenerationResult) -> None:
 
 
 def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
-    print("[PYBUILD] === Publish GitHub Release to Azure Blob ===")
+    provider = resolve_provider(params)
+    label = storage_label(provider)
+    print(f"[PYBUILD] === Publish GitHub Release to {label} (provider={provider}) ===")
     print(
-        f"[PYBUILD] upload config: Artifacts={params.upload_artifacts}, "
+        f"[PYBUILD] upload config: provider={provider}, Artifacts={params.upload_artifacts}, "
         f"Index={params.upload_index}, Concurrency={params.azure_upload_concurrency}"
     )
 
@@ -398,11 +414,8 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
             export_publish_summary(params, summary)
             return 0
 
-        sas = require_azure_sas(params)
-        client = AzureBlobClient(sas)
-        if not client.validate():
-            raise ValueError("Azure Blob SAS URL 验证失败")
-
+        output_path = resolve_index_output_path(repo_root, params)
+        # version prefix resolved after release tag when uploading artifacts
         gh_client = None
         release_tag = ""
         if params.upload_artifacts:
@@ -419,15 +432,12 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 release_tag = params.release_tag.strip()
 
         effective_version = resolve_effective_version(params, release_tag)
-        output_path = resolve_index_output_path(repo_root, params)
-        publish_options = AzureBlobPublishOptions(
-            sas_url=sas,
-            upload_retries=params.azure_upload_retries,
-            upload_concurrency=params.azure_upload_concurrency,
+        storage = open_storage_context(
+            params,
             version_prefix=effective_version,
-            public_base_url=params.azure_public_base_url,
             local_index_path=str(output_path),
         )
+        publish_options = to_azure_options(storage)
 
         if params.upload_artifacts:
             selection_manifest = load_release_asset_selection_manifest(params)
@@ -438,14 +448,14 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 repo_root, params, release_tag, effective_version, selection_manifest
             )
             if downloaded:
-                print("[PYBUILD] === Step 1: upload release assets ===")
+                print(f"[PYBUILD] === Step 1: upload release assets (provider={provider}) ===")
                 summary = orchestrate_publish(
                     downloaded,
                     publish_options,
                     upload_index=False,  # index handled below (may use merged summary)
                     minify_index_json=params.minify_index_json,
                     github_repository=params.effective_github_repository,
-                    client=client,
+                    storage=storage,
                 )
                 if not summary.shard_id:
                     summary.shard_id = (
@@ -459,7 +469,7 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 summary.success = True
 
         if params.upload_index and not summary.index_uploaded and (summary.success or not params.upload_artifacts):
-            print("[PYBUILD] === Step 2: generate and upload index.json ===")
+            print(f"[PYBUILD] === Step 2: generate and upload index.json (provider={provider}) ===")
             merged = load_merged_publish_summary(params)
             if merged is not None:
                 summary = merged
@@ -470,7 +480,7 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 summary.published_artifacts,
                 minify=params.minify_index_json,
                 github_repository=params.effective_github_repository,
-                client=client,
+                storage=storage,
             )
             summary.diagnostics.extend(index_result.diagnostics)
             summary.http_only_fallback_count = max(
@@ -480,7 +490,7 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
             if not index_result.index_json:
                 summary.error_message = "生成 index.json 失败"
                 summary.success = False
-            elif not upload_index_json(publish_options, index_result.index_json, client=client):
+            elif not storage_upload_index(storage, index_result.index_json):
                 summary.error_message = "上传 index.json 失败"
                 summary.success = False
             else:
@@ -493,16 +503,16 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 summary.success = True
 
         if not summary.success and not summary.error_message:
-            summary.error_message = "Azure Blob 发布失败"
+            summary.error_message = f"{label} 发布失败"
 
         print(
-            f"[PYBUILD] publish complete: success={summary.success} "
+            f"[PYBUILD] publish complete: provider={provider} success={summary.success} "
             f"tag={release_tag} version={effective_version}"
         )
         export_publish_summary(params, summary)
 
         if not summary.success:
-            raise RuntimeError(summary.error_message or "Azure Blob 发布失败")
+            raise RuntimeError(summary.error_message or f"{label} 发布失败")
         return 0
     except Exception:
         export_publish_summary(params, summary)

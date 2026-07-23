@@ -92,6 +92,8 @@ class PublishTests(unittest.TestCase):
             self.assertEqual(len(merged.published_artifacts), 2)
 
     def test_orchestrate_publish_upload_only(self) -> None:
+        from pybuild.native.storage_publish import StorageContext
+
         with tempfile.TemporaryDirectory() as tmp:
             payload = Path(tmp) / "small.bin"
             payload.write_bytes(b"x" * 10)
@@ -101,20 +103,28 @@ class PublishTests(unittest.TestCase):
                 public_base_url="https://desktop.dl.hagicode.com",
                 local_index_path=str(Path(tmp) / "index.json"),
             )
-
+            storage = StorageContext(
+                provider="azure",
+                public_base_url="https://desktop.dl.hagicode.com",
+                version_prefix="v1.0.0",
+                sas_url=options.sas_url,
+            )
             fake_result = PublishResult(
                 success=True,
                 uploaded_blob_names=["v1.0.0/small.bin"],
                 uploaded_blobs=["https://example/v1.0.0/small.bin"],
             )
-
-            with patch("pybuild.native.publish.upload_artifacts", return_value=fake_result):
+            with patch(
+                "pybuild.native.publish.storage_upload_artifacts",
+                return_value=fake_result,
+            ):
                 summary = orchestrate_publish(
                     [str(payload)],
                     options,
                     upload_index=False,
                     minify_index_json=True,
                     github_repository="HagiCode-org/desktop",
+                    storage=storage,
                 )
             self.assertTrue(summary.success)
             self.assertEqual(summary.uploaded_blob_count, 1)

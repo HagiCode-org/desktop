@@ -191,6 +191,8 @@ jobs:
               exit 1
             fi
             version="${draft_version}"
+            # Next-version tag for draft GH Release + R2 sync (does not create a git tag push).
+            release_tag="v${version}"
             release_name="Main Build ${version}"
             version_source="${DRAFT_VERSION_SOURCE:-draft-release:${version}}"
           fi
@@ -282,7 +284,7 @@ jobs:
     needs:
       - prepare-release
       - build-windows
-    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-windows.result == 'success' }}
+    if: ${{ (needs.prepare-release.outputs.is_tag_release == 'true' || github.ref == 'refs/heads/main') && needs.prepare-release.outputs.release_tag != '' && needs.build-windows.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -300,6 +302,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: ${{ needs.prepare-release.outputs.is_tag_release != 'true' }}
+          prerelease: ${{ needs.prepare-release.outputs.channel != 'stable' }}
           overwrite_files: 'true'
           files: |
             release-assets/windows/**/*.exe
@@ -313,7 +318,7 @@ jobs:
     needs:
       - prepare-release
       - build-unix
-    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-unix.result == 'success' }}
+    if: ${{ (needs.prepare-release.outputs.is_tag_release == 'true' || github.ref == 'refs/heads/main') && needs.prepare-release.outputs.release_tag != '' && needs.build-unix.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -371,6 +376,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: ${{ needs.prepare-release.outputs.is_tag_release != 'true' }}
+          prerelease: ${{ needs.prepare-release.outputs.channel != 'stable' }}
           overwrite_files: 'true'
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
@@ -382,6 +390,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          draft: ${{ needs.prepare-release.outputs.is_tag_release != 'true' }}
+          prerelease: ${{ needs.prepare-release.outputs.channel != 'stable' }}
           overwrite_files: 'true'
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
@@ -413,6 +424,7 @@ jobs:
         shell: bash
         env:
           IS_TAG_RELEASE: ${{ needs.prepare-release.outputs.is_tag_release }}
+          GITHUB_REF: ${{ github.ref }}
           BUILD_WINDOWS_STATUS: ${{ needs.build-windows.result }}
           BUILD_UNIX_STATUS: ${{ needs.build-unix.result }}
           PUBLISH_WINDOWS_STATUS: ${{ needs.publish-windows-release.result }}
@@ -427,7 +439,7 @@ jobs:
 
           echo "Windows build: ${windows_build_status}"
           echo "Unix build: ${unix_build_status}"
-          if [ "${IS_TAG_RELEASE}" = 'true' ]; then
+          if [ "${IS_TAG_RELEASE}" = 'true' ] || [ "${GITHUB_REF}" = 'refs/heads/main' ]; then
             echo "Windows publish: ${windows_publish_status}"
             echo "Unix publish: ${platform_publish_status}"
           fi
@@ -445,7 +457,9 @@ jobs:
             exit 0
           fi
 
-          if [ "${IS_TAG_RELEASE}" = 'true' ] && { [ "${windows_publish_status}" != 'success' ] || [ "${platform_publish_status}" != 'success' ]; }; then
+          # Require release asset publish on tag releases and main (main publishes draft for R2 sync).
+          if { [ "${IS_TAG_RELEASE}" = 'true' ] || [ "${GITHUB_REF}" = 'refs/heads/main' ]; } \
+            && { [ "${windows_publish_status}" != 'success' ] || [ "${platform_publish_status}" != 'success' ]; }; then
             echo 'overall=failed' >> "$GITHUB_OUTPUT"
             echo 'status_icon=❌' >> "$GITHUB_OUTPUT"
             echo 'status_text=失败' >> "$GITHUB_OUTPUT"
@@ -456,7 +470,8 @@ jobs:
           echo 'overall=success' >> "$GITHUB_OUTPUT"
           echo 'status_icon=✅' >> "$GITHUB_OUTPUT"
           echo 'status_text=成功' >> "$GITHUB_OUTPUT"
-          if [ "${IS_TAG_RELEASE}" = 'true' ]; then
+          # Tag releases and main branch continuous builds both sync to object storage (default R2).
+          if [ "${IS_TAG_RELEASE}" = 'true' ] || [ "${GITHUB_REF}" = 'refs/heads/main' ]; then
             echo 'sync_eligible=true' >> "$GITHUB_OUTPUT"
           else
             echo 'sync_eligible=false' >> "$GITHUB_OUTPUT"

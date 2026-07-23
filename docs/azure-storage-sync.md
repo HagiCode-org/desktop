@@ -1,15 +1,28 @@
-# Azure Storage Sync Configuration
+# Azure / R2 Storage Sync Configuration
 
-This document describes how to configure Azure Storage for automatic release file synchronization using a Blob SAS URL.
+This document describes how to configure object storage for automatic release file synchronization. **Default storage provider is Cloudflare R2** (`STORAGE_PROVIDER=r2`). Azure Blob remains available for migration rollback via explicit `STORAGE_PROVIDER=azure` plus SAS.
 
 ## Overview
 
-The Hagicode Desktop project uses two reusable GitHub Actions workflows to synchronize release assets to Azure Storage after `build.yml` finishes uploading the release assets and explicitly calls the sync pipeline:
+The Hagicode Desktop project uses two reusable GitHub Actions workflows to synchronize release assets after `build.yml` finishes uploading the release assets and explicitly calls the sync pipeline:
 
-- `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs
+- `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs (names retain Azure for stability)
 - `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json`
 
-Build entry routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`). Azure sync targets (`GenerateAzureUploadPlan`, `GenerateAzureIndex`, `PublishToAzureBlob`, `Default`) run as native Python under `pybuild/native/`.
+Build entry routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`). Historical Azure-prefixed targets (`GenerateAzureUploadPlan`, `GenerateAzureIndex`, `PublishToAzureBlob`, `Default`) run as native Python under `pybuild/native/` and execute against the **resolved** storage provider (`azure` or `r2`).
+
+### Storage provider selection
+
+Priority: CLI `--storage-provider` → env `STORAGE_PROVIDER` / `HAGICODE_STORAGE_PROVIDER` → default **`r2`**.
+
+| Provider | Required credentials | Notes |
+|----------|----------------------|-------|
+| `r2` (default) | `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY`, `R2_SECRET_KEY` | Optional: `R2_REGION` (default `auto`), `R2_PUBLIC_BASE_URL` |
+| `azure` | `AZURE_BLOB_SAS_URL` | Optional: `azure_public_base_url` / public CDN base |
+
+GitHub Actions: set repository/environment **variable** `STORAGE_PROVIDER` (defaults to `r2` in workflow expressions). Configure R2 values as **secrets** (`R2_*`). To roll back to Azure, set `STORAGE_PROVIDER=azure` and keep `AZURE_BLOB_SAS_URL`.
+
+R2 path requires `boto3` (declared in `requirements.lock.txt`).
 
 This provides:
 
@@ -383,3 +396,26 @@ However, **SAS URL is recommended** for better security and simpler configuratio
 - [Create a SAS token](https://docs.microsoft.com/azure/storage/common/storage-sas-overview)
 - [Azure CLI Documentation](https://docs.microsoft.com/cli/azure/)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
+
+
+
+
+## Main branch continuous sync (next version → R2)
+
+On every successful `main` push build:
+
+1. Version is resolved from Release Drafter draft (next semver).
+2. Build artifacts are uploaded to a **draft** GitHub Release at tag `v{nextVersion}` (not a real git tag push).
+3. `sync-azure-upload` / `sync-azure-finalize` run with `release_tag=v{nextVersion}` and `release_channel=beta` (default provider R2).
+
+Tag releases (`v*.*.*`) still publish non-draft releases and sync as before.
+
+Requirements: R2 secrets configured (see provider table). Draft listing/download is supported by pybuild `GitHubReleaseClient` (draft releases are not returned by `/releases/tags/{tag}` alone).
+
+## Rollback to Azure
+
+1. Set GitHub Actions variable `STORAGE_PROVIDER=azure` (repository or `production` environment).
+2. Ensure secret `AZURE_BLOB_SAS_URL` is present and valid.
+3. Re-run sync/finalize workflows. Plan/upload/index targets keep their Azure names but route through the Azure adapter.
+4. To return to R2, set `STORAGE_PROVIDER=r2` (or clear the variable to use workflow default) and ensure `R2_*` secrets are set.
+

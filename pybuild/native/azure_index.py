@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .azure_blob import AzureBlobClient, AzureBlobPublishOptions, BlobInfo, list_blobs, validate_index_file
+from .storage_publish import StorageContext, list_objects as storage_list_objects, open_storage_context, resolve_provider, storage_label, to_azure_options
 from .hybrid_metadata import KIND_OFFICIAL, PublishedArtifact
 from .params import resolve_github_repository_name
 from .path_utils import build_blob_url, extract_version, is_github_generated_source_archive, resolve_public_base_url
@@ -273,10 +274,12 @@ def generate_index_from_blobs_with_metadata(
     minify: bool = False,
     github_repository: str = "HagiCode-org/desktop",
     client: AzureBlobClient | None = None,
+    storage: StorageContext | None = None,
     visibility_max_attempts: int = 6,
     visibility_retry_delay_seconds: float = 10.0,
 ) -> IndexGenerationResult:
-    print("[PYBUILD] === Generating index.json from Azure blobs ===")
+    provider = storage.provider if storage is not None else "azure"
+    print(f"[PYBUILD] === Generating index.json from storage objects (provider={provider}) ===")
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -284,6 +287,7 @@ def generate_index_from_blobs_with_metadata(
         options,
         published_artifacts,
         client=client,
+        storage=storage,
         max_attempts=visibility_max_attempts,
         retry_delay_seconds=visibility_retry_delay_seconds,
     )
@@ -303,7 +307,7 @@ def generate_index_from_blobs_with_metadata(
                 {
                     "artifactName": Path(path).name,
                     "code": "published-artifact-not-listed",
-                    "message": f"本次发布的产物未出现在 Azure Blob 列表中，已阻止上传可能过期的 index.json：{path}",
+                    "message": f"本次发布的产物未出现在对象存储列表中，已阻止上传可能过期的 index.json：{path}",
                     "stage": "IndexWrite",
                 }
             )
@@ -329,16 +333,22 @@ def list_blobs_until_visible(
     published_artifacts: list[PublishedArtifact],
     *,
     client: AzureBlobClient | None = None,
+    storage: StorageContext | None = None,
     max_attempts: int = 6,
     retry_delay_seconds: float = 10.0,
 ) -> list[BlobInfo]:
-    if not published_artifacts:
+    def _list() -> list[BlobInfo]:
+        if storage is not None:
+            return storage_list_objects(storage)
         return list_blobs(options, client=client)
+
+    if not published_artifacts:
+        return _list()
 
     required = {artifact.path for artifact in published_artifacts if artifact.path}
     blobs: list[BlobInfo] = []
     for attempt in range(1, max(1, max_attempts) + 1):
-        blobs = list_blobs(options, client=client)
+        blobs = _list()
         listed = {blob.name for blob in blobs}
         missing = [path for path in required if path not in listed]
         if not missing:
@@ -354,26 +364,17 @@ def list_blobs_until_visible(
 
 def run_generate_azure_index(repo_root: Path, params: Any) -> int:
     from .artifacts import resolve_index_output_path
-    from .params import require_azure_sas
     from .publish import load_merged_publish_summary, report_index_diagnostics
 
-    print("[PYBUILD] === Generate Azure Index ===")
+    provider = resolve_provider(params)
+    label = storage_label(provider)
+    print(f"[PYBUILD] === Generate {label} Index (provider={provider}) ===")
     print(f"[PYBUILD] GitHub repository: {params.effective_github_repository}")
-    sas = require_azure_sas(params)
-    options = AzureBlobPublishOptions(
-        sas_url=sas,
-        public_base_url=params.azure_public_base_url,
-        version_prefix="",
-        local_index_path=str(resolve_index_output_path(repo_root, params)),
-    )
-    client = AzureBlobClient(sas)
-    if not client.validate():
-        raise ValueError("Azure Blob SAS URL 验证失败")
-
     output_path = resolve_index_output_path(repo_root, params)
+    storage = open_storage_context(params, version_prefix="", local_index_path=str(output_path))
+    options = to_azure_options(storage)
     merged = load_merged_publish_summary(params)
     published = merged.published_artifacts if merged is not None else []
-
     print(f"[PYBUILD] minify: {params.minify_index_json}")
     index_result = generate_index_from_blobs_with_metadata(
         options,
@@ -381,14 +382,14 @@ def run_generate_azure_index(repo_root: Path, params: Any) -> int:
         published,
         minify=params.minify_index_json,
         github_repository=params.effective_github_repository,
-        client=client,
+        storage=storage,
     )
     report_index_diagnostics(index_result)
     if not index_result.index_json:
         raise ValueError("生成 index.json 失败")
     if not validate_index_file(output_path):
         raise ValueError("index.json 验证失败")
-    print("[PYBUILD] Azure index.json generated")
+    print(f"[PYBUILD] {label} index.json generated")
     print(f"[PYBUILD] path: {output_path}")
     print(f"[PYBUILD] size: {len(index_result.index_json)} bytes")
     return 0
