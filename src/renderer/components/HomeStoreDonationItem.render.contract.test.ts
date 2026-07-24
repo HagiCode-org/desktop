@@ -12,12 +12,16 @@ describe('HomeStoreDonationItem render contract', () => {
     assert.match(source, /作者快穷死了，救救作者/);
     assert.match(source, /作者的 token 要耗尽了，快为作者续命/);
     assert.match(source, /t\('donationItem\.purchaseCount'/);
-    assert.match(source, /t\('donationItem\.actions\.purchase'/);
     assert.match(source, /t\('donationItem\.actions\.purchasing'/);
     assert.match(source, /t\('donationItem\.actions\.close'/);
     assert.match(source, /donationItem\.messages\.purchaseOutcome/);
     assert.match(source, /t\('donationItem\.messages\.purchaseFailed'/);
     assert.match(source, /t\('donationItem\.messages\.dismissFailed'/);
     assert.match(source, /t\('donationItem\.messages\.dismissed'/);
+    assert.match(source, /donationItem\.noPrivilegeNotice/);
+    assert.match(source, /donationItem\.tiers\.\$\{tier\}\.shortName|tierMeta\.shortNameKey/);
+    // Primary labels must not hardcode English Coffee/Dinner/Candy or Store long copy.
+    assert.doesNotMatch(source, /['"]Coffee['"]|['"]Dinner['"]|['"]Candy['"]/);
+    assert.doesNotMatch(source, /\$0\.99|\$9\.99|\$399/);
   });
 });

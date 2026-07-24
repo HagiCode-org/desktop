@@ -16,11 +16,16 @@ import {
   loadSubscriptionSnapshot,
   selectSubscriptionState,
 } from '@/store/slices/subscriptionSlice';
-import { shouldShowMsstoreDonationItem } from '@/lib/msstore-donation-item';
+import {
+  getMsstoreDonationTierCatalog,
+  shouldShowMsstoreDonationItem,
+} from '@/lib/msstore-donation-item';
 import type {
   MsstoreDonationItemPurchaseResult,
   MsstoreDonationItemState,
+  MsstoreDonationTipTierId,
 } from '../../types/msstore-donation-item.js';
+import { DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER } from '../../types/msstore-donation-item.js';
 
 interface HomeStoreDonationItemProps {
   isWindowsStoreRuntime: boolean;
@@ -28,7 +33,10 @@ interface HomeStoreDonationItemProps {
 
 const defaultState: MsstoreDonationItemState = {
   purchaseCount: 0,
+  purchaseCountsByTier: { ...DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER },
 };
+
+const tierCatalog = getMsstoreDonationTierCatalog();
 
 export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeStoreDonationItemProps) {
   const { t } = useTranslation(['pages']);
@@ -42,7 +50,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
   const [state, setState] = useState<MsstoreDonationItemState>(defaultState);
   const [installDate, setInstallDate] = useState<string | undefined>(undefined);
   const [ready, setReady] = useState(false);
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchasingTier, setPurchasingTier] = useState<MsstoreDonationTipTierId | null>(null);
   const [isDismissing, setIsDismissing] = useState(false);
 
   const sponsorActive = subscriptionState.snapshot?.status === 'active';
@@ -110,14 +118,14 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
     return null;
   }
 
-  const handlePurchase = async () => {
-    if (!window.electronAPI.msstoreDonationItem || isPurchasing) {
+  const handlePurchase = async (tier: MsstoreDonationTipTierId) => {
+    if (!window.electronAPI.msstoreDonationItem || purchasingTier) {
       return;
     }
 
-    setIsPurchasing(true);
+    setPurchasingTier(tier);
     try {
-      const resultAction = await dispatch(purchaseMsstoreDonationItem());
+      const resultAction = await dispatch(purchaseMsstoreDonationItem({ tier }));
       if (!purchaseMsstoreDonationItem.fulfilled.match(resultAction)) {
         throw new Error(
           typeof resultAction.payload === 'string'
@@ -129,10 +137,25 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
       setState((prev) => ({
         ...prev,
         purchaseCount: result.purchaseCount,
+        purchaseCountsByTier: result.purchaseCountsByTier ?? prev.purchaseCountsByTier,
       }));
 
+      const shortName = t(`donationItem.tiers.${tier}.shortName`, { ns: 'pages' });
+      const noPrivilege = t('donationItem.noPrivilegeNotice', { ns: 'pages' });
+
       if (result.outcome === 'succeeded' || result.outcome === 'already-purchased') {
-        toast.success(t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' }));
+        const base = t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' });
+        const tierThanks = t('donationItem.messages.tierThanks', {
+          ns: 'pages',
+          shortName,
+          defaultValue: base,
+        });
+        // Higher tiers get stronger toast (duration / description with no-privilege restatement).
+        const duration = tier === 'candy' ? 8000 : tier === 'dinner' ? 5500 : 4000;
+        toast.success(tierThanks, {
+          description: noPrivilege,
+          duration,
+        });
       } else if (result.outcome === 'canceled' || result.outcome === 'not-purchased') {
         toast.message(t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' }));
       } else {
@@ -147,7 +170,7 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
         error: error instanceof Error ? error.message : String(error),
       }));
     } finally {
-      setIsPurchasing(false);
+      setPurchasingTier(null);
     }
   };
 
@@ -183,12 +206,21 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
   };
 
   return (
-    <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-orange-500/10 p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+    <section
+      className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-orange-500/10 p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+      data-testid="msstore-donation-panel"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-primary">作者快穷死了，救救作者</h2>
           <p className="mt-2 text-sm text-foreground/80">作者的 token 要耗尽了，快为作者续命</p>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p
+            className="mt-3 text-sm text-muted-foreground"
+            data-testid="msstore-donation-no-privilege"
+          >
+            {t('donationItem.noPrivilegeNotice', { ns: 'pages' })}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
             {t('donationItem.purchaseCount', { ns: 'pages', count: state.purchaseCount })}
           </p>
         </div>
@@ -207,16 +239,47 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
         ) : null}
       </div>
 
-      <div className="mt-4">
-        <Button
-          type="button"
-          onClick={() => void handlePurchase()}
-          disabled={isPurchasing}
-          className="group gap-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30"
-        >
-          {isPurchasing ? t('donationItem.actions.purchasing', { ns: 'pages' }) : t('donationItem.actions.purchase', { ns: 'pages' })}
-          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-        </Button>
+      <div className="mt-5 grid gap-3" data-testid="msstore-donation-tier-list">
+        {tierCatalog.map((tierMeta) => {
+          const shortName = t(tierMeta.shortNameKey, { ns: 'pages' });
+          const isPurchasing = purchasingTier === tierMeta.tier;
+          const busy = purchasingTier !== null;
+
+          return (
+            <div
+              key={tierMeta.tier}
+              data-testid={`msstore-donation-tier-${tierMeta.tier}`}
+              data-visual-level={tierMeta.visualLevel}
+              className={`rounded-2xl border p-4 transition-all duration-300 motion-reduce:transition-none ${tierMeta.cardClassName}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-foreground">
+                    <span aria-hidden="true" className="mr-1.5">
+                      {tierMeta.emoji}
+                    </span>
+                    {shortName}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => void handlePurchase(tierMeta.tier)}
+                  disabled={busy}
+                  className={`group gap-2 transition-all duration-300 hover:-translate-y-0.5 motion-reduce:transform-none ${tierMeta.buttonClassName}`}
+                >
+                  {isPurchasing
+                    ? t('donationItem.actions.purchasing', { ns: 'pages' })
+                    : t('donationItem.actions.purchaseTier', {
+                      ns: 'pages',
+                      shortName,
+                      defaultValue: t('donationItem.actions.purchase', { ns: 'pages' }),
+                    })}
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

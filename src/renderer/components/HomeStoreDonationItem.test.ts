@@ -27,14 +27,25 @@ describe('HomeStoreDonationItem', () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
     assert.match(source, /donationItem\.purchaseCount/);
-    assert.match(source, /window\.electronAPI\.msstoreDonationItem\.purchase\(\)/);
+    assert.match(source, /purchaseMsstoreDonationItem\(\{ tier \}\)/);
     assert.match(source, /purchaseCount: result\.purchaseCount/);
   });
 
-  it('keeps required fixed Chinese campaign copy in component', async () => {
+  it('renders three progressive tier cards without price text', async () => {
+    const source = await fs.readFile(componentPath, 'utf8');
+
+    assert.match(source, /getMsstoreDonationTierCatalog/);
+    assert.match(source, /data-testid=\{`msstore-donation-tier-\$\{tierMeta\.tier\}`\}/);
+    assert.match(source, /data-visual-level=\{tierMeta\.visualLevel\}/);
+    assert.doesNotMatch(source, /\$0\.99|\$9\.99|\$399\.99|displayPrice|USD/);
+    assert.doesNotMatch(source, /给作者来杯卡布奇诺|给作者晚餐加上小青龙|给作者刷一个嘉年华/);
+  });
+
+  it('shows no-privilege notice and keeps required fixed Chinese campaign copy', async () => {
     const source = await fs.readFile(componentPath, 'utf8');
 
     assert.match(source, /作者快穷死了，救救作者/);
     assert.match(source, /作者的 token 要耗尽了，快为作者续命/);
+    assert.match(source, /donationItem\.noPrivilegeNotice/);
   });
 });

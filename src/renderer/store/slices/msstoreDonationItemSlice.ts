@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type {
   MsstoreDonationItemBridge,
+  MsstoreDonationItemPurchaseRequest,
   MsstoreDonationItemPurchaseResult,
   MsstoreDonationItemState,
 } from '../../../types/msstore-donation-item.js';
@@ -44,9 +45,9 @@ export const loadMsstoreDonationItemState = createAsyncThunk(
 
 export const purchaseMsstoreDonationItem = createAsyncThunk(
   'msstoreDonationItem/purchase',
-  async (_, { rejectWithValue }) => {
+  async (input: MsstoreDonationItemPurchaseRequest, { rejectWithValue }) => {
     try {
-      return await getBridge().purchase();
+      return await getBridge().purchase(input);
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
     }
@@ -107,6 +108,7 @@ const msstoreDonationItemSlice = createSlice({
         state.lastPurchase = action.payload;
         state.state = {
           purchaseCount: action.payload.purchaseCount,
+          purchaseCountsByTier: action.payload.purchaseCountsByTier,
           dismissedAt: state.state?.dismissedAt,
         };
       })
@@ -134,7 +136,5 @@ const msstoreDonationItemSlice = createSlice({
 });
 
 export const { setMsstoreDonationItemState } = msstoreDonationItemSlice.actions;
-
 export const selectMsstoreDonationItemState = (state: { msstoreDonationItem: MsstoreDonationItemSliceState }) => state.msstoreDonationItem;
-
 export default msstoreDonationItemSlice.reducer;

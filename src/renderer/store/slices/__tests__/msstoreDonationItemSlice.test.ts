@@ -18,11 +18,13 @@ describe('msstoreDonationItemSlice', () => {
 
     const nextState = reducer(initialState, setMsstoreDonationItemState({
       purchaseCount: 5,
+      purchaseCountsByTier: { coffee: 3, dinner: 1, candy: 1 },
       dismissedAt: '2024-06-01T00:00:00.000Z',
     }));
 
     assert.deepEqual(nextState.state, {
       purchaseCount: 5,
+      purchaseCountsByTier: { coffee: 3, dinner: 1, candy: 1 },
       dismissedAt: '2024-06-01T00:00:00.000Z',
     });
     assert.equal(nextState.error, null);
