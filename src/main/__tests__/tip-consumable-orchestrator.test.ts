@@ -15,6 +15,7 @@ function createDeps(options: {
   unfulfilled?: WindowsStoreUnfulfilledConsumableItem[] | (() => WindowsStoreUnfulfilledConsumableItem[]);
   queryOk?: boolean;
   reportOk?: boolean | ((productId: string) => boolean);
+  reportStatus?: string;
   purchaseOutcome?: StoreLicensePurchaseOutcome;
   purchaseImpl?: TipConsumableDeps['purchase'];
 }): TipConsumableDeps & {
@@ -23,20 +24,14 @@ function createDeps(options: {
 } {
   const reportCalls: Array<{ productId: string; trackingId?: string | null; quantity?: number }> = [];
   const purchaseCalls: string[] = [];
-  let unfulfilledReads = 0;
 
   return {
     reportCalls,
     purchaseCalls,
     async getUnfulfilled() {
-      unfulfilledReads += 1;
       const items = typeof options.unfulfilled === 'function'
         ? options.unfulfilled()
         : (options.unfulfilled ?? []);
-      // After first successful consume path tests may re-query with empty.
-      if (unfulfilledReads > 1 && options.unfulfilled && !Array.isArray(options.unfulfilled)) {
-        // keep function behavior
-      }
       return {
         ok: options.queryOk ?? true,
         items,
@@ -51,7 +46,7 @@ function createDeps(options: {
         : (options.reportOk ?? true);
       return {
         ok,
-        status: ok ? 'succeeded' : 'failed',
+        status: ok ? 'succeeded' : (options.reportStatus ?? 'failed'),
         trackingId: input.trackingId ?? null,
         balanceRemaining: ok ? 0 : 1,
         errorCode: ok ? null : 'report-failed',
@@ -84,41 +79,36 @@ describe('tip consumable orchestrator', () => {
     ]);
   });
 
-  it('no-pending proceeds to purchase and post-consume', async () => {
-    const deps = createDeps({ unfulfilled: [], purchaseOutcome: 'succeeded' });
+  it('no-pending proceeds to purchase and post-consume report', async () => {
+    const deps = createDeps({
+      // Benign miss on pre-purchase reconcile (nothing unfulfilled).
+      reportOk: true,
+      purchaseOutcome: 'succeeded',
+    });
     const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.phase, 'consume');
     assert.equal(result.localCountIncremented, true);
     assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
+    // 3 tip products pre-reconcile + 1 post-purchase consume
+    assert.ok(deps.reportCalls.length >= 4);
+    assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NC5T6VC1NQH');
   });
 
-  it('pending tips are consumed before purchase', async () => {
-    let phase = 0;
-    const deps = createDeps({
-      unfulfilled: () => {
-        phase += 1;
-        if (phase === 1) {
-          return [{ trackingId: 'pending-1', productId: '9NC5T6VC1NQH', quantity: 1 }];
-        }
-        // post-purchase re-query for purchased product
-        return [{ trackingId: 'new-1', productId: '9NSKR15751LN', quantity: 1 }];
-      },
-      purchaseOutcome: 'succeeded',
-    });
-
-    const result = await purchaseTipWithReconcile(deps, '9NSKR15751LN');
-    assert.equal(result.outcome, 'succeeded');
-    assert.equal(result.localCountIncremented, true);
-    assert.ok(deps.reportCalls.length >= 2);
-    assert.equal(deps.reportCalls[0]?.trackingId, 'pending-1');
-    assert.equal(deps.reportCalls[0]?.productId, '9NC5T6VC1NQH');
-    assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NSKR15751LN');
+  it('developer-managed pre-reconcile reports each tip product before purchase', async () => {
+    const deps = createDeps({ reportOk: true, purchaseOutcome: 'succeeded' });
+    await purchaseTipWithReconcile(deps, '9NSKR15751LN');
+    const prePurchaseReports = deps.reportCalls.slice(0, 3).map((c) => c.productId).sort();
+    assert.deepEqual(prePurchaseReports, ['9MWTKDX9J62G', '9NC5T6VC1NQH', '9NSKR15751LN'].sort());
     assert.deepEqual(deps.purchaseCalls, ['9NSKR15751LN']);
   });
 
-  it('reconcile failure blocks purchase', async () => {
-    const deps = createDeps({ queryOk: false, purchaseOutcome: 'succeeded' });
+  it('hard reconcile failure blocks purchase', async () => {
+    const deps = createDeps({
+      reportOk: false,
+      reportStatus: 'network-error',
+      purchaseOutcome: 'succeeded',
+    });
     const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
     assert.equal(result.outcome, 'reconcile-failed');
     assert.equal(result.phase, 'reconcile');
@@ -126,42 +116,79 @@ describe('tip consumable orchestrator', () => {
     assert.deepEqual(deps.purchaseCalls, []);
   });
 
-  it('purchase success + consume fail does not increment local count', async () => {
+  it('benign insufficient-quantity during reconcile does not block purchase', async () => {
     const deps = createDeps({
-      unfulfilled: [],
-      purchaseOutcome: 'succeeded',
       reportOk: false,
-    });
-    // consumeAfterPurchase: direct report fails, re-query empty -> ok. Force non-empty post query.
-    const deps2 = createDeps({
+      reportStatus: 'insufficient-quantity',
       purchaseOutcome: 'succeeded',
-      unfulfilled: () => [{ trackingId: 'x', productId: '9NC5T6VC1NQH', quantity: 1 }],
-      reportOk: (productId) => {
-        // fail only after purchase reports (still fail all)
-        void productId;
-        return false;
-      },
     });
-
-    // First consume during reconcile will also fail — use empty first then fail post.
-    let calls = 0;
-    const deps3: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
+    // reportOk false for all reports including post-purchase — will fail post consume
+    // Use custom: reconcile insufficient, post-purchase success
+    let reportCount = 0;
+    const deps2: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
       reportCalls: [],
       purchaseCalls: [],
       async getUnfulfilled() {
-        calls += 1;
-        if (calls === 1) {
-          return { ok: true, items: [], errorCode: null, errorMessage: null };
+        return { ok: true, items: [], errorCode: null, errorMessage: null };
+      },
+      async reportFulfillment(input) {
+        deps2.reportCalls.push(input);
+        reportCount += 1;
+        if (reportCount <= 3) {
+          return {
+            ok: false,
+            status: 'insufficient-quantity',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: 'insufficient-quantity',
+            errorMessage: 'InsufficentQuantity',
+          };
         }
         return {
           ok: true,
-          items: [{ trackingId: 'post', productId: '9NC5T6VC1NQH', quantity: 1 }],
+          status: 'succeeded',
+          trackingId: null,
+          balanceRemaining: 0,
           errorCode: null,
           errorMessage: null,
         };
       },
+      async purchase(productId) {
+        deps2.purchaseCalls.push(productId);
+        return { outcome: 'succeeded' };
+      },
+    };
+
+    const result = await purchaseTipWithReconcile(deps2, '9NC5T6VC1NQH');
+    assert.equal(result.outcome, 'succeeded');
+    assert.equal(result.localCountIncremented, true);
+    assert.deepEqual(deps2.purchaseCalls, ['9NC5T6VC1NQH']);
+    void deps;
+  });
+
+  it('purchase success + post consume fail does not increment local count', async () => {
+    let reportCount = 0;
+    const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
+      reportCalls: [],
+      purchaseCalls: [],
+      async getUnfulfilled() {
+        return { ok: true, items: [], errorCode: null, errorMessage: null };
+      },
       async reportFulfillment(input) {
-        deps3.reportCalls.push(input);
+        deps.reportCalls.push(input);
+        reportCount += 1;
+        if (reportCount <= 3) {
+          // pre-reconcile benign
+          return {
+            ok: false,
+            status: 'insufficient-quantity',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
+        // post-purchase hard fail
         return {
           ok: false,
           status: 'failed',
@@ -172,19 +199,17 @@ describe('tip consumable orchestrator', () => {
         };
       },
       async purchase(productId) {
-        deps3.purchaseCalls.push(productId);
+        deps.purchaseCalls.push(productId);
         return { outcome: 'succeeded' };
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps3, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
     assert.equal(result.outcome, 'consume-failed');
     assert.equal(result.phase, 'consume');
     assert.equal(result.purchaseOutcome, 'succeeded');
     assert.equal(result.localCountIncremented, false);
-    assert.deepEqual(deps3.purchaseCalls, ['9NC5T6VC1NQH']);
-    void deps;
-    void deps2;
+    assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
   });
 
   it('single-flight rejects concurrent purchase', async () => {
@@ -192,12 +217,25 @@ describe('tip consumable orchestrator', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let reportCount = 0;
 
     const deps: TipConsumableDeps = {
       async getUnfulfilled() {
         return { ok: true, items: [], errorCode: null, errorMessage: null };
       },
       async reportFulfillment() {
+        reportCount += 1;
+        // pre-reconcile benign; after purchase (report #4+) succeed
+        if (reportCount <= 3) {
+          return {
+            ok: false,
+            status: 'insufficient-quantity',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
         return {
           ok: true,
           status: 'succeeded',
@@ -214,7 +252,6 @@ describe('tip consumable orchestrator', () => {
     };
 
     const first = purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
-    // Allow first to enter purchase wait
     await new Promise((r) => setTimeout(r, 10));
     const second = await purchaseTipWithReconcile(deps, '9NSKR15751LN');
     assert.equal(second.outcome, 'busy');
@@ -223,49 +260,48 @@ describe('tip consumable orchestrator', () => {
     assert.equal(firstResult.outcome, 'succeeded');
   });
 
-  it('reconcilePendingTips ignores non-tip products', async () => {
-    const deps = createDeps({
-      unfulfilled: [
-        { trackingId: 'x', productId: 'NOT-TIP', quantity: 1 },
-      ],
-    });
+  it('reconcilePendingTips reports each whitelist tip product', async () => {
+    const deps = createDeps({ reportOk: true });
     const result = await reconcilePendingTips(deps);
     assert.equal(result.ok, true);
-    assert.equal(result.consumedPendingCount, 0);
-    assert.equal((deps as ReturnType<typeof createDeps>).reportCalls.length, 0);
+    assert.equal(result.consumedPendingCount, 3);
+    assert.equal(deps.reportCalls.length, 3);
   });
 
-  it('consumeAfterPurchase prefers trackingId then re-queries', async () => {
-    const deps = createDeps({ unfulfilled: [] });
+  it('consumeAfterPurchase always reports qty=1 without requiring balance query', async () => {
+    const deps = createDeps({ reportOk: true });
     const ok = await consumeAfterPurchase(deps, '9NC5T6VC1NQH', 'track-1');
     assert.equal(ok.ok, true);
-    assert.equal((deps as ReturnType<typeof createDeps>).reportCalls[0]?.trackingId, 'track-1');
+    assert.equal(ok.fulfilledCount, 1);
+    assert.equal(deps.reportCalls[0]?.trackingId, 'track-1');
+    assert.equal(deps.reportCalls[0]?.quantity, 1);
+    // getUnfulfilled must not be required
+    assert.equal(deps.reportCalls.length, 1);
   });
 
-
-  it('already-purchased forces consume then retries purchase once', async () => {
+  it('already-purchased force-reports then retries purchase once', async () => {
     let purchaseCount = 0;
-    let unfulfilledCalls = 0;
+    let reportCount = 0;
     const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
       reportCalls: [],
       purchaseCalls: [],
       async getUnfulfilled() {
-        unfulfilledCalls += 1;
-        // 1: pre-purchase reconcile (empty)
-        // 2: force-consume after already-purchased (balance 1)
-        // later: post-purchase consume (empty)
-        if (unfulfilledCalls === 2) {
-          return {
-            ok: true,
-            items: [{ trackingId: 'leftover', productId: '9NC5T6VC1NQH', quantity: 1 }],
-            errorCode: null,
-            errorMessage: null,
-          };
-        }
         return { ok: true, items: [], errorCode: null, errorMessage: null };
       },
       async reportFulfillment(input) {
         deps.reportCalls.push(input);
+        reportCount += 1;
+        // pre-reconcile 3 benign, force+post success
+        if (reportCount <= 3) {
+          return {
+            ok: false,
+            status: 'insufficient-quantity',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
         return {
           ok: true,
           status: 'succeeded',
@@ -289,43 +325,31 @@ describe('tip consumable orchestrator', () => {
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.localCountIncremented, true);
     assert.equal(deps.purchaseCalls.length, 2);
-    assert.ok(deps.reportCalls.length >= 1);
+    // force report + post-purchase report at least
+    assert.ok(deps.reportCalls.length >= 5);
   });
 
-  it('already-purchased with zero consumable balance surfaces no-consumable-balance', async () => {
-    const deps = createDeps({
-      unfulfilled: [],
-      purchaseOutcome: 'already-purchased',
-      reportOk: true,
-    });
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
-    assert.equal(result.outcome, 'consume-failed');
-    assert.equal(result.errorCode, 'no-consumable-balance');
-    assert.equal(result.localCountIncremented, false);
-    // No retry purchase when force-consume cannot fulfill anything.
-    assert.equal(deps.purchaseCalls.length, 1);
-  });
-
-  it('already-purchased after successful force-consume retry still owned surfaces tip-not-consumable', async () => {
-    let unfulfilledCalls = 0;
+  it('already-purchased after successful force-report still owned surfaces tip-not-consumable', async () => {
+    let reportCount = 0;
     const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
       reportCalls: [],
       purchaseCalls: [],
       async getUnfulfilled() {
-        unfulfilledCalls += 1;
-        // reconcile empty; force-consume sees balance; post paths empty
-        if (unfulfilledCalls === 2) {
-          return {
-            ok: true,
-            items: [{ trackingId: 'bal', productId: '9NC5T6VC1NQH', quantity: 1 }],
-            errorCode: null,
-            errorMessage: null,
-          };
-        }
         return { ok: true, items: [], errorCode: null, errorMessage: null };
       },
       async reportFulfillment(input) {
         deps.reportCalls.push(input);
+        reportCount += 1;
+        if (reportCount <= 3) {
+          return {
+            ok: false,
+            status: 'insufficient-quantity',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
         return {
           ok: true,
           status: 'succeeded',
@@ -347,5 +371,4 @@ describe('tip consumable orchestrator', () => {
     assert.equal(result.localCountIncremented, false);
     assert.equal(deps.purchaseCalls.length, 2);
   });
-
 });
