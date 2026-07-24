@@ -241,4 +241,62 @@ describe('tip consumable orchestrator', () => {
     assert.equal(ok.ok, true);
     assert.equal((deps as ReturnType<typeof createDeps>).reportCalls[0]?.trackingId, 'track-1');
   });
+
+
+  it('already-purchased forces consume then retries purchase once', async () => {
+    let purchaseCount = 0;
+    const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
+      reportCalls: [],
+      purchaseCalls: [],
+      async getUnfulfilled() {
+        return {
+          ok: true,
+          items: purchaseCount === 0
+            ? [{ trackingId: 'leftover', productId: '9NC5T6VC1NQH', quantity: 1 }]
+            : [],
+          errorCode: null,
+          errorMessage: null,
+        };
+      },
+      async reportFulfillment(input) {
+        deps.reportCalls.push(input);
+        return {
+          ok: true,
+          status: 'succeeded',
+          trackingId: input.trackingId ?? null,
+          balanceRemaining: 0,
+          errorCode: null,
+          errorMessage: null,
+        };
+      },
+      async purchase(productId) {
+        deps.purchaseCalls.push(productId);
+        purchaseCount += 1;
+        if (purchaseCount === 1) {
+          return { outcome: 'already-purchased' };
+        }
+        return { outcome: 'succeeded' };
+      },
+    };
+
+    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    assert.equal(result.outcome, 'succeeded');
+    assert.equal(result.localCountIncremented, true);
+    assert.equal(deps.purchaseCalls.length, 2);
+    assert.ok(deps.reportCalls.length >= 1);
+  });
+
+  it('already-purchased after consume retry surfaces tip-not-consumable', async () => {
+    const deps = createDeps({
+      unfulfilled: [],
+      purchaseOutcome: 'already-purchased',
+      reportOk: true,
+    });
+    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    assert.equal(result.outcome, 'already-purchased');
+    assert.equal(result.errorCode, 'tip-not-consumable');
+    assert.equal(result.localCountIncremented, false);
+    assert.equal(deps.purchaseCalls.length, 2);
+  });
+
 });

@@ -231,6 +231,7 @@ async function runPurchaseWithReconcile(
   }
 
   let purchaseOutcome: StoreLicensePurchaseOutcome;
+  let consumedPendingCount = reconcile.consumedPendingCount;
   try {
     const purchaseResult = await deps.purchase(productId);
     purchaseOutcome = purchaseResult.outcome;
@@ -241,9 +242,57 @@ async function runPurchaseWithReconcile(
       purchaseOutcome: 'failed',
       errorCode: 'purchase-threw',
       errorMessage: error instanceof Error ? error.message : String(error),
-      consumedPendingCount: reconcile.consumedPendingCount,
+      consumedPendingCount,
       localCountIncremented: false,
     };
+  }
+
+  // Durable-misconfigured or leftover unfulfilled consumable often surfaces as already-purchased.
+  // Force consume this product, then retry purchase once so a true consumable can be bought again.
+  if (purchaseOutcome === 'already-purchased') {
+    const forced = await consumeAfterPurchase(deps, productId);
+    if (!forced.ok) {
+      return {
+        phase: 'consume',
+        outcome: 'consume-failed',
+        purchaseOutcome,
+        errorCode: forced.errorCode ?? 'already-purchased-consume-failed',
+        errorMessage: forced.errorMessage
+          ?? 'Store reports already purchased, but consumable fulfillment failed. Retry tip sync.',
+        consumedPendingCount,
+        localCountIncremented: false,
+      };
+    }
+    consumedPendingCount += 1;
+
+    try {
+      const retry = await deps.purchase(productId);
+      purchaseOutcome = retry.outcome;
+    } catch (error) {
+      return {
+        phase: 'purchase',
+        outcome: 'failed',
+        purchaseOutcome: 'failed',
+        errorCode: 'purchase-retry-threw',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        consumedPendingCount,
+        localCountIncremented: false,
+      };
+    }
+
+    // Still already-purchased after consume: product is likely Durable in Partner Center, not Consumable.
+    if (purchaseOutcome === 'already-purchased') {
+      return {
+        phase: 'purchase',
+        outcome: 'already-purchased',
+        purchaseOutcome,
+        errorCode: 'tip-not-consumable',
+        errorMessage:
+          'Store still reports already purchased after consumable fulfillment. Check Partner Center product type is Consumable (not Durable).',
+        consumedPendingCount,
+        localCountIncremented: false,
+      };
+    }
   }
 
   if (!successPurchaseOutcomes.has(purchaseOutcome)) {
@@ -253,7 +302,7 @@ async function runPurchaseWithReconcile(
       purchaseOutcome,
       errorCode: null,
       errorMessage: null,
-      consumedPendingCount: reconcile.consumedPendingCount,
+      consumedPendingCount,
       localCountIncremented: false,
     };
   }
@@ -266,7 +315,7 @@ async function runPurchaseWithReconcile(
       purchaseOutcome,
       errorCode: postConsume.errorCode,
       errorMessage: postConsume.errorMessage,
-      consumedPendingCount: reconcile.consumedPendingCount,
+      consumedPendingCount,
       localCountIncremented: false,
     };
   }
@@ -277,7 +326,7 @@ async function runPurchaseWithReconcile(
     purchaseOutcome,
     errorCode: null,
     errorMessage: null,
-    consumedPendingCount: reconcile.consumedPendingCount,
+    consumedPendingCount,
     localCountIncremented: true,
   };
 }
