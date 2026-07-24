@@ -245,18 +245,24 @@ describe('tip consumable orchestrator', () => {
 
   it('already-purchased forces consume then retries purchase once', async () => {
     let purchaseCount = 0;
+    let unfulfilledCalls = 0;
     const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
       reportCalls: [],
       purchaseCalls: [],
       async getUnfulfilled() {
-        return {
-          ok: true,
-          items: purchaseCount === 0
-            ? [{ trackingId: 'leftover', productId: '9NC5T6VC1NQH', quantity: 1 }]
-            : [],
-          errorCode: null,
-          errorMessage: null,
-        };
+        unfulfilledCalls += 1;
+        // 1: pre-purchase reconcile (empty)
+        // 2: force-consume after already-purchased (balance 1)
+        // later: post-purchase consume (empty)
+        if (unfulfilledCalls === 2) {
+          return {
+            ok: true,
+            items: [{ trackingId: 'leftover', productId: '9NC5T6VC1NQH', quantity: 1 }],
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
+        return { ok: true, items: [], errorCode: null, errorMessage: null };
       },
       async reportFulfillment(input) {
         deps.reportCalls.push(input);
@@ -286,12 +292,55 @@ describe('tip consumable orchestrator', () => {
     assert.ok(deps.reportCalls.length >= 1);
   });
 
-  it('already-purchased after consume retry surfaces tip-not-consumable', async () => {
+  it('already-purchased with zero consumable balance surfaces no-consumable-balance', async () => {
     const deps = createDeps({
       unfulfilled: [],
       purchaseOutcome: 'already-purchased',
       reportOk: true,
     });
+    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    assert.equal(result.outcome, 'consume-failed');
+    assert.equal(result.errorCode, 'no-consumable-balance');
+    assert.equal(result.localCountIncremented, false);
+    // No retry purchase when force-consume cannot fulfill anything.
+    assert.equal(deps.purchaseCalls.length, 1);
+  });
+
+  it('already-purchased after successful force-consume retry still owned surfaces tip-not-consumable', async () => {
+    let unfulfilledCalls = 0;
+    const deps: TipConsumableDeps & { reportCalls: unknown[]; purchaseCalls: string[] } = {
+      reportCalls: [],
+      purchaseCalls: [],
+      async getUnfulfilled() {
+        unfulfilledCalls += 1;
+        // reconcile empty; force-consume sees balance; post paths empty
+        if (unfulfilledCalls === 2) {
+          return {
+            ok: true,
+            items: [{ trackingId: 'bal', productId: '9NC5T6VC1NQH', quantity: 1 }],
+            errorCode: null,
+            errorMessage: null,
+          };
+        }
+        return { ok: true, items: [], errorCode: null, errorMessage: null };
+      },
+      async reportFulfillment(input) {
+        deps.reportCalls.push(input);
+        return {
+          ok: true,
+          status: 'succeeded',
+          trackingId: input.trackingId ?? null,
+          balanceRemaining: 0,
+          errorCode: null,
+          errorMessage: null,
+        };
+      },
+      async purchase(productId) {
+        deps.purchaseCalls.push(productId);
+        return { outcome: 'already-purchased' };
+      },
+    };
+
     const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
     assert.equal(result.outcome, 'already-purchased');
     assert.equal(result.errorCode, 'tip-not-consumable');

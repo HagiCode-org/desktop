@@ -1,3 +1,4 @@
+import log from 'electron-log';
 import {
   MSSTORE_DONATION_TIP_PRODUCT_ID_SET,
   type MsstoreDonationTipProductId,
@@ -71,22 +72,48 @@ export function createDefaultTipConsumableDeps(
   options: { modulePath?: string | null } = {},
 ): TipConsumableDeps {
   const modulePath = options.modulePath ?? resolveWindowsStorePurchaseAddonPath() ?? '';
+  log.info('[TipConsumable] createDefaultTipConsumableDeps', {
+    modulePath: modulePath || null,
+    hasModulePath: Boolean(modulePath),
+  });
 
   return {
     purchase,
     async getUnfulfilled(productIds) {
-      return executeWindowsStoreGetUnfulfilledConsumables({
+      log.info('[TipConsumable] getUnfulfilled call', { modulePath: modulePath || null, productIds });
+      const result = await executeWindowsStoreGetUnfulfilledConsumables({
         modulePath,
         productIds,
       });
+      log.info('[TipConsumable] getUnfulfilled result', {
+        ok: result.ok,
+        itemCount: result.items.length,
+        errorCode: result.errorCode,
+        errorMessage: result.errorMessage,
+      });
+      return result;
     },
     async reportFulfillment(input) {
-      return executeWindowsStoreReportConsumableFulfillment({
+      log.info('[TipConsumable] reportFulfillment call', {
+        modulePath: modulePath || null,
+        productId: input.productId,
+        trackingId: input.trackingId ?? null,
+        quantity: input.quantity ?? 1,
+      });
+      const result = await executeWindowsStoreReportConsumableFulfillment({
         modulePath,
         productId: input.productId,
         trackingId: input.trackingId,
         quantity: input.quantity ?? 1,
       });
+      log.info('[TipConsumable] reportFulfillment call result', {
+        ok: result.ok,
+        status: result.status,
+        balanceRemaining: result.balanceRemaining,
+        errorCode: result.errorCode,
+        errorMessage: result.errorMessage,
+      });
+      return result;
     },
   };
 }
@@ -99,10 +126,25 @@ async function consumeItems(
   for (const item of items) {
     const quantity = Math.max(1, item.quantity || 1);
     for (let i = 0; i < quantity; i += 1) {
+      log.info('[TipConsumable] reportFulfillment', {
+        productId: item.productId,
+        trackingId: item.trackingId || null,
+        unitIndex: i + 1,
+        unitTotal: quantity,
+      });
       const report = await deps.reportFulfillment({
         productId: item.productId,
         trackingId: item.trackingId || null,
         quantity: 1,
+      });
+      log.info('[TipConsumable] reportFulfillment result', {
+        productId: item.productId,
+        ok: report.ok,
+        status: report.status,
+        balanceRemaining: report.balanceRemaining,
+        trackingId: report.trackingId,
+        errorCode: report.errorCode,
+        errorMessage: report.errorMessage,
       });
       if (!report.ok) {
         return {
@@ -127,7 +169,15 @@ export async function reconcilePendingTips(
   errorCode: string | null;
   errorMessage: string | null;
 }> {
+  log.info('[TipConsumable] reconcilePendingTips query', { productIds });
   const query = await deps.getUnfulfilled(productIds);
+  log.info('[TipConsumable] reconcilePendingTips query result', {
+    ok: query.ok,
+    rawItemCount: query.items.length,
+    items: query.items,
+    errorCode: query.errorCode,
+    errorMessage: query.errorMessage,
+  });
   if (!query.ok) {
     return {
       ok: false,
@@ -138,6 +188,10 @@ export async function reconcilePendingTips(
   }
 
   const pending = filterTipUnfulfilledItems(query.items);
+  log.info('[TipConsumable] whitelist pending after filter', {
+    pendingCount: pending.length,
+    pending,
+  });
   if (pending.length === 0) {
     return {
       ok: true,
@@ -148,6 +202,12 @@ export async function reconcilePendingTips(
   }
 
   const consume = await consumeItems(deps, pending);
+  log.info('[TipConsumable] reconcile consume finished', {
+    ok: consume.ok,
+    count: consume.count,
+    errorCode: consume.ok ? null : consume.errorCode,
+    errorMessage: consume.ok ? null : consume.errorMessage,
+  });
   if (!consume.ok) {
     return {
       ok: false,
@@ -169,55 +229,109 @@ export async function consumeAfterPurchase(
   deps: TipConsumableDeps,
   productId: MsstoreDonationTipProductId,
   trackingId?: string | null,
+  options: { requireFulfillment?: boolean } = {},
 ): Promise<{
   ok: boolean;
   errorCode: string | null;
   errorMessage: string | null;
+  fulfilledCount: number;
+  balanceSeen: number;
 }> {
+  const requireFulfillment = options.requireFulfillment === true;
+  let fulfilledCount = 0;
+
   if (trackingId) {
+    log.info('[TipConsumable] reportFulfillment with trackingId', { productId, trackingId });
     const report = await deps.reportFulfillment({
       productId,
       trackingId,
       quantity: 1,
     });
+    log.info('[TipConsumable] reportFulfillment result', {
+      productId,
+      trackingId,
+      ok: report.ok,
+      status: report.status,
+      balanceRemaining: report.balanceRemaining,
+      errorCode: report.errorCode,
+      errorMessage: report.errorMessage,
+    });
     if (report.ok) {
-      return { ok: true, errorCode: null, errorMessage: null };
+      return { ok: true, errorCode: null, errorMessage: null, fulfilledCount: 1, balanceSeen: report.balanceRemaining };
     }
     // Fall through to re-query if direct tracking report fails.
   }
 
   const query = await deps.getUnfulfilled([productId]);
+  log.info('[TipConsumable] unfulfilled query for product', {
+    productId,
+    ok: query.ok,
+    itemCount: query.items.length,
+    items: query.items,
+    errorCode: query.errorCode,
+    errorMessage: query.errorMessage,
+  });
   if (!query.ok) {
     return {
       ok: false,
       errorCode: query.errorCode ?? 'consume-failed',
       errorMessage: query.errorMessage ?? 'Failed to query unfulfilled consumable after purchase.',
+      fulfilledCount,
+      balanceSeen: 0,
     };
   }
 
   const pending = filterTipUnfulfilledItems(query.items).filter((item) => item.productId === productId);
+  const balanceSeen = pending.reduce((sum, item) => sum + Math.max(0, item.quantity || 0), 0);
+
   if (pending.length === 0) {
-    // Balance already zero — treat as consumed (idempotent).
-    return { ok: true, errorCode: null, errorMessage: null };
+    if (requireFulfillment) {
+      // already-purchased recovery: empty consumable balance means nothing to fulfill.
+      // Likely Durable ownership or Partner Center product type mismatch.
+      log.warn('[TipConsumable] requireFulfillment but balance is 0', { productId });
+      return {
+        ok: false,
+        errorCode: 'no-consumable-balance',
+        errorMessage:
+          'Store reports already purchased but consumable balance is 0. Product is likely Durable (not Consumable) in Partner Center, or fulfillment already cleared without unlocking repurchase.',
+        fulfilledCount,
+        balanceSeen: 0,
+      };
+    }
+    // Normal post-purchase path: balance already zero — treat as consumed (idempotent).
+    log.info('[TipConsumable] no pending balance; treat post-purchase consume as ok', { productId });
+    return { ok: true, errorCode: null, errorMessage: null, fulfilledCount, balanceSeen: 0 };
   }
 
   const consume = await consumeItems(deps, pending);
+  fulfilledCount += consume.count;
   if (!consume.ok) {
     return {
       ok: false,
       errorCode: consume.errorCode,
       errorMessage: consume.errorMessage,
+      fulfilledCount,
+      balanceSeen,
     };
   }
 
-  return { ok: true, errorCode: null, errorMessage: null };
+  return { ok: true, errorCode: null, errorMessage: null, fulfilledCount, balanceSeen };
 }
 
 async function runPurchaseWithReconcile(
   deps: TipConsumableDeps,
   productId: MsstoreDonationTipProductId,
 ): Promise<TipConsumableOrchestratorResult> {
+  log.info('[TipConsumable] purchaseWithReconcile start', { productId });
+
   const reconcile = await reconcilePendingTips(deps);
+  log.info('[TipConsumable] pre-purchase reconcile done', {
+    productId,
+    ok: reconcile.ok,
+    consumedPendingCount: reconcile.consumedPendingCount,
+    errorCode: reconcile.errorCode,
+    errorMessage: reconcile.errorMessage,
+  });
   if (!reconcile.ok) {
     return {
       phase: 'reconcile',
@@ -233,9 +347,19 @@ async function runPurchaseWithReconcile(
   let purchaseOutcome: StoreLicensePurchaseOutcome;
   let consumedPendingCount = reconcile.consumedPendingCount;
   try {
+    log.info('[TipConsumable] purchase attempt', { productId, attempt: 1 });
     const purchaseResult = await deps.purchase(productId);
     purchaseOutcome = purchaseResult.outcome;
+    log.info('[TipConsumable] purchase attempt result', {
+      productId,
+      attempt: 1,
+      outcome: purchaseOutcome,
+    });
   } catch (error) {
+    log.error('[TipConsumable] purchase threw', {
+      productId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       phase: 'purchase',
       outcome: 'failed',
@@ -250,7 +374,16 @@ async function runPurchaseWithReconcile(
   // Durable-misconfigured or leftover unfulfilled consumable often surfaces as already-purchased.
   // Force consume this product, then retry purchase once so a true consumable can be bought again.
   if (purchaseOutcome === 'already-purchased') {
-    const forced = await consumeAfterPurchase(deps, productId);
+    log.warn('[TipConsumable] already-purchased; force consumable fulfillment before retry', { productId });
+    const forced = await consumeAfterPurchase(deps, productId, null, { requireFulfillment: true });
+    log.info('[TipConsumable] force consume after already-purchased', {
+      productId,
+      ok: forced.ok,
+      fulfilledCount: forced.fulfilledCount,
+      balanceSeen: forced.balanceSeen,
+      errorCode: forced.errorCode,
+      errorMessage: forced.errorMessage,
+    });
     if (!forced.ok) {
       return {
         phase: 'consume',
@@ -263,12 +396,22 @@ async function runPurchaseWithReconcile(
         localCountIncremented: false,
       };
     }
-    consumedPendingCount += 1;
+    consumedPendingCount += forced.fulfilledCount;
 
     try {
+      log.info('[TipConsumable] purchase attempt', { productId, attempt: 2, reason: 'after-force-consume' });
       const retry = await deps.purchase(productId);
       purchaseOutcome = retry.outcome;
+      log.info('[TipConsumable] purchase attempt result', {
+        productId,
+        attempt: 2,
+        outcome: purchaseOutcome,
+      });
     } catch (error) {
+      log.error('[TipConsumable] purchase retry threw', {
+        productId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return {
         phase: 'purchase',
         outcome: 'failed',
@@ -282,6 +425,7 @@ async function runPurchaseWithReconcile(
 
     // Still already-purchased after consume: product is likely Durable in Partner Center, not Consumable.
     if (purchaseOutcome === 'already-purchased') {
+      log.error('[TipConsumable] still already-purchased after force consume', { productId });
       return {
         phase: 'purchase',
         outcome: 'already-purchased',
@@ -296,6 +440,10 @@ async function runPurchaseWithReconcile(
   }
 
   if (!successPurchaseOutcomes.has(purchaseOutcome)) {
+    log.info('[TipConsumable] non-success purchase outcome; skip post-consume', {
+      productId,
+      purchaseOutcome,
+    });
     return {
       phase: 'purchase',
       outcome: purchaseOutcome,
@@ -307,7 +455,16 @@ async function runPurchaseWithReconcile(
     };
   }
 
+  log.info('[TipConsumable] post-purchase consume', { productId, purchaseOutcome });
   const postConsume = await consumeAfterPurchase(deps, productId);
+  log.info('[TipConsumable] post-purchase consume result', {
+    productId,
+    ok: postConsume.ok,
+    fulfilledCount: postConsume.fulfilledCount,
+    balanceSeen: postConsume.balanceSeen,
+    errorCode: postConsume.errorCode,
+    errorMessage: postConsume.errorMessage,
+  });
   if (!postConsume.ok) {
     return {
       phase: 'consume',
@@ -320,6 +477,11 @@ async function runPurchaseWithReconcile(
     };
   }
 
+  log.info('[TipConsumable] purchaseWithReconcile success', {
+    productId,
+    purchaseOutcome,
+    consumedPendingCount,
+  });
   return {
     phase: 'consume',
     outcome: purchaseOutcome,

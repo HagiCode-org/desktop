@@ -1,3 +1,4 @@
+import log from 'electron-log';
 import type { BrowserWindow } from 'electron';
 import { electron } from '../../../electron-api.js';
 import type { ConfigManager, MsstoreDonationItemState } from '../../config.js';
@@ -145,7 +146,24 @@ export function registerMsstoreDonationItemHandlers(deps: {
         } satisfies MsstoreDonationItemPurchaseResult;
       }
 
+      log.info('[MsstoreDonationItem] purchase IPC start', {
+        tier: resolved.tier,
+        productId: resolved.productId,
+      });
+
       const orchestrated = await purchaseTipWithReconcile(getTipDeps(), resolved.productId);
+
+      log.info('[MsstoreDonationItem] purchase IPC orchestrated result', {
+        tier: resolved.tier,
+        productId: resolved.productId,
+        phase: orchestrated.phase,
+        outcome: orchestrated.outcome,
+        purchaseOutcome: orchestrated.purchaseOutcome,
+        errorCode: orchestrated.errorCode,
+        errorMessage: orchestrated.errorMessage,
+        consumedPendingCount: orchestrated.consumedPendingCount,
+        localCountIncremented: orchestrated.localCountIncremented,
+      });
 
       const shouldIncrement =
         orchestrated.localCountIncremented
