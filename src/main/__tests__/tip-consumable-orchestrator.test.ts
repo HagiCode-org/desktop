@@ -113,7 +113,7 @@ describe('tip consumable orchestrator', () => {
     assert.ok(deps.reportCalls.length >= 2);
     assert.equal(deps.reportCalls[0]?.trackingId, 'pending-1');
     assert.equal(deps.reportCalls[0]?.productId, '9NC5T6VC1NQH');
-    assert.equal(deps.reportCalls.at(-1)?.productId, '9NSKR15751LN');
+    assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NSKR15751LN');
     assert.deepEqual(deps.purchaseCalls, ['9NSKR15751LN']);
   });
 
