@@ -103,17 +103,48 @@ describe('tip consumable orchestrator', () => {
     assert.deepEqual(deps.purchaseCalls, ['9NSKR15751LN']);
   });
 
-  it('hard reconcile failure blocks purchase', async () => {
-    const deps = createDeps({
-      reportOk: false,
-      reportStatus: 'network-error',
-      purchaseOutcome: 'succeeded',
-    });
+  it('pre-purchase reconcile failures do not block purchase (developer-managed)', async () => {
+    let reportCount = 0;
+    const deps: TipConsumableDeps & { purchaseCalls: string[]; reportCalls: unknown[] } = {
+      reportCalls: [],
+      purchaseCalls: [],
+      async getUnfulfilled() {
+        return { ok: true, items: [], errorCode: null, errorMessage: null };
+      },
+      async reportFulfillment(input) {
+        deps.reportCalls.push(input);
+        reportCount += 1;
+        // pre-reconcile (3 tips) return Store server-error like 0x803F6107
+        if (reportCount <= 3) {
+          return {
+            ok: false,
+            status: 'server-error',
+            trackingId: null,
+            balanceRemaining: 0,
+            errorCode: '0x803F6107',
+            errorMessage: 'ReportConsumableFulfillment status=server-error',
+          };
+        }
+        // post-purchase report succeeds
+        return {
+          ok: true,
+          status: 'succeeded',
+          trackingId: null,
+          balanceRemaining: 0,
+          errorCode: null,
+          errorMessage: null,
+        };
+      },
+      async purchase(productId) {
+        deps.purchaseCalls.push(productId);
+        return { outcome: 'succeeded' };
+      },
+    };
+
     const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
-    assert.equal(result.outcome, 'reconcile-failed');
-    assert.equal(result.phase, 'reconcile');
-    assert.equal(result.localCountIncremented, false);
-    assert.deepEqual(deps.purchaseCalls, []);
+    assert.equal(result.outcome, 'succeeded');
+    assert.equal(result.localCountIncremented, true);
+    assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
   });
 
   it('benign insufficient-quantity during reconcile does not block purchase', async () => {

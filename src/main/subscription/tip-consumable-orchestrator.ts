@@ -169,52 +169,44 @@ export async function reconcilePendingTips(
   errorCode: string | null;
   errorMessage: string | null;
 }> {
-  // Developer-managed consumables: Store does not maintain a usable item balance.
-  // Pre-purchase reconcile = best-effort ReportConsumableFulfillment(qty=1) per tip product
-  // so a previously unfinished purchase cannot block the next buy. Failures that mean
-  // "nothing to fulfill" should not block purchase; hard API failures still block.
+  // Developer-managed consumables (official order):
+  //   1) RequestPurchase
+  //   2) ReportConsumableFulfillment(productId, quantity=1, trackingGuid)
+  // Blind pre-purchase Report often returns Store ServerError (e.g. 0x803F6107) when there is
+  // nothing to fulfill. That must NOT block opening purchase.
+  //
+  // Pre-purchase reconcile is therefore best-effort only: try report once per tip SKU to clear
+  // a stuck unfulfilled purchase, but always continue to purchase.
   const tipProductIds = productIds.filter((id) => MSSTORE_DONATION_TIP_PRODUCT_ID_SET.has(id));
-  log.info('[TipConsumable] reconcilePendingTips developer-managed', { tipProductIds });
+  log.info('[TipConsumable] reconcilePendingTips developer-managed best-effort', { tipProductIds });
 
   let consumedPendingCount = 0;
   for (const productId of tipProductIds) {
     log.info('[TipConsumable] reconcile reportFulfillment', { productId });
-    const report = await deps.reportFulfillment({
-      productId,
-      trackingId: null,
-      quantity: 1,
-    });
-    log.info('[TipConsumable] reconcile reportFulfillment result', {
-      productId,
-      ok: report.ok,
-      status: report.status,
-      errorCode: report.errorCode,
-      errorMessage: report.errorMessage,
-      balanceRemaining: report.balanceRemaining,
-    });
-
-    if (report.ok) {
-      consumedPendingCount += 1;
-      continue;
-    }
-
-    // Insufficient quantity / nothing unfulfilled: safe to continue (no pending purchase).
-    if (isBenignFulfillmentFailure(report)) {
-      log.info('[TipConsumable] reconcile benign fulfillment miss; continue', {
+    try {
+      const report = await deps.reportFulfillment({
         productId,
+        trackingId: null,
+        quantity: 1,
+      });
+      log.info('[TipConsumable] reconcile reportFulfillment result', {
+        productId,
+        ok: report.ok,
         status: report.status,
         errorCode: report.errorCode,
+        errorMessage: report.errorMessage,
+        balanceRemaining: report.balanceRemaining,
+        blocksPurchase: false,
       });
-      continue;
+      if (report.ok) {
+        consumedPendingCount += 1;
+      }
+    } catch (error) {
+      log.warn('[TipConsumable] reconcile reportFulfillment threw; continue to purchase', {
+        productId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-
-    return {
-      ok: false,
-      consumedPendingCount,
-      errorCode: report.errorCode ?? 'reconcile-failed',
-      errorMessage: report.errorMessage
-        ?? `Failed to reconcile consumable fulfillment for ${productId}.`,
-    };
   }
 
   return {
@@ -225,7 +217,8 @@ export async function reconcilePendingTips(
   };
 }
 
-function isBenignFulfillmentFailure(report: {
+/** Used by post-purchase / already-purchased recovery (not pre-purchase gate). */
+export function isBenignFulfillmentFailure(report: {
   ok: boolean;
   status: string;
   errorCode: string | null;
@@ -238,8 +231,10 @@ function isBenignFulfillmentFailure(report: {
     status === 'insufficient-quantity'
     || status.includes('insufficent') // WinRT enum typo InsufficentQuantity
     || code.includes('insuffic')
+    || code === '0x803f6107' // common Store miss when nothing is pending to fulfill
     || message.includes('insuffic')
     || message.includes('quantity')
+    || message.includes('0x803f6107')
   );
 }
 
@@ -371,18 +366,15 @@ async function runPurchaseWithReconcile(
       errorMessage: forced.errorMessage,
     });
     if (!forced.ok) {
-      return {
-        phase: 'consume',
-        outcome: 'consume-failed',
-        purchaseOutcome,
-        errorCode: forced.errorCode ?? 'already-purchased-consume-failed',
-        errorMessage: forced.errorMessage
-          ?? 'Store reports already purchased, but consumable fulfillment failed. Retry tip sync.',
-        consumedPendingCount,
-        localCountIncremented: false,
-      };
+      // Still retry purchase once: some Store errors on report are transient / no-pending,
+      // and a second RequestPurchase may succeed or return a clearer outcome.
+      log.warn('[TipConsumable] force report failed; still retry purchase once', {
+        productId,
+        errorCode: forced.errorCode,
+      });
+    } else {
+      consumedPendingCount += forced.fulfilledCount;
     }
-    consumedPendingCount += forced.fulfilledCount;
 
     try {
       log.info('[TipConsumable] purchase attempt', { productId, attempt: 2, reason: 'after-force-consume' });
