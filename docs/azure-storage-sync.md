@@ -6,8 +6,8 @@ This document describes how to configure object storage for automatic release fi
 
 The Hagicode Desktop project uses two reusable GitHub Actions workflows to synchronize release assets after `build.yml` finishes uploading the release assets and explicitly calls the sync pipeline:
 
-- `sync-azure-storage.yml`: `plan + upload(matrix)`, and it can still run an internal `finalize` step for standalone push or manual recovery runs (names retain Azure for stability)
-- `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json`
+- `sync-azure-storage.yml`: `plan + upload(matrix)` (workflow file name retained; display title is Object Storage)
+- `finalize-azure-storage.yml`: single-writer `finalize` for the root `index.json` (display title: Finalize Object Storage Sync)
 
 Build entry routes through Python Invoke (`./build.sh` -> `python -m pybuild.entry`). Historical Azure-prefixed targets (`GenerateAzureUploadPlan`, `GenerateAzureIndex`, `PublishToAzureBlob`, `Default`) run as native Python under `pybuild/native/` and execute against the **resolved** storage provider (`azure` or `r2`).
 
@@ -26,7 +26,7 @@ R2 path requires `boto3` (declared in `requirements.lock.txt`).
 
 This provides:
 
-- **Redundant backup**: Files stored in both GitHub Releases and Azure Storage
+- **Redundant backup**: Files stored in both GitHub Releases and object storage (R2 by default)
 - **CDN support**: Azure CDN can be configured for faster downloads
 - **Geographic distribution**: Files available from Azure's global infrastructure
 - **Bounded fan-out**: Eligible release assets are uploaded through a `plan -> upload(matrix) -> finalize` workflow instead of a single serial job
@@ -273,18 +273,18 @@ This caller-driven model avoids races where a GitHub Release exists before the s
 You can manually trigger the standalone sync workflow to recover an existing release:
 
 1. Go to "Actions" tab in your repository
-2. Select "Sync Release to Azure Storage"
+2. Select "Sync Release to Object Storage"
 3. Click "Run workflow"
 4. Enter the exact `release_tag` you want to sync
 5. Optionally override `max_parallel` if you want a more conservative or more aggressive upload fan-out
 6. The workflow will plan shards, upload eligible assets, and then finalize the root index
 
 **Tip**: Manual trigger is useful for:
-- Re-syncing an existing release to Azure Storage
+- Re-syncing an existing release to object storage
 - Testing the workflow configuration
 - Syncing a specific release version
 
-For full automated runs, the caller workflow now exposes `Finalize Azure Storage Sync` as a separate top-level job. If the shard uploads are already correct and only the root index needs another attempt, rerun that finalize job instead of re-running the upload fan-out. For standalone manual recovery, the original `sync-azure-storage.yml` workflow still supports a full end-to-end retry.
+For full automated runs, the caller workflow now exposes `Finalize Object Storage Sync` as a separate top-level job. If the shard uploads are already correct and only the root index needs another attempt, rerun that finalize job instead of re-running the upload fan-out. For standalone manual recovery, the original `sync-azure-storage.yml` workflow still supports a full end-to-end retry.
 
 ## CDN Configuration (Optional)
 
@@ -400,17 +400,6 @@ However, **SAS URL is recommended** for better security and simpler configuratio
 
 
 
-## Main branch continuous sync (next version → R2)
-
-On every successful `main` push build:
-
-1. Version is resolved from Release Drafter draft (next semver).
-2. Build artifacts are uploaded to a **draft** GitHub Release at tag `v{nextVersion}` (not a real git tag push).
-3. `sync-azure-upload` / `sync-azure-finalize` run with `release_tag=v{nextVersion}` and `release_channel=beta` (default provider R2).
-
-Tag releases (`v*.*.*`) still publish non-draft releases and sync as before.
-
-Requirements: R2 secrets configured (see provider table). Draft listing/download is supported by pybuild `GitHubReleaseClient` (draft releases are not returned by `/releases/tags/{tag}` alone).
 
 ## Rollback to Azure
 

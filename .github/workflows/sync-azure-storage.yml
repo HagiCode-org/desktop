@@ -1,4 +1,4 @@
-name: Sync Release to Azure Storage
+name: Sync Release to Object Storage
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       release_version:
-        description: 'Version prefix to publish into Azure (defaults to release_tag)'
+        description: 'Version prefix to publish into object storage (defaults to release_tag)'
         required: false
         type: string
         default: ''
@@ -35,7 +35,7 @@ on:
         required: true
         type: string
       release_version:
-        description: 'Version prefix to publish into Azure (defaults to release_tag)'
+        description: 'Version prefix to publish into object storage (defaults to release_tag)'
         required: false
         type: string
       release_channel:
@@ -57,7 +57,7 @@ permissions:
 
 jobs:
   plan:
-    name: Plan Azure Upload Shards
+    name: Plan Storage Upload Shards
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -110,7 +110,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Generate Azure upload plan
+    - name: Generate storage upload plan
       run: |
         ./build.sh \
           --target GenerateAzureUploadPlan \
@@ -150,7 +150,7 @@ jobs:
                 handle.write(f"{key}={value}\n")
 
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-            handle.write("## Azure Sync Plan\n")
+            handle.write("## Object Storage Sync Plan\n")
             handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
             handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
             handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
@@ -159,7 +159,7 @@ jobs:
             handle.write(f"- Planned shards: `{shard_count}`\n")
             handle.write(f"- Max parallel: `{plan['maxParallel']}`\n")
             if shard_count == 0:
-                handle.write("\nNo Azure-sync-eligible release assets were found. Upload fan-out will be skipped.\n")
+                handle.write("\nNo storage-sync-eligible release assets were found. Upload fan-out will be skipped.\n")
         PY
 
     - name: Upload plan artifacts
@@ -172,7 +172,7 @@ jobs:
         if-no-files-found: error
 
   upload:
-    name: Upload Azure Shard ${{ matrix.shard.shardId }}
+    name: Upload Storage Shard ${{ matrix.shard.shardId }}
     needs: plan
     if: needs.plan.outputs.has_shards == 'true'
     runs-on: ubuntu-latest
@@ -219,7 +219,7 @@ jobs:
         )
         PY
 
-    - name: Publish upload shard
+    - name: Publish storage upload shard
       id: publish
       continue-on-error: true
       run: |
@@ -294,5 +294,5 @@ jobs:
     - name: Fail shard job if publish step failed
       if: steps.publish.outcome != 'success'
       run: |
-        echo "::error::Azure shard publication failed for ${{ matrix.shard.shardId }}"
+        echo "::error::Storage shard publication failed for ${{ matrix.shard.shardId }}"
         exit 1

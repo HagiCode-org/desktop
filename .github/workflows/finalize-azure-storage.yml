@@ -1,4 +1,4 @@
-name: Finalize Azure Storage Sync
+name: Finalize Object Storage Sync
 
 on:
   workflow_call:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   finalize:
-    name: Finalize Azure Sync
+    name: Finalize Object Storage Sync
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -31,13 +31,13 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.lock.txt
 
-    - name: Download Azure upload plan
+    - name: Download storage upload plan
       uses: actions/download-artifact@v4
       with:
         name: azure-upload-plan
         path: artifacts/azure-upload-plan
 
-    - name: Read Azure upload plan metadata
+    - name: Read storage upload plan metadata
       id: plan
       run: |
         python3 - <<'PY'
@@ -63,7 +63,7 @@ jobs:
                 handle.write(f"{key}={value}\n")
 
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-            handle.write("## Azure Sync Finalize Plan\n")
+            handle.write("## Object Storage Sync Finalize Plan\n")
             handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
             handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
             handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
@@ -103,7 +103,7 @@ jobs:
         )
         PY
 
-    - name: Finalize Azure index publication
+    - name: Finalize storage index publication
       id: finalize_sync
       if: steps.plan.outputs.has_shards == 'true'
       continue-on-error: true
@@ -151,11 +151,11 @@ jobs:
         import os
         from pathlib import Path
 
-        summary_lines = ["## Azure Sync Finalize"]
+        summary_lines = ["## Object Storage Sync Finalize"]
         has_shards = os.environ["HAS_SHARDS"] == "true"
 
         if not has_shards:
-            summary_lines.append("- Azure sync was skipped because no eligible release assets were found.")
+            summary_lines.append("- Object storage sync was skipped because no eligible release assets were found.")
         else:
             summary_lines.append(f"- Planned shards: `{os.environ['SHARD_COUNT']}`")
             summary_lines.append(f"- Finalize step outcome: `{os.environ['FINALIZE_OUTCOME']}`")
@@ -195,5 +195,5 @@ jobs:
     - name: Fail workflow if finalize failed
       if: steps.plan.outputs.has_shards == 'true' && steps.finalize_sync.outcome != 'success'
       run: |
-        echo "::error::Azure sync finalize detected index publication failures"
+        echo "::error::Object storage finalize detected index publication failures"
         exit 1
