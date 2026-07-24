@@ -652,31 +652,36 @@ ratingPrompt:
     openFailed: 無法開啟 Microsoft Store 評價頁面：{{error}}
     openFailedFallback: Microsoft Store 評價頁面暫時無法使用。
 donationItem:
-  noPrivilegeNotice: '打賞是對作者工作的肯定，不附帶任何特權、功能解鎖或權益。'
+  noPrivilegeNotice: 打賞是對作者工作的肯定，不附帶任何特權、功能解鎖或權益。
   tiers:
     coffee:
-      shortName: '卡布奇諾'
+      shortName: 卡布奇諾
     dinner:
-      shortName: '小青龍'
+      shortName: 小青龍
     candy:
-      shortName: '嘉年華'
+      shortName: 嘉年華
   actions:
-    purchase: 'Donate now'
-    purchasing: 'Processing...'
-    purchaseTier: '打賞 {{shortName}}'
-    close: 'Close donation item'
-  purchaseCount: 'Donation count {{count}} (local record)'
+    purchase: Donate now
+    purchasing: Processing...
+    purchaseTier: 打賞 {{shortName}}
+    close: Close donation item
+    retrySync: Retry sync
+  purchaseCount: Donation count {{count}} (local record)
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: 'Donation item dismissed'
-    tierThanks: '感謝你的{{shortName}}打賞！'
+    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
+    consumeFailed: 'Tip payment succeeded but confirmation is incomplete: {{error}}'
+    reconcileSucceeded: Tip sync completed. You can tip again.
+    busy: Another tip operation is already in progress.
+    dismissed: Donation item dismissed
+    tierThanks: 感謝你的{{shortName}}打賞！
     purchaseOutcome:
-      succeeded: 'Donation completed. Thank you for supporting us!'
+      succeeded: Donation completed. Thank you for supporting us!
       already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: 'Donation flow was canceled.'
+      canceled: Donation flow was canceled.
       not-purchased: Donation flow ended without payment.
       network-error: Donation failed due to a network error.
       server-error: Donation failed due to a Microsoft Store service error.
       not-supported: Donation is not supported in this runtime.
-      failed: 'Donation failed. Please try again later.'
+      failed: Donation failed. Please try again later.

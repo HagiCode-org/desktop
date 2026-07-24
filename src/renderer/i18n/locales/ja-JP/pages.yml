@@ -652,31 +652,36 @@ ratingPrompt:
     openFailed: Microsoft Store のレビューページを開けませんでした：{{error}}
     openFailedFallback: Microsoft Store のレビューページは現在利用できません。
 donationItem:
-  noPrivilegeNotice: 'チップは作者への感謝であり、特権・機能解除・権利は付きません。'
+  noPrivilegeNotice: チップは作者への感謝であり、特権・機能解除・権利は付きません。
   tiers:
     coffee:
-      shortName: 'カプチーノ'
+      shortName: カプチーノ
     dinner:
-      shortName: '小青龍'
+      shortName: 小青龍
     candy:
-      shortName: 'カーニバル'
+      shortName: カーニバル
   actions:
-    purchase: 'Donate now'
-    purchasing: 'Processing...'
+    purchase: Donate now
+    purchasing: Processing...
     purchaseTier: '{{shortName}} をチップ'
-    close: 'Close donation item'
-  purchaseCount: 'Donation count {{count}} (local record)'
+    close: Close donation item
+    retrySync: Retry sync
+  purchaseCount: Donation count {{count}} (local record)
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: 'Donation item dismissed'
+    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
+    consumeFailed: 'Tip payment succeeded but confirmation is incomplete: {{error}}'
+    reconcileSucceeded: Tip sync completed. You can tip again.
+    busy: Another tip operation is already in progress.
+    dismissed: Donation item dismissed
     tierThanks: '{{shortName}} のチップをありがとうございます！'
     purchaseOutcome:
-      succeeded: 'Donation completed. Thank you for supporting us!'
-      already-purchased: 'Donation recorded. Thank you for your continued support!'
-      canceled: 'Donation flow was canceled.'
-      not-purchased: 'Donation flow ended without payment.'
-      network-error: 'Donation failed due to a network error.'
-      server-error: 'Donation failed due to a Microsoft Store service error.'
-      not-supported: 'Donation is not supported in this runtime.'
-      failed: 'Donation failed. Please try again later.'
+      succeeded: Donation completed. Thank you for supporting us!
+      already-purchased: Donation recorded. Thank you for your continued support!
+      canceled: Donation flow was canceled.
+      not-purchased: Donation flow ended without payment.
+      network-error: Donation failed due to a network error.
+      server-error: Donation failed due to a Microsoft Store service error.
+      not-supported: Donation is not supported in this runtime.
+      failed: Donation failed. Please try again later.

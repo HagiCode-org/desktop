@@ -668,10 +668,15 @@ donationItem:
     purchasing: '续命中...'
     purchaseTier: '打赏 {{shortName}}'
     close: '关闭捐助条目'
+    retrySync: '重试同步'
   purchaseCount: '已续命 {{count}} 次（本地记录）'
   messages:
     purchaseFailed: '续命失败：{{error}}'
     dismissFailed: '关闭捐助条目失败：{{error}}'
+    reconcileFailed: '未能确认未完成的打赏：{{error}}'
+    consumeFailed: '打赏支付成功，但确认未完成：{{error}}'
+    reconcileSucceeded: '打赏同步完成，可以继续打赏。'
+    busy: '已有打赏操作进行中。'
     dismissed: '已关闭捐助条目'
     tierThanks: '感谢你的{{shortName}}打赏！'
     purchaseOutcome:

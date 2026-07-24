@@ -652,31 +652,36 @@ ratingPrompt:
     openFailed: 'Falha ao abrir a página de avaliação da Microsoft Store: {{error}}'
     openFailedFallback: A página de avaliação da Microsoft Store não está disponível.
 donationItem:
-  noPrivilegeNotice: 'Gorjetas agradecem o trabalho do autor. Não liberam privilégios, recursos ou direitos.'
+  noPrivilegeNotice: Gorjetas agradecem o trabalho do autor. Não liberam privilégios, recursos ou direitos.
   tiers:
     coffee:
-      shortName: 'Cappuccino'
+      shortName: Cappuccino
     dinner:
-      shortName: 'Lagosta'
+      shortName: Lagosta
     candy:
-      shortName: 'Carnaval'
+      shortName: Carnaval
   actions:
-    purchase: 'Donate now'
-    purchasing: 'Processing...'
-    purchaseTier: 'Gorjeta {{shortName}}'
-    close: 'Close donation item'
-  purchaseCount: 'Donation count {{count}} (local record)'
+    purchase: Donate now
+    purchasing: Processing...
+    purchaseTier: Gorjeta {{shortName}}
+    close: Close donation item
+    retrySync: Retry sync
+  purchaseCount: Donation count {{count}} (local record)
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: 'Donation item dismissed'
-    tierThanks: 'Obrigado pela gorjeta {{shortName}}!'
+    reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
+    consumeFailed: 'Tip payment succeeded but confirmation is incomplete: {{error}}'
+    reconcileSucceeded: Tip sync completed. You can tip again.
+    busy: Another tip operation is already in progress.
+    dismissed: Donation item dismissed
+    tierThanks: Obrigado pela gorjeta {{shortName}}!
     purchaseOutcome:
-      succeeded: 'Donation completed. Thank you for supporting us!'
+      succeeded: Donation completed. Thank you for supporting us!
       already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: 'Donation flow was canceled.'
+      canceled: Donation flow was canceled.
       not-purchased: Donation flow ended without payment.
       network-error: Donation failed due to a network error.
       server-error: Donation failed due to a Microsoft Store service error.
       not-supported: Donation is not supported in this runtime.
-      failed: 'Donation failed. Please try again later.'
+      failed: Donation failed. Please try again later.
