@@ -34,6 +34,7 @@ export type StoreLicenseSyncSource = (typeof storeLicenseSyncSources)[number];
 export const storeLicenseKinds = [
   'subscription',
   'perpetual',
+  'consumable',
 ] as const;
 
 export type StoreLicenseKind = (typeof storeLicenseKinds)[number];

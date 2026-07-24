@@ -256,9 +256,14 @@ function findOwnedSku(storeProduct: DynWinRtStoreProduct | null): RawStoreLicens
 }
 
 function getStoreProductKinds(productConfig: StoreLicenseProductConfig): string[] {
-  return productConfig.licenseKind === 'subscription'
-    ? ['Subscription', 'Durable']
-    : ['Durable', 'Subscription'];
+  if (productConfig.licenseKind === 'subscription') {
+    return ['Subscription', 'Durable'];
+  }
+  if (productConfig.licenseKind === 'consumable') {
+    // One-time tip / IAP consumables must not be queried as Durable.
+    return ['Consumable'];
+  }
+  return ['Durable', 'Subscription'];
 }
 
 function getQueryResultErrorCode(queryResult: DynWinRtStoreProductQueryResult | null | undefined): string | null {
@@ -342,7 +347,7 @@ function buildUnsupportedPurchaseResult(error: unknown): RawStorePurchaseResult 
   };
 }
 
-function readNativeWindowHandle(rawHandle: Buffer | bigint | null | undefined): bigint | null {
+export function readNativeWindowHandle(rawHandle: Buffer | bigint | null | undefined): bigint | null {
   if (typeof rawHandle === 'bigint') {
     return rawHandle;
   }

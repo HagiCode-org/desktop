@@ -1,5 +1,5 @@
 export { EntitlementEvaluator } from './entitlement-evaluator.js';
-export { MicrosoftStoreSubscriptionBroker } from './subscription-broker.js';
+export { MicrosoftStoreSubscriptionBroker, readNativeWindowHandle } from './subscription-broker.js';
 export {
   buildTurboEnginePurchaseMessage,
   createStaleSnapshot,

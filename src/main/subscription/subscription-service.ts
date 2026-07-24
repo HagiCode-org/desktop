@@ -4,6 +4,7 @@ import type {
   SubscriptionEntitlementName,
   SubscriptionSnapshot,
 } from '../../types/subscription.js';
+import type { StoreLicenseProductConfig } from '../../types/store-license.js';
 import {
   createDefaultSubscriptionSnapshot,
   sponsorPlanProductConfig,
@@ -23,6 +24,8 @@ interface SubscriptionServiceOptions {
   broker: SubscriptionPlatformBroker;
   entitlementEvaluator: EntitlementEvaluator;
   retryPolicy?: Partial<StoreLicenseRetryPolicy>;
+  /** Defaults to sponsor plan; tip / other products must pass their own config. */
+  productConfig?: StoreLicenseProductConfig<SubscriptionEntitlementName>;
 }
 
 export class SubscriptionService {
@@ -30,7 +33,7 @@ export class SubscriptionService {
 
   constructor(options: SubscriptionServiceOptions) {
     this.service = new StoreLicenseService<SubscriptionSnapshot, SubscriptionEntitlementName>({
-      productConfig: sponsorPlanProductConfig,
+      productConfig: options.productConfig ?? sponsorPlanProductConfig,
       broker: options.broker,
       entitlementEvaluator: options.entitlementEvaluator,
       createDefaultSnapshot: createDefaultSubscriptionSnapshot,
