@@ -28,23 +28,23 @@ describe('resolveMsstoreDonationTipProductId whitelist mapping', () => {
   it('maps coffee/dinner/candy tiers to Store product IDs', () => {
     assert.deepEqual(resolveMsstoreDonationTipProductId({ tier: 'coffee' }), {
       tier: 'coffee',
-      productId: '9NC5T6VC1NQH',
+      productId: '9NNC9S2GVJKC',
     });
     assert.deepEqual(resolveMsstoreDonationTipProductId({ tier: 'dinner' }), {
       tier: 'dinner',
-      productId: '9NSKR15751LN',
+      productId: '9PBXBJFCL9K5',
     });
     assert.deepEqual(resolveMsstoreDonationTipProductId({ tier: 'candy' }), {
       tier: 'candy',
-      productId: '9MWTKDX9J62G',
+      productId: '9PGSK18H6872',
     });
-    assert.equal(MSSTORE_DONATION_TIP_PRODUCT_IDS.coffee, '9NC5T6VC1NQH');
+    assert.equal(MSSTORE_DONATION_TIP_PRODUCT_IDS.coffee, '9NNC9S2GVJKC');
   });
 
   it('accepts whitelist productId strings and rejects unknown ids/tiers', () => {
-    assert.deepEqual(resolveMsstoreDonationTipProductId('9NSKR15751LN'), {
+    assert.deepEqual(resolveMsstoreDonationTipProductId('9PBXBJFCL9K5'), {
       tier: 'dinner',
-      productId: '9NSKR15751LN',
+      productId: '9PBXBJFCL9K5',
     });
     assert.equal(resolveMsstoreDonationTipProductId('not-a-product'), null);
     assert.equal(resolveMsstoreDonationTipProductId({ tier: 'vip' as 'coffee' }), null);

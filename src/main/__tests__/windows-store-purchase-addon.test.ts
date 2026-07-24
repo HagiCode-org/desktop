@@ -187,8 +187,8 @@ describe('windows store consumable addon helpers', () => {
     const result = parseWindowsStoreUnfulfilledConsumablesResult({
       ok: true,
       items: [
-        { trackingId: 'tid-1', productId: '9NC5T6VC1NQH', quantity: 1 },
-        { trackingId: '', productId: '9NSKR15751LN', quantity: 2 },
+        { trackingId: 'tid-1', productId: '9NNC9S2GVJKC', quantity: 1 },
+        { trackingId: '', productId: '9PBXBJFCL9K5', quantity: 2 },
         { productId: '', quantity: 1 },
       ],
       errorCode: null,
@@ -198,8 +198,8 @@ describe('windows store consumable addon helpers', () => {
     assert.deepEqual(result, {
       ok: true,
       items: [
-        { trackingId: 'tid-1', productId: '9NC5T6VC1NQH', quantity: 1 },
-        { trackingId: '', productId: '9NSKR15751LN', quantity: 2 },
+        { trackingId: 'tid-1', productId: '9NNC9S2GVJKC', quantity: 1 },
+        { trackingId: '', productId: '9PBXBJFCL9K5', quantity: 2 },
       ],
       errorCode: null,
       errorMessage: null,
@@ -232,7 +232,7 @@ describe('windows store consumable addon helpers', () => {
 
     const result = await executeWindowsStoreGetUnfulfilledConsumables({
       modulePath: 'C:\\addon\\hagicode_store_purchase_addon.node',
-      productIds: ['9NC5T6VC1NQH'],
+      productIds: ['9NNC9S2GVJKC'],
     }, (modulePath) => {
       observedModulePath = modulePath;
       return {
@@ -246,7 +246,7 @@ describe('windows store consumable addon helpers', () => {
           observedProductIds = productIds;
           return {
             ok: true,
-            items: [{ trackingId: 't1', productId: '9NC5T6VC1NQH', quantity: 1 }],
+            items: [{ trackingId: 't1', productId: '9NNC9S2GVJKC', quantity: 1 }],
             errorCode: null,
             errorMessage: null,
           };
@@ -255,10 +255,10 @@ describe('windows store consumable addon helpers', () => {
     });
 
     assert.equal(observedModulePath, 'C:\\addon\\hagicode_store_purchase_addon.node');
-    assert.deepEqual(observedProductIds, ['9NC5T6VC1NQH']);
+    assert.deepEqual(observedProductIds, ['9NNC9S2GVJKC']);
     assert.equal(result.ok, true);
     assert.equal(result.items.length, 1);
-    assert.equal(result.items[0]?.productId, '9NC5T6VC1NQH');
+    assert.equal(result.items[0]?.productId, '9NNC9S2GVJKC');
   });
 
   it('returns addon-unsupported when consumable exports are missing', async () => {
@@ -278,7 +278,7 @@ describe('windows store consumable addon helpers', () => {
 
     const report = await executeWindowsStoreReportConsumableFulfillment({
       modulePath: 'C:\\addon\\hagicode_store_purchase_addon.node',
-      productId: '9NC5T6VC1NQH',
+      productId: '9NNC9S2GVJKC',
       trackingId: 'tid',
     }, () => ({
       async requestPurchase() {
@@ -300,7 +300,7 @@ describe('windows store consumable addon helpers', () => {
 
     const result = await executeWindowsStoreReportConsumableFulfillment({
       modulePath: 'C:\\addon\\hagicode_store_purchase_addon.node',
-      productId: '9NC5T6VC1NQH',
+      productId: '9NNC9S2GVJKC',
       trackingId: 'tid-9',
       quantity: 1,
     }, () => ({
@@ -325,7 +325,7 @@ describe('windows store consumable addon helpers', () => {
       },
     }));
 
-    assert.equal(observedProductId, '9NC5T6VC1NQH');
+    assert.equal(observedProductId, '9NNC9S2GVJKC');
     assert.equal(observedTrackingId, 'tid-9');
     assert.equal(observedQuantity, 1);
     assert.equal(result.ok, true);

@@ -7,9 +7,9 @@ export const MSSTORE_DONATION_TIP_TIER_IDS = ['coffee', 'dinner', 'candy'] as co
 
 /** Microsoft Store product IDs for one-time tip SKUs (purchase mapping only; UI shows i18n short names, no prices). */
 export const MSSTORE_DONATION_TIP_PRODUCT_IDS = {
-  coffee: '9NC5T6VC1NQH',
-  dinner: '9NSKR15751LN',
-  candy: '9MWTKDX9J62G',
+  coffee: '9NNC9S2GVJKC',
+  dinner: '9PBXBJFCL9K5',
+  candy: '9PGSK18H6872',
 } as const satisfies Record<MsstoreDonationTipTierId, string>;
 
 export type MsstoreDonationTipProductId =
