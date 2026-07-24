@@ -54,9 +54,49 @@ interface WindowsStoreStatusAddonOptions {
   productKinds: string[];
 }
 
+export interface WindowsStoreUnfulfilledConsumableItem {
+  trackingId: string;
+  productId: string;
+  quantity: number;
+}
+
+export interface WindowsStoreUnfulfilledConsumablesResult {
+  ok: boolean;
+  items: WindowsStoreUnfulfilledConsumableItem[];
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface WindowsStoreReportConsumableFulfillmentResult {
+  ok: boolean;
+  status: string;
+  trackingId: string | null;
+  balanceRemaining: number;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+interface WindowsStoreUnfulfilledConsumablesOptions {
+  modulePath: string;
+  productIds?: string[];
+}
+
+interface WindowsStoreReportConsumableFulfillmentOptions {
+  modulePath: string;
+  productId: string;
+  trackingId?: string | null;
+  quantity?: number;
+}
+
 interface NativeWindowsStoreAddon {
   requestPurchase(storeId: string, ownerWindowHandle?: string | null): Promise<Record<string, unknown>>;
   queryStoreStatus(storeId: string, productName: string, productKinds: string[]): Promise<Record<string, unknown>>;
+  getUnfulfilledConsumables?(productIds?: string[]): Promise<Record<string, unknown>>;
+  reportConsumableFulfillment?(
+    productId: string,
+    trackingId?: string | null,
+    quantity?: number,
+  ): Promise<Record<string, unknown>>;
 }
 
 type LoadPurchaseAddon = (modulePath: string) => NativeWindowsStoreAddon;
@@ -335,5 +375,198 @@ export async function executeWindowsStoreStatusAddon(
   } catch (error) {
     const { errorCode, errorMessage } = normalizeThrownError(error);
     return buildUnavailableStatusResult(options, errorCode ?? 'addon-execution-failed', errorMessage);
+  }
+}
+
+
+function normalizeQuantity(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.floor(parsed);
+    }
+  }
+  return 0;
+}
+
+export function parseWindowsStoreUnfulfilledConsumablesResult(
+  value: Record<string, unknown>,
+): WindowsStoreUnfulfilledConsumablesResult {
+  const rawItems = Array.isArray(value.items) ? value.items : [];
+  const items: WindowsStoreUnfulfilledConsumableItem[] = [];
+
+  for (const entry of rawItems) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+    const record = entry as Record<string, unknown>;
+    const productId = typeof record.productId === 'string' ? record.productId.trim() : '';
+    if (!productId) {
+      continue;
+    }
+    items.push({
+      trackingId: typeof record.trackingId === 'string' ? record.trackingId.trim() : '',
+      productId,
+      quantity: normalizeQuantity(record.quantity),
+    });
+  }
+
+  const explicitOk = value.ok;
+  const ok = typeof explicitOk === 'boolean'
+    ? explicitOk
+    : normalizeErrorCode(value.errorCode) == null;
+
+  return {
+    ok,
+    items,
+    errorCode: normalizeErrorCode(value.errorCode),
+    errorMessage: normalizeErrorMessage(value.errorMessage),
+  };
+}
+
+export function parseWindowsStoreReportConsumableFulfillmentResult(
+  value: Record<string, unknown>,
+): WindowsStoreReportConsumableFulfillmentResult {
+  const status = typeof value.status === 'string' && value.status.trim().length > 0
+    ? value.status.trim()
+    : 'failed';
+  const explicitOk = value.ok;
+  const ok = typeof explicitOk === 'boolean'
+    ? explicitOk
+    : status === 'succeeded';
+
+  return {
+    ok,
+    status,
+    trackingId: typeof value.trackingId === 'string' && value.trackingId.trim().length > 0
+      ? value.trackingId.trim()
+      : null,
+    balanceRemaining: normalizeQuantity(value.balanceRemaining),
+    errorCode: normalizeErrorCode(value.errorCode),
+    errorMessage: normalizeErrorMessage(value.errorMessage),
+  };
+}
+
+export async function executeWindowsStoreGetUnfulfilledConsumables(
+  options: WindowsStoreUnfulfilledConsumablesOptions,
+  loadPurchaseAddon: LoadPurchaseAddon = defaultLoadPurchaseAddon,
+): Promise<WindowsStoreUnfulfilledConsumablesResult> {
+  const modulePath = String(options.modulePath || '').trim();
+  if (!modulePath) {
+    return {
+      ok: false,
+      items: [],
+      errorCode: 'addon-missing',
+      errorMessage: 'Microsoft Store purchase addon is unavailable.',
+    };
+  }
+
+  let nativeAddon: NativeWindowsStoreAddon;
+  try {
+    nativeAddon = loadPurchaseAddon(modulePath);
+  } catch (error) {
+    return {
+      ok: false,
+      items: [],
+      errorCode: 'addon-load-failed',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  if (typeof nativeAddon.getUnfulfilledConsumables !== 'function') {
+    return {
+      ok: false,
+      items: [],
+      errorCode: 'addon-unsupported',
+      errorMessage: 'Microsoft Store addon does not export getUnfulfilledConsumables.',
+    };
+  }
+
+  try {
+    const rawResult = await nativeAddon.getUnfulfilledConsumables(options.productIds ?? []);
+    return parseWindowsStoreUnfulfilledConsumablesResult(rawResult);
+  } catch (error) {
+    const { errorCode, errorMessage } = normalizeThrownError(error);
+    return {
+      ok: false,
+      items: [],
+      errorCode: errorCode ?? 'unfulfilled-query-failed',
+      errorMessage: errorMessage ?? 'Failed to query unfulfilled consumables.',
+    };
+  }
+}
+
+export async function executeWindowsStoreReportConsumableFulfillment(
+  options: WindowsStoreReportConsumableFulfillmentOptions,
+  loadPurchaseAddon: LoadPurchaseAddon = defaultLoadPurchaseAddon,
+): Promise<WindowsStoreReportConsumableFulfillmentResult> {
+  const modulePath = String(options.modulePath || '').trim();
+  const productId = String(options.productId || '').trim();
+  if (!modulePath) {
+    return {
+      ok: false,
+      status: 'not-supported',
+      trackingId: null,
+      balanceRemaining: 0,
+      errorCode: 'addon-missing',
+      errorMessage: 'Microsoft Store purchase addon is unavailable.',
+    };
+  }
+  if (!productId) {
+    return {
+      ok: false,
+      status: 'failed',
+      trackingId: null,
+      balanceRemaining: 0,
+      errorCode: 'product-id-required',
+      errorMessage: 'reportConsumableFulfillment requires a productId.',
+    };
+  }
+
+  let nativeAddon: NativeWindowsStoreAddon;
+  try {
+    nativeAddon = loadPurchaseAddon(modulePath);
+  } catch (error) {
+    return {
+      ok: false,
+      status: 'not-supported',
+      trackingId: null,
+      balanceRemaining: 0,
+      errorCode: 'addon-load-failed',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  if (typeof nativeAddon.reportConsumableFulfillment !== 'function') {
+    return {
+      ok: false,
+      status: 'not-supported',
+      trackingId: null,
+      balanceRemaining: 0,
+      errorCode: 'addon-unsupported',
+      errorMessage: 'Microsoft Store addon does not export reportConsumableFulfillment.',
+    };
+  }
+
+  try {
+    const rawResult = await nativeAddon.reportConsumableFulfillment(
+      productId,
+      options.trackingId ?? null,
+      options.quantity ?? 1,
+    );
+    return parseWindowsStoreReportConsumableFulfillmentResult(rawResult);
+  } catch (error) {
+    const { errorCode, errorMessage } = normalizeThrownError(error);
+    return {
+      ok: false,
+      status: 'failed',
+      trackingId: typeof options.trackingId === 'string' ? options.trackingId : null,
+      balanceRemaining: 0,
+      errorCode: errorCode ?? 'consumable-report-failed',
+      errorMessage: errorMessage ?? 'Failed to report consumable fulfillment.',
+    };
   }
 }
