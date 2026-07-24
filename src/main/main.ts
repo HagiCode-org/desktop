@@ -803,6 +803,7 @@ function initializeMsstoreDonationItemService(): void {
     purchaseDonation: (productId) => purchaseMsstoreDonationItemByProductId(productId),
     canDismiss: () => subscriptionService?.getCurrentSnapshot().status === 'active',
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
+    getOwnerWindowHandle: () => readNativeWindowHandle(mainWindow?.getNativeWindowHandle() ?? null),
   });
   log.info('[App] MS Store donation item service and IPC handlers registered for Microsoft Store runtime', {
     tipProductIds: MSSTORE_DONATION_TIP_PRODUCT_IDS,

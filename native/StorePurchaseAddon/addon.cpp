@@ -1016,12 +1016,14 @@ namespace
             Napi::Env env,
             std::wstring productId,
             uint32_t quantity,
-            winrt::guid trackingId)
+            winrt::guid trackingId,
+            HWND ownerWindow)
             : env_(env)
             , deferred_(Napi::Promise::Deferred::New(env))
             , productId_(std::move(productId))
             , quantity_(quantity)
             , trackingId_(trackingId)
+            , ownerWindow_(ownerWindow)
         {
         }
 
@@ -1046,6 +1048,12 @@ namespace
                     1);
 
                 auto const context = StoreContext::GetDefault();
+                // Desktop Bridge: bind HWND so ReportConsumableFulfillment uses same identity as purchase.
+                if (ownerWindow_ != nullptr)
+                {
+                    auto initializeWithWindow = context.as<IInitializeWithWindow>();
+                    winrt::check_hresult(initializeWithWindow->Initialize(ownerWindow_));
+                }
                 auto const operation = context.ReportConsumableFulfillmentAsync(
                     winrt::hstring{ productId_ },
                     quantity_,
@@ -1169,6 +1177,7 @@ namespace
         std::wstring productId_;
         uint32_t quantity_{ 1 };
         winrt::guid trackingId_{};
+        HWND ownerWindow_{ nullptr };
     };
 
     Napi::Value RequestPurchase(Napi::CallbackInfo const& info)
@@ -1263,8 +1272,9 @@ namespace
     {
         auto env = info.Env();
 
-        // reportConsumableFulfillment(productId, trackingId?, quantity?)
+        // reportConsumableFulfillment(productId, trackingId?, quantity?, ownerWindowHandle?)
         // productId required for Windows.Services.Store ReportConsumableFulfillmentAsync.
+        // Desktop Bridge apps should pass owner HWND (same as requestPurchase) so StoreContext is initialized.
         if (info.Length() < 1 || !info[0].IsString())
         {
             throw Napi::TypeError::New(env, "reportConsumableFulfillment requires a productId string.");
@@ -1310,11 +1320,22 @@ namespace
             quantity = static_cast<uint32_t>(rawQuantity);
         }
 
+        HWND ownerWindow = nullptr;
+        if (info.Length() >= 4 && !info[3].IsNull() && !info[3].IsUndefined())
+        {
+            if (!info[3].IsString())
+            {
+                throw Napi::TypeError::New(env, "reportConsumableFulfillment owner window must be a string when provided.");
+            }
+            ownerWindow = ParseWindowHandle(info[3].As<Napi::String>().Utf8Value());
+        }
+
         return std::make_shared<ReportConsumableFulfillmentRequest>(
             env,
             productId,
             quantity,
-            trackingId)->Start();
+            trackingId,
+            ownerWindow)->Start();
     }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)

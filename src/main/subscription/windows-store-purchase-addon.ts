@@ -86,6 +86,7 @@ interface WindowsStoreReportConsumableFulfillmentOptions {
   productId: string;
   trackingId?: string | null;
   quantity?: number;
+  ownerWindowHandle?: bigint | null;
 }
 
 interface NativeWindowsStoreAddon {
@@ -96,6 +97,7 @@ interface NativeWindowsStoreAddon {
     productId: string,
     trackingId?: string | null,
     quantity?: number,
+    ownerWindowHandle?: string | null,
   ): Promise<Record<string, unknown>>;
 }
 
@@ -556,6 +558,7 @@ export async function executeWindowsStoreReportConsumableFulfillment(
       productId,
       options.trackingId ?? null,
       options.quantity ?? 1,
+      formatOwnerWindowHandle(options.ownerWindowHandle),
     );
     return parseWindowsStoreReportConsumableFulfillmentResult(rawResult);
   } catch (error) {

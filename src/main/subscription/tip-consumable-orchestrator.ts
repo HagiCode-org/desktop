@@ -69,9 +69,18 @@ export function filterTipUnfulfilledItems(
 
 export function createDefaultTipConsumableDeps(
   purchase: (productId: MsstoreDonationTipProductId) => Promise<{ outcome: StoreLicensePurchaseOutcome }>,
-  options: { modulePath?: string | null } = {},
+  options: {
+    modulePath?: string | null;
+    ownerWindowHandle?: bigint | null | (() => bigint | null);
+  } = {},
 ): TipConsumableDeps {
   const modulePath = options.modulePath ?? resolveWindowsStorePurchaseAddonPath() ?? '';
+  const resolveOwnerWindow = (): bigint | null => {
+    if (typeof options.ownerWindowHandle === 'function') {
+      return options.ownerWindowHandle();
+    }
+    return options.ownerWindowHandle ?? null;
+  };
   log.info('[TipConsumable] createDefaultTipConsumableDeps', {
     modulePath: modulePath || null,
     hasModulePath: Boolean(modulePath),
@@ -94,17 +103,20 @@ export function createDefaultTipConsumableDeps(
       return result;
     },
     async reportFulfillment(input) {
+      const ownerWindowHandle = resolveOwnerWindow();
       log.info('[TipConsumable] reportFulfillment call', {
         modulePath: modulePath || null,
         productId: input.productId,
         trackingId: input.trackingId ?? null,
         quantity: input.quantity ?? 1,
+        hasOwnerWindow: ownerWindowHandle != null,
       });
       const result = await executeWindowsStoreReportConsumableFulfillment({
         modulePath,
         productId: input.productId,
         trackingId: input.trackingId,
         quantity: input.quantity ?? 1,
+        ownerWindowHandle,
       });
       log.info('[TipConsumable] reportFulfillment call result', {
         ok: result.ok,
@@ -305,7 +317,8 @@ async function runPurchaseWithReconcile(
 ): Promise<TipConsumableOrchestratorResult> {
   log.info('[TipConsumable] purchaseWithReconcile start', { productId });
 
-  const reconcile = await reconcilePendingTips(deps);
+  // Only try to clear the SKU about to be purchased (developer-managed stuck fulfill).
+  const reconcile = await reconcilePendingTips(deps, [productId]);
   log.info('[TipConsumable] pre-purchase reconcile done', {
     productId,
     ok: reconcile.ok,

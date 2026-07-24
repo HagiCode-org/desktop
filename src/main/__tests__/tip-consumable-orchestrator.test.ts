@@ -90,16 +90,15 @@ describe('tip consumable orchestrator', () => {
     assert.equal(result.phase, 'consume');
     assert.equal(result.localCountIncremented, true);
     assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
-    // 3 tip products pre-reconcile + 1 post-purchase consume
-    assert.ok(deps.reportCalls.length >= 4);
+    // focused pre-reconcile (1) + post-purchase consume (1)
+    assert.ok(deps.reportCalls.length >= 2);
     assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NC5T6VC1NQH');
   });
 
-  it('developer-managed pre-reconcile reports each tip product before purchase', async () => {
+  it('developer-managed pre-reconcile reports only the product being purchased', async () => {
     const deps = createDeps({ reportOk: true, purchaseOutcome: 'succeeded' });
     await purchaseTipWithReconcile(deps, '9NSKR15751LN');
-    const prePurchaseReports = deps.reportCalls.slice(0, 3).map((c) => c.productId).sort();
-    assert.deepEqual(prePurchaseReports, ['9MWTKDX9J62G', '9NC5T6VC1NQH', '9NSKR15751LN'].sort());
+    assert.equal(deps.reportCalls[0]?.productId, '9NSKR15751LN');
     assert.deepEqual(deps.purchaseCalls, ['9NSKR15751LN']);
   });
 
@@ -115,7 +114,7 @@ describe('tip consumable orchestrator', () => {
         deps.reportCalls.push(input);
         reportCount += 1;
         // pre-reconcile (3 tips) return Store server-error like 0x803F6107
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           return {
             ok: false,
             status: 'server-error',
@@ -165,7 +164,7 @@ describe('tip consumable orchestrator', () => {
       async reportFulfillment(input) {
         deps2.reportCalls.push(input);
         reportCount += 1;
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           return {
             ok: false,
             status: 'insufficient-quantity',
@@ -208,7 +207,7 @@ describe('tip consumable orchestrator', () => {
       async reportFulfillment(input) {
         deps.reportCalls.push(input);
         reportCount += 1;
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           // pre-reconcile benign
           return {
             ok: false,
@@ -257,7 +256,7 @@ describe('tip consumable orchestrator', () => {
       async reportFulfillment() {
         reportCount += 1;
         // pre-reconcile benign; after purchase (report #4+) succeed
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           return {
             ok: false,
             status: 'insufficient-quantity',
@@ -323,7 +322,7 @@ describe('tip consumable orchestrator', () => {
         deps.reportCalls.push(input);
         reportCount += 1;
         // pre-reconcile 3 benign, force+post success
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           return {
             ok: false,
             status: 'insufficient-quantity',
@@ -357,7 +356,7 @@ describe('tip consumable orchestrator', () => {
     assert.equal(result.localCountIncremented, true);
     assert.equal(deps.purchaseCalls.length, 2);
     // force report + post-purchase report at least
-    assert.ok(deps.reportCalls.length >= 5);
+    assert.ok(deps.reportCalls.length >= 3);
   });
 
   it('already-purchased after successful force-report still owned surfaces tip-not-consumable', async () => {
@@ -371,7 +370,7 @@ describe('tip consumable orchestrator', () => {
       async reportFulfillment(input) {
         deps.reportCalls.push(input);
         reportCount += 1;
-        if (reportCount <= 3) {
+        if (reportCount <= 1) {
           return {
             ok: false,
             status: 'insufficient-quantity',

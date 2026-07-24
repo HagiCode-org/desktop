@@ -310,7 +310,7 @@ describe('windows store consumable addon helpers', () => {
       async queryStoreStatus() {
         return { availability: 'error' };
       },
-      async reportConsumableFulfillment(productId, trackingId, quantity) {
+      async reportConsumableFulfillment(productId, trackingId, quantity, _ownerWindow) {
         observedProductId = productId;
         observedTrackingId = trackingId;
         observedQuantity = quantity;

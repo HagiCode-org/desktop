@@ -104,12 +104,16 @@ export function registerMsstoreDonationItemHandlers(deps: {
   canDismiss: () => boolean;
   getWindows: () => BrowserWindow[];
   tipDeps?: TipConsumableDeps;
+  /** Desktop Bridge: required for ReportConsumableFulfillment StoreContext init. */
+  getOwnerWindowHandle?: () => bigint | null;
 }): void {
   state.configManager = deps.configManager;
   state.purchaseDonation = deps.purchaseDonation;
   state.canDismiss = deps.canDismiss;
   state.getWindows = deps.getWindows;
-  state.tipDeps = deps.tipDeps ?? createDefaultTipConsumableDeps(deps.purchaseDonation);
+  state.tipDeps = deps.tipDeps ?? createDefaultTipConsumableDeps(deps.purchaseDonation, {
+    ownerWindowHandle: deps.getOwnerWindowHandle ?? (() => null),
+  });
 
   ipcMain.handle(msstoreDonationItemChannels.getState, async () => {
     return getConfigManager().getMsstoreDonationItemState();
