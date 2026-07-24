@@ -9,6 +9,7 @@ import {
   dismissMsstoreDonationItem,
   loadMsstoreDonationItemState,
   purchaseMsstoreDonationItem,
+  reconcileMsstoreDonationItemPending,
   selectMsstoreDonationItemState,
   setMsstoreDonationItemState,
 } from '@/store/slices/msstoreDonationItemSlice';
@@ -118,6 +119,65 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
     return null;
   }
 
+  const handleRetryReconcile = async () => {
+    if (!window.electronAPI.msstoreDonationItem || purchasingTier) {
+      return;
+    }
+
+    setPurchasingTier('coffee');
+    try {
+      const resultAction = await dispatch(reconcileMsstoreDonationItemPending());
+      if (!reconcileMsstoreDonationItemPending.fulfilled.match(resultAction)) {
+        throw new Error(
+          typeof resultAction.payload === 'string'
+            ? resultAction.payload
+            : resultAction.error.message ?? t('donationItem.messages.reconcileFailed', {
+              ns: 'pages',
+              error: 'unknown',
+              defaultValue: t('donationItem.messages.purchaseOutcome.failed', { ns: 'pages' }),
+            }),
+        );
+      }
+      const result = resultAction.payload;
+      setState((prev) => ({
+        ...prev,
+        purchaseCount: result.purchaseCount,
+        purchaseCountsByTier: result.purchaseCountsByTier ?? prev.purchaseCountsByTier,
+      }));
+
+      if (result.outcome === 'succeeded') {
+        toast.success(t('donationItem.messages.reconcileSucceeded', {
+          ns: 'pages',
+          defaultValue: 'Tip sync completed.',
+        }));
+      } else {
+        toast.error(t('donationItem.messages.reconcileFailed', {
+          ns: 'pages',
+          error: result.errorMessage ?? result.errorCode ?? result.outcome,
+          defaultValue: t('donationItem.messages.purchaseOutcome.failed', { ns: 'pages' }),
+        }), {
+          action: {
+            label: t('donationItem.actions.retrySync', {
+              ns: 'pages',
+              defaultValue: 'Retry sync',
+            }),
+            onClick: () => {
+              void handleRetryReconcile();
+            },
+          },
+        });
+      }
+    } catch (error) {
+      toast.error(t('donationItem.messages.reconcileFailed', {
+        ns: 'pages',
+        error: error instanceof Error ? error.message : String(error),
+        defaultValue: t('donationItem.messages.purchaseOutcome.failed', { ns: 'pages' }),
+      }));
+    } finally {
+      setPurchasingTier(null);
+    }
+  };
+
   const handlePurchase = async (tier: MsstoreDonationTipTierId) => {
     if (!window.electronAPI.msstoreDonationItem || purchasingTier) {
       return;
@@ -158,6 +218,31 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
         });
       } else if (result.outcome === 'canceled' || result.outcome === 'not-purchased') {
         toast.message(t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' }));
+      } else if (
+        result.outcome === 'reconcile-failed'
+        || result.outcome === 'consume-failed'
+        || result.outcome === 'busy'
+      ) {
+        const messageKey = result.outcome === 'reconcile-failed'
+          ? 'donationItem.messages.reconcileFailed'
+          : result.outcome === 'consume-failed'
+            ? 'donationItem.messages.consumeFailed'
+            : 'donationItem.messages.busy';
+        toast.error(t(messageKey, {
+          ns: 'pages',
+          error: result.errorMessage ?? result.errorCode ?? result.outcome,
+          defaultValue: t('donationItem.messages.purchaseOutcome.failed', { ns: 'pages' }),
+        }), {
+          action: {
+            label: t('donationItem.actions.retrySync', {
+              ns: 'pages',
+              defaultValue: 'Retry sync',
+            }),
+            onClick: () => {
+              void handleRetryReconcile();
+            },
+          },
+        });
       } else {
         toast.error(t(`donationItem.messages.purchaseOutcome.${result.outcome}`, {
           ns: 'pages',
