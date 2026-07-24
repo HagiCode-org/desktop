@@ -23,11 +23,10 @@ describe('subscription main-process wiring', () => {
     assert.match(source, /function initializeSubscriptionService\(\): void \{[\s\S]*subscriptionService = new SubscriptionService/);
     assert.match(source, /function initializeTurboEngineLicenseService\(\): void \{[\s\S]*turboEngineLicenseService = new TurboEngineLicenseService/);
     assert.match(source, /productConfig: turboEngineProductConfig/);
-    assert.match(source, /const MSSTORE_DONATION_ITEM_PRODUCT_ID = '9NC5T6VC1NQH';/);
-    assert.match(source, /function initializeMsstoreDonationItemService\(\): void \{[\s\S]*msstoreDonationPurchaseService = new SubscriptionService/);
-    assert.match(source, /registerMsstoreDonationItemHandlers\(\{[\s\S]*purchaseDonation: \(\) => msstoreDonationPurchaseService!\.purchase\(\),/);
-    assert.match(source, /storeId: MSSTORE_DONATION_ITEM_PRODUCT_ID,/);
-    assert.match(source, /productId: MSSTORE_DONATION_ITEM_PRODUCT_ID,/);
+    assert.match(source, /MSSTORE_DONATION_TIP_PRODUCT_IDS/);
+    assert.match(source, /function createMsstoreDonationPurchaseService\(/);
+    assert.match(source, /function initializeMsstoreDonationItemService\(\): void \{[\s\S]*msstoreDonationPurchaseService = createMsstoreDonationPurchaseService/);
+    assert.match(source, /registerMsstoreDonationItemHandlers\(\{[\s\S]*purchaseDonation: \(productId\) => purchaseMsstoreDonationItemByProductId\(productId\)/);
     assert.match(source, /turboEngineLicenseService\.onDidChange\(\(\) => \{[\s\S]*scheduleTurboEngineBackendSync\('license-changed'\);/);
     assert.match(source, /function scheduleTurboEngineBackendSync\(reason: string\): void \{/);
     assert.match(source, /async function syncTurboEngineBackendState\(reason: string\): Promise<void> \{/);

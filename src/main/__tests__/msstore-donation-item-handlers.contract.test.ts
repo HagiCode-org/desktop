@@ -16,6 +16,15 @@ describe('msstore donation item IPC handlers contract', () => {
     assert.match(source, /const successOutcomes = new Set<MsstoreDonationItemPurchaseOutcome>\(\[/);
     assert.match(source, /'succeeded'/);
     assert.match(source, /'already-purchased'/);
-    assert.match(source, /incrementMsstoreDonationItemPurchaseCount\(\)/);
+    assert.match(source, /incrementMsstoreDonationItemPurchaseCount\(/);
+    assert.match(source, /resolveMsstoreDonationTipProductId/);
+    assert.match(source, /purchaseCountsByTier/);
+  });
+
+  it('rejects non-whitelist tier/product without calling Store purchase path for invalid input', async () => {
+    const source = await fs.readFile(handlersPath, 'utf8');
+
+    assert.match(source, /if \(!resolved\)/);
+    assert.match(source, /outcome: 'failed'/);
   });
 });

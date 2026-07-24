@@ -20,8 +20,15 @@ export interface MsstoreRatingPromptState {
   installDate?: string;
 }
 
+export interface MsstoreDonationPurchaseCountsByTier {
+  coffee: number;
+  dinner: number;
+  candy: number;
+}
+
 export interface MsstoreDonationItemState {
   purchaseCount: number;
+  purchaseCountsByTier: MsstoreDonationPurchaseCountsByTier;
   dismissedAt?: string;
 }
 
@@ -53,8 +60,15 @@ export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
 
 export const DEFAULT_MSSTORE_RATING_PROMPT_STATE: MsstoreRatingPromptState = {};
 
+export const DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER: MsstoreDonationPurchaseCountsByTier = {
+  coffee: 0,
+  dinner: 0,
+  candy: 0,
+};
+
 export const DEFAULT_MSSTORE_DONATION_ITEM_STATE: MsstoreDonationItemState = {
   purchaseCount: 0,
+  purchaseCountsByTier: { ...DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER },
 };
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
@@ -120,15 +134,29 @@ export function normalizeMsstoreRatingPromptState(
   return installDate === undefined ? {} : { installDate };
 }
 
+function normalizeNonNegativeInt(value: unknown, fallback: number): number {
+  const raw = typeof value === 'number' ? value : Number.NaN;
+  return Number.isInteger(raw) && raw >= 0 ? raw : fallback;
+}
+
+function normalizeMsstoreDonationPurchaseCountsByTier(
+  counts?: Partial<MsstoreDonationPurchaseCountsByTier> | null,
+): MsstoreDonationPurchaseCountsByTier {
+  return {
+    coffee: normalizeNonNegativeInt(counts?.coffee, DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER.coffee),
+    dinner: normalizeNonNegativeInt(counts?.dinner, DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER.dinner),
+    candy: normalizeNonNegativeInt(counts?.candy, DEFAULT_MSSTORE_DONATION_PURCHASE_COUNTS_BY_TIER.candy),
+  };
+}
+
 export function normalizeMsstoreDonationItemState(
   state?: Partial<MsstoreDonationItemState> | null,
 ): MsstoreDonationItemState {
-  const rawPurchaseCount = typeof state?.purchaseCount === 'number'
-    ? state.purchaseCount
-    : Number.NaN;
-  const purchaseCount = Number.isInteger(rawPurchaseCount) && rawPurchaseCount >= 0
-    ? rawPurchaseCount
-    : DEFAULT_MSSTORE_DONATION_ITEM_STATE.purchaseCount;
+  const purchaseCount = normalizeNonNegativeInt(
+    state?.purchaseCount,
+    DEFAULT_MSSTORE_DONATION_ITEM_STATE.purchaseCount,
+  );
+  const purchaseCountsByTier = normalizeMsstoreDonationPurchaseCountsByTier(state?.purchaseCountsByTier);
 
   const rawDismissedAt = state?.dismissedAt;
   const dismissedAt = typeof rawDismissedAt === 'string' && rawDismissedAt.trim().length > 0
@@ -136,10 +164,12 @@ export function normalizeMsstoreDonationItemState(
     : undefined;
 
   if (dismissedAt !== undefined && Number.isNaN(Date.parse(dismissedAt))) {
-    return { purchaseCount };
+    return { purchaseCount, purchaseCountsByTier };
   }
 
-  return dismissedAt === undefined ? { purchaseCount } : { purchaseCount, dismissedAt };
+  return dismissedAt === undefined
+    ? { purchaseCount, purchaseCountsByTier }
+    : { purchaseCount, purchaseCountsByTier, dismissedAt };
 }
 
 const defaultConfig: AppConfig = {
@@ -452,8 +482,13 @@ export class ConfigManager {
     const current = this.store.get('msstoreDonationItem');
     const normalized = normalizeMsstoreDonationItemState(current);
 
+    const currentByTier = current?.purchaseCountsByTier;
     const shouldPersist = current?.purchaseCount !== normalized.purchaseCount
-      || current?.dismissedAt !== normalized.dismissedAt;
+      || current?.dismissedAt !== normalized.dismissedAt
+      || currentByTier?.coffee !== normalized.purchaseCountsByTier.coffee
+      || currentByTier?.dinner !== normalized.purchaseCountsByTier.dinner
+      || currentByTier?.candy !== normalized.purchaseCountsByTier.candy
+      || currentByTier == null;
     if (shouldPersist) {
       this.store.set('msstoreDonationItem', normalized);
     }
@@ -467,11 +502,22 @@ export class ConfigManager {
     return normalized;
   }
 
-  incrementMsstoreDonationItemPurchaseCount(): MsstoreDonationItemState {
+  /**
+   * Increment compatible total purchaseCount and optional by-tier count.
+   * @param tier coffee | dinner | candy — when omitted, only total increments (legacy callers).
+   */
+  incrementMsstoreDonationItemPurchaseCount(
+    tier?: keyof MsstoreDonationPurchaseCountsByTier,
+  ): MsstoreDonationItemState {
     const current = this.getMsstoreDonationItemState();
+    const purchaseCountsByTier = { ...current.purchaseCountsByTier };
+    if (tier === 'coffee' || tier === 'dinner' || tier === 'candy') {
+      purchaseCountsByTier[tier] = purchaseCountsByTier[tier] + 1;
+    }
     const next = normalizeMsstoreDonationItemState({
       ...current,
       purchaseCount: current.purchaseCount + 1,
+      purchaseCountsByTier,
     });
     this.store.set('msstoreDonationItem', next);
     return next;

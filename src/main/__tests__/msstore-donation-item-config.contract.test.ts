@@ -11,6 +11,7 @@ describe('msstore donation item config contract', () => {
 
     assert.match(source, /export interface MsstoreDonationItemState \{/);
     assert.match(source, /purchaseCount: number;/);
+    assert.match(source, /purchaseCountsByTier: MsstoreDonationPurchaseCountsByTier;/);
     assert.match(source, /dismissedAt\?: string;/);
     assert.match(source, /msstoreDonationItem\?: MsstoreDonationItemState;/);
     assert.match(source, /export const DEFAULT_MSSTORE_DONATION_ITEM_STATE: MsstoreDonationItemState = \{/);
@@ -18,6 +19,6 @@ describe('msstore donation item config contract', () => {
     assert.match(source, /export function normalizeMsstoreDonationItemState\(/);
     assert.match(source, /getMsstoreDonationItemState\(\): MsstoreDonationItemState \{/);
     assert.match(source, /setMsstoreDonationItemState\(nextState: MsstoreDonationItemState\): MsstoreDonationItemState \{/);
-    assert.match(source, /incrementMsstoreDonationItemPurchaseCount\(\): MsstoreDonationItemState \{/);
+    assert.match(source, /incrementMsstoreDonationItemPurchaseCount\(/);
   });
 });

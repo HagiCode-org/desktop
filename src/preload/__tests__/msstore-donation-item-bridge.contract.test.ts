@@ -15,7 +15,7 @@ describe('msstore donation item preload bridge contract', () => {
     assert.match(source, /const msstoreDonationItemBridge: MsstoreDonationItemBridge = \{/);
     assert.match(source, /getState: \(\) => ipcRenderer\.invoke\(msstoreDonationItemChannels\.getState\)/);
     assert.match(source, /dismiss: \(\) => ipcRenderer\.invoke\(msstoreDonationItemChannels\.dismiss\)/);
-    assert.match(source, /purchase: \(\) => ipcRenderer\.invoke\(msstoreDonationItemChannels\.purchase\)/);
+    assert.match(source, /purchase: \(input\) => ipcRenderer\.invoke\(msstoreDonationItemChannels\.purchase, input\)/);
     assert.match(source, /ipcRenderer\.on\(msstoreDonationItemChannels\.changed, listener\)/);
     assert.match(source, /\.\.\.\(turboEngineLicenseFeatureEnabled \? \{ msstoreDonationItem: msstoreDonationItemBridge \} : \{\}\)/);
   });

@@ -102,7 +102,6 @@ const TURBOENGINE_LICENSE_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
 const TURBOENGINE_LICENSE_FEATURE_ARG = '--desktop-turboengine-license-enabled=1';
 const SUBSCRIPTION_PURCHASE_SMOKE_TEST_ARG = '--desktop-subscription-purchase-smoke-test=1';
-const MSSTORE_DONATION_ITEM_PRODUCT_ID = '9NC5T6VC1NQH';
 
 function findRuntimeArgValue(prefix: string): string | null {
   const match = process.argv.find((arg) => arg.startsWith(prefix));
@@ -728,34 +727,55 @@ function initializeTurboEngineLicenseService(): void {
   log.info('[App] TurboEngine license service and IPC handlers registered for Microsoft Store runtime');
 }
 
+function createMsstoreDonationPurchaseService(productId: MsstoreDonationTipProductId): SubscriptionService {
+  return new SubscriptionService({
+    broker: new MicrosoftStoreSubscriptionBroker({
+      windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
+      productConfig: {
+        ...sponsorPlanProductConfig,
+        key: `msstore-donation-item:${productId}`,
+        storeId: productId,
+        productId,
+        productName: 'MS Store Donation Item',
+        purchaseLabel: 'MS Store donation item',
+        statusLabel: 'MS Store donation item status',
+        // Tips are one-time Store add-ons; reuse perpetual kind so broker productKinds stay non-subscription.
+        licenseKind: 'perpetual',
+      },
+    }),
+    entitlementEvaluator: new EntitlementEvaluator(),
+  });
+}
+
+async function purchaseMsstoreDonationItemByProductId(
+  productId: MsstoreDonationTipProductId,
+): Promise<{ outcome: Awaited<ReturnType<SubscriptionService['purchase']>>['outcome'] }> {
+  // Per-call service so Dinner/Candy productIds pass through existing Store addon (no native change).
+  const service = createMsstoreDonationPurchaseService(productId);
+  try {
+    return await service.purchase();
+  } finally {
+    service.dispose();
+  }
+}
+
 function initializeMsstoreDonationItemService(): void {
   if (!msstoreDonationItemFeatureEnabled || msstoreDonationPurchaseService || !configManager) {
     return;
   }
 
-  msstoreDonationPurchaseService = new SubscriptionService({
-    broker: new MicrosoftStoreSubscriptionBroker({
-      windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
-      productConfig: {
-        ...sponsorPlanProductConfig,
-        key: 'msstore-donation-item',
-        storeId: MSSTORE_DONATION_ITEM_PRODUCT_ID,
-        productId: MSSTORE_DONATION_ITEM_PRODUCT_ID,
-        productName: 'MS Store Donation Item',
-        purchaseLabel: 'MS Store donation item',
-        statusLabel: 'MS Store donation item status',
-      },
-    }),
-    entitlementEvaluator: new EntitlementEvaluator(),
-  });
+  // Keep a default Coffee-backed service for dispose/cleanup parity with prior wiring.
+  msstoreDonationPurchaseService = createMsstoreDonationPurchaseService(MSSTORE_DONATION_TIP_PRODUCT_IDS.coffee);
 
   registerMsstoreDonationItemHandlers({
     configManager,
-    purchaseDonation: () => msstoreDonationPurchaseService!.purchase(),
+    purchaseDonation: (productId) => purchaseMsstoreDonationItemByProductId(productId),
     canDismiss: () => subscriptionService?.getCurrentSnapshot().status === 'active',
     getWindows: () => ElectronBrowserWindow.getAllWindows(),
   });
-  log.info('[App] MS Store donation item service and IPC handlers registered for Microsoft Store runtime');
+  log.info('[App] MS Store donation item service and IPC handlers registered for Microsoft Store runtime', {
+    tipProductIds: MSSTORE_DONATION_TIP_PRODUCT_IDS,
+  });
 }
 
 function getTurboEngineDlcProgramOptionSignature(): string {

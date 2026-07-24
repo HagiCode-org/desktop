@@ -478,7 +478,7 @@ const hagiNodeBridge: HagiNodeRuntimeBridge = Object.freeze({
 const msstoreDonationItemBridge: MsstoreDonationItemBridge = {
   getState: () => ipcRenderer.invoke(msstoreDonationItemChannels.getState),
   dismiss: () => ipcRenderer.invoke(msstoreDonationItemChannels.dismiss),
-  purchase: () => ipcRenderer.invoke(msstoreDonationItemChannels.purchase),
+  purchase: (input) => ipcRenderer.invoke(msstoreDonationItemChannels.purchase, input),
   onDidChange: (callback) => {
     const listener = (_event, snapshot) => {
       callback(snapshot);

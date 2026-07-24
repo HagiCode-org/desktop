@@ -2,7 +2,13 @@ import type { BrowserWindow } from 'electron';
 import { electron } from '../../../electron-api.js';
 import type { ConfigManager, MsstoreDonationItemState } from '../../config.js';
 import type { StoreLicensePurchaseOutcome } from '../../../types/store-license.js';
-import { msstoreDonationItemChannels } from '../../../types/msstore-donation-item.js';
+import {
+  msstoreDonationItemChannels,
+  resolveMsstoreDonationTipProductId,
+  type MsstoreDonationItemPurchaseRequest,
+  type MsstoreDonationTipProductId,
+  type MsstoreDonationTipTierId,
+} from '../../../types/msstore-donation-item.js';
 
 const { ipcMain } = electron;
 
@@ -11,11 +17,13 @@ export type MsstoreDonationItemPurchaseOutcome = StoreLicensePurchaseOutcome;
 export interface MsstoreDonationItemPurchaseResult {
   outcome: MsstoreDonationItemPurchaseOutcome;
   purchaseCount: number;
+  purchaseCountsByTier: MsstoreDonationItemState['purchaseCountsByTier'];
+  tier?: MsstoreDonationTipTierId;
 }
 
 interface MsstoreDonationItemHandlerState {
   configManager: ConfigManager | null;
-  purchaseDonation: (() => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }>) | null;
+  purchaseDonation: ((productId: MsstoreDonationTipProductId) => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }>) | null;
   canDismiss: (() => boolean) | null;
   getWindows: () => BrowserWindow[];
 }
@@ -54,7 +62,7 @@ function getConfigManager(): ConfigManager {
   return state.configManager;
 }
 
-function getPurchaseDonation(): () => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }> {
+function getPurchaseDonation(): (productId: MsstoreDonationTipProductId) => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }> {
   if (!state.purchaseDonation) {
     throw new Error('MS Store donation item handlers are not initialized');
   }
@@ -72,7 +80,7 @@ function canDismissDonationItem(): boolean {
 
 export function registerMsstoreDonationItemHandlers(deps: {
   configManager: ConfigManager;
-  purchaseDonation: () => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }>;
+  purchaseDonation: (productId: MsstoreDonationTipProductId) => Promise<{ outcome: MsstoreDonationItemPurchaseOutcome }>;
   canDismiss: () => boolean;
   getWindows: () => BrowserWindow[];
 }): void {
@@ -98,21 +106,37 @@ export function registerMsstoreDonationItemHandlers(deps: {
     return nextState;
   });
 
-  ipcMain.handle(msstoreDonationItemChannels.purchase, async () => {
-    const purchaseResult = await getPurchaseDonation()();
-    const outcome = purchaseResult.outcome;
+  ipcMain.handle(
+    msstoreDonationItemChannels.purchase,
+    async (_event, input?: MsstoreDonationItemPurchaseRequest | MsstoreDonationTipTierId | string) => {
+      const resolved = resolveMsstoreDonationTipProductId(input);
+      if (!resolved) {
+        const current = getConfigManager().getMsstoreDonationItemState();
+        broadcastState(current);
+        return {
+          outcome: 'failed' as const,
+          purchaseCount: current.purchaseCount,
+          purchaseCountsByTier: current.purchaseCountsByTier,
+        } satisfies MsstoreDonationItemPurchaseResult;
+      }
 
-    const nextState = isMsstoreDonationItemSuccessOutcome(outcome)
-      ? getConfigManager().incrementMsstoreDonationItemPurchaseCount()
-      : getConfigManager().getMsstoreDonationItemState();
+      const purchaseResult = await getPurchaseDonation()(resolved.productId);
+      const outcome = purchaseResult.outcome;
 
-    broadcastState(nextState);
+      const nextState = isMsstoreDonationItemSuccessOutcome(outcome)
+        ? getConfigManager().incrementMsstoreDonationItemPurchaseCount(resolved.tier)
+        : getConfigManager().getMsstoreDonationItemState();
 
-    return {
-      outcome,
-      purchaseCount: nextState.purchaseCount,
-    } satisfies MsstoreDonationItemPurchaseResult;
-  });
+      broadcastState(nextState);
+
+      return {
+        outcome,
+        purchaseCount: nextState.purchaseCount,
+        purchaseCountsByTier: nextState.purchaseCountsByTier,
+        tier: resolved.tier,
+      } satisfies MsstoreDonationItemPurchaseResult;
+    },
+  );
 }
 
 export function disposeMsstoreDonationItemHandlers(): void {
