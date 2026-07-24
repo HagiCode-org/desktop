@@ -40,17 +40,41 @@ export interface MsstoreDonationItemPurchaseRequest {
   productId?: string;
 }
 
+export type MsstoreDonationItemPhase = 'reconcile' | 'purchase' | 'consume' | 'idle';
+
+export type MsstoreDonationItemExtendedOutcome =
+  | StoreLicensePurchaseOutcome
+  | 'reconcile-failed'
+  | 'consume-failed'
+  | 'busy';
+
 export interface MsstoreDonationItemPurchaseResult {
-  outcome: StoreLicensePurchaseOutcome;
+  outcome: MsstoreDonationItemExtendedOutcome;
   purchaseCount: number;
   purchaseCountsByTier: MsstoreDonationPurchaseCountsByTier;
   tier?: MsstoreDonationTipTierId;
+  phase?: MsstoreDonationItemPhase;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  purchaseOutcome?: StoreLicensePurchaseOutcome | null;
+  localCountIncremented?: boolean;
+}
+
+export interface MsstoreDonationItemReconcileResult {
+  outcome: 'succeeded' | 'reconcile-failed' | 'busy';
+  phase: MsstoreDonationItemPhase;
+  purchaseCount: number;
+  purchaseCountsByTier: MsstoreDonationPurchaseCountsByTier;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  consumedPendingCount?: number;
 }
 
 export interface MsstoreDonationItemBridge {
   getState: () => Promise<MsstoreDonationItemState>;
   dismiss: () => Promise<MsstoreDonationItemState>;
   purchase: (input: MsstoreDonationItemPurchaseRequest) => Promise<MsstoreDonationItemPurchaseResult>;
+  reconcilePending?: () => Promise<MsstoreDonationItemReconcileResult>;
   onDidChange: (callback: (state: MsstoreDonationItemState) => void) => () => void;
 }
 
@@ -58,6 +82,7 @@ export const msstoreDonationItemChannels = {
   getState: 'get-msstore-donation-item-state',
   dismiss: 'dismiss-msstore-donation-item',
   purchase: 'purchase-msstore-donation-item',
+  reconcilePending: 'reconcile-msstore-donation-item-pending',
   changed: 'msstore-donation-item:changed',
 } as const;
 

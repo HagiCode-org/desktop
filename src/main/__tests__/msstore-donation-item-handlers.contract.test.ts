@@ -12,11 +12,14 @@ describe('msstore donation item IPC handlers contract', () => {
     assert.match(source, /msstoreDonationItemChannels\.getState/);
     assert.match(source, /msstoreDonationItemChannels\.dismiss/);
     assert.match(source, /msstoreDonationItemChannels\.purchase/);
+    assert.match(source, /msstoreDonationItemChannels\.reconcilePending/);
     assert.match(source, /window\.webContents\.send\(msstoreDonationItemChannels\.changed, snapshot\)/);
     assert.match(source, /const successOutcomes = new Set<MsstoreDonationItemPurchaseOutcome>\(\[/);
     assert.match(source, /'succeeded'/);
     assert.match(source, /'already-purchased'/);
     assert.match(source, /incrementMsstoreDonationItemPurchaseCount\(/);
+    assert.match(source, /purchaseTipWithReconcile/);
+    assert.match(source, /localCountIncremented/);
     assert.match(source, /resolveMsstoreDonationTipProductId/);
     assert.match(source, /purchaseCountsByTier/);
   });

@@ -479,6 +479,7 @@ const msstoreDonationItemBridge: MsstoreDonationItemBridge = {
   getState: () => ipcRenderer.invoke(msstoreDonationItemChannels.getState),
   dismiss: () => ipcRenderer.invoke(msstoreDonationItemChannels.dismiss),
   purchase: (input) => ipcRenderer.invoke(msstoreDonationItemChannels.purchase, input),
+  reconcilePending: () => ipcRenderer.invoke(msstoreDonationItemChannels.reconcilePending),
   onDidChange: (callback) => {
     const listener = (_event, snapshot) => {
       callback(snapshot);
