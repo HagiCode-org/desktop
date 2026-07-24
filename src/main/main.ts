@@ -81,6 +81,7 @@ import type { NotificationParams } from '../shared/api.js';
 import {
   EntitlementEvaluator,
   MicrosoftStoreSubscriptionBroker,
+  readNativeWindowHandle,
   SubscriptionService,
   TurboEngineEntitlementEvaluator,
   TurboEngineLicenseService,
@@ -90,6 +91,10 @@ import {
   turboEngineProductConfig,
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
+import {
+  executeWindowsStorePurchaseAddon,
+  resolveWindowsStorePurchaseAddonPath,
+} from './subscription/windows-store-purchase-addon.js';
 import {
   MSSTORE_DONATION_TIP_PRODUCT_IDS,
   type MsstoreDonationTipProductId,
@@ -731,36 +736,58 @@ function initializeTurboEngineLicenseService(): void {
   log.info('[App] TurboEngine license service and IPC handlers registered for Microsoft Store runtime');
 }
 
+function createMsstoreDonationProductConfig(productId: MsstoreDonationTipProductId) {
+  return {
+    ...sponsorPlanProductConfig,
+    key: `msstore-donation-item:${productId}`,
+    storeId: productId,
+    productId,
+    productName: 'MS Store Donation Item',
+    purchaseLabel: 'MS Store donation item',
+    statusLabel: 'MS Store donation item status',
+    // Tips are Store consumable add-ons, not Durable/Subscription.
+    licenseKind: 'consumable' as const,
+    entitlementNames: [] as typeof sponsorPlanProductConfig.entitlementNames,
+  };
+}
+
 function createMsstoreDonationPurchaseService(productId: MsstoreDonationTipProductId): SubscriptionService {
   return new SubscriptionService({
     broker: new MicrosoftStoreSubscriptionBroker({
       windowHandle: mainWindow?.getNativeWindowHandle() ?? null,
-      productConfig: {
-        ...sponsorPlanProductConfig,
-        key: `msstore-donation-item:${productId}`,
-        storeId: productId,
-        productId,
-        productName: 'MS Store Donation Item',
-        purchaseLabel: 'MS Store donation item',
-        statusLabel: 'MS Store donation item status',
-        // Tips are one-time Store add-ons; reuse perpetual kind so broker productKinds stay non-subscription.
-        licenseKind: 'perpetual',
-      },
+      productConfig: createMsstoreDonationProductConfig(productId),
     }),
     entitlementEvaluator: new EntitlementEvaluator(),
+    productConfig: createMsstoreDonationProductConfig(productId),
   });
 }
 
 async function purchaseMsstoreDonationItemByProductId(
   productId: MsstoreDonationTipProductId,
 ): Promise<{ outcome: Awaited<ReturnType<SubscriptionService['purchase']>>['outcome'] }> {
-  // Per-call service so Dinner/Candy productIds pass through existing Store addon (no native change).
-  const service = createMsstoreDonationPurchaseService(productId);
-  try {
-    return await service.purchase();
-  } finally {
-    service.dispose();
+  // Direct Store requestPurchase for consumable tips — avoid SubscriptionService productKey/logging
+  // and Durable ownership semantics that stick already-purchased until consumable fulfillment.
+  const modulePath = resolveWindowsStorePurchaseAddonPath();
+  if (!modulePath) {
+    return {
+      outcome: 'not-supported',
+    };
   }
+
+  const result = await executeWindowsStorePurchaseAddon({
+    modulePath,
+    storeId: productId,
+    ownerWindowHandle: readNativeWindowHandle(mainWindow?.getNativeWindowHandle() ?? null),
+  });
+
+  log.info('[MsstoreDonationItem] Store purchase completed.', {
+    productId,
+    outcome: result.outcome,
+    errorCode: result.errorCode,
+    errorMessage: result.errorMessage,
+  });
+
+  return { outcome: result.outcome };
 }
 
 function initializeMsstoreDonationItemService(): void {

@@ -21,6 +21,9 @@ describe('msstore donation item main-process wiring', () => {
     assert.match(source, /function initializeMsstoreDonationItemService\(\): void \{/);
     assert.match(source, /function createMsstoreDonationPurchaseService\(/);
     assert.match(source, /async function purchaseMsstoreDonationItemByProductId\(/);
+    assert.match(source, /licenseKind: 'consumable'/);
+    assert.match(source, /executeWindowsStorePurchaseAddon/);
+    assert.match(source, /readNativeWindowHandle/);
     assert.match(source, /registerMsstoreDonationItemHandlers\(\{/);
     assert.match(source, /canDismiss: \(\) => subscriptionService\?\.getCurrentSnapshot\(\)\.status === 'active',/);
     assert.match(source, /purchaseDonation: \(productId\) => purchaseMsstoreDonationItemByProductId\(productId\)/);
