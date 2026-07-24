@@ -655,21 +655,31 @@ ratingPrompt:
     openFailedFallback: Microsoft Store review page unavailable.
 
 donationItem:
+  noPrivilegeNotice: 'Tips appreciate the author''s work. They do not unlock privileges, features, or entitlements.'
+  tiers:
+    coffee:
+      shortName: 'Cappuccino'
+    dinner:
+      shortName: 'Lobster'
+    candy:
+      shortName: 'Carnival'
   actions:
-    purchase: Donate now
-    purchasing: Processing...
-    close: Close donation item
-  purchaseCount: Donation count {{count}} (local record)
+    purchase: 'Donate now'
+    purchasing: 'Processing...'
+    purchaseTier: 'Tip {{shortName}}'
+    close: 'Close donation item'
+  purchaseCount: 'Donation count {{count}} (local record)'
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: Donation item dismissed
+    dismissed: 'Donation item dismissed'
+    tierThanks: 'Thanks for the {{shortName}} tip!'
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
+      succeeded: 'Donation completed. Thank you for supporting us!'
       already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
+      canceled: 'Donation flow was canceled.'
       not-purchased: Donation flow ended without payment.
       network-error: Donation failed due to a network error.
       server-error: Donation failed due to a Microsoft Store service error.
       not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      failed: 'Donation failed. Please try again later.'

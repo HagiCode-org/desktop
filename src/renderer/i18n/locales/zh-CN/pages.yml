@@ -655,21 +655,31 @@ ratingPrompt:
     openFailedFallback: 微软商店评价页暂不可用。
 
 donationItem:
+  noPrivilegeNotice: '打赏是对作者工作的肯定，不附带任何特权、功能解锁或权益。'
+  tiers:
+    coffee:
+      shortName: '卡布奇诺'
+    dinner:
+      shortName: '小青龙'
+    candy:
+      shortName: '嘉年华'
   actions:
-    purchase: 立即续命
-    purchasing: 续命中...
-    close: 关闭捐助条目
-  purchaseCount: 已续命 {{count}} 次（本地记录）
+    purchase: '立即续命'
+    purchasing: '续命中...'
+    purchaseTier: '打赏 {{shortName}}'
+    close: '关闭捐助条目'
+  purchaseCount: '已续命 {{count}} 次（本地记录）'
   messages:
     purchaseFailed: '续命失败：{{error}}'
     dismissFailed: '关闭捐助条目失败：{{error}}'
-    dismissed: 已关闭捐助条目
+    dismissed: '已关闭捐助条目'
+    tierThanks: '感谢你的{{shortName}}打赏！'
     purchaseOutcome:
-      succeeded: 续命成功，感谢支持！
+      succeeded: '续命成功，感谢支持！'
       already-purchased: 已完成续命，感谢继续支持！
-      canceled: 已取消本次续命。
+      canceled: '已取消本次续命。'
       not-purchased: 续命流程结束，但未完成支付。
       network-error: 续命失败，网络异常。
       server-error: 续命失败，商店服务异常。
       not-supported: 当前运行环境不支持续命。
-      failed: 续命失败，请稍后重试。
+      failed: '续命失败，请稍后重试。'

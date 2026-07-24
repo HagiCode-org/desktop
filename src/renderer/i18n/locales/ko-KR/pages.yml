@@ -652,21 +652,31 @@ ratingPrompt:
     openFailed: 'Microsoft Store 리뷰 페이지를 여는 데 실패했습니다: {{error}}'
     openFailedFallback: Microsoft Store 리뷰 페이지를 사용할 수 없습니다.
 donationItem:
+  noPrivilegeNotice: '후원은 작가에 대한 응원이며 특권·기능 해제·권한을 제공하지 않습니다.'
+  tiers:
+    coffee:
+      shortName: '카푸치노'
+    dinner:
+      shortName: '샤오칭룽'
+    candy:
+      shortName: '카니발'
   actions:
-    purchase: Donate now
-    purchasing: Processing...
-    close: Close donation item
-  purchaseCount: Donation count {{count}} (local record)
+    purchase: 'Donate now'
+    purchasing: 'Processing...'
+    purchaseTier: '{{shortName}} 후원'
+    close: 'Close donation item'
+  purchaseCount: 'Donation count {{count}} (local record)'
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: Donation item dismissed
+    dismissed: 'Donation item dismissed'
+    tierThanks: '{{shortName}} 후원 감사합니다!'
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
-      already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
-      not-purchased: Donation flow ended without payment.
-      network-error: Donation failed due to a network error.
-      server-error: Donation failed due to a Microsoft Store service error.
-      not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      succeeded: 'Donation completed. Thank you for supporting us!'
+      already-purchased: 'Donation recorded. Thank you for your continued support!'
+      canceled: 'Donation flow was canceled.'
+      not-purchased: 'Donation flow ended without payment.'
+      network-error: 'Donation failed due to a network error.'
+      server-error: 'Donation failed due to a Microsoft Store service error.'
+      not-supported: 'Donation is not supported in this runtime.'
+      failed: 'Donation failed. Please try again later.'

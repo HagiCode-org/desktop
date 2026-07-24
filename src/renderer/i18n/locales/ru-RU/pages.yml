@@ -652,21 +652,31 @@ ratingPrompt:
     openFailed: 'Не удалось открыть страницу отзывов Microsoft Store: {{error}}'
     openFailedFallback: Страница отзывов Microsoft Store недоступна.
 donationItem:
+  noPrivilegeNotice: 'Чаевые — благодарность автору. Они не дают привилегий, функций или прав.'
+  tiers:
+    coffee:
+      shortName: 'Капучино'
+    dinner:
+      shortName: 'Лобстер'
+    candy:
+      shortName: 'Карнавал'
   actions:
-    purchase: Donate now
-    purchasing: Processing...
-    close: Close donation item
-  purchaseCount: Donation count {{count}} (local record)
+    purchase: 'Donate now'
+    purchasing: 'Processing...'
+    purchaseTier: 'Чаевые {{shortName}}'
+    close: 'Close donation item'
+  purchaseCount: 'Donation count {{count}} (local record)'
   messages:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
-    dismissed: Donation item dismissed
+    dismissed: 'Donation item dismissed'
+    tierThanks: 'Спасибо за чаевые {{shortName}}!'
     purchaseOutcome:
-      succeeded: Donation completed. Thank you for supporting us!
-      already-purchased: Donation recorded. Thank you for your continued support!
-      canceled: Donation flow was canceled.
-      not-purchased: Donation flow ended without payment.
-      network-error: Donation failed due to a network error.
-      server-error: Donation failed due to a Microsoft Store service error.
-      not-supported: Donation is not supported in this runtime.
-      failed: Donation failed. Please try again later.
+      succeeded: 'Donation completed. Thank you for supporting us!'
+      already-purchased: 'Donation recorded. Thank you for your continued support!'
+      canceled: 'Donation flow was canceled.'
+      not-purchased: 'Donation flow ended without payment.'
+      network-error: 'Donation failed due to a network error.'
+      server-error: 'Donation failed due to a Microsoft Store service error.'
+      not-supported: 'Donation is not supported in this runtime.'
+      failed: 'Donation failed. Please try again later.'
