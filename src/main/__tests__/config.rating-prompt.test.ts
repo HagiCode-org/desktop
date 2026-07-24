@@ -51,23 +51,33 @@ describe('normalizeMsstoreRatingPromptState', () => {
 
 describe('normalizeMsstoreDonationItemState', () => {
   it('returns default state when input is missing', () => {
-    assert.deepEqual(normalizeMsstoreDonationItemState(undefined), { purchaseCount: 0 });
-    assert.deepEqual(normalizeMsstoreDonationItemState(null), { purchaseCount: 0 });
+    assert.deepEqual(normalizeMsstoreDonationItemState(undefined), { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
+    assert.deepEqual(normalizeMsstoreDonationItemState(null), { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
   });
 
   it('keeps non-negative integer purchaseCount and trims valid dismissedAt', () => {
     assert.deepEqual(
       normalizeMsstoreDonationItemState({ purchaseCount: 12, dismissedAt: ' 2024-01-01T00:00:00.000Z ' }),
-      { purchaseCount: 12, dismissedAt: '2024-01-01T00:00:00.000Z' },
+      { purchaseCount: 12, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 }, dismissedAt: '2024-01-01T00:00:00.000Z' },
     );
   });
 
   it('drops invalid values and falls back to defaults', () => {
-    assert.deepEqual(normalizeMsstoreDonationItemState({ purchaseCount: -1 }), { purchaseCount: 0 });
-    assert.deepEqual(normalizeMsstoreDonationItemState({ purchaseCount: 1.5 }), { purchaseCount: 0 });
+    assert.deepEqual(normalizeMsstoreDonationItemState({ purchaseCount: -1 }), { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
+    assert.deepEqual(normalizeMsstoreDonationItemState({ purchaseCount: 1.5 }), { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
     assert.deepEqual(
       normalizeMsstoreDonationItemState({ purchaseCount: 3, dismissedAt: 'not-a-date' }),
-      { purchaseCount: 3 },
+      { purchaseCount: 3, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } },
+    );
+  });
+
+  it('normalizes by-tier counts and tolerates missing legacy field', () => {
+    assert.deepEqual(
+      normalizeMsstoreDonationItemState({
+        purchaseCount: 5,
+        purchaseCountsByTier: { coffee: 2, dinner: -1, candy: 1.5 } as never,
+      }),
+      { purchaseCount: 5, purchaseCountsByTier: { coffee: 2, dinner: 0, candy: 0 } },
     );
   });
 });
@@ -108,8 +118,8 @@ describe('ConfigManager MS Store donation item state', () => {
 
     const state = configManager.getMsstoreDonationItemState();
 
-    assert.deepEqual(state, { purchaseCount: 0 });
-    assert.deepEqual(store.get('msstoreDonationItem'), { purchaseCount: 0 });
+    assert.deepEqual(state, { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
+    assert.deepEqual(store.get('msstoreDonationItem'), { purchaseCount: 0, purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 } });
   });
 
   it('increments purchaseCount and persists across reads', () => {
@@ -125,7 +135,27 @@ describe('ConfigManager MS Store donation item state', () => {
 
     assert.equal(afterIncrement.purchaseCount, 3);
     assert.equal(reloaded.purchaseCount, 3);
-    assert.deepEqual(store.get('msstoreDonationItem'), { purchaseCount: 3 });
+    assert.deepEqual(store.get('msstoreDonationItem'), {
+      purchaseCount: 3,
+      purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 },
+    });
+  });
+
+  it('increments total and by-tier when tier is provided', () => {
+    const store = createMemoryStore({
+      msstoreDonationItem: {
+        purchaseCount: 1,
+        purchaseCountsByTier: { coffee: 1, dinner: 0, candy: 0 },
+      },
+    });
+    const configManager = new ConfigManager(store as unknown as Store<AppConfig>);
+
+    const after = configManager.incrementMsstoreDonationItemPurchaseCount('dinner');
+
+    assert.deepEqual(after, {
+      purchaseCount: 2,
+      purchaseCountsByTier: { coffee: 1, dinner: 1, candy: 0 },
+    });
   });
 
   it('stores dismissedAt via setMsstoreDonationItemState', () => {
@@ -134,11 +164,13 @@ describe('ConfigManager MS Store donation item state', () => {
 
     const next = configManager.setMsstoreDonationItemState({
       purchaseCount: 4,
+      purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 },
       dismissedAt: '2024-06-02T00:00:00.000Z',
     });
 
     assert.deepEqual(next, {
       purchaseCount: 4,
+      purchaseCountsByTier: { coffee: 0, dinner: 0, candy: 0 },
       dismissedAt: '2024-06-02T00:00:00.000Z',
     });
     assert.deepEqual(store.get('msstoreDonationItem'), next);

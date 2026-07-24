@@ -90,6 +90,10 @@ import {
   turboEngineProductConfig,
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
+import {
+  MSSTORE_DONATION_TIP_PRODUCT_IDS,
+  type MsstoreDonationTipProductId,
+} from '../types/msstore-donation-item.js';
 
 const { app, BrowserWindow: ElectronBrowserWindow, ipcMain, nativeImage, shell } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
