@@ -12,9 +12,9 @@ describe('msstore donation item main-process wiring', () => {
     const typesSource = await fs.readFile(typesPath, 'utf8');
 
     assert.match(source, /MSSTORE_DONATION_TIP_PRODUCT_IDS/);
-    assert.match(typesSource, /9NC5T6VC1NQH/);
-    assert.match(typesSource, /9NSKR15751LN/);
-    assert.match(typesSource, /9MWTKDX9J62G/);
+    assert.match(typesSource, /9NNC9S2GVJKC/);
+    assert.match(typesSource, /9PBXBJFCL9K5/);
+    assert.match(typesSource, /9PGSK18H6872/);
     assert.match(source, /let msstoreDonationPurchaseService: SubscriptionService \| null = null;/);
     assert.match(source, /let msstoreDonationItemFeatureEnabled = false;/);
     assert.match(source, /msstoreDonationItemFeatureEnabled = distributionModeState\.winStoreMode;/);

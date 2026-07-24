@@ -70,12 +70,12 @@ describe('tip consumable orchestrator', () => {
 
   it('filters unfulfilled items to tip whitelist only', () => {
     const filtered = filterTipUnfulfilledItems([
-      { trackingId: 'a', productId: '9NC5T6VC1NQH', quantity: 1 },
+      { trackingId: 'a', productId: '9NNC9S2GVJKC', quantity: 1 },
       { trackingId: 'b', productId: 'OTHER', quantity: 1 },
-      { trackingId: 'c', productId: '9NSKR15751LN', quantity: 0 },
+      { trackingId: 'c', productId: '9PBXBJFCL9K5', quantity: 0 },
     ]);
     assert.deepEqual(filtered, [
-      { trackingId: 'a', productId: '9NC5T6VC1NQH', quantity: 1 },
+      { trackingId: 'a', productId: '9NNC9S2GVJKC', quantity: 1 },
     ]);
   });
 
@@ -85,21 +85,21 @@ describe('tip consumable orchestrator', () => {
       reportOk: true,
       purchaseOutcome: 'succeeded',
     });
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.phase, 'consume');
     assert.equal(result.localCountIncremented, true);
-    assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
+    assert.deepEqual(deps.purchaseCalls, ['9NNC9S2GVJKC']);
     // focused pre-reconcile (1) + post-purchase consume (1)
     assert.ok(deps.reportCalls.length >= 2);
-    assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NC5T6VC1NQH');
+    assert.equal(deps.reportCalls[deps.reportCalls.length - 1]?.productId, '9NNC9S2GVJKC');
   });
 
   it('developer-managed pre-reconcile reports only the product being purchased', async () => {
     const deps = createDeps({ reportOk: true, purchaseOutcome: 'succeeded' });
-    await purchaseTipWithReconcile(deps, '9NSKR15751LN');
-    assert.equal(deps.reportCalls[0]?.productId, '9NSKR15751LN');
-    assert.deepEqual(deps.purchaseCalls, ['9NSKR15751LN']);
+    await purchaseTipWithReconcile(deps, '9PBXBJFCL9K5');
+    assert.equal(deps.reportCalls[0]?.productId, '9PBXBJFCL9K5');
+    assert.deepEqual(deps.purchaseCalls, ['9PBXBJFCL9K5']);
   });
 
   it('pre-purchase reconcile failures do not block purchase (developer-managed)', async () => {
@@ -140,10 +140,10 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.localCountIncremented, true);
-    assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
+    assert.deepEqual(deps.purchaseCalls, ['9NNC9S2GVJKC']);
   });
 
   it('benign insufficient-quantity during reconcile does not block purchase', async () => {
@@ -189,10 +189,10 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps2, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps2, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.localCountIncremented, true);
-    assert.deepEqual(deps2.purchaseCalls, ['9NC5T6VC1NQH']);
+    assert.deepEqual(deps2.purchaseCalls, ['9NNC9S2GVJKC']);
     void deps;
   });
 
@@ -234,12 +234,12 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'consume-failed');
     assert.equal(result.phase, 'consume');
     assert.equal(result.purchaseOutcome, 'succeeded');
     assert.equal(result.localCountIncremented, false);
-    assert.deepEqual(deps.purchaseCalls, ['9NC5T6VC1NQH']);
+    assert.deepEqual(deps.purchaseCalls, ['9NNC9S2GVJKC']);
   });
 
   it('single-flight rejects concurrent purchase', async () => {
@@ -281,9 +281,9 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const first = purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const first = purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     await new Promise((r) => setTimeout(r, 10));
-    const second = await purchaseTipWithReconcile(deps, '9NSKR15751LN');
+    const second = await purchaseTipWithReconcile(deps, '9PBXBJFCL9K5');
     assert.equal(second.outcome, 'busy');
     release();
     const firstResult = await first;
@@ -300,7 +300,7 @@ describe('tip consumable orchestrator', () => {
 
   it('consumeAfterPurchase always reports qty=1 without requiring balance query', async () => {
     const deps = createDeps({ reportOk: true });
-    const ok = await consumeAfterPurchase(deps, '9NC5T6VC1NQH', 'track-1');
+    const ok = await consumeAfterPurchase(deps, '9NNC9S2GVJKC', 'track-1');
     assert.equal(ok.ok, true);
     assert.equal(ok.fulfilledCount, 1);
     assert.equal(deps.reportCalls[0]?.trackingId, 'track-1');
@@ -351,7 +351,7 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'succeeded');
     assert.equal(result.localCountIncremented, true);
     assert.equal(deps.purchaseCalls.length, 2);
@@ -395,7 +395,7 @@ describe('tip consumable orchestrator', () => {
       },
     };
 
-    const result = await purchaseTipWithReconcile(deps, '9NC5T6VC1NQH');
+    const result = await purchaseTipWithReconcile(deps, '9NNC9S2GVJKC');
     assert.equal(result.outcome, 'already-purchased');
     assert.equal(result.errorCode, 'tip-not-consumable');
     assert.equal(result.localCountIncremented, false);

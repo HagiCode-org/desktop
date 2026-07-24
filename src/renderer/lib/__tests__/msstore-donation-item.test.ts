@@ -69,9 +69,9 @@ describe('msstore donation tip tier catalog', () => {
     assert.deepEqual(catalog.map((t) => t.tier), ['coffee', 'dinner', 'candy']);
     assert.deepEqual(catalog.map((t) => t.visualLevel), [1, 2, 3]);
     assert.deepEqual(catalog.map((t) => t.productId), [
-      '9NC5T6VC1NQH',
-      '9NSKR15751LN',
-      '9MWTKDX9J62G',
+      '9NNC9S2GVJKC',
+      '9PBXBJFCL9K5',
+      '9PGSK18H6872',
     ]);
     for (const tier of catalog) {
       assert.match(tier.shortNameKey, /^donationItem\.tiers\.(coffee|dinner|candy)\.shortName$/);
