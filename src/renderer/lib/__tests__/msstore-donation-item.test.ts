@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  getMsstoreDonationTierCatalog,
+  getMsstoreDonationTierOrder,
   MSSTORE_DONATION_ITEM_DAY_THRESHOLD_MS,
   shouldShowMsstoreDonationItem,
 } from '../msstore-donation-item.js';
@@ -54,5 +56,26 @@ describe('shouldShowMsstoreDonationItem', () => {
       installDate: exactly.toISOString(),
       now: NOW,
     }), true);
+  });
+});
+
+describe('msstore donation tip tier catalog', () => {
+  it('orders Coffee → Dinner → Candy with progressive visual levels and product map', () => {
+    const order = getMsstoreDonationTierOrder();
+    assert.deepEqual([...order], ['coffee', 'dinner', 'candy']);
+
+    const catalog = getMsstoreDonationTierCatalog();
+    assert.equal(catalog.length, 3);
+    assert.deepEqual(catalog.map((t) => t.tier), ['coffee', 'dinner', 'candy']);
+    assert.deepEqual(catalog.map((t) => t.visualLevel), [1, 2, 3]);
+    assert.deepEqual(catalog.map((t) => t.productId), [
+      '9NC5T6VC1NQH',
+      '9NSKR15751LN',
+      '9MWTKDX9J62G',
+    ]);
+    for (const tier of catalog) {
+      assert.match(tier.shortNameKey, /^donationItem\.tiers\.(coffee|dinner|candy)\.shortName$/);
+      assert.equal('displayPrice' in tier, false);
+    }
   });
 });
