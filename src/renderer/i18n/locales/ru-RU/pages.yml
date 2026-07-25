@@ -169,6 +169,10 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm uses `--ignore-scripts`
       description: Make Desktop-managed npm installs and sync operations skip lifecycle scripts so postinstall-related failures are easier to isolate.
+    skipPurchaseSimulateSuccess:
+      label: Skip purchase, simulate success
+      shortLabel: Simulate tip success
+      description: When enabled, starting a tip purchase skips the Microsoft Store checkout, treats the path as purchase success for the selected tier, and still plays a random thank-you animation. Default is off. Does not write durable purchase counts.
     installDate:
       label: Raw install date (msstoreRatingPrompt.installDate)
       description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
@@ -653,6 +657,10 @@ ratingPrompt:
     openFailedFallback: Страница отзывов Microsoft Store недоступна.
 donationItem:
   noPrivilegeNotice: Чаевые — благодарность автору. Они не дают привилегий, функций или прав.
+  thankYouAnimation:
+    close: Close
+    title: Thank you
+    noPrivilege: Tips never unlock features or privileges.
   tiers:
     coffee:
       shortName: Капучино

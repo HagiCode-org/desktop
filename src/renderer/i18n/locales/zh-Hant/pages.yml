@@ -169,6 +169,10 @@ settings:
     useIgnoreScriptsForManagedNpm:
       label: npm 使用 `--ignore-scripts`
       description: 讓 Desktop 託管的 npm 安裝與同步操作跳過 lifecycle scripts，便於排查 postinstall 等腳本導致的問題。
+    skipPurchaseSimulateSuccess:
+      label: 跳過購買，模擬購買成功
+      shortLabel: 模擬打賞成功
+      description: 開啟後，發起打賞購買將跳過 Microsoft Store 支付，按所選檔位視為購買成功，並仍播放隨機答謝動畫。預設關閉。預設不寫入持久化購買計數。
     installDate:
       label: Raw install date (msstoreRatingPrompt.installDate)
       description: Shows the exact persisted raw install date string in local config. Click repeatedly and edit to update saved value.
@@ -653,6 +657,10 @@ ratingPrompt:
     openFailedFallback: Microsoft Store 評價頁面暫時無法使用。
 donationItem:
   noPrivilegeNotice: 打賞是對作者工作的肯定，不附帶任何特權、功能解鎖或權益。
+  thankYouAnimation:
+    close: 關閉
+    title: 謝謝支持
+    noPrivilege: 打賞不會解鎖任何功能或特權。
   tiers:
     coffee:
       shortName: 卡布奇諾

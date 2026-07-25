@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from './components/providers/theme-provider';
 import { Toaster } from './components/ui/sonner';
+import { ThankYouAnimationHost } from './components/thank-you';
 import {
   applyDesktopTheme,
   DESKTOP_THEME_STORAGE_KEY,
@@ -57,6 +58,7 @@ try {
               onBootstrapErrorVisible={hideLoadingContainer}
             />
             <Toaster />
+            <ThankYouAnimationHost />
           </ThemeProvider>
         </I18nextProvider>
       </Provider>
