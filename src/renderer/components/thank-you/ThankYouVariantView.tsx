@@ -20,7 +20,8 @@ const VARIANT_MOTIFS: Record<ThankYouVariantId, string> = {
 
 /**
  * Progressive fullscreen thank-you visual for a tier + variant.
- * Intensity comes from tier tokens; motif/layout shifts by variantId 0..4.
+ * Intensity/particles come from tier tokens; motif shifts by variantId 0..4.
+ * Copy always stays centered.
  */
 export function ThankYouVariantView({
   tier,
@@ -35,27 +36,15 @@ export function ThankYouVariantView({
     ? Math.min(3, tokens.particleCount)
     : tokens.particleCount;
 
-  const layoutClass =
-    variantId === 0
-      ? 'items-center justify-center'
-      : variantId === 1
-        ? 'items-end justify-center pb-24'
-        : variantId === 2
-          ? 'items-start justify-center pt-24'
-          : variantId === 3
-            ? 'items-center justify-start pl-16'
-            : 'items-center justify-end pr-16';
-
   return (
     <div
-      className={`pointer-events-none absolute inset-0 flex ${layoutClass} bg-gradient-to-br ${tokens.className}`}
+      className={`pointer-events-none absolute inset-0 flex items-center justify-center bg-gradient-to-br ${tokens.className}`}
       data-testid="thank-you-variant"
       data-tier={tier}
       data-variant={variantId}
       data-intensity={tokens.intensity}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
     >
-      {/* ambient particles */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
         {Array.from({ length: particles }, (_, i) => {
           const left = ((i * 37) + variantId * 13) % 100;
@@ -102,12 +91,6 @@ export function ThankYouVariantView({
           {title}
         </h2>
         <p className="mt-3 text-sm text-white/80 sm:text-base">{subtitle}</p>
-        <p
-          className="mt-4 text-xs uppercase tracking-widest text-white/50"
-          data-testid="thank-you-variant-label"
-        >
-          {tier} · v{variantId + 1}
-        </p>
       </div>
     </div>
   );

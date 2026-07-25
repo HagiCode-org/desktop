@@ -8,24 +8,30 @@ const variantPath = path.resolve(process.cwd(), 'src/renderer/components/thank-y
 const mainPath = path.resolve(process.cwd(), 'src/renderer/main.tsx');
 
 describe('ThankYouAnimationHost contract', () => {
-  it('is fullscreen overlay with Esc/close and tier auto-timeout', async () => {
+  it('is fullscreen overlay dismissible by click-anywhere, Esc, and tier auto-timeout', async () => {
     const source = await fs.readFile(hostPath, 'utf8');
 
     assert.match(source, /fixed inset-0/);
     assert.match(source, /Escape/);
     assert.match(source, /closeThankYouAnimation/);
+    assert.match(source, /onClick=\{\(\) => dispatch\(closeThankYouAnimation\(\)\)\}/);
     assert.match(source, /reducedMotionDurationMs|prefers-reduced-motion/);
     assert.match(source, /getThankYouTierTokens/);
     assert.match(source, /data-testid="thank-you-animation-host"/);
+    assert.doesNotMatch(source, /thank-you-animation-close/);
   });
 
-  it('renders progressive variants via registry tokens', async () => {
-    const source = await fs.readFile(variantPath, 'utf8');
+  it('centers copy without level labels and uses gratitude message keys', async () => {
+    const [hostSource, variantSource] = await Promise.all([
+      fs.readFile(hostPath, 'utf8'),
+      fs.readFile(variantPath, 'utf8'),
+    ]);
 
-    assert.match(source, /data-tier=/);
-    assert.match(source, /data-variant=/);
-    assert.match(source, /data-intensity=/);
-    assert.match(source, /particleCount/);
+    assert.match(variantSource, /items-center justify-center/);
+    assert.doesNotMatch(variantSource, /tier ·|variant-label|v\{variantId/);
+    assert.match(hostSource, /donationItem\.thankYouAnimation\.title/);
+    assert.match(hostSource, /donationItem\.thankYouAnimation\.message/);
+    assert.doesNotMatch(hostSource, /noPrivilege/);
   });
 
   it('is mounted once in renderer shell', async () => {

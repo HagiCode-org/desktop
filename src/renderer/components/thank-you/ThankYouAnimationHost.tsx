@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { AppDispatch, RootState } from '@/store';
 import {
   closeThankYouAnimation,
@@ -34,6 +32,7 @@ function usePrefersReducedMotion(): boolean {
 /**
  * Single fullscreen thank-you overlay host.
  * Mount once in app shell so playback survives donation panel unmount.
+ * Dismiss: click anywhere, Escape, or tier auto-timeout.
  */
 export function ThankYouAnimationHost() {
   const { t } = useTranslation(['pages']);
@@ -83,16 +82,8 @@ export function ThankYouAnimationHost() {
     return null;
   }
 
-  const shortName = t(`donationItem.tiers.${playing.tier}.shortName`, { ns: 'pages' });
-  const title = t('donationItem.messages.tierThanks', {
-    ns: 'pages',
-    shortName,
-    defaultValue: t('donationItem.thankYouAnimation.title', { ns: 'pages' }),
-  });
-  const subtitle = t('donationItem.thankYouAnimation.noPrivilege', {
-    ns: 'pages',
-    defaultValue: t('donationItem.noPrivilegeNotice', { ns: 'pages' }),
-  });
+  const title = t('donationItem.thankYouAnimation.title', { ns: 'pages' });
+  const subtitle = t('donationItem.thankYouAnimation.message', { ns: 'pages' });
   const closeLabel = t('donationItem.thankYouAnimation.close', { ns: 'pages' });
 
   const variantId = Math.min(
@@ -102,11 +93,19 @@ export function ThankYouAnimationHost() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex"
+      className="fixed inset-0 z-[100] flex cursor-pointer"
       data-testid="thank-you-animation-host"
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      title={closeLabel}
+      onClick={() => dispatch(closeThankYouAnimation())}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          dispatch(closeThankYouAnimation());
+        }
+      }}
     >
       <ThankYouVariantView
         tier={playing.tier}
@@ -115,20 +114,6 @@ export function ThankYouAnimationHost() {
         title={title}
         subtitle={subtitle}
       />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end p-4">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="pointer-events-auto gap-1 shadow-lg"
-          onClick={() => dispatch(closeThankYouAnimation())}
-          aria-label={closeLabel}
-          data-testid="thank-you-animation-close"
-        >
-          <X className="h-4 w-4" />
-          {closeLabel}
-        </Button>
-      </div>
     </div>
   );
 }
