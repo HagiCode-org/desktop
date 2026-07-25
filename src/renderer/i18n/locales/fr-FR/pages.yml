@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: Les pourboires remercient l'auteur. Ils n'offrent aucun privilège, fonctionnalité ni droit.
   thankYouAnimation:
-    close: Close
-    title: Thank you
-    noPrivilege: Tips never unlock features or privileges.
+    close: Click anywhere to close
+    title: Thank you for your tip
+    message: With your support, the author will have more resources to make HagiCode even better.
   tiers:
     coffee:
       shortName: Cappuccino

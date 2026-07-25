@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: Las propinas agradecen el trabajo del autor. No desbloquean privilegios, funciones ni derechos.
   thankYouAnimation:
-    close: Close
-    title: Thank you
-    noPrivilege: Tips never unlock features or privileges.
+    close: Click anywhere to close
+    title: Thank you for your tip
+    message: With your support, the author will have more resources to make HagiCode even better.
   tiers:
     coffee:
       shortName: Capuchino

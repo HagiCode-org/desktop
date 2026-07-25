@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: 打賞是對作者工作的肯定，不附帶任何特權、功能解鎖或權益。
   thankYouAnimation:
-    close: 關閉
-    title: 謝謝支持
-    noPrivilege: 打賞不會解鎖任何功能或特權。
+    close: 點擊任意位置關閉
+    title: 謝謝您的打賞
+    message: 有了您提供的資源，作者將有更多資源把 HagiCode 越做越好。
   tiers:
     coffee:
       shortName: 卡布奇諾

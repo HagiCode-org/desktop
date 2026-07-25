@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: チップは作者への感謝であり、特権・機能解除・権利は付きません。
   thankYouAnimation:
-    close: Close
-    title: Thank you
-    noPrivilege: Tips never unlock features or privileges.
+    close: Click anywhere to close
+    title: Thank you for your tip
+    message: With your support, the author will have more resources to make HagiCode even better.
   tiers:
     coffee:
       shortName: カプチーノ

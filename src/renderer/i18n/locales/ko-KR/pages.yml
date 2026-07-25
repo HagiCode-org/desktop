@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: 후원은 작가에 대한 응원이며 특권·기능 해제·권한을 제공하지 않습니다.
   thankYouAnimation:
-    close: Close
-    title: Thank you
-    noPrivilege: Tips never unlock features or privileges.
+    close: Click anywhere to close
+    title: Thank you for your tip
+    message: With your support, the author will have more resources to make HagiCode even better.
   tiers:
     coffee:
       shortName: 카푸치노

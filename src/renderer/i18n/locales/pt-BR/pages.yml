@@ -658,9 +658,9 @@ ratingPrompt:
 donationItem:
   noPrivilegeNotice: Gorjetas agradecem o trabalho do autor. Não liberam privilégios, recursos ou direitos.
   thankYouAnimation:
-    close: Close
-    title: Thank you
-    noPrivilege: Tips never unlock features or privileges.
+    close: Click anywhere to close
+    title: Thank you for your tip
+    message: With your support, the author will have more resources to make HagiCode even better.
   tiers:
     coffee:
       shortName: Cappuccino
