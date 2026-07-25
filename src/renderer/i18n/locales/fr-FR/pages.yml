@@ -671,7 +671,6 @@ donationItem:
     purchaseFailed: 'Donation failed: {{error}}'
     dismissFailed: 'Failed to dismiss donation item: {{error}}'
     reconcileFailed: 'Could not confirm unfinished tips: {{error}}'
-    consumeFailed: 'Tip payment succeeded but confirmation is incomplete: {{error}}'
     reconcileSucceeded: Tip sync completed. You can tip again.
     busy: Another tip operation is already in progress.
     dismissed: Donation item dismissed

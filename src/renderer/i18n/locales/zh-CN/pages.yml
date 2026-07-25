@@ -674,7 +674,6 @@ donationItem:
     purchaseFailed: '续命失败：{{error}}'
     dismissFailed: '关闭捐助条目失败：{{error}}'
     reconcileFailed: '未能确认未完成的打赏：{{error}}'
-    consumeFailed: '打赏支付成功，但确认未完成：{{error}}'
     reconcileSucceeded: '打赏同步完成，可以继续打赏。'
     busy: '已有打赏操作进行中。'
     dismissed: '已关闭捐助条目'
