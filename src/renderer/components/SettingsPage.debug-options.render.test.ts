@@ -30,6 +30,7 @@ describe('debug options settings renderer wiring', () => {
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\s*\.getSettings\(\)/);
     assert.match(debugOptionsSettingsSource, /getDebugOptionsBridge\(\)\.setSettings\(\{/);
     assert.match(debugOptionsSettingsSource, /useIgnoreScriptsForManagedNpm/);
+    assert.match(debugOptionsSettingsSource, /skipPurchaseSimulateSuccess/);
     assert.match(debugOptionsSettingsSource, /msstoreInstallDateRaw/);
     assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.label/);
     assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.installDate\.description/);
@@ -51,5 +52,20 @@ describe('debug options settings renderer wiring', () => {
     assert.match(zhPagesSource, /label: npm 使用 `--ignore-scripts`/);
     assert.match(zhPagesSource, /installDate:\n[\s\S]*安装日期原始值/);
     assert.match(zhPagesSource, /ageDays: '安装天数：\{\{value\}\}'/);
+  });
+
+  it('wires skipPurchaseSimulateSuccess switch and i18n keys', async () => {
+    const [debugOptionsSettingsSource, enPagesSource, zhPagesSource] = await Promise.all([
+      fs.readFile(debugOptionsSettingsPath, 'utf8'),
+      fs.readFile(enPagesPath, 'utf8'),
+      fs.readFile(zhPagesPath, 'utf8'),
+    ]);
+
+    assert.match(debugOptionsSettingsSource, /skipPurchaseSimulateSuccess/);
+    assert.match(debugOptionsSettingsSource, /setSkipPurchaseSimulateSuccess/);
+    assert.match(debugOptionsSettingsSource, /settings\.debugOptions\.skipPurchaseSimulateSuccess\.label/);
+    assert.match(enPagesSource, /skipPurchaseSimulateSuccess:/);
+    assert.match(zhPagesSource, /skipPurchaseSimulateSuccess:/);
+    assert.match(zhPagesSource, /跳过购买，模拟购买成功/);
   });
 });

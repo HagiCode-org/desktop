@@ -24,6 +24,7 @@ export function DebugOptionsSettings() {
   const { t } = useTranslation('pages');
   const [settings, setSettings] = useState<DebugOptionsSettingsSnapshot | null>(null);
   const [useIgnoreScriptsForManagedNpm, setUseIgnoreScriptsForManagedNpm] = useState(false);
+  const [skipPurchaseSimulateSuccess, setSkipPurchaseSimulateSuccess] = useState(false);
   const [msstoreInstallDateRaw, setMsstoreInstallDateRaw] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export function DebugOptionsSettings() {
         if (!disposed) {
           setSettings(snapshot);
           setUseIgnoreScriptsForManagedNpm(snapshot.useIgnoreScriptsForManagedNpm);
+          setSkipPurchaseSimulateSuccess(snapshot.skipPurchaseSimulateSuccess);
           setMsstoreInstallDateRaw(snapshot.msstoreInstallDateRaw ?? '');
           setError(null);
         }
@@ -63,10 +65,12 @@ export function DebugOptionsSettings() {
     try {
       const result = await getDebugOptionsBridge().setSettings({
         useIgnoreScriptsForManagedNpm,
+        skipPurchaseSimulateSuccess,
         msstoreInstallDateRaw,
       });
       setSettings(result.settings);
       setUseIgnoreScriptsForManagedNpm(result.settings.useIgnoreScriptsForManagedNpm);
+      setSkipPurchaseSimulateSuccess(result.settings.skipPurchaseSimulateSuccess);
       setMsstoreInstallDateRaw(result.settings.msstoreInstallDateRaw ?? '');
       setLastSaveResult(result);
 
@@ -94,6 +98,7 @@ export function DebugOptionsSettings() {
     }
 
     setUseIgnoreScriptsForManagedNpm(settings.useIgnoreScriptsForManagedNpm);
+    setSkipPurchaseSimulateSuccess(settings.skipPurchaseSimulateSuccess);
     setMsstoreInstallDateRaw(settings.msstoreInstallDateRaw ?? '');
     setError(null);
     setLastSaveResult(null);
@@ -101,6 +106,7 @@ export function DebugOptionsSettings() {
 
   const hasChanges = settings !== null && (
     useIgnoreScriptsForManagedNpm !== settings.useIgnoreScriptsForManagedNpm
+    || skipPurchaseSimulateSuccess !== settings.skipPurchaseSimulateSuccess
     || msstoreInstallDateRaw !== (settings.msstoreInstallDateRaw ?? '')
   );
 
@@ -130,6 +136,24 @@ export function DebugOptionsSettings() {
                   onCheckedChange={setUseIgnoreScriptsForManagedNpm}
                   disabled={isSaving || settings === null}
                   aria-label={t('settings.debugOptions.useIgnoreScriptsForManagedNpm.label')}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div>
+                <h4 className="text-sm font-medium">{t('settings.debugOptions.skipPurchaseSimulateSuccess.label')}</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('settings.debugOptions.skipPurchaseSimulateSuccess.description')}
+                </p>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-3 py-2">
+                <span className="text-sm">{t('settings.debugOptions.skipPurchaseSimulateSuccess.shortLabel')}</span>
+                <Switch
+                  checked={skipPurchaseSimulateSuccess}
+                  onCheckedChange={setSkipPurchaseSimulateSuccess}
+                  disabled={isSaving || settings === null}
+                  aria-label={t('settings.debugOptions.skipPurchaseSimulateSuccess.label')}
                 />
               </div>
             </div>

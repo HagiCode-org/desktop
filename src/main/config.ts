@@ -56,6 +56,7 @@ export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
 
 export const DEFAULT_DEBUG_OPTIONS_SETTINGS: DebugOptionsConfig = {
   useIgnoreScriptsForManagedNpm: false,
+  skipPurchaseSimulateSuccess: false,
 };
 
 export const DEFAULT_MSSTORE_RATING_PROMPT_STATE: MsstoreRatingPromptState = {};
@@ -115,6 +116,7 @@ export function normalizeDebugOptionsSettings(
 ): DebugOptionsConfig {
   return {
     useIgnoreScriptsForManagedNpm: settings?.useIgnoreScriptsForManagedNpm ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.useIgnoreScriptsForManagedNpm,
+    skipPurchaseSimulateSuccess: settings?.skipPurchaseSimulateSuccess ?? DEFAULT_DEBUG_OPTIONS_SETTINGS.skipPurchaseSimulateSuccess,
   };
 }
 
@@ -406,7 +408,10 @@ export class ConfigManager {
     const current = this.store.get('debugOptions');
     const normalized = normalizeDebugOptionsSettings(current);
 
-    if (current?.useIgnoreScriptsForManagedNpm !== normalized.useIgnoreScriptsForManagedNpm) {
+    if (
+      current?.useIgnoreScriptsForManagedNpm !== normalized.useIgnoreScriptsForManagedNpm
+      || current?.skipPurchaseSimulateSuccess !== normalized.skipPurchaseSimulateSuccess
+    ) {
       this.store.set('debugOptions', normalized);
     }
 

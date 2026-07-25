@@ -1,5 +1,6 @@
 export interface DebugOptionsSettings {
   useIgnoreScriptsForManagedNpm: boolean;
+  skipPurchaseSimulateSuccess: boolean;
   msstoreInstallDateRaw?: string;
 }
 

@@ -40,6 +40,7 @@ function areDebugOptionsEqual(
   right: DebugOptionsSettings,
 ): boolean {
   return left.useIgnoreScriptsForManagedNpm === right.useIgnoreScriptsForManagedNpm
+    && left.skipPurchaseSimulateSuccess === right.skipPurchaseSimulateSuccess
     && (left.msstoreInstallDateRaw ?? '') === (right.msstoreInstallDateRaw ?? '');
 }
 
@@ -93,6 +94,7 @@ export async function saveDebugOptionsSettings(options: {
 
   const savedSettings = options.configManager.setDebugOptionsSettings({
     useIgnoreScriptsForManagedNpm: nextSettings.useIgnoreScriptsForManagedNpm,
+    skipPurchaseSimulateSuccess: nextSettings.skipPurchaseSimulateSuccess,
   });
 
   options.configManager.setMsstoreRatingPromptState({

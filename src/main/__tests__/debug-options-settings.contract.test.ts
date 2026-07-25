@@ -15,5 +15,6 @@ describe('debug options settings domain contract', () => {
     assert.match(source, /msstoreInstallAgeDays: calculateInstallAgeDays/);
     assert.match(source, /setMsstoreRatingPromptState\(\{\s*installDate: nextInstallDateRaw,/s);
     assert.match(source, /Math\.floor\(diffMs \/ \(24 \* 60 \* 60 \* 1000\)\)/);
+    assert.match(source, /skipPurchaseSimulateSuccess/);
   });
 });
