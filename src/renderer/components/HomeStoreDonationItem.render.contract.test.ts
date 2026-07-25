@@ -24,4 +24,10 @@ describe('HomeStoreDonationItem render contract', () => {
     assert.doesNotMatch(source, /['"]Coffee['"]|['"]Dinner['"]|['"]Candy['"]/);
     assert.doesNotMatch(source, /\$0\.99|\$9\.99|\$399/);
   });
+
+  it('relies on shell-mounted ThankYouAnimationHost rather than local overlay', async () => {
+    const source = await fs.readFile(componentPath, 'utf8');
+    assert.doesNotMatch(source, /ThankYouAnimationHost/);
+    assert.match(source, /openThankYouAnimation/);
+  });
 });

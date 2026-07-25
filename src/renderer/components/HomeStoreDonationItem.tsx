@@ -8,6 +8,7 @@ import type { AppDispatch, RootState } from '@/store';
 import {
   dismissMsstoreDonationItem,
   loadMsstoreDonationItemState,
+  openThankYouAnimation,
   purchaseMsstoreDonationItem,
   selectMsstoreDonationItemState,
   setMsstoreDonationItemState,
@@ -20,6 +21,8 @@ import {
   getMsstoreDonationTierCatalog,
   shouldShowMsstoreDonationItem,
 } from '@/lib/msstore-donation-item';
+import { pickThankYouVariant } from '@/lib/sponsor-thank-you-animation';
+import type { DebugOptionsBridge } from '../../types/debug-options.js';
 import type {
   MsstoreDonationItemPurchaseResult,
   MsstoreDonationItemState,
@@ -118,13 +121,60 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
     return null;
   }
 
+  const openSuccessThankYou = (tier: MsstoreDonationTipTierId) => {
+    const variantId = pickThankYouVariant(tier);
+    dispatch(openThankYouAnimation({ tier, variantId }));
+  };
+
+  const showSuccessFeedback = (tier: MsstoreDonationTipTierId, outcome: 'succeeded' | 'already-purchased') => {
+    const shortName = t(`donationItem.tiers.${tier}.shortName`, { ns: 'pages' });
+    const noPrivilege = t('donationItem.noPrivilegeNotice', { ns: 'pages' });
+    const baseMessage = t(`donationItem.messages.purchaseOutcome.${outcome}`, { ns: 'pages' });
+    const tierThanks = t('donationItem.messages.tierThanks', {
+      ns: 'pages',
+      shortName,
+      defaultValue: baseMessage,
+    });
+    // Higher tiers get stronger toast (duration / description with no-privilege restatement).
+    const duration = tier === 'candy' ? 8000 : tier === 'dinner' ? 5500 : 4000;
+    toast.success(tierThanks, {
+      description: noPrivilege,
+      duration,
+    });
+    openSuccessThankYou(tier);
+  };
+
   const handlePurchase = async (tier: MsstoreDonationTipTierId) => {
-    if (!window.electronAPI.msstoreDonationItem || purchasingTier) {
+    if (purchasingTier) {
       return;
     }
 
     setPurchasingTier(tier);
     try {
+      const debugBridge = (window as Window & {
+        electronAPI?: { debugOptions?: DebugOptionsBridge };
+      }).electronAPI?.debugOptions;
+
+      let skipPurchaseSimulateSuccess = false;
+      if (debugBridge?.getSettings) {
+        try {
+          const debugSettings = await debugBridge.getSettings();
+          skipPurchaseSimulateSuccess = debugSettings.skipPurchaseSimulateSuccess === true;
+        } catch {
+          skipPurchaseSimulateSuccess = false;
+        }
+      }
+
+      // Debug path: skip Store purchase, do not mutate durable counters, still play animation.
+      if (skipPurchaseSimulateSuccess) {
+        showSuccessFeedback(tier, 'succeeded');
+        return;
+      }
+
+      if (!window.electronAPI.msstoreDonationItem) {
+        return;
+      }
+
       const resultAction = await dispatch(purchaseMsstoreDonationItem({ tier }));
       if (!purchaseMsstoreDonationItem.fulfilled.match(resultAction)) {
         throw new Error(
@@ -140,22 +190,8 @@ export default function HomeStoreDonationItem({ isWindowsStoreRuntime }: HomeSto
         purchaseCountsByTier: result.purchaseCountsByTier ?? prev.purchaseCountsByTier,
       }));
 
-      const shortName = t(`donationItem.tiers.${tier}.shortName`, { ns: 'pages' });
-      const noPrivilege = t('donationItem.noPrivilegeNotice', { ns: 'pages' });
-
       if (result.outcome === 'succeeded' || result.outcome === 'already-purchased') {
-        const base = t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' });
-        const tierThanks = t('donationItem.messages.tierThanks', {
-          ns: 'pages',
-          shortName,
-          defaultValue: base,
-        });
-        // Higher tiers get stronger toast (duration / description with no-privilege restatement).
-        const duration = tier === 'candy' ? 8000 : tier === 'dinner' ? 5500 : 4000;
-        toast.success(tierThanks, {
-          description: noPrivilege,
-          duration,
-        });
+        showSuccessFeedback(tier, result.outcome);
       } else if (result.outcome === 'canceled' || result.outcome === 'not-purchased') {
         toast.message(t(`donationItem.messages.purchaseOutcome.${result.outcome}`, { ns: 'pages' }));
       } else if (

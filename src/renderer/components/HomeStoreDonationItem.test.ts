@@ -48,4 +48,35 @@ describe('HomeStoreDonationItem', () => {
     assert.match(source, /作者的 token 要耗尽了，快为作者续命/);
     assert.match(source, /donationItem\.noPrivilegeNotice/);
   });
+
+  it('opens thank-you animation on success outcomes and wires picker', async () => {
+    const source = await fs.readFile(componentPath, 'utf8');
+
+    assert.match(source, /openThankYouAnimation/);
+    assert.match(source, /pickThankYouVariant\(tier\)/);
+    assert.match(source, /showSuccessFeedback/);
+    assert.match(source, /result\.outcome === 'succeeded' \|\| result\.outcome === 'already-purchased'/);
+  });
+
+  it('supports skipPurchaseSimulateSuccess short-circuit without Store purchase', async () => {
+    const source = await fs.readFile(componentPath, 'utf8');
+
+    assert.match(source, /skipPurchaseSimulateSuccess/);
+    assert.match(source, /debugBridge\.getSettings/);
+    assert.match(source, /if \(skipPurchaseSimulateSuccess\)/);
+    assert.match(source, /showSuccessFeedback\(tier, 'succeeded'\)/);
+    // Simulate path returns before dispatching real purchase when flag is on.
+    assert.match(source, /purchaseMsstoreDonationItem\(\{ tier \}\)/);
+  });
+
+  it('does not open thank-you animation for cancel or failure outcomes', async () => {
+    const source = await fs.readFile(componentPath, 'utf8');
+
+    // Non-success branches use toast only; openSuccessThankYou only via showSuccessFeedback.
+    assert.match(source, /result\.outcome === 'canceled' \|\| result\.outcome === 'not-purchased'/);
+    assert.equal(
+      (source.match(/openSuccessThankYou\(tier\)/g) || []).length,
+      1,
+    );
+  });
 });

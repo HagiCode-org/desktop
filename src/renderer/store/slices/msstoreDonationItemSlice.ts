@@ -4,6 +4,7 @@ import type {
   MsstoreDonationItemPurchaseRequest,
   MsstoreDonationItemPurchaseResult,
   MsstoreDonationItemState,
+  MsstoreDonationTipTierId,
 } from '../../../types/msstore-donation-item.js';
 
 declare global {
@@ -14,6 +15,14 @@ declare global {
   }
 }
 
+export type ThankYouAnimationSession =
+  | { status: 'idle' }
+  | {
+    status: 'playing';
+    tier: MsstoreDonationTipTierId;
+    variantId: number;
+  };
+
 export interface MsstoreDonationItemSliceState {
   state: MsstoreDonationItemState | null;
   lastPurchase: MsstoreDonationItemPurchaseResult | null;
@@ -21,6 +30,7 @@ export interface MsstoreDonationItemSliceState {
   isPurchasing: boolean;
   isDismissing: boolean;
   error: string | null;
+  thankYouAnimation: ThankYouAnimationSession;
 }
 
 function getBridge(): MsstoreDonationItemBridge {
@@ -71,6 +81,7 @@ const initialState: MsstoreDonationItemSliceState = {
   isPurchasing: false,
   isDismissing: false,
   error: null,
+  thankYouAnimation: { status: 'idle' },
 };
 
 const msstoreDonationItemSlice = createSlice({
@@ -80,6 +91,19 @@ const msstoreDonationItemSlice = createSlice({
     setMsstoreDonationItemState(state, action: PayloadAction<MsstoreDonationItemState>) {
       state.state = action.payload;
       state.error = null;
+    },
+    openThankYouAnimation(
+      state,
+      action: PayloadAction<{ tier: MsstoreDonationTipTierId; variantId: number }>,
+    ) {
+      state.thankYouAnimation = {
+        status: 'playing',
+        tier: action.payload.tier,
+        variantId: action.payload.variantId,
+      };
+    },
+    closeThankYouAnimation(state) {
+      state.thankYouAnimation = { status: 'idle' };
     },
   },
   extraReducers: (builder) => {
@@ -138,6 +162,18 @@ const msstoreDonationItemSlice = createSlice({
   },
 });
 
-export const { setMsstoreDonationItemState } = msstoreDonationItemSlice.actions;
-export const selectMsstoreDonationItemState = (state: { msstoreDonationItem: MsstoreDonationItemSliceState }) => state.msstoreDonationItem;
+export const {
+  setMsstoreDonationItemState,
+  openThankYouAnimation,
+  closeThankYouAnimation,
+} = msstoreDonationItemSlice.actions;
+
+export const selectMsstoreDonationItemState = (state: {
+  msstoreDonationItem: MsstoreDonationItemSliceState;
+}) => state.msstoreDonationItem;
+
+export const selectThankYouAnimation = (state: {
+  msstoreDonationItem: MsstoreDonationItemSliceState;
+}) => state.msstoreDonationItem.thankYouAnimation;
+
 export default msstoreDonationItemSlice.reducer;
