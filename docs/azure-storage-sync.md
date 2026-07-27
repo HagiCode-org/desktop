@@ -30,6 +30,7 @@ This provides:
 - **CDN support**: Azure CDN can be configured for faster downloads
 - **Geographic distribution**: Files available from Azure's global infrastructure
 - **Bounded fan-out**: Eligible release assets are uploaded through a `plan -> upload(matrix) -> finalize` workflow instead of a single serial job
+- **R2 retention**: Finalize keeps only the latest three desktop versions in root `index.json` and deletes older R2 package objects, including `.torrent` sidecars.
 
 ## Workflow Topology
 
