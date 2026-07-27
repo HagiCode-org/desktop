@@ -84,6 +84,8 @@ describe('dependency management service contract', () => {
     assert.match(source, /configManager\.getDebugOptionsSettings\(\)/);
     assert.match(source, /env\.npm_config_ignore_scripts = 'true';/);
     assert.match(source, /env\.NPM_CONFIG_IGNORE_SCRIPTS = 'true';/);
+    assert.match(source, /env\.npm_config_bin_links = 'true';/);
+    assert.match(source, /env\.NPM_CONFIG_BIN_LINKS = 'true';/);
     assert.doesNotMatch(source, /rewriteNpmInstallArgsForWindowsStore\(args: readonly string\[\]\)/);
     assert.doesNotMatch(source, /Applying Microsoft Store npm install override/);
     assert.doesNotMatch(source, /--ignore-scripts/);

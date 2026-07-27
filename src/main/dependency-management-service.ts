@@ -889,6 +889,8 @@ export class DependencyManagementService {
     env.NPM_CONFIG_GLOBAL_PREFIX = environment.npmGlobalPrefix;
     env.npm_config_global = 'true';
     env.npm_config_location = 'global';
+    env.npm_config_bin_links = 'true';
+    env.NPM_CONFIG_BIN_LINKS = 'true';
     env.npm_config_cache = environment.npmCacheRoot;
     env.NPM_CONFIG_CACHE = environment.npmCacheRoot;
     env.npm_config_tmp = npmTmpRoot;
