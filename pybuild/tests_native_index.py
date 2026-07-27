@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from pybuild.native.azure_blob import BlobInfo
-from pybuild.native.azure_index import build_channels_object, build_index_result, extract_channel_from_version
+from pybuild.native.azure_index import (
+    build_channels_object,
+    build_index_result,
+    extract_channel_from_version,
+    select_index_retention,
+)
 from pybuild.native.hybrid_metadata import PublishedArtifact
 from pybuild.native.torrent import bencode, generate_torrent_sidecar
 
@@ -79,6 +84,45 @@ class IndexTests(unittest.TestCase):
         channels = build_channels_object(result.document["versions"])
         self.assertIn("stable", channels)
         self.assertIn("beta", channels)
+
+    def test_r2_retention_prunes_to_latest_three_and_stale_sidecars(self) -> None:
+        now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        blobs = [
+            BlobInfo(name="v1.4.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.3.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.2.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.1.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.1.0/app.exe.torrent", size=1, last_modified=now),
+        ]
+
+        retention = select_index_retention(blobs, "v1.4.0")
+        result = build_index_result(retention.retained_blobs, "", [], "https://cdn.example")
+
+        self.assertEqual(retention.retained_versions, ["v1.4.0", "v1.3.0", "v1.2.0"])
+        self.assertEqual(retention.stale_versions, ["v1.1.0"])
+        self.assertEqual(
+            retention.stale_object_keys,
+            ["v1.1.0/app.exe", "v1.1.0/app.exe.torrent"],
+        )
+        self.assertIsNotNone(result.document)
+        assert result.document is not None
+        self.assertEqual(len(result.document["versions"]), 3)
+        channel_versions = result.document["channels"]["stable"]["versions"]
+        self.assertNotIn("v1.1.0", channel_versions)
+
+    def test_r2_retention_forces_current_version(self) -> None:
+        now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        blobs = [
+            BlobInfo(name="v1.5.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.4.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.3.0/app.exe", size=1, last_modified=now),
+            BlobInfo(name="v1.2.0/app.exe", size=1, last_modified=now),
+        ]
+
+        retention = select_index_retention(blobs, "v1.2.0")
+
+        self.assertEqual(retention.retained_versions, ["v1.5.0", "v1.4.0", "v1.2.0"])
+        self.assertEqual(retention.stale_versions, ["v1.3.0"])
 
     def test_torrent_sidecar_roundtrip_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

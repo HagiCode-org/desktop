@@ -145,6 +145,10 @@ class R2BlobClient:
             ContentType=content_type or "application/octet-stream",
         )
 
+    def delete_object(self, object_key: str) -> bool:
+        self._client.delete_object(Bucket=self.bucket, Key=object_key)
+        return True
+
     def list_objects(self) -> list[BlobInfo]:
         keys: list[BlobInfo] = []
         token = None
@@ -243,6 +247,23 @@ def upload_artifacts(
         result.error_message = "; ".join(result.errors) if result.errors else "upload failed"
     else:
         result.success = True
+    return result
+
+
+def delete_objects(client: R2BlobClient, object_keys: list[str]) -> PublishResult:
+    result = PublishResult(success=True)
+    for object_key in sorted({key for key in object_keys if key}, key=str.lower):
+        try:
+            deleted = client.delete_object(object_key)
+            result.uploaded_blob_names.append(object_key)
+            action = "Deleted" if deleted else "Already absent"
+            print(f"{LOG} {action} stale object: {object_key}")
+        except Exception as error:  # noqa: BLE001
+            result.failed_blob_names.append(object_key)
+            result.errors.append(f"{object_key}: {error}")
+    if result.failed_blob_names:
+        result.success = False
+        result.error_message = "; ".join(result.errors)
     return result
 
 

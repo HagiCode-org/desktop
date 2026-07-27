@@ -10,6 +10,7 @@ from pybuild.native.azure_blob import PublishResult
 from pybuild.native.hybrid_metadata import PublishedArtifact
 from pybuild.native.publish import (
     ReleasePublishSummary,
+    apply_retention_cleanup,
     merge_publish_results,
     orchestrate_publish,
 )
@@ -131,6 +132,23 @@ class PublishTests(unittest.TestCase):
             self.assertEqual(len(summary.published_artifacts), 1)
             self.assertTrue(summary.published_artifacts[0].legacy_http_fallback)
 
+
+    def test_apply_retention_cleanup_reports_failed_keys(self) -> None:
+        from pybuild.native.azure_index import IndexGenerationResult, IndexRetentionResult
+        from pybuild.native.storage_publish import StorageContext
+
+        summary = ReleasePublishSummary()
+        storage = StorageContext(provider="r2", public_base_url="https://cdn")
+        index_result = IndexGenerationResult(
+            retention=IndexRetentionResult(stale_object_keys=["v1.0.0/app.bin"])
+        )
+        delete_result = PublishResult(success=False, failed_blob_names=["v1.0.0/app.bin"])
+        with patch("pybuild.native.publish.storage_delete_objects", return_value=delete_result):
+            ok = apply_retention_cleanup(summary, storage, index_result)
+
+        self.assertFalse(ok)
+        self.assertEqual(summary.stale_delete_failed_blob_names, ["v1.0.0/app.bin"])
+        self.assertEqual(summary.diagnostics[0]["code"], "stale-delete-failed")
 
 if __name__ == "__main__":
     unittest.main()

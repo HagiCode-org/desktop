@@ -192,6 +192,14 @@ def list_objects(ctx: StorageContext) -> list[BlobInfo]:
     return r2_blob.list_objects(ctx.r2_client)
 
 
+def delete_objects(ctx: StorageContext, object_keys: list[str]) -> PublishResult:
+    if ctx.provider != "r2":
+        return PublishResult(success=True)
+    if ctx.r2_client is None:
+        raise RuntimeError("R2 client not initialized")
+    return r2_blob.delete_objects(ctx.r2_client, object_keys)
+
+
 def upload_index(ctx: StorageContext, index_json: str) -> bool:
     if ctx.provider == "azure":
         if ctx.azure_client is None:

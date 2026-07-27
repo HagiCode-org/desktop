@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from functools import cmp_to_key
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -23,6 +24,15 @@ class IndexGenerationResult:
     http_only_fallback_count: int = 0
     missing_published_artifact_paths: list[str] = field(default_factory=list)
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
+    retention: "IndexRetentionResult | None" = None
+
+
+@dataclass
+class IndexRetentionResult:
+    retained_blobs: list[BlobInfo] = field(default_factory=list)
+    retained_versions: list[str] = field(default_factory=list)
+    stale_versions: list[str] = field(default_factory=list)
+    stale_object_keys: list[str] = field(default_factory=list)
 
 
 def try_parse_version(version: str) -> tuple[int, ...] | None:
@@ -58,6 +68,55 @@ def compare_precedence(left: tuple, right: tuple) -> int:
             return 0
         return 1 if left[4] > right[4] else -1
     return 0
+
+
+def compare_version_names(left: str, right: str) -> int:
+    left_parsed = try_parse_version(left)
+    right_parsed = try_parse_version(right)
+    if left_parsed is not None and right_parsed is not None:
+        return compare_precedence(left_parsed, right_parsed)
+    if left_parsed is not None:
+        return 1
+    if right_parsed is not None:
+        return -1
+    left_text = (left or "").lower()
+    right_text = (right or "").lower()
+    if left_text == right_text:
+        return 0
+    return 1 if left_text > right_text else -1
+
+
+def select_index_retention(
+    blobs: list[BlobInfo],
+    current_version: str,
+    *,
+    retention_count: int = 3,
+) -> IndexRetentionResult:
+    version_map: dict[str, list[BlobInfo]] = {}
+    for blob in blobs:
+        if "/" not in blob.name:
+            continue
+        version_map.setdefault(extract_version(blob.name), []).append(blob)
+
+    ordered_versions = sorted(version_map, key=cmp_to_key(compare_version_names), reverse=True)
+    limit = max(0, retention_count)
+    retained_versions = ordered_versions[:limit]
+    current = (current_version or "").strip().strip("/")
+    if current and current in version_map and current not in retained_versions:
+        if limit > 0 and len(retained_versions) >= limit:
+            retained_versions = retained_versions[: limit - 1]
+        retained_versions.append(current)
+
+    retained_set = set(retained_versions)
+    retained_versions = [version for version in ordered_versions if version in retained_set]
+    stale_versions = [version for version in ordered_versions if version not in retained_set]
+    stale_set = set(stale_versions)
+    return IndexRetentionResult(
+        retained_blobs=[blob for blob in blobs if extract_version(blob.name) in retained_set],
+        retained_versions=retained_versions,
+        stale_versions=stale_versions,
+        stale_object_keys=[blob.name for blob in blobs if extract_version(blob.name) in stale_set and "/" in blob.name],
+    )
 
 
 def extract_channel_from_version(version: str) -> str:
@@ -291,15 +350,21 @@ def generate_index_from_blobs_with_metadata(
         max_attempts=visibility_max_attempts,
         retry_delay_seconds=visibility_retry_delay_seconds,
     )
+    retention = None
+    index_blobs = blobs
+    if storage is not None and storage.provider == "r2":
+        retention = select_index_retention(blobs, options.version_prefix, retention_count=3)
+        index_blobs = retention.retained_blobs
     repo_name = resolve_github_repository_name(github_repository)
     result = build_index_result(
-        blobs,
+        index_blobs,
         options.sas_url,
         published_artifacts,
         options.public_base_url,
         github_repository_name=repo_name,
     )
-    missing = find_missing_published_artifact_paths(blobs, published_artifacts)
+    result.retention = retention
+    missing = find_missing_published_artifact_paths(index_blobs, published_artifacts)
     result.missing_published_artifact_paths = missing
     if missing:
         for path in missing:

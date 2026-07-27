@@ -16,6 +16,7 @@ from pybuild.native.storage_publish import (
     resolve_provider,
     upload_artifacts,
     upload_index,
+    delete_objects,
     list_objects,
 )
 
@@ -177,6 +178,27 @@ class StorageProviderTests(unittest.TestCase):
         self.assertEqual(ctx.public_base_url, "https://desktop.dl.hagicode.com")
         mock_cls.assert_called_once()
 
+
+    def test_delete_objects_r2_idempotent_missing(self) -> None:
+        client = MagicMock()
+        storage = StorageContext(provider="r2", public_base_url="https://cdn", r2_client=client)
+        client.delete_object.return_value = False
+
+        result = delete_objects(storage, ["v1.0.0/app.bin"])
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.uploaded_blob_names, ["v1.0.0/app.bin"])
+
+    def test_delete_objects_r2_reports_failures(self) -> None:
+        client = MagicMock()
+        storage = StorageContext(provider="r2", public_base_url="https://cdn", r2_client=client)
+        client.delete_object.side_effect = RuntimeError("denied")
+
+        result = delete_objects(storage, ["v1.0.0/app.bin"])
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.failed_blob_names, ["v1.0.0/app.bin"])
+        self.assertIn("denied", result.error_message)
 
 if __name__ == "__main__":
     unittest.main()

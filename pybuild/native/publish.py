@@ -24,6 +24,7 @@ from .storage_publish import (
     to_azure_options,
     upload_artifacts as storage_upload_artifacts,
     upload_index as storage_upload_index,
+    delete_objects as storage_delete_objects,
 )
 from .upload_plan import resolve_effective_version, resolve_release_tag
 
@@ -46,6 +47,8 @@ class ReleasePublishSummary:
     uploaded_blob_names: list[str] = field(default_factory=list)
     skipped_blob_names: list[str] = field(default_factory=list)
     missing_blob_names: list[str] = field(default_factory=list)
+    stale_deleted_blob_names: list[str] = field(default_factory=list)
+    stale_delete_failed_blob_names: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -65,6 +68,8 @@ class ReleasePublishSummary:
             "uploadedBlobNames": list(self.uploaded_blob_names),
             "skippedBlobNames": list(self.skipped_blob_names),
             "missingBlobNames": list(self.missing_blob_names),
+            "staleDeletedBlobNames": list(self.stale_deleted_blob_names),
+            "staleDeleteFailedBlobNames": list(self.stale_delete_failed_blob_names),
         }
 
 
@@ -128,6 +133,8 @@ def merge_publish_results(manifest: dict[str, Any]) -> ReleasePublishSummary:
         merged.uploaded_blob_names.extend(raw.get("uploadedBlobNames") or [])
         merged.skipped_blob_names.extend(raw.get("skippedBlobNames") or [])
         merged.missing_blob_names.extend(raw.get("missingBlobNames") or [])
+        merged.stale_deleted_blob_names.extend(raw.get("staleDeletedBlobNames") or [])
+        merged.stale_delete_failed_blob_names.extend(raw.get("staleDeleteFailedBlobNames") or [])
         for artifact_raw in raw.get("publishedArtifacts") or []:
             path = artifact_raw.get("path") or ""
             if path and path.lower() in seen_artifact_paths:
@@ -229,6 +236,32 @@ def download_selected_release_assets(
         print(f"[PYBUILD] filtered {skipped} GitHub source archive assets")
     print(f"[PYBUILD] prepared {len(filtered)} uploadable assets")
     return filtered
+
+
+def apply_retention_cleanup(
+    summary: ReleasePublishSummary,
+    storage: StorageContext,
+    index_result: IndexGenerationResult,
+) -> bool:
+    retention = index_result.retention
+    if storage.provider != "r2" or retention is None or not retention.stale_object_keys:
+        return True
+    delete_result = storage_delete_objects(storage, retention.stale_object_keys)
+    summary.stale_deleted_blob_names.extend(delete_result.uploaded_blob_names)
+    summary.stale_delete_failed_blob_names.extend(delete_result.failed_blob_names)
+    for failed in delete_result.failed_blob_names:
+        summary.diagnostics.append(
+            {
+                "artifactName": failed,
+                "code": "stale-delete-failed",
+                "message": f"R2 stale object deletion failed: {failed}",
+                "stage": "RetentionCleanup",
+            }
+        )
+    if not delete_result.success:
+        summary.error_message = "R2 stale object cleanup failed"
+        return False
+    return True
 
 
 def orchestrate_publish(
@@ -344,6 +377,9 @@ def orchestrate_publish(
         summary.error_message = "生成 index.json 失败"
         return summary
 
+    if not apply_retention_cleanup(summary, storage, index_result):
+        return summary
+
     summary.index_json = index_result.index_json
     uploaded = storage_upload_index(storage, index_result.index_json)
     if not uploaded:
@@ -373,6 +409,8 @@ def report_publish_summary(summary: ReleasePublishSummary) -> None:
     print(f"[PYBUILD]   uploaded blobs: {summary.uploaded_blob_count}")
     print(f"[PYBUILD]   skipped blobs: {summary.skipped_blob_count}")
     print(f"[PYBUILD]   missing blobs: {summary.missing_blob_count}")
+    print(f"[PYBUILD]   stale deleted blobs: {len(summary.stale_deleted_blob_names)}")
+    print(f"[PYBUILD]   stale delete failed blobs: {len(summary.stale_delete_failed_blob_names)}")
     if summary.diagnostics:
         print(f"[PYBUILD]   diagnostics ({len(summary.diagnostics)}):")
         for item in summary.diagnostics:
@@ -489,6 +527,8 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
             report_index_diagnostics(index_result)
             if not index_result.index_json:
                 summary.error_message = "生成 index.json 失败"
+                summary.success = False
+            elif not apply_retention_cleanup(summary, storage, index_result):
                 summary.success = False
             elif not storage_upload_index(storage, index_result.index_json):
                 summary.error_message = "上传 index.json 失败"
