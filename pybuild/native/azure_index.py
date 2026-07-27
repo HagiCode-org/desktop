@@ -189,6 +189,8 @@ def build_index_result(
     version_map: dict[str, list[BlobInfo]] = {}
     for blob in blobs:
         version = extract_version(blob.name)
+        if not version:
+            continue
         version_map.setdefault(version, []).append(blob)
 
     version_list: list[dict[str, Any]] = []

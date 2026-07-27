@@ -29,6 +29,7 @@ class IndexTests(unittest.TestCase):
             BlobInfo(name="v1.0.0/app-win.exe", size=100, last_modified=now),
             BlobInfo(name="v1.0.0/app-win.exe.torrent", size=10, last_modified=now),
             BlobInfo(name="v1.0.0-beta.1/app-mac.dmg", size=200, last_modified=now),
+            BlobInfo(name="app-unversioned.exe", size=300, last_modified=now),
         ]
         metadata = [
             PublishedArtifact(
@@ -71,6 +72,10 @@ class IndexTests(unittest.TestCase):
         self.assertIn("versions", result.document)
         self.assertIn("channels", result.document)
         self.assertEqual(result.version_count, 2)
+        self.assertNotIn("latest", result.document["channels"])
+        self.assertTrue(
+            all(version["version"] != "latest" for version in result.document["versions"])
+        )
         win = next(
             asset
             for version in result.document["versions"]

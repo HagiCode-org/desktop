@@ -36,7 +36,7 @@ def build_blob_url(container_base_url: str, blob_path: str) -> str:
 
 def extract_version(blob_name: str) -> str:
     slash_index = blob_name.find("/")
-    return blob_name[:slash_index] if slash_index > 0 else "latest"
+    return blob_name[:slash_index] if slash_index > 0 else ""
 
 
 def is_github_generated_source_archive(
