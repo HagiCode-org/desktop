@@ -20,8 +20,8 @@ permissions:
   contents: write
 
 env:
-  NODE_VERSION: '22'
-  HAGISCRIPT_VERSION: 'latest'
+  NODE_VERSION: "22"
+  HAGISCRIPT_VERSION: "latest"
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
             runs_on: ubuntu-latest
             builder_target: AppImage
             report_suffix: appimage
-            artifact_glob: '*.AppImage'
+            artifact_glob: "*.AppImage"
             upload_policy_package: linux-appimage
             release_upload_enabled: true
           - id: linux-tar-gz
@@ -48,7 +48,7 @@ jobs:
             runs_on: ubuntu-latest
             builder_target: tar.gz
             report_suffix: tar-gz
-            artifact_glob: '*.tar.gz'
+            artifact_glob: "*.tar.gz"
             upload_policy_package: linux-tar-gz
             release_upload_enabled: false
           - id: linux-zip
@@ -56,7 +56,7 @@ jobs:
             runs_on: ubuntu-latest
             builder_target: zip
             report_suffix: zip
-            artifact_glob: '*.zip'
+            artifact_glob: "*.zip"
             upload_policy_package: linux-zip
             release_upload_enabled: false
           - id: macos-x64-dmg
@@ -66,7 +66,7 @@ jobs:
             mac_runtime_platform: osx-x64
             builder_target: dmg
             report_suffix: dmg
-            artifact_glob: '*.dmg'
+            artifact_glob: "*.dmg"
             upload_policy_package: macos-x64-dmg
             release_upload_enabled: true
           - id: macos-x64-zip
@@ -76,7 +76,7 @@ jobs:
             mac_runtime_platform: osx-x64
             builder_target: zip
             report_suffix: zip
-            artifact_glob: '*.zip'
+            artifact_glob: "*.zip"
             upload_policy_package: macos-x64-zip
             release_upload_enabled: false
           - id: macos-arm64-dmg
@@ -86,7 +86,7 @@ jobs:
             mac_runtime_platform: osx-arm64
             builder_target: dmg
             report_suffix: dmg
-            artifact_glob: '*.dmg'
+            artifact_glob: "*.dmg"
             upload_policy_package: macos-arm64-dmg
             release_upload_enabled: true
           - id: macos-arm64-zip
@@ -96,7 +96,7 @@ jobs:
             mac_runtime_platform: osx-arm64
             builder_target: zip
             report_suffix: zip
-            artifact_glob: '*.zip'
+            artifact_glob: "*.zip"
             upload_policy_package: macos-arm64-zip
             release_upload_enabled: false
     env:
@@ -118,7 +118,7 @@ jobs:
           const policy = JSON.parse(fs.readFileSync('config/release-artifact-upload-policy.json', 'utf8'));
           const packages = policy.packages || {};
           console.log(String(packages[process.env.PACKAGE_TYPE] ?? policy.defaultEnabled ?? true));
-NODE
+          NODE
           )"
           echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
           echo "Release upload policy for ${{ matrix.target.upload_policy_package }}: ${enabled}"
@@ -236,7 +236,7 @@ NODE
         run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
           HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
           HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}

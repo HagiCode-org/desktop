@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       production_build:
@@ -300,7 +300,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          overwrite_files: 'true'
+          overwrite_files: "true"
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.msix
@@ -324,37 +324,37 @@ jobs:
           - id: linux-appimage
             name: Linux AppImage
             artifact_path: release-assets/linux-appimage
-            upload_glob: '**/*.AppImage'
+            upload_glob: "**/*.AppImage"
             release_upload_enabled: true
           - id: linux-tar-gz
             name: Linux tar.gz
             artifact_path: release-assets/linux-tar-gz
-            upload_glob: '**/*.tar.gz'
+            upload_glob: "**/*.tar.gz"
             release_upload_enabled: false
           - id: linux-zip
             name: Linux ZIP
             artifact_path: release-assets/linux-zip
-            upload_glob: '**/*.zip'
+            upload_glob: "**/*.zip"
             release_upload_enabled: false
           - id: macos-x64-dmg
             name: macOS x64 DMG
             artifact_path: release-assets/macos-x64-dmg
-            upload_glob: '**/*.dmg'
+            upload_glob: "**/*.dmg"
             release_upload_enabled: true
           - id: macos-x64-zip
             name: macOS x64 ZIP
             artifact_path: release-assets/macos-x64-zip
-            upload_glob: '**/*.zip'
+            upload_glob: "**/*.zip"
             release_upload_enabled: false
           - id: macos-arm64-dmg
             name: macOS arm64 DMG
             artifact_path: release-assets/macos-arm64-dmg
-            upload_glob: '**/*.dmg'
+            upload_glob: "**/*.dmg"
             release_upload_enabled: true
           - id: macos-arm64-zip
             name: macOS arm64 ZIP
             artifact_path: release-assets/macos-arm64-zip
-            upload_glob: '**/*.zip'
+            upload_glob: "**/*.zip"
             release_upload_enabled: false
 
     steps:
@@ -377,7 +377,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          overwrite_files: 'true'
+          overwrite_files: "true"
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
         env:
@@ -388,7 +388,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          overwrite_files: 'true'
+          overwrite_files: "true"
           files: |
             ${{ matrix.target.artifact_path }}/${{ matrix.target.upload_glob }}
         env:
