@@ -24,8 +24,8 @@ permissions:
   id-token: write
 
 env:
-  NODE_VERSION: '22'
-  HAGISCRIPT_VERSION: 'latest'
+  NODE_VERSION: "22"
+  HAGISCRIPT_VERSION: "latest"
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
           const policy = JSON.parse(fs.readFileSync('config/release-artifact-upload-policy.json', 'utf8'));
           const packages = policy.packages || {};
           console.log(String(packages[process.env.PACKAGE_TYPE] ?? policy.defaultEnabled ?? true));
-NODE
+          NODE
           )"
           echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
           echo "Release upload policy for ${{ matrix.target.upload_policy_package }}: ${enabled}"
@@ -155,7 +155,7 @@ NODE
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Install global hagiscript
         shell: bash
@@ -453,7 +453,7 @@ NODE
         if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'msix'
         shell: bash
         env:
-          VERIFY_STRICT: 'true'
+          VERIFY_STRICT: "true"
         run: |
           node scripts/verify-signature.js --catalog "${{ steps.windows_artifacts.outputs.catalog_path }}"
 
