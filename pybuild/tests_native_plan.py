@@ -94,6 +94,53 @@ class UploadPlanTests(unittest.TestCase):
             self.assertEqual(loaded_plan["eligibleAssets"][0]["name"], "app-mac.dmg")
             self.assertEqual(loaded_matrix["shard"][0]["shardId"], "shard-001")
 
+    def test_upload_policy_skips_signed_zip_and_linux_tar_gz_assets(self) -> None:
+        client = MagicMock(spec=GitHubReleaseClient)
+        client.github_repository = "HagiCode-org/desktop"
+        client.get_release_assets.return_value = [
+            GitHubReleaseAsset(name="HagiCode-1.0.0-win.exe", size=100),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-win-signed.exe", size=101),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-win.zip", size=102),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-linux.AppImage", size=200),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-linux.tar.gz", size=201),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-linux.zip", size=202),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-mac-x64.dmg", size=300),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-mac-arm64.dmg", size=301),
+            GitHubReleaseAsset(name="HagiCode-1.0.0-mac-x64.zip", size=302),
+        ]
+        client.is_source_archive.return_value = False
+
+        plan = create_upload_plan(
+            tag="v1.0.0",
+            version_prefix="v1.0.0",
+            release_channel="beta",
+            max_parallel=3,
+            client=client,
+        )
+
+        self.assertEqual(
+            [asset["name"] for asset in plan["eligible_assets"]],
+            [
+                "HagiCode-1.0.0-linux.AppImage",
+                "HagiCode-1.0.0-mac-arm64.dmg",
+                "HagiCode-1.0.0-mac-x64.dmg",
+                "HagiCode-1.0.0-win.exe",
+            ],
+        )
+        self.assertEqual(
+            plan["skipped_assets"],
+            [
+                "HagiCode-1.0.0-linux.tar.gz",
+                "HagiCode-1.0.0-linux.zip",
+                "HagiCode-1.0.0-mac-x64.zip",
+                "HagiCode-1.0.0-win-signed.exe",
+                "HagiCode-1.0.0-win.zip",
+            ],
+        )
+        shard_names = [shard["assets"][0]["name"] for shard in plan["shards"]]
+        self.assertNotIn("HagiCode-1.0.0-win-signed.exe", shard_names)
+        self.assertNotIn("HagiCode-1.0.0-linux.tar.gz", shard_names)
+
 
 if __name__ == "__main__":
     unittest.main()

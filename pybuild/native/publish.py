@@ -16,6 +16,7 @@ from .params import (
     resolve_github_repository_name,
 )
 from .path_utils import is_github_generated_source_archive, resolve_public_base_url
+from .upload_policy import filter_policy_enabled_files
 from .storage_publish import (
     StorageContext,
     open_storage_context,
@@ -189,12 +190,13 @@ def filter_eligible_files(
     repository: str,
 ) -> list[str]:
     repo_name = resolve_github_repository_name(repository)
-    filtered = [
+    source_filtered = [
         path
         for path in file_paths
         if not is_github_generated_source_archive(Path(path).name, repo_name, release_tag)
         and not is_github_generated_source_archive(Path(path).name, repo_name, effective_version)
     ]
+    filtered = filter_policy_enabled_files(source_filtered)
     filtered.sort(key=lambda item: Path(item).name.lower())
     return filtered
 
@@ -282,8 +284,9 @@ def orchestrate_publish(
     container_base_url = resolve_public_base_url(options.sas_url, options.public_base_url)
     if storage is not None and storage.public_base_url:
         container_base_url = storage.public_base_url.rstrip("/") + "/"
+    policy_enabled_files = filter_policy_enabled_files(downloaded_files)
     metadata_result = build_hybrid_metadata(
-        downloaded_files,
+        policy_enabled_files,
         options.version_prefix,
         container_base_url,
         github_repository,
@@ -294,7 +297,7 @@ def orchestrate_publish(
     summary.diagnostics.extend(item.to_dict() for item in metadata_result.diagnostics)
     summary.published_artifacts.extend(metadata_result.artifacts)
 
-    files_to_upload = list(downloaded_files)
+    files_to_upload = list(policy_enabled_files)
     for artifact in metadata_result.artifacts:
         if artifact.torrent_sidecar_local_path:
             files_to_upload.append(artifact.torrent_sidecar_local_path)

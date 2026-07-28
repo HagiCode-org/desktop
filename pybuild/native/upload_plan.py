@@ -10,6 +10,7 @@ from .params import (
     normalize_published_version_prefix,
     require_github_token,
 )
+from .upload_policy import resolve_upload_policy
 
 
 def create_upload_plan(
@@ -26,6 +27,10 @@ def create_upload_plan(
 
     for asset in sorted(assets, key=lambda item: item.name.lower()):
         if client.is_source_archive(asset.name, tag, version_prefix):
+            skipped_assets.append(asset.name)
+            continue
+        decision = resolve_upload_policy(asset.name)
+        if not decision.enabled:
             skipped_assets.append(asset.name)
             continue
         eligible_assets.append({"name": asset.name, "size": asset.size})

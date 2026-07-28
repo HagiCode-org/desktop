@@ -132,6 +132,48 @@ class PublishTests(unittest.TestCase):
             self.assertEqual(len(summary.published_artifacts), 1)
             self.assertTrue(summary.published_artifacts[0].legacy_http_fallback)
 
+    def test_orchestrate_publish_filters_disabled_release_assets(self) -> None:
+        from pybuild.native.storage_publish import StorageContext
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            enabled = root / "HagiCode-1.0.0-win.exe"
+            signed = root / "HagiCode-1.0.0-win-signed.exe"
+            zip_file = root / "HagiCode-1.0.0-win.zip"
+            linux_tar = root / "HagiCode-1.0.0-linux.tar.gz"
+            for item in (enabled, signed, zip_file, linux_tar):
+                item.write_bytes(b"x" * 10)
+            options = AzureBlobPublishOptions(
+                sas_url="https://account.blob.core.windows.net/container?sv=1",
+                version_prefix="v1.0.0",
+                public_base_url="https://desktop.dl.hagicode.com",
+                local_index_path=str(root / "index.json"),
+            )
+            storage = StorageContext(
+                provider="azure",
+                public_base_url="https://desktop.dl.hagicode.com",
+                version_prefix="v1.0.0",
+                sas_url=options.sas_url,
+            )
+            fake_result = PublishResult(
+                success=True,
+                uploaded_blob_names=["v1.0.0/HagiCode-1.0.0-win.exe"],
+                uploaded_blobs=["https://example/v1.0.0/HagiCode-1.0.0-win.exe"],
+            )
+            with patch("pybuild.native.publish.storage_upload_artifacts", return_value=fake_result) as upload:
+                summary = orchestrate_publish(
+                    [str(enabled), str(signed), str(zip_file), str(linux_tar)],
+                    options,
+                    upload_index=False,
+                    minify_index_json=True,
+                    github_repository="HagiCode-org/desktop",
+                    storage=storage,
+                )
+
+            upload.assert_called_once_with([str(enabled)], storage)
+            self.assertTrue(summary.success)
+            self.assertEqual([artifact.name for artifact in summary.published_artifacts], [enabled.name])
+
 
     def test_apply_retention_cleanup_reports_failed_keys(self) -> None:
         from pybuild.native.azure_index import IndexGenerationResult, IndexRetentionResult
