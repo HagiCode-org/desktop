@@ -45,17 +45,26 @@ jobs:
             report_suffix: portable
             requires_zip: true
             artifact_path: pkg/*.exe
+            upload_policy_package: windows-portable
+            release_upload_enabled: true
+            upload_zip_enabled: false
           - id: nsis
             name: NSIS
             builder_target: nsis
             report_suffix: nsis
             requires_zip: false
             artifact_path: pkg/*Setup*.exe
+            upload_policy_package: windows-nsis
+            release_upload_enabled: true
+            upload_zip_enabled: false
           - id: msix
             name: MSIX
             report_suffix: store
             requires_zip: false
             artifact_path: pkg/*.msix
+            upload_policy_package: windows-msix
+            release_upload_enabled: true
+            upload_zip_enabled: false
     permissions:
       contents: write
       id-token: write
@@ -65,6 +74,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Resolve release upload policy
+        id: upload_policy
+        shell: bash
+        env:
+          PACKAGE_TYPE: ${{ matrix.target.upload_policy_package }}
+        run: |
+          set -euo pipefail
+          enabled="$(node <<'NODE'
+          const fs = require('fs');
+          const policy = JSON.parse(fs.readFileSync('config/release-artifact-upload-policy.json', 'utf8'));
+          const packages = policy.packages || {};
+          console.log(String(packages[process.env.PACKAGE_TYPE] ?? policy.defaultEnabled ?? true));
+NODE
+          )"
+          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
+          echo "Release upload policy for ${{ matrix.target.upload_policy_package }}: ${enabled}"
 
       - name: Determine Windows signing policy
         id: signing_policy
@@ -487,13 +513,11 @@ jobs:
 
       - name: Upload Windows release bundle
         uses: actions/upload-artifact@v4
-        if: success() && inputs.publish_release_assets && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
+        if: success() && inputs.publish_release_assets && steps.upload_policy.outputs.enabled == 'true' && (steps.signing_policy.outputs.required != 'true' || matrix.target.id != 'msix' || steps.windows_signing.outcome == 'success')
         with:
           name: release-windows-${{ matrix.target.id }}-assets
           path: |
             ${{ steps.windows_artifacts.outputs.package_files }}
-            ${{ steps.windows_zip.outputs.zip_files }}
-            unsigned-artifacts/*
             ${{ steps.windows_artifacts.outputs.report_path }}
           retention-days: 30
           if-no-files-found: error

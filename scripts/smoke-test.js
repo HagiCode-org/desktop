@@ -592,6 +592,15 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(buildContent.includes('Publish Windows Release Assets'), 'build workflow publishes Windows release assets in a separate job');
   assert(buildContent.includes('Publish ${{ matrix.target.name }} Release Assets'), 'build workflow publishes non-Windows release assets through a matrix job');
   assert(buildContent.includes('release-assets/windows/**/*.msix'), 'build workflow publishes MSIX release assets');
+  assert(buildContent.includes('release_upload_enabled: false'), 'build workflow marks disabled release package types');
+  assert(!buildContent.includes('release-assets/windows/**/*.zip'), 'build workflow excludes Windows ZIP release uploads');
+  assert(reusableWindowsContent.includes('release-artifact-upload-policy.json'), 'Windows workflow reads the release artifact upload policy');
+  assert(reusableWindowsContent.includes('steps.upload_policy.outputs.enabled'), 'Windows workflow gates release upload on the policy file');
+  assert(!extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('windows_zip.outputs.zip_files'), 'Windows release bundle excludes ZIP outputs');
+  assert(reusableUnixContent.includes('release-artifact-upload-policy.json'), 'Unix workflow reads the release artifact upload policy');
+  assert(reusableUnixContent.includes('steps.upload_policy.outputs.enabled'), 'Unix workflow gates release upload on the policy file');
+  assert(reusableUnixContent.includes('Skip signed macOS upload surface'), 'Unix workflow skips signed macOS upload surface');
+  assert(!reusableUnixContent.includes('Build signed macOS artifacts'), 'Unix workflow no longer rebuilds signed macOS upload artifacts');
   assert(buildContent.includes("needs.prepare-release.outputs.is_tag_release == 'true'"), 'build workflow only publishes GitHub release assets for tag releases');
   assert(buildContent.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
   assert(!buildContent.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
@@ -620,8 +629,8 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
   assert(reusableUnixContent.includes('Resolve macOS signing mode'), 'reusable Unix workflow explicitly resolves macOS signing mode for production releases');
-  assert(reusableUnixContent.includes('Build unsigned macOS artifacts'), 'reusable Unix workflow preserves unsigned macOS artifacts before signed rebuilds');
-  assert(reusableUnixContent.includes('Build signed macOS artifacts'), 'reusable Unix workflow rebuilds signed macOS artifacts when signing material is present');
+  assert(reusableUnixContent.includes('Build unsigned macOS artifacts'), 'reusable Unix workflow preserves unsigned macOS artifacts');
+  assert(reusableUnixContent.includes('Skip signed macOS upload surface'), 'reusable Unix workflow skips signed macOS upload artifacts when signing material is present');
   assert(reusableUnixContent.includes('Summarize Linux artifacts'), 'reusable Unix workflow reports Linux ZIP diagnostics');
   assert(reusableUnixContent.includes('Upload Linux release bundle'), 'reusable Unix workflow uploads a Linux release bundle for later publication');
   assert(!reusableUnixContent.includes('pkg/*.deb'), 'reusable Unix workflow no longer references deb artifacts');

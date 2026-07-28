@@ -1,0 +1,19 @@
+{
+  "defaultEnabled": true,
+  "disableSigned": true,
+  "packages": {
+    "windows-portable": true,
+    "windows-nsis": true,
+    "windows-msix": true,
+    "windows-zip": false,
+    "linux-appimage": true,
+    "linux-tar-gz": false,
+    "linux-zip": false,
+    "macos-x64-dmg": true,
+    "macos-arm64-dmg": true,
+    "macos-x64-zip": false,
+    "macos-arm64-zip": false,
+    "unknown-zip": false,
+    "unknown-tar-gz": false
+  }
+}

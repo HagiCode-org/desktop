@@ -303,7 +303,6 @@ jobs:
           overwrite_files: 'true'
           files: |
             release-assets/windows/**/*.exe
-            release-assets/windows/**/*.zip
             release-assets/windows/**/*.msix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -326,48 +325,55 @@ jobs:
             name: Linux AppImage
             artifact_path: release-assets/linux-appimage
             upload_glob: '**/*.AppImage'
+            release_upload_enabled: true
           - id: linux-tar-gz
             name: Linux tar.gz
             artifact_path: release-assets/linux-tar-gz
             upload_glob: '**/*.tar.gz'
+            release_upload_enabled: false
           - id: linux-zip
             name: Linux ZIP
             artifact_path: release-assets/linux-zip
             upload_glob: '**/*.zip'
+            release_upload_enabled: false
           - id: macos-x64-dmg
             name: macOS x64 DMG
             artifact_path: release-assets/macos-x64-dmg
             upload_glob: '**/*.dmg'
+            release_upload_enabled: true
           - id: macos-x64-zip
             name: macOS x64 ZIP
             artifact_path: release-assets/macos-x64-zip
             upload_glob: '**/*.zip'
+            release_upload_enabled: false
           - id: macos-arm64-dmg
             name: macOS arm64 DMG
             artifact_path: release-assets/macos-arm64-dmg
             upload_glob: '**/*.dmg'
+            release_upload_enabled: true
           - id: macos-arm64-zip
             name: macOS arm64 ZIP
             artifact_path: release-assets/macos-arm64-zip
             upload_glob: '**/*.zip'
+            release_upload_enabled: false
 
     steps:
       - name: Download Linux release bundle
-        if: startsWith(matrix.target.id, 'linux-')
+        if: startsWith(matrix.target.id, 'linux-') && matrix.target.release_upload_enabled
         uses: actions/download-artifact@v4
         with:
           name: release-${{ matrix.target.id }}-assets
           path: ${{ matrix.target.artifact_path }}
 
       - name: Download macOS release bundle
-        if: startsWith(matrix.target.id, 'macos-')
+        if: startsWith(matrix.target.id, 'macos-') && matrix.target.release_upload_enabled
         uses: actions/download-artifact@v4
         with:
           name: release-${{ matrix.target.id }}-assets
           path: ${{ matrix.target.artifact_path }}
 
       - name: Upload Linux assets to GitHub Release
-        if: startsWith(matrix.target.id, 'linux-')
+        if: startsWith(matrix.target.id, 'linux-') && matrix.target.release_upload_enabled
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
@@ -378,7 +384,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS assets to GitHub Release
-        if: startsWith(matrix.target.id, 'macos-')
+        if: startsWith(matrix.target.id, 'macos-') && matrix.target.release_upload_enabled
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
