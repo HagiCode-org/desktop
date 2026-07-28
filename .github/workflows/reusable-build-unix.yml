@@ -230,8 +230,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
 
-      - name: Build unsigned macOS artifacts
-        if: startsWith(matrix.target.id, 'macos-') && inputs.is_production_build
+      - name: Build macOS artifacts
+        if: startsWith(matrix.target.id, 'macos-')
         shell: bash
         run: node scripts/ci-build.js --platform mac --target "${{ matrix.target.builder_target }}"
         env:
