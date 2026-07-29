@@ -52,14 +52,14 @@ jobs:
       - name: Build main-process helpers
         run: npm run build:tsc
 
-      - name: Download Linux tar.gz artifact
+      - name: Download Linux AppImage artifact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "release-linux-tar-gz-assets,hagicode-linux-tar-gz-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "release-linux-appimage-assets,hagicode-linux-appimage-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration
@@ -100,19 +100,19 @@ jobs:
       - name: Build main-process helpers
         run: npm run build:tsc
 
-      - name: Download macOS ZIP artifact
+      - name: Download macOS DMG artifact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "release-macos-x64-zip-assets,hagicode-macos-x64-zip-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "release-macos-x64-dmg-assets,hagicode-macos-x64-dmg-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
           node scripts/download-workflow-artifact.mjs \
             --repo "$GITHUB_REPOSITORY" \
             --run-id "${{ github.event.workflow_run.id }}" \
-            --artifact-name "release-macos-arm64-zip-assets,hagicode-macos-arm64-zip-${{ github.event.workflow_run.head_sha }}" \
+            --artifact-name "release-macos-arm64-dmg-assets,hagicode-macos-arm64-dmg-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
       - name: Run non-interactive runtime verification and dependency install integration
