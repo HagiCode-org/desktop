@@ -597,10 +597,14 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableWindowsContent.includes('release-artifact-upload-policy.json'), 'Windows workflow reads the release artifact upload policy');
   assert(reusableWindowsContent.includes('steps.upload_policy.outputs.enabled'), 'Windows workflow gates release upload on the policy file');
   assert(!extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('windows_zip.outputs.zip_files'), 'Windows release bundle excludes ZIP outputs');
+  assert(extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('unsigned-artifacts/*'), 'Windows release bundle uploads preserved unsigned outputs');
+  assert(!extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('windows_artifacts.outputs.package_files'), 'Windows release bundle excludes signed in-place package outputs');
   assert(reusableUnixContent.includes('release-artifact-upload-policy.json'), 'Unix workflow reads the release artifact upload policy');
   assert(reusableUnixContent.includes('steps.upload_policy.outputs.enabled'), 'Unix workflow gates release upload on the policy file');
   assert(reusableUnixContent.includes('Skip signed macOS upload surface'), 'Unix workflow skips signed macOS upload surface');
   assert(!reusableUnixContent.includes('Build signed macOS artifacts'), 'Unix workflow no longer rebuilds signed macOS upload artifacts');
+  assert(extractWorkflowStepBlock(reusableUnixContent, 'Upload macOS release bundle').includes('unsigned-artifacts/*'), 'macOS release bundle uploads preserved unsigned outputs');
+  assert(!extractWorkflowStepBlock(reusableUnixContent, 'Upload macOS release bundle').includes('pkg/${{ matrix.target.artifact_glob }}'), 'macOS release bundle excludes package output that may contain signed artifacts');
   assert(buildContent.includes("needs.prepare-release.outputs.is_tag_release == 'true'"), 'build workflow only publishes GitHub release assets for tag releases');
   assert(buildContent.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
   assert(!buildContent.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
