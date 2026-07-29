@@ -113,13 +113,7 @@ jobs:
           PACKAGE_TYPE: ${{ matrix.target.upload_policy_package }}
         run: |
           set -euo pipefail
-          enabled="$(node <<'NODE'
-          const fs = require('fs');
-          const policy = JSON.parse(fs.readFileSync('config/release-artifact-upload-policy.json', 'utf8'));
-          const packages = policy.packages || {};
-          console.log(String(packages[process.env.PACKAGE_TYPE] ?? policy.defaultEnabled ?? true));
-          NODE
-          )"
+          enabled="$(node -e 'const fs = require("fs"); const policy = JSON.parse(fs.readFileSync("config/release-artifact-upload-policy.json", "utf8")); const packages = policy.packages || {}; console.log(String(packages[process.env.PACKAGE_TYPE] ?? policy.defaultEnabled ?? true));')"
           echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
           echo "Release upload policy for ${{ matrix.target.upload_policy_package }}: ${enabled}"
 
@@ -350,7 +344,6 @@ jobs:
         with:
           name: release-${{ matrix.target.id }}-assets
           path: |
-            pkg/${{ matrix.target.artifact_glob }}
             unsigned-artifacts/*
             pkg/ci-build-report-mac-${{ matrix.target.report_suffix }}.json
           retention-days: 30
