@@ -13,7 +13,7 @@ const releaseReadmePath = path.resolve(process.cwd(), '..', 'hagicode-release', 
 const macBuildScriptPath = path.resolve(process.cwd(), 'scripts/build-macos.js');
 const ciBuildScriptPath = path.resolve(process.cwd(), 'scripts/ci-build.js');
 const bundledToolchainScriptPath = path.resolve(process.cwd(), 'scripts/prepare-bundled-toolchain.js');
-const electronForgeRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-forge.js');
+const electronForgeRunnerPath = path.resolve(process.cwd(), 'scripts/run-electron-forge-lib.js');
 const forgePackagingHooksPath = path.resolve(process.cwd(), 'scripts/forge-packaging-hooks.js');
 const prepareMsixScriptPath = path.resolve(process.cwd(), 'scripts/prepare-msix.js');
 const psfSupportScriptPath = path.resolve(process.cwd(), 'scripts/psf-support.js');
@@ -104,8 +104,9 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(reusableUnixWorkflow, /builder_target: dmg/);
     assert.match(reusableUnixWorkflow, /builder_target: zip/);
     assert.match(reusableUnixWorkflow, /Resolve macOS signing mode/);
-    assert.match(reusableUnixWorkflow, /Build unsigned macOS artifacts/);
-    assert.match(reusableUnixWorkflow, /Build signed macOS artifacts/);
+    assert.match(reusableUnixWorkflow, /Build macOS artifacts/);
+    assert.match(reusableUnixWorkflow, /Preserve unsigned macOS artifacts/);
+    assert.doesNotMatch(reusableUnixWorkflow, /Build signed macOS artifacts/);
     assert.doesNotMatch(reusableUnixWorkflow, /pkg\/\*\.deb/);
 
     assert.doesNotMatch(reusableWindowsWorkflow, /prepare-msix-release-assets\.js/);
@@ -121,13 +122,13 @@ describe('embedded runtime packaging configuration', () => {
     assert.match(runner, /HAGICODE_MACOS_NOFILE_LIMIT/);
     assert.match(runner, /ulimit -n/);
     assert.match(runner, /effective_limit.*-lt 16384/);
-    assert.match(runner, /@electron-forge\/core\/dist\/api\/package\.js/);
+    assert.match(runner, /runForgeCli\('package'/);
   });
 
   it('stages macOS unpacked artifacts without nesting the Electron Packager output directory', async () => {
     const runner = await fs.readFile(electronForgeRunnerPath, 'utf-8');
 
-    assert.match(runner, /fsp\.cp\(packagedPath, destination, \{ recursive: true \}\)/);
+    assert.match(runner, /fsp\.cp\(resolvedPackagedPath, destination, \{ recursive: true \}\)/);
     assert.doesNotMatch(runner, /path\.join\(destination, path\.basename\(packagedPath\)\)/);
   });
 

@@ -629,7 +629,8 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
   assert(reusableUnixContent.includes('Resolve macOS signing mode'), 'reusable Unix workflow explicitly resolves macOS signing mode for production releases');
-  assert(reusableUnixContent.includes('Build unsigned macOS artifacts'), 'reusable Unix workflow preserves unsigned macOS artifacts');
+  assert(reusableUnixContent.includes('Build macOS artifacts'), 'reusable Unix workflow builds macOS artifacts for every macOS matrix job');
+  assert(reusableUnixContent.includes('Preserve unsigned macOS artifacts'), 'reusable Unix workflow preserves unsigned macOS artifacts for production releases');
   assert(reusableUnixContent.includes('Skip signed macOS upload surface'), 'reusable Unix workflow skips signed macOS upload artifacts when signing material is present');
   assert(reusableUnixContent.includes('Summarize Linux artifacts'), 'reusable Unix workflow reports Linux ZIP diagnostics');
   assert(reusableUnixContent.includes('Upload Linux release bundle'), 'reusable Unix workflow uploads a Linux release bundle for later publication');
