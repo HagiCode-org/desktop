@@ -2,13 +2,13 @@ import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
@@ -20,7 +20,7 @@ import { StartupPhase, type ProcessStatus, type StartupFailurePayload } from '..
 
 type StepVisualState = 'pending' | 'active' | 'completed' | 'failed';
 
-interface WebServiceStartupProgressDialogProps {
+interface WebServiceStartupProgressDrawerProps {
   open: boolean;
   status: ProcessStatus;
   phase: StartupPhase;
@@ -66,7 +66,7 @@ function getStepVisualState(
   return 'pending';
 }
 
-export default function WebServiceStartupProgressDialog({
+export default function WebServiceStartupProgressDrawer({
   open,
   status,
   phase,
@@ -78,7 +78,7 @@ export default function WebServiceStartupProgressDialog({
   startupFailure,
   onOpenChange,
   onOpenFailureLog,
-}: WebServiceStartupProgressDialogProps) {
+}: WebServiceStartupProgressDrawerProps) {
   const { t } = useTranslation(['components']);
   const steps = getStartupProgressSteps(t);
   const displayedPhase = resolveDisplayedStartupPhase(status, phase, failurePhase);
@@ -98,10 +98,13 @@ export default function WebServiceStartupProgressDialog({
   const currentDetail = currentSummary;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="[&>button]:hidden max-w-3xl overflow-hidden border-border/80 p-0 shadow-xl">
-        <div className="border-b border-border/70 bg-primary/[0.06] px-6 py-5">
-          <DialogHeader className="space-y-3 text-left">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="[&>button]:hidden flex h-full w-[min(900px,92vw)] max-w-none flex-col overflow-hidden border-border/80 p-0 shadow-xl sm:max-w-none"
+      >
+        <div className="shrink-0 border-b border-border/70 bg-primary/[0.06] px-6 py-5">
+          <SheetHeader className="space-y-3 text-left">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-2">
                 <span
@@ -120,20 +123,20 @@ export default function WebServiceStartupProgressDialog({
                       ? t('webServiceStatus.startupProgress.states.completed')
                       : t('webServiceStatus.startupProgress.states.active')}
                 </span>
-                <DialogTitle className="text-2xl font-semibold tracking-tight">
+                <SheetTitle className="text-2xl font-semibold tracking-tight">
                   {isFailed
                     ? t('webServiceStatus.startupProgress.failureTitle')
                     : isSuccessful
                       ? t('webServiceStatus.startupProgress.successTitle')
                       : t('webServiceStatus.startupProgress.title')}
-                </DialogTitle>
-                <DialogDescription className="max-w-[64ch] text-sm leading-6 text-muted-foreground">
+                </SheetTitle>
+                <SheetDescription className="max-w-[64ch] text-sm leading-6 text-muted-foreground">
                   {isFailed
                     ? t('webServiceStatus.startupProgress.failureDescription')
                     : isSuccessful
                       ? t('webServiceStatus.startupProgress.successDescription')
                       : t('webServiceStatus.startupProgress.description')}
-                </DialogDescription>
+                </SheetDescription>
               </div>
 
               <div className="grid min-w-[220px] gap-2 text-sm text-muted-foreground sm:grid-cols-2">
@@ -151,10 +154,10 @@ export default function WebServiceStartupProgressDialog({
                 </div>
               </div>
             </div>
-          </DialogHeader>
+          </SheetHeader>
         </div>
 
-        <div className="space-y-5 px-6 py-6">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6">
           <section className="rounded-2xl border border-border/70 bg-muted/[0.22] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
@@ -225,23 +228,27 @@ export default function WebServiceStartupProgressDialog({
             <div className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
               {t('webServiceStatus.startupProgress.meta.accessUrl')}
             </div>
-            <div className="mt-2 break-all font-mono text-sm text-foreground">{accessUrl || '-'}</div>
+            <div className="mt-2 break-all text-sm font-medium text-foreground">{accessUrl || '-'}</div>
           </section>
         </div>
 
-        <DialogFooter className="border-t border-border/70 bg-muted/[0.14] px-6 py-4">
-          {startupFailure ? (
-            <Button type="button" variant="outline" onClick={onOpenFailureLog}>
+        <SheetFooter className="shrink-0 border-t border-border/70 bg-background px-6 py-4">
+          {isFailed ? (
+            <Button variant="outline" onClick={onOpenFailureLog}>
               {t('webServiceStatus.startupProgress.actions.openFailureLog')}
             </Button>
           ) : null}
-          {!isStarting ? (
-            <Button type="button" onClick={() => onOpenChange(false)}>
-              {t('webServiceStatus.startupProgress.actions.close')}
-            </Button>
-          ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Button
+            variant={isSuccessful ? 'default' : 'outline'}
+            onClick={() => onOpenChange(false)}
+            disabled={isStarting && !isFailed && !isSuccessful}
+          >
+            {isSuccessful
+              ? t('webServiceStatus.startupProgress.actions.done')
+              : t('webServiceStatus.startupProgress.actions.close')}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import WebServiceStartupProgressDialog from './WebServiceStartupProgressDialog';
+import WebServiceStartupProgressDrawer from './WebServiceStartupProgressDrawer';
 import {
   Server,
   Square,
@@ -112,9 +112,9 @@ const WebServiceStatusCard: React.FC = () => {
   const [dependencyReadiness, setDependencyReadiness] = useState<DependencyReadinessSummary | null>(null);
   const [dependencyReadinessError, setDependencyReadinessError] = useState<string | null>(null);
   const debounceSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startupDialogCloseTimeoutRef = useRef<number | null>(null);
+  const startupDrawerCloseTimeoutRef = useRef<number | null>(null);
   const lastStartupPhaseRef = useRef<StartupPhase>(StartupPhase.CheckingVersion);
-  const [showStartupProgressDialog, setShowStartupProgressDialog] = useState(false);
+  const [showStartupProgressDrawer, setShowStartupProgressDrawer] = useState(false);
 
   const isRunning = webServiceInfo.status === 'running';
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
@@ -157,10 +157,10 @@ const WebServiceStatusCard: React.FC = () => {
     lastStartupPhaseRef.current,
   );
 
-  const clearStartupDialogCloseTimeout = () => {
-    if (startupDialogCloseTimeoutRef.current !== null) {
-      window.clearTimeout(startupDialogCloseTimeoutRef.current);
-      startupDialogCloseTimeoutRef.current = null;
+  const clearStartupDrawerCloseTimeout = () => {
+    if (startupDrawerCloseTimeoutRef.current !== null) {
+      window.clearTimeout(startupDrawerCloseTimeoutRef.current);
+      startupDrawerCloseTimeoutRef.current = null;
     }
   };
 
@@ -177,27 +177,27 @@ const WebServiceStatusCard: React.FC = () => {
     }
 
     if (webServiceInfo.status === 'starting') {
-      clearStartupDialogCloseTimeout();
-      setShowStartupProgressDialog(true);
+      clearStartupDrawerCloseTimeout();
+      setShowStartupProgressDrawer(true);
       return;
     }
 
     if (webServiceInfo.phase === StartupPhase.Running && webServiceInfo.status === 'running') {
-      clearStartupDialogCloseTimeout();
-      startupDialogCloseTimeoutRef.current = window.setTimeout(() => {
-        setShowStartupProgressDialog(false);
-        startupDialogCloseTimeoutRef.current = null;
+      clearStartupDrawerCloseTimeout();
+      startupDrawerCloseTimeoutRef.current = window.setTimeout(() => {
+        setShowStartupProgressDrawer(false);
+        startupDrawerCloseTimeoutRef.current = null;
       }, 1100);
       return;
     }
 
     if (webServiceInfo.status === 'stopped' && !startupFailure) {
-      clearStartupDialogCloseTimeout();
-      setShowStartupProgressDialog(false);
+      clearStartupDrawerCloseTimeout();
+      setShowStartupProgressDrawer(false);
     }
 
     if (webServiceInfo.phase === StartupPhase.Error) {
-      clearStartupDialogCloseTimeout();
+      clearStartupDrawerCloseTimeout();
     }
   }, [startupFailure, webServiceInfo.phase, webServiceInfo.status]);
 
@@ -293,7 +293,7 @@ const WebServiceStatusCard: React.FC = () => {
     }
 
     lastStartupPhaseRef.current = StartupPhase.CheckingVersion;
-    setShowStartupProgressDialog(true);
+    setShowStartupProgressDrawer(true);
     await dispatch(startWebService());
   };
 
@@ -392,13 +392,13 @@ const WebServiceStatusCard: React.FC = () => {
     }
   };
 
-  const handleStartupProgressDialogOpenChange = (open: boolean) => {
+  const handleStartupProgressDrawerOpenChange = (open: boolean) => {
     if (webServiceInfo.status === 'starting') {
       return;
     }
 
-    clearStartupDialogCloseTimeout();
-    setShowStartupProgressDialog(open);
+    clearStartupDrawerCloseTimeout();
+    setShowStartupProgressDrawer(open);
   };
 
   useEffect(() => {
@@ -895,8 +895,8 @@ const WebServiceStatusCard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          <WebServiceStartupProgressDialog
-            open={showStartupProgressDialog}
+          <WebServiceStartupProgressDrawer
+            open={showStartupProgressDrawer}
             status={webServiceInfo.status}
             phase={webServiceInfo.phase}
             failurePhase={lastStartupPhaseRef.current}
@@ -905,7 +905,7 @@ const WebServiceStatusCard: React.FC = () => {
             port={webServiceInfo.port}
             errorMessage={error}
             startupFailure={startupFailure}
-            onOpenChange={handleStartupProgressDialogOpenChange}
+            onOpenChange={handleStartupProgressDrawerOpenChange}
             onOpenFailureLog={handleOpenStartupFailure}
           />
 
