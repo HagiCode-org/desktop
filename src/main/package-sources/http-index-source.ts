@@ -13,6 +13,7 @@ import type {
   DownloadProgressCallback,
 } from './package-source.js';
 import { desktopHttpClient, HttpStatusError, HttpTimeoutError, type DesktopHttpClient } from '../http-client.js';
+import type { Region } from '../region-detector.js';
 
 const HYBRID_THRESHOLD_BYTES = 0;
 
@@ -26,6 +27,7 @@ export interface HttpIndexAsset {
   infoHash?: string;
   webSeeds?: string[];
   downloadSources?: HttpIndexDownloadSource[];
+  downloadUrls?: Record<'china-mainland' | 'default', string>;
   sha256?: string;
 }
 
@@ -72,11 +74,16 @@ export class HttpIndexPackageSource implements PackageSource {
   private cache: Map<string, VersionCacheEntry>;
   private readonly cacheTtl = 60 * 60 * 1000;
   private readonly httpClient: DesktopHttpClient;
+  private region?: Region;
 
   constructor(config: HttpIndexConfig, httpClient: DesktopHttpClient = desktopHttpClient) {
     this.config = config;
     this.cache = new Map();
     this.httpClient = httpClient;
+  }
+
+  setRegion(region: Region): void {
+    this.region = region;
   }
 
   async listAvailableVersions(): Promise<Version[]> {
@@ -117,7 +124,7 @@ export class HttpIndexPackageSource implements PackageSource {
             continue;
           }
 
-          const directUrl = this.resolveAssetUrl(asset);
+          const directUrl = this.resolveAssetUrl(asset, this.region);
           const assetKind = this.detectAssetKind(asset.name, versionEntry.version, latestVersionSet);
           const hybrid = this.buildHybridMetadata(asset, directUrl, assetKind);
 
@@ -330,7 +337,16 @@ export class HttpIndexPackageSource implements PackageSource {
     return latestVersions;
   }
 
-  private resolveAssetUrl(asset: HttpIndexAsset): string {
+  private resolveAssetUrl(asset: HttpIndexAsset, region?: string): string {
+    // Prefer regional download URL when available
+    if (asset.downloadUrls) {
+      const regionKey: 'china-mainland' | 'default' = region === 'CN' ? 'china-mainland' : 'default';
+      const regionalUrl = asset.downloadUrls[regionKey];
+      if (regionalUrl) {
+        return new URL(regionalUrl, this.config.indexUrl).toString();
+      }
+    }
+
     if (asset.directUrl) {
       return new URL(asset.directUrl, this.config.indexUrl).toString();
     }
