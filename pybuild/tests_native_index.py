@@ -90,6 +90,47 @@ class IndexTests(unittest.TestCase):
         self.assertIn("stable", channels)
         self.assertIn("beta", channels)
 
+    def test_build_index_result_with_china_mainland_download_urls(self) -> None:
+        """大陆 base URL 配置时 asset 输出 downloadUrls，空值时省略节点。"""
+        now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        blobs = [
+            BlobInfo(name="v1.0.0/app-win.exe", size=100, last_modified=now),
+        ]
+        result = build_index_result(
+            blobs,
+            "https://account.blob.core.windows.net/container?sv=1",
+            public_base_url="https://dl-desktop.hagicode.com",
+            china_mainland_public_base_url="https://dl.desktop.hagicode.com",
+            github_repository_name="desktop",
+        )
+        self.assertIsNotNone(result.document)
+        assert result.document is not None
+        asset = result.document["versions"][0]["assets"][0]
+        self.assertIn("downloadUrls", asset)
+        self.assertEqual(asset["downloadUrls"]["default"], asset["directUrl"])
+        self.assertEqual(
+            asset["downloadUrls"]["china-mainland"],
+            "https://dl.desktop.hagicode.com/v1.0.0/app-win.exe",
+        )
+
+    def test_build_index_result_without_china_mainland(self) -> None:
+        """未配置大陆 base URL 时输出与现状一致，无 china-mainland 键。"""
+        now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        blobs = [
+            BlobInfo(name="v1.0.0/app-win.exe", size=100, last_modified=now),
+        ]
+        result = build_index_result(
+            blobs,
+            "https://account.blob.core.windows.net/container?sv=1",
+            public_base_url="https://dl-desktop.hagicode.com",
+            github_repository_name="desktop",
+        )
+        self.assertIsNotNone(result.document)
+        assert result.document is not None
+        asset = result.document["versions"][0]["assets"][0]
+        self.assertNotIn("downloadUrls", asset)
+        self.assertIn("directUrl", asset)
+
     def test_r2_retention_prunes_to_latest_three_and_stale_sidecars(self) -> None:
         now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         blobs = [

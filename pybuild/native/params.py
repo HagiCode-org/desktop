@@ -47,6 +47,7 @@ class BuildParams:
     storage_provider: str = "r2"
     azure_blob_sas_url: str = ""
     azure_public_base_url: str = DEFAULT_PUBLIC_BASE_URL
+    china_mainland_public_base_url: str = ""
     skip_azure_blob_publish: bool = False
     azure_generate_index: bool = True
     azure_upload_retries: int = DEFAULT_AZURE_UPLOAD_RETRIES
@@ -109,6 +110,7 @@ PARAM_ALIASES: dict[str, str] = {
     "storageprovider": "storage_provider",
     "azureblobsasurl": "azure_blob_sas_url",
     "azurepublicbaseurl": "azure_public_base_url",
+    "chinamainlandpublicbaseurl": "china_mainland_public_base_url",
     "skipazureblobpublish": "skip_azure_blob_publish",
     "azuregenerateindex": "azure_generate_index",
     "azureuploadretries": "azure_upload_retries",

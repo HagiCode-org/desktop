@@ -23,7 +23,9 @@ def build_container_base_url(sas_url: str) -> str:
     return urlunparse((uri.scheme, uri.netloc, path, "", "", ""))
 
 
-def resolve_public_base_url(sas_url: str, public_base_url: str = "") -> str:
+def resolve_public_base_url(sas_url: str, public_base_url: str = "", china_mainland_public_base_url: str = "") -> str:
+    if china_mainland_public_base_url and china_mainland_public_base_url.strip():
+        return china_mainland_public_base_url.strip().rstrip("/") + "/"
     if public_base_url and public_base_url.strip():
         return public_base_url.strip().rstrip("/") + "/"
     return build_container_base_url(sas_url)

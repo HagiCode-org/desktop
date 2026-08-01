@@ -46,7 +46,8 @@ def resolve_provider(params: BuildParams | None = None, override: str = "") -> s
 class StorageContext:
     provider: str
     public_base_url: str
-    version_prefix: str = ""
+    china_mainland_public_base_url: str = ""
+    version_prefix: str = """
     upload_retries: int = 3
     upload_concurrency: int = 4
     local_index_path: str = ""
@@ -116,6 +117,7 @@ def open_storage_context(
     ctx = StorageContext(
         provider=provider,
         public_base_url=public_base,
+        china_mainland_public_base_url=params.china_mainland_public_base_url,
         version_prefix=version_prefix,
         upload_retries=params.azure_upload_retries,
         upload_concurrency=params.azure_upload_concurrency,
@@ -159,6 +161,7 @@ def to_azure_options(ctx: StorageContext) -> AzureBlobPublishOptions:
         sas_url=ctx.sas_url,
         version_prefix=ctx.version_prefix,
         public_base_url=ctx.public_base_url,
+        china_mainland_public_base_url=ctx.china_mainland_public_base_url,
         upload_retries=ctx.upload_retries,
         upload_concurrency=ctx.upload_concurrency,
         local_index_path=ctx.local_index_path,

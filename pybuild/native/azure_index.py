@@ -179,9 +179,11 @@ def build_index_result(
     sas_url: str,
     published_artifacts: list[PublishedArtifact] | None = None,
     public_base_url: str = "",
+    china_mainland_public_base_url: str = "",
     github_repository_name: str = "desktop",
 ) -> IndexGenerationResult:
     container_base_url = resolve_public_base_url(sas_url, public_base_url)
+    cn_container_base_url = resolve_public_base_url(sas_url, public_base_url="", china_mainland_public_base_url=china_mainland_public_base_url) if china_mainland_public_base_url else ""
     metadata_by_path = {
         artifact.path: artifact for artifact in (published_artifacts or []) if artifact.path
     }
@@ -225,6 +227,11 @@ def build_index_result(
                 "lastModified": last_modified,
                 "directUrl": direct_url,
             }
+            if cn_container_base_url:
+                asset["downloadUrls"] = {
+                    "china-mainland": build_blob_url(cn_container_base_url, blob.name),
+                    "default": direct_url,
+                }
             sidecar_blob_name = f"{blob.name}.torrent"
             has_sidecar_blob = sidecar_blob_name in blobs_by_name
             can_publish_hybrid = bool(metadata and metadata.hybrid_eligible and has_sidecar_blob)
@@ -363,6 +370,7 @@ def generate_index_from_blobs_with_metadata(
         options.sas_url,
         published_artifacts,
         options.public_base_url,
+        options.china_mainland_public_base_url,
         github_repository_name=repo_name,
     )
     result.retention = retention
