@@ -355,8 +355,8 @@ def orchestrate_publish(
 
     print(f"[PYBUILD] === Generating index.json (provider={provider}) ===")
     index_result = generate_index_from_blobs_with_metadata(
-        options,
-        options.local_index_path,
+        storage,
+        storage.local_index_path,
         summary.published_artifacts,
         minify=minify_index_json,
         github_repository=github_repository or "HagiCode-org/desktop",

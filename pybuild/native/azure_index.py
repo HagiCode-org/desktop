@@ -378,16 +378,15 @@ def generate_index_from_blobs_with_metadata(
     )
     retention = None
     index_blobs = blobs
-    if storage is not None and storage.provider == "r2":
-        retention = select_index_retention(blobs, options.version_prefix, retention_count=3)
-        index_blobs = retention.retained_blobs
+    retention = select_index_retention(blobs, storage.version_prefix, retention_count=3)
+    index_blobs = retention.retained_blobs
     repo_name = resolve_github_repository_name(github_repository)
     result = build_index_result(
         index_blobs,
-        options.sas_url,
+        "",
         published_artifacts,
-        options.public_base_url,
-        options.cloudflare_public_base_url,
+        storage.public_base_url,
+        storage.cloudflare_public_base_url,
         github_repository_name=repo_name,
     )
     result.retention = retention

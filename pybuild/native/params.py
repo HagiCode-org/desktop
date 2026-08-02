@@ -7,6 +7,7 @@ from typing import Iterable
 
 DEFAULT_GITHUB_REPOSITORY = "HagiCode-org/desktop"
 DEFAULT_PUBLIC_BASE_URL = "https://dl.desktop.hagicode.com"
+DEFAULT_CLOUDFLARE_PUBLIC_BASE_URL = "https://dl-desktop.hagicode.com"
 DEFAULT_RELEASE_CHANNEL = "beta"
 DEFAULT_AZURE_MAX_PARALLEL = 3
 DEFAULT_AZURE_UPLOAD_RETRIES = 3
@@ -47,7 +48,7 @@ class BuildParams:
     storage_provider: str = "r2"
     azure_blob_sas_url: str = ""
     azure_public_base_url: str = DEFAULT_PUBLIC_BASE_URL
-    cloudflare_public_base_url: str = ""
+    cloudflare_public_base_url: str = DEFAULT_CLOUDFLARE_PUBLIC_BASE_URL
     skip_azure_blob_publish: bool = False
     azure_generate_index: bool = True
     azure_upload_retries: int = DEFAULT_AZURE_UPLOAD_RETRIES
@@ -254,8 +255,9 @@ def parse_passthrough(args: Iterable[str]) -> BuildParams:
             params.r2_region = env_region
     if not params.r2_public_base_url:
         params.r2_public_base_url = os.environ.get("R2_PUBLIC_BASE_URL", "").strip()
-    if not params.cloudflare_public_base_url:
-        params.cloudflare_public_base_url = os.environ.get("R2_CLOUDFLARE_PUBLIC_BASE_URL", "").strip()
+    env_cf = os.environ.get("R2_CLOUDFLARE_PUBLIC_BASE_URL", "").strip()
+    if env_cf:
+        params.cloudflare_public_base_url = env_cf
     if params.github_repository == DEFAULT_GITHUB_REPOSITORY:
         env_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
         if env_repo:
