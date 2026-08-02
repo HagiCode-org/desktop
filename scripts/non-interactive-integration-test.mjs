@@ -431,7 +431,10 @@ async function extractDmgArtifact(dmgArtifact, stagedRoot) {
     }
 
     const targetRoot = path.join(stagedRoot, path.basename(appBundle));
-    await fsp.cp(appBundle, targetRoot, { recursive: true });
+    await fsp.cp(appBundle, targetRoot, {
+      recursive: true,
+      verbatimSymlinks: true,
+    });
     await restoreExecutablePermissions(targetRoot);
     return targetRoot;
   } finally {
@@ -451,7 +454,10 @@ async function copyArtifactToPathWithSpaces() {
   const unpackedRoot = findUnpackedArtifactRoot();
   if (unpackedRoot) {
     const targetRoot = path.join(stagedRoot, path.basename(unpackedRoot));
-    await fsp.cp(unpackedRoot, targetRoot, { recursive: true });
+    await fsp.cp(unpackedRoot, targetRoot, {
+      recursive: true,
+      verbatimSymlinks: true,
+    });
     return { tempRoot, artifactRoot: targetRoot, source: unpackedRoot };
   }
 

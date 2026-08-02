@@ -137,3 +137,54 @@ test("uses the current Desktop-managed package set for dependency install assert
     "codex",
   ]);
 });
+
+test("node fs.cp without verbatimSymlinks rewrites relative symlink targets", async () => {
+  const projectRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "hagicode-non-interactive-test-"),
+  );
+  try {
+    const sourceRoot = path.join(projectRoot, "source-app");
+    const copiedRoot = path.join(projectRoot, "copied-app");
+    await fs.mkdir(path.join(sourceRoot, "Contents", "Frameworks"), {
+      recursive: true,
+    });
+
+    const symlinkPath = path.join(
+      sourceRoot,
+      "Contents",
+      "Frameworks",
+      "Electron Framework.framework",
+    );
+    await fs.symlink("Versions/Current", symlinkPath, "dir");
+
+    await fs.cp(sourceRoot, copiedRoot, { recursive: true });
+    const rewrittenTarget = await fs.readlink(
+      path.join(
+        copiedRoot,
+        "Contents",
+        "Frameworks",
+        "Electron Framework.framework",
+      ),
+    );
+
+    assert.notEqual(rewrittenTarget, "Versions/Current");
+
+    await fs.rm(copiedRoot, { recursive: true, force: true });
+    await fs.cp(sourceRoot, copiedRoot, {
+      recursive: true,
+      verbatimSymlinks: true,
+    });
+    const preservedTarget = await fs.readlink(
+      path.join(
+        copiedRoot,
+        "Contents",
+        "Frameworks",
+        "Electron Framework.framework",
+      ),
+    );
+
+    assert.equal(preservedTarget, "Versions/Current");
+  } finally {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  }
+});
