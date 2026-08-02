@@ -231,7 +231,7 @@ npx tsc
 node --test dist/main/__tests__/http-index-source-hybrid.test.js dist/main/__tests__/hybrid-download-coordinator.test.js dist/main/__tests__/region-detector.test.js
 ```
 
-Use mocked `RegionDetector` results for `CN`, `INTERNATIONAL`, and `error-fallback` when smoke-checking fallback order. Legacy single-source assets should still download through the preserved `downloadUrl` path without requiring structured `downloadSources`.
+Use mocked `RegionDetector` results for `CN`, `INTERNATIONAL`, and `error-fallback` when smoke-checking fallback order. Assets use `directUrl` as the primary download URL; `downloadSources` (structured) contain `official` and optionally `cloudflare` sources for hybrid structured fallback. The legacy `downloadUrl` path has been removed.
 
 ## Clipboard Integration
 
