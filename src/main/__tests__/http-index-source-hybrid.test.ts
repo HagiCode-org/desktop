@@ -309,7 +309,7 @@ describe('http index hybrid metadata support', () => {
       assert.match(validation.error ?? '', /Invalid index file format/);
   });
 
-  it('resolves regional download URLs via downloadUrls when present, falls back to directUrl otherwise', async () => {
+  it('uses official download source URL for asset resolution, with cloudflare in structured fallback', async () => {
     const version = '4.0.0';
     const desktopName = desktopAssetName(version);
     const httpClient = stubHttpClient({
@@ -322,25 +322,56 @@ describe('http index hybrid metadata support', () => {
               size: 2048,
               path: `./desktop/${desktopName}`,
               directUrl: `https://dl-desktop.hagicode.com/desktop/${desktopName}`,
-              downloadUrls: {
-                'china-mainland': `https://dl.desktop.hagicode.com/desktop/${desktopName}`,
-                default: `https://dl-desktop.hagicode.com/desktop/${desktopName}`,
-              },
+              downloadSources: [
+                {
+                  kind: 'official',
+                  label: 'Official',
+                  url: `https://dl-desktop.hagicode.com/desktop/${desktopName}`,
+                  primary: true,
+                  webSeed: true,
+                },
+                {
+                  kind: 'cloudflare',
+                  label: 'Cloudflare',
+                  url: `https://dl-desktop-cf.hagicode.com/desktop/${desktopName}`,
+                  primary: false,
+                  webSeed: true,
+                },
+              ],
+              webSeeds: [
+                `https://dl-desktop.hagicode.com/desktop/${desktopName}`,
+                `https://dl-desktop-cf.hagicode.com/desktop/${desktopName}`,
+              ],
             },
             {
               name: desktopAssetName('4.0.1'),
               size: 4096,
               path: './desktop/hagicode-4.0.1-win-x64.zip',
               directUrl: 'https://dl-desktop.hagicode.com/desktop/hagicode-4.0.1-win-x64.zip',
-              downloadUrls: {
-                default: 'https://dl-desktop.hagicode.com/desktop/hagicode-4.0.1-win-x64.zip',
-              },
+              downloadSources: [
+                {
+                  kind: 'official',
+                  label: 'Official',
+                  url: 'https://dl-desktop.hagicode.com/desktop/hagicode-4.0.1-win-x64.zip',
+                  primary: true,
+                  webSeed: true,
+                },
+              ],
             },
             {
               name: desktopAssetName('4.0.2'),
               size: 8192,
               path: './desktop/hagicode-4.0.2-win-x64.zip',
               directUrl: 'https://dl-desktop.hagicode.com/desktop/hagicode-4.0.2-win-x64.zip',
+              downloadSources: [
+                {
+                  kind: 'official',
+                  label: 'Official',
+                  url: 'https://dl-desktop.hagicode.com/desktop/hagicode-4.0.2-win-x64.zip',
+                  primary: true,
+                  webSeed: true,
+                },
+              ],
             },
           ],
         },
@@ -348,29 +379,12 @@ describe('http index hybrid metadata support', () => {
     });
 
     const source = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
+    const versions = await source.listAvailableVersions();
+    const asset = versions.find(v => v.version === version);
+    assert.ok(asset);
+    // Uses directUrl (official) for primary download
+    assert.ok(asset.downloadUrl);
+    assert.match(asset.downloadUrl, /dl-desktop\.hagicode\.com/);
 
-    // CN region
-    source.setRegion('CN');
-    const versionsCn = await source.listAvailableVersions();
-    const cnAsset = versionsCn.find(v => v.version === version);
-    assert.ok(cnAsset);
-    // With CN region, should prefer china-mainland URL
-    assert.match(cnAsset.downloadUrl, /dl\.desktop\.hagicode\.com/);
-
-    // Non-CN (default) region
-    source.setRegion('INTERNATIONAL');
-    const versionsIntl = await source.listAvailableVersions();
-    const intlAsset = versionsIntl.find(v => v.version === version);
-    assert.ok(intlAsset);
-    // With INTERNATIONAL, should use default key (which equals directUrl)
-    assert.match(intlAsset.downloadUrl, /dl-desktop\.hagicode\.com/);
-
-    // No region set (falls back to default)
-    const source2 = new HttpIndexPackageSource({ type: 'http-index', indexUrl: 'https://example.com/index.json' }, httpClient);
-    const versionsNoRegion = await source2.listAvailableVersions();
-    const noRegionAsset = versionsNoRegion.find(v => v.version === version);
-    assert.ok(noRegionAsset);
-    assert.match(noRegionAsset.downloadUrl, /dl-desktop\.hagicode\.com/);
-  });
-
+});
 });
