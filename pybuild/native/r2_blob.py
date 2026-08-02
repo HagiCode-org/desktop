@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .azure_blob import BlobInfo, PublishResult
+from .types import BlobInfo, PublishResult
 from .path_utils import build_blob_path
 
 LOG = "[PYBUILD][r2]"

@@ -8,8 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .azure_blob import AzureBlobClient, AzureBlobPublishOptions, BlobInfo, list_blobs, validate_index_file
-from .storage_publish import StorageContext, list_objects as storage_list_objects, open_storage_context, resolve_provider, storage_label, to_azure_options
+from .types import BlobInfo
+from .azure_blob import validate_index_file
+from .storage_publish import StorageContext, list_objects as storage_list_objects, open_storage_context, storage_label
 from .hybrid_metadata import KIND_OFFICIAL, PublishedArtifact
 from .params import resolve_github_repository_name
 from .path_utils import build_blob_url, extract_version, is_github_generated_source_archive, resolve_public_base_url
@@ -134,8 +135,19 @@ def extract_channel_from_version(version: str) -> str:
 
 
 def build_indexed_download_sources(metadata: PublishedArtifact | None, direct_url: str) -> list[dict[str, Any]]:
+    """Return deduplicated, sorted download sources. Always includes at least official when direct_url is set."""
     if metadata is None:
-        return []
+        if not direct_url:
+            return []
+        return [
+            {
+                "kind": KIND_OFFICIAL,
+                "label": "Official",
+                "url": direct_url,
+                "primary": True,
+                "webSeed": True,
+            }
+        ]
     sources = metadata.download_sources or [
         {
             "kind": KIND_OFFICIAL,
@@ -163,9 +175,14 @@ def build_indexed_web_seeds(
     download_sources: list[dict[str, Any]],
     direct_url: str,
 ) -> list[str]:
-    if metadata is None:
-        return []
     seeds: list[str] = []
+    if metadata is None:
+        for source in download_sources:
+            if source.get("webSeed"):
+                url = source.get("url", "")
+                if url and url not in seeds:
+                    seeds.append(url)
+        return seeds
     for url in list(metadata.web_seeds) + [source["url"] for source in download_sources if source.get("webSeed")]:
         if url and url not in seeds:
             seeds.append(url)
@@ -179,11 +196,11 @@ def build_index_result(
     sas_url: str,
     published_artifacts: list[PublishedArtifact] | None = None,
     public_base_url: str = "",
-    china_mainland_public_base_url: str = "",
+    cloudflare_public_base_url: str = "",
     github_repository_name: str = "desktop",
 ) -> IndexGenerationResult:
     container_base_url = resolve_public_base_url(sas_url, public_base_url)
-    cn_container_base_url = resolve_public_base_url(sas_url, public_base_url="", china_mainland_public_base_url=china_mainland_public_base_url) if china_mainland_public_base_url else ""
+    cf_container_base_url = (cloudflare_public_base_url.strip().rstrip("/") + "/") if cloudflare_public_base_url else ""
     metadata_by_path = {
         artifact.path: artifact for artifact in (published_artifacts or []) if artifact.path
     }
@@ -227,15 +244,20 @@ def build_index_result(
                 "lastModified": last_modified,
                 "directUrl": direct_url,
             }
-            if cn_container_base_url:
-                asset["downloadUrls"] = {
-                    "china-mainland": build_blob_url(cn_container_base_url, blob.name),
-                    "default": direct_url,
-                }
             sidecar_blob_name = f"{blob.name}.torrent"
             has_sidecar_blob = sidecar_blob_name in blobs_by_name
             can_publish_hybrid = bool(metadata and metadata.hybrid_eligible and has_sidecar_blob)
             indexed_download_sources = build_indexed_download_sources(metadata, direct_url)
+            if cf_container_base_url:
+                cf_url = build_blob_url(cf_container_base_url, blob.name)
+                cloudflare_source = {
+                    "kind": "cloudflare",
+                    "label": "Cloudflare",
+                    "url": cf_url,
+                    "primary": False,
+                    "webSeed": True,
+                }
+                indexed_download_sources.append(cloudflare_source)
             indexed_web_seeds = build_indexed_web_seeds(metadata, indexed_download_sources, direct_url)
             if indexed_download_sources:
                 asset["downloadSources"] = indexed_download_sources
@@ -335,27 +357,22 @@ def find_missing_published_artifact_paths(
 
 
 def generate_index_from_blobs_with_metadata(
-    options: AzureBlobPublishOptions,
+    storage: StorageContext,
     output_path: Path | str,
     published_artifacts: list[PublishedArtifact],
     *,
     minify: bool = False,
     github_repository: str = "HagiCode-org/desktop",
-    client: AzureBlobClient | None = None,
-    storage: StorageContext | None = None,
     visibility_max_attempts: int = 6,
     visibility_retry_delay_seconds: float = 10.0,
 ) -> IndexGenerationResult:
-    provider = storage.provider if storage is not None else "azure"
-    print(f"[PYBUILD] === Generating index.json from storage objects (provider={provider}) ===")
+    print(f"[PYBUILD] === Generating index.json from R2 storage objects ===")
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
 
     blobs = list_blobs_until_visible(
-        options,
+        storage,
         published_artifacts,
-        client=client,
-        storage=storage,
         max_attempts=visibility_max_attempts,
         retry_delay_seconds=visibility_retry_delay_seconds,
     )
@@ -370,7 +387,7 @@ def generate_index_from_blobs_with_metadata(
         options.sas_url,
         published_artifacts,
         options.public_base_url,
-        options.china_mainland_public_base_url,
+        options.cloudflare_public_base_url,
         github_repository_name=repo_name,
     )
     result.retention = retention
@@ -404,18 +421,14 @@ def generate_index_from_blobs_with_metadata(
 
 
 def list_blobs_until_visible(
-    options: AzureBlobPublishOptions,
+    storage: StorageContext,
     published_artifacts: list[PublishedArtifact],
     *,
-    client: AzureBlobClient | None = None,
-    storage: StorageContext | None = None,
     max_attempts: int = 6,
     retry_delay_seconds: float = 10.0,
 ) -> list[BlobInfo]:
     def _list() -> list[BlobInfo]:
-        if storage is not None:
-            return storage_list_objects(storage)
-        return list_blobs(options, client=client)
+        return storage_list_objects(storage)
 
     if not published_artifacts:
         return _list()
@@ -441,18 +454,18 @@ def run_generate_azure_index(repo_root: Path, params: Any) -> int:
     from .artifacts import resolve_index_output_path
     from .publish import load_merged_publish_summary, report_index_diagnostics
 
-    provider = resolve_provider(params)
+    provider = "r2"
     label = storage_label(provider)
     print(f"[PYBUILD] === Generate {label} Index (provider={provider}) ===")
     print(f"[PYBUILD] GitHub repository: {params.effective_github_repository}")
     output_path = resolve_index_output_path(repo_root, params)
     storage = open_storage_context(params, version_prefix="", local_index_path=str(output_path))
-    options = to_azure_options(storage)
+    pass  # storage used directly
     merged = load_merged_publish_summary(params)
     published = merged.published_artifacts if merged is not None else []
     print(f"[PYBUILD] minify: {params.minify_index_json}")
     index_result = generate_index_from_blobs_with_metadata(
-        options,
+        storage,
         output_path,
         published,
         minify=params.minify_index_json,

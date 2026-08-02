@@ -41,7 +41,7 @@ class AzureBlobPublishOptions:
     sas_url: str
     version_prefix: str = ""
     public_base_url: str = ""
-    china_mainland_public_base_url: str = ""
+    cloudflare_public_base_url: str = ""
     upload_retries: int = 3
     upload_concurrency: int = 4
     local_index_path: str = ""

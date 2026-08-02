@@ -7,13 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from pybuild.native.azure_blob import BlobInfo, PublishResult
+from pybuild.native.types import BlobInfo, PublishResult
 from pybuild.native.params import BuildParams, parse_passthrough
 from pybuild.native.storage_publish import (
     StorageContext,
     open_storage_context,
-    require_storage_credentials,
-    resolve_provider,
     upload_artifacts,
     upload_index,
     delete_objects,

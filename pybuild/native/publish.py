@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import read_json, resolve_index_output_path, write_camel_json
-from .azure_blob import AzureBlobPublishOptions
 from .azure_index import IndexGenerationResult, generate_index_from_blobs_with_metadata
 from .github_release import GitHubReleaseClient
 from .hybrid_metadata import PublishedArtifact, build_hybrid_metadata
@@ -20,9 +19,7 @@ from .upload_policy import filter_policy_enabled_files
 from .storage_publish import (
     StorageContext,
     open_storage_context,
-    resolve_provider,
     storage_label,
-    to_azure_options,
     upload_artifacts as storage_upload_artifacts,
     upload_index as storage_upload_index,
     delete_objects as storage_delete_objects,
@@ -268,22 +265,15 @@ def apply_retention_cleanup(
 
 def orchestrate_publish(
     downloaded_files: list[str],
-    options: AzureBlobPublishOptions,
+    storage: StorageContext,
     *,
     upload_index: bool,
     minify_index_json: bool,
     github_repository: str | None,
-    storage: StorageContext | None = None,
 ) -> ReleasePublishSummary:
-    """Upload artifacts (+ optional index) via resolved storage provider.
-
-    `options` still carries version_prefix / public_base_url / local_index_path for
-    metadata and index helpers. When `storage` is provided, upload/list go through it.
-    """
+    """Upload artifacts (+ optional index) via R2 storage."""
     summary = ReleasePublishSummary()
-    container_base_url = resolve_public_base_url(options.sas_url, options.public_base_url)
-    if storage is not None and storage.public_base_url:
-        container_base_url = storage.public_base_url.rstrip("/") + "/"
+    container_base_url = storage.public_base_url.rstrip("/") + "/"
     policy_enabled_files = filter_policy_enabled_files(downloaded_files)
     metadata_result = build_hybrid_metadata(
         policy_enabled_files,
@@ -370,7 +360,6 @@ def orchestrate_publish(
         summary.published_artifacts,
         minify=minify_index_json,
         github_repository=github_repository or "HagiCode-org/desktop",
-        storage=storage,
     )
     summary.diagnostics.extend(index_result.diagnostics)
     summary.http_only_fallback_count = max(
@@ -436,7 +425,7 @@ def report_index_diagnostics(result: IndexGenerationResult) -> None:
 
 
 def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
-    provider = resolve_provider(params)
+    provider = "r2"
     label = storage_label(provider)
     print(f"[PYBUILD] === Publish GitHub Release to {label} (provider={provider}) ===")
     print(
@@ -478,7 +467,7 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
             version_prefix=effective_version,
             local_index_path=str(output_path),
         )
-        publish_options = to_azure_options(storage)
+        pass  # storage used directly
 
         if params.upload_artifacts:
             selection_manifest = load_release_asset_selection_manifest(params)
@@ -492,11 +481,10 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 print(f"[PYBUILD] === Step 1: upload release assets (provider={provider}) ===")
                 summary = orchestrate_publish(
                     downloaded,
-                    publish_options,
+                    storage,
                     upload_index=False,  # index handled below (may use merged summary)
                     minify_index_json=params.minify_index_json,
                     github_repository=params.effective_github_repository,
-                    storage=storage,
                 )
                 if not summary.shard_id:
                     summary.shard_id = (

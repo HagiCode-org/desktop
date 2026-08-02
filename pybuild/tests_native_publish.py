@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from pybuild.native.azure_blob import PublishResult
+from pybuild.native.types import PublishResult
 from pybuild.native.hybrid_metadata import PublishedArtifact
 from pybuild.native.publish import (
     ReleasePublishSummary,
@@ -14,7 +14,8 @@ from pybuild.native.publish import (
     merge_publish_results,
     orchestrate_publish,
 )
-from pybuild.native.azure_blob import AzureBlobPublishOptions
+from pybuild.native.types import BlobInfo
+from pybuild.native.storage_publish import StorageContext, open_storage_context
 
 
 class PublishTests(unittest.TestCase):
@@ -93,7 +94,7 @@ class PublishTests(unittest.TestCase):
             self.assertEqual(len(merged.published_artifacts), 2)
 
     def test_orchestrate_publish_upload_only(self) -> None:
-        from pybuild.native.storage_publish import StorageContext
+        from pybuild.native.storage_publish import StorageContext, open_storage_context
 
         with tempfile.TemporaryDirectory() as tmp:
             payload = Path(tmp) / "small.bin"
@@ -133,7 +134,7 @@ class PublishTests(unittest.TestCase):
             self.assertTrue(summary.published_artifacts[0].legacy_http_fallback)
 
     def test_orchestrate_publish_filters_disabled_release_assets(self) -> None:
-        from pybuild.native.storage_publish import StorageContext
+        from pybuild.native.storage_publish import StorageContext, open_storage_context
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -177,7 +178,7 @@ class PublishTests(unittest.TestCase):
 
     def test_apply_retention_cleanup_reports_failed_keys(self) -> None:
         from pybuild.native.azure_index import IndexGenerationResult, IndexRetentionResult
-        from pybuild.native.storage_publish import StorageContext
+        from pybuild.native.storage_publish import StorageContext, open_storage_context
 
         summary = ReleasePublishSummary()
         storage = StorageContext(provider="r2", public_base_url="https://cdn")
