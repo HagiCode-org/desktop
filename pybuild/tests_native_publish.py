@@ -15,7 +15,7 @@ from pybuild.native.publish import (
     orchestrate_publish,
 )
 from pybuild.native.types import BlobInfo
-from pybuild.native.storage_publish import StorageContext, open_storage_context
+from pybuild.native.storage_publish import StorageContext
 
 
 class PublishTests(unittest.TestCase):
@@ -94,22 +94,15 @@ class PublishTests(unittest.TestCase):
             self.assertEqual(len(merged.published_artifacts), 2)
 
     def test_orchestrate_publish_upload_only(self) -> None:
-        from pybuild.native.storage_publish import StorageContext, open_storage_context
+        from pybuild.native.storage_publish import StorageContext
 
         with tempfile.TemporaryDirectory() as tmp:
             payload = Path(tmp) / "small.bin"
             payload.write_bytes(b"x" * 10)
-            options = AzureBlobPublishOptions(
-                sas_url="https://account.blob.core.windows.net/container?sv=1",
-                version_prefix="v1.0.0",
-                public_base_url="https://desktop.dl.hagicode.com",
-                local_index_path=str(Path(tmp) / "index.json"),
-            )
+            version_prefix = "v1.0.0"
             storage = StorageContext(
-                provider="azure",
                 public_base_url="https://desktop.dl.hagicode.com",
-                version_prefix="v1.0.0",
-                sas_url=options.sas_url,
+                version_prefix=version_prefix,
             )
             fake_result = PublishResult(
                 success=True,
@@ -122,11 +115,10 @@ class PublishTests(unittest.TestCase):
             ):
                 summary = orchestrate_publish(
                     [str(payload)],
-                    options,
+                    storage,
                     upload_index=False,
                     minify_index_json=True,
                     github_repository="HagiCode-org/desktop",
-                    storage=storage,
                 )
             self.assertTrue(summary.success)
             self.assertEqual(summary.uploaded_blob_count, 1)
@@ -134,7 +126,7 @@ class PublishTests(unittest.TestCase):
             self.assertTrue(summary.published_artifacts[0].legacy_http_fallback)
 
     def test_orchestrate_publish_filters_disabled_release_assets(self) -> None:
-        from pybuild.native.storage_publish import StorageContext, open_storage_context
+        from pybuild.native.storage_publish import StorageContext
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -144,17 +136,10 @@ class PublishTests(unittest.TestCase):
             linux_tar = root / "HagiCode-1.0.0-linux.tar.gz"
             for item in (enabled, signed, zip_file, linux_tar):
                 item.write_bytes(b"x" * 10)
-            options = AzureBlobPublishOptions(
-                sas_url="https://account.blob.core.windows.net/container?sv=1",
-                version_prefix="v1.0.0",
-                public_base_url="https://desktop.dl.hagicode.com",
-                local_index_path=str(root / "index.json"),
-            )
+            version_prefix = "v1.0.0"
             storage = StorageContext(
-                provider="azure",
                 public_base_url="https://desktop.dl.hagicode.com",
-                version_prefix="v1.0.0",
-                sas_url=options.sas_url,
+                version_prefix=version_prefix,
             )
             fake_result = PublishResult(
                 success=True,
@@ -164,11 +149,10 @@ class PublishTests(unittest.TestCase):
             with patch("pybuild.native.publish.storage_upload_artifacts", return_value=fake_result) as upload:
                 summary = orchestrate_publish(
                     [str(enabled), str(signed), str(zip_file), str(linux_tar)],
-                    options,
+                    storage,
                     upload_index=False,
                     minify_index_json=True,
                     github_repository="HagiCode-org/desktop",
-                    storage=storage,
                 )
 
             upload.assert_called_once_with([str(enabled)], storage)
@@ -178,10 +162,10 @@ class PublishTests(unittest.TestCase):
 
     def test_apply_retention_cleanup_reports_failed_keys(self) -> None:
         from pybuild.native.azure_index import IndexGenerationResult, IndexRetentionResult
-        from pybuild.native.storage_publish import StorageContext, open_storage_context
+        from pybuild.native.storage_publish import StorageContext
 
         summary = ReleasePublishSummary()
-        storage = StorageContext(provider="r2", public_base_url="https://cdn")
+        storage = StorageContext(public_base_url="https://cdn")
         index_result = IndexGenerationResult(
             retention=IndexRetentionResult(stale_object_keys=["v1.0.0/app.bin"])
         )

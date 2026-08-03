@@ -243,7 +243,7 @@ def apply_retention_cleanup(
     index_result: IndexGenerationResult,
 ) -> bool:
     retention = index_result.retention
-    if storage.provider != "r2" or retention is None or not retention.stale_object_keys:
+    if retention is None or not retention.stale_object_keys:
         return True
     delete_result = storage_delete_objects(storage, retention.stale_object_keys)
     summary.stale_deleted_blob_names.extend(delete_result.uploaded_blob_names)
@@ -277,7 +277,7 @@ def orchestrate_publish(
     policy_enabled_files = filter_policy_enabled_files(downloaded_files)
     metadata_result = build_hybrid_metadata(
         policy_enabled_files,
-        options.version_prefix,
+        storage.version_prefix,
         container_base_url,
         github_repository,
     )
@@ -303,7 +303,7 @@ def orchestrate_publish(
 
     if storage is None:
         raise ValueError("storage context required for orchestrate_publish")
-    provider = storage.provider
+    provider = "r2"
     label = storage_label(provider)
     upload_result = storage_upload_artifacts(unique_files, storage)
     summary.uploaded_blob_count = len(upload_result.uploaded_blob_names)
