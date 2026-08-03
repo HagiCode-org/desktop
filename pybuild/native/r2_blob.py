@@ -267,8 +267,27 @@ def delete_objects(client: R2BlobClient, object_keys: list[str]) -> PublishResul
     return result
 
 
-def upload_index_json(client: R2BlobClient, index_json: str) -> bool:
+def upload_index_json(
+    client: R2BlobClient,
+    index_json: str,
+    *,
+    schema_path: str = "",
+) -> bool:
     try:
+        if schema_path:
+            path = Path(schema_path)
+            if not path.is_file():
+                raise FileNotFoundError(f"index schema not found: {path}")
+            print(f"{LOG} Uploading index.schema.json to R2 bucket {client.bucket}...")
+            client.upload_bytes(
+                "index.schema.json",
+                path.read_bytes(),
+                content_type="application/schema+json",
+            )
+            print(
+                f"{LOG} index.schema.json uploaded successfully: "
+                f"{client.object_public_uri('index.schema.json')}"
+            )
         print(f"{LOG} Uploading index.json to R2 bucket {client.bucket}...")
         client.upload_bytes("index.json", index_json.encode("utf-8"), content_type="application/json")
         print(f"{LOG} index.json uploaded successfully: {client.object_public_uri('index.json')}")

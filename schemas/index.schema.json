@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schema.hagicode.com/schemas/desktop-index.schema.json",
+  "title": "HagiCode Desktop Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "updatedAt",
+    "versions",
+    "channels"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Version"
+      }
+    },
+    "channels": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Channel"
+      }
+    }
+  },
+  "definitions": {
+    "Version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "assets",
+        "files"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Asset"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Version raw object key projection for retention/diagnostics."
+        }
+      }
+    },
+    "Asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "path",
+        "size",
+        "lastModified",
+        "directUrl"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastModified": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "directUrl": {
+          "type": "string"
+        },
+        "torrentUrl": {
+          "type": "string"
+        },
+        "infoHash": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "downloadSources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DownloadSource"
+          }
+        },
+        "webSeeds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DownloadSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "label",
+        "url",
+        "primary",
+        "webSeed"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "boolean"
+        },
+        "webSeed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latest",
+        "versions"
+      ],
+      "properties": {
+        "latest": {
+          "type": "string"
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered newest-to-oldest channel versions; producer retains latest three globally."
+        }
+      }
+    }
+  }
+}

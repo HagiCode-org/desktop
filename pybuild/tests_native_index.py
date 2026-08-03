@@ -68,6 +68,7 @@ class IndexTests(unittest.TestCase):
         )
         self.assertIsNotNone(result.document)
         assert result.document is not None
+        self.assertEqual(result.document["$schema"], "https://desktop.dl.hagicode.com/index.schema.json")
         self.assertIn("updatedAt", result.document)
         self.assertIn("versions", result.document)
         self.assertIn("channels", result.document)
@@ -105,6 +106,7 @@ class IndexTests(unittest.TestCase):
         )
         self.assertIsNotNone(result.document)
         assert result.document is not None
+        self.assertEqual(result.document["$schema"], "https://dl.desktop.hagicode.com/index.schema.json")
         asset = result.document["versions"][0]["assets"][0]
         self.assertNotIn("downloadUrls", asset)
         sources = asset["downloadSources"]

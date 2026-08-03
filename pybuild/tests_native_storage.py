@@ -17,6 +17,7 @@ from pybuild.native.storage_publish import (
     delete_objects,
     list_objects,
 )
+from pybuild.native.params import require_storage_credentials
 
 
 class StorageProviderTests(unittest.TestCase):
@@ -31,7 +32,7 @@ class StorageProviderTests(unittest.TestCase):
             }
             with patch.dict(os.environ, env, clear=True):
                 params = BuildParams()
-                self.assertEqual(resolve_provider(params), "r2")
+                self.assertEqual(params.storage_provider, "r2")
 
     def test_resolve_provider_cli_over_env(self) -> None:
         with patch.dict(
@@ -40,17 +41,17 @@ class StorageProviderTests(unittest.TestCase):
             clear=False,
         ):
             params = parse_passthrough(["--storage-provider", "azure"])
-            self.assertEqual(resolve_provider(params), "azure")
+            self.assertEqual(params.storage_provider, "azure")
 
     def test_resolve_provider_env(self) -> None:
         with patch.dict(os.environ, {"STORAGE_PROVIDER": "azure"}, clear=False):
             params = parse_passthrough([])
-            self.assertEqual(resolve_provider(params), "azure")
+            self.assertEqual(params.storage_provider, "azure")
 
     def test_resolve_provider_invalid(self) -> None:
         params = BuildParams(storage_provider="gcs")
         with self.assertRaises(ValueError):
-            resolve_provider(params)
+            require_storage_credentials(params)
 
     def test_require_credentials_r2_missing(self) -> None:
         params = BuildParams(storage_provider="r2")
@@ -131,7 +132,6 @@ class StorageProviderTests(unittest.TestCase):
 
         client.upload_file.side_effect = _upload
         storage = StorageContext(
-            provider="r2",
             public_base_url="https://cdn",
             version_prefix="v1.0.0",
             r2_client=client,
@@ -151,35 +151,43 @@ class StorageProviderTests(unittest.TestCase):
         client.list_objects.return_value = [
             BlobInfo(name="v1/a.bin", size=1, last_modified=datetime.now(timezone.utc))
         ]
-        client.object_public_uri.return_value = "https://cdn/index.json"
-        storage = StorageContext(
-            provider="r2",
-            public_base_url="https://cdn",
-            r2_client=client,
-        )
-        blobs = list_objects(storage)
-        self.assertEqual(len(blobs), 1)
-        self.assertTrue(upload_index(storage, '{"ok":true}'))
-        client.upload_bytes.assert_called()
+        client.object_public_uri.side_effect = lambda key: f"https://cdn/{key}"
+        with tempfile.TemporaryDirectory() as tmp:
+            schema_path = Path(tmp) / "index.schema.json"
+            schema_path.write_text("{}", encoding="utf-8")
+            storage = StorageContext(
+                public_base_url="https://cdn",
+                r2_client=client,
+                local_schema_path=str(schema_path),
+            )
+            blobs = list_objects(storage)
+            self.assertEqual(len(blobs), 1)
+            self.assertTrue(upload_index(storage, '{"ok":true}'))
+        self.assertEqual(client.upload_bytes.call_count, 2)
+        first_key = client.upload_bytes.call_args_list[0].args[0]
+        second_key = client.upload_bytes.call_args_list[1].args[0]
+        self.assertEqual(first_key, "index.schema.json")
+        self.assertEqual(second_key, "index.json")
 
-    def test_azure_path_open_context(self) -> None:
+    def test_open_storage_context_builds_r2_client(self) -> None:
         params = BuildParams(
-            storage_provider="azure",
-            azure_blob_sas_url="https://account.blob.core.windows.net/container?sv=1",
-            azure_public_base_url="https://desktop.dl.hagicode.com",
+            storage_provider="r2",
+            r2_endpoint="https://example.r2.cloudflarestorage.com",
+            r2_bucket="desktop",
+            r2_access_key="ak",
+            r2_secret_key="sk",
+            r2_public_base_url="https://desktop.dl.hagicode.com",
         )
-        with patch("pybuild.native.storage_publish.AzureBlobClient") as mock_cls:
-            instance = mock_cls.return_value
-            instance.validate.return_value = True
-            ctx = open_storage_context(params, version_prefix="v1")
-        self.assertEqual(ctx.provider, "azure")
+        ctx = open_storage_context(params, version_prefix="v1")
         self.assertEqual(ctx.public_base_url, "https://desktop.dl.hagicode.com")
-        mock_cls.assert_called_once()
+        self.assertEqual(ctx.version_prefix, "v1")
+        self.assertEqual(ctx.local_schema_path, "")
+        self.assertIsNotNone(ctx.r2_client)
 
 
     def test_delete_objects_r2_idempotent_missing(self) -> None:
         client = MagicMock()
-        storage = StorageContext(provider="r2", public_base_url="https://cdn", r2_client=client)
+        storage = StorageContext(public_base_url="https://cdn", r2_client=client)
         client.delete_object.return_value = False
 
         result = delete_objects(storage, ["v1.0.0/app.bin"])
@@ -189,7 +197,7 @@ class StorageProviderTests(unittest.TestCase):
 
     def test_delete_objects_r2_reports_failures(self) -> None:
         client = MagicMock()
-        storage = StorageContext(provider="r2", public_base_url="https://cdn", r2_client=client)
+        storage = StorageContext(public_base_url="https://cdn", r2_client=client)
         client.delete_object.side_effect = RuntimeError("denied")
 
         result = delete_objects(storage, ["v1.0.0/app.bin"])

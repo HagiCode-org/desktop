@@ -303,6 +303,7 @@ def build_index_result(
 
     channels_data = build_channels_object(version_list)
     document = {
+        "$schema": build_blob_url(container_base_url, "index.schema.json"),
         "updatedAt": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
         "versions": version_list,
         "channels": channels_data,
