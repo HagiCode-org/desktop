@@ -1,4 +1,4 @@
-name: Finalize Object Storage Sync
+name: Finalize R2 Storage Sync
 
 on:
   workflow_call:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   finalize:
-    name: Finalize Object Storage Sync
+    name: Finalize R2 Storage Sync
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -31,13 +31,13 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.lock.txt
 
-    - name: Download storage upload plan
+    - name: Download R2 upload plan
       uses: actions/download-artifact@v4
       with:
-        name: azure-upload-plan
-        path: artifacts/azure-upload-plan
+        name: r2-upload-plan
+        path: artifacts/r2-upload-plan
 
-    - name: Read storage upload plan metadata
+    - name: Read R2 upload plan metadata
       id: plan
       run: |
         python3 - <<'PY'
@@ -45,8 +45,8 @@ jobs:
         import os
         from pathlib import Path
 
-        plan = json.loads(Path("artifacts/azure-upload-plan/azure-upload-plan.json").read_text(encoding="utf-8"))
-        matrix = json.loads(Path("artifacts/azure-upload-plan/azure-upload-matrix.json").read_text(encoding="utf-8"))
+        plan = json.loads(Path("artifacts/r2-upload-plan/r2-upload-plan.json").read_text(encoding="utf-8"))
+        matrix = json.loads(Path("artifacts/r2-upload-plan/r2-upload-matrix.json").read_text(encoding="utf-8"))
         shard_count = len(matrix.get("shard", []))
 
         outputs = {
@@ -63,7 +63,7 @@ jobs:
                 handle.write(f"{key}={value}\n")
 
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-            handle.write("## Object Storage Sync Finalize Plan\n")
+            handle.write("## R2 Storage Sync Finalize Plan\n")
             handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
             handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
             handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
@@ -103,13 +103,13 @@ jobs:
         )
         PY
 
-    - name: Finalize storage index publication
+    - name: Finalize R2 storage index publication
       id: finalize_sync
       if: steps.plan.outputs.has_shards == 'true'
       continue-on-error: true
       run: |
         ./build.sh \
-          --target PublishToAzureBlob \
+          --target PublishToR2 \
           --release-tag "${{ steps.plan.outputs.release_tag }}" \
           --release-version "${{ steps.plan.outputs.release_version }}" \
           --release-channel "${{ steps.plan.outputs.release_channel }}" \
@@ -121,9 +121,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
         FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-        STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'r2' }}
+        STORAGE_PROVIDER: r2
         R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
         R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
@@ -131,11 +130,11 @@ jobs:
         R2_REGION: ${{ secrets.R2_REGION }}
         R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
 
-    - name: Upload finalize result
+    - name: Upload R2 finalize result
       if: always() && steps.plan.outputs.has_shards == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: azure-sync-finalize-result
+        name: r2-sync-finalize-result
         path: artifacts/finalize-result.json
         if-no-files-found: warn
 
@@ -151,11 +150,11 @@ jobs:
         import os
         from pathlib import Path
 
-        summary_lines = ["## Object Storage Sync Finalize"]
+        summary_lines = ["## R2 Storage Sync Finalize"]
         has_shards = os.environ["HAS_SHARDS"] == "true"
 
         if not has_shards:
-            summary_lines.append("- Object storage sync was skipped because no eligible release assets were found.")
+            summary_lines.append("- R2 storage sync was skipped because no eligible release assets were found.")
         else:
             summary_lines.append(f"- Planned shards: `{os.environ['SHARD_COUNT']}`")
             summary_lines.append(f"- Finalize step outcome: `{os.environ['FINALIZE_OUTCOME']}`")
@@ -195,5 +194,5 @@ jobs:
     - name: Fail workflow if finalize failed
       if: steps.plan.outputs.has_shards == 'true' && steps.finalize_sync.outcome != 'success'
       run: |
-        echo "::error::Object storage finalize detected index publication failures"
+        echo "::error::R2 storage finalize detected index publication failures"
         exit 1

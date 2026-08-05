@@ -1,4 +1,4 @@
-name: Sync Release to Object Storage
+name: Sync Release to R2 Storage
 
 on:
   push:
@@ -57,7 +57,7 @@ permissions:
 
 jobs:
   plan:
-    name: Plan Storage Upload Shards
+    name: Plan R2 Upload Shards
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -110,16 +110,16 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Generate storage upload plan
+    - name: Generate R2 upload plan
       run: |
         ./build.sh \
-          --target GenerateAzureUploadPlan \
+          --target GenerateR2UploadPlan \
           --release-tag "${{ steps.meta.outputs.release_tag }}" \
           --release-version "${{ inputs.release_version }}" \
           --release-channel "${{ steps.meta.outputs.release_channel }}" \
-          --azure-max-parallel "${{ steps.meta.outputs.max_parallel }}" \
-          --azure-upload-plan-output-path "artifacts/azure-upload-plan.json" \
-          --azure-upload-matrix-output-path "artifacts/azure-upload-matrix.json"
+          --r2-max-parallel "${{ steps.meta.outputs.max_parallel }}" \
+          --r2-upload-plan-output-path "artifacts/r2-upload-plan.json" \
+          --r2-upload-matrix-output-path "artifacts/r2-upload-matrix.json"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -132,8 +132,8 @@ jobs:
         import os
         from pathlib import Path
 
-        plan = json.loads(Path("artifacts/azure-upload-plan.json").read_text(encoding="utf-8"))
-        matrix = json.loads(Path("artifacts/azure-upload-matrix.json").read_text(encoding="utf-8"))
+        plan = json.loads(Path("artifacts/r2-upload-plan.json").read_text(encoding="utf-8"))
+        matrix = json.loads(Path("artifacts/r2-upload-matrix.json").read_text(encoding="utf-8"))
         shard_count = len(matrix.get("shard", []))
         outputs = {
             "release_tag": plan["releaseTag"],
@@ -150,7 +150,7 @@ jobs:
                 handle.write(f"{key}={value}\n")
 
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-            handle.write("## Object Storage Sync Plan\n")
+            handle.write("## R2 Storage Sync Plan\n")
             handle.write(f"- Release tag: `{plan['releaseTag']}`\n")
             handle.write(f"- Version prefix: `{plan['versionPrefix']}`\n")
             handle.write(f"- Release channel: `{plan['releaseChannel']}`\n")
@@ -162,17 +162,17 @@ jobs:
                 handle.write("\nNo storage-sync-eligible release assets were found. Upload fan-out will be skipped.\n")
         PY
 
-    - name: Upload plan artifacts
+    - name: Upload R2 plan artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: azure-upload-plan
+        name: r2-upload-plan
         path: |
-          artifacts/azure-upload-plan.json
-          artifacts/azure-upload-matrix.json
+          artifacts/r2-upload-plan.json
+          artifacts/r2-upload-matrix.json
         if-no-files-found: error
 
   upload:
-    name: Upload Storage Shard ${{ matrix.shard.shardId }}
+    name: Upload R2 Shard ${{ matrix.shard.shardId }}
     needs: plan
     if: needs.plan.outputs.has_shards == 'true'
     runs-on: ubuntu-latest
@@ -219,12 +219,12 @@ jobs:
         )
         PY
 
-    - name: Publish storage upload shard
+    - name: Publish R2 upload shard
       id: publish
       continue-on-error: true
       run: |
         ./build.sh \
-          --target PublishToAzureBlob \
+          --target PublishToR2 \
           --release-tag "${{ needs.plan.outputs.release_tag }}" \
           --release-version "${{ needs.plan.outputs.release_version }}" \
           --release-channel "${{ needs.plan.outputs.release_channel }}" \
@@ -236,9 +236,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        AZURE_BLOB_SAS_URL: ${{ secrets.AZURE_BLOB_SAS_URL }}
         FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-        STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'r2' }}
+        STORAGE_PROVIDER: r2
         R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         R2_BUCKET: ${{ secrets.R2_BUCKET }}
         R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}

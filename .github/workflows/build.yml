@@ -547,20 +547,20 @@ jobs:
           exit 1
 
   sync-storage-upload:
-    name: Upload Release Shards to Object Storage
+    name: Upload Release Shards to R2 Storage
     needs:
       - prepare-release
       - build-summary
     if: ${{ always() && needs.build-summary.outputs.sync_eligible == 'true' && needs.build-summary.outputs.release_status == 'success' }}
-    uses: ./.github/workflows/sync-azure-storage.yml
+    uses: ./.github/workflows/sync-r2-storage.yml
     with:
       release_tag: ${{ needs.prepare-release.outputs.release_tag }}
       release_channel: ${{ needs.build-summary.outputs.channel }}
     secrets: inherit
 
   sync-storage-finalize:
-    name: Finalize Object Storage Sync
+    name: Finalize R2 Storage Sync
     needs: sync-storage-upload
     if: ${{ always() && needs.sync-storage-upload.result == 'success' }}
-    uses: ./.github/workflows/finalize-azure-storage.yml
+    uses: ./.github/workflows/finalize-r2-storage.yml
     secrets: inherit

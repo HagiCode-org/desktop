@@ -645,18 +645,18 @@ test('global hagiscript prerequisite is available', () => {
   assert(!globalHagiscriptVersion.includes('required') && !globalHagiscriptVersion.includes('missing'), `global hagiscript prerequisite resolved (${globalHagiscriptVersion})`);
 });
 
-test('azure sync build entry uses python invoke runtime', () => {
-  const syncWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'sync-azure-storage.yml');
-  const finalizeWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'finalize-azure-storage.yml');
+test('R2 sync build entry uses python invoke runtime', () => {
+  const syncWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'sync-r2-storage.yml');
+  const finalizeWorkflowPath = path.join(process.cwd(), '.github', 'workflows', 'finalize-r2-storage.yml');
   const buildShellPath = path.join(process.cwd(), 'build.sh');
   const buildPowerShellPath = path.join(process.cwd(), 'build.ps1');
   const buildCmdPath = path.join(process.cwd(), 'build.cmd');
 
-  if (!assert(fs.existsSync(syncWorkflowPath), '.github/workflows/sync-azure-storage.yml exists')) {
+  if (!assert(fs.existsSync(syncWorkflowPath), '.github/workflows/sync-r2-storage.yml exists')) {
     return;
   }
 
-  assert(fs.existsSync(finalizeWorkflowPath), '.github/workflows/finalize-azure-storage.yml exists');
+  assert(fs.existsSync(finalizeWorkflowPath), '.github/workflows/finalize-r2-storage.yml exists');
   assert(fs.existsSync(buildShellPath), 'build.sh exists');
   assert(fs.existsSync(buildPowerShellPath), 'build.ps1 exists');
   assert(fs.existsSync(buildCmdPath), 'build.cmd exists');
