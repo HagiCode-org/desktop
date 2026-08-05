@@ -852,7 +852,7 @@ If the HTTP index source fails:
 
 ## Additional Resources
 
-- [Azure Storage Sync Configuration](./azure-storage-sync.md)
+- [R2 Storage Sync Configuration](./r2-storage-sync.md)
 - [macOS Native Library Troubleshooting](./macos-native-library-troubleshooting.md)
 - [Channel Testing Guide](./channel-testing-guide.md)
 - [OpenSpec Proposals](../openspec/README.md)

@@ -33,4 +33,4 @@ npm run build:prod
 
 - `docs/development.md` - 本地开发说明与更新源配置
 - `docs/artifact-signing.md` - Windows 签名配置
-- `docs/azure-storage-sync.md` - 后续发布同步说明
+- `docs/r2-storage-sync.md` - 后续发布同步说明

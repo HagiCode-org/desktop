@@ -43,5 +43,5 @@ npm run build:mac:arm64:zip
 
 - `docs/development.md` - local development notes and update-source configuration
 - `docs/artifact-signing.md` - Windows signing setup
-- `docs/azure-storage-sync.md` - downstream release synchronization details
+- `docs/r2-storage-sync.md` - downstream release synchronization details
 - `docs/i18n-hagi18n.md` - Desktop locale maintenance with hagi18n YAML sources and generated runtime JSON
