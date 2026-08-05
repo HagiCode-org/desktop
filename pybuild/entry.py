@@ -16,9 +16,12 @@ class ParsedArgs:
 
 TARGET_ALIASES = {
     "setup": "Setup",
-    "generateazureuploadplan": "GenerateAzureUploadPlan",
-    "generateazureindex": "GenerateAzureIndex",
-    "publishtoazureblob": "PublishToAzureBlob",
+    "generater2uploadplan": "GenerateR2UploadPlan",
+    "generateazureuploadplan": "GenerateR2UploadPlan",
+    "generater2index": "GenerateR2Index",
+    "generateazureindex": "GenerateR2Index",
+    "publishtor2": "PublishToR2",
+    "publishtoazureblob": "PublishToR2",
     "default": "Default",
 }
 

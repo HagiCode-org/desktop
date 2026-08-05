@@ -8,15 +8,15 @@ from .params import BuildParams
 
 
 def default_plan_path(repo_root: Path) -> Path:
-    return repo_root / "artifacts" / "azure-upload-plan.json"
+    return repo_root / "artifacts" / "r2-upload-plan.json"
 
 
 def default_matrix_path(repo_root: Path) -> Path:
-    return repo_root / "artifacts" / "azure-upload-matrix.json"
+    return repo_root / "artifacts" / "r2-upload-matrix.json"
 
 
 def default_index_path(repo_root: Path) -> Path:
-    return repo_root / "artifacts" / "azure-index.json"
+    return repo_root / "artifacts" / "r2-index.json"
 
 
 def resolve_plan_output_path(repo_root: Path, params: BuildParams) -> Path:

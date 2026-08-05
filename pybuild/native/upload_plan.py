@@ -96,11 +96,11 @@ def resolve_effective_version(params: BuildParams, release_tag: str) -> str:
     return normalize_published_version_prefix(seed)
 
 
-def run_generate_azure_upload_plan(repo_root: Path, params: BuildParams) -> int:
+def run_generate_r2_upload_plan(repo_root: Path, params: BuildParams) -> int:
     from .storage_publish import resolve_provider
 
     provider = resolve_provider(params)
-    print(f"[PYBUILD] === Generate Azure Upload Plan (provider={provider}) ===")
+    print(f"[PYBUILD] === Generate R2 Upload Plan (provider={provider}) ===")
     token = require_github_token(params)
     client = GitHubReleaseClient(repo_root, token, params.effective_github_repository)
 

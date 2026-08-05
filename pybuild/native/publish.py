@@ -424,7 +424,7 @@ def report_index_diagnostics(result: IndexGenerationResult) -> None:
         )
 
 
-def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
+def run_publish_to_r2(repo_root: Path, params: BuildParams) -> int:
     provider = "r2"
     label = storage_label(provider)
     print(f"[PYBUILD] === Publish GitHub Release to {label} (provider={provider}) ===")
@@ -467,8 +467,6 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
             version_prefix=effective_version,
             local_index_path=str(output_path),
         )
-        pass  # storage used directly
-
         if params.upload_artifacts:
             selection_manifest = load_release_asset_selection_manifest(params)
             if selection_manifest and selection_manifest.get("shardId"):
@@ -504,12 +502,11 @@ def run_publish_to_azure_blob(repo_root: Path, params: BuildParams) -> int:
                 summary = merged
                 summary.shard_id = "finalize"
             index_result = generate_index_from_blobs_with_metadata(
-                publish_options,
+                storage,
                 output_path,
                 summary.published_artifacts,
                 minify=params.minify_index_json,
                 github_repository=params.effective_github_repository,
-                storage=storage,
             )
             summary.diagnostics.extend(index_result.diagnostics)
             summary.http_only_fallback_count = max(

@@ -450,7 +450,7 @@ def list_blobs_until_visible(
     return blobs
 
 
-def run_generate_azure_index(repo_root: Path, params: Any) -> int:
+def run_generate_r2_index(repo_root: Path, params: Any) -> int:
     from .artifacts import resolve_index_output_path
     from .publish import load_merged_publish_summary, report_index_diagnostics
 

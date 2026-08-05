@@ -5,10 +5,10 @@ from typing import Callable, Iterable
 
 from invoke import Collection, task
 
-from .native.azure_index import run_generate_azure_index
+from .native.azure_index import run_generate_r2_index
 from .native.params import parse_passthrough
-from .native.publish import run_publish_to_azure_blob
-from .native.upload_plan import run_generate_azure_upload_plan
+from .native.publish import run_publish_to_r2
+from .native.upload_plan import run_generate_r2_upload_plan
 from .runtime import BuildRuntime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -30,45 +30,45 @@ def _run_setup(passthrough: Iterable[str]) -> int:
     return 0
 
 
-def _run_generate_azure_upload_plan(passthrough: Iterable[str]) -> int:
+def _run_generate_r2_upload_plan(passthrough: Iterable[str]) -> int:
     params = parse_passthrough(passthrough)
     _warn_unrecognized(params)
-    RUNTIME.log_stage("GenerateAzureUploadPlan", "start")
+    RUNTIME.log_stage("GenerateR2UploadPlan", "start")
     try:
-        return run_generate_azure_upload_plan(REPO_ROOT, params)
+        return run_generate_r2_upload_plan(REPO_ROOT, params)
     finally:
-        RUNTIME.log_stage("GenerateAzureUploadPlan", "done")
+        RUNTIME.log_stage("GenerateR2UploadPlan", "done")
 
 
-def _run_generate_azure_index(passthrough: Iterable[str]) -> int:
+def _run_generate_r2_index(passthrough: Iterable[str]) -> int:
     params = parse_passthrough(passthrough)
     _warn_unrecognized(params)
-    RUNTIME.log_stage("GenerateAzureIndex", "start")
+    RUNTIME.log_stage("GenerateR2Index", "start")
     try:
-        return run_generate_azure_index(REPO_ROOT, params)
+        return run_generate_r2_index(REPO_ROOT, params)
     finally:
-        RUNTIME.log_stage("GenerateAzureIndex", "done")
+        RUNTIME.log_stage("GenerateR2Index", "done")
 
 
-def _run_publish_to_azure_blob(passthrough: Iterable[str]) -> int:
+def _run_publish_to_r2(passthrough: Iterable[str]) -> int:
     params = parse_passthrough(passthrough)
     _warn_unrecognized(params)
-    RUNTIME.log_stage("PublishToAzureBlob", "start")
+    RUNTIME.log_stage("PublishToR2", "start")
     try:
-        return run_publish_to_azure_blob(REPO_ROOT, params)
+        return run_publish_to_r2(REPO_ROOT, params)
     finally:
-        RUNTIME.log_stage("PublishToAzureBlob", "done")
+        RUNTIME.log_stage("PublishToR2", "done")
 
 
 def _run_default(passthrough: Iterable[str]) -> int:
-    return _run_publish_to_azure_blob(passthrough)
+    return _run_publish_to_r2(passthrough)
 
 
 TARGET_HANDLERS: dict[str, Callable[[Iterable[str]], int]] = {
     "Setup": _run_setup,
-    "GenerateAzureUploadPlan": _run_generate_azure_upload_plan,
-    "GenerateAzureIndex": _run_generate_azure_index,
-    "PublishToAzureBlob": _run_publish_to_azure_blob,
+    "GenerateR2UploadPlan": _run_generate_r2_upload_plan,
+    "GenerateR2Index": _run_generate_r2_index,
+    "PublishToR2": _run_publish_to_r2,
     "Default": _run_default,
 }
 
@@ -88,21 +88,21 @@ def setup(ctx, args=""):  # type: ignore[no-untyped-def]
 
 
 @task
-def generate_azure_upload_plan(ctx, args=""):  # type: ignore[no-untyped-def]
+def generate_r2_upload_plan(ctx, args=""):  # type: ignore[no-untyped-def]
     tokens = args.split() if args else []
-    raise SystemExit(_run_generate_azure_upload_plan(tokens))
+    raise SystemExit(_run_generate_r2_upload_plan(tokens))
 
 
 @task
-def generate_azure_index(ctx, args=""):  # type: ignore[no-untyped-def]
+def generate_r2_index(ctx, args=""):  # type: ignore[no-untyped-def]
     tokens = args.split() if args else []
-    raise SystemExit(_run_generate_azure_index(tokens))
+    raise SystemExit(_run_generate_r2_index(tokens))
 
 
 @task
-def publish_to_azure_blob(ctx, args=""):  # type: ignore[no-untyped-def]
+def publish_to_r2(ctx, args=""):  # type: ignore[no-untyped-def]
     tokens = args.split() if args else []
-    raise SystemExit(_run_publish_to_azure_blob(tokens))
+    raise SystemExit(_run_publish_to_r2(tokens))
 
 
 @task
@@ -113,8 +113,8 @@ def default(ctx, args=""):  # type: ignore[no-untyped-def]
 
 ns = Collection(
     setup,
-    generate_azure_upload_plan,
-    generate_azure_index,
-    publish_to_azure_blob,
+    generate_r2_upload_plan,
+    generate_r2_index,
+    publish_to_r2,
     default,
 )
