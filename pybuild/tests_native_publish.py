@@ -13,7 +13,10 @@ from pybuild.native.publish import (
     apply_retention_cleanup,
     merge_publish_results,
     orchestrate_publish,
+    run_publish_to_r2,
 )
+from pybuild.native.azure_index import IndexGenerationResult
+from pybuild.native.params import BuildParams
 from pybuild.native.types import BlobInfo
 from pybuild.native.storage_publish import StorageContext
 
@@ -176,6 +179,41 @@ class PublishTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(summary.stale_delete_failed_blob_names, ["v1.0.0/app.bin"])
         self.assertEqual(summary.diagnostics[0]["code"], "stale-delete-failed")
+
+    def test_finalize_index_uses_storage_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_path = root / "r2-index.json"
+            params = BuildParams(
+                upload_artifacts=False,
+                upload_index=True,
+                release_tag="v1.0.0",
+                release_version="v1.0.0",
+                azure_index_output_path=str(output_path),
+            )
+            storage = StorageContext(
+                public_base_url="https://desktop.dl.hagicode.com",
+                version_prefix="v1.0.0",
+            )
+            index_result = IndexGenerationResult(index_json='{"versions":[]}')
+
+            with (
+                patch("pybuild.native.publish.open_storage_context", return_value=storage),
+                patch(
+                    "pybuild.native.publish.generate_index_from_blobs_with_metadata",
+                    return_value=index_result,
+                ) as generate_index,
+                patch("pybuild.native.publish.storage_upload_index", return_value=True),
+            ):
+                self.assertEqual(run_publish_to_r2(root, params), 0)
+
+            generate_index.assert_called_once_with(
+                storage,
+                output_path,
+                [],
+                minify=True,
+                github_repository="HagiCode-org/desktop",
+            )
 
 if __name__ == "__main__":
     unittest.main()

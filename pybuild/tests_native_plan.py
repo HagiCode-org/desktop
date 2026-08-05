@@ -19,7 +19,7 @@ class ParamsTests(unittest.TestCase):
                 "--ReleaseTag",
                 "v1.2.3",
                 "--release-channel=beta",
-                "--AzureMaxParallel",
+                "--R2MaxParallel",
                 "5",
                 "--upload-index",
                 "false",
