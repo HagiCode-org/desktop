@@ -3,7 +3,7 @@ action_recommendations:
     watch: true
     include: true
     reason: "build desktop release artifacts"
-  - id: sync-azure-storage
+  - id: sync-r2-storage
     watch: true
     include: true
     reason: "publish desktop release assets"
