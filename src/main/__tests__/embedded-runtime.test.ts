@@ -158,12 +158,12 @@ describe('embedded runtime support', () => {
     const requirement = resolveAspNetCoreRuntimeRequirement('10.0.0', {
       min: '10.0.0',
       recommended: '10.0.0',
-    }, '10.0.5');
+    }, '10.0.10');
 
     const compatibility = evaluateRuntimeCompatibility(requirement, '10.0.4');
 
     assert.equal(compatibility.compatible, false);
-    assert.match(compatibility.reason || '', /requires ASP.NET Core >= 10\.0\.5/);
+    assert.match(compatibility.reason || '', /requires ASP.NET Core >= 10\.0\.10/);
     assert.equal(compatibility.embeddedVersion, '10.0.4');
   });
 

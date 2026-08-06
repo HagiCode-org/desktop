@@ -29,8 +29,8 @@ describe('embedded runtime packaging configuration', () => {
 
     assert.equal(manifest.platforms['osx-x64']?.rid, 'osx-x64');
     assert.equal(manifest.platforms['osx-arm64']?.rid, 'osx-arm64');
-    assert.match(manifest.platforms['osx-x64']?.downloadUrl || '', /aspnetcore-runtime-10\.0\.5-osx-x64\.tar\.gz$/);
-    assert.match(manifest.platforms['osx-arm64']?.downloadUrl || '', /aspnetcore-runtime-10\.0\.5-osx-arm64\.tar\.gz$/);
+    assert.match(manifest.platforms['osx-x64']?.downloadUrl || '', /aspnetcore-runtime-10\.0\.10-osx-x64\.tar\.gz$/);
+    assert.match(manifest.platforms['osx-arm64']?.downloadUrl || '', /aspnetcore-runtime-10\.0\.10-osx-arm64\.tar\.gz$/);
   });
 
   it('smoke test inspects packaged macOS app resources outside app.asar', async () => {
