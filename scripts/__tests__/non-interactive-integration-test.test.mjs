@@ -134,6 +134,38 @@ test("findWindowsPortableArtifact discovers nested Windows portable artifacts un
   }
 });
 
+test("findWindowsIntegrationArtifact prefers an unpacked ZIP over a portable executable", async () => {
+  const projectRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "hagicode-non-interactive-test-"),
+  );
+  try {
+    const artifactRoot = path.join(projectRoot, "pkg");
+    await fs.mkdir(artifactRoot, { recursive: true });
+    const unpackedZip = path.join(
+      artifactRoot,
+      "Hagicode Desktop 0.1.81-unpacked.zip",
+    );
+    const portableExecutable = path.join(
+      artifactRoot,
+      "Hagicode Desktop 0.1.81.exe",
+    );
+    await fs.writeFile(unpackedZip, "zip placeholder");
+    await fs.writeFile(portableExecutable, "portable executable placeholder");
+
+    const { findWindowsIntegrationArtifact } =
+      await importHarnessWithProjectRoot(
+        projectRoot,
+        `windows-artifact-priority=${Date.now()}`,
+      );
+    assert.deepEqual(findWindowsIntegrationArtifact(), {
+      type: "zip",
+      path: unpackedZip,
+    });
+  } finally {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("findTarGzArtifact discovers nested workflow artifacts under pkg/", async () => {
   const projectRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "hagicode-non-interactive-test-"),

@@ -311,6 +311,20 @@ export function findWindowsPortableArtifact() {
   );
 }
 
+export function findWindowsIntegrationArtifact() {
+  const unpackedZip = findZipArtifact();
+  if (unpackedZip) {
+    return { type: "zip", path: unpackedZip };
+  }
+
+  const portableExecutable = findWindowsPortableArtifact();
+  if (portableExecutable) {
+    return { type: "portable-exe", path: portableExecutable };
+  }
+
+  return null;
+}
+
 function shouldRestoreExecutableBit(filePath) {
   if (process.platform === "win32") {
     return false;
@@ -500,17 +514,22 @@ async function copyArtifactToPathWithSpaces() {
   }
 
   if (process.platform === "win32") {
-    const portableArtifact = findWindowsPortableArtifact();
-    if (portableArtifact) {
+    const artifact = findWindowsIntegrationArtifact();
+    if (artifact?.type === "zip") {
+      await extractZipArtifact(artifact.path, stagedRoot);
+      return { tempRoot, artifactRoot: stagedRoot, source: artifact.path };
+    }
+
+    if (artifact?.type === "portable-exe") {
       const targetArtifact = path.join(
         stagedRoot,
-        path.basename(portableArtifact),
+        path.basename(artifact.path),
       );
-      await fsp.copyFile(portableArtifact, targetArtifact);
+      await fsp.copyFile(artifact.path, targetArtifact);
       return {
         tempRoot,
         artifactRoot: stagedRoot,
-        source: portableArtifact,
+        source: artifact.path,
       };
     }
   }
