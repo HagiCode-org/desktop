@@ -181,7 +181,11 @@ class StorageProviderTests(unittest.TestCase):
         ctx = open_storage_context(params, version_prefix="v1")
         self.assertEqual(ctx.public_base_url, "https://desktop.dl.hagicode.com")
         self.assertEqual(ctx.version_prefix, "v1")
-        self.assertEqual(ctx.local_schema_path, "")
+        self.assertEqual(
+            Path(ctx.local_schema_path),
+            Path(__file__).resolve().parents[1] / "schemas" / "index.schema.json",
+        )
+        self.assertTrue(Path(ctx.local_schema_path).is_file())
         self.assertIsNotNone(ctx.r2_client)
 
 

@@ -11,6 +11,8 @@ from .params import BuildParams, DEFAULT_PUBLIC_BASE_URL
 from . import r2_blob
 
 LOG = "[PYBUILD][storage]"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+INDEX_SCHEMA_PATH = REPO_ROOT / "schemas" / "index.schema.json"
 
 def _env(name: str, fallback: str = "") -> str:
     value = os.environ.get(name, "").strip()
@@ -58,7 +60,7 @@ def open_storage_context(
         upload_retries=upload_retries,
         upload_concurrency=upload_concurrency,
         local_index_path=local_index_path,
-        local_schema_path=str(Path(local_index_path).with_name("index.schema.json")) if local_index_path else "",
+        local_schema_path=str(INDEX_SCHEMA_PATH),
     )
     endpoint = (params.r2_endpoint or "").strip() or _env("R2_ENDPOINT")
     bucket = (params.r2_bucket or "").strip() or _env("R2_BUCKET")
