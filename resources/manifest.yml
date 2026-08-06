@@ -52,7 +52,7 @@ components:
   - name: dotnet/runtime/linux-x64
     type: runtime
     source: desktop-embedded-dotnet
-    version: 10.0.5
+    version: 10.0.10
     channelVersion: "10.0"
     lifecycleDependencies: []
     installScript: ../scripts/hagiscript/install-dotnet.mjs
@@ -61,7 +61,7 @@ components:
   - name: dotnet/runtime/osx-x64
     type: runtime
     source: desktop-embedded-dotnet
-    version: 10.0.5
+    version: 10.0.10
     channelVersion: "10.0"
     lifecycleDependencies: []
     installScript: ../scripts/hagiscript/install-dotnet.mjs
@@ -70,7 +70,7 @@ components:
   - name: dotnet/runtime/osx-arm64
     type: runtime
     source: desktop-embedded-dotnet
-    version: 10.0.5
+    version: 10.0.10
     channelVersion: "10.0"
     lifecycleDependencies: []
     installScript: ../scripts/hagiscript/install-dotnet.mjs
@@ -79,7 +79,7 @@ components:
   - name: dotnet/runtime/win-x64
     type: runtime
     source: desktop-embedded-dotnet
-    version: 10.0.5
+    version: 10.0.10
     channelVersion: "10.0"
     lifecycleDependencies: []
     installScript: ../scripts/hagiscript/install-dotnet.mjs
@@ -159,8 +159,8 @@ desktopExtensions:
   embeddedRuntime:
     schemaVersion: 1
     channelVersion: "10.0"
-    releaseVersion: 10.0.5
-    releaseDate: "2026-03-12"
+    releaseVersion: 10.0.10
+    releaseDate: "2026-07-14"
     source:
       provider: microsoft
       releaseMetadataUrl: https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json
@@ -170,31 +170,31 @@ desktopExtensions:
       linux-x64:
         rid: linux-x64
         archiveType: tar.gz
-        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-linux-x64.tar.gz
-        aspNetCoreVersion: 10.0.5
-        netCoreVersion: 10.0.5
-        hostFxrVersion: 10.0.5
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.10/aspnetcore-runtime-10.0.10-linux-x64.tar.gz
+        aspNetCoreVersion: 10.0.10
+        netCoreVersion: 10.0.10
+        hostFxrVersion: 10.0.10
       osx-x64:
         rid: osx-x64
         archiveType: tar.gz
-        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-x64.tar.gz
-        aspNetCoreVersion: 10.0.5
-        netCoreVersion: 10.0.5
-        hostFxrVersion: 10.0.5
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.10/aspnetcore-runtime-10.0.10-osx-x64.tar.gz
+        aspNetCoreVersion: 10.0.10
+        netCoreVersion: 10.0.10
+        hostFxrVersion: 10.0.10
       osx-arm64:
         rid: osx-arm64
         archiveType: tar.gz
-        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-osx-arm64.tar.gz
-        aspNetCoreVersion: 10.0.5
-        netCoreVersion: 10.0.5
-        hostFxrVersion: 10.0.5
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.10/aspnetcore-runtime-10.0.10-osx-arm64.tar.gz
+        aspNetCoreVersion: 10.0.10
+        netCoreVersion: 10.0.10
+        hostFxrVersion: 10.0.10
       win-x64:
         rid: win-x64
         archiveType: zip
-        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.5/aspnetcore-runtime-10.0.5-win-x64.zip
-        aspNetCoreVersion: 10.0.5
-        netCoreVersion: 10.0.5
-        hostFxrVersion: 10.0.5
+        downloadUrl: https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/10.0.10/aspnetcore-runtime-10.0.10-win-x64.zip
+        aspNetCoreVersion: 10.0.10
+        netCoreVersion: 10.0.10
+        hostFxrVersion: 10.0.10
     expectedLayout:
       runtimeRootPattern: dotnet/<rid>
       requiredEntries:
