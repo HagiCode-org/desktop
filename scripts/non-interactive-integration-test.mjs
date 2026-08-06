@@ -298,6 +298,19 @@ export function findDmgArtifact() {
   return dmgs[0] ?? null;
 }
 
+export function findWindowsPortableArtifact() {
+  if (!pathExists(pkgRoot)) {
+    return null;
+  }
+
+  return (
+    findFilesWithExtension(pkgRoot, ".exe").find(
+      (artifactPath) =>
+        !path.basename(artifactPath).toLowerCase().includes("setup"),
+    ) ?? null
+  );
+}
+
 function shouldRestoreExecutableBit(filePath) {
   if (process.platform === "win32") {
     return false;
@@ -486,6 +499,22 @@ async function copyArtifactToPathWithSpaces() {
     }
   }
 
+  if (process.platform === "win32") {
+    const portableArtifact = findWindowsPortableArtifact();
+    if (portableArtifact) {
+      const targetArtifact = path.join(
+        stagedRoot,
+        path.basename(portableArtifact),
+      );
+      await fsp.copyFile(portableArtifact, targetArtifact);
+      return {
+        tempRoot,
+        artifactRoot: stagedRoot,
+        source: portableArtifact,
+      };
+    }
+  }
+
   const zipArtifact = findZipArtifact();
   if (zipArtifact) {
     await extractZipArtifact(zipArtifact, stagedRoot);
@@ -493,7 +522,7 @@ async function copyArtifactToPathWithSpaces() {
   }
 
   fail(
-    `No unpacked artifact root or packaged archive (.AppImage/.dmg/.tar.gz/.zip) found under ${pkgRoot}. Build a runnable Desktop artifact first.`,
+    `No unpacked artifact root or supported package (.exe/.AppImage/.dmg/.tar.gz/.zip) found under ${pkgRoot}. Build a runnable Desktop artifact first.`,
   );
 }
 

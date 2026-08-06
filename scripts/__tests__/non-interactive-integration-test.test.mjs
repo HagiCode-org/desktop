@@ -102,6 +102,38 @@ test("findDmgArtifact discovers the current macOS release package under pkg/", a
   }
 });
 
+test("findWindowsPortableArtifact discovers nested Windows portable artifacts under pkg/", async () => {
+  const projectRoot = await fs.mkdtemp(
+    path.join(os.tmpdir(), "hagicode-non-interactive-test-"),
+  );
+  try {
+    const nestedArtifactRoot = path.join(
+      projectRoot,
+      "pkg",
+      "unsigned-artifacts",
+    );
+    await fs.mkdir(nestedArtifactRoot, { recursive: true });
+    const portableExecutable = path.join(
+      nestedArtifactRoot,
+      "Hagicode Desktop 0.1.80-unsigned.exe",
+    );
+    const installerExecutable = path.join(
+      nestedArtifactRoot,
+      "Hagicode Desktop Setup 0.1.80.exe",
+    );
+    await fs.writeFile(portableExecutable, "portable executable placeholder");
+    await fs.writeFile(installerExecutable, "installer executable placeholder");
+
+    const { findWindowsPortableArtifact } = await importHarnessWithProjectRoot(
+      projectRoot,
+      `windows-portable=${Date.now()}`,
+    );
+    assert.equal(findWindowsPortableArtifact(), portableExecutable);
+  } finally {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("findTarGzArtifact discovers nested workflow artifacts under pkg/", async () => {
   const projectRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "hagicode-non-interactive-test-"),
