@@ -403,7 +403,7 @@ const WebServiceStatusCard: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      clearStartupDialogCloseTimeout();
+      clearStartupDrawerCloseTimeout();
     };
   }, []);
 
