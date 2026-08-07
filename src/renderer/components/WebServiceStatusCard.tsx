@@ -309,7 +309,10 @@ const WebServiceStatusCard: React.FC = () => {
     const url = webServiceInfo.url;
     if (url) {
       try {
-        await window.electronAPI.openHagicodeInApp(url);
+        const result = await window.electronAPI.openHagicodeInApp(url);
+        if (result.success) {
+          await window.electronAPI.recordInterfaceOpeningMethod('in-app');
+        }
       } catch (error) {
         console.error('Failed to open Hagicode in app:', error);
       }
@@ -320,7 +323,10 @@ const WebServiceStatusCard: React.FC = () => {
     const url = webServiceInfo.url;
     if (url) {
       try {
-        await window.electronAPI.openExternal(url);
+        const result = await window.electronAPI.openExternal(url);
+        if (result.success) {
+          await window.electronAPI.recordInterfaceOpeningMethod('browser');
+        }
       } catch (error) {
         console.error('Failed to open URL in browser:', error);
       }
