@@ -16,6 +16,8 @@ export interface VersionAutoUpdateSettings {
 
 export interface DebugOptionsConfig extends DebugOptionsSettings {}
 
+export type InterfaceOpeningMethod = 'in-app' | 'browser';
+
 export interface MsstoreRatingPromptState {
   installDate?: string;
 }
@@ -47,6 +49,7 @@ export interface AppConfig {
   logsDirectory?: string;
   msstoreRatingPrompt?: MsstoreRatingPromptState;
   msstoreDonationItem?: MsstoreDonationItemState;
+  interfaceOpeningMethod?: InterfaceOpeningMethod;
 }
 
 export const DEFAULT_VERSION_AUTO_UPDATE_SETTINGS: VersionAutoUpdateSettings = {
@@ -90,6 +93,10 @@ export function normalizeRuntimeDataPathPreset(
   fallback: RuntimeDataPathPreset = DEFAULT_RUNTIME_DATA_PATH_PRESET,
 ): RuntimeDataPathPreset {
   return value === 'home-runtime-data' ? value : fallback;
+}
+
+export function normalizeInterfaceOpeningMethod(value: unknown): InterfaceOpeningMethod | undefined {
+  return value === 'in-app' || value === 'browser' ? value : undefined;
 }
 
 export function normalizeRetainedArchiveCount(value: unknown, fallback: number = DEFAULT_VERSION_AUTO_UPDATE_SETTINGS.retainedArchiveCount): number {
@@ -309,6 +316,20 @@ export class ConfigManager {
     const normalized = normalizeRuntimeDataPathPreset(preset);
     this.store.set('runtimeDataPath', normalized);
     return normalized;
+  }
+
+  getInterfaceOpeningMethod(): InterfaceOpeningMethod | undefined {
+    return normalizeInterfaceOpeningMethod(this.store.get('interfaceOpeningMethod'));
+  }
+
+  setInterfaceOpeningMethod(method: unknown): InterfaceOpeningMethod | undefined {
+    const normalized = normalizeInterfaceOpeningMethod(method);
+    if (normalized !== undefined) {
+      this.store.set('interfaceOpeningMethod', normalized);
+      return normalized;
+    }
+
+    return this.getInterfaceOpeningMethod();
   }
 
   /**

@@ -38,6 +38,7 @@ import {
   openHagicodeInAppWindow,
   WIZARD_LAST_STEP_ABOUT_POPUP_MARKER_KEY,
 } from './hagicode-url.js';
+import { isValidServiceUrl, openPreferredInterface } from './interface-opening-preference.js';
 import { installWebServicePackageWithAutoSwitch } from './install-web-service-package.js';
 import { registerClipboardHandlers, wireDesktopWindowClipboard } from './clipboard-integration.js';
 import { exitNonInteractiveProcess } from './non-interactive-exit.js';
@@ -1051,6 +1052,10 @@ ipcMain.handle('open-hagicode-in-app', async (_, url: string) => {
   });
 });
 
+ipcMain.handle('record-interface-opening-method', (_, method: unknown) => {
+  configManager?.setInterfaceOpeningMethod(method);
+});
+
 ipcMain.handle('open-about-window', async (_, url: string) => {
   return await openAboutWindow({
     url,
@@ -1243,6 +1248,18 @@ ipcMain.handle('start-web-service', async (_, force?: boolean) => {
         startupFailure,
       };
     }
+
+    await openPreferredInterface({
+      url: status.url,
+      method: configManager?.getInterfaceOpeningMethod(),
+      openInApp: (url) => openHagicodeInAppWindow({
+        url,
+        logScope: 'Main',
+        createWindow: createManagedChildWindow,
+      }),
+      openInBrowser: async (url) => (await openExternalUrl(url)).success,
+      onError: (message, error) => log.warn(`[Main] ${message}`, error),
+    });
 
     return { success: true };
   } catch (error) {
@@ -2160,10 +2177,8 @@ ipcMain.on('web-service-status-for-menu', async (_event, status: ProcessInfo) =>
   }
 });
 
-// Open external link handler
-ipcMain.handle('open-external', async (_event, url: string) => {
+async function openExternalUrl(url: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // URL security validation
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -2174,7 +2189,6 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       };
     }
 
-    // Only allow http and https protocols
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return {
         success: false,
@@ -2182,7 +2196,6 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       };
     }
 
-    // Open external link with activate option to ensure browser window is focused
     await shell.openExternal(url, { activate: true });
 
     return {
@@ -2195,6 +2208,11 @@ ipcMain.handle('open-external', async (_event, url: string) => {
       error: error instanceof Error ? error.message : String(error)
     };
   }
+}
+
+// Open external link handler
+ipcMain.handle('open-external', async (_event, url: string) => {
+  return await openExternalUrl(url);
 });
 
 // Onboarding IPC Handlers
