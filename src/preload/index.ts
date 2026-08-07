@@ -55,6 +55,7 @@ import type {
 } from '../shared/api.js';
 import { createClipboardBridge } from './clipboard-bridge.js';
 import { createSystemDiagnosticBridge } from './system-diagnostic-bridge.js';
+import type { InterfaceOpeningMethod } from '../main/config.js';
 
 const { contextBridge, ipcRenderer } = electron;
 const SUBSCRIPTION_FEATURE_ARG = '--desktop-subscription-enabled=1';
@@ -210,6 +211,11 @@ export interface AboutWindowOpenResult {
   error?: string;
 }
 
+interface InterfaceOpenResult {
+  success: boolean;
+  error?: string;
+}
+
 // ElectronAPI interface combines all individual interfaces defined above
 // The electronAPI constant below implements this interface
 interface ElectronAPI {
@@ -227,7 +233,9 @@ interface ElectronAPI {
   msstoreDonationItem: MsstoreDonationItemBridge;
   showWindow: () => Promise<void>;
   hideWindow: () => Promise<void>;
-  openHagicodeInApp: (url: string) => Promise<void>;
+  openHagicodeInApp: (url: string) => Promise<InterfaceOpenResult>;
+  recordInterfaceOpeningMethod: (method: InterfaceOpeningMethod) => Promise<void>;
+  openExternal: (url: string) => Promise<InterfaceOpenResult>;
   openAboutWindow: (url: string) => Promise<AboutWindowOpenResult>;
   languageChanged: (language: string) => Promise<{ success: boolean; error?: string }>;
   onServerStatusChange: (callback: (status: any) => void) => () => void;
@@ -503,6 +511,7 @@ const electronAPI: ElectronAPI = {
   showWindow: () => ipcRenderer.invoke('show-window'),
   hideWindow: () => ipcRenderer.invoke('hide-window'),
   openHagicodeInApp: (url: string) => ipcRenderer.invoke('open-hagicode-in-app', url),
+  recordInterfaceOpeningMethod: (method) => ipcRenderer.invoke('record-interface-opening-method', method),
   openAboutWindow: (url: string) => ipcRenderer.invoke('open-about-window', url),
   languageChanged: (language: string) => ipcRenderer.invoke('language-changed', language),
   onServerStatusChange: (callback) => {
