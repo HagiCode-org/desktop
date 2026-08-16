@@ -12,6 +12,8 @@ import { createTelemetryContext, sanitizeProperties } from './privacy.js';
 import { createProvider } from './providers.js';
 
 const MAX_QUEUE = 100;
+const telemetryDebugEnabled = process.env.NODE_ENV !== 'production'
+  || process.env.HAGICODE_TELEMETRY_DEBUG === '1';
 
 export interface TelemetryManagerOptions {
   config: PublicTelemetryConfig;
@@ -47,6 +49,11 @@ export class TelemetryManager implements TelemetryFacade {
       await this.provider.init();
       await this.drain();
     } catch {
+      if (telemetryDebugEnabled) {
+        console.warn('[Telemetry] provider initialization failed', {
+          provider: this.currentRegion,
+        });
+      }
       this.provider = null;
     }
   }
@@ -59,6 +66,9 @@ export class TelemetryManager implements TelemetryFacade {
     this.provider = null;
     this.currentRegion = region;
     this.context.region = region;
+    if (telemetryDebugEnabled) {
+      console.info('[Telemetry] switching provider', { provider: region });
+    }
     if (!this.closed) await this.init();
   }
 
@@ -101,6 +111,13 @@ export class TelemetryManager implements TelemetryFacade {
     if (!this.provider || this.provider.status.state !== 'ready') {
       if (this.queue.length >= MAX_QUEUE) this.queue.shift();
       this.queue.push(event);
+      if (telemetryDebugEnabled) {
+        console.info('[Telemetry] event queued', {
+          provider: this.currentRegion,
+          event: name,
+          queueSize: this.queue.length,
+        });
+      }
       return;
     }
     try { await this.provider.send(event); } catch { /* telemetry never blocks business work */ }

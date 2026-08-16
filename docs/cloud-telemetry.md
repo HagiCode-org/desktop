@@ -7,6 +7,7 @@ The public configuration is read in the main process:
 - `HAGICODE_TELEMETRY_REGION_URL`: HTTPS endpoint returning `{ "region": "cn" | "overseas" }`
 - `HAGICODE_TELEMETRY_SAMPLE_RATE`: value from `0` to `1` (default `0.1`)
 - `HAGICODE_TELEMETRY_SESSION_REPLAY`: `1` enables replay where the regional provider supports it
+- `HAGICODE_TELEMETRY_DEBUG`: `1` enables provider connection, lifecycle, queue, and event status logs
 - `HAGICODE_CLOUDCARE_APP_ID`, `HAGICODE_CLOUDCARE_CLIENT_TOKEN`, `HAGICODE_CLOUDCARE_SITE`
 - `HAGICODE_SENTRY_DSN`, `HAGICODE_SENTRY_PROJECT_ID`
 - `HAGICODE_POSTHOG_PUBLIC_KEY`, `HAGICODE_POSTHOG_HOST`, `HAGICODE_POSTHOG_PROJECT_ID`
@@ -14,6 +15,10 @@ The public configuration is read in the main process:
 
 PostHog defaults are the supplied public key, `https://us.i.posthog.com`,
 `defaults: "2026-05-30"`, and `person_profiles: "identified_only"`.
+
+Development builds print telemetry diagnostics by default. Production builds
+only print them when `HAGICODE_TELEMETRY_DEBUG=1`; logs never include keys,
+user IDs, or event payloads.
 
 DSNs, project IDs and client tokens are public configuration. PostHog Node
 credentials and any other server-side token must be supplied only to the main

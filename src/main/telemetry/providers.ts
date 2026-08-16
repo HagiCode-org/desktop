@@ -10,6 +10,15 @@ import { PostHog } from 'posthog-node';
 
 type Sender = (event: TelemetryEvent, provider: TelemetryRegion) => Promise<void>;
 
+const telemetryDebugEnabled = process.env.NODE_ENV !== 'production'
+  || process.env.HAGICODE_TELEMETRY_DEBUG === '1';
+
+function debug(message: string, details?: Record<string, unknown>): void {
+  if (telemetryDebugEnabled) {
+    console.info(`[Telemetry] ${message}`, details ?? '');
+  }
+}
+
 class ConfiguredProvider implements TelemetryProvider {
   readonly status: ProviderStatus;
   private user: TelemetryUser | null = null;
@@ -25,22 +34,39 @@ class ConfiguredProvider implements TelemetryProvider {
     this.onDispose = lifecycle.onDispose;
     this.status = { region, state: 'idle', capabilities: new Set(capabilities) };
   }
-  async init(): Promise<void> { await this.onInit?.(); this.status.state = 'ready'; }
-  async stop(): Promise<void> { this.status.state = 'stopped'; }
-  async flush(): Promise<void> {}
+  async init(): Promise<void> {
+    debug('provider initializing', { provider: this.region });
+    await this.onInit?.();
+    this.status.state = 'ready';
+    debug('provider ready', { provider: this.region });
+  }
+  async stop(): Promise<void> {
+    this.status.state = 'stopped';
+    debug('provider stopped', { provider: this.region });
+  }
+  async flush(): Promise<void> {
+    debug('provider flushing', { provider: this.region });
+  }
   async dispose(): Promise<void> {
     await this.onDispose?.();
     this.status.state = 'stopped';
     this.user = null;
+    debug('provider disposed', { provider: this.region });
   }
   async identify(user: TelemetryUser): Promise<void> { this.user = user; }
   async send(event: TelemetryEvent): Promise<void> {
     if (this.status.state !== 'ready') throw new Error(`Provider ${this.region} is not ready`);
     try {
       await this.sender({ ...event, user: event.user ?? this.user ?? undefined }, this.region);
+      debug('event submitted', { provider: this.region, event: eventName(event) });
     } catch (error) {
       this.status.state = 'failed';
       this.status.lastError = error instanceof Error ? error.message : String(error);
+      debug('event submission failed', {
+        provider: this.region,
+        event: eventName(event),
+        error: this.status.lastError,
+      });
       throw error;
     }
   }
@@ -66,9 +92,14 @@ function createOverseasSender(config: PublicTelemetryConfig): {
   return {
     onInit: async () => {
       if (config.sentry?.dsn) {
+        debug('Sentry connection configured', { provider: 'overseas' });
         sentry = await import('@sentry/electron/main');
         sentry.init({ dsn: config.sentry.dsn, tracesSampleRate: config.sampleRate });
       }
+      if (posthog) debug('PostHog connection configured', {
+        provider: 'overseas',
+        host: config.posthog?.host,
+      });
     },
     sender: async (event) => {
       const distinctId = event.user?.id ?? event.context.sessionId;
