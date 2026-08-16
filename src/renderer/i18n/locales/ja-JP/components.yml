@@ -103,6 +103,7 @@ webServiceStatus:
   restartButton: 再起動
   restartingButton: 再起動中...
   stopButton: サービスの停止
+  openInApp: Hagicode を開く
   openInBrowser: ブラウザで開く
   openAppButton: アプリケーションを開く
   openBrowserButton: ブラウザで開く
@@ -159,6 +160,7 @@ webServiceStatus:
       failed: Failed
     actions:
       close: Close
+      done: 完了
       openFailureLog: View failure log
     meta:
       version: Active version

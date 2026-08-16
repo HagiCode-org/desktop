@@ -103,6 +103,7 @@ webServiceStatus:
   restartButton: 重啟
   restartingButton: 重啟中...
   stopButton: 停止服務
+  openInApp: 開啟 Hagicode
   openInBrowser: 在瀏覽器中開啟
   openAppButton: 打開應用
   openBrowserButton: 在瀏覽器中打開
@@ -159,6 +160,7 @@ webServiceStatus:
       failed: Failed
     actions:
       close: Close
+      done: Done
       openFailureLog: View failure log
     meta:
       version: Active version

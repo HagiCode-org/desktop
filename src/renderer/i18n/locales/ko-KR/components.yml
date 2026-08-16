@@ -103,6 +103,7 @@ webServiceStatus:
   restartButton: 다시 시작
   restartingButton: 다시 시작하는 중...
   stopButton: 서비스 중지
+  openInApp: Hagicode 열기
   openInBrowser: 브라우저에서 열기
   openAppButton: 지원서 열기
   openBrowserButton: 브라우저에서 열기
@@ -159,6 +160,7 @@ webServiceStatus:
       failed: Failed
     actions:
       close: Close
+      done: 완료
       openFailureLog: View failure log
     meta:
       version: Active version

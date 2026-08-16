@@ -54,8 +54,8 @@ describe('hagicode action button port waiting state', () => {
     const openBranch = source.slice(source.indexOf('// Running state - Open buttons'));
     assert.match(openBranch, /onClick=\{onOpenApp\}/);
     assert.match(openBranch, /onClick=\{onOpenBrowser\}/);
-    assert.match(openBranch, /t\('tray\.openInApp'\)/);
-    assert.match(openBranch, /t\('tray\.openInBrowser'\)/);
+    assert.match(openBranch, /t\('webServiceStatus\.openInApp'\)/);
+    assert.match(openBranch, /t\('webServiceStatus\.openInBrowser'\)/);
   });
 
   it('adds localized waiting labels without inline component literals', async () => {

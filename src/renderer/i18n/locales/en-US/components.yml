@@ -103,6 +103,7 @@ webServiceStatus:
   restartButton: Restart
   restartingButton: Restarting...
   stopButton: Stop Service
+  openInApp: Open Hagicode
   openInBrowser: Open in Browser
   openAppButton: Open Application
   openBrowserButton: Open in Browser
@@ -159,6 +160,7 @@ webServiceStatus:
       failed: Failed
     actions:
       close: Close
+      done: Done
       openFailureLog: View failure log
     meta:
       version: Active version
