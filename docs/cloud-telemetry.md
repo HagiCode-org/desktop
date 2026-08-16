@@ -1,39 +1,22 @@
-# Desktop cloud telemetry
+# Desktop PostHog telemetry
 
-Desktop cloud telemetry is disabled only when `HAGICODE_TELEMETRY_ENABLED=0`.
-The public configuration is read in the main process:
+Desktop telemetry uses PostHog only. It is enabled unless
+`HAGICODE_TELEMETRY_ENABLED=0`.
 
-- `HAGICODE_TELEMETRY_DEFAULT_REGION`: `cn` or `overseas` (default `overseas`)
-- `HAGICODE_TELEMETRY_REGION_URL`: HTTPS endpoint returning `{ "region": "cn" | "overseas" }`
-- `HAGICODE_TELEMETRY_SAMPLE_RATE`: value from `0` to `1` (default `0.1`)
-- `HAGICODE_TELEMETRY_SESSION_REPLAY`: `1` enables replay where the regional provider supports it
-- `HAGICODE_TELEMETRY_DEBUG`: `1` enables provider connection, lifecycle, queue, and event status logs
-- `HAGICODE_CLOUDCARE_APP_ID`, `HAGICODE_CLOUDCARE_CLIENT_TOKEN`, `HAGICODE_CLOUDCARE_SITE`
-- `HAGICODE_SENTRY_DSN`, `HAGICODE_SENTRY_PROJECT_ID`
-- `HAGICODE_POSTHOG_PUBLIC_KEY`, `HAGICODE_POSTHOG_HOST`, `HAGICODE_POSTHOG_PROJECT_ID`
-- `HAGICODE_POSTHOG_DEFAULTS`, `HAGICODE_POSTHOG_PERSON_PROFILES` (`identified_only` or `always`)
+- `HAGICODE_TELEMETRY_SAMPLE_RATE`: `0` to `1`, default `0.1`
+- `HAGICODE_TELEMETRY_SESSION_REPLAY`: `1` enables replay
+- `HAGICODE_TELEMETRY_DEBUG`: `1` enables diagnostics in production
+- `HAGICODE_POSTHOG_PUBLIC_KEY`: public project key
+- `HAGICODE_POSTHOG_HOST`: default `https://us.i.posthog.com`
+- `HAGICODE_POSTHOG_PROJECT_ID`: optional project identifier
+- `HAGICODE_POSTHOG_DEFAULTS`: default `2026-05-30`
+- `HAGICODE_POSTHOG_PERSON_PROFILES`: `identified_only` or `always`
 
-PostHog defaults are the supplied public key, `https://us.i.posthog.com`,
-`defaults: "2026-05-30"`, and `person_profiles: "identified_only"`.
+Development builds print connection, lifecycle, queue, and event status logs.
+Logs do not include keys, user IDs, or event payloads. PostHog Node credentials,
+if later required, must remain in the main process and never enter renderer or
+preload resources.
 
-Development builds print telemetry diagnostics by default. Production builds
-only print them when `HAGICODE_TELEMETRY_DEBUG=1`; logs never include keys,
-user IDs, or event payloads.
-
-DSNs, project IDs and client tokens are public configuration. PostHog Node
-credentials and any other server-side token must be supplied only to the main
-process runtime and must never be placed in preload or renderer variables.
-
-The app starts with the build default or cached region, detects the region
-asynchronously, and switches providers using `stop -> flush -> dispose -> init`.
-Detection failures retain the current provider and do not block startup.
-
-All events use the renderer `cloudTelemetry` bridge or the main-process
-`TelemetryManager`. Known sensitive fields, raw prompts, credentials,
-passwords, access tokens and raw business payloads are excluded before
-submission. Provider failures are bounded and never fail a business operation.
-
-China and overseas data are stored in their respective SaaS backends. Costs are
-controlled with sampling and replay settings; the SaaS free tiers are the
-initial target. China native minidump forwarding and hosted Redis presence
-aggregation remain follow-up work.
+The main process sends `app_started`; the renderer sends
+`main_view_entered`. Events are filtered, sampled, bounded, and flushed during
+shutdown. PostHog is the only cloud telemetry backend.
