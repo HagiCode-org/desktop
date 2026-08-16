@@ -89,7 +89,7 @@ function createOverseasSender(config: PublicTelemetryConfig): {
   return {
     onInit: async () => {
       debug('PostHog connection configured', {
-        provider: 'overseas',
+        provider: 'posthog',
         host: config.posthog?.host,
       });
     },

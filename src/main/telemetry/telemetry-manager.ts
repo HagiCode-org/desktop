@@ -82,7 +82,19 @@ export class TelemetryManager implements TelemetryFacade {
   getStatus(): ProviderStatus | null { return this.provider?.status ?? null; }
 
   private async send(name: Parameters<TelemetryProvider['send']>[0]['name'], properties?: Record<string, unknown>): Promise<void> {
-    if (this.closed || Math.random() > this.options.config.sampleRate) return;
+    const eventLabel = name === 'event' ? String(properties?.name ?? 'desktop_event') : `desktop_${name}`;
+    const criticalEvent = eventLabel === 'app_started' || eventLabel === 'main_view_entered';
+    if (this.closed) return;
+    if (!criticalEvent && Math.random() > this.options.config.sampleRate) {
+      if (telemetryDebugEnabled) {
+        console.info('[Telemetry] event sampled out', {
+          provider: 'posthog',
+          event: eventLabel,
+          sampleRate: this.options.config.sampleRate,
+        });
+      }
+      return;
+    }
     const event = {
       name,
       properties: sanitizeProperties(properties),
