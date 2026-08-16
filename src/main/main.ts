@@ -2655,6 +2655,10 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
   });
   await telemetryManager.init();
+  await telemetryManager.track('app_started', {
+    source: 'main_process',
+    kind: 'startup',
+  });
   void telemetryRegionResolver.detect().then((region: TelemetryRegion | null) => {
     if (region && region !== initialTelemetryRegion) {
       return telemetryManager?.switchRegion(region);

@@ -38,6 +38,7 @@ import type {
 import type { LogDirectoryOpenResult } from '../types/log-directory';
 import type { SubscriptionBridge } from '../types/subscription';
 import type { TurboEngineLicenseBridge } from '../types/turboengine-license';
+import { telemetry } from './telemetry';
 
 type BootstrapPhase = 'loading' | 'ready' | 'error';
 
@@ -487,6 +488,10 @@ function App({ onRendererMounted, onShellReady, onBootstrapErrorVisible }: AppPr
     }
 
     postShellInitializationStartedRef.current = true;
+    void telemetry.event('main_view_entered', {
+      source: 'renderer',
+      kind: 'main_view',
+    });
     let cancelled = false;
 
     void (async () => {
