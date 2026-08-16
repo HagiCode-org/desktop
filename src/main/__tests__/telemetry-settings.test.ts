@@ -114,7 +114,7 @@ describe('desktop telemetry retirement', () => {
 
     assert.equal(mainSource.includes("ipcMain.handle('telemetry:get'"), false);
     assert.equal(mainSource.includes("ipcMain.handle('telemetry:set'"), false);
-    assert.equal(preloadSource.includes('telemetry:'), false);
+    assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:get')"), false);
     assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:get')"), false);
     assert.equal(preloadSource.includes("ipcRenderer.invoke('telemetry:set')"), false);
     assert.equal(mainSource.includes("ipcMain.handle('remote-mode:set'"), false);

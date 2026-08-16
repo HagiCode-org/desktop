@@ -15,6 +15,7 @@ import i18n from './i18n';
 import App from './App';
 import 'driver.js/dist/driver.css';
 import './index.css';
+import { installRendererTelemetry } from './telemetry';
 
 const initialTheme = resolveInitialDesktopTheme({
   storage: window.localStorage,
@@ -25,6 +26,8 @@ const initialTheme = resolveInitialDesktopTheme({
 });
 
 applyDesktopTheme(document.documentElement, initialTheme);
+const removeRendererTelemetry = installRendererTelemetry();
+window.addEventListener('beforeunload', removeRendererTelemetry, { once: true });
 
 const loadingContainer = document.getElementById('loading-container');
 const rootElement = document.getElementById('root');

@@ -75,6 +75,14 @@ async function withTimeout<T>(
 declare global {
   interface Window {
     electronAPI: {
+      cloudTelemetry?: {
+        status: () => Promise<unknown>;
+        error: (error: unknown, properties?: Record<string, unknown>) => Promise<void>;
+        event: (name: string, properties?: Record<string, unknown>) => Promise<void>;
+        performance: (name: string, properties?: Record<string, unknown>) => Promise<void>;
+        identify: (id: string) => Promise<void>;
+        heartbeat: (properties?: Record<string, unknown>) => Promise<void>;
+      };
       bootstrap?: {
         getCachedSnapshot: () => DesktopBootstrapSnapshot | null;
         getSnapshot: () => Promise<DesktopBootstrapSnapshot>;

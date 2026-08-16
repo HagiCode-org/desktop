@@ -92,6 +92,10 @@ import {
   turboEngineProductConfig,
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
+import { readPublicTelemetryConfig } from './telemetry/config.js';
+import { StoreRegionCache, RegionResolver } from './telemetry/region-resolver.js';
+import { TelemetryManager } from './telemetry/telemetry-manager.js';
+import type { TelemetryRegion } from './telemetry/types.js';
 import {
   executeWindowsStorePurchaseAddon,
   resolveWindowsStorePurchaseAddonPath,
@@ -333,6 +337,7 @@ let turboEngineBackendSyncInFlight: Promise<void> | null = null;
 let subscriptionFeatureEnabled = false;
 let turboEngineLicenseFeatureEnabled = false;
 let msstoreDonationItemFeatureEnabled = false;
+let telemetryManager: TelemetryManager | null = null;
 let subscriptionPurchaseSmokeTestStarted = false;
 let lastAppliedTurboEngineDlcProgramOptionSignature = 'null|';
 const notificationService = new NotificationService({
@@ -1038,6 +1043,23 @@ ipcMain.handle('get-msstore-rating-prompt-state', () => {
     return {};
   }
   return configManager.getMsstoreRatingPromptState();
+});
+
+ipcMain.handle('cloud-telemetry:status', () => telemetryManager?.getStatus() ?? null);
+ipcMain.handle('cloud-telemetry:error', async (_event, error: unknown, properties?: Record<string, unknown>) => {
+  await telemetryManager?.reportError(error, properties);
+});
+ipcMain.handle('cloud-telemetry:event', async (_event, name: string, properties?: Record<string, unknown>) => {
+  await telemetryManager?.track(name, properties);
+});
+ipcMain.handle('cloud-telemetry:performance', async (_event, name: string, properties?: Record<string, unknown>) => {
+  await telemetryManager?.recordPerformance(name, properties);
+});
+ipcMain.handle('cloud-telemetry:identify', async (_event, id: string) => {
+  await telemetryManager?.identify(id);
+});
+ipcMain.handle('cloud-telemetry:heartbeat', async (_event, properties?: Record<string, unknown>) => {
+  await telemetryManager?.heartbeat(properties);
 });
 
 ipcMain.handle('show-window', () => {
@@ -2617,6 +2639,29 @@ app.whenReady().then(async () => {
   const detection = regionDetector.detectWithCache();
   console.log(`[App] Region detected: ${detection.region} (method: ${detection.method})`);
 
+  const telemetryConfig = readPublicTelemetryConfig();
+  const telemetryCache = new StoreRegionCache(configManager.getStore() as unknown as {
+    get<T>(key: string): T | undefined;
+    set(key: string, value: unknown): void;
+  });
+  const telemetryRegionResolver = new RegionResolver({
+    defaultRegion: telemetryConfig.defaultRegion,
+    detectionUrl: telemetryConfig.regionDetectionUrl,
+    cache: telemetryCache,
+  });
+  const initialTelemetryRegion = telemetryRegionResolver.initial();
+  telemetryManager = new TelemetryManager({
+    config: { ...telemetryConfig, defaultRegion: initialTelemetryRegion },
+    appVersion: app.getVersion(),
+  });
+  await telemetryManager.init();
+  void telemetryRegionResolver.detect().then((region: TelemetryRegion | null) => {
+    if (region && region !== initialTelemetryRegion) {
+      return telemetryManager?.switchRegion(region);
+    }
+    return undefined;
+  });
+
   // Initialize LLM Installation Manager (after ClaudeConfigManager is initialized later)
   // Will be properly initialized after ClaudeConfigManager
 
@@ -2894,6 +2939,8 @@ app.on('before-quit', async (event) => {
     if (rssFeedManager) {
       rssFeedManager.destroy();
     }
+    await telemetryManager?.close();
+    telemetryManager = null;
     versionUpdateManager?.dispose();
     subscriptionService?.dispose();
     turboEngineLicenseService?.dispose();
