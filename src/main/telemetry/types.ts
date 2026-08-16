@@ -1,5 +1,3 @@
-export type TelemetryRegion = 'cn' | 'overseas';
-
 export type TelemetryEventName =
   | 'error'
   | 'event'
@@ -10,7 +8,6 @@ export interface TelemetryContext {
   appVersion: string;
   platform: NodeJS.Platform;
   arch: string;
-  region: TelemetryRegion;
   sessionId: string;
 }
 
@@ -29,13 +26,9 @@ export interface TelemetryEvent {
 
 export interface PublicTelemetryConfig {
   enabled: boolean;
-  defaultRegion: TelemetryRegion;
-  regionDetectionUrl: string;
   sampleRate: number;
   sessionReplay: boolean;
-  cloudcare?: { appId: string; clientToken: string; site: string };
-  sentry?: { dsn: string; projectId: string };
-  posthog?: {
+  posthog: {
     apiKey: string;
     host: string;
     projectId: string;
@@ -47,14 +40,12 @@ export interface PublicTelemetryConfig {
 export type ProviderState = 'idle' | 'initializing' | 'ready' | 'failed' | 'stopped';
 
 export interface ProviderStatus {
-  region: TelemetryRegion;
   state: ProviderState;
   capabilities: ReadonlySet<TelemetryEventName>;
   lastError?: string;
 }
 
 export interface TelemetryProvider {
-  readonly region: TelemetryRegion;
   readonly status: ProviderStatus;
   init(): Promise<void>;
   stop(): Promise<void>;

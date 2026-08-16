@@ -4,7 +4,6 @@ import type {
   TelemetryContext,
   TelemetryFacade,
   TelemetryProvider,
-  TelemetryRegion,
   TelemetryUser,
   ProviderStatus,
 } from './types.js';
@@ -20,56 +19,39 @@ export interface TelemetryManagerOptions {
   appVersion: string;
   platform?: NodeJS.Platform;
   arch?: string;
-  createProvider?: (region: TelemetryRegion, config: PublicTelemetryConfig) => TelemetryProvider;
+  createProvider?: (config: PublicTelemetryConfig) => TelemetryProvider;
   sessionId?: string;
 }
 
 export class TelemetryManager implements TelemetryFacade {
   private provider: TelemetryProvider | null = null;
-  private currentRegion: TelemetryRegion;
   private readonly queue: Array<Parameters<TelemetryProvider['send']>[0]> = [];
   private readonly context: TelemetryContext;
   private user: TelemetryUser | undefined;
   private closed = false;
 
   constructor(private readonly options: TelemetryManagerOptions) {
-    this.currentRegion = options.config.defaultRegion;
     this.context = createTelemetryContext({
       appVersion: options.appVersion,
       platform: options.platform ?? process.platform,
       arch: options.arch ?? process.arch,
-      region: this.currentRegion,
     }, options.sessionId ?? randomUUID());
   }
 
   async init(): Promise<void> {
     if (this.closed || !this.options.config.enabled || this.provider) return;
-    this.provider = (this.options.createProvider ?? createProvider)(this.currentRegion, this.options.config);
+    this.provider = (this.options.createProvider ?? createProvider)(this.options.config);
     try {
       await this.provider.init();
       await this.drain();
     } catch {
       if (telemetryDebugEnabled) {
         console.warn('[Telemetry] provider initialization failed', {
-          provider: this.currentRegion,
+          provider: 'posthog',
         });
       }
       this.provider = null;
     }
-  }
-
-  async switchRegion(region: TelemetryRegion): Promise<void> {
-    if (region === this.currentRegion && this.provider) return;
-    await this.provider?.stop();
-    await this.provider?.flush();
-    await this.provider?.dispose();
-    this.provider = null;
-    this.currentRegion = region;
-    this.context.region = region;
-    if (telemetryDebugEnabled) {
-      console.info('[Telemetry] switching provider', { provider: region });
-    }
-    if (!this.closed) await this.init();
   }
 
   async close(): Promise<void> {
@@ -113,7 +95,7 @@ export class TelemetryManager implements TelemetryFacade {
       this.queue.push(event);
       if (telemetryDebugEnabled) {
         console.info('[Telemetry] event queued', {
-          provider: this.currentRegion,
+          provider: 'posthog',
           event: name,
           queueSize: this.queue.length,
         });

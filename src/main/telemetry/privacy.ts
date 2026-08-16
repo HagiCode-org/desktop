@@ -1,15 +1,12 @@
 import type { TelemetryContext } from './types.js';
 
 const ALLOWED_KEYS = new Set([
-  'appVersion', 'platform', 'arch', 'region', 'sessionId',
+  'appVersion', 'platform', 'arch', 'sessionId',
   'duration', 'status', 'kind', 'source', 'count', 'name',
 ]);
 const SENSITIVE = /prompt|password|secret|token|credential|authorization|api[-_]?key|payload/i;
 
-export function createTelemetryContext(
-  base: Omit<TelemetryContext, 'sessionId'>,
-  sessionId: string,
-): TelemetryContext {
+export function createTelemetryContext(base: Omit<TelemetryContext, 'sessionId'>, sessionId: string): TelemetryContext {
   return { ...base, sessionId };
 }
 

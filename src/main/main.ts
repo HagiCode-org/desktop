@@ -93,9 +93,7 @@ import {
 } from '../types/turboengine-license.js';
 import { sponsorPlanProductConfig } from '../types/subscription.js';
 import { readPublicTelemetryConfig } from './telemetry/config.js';
-import { StoreRegionCache, RegionResolver } from './telemetry/region-resolver.js';
 import { TelemetryManager } from './telemetry/telemetry-manager.js';
-import type { TelemetryRegion } from './telemetry/types.js';
 import {
   executeWindowsStorePurchaseAddon,
   resolveWindowsStorePurchaseAddonPath,
@@ -2640,30 +2638,14 @@ app.whenReady().then(async () => {
   console.log(`[App] Region detected: ${detection.region} (method: ${detection.method})`);
 
   const telemetryConfig = readPublicTelemetryConfig();
-  const telemetryCache = new StoreRegionCache(configManager.getStore() as unknown as {
-    get<T>(key: string): T | undefined;
-    set(key: string, value: unknown): void;
-  });
-  const telemetryRegionResolver = new RegionResolver({
-    defaultRegion: telemetryConfig.defaultRegion,
-    detectionUrl: telemetryConfig.regionDetectionUrl,
-    cache: telemetryCache,
-  });
-  const initialTelemetryRegion = telemetryRegionResolver.initial();
   telemetryManager = new TelemetryManager({
-    config: { ...telemetryConfig, defaultRegion: initialTelemetryRegion },
+    config: telemetryConfig,
     appVersion: app.getVersion(),
   });
   await telemetryManager.init();
   await telemetryManager.track('app_started', {
     source: 'main_process',
     kind: 'startup',
-  });
-  void telemetryRegionResolver.detect().then((region: TelemetryRegion | null) => {
-    if (region && region !== initialTelemetryRegion) {
-      return telemetryManager?.switchRegion(region);
-    }
-    return undefined;
   });
 
   // Initialize LLM Installation Manager (after ClaudeConfigManager is initialized later)
