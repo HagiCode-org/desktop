@@ -22,6 +22,20 @@ describe('web service status card log access wiring', () => {
     assert.match(source, /\{showRuntimeSecondaryControls && \(/);
   });
 
+  it('keeps startup checks in the loading transition and uses stable localized action keys', async () => {
+    const cardSource = await fs.readFile(webServiceStatusCardPath, 'utf8');
+    const actionSource = await fs.readFile(
+      path.resolve(process.cwd(), 'src/renderer/components/HagicodeActionButton.tsx'),
+      'utf8',
+    );
+
+    assert.match(cardSource, /const isTransitioning = webServiceInfo\.isChecking/);
+    assert.match(actionSource, /useTranslation\('components'\)/);
+    assert.match(actionSource, /webServiceStatus\.openInApp/);
+    assert.match(actionSource, /webServiceStatus\.openInBrowser/);
+    assert.doesNotMatch(actionSource, /tray\.openIn(App|Browser)/);
+  });
+
   it('routes homepage log clicks through the shared log-directory bridge and error codes', async () => {
     const source = await fs.readFile(webServiceStatusCardPath, 'utf8');
 

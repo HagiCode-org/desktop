@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { InstallWebServicePackageOptions } from '../../../types/version-install.js';
 
 /**
@@ -111,6 +111,8 @@ export interface WebServiceState {
   version: string | null;
   lastError: string | null;
   isOperating: boolean; // Start/stop operation in progress
+  startupBatch: number;
+  isChecking: boolean;
   restartCount: number;
   startTime: number | null;
   uptime: number;
@@ -156,6 +158,8 @@ const initialState: WebServiceState = {
   version: null,
   lastError: null,
   isOperating: false,
+  startupBatch: 0,
+  isChecking: false,
   restartCount: 0,
   startTime: null,
   uptime: 0,
@@ -200,6 +204,29 @@ export const webServiceSlice = createSlice({
 
     setOperating: (state, action: PayloadAction<boolean>) => {
       state.isOperating = action.payload;
+    },
+
+    setOperatingForBatch: (
+      state,
+      action: PayloadAction<{ batch: number; operating: boolean }>,
+    ) => {
+      if (action.payload.batch === state.startupBatch) {
+        state.isOperating = action.payload.operating;
+      }
+    },
+
+    beginStartupBatch: (
+      state,
+      action: PayloadAction<{ status?: ProcessStatus; checking?: boolean } | undefined>,
+    ) => {
+      state.startupBatch += 1;
+      state.status = action.payload?.status ?? 'starting';
+      state.isChecking = action.payload?.checking ?? true;
+      state.isOperating = true;
+    },
+
+    advanceStartupBatch: (state) => {
+      state.startupBatch += 1;
     },
 
     setError: (state, action: PayloadAction<string | null>) => {
@@ -256,11 +283,69 @@ export const webServiceSlice = createSlice({
       state.phaseMessage = action.payload.phaseMessage || null;
       state.host = action.payload.host;
       state.port = action.payload.port;
+      state.isChecking = action.payload.status === 'starting';
+    },
+
+    setProcessInfoForBatch: (
+      state,
+      action: PayloadAction<{ batch: number; info: ProcessInfo }>,
+    ) => {
+      if (action.payload.batch !== state.startupBatch) {
+        return;
+      }
+
+      const info = action.payload.info;
+      state.status = info.status;
+      state.url = info.url;
+      state.startTime = info.startTime;
+      state.uptime = info.uptime;
+      state.restartCount = info.restartCount;
+      state.phase = info.phase;
+      state.phaseMessage = info.phaseMessage || null;
+      state.host = info.host;
+      state.port = info.port;
+      state.isChecking = info.status === 'starting';
+    },
+
+    setStatusForBatch: (
+      state,
+      action: PayloadAction<{ batch: number; status: ProcessStatus }>,
+    ) => {
+      if (action.payload.batch !== state.startupBatch) {
+        return;
+      }
+      state.status = action.payload.status;
+      state.isChecking = action.payload.status === 'starting';
+    },
+
+    setErrorForBatch: (
+      state,
+      action: PayloadAction<{ batch: number; error: string | null }>,
+    ) => {
+      if (action.payload.batch !== state.startupBatch) {
+        return;
+      }
+      state.lastError = action.payload.error;
+      if (action.payload.error) {
+        state.status = 'error';
+        state.isChecking = false;
+      }
     },
 
     setStartupFailure: (state, action: PayloadAction<StartupFailurePayload | null>) => {
       state.startupFailure = action.payload;
       state.showStartupFailureDialog = !!action.payload;
+    },
+
+    setStartupFailureForBatch: (
+      state,
+      action: PayloadAction<{ batch: number; failure: StartupFailurePayload | null }>,
+    ) => {
+      if (action.payload.batch !== state.startupBatch) {
+        return;
+      }
+      state.startupFailure = action.payload.failure;
+      state.showStartupFailureDialog = !!action.payload.failure;
     },
 
     showStartupFailureDialog: (state) => {
@@ -363,6 +448,9 @@ export const webServiceSlice = createSlice({
 export const {
   setStatus,
   setOperating,
+  setOperatingForBatch,
+  beginStartupBatch,
+  advanceStartupBatch,
   setError,
   clearError,
   setUrl,
@@ -374,9 +462,13 @@ export const {
   setPort,
   setHost,
   setProcessInfo,
+  setProcessInfoForBatch,
+  setStatusForBatch,
+  setErrorForBatch,
   setPortAvailable,
   setStartupPhase,
   setStartupFailure,
+  setStartupFailureForBatch,
   showStartupFailureDialog,
   hideStartupFailureDialog,
   showStartConfirmDialog,
@@ -401,6 +493,8 @@ export const selectWebServiceStatus = (state: { webService: WebServiceState }) =
 export const selectWebServiceUrl = (state: { webService: WebServiceState }) => state.webService.url;
 export const selectWebServiceVersion = (state: { webService: WebServiceState }) => state.webService.version;
 export const selectWebServiceOperating = (state: { webService: WebServiceState }) => state.webService.isOperating;
+export const selectWebServiceStartupBatch = (state: { webService: WebServiceState }) => state.webService.startupBatch;
+export const selectWebServiceChecking = (state: { webService: WebServiceState }) => state.webService.isChecking;
 export const selectWebServiceError = (state: { webService: WebServiceState }) => state.webService.lastError;
 export const selectWebServiceStartTime = (state: { webService: WebServiceState }) => state.webService.startTime;
 export const selectWebServiceUptime = (state: { webService: WebServiceState }) => state.webService.uptime;
@@ -449,6 +543,8 @@ export const selectWebServiceInfo = (state: { webService: WebServiceState }) => 
   startTime: state.webService.startTime,
   restartCount: state.webService.restartCount,
   isOperating: state.webService.isOperating,
+  startupBatch: state.webService.startupBatch,
+  isChecking: state.webService.isChecking,
   lastError: state.webService.lastError,
   phase: state.webService.phase,
   phaseMessage: state.webService.phaseMessage,

@@ -30,7 +30,7 @@ export default function HagicodeActionButton({
   waitingPort,
   waitingPhaseMessage,
 }: HagicodeActionButtonProps) {
-  const { t } = useTranslation(['components', 'tray']);
+  const { t } = useTranslation('components');
 
   const isStarting = status === 'starting';
   const isStopping = status === 'stopping';
@@ -200,7 +200,7 @@ export default function HagicodeActionButton({
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center gap-1 h-full text-primary-foreground">
           <Monitor className="w-6 h-6" />
-          <span className="font-medium">{t('tray.openInApp')}</span>
+          <span className="font-medium">{t('webServiceStatus.openInApp')}</span>
         </div>
 
         {/* Border */}
@@ -230,7 +230,7 @@ export default function HagicodeActionButton({
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center gap-1 h-full">
           <ExternalLink className="w-6 h-6 text-primary" />
-          <span className="font-medium text-foreground">{t('tray.openInBrowser')}</span>
+          <span className="font-medium text-foreground">{t('webServiceStatus.openInBrowser')}</span>
         </div>
 
         {/* Hover glow */}

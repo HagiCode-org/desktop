@@ -118,7 +118,9 @@ const WebServiceStatusCard: React.FC = () => {
 
   const isRunning = webServiceInfo.status === 'running';
   const isStopped = webServiceInfo.status === 'stopped' || webServiceInfo.status === 'error';
-  const isTransitioning = webServiceInfo.status === 'starting' || webServiceInfo.status === 'stopping';
+  const isTransitioning = webServiceInfo.isChecking
+    || webServiceInfo.status === 'starting'
+    || webServiceInfo.status === 'stopping';
   const hasReadyWebUrl = Boolean(webServiceInfo.url?.trim());
   const isWaitingForPort = (
     webServiceInfo.status === 'starting' ||

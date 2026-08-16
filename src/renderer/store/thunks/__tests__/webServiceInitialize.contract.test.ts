@@ -19,4 +19,18 @@ describe('web service initialize thunk contracts', () => {
     assert.match(section, /currentState\.phase === StartupPhase\.CheckingDependencies/);
     assert.match(section, /if \(!shouldSkipStaleHydration\) \{\s*dispatch\(setProcessInfo\(status\)\);\s*\}/s);
   });
+
+  it('starts a batch and keeps health-check results tied to that batch', async () => {
+    const source = await fs.readFile(thunkPath, 'utf8');
+    const startSection = source.slice(
+      source.indexOf('export const startWebService'),
+      source.indexOf('export const confirmStartWithWarning'),
+    );
+
+    assert.match(startSection, /dispatch\(beginStartupBatch\(\)\);/);
+    assert.match(startSection, /const batch = .*startupBatch/);
+    assert.match(startSection, /fetchWebServiceStatus\(batch\)/);
+    assert.match(startSection, /setErrorForBatch/);
+    assert.match(startSection, /setOperatingForBatch/);
+  });
 });

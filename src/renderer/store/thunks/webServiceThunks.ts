@@ -2,11 +2,15 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'sonner';
 import i18n from '../../i18n';
 import {
-  setStatus,
-  setOperating,
+  setOperatingForBatch,
+  beginStartupBatch,
+  advanceStartupBatch,
   setError,
+  setErrorForBatch,
   setProcessInfo,
-  setStartupFailure,
+  setProcessInfoForBatch,
+  setStatusForBatch,
+  setStartupFailureForBatch,
   setVersion,
   setPackageInfo,
   setInstallProgress,
@@ -110,12 +114,12 @@ function getInstallSuccessDescription(
  */
 export const startWebService = createAsyncThunk(
   'webService/start',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
+    dispatch(beginStartupBatch());
+    const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
-      dispatch(setOperating(true));
-      dispatch(setStatus('starting'));
-      dispatch(setError(null));
-      dispatch(setStartupFailure(null));
+      dispatch(setErrorForBatch({ batch, error: null }));
+      dispatch(setStartupFailureForBatch({ batch, failure: null }));
       await waitForStartupStoreLicenseVerification();
 
       const result: {
@@ -126,45 +130,43 @@ export const startWebService = createAsyncThunk(
         await window.electronAPI.startWebService();
 
       if (result.success) {
-        dispatch(setStatus('running'));
-        dispatch(setStartupFailure(null));
-        // Fetch updated status
-        await dispatch(fetchWebServiceStatus());
+        dispatch(setStartupFailureForBatch({ batch, failure: null }));
+        // Keep the card in checking state until the current batch is confirmed healthy.
+        await dispatch(fetchWebServiceStatus(batch));
       } else {
         if (result.startupFailure) {
-          dispatch(setStartupFailure(result.startupFailure));
+          dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
 
         // Set error based on error type
         if (result.error) {
           switch (result.error.type) {
             case 'no-active-version':
-              dispatch(setError('No active version found. Please install and activate a version first.'));
+              dispatch(setErrorForBatch({ batch, error: 'No active version found. Please install and activate a version first.' }));
               break;
             case 'version-not-ready':
-              dispatch(setError('Active version is not ready. Dependencies may be missing.'));
+              dispatch(setErrorForBatch({ batch, error: 'Active version is not ready. Dependencies may be missing.' }));
               break;
             case 'dependency-requirements-not-met':
-              dispatch(setError(result.error.details || 'Required managed dependencies must be repaired before starting the web service.'));
+              dispatch(setErrorForBatch({ batch, error: result.error.details || 'Required managed dependencies must be repaired before starting the web service.' }));
               break;
             default:
-              dispatch(setError(result.error.details || 'Failed to start web service'));
+              dispatch(setErrorForBatch({ batch, error: result.error.details || 'Failed to start web service' }));
           }
         } else {
-          dispatch(setError('Failed to start web service'));
+          dispatch(setErrorForBatch({ batch, error: 'Failed to start web service' }));
         }
-        dispatch(setStatus('error'));
+        dispatch(setStatusForBatch({ batch, status: 'error' }));
       }
 
       return result.success;
     } catch (error) {
       console.error('Start web service error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      dispatch(setError(errorMessage));
-      dispatch(setStatus('error'));
+      dispatch(setErrorForBatch({ batch, error: errorMessage }));
       throw error;
     } finally {
-      dispatch(setOperating(false));
+      dispatch(setOperatingForBatch({ batch, operating: false }));
     }
   }
 );
@@ -175,11 +177,12 @@ export const startWebService = createAsyncThunk(
  */
 export const confirmStartWithWarning = createAsyncThunk(
   'webService/confirmStartWithWarning',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
+    dispatch(beginStartupBatch());
+    const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
-      dispatch(setOperating(true));
-      dispatch(setError(null));
-      dispatch(setStartupFailure(null));
+      dispatch(setErrorForBatch({ batch, error: null }));
+      dispatch(setStartupFailureForBatch({ batch, failure: null }));
       dispatch(hideStartConfirmDialog());
       await waitForStartupStoreLicenseVerification();
 
@@ -192,33 +195,30 @@ export const confirmStartWithWarning = createAsyncThunk(
         await window.electronAPI.startWebService(true);
 
       if (result.success) {
-        dispatch(setStatus('running'));
-        dispatch(setStartupFailure(null));
+        dispatch(setStartupFailureForBatch({ batch, failure: null }));
         dispatch(setShowDependencyWarning(true));
-        // Fetch updated status
-        await dispatch(fetchWebServiceStatus());
+        await dispatch(fetchWebServiceStatus(batch));
       } else {
         if (result.startupFailure) {
-          dispatch(setStartupFailure(result.startupFailure));
+          dispatch(setStartupFailureForBatch({ batch, failure: result.startupFailure }));
         }
         // Set error based on error type
         if (result.error) {
-          dispatch(setError(result.error.details || 'Failed to start web service'));
+          dispatch(setErrorForBatch({ batch, error: result.error.details || 'Failed to start web service' }));
         } else {
-          dispatch(setError('Failed to start web service'));
+          dispatch(setErrorForBatch({ batch, error: 'Failed to start web service' }));
         }
-        dispatch(setStatus('error'));
+        dispatch(setStatusForBatch({ batch, status: 'error' }));
       }
 
       return result.success;
     } catch (error) {
       console.error('Confirm start with warning error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      dispatch(setError(errorMessage));
-      dispatch(setStatus('error'));
+      dispatch(setErrorForBatch({ batch, error: errorMessage }));
       throw error;
     } finally {
-      dispatch(setOperating(false));
+      dispatch(setOperatingForBatch({ batch, operating: false }));
     }
   }
 );
@@ -229,31 +229,29 @@ export const confirmStartWithWarning = createAsyncThunk(
  */
 export const stopWebService = createAsyncThunk(
   'webService/stop',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
+    dispatch(beginStartupBatch({ status: 'stopping', checking: false }));
+    const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
-      dispatch(setOperating(true));
-      dispatch(setStatus('stopping'));
-      dispatch(setError(null));
+      dispatch(setErrorForBatch({ batch, error: null }));
 
       const success: boolean = await window.electronAPI.stopWebService();
 
       if (success) {
-        dispatch(setStatus('stopped'));
+        dispatch(setStatusForBatch({ batch, status: 'stopped' }));
         dispatch(setUrl(null));
       } else {
-        dispatch(setError('Failed to stop web service'));
-        dispatch(setStatus('error'));
+        dispatch(setErrorForBatch({ batch, error: 'Failed to stop web service' }));
       }
 
       return success;
     } catch (error) {
       console.error('Stop web service error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      dispatch(setError(errorMessage));
-      dispatch(setStatus('error'));
+      dispatch(setErrorForBatch({ batch, error: errorMessage }));
       throw error;
     } finally {
-      dispatch(setOperating(false));
+      dispatch(setOperatingForBatch({ batch, operating: false }));
     }
   }
 );
@@ -264,32 +262,29 @@ export const stopWebService = createAsyncThunk(
  */
 export const restartWebService = createAsyncThunk(
   'webService/restart',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
+    dispatch(beginStartupBatch({ status: 'stopping', checking: false }));
+    const batch = (getState() as { webService: { startupBatch: number } }).webService.startupBatch;
     try {
-      dispatch(setOperating(true));
-      dispatch(setStatus('stopping'));
-      dispatch(setError(null));
+      dispatch(setErrorForBatch({ batch, error: null }));
 
       const success: boolean = await window.electronAPI.restartWebService();
 
       if (success) {
-        dispatch(setStatus('running'));
-        // Fetch updated status
-        await dispatch(fetchWebServiceStatus());
+        dispatch(setStatusForBatch({ batch, status: 'starting' }));
+        await dispatch(fetchWebServiceStatus(batch));
       } else {
-        dispatch(setError('Failed to restart web service'));
-        dispatch(setStatus('error'));
+        dispatch(setErrorForBatch({ batch, error: 'Failed to restart web service' }));
       }
 
       return success;
     } catch (error) {
       console.error('Restart web service error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      dispatch(setError(errorMessage));
-      dispatch(setStatus('error'));
+      dispatch(setErrorForBatch({ batch, error: errorMessage }));
       throw error;
     } finally {
-      dispatch(setOperating(false));
+      dispatch(setOperatingForBatch({ batch, operating: false }));
     }
   }
 );
@@ -300,11 +295,17 @@ export const restartWebService = createAsyncThunk(
  */
 export const fetchWebServiceStatus = createAsyncThunk(
   'webService/fetchStatus',
-  async (_, { dispatch }) => {
+  async (batch: number | undefined, { dispatch }) => {
     try {
       const status: ProcessInfo = await window.electronAPI.getWebServiceStatus();
-      dispatch(setProcessInfo(status));
-      dispatch(setError(null));
+      if (batch === undefined) {
+        dispatch(setProcessInfo(status));
+      } else {
+        dispatch(setProcessInfoForBatch({ batch, info: status }));
+      }
+      if (batch === undefined) {
+        dispatch(setError(null));
+      }
       return status;
     } catch (error) {
       console.error('Fetch web service status error:', error);
@@ -630,6 +631,8 @@ export const checkDependenciesAfterInstall = createAsyncThunk(
 export const initializeWebService = createAsyncThunk(
   'webService/initialize',
   async (_, { dispatch, getState }) => {
+    dispatch(advanceStartupBatch());
+
     // Try to fetch initial data
     try {
       const platform: string = await window.electronAPI.getPlatform();

@@ -5,6 +5,9 @@ import reducer, {
   setInstallProgress,
   setInstallingVersionId,
   setStartupFailure,
+  beginStartupBatch,
+  setProcessInfoForBatch,
+  StartupPhase,
   showStartupFailureDialog,
   type StartupFailurePayload,
 } from '../webServiceSlice.js';
@@ -56,5 +59,40 @@ describe('webServiceSlice startup failure dialog state', () => {
     assert.equal(progressing.isInstalling, true);
     assert.equal(progressing.installingVersionId, 'version-1');
     assert.equal(cleared.installingVersionId, null);
+  });
+
+  it('ignores a late process result from an older startup batch', () => {
+    const firstBatch = reducer(undefined, beginStartupBatch());
+    const secondBatch = reducer(firstBatch, beginStartupBatch());
+    const current = reducer(secondBatch, setProcessInfoForBatch({
+      batch: secondBatch.startupBatch,
+      info: {
+        status: 'running',
+        uptime: 1000,
+        startTime: 1,
+        url: 'http://localhost:36556',
+        restartCount: 0,
+        phase: StartupPhase.Running,
+        host: 'localhost',
+        port: 36556,
+      },
+    }));
+    const unchanged = reducer(current, setProcessInfoForBatch({
+      batch: firstBatch.startupBatch,
+      info: {
+        status: 'error',
+        uptime: 0,
+        startTime: null,
+        url: null,
+        restartCount: 0,
+        phase: StartupPhase.Error,
+        host: 'localhost',
+        port: 36556,
+      },
+    }));
+
+    assert.equal(current.status, 'running');
+    assert.equal(unchanged.status, 'running');
+    assert.equal(unchanged.startupBatch, secondBatch.startupBatch);
   });
 });
