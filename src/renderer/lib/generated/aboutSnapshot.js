@@ -26,13 +26,6 @@ export const bundledAboutSnapshotPayload = {
       "url": "https://apps.microsoft.com/detail/9N3PM0N3SVDW"
     },
     {
-      "id": "steam",
-      "type": "link",
-      "label": "Steam",
-      "regionPriority": "international-first",
-      "url": "https://store.steampowered.com/app/4625540/Hagicode/"
-    },
-    {
       "id": "bilibili",
       "type": "link",
       "label": "Bilibili",

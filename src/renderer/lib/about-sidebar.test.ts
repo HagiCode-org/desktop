@@ -18,7 +18,7 @@ describe('about sidebar model', () => {
     const traditionalChineseModel = buildSidebarAboutModel('zh-Hant', snapshot, 'snapshot');
 
     assert.deepEqual(englishModel.sections.map((section) => section.id), ['store', 'community', 'content']);
-    assert.deepEqual(englishModel.sections[0]?.entries.map((entry) => entry.id), ['steam']);
+    assert.deepEqual(englishModel.sections[0]?.entries.map((entry) => entry.id), ['windows-store']);
     assert.deepEqual(englishModel.sections[1]?.entries.map((entry) => entry.id), ['discord', 'feishu-group', 'qq-group']);
     assert.deepEqual(englishModel.sections[2]?.entries.slice(0, 5).map((entry) => entry.id), [
       'youtube',
@@ -39,6 +39,26 @@ describe('about sidebar model', () => {
       'douyin-qr',
       'wechat-account',
     ]);
+  });
+
+  it('does not render Steam entries from runtime snapshots', async () => {
+    const snapshot = normalizeAboutSnapshotData({
+      ...bundledAboutSnapshotPayload,
+      entries: [
+        ...bundledAboutSnapshotPayload.entries,
+        {
+          id: 'steam',
+          type: 'link',
+          label: 'Steam',
+          regionPriority: 'international-first',
+          url: 'https://store.steampowered.com/app/4625540/Hagicode/',
+        },
+      ],
+    });
+    const model = buildSidebarAboutModel('en-US', snapshot, 'runtime');
+
+    assert.equal(model.sections.flatMap((section) => section.entries).some((entry) => entry.id === 'steam'), false);
+    assert.deepEqual(model.sections[0]?.entries.map((entry) => entry.id), ['windows-store']);
   });
 
   it('normalizes media URLs and rejects invalid payloads', () => {

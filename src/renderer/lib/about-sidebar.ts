@@ -11,7 +11,7 @@ export const ABOUT_SNAPSHOT_VERSION = '1.0.0';
 export const ABOUT_SNAPSHOT_REGION_PRIORITIES = ['china-first', 'international-first'] as const;
 export const REQUIRED_ABOUT_ENTRY_IDS = [
   'youtube',
-  'steam',
+  'windows-store',
   'bilibili',
   'xiaohongshu',
   'douyin-account',
@@ -23,7 +23,8 @@ export const REQUIRED_ABOUT_ENTRY_IDS = [
 ] as const;
 export const ABOUT_SECTION_ORDER = ['store', 'community', 'content'] as const;
 
-const STORE_ENTRY_IDS = new Set(['steam']);
+const HIDDEN_ENTRY_IDS = new Set(['steam']);
+const STORE_ENTRY_IDS = new Set(['windows-store']);
 const COMMUNITY_ENTRY_IDS = new Set(['qq-group', 'feishu-group', 'discord']);
 const ENTRY_ORDER = [
   'feishu-group',
@@ -31,7 +32,7 @@ const ENTRY_ORDER = [
   'discord',
   'youtube',
   'product-hunt',
-  'steam',
+  'windows-store',
   'bilibili',
   'xiaohongshu',
   'douyin-account',
@@ -374,7 +375,9 @@ export function buildSidebarAboutModel(
   const sections = ABOUT_SECTION_ORDER.map((sectionId) => {
     const sectionEntries = sortEntries(
       locale,
-      snapshot.entries.filter((entry) => getSectionId(entry) === sectionId),
+      snapshot.entries.filter(
+        (entry) => !HIDDEN_ENTRY_IDS.has(entry.id) && getSectionId(entry) === sectionId,
+      ),
     ).map((entry) => mapEntryToSidebarEntry(entry));
 
     return {
