@@ -98,11 +98,23 @@ Add these repository secrets:
 
 The workflow uses an explicit signing policy:
 
-- `push` to `main`: build artifacts, skip signing, mark build as unsigned.
-- `push` tag `v*.*.*`: require signing, fail before upload if configuration is missing or verification fails.
-- `workflow_dispatch`: use the `sign_windows_release` boolean input to decide whether signing is required.
+- Azure Signing is currently paused by `AZURE_SIGNING_PAUSED` in
+  `.github/workflows/reusable-build-windows.yml`. While it is `true`, every
+  Windows build skips configuration validation, Azure OIDC login, Artifact
+  Signing, and signature verification, including production builds and manual
+  runs with `sign_windows_release=true`.
+- While paused, Windows packaging and uploads continue with unsigned artifacts.
+  The workflow summary identifies the pause and the unsigned output.
+- After the pause is lifted, `push` to `main` builds artifacts and skips signing.
+- After the pause is lifted, `push` tag `v*.*.*` requires signing and fails before
+  upload if configuration is missing or verification fails.
+- After the pause is lifted, `workflow_dispatch` uses the `sign_windows_release`
+  boolean input to decide whether signing is required.
 
 This keeps development builds fast while enforcing fail-closed behavior for release builds.
+
+To restore Azure Signing, set `AZURE_SIGNING_PAUSED` to `false` and verify the
+Azure configuration and signing paths with a production or manual release run.
 
 ## Parallel Build And Upload Model
 
