@@ -27,6 +27,7 @@ env:
   NODE_VERSION: "22"
   HAGISCRIPT_VERSION: "latest"
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  AZURE_SIGNING_PAUSED: "true"
 
 jobs:
   build-windows:
@@ -90,23 +91,48 @@ jobs:
         id: signing_policy
         shell: bash
         run: |
-          if [[ "${{ inputs.is_production_build }}" == 'true' ]]; then
+          if [[ "${AZURE_SIGNING_PAUSED}" == 'true' ]]; then
+            required=false
+            active=false
+            paused=true
+            reason='Azure Signing is paused; continuing with unsigned artifacts'
+          elif [[ "${{ inputs.is_production_build }}" == 'true' ]]; then
             required=true
+            active=true
+            paused=false
             reason='production build'
           elif [[ "${{ inputs.sign_windows_release }}" == 'true' ]]; then
             required=true
+            active=true
+            paused=false
             reason='manual workflow_dispatch override'
           else
             required=false
+            active=false
+            paused=false
             reason='non-release build'
           fi
 
           echo "required=${required}" >> "$GITHUB_OUTPUT"
+          echo "active=${active}" >> "$GITHUB_OUTPUT"
+          echo "paused=${paused}" >> "$GITHUB_OUTPUT"
           echo "reason=${reason}" >> "$GITHUB_OUTPUT"
           echo "Windows signing required: ${required} (${reason})"
 
+      - name: Summarize paused Azure Signing
+        if: steps.signing_policy.outputs.paused == 'true'
+        shell: bash
+        run: |
+          {
+            echo '## Azure Signing paused'
+            echo
+            echo '- Azure Signing is currently paused for Windows builds.'
+            echo '- Azure configuration validation, Azure login, and Artifact Signing are skipped.'
+            echo '- This run continues as an unsigned Windows build.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Validate Artifact Signing configuration
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.active == 'true'
         shell: bash
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -241,7 +267,7 @@ jobs:
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
 
       - name: Preserve unsigned Windows artifacts
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && (steps.signing_policy.outputs.active == 'true' || steps.signing_policy.outputs.paused == 'true')
         shell: bash
         run: |
           set -euo pipefail
@@ -407,7 +433,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_payload_signable_count=$($zipPayloadRootExecutables.Count)"
 
       - name: Azure login for Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.active == 'true'
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -415,7 +441,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign Windows artifacts with Artifact Signing
-        if: success() && steps.signing_policy.outputs.required == 'true'
+        if: success() && steps.signing_policy.outputs.active == 'true'
         id: windows_signing
         continue-on-error: ${{ matrix.target.id == 'msix' }}
         uses: azure/artifact-signing-action@v2
@@ -444,7 +470,7 @@ jobs:
           Write-Warning 'MSIX signing failed; skipping signed artifact upload and retaining only the unsigned MSIX artifact.'
 
       - name: Verify Windows signatures
-        if: success() && steps.signing_policy.outputs.required == 'true' && matrix.target.id != 'msix'
+        if: success() && steps.signing_policy.outputs.active == 'true' && matrix.target.id != 'msix'
         shell: bash
         env:
           VERIFY_STRICT: "true"
@@ -530,7 +556,7 @@ jobs:
           if-no-files-found: error
 
       - name: Code signing failure notification
-        if: failure()
+        if: failure() && steps.signing_policy.outputs.active == 'true'
         shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:FEISHU_WEBHOOK_URL)) {
