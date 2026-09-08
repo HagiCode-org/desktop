@@ -66,7 +66,6 @@ resources/portable-fixed
 resources/windows-store-purchase-addon
 resources/toolchain
 resources/code-server
-resources/omniroute
 build
 
 .cache
