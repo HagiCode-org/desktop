@@ -137,6 +137,7 @@ jobs:
         name: r2-sync-finalize-result
         path: artifacts/finalize-result.json
         if-no-files-found: warn
+        retention-days: 7
 
     - name: Append workflow summary
       if: always()

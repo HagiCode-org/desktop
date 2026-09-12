@@ -170,6 +170,7 @@ jobs:
           artifacts/r2-upload-plan.json
           artifacts/r2-upload-matrix.json
         if-no-files-found: error
+        retention-days: 7
 
   upload:
     name: Upload R2 Shard ${{ matrix.shard.shardId }}
@@ -252,6 +253,7 @@ jobs:
         name: publish-result-${{ matrix.shard.shardId }}
         path: artifacts/publish-result-${{ matrix.shard.shardId }}.json
         if-no-files-found: warn
+        retention-days: 7
 
     - name: Append shard summary
       if: always()
