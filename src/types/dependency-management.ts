@@ -13,15 +13,17 @@ export type ManagedNpmPackageId =
   | 'opencode'
   | 'qoder'
   | 'gemini'
-  | 'impeccable';
+  | 'impeccable'
+  | 'oh-my-pi';
 
 export type NpmEnvironmentComponentStatus = 'available' | 'unavailable' | 'error';
 export type ManagedNpmPackageStatus = 'installed' | 'not-installed' | 'unknown';
 export type ManagedNpmPackageCategory = 'workflow' | 'agent-cli' | 'developer-tool';
-export type ManagedNpmPackageInstallMode = 'sdk-sync';
+export type ManagedNpmPackageInstallMode = 'sdk-sync' | 'external-cli';
 export type DependencyManagementOperation = 'install' | 'uninstall' | 'sync';
 export type DependencyManagementProgressStage = 'started' | 'output' | 'completed' | 'failed';
 export type DependencyManagementMode = 'internal' | 'external';
+export type DependencyUninstallMode = 'internal' | 'global';
 export type DependencyManagementEnvironmentSource = 'desktop-managed' | 'externally-managed';
 export type VendoredRuntimeId = never;
 export type VendoredRuntimeInstallStatus = 'installed' | 'not-installed' | 'removed' | 'failed' | 'packaged';
@@ -50,9 +52,22 @@ export interface ManagedNpmPackageDefinition {
   requiredVersionRange?: string;
   category: ManagedNpmPackageCategory;
   installMode: ManagedNpmPackageInstallMode;
+  externalCli?: ManagedExternalCliMetadata;
   agentCliId?: AgentCliId;
   docsLinkId?: string;
   required?: boolean;
+}
+
+export interface ManagedExternalCliInstaller {
+  command: string;
+  args: string[];
+  shell?: boolean;
+}
+
+export interface ManagedExternalCliMetadata {
+  // Only catalog-owned commands are allowed; installer output is never trusted without PATH/version validation.
+  installers: Partial<Record<'darwin' | 'linux' | 'win32', ManagedExternalCliInstaller>>;
+  versionProbe: string[];
 }
 
 export interface VendoredRuntimeDefinition {
@@ -208,7 +223,8 @@ export type DependencyReadinessBlockingReasonCode =
   | 'environment-unavailable'
   | 'required-packages-missing'
   | 'agent-cli-not-selected'
-  | 'agent-cli-not-installed';
+  | 'agent-cli-not-installed'
+  | 'external-cli-not-ready';
 
 export interface DependencyReadinessPackageSummary {
   id: ManagedNpmPackageId;
@@ -243,6 +259,8 @@ export interface DependencyReadinessSummary {
   selectedAgentCliPackageIds: ManagedNpmPackageId[];
   installedSelectedAgentCliPackageIds: ManagedNpmPackageId[];
   ignoredSelectedAgentCliPackageIds: string[];
+  selectedDeveloperToolPackageIds: ManagedNpmPackageId[];
+  missingSelectedDeveloperToolPackageIds: ManagedNpmPackageId[];
   blockingReasons: DependencyReadinessBlockingReason[];
 }
 
@@ -262,6 +280,14 @@ export interface DependencyManagementOperationResult {
   status?: ManagedNpmPackageStatusSnapshot;
   error?: string;
   snapshot: DependencyManagementSnapshot;
+  noOp?: boolean;
+  dependents?: ManagedNpmPackageId[];
+}
+
+export interface DependencyManagementUninstallRequest {
+  packageId: ManagedNpmPackageId;
+  mode?: DependencyUninstallMode;
+  force?: boolean;
 }
 
 export interface DependencyManagementBatchSyncRequest {
@@ -285,7 +311,7 @@ export interface DependencyManagementBridge {
   getMirrorSettings: () => Promise<NpmMirrorSettings>;
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => Promise<DependencyManagementSnapshot>;
   install: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
-  uninstall: (packageId: ManagedNpmPackageId) => Promise<DependencyManagementOperationResult>;
+  uninstall: (request: ManagedNpmPackageId | DependencyManagementUninstallRequest) => Promise<DependencyManagementOperationResult>;
   syncPackages: (request: DependencyManagementBatchSyncRequest) => Promise<DependencyManagementBatchSyncResult>;
   enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => Promise<VendoredRuntimeLifecycleResult>;

@@ -246,6 +246,7 @@ export interface OnboardingState {
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
   selectedAgentCliPackageIds: ManagedNpmPackageId[];
+  selectedDeveloperToolPackageIds: ManagedNpmPackageId[];
   dependencyModeSettings: DependencyManagementModeSettings | null;
   dependencyModeSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
   dependencySnapshot: DependencyManagementSnapshot | null;
