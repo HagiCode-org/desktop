@@ -35,7 +35,6 @@ export default function DependencyPreparationStep() {
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const latestProgress = Object.values(dependencyOperationProgress).at(-1);
   const environmentAvailable = readiness?.environmentAvailable ?? false;
-  const hasSelectedAgentCli = selectedAgentCliPackageIds.length > 0;
   const packagesToInstall = readiness
     ? uniquePackageIds([
       ...readiness.missingRequiredPackageIds,
@@ -44,7 +43,6 @@ export default function DependencyPreparationStep() {
       ...readiness.versionMismatchSelectedAgentCliPackageIds,
     ])
     : [];
-  const confirmDisabled = !environmentAvailable || isDependencyOperationActive || !hasSelectedAgentCli;
   const openNodeEnvironmentFaq = () => {
     void window.electronAPI.openExternal(t('onboarding:dependencyPreparation.environment.faqUrl'));
   };

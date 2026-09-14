@@ -36,6 +36,9 @@ describe('dependency management settings renderer wiring', () => {
     assert.match(modeSettingsSource, /const controlDisabled = !settings \|\| isSaving \|\| settings\?\.lockedByRuntime;/);
     assert.match(modeSettingsSource, /settings\?\.lockedByRuntime/);
     assert.match(modeSettingsSource, /settings\.lockedByRuntime/);
+    assert.match(modeSettingsSource, /disabled=\{controlDisabled\}/);
+    assert.match(modeSettingsSource, /window\.addEventListener\('focus'/);
+    assert.match(modeSettingsSource, /settings\.dependencyManagementMode\.takesEffect/);
   });
 
   it('adds localized settings copy for dependency management mode labels and read-only explanations', async () => {
@@ -46,6 +49,7 @@ describe('dependency management settings renderer wiring', () => {
 
     assert.match(enPagesSource, /dependencyManagement:\s*Dependency Management/);
     assert.match(enPagesSource, /label: External \(read-only\)/);
+    assert.match(enPagesSource, /takesEffect: Mode applied/);
     assert.match(zhPagesSource, /dependencyManagement:\s*依赖管理模式/);
     assert.match(zhPagesSource, /label: 外部模式（只读）/);
   });

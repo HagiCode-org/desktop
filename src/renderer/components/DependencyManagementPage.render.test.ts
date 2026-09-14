@@ -19,7 +19,7 @@ describe('dependency management renderer wiring', () => {
       fs.readFile(appPath, 'utf8'),
     ]);
 
-    assert.match(sidebarSource, /\{ id: 'dependency-management', labelKey: 'sidebar\.dependencyManagement', icon: PackageOpen \}/);
+    assert.match(sidebarSource, /\{ id: 'dependency-management', labelKey: 'sidebar\.dependencyManagement', icon: PackageOpen, emphasis: 'default' \}/);
     assert.match(appSource, /import DependencyManagementPage from '\.\/components\/DependencyManagementPage';/);
     assert.match(appSource, /\{currentView === 'dependency-management' && <DependencyManagementPage \/>\}/);
   });
@@ -153,10 +153,12 @@ describe('dependency management renderer wiring', () => {
     assert.match(source, /const showMutationActions = mutationsAvailable;/);
     assert.match(source, /const actionsDisabled = !environmentAvailable \|\| !mutationsAvailable \|\| isRefreshingSnapshot \|\| isPending \|\| Boolean\(activePackageId\) \|\| isRepairCompletionRunning;/);
     assert.match(source, /showMutationActions=\{showMutationActions\}/);
-    assert.doesNotMatch(source, /snapshot\.mode\.lockedByRuntime/);
-    assert.doesNotMatch(source, /dependencyManagement\.mode\.windowsStoreLocked/);
+    assert.match(source, /snapshot\.mode\.lockedByRuntime/);
+    assert.match(source, /snapshot\.mode\.readOnlyReason/);
+    assert.match(source, /disabled=\{isSavingMode \|\| snapshot\.mode\.lockedByRuntime\}/);
     assert.match(source, /dependencyManagement\.mode\.externalReadOnly/);
-    assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\) \|\| !mutationsAvailable;/);
+    assert.match(source, /dependencyManagement\.mode\.takesEffect/);
+    assert.match(source, /const mirrorToggleDisabled = isSavingMirrorSettings \|\| Boolean\(activePackageId\);/);
   });
 
   it('renders mirror acceleration controls with optimistic updates and rollback on failure', async () => {

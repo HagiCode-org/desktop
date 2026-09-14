@@ -62,6 +62,10 @@ describe('onboarding dependency preparation integration', () => {
     assert.match(wizardSource, /dispatch\(refreshOnboardingDependencySnapshot\(\)\)/);
     assert.match(wizardSource, /const environmentAvailable = readiness\.environmentAvailable;/);
     assert.match(wizardSource, /readinessReady: readiness\.ready/);
+    assert.match(wizardSource, /installDisabled: !environmentAvailable[\s\S]*packagesToInstall\.length === 0/);
+    assert.match(wizardSource, /if \(dependencyActionState\.packagesToInstall\.length === 0\) \{\s*return;\s*\}/);
+    assert.match(wizardSource, /dispatch\(installOnboardingDependencyPackages\(dependencyActionState\.packagesToInstall\)\)/);
+    assert.match(wizardSource, /const effectiveCanGoNext = currentStep === OnboardingStep\.LanguageSelection[\s\S]*currentStep === OnboardingStep\.DependencyPreparation[\s\S]*\? !isDependencyOperationActive/);
     assert.equal(wizardSource.includes('currentStep === OnboardingStep.SharingAcceleration && !isDownloading'), false);
     assert.match(wizardSource, /currentStep === OnboardingStep\.DependencyPreparation[\s\S]*isDependencyOperationActive[\s\S]*dispatch\(goToNextStep\(\)\);[\s\S]*dispatch\(downloadPackage\(\)\);/);
   });

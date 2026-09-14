@@ -138,7 +138,12 @@ function applyDependencySnapshot(state: OnboardingState, snapshot: DependencyMan
   state.dependencyModeSettings = snapshot.mode;
   state.dependencyModeSettingsStatus = 'ready';
   state.dependencySnapshot = snapshot;
-  state.dependencyReadiness = evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds);
+  // evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds)
+  state.dependencyReadiness = evaluateDependencyReadiness(
+    snapshot,
+    state.selectedAgentCliPackageIds,
+    state.selectedDeveloperToolPackageIds,
+  );
   state.isDependencyPreparationComplete = state.dependencyReadiness.ready;
 
   if (state.currentStep === OnboardingStep.DependencyPreparation
@@ -186,6 +191,7 @@ const initialState: OnboardingState = {
   isRecoveringFromStartupFailure: false,
   dependencyCheckResults: [],
   selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds,
+  selectedDeveloperToolPackageIds: [],
   dependencyModeSettings: null,
   dependencyModeSettingsStatus: 'idle',
   dependencySnapshot: null,
@@ -247,6 +253,12 @@ export const onboardingSlice = createSlice({
     },
     setSelectedAgentCliPackageIds: (state, action: PayloadAction<ManagedNpmPackageId[]>) => {
       state.selectedAgentCliPackageIds = action.payload;
+      if (state.dependencySnapshot) {
+        applyDependencySnapshot(state, state.dependencySnapshot);
+      }
+    },
+    setSelectedDeveloperToolPackageIds: (state, action: PayloadAction<ManagedNpmPackageId[]>) => {
+      state.selectedDeveloperToolPackageIds = action.payload;
       if (state.dependencySnapshot) {
         applyDependencySnapshot(state, state.dependencySnapshot);
       }
@@ -591,6 +603,7 @@ export const {
   setServiceProgress,
   setDependencyCheckResults,
   setSelectedAgentCliPackageIds,
+  setSelectedDeveloperToolPackageIds,
   setOnboardingDependencyProgress,
   addScriptOutput,
   clearScriptOutput,
@@ -619,6 +632,7 @@ export const selectOnboardingDependencyModeSettings = (state: { onboarding: Onbo
 export const selectOnboardingDependencySnapshot = (state: { onboarding: OnboardingState }) => state.onboarding.dependencySnapshot;
 export const selectOnboardingDependencyReadiness = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyReadiness;
 export const selectOnboardingSelectedAgentCliPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedAgentCliPackageIds;
+export const selectOnboardingSelectedDeveloperToolPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedDeveloperToolPackageIds;
 export const selectIsDependencyPreparationComplete = (state: { onboarding: OnboardingState }) => state.onboarding.isDependencyPreparationComplete;
 export const selectLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.legalDocuments;
 export const selectLegalMetadataSource = (state: { onboarding: OnboardingState }) => state.onboarding.legalMetadataSource;

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type {
   ManagedNpmPackageId,
   DependencyManagementBridge,
+  DependencyManagementMode,
   DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
   VendoredRuntimeId,
@@ -15,7 +16,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   appendBatchSyncLog,
   evaluateDependencyRepairIntent,
@@ -68,6 +79,9 @@ export default function DependencyManagementPage() {
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [repairCompletionState, setRepairCompletionState] = useState<RepairCompletionState>('idle');
   const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
+  const [isSavingMode, setIsSavingMode] = useState(false);
+  const [modeSwitchApplied, setModeSwitchApplied] = useState(false);
+  const [pendingUninstall, setPendingUninstall] = useState<ManagedNpmPackageId | null>(null);
   const [isPending, startTransition] = useTransition();
   const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -83,17 +97,44 @@ export default function DependencyManagementPage() {
     });
   };
 
-  const refreshSnapshot = async () => {
+  const refreshSnapshot = async (): Promise<boolean> => {
     setErrorMessage(null);
     setIsRefreshingSnapshot(true);
     try {
       const nextSnapshot = await getDependencyManagementBridge().refresh();
       applySnapshot(nextSnapshot);
+      return true;
     } catch (error) {
       setPageStatus('error');
       setErrorMessage(error instanceof Error ? error.message : String(error));
+      return false;
     } finally {
       setIsRefreshingSnapshot(false);
+    }
+  };
+
+  const handleModeChange = async (value: string) => {
+    if (!snapshot || isSavingMode || snapshot.mode.lockedByRuntime) {
+      return;
+    }
+
+    const nextMode = value as DependencyManagementMode;
+    if (nextMode === snapshot.mode.configuredMode) {
+      return;
+    }
+
+    setIsSavingMode(true);
+    setModeSwitchApplied(false);
+    setErrorMessage(null);
+    try {
+      await getDependencyManagementBridge().setMode(nextMode);
+      if (await refreshSnapshot()) {
+        setModeSwitchApplied(true);
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsSavingMode(false);
     }
   };
 
@@ -200,7 +241,7 @@ export default function DependencyManagementPage() {
     batchLogPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [isBatchSyncRunning]);
 
-  const runOperation = async (
+  const executeOperation = async (
     packageId: ManagedNpmPackageId,
     action: 'install' | 'uninstall',
   ) => {
@@ -235,6 +276,17 @@ export default function DependencyManagementPage() {
         [packageId]: message,
       }));
     }
+  };
+
+  const runOperation = async (
+    packageId: ManagedNpmPackageId,
+    action: 'install' | 'uninstall',
+  ) => {
+    if (action === 'uninstall') {
+      setPendingUninstall(packageId);
+      return;
+    }
+    await executeOperation(packageId, action);
   };
 
   const runBatchInstall = async (packageIds: ManagedNpmPackageId[]) => {
@@ -318,7 +370,7 @@ export default function DependencyManagementPage() {
   const showMutationActions = mutationsAvailable;
   const showSuggestedCommand = snapshot?.mode.effectiveMode === 'external';
   const actionsDisabled = !environmentAvailable || !mutationsAvailable || isRefreshingSnapshot || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
-  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId) || !mutationsAvailable;
+  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const suggestedCommandRegistryUrl = snapshot?.mirrorSettings.enabled ? mirrorRegistryUrl : null;
   const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
@@ -469,6 +521,39 @@ export default function DependencyManagementPage() {
                   </Badge>
                 </div>
 
+                <RadioGroup
+                  value={snapshot.mode.configuredMode}
+                  onValueChange={(value) => void handleModeChange(value)}
+                  disabled={isSavingMode || snapshot.mode.lockedByRuntime}
+                  className="gap-3"
+                >
+                  {(['internal', 'external'] as const).map((mode) => (
+                    <Label
+                      key={mode}
+                      htmlFor={`dependency-management-page-mode-${mode}`}
+                      className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/20 p-4"
+                    >
+                      <RadioGroupItem value={mode} id={`dependency-management-page-mode-${mode}`} className="mt-1" />
+                      <div className="space-y-1">
+                        <div className="font-medium">{t(`dependencyManagement.mode.options.${mode}.label`)}</div>
+                        <p className="text-sm text-muted-foreground">
+                          {t(`dependencyManagement.mode.options.${mode}.description`)}
+                        </p>
+                      </div>
+                    </Label>
+                  ))}
+                </RadioGroup>
+
+                {snapshot.mode.readOnlyReason ? (
+                  <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    {snapshot.mode.readOnlyReason}
+                  </div>
+                ) : null}
+
+                {modeSwitchApplied ? (
+                  <p className="text-sm text-muted-foreground">{t('dependencyManagement.mode.takesEffect')}</p>
+                ) : null}
+
                 {!snapshot.mode.mutationsAvailable ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
@@ -502,6 +587,45 @@ export default function DependencyManagementPage() {
               onInstallSelected={() => void runBatchInstall(baseSelectedEligibleIds)}
               onRunOperation={(packageId, action) => void runOperation(packageId, action)}
             />
+
+            <Dialog open={pendingUninstall !== null} onOpenChange={(open) => {
+              if (!open) {
+                setPendingUninstall(null);
+              }
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('dependencyManagement.uninstall.title')}</DialogTitle>
+                  <DialogDescription>
+                    {pendingUninstall
+                      ? t('dependencyManagement.uninstall.description', {
+                        name: snapshot.packages.find((item) => item.id === pendingUninstall)?.definition.displayName ?? pendingUninstall,
+                        mode: snapshot.mode.effectiveMode,
+                      })
+                      : null}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPendingUninstall(null)} disabled={Boolean(activePackageId)}>
+                    {t('dependencyManagement.uninstall.cancel')}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (pendingUninstall) {
+                        const packageId = pendingUninstall;
+                        setPendingUninstall(null);
+                        void executeOperation(packageId, 'uninstall');
+                      }
+                    }}
+                    disabled={!pendingUninstall || Boolean(activePackageId)}
+                  >
+                    {Boolean(activePackageId) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {t('dependencyManagement.uninstall.confirm')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <NpmPackageTable
               titleKey="dependencyManagement.packageTable.groups.agentCli.title"
@@ -646,9 +770,7 @@ export default function DependencyManagementPage() {
                     {t('dependencyManagement.mirror.registryUrl')}: {mirrorRegistryUrl}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {!snapshot.mode.mutationsAvailable
-                      ? t('dependencyManagement.mirror.readOnlyHelp')
-                      : snapshot.mirrorSettings.enabled
+                    {snapshot.mirrorSettings.enabled
                       ? t('dependencyManagement.mirror.enabledHelp')
                       : t('dependencyManagement.mirror.disabledHelp')}
                   </p>

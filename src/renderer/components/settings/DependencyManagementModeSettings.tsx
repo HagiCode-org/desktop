@@ -24,27 +24,36 @@ export function DependencyManagementModeSettings() {
   const { t } = useTranslation('pages');
   const [settings, setSettings] = useState<DependencyManagementModeSettingsState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveApplied, setSaveApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let disposed = false;
 
-    void getDependencyManagementBridge()
-      .getModeSettings()
-      .then((nextSettings) => {
+    const loadSettings = async () => {
+      try {
+        const nextSettings = await getDependencyManagementBridge().getModeSettings();
         if (!disposed) {
           setSettings(nextSettings);
           setError(null);
         }
-      })
-      .catch((loadError) => {
+      } catch (loadError) {
         if (!disposed) {
           setError(loadError instanceof Error ? loadError.message : String(loadError));
         }
-      });
+      }
+    };
+
+    const handleFocus = () => {
+      void loadSettings();
+    };
+
+    void loadSettings();
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       disposed = true;
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -59,10 +68,12 @@ export function DependencyManagementModeSettings() {
     }
 
     setIsSaving(true);
+    setSaveApplied(false);
     setError(null);
     try {
       const snapshot = await getDependencyManagementBridge().setMode(nextMode);
       setSettings(snapshot.mode);
+      setSaveApplied(true);
       toast.success(t('settings.dependencyManagementMode.messages.saveSuccess'));
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : String(saveError);
@@ -73,7 +84,7 @@ export function DependencyManagementModeSettings() {
     }
   };
 
-  const configuredMode = settings?.configuredMode ?? 'internal';
+  const configuredMode = settings?.configuredMode ?? 'external';
   const effectiveMode = settings?.effectiveMode ?? configuredMode;
   const controlDisabled = !settings || isSaving || settings?.lockedByRuntime;
 
@@ -122,6 +133,10 @@ export function DependencyManagementModeSettings() {
           <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
             {settings.readOnlyReason}
           </div>
+        ) : null}
+
+        {saveApplied ? (
+          <p className="text-sm text-muted-foreground">{t('settings.dependencyManagementMode.takesEffect')}</p>
         ) : null}
 
         {error ? (

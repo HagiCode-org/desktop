@@ -12,6 +12,9 @@ import {
   selectOnboardingDistributionState,
   selectOnboardingDependencyModeSettings,
   selectOnboardingSelectedAgentCliPackageIds,
+  selectOnboardingSelectedDeveloperToolPackageIds,
+  selectShowSkipConfirm,
+  setShowSkipConfirm,
   selectIsActive,
   selectOnboardingMode,
   selectOnboardingRuntimeProvisioned,
@@ -27,6 +30,7 @@ import {
   loadLegalDocuments,
   loadOnboardingDependencyModeSettings,
   refreshOnboardingDependencySnapshot,
+  skipOnboarding,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
 import { changeLanguage } from '../../store/thunks/i18nThunks';
@@ -43,6 +47,7 @@ import { Sheet, SheetContent } from '../ui/sheet';
 import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress } from '../../../types/onboarding';
 import { getDesktopLanguage, resolveDesktopLanguageCode } from '../../../shared/desktop-languages';
+import SkipConfirmDialog from './SkipConfirmDialog';
 
 interface OnboardingWizardProps {
   onComplete?: () => void;
@@ -82,6 +87,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const dependencyModeSettingsStatus = useSelector((state: RootState) => state.onboarding.dependencyModeSettingsStatus);
   const onboardingDependencyReadiness = useSelector((state: RootState) => selectOnboardingDependencyReadiness(state));
   const onboardingSelectedAgentCliPackageIds = useSelector((state: RootState) => selectOnboardingSelectedAgentCliPackageIds(state));
+  const onboardingSelectedDeveloperToolPackageIds = useSelector((state: RootState) => selectOnboardingSelectedDeveloperToolPackageIds(state));
+  const showSkipConfirm = useSelector((state: RootState) => selectShowSkipConfirm(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
   const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const onboardingError = useSelector((state: RootState) => state.onboarding.error);
@@ -251,6 +258,14 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     dispatch(goToPreviousStep());
   };
 
+  const handleSkip = () => {
+    dispatch(setShowSkipConfirm(true));
+  };
+
+  const confirmSkip = () => {
+    void dispatch(skipOnboarding());
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case OnboardingStep.LanguageSelection:
@@ -353,13 +368,22 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     const selectedAgentCliMissingPackageIds = readiness.agentCliPackages
       .filter((item) => selectedAgentCliPackageIdSet.has(item.id) && item.status !== 'installed')
       .map((item) => item.id);
-    const packagesToInstall = [...new Set([...requiredMissingPackageIds, ...selectedAgentCliMissingPackageIds])];
-    const hasSelectedAgentCli = selectedAgentCliPackageIds.length > 0;
+    const selectedDeveloperToolPackageIdSet = new Set(onboardingSelectedDeveloperToolPackageIds);
+    const selectedDeveloperToolMissingPackageIds = readiness.optionalPackages
+      .filter((item) => selectedDeveloperToolPackageIdSet.has(item.id) && item.status !== 'installed')
+      .map((item) => item.id);
+    const packagesToInstall = [...new Set([
+      ...requiredMissingPackageIds,
+      ...selectedAgentCliMissingPackageIds,
+      ...selectedDeveloperToolMissingPackageIds,
+    ])];
     const environmentAvailable = readiness.environmentAvailable;
 
     return {
       refreshDisabled: isDependencyOperationActive,
-      installDisabled: !environmentAvailable || isDependencyOperationActive || !hasSelectedAgentCli,
+      installDisabled: !environmentAvailable
+        || isDependencyOperationActive
+        || packagesToInstall.length === 0,
       installLabel: readiness.ready
         ? t('onboarding:dependencyPreparation.actions.recheck')
         : t('onboarding:dependencyPreparation.actions.install'),
@@ -371,6 +395,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     currentStep,
     onboardingDependencyReadiness,
     onboardingSelectedAgentCliPackageIds,
+    onboardingSelectedDeveloperToolPackageIds,
     isDependencyOperationActive,
     t,
   ]);
@@ -381,7 +406,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
 
     if (dependencyActionState.packagesToInstall.length === 0) {
-      void dispatch(refreshOnboardingDependencySnapshot());
       return;
     }
 
@@ -445,6 +469,13 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   </div>
 
                   <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <Button
+                      variant="ghost"
+                      onClick={handleSkip}
+                      className="w-full text-muted-foreground sm:w-auto"
+                    >
+                      {t('actions.skip')}
+                    </Button>
                     {dependencyActionState?.readinessReady
                       ? (
                         <>
@@ -500,6 +531,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 canGoPrevious={canGoPreviousInCommonActions}
                 onNext={handleNext}
                 onPrevious={handlePrevious}
+                onSkip={currentStep === OnboardingStep.Welcome ? handleSkip : undefined}
                 skipLabel={skipLabel}
                 nextLabel={nextLabel}
               />
@@ -507,6 +539,11 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
         </div>
       </SheetContent>
+      <SkipConfirmDialog
+        open={showSkipConfirm}
+        onConfirm={confirmSkip}
+        onCancel={() => dispatch(setShowSkipConfirm(false))}
+      />
     </Sheet>
   );
 }
