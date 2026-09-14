@@ -226,6 +226,7 @@ dependencyPreparation:
   title: 準備依賴項
   description: 安裝 HagiCode Desktop 必要的命令列依賴項，並選擇至少一個用於編碼會話的 Agent CLI。
   loading: 正在檢查 Desktop 託管的依賴項...
+  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   skip:
     title: 此步驟可以跳過
     description: 您可以先繼續到下載步驟，暫時不安裝依賴。安裝操作會把所選套件加入 Desktop 託管的 Node/npm 環境，之後也可以在應用內再安裝。
@@ -287,6 +288,13 @@ legal:
   decline: 拒絕並退出
   declining: 正在退出...
   refresh: 刷新協議訊息
+  lastUpdated: 'Last updated: {{date}}'
+  source:
+    fresh: Latest
+    cache: Cached
+    unavailable: Unavailable
+  openEula: Open EULA
+  openPrivacy: Open Privacy Policy
   metadata:
     remote: 已載入最新協定版本
     cache: 正在使用最近快取的協定版本

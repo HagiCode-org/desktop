@@ -161,11 +161,14 @@ dependencyManagement:
     active: 模式：{{mode}}
     readOnlyTitle: 只读模式
     externalReadOnly: Desktop 当前只是在检查外部托管的全局 Node/npm 环境，无法执行安装、卸载或批量同步。
+    takesEffect: 模式已应用。设置会立即在依赖管理模块生效，并决定是否允许修改依赖包。
     options:
       internal:
-        label: 内部模式
+        label: 内部模式（Desktop 托管，已弃用）
+        description: Desktop 使用内置 Node/npm 工具链，并允许安装、卸载和批量同步操作。
       external:
-        label: 外部模式
+        label: 外部模式（只读）
+        description: Desktop 仅检查当前全局 Node/npm 环境，不改动包，也不会覆盖 npm 前缀路径。
   environment:
     title: Node 环境
     description: Desktop 使用自己的 Node/npm 运行时来承载托管 CLI 包。
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: 需要升级
     not-installed: 未安装
     unknown: 未知
+  uninstall:
+    title: 确认卸载
+    description: 要从{{mode}}依赖环境卸载{{name}}吗？已激活的组件会先停用。
+    cancel: 取消
+    confirm: 卸载
+    success: 组件已成功卸载。
+    alreadyRemoved: 组件已经移除。
+    blocked: 其他组件仍依赖此组件，无法卸载。
   packages:
     hagiscript:
       description: 为兼容旧界面而保留的独立 CLI 元数据。Desktop 现在通过内置 SDK 同步托管工具。
@@ -293,6 +304,8 @@ dependencyManagement:
       description: 通过官方 @google/gemini-cli npm 包分发的 Gemini CLI。
     impeccable:
       description: 为 AI 编码代理提供设计技能、命令与反模式检测的 Impeccable 工具。
+    ohMyPi:
+      description: 通过官方 @oh-my-pi/pi-coding-agent 包分发的 Oh My Pi 编码代理 CLI。
   categories:
     bootstrap: 旧版兼容
     workflow: 工作流

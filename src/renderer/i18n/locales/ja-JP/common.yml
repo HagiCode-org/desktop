@@ -161,11 +161,14 @@ dependencyManagement:
     active: 'モード: {{mode}}'
     readOnlyTitle: 読み取り専用モード
     externalReadOnly: Desktop は外部で管理されているグローバル Node/npm 環境を確認しています。インストール、アンインストール、一括同期の操作は利用できません。
+    takesEffect: モードを適用しました。依存関係管理モジュールに直ちに反映され、パッケージ変更の可否を決定します。
     options:
       internal:
-        label: 内部
+        label: 内部（Desktop 管理、非推奨）
+        description: Desktop は内蔵 Node/npm ツールチェーンを使用し、インストール、アンインストール、バッチ同期を許可します。
       external:
-        label: 外部
+        label: 外部（読み取り専用）
+        description: Desktop は現在のグローバル Node/npm 環境を確認するだけで、パッケージを変更したり npm プレフィックスを上書きしたりしません。
   environment:
     title: ノード環境
     description: Desktop は、管理対象 CLI パッケージに独自の Node/npm ランタイムを使用します。
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: Upgrade required
     not-installed: インストールされていません
     unknown: 不明
+  uninstall:
+    title: アンインストールの確認
+    description: "{{name}}を{{mode}}環境からアンインストールしますか？有効なコンポーネントは先に無効化されます。"
+    cancel: キャンセル
+    confirm: アンインストール
+    success: コンポーネントをアンインストールしました。
+    alreadyRemoved: コンポーネントはすでに削除されています。
+    blocked: 他のコンポーネントが依存しているためアンインストールできません。
   packages:
     hagiscript:
       description: 旧来のスタンドアロン CLI メタデータは互換性のために保持されています。Desktop は現在、組み込み SDK を通じて管理ツールを同期します。

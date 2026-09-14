@@ -161,11 +161,14 @@ dependencyManagement:
     active: 'Modus: {{mode}}'
     readOnlyTitle: Nur-Lese-Modus
     externalReadOnly: Desktop prüft derzeit eine extern verwaltete globale Node/npm-Umgebung. Installations-, Deinstallations- und Batch-Synchronisierungsvorgänge sind nicht verfügbar.
+    takesEffect: Modus angewendet. Die Änderung wird sofort im Abhängigkeitsmanagement wirksam und bestimmt, ob Paketänderungen möglich sind.
     options:
       internal:
-        label: Intern
+        label: Intern (Desktop-verwaltet, veraltet)
+        description: Desktop verwendet seine gebündelte Node/npm-Toolchain und erlaubt Installation, Deinstallation und Batch-Synchronisierung.
       external:
-        label: Extern
+        label: Extern (nur Lesen)
+        description: Desktop prüft die aktuelle globale Node/npm-Umgebung, ohne Pakete zu ändern oder npm-Präfixe zu überschreiben.
   environment:
     title: Knotenumgebung
     description: Desktop verwendet seine eigene Node/npm-Laufzeit für verwaltete CLI-Pakete.
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: Upgrade required
     not-installed: Nicht installiert
     unknown: Unbekannt
+  uninstall:
+    title: Deinstallation bestätigen
+    description: "{{name}} aus der {{mode}}-Umgebung deinstallieren? Aktive Komponenten werden zuerst deaktiviert."
+    cancel: Abbrechen
+    confirm: Deinstallieren
+    success: Komponente erfolgreich deinstalliert.
+    alreadyRemoved: Komponente war bereits entfernt.
+    blocked: Deinstallation nicht möglich, da andere Komponenten davon abhängen.
   packages:
     hagiscript:
       description: Metadaten der alten Standalone-CLI bleiben aus Kompatibilitätsgründen erhalten. Desktop synchronisiert verwaltete Werkzeuge jetzt über das integrierte SDK.

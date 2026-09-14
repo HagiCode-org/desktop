@@ -60,11 +60,12 @@ settings:
     effectiveMode: 当前生效模式：{{mode}}
     options:
       internal:
-        label: 内部模式（Desktop 托管）
+        label: 内部模式（Desktop 托管，已弃用）
         description: Desktop 使用内置 Node/npm 工具链，并允许安装、卸载和批量同步操作。
       external:
         label: 外部模式（只读）
         description: Desktop 仅检查当前全局 Node/npm 环境，不改动包，也不会覆盖 npm 前缀路径。
+    takesEffect: 模式已应用。设置会立即在依赖管理模块生效，并决定是否允许修改依赖包。
     messages:
       saveSuccess: 依赖管理模式已保存
       saveFailed: 保存依赖管理模式失败

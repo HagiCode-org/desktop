@@ -226,6 +226,7 @@ dependencyPreparation:
   title: 종속성 준비
   description: HagiCode Desktop에 필요한 명령줄 종속성을 설치하고 코딩 세션에 사용할 하나 이상의 에이전트 CLI를 선택합니다.
   loading: 데스크톱 관리 종속성을 확인하는 중...
+  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   skip:
     title: This step can be skipped
     description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
@@ -287,6 +288,13 @@ legal:
   decline: 거절하고 나가기
   declining: 종료 중...
   refresh: 법적 메타데이터 새로 고침
+  lastUpdated: 'Last updated: {{date}}'
+  source:
+    fresh: Latest
+    cache: Cached
+    unavailable: Unavailable
+  openEula: Open EULA
+  openPrivacy: Open Privacy Policy
   metadata:
     remote: 최신 법률 메타데이터가 로드되었습니다.
     cache: 마지막으로 성공적으로 캐시된 법적 메타데이터 사용

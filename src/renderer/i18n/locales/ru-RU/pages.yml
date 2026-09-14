@@ -55,21 +55,22 @@ settings:
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
+    title: Режим управления зависимостями
+    description: Выберите, будет ли Desktop управлять CLI-зависимостями или только проверять текущую глобальную среду Node/npm.
+    effectiveMode: 'Текущий режим: {{mode}}'
     options:
       internal:
-        label: Internal (Desktop-managed)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+        label: Внутренний (управляется Desktop, устарел)
+        description: Desktop использует встроенную цепочку Node/npm и разрешает установку, удаление и пакетную синхронизацию.
       external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+        label: Внешний (только чтение)
+        description: Desktop проверяет текущую глобальную среду Node/npm, не изменяя пакеты и не переопределяя префиксы npm.
+    takesEffect: Режим применён. Изменение сразу вступает в силу в модуле управления зависимостями и определяет, разрешено ли изменять пакеты.
     messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
+      saveSuccess: Режим управления зависимостями сохранён
+      saveFailed: Не удалось сохранить режим управления зависимостями
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: 'Ошибка сохранения: {{error}}'
   smartConfig:
     title: Оперативное руководство Smart Config
     description: Просмотрите решенное приглашение, скопируйте его в любой поддерживаемый AI CLI и завершите процесс настройки вручную.

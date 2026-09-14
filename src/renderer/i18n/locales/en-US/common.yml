@@ -157,15 +157,18 @@ dependencyManagement:
   unavailable: Unavailable
   mode:
     title: Active dependency mode
-    description: The dependency page always shows the current effective mode and whether package mutations are allowed.
+    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
     active: 'Mode: {{mode}}'
     readOnlyTitle: Read-only mode
     externalReadOnly: Desktop is inspecting an externally managed global Node/npm environment. Install, uninstall, and batch sync actions are unavailable.
+    takesEffect: Mode applied. This takes effect in the Dependency Management module immediately and controls whether package mutations are available.
     options:
       internal:
-        label: Internal
+        label: Internal (Desktop-managed, deprecated)
+        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
       external:
-        label: External
+        label: External (read-only)
+        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
   environment:
     title: Node Environment
     description: Desktop uses its own Node/npm runtime for managed CLI packages.
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: Upgrade required
     not-installed: Not installed
     unknown: Unknown
+  uninstall:
+    title: Confirm uninstall
+    description: Uninstall {{name}} from the {{mode}} dependency environment? Active components are deactivated first.
+    cancel: Cancel
+    confirm: Uninstall
+    success: Component uninstalled successfully.
+    alreadyRemoved: Component was already removed.
+    blocked: Cannot uninstall while other components depend on it.
   packages:
     hagiscript:
       description: Legacy standalone CLI metadata retained for compatibility. Desktop now synchronizes managed tools through the embedded SDK.
@@ -293,6 +304,8 @@ dependencyManagement:
       description: Google Gemini CLI distributed through the official @google/gemini-cli npm package.
     impeccable:
       description: Impeccable design skills, commands, and anti-pattern detection for AI coding agents.
+    ohMyPi:
+      description: Oh My Pi coding agent CLI distributed through the official @oh-my-pi/pi-coding-agent package.
   categories:
     bootstrap: Legacy
     workflow: Workflow

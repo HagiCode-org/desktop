@@ -55,21 +55,22 @@ settings:
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
+    title: Abhängigkeitsverwaltungsmodus
+    description: Wählen Sie, ob Desktop CLI-Abhängigkeiten selbst verwaltet oder nur die aktuelle globale Node/npm-Umgebung prüft.
+    effectiveMode: 'Aktiver Modus: {{mode}}'
     options:
       internal:
-        label: Internal (Desktop-managed)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+        label: Intern (Desktop-verwaltet, veraltet)
+        description: Desktop verwendet seine gebündelte Node/npm-Toolchain und erlaubt Installation, Deinstallation und Batch-Synchronisierung.
       external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+        label: Extern (nur Lesen)
+        description: Desktop prüft die aktuelle globale Node/npm-Umgebung, ohne Pakete zu ändern oder npm-Präfixe zu überschreiben.
+    takesEffect: Modus angewendet. Die Änderung wird sofort im Abhängigkeitsmanagement wirksam und bestimmt, ob Paketänderungen möglich sind.
     messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
+      saveSuccess: Abhängigkeitsverwaltungsmodus gespeichert
+      saveFailed: Abhängigkeitsverwaltungsmodus konnte nicht gespeichert werden
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: 'Speichern fehlgeschlagen: {{error}}'
   smartConfig:
     title: Smart Config-Eingabeaufforderung
     description: Überprüfen Sie die gelöste Eingabeaufforderung, kopieren Sie sie in ein beliebiges unterstütztes AI CLI und schließen Sie den Konfigurationsablauf manuell ab.

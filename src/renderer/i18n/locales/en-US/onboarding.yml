@@ -233,6 +233,7 @@ dependencyPreparation:
   title: Prepare Dependencies
   description: Install Desktop-managed command-line dependencies here and choose Agent CLI packages for later coding sessions, or skip installation for now and continue with setup.
   loading: Checking Desktop-managed dependencies...
+  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   skip:
     title: This step can be skipped
     description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
@@ -250,6 +251,9 @@ dependencyPreparation:
   agentCli:
     title: Agent CLI selection
     description: Pick the Agent CLI packages you expect to use and install them now, or continue setup first and install them later in Desktop.
+  developerTools:
+    title: Optional developer tools
+    description: Select trusted tools distributed outside npm. Desktop validates each executable on PATH before reporting success.
   blocking:
     environment-unavailable:
       title: Node/npm environment unavailable
@@ -263,6 +267,9 @@ dependencyPreparation:
     agent-cli-not-installed:
       title: Selected Agent CLI needs repair
       description: Install or upgrade at least one selected Agent CLI package into Desktop's managed npm environment.
+    external-cli-not-ready:
+      title: Developer tool needs attention
+      description: The installer completed, but the executable or version check did not pass. Refresh PATH and try again.
   actions:
     install: Confirm and Install
     refresh: Refresh
@@ -270,7 +277,7 @@ dependencyPreparation:
     recheck: Recheck
   complete:
     title: Dependencies are ready
-    description: Required dependencies are installed and at least one selected Agent CLI is ready.
+    description: Required dependencies and selected tools are ready. Agent CLIs are optional.
   error:
     title: Dependency preparation failed
 legal:
@@ -294,6 +301,13 @@ legal:
   decline: Decline and Exit
   declining: Exiting...
   refresh: Refresh Legal Metadata
+  lastUpdated: 'Last updated: {{date}}'
+  source:
+    fresh: Latest
+    cache: Cached
+    unavailable: Unavailable
+  openEula: Open EULA
+  openPrivacy: Open Privacy Policy
   metadata:
     remote: Latest legal metadata loaded
     cache: Using the last successful cached legal metadata

@@ -55,21 +55,22 @@ settings:
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
+    title: 종속성 관리 모드
+    description: Desktop이 CLI 종속성을 직접 관리할지 현재 전역 Node/npm 환경만 검사할지 선택합니다.
+    effectiveMode: '현재 적용 모드: {{mode}}'
     options:
       internal:
-        label: Internal (Desktop-managed)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+        label: 내부（Desktop 관리, 사용 중단 예정）
+        description: Desktop은 번들된 Node/npm 도구 체인을 사용하며 설치, 제거 및 일괄 동기화를 허용합니다.
       external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+        label: 외부（읽기 전용）
+        description: Desktop은 현재 전역 Node/npm 환경만 확인하며 패키지를 변경하거나 npm 접두사 경로를 덮어쓰지 않습니다.
+    takesEffect: 모드가 적용되었습니다. 종속성 관리 모듈에 즉시 반영되며 패키지 변경 가능 여부를 결정합니다.
     messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
+      saveSuccess: 종속성 관리 모드가 저장되었습니다
+      saveFailed: 종속성 관리 모드를 저장하지 못했습니다
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: '저장 실패: {{error}}'
   smartConfig:
     title: 스마트 구성 프롬프트 안내
     description: 해결된 프롬프트를 검토하고 이를 지원되는 AI CLI에 복사한 후 구성 흐름을 수동으로 완료합니다.

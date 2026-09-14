@@ -55,21 +55,22 @@ settings:
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
+    title: Modo de gerenciamento de dependências
+    description: Escolha se o Desktop gerencia as dependências CLI ou apenas inspeciona o ambiente global Node/npm atual.
+    effectiveMode: 'Modo efetivo: {{mode}}'
     options:
       internal:
-        label: Internal (Desktop-managed)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+        label: Interno (gerenciado pelo Desktop, obsoleto)
+        description: O Desktop usa sua cadeia de ferramentas Node/npm integrada e permite instalar, desinstalar e sincronizar em lote.
       external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+        label: Externo (somente leitura)
+        description: O Desktop inspeciona o ambiente global Node/npm atual sem alterar pacotes nem substituir os prefixos do npm.
+    takesEffect: Modo aplicado. A alteração entra em vigor imediatamente no módulo de gerenciamento de dependências e determina se mudanças nos pacotes são permitidas.
     messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
+      saveSuccess: Modo de gerenciamento de dependências salvo
+      saveFailed: Falha ao salvar o modo de gerenciamento de dependências
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: 'Falha ao salvar: {{error}}'
   smartConfig:
     title: Orientação imediata do Smart Config
     description: Revise o prompt resolvido, copie-o em qualquer AI CLI compatível e conclua o fluxo de configuração manualmente.

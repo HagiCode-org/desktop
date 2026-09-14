@@ -226,6 +226,7 @@ dependencyPreparation:
   title: Abhängigkeiten vorbereiten
   description: Installieren Sie die für HagiCode Desktop erforderlichen Befehlszeilenabhängigkeiten und wählen Sie mindestens einen Agent CLI zur Verwendung mit Codierungssitzungen aus.
   loading: Vom Desktop verwaltete Abhängigkeiten werden überprüft...
+  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
   skip:
     title: This step can be skipped
     description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
@@ -287,6 +288,13 @@ legal:
   decline: Ablehnen und beenden
   declining: Verlassen...
   refresh: Rechtliche Metadaten aktualisieren
+  lastUpdated: 'Last updated: {{date}}'
+  source:
+    fresh: Latest
+    cache: Cached
+    unavailable: Unavailable
+  openEula: Open EULA
+  openPrivacy: Open Privacy Policy
   metadata:
     remote: Neueste rechtliche Metadaten geladen
     cache: Verwendung der letzten erfolgreich zwischengespeicherten rechtlichen Metadaten

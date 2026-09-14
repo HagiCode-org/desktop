@@ -55,21 +55,22 @@ settings:
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
   dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
+    title: Mode de gestion des dépendances
+    description: Choisissez si Desktop gère les dépendances CLI ou inspecte uniquement l'environnement global Node/npm actuel.
+    effectiveMode: 'Mode effectif : {{mode}}'
     options:
       internal:
-        label: Internal (Desktop-managed)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
+        label: Interne (géré par Desktop, obsolète)
+        description: Desktop utilise sa chaîne d'outils Node/npm intégrée et autorise l'installation, la désinstallation et la synchronisation par lot.
       external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
+        label: Externe (lecture seule)
+        description: Desktop inspecte l'environnement global Node/npm actuel sans modifier les paquets ni remplacer les préfixes npm.
+    takesEffect: Mode appliqué. Le changement prend effet immédiatement dans le module de gestion des dépendances et détermine si les modifications de paquets sont autorisées.
     messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
+      saveSuccess: Mode de gestion des dépendances enregistré
+      saveFailed: Échec de l'enregistrement du mode de gestion des dépendances
     errors:
-      saveErrorDetail: 'Save failed: {{error}}'
+      saveErrorDetail: "Échec de l'enregistrement : {{error}}"
   smartConfig:
     title: Conseils d’invite Smart Config
     description: Examinez l'invite résolue, copiez-la dans n'importe quel AI CLI pris en charge et terminez le flux de configuration manuellement.

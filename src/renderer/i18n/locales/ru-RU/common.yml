@@ -161,11 +161,14 @@ dependencyManagement:
     active: 'Режим: {{mode}}'
     readOnlyTitle: Режим только для чтения
     externalReadOnly: Desktop проверяет внешне управляемую глобальную среду Node/npm. Действия установки, удаления и пакетной синхронизации недоступны.
+    takesEffect: Режим применён. Изменение сразу вступает в силу в модуле управления зависимостями и определяет, разрешено ли изменять пакеты.
     options:
       internal:
-        label: Внутренний
+        label: Внутренний (управляется Desktop, устарел)
+        description: Desktop использует встроенную цепочку Node/npm и разрешает установку, удаление и пакетную синхронизацию.
       external:
-        label: Внешний
+        label: Внешний (только чтение)
+        description: Desktop проверяет текущую глобальную среду Node/npm, не изменяя пакеты и не переопределяя префиксы npm.
   environment:
     title: Среда узла
     description: Desktop использует собственную среду выполнения Node/npm для управляемых пакетов CLI.
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: Upgrade required
     not-installed: Не установлено
     unknown: Неизвестно
+  uninstall:
+    title: Подтвердите удаление
+    description: "Удалить {{name}} из среды {{mode}}? Активные компоненты будут сначала деактивированы."
+    cancel: Отмена
+    confirm: Удалить
+    success: Компонент удалён.
+    alreadyRemoved: Компонент уже удалён.
+    blocked: "Невозможно удалить компонент: от него зависят другие компоненты."
   packages:
     hagiscript:
       description: Метаданные старого автономного CLI сохранены только для совместимости. Теперь Desktop синхронизирует управляемые инструменты через встроенный SDK.

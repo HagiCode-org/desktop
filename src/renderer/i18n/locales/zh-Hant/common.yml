@@ -161,11 +161,14 @@ dependencyManagement:
     active: 模式：{{mode}}
     readOnlyTitle: 唯讀模式
     externalReadOnly: Desktop 目前只是在檢查外部託管的全域 Node/npm 環境，無法執行安裝、解除安裝或批次同步。
+    takesEffect: 模式已套用。設定會立即在依賴管理模組生效，並決定是否允許修改套件。
     options:
       internal:
-        label: 內部模式
+        label: 內部模式（Desktop 託管，已棄用）
+        description: Desktop 使用內建 Node/npm 工具鏈，並允許安裝、解除安裝和批次同步操作。
       external:
-        label: 外部模式
+        label: 外部模式（唯讀）
+        description: Desktop 僅檢查目前全域 Node/npm 環境，不改動套件，也不覆寫 npm 前綴路徑。
   environment:
     title: Node 環境
     description: Desktop 使用自己的 Node/npm 執行階段來承載託管 CLI 套件。
@@ -264,6 +267,14 @@ dependencyManagement:
     outdated: Upgrade required
     not-installed: 未安裝
     unknown: 未知
+  uninstall:
+    title: 確認解除安裝
+    description: "要從{{mode}}依賴環境解除安裝{{name}}嗎？已啟用的元件會先停用。"
+    cancel: 取消
+    confirm: 解除安裝
+    success: 元件已成功解除安裝。
+    alreadyRemoved: 元件已經移除。
+    blocked: 其他元件仍依賴此元件，無法解除安裝。
   packages:
     hagiscript:
       description: 為相容舊介面而保留的獨立 CLI 中繼資料。Desktop 現在透過內建 SDK 同步託管工具。
