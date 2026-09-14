@@ -204,6 +204,37 @@ const staticManagedNpmPackages = [
     category: 'developer-tool',
     installMode: 'sdk-sync',
   },
+  {
+    id: 'oh-my-pi',
+    packageName: '@oh-my-pi/pi-coding-agent',
+    displayName: 'Oh My Pi',
+    descriptionKey: 'dependencyManagement.packages.ohMyPi.description',
+    binName: 'omp',
+    installSpec: '@oh-my-pi/pi-coding-agent',
+    category: 'agent-cli',
+    installMode: 'external-cli',
+    agentCliId: 'pi',
+    externalCli: {
+      installers: {
+        darwin: {
+          command: 'sh',
+          args: ['-c', 'curl -fsSL https://omp.sh/install | sh'],
+          shell: false,
+        },
+        linux: {
+          command: 'sh',
+          args: ['-c', 'curl -fsSL https://omp.sh/install | sh'],
+          shell: false,
+        },
+        win32: {
+          command: 'powershell.exe',
+          args: ['-NoProfile', '-NonInteractive', '-Command', 'irm https://omp.sh/install.ps1 | iex'],
+          shell: false,
+        },
+      },
+      versionProbe: ['--version'],
+    },
+  },
 ] as const satisfies readonly ManagedNpmPackageStaticDefinition[];
 
 export const managedNpmPackages: readonly ManagedNpmPackageDefinition[] = staticManagedNpmPackages
@@ -222,7 +253,11 @@ export const optionalManagedNpmPackages = managedNpmPackages.filter(
 );
 
 export const npmInstallableAgentCliPackages = managedAgentCliPackages.filter(
-  (definition) => definition.installMode === 'sdk-sync' && Boolean(definition.agentCliId),
+  (definition) => Boolean(definition.agentCliId),
+);
+
+export const managedExternalCliPackages = managedNpmPackages.filter(
+  (definition) => definition.installMode === 'external-cli',
 );
 
 export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition | null {
@@ -337,7 +372,9 @@ function toReadinessPackageSummary(
   const effectiveDefinition = statusSnapshot?.definition ?? definition;
   const installedVersion = statusSnapshot?.version ?? null;
   const requiredVersionRange = getManagedPackageRequiredVersionRange(effectiveDefinition);
-  const versionSatisfied = isManagedPackageVersionSatisfied(effectiveDefinition, installedVersion);
+  const versionSatisfied = effectiveDefinition.installMode === 'external-cli'
+    ? statusSnapshot?.status === 'installed' && Boolean(statusSnapshot.executablePath) && Boolean(installedVersion)
+    : isManagedPackageVersionSatisfied(effectiveDefinition, installedVersion);
 
   return {
     id: definition.id,
@@ -355,6 +392,7 @@ function toReadinessPackageSummary(
 export function evaluateDependencyReadiness(
   snapshot: DependencyManagementSnapshot,
   selectedAgentCliPackageIds: readonly string[],
+  selectedDeveloperToolPackageIds: readonly string[] = [],
 ): DependencyReadinessSummary {
   const requiredPackages = requiredManagedNpmPackages.map((definition) =>
     toReadinessPackageSummary(definition, snapshot),
@@ -367,6 +405,13 @@ export function evaluateDependencyReadiness(
   );
   const selectedSupportedIds = getSupportedSelectedAgentCliPackageIds(selectedAgentCliPackageIds);
   const selectedSupportedSet = new Set(selectedSupportedIds);
+  const selectedDeveloperToolIds = selectedDeveloperToolPackageIds.filter(
+    (id): id is ManagedNpmPackageId => optionalPackages.some((item) => item.id === id && item.definition.installMode === 'external-cli'),
+  );
+  const missingSelectedDeveloperToolPackageIds = selectedDeveloperToolIds.filter((id) => {
+    const item = optionalPackages.find((candidate) => candidate.id === id);
+    return item?.status !== 'installed' || !item.versionSatisfied;
+  });
   const agentCliPackageById = new Map(agentCliPackages.map((item) => [item.id, item]));
   const installedSelectedAgentCliPackageIds = selectedSupportedIds.filter(
     (id) => agentCliPackageById.get(id)?.status === 'installed',
@@ -399,7 +444,8 @@ export function evaluateDependencyReadiness(
     (id) => !isNpmInstallableAgentCliPackageId(id),
   );
   const requiredReady = unsatisfiedRequiredPackageIds.length === 0;
-  const agentCliReady = selectedSupportedIds.length > 0 && satisfiedSelectedAgentCliPackageIds.length > 0;
+  const agentCliReady = selectedAgentCliPackageIds.length === 0
+    || (selectedSupportedIds.length > 0 && satisfiedSelectedAgentCliPackageIds.length > 0);
   const blockingReasons: DependencyReadinessSummary['blockingReasons'] = [];
 
   if (!snapshot.environment.available) {
@@ -417,16 +463,23 @@ export function evaluateDependencyReadiness(
     });
   }
 
-  if (selectedSupportedIds.length === 0) {
+  if (selectedAgentCliPackageIds.length > 0 && selectedSupportedIds.length === 0) {
     blockingReasons.push({
       code: 'agent-cli-not-selected',
-      message: 'Select at least one supported Agent CLI package managed by HagiCode Desktop.',
+      message: 'No selected Agent CLI is supported by Desktop.',
     });
-  } else if (!agentCliReady) {
+  } else if (selectedSupportedIds.length > 0 && !agentCliReady) {
     blockingReasons.push({
       code: 'agent-cli-not-installed',
       message: 'At least one selected Agent CLI package must be installed at a supported version in the Desktop managed npm environment.',
       packageIds: unsatisfiedSelectedAgentCliPackageIds,
+    });
+  }
+  if (missingSelectedDeveloperToolPackageIds.length > 0) {
+    blockingReasons.push({
+      code: 'external-cli-not-ready',
+      message: 'Selected developer tools must be installed and pass executable validation.',
+      packageIds: missingSelectedDeveloperToolPackageIds,
     });
   }
 
@@ -434,7 +487,7 @@ export function evaluateDependencyReadiness(
     environmentAvailable: snapshot.environment.available,
     requiredReady,
     agentCliReady,
-    ready: snapshot.environment.available && requiredReady && agentCliReady,
+    ready: snapshot.environment.available && requiredReady && agentCliReady && missingSelectedDeveloperToolPackageIds.length === 0,
     requiredPackages,
     optionalPackages,
     agentCliPackages,
@@ -445,6 +498,8 @@ export function evaluateDependencyReadiness(
     selectedAgentCliPackageIds: selectedSupportedIds,
     installedSelectedAgentCliPackageIds,
     ignoredSelectedAgentCliPackageIds,
+    selectedDeveloperToolPackageIds: selectedDeveloperToolIds,
+    missingSelectedDeveloperToolPackageIds,
     blockingReasons,
   };
 }

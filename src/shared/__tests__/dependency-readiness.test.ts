@@ -215,6 +215,17 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.optionalPackages.some((item) => item.id === optionalPackageId && item.status === 'not-installed'), true);
   });
 
+  it('treats Oh My Pi as an Agent CLI', () => {
+    const summary = evaluateDependencyReadiness(createSnapshot({
+      'oh-my-pi': 'not-installed',
+    }), ['oh-my-pi']);
+
+    assert.equal(summary.agentCliReady, false);
+    assert.equal(summary.ready, false);
+    assert.deepEqual(summary.missingSelectedAgentCliPackageIds, ['oh-my-pi']);
+    assert.equal(summary.blockingReasons.some((reason) => reason.code === 'agent-cli-not-installed'), true);
+  });
+
 
   it('ignores unknown Agent CLI ids and does not let them satisfy readiness', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({}), ['unknown-cli']);
