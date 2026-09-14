@@ -72,6 +72,12 @@ describe('dependency management service contract', () => {
     assert.match(source, /installMode: 'sdk-sync'/);
     assert.match(source, /runtimeManagedPackageManifestPackages/);
     assert.match(source, /applyRuntimeManagedPackageOverride/);
+    assert.match(source, /id: 'oh-my-pi'/);
+    assert.match(source, /binName: 'omp'/);
+    assert.match(source, /category: 'agent-cli'/);
+    assert.match(source, /installMode: 'external-cli'/);
+    assert.match(source, /curl -fsSL https:\/\/omp\.sh\/install \| sh/);
+    assert.match(source, /irm https:\/\/omp\.sh\/install\.ps1 \| iex/);
   });
 
   it('keeps sync failure diagnostics without forcing Microsoft Store npm install overrides', async () => {
@@ -127,8 +133,17 @@ describe('dependency management service contract', () => {
     assert.match(source, /mutationsAvailable: effectiveMode === 'internal'/);
     assert.match(source, /readOnlyReason: isWinStore/);
     assert.match(source, /MSIX \/ Microsoft Store packaging requires external read-only dependency management and does not use Desktop-managed Node\/npm\./);
+    assert.match(source, /if \(isWinStore && mode !== 'external'\) \{\s*throw new Error\(MSIX_EXTERNAL_MODE_LOCK_REASON\);/);
     assert.match(source, /const mode = this\.resolveModeSettings\(\);/);
     assert.match(source, /return this\.getSnapshot\(\);/);
+  });
+
+  it('keeps npm mirror acceleration opt-in regardless of locale', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = \{\s*enabled: false,\s*\};/);
+    assert.match(source, /return this\.normalizeMirrorSettings\(DEFAULT_MIRROR_SETTINGS\);/);
+    assert.doesNotMatch(source, /language === 'zh-CN'/);
   });
 
   it('uses external global npm inspection and rejects mutations in external mode', async () => {
@@ -160,6 +175,22 @@ describe('dependency management service contract', () => {
     );
 
     assert.match(handlersSource, /\[DependencyManagementHandlers\] syncPackages requested/);
+  });
+
+  it('supports persisted uninstall state, dependent protection, and idempotent removal', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /dependentsGraph/);
+    assert.match(source, /installedComponents/);
+    assert.match(source, /activationState/);
+    assert.match(source, /settingsStore\.set\('dependencyState'/);
+    assert.match(source, /resolveDependents\(/);
+    assert.match(source, /deactivateIfActive\(/);
+    assert.match(source, /removeFromStore\(/);
+    assert.match(source, /cleanupConfig\(/);
+    assert.match(source, /noOp: true/);
+    assert.match(source, /request\.force/);
+    assert.match(source, /cannot be uninstalled while required by/);
   });
 });
 

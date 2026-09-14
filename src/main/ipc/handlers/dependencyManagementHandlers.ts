@@ -4,6 +4,7 @@ import log from 'electron-log';
 import type DependencyManagementService from '../../dependency-management-service.js';
 import {
   type DependencyManagementBatchSyncRequest,
+  type DependencyManagementUninstallRequest,
   dependencyManagementChannels,
   legacyDependencyManagementChannels,
   type NpmMirrorSettingsInput,
@@ -128,12 +129,15 @@ export function registerDependencyManagementHandlers(deps: {
     return state.dependencyManagementService.install(packageId);
   };
 
-  const handleUninstall = async (_event: Electron.IpcMainInvokeEvent, packageId: string) => {
+  const handleUninstall = async (
+    _event: Electron.IpcMainInvokeEvent,
+    request: string | DependencyManagementUninstallRequest,
+  ) => {
     if (!state.dependencyManagementService) {
       throw new Error('DependencyManagementService is not initialized');
     }
 
-    return state.dependencyManagementService.uninstall(packageId);
+    return state.dependencyManagementService.uninstall(request);
   };
 
   const handleSyncPackages = async (_event: Electron.IpcMainInvokeEvent, request: DependencyManagementBatchSyncRequest) => {

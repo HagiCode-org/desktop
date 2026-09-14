@@ -56,6 +56,8 @@ import type {
   DependencyManagementOperationProgress,
   DependencyManagementOperationResult,
   DependencyManagementSnapshot,
+  DependencyManagementUninstallRequest,
+  DependencyUninstallMode,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
@@ -69,6 +71,13 @@ interface DependencyManagementServiceOptions {
 
 interface DependencyManagementSettingsStoreSchema {
   mirrorSettings?: NpmMirrorSettingsInput;
+  dependencyState?: DependencyState;
+}
+
+interface DependencyState {
+  installedComponents: ManagedNpmPackageId[];
+  dependentsGraph: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageId[]>>;
+  activationState: Partial<Record<ManagedNpmPackageId, boolean>>;
 }
 
 interface CommandResult {
@@ -388,11 +397,19 @@ export class DependencyManagementService {
       };
     }
 
-    return this.runPackageOperation(
+    const result = await this.runPackageOperation(
       definition.definition.id,
       'install',
       definition.definition,
     );
+    if (result.success) {
+      const state = this.getDependencyState();
+      if (!state.installedComponents.includes(definition.definition.id)) {
+        state.installedComponents.push(definition.definition.id);
+      }
+      this.saveDependencyState(state);
+    }
+    return result;
   }
 
   async syncPackages(request: DependencyManagementBatchSyncRequest): Promise<DependencyManagementBatchSyncResult> {
@@ -409,7 +426,30 @@ export class DependencyManagementService {
       };
     }
 
-    return this.runSdkSync(validation.definitions);
+    const npmDefinitions = validation.definitions.filter((definition) => definition.installMode === 'sdk-sync');
+    const externalDefinitions = validation.definitions.filter((definition) => definition.installMode === 'external-cli');
+    let result = npmDefinitions.length > 0
+      ? await this.runSdkSync(npmDefinitions)
+      : {
+          success: true,
+          packageIds: [],
+          operation: 'sync' as const,
+          statuses: [],
+          snapshot: await this.getSnapshot(),
+        };
+
+    for (const definition of externalDefinitions) {
+      const externalResult = await this.runExternalCliOperation(definition);
+      result = {
+        ...externalResult,
+        operation: 'sync',
+        packageIds: [...result.packageIds, definition.id],
+        statuses: [...result.statuses, ...(externalResult.statuses ?? [])],
+        success: result.success && externalResult.success,
+      };
+    }
+
+    return result;
   }
 
   async installManagedPackagesForCli(packageIds: ManagedNpmPackageId[]): Promise<CliDependencyInstallResult> {
@@ -510,8 +550,19 @@ export class DependencyManagementService {
     return resolvedPackageIds;
   }
 
-  async uninstall(packageId: string): Promise<DependencyManagementOperationResult> {
-    const definition = findManagedNpmPackage(packageId);
+  /**
+   * Uninstall is deactivate-before-remove, ownership-scoped, idempotent, and
+   * blocks dependents unless a programmatic force request is supplied.
+   * The UI intentionally does not expose force; product follow-up is required
+   * before allowing users to bypass dependency protection.
+   */
+  async uninstall(
+    requestOrPackageId: string | DependencyManagementUninstallRequest,
+  ): Promise<DependencyManagementOperationResult> {
+    const request: DependencyManagementUninstallRequest = typeof requestOrPackageId === 'string'
+      ? { packageId: requestOrPackageId as ManagedNpmPackageId }
+      : requestOrPackageId;
+    const definition = findManagedNpmPackage(request.packageId);
     if (definition?.required) {
       const snapshot = await this.getSnapshot();
       return {
@@ -523,7 +574,93 @@ export class DependencyManagementService {
       };
     }
 
-    return this.runPackageOperation(packageId, 'uninstall');
+    if (!definition) {
+      const snapshot = await this.getSnapshot();
+      return {
+        success: false,
+        packageId: request.packageId,
+        operation: 'uninstall',
+        error: `Unknown managed npm package: ${request.packageId}`,
+        snapshot,
+      };
+    }
+
+    const snapshot = await this.getSnapshot();
+    const state = this.getDependencyState();
+    const dependents = this.resolveDependents(request.packageId, state.dependentsGraph);
+    if (dependents.length > 0 && !request.force) {
+      return {
+        success: false,
+        packageId: definition.id,
+        operation: 'uninstall',
+        error: `${definition.displayName} cannot be uninstalled while required by: ${dependents.join(', ')}.`,
+        dependents,
+        snapshot,
+      };
+    }
+
+    const current = snapshot.packages.find((item) => item.id === definition.id);
+    if (current?.status === 'not-installed') {
+      return {
+        success: true,
+        packageId: definition.id,
+        operation: 'uninstall',
+        noOp: true,
+        snapshot,
+      };
+    }
+
+    await this.deactivateIfActive(definition.id, state);
+    const result = await this.runPackageOperation(definition.id, 'uninstall');
+    if (result.success) {
+      this.removeFromStore(definition.id, request.mode ?? 'global', state);
+      this.cleanupConfig(definition.id, state);
+      this.saveDependencyState(state);
+    }
+    return result;
+  }
+
+  resolveDependents(
+    componentId: ManagedNpmPackageId,
+    graph: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageId[]>> = this.getDependencyState().dependentsGraph,
+  ): ManagedNpmPackageId[] {
+    return [...new Set(graph[componentId] ?? [])];
+  }
+
+  private getDependencyState(): DependencyState {
+    const stored = this.settingsStore.get('dependencyState');
+    return {
+      installedComponents: [...(stored?.installedComponents ?? [])],
+      dependentsGraph: { ...(stored?.dependentsGraph ?? {}) },
+      activationState: { ...(stored?.activationState ?? {}) },
+    };
+  }
+
+  private saveDependencyState(state: DependencyState): void {
+    this.settingsStore.set('dependencyState', state);
+  }
+
+  private async deactivateIfActive(componentId: ManagedNpmPackageId, state: DependencyState): Promise<void> {
+    if (state.activationState[componentId]) {
+      state.activationState[componentId] = false;
+    }
+  }
+
+  private removeFromStore(componentId: ManagedNpmPackageId, _mode: DependencyUninstallMode, state: DependencyState): void {
+    state.installedComponents = state.installedComponents.filter((id) => id !== componentId);
+    delete state.activationState[componentId];
+  }
+
+  private cleanupConfig(componentId: ManagedNpmPackageId, state: DependencyState): void {
+    delete state.dependentsGraph[componentId];
+    for (const dependents of Object.values(state.dependentsGraph)) {
+      if (dependents) {
+        const index = dependents.indexOf(componentId);
+        if (index >= 0) {
+          dependents.splice(index, 1);
+        }
+      }
+    }
   }
 
   async getManagedCommandContext(packageId: ManagedNpmPackageId): Promise<ManagedNpmCommandContext> {
@@ -737,8 +874,8 @@ export class DependencyManagementService {
         return { success: false, error: `Unknown managed npm package: ${packageId}` };
       }
 
-      if ((operation === 'sync' || operation === 'install') && definition.installMode !== 'sdk-sync') {
-        return { success: false, error: `${definition.displayName} cannot be synchronized through the Desktop SDK workflow.` };
+      if (operation === 'uninstall' && definition.installMode === 'external-cli') {
+        return { success: false, error: `${definition.displayName} does not support automated uninstall.` };
       }
 
       if (!seen.has(definition.id)) {
@@ -844,10 +981,7 @@ export class DependencyManagementService {
   }
 
   private getDefaultMirrorSettings(): NpmMirrorSettings {
-    const language = this.configManager.getAll()?.settings?.language ?? 'zh-CN';
-    return this.normalizeMirrorSettings({
-      enabled: language === 'zh-CN',
-    });
+    return this.normalizeMirrorSettings(DEFAULT_MIRROR_SETTINGS);
   }
 
   private buildNpmOperationArgs(
@@ -1565,6 +1699,10 @@ export class DependencyManagementService {
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
   ): Promise<ManagedNpmPackageStatusSnapshot> {
+    if (definition.installMode === 'external-cli') {
+      return this.detectExternalCliStatus(definition, environment);
+    }
+
     const { packageRoot, executablePath } = this.getManagedPackagePaths(definition, environment);
 
     try {
@@ -1622,6 +1760,69 @@ export class DependencyManagementService {
         executablePath: this.existsSync(executablePath) ? executablePath : null,
         message: error instanceof Error ? error.message : String(error),
       };
+    }
+  }
+
+  private async detectExternalCliStatus(
+    definition: ManagedNpmPackageDefinition,
+    environment: DependencyManagementEnvironmentStatus,
+  ): Promise<ManagedNpmPackageStatusSnapshot> {
+    const commandEnv = this.buildExternalCommandEnv();
+    const executablePath = await this.findExecutableOnPath(definition.binName, commandEnv);
+    if (!executablePath) {
+      return {
+        id: definition.id,
+        definition,
+        status: 'not-installed',
+        version: null,
+        packageRoot: '',
+        executablePath: null,
+        message: `${definition.displayName} executable '${definition.binName}' was not found on PATH.`,
+      };
+    }
+
+    try {
+      const result = await this.runCommand(executablePath, definition.externalCli?.versionProbe ?? ['--version'], undefined, commandEnv);
+      if (result.exitCode !== 0) {
+        return {
+          id: definition.id,
+          definition,
+          status: 'unknown',
+          version: null,
+          packageRoot: '',
+          executablePath,
+          message: firstMeaningfulLine(result.stderr || result.stdout)
+            ?? `${definition.displayName} version probe exited with code ${result.exitCode}.`,
+        };
+      }
+      return {
+        id: definition.id,
+        definition,
+        status: 'installed',
+        version: normalizeVersionOutput(result.stdout || result.stderr),
+        packageRoot: '',
+        executablePath,
+      };
+    } catch (error) {
+      return {
+        id: definition.id,
+        definition,
+        status: 'unknown',
+        version: null,
+        packageRoot: '',
+        executablePath,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private async findExecutableOnPath(binName: string, env: NodeJS.ProcessEnv): Promise<string | null> {
+    try {
+      const command = this.platform === 'win32' ? 'where.exe' : 'which';
+      const result = await this.runCommand(command, [binName], undefined, env);
+      return result.exitCode === 0 ? firstMeaningfulLine(result.stdout) : null;
+    } catch {
+      return null;
     }
   }
 
@@ -1700,6 +1901,50 @@ export class DependencyManagementService {
     };
   }
 
+  private async runExternalCliOperation(
+    definition: ManagedNpmPackageDefinition,
+  ): Promise<DependencyManagementOperationResult & { statuses?: ManagedNpmPackageStatusSnapshot[] }> {
+    const installer = definition.externalCli?.installers[this.platform as 'darwin' | 'linux' | 'win32'];
+    if (!installer) {
+      const snapshot = await this.getSnapshot();
+      return { success: false, packageId: definition.id, operation: 'sync', error: `${definition.displayName} is not supported on ${this.platform}.`, snapshot };
+    }
+    const mode = this.resolveModeSettings();
+    if (!mode.mutationsAvailable) {
+      const snapshot = await this.getSnapshot();
+      return { success: false, packageId: definition.id, operation: 'sync', error: mode.readOnlyReason ?? 'External dependency mode is read-only.', snapshot };
+    }
+    const environment = await this.detectEnvironment(mode);
+    const commandEnv = this.buildExternalCommandEnv();
+    this.emitProgress(definition.id, 'sync', 'started', `Installing ${definition.displayName}`, 0);
+    try {
+      const result = await this.runCommand(installer.command, installer.args, undefined, commandEnv, { shell: installer.shell });
+      if (result.exitCode !== 0) {
+        throw new Error(firstMeaningfulLine(result.stderr || result.stdout)
+          ?? `${definition.displayName} installer exited with code ${result.exitCode}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.emitProgress(definition.id, 'sync', 'failed', message);
+      return { success: false, packageId: definition.id, operation: 'sync', error: message, snapshot: await this.getSnapshot() };
+    }
+    const snapshot = await this.getSnapshot();
+    const status = snapshot.packages.find((item) => item.id === definition.id);
+    const error = status?.status === 'installed' && status.executablePath
+      ? undefined
+      : status?.message ?? `${definition.displayName} installer completed, but ${definition.binName} was not validated on PATH.`;
+    this.emitProgress(definition.id, 'sync', error ? 'failed' : 'completed', error ?? `Installed ${definition.displayName}`, error ? undefined : 100);
+    return {
+      success: !error,
+      packageId: definition.id,
+      operation: 'sync',
+      status,
+      statuses: status ? [status] : [],
+      error,
+      snapshot: this.finalizeOperationSnapshot(snapshot),
+    };
+  }
+
   private async runPackageOperation(
     packageId: string,
     operation: DependencyManagementOperation,
@@ -1737,6 +1982,22 @@ export class DependencyManagementService {
         error: `Another npm operation is already active for ${this.activeOperation.packageId}`,
         snapshot,
       };
+    }
+
+    if (definition.installMode === 'external-cli') {
+      if (operation !== 'install') {
+        const snapshot = await this.getSnapshot();
+        return {
+          success: false,
+          packageId: definition.id,
+          operation,
+          error: `${definition.displayName} does not support automated uninstall.`,
+          snapshot,
+        };
+      }
+
+      const result = await this.runExternalCliOperation(definition);
+      return { ...result, operation };
     }
 
     if (operation === 'install' && definition.installMode === 'sdk-sync') {

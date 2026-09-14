@@ -85,7 +85,7 @@ export function normalizeDependencyManagementMode(
     return 'external';
   }
 
-  return value === 'external' ? 'external' : 'internal';
+  return value === 'internal' ? 'internal' : 'external';
 }
 
 export function normalizeRuntimeDataPathPreset(
@@ -187,7 +187,7 @@ const defaultConfig: AppConfig = {
     port: 36546,
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
-  dependencyManagementMode: 'internal',
+  dependencyManagementMode: 'external',
   debugOptions: DEFAULT_DEBUG_OPTIONS_SETTINGS,
   runtimeDataPath: DEFAULT_RUNTIME_DATA_PATH_PRESET,
   startOnStartup: false,
