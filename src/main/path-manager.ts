@@ -8,13 +8,10 @@ import { ConfigManager as DesktopConfigManager } from './config.js';
 import {
   buildNodeMajorNpmGlobalPaths,
   buildPm2MajorHomePaths,
-  buildPortableToolchainPaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
   type Pm2MajorHomePathOptions,
   type Pm2MajorHomePaths,
-  type PortableToolchainPathOptions,
-  type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
 import {
   buildPortableRuntimeSelection,
@@ -26,7 +23,6 @@ import {
   type PortableRuntimeSelection,
   type PortableRuntimeMacosPlatform,
 } from './portable-runtime-layout.js';
-import { getCommandExecutableName, getPinnedNodeRuntimeConfigPath } from './embedded-node-runtime-config.js';
 import {
   getDesktopRuntimeManifestPath,
   readDesktopRuntimeManifest,
@@ -56,13 +52,10 @@ const { app } = electron;
 export {
   buildNodeMajorNpmGlobalPaths,
   buildPm2MajorHomePaths,
-  buildPortableToolchainPaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
   type Pm2MajorHomePathOptions,
   type Pm2MajorHomePaths,
-  type PortableToolchainPathOptions,
-  type PortableToolchainPaths,
 } from './portable-toolchain-paths.js';
 export {
   buildPortableRuntimeSelection,
@@ -358,7 +351,6 @@ export async function prepareDataDirectoryAccess(
 export class PathManager {
   private static instance: PathManager | null = null;
   private static readonly PORTABLE_FIXED_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'current'] as const;
-  private static readonly PORTABLE_TOOLCHAIN_ROOT_SEGMENTS = ['extra', 'portable-fixed', 'toolchain'] as const;
   private static readonly PORTABLE_FIXED_REQUIRED_FILES = [
     'manifest.json',
     path.join('lib', 'PCode.Web.dll'),
@@ -683,10 +675,6 @@ export class PathManager {
     return path.join(process.resourcesPath, ...PathManager.PORTABLE_FIXED_ROOT_SEGMENTS);
   }
 
-  getExpectedPackagedPortableToolchainRoot(): string {
-    return path.join(process.resourcesPath, ...PathManager.PORTABLE_TOOLCHAIN_ROOT_SEGMENTS);
-  }
-
   getDevelopmentPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
     return resolveDesktopRuntimeComponentProgramRoot('dotnet', this.getRuntimeProgramHome(), platform);
   }
@@ -697,20 +685,6 @@ export class PathManager {
 
   getDevelopmentPortableRuntimeRoot(): string {
     return path.resolve(process.cwd(), 'resources', 'portable-fixed', 'current');
-  }
-
-  getDevelopmentPortableToolchainRoot(): string {
-    return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
-  }
-
-  private buildPortableToolchainRuntimePaths(): PortableToolchainPaths {
-    return buildPortableToolchainPaths({
-      cwd: process.cwd(),
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-      platform: process.platform,
-      overrideRoot: process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT,
-    });
   }
 
   getPinnedRuntimeRoot(platform: Platform = this.getCurrentPlatform()): string {
@@ -798,71 +772,6 @@ export class PathManager {
 
   getPortableRuntimeRoot(): string {
     return this.getPortableRuntimeSelection().runtimeRoot;
-  }
-
-  getPortableToolchainRoot(): string {
-    const overrideRoot = process.env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT?.trim();
-    if (overrideRoot) {
-      return path.resolve(overrideRoot);
-    }
-
-    return resolveDesktopRuntimeComponentProgramRoot('node', this.getRuntimeProgramHome(), this.getCurrentPlatform());
-  }
-
-  getPortableNodeRoot(): string {
-    return this.buildPortableToolchainRuntimePaths().nodeRoot;
-  }
-
-  getPortableToolchainBinRoot(): string {
-    return this.buildPortableToolchainRuntimePaths().toolchainBinRoot;
-  }
-
-  getPortableNodeBinRoot(): string {
-    return this.buildPortableToolchainRuntimePaths().nodeBinRoot;
-  }
-
-  getPortableNpmGlobalBinRoot(): string {
-    return this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot;
-  }
-
-  getPortableNodeExecutablePath(): string {
-    return this.buildPortableToolchainRuntimePaths().nodeExecutablePath;
-  }
-
-  getPortableNpmExecutablePath(): string {
-    return this.buildPortableToolchainRuntimePaths().npmExecutablePath;
-  }
-
-  getPortableManagedCliExecutablePath(commandName: 'openspec' | 'skills'): string | null {
-    const paths = this.buildPortableToolchainRuntimePaths();
-    const executableName = getCommandExecutableName(process.platform, commandName);
-    const npmGlobalCandidate = path.join(this.getNodeMajorNpmGlobalPaths().npmGlobalBinRoot, executableName);
-    if (fsSync.existsSync(npmGlobalCandidate)) {
-      return npmGlobalCandidate;
-    }
-
-    const legacyToolchainBinCandidate = path.join(paths.toolchainBinRoot, executableName);
-    if (fsSync.existsSync(legacyToolchainBinCandidate)) {
-      return legacyToolchainBinCandidate;
-    }
-
-    return null;
-  }
-
-  getPortableOpenspecExecutablePath(): string | null {
-    return this.getPortableManagedCliExecutablePath('openspec');
-  }
-
-  getPortableToolchainManifestPath(): string {
-    return this.buildPortableToolchainRuntimePaths().toolchainManifestPath;
-  }
-
-  getPortableSkillsExecutablePath(): string | null {
-    return this.getPortableManagedCliExecutablePath('skills');
-  }
-
-  getEmbeddedNodeRuntimeManifestPath(): string {
-    return getPinnedNodeRuntimeConfigPath();
   }
 
   getPortableRuntimeConfigDir(): string {

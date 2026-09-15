@@ -4,7 +4,6 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
-const onboardingStepPath = path.resolve(process.cwd(), 'src/renderer/components/onboarding/steps/DependencyPreparationStep.tsx');
 
 describe('web service dependency guard contract', () => {
   it('blocks service startup when required managed dependencies are missing or below the declared version', async () => {
@@ -17,10 +16,4 @@ describe('web service dependency guard contract', () => {
     assert.equal(source.includes('No blocking principle'), false);
   });
 
-  it('includes version-mismatched packages in the onboarding repair install set', async () => {
-    const source = await fs.readFile(onboardingStepPath, 'utf8');
-
-    assert.match(source, /readiness\.versionMismatchRequiredPackageIds/);
-    assert.match(source, /readiness\.versionMismatchSelectedAgentCliPackageIds/);
-  });
 });

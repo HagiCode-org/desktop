@@ -1,7 +1,6 @@
 import Store from 'electron-store';
 import type { ServerConfig } from './server';
 import { resolveDesktopLanguageCode } from '../shared/desktop-languages.js';
-import type { DependencyManagementMode } from '../types/dependency-management.js';
 import type { DebugOptionsSettings } from '../types/debug-options.js';
 import type { RuntimeDataPathPreset } from '../types/runtime-data-path.js';
 
@@ -37,7 +36,6 @@ export interface MsstoreDonationItemState {
 export interface AppConfig {
   server: ServerConfig;
   versionAutoUpdate: VersionAutoUpdateSettings;
-  dependencyManagementMode: DependencyManagementMode;
   debugOptions: DebugOptionsConfig;
   runtimeDataPath: RuntimeDataPathPreset;
   startOnStartup: boolean;
@@ -76,17 +74,6 @@ export const DEFAULT_MSSTORE_DONATION_ITEM_STATE: MsstoreDonationItemState = {
 };
 
 export const DEFAULT_RUNTIME_DATA_PATH_PRESET: RuntimeDataPathPreset = 'userData-runtime-data';
-
-export function normalizeDependencyManagementMode(
-  value: unknown,
-  isWindowsStoreRuntime: boolean = false,
-): DependencyManagementMode {
-  if (isWindowsStoreRuntime) {
-    return 'external';
-  }
-
-  return value === 'internal' ? 'internal' : 'external';
-}
 
 export function normalizeRuntimeDataPathPreset(
   value: unknown,
@@ -187,7 +174,6 @@ const defaultConfig: AppConfig = {
     port: 36546,
   },
   versionAutoUpdate: DEFAULT_VERSION_AUTO_UPDATE_SETTINGS,
-  dependencyManagementMode: 'external',
   debugOptions: DEFAULT_DEBUG_OPTIONS_SETTINGS,
   runtimeDataPath: DEFAULT_RUNTIME_DATA_PATH_PRESET,
   startOnStartup: false,
@@ -446,27 +432,6 @@ export class ConfigManager {
     });
     this.store.set('debugOptions', merged);
     return merged;
-  }
-
-  getDependencyManagementMode(isWinStore: boolean = false): DependencyManagementMode {
-    const current = this.store.get('dependencyManagementMode');
-    const normalized = normalizeDependencyManagementMode(current, isWinStore);
-
-    if (current !== normalized) {
-      this.store.set('dependencyManagementMode', normalized);
-    }
-
-    return normalized;
-  }
-
-  setDependencyManagementMode(mode: DependencyManagementMode, isWinStore: boolean = false): DependencyManagementMode {
-    if (mode !== 'internal' && mode !== 'external') {
-      throw new Error(`Unsupported dependency management mode: ${String(mode)}`);
-    }
-
-    const normalized = normalizeDependencyManagementMode(mode, isWinStore);
-    this.store.set('dependencyManagementMode', normalized);
-    return normalized;
   }
 
   getMsstoreRatingPromptState(): MsstoreRatingPromptState {

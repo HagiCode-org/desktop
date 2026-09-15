@@ -6,13 +6,11 @@ import {
   detectPinnedRuntimePlatform,
   readPinnedRuntimeManifest,
 } from './embedded-runtime-config.js';
-import { readPinnedNodeRuntimeConfig } from './embedded-node-runtime-config.js';
 import {
   readDesktopRuntimeManifest,
   type DesktopRuntimeManifest,
 } from './desktop-runtime-paths.js';
 
-export const DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME = 'node';
 export const DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME = 'server';
 export const DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR = 'pm2';
 export const DESKTOP_HAGISCRIPT_SERVER_RUNTIME_FILES_DIR = 'pm2-runtime';
@@ -23,7 +21,7 @@ export const DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME = 'hagicode_prod';
 export const DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME = 'hagicode-server';
 
 const DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME = 'hagiscript-runtime-scripts';
-const DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE = 'noop-install-node.mjs';
+const DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE = 'noop-install-dotnet.mjs';
 
 export interface DesktopHagiscriptManifestServerOptions {
   servicePayloadPath: string;
@@ -70,7 +68,6 @@ export function buildDesktopHagiscriptRuntimeManifest(
   const instanceName = resolveDesktopHagiscriptInstanceName();
   const desktopRuntimeManifest = options.desktopRuntimeManifest ?? readDesktopRuntimeManifest();
   const dotnetPlatform = options.dotnetPlatform ?? detectPinnedRuntimePlatform();
-  const nodeRuntimeConfig = readPinnedNodeRuntimeConfig();
   const dotnetRuntimeConfig = readPinnedRuntimeManifest();
   const paths = {
     runtimeRoot: options.runtimeRoot,
@@ -87,21 +84,10 @@ export function buildDesktopHagiscriptRuntimeManifest(
     componentDataRoot: path.join(options.runtimeDataRoot, 'components'),
     defaultPm2Home: 'pm2',
     npmPrefix: options.npmPrefix,
-    nodeRuntime: desktopRuntimeManifest.components.node.relativePath,
     dotnetRuntime: options.dotnetRuntimeRoot
       ?? desktopRuntimeManifest.components.dotnet.relativePath.replace('{platform}', dotnetPlatform),
   };
 
-  const nodeComponent = {
-    name: DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
-    type: 'runtime',
-    source: 'desktop-bundled-node',
-    version: nodeRuntimeConfig.releaseVersion,
-    channelVersion: nodeRuntimeConfig.channelVersion,
-    optionalPolicy: desktopRuntimeManifest.components.node.optionalPolicy,
-    installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-node.mjs'),
-    verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-node.mjs'),
-  };
   const dotnetComponentName = `dotnet/runtime/${dotnetPlatform}`;
   const dotnetComponent = {
     name: dotnetComponentName,
@@ -113,27 +99,22 @@ export function buildDesktopHagiscriptRuntimeManifest(
     verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-dotnet.mjs'),
   };
   const components: Array<Record<string, unknown>> = [
-    nodeComponent,
     dotnetComponent,
   ];
 
   const installOrder = [
-    DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
     dotnetComponentName,
   ];
   const removeOrder = [
     dotnetComponentName,
-    DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
   ];
   const updateOrder = [
-    DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
     dotnetComponentName,
   ];
 
   if (options.server) {
     components.splice(2, 0, buildDesktopHagiscriptServerComponent({
       server: options.server,
-      nodeComponentName: DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       dotnetComponentName,
       runtimeDataRoot: options.runtimeDataRoot,
     }));
@@ -235,7 +216,6 @@ export function buildDesktopManagedServerVersionState(input: {
 
 function buildDesktopHagiscriptServerComponent(input: {
   server: DesktopHagiscriptManifestServerOptions;
-  nodeComponentName: string;
   dotnetComponentName: string;
   runtimeDataRoot: string;
 }): Record<string, unknown> {
@@ -246,7 +226,6 @@ function buildDesktopHagiscriptServerComponent(input: {
     type: 'released-service',
     source: 'hagicode-release-package',
     lifecycleDependencies: [
-      input.nodeComponentName,
       input.dotnetComponentName,
     ],
     installScript: path.join(serverScriptsRoot, 'noop-install-server.mjs'),

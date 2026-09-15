@@ -1,27 +1,4 @@
-import fsSync from 'node:fs';
 import path from 'node:path';
-import type { PathManager } from './path-manager.js';
-import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
-
-export interface ToolchainLaunchPlan {
-  command: string;
-  args: string[];
-  shell: boolean;
-  usedBundledToolchain: boolean;
-  fellBackToSystemPath: boolean;
-  bundledCandidatePath: string;
-  resolutionSource: 'bundled-desktop' | 'system';
-  activationPolicy?: BundledNodeRuntimePolicyDecision;
-}
-
-export interface ResolveToolchainLaunchOptions {
-  commandName: 'node' | 'npm';
-  args?: string[];
-  platform?: NodeJS.Platform;
-  existsSync?: (path: string) => boolean;
-  activationPolicy?: BundledNodeRuntimePolicyDecision;
-  pathManager: Pick<PathManager, 'getPortableNodeExecutablePath' | 'getPortableNpmExecutablePath'>;
-}
 
 export interface CommandLaunchPlan {
   command: string;
@@ -81,26 +58,5 @@ export function resolveCommandLaunch(
   return {
     command: quoteShellCommandIfNeeded(normalizedCommand, shell, platform),
     shell,
-  };
-}
-
-export function resolveToolchainLaunchPlan(options: ResolveToolchainLaunchOptions): ToolchainLaunchPlan {
-  const platform = options.platform ?? process.platform;
-  const bundledCandidatePath = options.commandName === 'node'
-    ? options.pathManager.getPortableNodeExecutablePath()
-    : options.pathManager.getPortableNpmExecutablePath();
-  const existsSync = options.existsSync ?? fsSync.existsSync;
-  const enabled = options.activationPolicy?.enabled ?? true;
-  const command = enabled && existsSync(bundledCandidatePath) ? bundledCandidatePath : options.commandName;
-
-  return {
-    command,
-    args: [...(options.args ?? [])],
-    shell: shouldUseShellForCommand(command, platform),
-    usedBundledToolchain: command === bundledCandidatePath,
-    fellBackToSystemPath: command !== bundledCandidatePath,
-    bundledCandidatePath,
-    resolutionSource: command === bundledCandidatePath ? 'bundled-desktop' : 'system',
-    activationPolicy: options.activationPolicy,
   };
 }

@@ -9,115 +9,9 @@ import {
 } from '../non-interactive-mode.js';
 import type { NonInteractiveRuntimeVerificationReport } from '../non-interactive-runtime-verify.js';
 import type { NonInteractiveRuntimeLifecycleReport } from '../non-interactive-runtime-lifecycle.js';
-import type {
-  DependencyManagementOperationProgress,
-  DependencyManagementSnapshot,
-  ManagedNpmPackageId,
-} from '../../types/dependency-management.js';
-import type { CliDependencyInstallResult } from '../dependency-management-service.js';
 
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
 const bootstrapPath = path.resolve(process.cwd(), 'src/main/bootstrap.ts');
-const servicePath = path.resolve(process.cwd(), 'src/main/dependency-management-service.ts');
-
-function createSnapshot(): DependencyManagementSnapshot {
-  return {
-    mode: {
-      configuredMode: 'internal',
-      effectiveMode: 'internal',
-      lockedByRuntime: false,
-      mutationsAvailable: true,
-    },
-    environment: {
-      available: true,
-      source: 'desktop-managed',
-      toolchainRoot: '/tmp/Hagi Code/toolchain',
-      nodeRuntimeRoot: '/tmp/Hagi Code/toolchain/node',
-      nodeVersion: '22.0.0',
-      nodeMajorVersion: '22',
-      npmGlobalPrefix: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal',
-      npmGlobalBinRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
-      npmCacheRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmCache',
-      node: {
-        status: 'available',
-        executablePath: '/tmp/Hagi Code/toolchain/node/bin/node',
-        version: '22.0.0',
-      },
-      npm: {
-        status: 'available',
-        executablePath: '/tmp/Hagi Code/toolchain/node/lib/node_modules/npm/bin/npm-cli.js',
-        version: '10.0.0',
-      },
-    },
-    packages: [],
-    vendoredRuntimes: [],
-    mirrorSettings: {
-      enabled: false,
-      registryUrl: null,
-    },
-    activeOperation: null,
-    activeRuntimeActivation: null,
-    generatedAt: '2026-04-28T00:00:00.000Z',
-  };
-}
-
-function createResult(stage: CliDependencyInstallResult['stage'], success: boolean, error?: string): CliDependencyInstallResult {
-  const snapshot = createSnapshot();
-  return {
-    success,
-    stage,
-    requestedPackageIds: ['claude-code', 'codex'],
-    statuses: [],
-    verifications: success
-      ? [
-        {
-          packageId: 'pm2',
-          status: 'installed',
-          packageRoot: `${snapshot.environment.npmGlobalModulesRoot}/pm2`,
-          executablePath: `${snapshot.environment.npmGlobalBinRoot}/pm2`,
-          packageRootUnderManagedModules: true,
-          executableUnderManagedBin: true,
-          resolvedCommandPath: `${snapshot.environment.npmGlobalBinRoot}/pm2`,
-          commandResolvesThroughManagedPath: true,
-        },
-        {
-          packageId: 'claude-code',
-          status: 'installed',
-          packageRoot: `${snapshot.environment.npmGlobalModulesRoot}/@anthropic-ai/claude-code`,
-          executablePath: `${snapshot.environment.npmGlobalBinRoot}/claude`,
-          packageRootUnderManagedModules: true,
-          executableUnderManagedBin: true,
-          resolvedCommandPath: `${snapshot.environment.npmGlobalBinRoot}/claude`,
-          commandResolvesThroughManagedPath: true,
-        },
-      ]
-      : [],
-    snapshot,
-    error,
-  };
-}
-
-function createService(result: CliDependencyInstallResult) {
-  return {
-    onProgress(listener: (event: DependencyManagementOperationProgress) => void): () => void {
-      listener({
-        packageId: 'claude-code',
-        operation: 'sync',
-        stage: 'started',
-        message: 'sync Claude Code started',
-        percentage: 0,
-        timestamp: '2026-04-28T00:00:00.000Z',
-      });
-      return () => undefined;
-    },
-    async installManagedPackagesForCli(packageIds: ManagedNpmPackageId[]): Promise<CliDependencyInstallResult> {
-      assert.deepEqual(packageIds, ['claude-code', 'codex']);
-      return result;
-    },
-  };
-}
-
 function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVerificationReport {
   return {
     ok,
@@ -145,19 +39,8 @@ function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVeri
         runtimeSource: 'https://download.visualstudio.microsoft.com/runtime.tar.gz',
         issues: ok ? [] : ['dotnet runtime missing metadata'],
       },
-      node: {
-        ok,
-        status: ok ? 'ok' : 'error',
-        root: '/artifact/resources/extra/runtime/components/node/runtime',
-        manifestPath: '/artifact/resources/manifest.yml',
-        activeForDesktop: true,
-        nodeExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/bin/node',
-        npmExecutablePath: '/artifact/resources/extra/runtime/components/node/runtime/lib/node_modules/npm/bin/npm-cli.js',
-        governedNodeVersion: '22.0.0',
-        issues: ok ? [] : ['bundled Node runtime metadata is missing or invalid'],
-      },
     },
-    issues: ok ? [] : ['dotnet runtime missing metadata', 'bundled Node runtime metadata is missing or invalid'],
+    issues: ok ? [] : ['dotnet runtime missing metadata'],
   };
 }
 
@@ -202,22 +85,6 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
 }
 
 describe('non-interactive mode parser', () => {
-  it('parses deps install --claude-code --codex into managed package IDs', () => {
-    const result = parseNonInteractiveCommand([
-      '/opt/Hagicode Desktop/hagicode',
-      'deps',
-      'install',
-      '--claude-code',
-      '--codex',
-    ]);
-
-    assert.equal(result.handled, true);
-    assert.equal(result.ok, true);
-    if (result.handled && result.ok && result.command.kind === 'deps-install') {
-      assert.deepEqual(result.command.packageIds, ['claude-code', 'codex']);
-    }
-  });
-
   it('parses runtime verify and runtime lifecycle without extra arguments', () => {
     const verify = parseNonInteractiveCommand(['hagicode', 'runtime', 'verify']);
     const lifecycle = parseNonInteractiveCommand(['hagicode', 'runtime', 'lifecycle']);
@@ -236,58 +103,29 @@ describe('non-interactive mode parser', () => {
       '--ozone-platform=headless',
       '--hagicode-non-interactive-integration',
       '--hagicode-user-data-dir=/tmp/Hagi Code/userData',
-      'deps',
-      'install',
-      '--claude-code',
-      '--codex',
+      'runtime',
+      'verify',
     ]);
 
     assert.equal(result.handled, true);
     assert.equal(result.ok, true);
-    if (result.handled && result.ok && result.command.kind === 'deps-install') {
-      assert.deepEqual(result.userArgs, ['deps', 'install', '--claude-code', '--codex']);
-    }
   });
 
   it('rejects unsupported commands, flags, duplicates, and extra runtime arguments', () => {
     const unsupportedCommand = parseNonInteractiveCommand(['hagicode', 'sync', 'install']);
     const unsupportedFlag = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--unknown']);
-    const duplicateFlag = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--codex', '--codex']);
-    const emptySelection = parseNonInteractiveCommand(['hagicode', 'deps', 'install']);
     const extraRuntimeArgs = parseNonInteractiveCommand(['hagicode', 'runtime', 'verify', '--verbose']);
 
     assert.equal(unsupportedCommand.handled, true);
     assert.equal(unsupportedCommand.ok, false);
     assert.equal(unsupportedFlag.handled, true);
     assert.equal(unsupportedFlag.ok, false);
-    assert.equal(duplicateFlag.handled, true);
-    assert.equal(duplicateFlag.ok, false);
-    assert.equal(emptySelection.handled, true);
-    assert.equal(emptySelection.ok, false);
     assert.equal(extraRuntimeArgs.handled, true);
     assert.equal(extraRuntimeArgs.ok, false);
   });
 });
 
 describe('non-interactive mode dispatch', () => {
-  it('maps successful dependency installs to stdout and exit code 0', async () => {
-    const stdout: string[] = [];
-    const stderr: string[] = [];
-    const parseResult = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--claude-code', '--codex']);
-    const result = await runNonInteractiveCommand(parseResult, {
-      service: createService(createResult('success', true)),
-      output: {
-        stdout: (line) => stdout.push(line),
-        stderr: (line) => stderr.push(line),
-      },
-    });
-
-    assert.equal(result.exitCode, nonInteractiveExitCodes.success);
-    assert.equal(stderr.length, 0);
-    assert.match(stdout.join('\n'), /requested packages: claude-code, codex/);
-    assert.match(stdout.join('\n'), /result: success/);
-  });
-
   it('maps successful runtime verification to stdout and exit code 0', async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -303,7 +141,6 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(result.exitCode, nonInteractiveExitCodes.success);
     assert.equal(stderr.length, 0);
     assert.match(stdout.join('\n'), /runtime component dotnet status: ok/);
-    assert.match(stdout.join('\n'), /runtime component node manifest: \/artifact\/resources\/manifest.yml/);
     assert.match(stdout.join('\n'), /result: success/);
   });
 
@@ -326,9 +163,9 @@ describe('non-interactive mode dispatch', () => {
     assert.match(stdout.join('\n'), /result: success/);
   });
 
-  it('maps usage, install, and verification failures to stderr and deterministic exit codes', async () => {
+  it('maps usage failures to stderr and deterministic exit codes', async () => {
     const usageStderr: string[] = [];
-    const usage = await runNonInteractiveCommand(parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--bad']), {
+    const usage = await runNonInteractiveCommand(parseNonInteractiveCommand(['hagicode', 'sync', 'install']), {
       output: {
         stdout: () => undefined,
         stderr: (line) => usageStderr.push(line),
@@ -337,23 +174,7 @@ describe('non-interactive mode dispatch', () => {
     assert.equal(usage.exitCode, nonInteractiveExitCodes.usage);
     assert.match(usageStderr.join('\n'), /Usage:/);
 
-    for (const [stage, exitCode] of [
-      ['install', nonInteractiveExitCodes.install],
-      ['verification', nonInteractiveExitCodes.verification],
-    ] as const) {
-      const stderr: string[] = [];
-      const parseResult = parseNonInteractiveCommand(['hagicode', 'deps', 'install', '--claude-code', '--codex']);
-      const result = await runNonInteractiveCommand(parseResult, {
-        service: createService(createResult(stage, false, `${stage} failed`)),
-        output: {
-          stdout: () => undefined,
-          stderr: (line) => stderr.push(line),
-        },
-      });
-      assert.equal(result.exitCode, exitCode);
-      assert.match(stderr.join('\n'), new RegExp(`stage: ${stage}`));
-      assert.match(stderr.join('\n'), new RegExp(`${stage} failed`));
-    }
+    assert.equal(usage.exitCode, nonInteractiveExitCodes.usage);
   });
 
   it('maps failed runtime verification and lifecycle checks to exit code 72', async () => {
@@ -388,19 +209,5 @@ describe('main-process entrypoint contract', () => {
     assert.match(source, /parseNonInteractiveCommand\(process\.argv\)/);
     assert.match(source, /runNonInteractiveBootstrap\(\)/);
     assert.match(source, /await import\('\.\/main\.js'\)/);
-  });
-});
-
-describe('dependency service CLI contract', () => {
-  it('injects pm2 into the internal sync set and verifies the synced packages by refreshed status', async () => {
-    const source = await fs.readFile(servicePath, 'utf8');
-
-    assert.match(source, /installManagedPackagesForCli\(packageIds: ManagedNpmPackageId\[\]\)/);
-    assert.match(source, /const syncPackageIds = this\.resolveCliSyncPackageIds\(requestedPackageIds\);/);
-    assert.match(source, /const verificationPackageIds = syncPackageIds;/);
-    assert.match(source, /verifyManagedPackagesForCli/);
-    assert.match(source, /resolveCommandThroughManagedEnv/);
-    assert.doesNotMatch(source, /bootstrapResult/);
-    assert.doesNotMatch(source, /getHagiscriptStatus/);
   });
 });

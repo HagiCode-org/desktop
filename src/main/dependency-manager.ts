@@ -9,12 +9,6 @@ import {
   validateBundledRuntimeForPlatform,
 } from './embedded-runtime.js';
 import { resolvePinnedRuntimeTarget } from './embedded-runtime-config.js';
-import {
-  BundledNodeRuntimeManager,
-  type BundledToolchainComponentId,
-  type BundledToolchainComponentStatus,
-} from './bundled-node-runtime-manager.js';
-import { satisfies } from 'semver';
 
 const { app } = electron;
 
@@ -29,8 +23,8 @@ export enum DependencyType {
   CliTool = 'cli-tool',
 }
 
-export interface BundledCliManualAction {
-  logicalName: Exclude<BundledToolchainComponentId, 'node' | 'npm'>;
+export interface ExternalCliManualAction {
+  logicalName: string;
   packageName: string;
   version: string;
   binName: string;
@@ -39,15 +33,13 @@ export interface BundledCliManualAction {
   installState: 'pending' | 'installed';
   installSpec: string;
   manualActionId: string;
-  toolchainRoot: string;
-  npmExecutablePath?: string;
   command?: string;
 }
 
 export interface DependencyActionPlan {
   status: 'manual-action-required';
   message: string;
-  packages: BundledCliManualAction[];
+  packages: ExternalCliManualAction[];
 }
 
 /**
@@ -70,7 +62,7 @@ export interface DependencyCheckResult {
   sourcePath?: string;
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
-  manualAction?: BundledCliManualAction;
+  manualAction?: ExternalCliManualAction;
 }
 
 /**
@@ -79,7 +71,6 @@ export interface DependencyCheckResult {
 export class DependencyManager {
   private currentManifest: Manifest | null = null;
   private readonly pathManager = PathManager.getInstance();
-  private readonly bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
   private static readonly DESKTOP_DOWNLOAD_URL = 'https://hagicode.com/desktop/#download';
   private static readonly MANUAL_DEPENDENCY_HANDOFF_MESSAGE =
     'Desktop no longer executes dependency installers automatically. Review the dependency status, run the required manual steps outside Desktop, and refresh when finished.';
@@ -108,6 +99,10 @@ export class DependencyManager {
 
   getManualDependencyHandoffMessage(): string {
     return DependencyManager.MANUAL_DEPENDENCY_HANDOFF_MESSAGE;
+  }
+
+  buildManualActionPlan(_dependencies: DependencyCheckResult[]): DependencyActionPlan | null {
+    return null;
   }
 
   /**
@@ -139,12 +134,7 @@ export class DependencyManager {
         return bundledRuntimeResult;
       }
 
-      const bundledToolchainResult = await this.checkBundledToolchainDependency(dep);
-      if (bundledToolchainResult) {
-        return bundledToolchainResult;
-      }
-
-      // Non-bundled dependencies remain manual/external checks in the current flow.
+      // Node and npm dependencies are checked through the external environment.
       return {
         key: dep.key,
         name: dep.name,
@@ -199,103 +189,6 @@ export class DependencyManager {
 
     if (parts.length === 0) return 'any';
     return parts.join(', ');
-  }
-
-  private quoteManualCommandSegment(segment: string): string {
-    if (segment.length === 0) {
-      return '""';
-    }
-
-    if (process.platform === 'win32') {
-      return `"${segment.replace(/"/g, '\\"')}"`;
-    }
-
-    return `'${segment.replace(/'/g, `'\\''`)}'`;
-  }
-
-  private buildBundledInstallCommand(
-    nodeExecutablePath: string | undefined,
-    npmExecutablePath: string | undefined,
-    installSpec: string,
-  ): string | undefined {
-    if (!npmExecutablePath) {
-      return undefined;
-    }
-
-    const quotedArgs = [
-      'install',
-      '-g',
-      this.quoteManualCommandSegment(installSpec),
-    ];
-
-    if (/\.js$/i.test(npmExecutablePath)) {
-      if (!nodeExecutablePath) {
-        return undefined;
-      }
-
-      return [
-        this.quoteManualCommandSegment(nodeExecutablePath),
-        this.quoteManualCommandSegment(npmExecutablePath),
-        ...quotedArgs,
-      ].join(' ');
-    }
-
-    return [
-      this.quoteManualCommandSegment(npmExecutablePath),
-      ...quotedArgs,
-    ].join(' ');
-  }
-
-  private buildBundledCliManualAction(
-    componentId: Exclude<BundledToolchainComponentId, 'node' | 'npm'>,
-    component: BundledToolchainComponentStatus,
-    bundledStatus: Awaited<ReturnType<BundledNodeRuntimeManager['verify']>>,
-  ): BundledCliManualAction | undefined {
-    const packageRecord = bundledStatus.manifest?.packages?.[componentId];
-    const nodeExecutablePath = bundledStatus.components.node.executablePath;
-    const npmExecutablePath = bundledStatus.components.npm.executablePath;
-    if (!packageRecord) {
-      return undefined;
-    }
-
-    const command = this.buildBundledInstallCommand(
-      nodeExecutablePath,
-      npmExecutablePath,
-      packageRecord.installSpec,
-    );
-
-    return {
-      logicalName: componentId,
-      packageName: packageRecord.packageName,
-      version: packageRecord.version,
-      binName: packageRecord.binName,
-      aliases: packageRecord.aliases || [],
-      installMode: packageRecord.installMode,
-      installState: packageRecord.installState,
-      installSpec: packageRecord.installSpec,
-      manualActionId: packageRecord.manualActionId,
-      toolchainRoot: bundledStatus.toolchainRoot,
-      npmExecutablePath,
-      command,
-    };
-  }
-
-  buildManualActionPlan(dependencies: DependencyCheckResult[]): DependencyActionPlan | null {
-    const packages = dependencies
-      .filter((dependency): dependency is DependencyCheckResult & { manualAction: BundledCliManualAction } => (
-        dependency.status === 'manual-install-required' && !!dependency.manualAction
-      ))
-      .map((dependency) => dependency.manualAction);
-
-    if (packages.length === 0) {
-      return null;
-    }
-
-    return {
-      status: 'manual-action-required',
-      message: 'Bundled Node.js and npm are ready, but Desktop-managed CLI packages must be installed manually before they can be used.',
-      packages,
-    };
   }
 
   private async checkBundledDotnetDependency(dep: ParsedDependency): Promise<DependencyCheckResult | null> {
@@ -359,118 +252,6 @@ export class DependencyManager {
       primaryAction,
       status: 'missing',
     };
-  }
-
-  private normalizeToolchainDependencyKey(dep: ParsedDependency): BundledToolchainComponentId | null {
-    const normalizedKey = dep.key.toLowerCase();
-    const normalizedName = dep.name.toLowerCase();
-    if (normalizedKey === 'node' || normalizedName.includes('node.js')) return 'node';
-    if (normalizedKey === 'npm' || normalizedName === 'npm') return 'npm';
-    if (normalizedKey === 'openspec' || normalizedName.includes('openspec')) return 'openspec';
-    if (normalizedKey === 'skills' || normalizedName.includes('skills')) return 'skills';
-    return null;
-  }
-
-  private async checkBundledToolchainDependency(dep: ParsedDependency): Promise<DependencyCheckResult | null> {
-    const componentId = this.normalizeToolchainDependencyKey(dep);
-    if (!componentId) {
-      return null;
-    }
-
-    const bundledStatus = await this.bundledNodeRuntimeManager.verify();
-    if ((componentId === 'node' || componentId === 'npm') && !bundledStatus.activeForDesktop) {
-      return null;
-    }
-    const component = bundledStatus.components[componentId];
-    const requiredVersion = component.requiredVersion ?? this.formatRequiredVersion(dep.versionConstraints);
-
-    if (component.primaryAction === 'manual-install') {
-      const manualAction = componentId === 'node' || componentId === 'npm'
-        ? undefined
-        : this.buildBundledCliManualAction(componentId, component, bundledStatus);
-      return {
-        key: dep.key,
-        name: dep.name,
-        type: this.mapDependencyType(dep.key, dep.type),
-        installed: false,
-        version: component.version,
-        requiredVersion,
-        versionMismatch: false,
-        description: component.message,
-        resolutionSource: 'bundled-desktop',
-        sourcePath: component.executablePath ?? component.sourcePath,
-        primaryAction: 'manual-install',
-        status: 'manual-install-required',
-        manualAction,
-      };
-    }
-
-    if (component.installed) {
-      const versionMismatch = !this.isBundledToolchainVersionCompatible(componentId, component.version, dep);
-      return {
-        key: dep.key,
-        name: dep.name,
-        type: this.mapDependencyType(dep.key, dep.type),
-        installed: !versionMismatch,
-        version: component.version,
-        requiredVersion,
-        versionMismatch,
-        description: versionMismatch
-          ? `Bundled Desktop ${componentId} version does not satisfy ${requiredVersion}. Update Desktop to refresh the managed toolchain.`
-          : `Bundled with Desktop at ${component.sourcePath}`,
-        resolutionSource: 'bundled-desktop',
-        sourcePath: component.executablePath ?? component.sourcePath,
-        primaryAction: versionMismatch ? 'update-desktop' : undefined,
-        status: versionMismatch ? 'version-mismatch' : 'installed',
-      };
-    }
-
-    return {
-      key: dep.key,
-      name: dep.name,
-      type: this.mapDependencyType(dep.key, dep.type),
-      installed: false,
-      version: component.version,
-      requiredVersion,
-      versionMismatch: false,
-      description: `${component.message ?? (bundledStatus.errors.join('; ') || 'Bundled Desktop toolchain validation failed.')} Reinstall or update Desktop to restore the managed toolchain.`,
-      downloadUrl: DependencyManager.DESKTOP_DOWNLOAD_URL,
-      resolutionSource: 'bundled-desktop',
-      sourcePath: component.executablePath ?? component.sourcePath,
-      primaryAction: component.primaryAction === 'update-desktop' ? 'update-desktop' : 'reinstall-desktop',
-      status: 'missing',
-    };
-  }
-
-  private isBundledToolchainVersionCompatible(
-    componentId: BundledToolchainComponentId,
-    version: string | undefined,
-    dep: ParsedDependency,
-  ): boolean {
-    if (!version) {
-      return false;
-    }
-
-    if (componentId === 'openspec') {
-      return satisfies(version, '>=1.0.0 <2.0.0', { includePrerelease: true });
-    }
-
-    if (componentId === 'skills') {
-      return true;
-    }
-
-    if (dep.versionConstraints.exact) {
-      return version === dep.versionConstraints.exact;
-    }
-
-    const rangeParts = [];
-    if (dep.versionConstraints.min) rangeParts.push(`>=${dep.versionConstraints.min}`);
-    if (dep.versionConstraints.max) rangeParts.push(`<${dep.versionConstraints.max}`);
-    if (rangeParts.length === 0) {
-      return true;
-    }
-
-    return satisfies(version, rangeParts.join(' '), { includePrerelease: true });
   }
 
   /**

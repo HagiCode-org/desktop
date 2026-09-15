@@ -205,8 +205,6 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
   const desktopExtensions = asRecord(manifest.desktopExtensions);
   const distribution = asRecord(desktopExtensions?.distribution);
   const programHomes = asRecord(distribution?.programHomes);
-  const nodeComponent = resolveManifestComponentByName(manifest, 'node');
-  const nodeRuntime = normalizeRelativePath(readString(paths?.nodeRuntime)) ?? 'components/node/runtime';
   const dotnetRuntime = normalizeRelativePath(readString(paths?.dotnetRuntime)) ?? 'components/dotnet/runtime';
   const runtimeDataRelativePath = normalizeRelativePath(readString(distribution?.runtimeDataRelativePath)) ?? 'runtimeData';
 
@@ -234,10 +232,6 @@ function synthesizeDesktopRuntimeSection(manifest: RuntimeManifestStore): Record
       dotnet: {
         relativePath: `${dotnetRuntime}/{platform}`,
       },
-      node: {
-        relativePath: nodeRuntime,
-        optionalPolicy: asRecord(nodeComponent?.optionalPolicy) ?? undefined,
-      },
     },
     services: {},
     npmSync: asRecord(manifest.npmSync) ?? undefined,
@@ -261,19 +255,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function resolveManifestComponentByName(
-  manifest: RuntimeManifestStore,
-  componentName: string,
-): Record<string, unknown> | null {
-  if (!Array.isArray(manifest.components)) {
-    return null;
-  }
-
-  return manifest.components
-    .map((entry) => asRecord(entry))
-    .find((entry) => readString(entry?.name) === componentName) ?? null;
-}
-
 export function materializeRuntimeManifestContent(
   manifestContent: string,
   _dataScopePath: string,
@@ -282,7 +263,7 @@ export function materializeRuntimeManifestContent(
 ): string {
   const parsed = load(manifestContent);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-    throw new Error('Bundled runtime manifest must be a YAML object.');
+    throw new Error('Desktop runtime manifest must be a YAML object.');
   }
 
   const manifest = parsed as RuntimeManifestStore;

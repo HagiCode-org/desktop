@@ -6,10 +6,8 @@ import { buildStartupFailurePayload } from '../startup-failure-payload.js';
 import type { StartResult } from '../manifest-reader.js';
 import {
   resolveCommandLaunch,
-  resolveToolchainLaunchPlan,
   shouldUseShellForCommand,
 } from '../toolchain-launch.js';
-import { resolveBundledNodeRuntimePolicy } from '../bundled-node-runtime-policy.js';
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
 const hagiscriptRuntimeContextPath = path.resolve(process.cwd(), 'src/main/hagiscript-runtime-context.ts');
@@ -87,15 +85,12 @@ describe('web-service startup flow', () => {
     assert.match(runtimeContextSource, /getManagedCommandContext\('pm2'\)/);
     assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
     assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
-    assert.match(runtimeContextSource, /dependencyManagementMode: shared\.dependencyManagementMode/);
     assert.match(runtimeContextSource, /externalNodePath: shared\.externalNodePath/);
     assert.match(runtimeContextSource, /managedContext\.environment\.source === 'externally-managed'/);
     assert.match(runtimeContextSource, /const serviceDataHome = pm2Home;/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.source === 'desktop-managed'/);
-    assert.match(runtimeContextSource, /\? path\.resolve\(managedContext\.environment\.npmGlobalPrefix\)/);
-    assert.match(runtimeContextSource, /: managedContext\.environment\.npmGlobalPrefix,/);
+    assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.npmGlobalPrefix/);
     assert.match(runtimeContextSource, /servicePayloadPath,/);
     assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
@@ -106,7 +101,6 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /restartManagedServer/);
     assert.match(serverManagerSource, /stopManagedServer/);
     assert.match(serverManagerSource, /getManagedServerStatus/);
-    assert.match(serverManagerSource, /dependencyManagementMode: context\.dependencyManagementMode/);
     assert.match(serverManagerSource, /externalNodePath: context\.externalNodePath/);
     assert.match(serverManagerSource, /response\?\.pm2Home \? path\.join\(response\.pm2Home, 'logs'\) : null/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
@@ -205,122 +199,36 @@ describe('web-service startup flow', () => {
     assert.equal(retiredCompatibilityPayloadField in payload, false);
   });
 
-  it('prefers bundled absolute toolchain executables and falls back to system PATH when missing', () => {
-    const bundledNode = '/portable/toolchain/node/bin/node';
-    const bundledNpm = '/portable/toolchain/node/bin/npm';
-    const pathManager = {
-      getPortableNodeExecutablePath: () => bundledNode,
-      getPortableNpmExecutablePath: () => bundledNpm,
-    };
-
-    const nodePlan = resolveToolchainLaunchPlan({
-      commandName: 'node',
-      args: ['server.js', '--watch'],
-      platform: 'linux',
-      existsSync: target => target === bundledNode,
-      pathManager,
-    });
-    const npmPlan = resolveToolchainLaunchPlan({
-      commandName: 'npm',
-      args: ['run', 'dev'],
-      platform: 'linux',
-      existsSync: () => false,
-      pathManager,
-    });
-
-    assert.equal(nodePlan.command, bundledNode);
-    assert.deepEqual(nodePlan.args, ['server.js', '--watch']);
-    assert.equal(nodePlan.usedBundledToolchain, true);
-    assert.equal(nodePlan.fellBackToSystemPath, false);
-    assert.equal(nodePlan.shell, false);
-
-    assert.equal(npmPlan.command, 'npm');
-    assert.deepEqual(npmPlan.args, ['run', 'dev']);
-    assert.equal(npmPlan.usedBundledToolchain, false);
-    assert.equal(npmPlan.fellBackToSystemPath, true);
-  });
-
-  it('uses desktop default-enabled policy unless an explicit disable override is present', () => {
-    const defaultPolicy = resolveBundledNodeRuntimePolicy({ defaultEnabledByConsumer: { desktop: true } });
-    const disabledPolicy = resolveBundledNodeRuntimePolicy({
-      defaultEnabledByConsumer: { desktop: true },
-      explicitEnabled: false,
-    });
-
-    assert.equal(defaultPolicy.enabled, true);
-    assert.equal(defaultPolicy.source, 'manifest-default');
-    assert.equal(disabledPolicy.enabled, false);
-    assert.equal(disabledPolicy.source, 'override');
-  });
-
-  it('does not resolve bundled node or npm when the effective desktop policy is disabled', () => {
-    const bundledNode = '/portable/toolchain/node/bin/node';
-    const policy = resolveBundledNodeRuntimePolicy({
-      defaultEnabledByConsumer: { desktop: true },
-      explicitEnabled: false,
-    });
-    const plan = resolveToolchainLaunchPlan({
-      commandName: 'node',
-      args: ['server.js'],
-      platform: 'linux',
-      existsSync: target => target === bundledNode,
-      activationPolicy: policy,
-      pathManager: {
-        getPortableNodeExecutablePath: () => bundledNode,
-        getPortableNpmExecutablePath: () => '/portable/toolchain/node/bin/npm',
-      },
-    });
-
-    assert.equal(plan.command, 'node');
-    assert.equal(plan.usedBundledToolchain, false);
-    assert.equal(plan.resolutionSource, 'system');
-    assert.equal(plan.activationPolicy?.source, 'override');
-  });
-
-  it('routes Windows command-wrapper executables through shell mode and keeps args unchanged', () => {
-    const plan = resolveToolchainLaunchPlan({
-      commandName: 'npm',
-      args: ['install', '--global', '@openspec/cli'],
-      platform: 'win32',
-      existsSync: target => target.endsWith('npm.cmd'),
-      pathManager: {
-        getPortableNodeExecutablePath: () => 'C:\\portable\\toolchain\\node\\node.exe',
-        getPortableNpmExecutablePath: () => 'C:\\portable\\toolchain\\node\\npm.cmd',
-      },
-    });
-
-    assert.equal(plan.command, 'C:\\portable\\toolchain\\node\\npm.cmd');
-    assert.deepEqual(plan.args, ['install', '--global', '@openspec/cli']);
-    assert.equal(plan.shell, true);
-    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\node.exe', 'win32'), false);
-    assert.equal(shouldUseShellForCommand('C:\\portable\\toolchain\\node\\npm.cmd', 'win32'), true);
+  it('routes Windows command-wrapper executables through shell mode', () => {
+    assert.equal(shouldUseShellForCommand('C:\\Program Files\\nodejs\\node.exe', 'win32'), false);
+    assert.equal(shouldUseShellForCommand('C:\\Users\\Test\\AppData\\Roaming\\npm\\npm.cmd', 'win32'), true);
   });
 
   it('quotes Windows absolute wrapper commands under Program Files roots before routing them through shell execution', () => {
     const npmLaunch = resolveCommandLaunch(
-      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd',
+      'C:\\Program Files\\nodejs\\npm.cmd',
       'win32',
     );
     const hagiscriptLaunch = resolveCommandLaunch(
-      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd',
+      'C:\\Program Files\\Hagicode\\bin\\hagiscript.cmd',
       'win32',
     );
     const batchLaunch = resolveCommandLaunch(
-      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\managed-tool.bat',
+      'C:\\Program Files\\Hagicode\\bin\\managed-tool.bat',
       'win32',
     );
     const nodeLaunch = resolveCommandLaunch(
-      'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe',
+      'C:\\Program Files\\nodejs\\node.exe',
       'win32',
     );
 
-    assert.equal(npmLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
+    assert.equal(npmLaunch.command, '"C:\\Program Files\\nodejs\\npm.cmd"');
     assert.equal(npmLaunch.shell, true);
-    assert.equal(hagiscriptLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\hagiscript.cmd"');
+    assert.equal(hagiscriptLaunch.command, '"C:\\Program Files\\Hagicode\\bin\\hagiscript.cmd"');
     assert.equal(hagiscriptLaunch.shell, true);
-    assert.equal(batchLaunch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\managed-tool.bat"');
+    assert.equal(batchLaunch.command, '"C:\\Program Files\\Hagicode\\bin\\managed-tool.bat"');
     assert.equal(batchLaunch.shell, true);
-    assert.equal(nodeLaunch.command, 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\node.exe');
+    assert.equal(nodeLaunch.command, 'C:\\Program Files\\nodejs\\node.exe');
     assert.equal(nodeLaunch.shell, false);
   });
 });

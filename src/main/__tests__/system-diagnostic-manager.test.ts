@@ -3,59 +3,35 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-const systemDiagnosticManagerPath = path.resolve(process.cwd(), 'src/main/system-diagnostic-manager.ts');
+const managerPath = path.resolve(process.cwd(), 'src/main/system-diagnostic-manager.ts');
 
-describe('system-diagnostic-manager bundled toolchain reporting', () => {
-  it('reports manifest-declared commands and deferred package metadata in the diagnostic report', async () => {
-    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
-
-    assert.match(source, /Object\.entries\(status\.manifest\?\.commands \?\? {}\)/);
-    assert.match(source, /Object\.entries\(status\.manifest\?\.packages \?\? {}\)/);
-    assert.match(source, /`activeForDesktop=\$\{data\.bundledToolchain\.activeForDesktop\}`/);
-    assert.match(source, /`activationSource=\$\{data\.bundledToolchain\.activationSource\}`/);
-    assert.match(source, /`package\.\$\{name\}\.name=\$\{packageRecord\.packageName\}`/);
-    assert.match(source, /`package\.\$\{name\}\.version=\$\{packageRecord\.version \?\? 'unknown'\}`/);
-    assert.match(source, /`coverage\.requiredByCoreRuntime=\$\{AUDITED_CORE_DEPENDENCY_COVERAGE_MATRIX\.requiredCommands\.join\(','\)\}`/);
-  });
-
-  it('probes the full desktop agent cli catalog instead of only npm-managed packages', async () => {
-    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
+describe('system-diagnostic-manager external runtime reporting', () => {
+  it('probes the full desktop agent CLI catalog', async () => {
+    const source = await fs.readFile(managerPath, 'utf8');
 
     assert.match(source, /desktopAgentCliCatalog\.map/);
-    assert.match(source, /copilot: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /pi: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /reasonix: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /'kiro-cli': \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /kimi: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /deepagents: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /hermes: \[\['--version'\], \['version'\], \['-v'\]\]/);
-    assert.match(source, /const commandCandidates = \[\.\.\.definition\.commandCandidates\]/);
+    assert.match(source, /this\.probeAgentCli\(definition, runtimeEnv, issues\)/);
   });
 
-  it('collects built-in Node.js, npm config, and managed command diagnostics', async () => {
-    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
+  it('collects .NET, external Node.js, npm, and npm configuration diagnostics', async () => {
+    const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /builtinRuntimes = await this\.collectBuiltinRuntimeDiagnostics/);
-    assert.match(source, /probeBundledRuntimeCommand\('node'/);
-    assert.match(source, /probeBundledRuntimeCommand\('npm'/);
-    assert.doesNotMatch(source, /probeBundledRuntimeCommand\('npx'/);
-    assert.match(source, /\['config', 'get', 'registry'\]/);
-    assert.match(source, /HAGICODE_NPM_GLOBAL_PREFIX/);
+    assert.match(source, /this\.collectDotnetRuntimeRow\(runtimeEnv, issues\)/);
+    assert.match(source, /this\.probeExternalRuntimeCommand\('node', runtimeEnv, issues\)/);
+    assert.match(source, /this\.probeExternalRuntimeCommand\('npm', runtimeEnv, issues\)/);
+    assert.match(source, /this\.collectNpmConfigInfo\(runtimeEnv, issues\)/);
+    assert.match(source, /source: 'external'/);
     assert.match(source, /npm\.globalBinRoot/);
     assert.match(source, /npm\.globalModulesRoot/);
-    assert.match(source, /npm\.bundledRuntimeRoot/);
-    assert.match(source, /managed\.\$\{command\.id\}\.status=\$\{command\.status\}/);
-    assert.match(source, /pushSection\('built-in-runtimes'/);
-    assert.doesNotMatch(source, /id: 'npx'/);
   });
 
-  it('keeps runtime diagnostics scoped when bundled Node validation or npm config probes fail', async () => {
-    const source = await fs.readFile(systemDiagnosticManagerPath, 'utf8');
+  it('keeps external runtime failures scoped to the relevant diagnostic sections', async () => {
+    const source = await fs.readFile(managerPath, 'utf8');
 
-    assert.match(source, /safeCollectBundledToolchainStatus/);
-    assert.match(source, /this\.pushIssue\(issues, 'bundled-runtime', 'node-verify', 'error'/);
+    assert.match(source, /this\.pushIssue\(issues, 'builtin-runtime', command, 'missing'/);
+    assert.match(source, /this\.pushIssue\(issues, 'builtin-runtime', command, 'error'/);
     assert.match(source, /this\.pushIssue\(issues, 'npm-config', 'registry', 'error'/);
-    assert.match(source, /this\.pushIssue\(issues, 'npm-config', key, 'error'/);
-    assert.match(source, /this\.pushIssue\(issues, 'managed-command', id, 'missing'/);
+    assert.match(source, /this\.pushIssue\(issues, 'toolchain', toolchainProbe\.command, 'missing'/);
+    assert.doesNotMatch(source, /bundledToolchain/);
   });
 });

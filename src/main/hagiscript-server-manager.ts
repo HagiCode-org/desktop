@@ -134,9 +134,6 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', 'exact', {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.dependencyManagementMode
-          ? { dependencyManagementMode: context.dependencyManagementMode }
-          : {}),
         ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
@@ -192,9 +189,6 @@ export class HagiscriptPm2Manager {
       const report = await queryRuntimeState({
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.dependencyManagementMode
-          ? { dependencyManagementMode: context.dependencyManagementMode }
-          : {}),
       });
 
       return {
@@ -273,9 +267,6 @@ export class HagiscriptPm2Manager {
       const environment = await resolveManagedServerStartupEnvironment({
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.dependencyManagementMode
-          ? { dependencyManagementMode: context.dependencyManagementMode }
-          : {}),
         ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
@@ -309,9 +300,6 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', action, {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.dependencyManagementMode
-          ? { dependencyManagementMode: context.dependencyManagementMode }
-          : {}),
         ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
@@ -332,9 +320,6 @@ export class HagiscriptPm2Manager {
     const options = {
       manifestPath: context.manifestPath,
       runtimeRoot: context.runtimeRoot,
-      ...(context.dependencyManagementMode
-        ? { dependencyManagementMode: context.dependencyManagementMode }
-        : {}),
       ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
     };
 

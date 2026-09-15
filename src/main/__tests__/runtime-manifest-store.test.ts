@@ -55,7 +55,6 @@ describe('runtime manifest store data scope resolution', () => {
         '  componentDataRoot: components',
         '  defaultPm2Home: pm2',
         '  npmPrefix: npm',
-        '  nodeRuntime: components/node/runtime',
         '  dotnetRuntime: components/dotnet/runtime',
         '  vendoredRoot: components/bundled',
       ].join('\n'),
@@ -78,20 +77,11 @@ describe('runtime manifest store data scope resolution', () => {
     assert.equal(parsed.paths.serverDataRoot, path.join(runtimeDataRoot, 'apps', 'data'));
   });
 
-  it('keeps the synthesized desktopRuntime node component required by default', () => {
+  it('keeps the synthesized desktopRuntime section focused on the embedded .NET runtime', () => {
     const desktopRuntime = readRuntimeManifestSection<{
-      components: {
-        node: {
-          optionalPolicy?: {
-            rules: Array<{
-              id?: string;
-              dependencyManagementModes?: string[];
-            }>;
-          };
-        };
-      };
+      components: { dotnet: { relativePath: string } };
     }>('desktopRuntime');
 
-    assert.equal(desktopRuntime.components.node.optionalPolicy, undefined);
+    assert.equal(desktopRuntime.components.dotnet.relativePath, 'components/dotnet/runtime/{platform}');
   });
 });

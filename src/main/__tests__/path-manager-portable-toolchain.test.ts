@@ -1,86 +1,12 @@
 import assert from 'node:assert/strict';
-import path from 'node:path';
 import { describe, it } from 'node:test';
 import {
   buildNodeMajorNpmGlobalPaths,
   buildPm2MajorHomePaths,
   buildNpmGlobalCommandArtifactPaths,
-  buildPortableToolchainPaths,
-  resolvePortableToolchainRoot,
 } from '../portable-toolchain-paths.js';
 
-describe('path-manager portable toolchain paths', () => {
-  it('resolves development mode toolchain paths from the shared desktop runtime on unix', () => {
-    const paths = buildPortableToolchainPaths({
-      cwd: '/workspace/hagicode-desktop',
-      resourcesPath: '/ignored/resources',
-      isPackaged: false,
-      platform: 'linux',
-    });
-
-    assert.equal(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/components/node/runtime');
-    assert.equal(paths.nodeRoot, '/workspace/hagicode-desktop/resources/components/node/runtime');
-    assert.equal(paths.toolchainBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
-    assert.equal(paths.nodeBinRoot, '/workspace/hagicode-desktop/resources/components/node/runtime/bin');
-    assert.equal(paths.nodeExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/bin/node');
-    assert.equal(paths.npmExecutablePath, '/workspace/hagicode-desktop/resources/components/node/runtime/bin/npm');
-    assert.equal(paths.toolchainManifestPath, '/workspace/hagicode-desktop/resources/components/node/runtime/toolchain-manifest.json');
-    assert.notEqual(paths.toolchainRoot, '/workspace/hagicode-desktop/resources/toolchain');
-    assert.equal('openspecExecutablePath' in paths, false);
-  });
-
-  it('resolves packaged mode toolchain paths from resources on windows', () => {
-    const paths = buildPortableToolchainPaths({
-      cwd: 'C:/workspace/hagicode-desktop',
-      resourcesPath: 'C:/Program Files/HagiCode/resources',
-      isPackaged: true,
-      platform: 'win32',
-    });
-
-    assert.equal(paths.toolchainRoot, path.win32.join('C:/Program Files/HagiCode/resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
-    assert.equal(paths.nodeRoot, paths.toolchainRoot);
-    assert.equal(paths.nodeBinRoot, paths.toolchainRoot);
-    assert.equal(paths.nodeExecutablePath, path.win32.join(paths.toolchainRoot, 'node.exe'));
-    assert.equal(paths.npmExecutablePath, path.win32.join(paths.toolchainRoot, 'npm.cmd'));
-    assert.equal('openspecExecutablePath' in paths, false);
-  });
-
-  it('supports explicit toolchain root override for all derived paths', () => {
-    const toolchainRoot = resolvePortableToolchainRoot({
-      cwd: '/workspace/hagicode-desktop',
-      resourcesPath: '/ignored/resources',
-      isPackaged: true,
-      platform: 'linux',
-      overrideRoot: ' ../portable/toolchain ',
-    });
-    const paths = buildPortableToolchainPaths({
-      cwd: '/workspace/hagicode-desktop',
-      resourcesPath: '/ignored/resources',
-      isPackaged: true,
-      platform: 'linux',
-      overrideRoot: ' ../portable/toolchain ',
-    });
-
-    assert.equal(toolchainRoot, path.resolve('../portable/toolchain'));
-    assert.equal(paths.toolchainRoot, toolchainRoot);
-    assert.equal(paths.nodeExecutablePath, path.join(toolchainRoot, 'bin', 'node'));
-  });
-
-  it('keeps macOS packaged root under Contents/Resources via process.resourcesPath', () => {
-    const paths = buildPortableToolchainPaths({
-      cwd: '/workspace/hagicode-desktop',
-      resourcesPath: '/Applications/HagiCode Desktop.app/Contents/Resources',
-      isPackaged: true,
-      platform: 'darwin',
-    });
-
-    assert.equal(
-      paths.toolchainRoot,
-      '/Applications/HagiCode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime',
-    );
-    assert.equal(paths.nodeExecutablePath, '/Applications/HagiCode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime/bin/node');
-  });
-
+describe('external npm global and PM2 paths', () => {
   it('resolves Node-major npm global paths under userData on linux and macOS', () => {
     const node22 = buildNodeMajorNpmGlobalPaths({
       runtimeDataRoot: '/home/user/.hagicode/runtime-data',

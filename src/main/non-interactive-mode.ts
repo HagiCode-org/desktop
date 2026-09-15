@@ -1,24 +1,11 @@
-import type DependencyManagementService from './dependency-management-service.js';
-import type {
-  CliDependencyInstallResult,
-} from './dependency-management-service.js';
 import type {
   NonInteractiveRuntimeVerificationReport,
 } from './non-interactive-runtime-verify.js';
 import type {
   NonInteractiveRuntimeLifecycleReport,
 } from './non-interactive-runtime-lifecycle.js';
-import type {
-  DependencyManagementOperationProgress,
-  ManagedNpmPackageId,
-} from '../types/dependency-management.js';
 
-export type NonInteractiveCommandKind = 'deps-install' | 'runtime-verify' | 'runtime-lifecycle';
-
-export interface NonInteractiveDepsInstallCommand {
-  kind: 'deps-install';
-  packageIds: ManagedNpmPackageId[];
-}
+export type NonInteractiveCommandKind = 'runtime-verify' | 'runtime-lifecycle';
 
 export interface NonInteractiveRuntimeVerifyCommand {
   kind: 'runtime-verify';
@@ -29,7 +16,6 @@ export interface NonInteractiveRuntimeLifecycleCommand {
 }
 
 export type NonInteractiveCommand =
-  | NonInteractiveDepsInstallCommand
   | NonInteractiveRuntimeVerifyCommand
   | NonInteractiveRuntimeLifecycleCommand;
 
@@ -40,7 +26,7 @@ export type NonInteractiveParseResult =
 
 export interface NonInteractiveRunResult {
   exitCode: number;
-  stage: 'usage' | 'environment' | 'install' | 'verification' | 'success' | 'internal';
+  stage: 'usage' | 'verification' | 'success' | 'internal';
   error?: string;
 }
 
@@ -50,7 +36,6 @@ export interface NonInteractiveOutput {
 }
 
 export interface NonInteractiveRunOptions {
-  service?: Pick<DependencyManagementService, 'onProgress' | 'installManagedPackagesForCli'>;
   output?: NonInteractiveOutput;
   runtimeVerifier?: () => Promise<NonInteractiveRuntimeVerificationReport>;
   runtimeLifecycleVerifier?: () => Promise<NonInteractiveRuntimeLifecycleReport>;
@@ -59,20 +44,12 @@ export interface NonInteractiveRunOptions {
 export const nonInteractiveExitCodes = {
   success: 0,
   usage: 64,
-  environment: 69,
-  install: 71,
   verification: 72,
   internal: 1,
 } as const;
 
-const flagToPackageId = new Map<string, ManagedNpmPackageId>([
-  ['--claude-code', 'claude-code'],
-  ['--codex', 'codex'],
-]);
-
 export const nonInteractiveUsageText = [
   'Usage:',
-  '  Hagicode Desktop deps install --claude-code --codex',
   '  Hagicode Desktop runtime verify',
   '  Hagicode Desktop runtime lifecycle',
   '',
@@ -80,15 +57,9 @@ export const nonInteractiveUsageText = [
   '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
   '  runtime lifecycle  Validate Desktop SDK managed runtime service lifecycle transitions.',
   '',
-  'Supported deps install flags:',
-  '  --claude-code   Install the Desktop-managed Claude Code package.',
-  '  --codex         Install the Desktop-managed Codex package.',
-  '',
   'Exit codes:',
   `  ${nonInteractiveExitCodes.success}   success`,
   `  ${nonInteractiveExitCodes.usage}  command or flag usage error`,
-  `  ${nonInteractiveExitCodes.environment}  Desktop-managed Node/npm environment unavailable`,
-  `  ${nonInteractiveExitCodes.install}  requested package installation failed`,
   `  ${nonInteractiveExitCodes.verification}  post-install package verification failed`,
   `  ${nonInteractiveExitCodes.internal}   unexpected internal failure`,
 ].join('\n');
@@ -185,8 +156,7 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
     return { handled: false, reason: 'no-command' };
   }
 
-  if (userArgs[0] !== 'deps') {
-    if (userArgs[0] === 'runtime') {
+  if (userArgs[0] === 'runtime') {
       if (userArgs[1] !== 'verify' && userArgs[1] !== 'lifecycle') {
         return {
           handled: true,
@@ -215,65 +185,10 @@ export function parseNonInteractiveCommand(argv: readonly string[]): NonInteract
       };
     }
 
-    return {
-      handled: true,
-      ok: false,
-      error: `Unsupported non-interactive command: ${userArgs[0]}`,
-      userArgs,
-    };
-  }
-
-  if (userArgs[1] !== 'install') {
-    return {
-      handled: true,
-      ok: false,
-      error: `Unsupported deps command: ${userArgs.slice(0, 2).join(' ') || 'deps'}`,
-      userArgs,
-    };
-  }
-
-  const packageIds: ManagedNpmPackageId[] = [];
-  const seenFlags = new Set<string>();
-  const flags = userArgs.slice(2);
-
-  for (const flag of flags) {
-    const packageId = flagToPackageId.get(flag);
-    if (!packageId) {
-      return {
-        handled: true,
-        ok: false,
-        error: `Unsupported deps install flag: ${flag}`,
-        userArgs,
-      };
-    }
-    if (seenFlags.has(flag)) {
-      return {
-        handled: true,
-        ok: false,
-        error: `Duplicate deps install flag: ${flag}`,
-        userArgs,
-      };
-    }
-    seenFlags.add(flag);
-    packageIds.push(packageId);
-  }
-
-  if (packageIds.length === 0) {
-    return {
-      handled: true,
-      ok: false,
-      error: 'deps install requires at least one supported package flag.',
-      userArgs,
-    };
-  }
-
   return {
     handled: true,
-    ok: true,
-    command: {
-      kind: 'deps-install',
-      packageIds,
-    },
+    ok: false,
+    error: `Unsupported non-interactive command: ${userArgs[0]}`,
     userArgs,
   };
 }
@@ -283,52 +198,6 @@ function defaultOutput(): NonInteractiveOutput {
     stdout: (line) => process.stdout.write(`${line}\n`),
     stderr: (line) => process.stderr.write(`${line}\n`),
   };
-}
-
-function exitCodeForStage(stage: CliDependencyInstallResult['stage']): number {
-  switch (stage) {
-    case 'success':
-      return nonInteractiveExitCodes.success;
-    case 'environment':
-      return nonInteractiveExitCodes.environment;
-    case 'install':
-      return nonInteractiveExitCodes.install;
-    case 'verification':
-      return nonInteractiveExitCodes.verification;
-    default:
-      return nonInteractiveExitCodes.internal;
-  }
-}
-
-function printProgress(output: NonInteractiveOutput, event: DependencyManagementOperationProgress): void {
-  const percent = typeof event.percentage === 'number' ? ` ${event.percentage}%` : '';
-  output.stdout(`[${event.packageId}] ${event.operation}:${event.stage}${percent} ${event.message}`);
-}
-
-function printSuccess(output: NonInteractiveOutput, result: CliDependencyInstallResult): void {
-  output.stdout('HagiCode Desktop non-interactive dependency install');
-  output.stdout(`command: deps install`);
-  output.stdout(`requested packages: ${result.requestedPackageIds.join(', ')}`);
-  output.stdout(`install root: ${result.snapshot.environment.npmGlobalPrefix}`);
-  output.stdout(`managed modules: ${result.snapshot.environment.npmGlobalModulesRoot}`);
-  output.stdout(`managed bin: ${result.snapshot.environment.npmGlobalBinRoot}`);
-  for (const verification of result.verifications) {
-    output.stdout(
-      `[${verification.packageId}] status=${verification.status} packageRoot=${verification.packageRoot ?? '<missing>'} executable=${verification.executablePath ?? '<missing>'} resolved=${verification.resolvedCommandPath ?? '<missing>'}`,
-    );
-  }
-  output.stdout('result: success');
-}
-
-function printFailure(output: NonInteractiveOutput, result: CliDependencyInstallResult): void {
-  output.stderr(`result: failure`);
-  output.stderr(`stage: ${result.stage}`);
-  output.stderr(`error: ${result.error ?? 'unknown non-interactive dependency install failure'}`);
-  if (result.snapshot) {
-    output.stderr(`install root: ${result.snapshot.environment.npmGlobalPrefix}`);
-    output.stderr(`managed modules: ${result.snapshot.environment.npmGlobalModulesRoot}`);
-    output.stderr(`managed bin: ${result.snapshot.environment.npmGlobalBinRoot}`);
-  }
 }
 
 function formatRuntimeVerificationIssues(issues: string[]): string {
@@ -356,14 +225,6 @@ function printRuntimeVerificationReport(output: NonInteractiveOutput, report: No
   output.stdout(`runtime component dotnet hostfxr: ${report.components.dotnet.hostFxrVersion ?? '<missing>'}`);
   output.stdout(`runtime component dotnet source: ${report.components.dotnet.runtimeSource ?? '<missing>'}`);
   output.stdout(`runtime component dotnet issues: ${formatRuntimeVerificationIssues(report.components.dotnet.issues)}`);
-  output.stdout(`runtime component node root: ${report.components.node.root}`);
-  output.stdout(`runtime component node status: ${report.components.node.status}`);
-  output.stdout(`runtime component node manifest: ${report.components.node.manifestPath}`);
-  output.stdout(`runtime component node active: ${report.components.node.activeForDesktop}`);
-  output.stdout(`runtime component node executable: ${report.components.node.nodeExecutablePath ?? '<missing>'}`);
-  output.stdout(`runtime component npm executable: ${report.components.node.npmExecutablePath ?? '<missing>'}`);
-  output.stdout(`runtime component node version: ${report.components.node.governedNodeVersion ?? '<missing>'}`);
-  output.stdout(`runtime component node issues: ${formatRuntimeVerificationIssues(report.components.node.issues)}`);
 }
 
 function printRuntimeVerificationFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeVerificationReport): void {
@@ -521,33 +382,9 @@ export async function runNonInteractiveCommand(
     return runRuntimeLifecycleCommand(output, options.runtimeLifecycleVerifier);
   }
 
-  const service = options.service ?? new (await import('./dependency-management-service.js')).default();
-  const unsubscribe = service.onProgress((event) => printProgress(output, event));
-
-  try {
-    const result = await service.installManagedPackagesForCli(parseResult.command.packageIds);
-    if (result.success) {
-      printSuccess(output, result);
-    } else {
-      printFailure(output, result);
-    }
-
-    return {
-      exitCode: exitCodeForStage(result.stage),
-      stage: result.stage,
-      error: result.error,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    output.stderr(`result: failure`);
-    output.stderr(`stage: internal`);
-    output.stderr(`error: ${message}`);
-    return {
-      exitCode: nonInteractiveExitCodes.internal,
-      stage: 'internal',
-      error: message,
-    };
-  } finally {
-    unsubscribe();
-  }
+  return {
+    exitCode: nonInteractiveExitCodes.internal,
+    stage: 'internal',
+    error: 'Unsupported non-interactive command',
+  };
 }

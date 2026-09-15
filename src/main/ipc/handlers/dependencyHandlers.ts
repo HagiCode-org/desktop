@@ -4,7 +4,6 @@ import log from 'electron-log';
 import { VersionManager } from '../../version-manager.js';
 import { DependencyManager } from '../../dependency-manager.js';
 import { manifestReader } from '../../manifest-reader.js';
-import { BundledNodeRuntimeManager } from '../../bundled-node-runtime-manager.js';
 
 const { ipcMain, app } = electron;
 
@@ -56,32 +55,6 @@ export function registerDependencyHandlers(deps: {
     } catch (error) {
       console.error('Failed to check dependencies:', error);
       return [];
-    }
-  });
-
-  ipcMain.handle('dependency:get-bundled-toolchain-status', async () => {
-    try {
-      return await new BundledNodeRuntimeManager().verify();
-    } catch (error) {
-      log.error('[DependencyHandlers] Failed to verify bundled toolchain:', error);
-      return {
-        available: false,
-        integrity: 'corrupt',
-        errors: [error instanceof Error ? error.message : String(error)],
-      };
-    }
-  });
-
-  ipcMain.handle('dependency:refresh-bundled-toolchain-status', async () => {
-    try {
-      return await new BundledNodeRuntimeManager().verify();
-    } catch (error) {
-      log.error('[DependencyHandlers] Failed to refresh bundled toolchain:', error);
-      return {
-        available: false,
-        integrity: 'corrupt',
-        errors: [error instanceof Error ? error.message : String(error)],
-      };
     }
   });
 

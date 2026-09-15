@@ -1,31 +1,4 @@
-import fsSync from 'node:fs';
 import path from 'node:path';
-import {
-  getNodeExecutableRelativePath,
-  resolveExistingNpmExecutableRelativePath,
-} from './embedded-node-runtime-config.js';
-import {
-  resolveDesktopRuntimeComponentProgramRoot,
-  resolveDesktopRuntimeProgramHome,
-} from './desktop-runtime-paths.js';
-
-export interface PortableToolchainPathOptions {
-  cwd: string;
-  resourcesPath: string;
-  isPackaged: boolean;
-  platform?: NodeJS.Platform;
-  overrideRoot?: string | null;
-}
-
-export interface PortableToolchainPaths {
-  toolchainRoot: string;
-  nodeRoot: string;
-  toolchainBinRoot: string;
-  nodeBinRoot: string;
-  toolchainManifestPath: string;
-  nodeExecutablePath: string;
-  npmExecutablePath: string;
-}
 
 export interface NodeMajorNpmGlobalPathOptions {
   runtimeDataRoot?: string;
@@ -56,44 +29,6 @@ export interface Pm2MajorHomePaths {
   pm2Version: string | null;
   pm2MajorVersion: string;
   pm2Home: string;
-}
-
-export function resolvePortableToolchainRoot(options: PortableToolchainPathOptions): string {
-  const overrideRoot = options.overrideRoot?.trim();
-  if (overrideRoot) {
-    return path.resolve(overrideRoot);
-  }
-
-  const programHome = resolveDesktopRuntimeProgramHome({
-    cwd: options.cwd,
-    resourcesPath: options.resourcesPath,
-    isPackaged: options.isPackaged,
-  });
-  return resolveDesktopRuntimeComponentProgramRoot('node', programHome, 'unused');
-}
-
-export function buildPortableToolchainPaths(options: PortableToolchainPathOptions): PortableToolchainPaths {
-  const platform = options.platform ?? process.platform;
-  const pathModule = getPathModuleForPlatform(platform);
-  const toolchainRoot = resolvePortableToolchainRoot(options);
-  const nodeRoot = toolchainRoot;
-  const toolchainBinRoot = platform === 'win32' ? toolchainRoot : pathModule.join(toolchainRoot, 'bin');
-  const nodeBinRoot = toolchainBinRoot;
-  const nodeExecutablePath = pathModule.join(toolchainRoot, getNodeExecutableRelativePath(platform));
-  const npmExecutablePath = pathModule.join(
-    toolchainRoot,
-    resolveExistingNpmExecutableRelativePath(toolchainRoot, platform, fsSync.existsSync),
-  );
-
-  return {
-    toolchainRoot,
-    nodeRoot,
-    toolchainBinRoot,
-    nodeBinRoot,
-    toolchainManifestPath: pathModule.join(toolchainRoot, 'toolchain-manifest.json'),
-    nodeExecutablePath,
-    npmExecutablePath,
-  };
 }
 
 function getPathModuleForPlatform(platform: NodeJS.Platform): typeof path.posix | typeof path.win32 {

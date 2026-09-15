@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 import {
   DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME,
   buildDesktopHagiscriptRuntimeManifest,
-  DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
   DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
   DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME,
   DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
@@ -47,8 +46,7 @@ describe('hagiscript desktop manifest builder', () => {
       manifest.paths.componentDataRoot,
       '/tmp/home/.hagicode/runtime-data/components',
     );
-    assert.deepEqual(manifest.phases.install.order.slice(0, 3), [
-      DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
+    assert.deepEqual(manifest.phases.install.order, [
       'dotnet/runtime/linux-x64',
       DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME,
     ]);
@@ -60,14 +58,8 @@ describe('hagiscript desktop manifest builder', () => {
     const serverComponent = manifest.components.find(
       (component) => component.name === DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME,
     ) as Record<string, unknown> | undefined;
-    const nodeComponent = manifest.components.find(
-      (component) => component.name === DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
-    ) as Record<string, unknown> | undefined;
-    assert.ok(nodeComponent);
     assert.ok(serverComponent);
-    assert.equal(nodeComponent.optionalPolicy, undefined);
     assert.deepEqual(serverComponent.lifecycleDependencies, [
-      DESKTOP_HAGISCRIPT_NODE_COMPONENT_NAME,
       'dotnet/runtime/linux-x64',
     ]);
     assert.equal(

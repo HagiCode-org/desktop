@@ -50,7 +50,6 @@ describe('desktop telemetry retirement', () => {
         enabled: false,
         retainedArchiveCount: 9,
       },
-      dependencyManagementMode: 'external',
     });
     const manager = new DesktopConfigManager(store as never);
 
@@ -60,38 +59,27 @@ describe('desktop telemetry retirement', () => {
       enabled: false,
       retainedArchiveCount: 9,
     });
-    assert.equal(manager.getDependencyManagementMode(), 'external');
-    assert.equal(manager.setDependencyManagementMode('internal'), 'internal');
-    assert.equal(manager.getDependencyManagementMode(), 'internal');
     assert.equal('telemetry' in manager.getAll(), false);
     assert.equal('remoteMode' in manager.getAll(), false);
   });
 
-  it('defaults dependency management mode to external and still forces it for Win Store launches', () => {
+  it('keeps external dependency management implicit while preserving runtime data settings', () => {
     const firstRunStore = new MockStore();
     const firstRunManager = new DesktopConfigManager(firstRunStore as never);
 
-    assert.equal(firstRunManager.getDependencyManagementMode(true), 'external');
-    assert.equal(firstRunStore.get('dependencyManagementMode'), 'external');
     assert.equal(firstRunManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
     assert.equal(firstRunStore.get('runtimeDataPath'), 'userData-runtime-data');
-    assert.equal(firstRunManager.getDependencyManagementMode(false), 'external');
 
     const existingStore = new MockStore({
-      dependencyManagementMode: 'internal',
+      runtimeDataPath: 'custom-folder',
     });
     const existingManager = new DesktopConfigManager(existingStore as never);
 
-    assert.equal(existingManager.getDependencyManagementMode(true), 'external');
-    assert.equal(existingStore.get('dependencyManagementMode'), 'external');
-    assert.equal(existingManager.setDependencyManagementMode('internal', true), 'external');
-    assert.equal(existingStore.get('dependencyManagementMode'), 'external');
-
+    assert.equal(existingManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
     const nonWinStoreStore = new MockStore();
     const nonWinStoreManager = new DesktopConfigManager(nonWinStoreStore as never);
 
-    assert.equal(nonWinStoreManager.getDependencyManagementMode(false), 'external');
-    assert.equal(nonWinStoreStore.get('dependencyManagementMode'), 'external');
+    assert.equal(nonWinStoreManager.getRuntimeDataPathPreset(), 'userData-runtime-data');
   });
 
   it('normalizes persisted runtime data path presets and keeps the supported values stable', () => {

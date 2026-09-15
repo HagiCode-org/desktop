@@ -8,13 +8,12 @@ import {
   type ResolveRuntimeManifestPathOptions,
 } from './runtime-manifest-store.js';
 
-export type DesktopRuntimeComponentId = 'dotnet' | 'node';
+export type DesktopRuntimeComponentId = 'dotnet';
 export type DesktopRuntimeServiceId = never;
 
 export interface DesktopRuntimeOptionalPolicyRule {
   id?: string;
   consumers?: string[];
-  dependencyManagementModes?: string[];
 }
 
 export interface DesktopRuntimeOptionalPolicy {
@@ -189,11 +188,7 @@ export function resolveDesktopRuntimeComponentContainerRoot(
   );
 }
 
-function resolveDesktopRuntimeComponentRuntimeSuffix(componentId: DesktopRuntimeComponentId): string[] {
-  if (componentId === 'node') {
-    return [];
-  }
-
+function resolveDesktopRuntimeComponentRuntimeSuffix(_componentId: DesktopRuntimeComponentId): string[] {
   return ['current'];
 }
 

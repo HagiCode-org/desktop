@@ -1,63 +1,29 @@
-import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-import {
-  createNpmSyncPlan,
-  syncNpmGlobals,
-  validateNpmSyncManifest,
-  type InstalledGlobalPackages,
-  type NpmSyncManifest,
-} from '@hagicode/hagiscript-sdk';
 import log from 'electron-log';
 import Store from 'electron-store';
-import { ConfigManager } from './config.js';
 import { PathManager } from './path-manager.js';
-import { getCommandExecutableName } from './embedded-node-runtime-config.js';
 import { resolveCommandLaunch } from './toolchain-launch.js';
 import { executeCliStreaming } from './utils/cli-executor.js';
-import { injectPortableToolchainEnv, resolvePathEnvKey } from './portable-toolchain-env.js';
-import { BundledNodeRuntimeManager } from './bundled-node-runtime-manager.js';
-import { electron } from '../electron-api.js';
-import { isWindowsStoreRuntime } from './windows-store-runtime.js';
+import { resolveManagedCliExecutablePath } from './managed-cli-executable-resolver.js';
+import { type NodeMajorNpmGlobalPaths } from './portable-toolchain-paths.js';
 import {
-  buildNpmGlobalCommandArtifactPaths,
-  type NodeMajorNpmGlobalPaths,
-} from './portable-toolchain-paths.js';
-import {
-  buildDesktopNpmSyncManifest,
-  buildInstalledGlobalPackagesFromDefinitions,
-} from './hagiscript-sync.js';
-import type { BundledNodeRuntimePolicyDecision } from './bundled-node-runtime-policy.js';
-import {
-  getManagedPackageInstallArgs,
   managedNpmPackages,
   findManagedNpmPackage,
-  isVendoredRuntimeMutationId,
 } from '../shared/npm-managed-packages.js';
 import {
-  getActiveVendoredRuntimeActivation,
   onVendoredRuntimeActivationProgress,
 } from './vendored-runtime-activation-state.js';
 import type {
-  DependencyManagementMode,
-  DependencyManagementModeSettings,
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  DependencyManagementBatchSyncRequest,
-  DependencyManagementBatchSyncResult,
   NpmEnvironmentComponent,
   DependencyManagementEnvironmentStatus,
   NpmMirrorSettings,
   NpmMirrorSettingsInput,
-  DependencyManagementOperation,
-  DependencyManagementOperationProgress,
-  DependencyManagementOperationResult,
   DependencyManagementSnapshot,
-  DependencyManagementUninstallRequest,
-  DependencyUninstallMode,
   VendoredRuntimeStatusSnapshot,
 } from '../types/dependency-management.js';
 
@@ -66,18 +32,10 @@ interface DependencyManagementServiceOptions {
   existsSync?: (targetPath: string) => boolean;
   platform?: NodeJS.Platform;
   settingsStore?: Store<DependencyManagementSettingsStoreSchema>;
-  configManager?: ConfigManager;
 }
 
 interface DependencyManagementSettingsStoreSchema {
   mirrorSettings?: NpmMirrorSettingsInput;
-  dependencyState?: DependencyState;
-}
-
-interface DependencyState {
-  installedComponents: ManagedNpmPackageId[];
-  dependentsGraph: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageId[]>>;
-  activationState: Partial<Record<ManagedNpmPackageId, boolean>>;
 }
 
 interface CommandResult {
@@ -96,7 +54,6 @@ export interface ManagedNpmCommandContext {
 interface ManagedNpmPackagePaths {
   packageRoot: string;
   executablePath: string;
-  commandArtifacts: string[];
 }
 
 interface InstalledPackageInventoryEntry {
@@ -104,56 +61,11 @@ interface InstalledPackageInventoryEntry {
   packageRoot: string | null;
 }
 
-type ProgressListener = (event: DependencyManagementOperationProgress) => void;
-
-type SdkNpmSyncOptions = Parameters<typeof syncNpmGlobals>[0];
-type SdkNpmGlobalCommandOptions = NonNullable<SdkNpmSyncOptions['npmOptions']>;
-type SdkVerifyNodeRuntime = NonNullable<SdkNpmSyncOptions['verifyRuntime']>;
-type SdkVerifyNodeRuntimeOptions = Parameters<SdkVerifyNodeRuntime>[1];
-type SdkNodeRuntimeVerificationResult = Awaited<ReturnType<SdkVerifyNodeRuntime>>;
-type NpmSyncLogEvent = Parameters<NonNullable<SdkNpmSyncOptions['onLog']>>[0];
-const { app } = electron;
-
-export type CliDependencyInstallStage =
-  | 'environment'
-  | 'install'
-  | 'verification'
-  | 'success';
-
-export interface CliManagedPackageVerification {
-  packageId: ManagedNpmPackageId;
-  status: ManagedNpmPackageStatusSnapshot['status'];
-  packageRoot: string | null;
-  executablePath: string | null;
-  packageRootUnderManagedModules: boolean;
-  executableUnderManagedBin: boolean;
-  resolvedCommandPath: string | null;
-  commandResolvesThroughManagedPath: boolean;
-  error?: string;
-}
-
-export interface CliDependencyInstallResult {
-  success: boolean;
-  stage: CliDependencyInstallStage;
-  requestedPackageIds: ManagedNpmPackageId[];
-  statuses: ManagedNpmPackageStatusSnapshot[];
-  verifications: CliManagedPackageVerification[];
-  snapshot: DependencyManagementSnapshot;
-  error?: string;
-}
-
 export const NPM_MIRROR_REGISTRY_URL = 'https://registry.npmmirror.com/';
-export const NPM_DEFAULT_REGISTRY_URL = 'https://registry.npmjs.org/';
 
 const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = {
   enabled: false,
 };
-
-const MSIX_EXTERNAL_MODE_LOCK_REASON =
-  'MSIX / Microsoft Store packaging requires external read-only dependency management and does not use Desktop-managed Node/npm.';
-
-const EXTERNAL_MODE_READ_ONLY_REASON =
-  'External dependency mode is read-only and only inspects the current global Node/npm environment.';
 
 function stripAnsi(input: string): string {
   return input.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').trim();
@@ -165,6 +77,10 @@ function normalizeCommandName(command: string): string {
   return (segments.length > 0 ? segments[segments.length - 1] : normalized).toLowerCase();
 }
 
+function getCommandExecutableName(platform: NodeJS.Platform, commandName: string): string {
+  return platform === 'win32' ? `${commandName}.cmd` : commandName;
+}
+
 function firstMeaningfulLine(input: string): string | null {
   const line = stripAnsi(input)
     .split(/\r?\n/)
@@ -174,23 +90,9 @@ function firstMeaningfulLine(input: string): string | null {
   return line ?? null;
 }
 
-function extractPercent(message: string): number | undefined {
-  const match = message.match(/(?:^|\s)(\d{1,3})%(?:\s|$)/);
-  if (!match) {
-    return undefined;
-  }
-
-  const value = Number(match[1]);
-  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : undefined;
-}
-
 function normalizeVersionOutput(value: string): string | null {
   const line = firstMeaningfulLine(value);
   return line ? line.replace(/^v/, '') : null;
-}
-
-function isJavaScriptCommandPath(command: string): boolean {
-  return /\.(?:c|m)?js$/i.test(command);
 }
 
 function isSinglePackageGlobalListCommand(command: string, args: readonly string[]): boolean {
@@ -239,103 +141,19 @@ function parseInstalledPackageInventoryEntry(
   }
 }
 
-function formatNpmSyncLogEvent(event: NpmSyncLogEvent): { message: string; percentage?: number } | null {
-  switch (event.type) {
-    case 'manifest-loaded':
-      return {
-        message: `Loaded Desktop sync manifest with ${event.packageCount} package(s).`,
-        percentage: 5,
-      };
-    case 'runtime-valid':
-      return {
-        message: `Validated Desktop-managed Node ${event.runtime.nodeVersion} / npm ${event.runtime.npmVersion}.`,
-        percentage: 10,
-      };
-    case 'inventory':
-      return {
-        message: `Read installed global package inventory (${Object.keys(event.packages).length} package(s)).`,
-        percentage: 20,
-      };
-    case 'planned-action':
-      return {
-        message: `${event.action.action} ${event.action.packageName} (${event.action.selectedInstallSelector}).`,
-        percentage: 30,
-      };
-    case 'skip':
-      return {
-        message: `Skipped ${event.action.packageName}; already satisfied.`,
-        percentage: 60,
-      };
-    case 'install-start':
-      return {
-        message: `Installing ${event.action.packageName} (${event.action.selectedInstallSelector}).`,
-        percentage: 55,
-      };
-    case 'install-complete':
-      return {
-        message: `Installed ${event.action.packageName}.`,
-        percentage: 85,
-      };
-    case 'fallback-policy':
-      return {
-        message: `Using registry mirror policy ${event.fallbackPolicy}${event.registryMirror ? ` (${event.registryMirror})` : ''}.`,
-      };
-    case 'fallback-used':
-      return {
-        message: `Registry mirror fallback used for ${event.fallback.packageName ?? event.fallback.commandKind}.`,
-      };
-    case 'mirror-only':
-      return {
-        message: `Using registry mirror only: ${event.registryMirror}.`,
-      };
-    case 'summary':
-      return {
-        message: `SDK sync completed: ${event.summary.changedCount} changed, ${event.summary.noopCount} unchanged.`,
-        percentage: 95,
-      };
-    default:
-      return null;
-  }
-}
-
 export class DependencyManagementService {
   private readonly pathManager: PathManager;
   private readonly existsSync: (targetPath: string) => boolean;
   private readonly platform: NodeJS.Platform;
   private readonly settingsStore: Store<DependencyManagementSettingsStoreSchema>;
-  private readonly configManager: ConfigManager;
-  private readonly bundledNodeRuntimeManager: BundledNodeRuntimeManager;
-  private readonly events = new EventEmitter();
-  private activeOperation: DependencyManagementOperationProgress | null = null;
 
   constructor(options: DependencyManagementServiceOptions = {}) {
     this.pathManager = options.pathManager ?? PathManager.getInstance();
     this.existsSync = options.existsSync ?? fsSync.existsSync;
     this.platform = options.platform ?? process.platform;
-    this.configManager = options.configManager ?? new ConfigManager();
-    this.bundledNodeRuntimeManager = new BundledNodeRuntimeManager(this.pathManager);
     this.settingsStore = options.settingsStore ?? new Store<DependencyManagementSettingsStoreSchema>({
       name: 'npm-management',
     });
-  }
-
-  getModeSettings(): DependencyManagementModeSettings {
-    return this.resolveModeSettings();
-  }
-
-  async setMode(mode: DependencyManagementMode): Promise<DependencyManagementSnapshot> {
-    const isWinStore = this.isWindowsStoreExecutionEnvironment();
-    if (isWinStore && mode !== 'external') {
-      throw new Error(MSIX_EXTERNAL_MODE_LOCK_REASON);
-    }
-
-    this.configManager.setDependencyManagementMode(mode, isWinStore);
-    return this.getSnapshot();
-  }
-
-  onProgress(listener: ProgressListener): () => void {
-    this.events.on('progress', listener);
-    return () => this.events.off('progress', listener);
   }
 
   onVendoredRuntimeActivationProgress(
@@ -345,8 +163,7 @@ export class DependencyManagementService {
   }
 
   async getSnapshot(): Promise<DependencyManagementSnapshot> {
-    const mode = this.resolveModeSettings();
-    const environment = await this.detectEnvironment(mode);
+    const environment = await this.detectEnvironment();
     const packages = await Promise.all(
       managedNpmPackages.map((definition) => this.detectPackageStatus(definition, environment)),
     );
@@ -354,13 +171,11 @@ export class DependencyManagementService {
     const mirrorSettings = this.getMirrorSettings();
 
     return {
-      mode,
       environment,
       packages,
       vendoredRuntimes,
       mirrorSettings,
-      activeOperation: this.activeOperation,
-      activeRuntimeActivation: getActiveVendoredRuntimeActivation(),
+      activeRuntimeActivation: null,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -384,292 +199,9 @@ export class DependencyManagementService {
     return this.getSnapshot();
   }
 
-  async install(packageId: string): Promise<DependencyManagementOperationResult> {
-    const definition = this.resolveInstallDefinition(packageId);
-    if (!definition.success) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: definition.packageId,
-        operation: 'install',
-        error: definition.error,
-        snapshot,
-      };
-    }
-
-    const result = await this.runPackageOperation(
-      definition.definition.id,
-      'install',
-      definition.definition,
-    );
-    if (result.success) {
-      const state = this.getDependencyState();
-      if (!state.installedComponents.includes(definition.definition.id)) {
-        state.installedComponents.push(definition.definition.id);
-      }
-      this.saveDependencyState(state);
-    }
-    return result;
-  }
-
-  async syncPackages(request: DependencyManagementBatchSyncRequest): Promise<DependencyManagementBatchSyncResult> {
-    const validation = this.resolvePackageDefinitions(request.packageIds, 'sync');
-    if (!validation.success) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageIds: request.packageIds,
-        operation: 'sync',
-        statuses: [],
-        error: validation.error,
-        snapshot,
-      };
-    }
-
-    const npmDefinitions = validation.definitions.filter((definition) => definition.installMode === 'sdk-sync');
-    const externalDefinitions = validation.definitions.filter((definition) => definition.installMode === 'external-cli');
-    let result = npmDefinitions.length > 0
-      ? await this.runSdkSync(npmDefinitions)
-      : {
-          success: true,
-          packageIds: [],
-          operation: 'sync' as const,
-          statuses: [],
-          snapshot: await this.getSnapshot(),
-        };
-
-    for (const definition of externalDefinitions) {
-      const externalResult = await this.runExternalCliOperation(definition);
-      result = {
-        ...externalResult,
-        operation: 'sync',
-        packageIds: [...result.packageIds, definition.id],
-        statuses: [...result.statuses, ...(externalResult.statuses ?? [])],
-        success: result.success && externalResult.success,
-      };
-    }
-
-    return result;
-  }
-
-  async installManagedPackagesForCli(packageIds: ManagedNpmPackageId[]): Promise<CliDependencyInstallResult> {
-    const validation = this.resolvePackageDefinitions(packageIds, 'sync');
-    if (!validation.success) {
-      const snapshot = await this.getSnapshot();
-      return this.buildCliDependencyInstallResult({
-        success: false,
-        stage: 'install',
-        requestedPackageIds: packageIds,
-        snapshot,
-        error: validation.error,
-      });
-    }
-
-    const requestedPackageIds = validation.definitions.map((definition) => definition.id);
-    if (requestedPackageIds.length === 0) {
-      const snapshot = await this.getSnapshot();
-      return this.buildCliDependencyInstallResult({
-        success: false,
-        stage: 'install',
-        requestedPackageIds,
-        snapshot,
-        error: 'No sync-managed packages were selected.',
-      });
-    }
-
-    const syncPackageIds = this.resolveCliSyncPackageIds(requestedPackageIds);
-
-    const initialSnapshot = await this.getSnapshot();
-    if (!initialSnapshot.environment.available) {
-      return this.buildCliDependencyInstallResult({
-        success: false,
-        stage: 'environment',
-        requestedPackageIds,
-        snapshot: initialSnapshot,
-        error: initialSnapshot.environment.error ?? 'Desktop-managed Node/npm environment is unavailable.',
-      });
-    }
-
-    const installResult = await this.syncPackages({ packageIds: syncPackageIds });
-    const snapshot = installResult.snapshot;
-    if (!installResult.success) {
-      return this.buildCliDependencyInstallResult({
-        success: false,
-        stage: 'install',
-        requestedPackageIds,
-        snapshot,
-        error: installResult.error ?? `Failed to install requested packages: ${syncPackageIds.join(', ')}`,
-      });
-    }
-
-    const verificationPackageIds = syncPackageIds;
-    const verifications = await this.verifyManagedPackagesForCli(verificationPackageIds, snapshot);
-    const failedVerification = verifications.find((verification) => verification.error);
-    if (failedVerification) {
-      return {
-        success: false,
-        stage: 'verification',
-        requestedPackageIds,
-        statuses: snapshot.packages.filter((item) => verificationPackageIds.includes(item.id)),
-        verifications,
-        snapshot,
-        error: `${failedVerification.packageId}: ${failedVerification.error}`,
-      };
-    }
-
-    return {
-      success: true,
-      stage: 'success',
-      requestedPackageIds,
-      statuses: snapshot.packages.filter((item) => verificationPackageIds.includes(item.id)),
-      verifications,
-      snapshot,
-    };
-  }
-
-  private resolveCliSyncPackageIds(requestedPackageIds: readonly ManagedNpmPackageId[]): ManagedNpmPackageId[] {
-    const resolvedPackageIds: ManagedNpmPackageId[] = [];
-    const seen = new Set<ManagedNpmPackageId>();
-
-    const addPackageId = (packageId: ManagedNpmPackageId): void => {
-      if (seen.has(packageId)) {
-        return;
-      }
-
-      seen.add(packageId);
-      resolvedPackageIds.push(packageId);
-    };
-
-    // Non-interactive lifecycle validation depends on Desktop-managed PM2.
-    addPackageId('pm2');
-
-    for (const packageId of requestedPackageIds) {
-      addPackageId(packageId);
-    }
-
-    return resolvedPackageIds;
-  }
-
-  /**
-   * Uninstall is deactivate-before-remove, ownership-scoped, idempotent, and
-   * blocks dependents unless a programmatic force request is supplied.
-   * The UI intentionally does not expose force; product follow-up is required
-   * before allowing users to bypass dependency protection.
-   */
-  async uninstall(
-    requestOrPackageId: string | DependencyManagementUninstallRequest,
-  ): Promise<DependencyManagementOperationResult> {
-    const request: DependencyManagementUninstallRequest = typeof requestOrPackageId === 'string'
-      ? { packageId: requestOrPackageId as ManagedNpmPackageId }
-      : requestOrPackageId;
-    const definition = findManagedNpmPackage(request.packageId);
-    if (definition?.required) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: definition.id,
-        operation: 'uninstall',
-        error: `${definition.displayName} is a required managed tool and cannot be removed.`,
-        snapshot,
-      };
-    }
-
-    if (!definition) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: request.packageId,
-        operation: 'uninstall',
-        error: `Unknown managed npm package: ${request.packageId}`,
-        snapshot,
-      };
-    }
-
-    const snapshot = await this.getSnapshot();
-    const state = this.getDependencyState();
-    const dependents = this.resolveDependents(request.packageId, state.dependentsGraph);
-    if (dependents.length > 0 && !request.force) {
-      return {
-        success: false,
-        packageId: definition.id,
-        operation: 'uninstall',
-        error: `${definition.displayName} cannot be uninstalled while required by: ${dependents.join(', ')}.`,
-        dependents,
-        snapshot,
-      };
-    }
-
-    const current = snapshot.packages.find((item) => item.id === definition.id);
-    if (current?.status === 'not-installed') {
-      return {
-        success: true,
-        packageId: definition.id,
-        operation: 'uninstall',
-        noOp: true,
-        snapshot,
-      };
-    }
-
-    await this.deactivateIfActive(definition.id, state);
-    const result = await this.runPackageOperation(definition.id, 'uninstall');
-    if (result.success) {
-      this.removeFromStore(definition.id, request.mode ?? 'global', state);
-      this.cleanupConfig(definition.id, state);
-      this.saveDependencyState(state);
-    }
-    return result;
-  }
-
-  resolveDependents(
-    componentId: ManagedNpmPackageId,
-    graph: Partial<Record<ManagedNpmPackageId, ManagedNpmPackageId[]>> = this.getDependencyState().dependentsGraph,
-  ): ManagedNpmPackageId[] {
-    return [...new Set(graph[componentId] ?? [])];
-  }
-
-  private getDependencyState(): DependencyState {
-    const stored = this.settingsStore.get('dependencyState');
-    return {
-      installedComponents: [...(stored?.installedComponents ?? [])],
-      dependentsGraph: { ...(stored?.dependentsGraph ?? {}) },
-      activationState: { ...(stored?.activationState ?? {}) },
-    };
-  }
-
-  private saveDependencyState(state: DependencyState): void {
-    this.settingsStore.set('dependencyState', state);
-  }
-
-  private async deactivateIfActive(componentId: ManagedNpmPackageId, state: DependencyState): Promise<void> {
-    if (state.activationState[componentId]) {
-      state.activationState[componentId] = false;
-    }
-  }
-
-  private removeFromStore(componentId: ManagedNpmPackageId, _mode: DependencyUninstallMode, state: DependencyState): void {
-    state.installedComponents = state.installedComponents.filter((id) => id !== componentId);
-    delete state.activationState[componentId];
-  }
-
-  private cleanupConfig(componentId: ManagedNpmPackageId, state: DependencyState): void {
-    delete state.dependentsGraph[componentId];
-    for (const dependents of Object.values(state.dependentsGraph)) {
-      if (dependents) {
-        const index = dependents.indexOf(componentId);
-        if (index >= 0) {
-          dependents.splice(index, 1);
-        }
-      }
-    }
-  }
-
   async getManagedCommandContext(packageId: ManagedNpmPackageId): Promise<ManagedNpmCommandContext> {
-    const mode = this.resolveModeSettings();
-    const activationPolicy = await this.getActivationPolicy(mode);
-    const environment = await this.detectEnvironment(mode, activationPolicy);
-    const commandEnv = environment.source === 'desktop-managed'
-      ? this.buildCommandEnv(activationPolicy, environment.nodeVersion)
-      : this.buildExternalCommandEnv();
+    const environment = await this.detectEnvironment();
+    const commandEnv = this.buildCommandEnv(environment.nodeVersion);
     const definition = findManagedNpmPackage(packageId);
 
     if (!definition) {
@@ -690,202 +222,6 @@ export class DependencyManagementService {
     };
   }
 
-  private buildCliDependencyInstallResult(input: {
-    success: boolean;
-    stage: CliDependencyInstallStage;
-    requestedPackageIds: ManagedNpmPackageId[];
-    snapshot: DependencyManagementSnapshot;
-    error?: string;
-  }): CliDependencyInstallResult {
-    return {
-      success: input.success,
-      stage: input.stage,
-      requestedPackageIds: input.requestedPackageIds,
-      statuses: input.snapshot.packages.filter((item) => input.requestedPackageIds.includes(item.id)),
-      verifications: [],
-      snapshot: input.snapshot,
-      error: input.error,
-    };
-  }
-
-  private validateInstalledPackageForCli(
-    packageId: ManagedNpmPackageId,
-    status: ManagedNpmPackageStatusSnapshot | undefined,
-  ): string | null {
-    if (status?.status !== 'installed') {
-      return `package is not installed in Desktop's managed npm prefix.`;
-    }
-
-    if (!status.executablePath) {
-      return `package is installed but its executable wrapper path is missing.`;
-    }
-
-    if (!status.packageRoot) {
-      return `package root is missing from the refreshed dependency snapshot.`;
-    }
-
-    void packageId;
-    return null;
-  }
-
-  private isPathUnder(parentPath: string, childPath: string | null | undefined): boolean {
-    if (!childPath) {
-      return false;
-    }
-
-    const normalize = (value: string) => (
-      this.platform === 'win32'
-        ? path.resolve(value).toLowerCase()
-        : path.resolve(value)
-    );
-    const parent = normalize(parentPath);
-    const child = normalize(childPath);
-    const relative = path.relative(parent, child);
-    return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
-  }
-
-  private async resolveCommandThroughManagedEnv(
-    definition: ManagedNpmPackageDefinition,
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-    environment: DependencyManagementEnvironmentStatus,
-  ): Promise<string | null> {
-    const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
-    const nodeCommand = this.getNodeExecutablePath(activationPolicy);
-    const script = [
-      "const fs = require('fs');",
-      "const path = require('path');",
-      "const name = process.argv[1];",
-      "const isWin = process.platform === 'win32';",
-      "const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === 'path') || 'PATH';",
-      "const pathEntries = String(process.env[pathKey] || '').split(path.delimiter).filter(Boolean);",
-      "const extensions = isWin ? String(process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';') : [''];",
-      "for (const entry of pathEntries) {",
-      "  const candidates = isWin ? extensions.map((ext) => path.join(entry, name + ext.toLowerCase())).concat(extensions.map((ext) => path.join(entry, name + ext.toUpperCase()))) : [path.join(entry, name)];",
-      "  for (const candidate of candidates) {",
-      "    if (fs.existsSync(candidate)) { process.stdout.write(candidate); process.exit(0); }",
-      "  }",
-      "}",
-      "process.exit(1);",
-    ].join('\n');
-
-    const result = await this.runCommand(
-      nodeCommand,
-      ['-e', script, definition.binName],
-      undefined,
-      commandEnv,
-    );
-    if (result.exitCode !== 0) {
-      return null;
-    }
-
-    return firstMeaningfulLine(result.stdout);
-  }
-
-  private async verifyManagedPackagesForCli(
-    packageIds: readonly ManagedNpmPackageId[],
-    snapshot: DependencyManagementSnapshot,
-  ): Promise<CliManagedPackageVerification[]> {
-    const activationPolicy = await this.getDesktopActivationPolicy();
-    const environment = snapshot.environment;
-    const verifications: CliManagedPackageVerification[] = [];
-
-    for (const packageId of packageIds) {
-      const definition = findManagedNpmPackage(packageId);
-      const status = this.findPackageStatus(snapshot, packageId);
-      const packageInstallError = this.validateInstalledPackageForCli(packageId, status);
-      const packageRootUnderManagedModules = this.isPathUnder(environment.npmGlobalModulesRoot, status?.packageRoot);
-      const executableUnderManagedBin = this.isPathUnder(environment.npmGlobalBinRoot, status?.executablePath);
-      const resolvedCommandPath = definition && status?.executablePath
-        ? await this.resolveCommandThroughManagedEnv(definition, activationPolicy, environment)
-        : null;
-      const commandResolvesThroughManagedPath = this.isPathUnder(environment.npmGlobalBinRoot, resolvedCommandPath);
-      const locationError = !packageRootUnderManagedModules
-        ? `package root is outside Desktop's managed npm modules directory: ${status?.packageRoot ?? '<missing>'}`
-        : !executableUnderManagedBin
-          ? `executable wrapper is outside Desktop's managed npm bin directory: ${status?.executablePath ?? '<missing>'}`
-          : !commandResolvesThroughManagedPath
-            ? `Desktop-injected PATH could not resolve ${definition?.binName ?? packageId} from the managed npm bin directory.`
-            : undefined;
-
-      verifications.push({
-        packageId,
-        status: status?.status ?? 'unknown',
-        packageRoot: status?.packageRoot ?? null,
-        executablePath: status?.executablePath ?? null,
-        packageRootUnderManagedModules,
-        executableUnderManagedBin,
-        resolvedCommandPath,
-        commandResolvesThroughManagedPath,
-        error: packageInstallError ?? locationError,
-      });
-    }
-
-    return verifications;
-  }
-
-  private resolveInstallDefinition(
-    packageId: string,
-  ): (
-    | { success: true; definition: ManagedNpmPackageDefinition }
-    | { success: false; packageId: ManagedNpmPackageId; error: string }
-  ) {
-    const normalizedPackageId = packageId as ManagedNpmPackageId;
-
-    if (isVendoredRuntimeMutationId(normalizedPackageId)) {
-      return {
-        success: false,
-        packageId: normalizedPackageId,
-        error: `${normalizedPackageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
-      };
-    }
-
-    const definition = findManagedNpmPackage(normalizedPackageId);
-    if (!definition) {
-      return {
-        success: false,
-        packageId: normalizedPackageId,
-        error: `Unknown managed npm package: ${normalizedPackageId}`,
-      };
-    }
-
-    return {
-      success: true,
-      definition,
-    };
-  }
-
-  private resolvePackageDefinitions(
-    packageIds: readonly string[],
-    operation: DependencyManagementOperation,
-  ): { success: true; definitions: ManagedNpmPackageDefinition[] } | { success: false; error: string } {
-    const definitions: ManagedNpmPackageDefinition[] = [];
-    const seen = new Set<ManagedNpmPackageId>();
-
-    for (const packageId of packageIds) {
-      if (isVendoredRuntimeMutationId(packageId)) {
-        return {
-          success: false,
-          error: `${packageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
-        };
-      }
-
-      const definition = findManagedNpmPackage(packageId);
-      if (!definition) {
-        return { success: false, error: `Unknown managed npm package: ${packageId}` };
-      }
-
-      if (operation === 'uninstall' && definition.installMode === 'external-cli') {
-        return { success: false, error: `${definition.displayName} does not support automated uninstall.` };
-      }
-
-      if (!seen.has(definition.id)) {
-        definitions.push(definition);
-        seen.add(definition.id);
-      }
-    }
-
-    return { success: true, definitions };
-  }
 
   private getNodeMajorNpmGlobalPaths(
     nodeVersion?: string | null,
@@ -933,43 +269,26 @@ export class DependencyManagementService {
     return this.platform === 'win32' ? installPrefix : path.join(installPrefix, 'bin');
   }
 
-  private getManagedPackagePaths(
+  private async getManagedPackagePaths(
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
-  ): ManagedNpmPackagePaths {
+  ): Promise<ManagedNpmPackagePaths> {
     const installPrefix = this.getManagedPackageInstallPrefix(definition, environment);
     const packageRoot = path.join(
       this.getNpmGlobalModulesRoot(installPrefix, environment.nodeVersion),
       ...definition.packageName.split('/').filter(Boolean),
     );
-    const commandArtifacts = this.getManagedPackageCommandArtifacts(definition, environment);
     const executableName = getCommandExecutableName(this.platform, definition.binName);
+    const staticExecutablePath = path.join(this.getManagedPackageBinRoot(definition, environment), executableName);
 
     return {
       packageRoot,
-      executablePath: path.join(this.getManagedPackageBinRoot(definition, environment), executableName),
-      commandArtifacts,
+      executablePath: await resolveManagedCliExecutablePath({
+        binName: definition.binName,
+        platform: this.platform,
+        staticExecutablePath,
+      }),
     };
-  }
-
-  private getManagedPackageCommandArtifacts(
-    definition: ManagedNpmPackageDefinition,
-    environment: DependencyManagementEnvironmentStatus,
-  ): string[] {
-    return buildNpmGlobalCommandArtifactPaths(
-      this.getManagedPackageBinRoot(definition, environment),
-      definition.binName,
-      this.platform,
-    );
-  }
-
-  private async removeManagedPackageInstallTarget(
-    definition: ManagedNpmPackageDefinition,
-    environment: DependencyManagementEnvironmentStatus,
-  ): Promise<void> {
-    const paths = this.getManagedPackagePaths(definition, environment);
-    await fs.rm(paths.packageRoot, { recursive: true, force: true });
-    await Promise.all(paths.commandArtifacts.map((artifactPath) => fs.rm(artifactPath, { force: true })));
   }
 
   private normalizeMirrorSettings(input?: Partial<NpmMirrorSettingsInput> | null): NpmMirrorSettings {
@@ -984,117 +303,6 @@ export class DependencyManagementService {
     return this.normalizeMirrorSettings(DEFAULT_MIRROR_SETTINGS);
   }
 
-  private buildNpmOperationArgs(
-    operation: DependencyManagementOperation,
-    environment: DependencyManagementEnvironmentStatus,
-    definition: ManagedNpmPackageDefinition,
-    registryUrl?: string | null,
-  ): string[] {
-    const prefixArgs = ['--prefix', environment.npmGlobalPrefix];
-
-    if (operation === 'install') {
-      return [...getManagedPackageInstallArgs(definition, registryUrl), ...prefixArgs];
-    }
-
-    return ['uninstall', '-g', ...prefixArgs, definition.packageName];
-  }
-
-  private buildSdkSyncCommandEnv(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-    environment: DependencyManagementEnvironmentStatus,
-  ): NodeJS.ProcessEnv {
-    const env = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
-
-    this.applyManagedNpmConfigEnv(env, environment);
-
-    return env;
-  }
-
-  private applyManagedNpmConfigEnv(
-    env: NodeJS.ProcessEnv,
-    environment: Pick<DependencyManagementEnvironmentStatus, 'npmGlobalPrefix' | 'npmCacheRoot'>,
-  ): void {
-    const npmTmpRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npmTmp');
-    const npmUserConfigPath = path.join(path.dirname(environment.npmGlobalPrefix), 'npmrc');
-
-    env.npm_config_prefix = environment.npmGlobalPrefix;
-    env.NPM_CONFIG_PREFIX = environment.npmGlobalPrefix;
-    env.npm_config_global_prefix = environment.npmGlobalPrefix;
-    env.NPM_CONFIG_GLOBAL_PREFIX = environment.npmGlobalPrefix;
-    env.npm_config_global = 'true';
-    env.npm_config_location = 'global';
-    env.npm_config_bin_links = 'true';
-    env.NPM_CONFIG_BIN_LINKS = 'true';
-    env.npm_config_cache = environment.npmCacheRoot;
-    env.NPM_CONFIG_CACHE = environment.npmCacheRoot;
-    env.npm_config_tmp = npmTmpRoot;
-    env.NPM_CONFIG_TMP = npmTmpRoot;
-    env.TMP = npmTmpRoot;
-    env.TEMP = npmTmpRoot;
-    env.npm_config_userconfig = npmUserConfigPath;
-    env.NPM_CONFIG_USERCONFIG = npmUserConfigPath;
-  }
-
-  private applyManagedNpmDebugOptionsEnv(env: NodeJS.ProcessEnv): void {
-    const debugOptions = this.configManager.getDebugOptionsSettings();
-
-    if (debugOptions.useIgnoreScriptsForManagedNpm) {
-      env.npm_config_ignore_scripts = 'true';
-      env.NPM_CONFIG_IGNORE_SCRIPTS = 'true';
-      return;
-    }
-
-    delete env.npm_config_ignore_scripts;
-    delete env.NPM_CONFIG_IGNORE_SCRIPTS;
-  }
-
-  private isWindowsStoreExecutionEnvironment(): boolean {
-    return isWindowsStoreRuntime({
-      platform: this.platform,
-      inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
-      processWindowsStore: Boolean((process as NodeJS.Process & { windowsStore?: boolean }).windowsStore),
-      execPath: process.execPath,
-      isPackaged: app.isPackaged,
-      defaultApp: (process as NodeJS.Process & { defaultApp?: boolean }).defaultApp,
-    });
-  }
-
-  private resolveModeSettings(): DependencyManagementModeSettings {
-    const isWinStore = this.isWindowsStoreExecutionEnvironment();
-    const configuredMode = this.configManager.getDependencyManagementMode(isWinStore);
-    const effectiveMode: DependencyManagementMode = configuredMode;
-
-    return {
-      configuredMode,
-      effectiveMode,
-      lockedByRuntime: isWinStore,
-      mutationsAvailable: effectiveMode === 'internal',
-      readOnlyReason: isWinStore
-        ? MSIX_EXTERNAL_MODE_LOCK_REASON
-        : effectiveMode === 'external'
-          ? EXTERNAL_MODE_READ_ONLY_REASON
-        : undefined,
-    };
-  }
-
-  private createExternalActivationPolicy(): BundledNodeRuntimePolicyDecision {
-    return {
-      consumer: 'desktop-external',
-      enabled: false,
-      source: 'override',
-      explicitEnabled: false,
-      manifestDefault: null,
-      legacyFallbackEnabled: true,
-    };
-  }
-
-  private async getActivationPolicy(
-    mode: DependencyManagementModeSettings,
-  ): Promise<BundledNodeRuntimePolicyDecision> {
-    return mode.effectiveMode === 'internal'
-      ? this.getDesktopActivationPolicy()
-      : this.createExternalActivationPolicy();
-  }
 
   private buildExternalCommandEnv(): NodeJS.ProcessEnv {
     const env: NodeJS.ProcessEnv = { ...process.env };
@@ -1114,393 +322,42 @@ export class DependencyManagementService {
     return env;
   }
 
-  private buildSdkSyncManifest(
-    definitions: readonly ManagedNpmPackageDefinition[],
-    registryUrl?: string | null,
-  ): NpmSyncManifest {
-    return validateNpmSyncManifest(buildDesktopNpmSyncManifest(definitions, registryUrl));
-  }
-
-  private async writeSdkSyncManifest(
-    definitions: readonly ManagedNpmPackageDefinition[],
-    registryUrl?: string | null,
-  ): Promise<{ manifestDirectory: string; manifestPath: string }> {
-    const manifestDirectory = await fs.mkdtemp(path.join(tmpdir(), 'hagicode-sdk-sync-'));
-    const manifestPath = path.join(manifestDirectory, 'manifest.json');
-    await fs.writeFile(
-      manifestPath,
-      JSON.stringify(this.buildSdkSyncManifest(definitions, registryUrl), null, 2),
-      'utf8',
-    );
-    return { manifestDirectory, manifestPath };
-  }
-
-  private buildInstalledGlobalPackages(
-    definitions: readonly ManagedNpmPackageDefinition[],
-    snapshot: DependencyManagementSnapshot,
-  ): InstalledGlobalPackages {
-    const installedVersionsByPackageName = Object.fromEntries(snapshot.packages.map((item) => [
-      item.definition.packageName,
-      item.status === 'installed' ? item.version : null,
-    ]));
-
-    return buildInstalledGlobalPackagesFromDefinitions(definitions, installedVersionsByPackageName);
-  }
-
-  private mapSdkLogEventPackageIds(
-    definitionsByPackageName: ReadonlyMap<string, ManagedNpmPackageDefinition>,
-    event: NpmSyncLogEvent,
-  ): ManagedNpmPackageId[] {
-    switch (event.type) {
-      case 'planned-action':
-      case 'skip':
-      case 'install-start':
-      case 'install-complete': {
-        const definition = definitionsByPackageName.get(event.action.packageName);
-        return definition ? [definition.id] : [];
-      }
-      case 'fallback-used': {
-        if (!event.fallback.packageName) {
-          return [];
-        }
-
-        const definition = definitionsByPackageName.get(event.fallback.packageName);
-        return definition ? [definition.id] : [];
-      }
-      default:
-        return [...definitionsByPackageName.values()].map((definition) => definition.id);
-    }
-  }
-
-  private buildSdkSyncNpmCommandOptions(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-    environment: DependencyManagementEnvironmentStatus,
-  ): SdkNpmGlobalCommandOptions {
-    return {
-      prefix: environment.npmGlobalPrefix,
-      env: this.buildSdkSyncCommandEnv(activationPolicy, environment),
-      platform: this.platform,
-      nodePath: environment.node.executablePath ?? undefined,
-      runCommand: async (command, args, timeoutMs, launchOptions) => {
-        const execution = this.resolveSdkNpmCommandExecution(command, args, activationPolicy, environment);
-        const result = await this.runCommand(execution.command, execution.args, undefined, this.buildSdkSyncCommandEnv(activationPolicy, environment), {
-          shell: launchOptions?.shell,
-          timeoutMs,
-        });
-
-        return {
-          command: execution.command,
-          args: execution.args,
-          stdout: result.stdout,
-          stderr: result.stderr,
-        };
-      },
-    };
-  }
-
-  private resolveSdkNpmCommandExecution(
-    command: string,
-    args: readonly string[],
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-    environment: DependencyManagementEnvironmentStatus,
-  ): { command: string; args: string[] } {
-    if (!isJavaScriptCommandPath(command)) {
-      return {
-        command,
-        args: [...args],
-      };
-    }
-
-    const nodeExecutablePath = environment.node.executablePath ?? this.getNodeExecutablePath(activationPolicy);
-    return {
-      command: nodeExecutablePath,
-      args: [command, ...args],
-    };
-  }
-
-  private buildInvalidSdkNodeRuntimeResult(
-    runtimePath: string,
-    nodePath: string,
-    npmPath: string,
-    failureReason: string,
-  ): SdkNodeRuntimeVerificationResult {
-    return {
-      valid: false,
-      targetDirectory: runtimePath,
-      nodePath,
-      npmPath,
-      failureReason,
-    };
-  }
-
-  private async verifySdkNodeRuntime(
-    runtimePath: string,
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-    environment: DependencyManagementEnvironmentStatus,
-    options?: SdkVerifyNodeRuntimeOptions,
-  ): Promise<SdkNodeRuntimeVerificationResult> {
-    const nodePath = environment.node.executablePath ?? this.getNodeExecutablePath(activationPolicy);
-    const npmPath = environment.npm.executablePath ?? this.getNpmExecutablePath(activationPolicy);
-
-    if (!this.existsSync(nodePath)) {
-      return this.buildInvalidSdkNodeRuntimeResult(runtimePath, nodePath, npmPath, `Node executable not found: ${nodePath}`);
-    }
-
-    if (!this.existsSync(npmPath)) {
-      return this.buildInvalidSdkNodeRuntimeResult(runtimePath, nodePath, npmPath, `npm executable not found: ${npmPath}`);
-    }
-
-    const commandEnv = this.buildSdkSyncCommandEnv(activationPolicy, environment);
-
-    try {
-      const nodeResult = await this.runCommand(nodePath, ['--version'], undefined, commandEnv, {
-        timeoutMs: options?.timeoutMs,
-      });
-      if (nodeResult.exitCode !== 0) {
-        return this.buildInvalidSdkNodeRuntimeResult(
-          runtimePath,
-          nodePath,
-          npmPath,
-          firstMeaningfulLine(nodeResult.stderr || nodeResult.stdout) ?? `node exited with code ${nodeResult.exitCode}`,
-        );
-      }
-
-      const npmExecution = this.resolveSdkNpmCommandExecution(npmPath, ['--version'], activationPolicy, environment);
-      const npmResult = await this.runCommand(npmExecution.command, npmExecution.args, undefined, commandEnv, {
-        timeoutMs: options?.timeoutMs,
-      });
-      if (npmResult.exitCode !== 0) {
-        return this.buildInvalidSdkNodeRuntimeResult(
-          runtimePath,
-          nodePath,
-          npmPath,
-          firstMeaningfulLine(npmResult.stderr || npmResult.stdout) ?? `npm exited with code ${npmResult.exitCode}`,
-        );
-      }
-
-      return {
-        valid: true,
-        targetDirectory: runtimePath,
-        nodePath,
-        npmPath,
-        nodeVersion: normalizeVersionOutput(nodeResult.stdout || nodeResult.stderr) ?? undefined,
-        npmVersion: normalizeVersionOutput(npmResult.stdout || npmResult.stderr) ?? undefined,
-      };
-    } catch (error) {
-      return this.buildInvalidSdkNodeRuntimeResult(
-        runtimePath,
-        nodePath,
-        npmPath,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-
-  private shouldRetryWithoutMirror(result: CommandResult, operation: DependencyManagementOperation, mirrorSettings: NpmMirrorSettings): boolean {
-    return operation === 'install' && Boolean(mirrorSettings.enabled && mirrorSettings.registryUrl) && result.exitCode !== 0;
-  }
-
-  private buildOfficialRegistryRetryEnv(environment: DependencyManagementEnvironmentStatus, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-    const retryCacheRoot = path.join(path.dirname(environment.npmGlobalPrefix), 'npmCache-official');
-
-    return {
-      ...baseEnv,
-      npm_config_cache: retryCacheRoot,
-      npm_config_prefer_online: 'true',
-      npm_config_prefer_offline: 'false',
-      npm_config_offline: 'false',
-    };
-  }
-
   private buildCommandEnv(
-    activationPolicy?: BundledNodeRuntimePolicyDecision,
     nodeVersion?: string | null,
   ): NodeJS.ProcessEnv {
-    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
-    const nodeRuntimeRoot = this.getNodeRuntimeRoot(activationPolicy);
-    const envResult = injectPortableToolchainEnv(process.env, this.pathManager, {
-      platform: this.platform,
-      existsSync: this.existsSync,
-      activationPolicy,
-      npmGlobalPaths,
-    });
-    const pathKey = resolvePathEnvKey(envResult.env, this.platform);
-    const pathValue = envResult.env[pathKey];
-    const nodeExecutablePath = path.join(
-      this.platform === 'win32' ? nodeRuntimeRoot : path.join(nodeRuntimeRoot, 'bin'),
-      this.platform === 'win32' ? 'node.exe' : 'node',
-    );
-    const env: NodeJS.ProcessEnv = {
-      ...envResult.env,
-      [pathKey]: pathValue,
-      npm_config_cache: this.getNpmCacheRoot(nodeVersion),
-    };
-
-    if (activationPolicy?.enabled !== false) {
-      env.NODE = nodeExecutablePath;
-      env.npm_node_execpath = nodeExecutablePath;
-      env.npm_execpath = this.getBundledNpmCliPath(nodeRuntimeRoot);
-    }
-
-    delete env.npm_config_prefix;
-    delete env.NPM_CONFIG_PREFIX;
-    delete env.npm_config_global_prefix;
-    delete env.NPM_CONFIG_GLOBAL_PREFIX;
-    delete env.npm_config_globalconfig;
-    delete env.NPM_CONFIG_GLOBALCONFIG;
-    delete env.NPM_CONFIG_GLOBAL_CONFIG;
-
-    const environment = this.buildCommandEnvNpmEnvironment(nodeVersion);
-    this.applyManagedNpmConfigEnv(env, environment);
-    this.applyManagedNpmDebugOptionsEnv(env);
-
-    // npm must see the selected Desktop-owned Node/npm even when the user's PATH contains another Node/npm.
-    if (envResult.markerInjected) {
-      env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT = this.pathManager.getPortableToolchainRoot();
-    } else {
-      delete env.HAGICODE_PORTABLE_TOOLCHAIN_ROOT;
-    }
-
-    this.applyWindowsStoreNpmOverrides(env);
-
+    const env = this.buildExternalCommandEnv();
+    env.npm_config_cache = this.getNpmCacheRoot(nodeVersion);
     return env;
   }
 
-  private applyWindowsStoreNpmOverrides(env: NodeJS.ProcessEnv): void {
-    if (this.isWindowsStoreExecutionEnvironment()) {
-      env.HAGICODE_DESKTOP_WINDOWS_STORE = '1';
-      return;
-    }
-
-    delete env.HAGICODE_DESKTOP_WINDOWS_STORE;
-  }
-
-  private buildCommandEnvNpmEnvironment(
-    nodeVersion?: string | null,
-  ): Pick<DependencyManagementEnvironmentStatus, 'npmGlobalPrefix' | 'npmCacheRoot'> {
-    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
-
-    return {
-      npmGlobalPrefix: npmGlobalPaths.npmGlobalPrefix,
-      npmCacheRoot: npmGlobalPaths.npmCacheRoot,
-    };
-  }
-
-  private async getDesktopActivationPolicy(): Promise<BundledNodeRuntimePolicyDecision> {
-    return this.bundledNodeRuntimeManager.getDesktopActivationPolicy();
-  }
-
-  private getNodeExecutablePath(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-  ): string {
-    if (activationPolicy.enabled) {
-      return this.pathManager.getPortableNodeExecutablePath();
-    }
-
-    return process.env.npm_node_execpath?.trim() || 'node';
-  }
-
-  private getNpmExecutablePath(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
-  ): string {
-    if (activationPolicy.enabled) {
-      return this.getBundledNpmCliPath(this.getNodeRuntimeRoot(activationPolicy));
-    }
-
-    return 'npm';
-  }
-
-  private getBundledNpmCliPath(nodeRuntimeRoot: string): string {
-    return this.platform === 'win32'
-      ? path.join(nodeRuntimeRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js')
-      : path.join(nodeRuntimeRoot, 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js');
-  }
-
-  private getNodeRuntimeRoot(
-    activationPolicy?: BundledNodeRuntimePolicyDecision,
-  ): string {
-    const inheritedNodeExecutable = process.env.npm_node_execpath?.trim();
-    if (activationPolicy?.enabled === false && inheritedNodeExecutable && path.isAbsolute(inheritedNodeExecutable)) {
-      return this.platform === 'win32'
-        ? path.dirname(inheritedNodeExecutable)
-        : path.dirname(path.dirname(inheritedNodeExecutable));
-    }
-
-    return this.pathManager.getPortableNodeRoot();
-  }
-
-  private async detectEnvironment(
-    mode: DependencyManagementModeSettings,
-    activationPolicy?: BundledNodeRuntimePolicyDecision,
-  ): Promise<DependencyManagementEnvironmentStatus> {
-    return mode.effectiveMode === 'internal'
-      ? this.detectInternalEnvironment(activationPolicy)
-      : this.detectExternalEnvironment();
-  }
-
-  private async detectInternalEnvironment(
-    activationPolicy?: BundledNodeRuntimePolicyDecision,
-  ): Promise<DependencyManagementEnvironmentStatus> {
-    const effectivePolicy = activationPolicy ?? await this.getDesktopActivationPolicy();
-    const toolchainRoot = this.pathManager.getPortableToolchainRoot();
-    const nodeRuntimeRoot = this.getNodeRuntimeRoot(effectivePolicy);
-    const initialCommandEnv = this.buildCommandEnv(effectivePolicy);
-    const node = await this.detectExecutableVersion('node', this.getNodeExecutablePath(effectivePolicy), ['--version'], initialCommandEnv);
-    const nodeVersion = node.version ?? process.versions.node;
-    const npmGlobalPaths = this.getNodeMajorNpmGlobalPaths(nodeVersion);
-    const commandEnv = this.buildCommandEnv(effectivePolicy, nodeVersion);
-    const npm = await this.detectNpmVersion(effectivePolicy, commandEnv);
-    const available = node.status === 'available' && npm.status !== 'unavailable';
-
-    return {
-      available,
-      source: 'desktop-managed',
-      toolchainRoot,
-      nodeRuntimeRoot,
-      nodeVersion,
-      nodeMajorVersion: npmGlobalPaths.nodeMajorVersion,
-      npmGlobalPrefix: npmGlobalPaths.npmGlobalPrefix,
-      npmGlobalBinRoot: npmGlobalPaths.npmGlobalBinRoot,
-      npmGlobalModulesRoot: npmGlobalPaths.npmGlobalModulesRoot,
-      npmCacheRoot: npmGlobalPaths.npmCacheRoot,
-      node,
-      npm,
-      error: available
-        ? undefined
-        : node.message ?? npm.message ?? 'Desktop-managed Node/npm environment is unavailable',
-    };
+  private async detectEnvironment(): Promise<DependencyManagementEnvironmentStatus> {
+    return this.detectExternalEnvironment();
   }
 
   private async detectExternalEnvironment(): Promise<DependencyManagementEnvironmentStatus> {
-    const activationPolicy = this.createExternalActivationPolicy();
     const commandEnv = this.buildExternalCommandEnv();
     const inheritedNodeExecutable = process.env.npm_node_execpath?.trim() || 'node';
     const node = await this.detectExecutableVersion('node', inheritedNodeExecutable, ['--version'], commandEnv);
     const resolvedNodeExecutablePath = await this.resolveExternalNodeExecutablePath(commandEnv, inheritedNodeExecutable);
     const nodeVersion = node.version;
-    const npm = await this.detectNpmVersion(activationPolicy, commandEnv);
-    const npmGlobalPrefix = await this.resolveExternalNpmGlobalPrefix(activationPolicy, commandEnv);
+    const npm = await this.detectNpmVersion(commandEnv);
+    const npmGlobalPrefix = await this.resolveExternalNpmGlobalPrefix(commandEnv);
     const npmGlobalModulesRoot = await this.resolveExternalNpmGlobalModulesRoot(
-      activationPolicy,
       commandEnv,
       npmGlobalPrefix,
       nodeVersion,
     );
-    const npmCacheRoot = await this.resolveExternalNpmCacheRoot(activationPolicy, commandEnv, npmGlobalPrefix);
+    const npmCacheRoot = await this.resolveExternalNpmCacheRoot(commandEnv, npmGlobalPrefix);
     const npmGlobalBinRoot = npmGlobalPrefix
       ? this.getNpmGlobalBinRoot(npmGlobalPrefix, nodeVersion)
       : '';
-    const nodeRuntimeRoot = resolvedNodeExecutablePath
-      ? this.resolveNodeRuntimeRootFromExecutable(resolvedNodeExecutablePath)
-      : '';
-    const toolchainRoot = nodeRuntimeRoot;
     const available = node.status === 'available' && npm.status !== 'unavailable';
 
     return {
       available,
       source: 'externally-managed',
-      toolchainRoot,
-      nodeRuntimeRoot,
+      toolchainRoot: resolvedNodeExecutablePath ? path.dirname(resolvedNodeExecutablePath) : '',
+      nodeRuntimeRoot: resolvedNodeExecutablePath ? path.dirname(resolvedNodeExecutablePath) : '',
       nodeVersion,
       nodeMajorVersion: nodeVersion ? this.getNodeMajorNpmGlobalPaths(nodeVersion).nodeMajorVersion : '',
       npmGlobalPrefix,
@@ -1516,12 +373,6 @@ export class DependencyManagementService {
         ? undefined
         : node.message ?? npm.message ?? 'External dependency mode is read-only and no usable global Node/npm environment was found.',
     };
-  }
-
-  private resolveNodeRuntimeRootFromExecutable(executablePath: string): string {
-    return this.platform === 'win32'
-      ? path.dirname(executablePath)
-      : path.dirname(path.dirname(executablePath));
   }
 
   private async resolveExternalNodeExecutablePath(
@@ -1545,11 +396,10 @@ export class DependencyManagementService {
   }
 
   private async resolveExternalNpmGlobalPrefix(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     env: NodeJS.ProcessEnv,
   ): Promise<string> {
     try {
-      const result = await this.runNpmCommand(activationPolicy, ['prefix', '-g'], undefined, env);
+      const result = await this.runNpmCommand(['prefix', '-g'], undefined, env);
       return firstMeaningfulLine(result.stdout) ?? '';
     } catch {
       return '';
@@ -1557,13 +407,12 @@ export class DependencyManagementService {
   }
 
   private async resolveExternalNpmGlobalModulesRoot(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     env: NodeJS.ProcessEnv,
     npmGlobalPrefix: string,
     nodeVersion?: string | null,
   ): Promise<string> {
     try {
-      const result = await this.runNpmCommand(activationPolicy, ['root', '-g'], undefined, env);
+      const result = await this.runNpmCommand(['root', '-g'], undefined, env);
       return firstMeaningfulLine(result.stdout) ?? this.getNpmGlobalModulesRoot(npmGlobalPrefix, nodeVersion);
     } catch {
       return npmGlobalPrefix ? this.getNpmGlobalModulesRoot(npmGlobalPrefix, nodeVersion) : '';
@@ -1571,12 +420,11 @@ export class DependencyManagementService {
   }
 
   private async resolveExternalNpmCacheRoot(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     env: NodeJS.ProcessEnv,
     npmGlobalPrefix: string,
   ): Promise<string> {
     try {
-      const result = await this.runNpmCommand(activationPolicy, ['config', 'get', 'cache'], undefined, env);
+      const result = await this.runNpmCommand(['config', 'get', 'cache'], undefined, env);
       return firstMeaningfulLine(result.stdout) ?? '';
     } catch {
       return npmGlobalPrefix ? path.join(path.dirname(npmGlobalPrefix), 'npm-cache') : '';
@@ -1625,18 +473,9 @@ export class DependencyManagementService {
   }
 
   private buildNpmExecution(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     args: string[],
   ): { command: string; args: string[]; executablePath: string } {
-    const executablePath = this.getNpmExecutablePath(activationPolicy);
-    if (activationPolicy.enabled) {
-      return {
-        command: this.getNodeExecutablePath(activationPolicy),
-        args: [executablePath, ...args],
-        executablePath,
-      };
-    }
-
+    const executablePath = 'npm';
     return {
       command: executablePath,
       args: [...args],
@@ -1645,10 +484,9 @@ export class DependencyManagementService {
   }
 
   private async detectNpmVersion(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     env: NodeJS.ProcessEnv,
   ): Promise<NpmEnvironmentComponent> {
-    const execution = this.buildNpmExecution(activationPolicy, ['--version']);
+    const execution = this.buildNpmExecution(['--version']);
 
     if (path.isAbsolute(execution.executablePath) && !this.existsSync(execution.executablePath)) {
       return {
@@ -1686,12 +524,11 @@ export class DependencyManagementService {
   }
 
   private runNpmCommand(
-    activationPolicy: BundledNodeRuntimePolicyDecision,
     args: string[],
     onOutput?: (chunk: string) => void,
-    env: NodeJS.ProcessEnv = this.buildCommandEnv(activationPolicy),
+    env: NodeJS.ProcessEnv = this.buildCommandEnv(),
   ): Promise<CommandResult> {
-    const execution = this.buildNpmExecution(activationPolicy, args);
+    const execution = this.buildNpmExecution(args);
     return this.runCommand(execution.command, execution.args, onOutput, env);
   }
 
@@ -1699,11 +536,11 @@ export class DependencyManagementService {
     definition: ManagedNpmPackageDefinition,
     environment: DependencyManagementEnvironmentStatus,
   ): Promise<ManagedNpmPackageStatusSnapshot> {
-    if (definition.installMode === 'external-cli') {
+    if (definition.externalCli) {
       return this.detectExternalCliStatus(definition, environment);
     }
 
-    const { packageRoot, executablePath } = this.getManagedPackagePaths(definition, environment);
+    const { packageRoot, executablePath } = await this.getManagedPackagePaths(definition, environment);
 
     try {
       const raw = await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8');
@@ -1835,11 +672,7 @@ export class DependencyManagementService {
     }
 
     try {
-      const activationPolicy = environment.source === 'desktop-managed'
-        ? await this.getDesktopActivationPolicy()
-        : this.createExternalActivationPolicy();
       const result = await this.runNpmCommand(
-        activationPolicy,
         [
           'list',
           '-g',
@@ -1851,9 +684,7 @@ export class DependencyManagementService {
           definition.packageName,
         ],
         undefined,
-        environment.source === 'desktop-managed'
-          ? this.buildCommandEnv(activationPolicy, environment.nodeVersion)
-          : this.buildExternalCommandEnv(),
+        this.buildCommandEnv(environment.nodeVersion),
       );
       const inventoryEntry = parseInstalledPackageInventoryEntry(result.stdout, definition.packageName);
       return inventoryEntry && (inventoryEntry.version || inventoryEntry.packageRoot)
@@ -1862,428 +693,6 @@ export class DependencyManagementService {
     } catch {
       return null;
     }
-  }
-
-  private findPackageStatus(
-    snapshot: DependencyManagementSnapshot,
-    packageId: ManagedNpmPackageId,
-  ): ManagedNpmPackageStatusSnapshot | undefined {
-    return snapshot.packages.find((item) => item.id === packageId);
-  }
-
-  private validatePackageOperationOutcome(
-    definition: ManagedNpmPackageDefinition,
-    operation: DependencyManagementOperation,
-    status: ManagedNpmPackageStatusSnapshot | undefined,
-  ): string | null {
-    if (operation === 'uninstall') {
-      return status?.status === 'not-installed'
-        ? null
-        : `uninstall ${definition.displayName} completed with exit code 0, but Desktop still detected the package in ${status?.packageRoot ?? 'the managed npm prefix'}.`;
-    }
-
-    if (status?.status !== 'installed') {
-      return `${operation} ${definition.displayName} completed with exit code 0, but Desktop could not detect the package in ${status?.packageRoot ?? 'the managed npm prefix'}.`;
-    }
-
-    if (!status.executablePath) {
-      return `${operation} ${definition.displayName} completed, but the managed executable is missing. Expected a runnable ${definition.binName} wrapper in Desktop's npm bin directory.`;
-    }
-
-    return null;
-  }
-
-  private finalizeOperationSnapshot(snapshot: DependencyManagementSnapshot): DependencyManagementSnapshot {
-    return {
-      ...snapshot,
-      activeOperation: this.activeOperation,
-      generatedAt: new Date().toISOString(),
-    };
-  }
-
-  private async runExternalCliOperation(
-    definition: ManagedNpmPackageDefinition,
-  ): Promise<DependencyManagementOperationResult & { statuses?: ManagedNpmPackageStatusSnapshot[] }> {
-    const installer = definition.externalCli?.installers[this.platform as 'darwin' | 'linux' | 'win32'];
-    if (!installer) {
-      const snapshot = await this.getSnapshot();
-      return { success: false, packageId: definition.id, operation: 'sync', error: `${definition.displayName} is not supported on ${this.platform}.`, snapshot };
-    }
-    const mode = this.resolveModeSettings();
-    if (!mode.mutationsAvailable) {
-      const snapshot = await this.getSnapshot();
-      return { success: false, packageId: definition.id, operation: 'sync', error: mode.readOnlyReason ?? 'External dependency mode is read-only.', snapshot };
-    }
-    const environment = await this.detectEnvironment(mode);
-    const commandEnv = this.buildExternalCommandEnv();
-    this.emitProgress(definition.id, 'sync', 'started', `Installing ${definition.displayName}`, 0);
-    try {
-      const result = await this.runCommand(installer.command, installer.args, undefined, commandEnv, { shell: installer.shell });
-      if (result.exitCode !== 0) {
-        throw new Error(firstMeaningfulLine(result.stderr || result.stdout)
-          ?? `${definition.displayName} installer exited with code ${result.exitCode}.`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.emitProgress(definition.id, 'sync', 'failed', message);
-      return { success: false, packageId: definition.id, operation: 'sync', error: message, snapshot: await this.getSnapshot() };
-    }
-    const snapshot = await this.getSnapshot();
-    const status = snapshot.packages.find((item) => item.id === definition.id);
-    const error = status?.status === 'installed' && status.executablePath
-      ? undefined
-      : status?.message ?? `${definition.displayName} installer completed, but ${definition.binName} was not validated on PATH.`;
-    this.emitProgress(definition.id, 'sync', error ? 'failed' : 'completed', error ?? `Installed ${definition.displayName}`, error ? undefined : 100);
-    return {
-      success: !error,
-      packageId: definition.id,
-      operation: 'sync',
-      status,
-      statuses: status ? [status] : [],
-      error,
-      snapshot: this.finalizeOperationSnapshot(snapshot),
-    };
-  }
-
-  private async runPackageOperation(
-    packageId: string,
-    operation: DependencyManagementOperation,
-    definitionOverride?: ManagedNpmPackageDefinition,
-  ): Promise<DependencyManagementOperationResult> {
-    if (isVendoredRuntimeMutationId(packageId)) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: packageId as ManagedNpmPackageId,
-        operation,
-        error: `${packageId} is a Desktop-managed vendored runtime and cannot be mutated through npm package operations.`,
-        snapshot,
-      };
-    }
-
-    const definition = definitionOverride ?? findManagedNpmPackage(packageId);
-    if (!definition) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: packageId as ManagedNpmPackageId,
-        operation,
-        error: `Unknown managed npm package: ${packageId}`,
-        snapshot,
-      };
-    }
-
-    if (this.activeOperation) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: definition.id,
-        operation,
-        error: `Another npm operation is already active for ${this.activeOperation.packageId}`,
-        snapshot,
-      };
-    }
-
-    if (definition.installMode === 'external-cli') {
-      if (operation !== 'install') {
-        const snapshot = await this.getSnapshot();
-        return {
-          success: false,
-          packageId: definition.id,
-          operation,
-          error: `${definition.displayName} does not support automated uninstall.`,
-          snapshot,
-        };
-      }
-
-      const result = await this.runExternalCliOperation(definition);
-      return { ...result, operation };
-    }
-
-    if (operation === 'install' && definition.installMode === 'sdk-sync') {
-      const result = await this.runSdkSync([definition]);
-      return {
-        success: result.success,
-        packageId: definition.id,
-        operation: 'install',
-        status: this.findPackageStatus(result.snapshot, definition.id),
-        error: result.error,
-        snapshot: result.snapshot,
-      };
-    }
-
-    const mode = this.resolveModeSettings();
-    if (!mode.mutationsAvailable) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: definition.id,
-        operation,
-        error: mode.readOnlyReason ?? 'External dependency mode is read-only.',
-        snapshot,
-      };
-    }
-
-    const activationPolicy = await this.getActivationPolicy(mode);
-    const environment = await this.detectEnvironment(mode, activationPolicy);
-    if (!environment.available) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageId: definition.id,
-        operation,
-        error: environment.error ?? 'Desktop-managed Node/npm environment is unavailable',
-        snapshot,
-      };
-    }
-
-    const mirrorSettings = this.getMirrorSettings();
-    const args = this.buildNpmOperationArgs(operation, environment, definition, mirrorSettings.registryUrl);
-
-    const mirrorSuffix = operation === 'install' && mirrorSettings.enabled && mirrorSettings.registryUrl
-      ? ` using registry mirror ${mirrorSettings.registryUrl}`
-      : '';
-    this.emitProgress(definition.id, operation, 'started', `${operation} ${definition.displayName} started${mirrorSuffix}`, 0);
-
-    let success = false;
-    let errorMessage: string | undefined;
-    try {
-      const commandEnv = this.buildCommandEnv(activationPolicy, environment.nodeVersion);
-      if (operation === 'install') {
-        await this.removeManagedPackageInstallTarget(definition, environment);
-      }
-      let result = await this.runNpmCommand(activationPolicy, args, (chunk) => {
-        const message = firstMeaningfulLine(chunk);
-        if (message) {
-          this.emitProgress(definition.id, operation, 'output', message, extractPercent(message));
-        }
-      }, commandEnv);
-
-      if (this.shouldRetryWithoutMirror(result, operation, mirrorSettings)) {
-        this.emitProgress(definition.id, operation, 'output', `Registry mirror failed for ${definition.installSpec}; retrying with ${NPM_DEFAULT_REGISTRY_URL}`, undefined);
-        await this.removeManagedPackageInstallTarget(definition, environment);
-        result = await this.runNpmCommand(
-          activationPolicy,
-          this.buildNpmOperationArgs(operation, environment, definition, NPM_DEFAULT_REGISTRY_URL),
-          (chunk) => {
-            const message = firstMeaningfulLine(chunk);
-            if (message) {
-              this.emitProgress(definition.id, operation, 'output', message, extractPercent(message));
-            }
-          },
-          this.buildOfficialRegistryRetryEnv(environment, commandEnv),
-        );
-      }
-
-      success = result.exitCode === 0;
-      if (!success) {
-        errorMessage = firstMeaningfulLine(result.stderr || result.stdout) ?? `npm exited with code ${result.exitCode}`;
-      }
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : String(error);
-    }
-
-    const snapshot = await this.getSnapshot();
-    const status = snapshot.packages.find((item) => item.id === definition.id);
-    const verificationError = success
-      ? this.validatePackageOperationOutcome(definition, operation, status)
-      : null;
-    if (verificationError) {
-      success = false;
-      errorMessage = verificationError;
-    }
-
-    this.emitProgress(
-      definition.id,
-      operation,
-      success ? 'completed' : 'failed',
-      success ? `${operation} ${definition.displayName} completed` : (errorMessage ?? `${operation} ${definition.displayName} failed`),
-      success ? 100 : undefined,
-    );
-
-    const finalizedSnapshot = this.finalizeOperationSnapshot(snapshot);
-    const finalizedStatus = finalizedSnapshot.packages.find((item) => item.id === definition.id);
-
-    return {
-      success,
-      packageId: definition.id,
-      operation,
-      status: finalizedStatus,
-      error: errorMessage,
-      snapshot: finalizedSnapshot,
-    };
-  }
-
-  private async runSdkSync(
-    definitions: readonly ManagedNpmPackageDefinition[],
-  ): Promise<DependencyManagementBatchSyncResult> {
-    const packageIds = definitions.map((definition) => definition.id);
-    if (definitions.length === 0) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: true,
-        packageIds: [],
-        operation: 'sync',
-        statuses: [],
-        snapshot,
-      };
-    }
-
-    if (this.activeOperation) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageIds,
-        operation: 'sync',
-        statuses: [],
-        error: `Another npm operation is already active for ${this.activeOperation.packageId}`,
-        snapshot,
-      };
-    }
-
-    const mode = this.resolveModeSettings();
-    if (!mode.mutationsAvailable) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageIds,
-        operation: 'sync',
-        statuses: [],
-        error: mode.readOnlyReason ?? 'External dependency mode is read-only.',
-        snapshot,
-      };
-    }
-
-    const activationPolicy = await this.getActivationPolicy(mode);
-    const environment = await this.detectEnvironment(mode, activationPolicy);
-    if (!environment.available) {
-      const snapshot = await this.getSnapshot();
-      return {
-        success: false,
-        packageIds,
-        operation: 'sync',
-        statuses: [],
-        error: environment.error ?? 'Desktop-managed Node/npm environment is unavailable',
-        snapshot,
-      };
-    }
-
-    const mirrorSettings = this.getMirrorSettings();
-    const mirrorSuffix = mirrorSettings.enabled && mirrorSettings.registryUrl
-      ? ` using registry mirror ${mirrorSettings.registryUrl}`
-      : '';
-    for (const definition of definitions) {
-      this.emitProgress(definition.id, 'sync', 'started', `sync ${definition.displayName} started${mirrorSuffix}`, 0);
-    }
-
-    let success = false;
-    let errorMessage: string | undefined;
-    let manifestDirectory: string | null = null;
-    try {
-      log.info('[DependencyManagementService] Starting managed package sync', {
-        packageIds,
-        packageNames: definitions.map((definition) => definition.packageName),
-        windowsStore: this.isWindowsStoreExecutionEnvironment(),
-        registryMirror: mirrorSettings.registryUrl ?? null,
-      });
-
-      const manifest = await this.writeSdkSyncManifest(definitions, mirrorSettings.registryUrl);
-      manifestDirectory = manifest.manifestDirectory;
-      const manifestValue = this.buildSdkSyncManifest(definitions, mirrorSettings.registryUrl);
-      const installed = this.buildInstalledGlobalPackages(definitions, await this.getSnapshot());
-      createNpmSyncPlan(manifestValue, installed);
-
-      const definitionsByPackageName = new Map(definitions.map((definition) => [definition.packageName, definition]));
-      await syncNpmGlobals({
-        runtimePath: environment.nodeRuntimeRoot,
-        manifestPath: manifest.manifestPath,
-        registryMirror: mirrorSettings.registryUrl ?? undefined,
-        verifyRuntime: (runtimePath, options) => this.verifySdkNodeRuntime(runtimePath, activationPolicy, environment, options),
-        npmOptions: this.buildSdkSyncNpmCommandOptions(activationPolicy, environment),
-        onLog: (event) => {
-          const formatted = formatNpmSyncLogEvent(event);
-          if (!formatted) {
-            return;
-          }
-
-          const targetPackageIds = this.mapSdkLogEventPackageIds(definitionsByPackageName, event);
-          for (const targetPackageId of targetPackageIds) {
-            this.emitProgress(targetPackageId, 'sync', 'output', formatted.message, formatted.percentage);
-          }
-        },
-      });
-
-      success = true;
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : String(error);
-      log.warn('[DependencyManagementService] Managed package sync failed', {
-        packageIds,
-        error: errorMessage,
-      });
-    } finally {
-      if (manifestDirectory) {
-        await fs.rm(manifestDirectory, { recursive: true, force: true }).catch(() => undefined);
-      }
-    }
-
-    const snapshot = await this.getSnapshot();
-    const statuses = snapshot.packages.filter((item) => packageIds.includes(item.id));
-    if (success) {
-      const verificationError = definitions
-        .map((definition) => this.validatePackageOperationOutcome(
-          definition,
-          'sync',
-          statuses.find((item) => item.id === definition.id),
-        ))
-        .find((candidate) => candidate !== null);
-
-      if (verificationError) {
-        success = false;
-        errorMessage = verificationError;
-      }
-    }
-
-    for (const definition of definitions) {
-      this.emitProgress(
-        definition.id,
-        'sync',
-        success ? 'completed' : 'failed',
-        success ? `sync ${definition.displayName} completed` : (errorMessage ?? `sync ${definition.displayName} failed`),
-        success ? 100 : undefined,
-      );
-    }
-
-    const finalizedSnapshot = this.finalizeOperationSnapshot(snapshot);
-    const finalizedStatuses = finalizedSnapshot.packages.filter((item) => packageIds.includes(item.id));
-
-    return {
-      success,
-      packageIds,
-      operation: 'sync',
-      statuses: finalizedStatuses,
-      error: errorMessage,
-      snapshot: finalizedSnapshot,
-    };
-  }
-
-  private emitProgress(
-    packageId: ManagedNpmPackageId,
-    operation: DependencyManagementOperation,
-    stage: DependencyManagementOperationProgress['stage'],
-    message: string,
-    percentage?: number,
-  ): void {
-    const event: DependencyManagementOperationProgress = {
-      packageId,
-      operation,
-      stage,
-      message,
-      percentage,
-      timestamp: new Date().toISOString(),
-    };
-
-    this.activeOperation = stage === 'completed' || stage === 'failed' ? null : event;
-    this.events.emit('progress', event);
   }
 
   private runCommand(

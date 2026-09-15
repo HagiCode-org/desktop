@@ -21,7 +21,6 @@ export type HagiscriptManagedPm2Service = 'server';
 export interface HagiscriptRuntimeContext {
   readonly serviceName: HagiscriptManagedPm2Service;
   readonly activeRuntime: ActiveRuntimeDescriptor;
-  readonly dependencyManagementMode?: string;
   readonly externalNodePath: string | null;
   readonly runtimeRoot: string;
   readonly runtimeHome: string;
@@ -142,7 +141,6 @@ export class HagiscriptRuntimeContextResolver {
     return {
       serviceName: 'server',
       activeRuntime: input.activeRuntime,
-      dependencyManagementMode: shared.dependencyManagementMode,
       externalNodePath: shared.externalNodePath,
       runtimeRoot: shared.runtimeRoot,
       runtimeHome: shared.runtimeHome,
@@ -165,7 +163,6 @@ export class HagiscriptRuntimeContextResolver {
   }
 
   private async resolveSharedContext(): Promise<{
-    dependencyManagementMode?: string;
     externalNodePath: string | null;
     runtimeRoot: string;
     runtimeHome: string;
@@ -192,9 +189,6 @@ export class HagiscriptRuntimeContextResolver {
       : null;
 
     return {
-      dependencyManagementMode: managedContext.environment.source === 'externally-managed'
-        ? 'external-managed'
-        : undefined,
       externalNodePath,
       runtimeRoot: aliasedRuntimeRoot,
       runtimeHome: aliasedRuntimeHome,
@@ -202,9 +196,7 @@ export class HagiscriptRuntimeContextResolver {
       runtimeLogsDirectory: path.join(runtimeDataRoot, 'logs'),
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
-      npmPrefix: managedContext.environment.source === 'desktop-managed'
-        ? path.resolve(managedContext.environment.npmGlobalPrefix)
-        : managedContext.environment.npmGlobalPrefix,
+      npmPrefix: managedContext.environment.npmGlobalPrefix,
       dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
     };
   }
