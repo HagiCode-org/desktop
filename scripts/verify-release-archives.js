@@ -14,21 +14,13 @@ import {
   readPinnedRuntimeConfig,
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
-import { detectNodeRuntimePlatform } from './embedded-node-runtime-config.js';
-import {
-  readToolchainManifest,
-  validateToolchainManifest,
-  validateToolchainPayload,
-} from './bundled-toolchain-contract.js';
-import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
 const args = process.argv.slice(2);
 const archives = [];
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
-const fallbackPlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const bundledNodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
+const fallbackPlatform = runtimePlatform;
 
 function parseArgs() {
   for (let index = 0; index < args.length; index += 1) {
@@ -257,112 +249,12 @@ function validateDotnetRuntimePayload(runtimeRoot, options = {}) {
   return errors;
 }
 
-function findToolchainRoots(rootPath) {
-  const matches = [];
-  const stack = [rootPath];
-  const seen = new Set();
-
-  while (stack.length > 0) {
-    const currentPath = stack.pop();
-    const manifestPath = path.join(currentPath, 'toolchain-manifest.json');
-    if (fs.existsSync(manifestPath) && !seen.has(currentPath)) {
-      matches.push(currentPath);
-      seen.add(currentPath);
-    }
-
-    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-
-      const absolutePath = path.join(currentPath, entry.name);
-      const relativePath = path.relative(rootPath, absolutePath);
-      const parts = suffixSegments(relativePath);
-      if (parts.length >= 2 && parts.at(-2) === 'extra' && parts.at(-1) === 'toolchain' && !seen.has(absolutePath)) {
-        matches.push(absolutePath);
-        seen.add(absolutePath);
-        continue;
-      }
-
-      stack.push(absolutePath);
-    }
-  }
-
-  return matches.sort();
-}
-
-function collectToolchainRoots(rootPath) {
-  return [
-    ...new Set([
-      ...findExtraRoots(rootPath, ['node', 'runtime']),
-      ...findToolchainRoots(rootPath),
-    ]),
-  ].sort();
-}
-
-function findExtraRoots(rootPath, suffixParts) {
-  const exactMatches = [];
-  const fallbackMatches = [];
-  const stack = [rootPath];
-  const alternateSuffixParts = suffixParts.at(-1) === 'current'
-    ? suffixParts.slice(0, -1)
-    : null;
-
-  while (stack.length > 0) {
-    const currentPath = stack.pop();
-    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-
-      const absolutePath = path.join(currentPath, entry.name);
-      const relativePath = path.relative(rootPath, absolutePath);
-      const parts = suffixSegments(relativePath);
-
-      const matchesSuffix = (expectedParts) => {
-        if (!expectedParts || parts.length < expectedParts.length) {
-          return false;
-        }
-
-        const tail = parts.slice(-(expectedParts.length));
-        return tail.every((value, index) => value === expectedParts[index]);
-      };
-
-      if (parts.includes('extra') && matchesSuffix(suffixParts)) {
-        exactMatches.push(absolutePath);
-        continue;
-      }
-
-      if (parts.includes('extra') && matchesSuffix(alternateSuffixParts)) {
-        fallbackMatches.push(absolutePath);
-      }
-
-      stack.push(absolutePath);
-    }
-  }
-
-  return (exactMatches.length > 0 ? exactMatches : fallbackMatches).sort();
-}
-
-function describeToolchainRoots(rootPath) {
-  return collectToolchainRoots(rootPath)
-    .map((candidate) => path.relative(rootPath, candidate) || '.')
-    .join(', ');
-}
-
 function resolveToolchainValidation(rootPath, options = {}) {
-  const toolchainRoots = options.toolchainRoots ?? collectToolchainRoots(rootPath);
-  const requireBundledNodePayload = options.requireBundledNodePayload ?? bundledNodePolicy.required;
-  const skipReason = options.skipReason ?? bundledNodePolicy.reason;
-
   return {
-    toolchainRoots,
-    requireBundledNodePayload,
-    skipReason,
-    shouldValidate: requireBundledNodePayload || toolchainRoots.length > 0,
+    toolchainRoots: [],
+    requireBundledNodePayload: false,
+    skipReason: options.skipReason ?? 'external Node/npm management',
+    shouldValidate: false,
   };
 }
 
@@ -420,17 +312,6 @@ function validateExtractedToolchain(archivePath, extractionRoot, options = {}) {
 }
 
 function validateExtractedArchiveContents(archivePath, extractionRoot, options = {}) {
-  const toolchainValidation = resolveToolchainValidation(extractionRoot, options);
-  if (toolchainValidation.shouldValidate) {
-    validateExtractedToolchain(archivePath, extractionRoot, {
-      extractedFromZip: options.extractedFromZip,
-      toolchainRoots: toolchainValidation.toolchainRoots,
-    });
-  } else {
-    const reasonSuffix = toolchainValidation.skipReason ? ` (${toolchainValidation.skipReason})` : '';
-    console.log(`[archive-verify] ${path.basename(archivePath)} -> skipping bundled Node toolchain validation${reasonSuffix}`);
-  }
-
   validateVendoredRuntimeRoots(archivePath, extractionRoot, {
     label: 'embedded dotnet runtime',
     suffixParts: ['dotnet', 'runtime', runtimePlatform, 'current'],

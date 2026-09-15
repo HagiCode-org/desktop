@@ -13,10 +13,7 @@ import {
   buildResolvedHagiscriptEnvironment,
   resolveGlobalHagiscriptPackageRoot,
 } from './global-hagiscript.js';
-import {
-  RUNTIME_CONSUMER_ENV,
-  RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV,
-} from './runtime-node-policy.js';
+const RUNTIME_CONSUMER_ENV = 'HAGICODE_RUNTIME_CONSUMER';
 
 const MINIMUM_HAGISCRIPT_VERSION = '0.3.3';
 const NODE_COMPONENT_NAME = 'node';
@@ -79,13 +76,9 @@ async function runDesktopRuntimeLifecycle(phase, componentIds, options = {}) {
     componentNames.join(','),
   ];
   const runtimeConsumer = process.env[RUNTIME_CONSUMER_ENV]?.trim();
-  const dependencyManagementMode = process.env[RUNTIME_DEPENDENCY_MANAGEMENT_MODE_ENV]?.trim();
 
   if (runtimeConsumer) {
     args.push('--consumer', runtimeConsumer);
-  }
-  if (dependencyManagementMode) {
-    args.push('--dependency-management-mode', dependencyManagementMode);
   }
 
   if (options.force) {

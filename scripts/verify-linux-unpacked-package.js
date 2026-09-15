@@ -12,19 +12,11 @@ import {
   readPinnedRuntimeConfig,
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
-import { detectNodeRuntimePlatform } from './embedded-node-runtime-config.js';
-import {
-  readToolchainManifest,
-  validateToolchainManifest,
-  validateToolchainPayload,
-} from './bundled-toolchain-contract.js';
-
 const require = createRequire(import.meta.url);
 const asar = require('@electron/asar');
 
 const args = process.argv.slice(2);
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
-const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
 const forbiddenAsarPrefixes = [
@@ -222,14 +214,6 @@ function validateDotnetRuntimePayload(runtimeRoot) {
   return errors;
 }
 
-function validateNodeToolchain(toolchainRoot) {
-  const payloadErrors = validateToolchainPayload(toolchainRoot, { platform: nodeRuntimePlatform });
-  const manifest = readToolchainManifest(toolchainRoot);
-  const manifestPlatform = manifest?.platform || nodeRuntimePlatform;
-  const manifestErrors = validateToolchainManifest(toolchainRoot, { platform: manifestPlatform });
-  return [...payloadErrors, ...manifestErrors];
-}
-
 async function validatePackagedAsar(unpackedRoot) {
   const asarPath = path.join(unpackedRoot, 'resources', 'app.asar');
   if (!fs.existsSync(asarPath)) {
@@ -268,7 +252,6 @@ async function validatePackagedAsar(unpackedRoot) {
 
 async function main() {
   ensureLinuxPlatform(runtimePlatform, 'Embedded dotnet runtime platform');
-  ensureLinuxPlatform(nodeRuntimePlatform, 'Bundled Node runtime platform');
 
   const unpackedRoot = resolveLinuxUnpackedRoot(parseArgs());
   const runtimeRoot = path.join(unpackedRoot, 'resources', 'extra', 'runtime');
@@ -276,18 +259,11 @@ async function main() {
     throw new Error(`linux-unpacked runtime root does not exist: ${runtimeRoot}`);
   }
 
-  const validations = [
-    {
-      label: 'bundled Node runtime',
-      targetRoot: path.join(runtimeRoot, 'components', 'node', 'runtime'),
-      validate: validateNodeToolchain,
-    },
-    {
+  const validations = [{
       label: 'embedded dotnet runtime',
       targetRoot: path.join(runtimeRoot, 'components', 'dotnet', 'runtime', runtimePlatform, 'current'),
       validate: validateDotnetRuntimePayload,
-    },
-  ];
+    }];
 
   const failures = [];
 

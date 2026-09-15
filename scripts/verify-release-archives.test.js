@@ -7,7 +7,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  resolveToolchainValidation,
   resolveMacArchiveArch,
   selectDiscoveredArchives,
 } from './verify-release-archives.js';
@@ -48,21 +47,4 @@ test('selectDiscoveredArchives keeps only the arm64 mac zip for arm64 validation
 test('resolveMacArchiveArch prefers explicit requested mac runtime platforms', () => {
   assert.equal(resolveMacArchiveArch({ runtimePlatform: 'osx-x64' }), 'x64');
   assert.equal(resolveMacArchiveArch({ runtimePlatform: 'osx-arm64' }), 'arm64');
-});
-
-test('resolveToolchainValidation skips optional bundled Node validation when no toolchain root exists', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hagicode-archive-verify-'));
-
-  try {
-    const validation = resolveToolchainValidation(tempRoot, {
-      requireBundledNodePayload: false,
-      skipReason: 'optional policy matched',
-    });
-
-    assert.equal(validation.shouldValidate, false);
-    assert.deepEqual(validation.toolchainRoots, []);
-    assert.equal(validation.skipReason, 'optional policy matched');
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
 });

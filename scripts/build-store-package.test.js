@@ -10,18 +10,12 @@ import {
 } from './build-store-package.js';
 import { toWindowsPackageVersion } from './store-package-config.js';
 
-test('buildStepScripts prefers optional runtime preparation entrypoints for Store builds', () => {
+test('buildStepScripts keeps Store builds on the production build entrypoint', () => {
   const scripts = {
-    'prepare:runtime': 'node scripts/prepare-embedded-runtime.js',
-    'prepare:runtime:optional': 'node scripts/prepare-runtime-if-supported.js',
-    'prepare:bundled-toolchain': 'node scripts/prepare-bundled-toolchain.js',
-    'prepare:bundled-toolchain:optional': 'node scripts/prepare-bundled-toolchain-if-supported.js',
     'build:prod': 'npm run build:all',
   };
 
   assert.deepEqual(buildStepScripts(scripts), [
-    'prepare:runtime:optional',
-    'prepare:bundled-toolchain:optional',
     'build:prod',
   ]);
 });
@@ -29,7 +23,6 @@ test('buildStepScripts prefers optional runtime preparation entrypoints for Stor
 test('resolveStoreRuntimePolicyEnvironment defaults Store builds to external dependency management', () => {
   assert.deepEqual(resolveStoreRuntimePolicyEnvironment({}), {
     HAGICODE_RUNTIME_CONSUMER: 'windows-store',
-    HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: 'external',
   });
 });
 
@@ -38,7 +31,7 @@ test('toWindowsPackageVersion accepts tagged Windows Store versions from win_sto
   assert.equal(toWindowsPackageVersion('V0.2.1-beta.7'), '0.2.1.7');
 });
 
-test('createStoreBuildMetadata records Node preparation as external by default for Store builds', () => {
+test('createStoreBuildMetadata records external runtime package metadata', () => {
   const metadata = createStoreBuildMetadata({
     artifacts: ['/tmp/Hagicode-Desktop.msix'],
     buildMode: 'desktop-store-build-dry-run',
@@ -53,12 +46,6 @@ test('createStoreBuildMetadata records Node preparation as external by default f
     restoredWorkspacePayload: false,
     serverPayloadPath: null,
     serverPayloadRoot: null,
-    nodePreparation: {
-      status: 'not-run-dry-run',
-      reason: null,
-      consumer: 'windows-store',
-      dependencyManagementMode: 'external',
-    },
     storeConfig: {
       packageIdentity: {
         displayName: 'Hagicode Desktop',
@@ -76,11 +63,5 @@ test('createStoreBuildMetadata records Node preparation as external by default f
     storeConfigPath: '/tmp/store-package.json',
   });
 
-  assert.deepEqual(metadata.nodePreparation, {
-    status: 'not-run-dry-run',
-    reason: null,
-    consumer: 'windows-store',
-    dependencyManagementMode: 'external',
-  });
   assert.equal(metadata.windowsStoreVersion, 'v0.1.0');
 });

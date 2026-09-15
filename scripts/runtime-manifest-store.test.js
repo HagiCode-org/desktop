@@ -46,7 +46,6 @@ describe('script runtime manifest store data scope resolution', () => {
         '  componentDataRoot: components',
         '  defaultPm2Home: pm2',
         '  npmPrefix: npm',
-        '  nodeRuntime: components/node/runtime',
         '  dotnetRuntime: components/dotnet/runtime',
         '  vendoredRoot: components/bundled',
       ].join('\n'),
@@ -60,23 +59,18 @@ describe('script runtime manifest store data scope resolution', () => {
   });
 });
 
-describe('bundled runtime manifest component contracts', () => {
-  it('keeps only the active Desktop runtime components', () => {
+describe('embedded .NET runtime manifest component contracts', () => {
+  it('keeps only the active Desktop .NET runtime components', () => {
     const manifest = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
     const componentNames = Array.isArray(manifest.components)
       ? manifest.components.map((component) => component?.name).filter(Boolean)
       : [];
 
     assert.deepEqual(componentNames, [
-      'node',
       'dotnet/runtime/linux-x64',
       'dotnet/runtime/osx-x64',
       'dotnet/runtime/osx-arm64',
       'dotnet/runtime/win-x64',
     ]);
-    assert.equal(
-      manifest.components.find((component) => component?.name === 'node')?.optionalPolicy,
-      undefined,
-    );
   });
 });

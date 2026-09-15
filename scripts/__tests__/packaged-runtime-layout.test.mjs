@@ -24,17 +24,20 @@ test('smoke-test macOS resource roots include flattened app bundles', async () =
 
 test('linux unpacked verification resolves nested application roots', async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-linux-unpacked-'));
+  const originalCwd = process.cwd();
 
   try {
-    const nestedRoot = path.join(tmpRoot, 'linux-unpacked', 'Hagicode Desktop');
+    const nestedRoot = path.join(tmpRoot, 'pkg', 'linux-unpacked', 'Hagicode Desktop');
     await fs.mkdir(path.join(nestedRoot, 'resources'), { recursive: true });
     await fs.writeFile(path.join(nestedRoot, 'resources', 'app.asar'), 'asar', 'utf8');
+    process.chdir(tmpRoot);
 
-    const verifyHelpers = await import(new URL(`../verify-linux-unpacked-package.js?t=${Date.now()}`, import.meta.url));
-    const resolvedRoot = verifyHelpers.resolveLinuxUnpackedRoot(path.join(tmpRoot, 'linux-unpacked'));
+    const smokeHelpers = await import(new URL(`../smoke-test.js?t=${Date.now()}`, import.meta.url));
+    const resolvedRoots = smokeHelpers.resolvePackagedLinuxUnpackedRoots();
 
-    assert.equal(resolvedRoot, nestedRoot);
+    assert(resolvedRoots.includes(nestedRoot));
   } finally {
+    process.chdir(originalCwd);
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }
 });

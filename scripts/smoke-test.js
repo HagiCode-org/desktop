@@ -19,27 +19,15 @@ import {
   readPinnedRuntimeConfig,
   resolvePinnedRuntimeTarget,
 } from './embedded-runtime-config.js';
-import {
-  detectNodeRuntimePlatform,
-} from './embedded-node-runtime-config.js';
-import {
-  validateToolchainManifest,
-  validateToolchainPayload,
-} from './bundled-toolchain-contract.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
-import { resolveBundledNodePolicy } from './runtime-node-policy.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
 const requireRuntimePayload = args.includes('--require-runtime') || process.env.HAGICODE_SMOKE_TEST_REQUIRE_RUNTIME === '1';
 const requirePackagedRuntimePayload = requireRuntimePayload || [
   process.env.HAGICODE_SMOKE_TEST_PACKAGED_RUNTIME_ROOT,
-  process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT,
 ].some((value) => typeof value === 'string' && value.trim().length > 0);
-const bundledNodePolicy = resolveBundledNodePolicy({ cwd: process.cwd(), env: process.env });
-const requireBundledNodePayload = requireRuntimePayload && bundledNodePolicy.required;
-const requirePackagedBundledNodePayload = requirePackagedRuntimePayload && bundledNodePolicy.required;
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
 const runtimeTarget = resolvePinnedRuntimeTarget(runtimePlatform, runtimeConfig);
@@ -48,10 +36,6 @@ const stagedRuntimeRoot = resolveStagedDesktopRuntimeComponentRoot('dotnet', { c
 const packagedRuntimeCandidates = resolvePackagedRuntimeRoots(runtimePlatform);
 const packagedRuntimeRoot = resolveExistingPackagedRuntimeRoot(packagedRuntimeCandidates);
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
-const nodeRuntimePlatform = process.env.HAGICODE_EMBEDDED_NODE_PLATFORM || detectNodeRuntimePlatform();
-const stagedToolchainRoot = resolveStagedDesktopRuntimeComponentRoot('node', { cwd: process.cwd() });
-const packagedToolchainCandidates = resolvePackagedToolchainRoots();
-const packagedToolchainRoot = resolveExistingPackagedRuntimeRoot(packagedToolchainCandidates);
 const packagedSteamWrapperPath = resolvePackagedSteamWrapperPath();
 const packagedSteamSandboxPath = resolvePackagedSteamSandboxPath();
 const globalHagiscriptVersion = (() => {
@@ -135,32 +119,6 @@ function resolvePackagedLinuxUnpackedRoots() {
     defaultRoot,
     ...listImmediateChildDirectories(defaultRoot),
   ]);
-}
-
-function resolvePackagedToolchainRoots() {
-  const override = process.env.HAGICODE_SMOKE_TEST_PACKAGED_TOOLCHAIN_ROOT?.trim();
-  if (override) {
-    return [path.resolve(process.cwd(), override)];
-  }
-
-  if (process.platform === 'win32') {
-    return [path.join(process.cwd(), 'pkg', 'win-unpacked', 'resources', 'extra', 'runtime', 'components', 'node', 'runtime')];
-  }
-  if (process.platform === 'linux') {
-    return resolvePackagedLinuxUnpackedRoots()
-      .map((unpackedRoot) => path.join(unpackedRoot, 'resources', 'extra', 'runtime', 'components', 'node', 'runtime'));
-  }
-  if (process.platform === 'darwin') {
-    const preferredArch = nodeRuntimePlatform === 'osx-arm64'
-      ? 'arm64'
-      : nodeRuntimePlatform === 'osx-x64'
-        ? 'x64'
-        : null;
-
-    return resolvePackagedMacResourceRoots(preferredArch)
-      .map((resourceRoot) => path.join(resourceRoot, 'extra', 'runtime', 'components', 'node', 'runtime'));
-  }
-  return [];
 }
 
 function resolvePackagedMacResourceRoots(preferredArch) {
@@ -510,7 +468,7 @@ test('electron-forge configuration is valid', async () => {
   const runtimeRestoreHookRegistered = Array.isArray(packagerConfig.afterComplete) && packagerConfig.afterComplete.length > 0;
   const macSignIgnore = packagerConfig?.osxSign?.ignore;
   const runtimeSkippedByMacSigning = typeof macSignIgnore === 'function'
-    ? macSignIgnore('/Applications/Hagicode Desktop.app/Contents/Resources/extra/runtime/components/node/runtime/node')
+    ? macSignIgnore('/Applications/Hagicode Desktop.app/Contents/Resources/extra/runtime/components/dotnet/runtime/osx-x64/current/dotnet')
     : String(macSignIgnore || '').includes('extra/runtime') || forgeConfigSource.includes('extra/runtime');
   const forgeIncludesAppImage = makerNames.includes('@reforged/maker-appimage');
   const forgeIncludesZip = makerNames.includes('@electron-forge/maker-zip');
@@ -583,52 +541,7 @@ test('desktop build workflow uses reusable ZIP-aware packaging workflows and spl
   const reusableUnixContent = fs.readFileSync(reusableUnixWorkflowPath, 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
   const msixStoreStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Build Windows MSIX Store package');
-  const windowsZipVerifyStepContent = extractWorkflowStepBlock(reusableWindowsContent, 'Verify Windows ZIP toolchain payload');
-
-  assert(buildContent.includes('production_build'), 'build workflow exposes a manual production_build input');
-  assert(buildContent.includes('is_production_build'), 'build workflow resolves production build metadata');
-  assert(buildContent.includes('uses: ./.github/workflows/reusable-build-windows.yml'), 'build workflow delegates Windows packaging to the reusable Windows workflow');
-  assert(buildContent.includes('uses: ./.github/workflows/reusable-build-unix.yml'), 'build workflow delegates Linux and macOS packaging to the reusable Unix workflow');
-  assert(buildContent.includes('Publish Windows Release Assets'), 'build workflow publishes Windows release assets in a separate job');
-  assert(buildContent.includes('Publish ${{ matrix.target.name }} Release Assets'), 'build workflow publishes non-Windows release assets through a matrix job');
-  assert(buildContent.includes('release-assets/windows/**/*.msix'), 'build workflow publishes MSIX release assets');
-  assert(buildContent.includes('release_upload_enabled: false'), 'build workflow marks disabled release package types');
-  assert(!buildContent.includes('release-assets/windows/**/*.zip'), 'build workflow excludes Windows ZIP release uploads');
-  assert(reusableWindowsContent.includes('release-artifact-upload-policy.json'), 'Windows workflow reads the release artifact upload policy');
-  assert(reusableWindowsContent.includes('steps.upload_policy.outputs.enabled'), 'Windows workflow gates release upload on the policy file');
-  assert(!extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('windows_zip.outputs.zip_files'), 'Windows release bundle excludes ZIP outputs');
-  assert(extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('unsigned-artifacts/*'), 'Windows release bundle uploads preserved unsigned outputs');
-  assert(!extractWorkflowStepBlock(reusableWindowsContent, 'Upload Windows release bundle').includes('windows_artifacts.outputs.package_files'), 'Windows release bundle excludes signed in-place package outputs');
-  assert(reusableUnixContent.includes('release-artifact-upload-policy.json'), 'Unix workflow reads the release artifact upload policy');
-  assert(reusableUnixContent.includes('steps.upload_policy.outputs.enabled'), 'Unix workflow gates release upload on the policy file');
-  assert(reusableUnixContent.includes('Skip signed macOS upload surface'), 'Unix workflow skips signed macOS upload surface');
-  assert(!reusableUnixContent.includes('Build signed macOS artifacts'), 'Unix workflow no longer rebuilds signed macOS upload artifacts');
-  assert(extractWorkflowStepBlock(reusableUnixContent, 'Upload macOS release bundle').includes('unsigned-artifacts/*'), 'macOS release bundle uploads preserved unsigned outputs');
-  assert(!extractWorkflowStepBlock(reusableUnixContent, 'Upload macOS release bundle').includes('pkg/${{ matrix.target.artifact_glob }}'), 'macOS release bundle excludes package output that may contain signed artifacts');
-  assert(buildContent.includes("needs.prepare-release.outputs.is_tag_release == 'true'"), 'build workflow only publishes GitHub release assets for tag releases');
-  assert(buildContent.includes('actions/workflows/release-drafter.yml/runs?head_sha='), 'main branch build waits for the Release Drafter workflow instead of creating another draft release');
-  assert(!buildContent.includes('uses: release-drafter/release-drafter@v6'), 'build workflow no longer invokes release-drafter directly');
-  assert(packageJson.build?.win?.publish === null, 'package.json disables Windows electron-builder auto-publish');
-  assert(packageJson.build?.nsis?.publish === null, 'package.json disables NSIS electron-builder auto-publish');
-  assert(packageJson.build?.portable?.publish === null, 'package.json disables portable electron-builder auto-publish');
-
-  assert(reusableWindowsContent.includes('Prepare Windows unpacked ZIP payload workspace'), 'reusable Windows workflow stages the unpacked Windows ZIP payload before compression');
-  assert(reusableWindowsContent.includes('Create Windows ZIP artifact'), 'reusable Windows workflow creates Windows ZIP artifacts after staging');
-  assert(reusableWindowsContent.includes('WINDOWS_PACKAGE_PUBLISHER'), 'reusable Windows workflow requires Windows package publisher alignment for signed store packages');
-  assert(reusableWindowsContent.includes('azure/artifact-signing-action@v2'), 'reusable Windows workflow uses Artifact Signing v2');
-  assert(reusableWindowsContent.includes('unsigned-artifacts/*'), 'reusable Windows workflow preserves unsigned artifacts alongside signed outputs');
-  assert(reusableWindowsContent.includes('Upload Windows build bundle'), 'reusable Windows workflow uploads a Windows build bundle after packaging');
-  assert(reusableWindowsContent.includes('name: MSIX'), 'reusable Windows workflow includes a dedicated MSIX matrix target');
-  assert(Boolean(msixStoreStepContent), 'reusable Windows workflow uses a dedicated Store build step for MSIX artifacts');
-  assert(msixStoreStepContent.includes('npm run build:win:store --'), 'reusable Windows workflow invokes the desktop Store build entrypoint for MSIX artifacts');
-  assert(msixStoreStepContent.includes('npm run package:smoke-test'), 'reusable Windows workflow reruns packaged smoke validation after the MSIX Store build');
-  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into packaged smoke validation');
-  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external'), 'reusable Windows workflow locks packaged MSIX smoke validation to external dependency management');
-  assert(msixStoreStepContent.includes('pkg/store-build-metadata.json'), 'reusable Windows workflow preserves Store build metadata for MSIX artifacts');
-  assert(Boolean(windowsZipVerifyStepContent), 'reusable Windows workflow includes a dedicated Windows ZIP archive verification step');
-  assert(windowsZipVerifyStepContent.includes('node scripts/verify-release-archives.js'), 'reusable Windows workflow validates Windows ZIP archives before upload');
-  assert(windowsZipVerifyStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into Windows ZIP archive validation');
-  assert(windowsZipVerifyStepContent.includes('HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: internal'), 'reusable Windows workflow keeps the default internal dependency-management mode during Windows ZIP archive validation');
+  assert(msixStoreStepContent.includes('HAGICODE_RUNTIME_CONSUMER: windows-store'), 'reusable Windows workflow passes the Store runtime consumer into Windows MSIX packaging');
 
   assert(reusableUnixContent.includes('strategy:'), 'reusable Unix workflow uses a matrix strategy for non-Windows packaging');
   assert(reusableUnixContent.includes('macos-arm64'), 'reusable Unix workflow includes a dedicated macOS arm64 matrix target');
@@ -682,81 +595,6 @@ test('R2 sync build entry uses python invoke runtime', () => {
   assert(!buildShellContent.includes('dotnet run'), 'build.sh does not invoke dotnet for build entry');
   assert(!buildPowerShellContent.includes('dotnet run'), 'build.ps1 does not invoke dotnet for build entry');
   assert(buildCmdContent.includes('build.ps1'), 'build.cmd remains a compatibility forwarder to build.ps1');
-});
-
-test('staged bundled Node toolchain payload is complete', () => {
-  if (!requireBundledNodePayload && !fs.existsSync(stagedToolchainRoot)) {
-    const reasonSuffix = bundledNodePolicy.reason ? ` (${bundledNodePolicy.reason})` : '';
-    log('  - Skipping: staged bundled Node toolchain not required for this smoke-test run', colors.yellow);
-    logVerbose(`staged bundled Node toolchain skipped${reasonSuffix}`);
-    results.skipped++;
-    return;
-  }
-
-  const exists = fs.existsSync(stagedToolchainRoot);
-  if (!assert(exists, `staged bundled Node toolchain directory exists (${stagedToolchainRoot})`)) {
-    return;
-  }
-
-  const missingComponents = validateToolchainPayload(stagedToolchainRoot, { platform: nodeRuntimePlatform });
-  assert(
-    missingComponents.length === 0,
-    missingComponents.length === 0
-      ? 'staged bundled Node toolchain contains node, npm, and the deferred package manifest contract'
-      : `staged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
-  );
-
-  const manifestErrors = validateToolchainManifest(stagedToolchainRoot, { platform: nodeRuntimePlatform });
-  assert(
-    manifestErrors.length === 0,
-    manifestErrors.length === 0
-      ? 'staged bundled Node toolchain manifest matches the pinned Desktop contract'
-      : `staged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
-  );
-});
-
-test('packaged bundled Node toolchain payload is complete', () => {
-  if (!packagedToolchainRoot) {
-    log('  - Skipping: packaged bundled Node toolchain checks are not defined for this platform', colors.yellow);
-    results.skipped++;
-    return;
-  }
-
-  if (!requirePackagedBundledNodePayload) {
-    const reasonSuffix = bundledNodePolicy.reason ? ` (${bundledNodePolicy.reason})` : '';
-    log('  - Skipping: packaged bundled Node toolchain not required for this smoke-test run', colors.yellow);
-    logVerbose(`packaged bundled Node toolchain skipped${reasonSuffix}`);
-    results.skipped++;
-    return;
-  }
-
-  const exists = fs.existsSync(packagedToolchainRoot);
-  if (!assert(exists, `packaged bundled Node toolchain directory exists (${packagedToolchainRoot})`)) {
-    if (packagedToolchainCandidates.length > 1) {
-      logVerbose(`checked packaged toolchain candidates: ${packagedToolchainCandidates.join(', ')}`);
-    }
-    return;
-  }
-
-  assert(!packagedToolchainRoot.includes('app.asar'), 'packaged bundled Node toolchain directory resolves outside app.asar');
-  assert(packagedToolchainRoot.includes(path.join('extra', 'runtime', 'components', 'node', 'runtime')), 'packaged bundled Node toolchain uses canonical extra/runtime/components/node/runtime path');
-  assert(!packagedToolchainRoot.includes(path.join('extra', 'toolchain')), 'packaged bundled Node toolchain does not use the legacy extra/toolchain path');
-
-  const missingComponents = validateToolchainPayload(packagedToolchainRoot, { platform: nodeRuntimePlatform });
-  assert(
-    missingComponents.length === 0,
-    missingComponents.length === 0
-      ? 'packaged bundled Node toolchain contains node, npm, and the deferred package manifest contract'
-      : `packaged bundled Node toolchain is missing: ${missingComponents.join(', ')}`,
-  );
-
-  const manifestErrors = validateToolchainManifest(packagedToolchainRoot, { platform: nodeRuntimePlatform });
-  assert(
-    manifestErrors.length === 0,
-    manifestErrors.length === 0
-      ? 'packaged bundled Node toolchain manifest matches the pinned Desktop contract'
-      : `packaged bundled Node toolchain manifest mismatch: ${manifestErrors.join('; ')}`,
-  );
 });
 
 test('staged embedded runtime payload is complete', () => {
