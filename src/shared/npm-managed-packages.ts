@@ -7,7 +7,6 @@ import type {
   DependencyReadinessPackageSummary,
   DependencyReadinessSummary,
 } from '../types/dependency-management.js';
-import { isVendoredRuntimeId } from './vendored-runtimes.js';
 import {
   runtimeManagedPackageManifestPackages,
   type RuntimeManagedPackageManifestEntry,
@@ -60,7 +59,6 @@ const staticManagedNpmPackages = [
     binName: 'openspec',
     installSpec: '@fission-ai/openspec',
     category: 'workflow',
-    installMode: 'sdk-sync',
     required: true,
   },
   {
@@ -71,7 +69,6 @@ const staticManagedNpmPackages = [
     binName: 'skills',
     installSpec: 'skills',
     category: 'workflow',
-    installMode: 'sdk-sync',
     required: true,
   },
   {
@@ -83,7 +80,6 @@ const staticManagedNpmPackages = [
     installSpec: 'pm2@7.0.1',
     requiredVersionRange: '>=7.0.1',
     category: 'workflow',
-    installMode: 'sdk-sync',
     required: true,
   },
   {
@@ -94,7 +90,6 @@ const staticManagedNpmPackages = [
     binName: 'claude',
     installSpec: '@anthropic-ai/claude-code',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'claude-code',
     docsLinkId: 'claudeCodeSetup',
   },
@@ -106,7 +101,6 @@ const staticManagedNpmPackages = [
     binName: 'codex',
     installSpec: '@openai/codex',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'codex',
     docsLinkId: 'codexSetup',
   },
@@ -120,7 +114,6 @@ const staticManagedNpmPackages = [
     installArgs: ['--ignore-scripts'],
     requiredVersionRange: '0.78.1',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'pi',
   },
   {
@@ -132,7 +125,6 @@ const staticManagedNpmPackages = [
     installSpec: 'reasonix@1.2.0',
     requiredVersionRange: '1.2.0',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'reasonix',
   },
   {
@@ -143,7 +135,6 @@ const staticManagedNpmPackages = [
     binName: 'copilot',
     installSpec: '@github/copilot',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'copilot',
     docsLinkId: 'copilotSetup',
   },
@@ -155,7 +146,6 @@ const staticManagedNpmPackages = [
     binName: 'codebuddy',
     installSpec: '@tencent-ai/codebuddy-code',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'codebuddy',
   },
   {
@@ -166,7 +156,6 @@ const staticManagedNpmPackages = [
     binName: 'opencode',
     installSpec: 'opencode-ai',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'opencode',
     docsLinkId: 'opencodeSetup',
   },
@@ -178,7 +167,6 @@ const staticManagedNpmPackages = [
     binName: 'qodercli',
     installSpec: '@qoder-ai/qodercli',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'qoder',
     docsLinkId: 'qoderSetup',
   },
@@ -190,7 +178,6 @@ const staticManagedNpmPackages = [
     binName: 'gemini',
     installSpec: '@google/gemini-cli',
     category: 'agent-cli',
-    installMode: 'sdk-sync',
     agentCliId: 'gemini',
     docsLinkId: 'geminiSetup',
   },
@@ -202,7 +189,6 @@ const staticManagedNpmPackages = [
     binName: 'impeccable',
     installSpec: 'impeccable',
     category: 'developer-tool',
-    installMode: 'sdk-sync',
   },
   {
     id: 'oh-my-pi',
@@ -212,7 +198,6 @@ const staticManagedNpmPackages = [
     binName: 'omp',
     installSpec: '@oh-my-pi/pi-coding-agent',
     category: 'agent-cli',
-    installMode: 'external-cli',
     agentCliId: 'pi',
     externalCli: {
       installers: {
@@ -257,7 +242,7 @@ export const npmInstallableAgentCliPackages = managedAgentCliPackages.filter(
 );
 
 export const managedExternalCliPackages = managedNpmPackages.filter(
-  (definition) => definition.installMode === 'external-cli',
+  (definition) => Boolean(definition.externalCli),
 );
 
 export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition | null {
@@ -266,10 +251,6 @@ export function findManagedNpmPackage(id: string): ManagedNpmPackageDefinition |
 
 export function isManagedNpmPackageId(id: string): id is ManagedNpmPackageId {
   return findManagedNpmPackage(id) !== null;
-}
-
-export function isVendoredRuntimeMutationId(id: string): boolean {
-  return isVendoredRuntimeId(id);
 }
 
 export function findManagedPackageStatus(
@@ -372,7 +353,7 @@ function toReadinessPackageSummary(
   const effectiveDefinition = statusSnapshot?.definition ?? definition;
   const installedVersion = statusSnapshot?.version ?? null;
   const requiredVersionRange = getManagedPackageRequiredVersionRange(effectiveDefinition);
-  const versionSatisfied = effectiveDefinition.installMode === 'external-cli'
+  const versionSatisfied = effectiveDefinition.externalCli
     ? statusSnapshot?.status === 'installed' && Boolean(statusSnapshot.executablePath) && Boolean(installedVersion)
     : isManagedPackageVersionSatisfied(effectiveDefinition, installedVersion);
 
@@ -406,7 +387,7 @@ export function evaluateDependencyReadiness(
   const selectedSupportedIds = getSupportedSelectedAgentCliPackageIds(selectedAgentCliPackageIds);
   const selectedSupportedSet = new Set(selectedSupportedIds);
   const selectedDeveloperToolIds = selectedDeveloperToolPackageIds.filter(
-    (id): id is ManagedNpmPackageId => optionalPackages.some((item) => item.id === id && item.definition.installMode === 'external-cli'),
+    (id): id is ManagedNpmPackageId => optionalPackages.some((item) => item.id === id && Boolean(item.definition.externalCli)),
   );
   const missingSelectedDeveloperToolPackageIds = selectedDeveloperToolIds.filter((id) => {
     const item = optionalPackages.find((candidate) => candidate.id === id);

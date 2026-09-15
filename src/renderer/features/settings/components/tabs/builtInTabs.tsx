@@ -2,7 +2,6 @@ import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LanguageSelector } from '@/components/settings';
-import { DependencyManagementModeSettings } from '@/components/settings/DependencyManagementModeSettings';
 import { DebugOptionsSettings } from '@/components/settings/DebugOptionsSettings';
 import { OnboardingSettings } from '@/components/settings/OnboardingSettings';
 import { RuntimeDataPathSettings } from '@/components/settings/RuntimeDataPathSettings';
@@ -12,10 +11,6 @@ import type { SettingsTabComponentProps } from '../../types';
 
 export function OnboardingSettingsTab() {
   return <OnboardingSettings />;
-}
-
-export function DependencyManagementSettingsTab() {
-  return <DependencyManagementModeSettings />;
 }
 
 export function VersionUpdateSettingsTab({ distributionState }: SettingsTabComponentProps) {

@@ -1,8 +1,6 @@
-import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
-  CheckCircle2,
   ExternalLink,
   FolderOpen,
   Loader2,
@@ -10,13 +8,10 @@ import {
   Play,
   RefreshCw,
   Square,
-  Trash2,
   Wrench,
 } from 'lucide-react';
 import type {
-  ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  DependencyManagementOperationProgress,
   VendoredRuntimeLifecycleAction,
   VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
@@ -30,14 +25,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
 import {
-  getManagedPackageActionKey,
   getManagedPackageDisplayStatus,
   getManagedPackageRequiredVersion,
-  isOperationActive,
   isManagedPackageOutdated,
   managedPackageRowClassName,
   packageBadgeVariant,
-  type BatchSyncState,
 } from './dependencyManagementPageModel';
 
 function vendoredRuntimeBadgeVariant(item: VendoredRuntimeStatusSnapshot): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -249,72 +241,15 @@ export function PackageDetails({ item }: PackageDetailsProps) {
   );
 }
 
-interface PackageProgressProps {
-  item: ManagedNpmPackageStatusSnapshot;
-  progress?: DependencyManagementOperationProgress;
-  error?: string;
-}
-
-export function PackageProgress({ item, progress, error }: PackageProgressProps) {
-  if (isOperationActive(progress)) {
-    return (
-      <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {progress?.message}
-        </div>
-        <Progress value={progress?.percentage ?? 20} />
-      </div>
-    );
-  }
-
-  if (progress?.stage === 'completed') {
-    return (
-      <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-        <CheckCircle2 className="h-4 w-4" />
-        {progress.message}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (item.message) {
-    return <p className="text-sm text-muted-foreground">{item.message}</p>;
-  }
-
-  return null;
-}
-
 interface NpmPackageTableProps {
   titleKey?: string;
   descriptionKey?: string;
   packages: ManagedNpmPackageStatusSnapshot[];
-  highlightedPackageIds?: ManagedNpmPackageId[];
-  showMutationActions?: boolean;
+  highlightedPackageIds?: string[];
   showSuggestedCommand?: boolean;
   suggestedCommandRegistryUrl?: string | null;
-  selectedPackageIds: ManagedNpmPackageId[];
-  selectablePackageIds: ManagedNpmPackageId[];
-  selectAllChecked: boolean | 'indeterminate';
-  selectedEligibleCount: number;
-  batchSyncPackageIds: Set<ManagedNpmPackageId>;
-  isBatchSyncRunning: boolean;
-  progressByPackageId: Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>;
-  activeOperation?: DependencyManagementOperationProgress | null;
-  operationErrorByPackageId: Partial<Record<ManagedNpmPackageId, string>>;
-  actionsDisabled: boolean;
-  onTogglePackage: (packageId: ManagedNpmPackageId, checked: boolean) => void;
-  onToggleAll: (checked: boolean) => void;
-  onInstallSelected: () => void;
-  onRunOperation: (packageId: ManagedNpmPackageId, action: 'install' | 'uninstall') => void;
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
 }
 
 export function NpmPackageTable({
@@ -322,23 +257,10 @@ export function NpmPackageTable({
   descriptionKey = 'dependencyManagement.packageTable.description',
   packages,
   highlightedPackageIds = [],
-  showMutationActions = true,
-  showSuggestedCommand = false,
+  showSuggestedCommand = true,
   suggestedCommandRegistryUrl = null,
-  selectedPackageIds,
-  selectablePackageIds,
-  selectAllChecked,
-  selectedEligibleCount,
-  batchSyncPackageIds,
-  isBatchSyncRunning,
-  progressByPackageId,
-  activeOperation,
-  operationErrorByPackageId,
-  actionsDisabled,
-  onTogglePackage,
-  onToggleAll,
-  onInstallSelected,
-  onRunOperation,
+  selectedIds,
+  onSelectionChange,
 }: NpmPackageTableProps) {
   const { t } = useTranslation(['common', 'pages']);
   const highlightedPackageIdSet = new Set(highlightedPackageIds);
@@ -351,61 +273,24 @@ export function NpmPackageTable({
             <CardTitle className="text-lg">{t(titleKey)}</CardTitle>
             <CardDescription>{t(descriptionKey)}</CardDescription>
           </div>
-          {showMutationActions ? (
-            <Button onClick={onInstallSelected} disabled={actionsDisabled || isBatchSyncRunning || selectedEligibleCount === 0}>
-              {isBatchSyncRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
-              {isBatchSyncRunning ? t('dependencyManagement.actions.installSelectedRunning') : t('dependencyManagement.actions.installSelected')}
-            </Button>
-          ) : null}
         </div>
-        {showMutationActions ? (
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {t('dependencyManagement.selection.selectedCount', { count: selectedEligibleCount })}
-          </p>
-        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
-        <Table className={cn('min-w-[860px]', !showMutationActions && 'min-w-[720px]')}>
+        <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow>
-              {showMutationActions ? (
-                <TableHead className="w-20 px-3 text-center">
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={selectAllChecked}
-                      onCheckedChange={(checked) => onToggleAll(checked === true)}
-                      disabled={actionsDisabled || selectablePackageIds.length === 0}
-                      aria-label={t('dependencyManagement.selection.selectAll')}
-                      className="h-6 w-6 rounded-md border-2 shadow-sm"
-                    />
-                  </div>
-                </TableHead>
-              ) : null}
+              <TableHead className="w-12" />
               <TableHead className="min-w-[240px]">{t('dependencyManagement.packageTable.tool')}</TableHead>
               <TableHead>{t('dependencyManagement.package.category')}</TableHead>
               <TableHead>{t('dependencyManagement.package.version')}</TableHead>
               <TableHead className="min-w-[220px]">{t('dependencyManagement.package.packageName')}</TableHead>
-              {showMutationActions ? (
-                <TableHead className="min-w-[220px] text-right">{t('dependencyManagement.packageTable.action')}</TableHead>
-              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {packages.map((item) => {
-              const usesBatchSyncPanel = batchSyncPackageIds.has(item.id);
-              const itemProgress = progressByPackageId[item.id]
-                ?? (activeOperation?.packageId === item.id ? activeOperation : undefined);
-              const isActive = isOperationActive(itemProgress);
               const isHighlighted = highlightedPackageIdSet.has(item.id);
               const displayStatus = getManagedPackageDisplayStatus(item);
-              const actionKey = getManagedPackageActionKey(item);
               const requiredVersion = getManagedPackageRequiredVersion(item);
-              const rowDisabled = actionsDisabled || item.status === 'unknown';
-              const canUninstall = item.status === 'installed' && item.definition.required !== true;
-              const error = usesBatchSyncPanel
-                ? undefined
-                : operationErrorByPackageId[item.id] ?? (item.status === 'unknown' ? item.message : undefined);
-              const disabledReason = item.status === 'unknown' ? t('dependencyManagement.disabled.unknown') : undefined;
               const globalInstallCommand = buildManagedPackageGlobalInstallCommand(
                 item.definition,
                 suggestedCommandRegistryUrl,
@@ -414,30 +299,31 @@ export function NpmPackageTable({
               return (
                 <TableRow
                   key={item.id}
-                  data-state={selectedPackageIds.includes(item.id) ? 'selected' : undefined}
                   className={cn(
                     managedPackageRowClassName(item),
                     isHighlighted && 'ring-1 ring-inset ring-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
-                    selectedPackageIds.includes(item.id) && 'ring-1 ring-primary/30',
                   )}
                 >
-                  {showMutationActions ? (
-                    <TableCell className="w-20 px-3 align-top">
-                      <div className="flex justify-center pt-1">
-                        <Checkbox
-                          checked={selectedPackageIds.includes(item.id)}
-                          onCheckedChange={(checked) => onTogglePackage(item.id, checked === true)}
-                          disabled={rowDisabled}
-                          aria-label={t('dependencyManagement.selection.selectPackage', { name: item.definition.displayName })}
-                          aria-describedby={disabledReason ? `${item.id}-disabled-reason` : undefined}
-                          className="h-6 w-6 rounded-md border-2 shadow-sm"
-                        />
-                      </div>
-                    </TableCell>
-                  ) : null}
+                  <TableCell className="align-top">
+                    <Checkbox
+                      checked={selectedIds.includes(item.id)}
+                      onCheckedChange={(checked) => {
+                        const nextIds = checked
+                          ? [...selectedIds, item.id]
+                          : selectedIds.filter((id) => id !== item.id);
+                        onSelectionChange(nextIds);
+                      }}
+                      aria-label={item.definition.displayName}
+                    />
+                  </TableCell>
                   <TableCell className="align-top">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-medium">{item.definition.displayName}</div>
+                      {item.definition.required === true ? (
+                        <Badge variant="outline" title={t('dependencyManagement.batch.requiredLabel')}>
+                          ★ {t('dependencyManagement.batch.requiredLabel')}
+                        </Badge>
+                      ) : null}
                       <Badge variant={packageBadgeVariant(item)}>
                         {t(`dependencyManagement.packageStatus.${displayStatus}`)}
                       </Badge>
@@ -451,7 +337,6 @@ export function NpmPackageTable({
                         <code className="mt-1 block break-all font-mono text-xs text-foreground">{globalInstallCommand}</code>
                       </div>
                     ) : null}
-                    {disabledReason && <div id={`${item.id}-disabled-reason`} className="sr-only">{disabledReason}</div>}
                   </TableCell>
                   <TableCell className="align-top">
                     <Badge variant="secondary">{t(`dependencyManagement.categories.${item.definition.category}`)}</Badge>
@@ -468,35 +353,6 @@ export function NpmPackageTable({
                     ) : null}
                   </TableCell>
                   <TableCell className="max-w-[220px] break-all align-top text-muted-foreground">{item.definition.packageName}</TableCell>
-                  {showMutationActions ? (
-                    <TableCell className="space-y-2 align-top text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" onClick={() => onRunOperation(item.id, 'install')} disabled={rowDisabled}>
-                          {isActive ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackageOpen className="mr-2 h-4 w-4" />}
-                          {t(`dependencyManagement.actions.${actionKey}`)}
-                        </Button>
-                        {canUninstall && (
-                          <Button size="sm" variant="outline" onClick={() => onRunOperation(item.id, 'uninstall')} disabled={rowDisabled}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {t('dependencyManagement.actions.uninstall')}
-                          </Button>
-                        )}
-                      </div>
-                      {!usesBatchSyncPanel && isActive && (
-                        <div className="min-w-48 space-y-1 text-left text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />{itemProgress?.message}</div>
-                          <Progress value={itemProgress?.percentage ?? 20} />
-                        </div>
-                      )}
-                      {!usesBatchSyncPanel && itemProgress?.stage === 'completed' && (
-                        <div className="flex items-center justify-end gap-1 text-xs text-emerald-700 dark:text-emerald-300">
-                          <CheckCircle2 className="h-3 w-3" />
-                          {itemProgress.message}
-                        </div>
-                      )}
-                      {error && <div className="text-left text-xs text-destructive">{error}</div>}
-                    </TableCell>
-                  ) : null}
                 </TableRow>
               );
             })}
@@ -506,55 +362,3 @@ export function NpmPackageTable({
     </Card>
   );
 }
-
-export const BatchSyncLogPanel = forwardRef<HTMLDivElement, { batchSyncState: BatchSyncState }>(function BatchSyncLogPanel({ batchSyncState }, ref) {
-  const { t } = useTranslation('common');
-  const statusVariant = batchSyncState.status === 'failed'
-    ? 'destructive'
-    : batchSyncState.status === 'completed'
-      ? 'default'
-      : 'secondary';
-
-  return (
-    <Card ref={ref}>
-      <CardHeader className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">{t('dependencyManagement.batchLog.title')}</CardTitle>
-            <CardDescription>
-              {t('dependencyManagement.batchLog.description', { count: batchSyncState.packageIds.length })}
-            </CardDescription>
-          </div>
-          <Badge variant={statusVariant}>{t(`dependencyManagement.batchLog.status.${batchSyncState.status}`)}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="max-h-72 overflow-auto rounded-lg border bg-muted/30 p-3 font-mono text-xs leading-5">
-          {batchSyncState.logs.length > 0 ? (
-            batchSyncState.logs.map((entry) => (
-              <div key={`${entry.timestamp}-${entry.stage}-${entry.message}`} className="whitespace-pre-wrap break-words">
-                [{new Date(entry.timestamp).toLocaleTimeString()}] {entry.message}
-              </div>
-            ))
-          ) : (
-            <p className="font-sans text-sm text-muted-foreground">{t('dependencyManagement.batchLog.empty')}</p>
-          )}
-        </div>
-
-        {batchSyncState.status === 'completed' && (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4" />
-            {t('dependencyManagement.batchLog.completed')}
-          </div>
-        )}
-
-        {batchSyncState.error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{batchSyncState.error}</AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
-  );
-});

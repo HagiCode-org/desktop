@@ -21,10 +21,7 @@ describe('onboarding wizard manual handoff integration', () => {
     assert.match(source, /await dispatch\(completeOnboarding\(downloadProgress\.version\)\)\.unwrap\(\);/);
     assert.match(source, /void dispatch\(fetchActiveVersion\(\)\);/);
     assert.match(source, /onComplete\?\.\(\);/);
-    assert.match(source, /currentStep === OnboardingStep\.DependencyPreparation && runtimeProvisioned/);
-    assert.match(source, /await dispatch\(completeOnboarding\(activeVersion\.id\)\)\.unwrap\(\);/);
-    assert.match(source, /window\.electronAPI\.versionGetInstalled\(\)/);
-    assert.match(source, /await dispatch\(completeOnboarding\(fallbackVersion\.id\)\)\.unwrap\(\);/);
+    assert.doesNotMatch(source, /OnboardingStep\.DependencyPreparation/);
   });
 
   it('does not open Hagicode automatically when onboarding is completed', async () => {
@@ -43,10 +40,9 @@ describe('onboarding wizard manual handoff integration', () => {
   it('keeps the onboarding shell within the viewport and lets the step body scroll', async () => {
     const source = await fs.readFile(wizardPath, 'utf8');
 
-    assert.match(source, /fixed inset-0 z-50 overflow-hidden bg-background\/95 px-4 py-4 sm:px-6 sm:py-6/);
-    assert.match(source, /mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-4/);
-    assert.match(source, /flex flex-shrink-0 flex-col gap-4 rounded-2xl border bg-card px-6 py-5 shadow-sm/);
-    assert.match(source, /<div className="flex-1 overflow-y-auto p-6 sm:p-8">\{renderStep\(\)\}<\/div>/);
+    assert.match(source, /w-\[80vw\].*overflow-hidden/);
+    assert.match(source, /flex flex-shrink-0 flex-col gap-4 border-b bg-card/);
+    assert.match(source, /flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6/);
   });
 
   it('updates welcome and progress copy to support variable step counts while keeping manual startup messaging', async () => {
@@ -60,7 +56,7 @@ describe('onboarding wizard manual handoff integration', () => {
 
     assert.equal(welcomeSource.includes("welcome.steps.launch"), false);
     assert.match(welcomeSource, /welcome\.steps\.languageSelection/);
-    assert.match(welcomeSource, /welcome\.steps\.dependencyPreparation/);
+    assert.doesNotMatch(welcomeSource, /welcome\.steps\.dependencyPreparation/);
     assert.match(welcomeSource, /const steps = stepSequence\.map\(\(step, index\) => \(\{/);
     assert.match(welcomeSource, /t\('welcome\.description', \{ count: steps\.length \}\)/);
     assert.match(welcomeSource, /t\('welcome\.processTitle', \{ count: steps\.length \}\)/);
@@ -80,7 +76,7 @@ describe('onboarding wizard manual handoff integration', () => {
     const source = await fs.readFile(legalConsentPath, 'utf8');
 
     assert.match(source, /const shouldCompleteAfterAccept = useMemo\(\(\) => \{/);
-    assert.match(source, /const sequence = getOnboardingSequence\(mode, dependencyModeSettings, distributionState\);/);
+    assert.match(source, /const sequence = getOnboardingSequence\(mode, distributionState\);/);
     assert.match(source, /return sequence\[sequence\.length - 1\] === OnboardingStep\.LegalConsent;/);
     assert.match(source, /await dispatch\(fetchActiveVersion\(\)\)\.unwrap\(\);/);
     assert.match(source, /await dispatch\(completeOnboarding\(activeVersion\.id\)\)\.unwrap\(\);/);

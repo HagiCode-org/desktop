@@ -11,8 +11,7 @@ import type {
   ResolvedLegalDocumentsPayload,
 } from '../../../types/onboarding';
 import { OnboardingStep } from '../../../types/onboarding';
-import type { ManagedNpmPackageId, DependencyManagementBridge, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
-import type { DependencyManagementModeSettings } from '../../../types/dependency-management.js';
+import type { DependencyManagementBridge } from '../../../types/dependency-management.js';
 
 declare global {
   interface Window {
@@ -53,11 +52,6 @@ export const GO_TO_NEXT_STEP = 'onboarding/nextStep';
 export const GO_TO_PREVIOUS_STEP = 'onboarding/previousStep';
 export const SKIP_ONBOARDING = 'onboarding/skip';
 export const TRIGGER_ONBOARDING_NEXT = 'dependency/triggerOnboardingNext';
-
-export interface OnboardingDependencyOperationRejectedPayload {
-  message: string;
-  snapshot?: DependencyManagementSnapshot;
-}
 
 // Async thunks
 export const checkOnboardingTrigger = createAsyncThunk(
@@ -212,66 +206,6 @@ export const completeOnboarding = createAsyncThunk(
       return { success: true };
     } catch (error: unknown) {
       return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const loadOnboardingDependencySnapshot = createAsyncThunk(
-  'onboarding/loadDependencySnapshot',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await window.electronAPI.dependencyManagement.getSnapshot();
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const loadOnboardingDependencyModeSettings = createAsyncThunk(
-  'onboarding/loadDependencyModeSettings',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await window.electronAPI.dependencyManagement.getModeSettings();
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const refreshOnboardingDependencySnapshot = createAsyncThunk(
-  'onboarding/refreshDependencySnapshot',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await window.electronAPI.dependencyManagement.refresh();
-    } catch (error: unknown) {
-      return rejectWithValue(error instanceof Error ? error.message : String(error));
-    }
-  }
-);
-
-export const installOnboardingDependencyPackages = createAsyncThunk(
-  'onboarding/installDependencyPackages',
-  async (packageIds: ManagedNpmPackageId[], { rejectWithValue }) => {
-    try {
-      const latestSnapshot: DependencyManagementSnapshot | null = null;
-
-      if (packageIds.length > 0) {
-        const result = await window.electronAPI.dependencyManagement.syncPackages({ packageIds });
-        if (!result.success) {
-          return rejectWithValue({
-            message: result.error || 'Failed to install npm packages',
-            snapshot: result.snapshot,
-          } satisfies OnboardingDependencyOperationRejectedPayload);
-        }
-
-        return result.snapshot;
-      }
-
-      return latestSnapshot ?? await window.electronAPI.dependencyManagement.refresh();
-    } catch (error: unknown) {
-      return rejectWithValue({
-        message: error instanceof Error ? error.message : String(error),
-      } satisfies OnboardingDependencyOperationRejectedPayload);
     }
   }
 );

@@ -16,8 +16,6 @@ function getWelcomeStepTranslationKey(step: OnboardingStep) {
       return 'welcome.steps.legalConsent';
     case OnboardingStep.SharingAcceleration:
       return 'welcome.steps.sharingAcceleration';
-    case OnboardingStep.DependencyPreparation:
-      return 'welcome.steps.dependencyPreparation';
     case OnboardingStep.Download:
       return 'welcome.steps.download';
     default:

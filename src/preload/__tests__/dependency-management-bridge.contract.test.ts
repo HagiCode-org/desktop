@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 const preloadPath = path.resolve(process.cwd(), 'src/preload/index.ts');
 
 describe('dependency management preload contract', () => {
-  it('exposes typed dependency management methods and progress unsubscribe handling', async () => {
+  it('exposes read-only dependency management methods and progress unsubscribe handling', async () => {
     const source = await fs.readFile(preloadPath, 'utf8');
 
     assert.match(source, /dependencyManagement: DependencyManagementBridge;/);
@@ -14,18 +14,12 @@ describe('dependency management preload contract', () => {
     assert.match(source, /refresh: \(\) => ipcRenderer\.invoke\(dependencyManagementChannels\.refresh\)/);
     assert.match(source, /getMirrorSettings: \(\) => ipcRenderer\.invoke\(dependencyManagementChannels\.getMirrorSettings\)/);
     assert.match(source, /setMirrorSettings: \(settings: NpmMirrorSettingsInput\) => ipcRenderer\.invoke\(dependencyManagementChannels\.setMirrorSettings, settings\)/);
-    assert.doesNotMatch(source, /DependencyManagementInstallRequest/);
-    assert.match(source, /install: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.install, packageId\)/);
-    assert.match(source, /uninstall: \(packageId: ManagedNpmPackageId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.uninstall, packageId\)/);
-    assert.match(source, /syncPackages: \(request: DependencyManagementBatchSyncRequest\) => ipcRenderer\.invoke\(dependencyManagementChannels\.syncPackages, request\)/);
     assert.match(source, /enableVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.enableVendoredRuntime, runtimeId\)/);
     assert.match(source, /startVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.startVendoredRuntime, runtimeId\)/);
     assert.match(source, /stopVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.stopVendoredRuntime, runtimeId\)/);
     assert.match(source, /restartVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.restartVendoredRuntime, runtimeId\)/);
     assert.match(source, /repairVendoredRuntime: \(runtimeId: VendoredRuntimeId\) => ipcRenderer\.invoke\(dependencyManagementChannels\.repairVendoredRuntime, runtimeId\)/);
     assert.match(source, /openVendoredRuntimePath: \(runtimeId: VendoredRuntimeId, target: 'logs' \| 'runtime-root'\) => ipcRenderer\.invoke\(dependencyManagementChannels\.openVendoredRuntimePath, runtimeId, target\)/);
-    assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.progress, listener\)/);
-    assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.progress, listener\)/);
     assert.match(source, /ipcRenderer\.on\(dependencyManagementChannels\.vendoredRuntimeActivationProgress, listener\)/);
     assert.match(source, /return \(\) => ipcRenderer\.removeListener\(dependencyManagementChannels\.vendoredRuntimeActivationProgress, listener\)/);
   });

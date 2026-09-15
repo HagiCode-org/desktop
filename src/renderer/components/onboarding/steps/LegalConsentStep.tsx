@@ -14,7 +14,6 @@ import {
   selectIsLoadingLegalMetadata,
   selectLegalDocuments,
   selectLegalMetadataSource,
-  selectOnboardingDependencyModeSettings,
   selectOnboardingDistributionState,
   selectOnboardingError,
   selectOnboardingMode,
@@ -51,7 +50,6 @@ const LegalConsentStep = forwardRef<LegalConsentStepHandle, LegalConsentStepProp
   const mode = useSelector((state: RootState) => selectOnboardingMode(state));
   const distributionState = useSelector((state: RootState) => selectOnboardingDistributionState(state));
   const runtimeProvisioned = useSelector((state: RootState) => selectOnboardingRuntimeProvisioned(state));
-  const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
   const documents = useSelector((state: RootState) => selectLegalDocuments(state));
   const source = useSelector((state: RootState) => selectLegalMetadataSource(state));
   const isLoading = useSelector((state: RootState) => selectIsLoadingLegalMetadata(state));
@@ -69,9 +67,9 @@ const LegalConsentStep = forwardRef<LegalConsentStepHandle, LegalConsentStepProp
       return true;
     }
 
-    const sequence = getOnboardingSequence(mode, dependencyModeSettings, distributionState);
+    const sequence = getOnboardingSequence(mode, distributionState);
     return sequence[sequence.length - 1] === OnboardingStep.LegalConsent;
-  }, [dependencyModeSettings, distributionState, mode, runtimeProvisioned]);
+  }, [distributionState, mode, runtimeProvisioned]);
 
   const canAccept = isChecked && documents.length >= 2 && !isLoading && !isAccepting && !isDeclining;
 

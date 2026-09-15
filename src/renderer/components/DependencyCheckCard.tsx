@@ -26,7 +26,6 @@ declare global {
     electronAPI: {
       getPackageDependencies: () => Promise<DependencyCheckResult[]>;
       refreshPackageDependencies: () => Promise<DependencyCheckResult[]>;
-      refreshBundledToolchainStatus: () => Promise<any>;
       installPackageDependency: (dependencyType: string) => Promise<boolean>;
       onPackageDependenciesUpdated: (callback: (deps: DependencyCheckResult[]) => void) => void;
     };
@@ -67,7 +66,6 @@ export default function DependencyCheckCard() {
   };
 
   const handleRefresh = async () => {
-    await window.electronAPI.refreshBundledToolchainStatus?.();
     await fetchDependencies();
   };
 

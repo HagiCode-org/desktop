@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -8,11 +8,7 @@ import {
   selectCanGoPrevious,
   selectCurrentStep,
   selectDownloadProgress,
-  selectOnboardingDependencyReadiness,
   selectOnboardingDistributionState,
-  selectOnboardingDependencyModeSettings,
-  selectOnboardingSelectedAgentCliPackageIds,
-  selectOnboardingSelectedDeveloperToolPackageIds,
   selectShowSkipConfirm,
   setShowSkipConfirm,
   selectIsActive,
@@ -26,10 +22,7 @@ import {
   downloadPackage,
   goToNextStep,
   goToPreviousStep,
-  installOnboardingDependencyPackages,
   loadLegalDocuments,
-  loadOnboardingDependencyModeSettings,
-  refreshOnboardingDependencySnapshot,
   skipOnboarding,
 } from '../../store/thunks/onboardingThunks';
 import { fetchActiveVersion } from '../../store/thunks/webServiceThunks';
@@ -37,12 +30,10 @@ import { changeLanguage } from '../../store/thunks/i18nThunks';
 import WelcomeIntro from './steps/WelcomeIntro';
 import LegalConsentStep, { type LegalConsentStepHandle } from './steps/LegalConsentStep';
 import SharingAccelerationStep from './steps/SharingAccelerationStep';
-import DependencyPreparationStep from './steps/DependencyPreparationStep';
 import PackageDownload from './steps/PackageDownload';
 import LanguageSelectionStep from './steps/LanguageSelectionStep';
 import OnboardingProgress from './OnboardingProgress';
 import OnboardingActions from './OnboardingActions';
-import { Button } from '../ui/button';
 import { Sheet, SheetContent } from '../ui/sheet';
 import type { AppDispatch, RootState } from '../../store';
 import type { DownloadProgress } from '../../../types/onboarding';
@@ -63,8 +54,6 @@ function getStepLabel(t: ReturnType<typeof useTranslation<'onboarding'>>['t'], s
       return t('legal.title');
     case OnboardingStep.SharingAcceleration:
       return t('sharingAcceleration.title');
-    case OnboardingStep.DependencyPreparation:
-      return t('dependencyPreparation.title');
     case OnboardingStep.Download:
       return t('download.title');
     default:
@@ -83,14 +72,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const canGoNext = useSelector((state: RootState) => selectCanGoNext(state));
   const canGoPrevious = useSelector((state: RootState) => selectCanGoPrevious(state));
   const downloadProgress = useSelector((state: RootState) => selectDownloadProgress(state));
-  const dependencyModeSettings = useSelector((state: RootState) => selectOnboardingDependencyModeSettings(state));
-  const dependencyModeSettingsStatus = useSelector((state: RootState) => state.onboarding.dependencyModeSettingsStatus);
-  const onboardingDependencyReadiness = useSelector((state: RootState) => selectOnboardingDependencyReadiness(state));
-  const onboardingSelectedAgentCliPackageIds = useSelector((state: RootState) => selectOnboardingSelectedAgentCliPackageIds(state));
-  const onboardingSelectedDeveloperToolPackageIds = useSelector((state: RootState) => selectOnboardingSelectedDeveloperToolPackageIds(state));
   const showSkipConfirm = useSelector((state: RootState) => selectShowSkipConfirm(state));
   const isDownloading = useSelector((state: RootState) => state.onboarding.isDownloading);
-  const isDependencyOperationActive = useSelector((state: RootState) => state.onboarding.isDependencyOperationActive);
   const onboardingError = useSelector((state: RootState) => state.onboarding.error);
   const locale = useSelector((state: RootState) => state.i18n.currentLanguage);
 
@@ -135,14 +118,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }, [isActive, locale, dispatch]);
 
   useEffect(() => {
-    if (!isActive || mode !== 'full' || dependencyModeSettingsStatus !== 'idle') {
-      return;
-    }
-
-    void dispatch(loadOnboardingDependencyModeSettings());
-  }, [dependencyModeSettingsStatus, dispatch, isActive, mode]);
-
-  useEffect(() => {
     if (currentStep !== OnboardingStep.Download || runtimeProvisioned || isDownloading || downloadCompleted) {
       return;
     }
@@ -155,8 +130,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }, [currentStep, dispatch, downloadCompleted, downloadProgress, isDownloading, onboardingError, runtimeProvisioned]);
 
   const stepSequence = useMemo(
-    () => getOnboardingSequence(mode, dependencyModeSettings, distributionState),
-    [dependencyModeSettings, distributionState, mode],
+    () => getOnboardingSequence(mode, distributionState),
+    [distributionState, mode],
   );
   const totalSteps = stepSequence.length;
   const currentStepNumber = Math.max(1, stepSequence.indexOf(currentStep) + 1);
@@ -188,66 +163,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return;
     }
 
-    if (currentStep === OnboardingStep.DependencyPreparation && runtimeProvisioned) {
-      if (isDependencyOperationActive) {
-        return;
-      }
-
-      void dispatch(fetchActiveVersion()).unwrap().then(async (activeVersion) => {
-        if (activeVersion?.id) {
-          await dispatch(completeOnboarding(activeVersion.id)).unwrap();
-          void dispatch(fetchActiveVersion());
-          onComplete?.();
-          return;
-        }
-
-        const fallbackVersion = [...await window.electronAPI.versionGetInstalled()]
-          .sort((left, right) => {
-            if (left.isActive !== right.isActive) {
-              return Number(right.isActive) - Number(left.isActive);
-            }
-
-            const leftInstalledAt = Number.isFinite(Date.parse(left.installedAt)) ? Date.parse(left.installedAt) : 0;
-            const rightInstalledAt = Number.isFinite(Date.parse(right.installedAt)) ? Date.parse(right.installedAt) : 0;
-            return rightInstalledAt - leftInstalledAt;
-          })[0];
-        if (!fallbackVersion?.id) {
-          return;
-        }
-
-        await dispatch(completeOnboarding(fallbackVersion.id)).unwrap();
-        void dispatch(fetchActiveVersion());
-        onComplete?.();
-      });
-      return;
-    }
-
-    if (currentStep === OnboardingStep.DependencyPreparation) {
-      if (isDependencyOperationActive) {
-        return;
-      }
-
-      dispatch(goToNextStep());
-
-      if (!isDownloading && !downloadCompleted) {
-        dispatch(downloadPackage());
-      }
-      return;
-    }
-
     if (currentStep === OnboardingStep.LegalConsent) {
       await legalConsentRef.current?.accept();
-      return;
-    }
-
-    if (currentStep === OnboardingStep.SharingAcceleration && mode === 'full' && dependencyModeSettingsStatus !== 'ready') {
-      try {
-        await dispatch(loadOnboardingDependencyModeSettings()).unwrap();
-      } catch {
-        // Fall back to the existing full flow if the mode settings cannot be loaded.
-      }
-
-      dispatch(goToNextStep());
       return;
     }
 
@@ -286,8 +203,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <LegalConsentStep ref={legalConsentRef} onCanAcceptChange={setLegalConsentCanAccept} />;
       case OnboardingStep.SharingAcceleration:
         return <SharingAccelerationStep onReadyChange={setSharingStepReady} />;
-      case OnboardingStep.DependencyPreparation:
-        return <DependencyPreparationStep />;
       case OnboardingStep.Download:
         return <PackageDownload />;
       default:
@@ -321,10 +236,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return t('actions.finish');
     }
 
-    if (currentStep === OnboardingStep.DependencyPreparation && runtimeProvisioned) {
-      return t('actions.finish');
-    }
-
     return undefined;
   }, [currentStep, downloadCompleted, languageStepPending, runtimeProvisioned, selectedLanguage, t]);
 
@@ -334,91 +245,12 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       ? sharingStepReady
       : currentStep === OnboardingStep.LegalConsent
         ? legalConsentCanAccept
-        : currentStep === OnboardingStep.DependencyPreparation
-          ? !isDependencyOperationActive
-          : canGoNext;
+        : canGoNext;
 
   const canGoPreviousInCommonActions = currentStep === OnboardingStep.Welcome
     ? false
     : canGoPrevious;
   const skipLabel = currentStep === OnboardingStep.Welcome ? t('welcome.skip') : undefined;
-
-  const dependencyActionState = useMemo(() => {
-    if (currentStep !== OnboardingStep.DependencyPreparation) {
-      return null;
-    }
-
-    const readiness = onboardingDependencyReadiness;
-    const selectedAgentCliPackageIds = onboardingSelectedAgentCliPackageIds;
-
-    if (!readiness) {
-      return {
-        refreshDisabled: isDependencyOperationActive,
-        installDisabled: true,
-        installLabel: t('onboarding:dependencyPreparation.actions.install'),
-        installLoading: false,
-        packagesToInstall: [] as string[],
-      };
-    }
-
-    const requiredMissingPackageIds = readiness.requiredPackages
-      .filter((item) => item.status !== 'installed')
-      .map((item) => item.id);
-    const selectedAgentCliPackageIdSet = new Set(selectedAgentCliPackageIds);
-    const selectedAgentCliMissingPackageIds = readiness.agentCliPackages
-      .filter((item) => selectedAgentCliPackageIdSet.has(item.id) && item.status !== 'installed')
-      .map((item) => item.id);
-    const selectedDeveloperToolPackageIdSet = new Set(onboardingSelectedDeveloperToolPackageIds);
-    const selectedDeveloperToolMissingPackageIds = readiness.optionalPackages
-      .filter((item) => selectedDeveloperToolPackageIdSet.has(item.id) && item.status !== 'installed')
-      .map((item) => item.id);
-    const packagesToInstall = [...new Set([
-      ...requiredMissingPackageIds,
-      ...selectedAgentCliMissingPackageIds,
-      ...selectedDeveloperToolMissingPackageIds,
-    ])];
-    const environmentAvailable = readiness.environmentAvailable;
-
-    return {
-      refreshDisabled: isDependencyOperationActive,
-      installDisabled: !environmentAvailable
-        || isDependencyOperationActive
-        || packagesToInstall.length === 0,
-      installLabel: readiness.ready
-        ? t('onboarding:dependencyPreparation.actions.recheck')
-        : t('onboarding:dependencyPreparation.actions.install'),
-      installLoading: isDependencyOperationActive,
-      packagesToInstall,
-      readinessReady: readiness.ready,
-    };
-  }, [
-    currentStep,
-    onboardingDependencyReadiness,
-    onboardingSelectedAgentCliPackageIds,
-    onboardingSelectedDeveloperToolPackageIds,
-    isDependencyOperationActive,
-    t,
-  ]);
-
-  const handleDependencyInstallOrRecheck = () => {
-    if (!dependencyActionState || dependencyActionState.installDisabled) {
-      return;
-    }
-
-    if (dependencyActionState.packagesToInstall.length === 0) {
-      return;
-    }
-
-    void dispatch(installOnboardingDependencyPackages(dependencyActionState.packagesToInstall));
-  };
-
-  const handleDependencyRefresh = () => {
-    if (!dependencyActionState || dependencyActionState.refreshDisabled) {
-      return;
-    }
-
-    void dispatch(refreshOnboardingDependencySnapshot());
-  };
 
   if (!isActive) {
     return null;
@@ -452,81 +284,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">{renderStep()}</div>
 
           <div className="sticky bottom-0 flex-shrink-0 bg-card">
-            {currentStep === OnboardingStep.DependencyPreparation ? (
-              <div className="border-t bg-card/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:px-6">
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-h-10 items-center">
-                    {canGoPreviousInCommonActions && (
-                      <Button
-                        variant="ghost"
-                        onClick={handlePrevious}
-                        className="w-full gap-2 sm:w-auto"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        {t('actions.previous')}
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <Button
-                      variant="ghost"
-                      onClick={handleSkip}
-                      className="w-full text-muted-foreground sm:w-auto"
-                    >
-                      {t('actions.skip')}
-                    </Button>
-                    {dependencyActionState?.readinessReady
-                      ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            onClick={handleDependencyRefresh}
-                            disabled={dependencyActionState?.refreshDisabled ?? true}
-                            className="w-full gap-2 sm:w-auto"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                            {t('onboarding:dependencyPreparation.actions.refresh')}
-                          </Button>
-                          <Button
-                            onClick={handleNext}
-                            disabled={!effectiveCanGoNext}
-                            className="w-full min-w-40 justify-center gap-2 sm:w-auto"
-                          >
-                            {nextLabel ?? t('actions.next')}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )
-                      : (
-                        <>
-                          <Button
-                            variant="outline"
-                            onClick={handleDependencyRefresh}
-                            disabled={dependencyActionState?.refreshDisabled ?? true}
-                            className="w-full gap-2 sm:w-auto"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                            {t('onboarding:dependencyPreparation.actions.refresh')}
-                          </Button>
-                          <Button
-                            onClick={handleDependencyInstallOrRecheck}
-                            disabled={dependencyActionState?.installDisabled ?? true}
-                            className="w-full min-w-40 justify-center gap-2 sm:w-auto"
-                          >
-                            {dependencyActionState?.installLoading
-                              ? <Loader2 className="h-4 w-4 animate-spin" />
-                              : <PackageOpen className="h-4 w-4" />}
-                            {dependencyActionState?.installLabel ?? t('onboarding:dependencyPreparation.actions.install')}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <OnboardingActions
+            <OnboardingActions
                 canGoNext={effectiveCanGoNext}
                 canGoPrevious={canGoPreviousInCommonActions}
                 onNext={handleNext}
@@ -535,7 +293,6 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 skipLabel={skipLabel}
                 nextLabel={nextLabel}
               />
-            )}
           </div>
         </div>
       </SheetContent>

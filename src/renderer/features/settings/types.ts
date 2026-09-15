@@ -5,7 +5,6 @@ import type { DistributionModeState } from '../../../types/distribution-mode';
 export type SettingsTabId =
   | 'notification'
   | 'onboarding'
-  | 'dependencyManagement'
   | 'updates'
   | 'runtimeData'
   | 'debugOptions'

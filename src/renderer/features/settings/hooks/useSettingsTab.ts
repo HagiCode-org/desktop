@@ -1,4 +1,4 @@
-import { BellRing, Bug, Gauge, Languages, Rocket, SlidersHorizontal, Upload, HardDrive } from 'lucide-react';
+import { BellRing, Bug, Languages, Rocket, SlidersHorizontal, Upload, HardDrive } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DistributionModeState } from '../../../../types/distribution-mode';
 import type { SettingsTabConfig, SettingsTabId } from '../types';
@@ -22,12 +22,6 @@ export function useSettingsTab({ distributionState, showSharingAccelerationSetti
         labelKey: 'settings.tabs.onboarding',
         icon: Rocket,
         loader: () => import('../components/tabs/builtInTabs').then((module) => ({ default: module.OnboardingSettingsTab })),
-      },
-      {
-        id: 'dependencyManagement',
-        labelKey: 'settings.tabs.dependencyManagement',
-        icon: Gauge,
-        loader: () => import('../components/tabs/builtInTabs').then((module) => ({ default: module.DependencyManagementSettingsTab })),
       },
       {
         id: 'updates',

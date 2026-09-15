@@ -53,6 +53,8 @@ function createSnapshot(
       available: true,
       toolchainRoot: '/managed',
       nodeRuntimeRoot: '/managed/node',
+      toolchainRoot: '/managed',
+      nodeRuntimeRoot: '/managed/node',
       nodeVersion: 'v24.0.0',
       nodeMajorVersion: '24',
       npmGlobalPrefix: '/managed/node',
@@ -77,7 +79,6 @@ function createSnapshot(
       enabled: false,
       registryUrl: null,
     },
-    activeOperation: null,
     generatedAt: '2026-04-26T00:00:00.000Z',
   };
 }

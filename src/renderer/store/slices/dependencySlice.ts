@@ -39,7 +39,6 @@ export interface DependencyItem {
     installState: 'pending' | 'installed';
     installSpec: string;
     manualActionId: string;
-    toolchainRoot: string;
     npmExecutablePath?: string;
     command?: string;
   };

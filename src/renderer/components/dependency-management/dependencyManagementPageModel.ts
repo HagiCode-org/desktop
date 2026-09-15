@@ -3,13 +3,14 @@ import {
   isManagedPackageVersionSatisfied,
 } from '../../../shared/npm-managed-packages.js';
 import type {
+  ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  DependencyManagementOperationProgress,
   VendoredRuntimeId,
   VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
 import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
+import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
 
 export type ManagedPackageDisplayStatus = ManagedNpmPackageStatusSnapshot['status'] | 'outdated';
 
@@ -25,20 +26,14 @@ export function getManagedPackageRequiredVersion(item: ManagedNpmPackageStatusSn
   return getManagedPackageRequiredVersionRange(item.definition);
 }
 
-export type BatchSyncStatus = 'running' | 'completed' | 'failed';
-
-export interface BatchSyncLogEntry {
-  timestamp: string;
-  stage: DependencyManagementOperationProgress['stage'];
-  message: string;
-  percentage?: number;
-}
-
-export interface BatchSyncState {
-  packageIds: ManagedNpmPackageId[];
-  status: BatchSyncStatus;
-  logs: BatchSyncLogEntry[];
-  error?: string;
+export function buildBatchInstallCommand(
+  definitions: ManagedNpmPackageDefinition[],
+  registryUrl?: string | null,
+): string {
+  // Keep each package command independent so install arguments match the single-package path.
+  return definitions
+    .map((definition) => buildManagedPackageGlobalInstallCommand(definition, registryUrl))
+    .join('\n');
 }
 
 export function packageBadgeVariant(item: ManagedNpmPackageStatusSnapshot) {
@@ -56,48 +51,6 @@ export function packageBadgeVariant(item: ManagedNpmPackageStatusSnapshot) {
   return 'secondary' as const;
 }
 
-export function isOperationActive(progress?: DependencyManagementOperationProgress): boolean {
-  return progress?.stage === 'started' || progress?.stage === 'output';
-}
-
-export function buildBatchSyncLogKey(entry: Pick<BatchSyncLogEntry, 'stage' | 'message' | 'percentage'>): string {
-  return `${entry.stage}:${entry.message}:${entry.percentage ?? ''}`;
-}
-
-export function isBatchSyncEvent(batchSyncState: BatchSyncState | null, event: DependencyManagementOperationProgress): boolean {
-  return Boolean(
-    batchSyncState
-    && batchSyncState.packageIds.includes(event.packageId),
-  );
-}
-
-export function appendBatchSyncLog(
-  batchSyncState: BatchSyncState,
-  event: DependencyManagementOperationProgress,
-): BatchSyncState {
-  const nextEntry: BatchSyncLogEntry = {
-    timestamp: event.timestamp,
-    stage: event.stage,
-    message: event.message,
-    percentage: event.percentage,
-  };
-  const lastEntry = batchSyncState.logs[batchSyncState.logs.length - 1];
-  const nextLogs = lastEntry && buildBatchSyncLogKey(lastEntry) === buildBatchSyncLogKey(nextEntry)
-    ? batchSyncState.logs
-    : [...batchSyncState.logs, nextEntry];
-
-  return {
-    ...batchSyncState,
-    logs: nextLogs,
-    status: event.stage === 'failed'
-      ? 'failed'
-      : event.stage === 'completed'
-        ? 'completed'
-        : batchSyncState.status,
-    error: event.stage === 'failed' ? event.message : undefined,
-  };
-}
-
 export function managedPackageRowClassName(item: ManagedNpmPackageStatusSnapshot): string {
   const displayStatus = getManagedPackageDisplayStatus(item);
 
@@ -110,16 +63,6 @@ export function managedPackageRowClassName(item: ManagedNpmPackageStatusSnapshot
   }
 
   return 'bg-red-500/10 hover:bg-red-500/15';
-}
-
-export function getManagedPackageActionKey(item: ManagedNpmPackageStatusSnapshot): 'install' | 'reinstall' | 'upgrade' {
-  const displayStatus = getManagedPackageDisplayStatus(item);
-
-  if (displayStatus === 'outdated') {
-    return 'upgrade';
-  }
-
-  return item.status === 'installed' ? 'reinstall' : 'install';
 }
 
 export function prioritizePackagesForRepair(
@@ -203,69 +146,4 @@ export function evaluateDependencyRepairIntent(
     pendingPackageIds,
     pendingRuntimeIds,
   };
-}
-
-export function getSelectablePackageIds(
-  packages: readonly ManagedNpmPackageStatusSnapshot[],
-  options: {
-    actionsDisabled: boolean;
-  },
-): ManagedNpmPackageId[] {
-  if (options.actionsDisabled) {
-    return [];
-  }
-
-  return getInstallEligiblePackageIds(packages, options);
-}
-
-export function getInstallEligiblePackageIds(
-  packages: readonly ManagedNpmPackageStatusSnapshot[],
-): ManagedNpmPackageId[] {
-  return packages
-    .filter((item) => item.status !== 'unknown')
-    .map((item) => item.id);
-}
-
-export function getSelectedEligiblePackageIds(
-  selectedPackageIds: readonly ManagedNpmPackageId[],
-  selectablePackageIds: readonly ManagedNpmPackageId[],
-): ManagedNpmPackageId[] {
-  return selectedPackageIds.filter((id) => selectablePackageIds.includes(id));
-}
-
-export function pruneSelectedPackageIds(
-  selectedPackageIds: readonly ManagedNpmPackageId[],
-  packages: readonly ManagedNpmPackageStatusSnapshot[],
-): ManagedNpmPackageId[] {
-  const eligibleIds = new Set(getInstallEligiblePackageIds(packages));
-  return selectedPackageIds.filter((id) => eligibleIds.has(id));
-}
-
-export function getSelectAllChecked(
-  selectedPackageIds: readonly ManagedNpmPackageId[],
-  selectablePackageIds: readonly ManagedNpmPackageId[],
-): boolean | 'indeterminate' {
-  const selectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, selectablePackageIds);
-  const allEligibleSelected = selectablePackageIds.length > 0 && selectablePackageIds.every((id) => selectedPackageIds.includes(id));
-
-  return allEligibleSelected ? true : selectedEligibleIds.length > 0 ? 'indeterminate' : false;
-}
-
-export function updateSelectedPackageIds(
-  current: readonly ManagedNpmPackageId[],
-  packageId: ManagedNpmPackageId,
-  checked: boolean,
-): ManagedNpmPackageId[] {
-  return checked
-    ? Array.from(new Set([...current, packageId]))
-    : current.filter((id) => id !== packageId);
-}
-
-export function updateSelectAllPackageIds(
-  current: readonly ManagedNpmPackageId[],
-  selectablePackageIds: readonly ManagedNpmPackageId[],
-  checked: boolean,
-): ManagedNpmPackageId[] {
-  const currentWithoutEligible = current.filter((id) => !selectablePackageIds.includes(id));
-  return checked ? [...currentWithoutEligible, ...selectablePackageIds] : currentWithoutEligible;
 }

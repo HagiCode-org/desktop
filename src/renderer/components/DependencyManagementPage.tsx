@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ExternalLink, Gauge, Loader2, PackageOpen, RefreshCw } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import type {
-  ManagedNpmPackageId,
   DependencyManagementBridge,
-  DependencyManagementMode,
-  DependencyManagementOperationProgress,
   DependencyManagementSnapshot,
+  ManagedNpmPackageId,
   VendoredRuntimeId,
   VendoredRuntimeLifecycleAction,
   VendoredRuntimeStatusSnapshot,
@@ -16,36 +14,18 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  appendBatchSyncLog,
   evaluateDependencyRepairIntent,
-  getSelectablePackageIds,
-  getSelectAllChecked,
-  getSelectedEligiblePackageIds,
-  isBatchSyncEvent,
-  pruneSelectedPackageIds,
   prioritizePackagesForRepair,
   prioritizeVendoredRuntimesForRepair,
-  type BatchSyncState,
-  updateSelectAllPackageIds,
-  updateSelectedPackageIds,
+  buildBatchInstallCommand,
 } from './dependency-management/dependencyManagementPageModel';
 import {
-  BatchSyncLogPanel,
   NpmPackageTable,
   VendoredRuntimeCard,
 } from './dependency-management/NpmPackageGroups';
+import { BatchCommandDialog } from './dependency-management/BatchCommandDialog';
 import { setDependencyManagementIntent, switchView } from '@/store/slices/viewSlice';
 import type { AppDispatch, RootState } from '@/store';
 
@@ -69,21 +49,15 @@ export default function DependencyManagementPage() {
   const [snapshot, setSnapshot] = useState<DependencyManagementSnapshot | null>(null);
   const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [progress, setProgress] = useState<Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>>({});
-  const [operationError, setOperationError] = useState<Partial<Record<ManagedNpmPackageId, string>>>({});
-  const [selectedPackageIds, setSelectedPackageIds] = useState<ManagedNpmPackageId[]>([]);
-  const [batchSyncState, setBatchSyncState] = useState<BatchSyncState | null>(null);
   const [runtimeActionState, setRuntimeActionState] = useState<Partial<Record<VendoredRuntimeId, VendoredRuntimeLifecycleAction>>>({});
   const [runtimeOperationError, setRuntimeOperationError] = useState<Partial<Record<VendoredRuntimeId, string>>>({});
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [repairCompletionState, setRepairCompletionState] = useState<RepairCompletionState>('idle');
   const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
-  const [isSavingMode, setIsSavingMode] = useState(false);
-  const [modeSwitchApplied, setModeSwitchApplied] = useState(false);
-  const [pendingUninstall, setPendingUninstall] = useState<ManagedNpmPackageId | null>(null);
   const [isPending, startTransition] = useTransition();
-  const batchLogPanelRef = useRef<HTMLDivElement | null>(null);
+  const [selectedPackageIds, setSelectedPackageIds] = useState<Set<ManagedNpmPackageId>>(new Set());
+  const [batchCommand, setBatchCommand] = useState<string | null>(null);
 
   const openNodeEnvironmentFaq = () => {
     void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'));
@@ -113,31 +87,6 @@ export default function DependencyManagementPage() {
     }
   };
 
-  const handleModeChange = async (value: string) => {
-    if (!snapshot || isSavingMode || snapshot.mode.lockedByRuntime) {
-      return;
-    }
-
-    const nextMode = value as DependencyManagementMode;
-    if (nextMode === snapshot.mode.configuredMode) {
-      return;
-    }
-
-    setIsSavingMode(true);
-    setModeSwitchApplied(false);
-    setErrorMessage(null);
-    try {
-      await getDependencyManagementBridge().setMode(nextMode);
-      if (await refreshSnapshot()) {
-        setModeSwitchApplied(true);
-      }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsSavingMode(false);
-    }
-  };
-
   useEffect(() => {
     let disposed = false;
 
@@ -157,23 +106,6 @@ export default function DependencyManagementPage() {
     };
 
     const bridge = getDependencyManagementBridge();
-    const unsubscribe = bridge.onProgress((event) => {
-      setProgress((current) => ({ ...current, [event.packageId]: event }));
-      setBatchSyncState((current) => {
-        if (!isBatchSyncEvent(current, event)) {
-          return current;
-        }
-
-        return appendBatchSyncLog(current, event);
-      });
-      if (event.stage === 'failed') {
-        setOperationError((current) => ({ ...current, [event.packageId]: event.message }));
-      }
-      if (event.stage === 'completed') {
-        setOperationError((current) => ({ ...current, [event.packageId]: undefined }));
-      }
-    });
-
     const unsubscribeActivation = bridge.onVendoredRuntimeActivationProgress((event) => {
       setSnapshot((current) => {
         if (!current) {
@@ -213,121 +145,15 @@ export default function DependencyManagementPage() {
 
     return () => {
       disposed = true;
-      unsubscribe();
       unsubscribeActivation();
     };
   }, []);
 
   useEffect(() => {
-    if (!snapshot) {
-      return;
-    }
-
-    setSelectedPackageIds((current) => pruneSelectedPackageIds(current, snapshot.packages));
-  }, [snapshot]);
-
-  useEffect(() => {
     setRepairCompletionState('idle');
   }, [repairIntent?.failureKind, repairIntent?.targetPackageIds.join('|')]);
 
-  const isBatchSyncRunning = batchSyncState?.status === 'running';
   const isRepairCompletionRunning = repairCompletionState === 'checking';
-
-  useEffect(() => {
-    if (!isBatchSyncRunning) {
-      return;
-    }
-
-    batchLogPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [isBatchSyncRunning]);
-
-  const executeOperation = async (
-    packageId: ManagedNpmPackageId,
-    action: 'install' | 'uninstall',
-  ) => {
-    setOperationError((current) => ({ ...current, [packageId]: undefined }));
-    setBatchSyncState({
-      packageIds: [packageId],
-      status: 'running',
-      logs: [],
-    });
-    try {
-      const result = action === 'install'
-        ? await getDependencyManagementBridge().install(packageId)
-        : await getDependencyManagementBridge().uninstall(packageId);
-      applySnapshot(result.snapshot);
-      if (!result.success) {
-        setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
-          ? { ...current, status: 'failed', error: result.error ?? t('dependencyManagement.errors.operationFailed') }
-          : current);
-        setOperationError((current) => ({ ...current, [packageId]: result.error ?? t('dependencyManagement.errors.operationFailed') }));
-        return;
-      }
-      setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
-        ? { ...current, status: 'completed', error: undefined }
-        : current);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setBatchSyncState((current) => current && current.packageIds.length === 1 && current.packageIds[0] === packageId
-        ? { ...current, status: 'failed', error: message }
-        : current);
-      setOperationError((current) => ({
-        ...current,
-        [packageId]: message,
-      }));
-    }
-  };
-
-  const runOperation = async (
-    packageId: ManagedNpmPackageId,
-    action: 'install' | 'uninstall',
-  ) => {
-    if (action === 'uninstall') {
-      setPendingUninstall(packageId);
-      return;
-    }
-    await executeOperation(packageId, action);
-  };
-
-  const runBatchInstall = async (packageIds: ManagedNpmPackageId[]) => {
-    if (packageIds.length === 0) {
-      return;
-    }
-
-    setBatchSyncState({
-      packageIds,
-      status: 'running',
-      logs: [],
-    });
-    setOperationError((current) => {
-      const next = { ...current };
-      for (const packageId of packageIds) {
-        next[packageId] = undefined;
-      }
-      return next;
-    });
-
-    try {
-      const result = await getDependencyManagementBridge().syncPackages({ packageIds });
-      applySnapshot(result.snapshot);
-      if (result.success) {
-        setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
-          ? { ...current, status: 'completed', error: undefined }
-          : current);
-        setSelectedPackageIds((current) => current.filter((id) => !packageIds.includes(id)));
-        return;
-      }
-
-      setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
-        ? { ...current, status: 'failed', error: result.error ?? t('dependencyManagement.errors.operationFailed') }
-        : current);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setBatchSyncState((current) => current && current.packageIds.every((id) => packageIds.includes(id))
-        ? { ...current, status: 'failed', error: message }
-        : current);
-    }
-  };
 
   const updateMirrorSettings = async (enabled: boolean) => {
     if (!snapshot) {
@@ -364,29 +190,34 @@ export default function DependencyManagementPage() {
   const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
   const prioritizedVendoredRuntimes = prioritizeVendoredRuntimesForRepair(vendoredRuntimes, highlightedRuntimeIds);
   const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], snapshot?.vendoredRuntimes ?? [], repairIntent);
-  const activePackageId = snapshot?.activeOperation?.packageId;
-  const environmentAvailable = snapshot?.environment.available ?? false;
-  const mutationsAvailable = snapshot?.mode.mutationsAvailable ?? false;
-  const showMutationActions = mutationsAvailable;
-  const showSuggestedCommand = snapshot?.mode.effectiveMode === 'external';
-  const actionsDisabled = !environmentAvailable || !mutationsAvailable || isRefreshingSnapshot || isPending || Boolean(activePackageId) || isRepairCompletionRunning;
-  const mirrorToggleDisabled = isSavingMirrorSettings || Boolean(activePackageId);
+  const showSuggestedCommand = true;
+  const mirrorToggleDisabled = isSavingMirrorSettings;
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const suggestedCommandRegistryUrl = snapshot?.mirrorSettings.enabled ? mirrorRegistryUrl : null;
-  const selectablePackageIds = getSelectablePackageIds(managedPackages, { actionsDisabled });
-  const batchSyncPackageIds = new Set(batchSyncState?.packageIds ?? []);
   const basePackages = prioritizedManagedPackages.filter((item) => item.definition.category !== 'agent-cli');
   const agentCliPackages = prioritizedManagedPackages.filter((item) => item.definition.category === 'agent-cli');
   const basePackageIdSet = new Set(basePackages.map((item) => item.id));
   const agentCliPackageIdSet = new Set(agentCliPackages.map((item) => item.id));
   const baseHighlightedPackageIds = highlightedPackageIds.filter((id) => basePackageIdSet.has(id));
   const agentCliHighlightedPackageIds = highlightedPackageIds.filter((id) => agentCliPackageIdSet.has(id));
-  const baseSelectablePackageIds = selectablePackageIds.filter((id) => basePackageIdSet.has(id));
-  const agentCliSelectablePackageIds = selectablePackageIds.filter((id) => agentCliPackageIdSet.has(id));
-  const baseSelectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, baseSelectablePackageIds);
-  const agentCliSelectedEligibleIds = getSelectedEligiblePackageIds(selectedPackageIds, agentCliSelectablePackageIds);
-  const baseSelectAllChecked = getSelectAllChecked(selectedPackageIds, baseSelectablePackageIds);
-  const agentCliSelectAllChecked = getSelectAllChecked(selectedPackageIds, agentCliSelectablePackageIds);
+  const selectedIds = [...selectedPackageIds];
+  const updateSelectedIds = (groupIds: string[], group: 'base' | 'agent-cli') => {
+    const groupSet = group === 'base' ? basePackageIdSet : agentCliPackageIdSet;
+    setSelectedPackageIds((current) => {
+      const next = new Set([...current].filter((id) => !groupSet.has(id)));
+      groupIds.forEach((id) => next.add(id as ManagedNpmPackageId));
+      return next;
+    });
+  };
+  const generateBatchCommand = () => {
+    if (!snapshot || selectedPackageIds.size === 0) {
+      return;
+    }
+    const definitions = snapshot.packages
+      .filter((item) => selectedPackageIds.has(item.id))
+      .map((item) => item.definition);
+    setBatchCommand(buildBatchInstallCommand(definitions, suggestedCommandRegistryUrl));
+  };
 
   const runVendoredRuntimeAction = async (
     runtimeId: VendoredRuntimeId,
@@ -427,14 +258,6 @@ export default function DependencyManagementPage() {
     } finally {
       setRuntimeActionState((current) => ({ ...current, [runtimeId]: undefined }));
     }
-  };
-
-  const togglePackageSelection = (packageId: ManagedNpmPackageId, checked: boolean) => {
-    setSelectedPackageIds((current) => updateSelectedPackageIds(current, packageId, checked));
-  };
-
-  const toggleSelectAll = (checked: boolean, eligiblePackageIds: readonly ManagedNpmPackageId[]) => {
-    setSelectedPackageIds((current) => updateSelectAllPackageIds(current, eligiblePackageIds, checked));
   };
 
   const runRepairCompletionCheck = async () => {
@@ -506,61 +329,11 @@ export default function DependencyManagementPage() {
           <div className="space-y-5">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">{t('dependencyManagement.mode.title')}</CardTitle>
-                <CardDescription>{t('dependencyManagement.mode.description')}</CardDescription>
+                <CardTitle className="text-lg">{t('dependencyManagement.environment.title')}</CardTitle>
+                <CardDescription>{t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={snapshot.mode.effectiveMode === 'internal' ? 'default' : 'secondary'}>
-                    {t('dependencyManagement.mode.active', {
-                      mode: t(`dependencyManagement.mode.options.${snapshot.mode.effectiveMode}.label`),
-                    })}
-                  </Badge>
-                  <Badge variant="outline">
-                    {t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}
-                  </Badge>
-                </div>
-
-                <RadioGroup
-                  value={snapshot.mode.configuredMode}
-                  onValueChange={(value) => void handleModeChange(value)}
-                  disabled={isSavingMode || snapshot.mode.lockedByRuntime}
-                  className="gap-3"
-                >
-                  {(['internal', 'external'] as const).map((mode) => (
-                    <Label
-                      key={mode}
-                      htmlFor={`dependency-management-page-mode-${mode}`}
-                      className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/20 p-4"
-                    >
-                      <RadioGroupItem value={mode} id={`dependency-management-page-mode-${mode}`} className="mt-1" />
-                      <div className="space-y-1">
-                        <div className="font-medium">{t(`dependencyManagement.mode.options.${mode}.label`)}</div>
-                        <p className="text-sm text-muted-foreground">
-                          {t(`dependencyManagement.mode.options.${mode}.description`)}
-                        </p>
-                      </div>
-                    </Label>
-                  ))}
-                </RadioGroup>
-
-                {snapshot.mode.readOnlyReason ? (
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                    {snapshot.mode.readOnlyReason}
-                  </div>
-                ) : null}
-
-                {modeSwitchApplied ? (
-                  <p className="text-sm text-muted-foreground">{t('dependencyManagement.mode.takesEffect')}</p>
-                ) : null}
-
-                {!snapshot.mode.mutationsAvailable ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{t('dependencyManagement.mode.readOnlyTitle')}</AlertTitle>
-                    <AlertDescription>{t('dependencyManagement.mode.externalReadOnly')}</AlertDescription>
-                  </Alert>
-                ) : null}
+              <CardContent>
+                <Badge variant="outline">{snapshot.environment.nodeVersion ?? t('dependencyManagement.environment.unavailable')}</Badge>
               </CardContent>
             </Card>
 
@@ -569,87 +342,32 @@ export default function DependencyManagementPage() {
               descriptionKey="dependencyManagement.packageTable.groups.base.description"
               packages={basePackages}
               highlightedPackageIds={baseHighlightedPackageIds}
-              showMutationActions={showMutationActions}
               showSuggestedCommand={showSuggestedCommand}
               suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
-              selectedPackageIds={selectedPackageIds}
-              selectablePackageIds={baseSelectablePackageIds}
-              selectAllChecked={baseSelectAllChecked}
-              selectedEligibleCount={baseSelectedEligibleIds.length}
-              batchSyncPackageIds={batchSyncPackageIds}
-              isBatchSyncRunning={isBatchSyncRunning}
-              progressByPackageId={progress}
-              activeOperation={snapshot.activeOperation}
-              operationErrorByPackageId={operationError}
-              actionsDisabled={actionsDisabled}
-              onTogglePackage={togglePackageSelection}
-              onToggleAll={(checked) => toggleSelectAll(checked, baseSelectablePackageIds)}
-              onInstallSelected={() => void runBatchInstall(baseSelectedEligibleIds)}
-              onRunOperation={(packageId, action) => void runOperation(packageId, action)}
+              selectedIds={selectedIds.filter((id) => basePackageIdSet.has(id))}
+              onSelectionChange={(ids) => updateSelectedIds(ids, 'base')}
             />
-
-            <Dialog open={pendingUninstall !== null} onOpenChange={(open) => {
-              if (!open) {
-                setPendingUninstall(null);
-              }
-            }}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('dependencyManagement.uninstall.title')}</DialogTitle>
-                  <DialogDescription>
-                    {pendingUninstall
-                      ? t('dependencyManagement.uninstall.description', {
-                        name: snapshot.packages.find((item) => item.id === pendingUninstall)?.definition.displayName ?? pendingUninstall,
-                        mode: snapshot.mode.effectiveMode,
-                      })
-                      : null}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setPendingUninstall(null)} disabled={Boolean(activePackageId)}>
-                    {t('dependencyManagement.uninstall.cancel')}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      if (pendingUninstall) {
-                        const packageId = pendingUninstall;
-                        setPendingUninstall(null);
-                        void executeOperation(packageId, 'uninstall');
-                      }
-                    }}
-                    disabled={!pendingUninstall || Boolean(activePackageId)}
-                  >
-                    {Boolean(activePackageId) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {t('dependencyManagement.uninstall.confirm')}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
 
             <NpmPackageTable
               titleKey="dependencyManagement.packageTable.groups.agentCli.title"
               descriptionKey="dependencyManagement.packageTable.groups.agentCli.description"
               packages={agentCliPackages}
               highlightedPackageIds={agentCliHighlightedPackageIds}
-              showMutationActions={showMutationActions}
               showSuggestedCommand={showSuggestedCommand}
               suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
-              selectedPackageIds={selectedPackageIds}
-              selectablePackageIds={agentCliSelectablePackageIds}
-              selectAllChecked={agentCliSelectAllChecked}
-              selectedEligibleCount={agentCliSelectedEligibleIds.length}
-              batchSyncPackageIds={batchSyncPackageIds}
-              isBatchSyncRunning={isBatchSyncRunning}
-              progressByPackageId={progress}
-              activeOperation={snapshot.activeOperation}
-              operationErrorByPackageId={operationError}
-              actionsDisabled={actionsDisabled}
-              onTogglePackage={togglePackageSelection}
-              onToggleAll={(checked) => toggleSelectAll(checked, agentCliSelectablePackageIds)}
-              onInstallSelected={() => void runBatchInstall(agentCliSelectedEligibleIds)}
-              onRunOperation={(packageId, action) => void runOperation(packageId, action)}
+              selectedIds={selectedIds.filter((id) => agentCliPackageIdSet.has(id))}
+              onSelectionChange={(ids) => updateSelectedIds(ids, 'agent-cli')}
             />
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+                <span className="text-sm font-medium">
+                  {t('dependencyManagement.batch.selectedCount', { count: selectedPackageIds.size })}
+                </span>
+                <Button type="button" onClick={generateBatchCommand} disabled={selectedPackageIds.size === 0}>
+                  {t('dependencyManagement.batch.generate')}
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {hasVendoredRuntimes && (
@@ -685,10 +403,6 @@ export default function DependencyManagementPage() {
             </Card>
           )}
 
-          {batchSyncState && (
-            <BatchSyncLogPanel ref={batchLogPanelRef} batchSyncState={batchSyncState} />
-          )}
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -701,9 +415,7 @@ export default function DependencyManagementPage() {
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="text-sm font-medium">{t('dependencyManagement.environment.rationaleTitle')}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {snapshot.environment.source === 'desktop-managed'
-                    ? t('dependencyManagement.environment.managedNotice')
-                    : t('dependencyManagement.environment.externalNotice')}
+                  {t('dependencyManagement.environment.externalNotice')}
                 </p>
                 <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" onClick={openNodeEnvironmentFaq}>
                   <ExternalLink className="h-4 w-4" />
@@ -733,10 +445,6 @@ export default function DependencyManagementPage() {
                 <p className="break-all text-sm text-muted-foreground">
                   {t(`dependencyManagement.environment.sourceLabel.${snapshot.environment.source}`)}
                 </p>
-                <p className="text-sm font-medium">{t('dependencyManagement.environment.toolchainRoot')}</p>
-                <p className="break-all text-sm text-muted-foreground">{snapshot.environment.toolchainRoot}</p>
-                <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.nodeRuntimeRoot')}</p>
-                <p className="break-all text-sm text-muted-foreground">{snapshot.environment.nodeRuntimeRoot}</p>
                 <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.nodeMajorVersion')}</p>
                 <p className="break-all text-sm text-muted-foreground">node{snapshot.environment.nodeMajorVersion}</p>
                 <p className="mt-3 text-sm font-medium">{t('dependencyManagement.environment.globalPrefix')}</p>
@@ -794,6 +502,15 @@ export default function DependencyManagementPage() {
           </Card>
         </>
       )}
+      <BatchCommandDialog
+        open={batchCommand !== null}
+        command={batchCommand ?? ''}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBatchCommand(null);
+          }
+        }}
+      />
     </div>
   );
 }

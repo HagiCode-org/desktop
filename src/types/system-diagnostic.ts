@@ -13,8 +13,7 @@ export type SystemDiagnosticCommandStatus = 'available' | 'missing' | 'error';
 export type SystemDiagnosticAgentCliStatus = 'available' | 'missing' | 'error';
 export type SystemDiagnosticCommandScope = 'required-by-core-runtime';
 export type SystemDiagnosticRuntimeStatus = 'healthy' | 'warning' | 'missing' | 'invalid' | 'unknown';
-export type SystemDiagnosticRuntimeSource = 'bundled' | 'desktop-managed' | 'host' | 'unknown';
-export type SystemDiagnosticManagedCommandStatus = 'installed' | 'deferred' | 'manual' | 'missing' | 'invalid' | 'unknown';
+export type SystemDiagnosticRuntimeSource = 'external' | 'host' | 'unknown';
 
 export interface SystemDiagnosticCoverageMatrix {
   auditedConsumers: string[];
@@ -70,21 +69,6 @@ export interface SystemDiagnosticCommandProbe {
   message: string | null;
 }
 
-export interface SystemDiagnosticBundledToolchainInfo {
-  available: boolean;
-  integrity: string;
-  platform: string;
-  toolchainRoot: string;
-  manifestPath: string;
-  runtimeManifestPath: string;
-  remediation: string;
-  activeForDesktop: boolean;
-  activationSource: string;
-  commands: Record<string, string | null>;
-  packages: Record<string, { packageName: string; version: string | null; integrity?: string }>;
-  errors: string[];
-}
-
 export interface SystemDiagnosticRuntimeRow {
   id: string;
   name: string;
@@ -103,30 +87,16 @@ export interface SystemDiagnosticNpmConfigInfo {
   binRootPath: string | null;
   packageRootPath: string | null;
   nodeMajorVersion: string | null;
-  bundledRuntimeRoot: string | null;
   mirrorEnabled: boolean | null;
-  source: 'npm-config' | 'desktop-managed' | 'unknown';
+  source: 'npm-config' | 'unknown';
   status: SystemDiagnosticRuntimeStatus;
-  message: string | null;
-}
-
-export interface SystemDiagnosticManagedCommandReadiness {
-  id: string;
-  packageName: string;
-  declaredVersion: string | null;
-  binName: string;
-  installMode: 'manual' | 'auto' | 'unknown';
-  installState: 'pending' | 'installed' | 'unknown';
-  commandPath: string | null;
-  status: SystemDiagnosticManagedCommandStatus;
-  version: string | null;
   message: string | null;
 }
 
 export interface SystemDiagnosticBuiltinRuntimeInfo {
   rows: SystemDiagnosticRuntimeRow[];
   npmConfig: SystemDiagnosticNpmConfigInfo;
-  managedCommands: SystemDiagnosticManagedCommandReadiness[];
+  managedCommands: [];
 }
 
 export interface SystemDiagnosticWindowsCodePageInfo {
@@ -148,7 +118,6 @@ export interface SystemDiagnosticData {
   hardware: SystemDiagnosticHardwareInfo;
   agentCli: SystemDiagnosticAgentCliInfo;
   toolchain: SystemDiagnosticCommandProbe[];
-  bundledToolchain?: SystemDiagnosticBundledToolchainInfo;
   builtinRuntimes?: SystemDiagnosticBuiltinRuntimeInfo;
   windowsCodePage?: SystemDiagnosticWindowsCodePageInfo;
   issues: SystemDiagnosticIssue[];

@@ -1,13 +1,6 @@
 /**
  * Onboarding wizard types and interfaces
  */
-import type {
-  ManagedNpmPackageId,
-  DependencyManagementModeSettings,
-  DependencyManagementOperationProgress,
-  DependencyManagementSnapshot,
-  DependencyReadinessSummary,
-} from './dependency-management.js';
 import type { DistributionModeState } from './distribution-mode.js';
 
 /**
@@ -18,8 +11,7 @@ export enum OnboardingStep {
   Welcome = 1,
   LegalConsent = 2,
   SharingAcceleration = 3,
-  DependencyPreparation = 4,
-  Download = 5,
+  Download = 4,
 }
 
 export type LegalDocumentType = 'eula' | 'privacy-policy';
@@ -132,11 +124,11 @@ export interface DependencyItem {
   resolutionSource?: 'bundled-desktop' | 'system';
   sourcePath?: string;
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
-  manualAction?: BundledCliManualAction;
+  manualAction?: ExternalCliManualAction;
 }
 
-export interface BundledCliManualAction {
-  logicalName: 'openspec' | 'skills';
+export interface ExternalCliManualAction {
+  logicalName: string;
   packageName: string;
   version: string;
   binName: string;
@@ -145,15 +137,13 @@ export interface BundledCliManualAction {
   installState: 'pending' | 'installed';
   installSpec: string;
   manualActionId: string;
-  toolchainRoot: string;
-  npmExecutablePath?: string;
   command?: string;
 }
 
 export interface DependencyActionPlan {
   status: 'manual-action-required';
   message: string;
-  packages: BundledCliManualAction[];
+  packages: ExternalCliManualAction[];
 }
 
 export interface OnboardingDependencyInstallResult {
@@ -245,17 +235,6 @@ export interface OnboardingState {
   isRecoveringFromStartupFailure: boolean;
   // Dependency check results for onboarding
   dependencyCheckResults: DependencyCheckResult[];
-  selectedAgentCliPackageIds: ManagedNpmPackageId[];
-  selectedDeveloperToolPackageIds: ManagedNpmPackageId[];
-  dependencyModeSettings: DependencyManagementModeSettings | null;
-  dependencyModeSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
-  dependencySnapshot: DependencyManagementSnapshot | null;
-  dependencyReadiness: DependencyReadinessSummary | null;
-  dependencySnapshotStatus: 'idle' | 'loading' | 'ready' | 'error';
-  dependencyOperationProgress: Partial<Record<ManagedNpmPackageId, DependencyManagementOperationProgress>>;
-  dependencyOperationError: string | null;
-  isDependencyOperationActive: boolean;
-  isDependencyPreparationComplete: boolean;
   // Real-time script output logs
   scriptOutputLogs: ScriptOutput[];
 }
@@ -275,7 +254,7 @@ export interface DependencyCheckResult {
   isChecking?: boolean;  // True while check is in progress
   primaryAction?: 'install' | 'visit-website' | 'reinstall-desktop' | 'update-desktop' | 'manual-install';
   status?: 'installed' | 'missing' | 'version-mismatch' | 'manual-install-required';
-  manualAction?: BundledCliManualAction;
+  manualAction?: ExternalCliManualAction;
 }
 
 /**

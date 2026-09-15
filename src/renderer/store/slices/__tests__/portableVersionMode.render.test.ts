@@ -122,6 +122,6 @@ describe('portable version renderer integration', () => {
 
     assert.match(source, /selectOnboardingDistributionState/);
     assert.match(source, /const distributionState = useSelector\(\(state: RootState\) => selectOnboardingDistributionState\(state\)\);/);
-    assert.match(source, /getOnboardingSequence\(mode, dependencyModeSettings, distributionState\)/);
+    assert.match(source, /getOnboardingSequence\(mode, distributionState\)/);
   });
 });

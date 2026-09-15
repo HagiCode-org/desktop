@@ -16,10 +16,7 @@ import {
   createDefaultDistributionModeState,
   type DistributionModeState,
 } from '../../../types/distribution-mode.js';
-import { evaluateDependencyReadiness, npmInstallableAgentCliPackages } from '../../../shared/npm-managed-packages.js';
-import type { ManagedNpmPackageId, DependencyManagementModeSettings, DependencyManagementSnapshot } from '../../../types/dependency-management.js';
 import {
-  type OnboardingDependencyOperationRejectedPayload,
   acceptLegalDocuments,
   checkOnboardingTrigger,
   declineLegalDocuments,
@@ -27,14 +24,10 @@ import {
   GO_TO_NEXT_STEP,
   GO_TO_PREVIOUS_STEP,
   loadLegalDocuments,
-  loadOnboardingDependencyModeSettings,
-  loadOnboardingDependencySnapshot,
   completeOnboarding,
-  installOnboardingDependencyPackages,
   openLegalDocument,
   recoverFromStartupFailure,
   resetOnboarding,
-  refreshOnboardingDependencySnapshot,
   skipOnboarding,
   startService,
 } from '../thunks/onboardingThunks';
@@ -44,26 +37,10 @@ const fullSequence = [
   OnboardingStep.Welcome,
   OnboardingStep.LegalConsent,
   OnboardingStep.SharingAcceleration,
-  OnboardingStep.DependencyPreparation,
-  OnboardingStep.Download,
-] as const;
-
-const fullSequenceWithoutDependencyPreparation = [
-  OnboardingStep.LanguageSelection,
-  OnboardingStep.Welcome,
-  OnboardingStep.LegalConsent,
-  OnboardingStep.SharingAcceleration,
   OnboardingStep.Download,
 ] as const;
 
 const legalOnlySequence = [OnboardingStep.LanguageSelection, OnboardingStep.LegalConsent] as const;
-
-function shouldHideDependencyPreparationStep(
-  mode: OnboardingMode,
-  dependencyModeSettings?: DependencyManagementModeSettings | null,
-) {
-  return mode === 'full' && dependencyModeSettings?.effectiveMode === 'external';
-}
 
 function shouldHideSharingAccelerationStep(distributionState: DistributionModeState) {
   return distributionState.fusionMode;
@@ -73,22 +50,15 @@ function shouldHideDownloadStep(distributionState: DistributionModeState) {
   return distributionState.fusionMode;
 }
 
-function resolveDependencyModeSettings(state: Pick<OnboardingState, 'dependencyModeSettings' | 'dependencySnapshot'>) {
-  return state.dependencyModeSettings ?? state.dependencySnapshot?.mode ?? null;
-}
-
 export function getOnboardingSequence(
   mode: OnboardingMode,
-  dependencyModeSettings?: DependencyManagementModeSettings | null,
   distributionState: DistributionModeState = createDefaultDistributionModeState(),
 ) {
   if (mode === 'legal-only') {
     return [...legalOnlySequence];
   }
 
-  let sequence = shouldHideDependencyPreparationStep(mode, dependencyModeSettings)
-    ? [...fullSequenceWithoutDependencyPreparation]
-    : [...fullSequence];
+  let sequence = [...fullSequence];
 
   if (shouldHideSharingAccelerationStep(distributionState)) {
     sequence = sequence.filter((step) => step !== OnboardingStep.SharingAcceleration);
@@ -104,19 +74,17 @@ export function getOnboardingSequence(
 function getStepIndex(
   mode: OnboardingMode,
   step: OnboardingStep,
-  dependencyModeSettings?: DependencyManagementModeSettings | null,
   distributionState: DistributionModeState = createDefaultDistributionModeState(),
 ) {
-  return getOnboardingSequence(mode, dependencyModeSettings, distributionState).indexOf(step);
+  return getOnboardingSequence(mode, distributionState).indexOf(step);
 }
 
 function getNextStep(
   mode: OnboardingMode,
   step: OnboardingStep,
-  dependencyModeSettings?: DependencyManagementModeSettings | null,
   distributionState: DistributionModeState = createDefaultDistributionModeState(),
 ) {
-  const sequence = getOnboardingSequence(mode, dependencyModeSettings, distributionState);
+  const sequence = getOnboardingSequence(mode, distributionState);
   const index = sequence.indexOf(step);
   return index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : step;
 }
@@ -124,42 +92,11 @@ function getNextStep(
 function getPreviousStep(
   mode: OnboardingMode,
   step: OnboardingStep,
-  dependencyModeSettings?: DependencyManagementModeSettings | null,
   distributionState: DistributionModeState = createDefaultDistributionModeState(),
 ) {
-  const sequence = getOnboardingSequence(mode, dependencyModeSettings, distributionState);
+  const sequence = getOnboardingSequence(mode, distributionState);
   const index = sequence.indexOf(step);
   return index > 0 ? sequence[index - 1] : step;
-}
-
-const defaultSelectedAgentCliPackageIds = [npmInstallableAgentCliPackages[0]?.id].filter(Boolean) as ManagedNpmPackageId[];
-
-function applyDependencySnapshot(state: OnboardingState, snapshot: DependencyManagementSnapshot) {
-  state.dependencyModeSettings = snapshot.mode;
-  state.dependencyModeSettingsStatus = 'ready';
-  state.dependencySnapshot = snapshot;
-  // evaluateDependencyReadiness(snapshot, state.selectedAgentCliPackageIds)
-  state.dependencyReadiness = evaluateDependencyReadiness(
-    snapshot,
-    state.selectedAgentCliPackageIds,
-    state.selectedDeveloperToolPackageIds,
-  );
-  state.isDependencyPreparationComplete = state.dependencyReadiness.ready;
-
-  if (state.currentStep === OnboardingStep.DependencyPreparation
-    && shouldHideDependencyPreparationStep(state.mode, snapshot.mode)) {
-    state.currentStep = OnboardingStep.Download;
-  }
-}
-
-function readDependencyOperationRejectedPayload(payload: unknown): OnboardingDependencyOperationRejectedPayload {
-  if (typeof payload === 'object' && payload !== null && 'message' in payload) {
-    return payload as OnboardingDependencyOperationRejectedPayload;
-  }
-
-  return {
-    message: typeof payload === 'string' ? payload : 'Failed to install npm packages',
-  };
 }
 
 const initialState: OnboardingState = {
@@ -190,17 +127,6 @@ const initialState: OnboardingState = {
   isStartingService: false,
   isRecoveringFromStartupFailure: false,
   dependencyCheckResults: [],
-  selectedAgentCliPackageIds: defaultSelectedAgentCliPackageIds,
-  selectedDeveloperToolPackageIds: [],
-  dependencyModeSettings: null,
-  dependencyModeSettingsStatus: 'idle',
-  dependencySnapshot: null,
-  dependencyReadiness: null,
-  dependencySnapshotStatus: 'idle',
-  dependencyOperationProgress: {},
-  dependencyOperationError: null,
-  isDependencyOperationActive: false,
-  isDependencyPreparationComplete: false,
   scriptOutputLogs: [],
 };
 
@@ -212,7 +138,7 @@ export const onboardingSlice = createSlice({
       state.distributionState = action.payload;
 
       if (state.currentStep === OnboardingStep.SharingAcceleration && shouldHideSharingAccelerationStep(action.payload)) {
-        state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, resolveDependencyModeSettings(state), action.payload);
+        state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, action.payload);
       }
     },
     setActive: (state, action: PayloadAction<boolean>) => {
@@ -250,29 +176,6 @@ export const onboardingSlice = createSlice({
     },
     setDependencyCheckResults: (state, action: PayloadAction<DependencyCheckResult[]>) => {
       state.dependencyCheckResults = action.payload;
-    },
-    setSelectedAgentCliPackageIds: (state, action: PayloadAction<ManagedNpmPackageId[]>) => {
-      state.selectedAgentCliPackageIds = action.payload;
-      if (state.dependencySnapshot) {
-        applyDependencySnapshot(state, state.dependencySnapshot);
-      }
-    },
-    setSelectedDeveloperToolPackageIds: (state, action: PayloadAction<ManagedNpmPackageId[]>) => {
-      state.selectedDeveloperToolPackageIds = action.payload;
-      if (state.dependencySnapshot) {
-        applyDependencySnapshot(state, state.dependencySnapshot);
-      }
-    },
-    setOnboardingDependencyProgress: (state, action: PayloadAction<OnboardingState['dependencyOperationProgress'][ManagedNpmPackageId]>) => {
-      const progress = action.payload;
-      if (!progress) {
-        return;
-      }
-      state.dependencyOperationProgress[progress.packageId] = progress;
-      state.isDependencyOperationActive = progress.stage === 'started' || progress.stage === 'output';
-      if (progress.stage === 'failed') {
-        state.dependencyOperationError = progress.message;
-      }
     },
     addScriptOutput: (state, action: PayloadAction<ScriptOutput>) => {
       if (state.scriptOutputLogs.length >= 500) {
@@ -351,7 +254,7 @@ export const onboardingSlice = createSlice({
           state.isActive = false;
           state.mode = 'none';
         } else {
-          state.currentStep = getNextStep(state.mode, OnboardingStep.LegalConsent, resolveDependencyModeSettings(state), state.distributionState);
+          state.currentStep = getNextStep(state.mode, OnboardingStep.LegalConsent, state.distributionState);
         }
       })
       .addCase(acceptLegalDocuments.rejected, (state, action) => {
@@ -484,18 +387,15 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_NEXT_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.LanguageSelection:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.LanguageSelection, state.distributionState);
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.Welcome, state.distributionState);
             break;
           case OnboardingStep.LegalConsent:
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, resolveDependencyModeSettings(state), state.distributionState);
-            break;
-          case OnboardingStep.DependencyPreparation:
-            state.currentStep = getNextStep(state.mode, OnboardingStep.DependencyPreparation, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getNextStep(state.mode, OnboardingStep.SharingAcceleration, state.distributionState);
             break;
           case OnboardingStep.Download:
             break;
@@ -504,88 +404,22 @@ export const onboardingSlice = createSlice({
       .addCase(GO_TO_PREVIOUS_STEP, (state) => {
         switch (state.currentStep) {
           case OnboardingStep.Download:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, resolveDependencyModeSettings(state), state.distributionState);
-            break;
-          case OnboardingStep.DependencyPreparation:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.DependencyPreparation, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Download, state.distributionState);
             break;
           case OnboardingStep.SharingAcceleration:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.SharingAcceleration, state.distributionState);
             break;
           case OnboardingStep.LegalConsent:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.LegalConsent, state.distributionState);
             break;
           case OnboardingStep.Welcome:
-            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome, resolveDependencyModeSettings(state), state.distributionState);
+            state.currentStep = getPreviousStep(state.mode, OnboardingStep.Welcome, state.distributionState);
             break;
           default:
             break;
         }
       });
 
-    builder
-      .addCase(loadOnboardingDependencyModeSettings.pending, (state) => {
-        state.dependencyModeSettingsStatus = 'loading';
-      })
-      .addCase(loadOnboardingDependencyModeSettings.fulfilled, (state, action: PayloadAction<DependencyManagementModeSettings>) => {
-        state.dependencyModeSettings = action.payload;
-        state.dependencyModeSettingsStatus = 'ready';
-
-        if (state.currentStep === OnboardingStep.DependencyPreparation
-          && shouldHideDependencyPreparationStep(state.mode, action.payload)) {
-          state.currentStep = OnboardingStep.Download;
-        }
-      })
-      .addCase(loadOnboardingDependencyModeSettings.rejected, (state) => {
-        state.dependencyModeSettingsStatus = 'error';
-      });
-
-    builder
-      .addCase(loadOnboardingDependencySnapshot.pending, (state) => {
-        state.dependencySnapshotStatus = 'loading';
-        state.dependencyOperationError = null;
-      })
-      .addCase(loadOnboardingDependencySnapshot.fulfilled, (state, action: PayloadAction<DependencyManagementSnapshot>) => {
-        state.dependencySnapshotStatus = 'ready';
-        applyDependencySnapshot(state, action.payload);
-      })
-      .addCase(loadOnboardingDependencySnapshot.rejected, (state, action) => {
-        state.dependencySnapshotStatus = 'error';
-        state.dependencyOperationError = action.payload as string || 'Failed to load dependency readiness';
-        state.isDependencyPreparationComplete = false;
-      })
-      .addCase(refreshOnboardingDependencySnapshot.pending, (state) => {
-        state.dependencySnapshotStatus = 'loading';
-        state.dependencyOperationError = null;
-      })
-      .addCase(refreshOnboardingDependencySnapshot.fulfilled, (state, action: PayloadAction<DependencyManagementSnapshot>) => {
-        state.dependencySnapshotStatus = 'ready';
-        applyDependencySnapshot(state, action.payload);
-      })
-      .addCase(refreshOnboardingDependencySnapshot.rejected, (state, action) => {
-        state.dependencySnapshotStatus = 'error';
-        state.dependencyOperationError = action.payload as string || 'Failed to refresh dependency readiness';
-        state.isDependencyPreparationComplete = false;
-      })
-      .addCase(installOnboardingDependencyPackages.pending, (state) => {
-        state.isDependencyOperationActive = true;
-        state.dependencyOperationError = null;
-      })
-      .addCase(installOnboardingDependencyPackages.fulfilled, (state, action: PayloadAction<DependencyManagementSnapshot>) => {
-        state.isDependencyOperationActive = false;
-        state.dependencySnapshotStatus = 'ready';
-        applyDependencySnapshot(state, action.payload);
-      })
-      .addCase(installOnboardingDependencyPackages.rejected, (state, action) => {
-        state.isDependencyOperationActive = false;
-        const payload = readDependencyOperationRejectedPayload(action.payload);
-        if (payload.snapshot) {
-          state.dependencySnapshotStatus = 'ready';
-          applyDependencySnapshot(state, payload.snapshot);
-        }
-        state.dependencyOperationError = payload.message;
-        state.isDependencyPreparationComplete = false;
-      });
   },
 });
 
@@ -602,9 +436,6 @@ export const {
   setDownloadProgress,
   setServiceProgress,
   setDependencyCheckResults,
-  setSelectedAgentCliPackageIds,
-  setSelectedDeveloperToolPackageIds,
-  setOnboardingDependencyProgress,
   addScriptOutput,
   clearScriptOutput,
   restartOnboardingFlow,
@@ -628,12 +459,6 @@ export const selectIsRecoveringFromStartupFailure = (state: { onboarding: Onboar
   state.onboarding.isRecoveringFromStartupFailure;
 export const selectDependencyCheckResults = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyCheckResults;
 export const selectScriptOutputLogs = (state: { onboarding: OnboardingState }) => state.onboarding.scriptOutputLogs;
-export const selectOnboardingDependencyModeSettings = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyModeSettings;
-export const selectOnboardingDependencySnapshot = (state: { onboarding: OnboardingState }) => state.onboarding.dependencySnapshot;
-export const selectOnboardingDependencyReadiness = (state: { onboarding: OnboardingState }) => state.onboarding.dependencyReadiness;
-export const selectOnboardingSelectedAgentCliPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedAgentCliPackageIds;
-export const selectOnboardingSelectedDeveloperToolPackageIds = (state: { onboarding: OnboardingState }) => state.onboarding.selectedDeveloperToolPackageIds;
-export const selectIsDependencyPreparationComplete = (state: { onboarding: OnboardingState }) => state.onboarding.isDependencyPreparationComplete;
 export const selectLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.legalDocuments;
 export const selectLegalMetadataSource = (state: { onboarding: OnboardingState }) => state.onboarding.legalMetadataSource;
 export const selectIsLoadingLegalMetadata = (state: { onboarding: OnboardingState }) => state.onboarding.isLoadingLegalMetadata;
@@ -641,7 +466,7 @@ export const selectIsAcceptingLegalDocuments = (state: { onboarding: OnboardingS
 export const selectIsDecliningLegalDocuments = (state: { onboarding: OnboardingState }) => state.onboarding.isDecliningLegalDocuments;
 
 export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
-  const { currentStep, downloadProgress, isDependencyOperationActive, runtimeProvisioned } = state.onboarding;
+  const { currentStep, downloadProgress, runtimeProvisioned } = state.onboarding;
 
   switch (currentStep) {
     case OnboardingStep.LanguageSelection:
@@ -652,8 +477,6 @@ export const selectCanGoNext = (state: { onboarding: OnboardingState }) => {
       return false;
     case OnboardingStep.SharingAcceleration:
       return true;
-    case OnboardingStep.DependencyPreparation:
-      return !isDependencyOperationActive;
     case OnboardingStep.Download:
       return runtimeProvisioned || (downloadProgress?.progress === 100 && Boolean(downloadProgress.version));
     default:
@@ -665,7 +488,6 @@ export const selectCanGoPrevious = (state: { onboarding: OnboardingState }) => {
   return getStepIndex(
     state.onboarding.mode,
     state.onboarding.currentStep,
-    resolveDependencyModeSettings(state.onboarding),
     state.onboarding.distributionState,
   ) > 0;
 };

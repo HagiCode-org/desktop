@@ -18,9 +18,6 @@ import type { SharingAccelerationSettings, SharingAccelerationSettingsInput, Ver
 import type { SystemDiagnosticBridge } from '../types/system-diagnostic.js';
 import { systemDiagnosticChannels } from '../types/system-diagnostic.js';
 import type {
-  DependencyManagementMode,
-  ManagedNpmPackageId,
-  DependencyManagementBatchSyncRequest,
   DependencyManagementBridge,
 } from '../types/dependency-management.js';
 import type { VendoredRuntimeId } from '../types/dependency-management.js';
@@ -311,8 +308,6 @@ interface ElectronAPI {
   };
   systemDiagnostic: SystemDiagnosticBridge;
   hagiNode: HagiNodeRuntimeBridge;
-  /** @deprecated Use dependencyManagement. */
-  npmManagement: DependencyManagementBridge;
   dependencyManagement: DependencyManagementBridge;
   runtimeDataPath: RuntimeDataPathBridge;
   debugOptions: DebugOptionsBridge;
@@ -322,8 +317,6 @@ interface ElectronAPI {
 
   // Dependency Management APIs
   checkDependencies: () => Promise<any>;
-  getBundledToolchainStatus: () => Promise<any>;
-  refreshBundledToolchainStatus: () => Promise<any>;
   installDependency: (dependencyType: string) => Promise<void>;
   onDependencyStatusChange: (callback: (dependencies: any) => void) => () => void;
 
@@ -393,26 +386,14 @@ const rendererEventTarget = globalThis as unknown as {
 const dependencyManagementBridge: DependencyManagementBridge = {
   getSnapshot: () => ipcRenderer.invoke(dependencyManagementChannels.snapshot),
   refresh: () => ipcRenderer.invoke(dependencyManagementChannels.refresh),
-  getModeSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getModeSettings),
-  setMode: (mode: DependencyManagementMode) => ipcRenderer.invoke(dependencyManagementChannels.setMode, mode),
   getMirrorSettings: () => ipcRenderer.invoke(dependencyManagementChannels.getMirrorSettings),
   setMirrorSettings: (settings: NpmMirrorSettingsInput) => ipcRenderer.invoke(dependencyManagementChannels.setMirrorSettings, settings),
-  install: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.install, packageId),
-  uninstall: (packageId: ManagedNpmPackageId) => ipcRenderer.invoke(dependencyManagementChannels.uninstall, packageId),
-  syncPackages: (request: DependencyManagementBatchSyncRequest) => ipcRenderer.invoke(dependencyManagementChannels.syncPackages, request),
   enableVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.enableVendoredRuntime, runtimeId),
   startVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.startVendoredRuntime, runtimeId),
   stopVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.stopVendoredRuntime, runtimeId),
   restartVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.restartVendoredRuntime, runtimeId),
   repairVendoredRuntime: (runtimeId: VendoredRuntimeId) => ipcRenderer.invoke(dependencyManagementChannels.repairVendoredRuntime, runtimeId),
   openVendoredRuntimePath: (runtimeId: VendoredRuntimeId, target: 'logs' | 'runtime-root') => ipcRenderer.invoke(dependencyManagementChannels.openVendoredRuntimePath, runtimeId, target),
-  onProgress: (callback) => {
-    const listener = (_event, progress) => {
-      callback(progress);
-    };
-    ipcRenderer.on(dependencyManagementChannels.progress, listener);
-    return () => ipcRenderer.removeListener(dependencyManagementChannels.progress, listener);
-  },
   onVendoredRuntimeActivationProgress: (callback) => {
     const listener = (_event, progress) => {
       callback(progress);
@@ -603,8 +584,6 @@ const electronAPI: ElectronAPI = {
 
   // Dependency Management APIs
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
-  getBundledToolchainStatus: () => ipcRenderer.invoke('dependency:get-bundled-toolchain-status'),
-  refreshBundledToolchainStatus: () => ipcRenderer.invoke('dependency:refresh-bundled-toolchain-status'),
   installDependency: (dependencyType) => ipcRenderer.invoke('install-dependency', dependencyType),
   onDependencyStatusChange: (callback) => {
     const listener = (_event, dependencies) => {
@@ -843,7 +822,6 @@ const electronAPI: ElectronAPI = {
   clipboard: clipboardBridge,
   systemDiagnostic: systemDiagnosticBridge,
   hagiNode: hagiNodeBridge,
-  npmManagement: dependencyManagementBridge,
   dependencyManagement: dependencyManagementBridge,
 };
 
