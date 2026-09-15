@@ -14,6 +14,7 @@ Hagicode Desktop brings common HagiCode tasks into one place: first-run setup, d
 - Start, stop, restart, and switch HagiCode Server versions from the desktop
 - Monitor local resources, server status, and service health in one dashboard
 - Manage package sources, dependencies, license information, and runtime updates
+- In Dependency Management, required packages are marked and selected packages can be combined into a batch install command that users can view and copy
 - Choose agent executors such as Claude Code, Codex, and GitHub Copilot CLI
 - Receive RSS updates and use tray integration for quick background access
 - Use English or Simplified Chinese UI out of the box

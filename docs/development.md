@@ -103,8 +103,7 @@ Invalid configurations will fall back to the default HTTP index source with a wa
 
 Desktop owns the Microsoft Store packaging contract used by `repos/win_store_packer`.
 
-MSIX / Microsoft Store runs now force dependency management into `external` read-only mode and skip Desktop's bundled Node/npm toolchain.
-Standard development runs, portable builds, and NSIS installs still allow switching dependency management between internal and external modes.
+MSIX / Microsoft Store and standard Desktop runs use the externally installed Node/npm environment. There is no dependency-management mode switch.
 
 ### Store metadata source
 
@@ -191,7 +190,7 @@ npm run build:all
 npm run build:prod
 ```
 
-Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop runtime inputs through hagiscript before `electron-forge`: the embedded .NET runtime and the bundled Node toolchain.
+Platform packaging commands (`build:linux`, `build:win`, `build:mac:x64`, `build:mac:arm64`) stage the Desktop .NET runtime inputs through hagiscript before `electron-forge`. Node/npm remains external.
 
 ### Running Smoke Tests
 
@@ -203,7 +202,7 @@ npm run smoke-test
 npm run smoke-test:verbose
 ```
 
-The smoke test validates the staged and packaged .NET runtime plus bundled Node toolchain contracts.
+The smoke test validates the staged and packaged .NET runtime; Node/npm is supplied by the host environment.
 
 ### CLI Process Execution
 
@@ -437,7 +436,7 @@ Desktop starts the validated framework-dependent service payload through PM2 ins
 
 Before each start or restart, Desktop regenerates runtime files under `<userData>/config/pm2-dotnet-service/`:
 
-- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, `DOTNET_MULTILEVEL_LOOKUP=0`, explicit `HAGICODE_DOTNET_EXE`, optional `HAGICODE_AGENT_CLI_PATH` for Agent CLI discovery, and optional `HAGICODE_NPM_GLOBAL_PATH` for the Desktop-managed npm global prefix. `HAGICODE_AGENT_CLI_PATH` remains a command-search directory hint only, while `HAGICODE_NPM_GLOBAL_PATH` identifies the Desktop-owned npm global install root used to resolve managed packages such as `pm2`. Desktop no longer prepends bundled dotnet or bundled Node/npm runtime roots to `PATH` / `Path` for the managed server.
+- `.env`: sorted runtime environment values required by the .NET service, including host, port, data directory, pinned `DOTNET_ROOT`, `DOTNET_MULTILEVEL_LOOKUP=0`, explicit `HAGICODE_DOTNET_EXE`, optional `HAGICODE_AGENT_CLI_PATH` for Agent CLI discovery, and optional `HAGICODE_NPM_GLOBAL_PATH` for the externally managed npm global prefix. `HAGICODE_AGENT_CLI_PATH` remains a command-search directory hint only, while `HAGICODE_NPM_GLOBAL_PATH` identifies the external npm global install root used to resolve managed packages such as `pm2`. Desktop does not prepend a Node/npm payload to `PATH` / `Path` for the managed server.
 - `ecosystem.config.js`: PM2 app definition with explicit absolute `script` (`dotnetPath`), `args`, `cwd`, process name, and `.env` file reference.
 
 If a managed service descendant or maintenance script needs the Desktop-pinned .NET runtime, read `HAGICODE_DOTNET_EXE` or `DOTNET_ROOT` from `.env`. Do not assume Desktop has exposed the bundled runtime through `PATH`.
@@ -480,7 +479,7 @@ Packaging copies `resources/portable-fixed` into `resources/extra/portable-fixed
 
 If `current/` is missing, Desktop stays in normal mode. If `current/` exists but the required files are incomplete, Desktop logs the validation failure and safely falls back to normal mode.
 
-Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. The bundled Desktop Node environment now ships as `node` + `npm` plus deferred metadata for the managed CLI packages, so any future Steam-ready packaging work should preserve the same manual-handoff contract unless it also introduces an explicit user-triggered installation flow.
+Portable-version builds intentionally skip the first-run download flow and OpenSpec CLI guidance. Steam-ready packaging uses the external Node/npm environment and the same catalog-driven manual handoff for CLI packages.
 
 ### Steam Linux startup compatibility
 
@@ -526,49 +525,12 @@ Recommended Steamworks fields for the packaged Linux artifact:
 - `Executable`: `hagicode-steam-wrapper.sh`
 - `Arguments`: leave empty unless you need app-specific arguments
 
-### Dev startup for portable version mode
-
-Use the dedicated dev command when you want Electron dev mode to boot directly into portable version mode with an already-extracted server payload:
-
-```bash
-npm run dev:portable-version
-npm run dev:steam-mode
-```
-
-`npm run dev:steam-mode` is an alias of `npm run dev:portable-version`. Use it when you want the command name to reflect that you are verifying Steam mode startup behavior in development.
-
-Behavior:
-
-- Reuses the same pinned Desktop runtime preparation as `npm run dev:embedded-runtime`
-- Loads `.env`, `.env.local`, `.env.development`, and `.env.development.local` before resolving overrides
-- Sets `HAGICODE_PORTABLE_RUNTIME_ROOT` before launching `npm run dev`
-- Prefers a valid extracted Linux x64 runtime from these workspace outputs:
-  - `../local_deployment/linux-x64` or `../local_deployment/linux-x64-nort`
-  - `../local_publishment/.local-publishment/linux-x64` or `../local_publishment/.local-publishment/linux-x64-nort`
-  - `../hagicode-core/Release/release-structured/linux-x64` or `../hagicode-core/Release/release-structured/linux-x64-nort`
-  - `../hagibuild/Release/release-structured/linux-x64` or `../hagibuild/Release/release-structured/linux-x64-nort`
-- When the extracted runtime has `lib/PCode.Web.dll` but no top-level `manifest.json`, the script stages a temporary dev bridge payload under `build/portable-version-runtime/current`
-
-Override the extracted runtime directory explicitly when needed:
-
-```bash
-HAGICODE_PORTABLE_RUNTIME_ROOT=/absolute/path/to/extracted/runtime npm run dev:steam-mode
-```
-
-You can also put the override into `repos/hagicode-desktop/.env.local`:
-
-```bash
-HAGICODE_PORTABLE_RUNTIME_ROOT=../local_publishment/.local-publishment/linux-x64-nort
-```
-
-The override should point at the extracted runtime root. If that root already contains `manifest.json` and `lib/PCode.Web.dll`, it is used directly. If it only contains the managed payload under `lib/`, the dev script creates the temporary bridge payload automatically.
-
 ### Preparing the staged runtime
 
 Run from `repos/hagicode-desktop`:
 
 ```bash
-npm run prepare:runtime
+node scripts/prepare-embedded-runtime.js
 ```
 
 Behavior:
@@ -594,33 +556,8 @@ Desktop does not fall back to a machine-wide `dotnet` installation when that pac
 
 ### Development debugging with the staged runtime
 
-Use the helper when debugging Desktop with the same private runtime that packaging uses:
-
-```bash
-npm run dev:embedded-runtime
-```
-
-Notes:
-
-- Windows and Linux are supported in this helper flow.
-- The helper stages the pinned runtime first, then launches `npm run dev` with:
-  - `HAGICODE_EMBEDDED_DOTNET_PLATFORM=<rid>`
-  - `HAGICODE_EMBEDDED_DOTNET_ROOT=<repo>/resources/components/dotnet/runtime/<rid>`
-- Development runtime resolution reuses the staged runtime directly instead of relying on global `dotnet`.
-
-Manual override remains available:
-
-```bash
-export HAGICODE_EMBEDDED_DOTNET_ROOT="$PWD/resources/components/dotnet/runtime/linux-x64"
-npm run dev
-```
-
-Windows PowerShell example:
-
-```powershell
-$env:HAGICODE_EMBEDDED_DOTNET_ROOT = "$PWD/resources/components/dotnet/runtime/win-x64"
-npm run dev
-```
+Use `npm run dev` after staging the separate embedded .NET runtime. Node.js and npm are resolved
+from the external host environment and are never replaced by a Desktop payload.
 
 ### Verification commands
 
@@ -700,7 +637,7 @@ The Desktop Windows and Linux packaging jobs now share the same runtime rules as
 
 When CI fails, diagnose in this order:
 
-1. `prepare:runtime` failed before packaging
+1. `node scripts/prepare-embedded-runtime.js` failed before packaging
 2. staged `.hagicode-runtime.json` does not match the pinned manifest
 3. packaged `resources/dotnet/<rid>` is missing or landed in the wrong location
 4. the service payload is missing `PCode.Web.dll`, `PCode.Web.runtimeconfig.json`, or `PCode.Web.deps.json`
@@ -716,7 +653,7 @@ Symptoms:
 
 Actions:
 
-1. Re-run `npm run prepare:runtime`
+1. Re-run `node scripts/prepare-embedded-runtime.js`
 2. Confirm `resources/components/dotnet/runtime/<rid>` exists
 3. Rebuild the package and rerun `npm run package:smoke-test`
 
@@ -744,7 +681,7 @@ Actions:
 
 1. Compare `.hagicode-runtime.json` with `resources/manifest.yml`
 2. Check `host/fxr`, `shared/Microsoft.NETCore.App`, and `shared/Microsoft.AspNetCore.App` version directories
-3. Clear `build/embedded-runtime/current/` and rerun `npm run prepare:runtime`
+3. Clear `build/embedded-runtime/current/` and rerun `node scripts/prepare-embedded-runtime.js`
 
 #### Invalid service payload or runtime incompatibility
 
