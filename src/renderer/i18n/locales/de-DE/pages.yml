@@ -54,23 +54,6 @@ settings:
     description: Reserve one place for logs, experiments, and advanced runtime controls.
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
-  dependencyManagementMode:
-    title: Abhängigkeitsverwaltungsmodus
-    description: Wählen Sie, ob Desktop CLI-Abhängigkeiten selbst verwaltet oder nur die aktuelle globale Node/npm-Umgebung prüft.
-    effectiveMode: 'Aktiver Modus: {{mode}}'
-    options:
-      internal:
-        label: Intern (Desktop-verwaltet, veraltet)
-        description: Desktop verwendet seine gebündelte Node/npm-Toolchain und erlaubt Installation, Deinstallation und Batch-Synchronisierung.
-      external:
-        label: Extern (nur Lesen)
-        description: Desktop prüft die aktuelle globale Node/npm-Umgebung, ohne Pakete zu ändern oder npm-Präfixe zu überschreiben.
-    takesEffect: Modus angewendet. Die Änderung wird sofort im Abhängigkeitsmanagement wirksam und bestimmt, ob Paketänderungen möglich sind.
-    messages:
-      saveSuccess: Abhängigkeitsverwaltungsmodus gespeichert
-      saveFailed: Abhängigkeitsverwaltungsmodus konnte nicht gespeichert werden
-    errors:
-      saveErrorDetail: 'Speichern fehlgeschlagen: {{error}}'
   smartConfig:
     title: Smart Config-Eingabeaufforderung
     description: Überprüfen Sie die gelöste Eingabeaufforderung, kopieren Sie sie in ein beliebiges unterstütztes AI CLI und schließen Sie den Konfigurationsablauf manuell ab.

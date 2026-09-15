@@ -155,20 +155,6 @@ dependencyManagement:
   description: Gerencie dependências de linha de comando obrigatórias e opcionais para preparação de inicialização do HagiCode e inspecione o ambiente Node/npm incorporado do Desktop.
   loading: Lendo status de dependência...
   unavailable: Indisponível
-  mode:
-    title: Modo de dependência ativo
-    description: A página de dependências sempre mostra o modo efetivo atual e se mudanças em pacotes são permitidas.
-    active: 'Modo: {{mode}}'
-    readOnlyTitle: Modo somente leitura
-    externalReadOnly: O Desktop está inspecionando um ambiente global Node/npm gerenciado externamente. As ações de instalar, desinstalar e sincronização em lote não estão disponíveis.
-    takesEffect: Modo aplicado. A alteração entra em vigor imediatamente no módulo de gerenciamento de dependências e determina se mudanças nos pacotes são permitidas.
-    options:
-      internal:
-        label: Interno (gerenciado pelo Desktop, obsoleto)
-        description: O Desktop usa sua cadeia de ferramentas Node/npm integrada e permite instalar, desinstalar e sincronizar em lote.
-      external:
-        label: Externo (somente leitura)
-        description: O Desktop inspeciona o ambiente global Node/npm atual sem alterar pacotes ou substituir os prefixos do npm.
   environment:
     title: Ambiente de nó
     description: Desktop usa seu próprio tempo de execução Node/npm para pacotes CLI gerenciados.
@@ -179,13 +165,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Versão
     source: Origem do ambiente
-    toolchainRoot: Raiz do conjunto de ferramentas
-    nodeRuntimeRoot: Raiz de tempo de execução do nó empacotado
     nodeMajorVersion: Árvore de pacotes principais do nó
     globalPrefix: Prefixo global
     globalModulesRoot: Raiz de módulos globais
     sourceLabel:
-      desktop-managed: Ambiente gerenciado pelo Desktop
       externally-managed: Ambiente global gerenciado externamente
     status:
       available: Disponível
@@ -422,7 +405,6 @@ systemDiagnostic:
       'false': desativado
     source:
       bundled: Empacotado
-      desktop-managed: Gerenciado por desktop
       host: Host PATH
       unknown: Fonte desconhecida
     status:

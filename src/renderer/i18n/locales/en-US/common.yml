@@ -152,40 +152,23 @@ sidebar:
   expand: Expand
 dependencyManagement:
   title: Dependency Management
-  description: Manage required and optional command-line dependencies for HagiCode launch readiness, and inspect Desktop's embedded Node/npm environment.
+  description: Manage command-line dependencies through the externally installed Node/npm environment.
   loading: Reading dependency status...
   unavailable: Unavailable
-  mode:
-    title: Active dependency mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    active: 'Mode: {{mode}}'
-    readOnlyTitle: Read-only mode
-    externalReadOnly: Desktop is inspecting an externally managed global Node/npm environment. Install, uninstall, and batch sync actions are unavailable.
-    takesEffect: Mode applied. This takes effect in the Dependency Management module immediately and controls whether package mutations are available.
-    options:
-      internal:
-        label: Internal (Desktop-managed, deprecated)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
-      external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
   environment:
     title: Node Environment
-    description: Desktop uses its own Node/npm runtime for managed CLI packages.
-    managedNotice: Read the FAQ for current details about Desktop's Node/npm runtime, PATH isolation, package locations, and troubleshooting.
+    description: Desktop uses the externally installed Node/npm runtime for managed CLI packages.
+    managedNotice: Read the FAQ for current details about external Node/npm setup, package locations, and troubleshooting.
     externalNotice: Desktop is currently inspecting the global Node/npm environment that already exists on this system.
-    rationaleTitle: Desktop-managed Node/npm environment
+    rationaleTitle: External Node/npm environment
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Version
     source: Environment source
-    toolchainRoot: Toolchain root
-    nodeRuntimeRoot: Bundled Node runtime root
     nodeMajorVersion: Node major package tree
     globalPrefix: Global prefix
     globalModulesRoot: Global modules root
     sourceLabel:
-      desktop-managed: Desktop-managed environment
       externally-managed: Externally managed global environment
     status:
       available: Available
@@ -201,7 +184,7 @@ dependencyManagement:
     saving: Saving
     enabledHelp: Upcoming sync/install operations will use the npmmirror.com registry mirror.
     disabledHelp: Upcoming npm operations will use the default npm registry behavior.
-    readOnlyHelp: Mirror settings have no effect while dependency management is in external read-only mode.
+    readOnlyHelp: Mirror settings apply to external npm operations.
     saveFailed: Failed to save mirror setting
   vendoredRuntime:
     title: Desktop-managed runtimes
@@ -424,7 +407,6 @@ systemDiagnostic:
       'false': disabled
     source:
       bundled: Bundled
-      desktop-managed: Desktop-managed
       host: Host PATH
       unknown: Unknown source
     status:

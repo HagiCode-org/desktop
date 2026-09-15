@@ -18,7 +18,6 @@ welcome:
     welcome: Review the setup and what will happen next
     download: Download the latest Hagicode Server package
     launch: Start the service and confirm it is running
-    dependencyPreparation: Confirm required dependencies and Agent CLI packages are ready
     sharingAcceleration: Confirm whether shared acceleration should stay enabled by default
     legalConsent: Confirm the current EULA and Privacy Policy revisions, then review the official pages in your browser
   skip: Skip Setup
@@ -84,7 +83,7 @@ dependencies:
     message: Some dependencies failed to install. Please install them manually and continue.
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.
+    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
@@ -202,7 +201,7 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.
+    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
@@ -229,57 +228,6 @@ sharingAcceleration:
     fallback: If the torrent sidecar is missing or the handshake fails, fallback backfill starts automatically
     disable: Disable it now if your network is restricted or you do not want to share
     portable: Portable mode forces this feature off and never seeds implicitly
-dependencyPreparation:
-  title: Prepare Dependencies
-  description: Install Desktop-managed command-line dependencies here and choose Agent CLI packages for later coding sessions, or skip installation for now and continue with setup.
-  loading: Checking Desktop-managed dependencies...
-  refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
-  skip:
-    title: This step can be skipped
-    description: You can continue to the download step without installing dependencies now. The install action adds the selected packages to Desktop's managed Node/npm environment, and you can install them later inside the app.
-  environment:
-    title: Desktop-managed Node/npm environment
-    description: Desktop installs and checks managed CLI packages in its own Node/npm environment. Read the FAQ for current path, package, and troubleshooting details.
-    faqLinkLabel: View Node environment FAQ
-    faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
-  required:
-    title: Required dependencies
-    description: Install these dependencies before first use when possible; if you skip them now, you can still come back and install them later in Desktop.
-  optional:
-    title: Optional dependencies
-    description: Optional dependencies do not block setup.
-  agentCli:
-    title: Agent CLI selection
-    description: Pick the Agent CLI packages you expect to use and install them now, or continue setup first and install them later in Desktop.
-  developerTools:
-    title: Optional developer tools
-    description: Select trusted tools distributed outside npm. Desktop validates each executable on PATH before reporting success.
-  blocking:
-    environment-unavailable:
-      title: Node/npm environment unavailable
-      description: Desktop cannot access its managed Node/npm environment. Refresh after the toolchain is available, or open the Node environment FAQ for troubleshooting details.
-    required-packages-missing:
-      title: Required dependencies need repair
-      description: Install or upgrade the required dependencies before continuing.
-    agent-cli-not-selected:
-      title: Select an Agent CLI
-      description: Choose at least one supported Agent CLI dependency.
-    agent-cli-not-installed:
-      title: Selected Agent CLI needs repair
-      description: Install or upgrade at least one selected Agent CLI package into Desktop's managed npm environment.
-    external-cli-not-ready:
-      title: Developer tool needs attention
-      description: The installer completed, but the executable or version check did not pass. Refresh PATH and try again.
-  actions:
-    install: Confirm and Install
-    refresh: Refresh
-    retry: Retry
-    recheck: Recheck
-  complete:
-    title: Dependencies are ready
-    description: Required dependencies and selected tools are ready. Agent CLIs are optional.
-  error:
-    title: Dependency preparation failed
 legal:
   title: End User License Agreement and Privacy Policy
   descriptionFull: Before downloading HagiCode Server, confirm the current EULA and Privacy Policy revisions. The official documents open in your default browser.

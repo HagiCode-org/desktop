@@ -54,23 +54,6 @@ settings:
     description: Reserve one place for logs, experiments, and advanced runtime controls.
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
-  dependencyManagementMode:
-    title: Dependency management mode
-    description: Choose whether Desktop manages CLI dependencies itself or only inspects the current global Node/npm environment.
-    effectiveMode: 'Effective mode: {{mode}}'
-    options:
-      internal:
-        label: Internal (Desktop-managed, deprecated)
-        description: Desktop uses its bundled Node/npm toolchain and allows install, uninstall, and batch sync operations.
-      external:
-        label: External (read-only)
-        description: Desktop inspects the current global Node/npm environment without changing packages or overriding npm prefixes.
-    takesEffect: Mode applied. This takes effect in the Dependency Management module immediately and controls whether package mutations are available.
-    messages:
-      saveSuccess: Dependency management mode saved
-      saveFailed: Failed to save dependency management mode
-    errors:
-      saveErrorDetail: 'Save failed: {{error}}'
   smartConfig:
     title: Smart Config prompt guidance
     description: Review the resolved prompt, copy it into any supported AI CLI, and complete the configuration flow manually.
@@ -235,7 +218,7 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.
+    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.

@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: Dependencias del sistema
   description: Verifique y administre las dependencias del tiempo de ejecución del sistema requeridas por el servicio web
+  batch:
+    selectedCount: 'Seleccionados: {{count}}'
+    generate: Generar comando por lotes
+    dialogTitle: Comando de instalación por lotes
+    copy: Copiar
+    requiredLabel: Obligatorio
   status:
     installed: Instalado
     bundled: Incluido con el escritorio

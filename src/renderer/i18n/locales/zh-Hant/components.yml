@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: 系統依賴管理
   description: 檢查與管理 Hagicode 服務所需的系統運作時依賴
+  batch:
+    selectedCount: '已選擇：{{count}}'
+    generate: 產生批次命令
+    dialogTitle: 批次安裝命令
+    copy: 複製
+    requiredLabel: 必需
   status:
     installed: 已安裝
     bundled: 隨 Desktop 內置

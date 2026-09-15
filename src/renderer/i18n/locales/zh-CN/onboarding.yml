@@ -18,7 +18,6 @@ welcome:
     welcome: 了解本次引导会完成的准备工作
     download: 下载最新的 Hagicode Server 包
     launch: 启动服务并确认运行正常
-    dependencyPreparation: 确认必需依赖项和 Agent CLI 已就绪
     sharingAcceleration: 确认是否开启共享加速，默认已为您开启
     legalConsent: 确认当前 EULA 与隐私政策版本并在浏览器中阅读正式文档
   skip: 跳过引导
@@ -84,7 +83,7 @@ dependencies:
     message: 部分依赖项安装失败，请手动安装后继续。
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
@@ -202,7 +201,7 @@ dependencyManagement:
     systemSource: 系统来源
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。

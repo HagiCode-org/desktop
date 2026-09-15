@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: Systemabhängigkeiten
   description: Überprüfen und verwalten Sie die vom Webdienst benötigten Systemlaufzeitabhängigkeiten
+  batch:
+    selectedCount: 'Ausgewählt: {{count}}'
+    generate: Stapelbefehl generieren
+    dialogTitle: Stapel-Installationsbefehl
+    copy: Kopieren
+    requiredLabel: Erforderlich
   status:
     installed: Installiert
     bundled: Im Lieferumfang des Desktops enthalten

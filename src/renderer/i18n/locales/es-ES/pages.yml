@@ -54,23 +54,6 @@ settings:
     description: Reserve one place for logs, experiments, and advanced runtime controls.
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
-  dependencyManagementMode:
-    title: Modo de gestión de dependencias
-    description: Elige si Desktop gestiona las dependencias CLI o solo inspecciona el entorno global actual de Node/npm.
-    effectiveMode: 'Modo efectivo: {{mode}}'
-    options:
-      internal:
-        label: Interno (gestionado por Desktop, obsoleto)
-        description: Desktop usa su cadena de herramientas Node/npm integrada y permite instalar, desinstalar y sincronizar por lotes.
-      external:
-        label: Externo (solo lectura)
-        description: Desktop inspecciona el entorno global actual de Node/npm sin modificar paquetes ni sobrescribir los prefijos de npm.
-    takesEffect: Modo aplicado. El cambio se refleja inmediatamente en el módulo de gestión de dependencias y determina si se permiten cambios en los paquetes.
-    messages:
-      saveSuccess: Modo de gestión de dependencias guardado
-      saveFailed: No se pudo guardar el modo de gestión de dependencias
-    errors:
-      saveErrorDetail: 'Error al guardar: {{error}}'
   smartConfig:
     title: Guía rápida de configuración inteligente
     description: Revise el mensaje resuelto, cópielo en cualquier AI CLI compatible y complete el flujo de configuración manualmente.

@@ -17,7 +17,6 @@ welcome:
     welcome: Überprüfen Sie die Einrichtung und was als nächstes passieren wird
     download: Laden Sie das neueste Hagicode Server-Paket herunter
     launch: Starten Sie den Dienst und bestätigen Sie, dass er ausgeführt wird
-    dependencyPreparation: Bestätigen Sie, dass die erforderlichen Abhängigkeiten vorhanden sind und die Agent CLI-Pakete bereit sind
     sharingAcceleration: Bestätigen Sie, ob die gemeinsame Beschleunigung standardmäßig aktiviert bleiben soll
     legalConsent: Bestätigen Sie die aktuellen Überarbeitungen der EULA und der Datenschutzrichtlinie und überprüfen Sie dann die offiziellen Seiten in Ihrem Browser
     languageSelection: Zuerst die Desktop-Sprache für die Einrichtung auswählen

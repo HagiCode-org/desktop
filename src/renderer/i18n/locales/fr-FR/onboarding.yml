@@ -17,7 +17,6 @@ welcome:
     welcome: Passez en revue la configuration et ce qui va se passer ensuite
     download: Téléchargez le dernier package Hagicode Server
     launch: Démarrez le service et confirmez qu'il est en cours d'exécution
-    dependencyPreparation: Confirmez que les dépendances requises et que les packages Agent CLI sont prêts
     sharingAcceleration: Confirmez si l'accélération partagée doit rester activée par défaut
     legalConsent: Confirmez les révisions actuelles du CLUF et de la politique de confidentialité, puis consultez les pages officielles dans votre navigateur.
     languageSelection: Choisir d'abord la langue du Desktop pour l'installation

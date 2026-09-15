@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: システムの依存関係
   description: Web サービスに必要なシステム実行時の依存関係を確認および管理する
+  batch:
+    selectedCount: '選択済み: {{count}}'
+    generate: 一括コマンドを生成
+    dialogTitle: 一括インストールコマンド
+    copy: コピー
+    requiredLabel: 必須
   status:
     installed: インストール済み
     bundled: デスクトップにバンドルされている

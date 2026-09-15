@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: 시스템 종속성
   description: 웹 서비스에 필요한 시스템 런타임 종속성을 확인하고 관리합니다.
+  batch:
+    selectedCount: '선택됨: {{count}}'
+    generate: 일괄 명령 생성
+    dialogTitle: 일괄 설치 명령
+    copy: 복사
+    requiredLabel: 필수
   status:
     installed: 설치됨
     bundled: 데스크탑과 함께 번들로 제공

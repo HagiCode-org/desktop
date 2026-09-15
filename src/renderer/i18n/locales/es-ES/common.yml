@@ -155,20 +155,6 @@ dependencyManagement:
   description: Administre las dependencias de línea de comandos requeridas y opcionales para la preparación del lanzamiento de HagiCode e inspeccione el entorno integrado Node/npm del escritorio.
   loading: Leyendo el estado de dependencia...
   unavailable: No disponible
-  mode:
-    title: Modo de dependencias activo
-    description: La página de dependencias siempre muestra el modo efectivo actual y si se permiten cambios en los paquetes.
-    active: 'Modo: {{mode}}'
-    readOnlyTitle: Modo de solo lectura
-    externalReadOnly: Desktop está inspeccionando un entorno global de Node/npm gestionado externamente. Las acciones de instalar, desinstalar y sincronización por lotes no están disponibles.
-    takesEffect: Modo aplicado. El cambio se refleja inmediatamente en el módulo de gestión de dependencias y determina si se permiten cambios en los paquetes.
-    options:
-      internal:
-        label: Interno (gestionado por Desktop, obsoleto)
-        description: Desktop usa su cadena de herramientas Node/npm integrada y permite instalar, desinstalar y sincronizar por lotes.
-      external:
-        label: Externo (solo lectura)
-        description: Desktop inspecciona el entorno global actual de Node/npm sin modificar paquetes ni sobrescribir los prefijos de npm.
   environment:
     title: Entorno de nodo
     description: Desktop utiliza su propio tiempo de ejecución Node/npm para los paquetes CLI administrados.
@@ -179,13 +165,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Versión
     source: Origen del entorno
-    toolchainRoot: Raíz de la cadena de herramientas
-    nodeRuntimeRoot: Raíz del tiempo de ejecución del nodo incluido
     nodeMajorVersion: Árbol de paquetes principales del nodo
     globalPrefix: Prefijo global
     globalModulesRoot: Raíz de módulos globales
     sourceLabel:
-      desktop-managed: Entorno gestionado por Desktop
       externally-managed: Entorno global gestionado externamente
     status:
       available: Disponible
@@ -422,7 +405,6 @@ systemDiagnostic:
       'false': discapacitado
     source:
       bundled: incluido
-      desktop-managed: Administrado por escritorio
       host: RUTA del anfitrión
       unknown: Fuente desconocida
     status:

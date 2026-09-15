@@ -155,20 +155,6 @@ dependencyManagement:
   description: 출시 준비를 위한 필수 및 선택적 명령줄 종속성을 관리하고 Desktop의 내장 Node/1 환경을 검사합니다.
   loading: 종속성 상태를 읽는 중...
   unavailable: 이용 불가
-  mode:
-    title: 현재 종속성 모드
-    description: 종속성 페이지에는 현재 실제로 적용 중인 모드와 패키지 변경 가능 여부가 항상 표시됩니다.
-    active: '모드: {{mode}}'
-    readOnlyTitle: 읽기 전용 모드
-    externalReadOnly: Desktop은 외부에서 관리되는 전역 Node/npm 환경을 검사하고 있습니다. 설치, 제거 및 일괄 동기화 작업은 사용할 수 없습니다.
-    takesEffect: 모드가 적용되었습니다. 종속성 관리 모듈에 즉시 반영되며 패키지 변경 가능 여부를 결정합니다.
-    options:
-      internal:
-        label: 내부（Desktop 관리, 사용 중단 예정）
-        description: Desktop은 번들된 Node/npm 도구 체인을 사용하며 설치, 제거 및 일괄 동기화를 허용합니다.
-      external:
-        label: 외부（읽기 전용）
-        description: Desktop은 현재 전역 Node/npm 환경만 확인하며 패키지를 변경하거나 npm 접두사 경로를 덮어쓰지 않습니다.
   environment:
     title: 노드 환경
     description: Desktop은 관리되는 1개 패키지에 대해 자체 Node/00 런타임을 사용합니다.
@@ -179,13 +165,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: 버전
     source: 환경 소스
-    toolchainRoot: 툴체인 루트
-    nodeRuntimeRoot: 번들 노드 런타임 루트
     nodeMajorVersion: 노드 주요 패키지 트리
     globalPrefix: 전역 접두사
     globalModulesRoot: 전역 모듈 루트
     sourceLabel:
-      desktop-managed: Desktop 관리 환경
       externally-managed: 외부 관리 전역 환경
     status:
       available: 가능
@@ -422,7 +405,6 @@ systemDiagnostic:
       'false': 장애인
     source:
       bundled: 번들로 제공
-      desktop-managed: 데스크탑 관리
       host: 호스트 경로
       unknown: 알 수 없는 출처
     status:

@@ -155,20 +155,6 @@ dependencyManagement:
   description: Gérez les dépendances de ligne de commande obligatoires et facultatives pour la préparation au lancement HagiCode et inspectez l'environnement Node/npm intégré de Desktop.
   loading: Lecture du statut de dépendance...
   unavailable: Indisponible
-  mode:
-    title: Mode de dépendances actif
-    description: La page des dépendances affiche toujours le mode effectif actuel et si les modifications de paquets sont autorisées.
-    active: 'Mode : {{mode}}'
-    readOnlyTitle: Mode lecture seule
-    externalReadOnly: Desktop inspecte actuellement un environnement global Node/npm géré en externe. Les actions d'installation, de désinstallation et de synchronisation par lot ne sont pas disponibles.
-    takesEffect: Mode appliqué. Le changement prend effet immédiatement dans le module de gestion des dépendances et détermine si les modifications de paquets sont autorisées.
-    options:
-      internal:
-        label: Interne (géré par Desktop, obsolète)
-        description: Desktop utilise sa chaîne d'outils Node/npm intégrée et autorise l'installation, la désinstallation et la synchronisation par lot.
-      external:
-        label: Externe (lecture seule)
-        description: Desktop inspecte l'environnement global Node/npm actuel sans modifier les paquets ni remplacer les préfixes npm.
   environment:
     title: Environnement de nœud
     description: Desktop utilise son propre environnement d'exécution Node/npm pour les packages CLI gérés.
@@ -179,13 +165,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Version
     source: Source de l'environnement
-    toolchainRoot: Racine de la chaîne d'outils
-    nodeRuntimeRoot: Racine d'exécution du nœud groupé
     nodeMajorVersion: Arborescence des packages principaux du nœud
     globalPrefix: Préfixe global
     globalModulesRoot: Racine des modules globaux
     sourceLabel:
-      desktop-managed: Environnement géré par Desktop
       externally-managed: Environnement global géré en externe
     status:
       available: Disponible
@@ -422,7 +405,6 @@ systemDiagnostic:
       'false': désactivé
     source:
       bundled: Regroupé
-      desktop-managed: Géré depuis le bureau
       host: CHEMIN de l'hôte
       unknown: Source inconnue
     status:

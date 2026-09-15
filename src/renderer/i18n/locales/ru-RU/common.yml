@@ -155,20 +155,6 @@ dependencyManagement:
   description: Управляйте необходимыми и дополнительными зависимостями командной строки для готовности к запуску HagiCode и проверяйте встроенную среду Node/npm рабочего стола.
   loading: Чтение статуса зависимости...
   unavailable: Недоступно
-  mode:
-    title: Текущий режим зависимостей
-    description: Страница зависимостей всегда показывает текущий фактический режим и то, разрешены ли изменения пакетов.
-    active: 'Режим: {{mode}}'
-    readOnlyTitle: Режим только для чтения
-    externalReadOnly: Desktop проверяет внешне управляемую глобальную среду Node/npm. Действия установки, удаления и пакетной синхронизации недоступны.
-    takesEffect: Режим применён. Изменение сразу вступает в силу в модуле управления зависимостями и определяет, разрешено ли изменять пакеты.
-    options:
-      internal:
-        label: Внутренний (управляется Desktop, устарел)
-        description: Desktop использует встроенную цепочку Node/npm и разрешает установку, удаление и пакетную синхронизацию.
-      external:
-        label: Внешний (только чтение)
-        description: Desktop проверяет текущую глобальную среду Node/npm, не изменяя пакеты и не переопределяя префиксы npm.
   environment:
     title: Среда узла
     description: Desktop использует собственную среду выполнения Node/npm для управляемых пакетов CLI.
@@ -179,13 +165,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     version: Версия
     source: Источник среды
-    toolchainRoot: Корень цепочки инструментов
-    nodeRuntimeRoot: Корень среды выполнения связанного узла
     nodeMajorVersion: Основное дерево пакетов узла
     globalPrefix: Глобальный префикс
     globalModulesRoot: Глобальный корень модулей
     sourceLabel:
-      desktop-managed: Среда, управляемая Desktop
       externally-managed: Внешне управляемая глобальная среда
     status:
       available: Доступно
@@ -422,7 +405,6 @@ systemDiagnostic:
       'false': отключен
     source:
       bundled: В комплекте
-      desktop-managed: Управляемый настольным компьютером
       host: ПУТЬ хоста
       unknown: Неизвестный источник
     status:

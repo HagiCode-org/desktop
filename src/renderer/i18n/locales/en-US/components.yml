@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: System Dependencies
   description: Check and manage system runtime dependencies required by the web service
+  batch:
+    selectedCount: 'Selected: {{count}}'
+    generate: Generate batch command
+    dialogTitle: Batch install command
+    copy: Copy
+    requiredLabel: Required
   status:
     installed: Installed
     bundled: Bundled with Desktop
@@ -239,7 +245,7 @@ dependencyManagement:
     systemSource: System source
   manualHandoff:
     title: Manual CLI package install required
-    description: Run the suggested command outside Desktop. For current details about Desktop's bundled Node/npm environment and PATH behavior, read the FAQ.
+    description: Run the suggested command outside Desktop. For current details about the externally installed Node/npm environment and PATH behavior, read the FAQ.
     faqLinkLabel: View Node environment FAQ
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.

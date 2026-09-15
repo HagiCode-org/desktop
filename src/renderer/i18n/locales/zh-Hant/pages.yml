@@ -3,7 +3,7 @@ settings:
   loading: Loading settings module...
   tabs:
     notification: Notification Center
-    dependencyManagement: 依賴管理模式
+    dependencyManagement: 依賴管理
     debugOptions: 調試選項
     language: Language Settings
     onboarding: 啟動精靈
@@ -54,23 +54,6 @@ settings:
     description: Reserve one place for logs, experiments, and advanced runtime controls.
   placeholders:
     comingSoon: This settings module is registered in the new settings framework. Detailed controls will arrive in a follow-up change.
-  dependencyManagementMode:
-    title: 依賴管理模式
-    description: 選擇由 Desktop 自行管理 CLI 依賴，或僅唯讀檢查目前全域 Node/npm 環境。
-    effectiveMode: 目前生效模式：{{mode}}
-    options:
-      internal:
-        label: 內部模式（Desktop 託管，已棄用）
-        description: Desktop 使用內建 Node/npm 工具鏈，並允許安裝、解除安裝和批次同步操作。
-      external:
-        label: 外部模式（唯讀）
-        description: Desktop 僅檢查目前全域 Node/npm 環境，不改動套件，也不覆寫 npm 前綴路徑。
-    takesEffect: 模式已套用。設定會立即在依賴管理模組生效，並決定是否允許修改套件。
-    messages:
-      saveSuccess: 依賴管理模式已儲存
-      saveFailed: 儲存依賴管理模式失敗
-    errors:
-      saveErrorDetail: 儲存失敗：{{error}}
   smartConfig:
     title: 智慧配置提示指引
     description: 查看 Desktop 解析出的提示詞，複製到任意支援的 AI CLI 中，並手動完成設定流程。

@@ -17,7 +17,6 @@ welcome:
     welcome: 설정과 다음에 일어날 일을 검토하세요.
     download: 최신 Hagicode Server 패키지 다운로드
     launch: 서비스를 시작하고 실행 중인지 확인하세요.
-    dependencyPreparation: 필수 종속성을 확인하고 에이전트 패키지가 준비되었는지 확인하세요.
     sharingAcceleration: 공유 가속을 기본적으로 활성화해야 하는지 확인하세요.
     legalConsent: 현재 EULA 및 개인정보 보호정책 개정을 확인한 다음 브라우저에서 공식 페이지를 검토하세요.
     languageSelection: 설정에 사용할 Desktop 언어를 먼저 선택합니다

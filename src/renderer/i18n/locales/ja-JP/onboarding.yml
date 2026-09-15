@@ -17,7 +17,6 @@ welcome:
     welcome: セットアップと次に何が起こるかを確認してください
     download: 最新の Hagicode Server パッケージをダウンロード
     launch: サービスを開始し、実行されていることを確認します
-    dependencyPreparation: 必要な依存関係とエージェント CLI パッケージの準備ができていることを確認します
     sharingAcceleration: 共有アクセラレーションをデフォルトで有効にしておくかどうかを確認する
     legalConsent: 現在の EULA とプライバシー ポリシーの改訂を確認し、ブラウザで公式ページを確認してください
     languageSelection: セットアップで使う Desktop の言語を選択する

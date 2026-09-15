@@ -17,7 +17,6 @@ welcome:
     welcome: Revise a configuração e o que acontecerá a seguir
     download: Baixe o pacote Hagicode Server mais recente
     launch: Inicie o serviço e confirme se ele está em execução
-    dependencyPreparation: Confirme se as dependências necessárias e se os pacotes do Agente CLI estão prontos
     sharingAcceleration: Confirme se a aceleração compartilhada deve permanecer habilitada por padrão
     legalConsent: Confirme as revisões atuais do EULA e da Política de Privacidade e revise as páginas oficiais em seu navegador
     languageSelection: Primeiro escolha o idioma do Desktop para a configuração

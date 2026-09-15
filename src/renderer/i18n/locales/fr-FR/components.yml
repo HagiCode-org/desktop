@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: Dépendances du système
   description: Vérifier et gérer les dépendances d'exécution du système requises par le service Web
+  batch:
+    selectedCount: 'Sélectionnés : {{count}}'
+    generate: Générer la commande groupée
+    dialogTitle: Commande d'installation groupée
+    copy: Copier
+    requiredLabel: Requis
   status:
     installed: Installé
     bundled: Livré avec le bureau

@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: 系统依赖管理
   description: 检查和管理 Hagicode 服务所需的系统运行时依赖
+  batch:
+    selectedCount: '已选择：{{count}}'
+    generate: 生成批量命令
+    dialogTitle: 批量安装命令
+    copy: 复制
+    requiredLabel: 必需
   status:
     installed: 已安装
     bundled: 随 Desktop 内置
@@ -239,7 +245,7 @@ dependencyManagement:
     systemSource: 系统来源
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。

@@ -3,7 +3,7 @@ settings:
   loading: 正在加载设置模块...
   tabs:
     notification: 通知管理
-    dependencyManagement: 依赖管理模式
+    dependencyManagement: 依赖管理
     debugOptions: 调试选项
     language: 语言设置
     onboarding: 启动向导
@@ -54,23 +54,6 @@ settings:
     description: 为日志、实验功能和高级运行参数预留统一入口。
   placeholders:
     comingSoon: 该设置模块已挂入新设置框架，具体配置将在后续 change 中补齐。
-  dependencyManagementMode:
-    title: 依赖管理模式
-    description: 选择由 Desktop 自行管理 CLI 依赖，或仅只读检查当前全局 Node/npm 环境。
-    effectiveMode: 当前生效模式：{{mode}}
-    options:
-      internal:
-        label: 内部模式（Desktop 托管，已弃用）
-        description: Desktop 使用内置 Node/npm 工具链，并允许安装、卸载和批量同步操作。
-      external:
-        label: 外部模式（只读）
-        description: Desktop 仅检查当前全局 Node/npm 环境，不改动包，也不会覆盖 npm 前缀路径。
-    takesEffect: 模式已应用。设置会立即在依赖管理模块生效，并决定是否允许修改依赖包。
-    messages:
-      saveSuccess: 依赖管理模式已保存
-      saveFailed: 保存依赖管理模式失败
-    errors:
-      saveErrorDetail: 保存失败：{{error}}
   smartConfig:
     title: 智能配置提示指引
     description: 查看 Desktop 解析出的提示词，复制到任意受支持的 AI CLI 中，并手动完成配置流程。
@@ -235,7 +218,7 @@ dependencyManagement:
     systemSource: 系统来源
   manualHandoff:
     title: 需要手动安装 CLI 包
-    description: 请在 Desktop 外执行建议命令。关于 Desktop 内置 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
+    description: 请在 Desktop 外执行建议命令。关于外部 Node/npm 环境和 PATH 行为的最新说明，请阅读 FAQ。
     faqLinkLabel: 查看 Node 环境 FAQ
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。

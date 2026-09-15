@@ -213,6 +213,12 @@ languageSelector:
 dependencyManagement:
   title: Системные зависимости
   description: Проверяйте и управляйте зависимостями времени выполнения системы, необходимыми веб-службой.
+  batch:
+    selectedCount: 'Выбрано: {{count}}'
+    generate: Создать пакетную команду
+    dialogTitle: Пакетная команда установки
+    copy: Копировать
+    requiredLabel: Обязательно
   status:
     installed: Установлено
     bundled: В комплекте с рабочим столом

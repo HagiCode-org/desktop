@@ -17,7 +17,6 @@ welcome:
     welcome: 了解本次引導會完成的準備工作
     download: 下載最新的 Hagicode Server 包
     launch: 啟動服務並確認運作正常
-    dependencyPreparation: 確認必需依賴項和 Agent CLI 已就緒
     sharingAcceleration: 確認是否開啟共用加速，預設已為您開啟
     legalConsent: 確認當前 EULA 與隱私權政策版本並在瀏覽器中閱讀正式文檔
     languageSelection: 先選擇引導與介面使用的語言
