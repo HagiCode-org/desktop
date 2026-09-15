@@ -199,7 +199,6 @@ jobs:
           path: |
             .cache/electron
             build/embedded-runtime/downloads
-            build/embedded-node-runtime/downloads
             .generated/code-server-runtime/downloads
           key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
           restore-keys: |
@@ -232,7 +231,6 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           HAGICODE_MAC_BUILD_ARCHS: ${{ matrix.target.mac_arch }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
-          HAGICODE_EMBEDDED_NODE_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
           HAGICODE_CODE_SERVER_PLATFORM: ${{ matrix.target.mac_runtime_platform }}
 
       - name: Preserve unsigned macOS artifacts

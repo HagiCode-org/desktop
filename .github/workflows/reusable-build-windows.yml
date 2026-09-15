@@ -195,7 +195,6 @@ jobs:
           path: |
             .cache/electron
             build/embedded-runtime/downloads
-            build/embedded-node-runtime/downloads
             .generated/code-server-runtime/downloads
           key: ${{ runner.os }}-build-downloads-${{ hashFiles('package-lock.json', 'resources/manifest.yml') }}
           restore-keys: |
@@ -245,7 +244,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
           HAGICODE_RUNTIME_CONSUMER: windows-store
-          HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: internal
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
 
       - name: Build Windows MSIX Store package
@@ -262,7 +260,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
           HAGICODE_RUNTIME_CONSUMER: windows-store
-          HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: external
           WINDOWS_PACKAGE_PUBLISHER: ${{ secrets.WINDOWS_PACKAGE_PUBLISHER }}
 
       - name: Preserve unsigned Windows artifacts
@@ -503,14 +500,6 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "zip_path=$($zipFile.FullName)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value 'zip_count=1'
 
-      - name: Verify Windows ZIP toolchain payload
-        if: success() && matrix.target.requires_zip && steps.windows_zip.outputs.zip_path != ''
-        shell: bash
-        env:
-          HAGICODE_RUNTIME_CONSUMER: windows-store
-          HAGICODE_RUNTIME_DEPENDENCY_MANAGEMENT_MODE: internal
-        run: |
-          node scripts/verify-release-archives.js --archive "${{ steps.windows_zip.outputs.zip_path }}"
 
       - name: Summarize Windows package build
         if: success()
