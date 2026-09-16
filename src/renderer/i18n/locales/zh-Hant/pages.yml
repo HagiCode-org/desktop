@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: 運行成功
 dependencyManagement:
+  tabs:
+    cliPackages: CLI 套件
+    environment: 環境
   title: 依賴項管理
   backToDashboard: 返回儀表板
   description: 管理 Hagicode 服務包和系統相依性

@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: Успешно работает
 dependencyManagement:
+  tabs:
+    cliPackages: CLI-пакеты
+    environment: Окружение
   title: Управление зависимостями
   backToDashboard: Вернуться к панели управления
   description: Управление пакетами встроенных веб-сервисов и системными зависимостями.

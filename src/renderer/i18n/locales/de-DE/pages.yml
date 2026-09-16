@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: Läuft erfolgreich
 dependencyManagement:
+  tabs:
+    cliPackages: CLI-Pakete
+    environment: Umgebung
   title: Abhängigkeitsmanagement
   backToDashboard: Zurück zum Dashboard
   description: Verwalten Sie eingebettete Webdienstpakete und Systemabhängigkeiten

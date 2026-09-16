@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: Ejecutando con éxito
 dependencyManagement:
+  tabs:
+    cliPackages: Paquetes CLI
+    environment: Entorno
   title: Gestión de dependencias
   backToDashboard: Volver al panel
   description: Gestionar paquetes de servicios web integrados y dependencias del sistema.

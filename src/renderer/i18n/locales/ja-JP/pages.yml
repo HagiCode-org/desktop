@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: 正常に実行されました
 dependencyManagement:
+  tabs:
+    cliPackages: CLI パッケージ
+    environment: 環境
   title: 依存関係の管理
   backToDashboard: ダッシュボードに戻る
   description: 埋め込み Web サービス パッケージとシステムの依存関係を管理する

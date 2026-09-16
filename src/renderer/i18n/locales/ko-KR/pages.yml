@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: 성공적으로 실행 중
 dependencyManagement:
+  tabs:
+    cliPackages: CLI 패키지
+    environment: 환경
   title: 종속성 관리
   backToDashboard: 대시보드로 돌아가기
   description: 내장된 웹 서비스 패키지 및 시스템 종속성 관리

@@ -187,6 +187,9 @@ secure:
 header:
   runningSuccessfully: Running Successfully
 dependencyManagement:
+  tabs:
+    cliPackages: CLI Packages
+    environment: Environment
   title: Dependency Management
   backToDashboard: Back to Dashboard
   description: Manage embedded web service packages and system dependencies
