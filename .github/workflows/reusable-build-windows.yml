@@ -238,8 +238,8 @@ jobs:
 
       - name: Build Windows ${{ matrix.target.name }} package
         if: matrix.target.id != 'msix'
-        shell: bash
-        run: node scripts/ci-build.js --platform win --target "${{ matrix.target.builder_target }}"
+        shell: cmd
+        run: build.cmd --target Build -- --platform win --target ${{ matrix.target.builder_target }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
@@ -248,14 +248,10 @@ jobs:
 
       - name: Build Windows MSIX Store package
         if: matrix.target.id == 'msix'
-        shell: bash
+        shell: cmd
         run: |
-          npm run build:win:store -- \
-            --artifact-output-dir pkg \
-            --metadata-output-path pkg/store-build-metadata.json \
-            --overlay-output-path forge.store-config.json \
-            --platform-id win-x64
-          npm run package:smoke-test
+          call npm run generate:store-bindings
+          call build.cmd --target Build -- --platform win --target msix --artifact-output-dir pkg --metadata-output-path pkg/store-build-metadata.json --overlay-output-path forge.store-config.json --platform-id win-x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64

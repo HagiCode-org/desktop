@@ -21,12 +21,36 @@ def _warn_unrecognized(params) -> None:
         RUNTIME.log(f"unrecognized passthrough (ignored): {joined}")
 
 
+def _run_prepare_runtime(passthrough: Iterable[str]) -> int:
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
+    RUNTIME.log_stage("PrepareRuntime", "start")
+    try:
+        RUNTIME.run_command(["npm", "run", "prepare:runtime"])
+    finally:
+        RUNTIME.log_stage("PrepareRuntime", "done")
+    return 0
+
+
 def _run_setup(passthrough: Iterable[str]) -> int:
     params = parse_passthrough(passthrough)
     _warn_unrecognized(params)
     RUNTIME.log_stage("Setup", "start")
+    _run_prepare_runtime(passthrough)
     print("[PYBUILD] setup completed")
     RUNTIME.log_stage("Setup", "done")
+    return 0
+
+
+def _run_build(passthrough: Iterable[str]) -> int:
+    params = parse_passthrough(passthrough)
+    _warn_unrecognized(params)
+    RUNTIME.log_stage("Build", "start")
+    try:
+        _run_prepare_runtime(passthrough)
+        RUNTIME.run_command(["node", "scripts/ci-build.js", *passthrough])
+    finally:
+        RUNTIME.log_stage("Build", "done")
     return 0
 
 
@@ -54,6 +78,7 @@ def _run_publish_to_r2(passthrough: Iterable[str]) -> int:
     params = parse_passthrough(passthrough)
     _warn_unrecognized(params)
     RUNTIME.log_stage("PublishToR2", "start")
+    _run_prepare_runtime(passthrough)
     try:
         return run_publish_to_r2(REPO_ROOT, params)
     finally:
@@ -61,11 +86,12 @@ def _run_publish_to_r2(passthrough: Iterable[str]) -> int:
 
 
 def _run_default(passthrough: Iterable[str]) -> int:
-    return _run_publish_to_r2(passthrough)
+    return _run_build(passthrough)
 
 
 TARGET_HANDLERS: dict[str, Callable[[Iterable[str]], int]] = {
     "Setup": _run_setup,
+    "Build": _run_build,
     "GenerateR2UploadPlan": _run_generate_r2_upload_plan,
     "GenerateR2Index": _run_generate_r2_index,
     "PublishToR2": _run_publish_to_r2,
@@ -85,6 +111,13 @@ def setup(ctx, args=""):  # type: ignore[no-untyped-def]
     """Placeholder setup target."""
     tokens = args.split() if args else []
     raise SystemExit(_run_setup(tokens))
+
+
+@task
+def build(ctx, args=""):  # type: ignore[no-untyped-def]
+    """Build the desktop app and stage the embedded dotnet runtime."""
+    tokens = args.split() if args else []
+    raise SystemExit(_run_build(tokens))
 
 
 @task
@@ -113,6 +146,7 @@ def default(ctx, args=""):  # type: ignore[no-untyped-def]
 
 ns = Collection(
     setup,
+    build,
     generate_r2_upload_plan,
     generate_r2_index,
     publish_to_r2,

@@ -16,6 +16,7 @@ class ParsedArgs:
 
 TARGET_ALIASES = {
     "setup": "Setup",
+    "build": "Build",
     "generater2uploadplan": "GenerateR2UploadPlan",
     "generateazureuploadplan": "GenerateR2UploadPlan",
     "generater2index": "GenerateR2Index",
