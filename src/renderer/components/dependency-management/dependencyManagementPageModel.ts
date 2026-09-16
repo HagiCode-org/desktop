@@ -6,8 +6,6 @@ import type {
   ManagedNpmPackageDefinition,
   ManagedNpmPackageId,
   ManagedNpmPackageStatusSnapshot,
-  VendoredRuntimeId,
-  VendoredRuntimeStatusSnapshot,
 } from '../../../types/dependency-management.js';
 import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
 import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
@@ -87,63 +85,30 @@ export function prioritizePackagesForRepair(
   return [...packages].sort((left, right) => sortWeight(left) - sortWeight(right));
 }
 
-export function prioritizeVendoredRuntimesForRepair(
-  runtimes: readonly VendoredRuntimeStatusSnapshot[],
-  highlightedRuntimeIds: readonly VendoredRuntimeId[],
-): VendoredRuntimeStatusSnapshot[] {
-  if (highlightedRuntimeIds.length === 0) {
-    return [...runtimes];
-  }
-
-  const highlighted = new Set(highlightedRuntimeIds);
-  const sortWeight = (item: VendoredRuntimeStatusSnapshot): number => {
-    if (!highlighted.has(item.id)) {
-      return 2;
-    }
-    if (item.installStatus !== 'installed') {
-      return 0;
-    }
-    return 1;
-  };
-
-  return [...runtimes].sort((left, right) => sortWeight(left) - sortWeight(right));
-}
-
 export interface DependencyRepairEvaluation {
   ready: boolean;
   pendingPackageIds: ManagedNpmPackageId[];
-  pendingRuntimeIds: VendoredRuntimeId[];
 }
 
 export function evaluateDependencyRepairIntent(
   packages: readonly ManagedNpmPackageStatusSnapshot[],
-  vendoredRuntimes: readonly VendoredRuntimeStatusSnapshot[],
-  intent: Pick<DependencyManagementRepairIntent, 'targetPackageIds' | 'targetRuntimeIds'> | null,
+  intent: Pick<DependencyManagementRepairIntent, 'targetPackageIds'> | null,
 ): DependencyRepairEvaluation {
   const targetPackageIds = intent?.targetPackageIds ?? [];
-  const targetRuntimeIds = intent?.targetRuntimeIds ?? [];
-  if (targetPackageIds.length === 0 && targetRuntimeIds.length === 0) {
+  if (targetPackageIds.length === 0) {
     return {
       ready: false,
       pendingPackageIds: [],
-      pendingRuntimeIds: [],
     };
   }
 
   const packageById = new Map(packages.map((item) => [item.id, item]));
-  const runtimeById = new Map(vendoredRuntimes.map((item) => [item.id, item]));
   const pendingPackageIds = targetPackageIds.filter((packageId) => {
     const item = packageById.get(packageId);
     return !item || item.status === 'not-installed' || item.status === 'unknown' || isManagedPackageOutdated(item);
   });
-  const pendingRuntimeIds = targetRuntimeIds.filter((runtimeId) => {
-    const item = runtimeById.get(runtimeId);
-    return !item || item.installStatus !== 'installed';
-  });
-
   return {
-    ready: pendingPackageIds.length === 0 && pendingRuntimeIds.length === 0,
+    ready: pendingPackageIds.length === 0,
     pendingPackageIds,
-    pendingRuntimeIds,
   };
 }
