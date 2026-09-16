@@ -1,9 +1,4 @@
 [CmdletBinding()]
-Param(
-    [Parameter(Position=0,Mandatory=$false,ValueFromRemainingArguments=$true)]
-    [string[]]$BuildArguments
-)
-
 Write-Output "PowerShell $($PSVersionTable.PSEdition) version $($PSVersionTable.PSVersion)"
 
 Set-StrictMode -Version 2.0
@@ -31,7 +26,7 @@ $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
 $env:PYTHONPATH = if ($env:PYTHONPATH) { "$PSScriptRoot;$($env:PYTHONPATH)" } else { $PSScriptRoot }
 $pythonCmd = Resolve-Python
 
-& $pythonCmd -m pybuild.entry @BuildArguments
+& $pythonCmd -m pybuild.entry @args
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
