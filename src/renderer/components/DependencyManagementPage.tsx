@@ -190,7 +190,6 @@ export default function DependencyManagementPage() {
   const prioritizedManagedPackages = prioritizePackagesForRepair(managedPackages, highlightedPackageIds);
   const prioritizedVendoredRuntimes = prioritizeVendoredRuntimesForRepair(vendoredRuntimes, highlightedRuntimeIds);
   const repairEvaluation = evaluateDependencyRepairIntent(snapshot?.packages ?? [], snapshot?.vendoredRuntimes ?? [], repairIntent);
-  const showSuggestedCommand = true;
   const mirrorToggleDisabled = isSavingMirrorSettings;
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
   const suggestedCommandRegistryUrl = snapshot?.mirrorSettings.enabled ? mirrorRegistryUrl : null;
@@ -337,13 +336,22 @@ export default function DependencyManagementPage() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+                <span className="text-sm font-medium">
+                  {t('dependencyManagement.batch.selectedCount', { count: selectedPackageIds.size, ns: 'components' })}
+                </span>
+                <Button type="button" onClick={generateBatchCommand} disabled={selectedPackageIds.size === 0}>
+                  {t('dependencyManagement.batch.generate', { ns: 'components' })}
+                </Button>
+              </CardContent>
+            </Card>
+
             <NpmPackageTable
               titleKey="dependencyManagement.packageTable.groups.base.title"
               descriptionKey="dependencyManagement.packageTable.groups.base.description"
               packages={basePackages}
               highlightedPackageIds={baseHighlightedPackageIds}
-              showSuggestedCommand={showSuggestedCommand}
-              suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
               selectedIds={selectedIds.filter((id) => basePackageIdSet.has(id))}
               onSelectionChange={(ids) => updateSelectedIds(ids, 'base')}
             />
@@ -353,21 +361,9 @@ export default function DependencyManagementPage() {
               descriptionKey="dependencyManagement.packageTable.groups.agentCli.description"
               packages={agentCliPackages}
               highlightedPackageIds={agentCliHighlightedPackageIds}
-              showSuggestedCommand={showSuggestedCommand}
-              suggestedCommandRegistryUrl={suggestedCommandRegistryUrl}
               selectedIds={selectedIds.filter((id) => agentCliPackageIdSet.has(id))}
               onSelectionChange={(ids) => updateSelectedIds(ids, 'agent-cli')}
             />
-            <Card>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
-                <span className="text-sm font-medium">
-                  {t('dependencyManagement.batch.selectedCount', { count: selectedPackageIds.size })}
-                </span>
-                <Button type="button" onClick={generateBatchCommand} disabled={selectedPackageIds.size === 0}>
-                  {t('dependencyManagement.batch.generate')}
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
           {hasVendoredRuntimes && (

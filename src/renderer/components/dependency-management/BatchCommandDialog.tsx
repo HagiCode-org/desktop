@@ -49,13 +49,13 @@ export function BatchCommandDialog({ open, command, onOpenChange }: BatchCommand
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{t('dependencyManagement.batch.dialogTitle')}</DialogTitle>
-          <DialogDescription>{t('dependencyManagement.batch.selectedCount', { count: command.split('\n').length })}</DialogDescription>
+          <DialogTitle>{t('dependencyManagement.batch.dialogTitle', { ns: 'components' })}</DialogTitle>
+          <DialogDescription>{t('dependencyManagement.batch.selectedCount', { count: command.split('\n').length, ns: 'components' })}</DialogDescription>
         </DialogHeader>
         <pre className="max-h-[60vh] select-text overflow-auto rounded-md border bg-muted/30 p-4 font-mono text-sm leading-6">{command}</pre>
         <DialogFooter>
           <Button type="button" onClick={() => void copyCommand()}>
-            {copied ? `${t('dependencyManagement.batch.copy')} ✓` : t('dependencyManagement.batch.copy')}
+            {copied ? `${t('dependencyManagement.batch.copy', { ns: 'components' })} ✓` : t('dependencyManagement.batch.copy', { ns: 'components' })}
           </Button>
         </DialogFooter>
       </DialogContent>

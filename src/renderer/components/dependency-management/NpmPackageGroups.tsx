@@ -23,7 +23,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
 import {
   getManagedPackageDisplayStatus,
   getManagedPackageRequiredVersion,
@@ -246,8 +245,6 @@ interface NpmPackageTableProps {
   descriptionKey?: string;
   packages: ManagedNpmPackageStatusSnapshot[];
   highlightedPackageIds?: string[];
-  showSuggestedCommand?: boolean;
-  suggestedCommandRegistryUrl?: string | null;
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
 }
@@ -257,8 +254,6 @@ export function NpmPackageTable({
   descriptionKey = 'dependencyManagement.packageTable.description',
   packages,
   highlightedPackageIds = [],
-  showSuggestedCommand = true,
-  suggestedCommandRegistryUrl = null,
   selectedIds,
   onSelectionChange,
 }: NpmPackageTableProps) {
@@ -291,11 +286,6 @@ export function NpmPackageTable({
               const isHighlighted = highlightedPackageIdSet.has(item.id);
               const displayStatus = getManagedPackageDisplayStatus(item);
               const requiredVersion = getManagedPackageRequiredVersion(item);
-              const globalInstallCommand = buildManagedPackageGlobalInstallCommand(
-                item.definition,
-                suggestedCommandRegistryUrl,
-              );
-
               return (
                 <TableRow
                   key={item.id}
@@ -320,8 +310,8 @@ export function NpmPackageTable({
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-medium">{item.definition.displayName}</div>
                       {item.definition.required === true ? (
-                        <Badge variant="outline" title={t('dependencyManagement.batch.requiredLabel')}>
-                          ★ {t('dependencyManagement.batch.requiredLabel')}
+                        <Badge variant="outline" title={t('dependencyManagement.batch.requiredLabel', { ns: 'components' })}>
+                          ★ {t('dependencyManagement.batch.requiredLabel', { ns: 'components' })}
                         </Badge>
                       ) : null}
                       <Badge variant={packageBadgeVariant(item)}>
@@ -329,14 +319,6 @@ export function NpmPackageTable({
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">{t(item.definition.descriptionKey)}</div>
-                    {showSuggestedCommand ? (
-                      <div className="mt-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-left">
-                        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('dependencyManagement.details.manualCommand', { ns: 'pages' })}
-                        </div>
-                        <code className="mt-1 block break-all font-mono text-xs text-foreground">{globalInstallCommand}</code>
-                      </div>
-                    ) : null}
                   </TableCell>
                   <TableCell className="align-top">
                     <Badge variant="secondary">{t(`dependencyManagement.categories.${item.definition.category}`)}</Badge>
