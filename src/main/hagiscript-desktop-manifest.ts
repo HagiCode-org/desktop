@@ -19,6 +19,9 @@ export const DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV = 'hagicode_instance';
 export const DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME = 'hagicode_dev';
 export const DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME = 'hagicode_prod';
 export const DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME = 'hagicode-server';
+export const DESKTOP_NODELESS_MANIFEST_PATHS = {
+  nodeRuntime: '',
+} as const;
 
 const DESKTOP_RUNTIME_SCRIPTS_DIRECTORY_NAME = 'hagiscript-runtime-scripts';
 const DESKTOP_RUNTIME_SCRIPTS_REQUIRED_FILE = 'noop-install-dotnet.mjs';
@@ -37,6 +40,7 @@ export interface DesktopHagiscriptManifestOptions {
   serverProgramRoot: string;
   serverDataRoot: string;
   npmPrefix: string;
+  nodeRuntimeRoot?: string;
   dotnetRuntimeRoot?: string;
   desktopRuntimeManifest?: DesktopRuntimeManifest;
   dotnetPlatform?: string;
@@ -84,6 +88,8 @@ export function buildDesktopHagiscriptRuntimeManifest(
     componentDataRoot: path.join(options.runtimeDataRoot, 'components'),
     defaultPm2Home: 'pm2',
     npmPrefix: options.npmPrefix,
+    // An empty nodeRuntime is intentional when Desktop no longer bundles Node.
+    nodeRuntime: options.nodeRuntimeRoot ?? DESKTOP_NODELESS_MANIFEST_PATHS.nodeRuntime,
     dotnetRuntime: options.dotnetRuntimeRoot
       ?? desktopRuntimeManifest.components.dotnet.relativePath.replace('{platform}', dotnetPlatform),
   };
@@ -99,6 +105,13 @@ export function buildDesktopHagiscriptRuntimeManifest(
     verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-dotnet.mjs'),
   };
   const components: Array<Record<string, unknown>> = [
+    {
+      name: 'node',
+      type: 'runtime',
+      required: Boolean(options.nodeRuntimeRoot),
+      installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-node.mjs'),
+      verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-node.mjs'),
+    },
     dotnetComponent,
   ];
 

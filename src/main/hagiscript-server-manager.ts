@@ -2,6 +2,7 @@ import path from 'node:path';
 import {
   executeComponentServiceAction,
   getManagedServerStatus,
+  packageVersion as hagiscriptSdkVersion,
   queryRuntimeState,
   resolveManagedServerStartupEnvironment,
   restartManagedServer,
@@ -111,6 +112,8 @@ interface Pm2ProcessMetrics {
   restartCount: number;
   pmUptime: number | null;
 }
+
+const MINIMUM_NODELESS_SDK_VERSION = '0.3.8';
 
 export class HagiscriptPm2Manager {
   async exact(context: HagiscriptRuntimeContext): Promise<HagiscriptBundledRuntimeExactResult> {
@@ -264,6 +267,7 @@ export class HagiscriptPm2Manager {
 
   async resolveStartupEnvironment(context: HagiscriptRuntimeContext): Promise<HagiscriptServerStartupEnvironmentResult> {
     try {
+      this.assertNodeLessSdkContract();
       const environment = await resolveManagedServerStartupEnvironment({
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
@@ -284,6 +288,23 @@ export class HagiscriptPm2Manager {
         environment: null,
         logPaths: this.buildStartupEnvironmentLogPaths(context, null),
       };
+    }
+  }
+
+  private assertNodeLessSdkContract(): void {
+    const [major, minor, patch] = hagiscriptSdkVersion.split('.').map(Number);
+    const [requiredMajor, requiredMinor, requiredPatch] = MINIMUM_NODELESS_SDK_VERSION.split('.').map(Number);
+    if (
+      !Number.isFinite(major)
+      || !Number.isFinite(minor)
+      || !Number.isFinite(patch)
+      || major < requiredMajor
+      || (major === requiredMajor && minor < requiredMinor)
+      || (major === requiredMajor && minor === requiredMinor && patch < requiredPatch)
+    ) {
+      throw new Error(
+        `Node-less Desktop startup requires @hagicode/hagiscript-sdk >= ${MINIMUM_NODELESS_SDK_VERSION}; found ${hagiscriptSdkVersion}.`,
+      );
     }
   }
 
@@ -352,12 +373,12 @@ export class HagiscriptPm2Manager {
   ): HagiscriptServerLifecycleResult {
     const metrics = this.parsePm2ProcessMetrics(result.stdout, result.appName);
     return {
-      success: true,
+      success: result.status !== 'unknown' && result.status !== 'errored',
       action,
       summary: `${summaryPrefix} completed with status ${result.status}.`,
       stdout: result.stdout,
       stderr: result.stderr,
-      exitCode: 0,
+      exitCode: result.status === 'online' || result.status === 'stopped' ? 0 : null,
       exists: result.exists,
       status: result.status,
       pid: result.pid,

@@ -561,6 +561,7 @@ export class PCodeWebServiceManager {
     }
 
     const environment = result.environment;
+    const nodeLessLaunch = environment.nodePath.length === 0;
     log.info('[WebService] Desktop SDK PM2 launch plan:', {
       action,
       windowsStoreRuntime,
@@ -573,11 +574,17 @@ export class PCodeWebServiceManager {
       pm2Home: environment.pm2Home,
       pm2BinaryPath: environment.pm2BinaryPath,
       nodePath: environment.nodePath,
+      nodeLessLaunch,
       runtimeFilesDir: environment.runtimeFilesDir,
       envFilePath: environment.envFilePath,
     });
 
     this.appendStartupLogLine(`Desktop SDK PM2 ${action} invocation requested for ${environment.appName}`);
+    if (nodeLessLaunch) {
+      this.appendStartupLogLine(
+        `Desktop SDK PM2 ${action} using node-less released-service launch via dotnet: ${environment.script}`,
+      );
+    }
     this.appendStartupLogLine(`Desktop SDK PM2 node path: ${environment.nodePath}`);
     this.appendStartupLogLine(`Desktop SDK PM2 binary path: ${environment.pm2BinaryPath}`);
     this.appendStartupLogLine(`Desktop SDK PM2 cwd: ${environment.cwd}`);
@@ -602,8 +609,9 @@ export class PCodeWebServiceManager {
     const pid = result.pid ?? 'n/a';
     const exitCode = result.exitCode ?? 'n/a';
     const pm2BinaryPath = result.pm2BinaryPath ?? 'unknown';
+    const reason = result.success ? 'none' : result.summary;
     this.appendStartupLogLine(
-      `Desktop SDK PM2 ${action} returned status ${result.status} (exists=${result.exists}, pid=${pid}, exitCode=${exitCode}, pm2=${pm2BinaryPath})`,
+      `Desktop SDK PM2 ${action} returned status ${result.status} (exists=${result.exists}, pid=${pid}, exitCode=${exitCode}, pm2=${pm2BinaryPath}, reason=${reason})`,
     );
   }
 
