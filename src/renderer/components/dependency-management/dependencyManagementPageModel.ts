@@ -27,11 +27,13 @@ export function getManagedPackageRequiredVersion(item: ManagedNpmPackageStatusSn
 export function buildBatchInstallCommand(
   definitions: ManagedNpmPackageDefinition[],
   registryUrl?: string | null,
+  platform?: string,
 ): string {
-  // Keep each package command independent so install arguments match the single-package path.
+  // Chain commands so later installs run only after earlier installs succeed.
+  const continuation = platform?.toLowerCase().includes('win') ? ' && ^\n' : ' && \\\n';
   return definitions
     .map((definition) => buildManagedPackageGlobalInstallCommand(definition, registryUrl))
-    .join('\n');
+    .join(continuation);
 }
 
 export function packageBadgeVariant(item: ManagedNpmPackageStatusSnapshot) {
@@ -60,7 +62,11 @@ export function managedPackageRowClassName(item: ManagedNpmPackageStatusSnapshot
     return 'bg-amber-500/10 hover:bg-amber-500/15';
   }
 
-  return 'bg-red-500/10 hover:bg-red-500/15';
+  if (item.definition.required === true && displayStatus === 'not-installed') {
+    return 'bg-red-500/10 hover:bg-red-500/15';
+  }
+
+  return 'hover:bg-muted/50';
 }
 
 export function prioritizePackagesForRepair(

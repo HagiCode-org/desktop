@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -7,7 +8,7 @@ import type { DependencyManagementTabProps } from '../types';
 
 export default function CliPackagesTab({
   basePackages, agentCliPackages, baseHighlightedPackageIds, agentCliHighlightedPackageIds,
-  selectedPackageIds, onSelectionChange, onGenerateBatchCommand,
+  selectedPackageIds, onSelectionChange, onGenerateBatchCommand, onRefresh, isRefreshing,
   snapshot, onUpdateMirrorSettings, isSavingMirrorSettings, mirrorSaveError,
 }: DependencyManagementTabProps) {
   const { t } = useTranslation(['common', 'components']);
@@ -28,6 +29,10 @@ export default function CliPackagesTab({
             {t('dependencyManagement.mirror.toggleLabel')}
           </label>
           <Button type="button" onClick={onGenerateBatchCommand} disabled={selectedPackageIds.size === 0}>{t('dependencyManagement.batch.generate', { ns: 'components' })}</Button>
+          <Button type="button" variant="outline" onClick={onRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {t('dependencyManagement.actions.refresh')}
+          </Button>
         </div>
         {mirrorSaveError ? <p className="basis-full text-sm text-destructive">{mirrorSaveError}</p> : null}
       </CardContent></Card>

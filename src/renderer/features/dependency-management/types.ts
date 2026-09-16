@@ -13,6 +13,8 @@ export interface DependencyManagementTabProps {
   selectedPackageIds: Set<ManagedNpmPackageId>;
   onSelectionChange: (ids: string[], group: 'base' | 'agent-cli') => void;
   onGenerateBatchCommand: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
   onOpenNodeEnvironmentFaq: () => void;
   onUpdateMirrorSettings: (enabled: boolean) => void;
   isSavingMirrorSettings: boolean;

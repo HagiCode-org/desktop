@@ -34,7 +34,11 @@ describe('buildBatchInstallCommand', () => {
       [
         'npm install -g --registry https://registry.example.test/ @fission-ai/openspec',
         'npm install -g --ignore-scripts --registry https://registry.example.test/ @earendil-works/pi-coding-agent@0.78.1',
-      ].join('\n'),
+      ].join(' && \\\n'),
     );
+  });
+
+  it('uses Windows command continuation syntax', () => {
+    assert.match(buildBatchInstallCommand(definitions, null, 'win32'), /openspec\s+&& \^\n/);
   });
 });
