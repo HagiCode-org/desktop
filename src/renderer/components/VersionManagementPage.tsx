@@ -37,6 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { VersionManagementTabContent } from '../features/version-management/VersionManagementTabContent';
 import { useVersionManagementTab } from '../features/version-management/useVersionManagementTab';
 import type { InstalledVersion, Version } from '../features/version-management/types';
+import { PageHeader } from './ui/page-header';
 
 
 interface VersionSwitchResult {
@@ -509,54 +510,40 @@ export default function VersionManagementPage({ distributionState }: VersionMana
   return (
     <>
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        <section className="rounded-[28px] border border-border/80 bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-primary">
-                  <Package className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                    {t('versionManagement.title')}
-                  </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('versionManagement.description')}</p>
-                </div>
-              </div>
-            </div>
-            <Button type="button" variant="outline" onClick={fetchAllData}>
-              <RefreshCw className="h-4 w-4" />
-              {t('versionManagement.actions.refresh')}
-            </Button>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <SummaryTile
+        <PageHeader
+          icon={Package}
+          titleKey="versionManagement.title"
+          descriptionKey="versionManagement.description"
+          actions={<Button type="button" variant="outline" onClick={fetchAllData}><RefreshCw className="h-4 w-4" />{t('versionManagement.actions.refresh')}</Button>}
+          summaryTiles={(
+            <>
+              <SummaryTile
               icon={Package}
               label={t('common.version', { ns: 'common' })}
               value={activeVersion?.version ?? t('versionManagement.notInstalled')}
               description={activeVersion ? activeVersion.packageFilename : t('versionManagement.noVersionsInstalled.description')}
-            />
-            <SummaryTile
+              />
+              <SummaryTile
               icon={HardDrive}
               label={t('versionManagement.installedVersions')}
               value={installedVersions.length.toString()}
               description={installedVersions.length > 0 ? t('versionManagement.status.installed') : t('versionManagement.notInstalled')}
-            />
-            <SummaryTile
+              />
+              <SummaryTile
               icon={Download}
               label={t('versionManagement.availableVersions')}
               value={availableVersions.length.toString()}
               description={availableVersions.length > 0 ? t('versionManagement.actions.install') : t('versionManagement.noVersionsAvailable')}
-            />
-            <SummaryTile
+              />
+              <SummaryTile
               icon={isInstallingFromState ? Loader2 : RefreshCw}
               label={t('versionManagement.actions.refresh')}
               value={isInstallingFromState ? getInstallProgressText() : t('versionManagement.status.ready')}
               description={isInstallingFromState ? getInstallStageFlow() : t('versionManagement.info.description')}
-            />
-          </div>
-        </section>
+              />
+            </>
+          )}
+        />
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl border border-border/70 bg-muted/25 p-2">
