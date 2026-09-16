@@ -74,6 +74,8 @@ describe('web-service startup flow', () => {
     assert.match(webServiceSource, /private isWindowsStoreExecutionEnvironment\(\): boolean/);
     assert.match(webServiceSource, /isWindowsStoreRuntime\(\{/);
     assert.match(webServiceSource, /Desktop SDK PM2 launch plan:/);
+    assert.match(webServiceSource, /nodeLessLaunch/);
+    assert.match(webServiceSource, /reason=\$\{reason\}/);
     assert.match(webServiceSource, /Desktop SDK PM2 invocation appears blocked by Microsoft Store\/MSIX permissions/);
     assert.match(webServiceSource, /appendManagedPm2InvocationResult\(/);
     assert.match(webServiceSource, /appendManagedPm2PermissionFailureHint\(/);
@@ -104,6 +106,7 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /externalNodePath: context\.externalNodePath/);
     assert.match(serverManagerSource, /response\?\.pm2Home \? path\.join\(response\.pm2Home, 'logs'\) : null/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
+    assert.match(serverManagerSource, /MINIMUM_NODELESS_SDK_VERSION/);
   });
 
   it('keeps Desktop-managed environment injection authoritative over legacy config env values', async () => {

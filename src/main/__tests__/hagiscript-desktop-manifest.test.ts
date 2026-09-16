@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   DESKTOP_HAGISCRIPT_DEV_INSTANCE_NAME,
   buildDesktopHagiscriptRuntimeManifest,
+  DESKTOP_NODELESS_MANIFEST_PATHS,
   DESKTOP_HAGISCRIPT_PM2_NAME_IDENTIFIER_ENV,
   DESKTOP_HAGISCRIPT_PROD_INSTANCE_NAME,
   DESKTOP_HAGISCRIPT_SERVER_BASE_APP_NAME,
@@ -40,6 +41,7 @@ describe('hagiscript desktop manifest builder', () => {
     };
 
     assert.equal(manifest.paths.runtimeDataRoot, '/tmp/home/.hagicode/runtime-data');
+    assert.equal(manifest.paths.nodeRuntime, DESKTOP_NODELESS_MANIFEST_PATHS.nodeRuntime);
     assert.equal(manifest.paths.serverProgramRoot, '/tmp/home/.hagicode/runtime-data/apps/installed');
     assert.equal(manifest.paths.serverDataRoot, '/tmp/home/.hagicode/runtime-data/apps/data');
     assert.equal(
@@ -59,6 +61,10 @@ describe('hagiscript desktop manifest builder', () => {
       (component) => component.name === DESKTOP_HAGISCRIPT_SERVER_COMPONENT_NAME,
     ) as Record<string, unknown> | undefined;
     assert.ok(serverComponent);
+    assert.equal(
+      (manifest.components.find((component) => component.name === 'node') as { required?: boolean }).required,
+      false,
+    );
     assert.deepEqual(serverComponent.lifecycleDependencies, [
       'dotnet/runtime/linux-x64',
     ]);
