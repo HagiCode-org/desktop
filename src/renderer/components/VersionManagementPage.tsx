@@ -5,15 +5,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   Package,
   Download,
-  Trash2,
   RefreshCw,
   CheckCircle,
   AlertCircle,
-  Clock,
   HardDrive,
-  FolderOpen,
   Loader2,
-  Rocket,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -35,52 +31,13 @@ import {
   installWebServicePackage,
 } from '../store/thunks/webServiceThunks';
 import type { RootState } from '../store';
-import { PackageSourceSelector } from './PackageSourceSelector';
 import type { DistributionModeState } from '../../types/distribution-mode';
 import { resolveDesktopLanguageCode } from '../../shared/desktop-languages';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { VersionManagementTabContent } from '../features/version-management/VersionManagementTabContent';
+import { useVersionManagementTab } from '../features/version-management/useVersionManagementTab';
+import type { InstalledVersion, Version } from '../features/version-management/types';
 
-
-interface Version {
-  id: string;
-  version: string;
-  platform: string;
-  packageFilename: string;
-  sourceType?: 'local-folder' | 'http-index';
-  assetKind?: string;
-  hybrid?: {
-    torrentFirst: boolean;
-    eligible: boolean;
-    legacyHttpFallback: boolean;
-    isLatestDesktopAsset: boolean;
-    isLatestWebAsset: boolean;
-    serviceScope: 'latest-desktop' | 'latest-server' | 'local-cache';
-  };
-}
-
-interface InstalledVersion {
-  id: string;
-  version: string;
-  platform: string;
-  packageFilename: string;
-  installedPath: string;
-  installedAt: string;
-  status: 'installed-ready' | 'payload-invalid' | 'runtime-incompatible' | 'desktop-incompatible';
-  isActive: boolean;
-  runtimeSource?: 'installed-version' | 'portable-fixed';
-  isReadOnly?: boolean;
-  validation?: {
-    startable: boolean;
-    message?: string;
-    desktopCompatibility?: {
-      declared: boolean;
-      compatible: boolean;
-      requiredVersion?: string;
-      currentVersion: string;
-      message?: string;
-      reason?: string;
-    };
-  };
-}
 
 interface VersionSwitchResult {
   success: boolean;
@@ -149,6 +106,7 @@ function SummaryTile({
 
 export default function VersionManagementPage({ distributionState }: VersionManagementPageProps) {
   const { t, i18n } = useTranslation(['pages', 'common']);
+  const { activeTab, setActiveTab, tabs } = useVersionManagementTab();
   const dispatch = useDispatch();
   const webServiceOperating = useSelector((state: RootState) => selectWebServiceOperating(state));
   const isInstallingFromState = useSelector((state: RootState) => selectIsInstallingFromState(state));
@@ -160,7 +118,6 @@ export default function VersionManagementPage({ distributionState }: VersionMana
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
   const [uninstalling, setUninstalling] = useState<string | null>(null);
-  const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
 
   // Dialog states
   const [reinstallDialogOpen, setReinstallDialogOpen] = useState(false);
@@ -214,13 +171,6 @@ export default function VersionManagementPage({ distributionState }: VersionMana
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInstall = async (versionId: string) => {
-    if (isInstallingFromState || webServiceOperating) return;
-
-    // Use Redux thunk which will check service status and show confirmation dialog if needed
-    dispatch(installWebServicePackage(versionId));
   };
 
   const handleUninstall = async (versionId: string) => {
@@ -512,13 +462,6 @@ export default function VersionManagementPage({ distributionState }: VersionMana
     return platform;
   };
 
-  // Computed properties for version list display
-  const displayVersions = isVersionsExpanded
-    ? availableVersions
-    : availableVersions.slice(0, 3);
-  const remainingCount = availableVersions.length - 3;
-  const showExpandButton = availableVersions.length > 3;
-
   if (loading) {
     return (
       <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-10">
@@ -615,329 +558,42 @@ export default function VersionManagementPage({ distributionState }: VersionMana
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border/80 bg-card p-5 shadow-sm">
-          <PackageSourceSelector />
-        </section>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl border border-border/70 bg-muted/25 p-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-xl px-4 py-3">
+                  <Icon className="h-4 w-4" />
+                  <span>{t(tab.labelKey)}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          <VersionManagementTabContent
+            activeTab={tabs.find((tab) => tab.id === activeTab) ?? tabs[0]}
+            availableVersions={availableVersions}
+            installedVersions={installedVersions}
+            getPlatformLabel={getPlatformLabel}
+            getInstallProgressText={getInstallProgressText}
+            onRefresh={fetchAllData}
+            renderInstallTelemetry={renderInstallTelemetry}
+            onReinstall={handleReinstall}
+            onOpenLogs={handleOpenLogs}
+            onSwitch={handleSwitch}
+            onUninstall={handleUninstall}
+            onStartOnboarding={handleStartOnboarding}
+            switching={switching}
+            uninstalling={uninstalling}
+            isInstalling={isInstallingFromState}
+            installProgress={webServiceInstallProgress}
+            getVersionStatus={getVersionStatus}
+            formatDate={formatDate}
+            isDesktopIncompatible={isDesktopIncompatible}
+            getDesktopCompatibility={getDesktopCompatibility}
+          />
+        </Tabs>
 
-        <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-              <Download className="w-5 h-5 text-primary" />
-              {t('versionManagement.availableVersions')}
-            </h2>
-            <Button type="button" variant="outline" size="sm" onClick={fetchAllData}>
-              <RefreshCw className="w-4 h-4" />
-              {t('versionManagement.actions.refresh')}
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-           {displayVersions.map((version) => {
-            const installed = installedVersions.find((v) => v.id === version.id);
-            const isInstallingCurrentVersion = isInstallingFromState && installingVersionId === version.id;
-
-            return (
-               <div
-                 key={version.id}
-                 className="rounded-2xl border border-border/70 bg-background/60 p-4 transition-colors hover:border-border"
-               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-                      <Package className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{version.packageFilename}</h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{getPlatformLabel(version.platform)}</span>
-                        {installed && (
-                          <span className="text-primary">• {t('versionManagement.installed')}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {!installed ? (
-                    <div className="flex items-center gap-2">
-                      {isInstallingCurrentVersion && webServiceInstallProgress ? (
-                        <div className="flex items-center gap-2">
-                          {/* 进度条 */}
-                          <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all duration-300 ease-out"
-                              style={{ width: `${webServiceInstallProgress.progress}%` }}
-                            />
-                          </div>
-                          {/* 进度文本 */}
-                          <span className="text-xs text-muted-foreground min-w-[60px]">
-                            {webServiceInstallProgress.stage === 'fetching-torrent' && t('versionManagement.downloadStage.fetchingTorrent')}
-                            {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
-                            {webServiceInstallProgress.stage === 'switching' && t('versionManagement.switching')}
-                            {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
-                          </span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleInstall(version.id)}
-                          disabled={isInstallingFromState || webServiceOperating}
-                          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isInstallingCurrentVersion ? (
-                            <>
-                              <Loader2 className="animate-spin h-4 w-4" />
-                              {getInstallProgressText()}
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-4 h-4" />
-                              {t('versionManagement.actions.install')}
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-sm text-primary flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      {t('versionManagement.installed')}
-                    </span>
-                  )}
-                </div>
-                {renderInstallTelemetry(version.id)}
-              </div>
-            );
-          })}
-
-          {showExpandButton && (
-            <button
-              onClick={() => setIsVersionsExpanded(!isVersionsExpanded)}
-              className="mt-4 w-full py-2 text-sm text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-2"
-            >
-              {isVersionsExpanded
-                ? t('versionManagement.actions.showLessVersions')
-                : t('versionManagement.actions.showMoreVersions', { count: remainingCount })}
-            </button>
-          )}
-
-           {availableVersions.length === 0 && (
-             <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-8 text-center text-muted-foreground">
-               <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-               <p>{t('versionManagement.noVersionsAvailable')}</p>
-             </div>
-           )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
-          {installedVersions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-12">
-              <div className="space-y-6 text-center">
-                <div className="flex justify-center">
-                  <div className="rounded-full bg-primary/10 p-4">
-                    <Rocket className="w-12 h-12 text-primary" />
-                  </div>
-                </div>
-                <div>
-                  <h2 className="mb-2 text-2xl font-bold text-foreground">
-                    {t('versionManagement.noVersionsInstalled.title')}
-                  </h2>
-                  <p className="mx-auto max-w-md text-muted-foreground">
-                    {t('versionManagement.noVersionsInstalled.description')}
-                  </p>
-                </div>
-                <button
-                  onClick={handleStartOnboarding}
-                  className="mx-auto flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  <Rocket className="w-5 h-5" />
-                  {t('versionManagement.noVersionsInstalled.startButton')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-foreground">
-                <HardDrive className="w-5 h-5 text-primary" />
-                {t('versionManagement.installedVersions')}
-              </h2>
- 
-              <div className="space-y-3">
-                {installedVersions.map((version) => (
-                <div
-                  key={version.id}
-                  className="overflow-hidden rounded-2xl border border-border/70 bg-background/60"
-               >
-                {/* Version Header */}
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-                        <Package className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{version.packageFilename}</h3>
-                          {getVersionStatus(version)}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{getPlatformLabel(version.platform)}</span>
-                          <span>•</span>
-                          <span>{t('versionManagement.installedAt')}: {formatDate(version.installedAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Reinstall button for all installed versions */}
-                       {isInstallingFromState && webServiceInstallProgress ? (
-                         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-1.5">
-                          {/* 进度条 */}
-                          <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all duration-300 ease-out"
-                              style={{ width: `${webServiceInstallProgress.progress}%` }}
-                            />
-                          </div>
-                          {/* 进度文本 */}
-                          <span className="text-xs text-muted-foreground min-w-[50px]">
-                            {webServiceInstallProgress.stage === 'fetching-torrent' && t('versionManagement.downloadStage.fetchingTorrent')}
-                            {webServiceInstallProgress.stage === 'downloading' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'backfilling' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'extracting' && `${webServiceInstallProgress.progress}%`}
-                            {webServiceInstallProgress.stage === 'verifying' && t('versionManagement.verifying')}
-                            {webServiceInstallProgress.stage === 'switching' && t('versionManagement.switching')}
-                            {webServiceInstallProgress.stage === 'completed' && t('versionManagement.completed')}
-                          </span>
-                        </div>
-                      ) : (
-                         <button
-                           onClick={() => handleReinstall(version.id)}
-                           disabled={isInstallingFromState || switching === version.id}
-                           className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50"
-                           title={t('versionManagement.actions.reinstallPackage')}
-                         >
-                          {isInstallingFromState ? (
-                            <>
-                              <Loader2 className="animate-spin h-3 w-3" />
-                              {getInstallProgressText()}
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4" />
-                              {t('versionManagement.actions.reinstall')}
-                            </>
-                          )}
-                        </button>
-                      )}
-
-                      {/* Open Logs button for all installed versions */}
-                       <button
-                         onClick={() => handleOpenLogs(version.id)}
-                         className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
-                         title={t('versionManagement.actions.openLogs')}
-                       >
-                        <FolderOpen className="w-4 h-4" />
-                        {t('versionManagement.actions.openLogs')}
-                      </button>
-
-                      {!version.isActive && (
-                         <button
-                           onClick={() => handleSwitch(version.id)}
-                           disabled={switching === version.id || isInstallingFromState || isDesktopIncompatible(version)}
-                           className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                           title={isDesktopIncompatible(version) ? t('versionManagement.actions.switchDisabledDesktop') : undefined}
-                         >
-                          {switching === version.id ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary-foreground"></div>
-                              {t('versionManagement.switching')}
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4" />
-                              {t('versionManagement.actions.switch')}
-                            </>
-                          )}
-                        </button>
-                      )}
-
-                      {!version.isActive && (
-                        <button
-                          onClick={() => handleUninstall(version.id)}
-                          disabled={uninstalling === version.id || isInstallingFromState}
-                          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={t('versionManagement.actions.uninstall')}
-                        >
-                          {uninstalling === version.id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {isDesktopIncompatible(version) && (
-                    <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-300" />
-                        <div className="space-y-2 text-sm">
-                          <p className="font-medium text-amber-900 dark:text-amber-100">
-                            {t('versionManagement.desktopCompatibility.blockedTitle')}
-                          </p>
-                          <div className="grid gap-1 text-amber-900/90 dark:text-amber-100/90">
-                            <p>
-                              {t('versionManagement.desktopCompatibility.requiredVersion')}{' '}
-                              <span className="font-mono">{getDesktopCompatibility(version)?.requiredVersion}</span>
-                            </p>
-                            <p>
-                              {t('versionManagement.desktopCompatibility.currentVersion')}{' '}
-                              <span className="font-mono">{getDesktopCompatibility(version)?.currentVersion}</span>
-                            </p>
-                          </div>
-                          {getDesktopCompatibility(version)?.reason && (
-                            <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
-                              {getDesktopCompatibility(version)?.reason}
-                            </p>
-                          )}
-                          {!getDesktopCompatibility(version)?.reason && (
-                            <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
-                              {t('versionManagement.desktopCompatibility.upgradeGuidance')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                   {renderInstallTelemetry(version.id)}
-                 </div>
-               </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-       <section className="rounded-3xl border border-border/80 bg-muted/25 p-4">
-         <div className="flex items-start gap-3">
-          <div className="flex items-center justify-center w-5 h-5 bg-primary/10 rounded mt-0.5 flex-shrink-0">
-            <Clock className="w-3 h-3 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-foreground font-medium mb-1">
-              {t('versionManagement.info.title')}
-            </p>
-           <p className="text-xs text-muted-foreground">
-             {t('versionManagement.info.description')}
-           </p>
-          </div>
-         </div>
-        </section>
       </div>
 
       {/* Reinstall Confirmation Dialog */}
