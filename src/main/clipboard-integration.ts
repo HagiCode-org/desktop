@@ -18,8 +18,9 @@ function attachContextMenuHandler(targetContents: WebContents): void {
     wiredWebContentsIds.delete(targetContents.id);
   });
 
-  targetContents.on('context-menu', (_event, params) => {
-    const template = buildClipboardContextMenuTemplate(params, clipboard.readText().length > 0);
+  targetContents.on('context-menu', async (_event, params) => {
+    const clipboardText = await clipboard.readText();
+    const template = buildClipboardContextMenuTemplate(params, clipboardText.length > 0);
 
     if (template.length === 0) {
       return;
