@@ -27,6 +27,18 @@ class CommandFailed(RuntimeError):
         self.stderr = stderr
 
 
+def _command_needs_shell(command: Sequence[str]) -> bool:
+    # On Windows, wrapper executables shipped as .cmd/.bat/.ps1 (e.g. npm, npx,
+    # yarn) cannot be launched directly via CreateProcess. They must run through
+    # the shell (cmd.exe /c). Real executables (.exe) do not need this.
+    if os.name != "nt" or not command:
+        return False
+    resolved = shutil.which(str(command[0]))
+    if not resolved:
+        return False
+    return resolved.lower().endswith((".cmd", ".bat", ".ps1"))
+
+
 class BuildRuntime:
     def __init__(self, repo_root: Path, log_prefix: str = "[PYBUILD]") -> None:
         self.repo_root = repo_root
@@ -51,13 +63,19 @@ class BuildRuntime:
         if env:
             merged_env.update(env)
 
+        # .cmd/.bat/.ps1 wrappers on Windows must run through cmd.exe; pass the
+        # command as a single joined line so quoting is handled consistently.
+        use_shell = _command_needs_shell(command)
+        program: str | list[str] = subprocess.list2cmdline(list(command)) if use_shell else list(command)
+
         completed = subprocess.run(
-            list(command),
+            program,
             cwd=str(cwd or self.repo_root),
             env=merged_env,
             check=False,
             capture_output=capture,
             text=True if capture else None,
+            shell=use_shell,
         )
         if completed.returncode != 0:
             stderr = completed.stderr if capture else ""
