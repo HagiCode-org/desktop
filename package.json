@@ -118,7 +118,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "electron": "^42.4.0",
+    "electron": "^44.4.1",
     "node-addon-api": "^8.8.0",
     "node-gyp": "^12.4.0",
     "tailwindcss": "^4.3.1",
@@ -199,5 +199,8 @@
   "optionalDependencies": {
     "@microsoft/dynwinrt": "0.1.0-preview.6",
     "@microsoft/dynwinrt-codegen": "0.1.0-preview.6"
+  },
+  "overrides": {
+    "@electron/node-gyp": "10.2.0-electron.1"
   }
 }
