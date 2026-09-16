@@ -20,6 +20,7 @@
   "scripts": {
     "prepare:about-snapshot": "node scripts/generate-about-snapshot.js",
     "prepare:managed-npm-packages": "node scripts/generate-managed-npm-packages.js",
+    "prepare:runtime": "node scripts/prepare-embedded-runtime.js",
     "i18n:audit": "hagi18n audit --config hagi18n.yaml",
     "i18n:report": "hagi18n report --config hagi18n.yaml",
     "i18n:doctor": "hagi18n doctor --config hagi18n.yaml",

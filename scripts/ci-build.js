@@ -532,6 +532,7 @@ function getBuildSteps() {
   if (config.platform === 'win') {
     const { forgeTargets } = resolveWindowsPackageTargets();
     const steps = [
+      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
     ];
 
@@ -558,6 +559,7 @@ function getBuildSteps() {
   if (config.platform === 'linux') {
     const targets = resolveLinuxPackageTargets();
     const steps = [
+      buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
       buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
       buildStep('node', ['scripts/run-electron-forge.js', '--platform', 'linux', '--arch', process.arch, '--targets', targets.join(',')], `Package Linux artifacts (${targets.join(', ')})`),
       buildStep('npm', ['run', 'package:smoke-test'], 'Run packaged smoke test'),
@@ -575,6 +577,7 @@ function getBuildSteps() {
     const targets = resolveMacPackageTargets();
     return archs.flatMap((arch) => {
       const steps = [
+        buildStep('npm', ['run', 'prepare:runtime'], 'Prepare embedded runtime'),
         buildStep('npm', ['run', 'build:prod'], 'Build production assets'),
         buildStep(
           'node',
