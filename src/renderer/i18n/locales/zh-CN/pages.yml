@@ -223,6 +223,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/faq/desktop-node-environment/
     refreshHint: 命令执行完成后刷新一次，以重新检测 Desktop 托管依赖。
 versionManagement:
+  tabs:
+    newVersions: 新版本
+    downloadedVersions: 已下载版本
+    sourceManagement: 源管理
   title: 版本管理
   description: 安装、切换和管理 Hagicode Server 版本
   availableVersions: 可用版本

@@ -223,6 +223,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: Refresh after the command finishes to re-check Desktop-managed dependencies.
 versionManagement:
+  tabs:
+    newVersions: New Versions
+    downloadedVersions: Downloaded Versions
+    sourceManagement: Source Management
   title: Version Management
   description: Install, switch, and manage Hagicode Server versions
   availableVersions: Available Versions

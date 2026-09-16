@@ -223,6 +223,10 @@ dependencyManagement:
     faqUrl: https://docs.hagicode.com/en/faq/desktop-node-environment/
     refreshHint: 명령이 완료된 후 새로 고쳐 Desktop 관리 종속성을 다시 확인하세요.
 versionManagement:
+  tabs:
+    newVersions: 새 버전
+    downloadedVersions: 다운로드한 버전
+    sourceManagement: 소스 관리
   title: 버전 관리
   description: Hagicode Server 버전 설치, 전환 및 관리
   availableVersions: 사용 가능한 버전
