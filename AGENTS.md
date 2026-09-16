@@ -40,6 +40,7 @@ npm run build:linux
 - Keep renderer changes aligned with existing React and Redux Toolkit patterns.
 - Route all user-facing strings through the repo's i18n flow.
 - If packaging, runtime bootstrapping, or native dependency behavior changes, run the relevant smoke or verification scripts.
+- Desktop startup may omit `paths.nodeRuntime` when no Node runtime is bundled. The manifest must retain a required `paths.dotnetRuntime`; SDK `0.3.8+` resolves released-service startup through managed `dotnet` in this mode.
 
 ## References
 
