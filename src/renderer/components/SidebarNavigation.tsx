@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/components/providers/theme-provider';
 import {
   AlertCircle,
   BadgeCheck,
