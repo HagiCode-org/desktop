@@ -215,9 +215,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install build Python dependencies
+        run: python -m pip install -r requirements.lock.txt
+
       - name: Build Linux artifacts
         if: startsWith(matrix.target.id, 'linux-')
-        run: build.sh --target Build -- --platform linux --target "${{ matrix.target.builder_target }}"
+        run: ./build.sh --target Build -- --platform linux --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: linux-x64
@@ -225,7 +233,7 @@ jobs:
       - name: Build macOS artifacts
         if: startsWith(matrix.target.id, 'macos-')
         shell: bash
-        run: build.sh --target Build -- --platform mac --target "${{ matrix.target.builder_target }}"
+        run: ./build.sh --target Build -- --platform mac --target "${{ matrix.target.builder_target }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

@@ -11,13 +11,13 @@ function ResolvePython {
         return
     fi
 
-    if command -v python3 &>/dev/null; then
-        echo "python3"
+    if command -v python &>/dev/null; then
+        echo "python"
         return
     fi
 
-    if command -v python &>/dev/null; then
-        echo "python"
+    if command -v python3 &>/dev/null; then
+        echo "python3"
         return
     fi
 

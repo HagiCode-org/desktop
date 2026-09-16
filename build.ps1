@@ -1,4 +1,3 @@
-[CmdletBinding()]
 Write-Output "PowerShell $($PSVersionTable.PSEdition) version $($PSVersionTable.PSVersion)"
 
 Set-StrictMode -Version 2.0
