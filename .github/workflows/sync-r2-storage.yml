@@ -199,6 +199,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.lock.txt
 
+    - name: Install Node dependencies
+      run: npm ci
+
     - name: Write shard asset manifest
       env:
         SHARD_ID: ${{ matrix.shard.shardId }}

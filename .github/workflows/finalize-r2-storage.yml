@@ -31,6 +31,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.lock.txt
 
+    - name: Install Node dependencies
+      run: npm ci
+
     - name: Download R2 upload plan
       uses: actions/download-artifact@v4
       with:
