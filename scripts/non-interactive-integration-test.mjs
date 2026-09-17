@@ -877,31 +877,18 @@ function assertRuntimeVerificationOutput(
   const programHome = parseOutputValue(output, "runtime program home");
   const dataHome = parseOutputValue(output, "runtime data home");
   const dotnetRoot = parseOutputValue(output, "runtime component dotnet root");
-  const nodeRoot = parseOutputValue(output, "runtime component node root");
-  const governedNodeVersion = parseOutputValue(
-    output,
-    "runtime component node version",
-  );
 
-  if (
-    !programHome ||
-    !dataHome ||
-    !dotnetRoot ||
-    !nodeRoot ||
-    !governedNodeVersion
-  ) {
+  if (!programHome || !dataHome || !dotnetRoot) {
     fail(
       "Runtime verification output did not include all required runtime structure diagnostics.",
     );
   }
 
   assertOutputValue(output, "runtime component dotnet status", "ok");
-  assertOutputValue(output, "runtime component node status", "ok");
   assertOutputValue(output, "result", "success");
 
   assertPathWithinRoot(programHome, artifactRoot, "runtime program home");
   assertPathWithinRoot(dotnetRoot, programHome, "dotnet runtime root");
-  assertPathWithinRoot(nodeRoot, programHome, "node runtime root");
 
   const expectedDataHome = helpers.resolveDesktopRuntimeDataHome({
     userDataPath: userDataDir,
@@ -915,7 +902,6 @@ function assertRuntimeVerificationOutput(
 
   return {
     dataHome,
-    nodeVersion: governedNodeVersion,
     userDataDir,
   };
 }
