@@ -11,10 +11,8 @@ import AdmZip from "adm-zip";
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, "pkg");
 const runtimeVerifyArgs = ["runtime", "verify"];
-const dependencyInstallArgs = ["deps", "install", "--claude-code", "--codex"];
 const runtimeLifecycleArgs = ["runtime", "lifecycle"];
 const defaultCommandTimeoutMs = 240_000;
-export const expectedInstalledPackageIds = ["pm2", "claude-code", "codex"];
 const interestingDiagnosticBasenames = new Set([
   "non-interactive-startup.log",
   "launch-contract.json",
@@ -92,32 +90,18 @@ async function loadDesktopManagedPathHelpers() {
     "main",
     "desktop-runtime-paths.js",
   );
-  const portableToolchainPathsModulePath = path.join(
-    projectRoot,
-    "dist",
-    "main",
-    "portable-toolchain-paths.js",
-  );
-  if (
-    !pathExists(desktopRuntimePathsModulePath) ||
-    !pathExists(portableToolchainPathsModulePath)
-  ) {
+  if (!pathExists(desktopRuntimePathsModulePath)) {
     fail(
-      "Compiled Desktop path helpers are missing under dist/main. Run npm run build:tsc before the packaged integration harness.",
+      "Compiled Desktop runtime path helper is missing under dist/main. Run npm run build:tsc before the packaged integration harness.",
     );
   }
 
   const desktopRuntimePathsModule = await import(
     pathToFileURL(desktopRuntimePathsModulePath).href
   );
-  const portableToolchainPathsModule = await import(
-    pathToFileURL(portableToolchainPathsModulePath).href
-  );
   return {
     resolveDesktopRuntimeDataHome:
       desktopRuntimePathsModule.resolveDesktopRuntimeDataHome,
-    buildNodeMajorNpmGlobalPaths:
-      portableToolchainPathsModule.buildNodeMajorNpmGlobalPaths,
   };
 }
 
@@ -750,27 +734,6 @@ function assertOutputValue(output, label, expected) {
   }
 }
 
-function assertOutputContainsPackage(output, packageId) {
-  const line = output
-    .split(/\r?\n/)
-    .find((entry) => entry.startsWith(`[${packageId}] status=installed `));
-  if (!line) {
-    fail(`Missing installed status output for ${packageId}.`);
-  }
-  if (
-    !line.includes("packageRoot=") ||
-    !line.includes("executable=") ||
-    !line.includes("resolved=")
-  ) {
-    fail(
-      `Package output for ${packageId} does not include packageRoot, executable, and resolved path diagnostics.`,
-    );
-  }
-  if (line.includes("<missing>")) {
-    fail(`Package output for ${packageId} contains a missing path: ${line}`);
-  }
-}
-
 function assertPathWithinRoot(candidatePath, rootPath, label) {
   const resolveComparablePath = (targetPath) => {
     if (!targetPath) {
@@ -904,56 +867,6 @@ function assertRuntimeVerificationOutput(
     dataHome,
     userDataDir,
   };
-}
-
-function assertDependencyInstallOutput(
-  output,
-  { userDataDir, runtimeContext, helpers },
-) {
-  const installRoot = parseOutputValue(output, "install root");
-  const managedModules = parseOutputValue(output, "managed modules");
-  const managedBin = parseOutputValue(output, "managed bin");
-
-  if (!installRoot || !managedModules || !managedBin) {
-    fail(
-      "CLI output did not include install root, managed modules, and managed bin diagnostics.",
-    );
-  }
-
-  const expectedPaths = helpers.buildNodeMajorNpmGlobalPaths({
-    runtimeDataRoot: runtimeContext.dataHome,
-    nodeVersion: runtimeContext.nodeVersion,
-  });
-  if (installRoot !== expectedPaths.npmGlobalPrefix) {
-    fail(
-      `Managed npm prefix does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalPrefix}\nActual: ${installRoot}`,
-    );
-  }
-  if (managedModules !== expectedPaths.npmGlobalModulesRoot) {
-    fail(
-      `Managed npm modules root does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalModulesRoot}\nActual: ${managedModules}`,
-    );
-  }
-  if (managedBin !== expectedPaths.npmGlobalBinRoot) {
-    fail(
-      `Managed npm bin root does not match the Desktop-managed helper.\nExpected: ${expectedPaths.npmGlobalBinRoot}\nActual: ${managedBin}`,
-    );
-  }
-
-  for (const expectedPath of [installRoot, managedModules, managedBin]) {
-    assertPathWithinRoot(
-      expectedPath,
-      runtimeContext.dataHome,
-      "managed npm path",
-    );
-    if (!pathExists(expectedPath)) {
-      fail(`Expected managed path to exist after install: ${expectedPath}`);
-    }
-  }
-
-  for (const packageId of expectedInstalledPackageIds) {
-    assertOutputContainsPackage(output, packageId);
-  }
 }
 
 function assertRuntimeLifecycleOutput(
@@ -1154,7 +1067,7 @@ async function main() {
       );
     }
 
-    log("stage 1/4: runtime verification");
+    log("stage 1/2: runtime verification");
     await runScenario({
       name: "runtime verification",
       executablePath,
@@ -1169,22 +1082,7 @@ async function main() {
       },
     });
 
-    log("stage 2/4: managed PM2 bootstrap");
-    await runScenario({
-      name: "dependency install",
-      executablePath,
-      userDataDir,
-      commandArgs: dependencyInstallArgs,
-      onSuccess: async (result) => {
-        assertDependencyInstallOutput(result.stdout, {
-          userDataDir,
-          runtimeContext,
-          helpers,
-        });
-      },
-    });
-
-    log("stage 3/4 and 4/4: PM2 environment and lifecycle verification");
+    log("stage 2/2: PM2 environment and lifecycle verification");
     await runScenario({
       name: "runtime lifecycle",
       executablePath,

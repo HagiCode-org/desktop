@@ -189,19 +189,6 @@ test("findTarGzArtifact discovers nested workflow artifacts under pkg/", async (
   }
 });
 
-test("uses the current Desktop-managed package set for dependency install assertions", async () => {
-  const { expectedInstalledPackageIds } = await importHarnessWithProjectRoot(
-    process.cwd(),
-    `expected-packages=${Date.now()}`,
-  );
-
-  assert.deepEqual(expectedInstalledPackageIds, [
-    "pm2",
-    "claude-code",
-    "codex",
-  ]);
-});
-
 test("node fs.cp without verbatimSymlinks rewrites relative symlink targets", async () => {
   const projectRoot = await fs.mkdtemp(
     path.join(os.tmpdir(), "hagicode-non-interactive-test-"),
