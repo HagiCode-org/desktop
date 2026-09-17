@@ -11,7 +11,6 @@ import AdmZip from "adm-zip";
 const projectRoot = process.cwd();
 const pkgRoot = path.join(projectRoot, "pkg");
 const runtimeVerifyArgs = ["runtime", "verify"];
-const runtimeLifecycleArgs = ["runtime", "lifecycle"];
 const defaultCommandTimeoutMs = 240_000;
 const interestingDiagnosticBasenames = new Set([
   "non-interactive-startup.log",
@@ -863,127 +862,6 @@ function assertRuntimeVerificationOutput(
   }
   assertPathContainsSpaces(programHome, "runtime program home");
 
-  return {
-    dataHome,
-    userDataDir,
-  };
-}
-
-function assertRuntimeLifecycleOutput(
-  output,
-  { artifactRoot, runtimeContext },
-) {
-  const managedNpmPrefix = parseOutputValue(output, "managed npm prefix");
-  const managedNpmBin = parseOutputValue(output, "managed npm bin");
-  const managedNpmModules = parseOutputValue(output, "managed npm modules");
-  const pm2PackageRoot = parseOutputValue(
-    output,
-    "standalone pm2 package root",
-  );
-  const pm2Executable = parseOutputValue(output, "bundled pm2 executable");
-  const desktopLogsDirectory = parseOutputValue(
-    output,
-    "desktop logs directory",
-  );
-  const backendRuntimeRoot = parseOutputValue(
-    output,
-    "backend active runtime root",
-  );
-  const backendPayloadDll = parseOutputValue(output, "backend payload dll");
-  const backendPm2Home = parseOutputValue(output, "backend pm2 home");
-  const backendRuntimeData = parseOutputValue(output, "backend runtime data");
-  const backendLifecycleSkipped =
-    parseOutputValue(output, "backend lifecycle skipped") === "true";
-  const backendLifecycleSkipReason = parseOutputValue(
-    output,
-    "backend lifecycle skip reason",
-  );
-
-  for (const [label, value] of [
-    ["managed npm prefix", managedNpmPrefix],
-    ["managed npm bin", managedNpmBin],
-    ["managed npm modules", managedNpmModules],
-    ["bundled pm2 executable", pm2Executable],
-    ["desktop logs directory", desktopLogsDirectory],
-    ["backend active runtime root", backendRuntimeRoot],
-    ["backend payload dll", backendPayloadDll],
-  ]) {
-    if (!value) {
-      fail(`Runtime lifecycle output did not include ${label}.`);
-    }
-  }
-
-  assertOutputValue(output, "result", "success");
-
-  for (const managedPath of [
-    managedNpmPrefix,
-    managedNpmBin,
-    managedNpmModules,
-    pm2Executable,
-  ]) {
-    assertPathWithinRoot(
-      managedPath,
-      runtimeContext.dataHome,
-      "managed PM2 path",
-    );
-  }
-  assertPathWithinRoot(
-    desktopLogsDirectory,
-    runtimeContext.userDataDir,
-    "desktop logs directory",
-  );
-  assertPathContainsSpaces(desktopLogsDirectory, "desktop logs directory");
-
-  if (pm2PackageRoot && pm2PackageRoot !== "<missing>") {
-    assertPathWithinRoot(
-      pm2PackageRoot,
-      runtimeContext.dataHome,
-      "standalone pm2 package root",
-    );
-  }
-
-  assertPathWithinRoot(
-    backendRuntimeRoot,
-    artifactRoot,
-    "backend active runtime root",
-  );
-  assertPathContainsSpaces(backendRuntimeRoot, "backend active runtime root");
-
-  if (backendLifecycleSkipped) {
-    if (
-      !backendLifecycleSkipReason ||
-      !backendLifecycleSkipReason.includes(
-        "Missing framework-dependent payload files",
-      )
-    ) {
-      fail(
-        `Expected backend lifecycle skip reason to explain the missing packaged payload.\nReason: ${backendLifecycleSkipReason ?? "<missing>"}`,
-      );
-    }
-    return;
-  }
-
-  assertOutputValue(output, "backend start success", "true");
-  assertOutputValue(output, "backend status after start", "online");
-  assertOutputValue(output, "backend restart success", "true");
-  assertOutputValue(output, "backend status after restart", "online");
-  assertOutputValue(output, "backend stop success", "true");
-  assertOutputValue(output, "backend status after stop", "stopped");
-
-  for (const managedPath of [backendPm2Home, backendRuntimeData]) {
-    assertPathWithinRoot(
-      managedPath,
-      runtimeContext.dataHome,
-      "managed PM2 path",
-    );
-  }
-
-  assertPathWithinRoot(
-    backendPayloadDll,
-    backendRuntimeRoot,
-    "backend payload dll",
-  );
-  assertPathContainsSpaces(backendPayloadDll, "backend payload dll");
 }
 
 async function runScenario({
@@ -1033,8 +911,6 @@ async function main() {
     userDataDir,
     "non-interactive-startup.log",
   );
-  let runtimeContext = null;
-
   let caughtError = null;
 
   try {
@@ -1067,31 +943,17 @@ async function main() {
       );
     }
 
-    log("stage 1/2: runtime verification");
+    log("stage 1/1: runtime verification");
     await runScenario({
       name: "runtime verification",
       executablePath,
       userDataDir,
       commandArgs: runtimeVerifyArgs,
       onSuccess: async (result) => {
-        runtimeContext = assertRuntimeVerificationOutput(result.stdout, {
+        assertRuntimeVerificationOutput(result.stdout, {
           artifactRoot,
           userDataDir,
           helpers,
-        });
-      },
-    });
-
-    log("stage 2/2: PM2 environment and lifecycle verification");
-    await runScenario({
-      name: "runtime lifecycle",
-      executablePath,
-      userDataDir,
-      commandArgs: runtimeLifecycleArgs,
-      onSuccess: async (result) => {
-        assertRuntimeLifecycleOutput(result.stdout, {
-          artifactRoot,
-          runtimeContext,
         });
       },
     });

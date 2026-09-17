@@ -62,7 +62,7 @@ jobs:
             --artifact-name "release-linux-appimage-assets,hagicode-linux-appimage-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification and dependency install integration
+      - name: Run non-interactive runtime verification
         run: npm run package:non-interactive-integration
 
   integration-macos:
@@ -115,7 +115,7 @@ jobs:
             --artifact-name "release-macos-arm64-dmg-assets,hagicode-macos-arm64-dmg-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification and dependency install integration
+      - name: Run non-interactive runtime verification
         run: npm run package:non-interactive-integration
 
   integration-windows:
@@ -164,6 +164,6 @@ jobs:
             --artifact-name "release-windows-portable-assets,hagicode-windows-portable-${{ github.event.workflow_run.head_sha }}" \
             --output-dir pkg
 
-      - name: Run non-interactive runtime verification and dependency install integration
+      - name: Run non-interactive runtime verification
         shell: bash
         run: npm run package:non-interactive-integration
