@@ -301,6 +301,7 @@ jobs:
         with:
           tag_name: ${{ needs.prepare-release.outputs.release_tag }}
           overwrite_files: "true"
+          preserve_order: "true"
           files: |
             release-assets/windows/**/*.exe
             release-assets/windows/**/*.msix
@@ -312,13 +313,15 @@ jobs:
     needs:
       - prepare-release
       - build-unix
-    if: ${{ needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-unix.result == 'success' }}
+      - publish-windows-release
+    if: ${{ always() && needs.prepare-release.outputs.is_tag_release == 'true' && needs.build-unix.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: production
       deployment: false
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         target:
           - id: linux-appimage
