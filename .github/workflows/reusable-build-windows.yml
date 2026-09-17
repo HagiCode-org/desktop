@@ -253,8 +253,9 @@ jobs:
         if: matrix.target.id == 'msix'
         shell: cmd
         run: |
-          call npm run generate:store-bindings
-          call build.cmd --target Build -- --platform win --target msix --artifact-output-dir pkg --metadata-output-path pkg/store-build-metadata.json --overlay-output-path forge.store-config.json --platform-id win-x64
+          call build.cmd --target Setup
+          call npm run build:win:store -- --artifact-output-dir pkg --metadata-output-path pkg/store-build-metadata.json --overlay-output-path forge.store-config.json --platform-id win-x64
+          call npm run package:smoke-test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HAGICODE_EMBEDDED_DOTNET_PLATFORM: win-x64
