@@ -55,6 +55,9 @@ on:
 permissions:
   contents: write
 
+env:
+  HAGISCRIPT_VERSION: "latest"
+
 jobs:
   plan:
     name: Plan R2 Upload Shards
@@ -201,6 +204,11 @@ jobs:
 
     - name: Install Node dependencies
       run: npm ci
+
+    - name: Install global hagiscript
+      run: |
+        npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+        hagiscript --version
 
     - name: Write shard asset manifest
       env:

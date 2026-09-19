@@ -18,6 +18,7 @@ from pybuild.native.storage_publish import (
     list_objects,
 )
 from pybuild.native.params import require_storage_credentials
+from pybuild.native.r2_blob import _format_r2_error
 
 
 class StorageProviderTests(unittest.TestCase):
@@ -144,6 +145,20 @@ class StorageProviderTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.uploaded_blob_names, ["v1.0.0/app.bin"])
         client.upload_file.assert_called()
+
+    def test_format_r2_error_includes_response_metadata(self) -> None:
+        error = RuntimeError("request failed")
+        error.response = {  # type: ignore[attr-defined]
+            "Error": {"Code": "SlowDown", "Message": "Reduce your request rate"},
+            "ResponseMetadata": {"HTTPStatusCode": 503, "RequestId": "request-123"},
+        }
+
+        detail = _format_r2_error(error)
+
+        self.assertIn("RuntimeError", detail)
+        self.assertIn("code=SlowDown", detail)
+        self.assertIn("http_status=503", detail)
+        self.assertIn("request_id=request-123", detail)
 
     def test_list_and_index_r2_mocked(self) -> None:
         client = MagicMock()

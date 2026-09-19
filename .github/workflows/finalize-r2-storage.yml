@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+env:
+  HAGISCRIPT_VERSION: "latest"
+
 jobs:
   finalize:
     name: Finalize R2 Storage Sync
@@ -33,6 +36,11 @@ jobs:
 
     - name: Install Node dependencies
       run: npm ci
+
+    - name: Install global hagiscript
+      run: |
+        npm install --global "@hagicode/hagiscript@${HAGISCRIPT_VERSION}"
+        hagiscript --version
 
     - name: Download R2 upload plan
       uses: actions/download-artifact@v4

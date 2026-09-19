@@ -6,11 +6,38 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .types import BlobInfo, PublishResult
 from .path_utils import build_blob_path
 
 LOG = "[PYBUILD][r2]"
+
+
+def _format_r2_error(error: Exception) -> str:
+    """Return actionable S3 error metadata without exposing request credentials."""
+    response: Any = getattr(error, "response", None)
+    if not isinstance(response, dict):
+        return f"{type(error).__name__}: {error}"
+
+    error_data = response.get("Error")
+    metadata = response.get("ResponseMetadata")
+    fields = [type(error).__name__]
+    if isinstance(error_data, dict):
+        code = error_data.get("Code")
+        message = error_data.get("Message")
+        if code:
+            fields.append(f"code={code}")
+        if message:
+            fields.append(f"message={message}")
+    if isinstance(metadata, dict):
+        status = metadata.get("HTTPStatusCode")
+        request_id = metadata.get("RequestId")
+        if status is not None:
+            fields.append(f"http_status={status}")
+        if request_id:
+            fields.append(f"request_id={request_id}")
+    return ", ".join(fields)
 
 
 def _boto3_client(
@@ -96,8 +123,13 @@ class R2BlobClient:
     def upload_file(self, object_key: str, file_path: Path, retries: int = 3) -> None:
         attempts = max(1, retries + 1)
         last_error: Exception | None = None
+        file_size = file_path.stat().st_size
         for attempt in range(1, attempts + 1):
             try:
+                print(
+                    f"{LOG} upload attempt {attempt}/{attempts}: "
+                    f"bucket={self.bucket} key={object_key} bytes={file_size}"
+                )
                 try:
                     self._client.upload_file(
                         str(file_path),
@@ -111,15 +143,21 @@ class R2BlobClient:
             except Exception as error:  # noqa: BLE001
                 last_error = error
                 if attempt < attempts:
+                    delay = min(2 * attempt, 10)
                     print(
                         f"{LOG} upload attempt {attempt}/{attempts} failed "
-                        f"for {object_key}: {error}"
+                        f"for key={object_key}: {_format_r2_error(error)}; "
+                        f"retry_in_seconds={delay}"
                     )
-                    time.sleep(min(2 * attempt, 10))
+                    time.sleep(delay)
                 else:
                     break
         # Final fallback: PutObject body stream
         try:
+            print(
+                f"{LOG} upload_file exhausted retries; attempting put_object fallback: "
+                f"bucket={self.bucket} key={object_key} bytes={file_size}"
+            )
             with file_path.open("rb") as fh:
                 self._client.put_object(
                     Bucket=self.bucket,
@@ -130,6 +168,10 @@ class R2BlobClient:
             return
         except Exception as error:  # noqa: BLE001
             last_error = error
+            print(
+                f"{LOG} put_object fallback failed for key={object_key}: "
+                f"{_format_r2_error(error)}"
+            )
         raise last_error or RuntimeError(f"上传 {object_key} 失败")
 
     def upload_bytes(
@@ -204,6 +246,10 @@ def upload_artifacts(
     result = PublishResult()
     print(f"{LOG} bucket: {client.bucket}")
     print(f"{LOG} version prefix: {version_prefix or '(none)'}")
+    print(
+        f"{LOG} upload settings: retries={upload_retries} "
+        f"concurrency={max(1, upload_concurrency)}"
+    )
 
     distinct_files = sorted({path for path in file_paths if path}, key=str.lower)
     concurrency = max(1, upload_concurrency)
@@ -223,7 +269,9 @@ def upload_artifacts(
             print(f"{LOG} Upload successful: {url}")
             return "uploaded", object_key, url
         except Exception as error:  # noqa: BLE001
-            return "failed", object_key, str(error)
+            detail = _format_r2_error(error)
+            print(f"{LOG} upload failed: key={object_key} detail={detail}")
+            return "failed", object_key, detail
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         futures = {executor.submit(_upload_one, path): path for path in distinct_files}

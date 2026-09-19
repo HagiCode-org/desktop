@@ -81,7 +81,11 @@ def open_storage_context(
         raise ValueError("R2 config validation failed")
     print(
         f"{LOG} provider=r2 public_base={public_base or '(none)'} "
-        f"version_prefix={version_prefix or '(none)'}"
+        f"version_prefix={version_prefix or '(none)'} bucket={bucket} "
+        f"region={region} path_style={path_style} "
+        f"endpoint_configured={bool(endpoint)} "
+        f"access_key_configured={bool(access_key)} "
+        f"secret_key_configured={bool(secret_key)}"
     )
     return ctx
 
