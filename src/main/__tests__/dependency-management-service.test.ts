@@ -23,6 +23,14 @@ describe('dependency management service contract', () => {
     assert.match(source, /const DEFAULT_MIRROR_SETTINGS: NpmMirrorSettingsInput = \{\s*enabled: false,\s*\};/);
     assert.match(source, /return this\.normalizeMirrorSettings\(DEFAULT_MIRROR_SETTINGS\);/);
   });
+
+  it('uses the shared resolver for managed and external CLI discovery', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /private async getManagedPackagePaths[\s\S]*?executablePath: await resolveManagedCliExecutablePath\(\{/);
+    assert.match(source, /private async findExecutableOnPath[\s\S]*?resolveManagedCliExecutablePath\(\{/);
+    assert.doesNotMatch(source, /where\.exe/);
+  });
 });
 
 describe('Windows command launch contract', () => {

@@ -654,13 +654,12 @@ export class DependencyManagementService {
   }
 
   private async findExecutableOnPath(binName: string, env: NodeJS.ProcessEnv): Promise<string | null> {
-    try {
-      const command = this.platform === 'win32' ? 'where.exe' : 'which';
-      const result = await this.runCommand(command, [binName], undefined, env);
-      return result.exitCode === 0 ? firstMeaningfulLine(result.stdout) : null;
-    } catch {
-      return null;
-    }
+    return (await resolveManagedCliExecutablePath({
+      binName,
+      platform: this.platform,
+      staticExecutablePath: '',
+      env,
+    })) || null;
   }
 
   private async detectInstalledPackageFromInventory(
