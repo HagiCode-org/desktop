@@ -7,17 +7,44 @@ import {
   buildStepScripts,
   createStoreBuildMetadata,
   resolveStoreRuntimePolicyEnvironment,
+  validateStoreMsixRuntimeEntries,
 } from './build-store-package.js';
 import { toWindowsPackageVersion } from './store-package-config.js';
 
-test('buildStepScripts keeps Store builds on the production build entrypoint', () => {
+test('Store builds prepare only the .NET runtime before production assets', () => {
   const scripts = {
+    'prepare:runtime': 'node scripts/prepare-embedded-runtime.js',
     'build:prod': 'npm run build:all',
+    'prepare:bundled-toolchain': 'node scripts/prepare-bundled-toolchain.js',
   };
 
   assert.deepEqual(buildStepScripts(scripts), [
+    'prepare:runtime',
     'build:prod',
   ]);
+  assert.throws(() => buildStepScripts({ 'build:prod': scripts['build:prod'] }), /prepare:runtime/);
+});
+
+test('Store MSIX requires the pinned .NET runtime and excludes Node', () => {
+  const target = { hostFxrVersion: '10.0.10', netCoreVersion: '10.0.10', aspNetCoreVersion: '10.0.10' };
+  const prefix = 'VFS/ProgramFilesX64/Hagicode Desktop/resources/extra/runtime/components/dotnet/runtime/win-x64/current/';
+  const entries = [
+    `${prefix}dotnet.exe`,
+    `${prefix}host/fxr/10.0.10/hostfxr.dll`,
+    `${prefix}shared/Microsoft.NETCore.App/10.0.10/System.Private.CoreLib.dll`,
+    `${prefix}shared/Microsoft.AspNetCore.App/10.0.10/Microsoft.AspNetCore.dll`,
+  ];
+  assert.doesNotThrow(() => validateStoreMsixRuntimeEntries(entries, 'win-x64', target));
+  assert.throws(() => validateStoreMsixRuntimeEntries(entries.slice(1), 'win-x64', target), /dotnet.exe/);
+  assert.throws(() => validateStoreMsixRuntimeEntries(entries.map((entry) => entry.replace('10.0.10', '9.0.0')), 'win-x64', target), /runtime/);
+  assert.throws(() => validateStoreMsixRuntimeEntries([
+    ...entries,
+    'VFS/ProgramFilesX64/Hagicode Desktop/resources/extra/runtime/components/node/runtime/node.exe',
+  ], 'win-x64', target), /Node runtime/);
+  assert.throws(() => validateStoreMsixRuntimeEntries([
+    ...entries,
+    'app/resources/extra/runtime/components/node/runtime/package.json',
+  ], 'win-x64', target), /Node runtime/);
 });
 
 test('resolveStoreRuntimePolicyEnvironment defaults Store builds to external dependency management', () => {

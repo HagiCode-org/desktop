@@ -18,6 +18,7 @@ import {
   validateServerPayloadRoot,
   writeStoreForgeConfigOverlay,
 } from './store-package-config.js';
+import { readPinnedRuntimeConfig } from './embedded-runtime-config.js';
 const RUNTIME_CONSUMER_ENV = 'HAGICODE_RUNTIME_CONSUMER';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -121,19 +122,34 @@ function resolveWindowsArch(platformId) {
 }
 
 export function buildStepScripts(scripts) {
-  const selectScript = (preferred, fallback) => {
-    if (typeof scripts[preferred] === 'string') {
-      return preferred;
-    }
-    if (typeof scripts[fallback] === 'string') {
-      return fallback;
-    }
-    return null;
-  };
+  if (typeof scripts['prepare:runtime'] !== 'string') {
+    throw new Error('Store packaging requires the Desktop prepare:runtime script.');
+  }
+  if (typeof scripts['build:prod'] !== 'string') {
+    throw new Error('Store packaging requires the Desktop build:prod script.');
+  }
+  return ['prepare:runtime', 'build:prod'];
+}
 
-  return [
-    typeof scripts['build:prod'] === 'string' ? 'build:prod' : null,
-  ].filter(Boolean);
+export function validateStoreMsixRuntimeEntries(entries, platformId, runtimeTarget) {
+  const names = entries.map((entry) => entry.replaceAll('\\', '/').toLowerCase());
+  const runtimeRoot = `resources/extra/runtime/components/dotnet/runtime/${platformId}/current/`.toLowerCase();
+  const required = [
+    'dotnet.exe',
+    `host/fxr/${runtimeTarget.hostFxrVersion}/hostfxr.dll`,
+    `shared/Microsoft.NETCore.App/${runtimeTarget.netCoreVersion}/System.Private.CoreLib.dll`,
+    `shared/Microsoft.AspNetCore.App/${runtimeTarget.aspNetCoreVersion}/Microsoft.AspNetCore.dll`,
+  ];
+  const missing = required.filter((relativePath) =>
+    !names.some((name) => name.endsWith(`${runtimeRoot}${relativePath.toLowerCase()}`)));
+  if (missing.length > 0) {
+    throw new Error(`Store MSIX is missing the bundled .NET runtime: ${missing.join(', ')}`);
+  }
+  if (names.some((name) =>
+    name.includes('resources/extra/runtime/components/node/') ||
+    name.endsWith('/node.exe'))) {
+    throw new Error('Store MSIX must not bundle a Node runtime.');
+  }
 }
 
 function resolveStoreRuntimePolicyEnvironment(baseEnv = process.env) {
@@ -432,6 +448,15 @@ export async function buildStorePackage(rawOptions = {}) {
     }
 
     const packagedMsixPath = packagedMsixArtifacts[0];
+    const runtimeTarget = readPinnedRuntimeConfig().platforms[options.platformId];
+    if (!runtimeTarget) {
+      throw new Error(`No pinned .NET runtime is configured for ${options.platformId}.`);
+    }
+    validateStoreMsixRuntimeEntries(
+      new AdmZip(packagedMsixPath).getEntries().map((entry) => entry.entryName),
+      options.platformId,
+      runtimeTarget,
+    );
 
     const buildMetadata = createStoreBuildMetadata({
       artifacts: [packagedMsixPath],
