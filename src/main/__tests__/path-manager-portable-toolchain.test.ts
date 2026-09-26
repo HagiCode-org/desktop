@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildNodeMajorNpmGlobalPaths,
-  buildPm2MajorHomePaths,
   buildNpmGlobalCommandArtifactPaths,
 } from '../portable-toolchain-paths.js';
 
-describe('external npm global and PM2 paths', () => {
+describe('external npm global paths', () => {
   it('resolves Node-major npm global paths under userData on linux and macOS', () => {
     const node22 = buildNodeMajorNpmGlobalPaths({
       runtimeDataRoot: '/home/user/.hagicode/runtime-data',
@@ -50,33 +49,4 @@ describe('external npm global and PM2 paths', () => {
     ]);
   });
 
-  it('derives Desktop-managed PM2 homes under userData by PM2 major version', () => {
-    const linuxPaths = buildPm2MajorHomePaths({
-      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
-      pm2Version: '6.0.14',
-      platform: 'linux',
-    });
-    const windowsPaths = buildPm2MajorHomePaths({
-      runtimeDataRoot: 'C:\\Users\\Test\\.hagicode\\runtime-data',
-      pm2Version: '7.0.1',
-      platform: 'win32',
-    });
-
-    assert.equal(linuxPaths.pm2Home, '/home/user/.hagicode/runtime-data/pm2/6');
-    assert.equal(windowsPaths.pm2Home, 'C:\\Users\\Test\\.hagicode\\runtime-data\\pm2\\7');
-  });
-
-  it('falls back to a deterministic PM2 home when the PM2 version is invalid', () => {
-    const paths = buildPm2MajorHomePaths({
-      runtimeDataRoot: '/home/user/.hagicode/runtime-data',
-      pm2Version: 'not-a-version',
-      pm2MajorVersion: 'bad-input',
-      platform: 'linux',
-    });
-
-    assert.equal(
-      paths.pm2Home,
-      '/home/user/.hagicode/runtime-data/pm2/7',
-    );
-  });
 });

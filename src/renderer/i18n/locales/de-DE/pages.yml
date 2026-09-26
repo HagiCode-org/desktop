@@ -118,7 +118,7 @@ settings:
       retentionPolicy: Bei der Aufbewahrungsbereinigung werden nur zwischengespeicherte Archive und Metadaten entfernt. Installierte Versionsverzeichnisse bleiben unberührt.
   runtimeDataPath:
     title: Runtime data storage path
-    description: Choose where Desktop stores runtime-managed files, PM2 state, logs, and other runtime data.
+    description: Choose where Desktop stores runtime-managed files, logs, and other runtime data.
     activePreset: 'Current effective preset: {{preset}}'
     environmentOverrideBadge: Environment override active
     lockedByRuntime: Locked by Microsoft Store
@@ -135,7 +135,7 @@ settings:
         description: Stores runtime data under the current user home directory. Best for deployments that need a stable shared path.
     warnings:
       noMigration: Changing this setting only updates the target path. Desktop does not migrate existing runtime data automatically.
-      restart: Saving a changed preset stops and starts managed PM2 services so the new runtime data root takes effect immediately.
+      restart: Saving a changed preset restarts the managed backend so the new runtime data root takes effect immediately.
     actions:
       save: Save Changes
       saving: Saving...

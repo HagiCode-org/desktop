@@ -72,17 +72,6 @@ const staticManagedNpmPackages = [
     required: true,
   },
   {
-    id: 'pm2',
-    packageName: 'pm2',
-    displayName: 'PM2',
-    descriptionKey: 'dependencyManagement.packages.pm2.description',
-    binName: 'pm2',
-    installSpec: 'pm2@7.0.1',
-    requiredVersionRange: '>=7.0.1',
-    category: 'workflow',
-    required: true,
-  },
-  {
     id: 'claude-code',
     packageName: '@anthropic-ai/claude-code',
     displayName: 'Claude Code',

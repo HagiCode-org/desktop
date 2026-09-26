@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import log from 'electron-log';
 import { electron } from '../electron-api.js';
 import { ConfigManager } from './config.js';
@@ -24,19 +25,6 @@ import { validateFrameworkDependentPayload } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility } from './desktop-compatibility.js';
 import type { DependencyManagementService } from './dependency-management-service.js';
 import {
-  HagiscriptRuntimeContextResolver,
-  type HagiscriptRuntimeContext,
-} from './hagiscript-runtime-context.js';
-import {
-  HagiscriptServerManager,
-  type HagiscriptManagedServerStatus,
-  type HagiscriptRuntimeStateReport,
-  type HagiscriptRuntimeStateResult,
-  type HagiscriptServerLifecycleAction,
-  type HagiscriptServerLifecycleResult,
-  type HagiscriptServerStartupEnvironmentResult,
-} from './hagiscript-server-manager.js';
-import {
   buildAccessUrl,
   coerceListenHost,
   DEFAULT_WEB_SERVICE_HOST,
@@ -48,19 +36,13 @@ import {
   resolveSteamIntegration,
   HAGICODE_STEAM_ACHIEVEMENT_SYNC_ENV_KEY,
 } from './steam-integration-env.js';
-import { isWindowsStoreRuntime } from './windows-store-runtime.js';
+import {
+  BackendProcessOwner,
+  type BackendProcessLaunch,
+  type BackendProcessSnapshot,
+} from './backend-process-owner.js';
 
 const { app } = electron;
-
-const MANAGED_PM2_ONLINE_SETTLE_TIMEOUT_MS = 8_000;
-const MANAGED_PM2_ONLINE_POLL_INTERVAL_MS = 500;
-const PM2_PERMISSION_DENIED_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> = [
-  { pattern: /access is denied/i, label: 'Access is denied' },
-  { pattern: /\bEACCES\b/i, label: 'EACCES' },
-  { pattern: /\bEPERM\b/i, label: 'EPERM' },
-  { pattern: /permission denied/i, label: 'permission denied' },
-  { pattern: /operation not permitted/i, label: 'operation not permitted' },
-];
 
 export type ProcessStatus = 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
 
@@ -87,6 +69,7 @@ export interface ProcessInfo {
   status: ProcessStatus;
   uptime: number;
   startTime: number | null;
+  pid: number | null;
   url: string | null;
   restartCount: number;
   phase: StartupPhase;
@@ -121,10 +104,29 @@ interface WebServiceManagerDeps {
   configManager?: ConfigManager | null;
   httpClient?: DesktopHttpClient;
   dependencyManagementService?: DependencyManagementService | null;
-  hagiscriptServerManager?: HagiscriptServerManager;
-  hagiscriptRuntimeContextResolver?: HagiscriptRuntimeContextResolver;
+  backendProcessOwner?: BackendProcessOwner;
+  pathManager?: WebServicePathManager;
+  resolveLaunchContext?: typeof resolveManagedLaunchContextForRuntimeRoot;
+  prepareServiceEnvironment?: () => Promise<NodeJS.ProcessEnv>;
+  startupTimeoutMs?: number;
+  shutdownTimeoutMs?: number;
+  maxRestartAttempts?: number;
   resolveTurboEngineDlcProgramOption?: (() => { enabled: boolean | null; source: string | null } | null) | null;
 }
+
+type WebServicePathManager = Pick<
+  PathManager,
+  | 'getRuntimeDataHome'
+  | 'getCurrentPlatform'
+  | 'getDesktopLogsDirectory'
+  | 'getDesktopAppsRoot'
+  | 'getDesktopConfigDirectory'
+  | 'getEmbeddedDotnetPath'
+  | 'getInstalledVersionPath'
+  | 'getPaths'
+  | 'getDataDirectory'
+  | 'getAppSettingsPath'
+>;
 
 export interface StartupFailureInfo {
   summary: string;
@@ -190,16 +192,14 @@ export class PCodeWebServiceManager {
   private readonly configManager: ConfigManager | null;
   private readonly httpClient: DesktopHttpClient;
   private dependencyManagementService: DependencyManagementService | null;
-  private hagiscriptRuntimeContextResolver: HagiscriptRuntimeContextResolver | null;
-  private readonly hagiscriptServerManager: HagiscriptServerManager;
   private readonly resolveTurboEngineDlcProgramOption: (() => { enabled: boolean | null; source: string | null } | null) | null;
   private status: ProcessStatus = 'stopped';
   private startTime: number | null = null;
   private restartCount: number = 0;
   private maxRestartAttempts: number = 3;
-  private startTimeout: number = 30000; // 30 seconds
-  private stopTimeout: number = 10000; // 10 seconds
-  private pathManager: PathManager;
+  private startTimeout: number;
+  private stopTimeout: number;
+  private pathManager: WebServicePathManager;
   private currentPhase: StartupPhase = StartupPhase.Idle;
   private activeVersionPath: string | null = null; // Path to the active version installation
   private entryPoint: EntryPoint | null = null; // EntryPoint from manifest
@@ -213,12 +213,20 @@ export class PCodeWebServiceManager {
   private startupLogLines: string[] = [];
   private startupLogTruncated: boolean = false;
   private lastResolvedServiceEnv: NodeJS.ProcessEnv | null = null;
-  private lastPm2StatusWarningKey: string | null = null;
-  private repeatedPm2StatusWarningSuppressed: boolean = false;
-  private cachedManagedLaunchContext: { runtimeRoot: string; context: ManagedLaunchContext } | null = null;
   private lastHealthCheckLogState: 'healthy' | 'unhealthy' | null = null;
   private distributionMode: DistributionMode = 'normal';
   private statusRequestPromise: Promise<ProcessInfo> | null = null;
+  private readonly backendProcessOwner: BackendProcessOwner;
+  private readonly orphanReconciliation: Promise<void>;
+  private orphanReconciliationError: Error | null = null;
+  private lifecycleQueue: Promise<void> = Promise.resolve();
+  private cleanupPromise: Promise<void> | null = null;
+  private ownedBackend: BackendProcessSnapshot | null = null;
+  private explicitStopInProgress = false;
+  private explicitStopRequested = false;
+  private lastBackendWasRunning = false;
+  private readonly resolveLaunchContext: typeof resolveManagedLaunchContextForRuntimeRoot;
+  private readonly prepareServiceEnvironmentOverride?: () => Promise<NodeJS.ProcessEnv>;
 
   constructor(config: WebServiceConfig, deps: WebServiceManagerDeps = {}) {
     this.config = {
@@ -227,16 +235,46 @@ export class PCodeWebServiceManager {
     };
     this.configManager = deps.configManager ?? null;
     this.httpClient = deps.httpClient ?? desktopHttpClient;
-    this.pathManager = PathManager.getInstance();
+    this.pathManager = deps.pathManager ?? PathManager.getInstance();
+    this.resolveLaunchContext = deps.resolveLaunchContext ?? resolveManagedLaunchContextForRuntimeRoot;
+    this.prepareServiceEnvironmentOverride = deps.prepareServiceEnvironment;
+    this.startTimeout = deps.startupTimeoutMs ?? 30_000;
+    this.stopTimeout = deps.shutdownTimeoutMs ?? 10_000;
+    this.maxRestartAttempts = deps.maxRestartAttempts ?? 3;
     this.dependencyManagementService = deps.dependencyManagementService ?? null;
-    this.hagiscriptRuntimeContextResolver = deps.hagiscriptRuntimeContextResolver
-      ?? (this.dependencyManagementService
-        ? new HagiscriptRuntimeContextResolver({
-            pathManager: this.pathManager,
-          })
-        : null);
-    this.hagiscriptServerManager = deps.hagiscriptServerManager ?? new HagiscriptServerManager();
     this.resolveTurboEngineDlcProgramOption = deps.resolveTurboEngineDlcProgramOption ?? null;
+    this.backendProcessOwner = deps.backendProcessOwner ?? new BackendProcessOwner(
+      path.join(this.pathManager.getRuntimeDataHome(), 'backend-process.json'),
+      {
+        onOutput: (stream, text) => this.appendDiagnosticOutput(`Backend ${stream}`, text),
+        onError: (message, error) => {
+          this.appendStartupLogLine(message);
+          log.error('[WebService][BackendProcessOwner]', message, error);
+        },
+        onExit: (code, signal) => {
+          const exitSummary = `Owned backend exited (code=${code ?? 'n/a'}, signal=${signal ?? 'none'}).`;
+          this.appendStartupLogLine(exitSummary);
+          if (
+            this.lastBackendWasRunning
+            && !this.explicitStopRequested
+            && !this.explicitStopInProgress
+            && !this.cleanupPromise
+          ) {
+            this.scheduleUnexpectedBackendRestart();
+          }
+        },
+      },
+    );
+    this.orphanReconciliation = this.backendProcessOwner.reconcileOrphan().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      this.orphanReconciliationError = new Error(
+        `Unable to safely reconcile a previous Desktop-owned backend: ${message}`,
+      );
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.appendStartupLogLine(this.orphanReconciliationError.message);
+      log.error('[WebService] Backend orphan reconciliation failed:', error);
+    });
 
     this.savedConfigInitialization = this.initializeSavedConfig().catch(error => {
       log.error('[WebService] Failed to initialize saved bind config:', error);
@@ -254,17 +292,11 @@ export class PCodeWebServiceManager {
 
   setDistributionMode(distributionMode: DistributionMode): void {
     this.distributionMode = distributionMode;
-    this.cachedManagedLaunchContext = null;
     log.info('[WebService] Distribution mode set:', { distributionMode });
   }
 
   setDependencyManagementService(dependencyManagementService: DependencyManagementService | null): void {
     this.dependencyManagementService = dependencyManagementService;
-    this.hagiscriptRuntimeContextResolver = dependencyManagementService
-      ? new HagiscriptRuntimeContextResolver({
-          pathManager: this.pathManager,
-        })
-      : null;
   }
 
   /**
@@ -286,7 +318,6 @@ export class PCodeWebServiceManager {
     this.activeRuntime = runtime;
     this.activeVersionId = runtime?.versionId ?? null;
     this.activeVersionPath = runtime?.rootPath ?? null;
-    this.cachedManagedLaunchContext = null;
     this.lastHealthCheckLogState = null;
 
     if (runtime) {
@@ -359,6 +390,12 @@ export class PCodeWebServiceManager {
     await this.savedConfigInitialization;
   }
 
+  private async runLifecycleExclusive<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.lifecycleQueue.then(operation, operation);
+    this.lifecycleQueue = result.then(() => undefined, () => undefined);
+    return await result;
+  }
+
   private resetStartupLogBuffer(): void {
     this.startupLogLines = [];
     this.startupLogTruncated = false;
@@ -388,34 +425,6 @@ export class PCodeWebServiceManager {
     for (const line of lines) {
       this.appendStartupLogLine(`${label}: ${line}`);
     }
-  }
-
-  private resetPm2StatusWarningState(): void {
-    this.lastPm2StatusWarningKey = null;
-    this.repeatedPm2StatusWarningSuppressed = false;
-  }
-
-  private logPm2StatusFailure(result: HagiscriptServerLifecycleResult): void {
-    const warningKey = `${result.action}:${result.status}:${result.summary}`;
-    if (this.lastPm2StatusWarningKey === warningKey) {
-      if (!this.repeatedPm2StatusWarningSuppressed) {
-        log.info('[WebService] Suppressing repeated Desktop SDK PM2 status warnings after the initial failure:', {
-          action: result.action,
-          status: result.status,
-          summary: result.summary,
-        });
-        this.repeatedPm2StatusWarningSuppressed = true;
-      }
-      return;
-    }
-
-    this.lastPm2StatusWarningKey = warningKey;
-    this.repeatedPm2StatusWarningSuppressed = false;
-    log.warn('[WebService] Desktop SDK PM2 status unavailable:', {
-      action: result.action,
-      status: result.status,
-      summary: result.summary,
-    });
   }
 
   private buildStartupFailureInfo(summary: string): StartupFailureInfo {
@@ -466,288 +475,28 @@ export class PCodeWebServiceManager {
     };
   }
 
-  private async appendDiagnosticFile(pathValue: string): Promise<void> {
-    try {
-      const content = await fs.readFile(pathValue, 'utf8');
-      this.appendStartupLogLine(`Diagnostic file: ${pathValue}`);
-      this.appendDiagnosticOutput(path.basename(pathValue), content);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return;
-      }
-
-      log.warn('[WebService] Failed to read diagnostic file:', { path: pathValue, error });
-    }
-  }
-
-  private async appendHagiscriptDiagnostics(input: {
-    summary: string;
-    stdout: string;
-    stderr: string;
-    logPaths: readonly string[];
-  }): Promise<void> {
-    this.appendStartupLogLine('Desktop SDK failure summary: ' + input.summary);
-    this.appendDiagnosticOutput('Desktop SDK stdout', input.stdout);
-    this.appendDiagnosticOutput('Desktop SDK stderr', input.stderr);
-    for (const logPath of input.logPaths) {
-      await this.appendDiagnosticFile(logPath);
-    }
-  }
-
-  private async buildHagiscriptLifecycleFailureResult(result: HagiscriptServerLifecycleResult): Promise<StartResult> {
-    await this.appendHagiscriptDiagnostics({
-      summary: result.summary,
-      stdout: result.stdout,
-      stderr: result.stderr,
-      logPaths: result.logPaths,
-    });
-    const failure = this.buildStartupFailureInfo(result.summary);
-
-    return {
-      success: false,
-      resultSession: {
-        exitCode: result.exitCode ?? -1,
-        stdout: result.stdout,
-        stderr: result.stderr || result.summary,
-        duration: 0,
-        timestamp: failure.timestamp,
-        success: false,
-        errorMessage: result.summary,
-        port: failure.port,
-      },
-      parsedResult: {
-        success: false,
-        errorMessage: result.summary,
-        rawOutput: failure.log,
-        port: failure.port,
-      },
-      port: failure.port,
-    };
-  }
-
-  private isWindowsStoreExecutionEnvironment(): boolean {
-    const runtimeProcess = process as NodeJS.Process & { windowsStore?: boolean; defaultApp?: boolean };
-    return isWindowsStoreRuntime({
-      platform: process.platform,
-      inheritedFlag: process.env.HAGICODE_DESKTOP_WINDOWS_STORE,
-      processWindowsStore: Boolean(runtimeProcess.windowsStore),
-      execPath: process.execPath,
-      isPackaged: app.isPackaged,
-      defaultApp: runtimeProcess.defaultApp,
-    });
-  }
-
-  private async appendManagedPm2InvocationPlan(
-    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
-    result: HagiscriptServerStartupEnvironmentResult,
-  ): Promise<void> {
-    const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
-    this.appendStartupLogLine(
-      `Desktop runtime packaging: ${windowsStoreRuntime ? 'Microsoft Store/MSIX' : 'standard'}`,
-    );
-
-    if (!result.success || !result.environment) {
-      this.appendStartupLogLine(
-        `Desktop SDK PM2 ${action} launch plan could not be resolved: ${result.summary}`,
-      );
-
-      for (const logPath of result.logPaths) {
-        await this.appendDiagnosticFile(logPath);
-      }
-
-      return;
-    }
-
-    const environment = result.environment;
-    const nodeLessLaunch = environment.nodePath.length === 0;
-    log.info('[WebService] Desktop SDK PM2 launch plan:', {
-      action,
-      windowsStoreRuntime,
-      appName: environment.appName,
-      cwd: environment.cwd,
-      script: environment.script,
-      args: environment.args,
-      pathKey: environment.pathKey,
-      pathEntries: environment.pathEntries,
-      pm2Home: environment.pm2Home,
-      pm2BinaryPath: environment.pm2BinaryPath,
-      nodePath: environment.nodePath,
-      nodeLessLaunch,
-      runtimeFilesDir: environment.runtimeFilesDir,
-      envFilePath: environment.envFilePath,
-    });
-
-    this.appendStartupLogLine(`Desktop SDK PM2 ${action} invocation requested for ${environment.appName}`);
-    if (nodeLessLaunch) {
-      this.appendStartupLogLine(
-        `Desktop SDK PM2 ${action} using node-less released-service launch via dotnet: ${environment.script}`,
-      );
-    }
-    this.appendStartupLogLine(`Desktop SDK PM2 node path: ${environment.nodePath}`);
-    this.appendStartupLogLine(`Desktop SDK PM2 binary path: ${environment.pm2BinaryPath}`);
-    this.appendStartupLogLine(`Desktop SDK PM2 cwd: ${environment.cwd}`);
-    this.appendStartupLogLine(`Desktop SDK PM2 script: ${environment.script}`);
-    this.appendStartupLogLine(`Desktop SDK PM2 args: ${environment.args.join(' ') || '(none)'}`);
-    this.appendStartupLogLine(
-      `Desktop SDK PM2 ${environment.pathKey} entries: ${environment.pathEntries.length}`,
-    );
-    this.appendStartupLogLine(`Desktop SDK PM2 home (resolved): ${environment.pm2Home}`);
-    if (environment.runtimeFilesDir) {
-      this.appendStartupLogLine(`Desktop SDK PM2 runtime files dir: ${environment.runtimeFilesDir}`);
-    }
-    if (environment.envFilePath) {
-      this.appendStartupLogLine(`Desktop SDK PM2 env file: ${environment.envFilePath}`);
-    }
-  }
-
-  private appendManagedPm2InvocationResult(
-    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
-    result: HagiscriptServerLifecycleResult,
-  ): void {
-    const pid = result.pid ?? 'n/a';
-    const exitCode = result.exitCode ?? 'n/a';
-    const pm2BinaryPath = result.pm2BinaryPath ?? 'unknown';
-    const reason = result.success ? 'none' : result.summary;
-    this.appendStartupLogLine(
-      `Desktop SDK PM2 ${action} returned status ${result.status} (exists=${result.exists}, pid=${pid}, exitCode=${exitCode}, pm2=${pm2BinaryPath}, reason=${reason})`,
-    );
-  }
-
-  private findPm2PermissionDeniedMarker(values: Array<string | null | undefined>): string | null {
-    const content = values
-      .map(value => value?.trim() ?? '')
-      .filter(Boolean)
-      .join('\n');
-
-    if (!content) {
-      return null;
-    }
-
-    for (const candidate of PM2_PERMISSION_DENIED_PATTERNS) {
-      if (candidate.pattern.test(content)) {
-        return candidate.label;
-      }
-    }
-
-    return null;
-  }
-
-  private appendManagedPm2PermissionFailureHint(input: {
-    action: HagiscriptServerLifecycleAction;
-    lifecycleResult: HagiscriptServerLifecycleResult;
-    runtimeStateResult?: HagiscriptRuntimeStateResult | null;
-  }): void {
-    const marker = this.findPm2PermissionDeniedMarker([
-      input.lifecycleResult.summary,
-      input.lifecycleResult.stdout,
-      input.lifecycleResult.stderr,
-      input.runtimeStateResult?.summary,
-      input.runtimeStateResult?.stdout,
-      input.runtimeStateResult?.stderr,
-    ]);
-
-    if (!marker) {
-      return;
-    }
-
-    const windowsStoreRuntime = this.isWindowsStoreExecutionEnvironment();
-    const message = windowsStoreRuntime
-      ? `Desktop SDK PM2 invocation appears blocked by Microsoft Store/MSIX permissions (${marker}).`
-      : `Desktop SDK PM2 invocation appears blocked by operating-system permissions (${marker}).`;
-
-    this.appendStartupLogLine(message);
-    log.warn('[WebService] Desktop SDK PM2 permission failure detected:', {
-      action: input.action,
-      status: input.lifecycleResult.status,
-      summary: input.lifecycleResult.summary,
-      windowsStoreRuntime,
-      marker,
-    });
-  }
-
-  private async resolveManagedLaunchContext(): Promise<ManagedLaunchContext> {
+  private async resolveDirectBackendLaunchContext(): Promise<ManagedLaunchContext> {
     if (!this.activeVersionPath) {
       throw new Error('No active version set');
     }
 
-    if (this.cachedManagedLaunchContext?.runtimeRoot === this.activeVersionPath) {
-      return this.cachedManagedLaunchContext.context;
-    }
-
-    const context = await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath);
-    this.cachedManagedLaunchContext = {
-      runtimeRoot: this.activeVersionPath,
-      context,
-    };
-    return context;
-  }
-
-  private async awaitManagedPm2OnlineStatus(
-    context: HagiscriptRuntimeContext,
-    action: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'>,
-    initialResult: HagiscriptServerLifecycleResult,
-  ): Promise<HagiscriptServerLifecycleResult> {
-    if (!initialResult.success || initialResult.status === 'online') {
-      return initialResult;
-    }
-
-    this.appendStartupLogLine(
-      `Desktop SDK PM2 initially reported ${initialResult.status} during ${action}; waiting for managed status to settle`,
-    );
-
-    const deadline = Date.now() + Math.min(this.startTimeout, MANAGED_PM2_ONLINE_SETTLE_TIMEOUT_MS);
-    let lastResult = initialResult;
-
-    while (Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, MANAGED_PM2_ONLINE_POLL_INTERVAL_MS));
-      const statusResult = await this.hagiscriptServerManager.status(context);
-      if (!statusResult.success) {
-        return statusResult;
-      }
-
-      lastResult = statusResult;
-      if (statusResult.status === 'online' || statusResult.status === 'errored') {
-        return statusResult;
-      }
-    }
-
-    return lastResult;
-  }
-
-  private async resolveManagedLaunchContextForLifecycleTransition(): Promise<ManagedLaunchContext> {
-    if (!this.activeVersionPath) {
-      throw new Error('No active version set');
-    }
-
-    const context = await resolveManagedLaunchContextForRuntimeRoot(this.activeVersionPath, app.getVersion(), {
+    const desktopVersion = app?.getVersion?.() ?? '0.0.0';
+    const context = await this.resolveLaunchContext(this.activeVersionPath, desktopVersion, {
       logResolvedContext: true,
     });
-    this.cachedManagedLaunchContext = {
-      runtimeRoot: this.activeVersionPath,
-      context,
-    };
     return context;
   }
 
-  private async resolveHagiscriptRuntimeContext(
-    servicePayloadPath: string,
-    serviceWorkingDirectory: string,
-    serviceEnv?: NodeJS.ProcessEnv,
-  ): Promise<HagiscriptRuntimeContext> {
-    if (!this.activeRuntime) {
-      throw new Error('No active runtime set');
+  private async resolveManagedDotnetExecutable(): Promise<string> {
+    const executablePath = path.resolve(this.pathManager.getEmbeddedDotnetPath());
+    const stats = await fs.stat(executablePath);
+    if (!stats.isFile()) {
+      throw new Error(`Managed .NET executable is not a file: ${executablePath}`);
     }
-
-    if (!this.hagiscriptRuntimeContextResolver) {
-      throw new Error('Desktop managed runtime context is not initialized yet.');
+    if (process.platform !== 'win32') {
+      await fs.access(executablePath, fsConstants.X_OK);
     }
-
-    return await this.hagiscriptRuntimeContextResolver.resolve({
-      activeRuntime: this.activeRuntime,
-      servicePayloadPath,
-      serviceWorkingDirectory,
-      serviceEnv,
-    });
+    return executablePath;
   }
 
   private buildHagiscriptServiceEnvironment(baseEnv: NodeJS.ProcessEnv | undefined): NodeJS.ProcessEnv {
@@ -757,22 +506,6 @@ export class PCodeWebServiceManager {
       ASPNETCORE_ENVIRONMENT: baseEnv?.ASPNETCORE_ENVIRONMENT ?? this.config.env?.ASPNETCORE_ENVIRONMENT ?? 'Production',
       ASPNETCORE_URLS: buildAccessUrl(this.config.host, this.config.port),
     };
-  }
-
-  private mapPm2StatusToProcessStatus(status: HagiscriptManagedServerStatus): ProcessStatus {
-    switch (status) {
-      case 'online':
-        return 'running';
-      case 'stopped':
-      case 'missing':
-        return 'stopped';
-      default:
-        return 'error';
-    }
-  }
-
-  private getServerRuntimeState(report: HagiscriptRuntimeStateReport | null): HagiscriptRuntimeStateReport['components'][number] | null {
-    return report?.components.find((component) => component.name === 'server') ?? null;
   }
 
   private isStartupTransitionActive(): boolean {
@@ -790,6 +523,7 @@ export class PCodeWebServiceManager {
         this.status = 'stopped';
         this.startTime = null;
         this.restartCount = 0;
+        this.lastBackendWasRunning = false;
         break;
       case StartupPhase.CheckingVersion:
       case StartupPhase.CheckingDependencies:
@@ -895,45 +629,6 @@ export class PCodeWebServiceManager {
   }
 
   /**
-   * Check if a specific host/port accepts TCP connections.
-   */
-  private async checkPortReachable(host: string, port: number, timeoutMs: number = 2000): Promise<boolean> {
-    const net = await import('node:net');
-
-    return await new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(timeoutMs);
-
-      socket.once('connect', () => {
-        socket.destroy();
-        resolve(true);
-      });
-
-      socket.once('timeout', () => {
-        socket.destroy();
-        resolve(false);
-      });
-
-      socket.once('error', () => {
-        socket.destroy();
-        resolve(false);
-      });
-
-      socket.connect(port, host);
-    });
-  }
-
-  private async isManagedServiceReachable(port: number): Promise<boolean> {
-    const probeHosts = this.resolveProbeHosts(this.config.host);
-    for (const host of probeHosts) {
-      if (await this.checkPortReachable(host, port, 1000)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * Emit phase update to renderer
    */
   private emitPhase(phase: StartupPhase, message?: string): void {
@@ -975,6 +670,9 @@ export class PCodeWebServiceManager {
     log.info('[WebService] Waiting for port listening:', `${this.config.host}:${this.config.port}`, 'probeHosts:', probeHosts, 'timeout:', timeout);
 
     while (Date.now() - startTime < timeout) {
+      if (!this.ownedBackend?.isAlive()) {
+        return false;
+      }
       attempt++;
       for (const probeHost of probeHosts) {
         try {
@@ -1006,7 +704,10 @@ export class PCodeWebServiceManager {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between attempts
+      await new Promise(resolve => setTimeout(
+        resolve,
+        Math.min(500, Math.max(0, timeout - (Date.now() - startTime))),
+      ));
     }
 
     log.error('[WebService] Port listening timeout after', attempt, 'attempts');
@@ -1110,6 +811,14 @@ export class PCodeWebServiceManager {
   }
 
   private async prepareServiceEnvironment(): Promise<PreparedServiceEnvironment> {
+    if (this.prepareServiceEnvironmentOverride) {
+      const mergedEnv = await this.prepareServiceEnvironmentOverride();
+      return {
+        mergedEnv,
+        managedSnapshot: [],
+      };
+    }
+
     const existingConfig = await this.readExistingServiceConfig();
     const consoleEnv = await loadConsoleEnvironment();
     const existingEnv = { ...process.env, ...consoleEnv, ...this.config.env };
@@ -1205,19 +914,38 @@ export class PCodeWebServiceManager {
    * @returns StartResult with service URL and port information
    */
   async start(): Promise<StartResult> {
+    return await this.runLifecycleExclusive(async () => await this.startInternal());
+  }
+
+  private async startInternal(): Promise<StartResult> {
     await this.ensureSavedConfigInitialized();
-    this.resetPm2StatusWarningState();
+    await this.orphanReconciliation;
     this.resetStartupLogBuffer();
     this.appendStartupLogLine(`Starting service with configured host ${this.config.host} and port ${this.config.port}`);
 
-    // PM2 restart_time is diagnostic state from the previous runtime. A manual
-    // Desktop start should always get a fresh attempt, especially after version switches.
+    // A manual Desktop start gets a fresh automatic-restart budget.
     this.restartCount = 0;
+    this.lastBackendWasRunning = false;
 
-    if (this.status === 'running') {
-      log.warn('[WebService] Existing service runtime detected before start; stopping it before launching current version.');
+    const currentOwned = this.backendProcessOwner.snapshot;
+    const runtime = this.activeRuntime;
+    if (
+      currentOwned
+      && runtime
+      && this.status === 'running'
+      && currentOwned.identity.runtimeIdentity === this.getRuntimeIdentity(runtime)
+    ) {
+      const currentStatus = await this.getStatusInternal();
+      if (currentStatus.status === 'running') {
+        this.lastBackendWasRunning = true;
+        return this.buildSuccessfulStartResult('Desktop-owned backend is already healthy.');
+      }
+    }
+
+    if (currentOwned) {
+      log.warn('[WebService] Existing owned backend detected before start; stopping it before launching current version.');
       this.appendStartupLogLine('Existing service runtime detected; stopping before launching current version');
-      const stopped = await this.stop();
+      const stopped = await this.stopInternal();
       if (!stopped) {
         this.status = 'error';
         this.emitPhase(StartupPhase.Error, 'Failed to stop existing service runtime');
@@ -1242,7 +970,36 @@ export class PCodeWebServiceManager {
       return this.buildStartupFailureResult('No active version set');
     }
 
-    return await this.runLifecycleTransition('start');
+    return await this.runDirectLifecycleTransition('start');
+  }
+
+  private getRuntimeIdentity(runtime: ActiveRuntimeDescriptor): string {
+    return `${runtime.kind}:${path.resolve(runtime.rootPath)}:${runtime.versionId ?? ''}`;
+  }
+
+  private buildSuccessfulStartResult(stdout: string): StartResult {
+    const url = buildAccessUrl(this.config.host, this.config.port);
+    return {
+      success: true,
+      resultSession: {
+        exitCode: 0,
+        stdout,
+        stderr: '',
+        duration: Date.now() - (this.startTime ?? Date.now()),
+        timestamp: new Date().toISOString(),
+        success: true,
+        port: this.config.port,
+        url,
+      },
+      parsedResult: {
+        success: true,
+        rawOutput: 'Desktop-owned backend passed HTTP health verification.',
+        port: this.config.port,
+        url,
+      },
+      url,
+      port: this.config.port,
+    };
   }
 
   /**
@@ -1253,6 +1010,9 @@ export class PCodeWebServiceManager {
     const checkInterval = 1000; // Check every second
 
     while (Date.now() - startTime < this.startTimeout) {
+      if (!this.ownedBackend?.isAlive()) {
+        return false;
+      }
       const isHealthy = await this.performHealthCheck();
       if (isHealthy) {
         return true;
@@ -1267,46 +1027,37 @@ export class PCodeWebServiceManager {
    * Stop the web service process
    */
   async stop(): Promise<boolean> {
+    this.explicitStopRequested = true;
+    return await this.runLifecycleExclusive(async () => await this.stopInternal());
+  }
+
+  private async stopInternal(): Promise<boolean> {
     try {
+      await this.orphanReconciliation;
+      this.explicitStopInProgress = true;
       this.status = 'stopping';
       this.lastHealthCheckLogState = null;
       log.info('[WebService] Stopping web service...');
-
-      const launchContext = await this.resolveManagedLaunchContext();
-      const context = await this.resolveHagiscriptRuntimeContext(
-        launchContext.serviceDllPath,
-        launchContext.serviceWorkingDirectory,
-        this.lastResolvedServiceEnv ?? this.buildHagiscriptServiceEnvironment(this.config.env),
-      );
-      let stopResult: HagiscriptServerLifecycleResult;
-      try {
-        stopResult = await this.hagiscriptServerManager.stop(context);
-      } finally {
-        await context.cleanup();
-      }
-
-      if (!stopResult.success && !['missing', 'stopped'].includes(stopResult.status)) {
-        log.error('[WebService] Desktop SDK stop failed:', {
-          status: stopResult.status,
-          summary: stopResult.summary,
-        });
-        this.status = 'error';
-        return false;
-      }
+      await this.backendProcessOwner.stop(this.stopTimeout);
+      this.ownedBackend = null;
 
       this.status = 'stopped';
       this.lastResolvedServiceEnv = null;
       this.startTime = null;
       this.restartCount = 0;
+      this.lastBackendWasRunning = false;
       this.currentPhase = StartupPhase.Idle;
       this.lastHealthCheckLogState = null;
-      this.resetPm2StatusWarningState();
       log.info('[WebService] Stopped successfully');
       return true;
     } catch (error) {
       log.error('[WebService] Failed to stop:', error);
       this.status = 'error';
+      this.appendStartupLogLine(`Backend shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       return false;
+    } finally {
+      this.explicitStopInProgress = false;
+      this.explicitStopRequested = false;
     }
   }
 
@@ -1314,9 +1065,16 @@ export class PCodeWebServiceManager {
    * Restart the web service
    */
   async restart(): Promise<StartResult> {
-    log.info('[WebService] Restarting web service...');
-    this.restartCount = 0;
-    return await this.runLifecycleTransition('restart');
+    this.explicitStopRequested = true;
+    return await this.runLifecycleExclusive(async () => {
+      log.info('[WebService] Restarting web service...');
+      this.restartCount = 0;
+      const stopped = await this.stopInternal();
+      if (!stopped) {
+        return this.buildStartupFailureResult('Failed to stop the owned backend before restart.');
+      }
+      return await this.runDirectLifecycleTransition('restart');
+    });
   }
 
   /**
@@ -1337,102 +1095,70 @@ export class PCodeWebServiceManager {
 
   private async getStatusInternal(): Promise<ProcessInfo> {
     await this.ensureSavedConfigInitialized();
+    await this.orphanReconciliation;
 
-    if (!this.activeVersionPath || !this.activeRuntime) {
-      this.status = 'stopped';
-      this.currentPhase = StartupPhase.Idle;
+    if (this.orphanReconciliationError) {
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      return this.buildProcessInfo();
+    }
+
+    if (this.explicitStopRequested || this.explicitStopInProgress || this.status === 'stopping') {
+      this.status = 'stopping';
+      return this.buildProcessInfo();
+    }
+
+    const owned = this.backendProcessOwner.snapshot;
+    if (!owned || !owned.isAlive()) {
+      const restartUnexpectedExit = this.lastBackendWasRunning
+        && !this.explicitStopRequested
+        && !this.cleanupPromise;
+      this.ownedBackend = null;
       this.startTime = null;
-      this.restartCount = 0;
-      this.cachedManagedLaunchContext = null;
-      this.lastHealthCheckLogState = null;
-      return {
-        status: this.status,
-        uptime: 0,
-        startTime: null,
-        url: null,
-        restartCount: 0,
-        phase: this.currentPhase,
-        port: this.config.port,
-        host: this.config.host,
-      };
-    }
-
-    const launchContext = await this.resolveManagedLaunchContext();
-    const context = await this.resolveHagiscriptRuntimeContext(
-      launchContext.serviceDllPath,
-      launchContext.serviceWorkingDirectory,
-      this.lastResolvedServiceEnv ?? this.buildHagiscriptServiceEnvironment(this.config.env),
-    );
-    let lifecycleResult: HagiscriptServerLifecycleResult;
-    let runtimeStateResult: HagiscriptRuntimeStateResult | null = null;
-    try {
-      lifecycleResult = await this.hagiscriptServerManager.status(context);
-      if (lifecycleResult.status === 'online') {
-        runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(context);
+      if (restartUnexpectedExit) {
+        this.scheduleUnexpectedBackendRestart();
+      } else if (!this.isStartupTransitionActive() && this.currentPhase !== StartupPhase.Error) {
+        this.status = 'stopped';
+        this.currentPhase = StartupPhase.Idle;
       }
-    } finally {
-      await context.cleanup();
+      return this.buildProcessInfo();
     }
 
+    if (!this.activeRuntime) {
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.appendStartupLogLine('An owned backend is running but no active runtime is selected.');
+      return this.buildProcessInfo();
+    }
+
+    this.ownedBackend = owned;
     const startupTransitionActive = this.isStartupTransitionActive();
-
-    if (!lifecycleResult.success) {
-      if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
-        this.status = 'starting';
-        this.restartCount = lifecycleResult.restartCount;
-      } else {
-        this.logPm2StatusFailure(lifecycleResult);
-        this.status = 'error';
-        this.currentPhase = StartupPhase.Error;
-        this.startTime = null;
-        this.restartCount = 0;
-      }
-    } else if (lifecycleResult.status === 'online') {
-      const healthCheckPassed = await this.performHealthCheck();
-      if (healthCheckPassed) {
-        this.status = 'running';
-        this.currentPhase = StartupPhase.Running;
-        this.startTime = lifecycleResult.pmUptime ?? this.startTime ?? Date.now();
-        this.restartCount = lifecycleResult.restartCount;
-        this.resetPm2StatusWarningState();
-      } else if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
-        this.status = 'starting';
-        this.currentPhase = StartupPhase.HealthCheck;
-        this.startTime = lifecycleResult.pmUptime ?? this.startTime ?? Date.now();
-        this.restartCount = lifecycleResult.restartCount;
-      } else {
-        const serverState = this.getServerRuntimeState(runtimeStateResult?.report ?? null);
-        const releasedServiceReady = serverState?.details?.releasedServiceReady;
-        this.status = 'error';
-        this.currentPhase = StartupPhase.Error;
-        this.appendStartupLogLine(
-          releasedServiceReady === false
-            ? 'Desktop SDK PM2 reports the server online, but the released-service payload is not ready.'
-            : 'Desktop SDK PM2 reports the server online, but Desktop health verification failed.',
-        );
-        this.startTime = lifecycleResult.pmUptime ?? this.startTime;
-        this.restartCount = lifecycleResult.restartCount;
-      }
+    const healthCheckPassed = await this.performHealthCheck();
+    if (healthCheckPassed) {
+      this.status = 'running';
+      this.currentPhase = StartupPhase.Running;
+      this.lastBackendWasRunning = true;
+      this.startTime = owned.startTime;
+      this.lastBackendWasRunning = true;
+    } else if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
+      this.status = 'starting';
+      this.currentPhase = StartupPhase.HealthCheck;
+      this.startTime = owned.startTime;
     } else {
-      if (startupTransitionActive && this.currentPhase !== StartupPhase.Error) {
-        this.status = 'starting';
-        this.restartCount = lifecycleResult.restartCount;
-      } else {
-        this.status = this.mapPm2StatusToProcessStatus(lifecycleResult.status);
-        this.currentPhase = this.status === 'stopped' ? StartupPhase.Idle : StartupPhase.Error;
-        this.startTime = null;
-        this.restartCount = lifecycleResult.restartCount;
-      }
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.appendStartupLogLine('The owned backend process is alive, but HTTP health verification failed.');
     }
+    return this.buildProcessInfo();
+  }
 
-    const uptime = this.startTime ? Date.now() - this.startTime : 0;
-    const runningUrl = this.status === 'running' ? buildAccessUrl(this.config.host, this.config.port) : null;
-
+  private buildProcessInfo(): ProcessInfo {
     return {
       status: this.status,
-      uptime,
+      uptime: this.startTime ? Date.now() - this.startTime : 0,
       startTime: this.startTime,
-      url: runningUrl,
+      pid: this.backendProcessOwner.snapshot?.pid ?? null,
+      url: this.status === 'running' ? buildAccessUrl(this.config.host, this.config.port) : null,
       restartCount: this.restartCount,
       phase: this.currentPhase,
       port: this.config.port,
@@ -1440,210 +1166,160 @@ export class PCodeWebServiceManager {
     };
   }
 
-  private async runLifecycleTransition(action: HagiscriptServerLifecycleAction): Promise<StartResult> {
-    try {
-      const lifecycleAction: Extract<HagiscriptServerLifecycleAction, 'start' | 'restart'> = action === 'restart'
-        ? 'restart'
-        : 'start';
-      this.status = 'starting';
-      this.lastHealthCheckLogState = null;
-      log.info('[WebService] Starting with configured host/port:', {
-        host: this.config.host,
-        port: this.config.port,
-        action,
-      });
+  private scheduleUnexpectedBackendRestart(): void {
+    if (this.restartCount >= this.maxRestartAttempts) {
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.appendStartupLogLine(`Automatic backend restart budget exhausted after ${this.restartCount} retries.`);
+      this.lastBackendWasRunning = false;
+      return;
+    }
 
-      let launchContext: {
-        serviceDllPath: string;
-        serviceWorkingDirectory: string;
-        requiredRuntimeLabel?: string;
+    this.restartCount += 1;
+    const attempt = this.restartCount;
+    this.lastBackendWasRunning = false;
+    this.status = 'starting';
+    this.currentPhase = StartupPhase.CheckingVersion;
+    this.appendStartupLogLine(`Unexpected backend exit; scheduling automatic restart ${attempt}/${this.maxRestartAttempts}.`);
+    void this.runLifecycleExclusive(async () => {
+      if (this.explicitStopRequested || this.cleanupPromise || this.backendProcessOwner.snapshot) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(attempt * 1_000, 5_000)));
+      if (this.explicitStopRequested || this.cleanupPromise || this.backendProcessOwner.snapshot) {
+        return;
+      }
+      const result = await this.runDirectLifecycleTransition('restart');
+      if (!result.success) {
+        this.status = 'error';
+        this.currentPhase = StartupPhase.Error;
+      }
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      this.status = 'error';
+      this.currentPhase = StartupPhase.Error;
+      this.appendStartupLogLine(`Automatic backend restart failed: ${message}`);
+      log.error('[WebService] Automatic backend restart failed:', error);
+    });
+  }
+
+  private async runDirectLifecycleTransition(action: 'start' | 'restart'): Promise<StartResult> {
+    this.status = 'starting';
+    this.lastHealthCheckLogState = null;
+    this.emitPhase(StartupPhase.CheckingVersion, 'Validating installed server version...');
+    log.info('[WebService] Starting the Desktop-owned backend:', {
+      host: this.config.host,
+      port: this.config.port,
+      action,
+    });
+
+    try {
+      await this.orphanReconciliation;
+      if (this.orphanReconciliationError) {
+        throw this.orphanReconciliationError;
+      }
+
+      const launchContext = await this.resolveDirectBackendLaunchContext();
+      this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
+      this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
+      if (launchContext.requiredRuntimeLabel) {
+        this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
+      }
+
+      this.emitPhase(StartupPhase.CheckingDependencies, 'Preparing the managed .NET runtime and service environment...');
+      const prepared = await this.prepareServiceEnvironment();
+      const serviceEnv = this.buildHagiscriptServiceEnvironment(prepared.mergedEnv);
+      this.lastResolvedServiceEnv = serviceEnv;
+      this.appendStartupLogLine(`ASPNETCORE_URLS=${serviceEnv.ASPNETCORE_URLS}`);
+      this.appendStartupLogLine(`ASPNETCORE_ENVIRONMENT=${serviceEnv.ASPNETCORE_ENVIRONMENT}`);
+
+      const dotnetExecutable = await this.resolveManagedDotnetExecutable();
+      const available = await this.checkPortAvailable(this.config.port);
+      if (!available) {
+        throw new Error(
+          `Port ${this.config.port} is already in use by a process Desktop does not own. Stop that service before starting Hagicode Server; Desktop will not adopt a port-only listener.`,
+        );
+      }
+
+      const runtime = this.activeRuntime;
+      if (!runtime) {
+        throw new Error('No active runtime set.');
+      }
+      const launch: BackendProcessLaunch = {
+        executablePath: dotnetExecutable,
+        args: [launchContext.serviceDllPath, ...(this.config.args ?? [])],
+        workingDirectory: launchContext.serviceWorkingDirectory,
+        env: serviceEnv,
+        runtimeIdentity: this.getRuntimeIdentity(runtime),
+        runtimeRoot: runtime.rootPath,
+        serviceDllPath: launchContext.serviceDllPath,
+        port: this.config.port,
       };
 
-      try {
-        launchContext = await this.resolveManagedLaunchContextForLifecycleTransition();
-        this.appendStartupLogLine(`Managed entry point: ${launchContext.serviceDllPath}`);
-        this.appendStartupLogLine(`Managed working directory: ${launchContext.serviceWorkingDirectory}`);
-        if (launchContext.requiredRuntimeLabel) {
-          this.appendStartupLogLine(`Required ASP.NET Core runtime: ${launchContext.requiredRuntimeLabel}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorCode = error instanceof ManagedLaunchError ? error.code : 'invalid-service-payload';
-        log.error('[WebService] Service payload validation failed:', errorCode, errorMessage);
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, errorMessage);
-        this.appendStartupLogLine(`Start failed [${errorCode}]: ${errorMessage}`);
-        return this.buildStartupFailureResult(errorMessage);
-      }
+      this.emitPhase(StartupPhase.Spawning, action === 'restart' ? 'Restarting the owned backend...' : 'Starting the owned backend...');
+      this.appendStartupLogLine(`Managed .NET executable: ${dotnetExecutable}`);
+      this.ownedBackend = await this.backendProcessOwner.start(launch);
+      this.startTime = this.ownedBackend.startTime;
+      this.restartCount = Math.max(this.restartCount, 0);
 
-      let preparedEnv: NodeJS.ProcessEnv;
-      try {
-        const prepared = await this.prepareServiceEnvironment();
-        preparedEnv = this.buildHagiscriptServiceEnvironment(prepared.mergedEnv);
-        this.lastResolvedServiceEnv = preparedEnv;
-        this.appendStartupLogLine(`ASPNETCORE_URLS=${preparedEnv.ASPNETCORE_URLS}`);
-        this.appendStartupLogLine(`ASPNETCORE_ENVIRONMENT=${preparedEnv.ASPNETCORE_ENVIRONMENT}`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        log.error('[WebService] Failed to prepare environment injection:', errorMessage);
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, `Environment injection failed: ${errorMessage}`);
-        this.appendStartupLogLine(`Start failed: environment injection failed - ${errorMessage}`);
-        return this.buildStartupFailureResult(`Environment injection failed: ${errorMessage}`);
-      }
-
-      const context = await this.resolveHagiscriptRuntimeContext(
-        launchContext.serviceDllPath,
-        launchContext.serviceWorkingDirectory,
-        preparedEnv,
-      );
-      let lifecycleResult: HagiscriptServerLifecycleResult;
-      let runtimeStateResult: HagiscriptRuntimeStateResult | null = null;
-      try {
-        this.emitPhase(
-          StartupPhase.Spawning,
-          lifecycleAction === 'restart'
-            ? 'Restarting service via Desktop SDK PM2...'
-            : 'Starting service via Desktop SDK PM2...',
-        );
-        this.appendStartupLogLine(`runtime manifest override: ${context.manifestPath}`);
-        this.appendStartupLogLine(`runtime home: ${context.runtimeHome}`);
-        this.appendStartupLogLine(`runtime data root: ${context.runtimeDataRoot}`);
-        this.appendStartupLogLine(`PM2 home: ${context.pm2Home}`);
-        this.appendStartupLogLine(`runtime files directory: ${context.runtimeFilesDir}`);
-
-        const startupEnvironmentResult = await this.hagiscriptServerManager.resolveStartupEnvironment(context);
-        await this.appendManagedPm2InvocationPlan(lifecycleAction, startupEnvironmentResult);
-
-        if (await this.isManagedServiceReachable(this.config.port)) {
-          log.warn('[WebService] Target port is reachable before Desktop SDK start; lifecycle start may fail if another process owns it:', {
-            port: this.config.port,
-          });
-          this.appendStartupLogLine(
-            'Target port ' + this.config.port + ' is already reachable before Desktop SDK PM2 action',
-          );
-        }
-
-        const initialLifecycleResult = lifecycleAction === 'restart'
-          ? await this.hagiscriptServerManager.restart(context)
-          : await this.hagiscriptServerManager.start(context);
-        this.appendManagedPm2InvocationResult(lifecycleAction, initialLifecycleResult);
-
-        lifecycleResult = await this.awaitManagedPm2OnlineStatus(context, lifecycleAction, initialLifecycleResult);
-
-        if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
-          runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(context);
-        }
-      } finally {
-        await context.cleanup();
-      }
-
-      if (!lifecycleResult.success || lifecycleResult.status !== 'online') {
-        this.appendManagedPm2PermissionFailureHint({
-          action,
-          lifecycleResult,
-          runtimeStateResult,
-        });
-        if (runtimeStateResult) {
-          await this.appendHagiscriptDiagnostics({
-            summary: runtimeStateResult.summary,
-            stdout: runtimeStateResult.stdout,
-            stderr: runtimeStateResult.stderr,
-            logPaths: runtimeStateResult.logPaths,
-          });
-        }
-        this.status = 'error';
-        this.emitPhase(StartupPhase.Error, lifecycleResult.summary);
-        return await this.buildHagiscriptLifecycleFailureResult(
-          lifecycleResult.success
-            ? {
-                ...lifecycleResult,
-                success: false,
-                summary: 'Desktop SDK PM2 reported ' + lifecycleResult.status + ' during ' + action + '.',
-              }
-            : lifecycleResult,
-        );
-      }
-
-      this.restartCount = lifecycleResult.restartCount;
-      this.startTime = lifecycleResult.pmUptime ?? Date.now();
-
-      this.emitPhase(StartupPhase.WaitingListening, 'Waiting for service to start listening...');
-      const listening = await this.waitForPortListening();
+      this.emitPhase(StartupPhase.WaitingListening, 'Waiting for the owned backend to start listening...');
+      const listening = await this.waitForPortListening(this.startTimeout);
       if (!listening) {
-        this.emitPhase(StartupPhase.Error, 'Service failed to start listening');
-        this.appendStartupLogLine(`Start failed: service did not listen on ${this.config.host}:${this.config.port}`);
-        await this.stop();
+        const summary = this.ownedBackend?.isAlive()
+          ? `Owned backend did not listen on ${this.config.host}:${this.config.port} within ${this.startTimeout}ms.`
+          : 'Owned backend exited before it began listening.';
+        this.appendStartupLogLine(summary);
+        await this.stopBackendAfterStartupFailure();
         this.status = 'error';
-        return this.buildStartupFailureResult('Service failed to start listening');
+        this.emitPhase(StartupPhase.Error, summary);
+        return this.buildStartupFailureResult(summary);
       }
 
-      this.emitPhase(StartupPhase.HealthCheck, 'Performing health check...');
+      this.emitPhase(StartupPhase.HealthCheck, 'Verifying the owned backend health endpoint...');
       const healthCheckPassed = await this.waitForHealthCheck();
       if (!healthCheckPassed) {
-        const contextForDiagnostics = await this.resolveHagiscriptRuntimeContext(
-          launchContext.serviceDllPath,
-          launchContext.serviceWorkingDirectory,
-          preparedEnv,
-        );
-        try {
-          const runtimeStateResult = await this.hagiscriptServerManager.getRuntimeState(contextForDiagnostics);
-          await this.appendHagiscriptDiagnostics({
-            summary: runtimeStateResult.summary,
-            stdout: runtimeStateResult.stdout,
-            stderr: runtimeStateResult.stderr,
-            logPaths: runtimeStateResult.logPaths,
-          });
-        } finally {
-          await contextForDiagnostics.cleanup();
-        }
-        log.error('[WebService] Health check failed');
-        this.emitPhase(StartupPhase.Error, 'Health check failed');
-        this.appendStartupLogLine('Start failed: health check did not pass within timeout');
-        await this.stop();
+        const summary = this.ownedBackend?.isAlive()
+          ? `Owned backend failed its HTTP health check within ${this.startTimeout}ms.`
+          : 'Owned backend exited before passing its HTTP health check.';
+        this.appendStartupLogLine(summary);
+        await this.stopBackendAfterStartupFailure();
         this.status = 'error';
-        return this.buildStartupFailureResult('Health check failed');
+        this.emitPhase(StartupPhase.Error, summary);
+        return this.buildStartupFailureResult(summary);
       }
 
       this.status = 'running';
-      this.resetPm2StatusWarningState();
+      this.currentPhase = StartupPhase.Running;
       await this.saveLastSuccessfulConfig();
-
-      log.info('[WebService] Service started successfully on port:', this.config.port);
-      log.info('[WebService] Environment injection confirmed:', {
-        mode: 'env',
-        managedVariableCount: this.lastManagedEnvSnapshot.length,
-      });
       this.emitPhase(StartupPhase.Running, 'Service is running');
-
-      return {
-        success: true,
-        resultSession: {
-          exitCode: lifecycleResult.exitCode ?? -1,
-          stdout: lifecycleResult.stdout,
-          stderr: lifecycleResult.stderr,
-          duration: 0,
-          timestamp: new Date().toISOString(),
-          success: true,
-          port: this.config.port,
-          url: buildAccessUrl(this.config.host, this.config.port),
-        },
-        parsedResult: {
-          success: true,
-          rawOutput: lifecycleResult.summary,
-          port: this.config.port,
-          url: buildAccessUrl(this.config.host, this.config.port),
-        },
-        url: buildAccessUrl(this.config.host, this.config.port),
+      log.info('[WebService] Desktop-owned backend is healthy:', {
+        pid: this.ownedBackend?.pid ?? null,
         port: this.config.port,
-      };
+      });
+      return this.buildSuccessfulStartResult(this.startupLogLines.join('\n'));
     } catch (error) {
-      log.error('[WebService] Failed to start:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      log.error('[WebService] Direct backend startup failed:', error);
+      this.appendStartupLogLine(`Direct backend startup failed: ${message}`);
+      const stopError = await this.stopBackendAfterStartupFailure();
+      const summary = stopError ? `${message}; cleanup also failed: ${stopError}` : message;
       this.status = 'error';
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.appendStartupLogLine(`Start failed with exception: ${errorMessage}`);
-      this.emitPhase(StartupPhase.Error, `Start failed: ${errorMessage}`);
-      return this.buildStartupFailureResult(errorMessage);
+      this.currentPhase = StartupPhase.Error;
+      this.emitPhase(StartupPhase.Error, summary);
+      return this.buildStartupFailureResult(summary);
+    }
+  }
+
+  private async stopBackendAfterStartupFailure(): Promise<string | null> {
+    try {
+      await this.backendProcessOwner.stop(this.stopTimeout);
+      this.ownedBackend = null;
+      this.startTime = null;
+      return null;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.appendStartupLogLine(`Failed to clean up the backend after startup failure: ${message}`);
+      return message;
     }
   }
 
@@ -1853,8 +1529,12 @@ export class PCodeWebServiceManager {
    * Cleanup resources
    */
   async cleanup(): Promise<void> {
-    if (this.status === 'running') {
-      await this.stop();
+    if (!this.cleanupPromise) {
+      this.explicitStopRequested = true;
+      this.cleanupPromise = this.runLifecycleExclusive(async () => {
+        await this.stopInternal();
+      });
     }
+    await this.cleanupPromise;
   }
 }

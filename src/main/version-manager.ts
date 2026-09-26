@@ -12,10 +12,6 @@ import { createPackageSource, type PackageSource, type PackageSourceConfig, type
 import type { RegionDetector } from './region-detector.js';
 import { evaluateRuntimeCompatibility, validateFrameworkDependentPayload, validateEmbeddedRuntimeLayout } from './embedded-runtime.js';
 import { evaluateDesktopCompatibility, type DesktopCompatibilityDetails } from './desktop-compatibility.js';
-import {
-  DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR,
-  DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE,
-} from './hagiscript-desktop-manifest.js';
 import { isWindowsStoreRuntime } from './windows-store-runtime.js';
 import {
   type ActiveRuntimeDescriptor,
@@ -822,7 +818,6 @@ export class VersionManager {
       if (!currentActive && versionInfo.status !== 'desktop-incompatible') {
         await this.stateManager.setActiveVersion(versionId);
       }
-      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version installed successfully:', versionId, 'status:', versionInfo.status);
 
@@ -927,7 +922,6 @@ export class VersionManager {
 
       // Remove from state
       await this.stateManager.removeInstalledVersion(versionId);
-      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version uninstalled:', versionId);
       return true;
@@ -968,7 +962,6 @@ export class VersionManager {
 
       // Update active version (allow switching to any installed version)
       await this.stateManager.setActiveVersion(versionId);
-      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Switched to version:', versionId, 'status:', targetVersion.status);
 
@@ -1110,45 +1103,6 @@ export class VersionManager {
     }
   }
 
-  private async syncHagiscriptManagedServerVersionState(): Promise<void> {
-    const [installedVersions, activeVersion] = await Promise.all([
-      this.stateManager.getInstalledVersions(),
-      this.stateManager.getActiveVersion(),
-    ]);
-    const pm2Home = path.join(this.pathManager.getRuntimeDataHome(), DESKTOP_HAGISCRIPT_SERVER_PM2_HOME_DIR);
-    const statePath = path.join(pm2Home, DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE);
-    const versions = Object.fromEntries(
-      installedVersions.map((version) => [
-        version.id,
-        {
-          version: version.id,
-          installPath: version.installedPath,
-          installedAt: version.installedAt,
-          source: {
-            kind: 'local-folder',
-            locator: version.installedPath,
-            assetName: version.packageFilename || path.basename(version.installedPath),
-          },
-        },
-      ]),
-    );
-
-    await fs.mkdir(pm2Home, { recursive: true });
-    await fs.writeFile(
-      statePath,
-      `${JSON.stringify(
-        {
-          schemaVersion: 1,
-          activeVersion: activeVersion?.versionId ?? null,
-          versions,
-        },
-        null,
-        2,
-      )}\n`,
-      'utf8',
-    );
-  }
-
   /**
    * Reinstall a version (works even for active versions)
    * This will clear the active status, remove the version, and reinstall it
@@ -1185,7 +1139,6 @@ export class VersionManager {
 
       // Remove from state
       await this.stateManager.removeInstalledVersion(versionId);
-      await this.syncHagiscriptManagedServerVersionState();
 
       log.info('[VersionManager] Version removed for reinstallation:', versionId);
 

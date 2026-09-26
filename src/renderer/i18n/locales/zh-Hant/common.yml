@@ -265,8 +265,6 @@ dependencyManagement:
       description: OpenSpec 提案、規格與任務流程 CLI。
     skills:
       description: Codex/Agent 技能管理 CLI。
-    pm2:
-      description: PM2 行程管理器，可用於託管 Desktop 管理的服務。
     claudeCode:
       description: 用於 AI 輔助編碼會話的 Claude Code Agent CLI。
     codex:
@@ -314,7 +312,7 @@ dependencyManagement:
     groups:
       base:
         title: 基礎相依性
-        description: 在同一處安裝 OpenSpec、Skills、PM2 與其他 Desktop 工作流程基礎工具。
+        description: 在同一處安裝 OpenSpec、Skills 與其他 Desktop 工作流程基礎工具。
       agentCli:
         title: Agent CLI
         description: 依需求選擇要接入的 Agent CLI，並透過 Desktop SDK 的 npm 同步流程統一安裝。

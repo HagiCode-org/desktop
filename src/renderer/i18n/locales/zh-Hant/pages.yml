@@ -118,7 +118,7 @@ settings:
       retentionPolicy: 保留策略只會清理快取歸檔文件，不會刪除已經安裝完成的版本目錄。
   runtimeDataPath:
     title: 執行時資料儲存路徑
-    description: 選擇 Desktop 執行時檔案、PM2 狀態、日誌和其他執行時資料的儲存根目錄。
+    description: 選擇 Desktop 執行時檔案、日誌和其他執行時資料的儲存根目錄。
     activePreset: 目前生效預設：{{preset}}
     environmentOverrideBadge: 環境變數覆寫已啟用
     lockedByRuntime: Locked by Microsoft Store
@@ -135,7 +135,7 @@ settings:
         description: 儲存到目前使用者主目錄下，適合需要固定共用路徑的部署方式。
     warnings:
       noMigration: 切換此設定只會修改目標路徑，Desktop 不會自動遷移既有執行時資料。
-      restart: 儲存新的預設後，Desktop 會停止並重新啟動受管 PM2 服務，讓新的執行時資料根目錄立即生效。
+      restart: 儲存新的預設後，Desktop 會重新啟動受管後端，讓新的執行時資料根目錄立即生效。
     actions:
       save: 儲存變更
       saving: 儲存中...
@@ -143,7 +143,7 @@ settings:
     messages:
       unchanged: 目前已在使用此執行時資料路徑預設
       saveSuccess: 執行時資料路徑已儲存
-      restartSuccess: 執行時資料路徑已儲存，並已重新啟動受管 PM2 服務
+      restartSuccess: 執行時資料路徑已儲存，並已重新啟動受管後端
       saveFailed: 儲存執行時資料路徑失敗
     errors:
       saveErrorDetail: 儲存失敗：{{error}}

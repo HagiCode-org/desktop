@@ -105,6 +105,7 @@ export interface WebServiceProcessInfo {
   status: 'running' | 'stopped' | 'error' | 'starting' | 'stopping';
   uptime: number;
   startTime: number | null;
+  pid: number | null;
   url: string | null;
   restartCount: number;
   phase: 'idle' | 'checking_version' | 'checking_dependencies' | 'spawning' | 'waiting_listening' | 'health_check' | 'running' | 'error';

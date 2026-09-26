@@ -70,6 +70,7 @@ describe('webServiceSlice startup failure dialog state', () => {
         status: 'running',
         uptime: 1000,
         startTime: 1,
+        pid: 1234,
         url: 'http://localhost:36556',
         restartCount: 0,
         phase: StartupPhase.Running,
@@ -83,6 +84,7 @@ describe('webServiceSlice startup failure dialog state', () => {
         status: 'error',
         uptime: 0,
         startTime: null,
+        pid: null,
         url: null,
         restartCount: 0,
         phase: StartupPhase.Error,
@@ -92,7 +94,9 @@ describe('webServiceSlice startup failure dialog state', () => {
     }));
 
     assert.equal(current.status, 'running');
+    assert.equal(current.pid, 1234);
     assert.equal(unchanged.status, 'running');
+    assert.equal(unchanged.pid, 1234);
     assert.equal(unchanged.startupBatch, secondBatch.startupBatch);
   });
 });

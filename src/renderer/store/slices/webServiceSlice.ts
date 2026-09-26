@@ -115,6 +115,7 @@ export interface WebServiceState {
   isChecking: boolean;
   restartCount: number;
   startTime: number | null;
+  pid: number | null;
   uptime: number;
   host: string;
   port: number;
@@ -162,6 +163,7 @@ const initialState: WebServiceState = {
   isChecking: false,
   restartCount: 0,
   startTime: null,
+  pid: null,
   uptime: 0,
   host: 'localhost',
   port: 36556,
@@ -277,6 +279,7 @@ export const webServiceSlice = createSlice({
       state.status = action.payload.status;
       state.url = action.payload.url;
       state.startTime = action.payload.startTime;
+      state.pid = action.payload.pid;
       state.uptime = action.payload.uptime;
       state.restartCount = action.payload.restartCount;
       state.phase = action.payload.phase;
@@ -298,6 +301,7 @@ export const webServiceSlice = createSlice({
       state.status = info.status;
       state.url = info.url;
       state.startTime = info.startTime;
+      state.pid = info.pid;
       state.uptime = info.uptime;
       state.restartCount = info.restartCount;
       state.phase = info.phase;

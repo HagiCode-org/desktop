@@ -10,22 +10,26 @@ import {
 } from '../toolchain-launch.js';
 
 const webServiceManagerPath = path.resolve(process.cwd(), 'src/main/web-service-manager.ts');
-const hagiscriptRuntimeContextPath = path.resolve(process.cwd(), 'src/main/hagiscript-runtime-context.ts');
-const hagiscriptServerManagerPath = path.resolve(process.cwd(), 'src/main/hagiscript-server-manager.ts');
+const backendProcessOwnerPath = path.resolve(process.cwd(), 'src/main/backend-process-owner.ts');
 const webServiceSlicePath = path.resolve(process.cwd(), 'src/renderer/store/slices/webServiceSlice.ts');
 const manifestReaderPath = path.resolve(process.cwd(), 'src/main/manifest-reader.ts');
 const retiredCompatibilityPayloadField = 'startup' + 'Compatibility';
 
 describe('web-service startup flow', () => {
-  it('does not gate startup on a standalone preflight port-monitoring phase', async () => {
+  it('uses a direct owned child, rejects unowned listeners, and gates readiness on HTTP health', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+    const ownerSource = await fs.readFile(backendProcessOwnerPath, 'utf-8');
 
     assert.equal(source.includes('StartupPhase.CheckingPort'), false);
     assert.equal(source.includes('Checking port availability...'), false);
     assert.equal(source.includes('evaluateFixedPortStartup'), false);
+    assert.match(source, /backendProcessOwner\.start\(launch\)/);
+    assert.match(source, /checkPortAvailable\(this\.config\.port\)/);
+    assert.match(source, /Desktop will not adopt a port-only listener/);
     assert.match(source, /emitPhase\(\s*StartupPhase\.Spawning/);
-    assert.match(source, /waitForPortListening\(\)/);
+    assert.match(source, /waitForPortListening\(this\.startTimeout\)/);
     assert.match(source, /waitForHealthCheck\(\)/);
+    assert.match(ownerSource, /shell:\s*false/);
   });
 
   it('keeps transitional startup polling in starting state until startup truly fails or succeeds', async () => {
@@ -52,60 +56,27 @@ describe('web-service startup flow', () => {
   it('resets stale restart counters for manual start and stop flows', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.match(source, /A manual\s*\n\s*\/\/ Desktop start should always get a fresh attempt/);
-    assert.match(source, /this\.restartCount = 0;\n\n    if \(this\.status === 'running'\)/);
-    assert.match(source, /this\.lastResolvedServiceEnv = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;\n\s*this\.currentPhase = StartupPhase\.Idle;/);
-    assert.match(source, /return await this\.runLifecycleTransition\('restart'\);/);
+    assert.match(source, /A manual Desktop start gets a fresh automatic-restart budget/);
+    assert.match(source, /this\.restartCount = 0;\s*this\.lastBackendWasRunning = false;/);
+    assert.match(source, /this\.lastResolvedServiceEnv = null;\n\s*this\.startTime = null;\n\s*this\.restartCount = 0;\n\s*this\.lastBackendWasRunning = false;\n\s*this\.currentPhase = StartupPhase\.Idle;/);
+    assert.match(source, /return await this\.runDirectLifecycleTransition\('restart'\);/);
   });
 
-  it('routes lifecycle through the Desktop SDK adapter and runtime context resolver', async () => {
+  it('starts and observes only the Desktop-owned managed .NET backend', async () => {
     const webServiceSource = await fs.readFile(webServiceManagerPath, 'utf-8');
-    const runtimeContextSource = await fs.readFile(hagiscriptRuntimeContextPath, 'utf-8');
-    const serverManagerSource = await fs.readFile(hagiscriptServerManagerPath, 'utf-8');
+    assert.match(webServiceSource, /this\.pathManager\.getEmbeddedDotnetPath\(\)/);
+    assert.match(webServiceSource, /this\.backendProcessOwner\.start\(launch\)/);
+    assert.match(webServiceSource, /this\.backendProcessOwner\.snapshot/);
+    assert.match(webServiceSource, /this\.performHealthCheck\(\)/);
+    assert.doesNotMatch(webServiceSource, /PM2|pm2|HagiscriptServerManager|resolveStartupEnvironment/);
+  });
 
-    assert.match(webServiceSource, /setDependencyManagementService\(dependencyManagementService: DependencyManagementService \| null\)/);
-    assert.match(webServiceSource, /resolveHagiscriptRuntimeContext\(/);
-    assert.match(webServiceSource, /this\.hagiscriptServerManager\.start\(context\)/);
-    assert.match(webServiceSource, /this\.hagiscriptServerManager\.restart\(context\)/);
-    assert.match(webServiceSource, /this\.hagiscriptServerManager\.status\(context\)/);
-    assert.match(webServiceSource, /this\.hagiscriptServerManager\.resolveStartupEnvironment\(context\)/);
-    assert.match(webServiceSource, /awaitManagedPm2OnlineStatus\(/);
-    assert.match(webServiceSource, /Desktop SDK PM2 initially reported .* waiting for managed status to settle/);
-    assert.match(webServiceSource, /private isWindowsStoreExecutionEnvironment\(\): boolean/);
-    assert.match(webServiceSource, /isWindowsStoreRuntime\(\{/);
-    assert.match(webServiceSource, /Desktop SDK PM2 launch plan:/);
-    assert.match(webServiceSource, /nodeLessLaunch/);
-    assert.match(webServiceSource, /reason=\$\{reason\}/);
-    assert.match(webServiceSource, /Desktop SDK PM2 invocation appears blocked by Microsoft Store\/MSIX permissions/);
-    assert.match(webServiceSource, /appendManagedPm2InvocationResult\(/);
-    assert.match(webServiceSource, /appendManagedPm2PermissionFailureHint\(/);
-    assert.match(webServiceSource, /this\.hagiscriptServerManager\.getRuntimeState\(context\)/);
-    assert.match(webServiceSource, /runtime manifest override:/);
-    assert.match(webServiceSource, /ASPNETCORE_URLS=/);
-    assert.doesNotMatch(webServiceSource, /this\.pm2Manager\./);
-
-    assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
-    assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
-    assert.match(runtimeContextSource, /nodeRuntimeRoot: shared\.nodeRuntimeRoot/);
-    assert.match(runtimeContextSource, /const serviceDataHome = pm2Home;/);
-    assert.match(runtimeContextSource, /serverProgramRoot/);
-    assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /npmPrefix: shared\.npmPrefix/);
-    assert.match(runtimeContextSource, /const nodeRuntimeRoot = path\.join\(aliasedBundledRuntimeHome, 'components', 'node', 'runtime'\)/);
-    assert.match(runtimeContextSource, /servicePayloadPath,/);
-    assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
-    assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
-
-    assert.match(serverManagerSource, /executeComponentServiceAction/);
-    assert.match(serverManagerSource, /queryRuntimeState/);
-    assert.match(serverManagerSource, /startManagedServer/);
-    assert.match(serverManagerSource, /restartManagedServer/);
-    assert.match(serverManagerSource, /stopManagedServer/);
-    assert.match(serverManagerSource, /getManagedServerStatus/);
-    assert.doesNotMatch(serverManagerSource, /externalNodePath/);
-    assert.match(serverManagerSource, /response\?\.pm2Home \? path\.join\(response\.pm2Home, 'logs'\) : null/);
-    assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
-    assert.match(serverManagerSource, /MINIMUM_NODELESS_SDK_VERSION/);
+  it('reports auxiliary service management as external rather than invoking Desktop PM2 lifecycle', async () => {
+    const source = await fs.readFile(
+      path.resolve(process.cwd(), 'src/main/non-interactive-runtime-lifecycle.ts'),
+      'utf-8',
+    );
+    assert.match(source, /auxiliaryManagement: 'external'/);
   });
 
   it('keeps Desktop-managed environment injection authoritative over legacy config env values', async () => {
@@ -150,18 +121,17 @@ describe('web-service startup flow', () => {
     assert.match(source, /HealthCheck = 'health_check'/);
   });
 
-  it('caches managed launch context for status polling and only logs health-check transitions', async () => {
+  it('coalesces status polls and only logs health-check transitions', async () => {
     const source = await fs.readFile(webServiceManagerPath, 'utf-8');
 
-    assert.equal(source.includes("private cachedManagedLaunchContext: { runtimeRoot: string; context: ManagedLaunchContext } | null = null;"), true);
-    assert.match(source, /if \(this\.cachedManagedLaunchContext\?\.runtimeRoot === this\.activeVersionPath\) \{\s*return this\.cachedManagedLaunchContext\.context;\s*\}/s);
+    assert.match(source, /if \(this\.statusRequestPromise\) \{\s*return await this\.statusRequestPromise;/s);
+    assert.match(source, /const owned = this\.backendProcessOwner\.snapshot;/);
     assert.equal(source.includes("private lastHealthCheckLogState: 'healthy' | 'unhealthy' | null = null;"), true);
     assert.equal(source.includes("if (this.lastHealthCheckLogState !== 'healthy') {"), true);
     assert.equal(source.includes("this.lastHealthCheckLogState = 'healthy';"), true);
     assert.equal(source.includes("if (this.lastHealthCheckLogState !== 'unhealthy') {"), true);
     assert.equal(source.includes("this.lastHealthCheckLogState = 'unhealthy';"), true);
-    assert.equal(source.includes('launchContext = await this.resolveManagedLaunchContextForLifecycleTransition();'), true);
-    assert.equal(source.includes('logResolvedContext: true'), true);
+    assert.equal(source.includes('launchContext = await this.resolveDirectBackendLaunchContext();'), true);
   });
 
   it('keeps repeated manifest reads out of the default info log level', async () => {

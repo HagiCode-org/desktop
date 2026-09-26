@@ -7,11 +7,8 @@ import log from 'electron-log';
 import { ConfigManager as DesktopConfigManager } from './config.js';
 import {
   buildNodeMajorNpmGlobalPaths,
-  buildPm2MajorHomePaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
-  type Pm2MajorHomePathOptions,
-  type Pm2MajorHomePaths,
 } from './portable-toolchain-paths.js';
 import {
   buildPortableRuntimeSelection,
@@ -51,11 +48,8 @@ const { app } = electron;
 
 export {
   buildNodeMajorNpmGlobalPaths,
-  buildPm2MajorHomePaths,
   type NodeMajorNpmGlobalPathOptions,
   type NodeMajorNpmGlobalPaths,
-  type Pm2MajorHomePathOptions,
-  type Pm2MajorHomePaths,
 } from './portable-toolchain-paths.js';
 export {
   buildPortableRuntimeSelection,
@@ -478,23 +472,6 @@ export class PathManager {
       ...input,
       runtimeDataRoot: this.paths.runtimeDataRoot,
     });
-  }
-
-  getPm2MajorHomePaths(
-    input: Omit<Pm2MajorHomePathOptions, 'runtimeDataRoot' | 'userDataPath'> = {},
-  ): Pm2MajorHomePaths {
-    return buildPm2MajorHomePaths({
-      ...input,
-      runtimeDataRoot: this.paths.runtimeDataRoot,
-    });
-  }
-
-  async ensurePm2MajorHomeDirectory(
-    input: Omit<Pm2MajorHomePathOptions, 'userDataPath'> = {},
-  ): Promise<Pm2MajorHomePaths> {
-    const pm2HomePaths = this.getPm2MajorHomePaths(input);
-    await fs.mkdir(pm2HomePaths.pm2Home, { recursive: true });
-    return pm2HomePaths;
   }
 
   /**

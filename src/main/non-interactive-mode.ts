@@ -55,7 +55,7 @@ export const nonInteractiveUsageText = [
   '',
   'Supported commands:',
   '  runtime verify  Validate the migrated Desktop runtime structure and report resolved paths.',
-  '  runtime lifecycle  Validate Desktop SDK managed runtime service lifecycle transitions.',
+  '  runtime lifecycle  Verify the Desktop-owned .NET backend start, restart, health, and stop lifecycle.',
   '',
   'Exit codes:',
   `  ${nonInteractiveExitCodes.success}   success`,
@@ -240,30 +240,25 @@ function printRuntimeLifecycleReport(output: NonInteractiveOutput, report: NonIn
   output.stdout('HagiCode Desktop non-interactive runtime lifecycle');
   output.stdout('command: runtime lifecycle');
   output.stdout(`desktop logs directory: ${report.desktopLogsDirectory}`);
-  output.stdout(`managed npm prefix: ${report.tooling.npmGlobalPrefix}`);
-  output.stdout(`managed npm bin: ${report.tooling.npmGlobalBinRoot}`);
-  output.stdout(`managed npm modules: ${report.tooling.npmGlobalModulesRoot}`);
-  output.stdout(`standalone pm2 package root: ${report.tooling.pm2PackageRoot ?? '<missing>'}`);
-  output.stdout(`bundled pm2 executable: ${report.tooling.pm2ExecutablePath ?? '<missing>'}`);
-  output.stdout(`standalone pm2 version: ${report.tooling.pm2PackageVersion ?? '<missing>'}`);
-  output.stdout(`standalone pm2 package managed: ${report.tooling.pm2PackageUnderManagedModules}`);
-  output.stdout(`standalone pm2 executable managed: ${report.tooling.pm2ExecutableUnderManagedBin}`);
-
-  output.stdout(`backend active runtime root: ${report.services.backend.activeRuntimeRoot ?? '<missing>'}`);
-  output.stdout(`backend payload dll: ${report.services.backend.serviceDllPath ?? '<missing>'}`);
-  output.stdout(`backend working directory: ${report.services.backend.serviceWorkingDirectory ?? '<missing>'}`);
-  output.stdout(`backend required runtime: ${report.services.backend.requiredRuntimeLabel ?? '<missing>'}`);
-  output.stdout(`backend pm2 home: ${report.services.backend.pm2Home}`);
-  output.stdout(`backend runtime data: ${report.services.backend.runtimeDataHome}`);
-  output.stdout(`backend runtime files: ${report.services.backend.runtimeFilesDir ?? '<missing>'}`);
-  output.stdout(`backend lifecycle skipped: ${report.services.backend.skipped}`);
-  output.stdout(`backend lifecycle skip reason: ${report.services.backend.skipReason ?? '<none>'}`);
-  output.stdout(`backend start success: ${report.services.backend.startSuccess}`);
-  output.stdout(`backend status after start: ${report.services.backend.statusAfterStart}`);
-  output.stdout(`backend restart success: ${report.services.backend.restartSuccess}`);
-  output.stdout(`backend status after restart: ${report.services.backend.statusAfterRestart}`);
-  output.stdout(`backend stop success: ${report.services.backend.stopSuccess}`);
-  output.stdout(`backend status after stop: ${report.services.backend.statusAfterStop}`);
+  output.stdout(`backend lifecycle owner: Desktop-owned .NET child process`);
+  output.stdout(`backend active runtime root: ${report.backend.activeRuntimeRoot}`);
+  output.stdout(`backend payload dll: ${report.backend.serviceDllPath}`);
+  output.stdout(`backend working directory: ${report.backend.serviceWorkingDirectory}`);
+  output.stdout(`backend dotnet executable: ${report.backend.dotnetExecutablePath}`);
+  output.stdout(`backend port: ${report.backend.port}`);
+  output.stdout(`backend lifecycle skipped: ${report.backend.skipped}`);
+  output.stdout(`backend lifecycle skip reason: ${report.backend.skipReason ?? '<none>'}`);
+  output.stdout(`backend start success: ${report.backend.startSuccess}`);
+  output.stdout(`backend status after start: ${report.backend.statusAfterStart}`);
+  output.stdout(`backend pid after start: ${report.backend.pidAfterStart}`);
+  output.stdout(`backend restart success: ${report.backend.restartSuccess}`);
+  output.stdout(`backend status after restart: ${report.backend.statusAfterRestart}`);
+  output.stdout(`backend pid after restart: ${report.backend.pidAfterRestart}`);
+  output.stdout(`backend stop success: ${report.backend.stopSuccess}`);
+  output.stdout(`backend status after stop: ${report.backend.statusAfterStop}`);
+  output.stdout(`backend pid after stop: ${report.backend.pidAfterStop}`);
+  output.stdout(`backend process identity verified: ${report.backend.processIdentityVerified}`);
+  output.stdout(`auxiliary service management: ${report.auxiliaryManagement}`);
 }
 
 function printRuntimeLifecycleFailure(output: NonInteractiveOutput, report: NonInteractiveRuntimeLifecycleReport): void {
@@ -274,11 +269,6 @@ function printRuntimeLifecycleFailure(output: NonInteractiveOutput, report: NonI
     output.stderr(`issue: ${issue}`);
   }
 
-  for (const [serviceName, serviceReport] of Object.entries(report.services)) {
-    for (const diagnostic of serviceReport.diagnostics) {
-      output.stderr(`${serviceName} diagnostic: ${diagnostic}`);
-    }
-  }
 }
 
 async function runRuntimeVerificationCommand(

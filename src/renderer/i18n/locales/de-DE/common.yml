@@ -265,8 +265,6 @@ dependencyManagement:
       description: OpenSpec Angebots-, Spezifikations- und Aufgaben-Workflow CLI.
     skills:
       description: Codex/Agent-Skill-Management CLI.
-    pm2:
-      description: PM2-Prozessmanager zur Überwachung von Desktop-verwalteten Diensten.
     claudeCode:
       description: Claude Code Agent CLI für AI-unterstützte Codierungssitzungen.
     codex:
@@ -314,7 +312,7 @@ dependencyManagement:
     groups:
       base:
         title: Grundabhängigkeiten
-        description: Installieren Sie OpenSpec, Skills, PM2 und weitere Desktop-Grundlagen für Workflows an einem Ort.
+        description: Installieren Sie OpenSpec, Skills und weitere Desktop-Grundlagen für Workflows an einem Ort.
       agentCli:
         title: Agent CLI
         description: Wählen Sie die Agent-CLI-Tools aus, die Sie anbinden möchten, und installieren Sie sie über den npm-Sync-Ablauf des Desktop SDK.

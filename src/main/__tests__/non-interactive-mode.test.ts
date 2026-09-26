@@ -12,6 +12,7 @@ import type { NonInteractiveRuntimeLifecycleReport } from '../non-interactive-ru
 
 const mainPath = path.resolve(process.cwd(), 'src/main/main.ts');
 const bootstrapPath = path.resolve(process.cwd(), 'src/main/bootstrap.ts');
+const runtimeLifecyclePath = path.resolve(process.cwd(), 'src/main/non-interactive-runtime-lifecycle.ts');
 function createRuntimeVerificationReport(ok: boolean): NonInteractiveRuntimeVerificationReport {
   return {
     ok,
@@ -48,39 +49,28 @@ function createRuntimeLifecycleReport(ok: boolean): NonInteractiveRuntimeLifecyc
   return {
     ok,
     desktopLogsDirectory: '/tmp/Hagi Code/userData/logs',
-    tooling: {
-      npmGlobalPrefix: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal',
-      npmGlobalBinRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/bin',
-      npmGlobalModulesRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules',
-      pm2PackageRoot: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/lib/node_modules/pm2',
-      pm2ExecutablePath: '/tmp/Hagi Code/.hagicode/runtime-data/node/node22/npmGlobal/bin/pm2',
-      pm2PackageVersion: '7.0.1',
-      pm2PackageUnderManagedModules: true,
-      pm2ExecutableUnderManagedBin: true,
+    backend: {
+      activeRuntimeRoot: '/artifact/resources/extra/portable-fixed/current',
+      serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
+      serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
+      dotnetExecutablePath: '/artifact/resources/extra/runtime/components/dotnet/runtime/linux-x64/current/dotnet',
+      port: 36556,
+      skipped: false,
+      skipReason: null,
+      startSuccess: ok,
+      statusAfterStart: ok ? 'running' : 'error',
+      pidAfterStart: ok ? 1234 : null,
+      restartSuccess: ok,
+      statusAfterRestart: ok ? 'running' : 'error',
+      pidAfterRestart: ok ? 1235 : null,
+      stopSuccess: ok,
+      statusAfterStop: 'stopped',
+      pidAfterStop: null,
+      processIdentityVerified: ok,
+      ...(ok ? {} : { error: 'backend diagnostic: restart failed' }),
     },
-    services: {
-      backend: {
-        pm2Home: '/tmp/Hagi Code/.hagicode/runtime-data/pm2',
-        runtimeDataHome: '/tmp/Hagi Code/.hagicode/runtime-data/pm2',
-        runtimeFilesDir: '/tmp/Hagi Code/.hagicode/runtime-data/pm2/pm2-runtime',
-        launchScriptPath: null,
-        launchWorkingDirectory: null,
-        activeRuntimeRoot: '/artifact/resources/extra/portable-fixed/current',
-        serviceDllPath: '/artifact/resources/extra/portable-fixed/current/lib/PCode.Web.dll',
-        serviceWorkingDirectory: '/artifact/resources/extra/portable-fixed/current/lib',
-        requiredRuntimeLabel: '10.0.0',
-        skipped: false,
-        skipReason: null,
-        startSuccess: ok,
-        statusAfterStart: ok ? 'online' : 'errored',
-        restartSuccess: ok,
-        statusAfterRestart: ok ? 'online' : 'errored',
-        stopSuccess: ok,
-        statusAfterStop: 'stopped',
-        diagnostics: ok ? [] : ['backend diagnostic: restart failed'],
-      },
-    },
-    issues: ok ? [] : ['backend failed to restart under the Desktop SDK runtime.'],
+    auxiliaryManagement: 'external',
+    issues: ok ? [] : ['Backend failed to restart under the Desktop-owned .NET process lifecycle.'],
   };
 }
 
@@ -158,9 +148,32 @@ describe('non-interactive mode dispatch', () => {
 
     assert.equal(result.exitCode, nonInteractiveExitCodes.success);
     assert.equal(stderr.length, 0);
-    assert.match(stdout.join('\n'), /standalone pm2 package managed: true/);
-    assert.match(stdout.join('\n'), /backend status after restart: online/);
+    assert.match(stdout.join('\n'), /backend lifecycle owner: Desktop-owned \.NET child process/);
+    assert.match(stdout.join('\n'), /backend status after restart: running/);
+    assert.match(stdout.join('\n'), /backend pid after start: 1234/);
+    assert.match(stdout.join('\n'), /backend pid after restart: 1235/);
+    assert.match(stdout.join('\n'), /backend pid after stop: null/);
+    assert.match(stdout.join('\n'), /backend process identity verified: true/);
+    assert.match(stdout.join('\n'), /auxiliary service management: external/);
     assert.match(stdout.join('\n'), /result: success/);
+  });
+
+  it('reports a missing packaged backend payload as an explicit lifecycle skip', async () => {
+    const stdout: string[] = [];
+    const report = createRuntimeLifecycleReport(true);
+    report.backend.skipped = true;
+    report.backend.skipReason = 'This Desktop package does not contain a portable backend payload.';
+    const result = await runNonInteractiveCommand(parseNonInteractiveCommand(['hagicode', 'runtime', 'lifecycle']), {
+      runtimeLifecycleVerifier: async () => report,
+      output: {
+        stdout: (line) => stdout.push(line),
+        stderr: () => undefined,
+      },
+    });
+
+    assert.equal(result.exitCode, nonInteractiveExitCodes.success);
+    assert.match(stdout.join('\n'), /backend lifecycle skipped: true/);
+    assert.match(stdout.join('\n'), /does not contain a portable backend payload/);
   });
 
   it('maps usage failures to stderr and deterministic exit codes', async () => {
@@ -193,6 +206,18 @@ describe('non-interactive mode dispatch', () => {
 });
 
 describe('main-process entrypoint contract', () => {
+  it('verifies the packaged backend through the Desktop-owned direct .NET manager', async () => {
+    const source = await fs.readFile(runtimeLifecyclePath, 'utf8');
+
+    assert.match(source, /new PCodeWebServiceManager/);
+    assert.match(source, /await manager\.start\(\)/);
+    assert.match(source, /await manager\.restart\(\)/);
+    assert.match(source, /await manager\.stop\(\)/);
+    assert.match(source, /await manager\.cleanup\(\)/);
+    assert.match(source, /auxiliaryManagement: 'external'/);
+    assert.doesNotMatch(source, /HagiscriptServerManager|pm2/i);
+  });
+
   it('keeps main-process UI startup hooks behind non-interactive detection', async () => {
     const source = await fs.readFile(mainPath, 'utf8');
 

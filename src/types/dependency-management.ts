@@ -3,7 +3,6 @@ import type { AgentCliId } from './agent-cli-catalog.js';
 export type ManagedNpmPackageId =
   | 'openspec'
   | 'skills'
-  | 'pm2'
   | 'claude-code'
   | 'codex'
   | 'pi'

@@ -111,90 +111,40 @@ describe('dependency readiness evaluation', () => {
     assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
   });
 
-  it('blocks readiness when PM2 is installed but below the required version', () => {
-    const summary = evaluateDependencyReadiness(createSnapshot({}, { pm2: '6.0.14' }), ['codex']);
-
-    assert.equal(summary.requiredReady, false);
-    assert.equal(summary.ready, false);
-    assert.deepEqual(summary.missingRequiredPackageIds, []);
-    assert.deepEqual(summary.versionMismatchRequiredPackageIds, ['pm2']);
-    assert.equal(summary.requiredPackages.some((item) => item.id === 'pm2' && item.versionSatisfied === false), true);
-    assert.equal(summary.optionalPackages.some((item) => item.id === 'pm2'), false);
-    assert.equal(summary.blockingReasons.some((reason) => reason.code === 'required-packages-missing'), true);
-  });
-
-  it('uses the snapshot definition when a managed package is configured to latest or dev', () => {
-    const latestSnapshot = createSnapshot(
-      {},
-      { pm2: '9.9.9' },
-      {
-        pm2: {
-          installSpec: 'pm2@latest',
-          requiredVersionRange: undefined,
-        },
-      },
-    );
-
-    const latestSummary = evaluateDependencyReadiness(latestSnapshot, ['codex']);
-    const latestPm2 = latestSummary.requiredPackages.find((item) => item.id === 'pm2');
-    assert.equal(latestPm2?.installSpec, 'pm2@latest');
-    assert.equal(latestPm2?.requiredVersionRange, null);
-    assert.equal(latestPm2?.versionSatisfied, true);
-
-    const devSnapshot = createSnapshot(
-      {},
-      { pm2: '7.0.1-dev.5' },
-      {
-        pm2: {
-          installSpec: 'pm2@dev',
-          requiredVersionRange: undefined,
-        },
-      },
-    );
-
-    const devSummary = evaluateDependencyReadiness(devSnapshot, ['codex']);
-    const devPm2 = devSummary.requiredPackages.find((item) => item.id === 'pm2');
-    assert.equal(devPm2?.installSpec, 'pm2@dev');
-    assert.equal(devPm2?.requiredVersionRange, null);
-    assert.equal(devPm2?.versionSatisfied, true);
-  });
-
   it('treats catalog-pinned managed package versions as minimum supported versions', () => {
-    const summary = evaluateDependencyReadiness(createSnapshot({}, { openspec: '1.3.1', pm2: '7.1.0' }), ['codex']);
+    const summary = evaluateDependencyReadiness(createSnapshot({}, { openspec: '1.3.1' }), ['codex']);
     const openspec = summary.requiredPackages.find((item) => item.id === 'openspec');
-    const pm2 = summary.requiredPackages.find((item) => item.id === 'pm2');
 
     assert.equal(openspec?.requiredVersionRange, '1.3.1');
     assert.equal(openspec?.versionSatisfied, true);
-    assert.equal(pm2?.requiredVersionRange, '>=7.0.1');
-    assert.equal(pm2?.versionSatisfied, true);
     assert.equal(summary.requiredReady, true);
   });
 
   it('still allows exact-version checks when a snapshot definition explicitly requires one', () => {
-    const pm2Definition = managedNpmPackages.find((definition) => definition.id === 'pm2');
-    if (!pm2Definition) {
-      throw new Error('pm2 definition missing from managed catalog');
+    const openspecDefinition = managedNpmPackages.find((definition) => definition.id === 'openspec');
+    if (!openspecDefinition) {
+      throw new Error('openspec definition missing from managed catalog');
     }
 
     assert.equal(
       isManagedPackageVersionSatisfied(
         {
-          ...pm2Definition,
-          installSpec: 'pm2@7.0.1',
-          requiredVersionRange: '7.0.1',
+          ...openspecDefinition,
+          installSpec: '@fission-ai/openspec@1.3.1',
+          requiredVersionRange: '1.3.1',
         },
-        '7.0.0',
+        '1.3.0',
       ),
       false,
     );
   });
 
-  it('keeps optional package status visible without blocking readiness', () => {
+  it('does not require PM2 for dependency readiness', () => {
     const summary = evaluateDependencyReadiness(createSnapshot({}), ['codex']);
 
     assert.equal(summary.optionalPackages.every((item) => item.definition.required !== true), true);
-    assert.equal(summary.requiredPackages.some((item) => item.id === 'pm2'), true);
+    assert.equal(managedNpmPackages.some((item) => item.id === 'pm2'), false);
+    assert.equal(summary.requiredPackages.some((item) => item.packageName === 'pm2'), false);
     assert.equal(summary.requiredReady, true);
     assert.equal(summary.agentCliReady, true);
     assert.equal(summary.ready, true);

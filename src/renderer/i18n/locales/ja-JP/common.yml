@@ -265,8 +265,6 @@ dependencyManagement:
       description: OpenSpec 提案書、仕様書、およびタスクのワークフロー CLI。
     skills:
       description: Codex/エージェントのスキル管理 CLI。
-    pm2:
-      description: Desktop 管理サービスの監視に利用できる PM2 プロセスマネージャー。
     claudeCode:
       description: Claude Code エージェント CLI（AI 支援コーディング セッション用）。
     codex:
@@ -314,7 +312,7 @@ dependencyManagement:
     groups:
       base:
         title: 基本依存関係
-        description: OpenSpec、Skills、PM2 など、Desktop ワークフローの基盤ツールをまとめてインストールします。
+        description: OpenSpec、Skills など、Desktop ワークフローの基盤ツールをまとめてインストールします。
       agentCli:
         title: Agent CLI
         description: 接続したい Agent CLI を選択し、Desktop SDK の npm 同期フローでまとめてインストールします。
