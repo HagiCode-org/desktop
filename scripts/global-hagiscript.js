@@ -228,11 +228,47 @@ export function resolveGlobalHagiscriptPackageRoot(minimumVersion = '0.1.8') {
   if (resolved.packageRoot) {
     return resolved.packageRoot;
   }
+  const commandPackageRoot = resolvePackageRootFromCommand(resolved.command);
+  if (commandPackageRoot) {
+    return commandPackageRoot;
+  }
   const packageRoot = path.join(resolveGlobalNodeModulesRoot(), '@hagicode', 'hagiscript');
   if (!fs.existsSync(packageRoot)) {
     throw new Error(`Global hagiscript package root was not found: ${packageRoot}`);
   }
   return packageRoot;
+}
+
+function resolvePackageRootFromCommand(command) {
+  const commandPath = path.isAbsolute(command)
+    ? command
+    : process.env.PATH?.split(path.delimiter)
+      .flatMap((directory) => {
+        const extensions = process.platform === 'win32' && !path.extname(command)
+          ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';')
+          : [''];
+        return extensions.map((extension) => path.join(directory, `${command}${extension}`));
+      })
+      .find((candidate) => fs.existsSync(candidate));
+  if (!commandPath || !fs.existsSync(commandPath)) {
+    return null;
+  }
+
+  let directory = path.dirname(fs.realpathSync(commandPath));
+  while (true) {
+    const manifestPath = path.join(directory, 'package.json');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (manifest.name === '@hagicode/hagiscript') {
+        return directory;
+      }
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      return null;
+    }
+    directory = parent;
+  }
 }
 
 export function getHagiscriptSpawnOptions(command) {

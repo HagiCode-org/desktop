@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { dump } from 'js-yaml';
-import type { DependencyManagementService } from './dependency-management-service.js';
 import {
   buildDesktopHagiscriptRuntimeManifest,
   buildDesktopManagedServerVersionState,
@@ -21,7 +21,6 @@ export type HagiscriptManagedPm2Service = 'server';
 export interface HagiscriptRuntimeContext {
   readonly serviceName: HagiscriptManagedPm2Service;
   readonly activeRuntime: ActiveRuntimeDescriptor;
-  readonly externalNodePath: string | null;
   readonly runtimeRoot: string;
   readonly runtimeHome: string;
   readonly runtimeDataRoot: string;
@@ -50,6 +49,7 @@ export class HagiscriptRuntimeContextResolver {
   private readonly pathManager: Pick<
     PathManager,
     | 'getRuntimeProgramHome'
+    | 'getBundledRuntimeProgramHome'
     | 'getRuntimeDataHome'
     | 'getUserDataPath'
     | 'getManagedServerProgramHome'
@@ -57,12 +57,11 @@ export class HagiscriptRuntimeContextResolver {
     | 'getEmbeddedRuntimeRoot'
     | 'getCurrentPlatform'
   >;
-  private readonly dependencyManagementService: DependencyManagementService;
-
   constructor(options: {
     pathManager: Pick<
       PathManager,
       | 'getRuntimeProgramHome'
+      | 'getBundledRuntimeProgramHome'
       | 'getRuntimeDataHome'
       | 'getUserDataPath'
       | 'getManagedServerProgramHome'
@@ -70,10 +69,8 @@ export class HagiscriptRuntimeContextResolver {
       | 'getEmbeddedRuntimeRoot'
       | 'getCurrentPlatform'
     >;
-    dependencyManagementService: DependencyManagementService;
   }) {
     this.pathManager = options.pathManager;
-    this.dependencyManagementService = options.dependencyManagementService;
   }
 
   async resolve(input: ResolveHagiscriptRuntimeContextInput): Promise<HagiscriptRuntimeContext> {
@@ -125,6 +122,7 @@ export class HagiscriptRuntimeContextResolver {
           serverProgramRoot: shared.serverProgramRoot,
           serverDataRoot: pm2Home,
           npmPrefix: shared.npmPrefix,
+          nodeRuntimeRoot: shared.nodeRuntimeRoot ?? undefined,
           dotnetRuntimeRoot: shared.dotnetRuntimeRoot,
           server: {
             servicePayloadPath,
@@ -141,7 +139,6 @@ export class HagiscriptRuntimeContextResolver {
     return {
       serviceName: 'server',
       activeRuntime: input.activeRuntime,
-      externalNodePath: shared.externalNodePath,
       runtimeRoot: shared.runtimeRoot,
       runtimeHome: shared.runtimeHome,
       runtimeDataRoot: shared.runtimeDataRoot,
@@ -163,7 +160,6 @@ export class HagiscriptRuntimeContextResolver {
   }
 
   private async resolveSharedContext(): Promise<{
-    externalNodePath: string | null;
     runtimeRoot: string;
     runtimeHome: string;
     runtimeDataRoot: string;
@@ -171,11 +167,13 @@ export class HagiscriptRuntimeContextResolver {
     runtimeStateFilePath: string;
     serverProgramRoot: string;
     npmPrefix: string;
+    nodeRuntimeRoot: string;
     dotnetRuntimeRoot: string;
   }> {
-    const managedContext = await this.dependencyManagementService.getManagedCommandContext('pm2');
-
+    const platform = this.pathManager.getCurrentPlatform();
+    const nodeExecutableName = platform.startsWith('win-') ? 'node.exe' : path.join('bin', 'node');
     const runtimeHome = path.resolve(this.pathManager.getRuntimeProgramHome());
+    const bundledRuntimeHome = path.resolve(this.pathManager.getBundledRuntimeProgramHome());
     const runtimeDataRoot = path.resolve(this.pathManager.getRuntimeDataHome());
     const runtimeRoot = path.resolve(this.pathManager.getUserDataPath());
     const serverProgramRoot = path.resolve(this.pathManager.getManagedServerProgramHome());
@@ -183,21 +181,54 @@ export class HagiscriptRuntimeContextResolver {
     const aliasedRuntimeRoot = await ensureNoSpacePathAlias(runtimeRoot, 'desktop-runtime-root');
     const dotnetRuntimeRoot = path.resolve(this.pathManager.getEmbeddedRuntimeContainerRoot(this.pathManager.getCurrentPlatform()));
     const aliasedDotnetRuntimeRoot = await ensureNoSpacePathAlias(dotnetRuntimeRoot, 'desktop-dotnet-runtime-root');
-    const externalNodePath = managedContext.environment.source === 'externally-managed'
-      && path.isAbsolute(managedContext.environment.node.executablePath)
-      ? path.resolve(managedContext.environment.node.executablePath)
-      : null;
+    const aliasedBundledRuntimeHome = await ensureNoSpacePathAlias(bundledRuntimeHome, 'desktop-bundled-runtime-home');
+    const nodeRuntimeRoot = path.join(aliasedBundledRuntimeHome, 'components', 'node', 'runtime');
+    const npmPrefix = path.join(aliasedBundledRuntimeHome, 'npm-pm2');
+    await validateDesktopPm2Toolchain(nodeRuntimeRoot, npmPrefix, nodeExecutableName, platform);
 
     return {
-      externalNodePath,
       runtimeRoot: aliasedRuntimeRoot,
       runtimeHome: aliasedRuntimeHome,
       runtimeDataRoot,
       runtimeLogsDirectory: path.join(runtimeDataRoot, 'logs'),
       runtimeStateFilePath: path.join(runtimeDataRoot, 'state.json'),
       serverProgramRoot,
-      npmPrefix: managedContext.environment.npmGlobalPrefix,
+      npmPrefix,
+      nodeRuntimeRoot,
       dotnetRuntimeRoot: aliasedDotnetRuntimeRoot,
     };
+  }
+}
+
+export async function validateDesktopPm2Toolchain(
+  nodeRuntimeRoot: string,
+  npmPrefix: string,
+  nodeExecutableName = process.platform === 'win32' ? 'node.exe' : path.join('bin', 'node'),
+  platform: string = process.platform,
+): Promise<void> {
+  const nodePath = path.join(nodeRuntimeRoot, nodeExecutableName);
+  const pm2Root = path.join(
+    npmPrefix,
+    platform.startsWith('win-') || platform === 'win32' ? 'node_modules' : path.join('lib', 'node_modules'),
+    'pm2',
+  );
+  const requiredFiles = [
+    ['Bundled PM2 Node executable', nodePath],
+    ['Managed PM2 entrypoint', path.join(pm2Root, 'bin', 'pm2')],
+    ['Managed PM2 package manifest', path.join(pm2Root, 'package.json')],
+  ] as const;
+
+  for (const [label, targetPath] of requiredFiles) {
+    try {
+      const stats = await fs.stat(targetPath);
+      if (!stats.isFile()) {
+        throw new Error(`${label} is not a file: ${targetPath}`);
+      }
+      if (label === 'Bundled PM2 Node executable' && !platform.startsWith('win-') && platform !== 'win32') {
+        await fs.access(targetPath, constants.X_OK);
+      }
+    } catch {
+      throw new Error(`${label} is missing: ${targetPath}`);
+    }
   }
 }

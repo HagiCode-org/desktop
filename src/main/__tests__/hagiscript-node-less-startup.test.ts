@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { chmod } from 'node:fs/promises';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,14 +8,16 @@ import { stringify } from 'yaml';
 import { loadRuntimeManifest, resolveManagedServerStartupEnvironment } from '@hagicode/hagiscript-sdk';
 import { buildDesktopHagiscriptRuntimeManifest } from '../hagiscript-desktop-manifest.js';
 
-describe('node-less Desktop startup', () => {
-  it('accepts an empty node runtime and resolves the released service through dotnet', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-node-less-'));
+describe('Desktop managed Node startup', () => {
+  it('uses bundled Node for PM2 and resolves the released service through dotnet', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'hagicode-managed-node-'));
     const scriptsRoot = path.join(root, 'scripts');
     const payloadRoot = path.join(root, 'payload', 'lib');
     const runtimeDataRoot = path.join(root, 'runtime-data');
     const serverDataRoot = path.join(runtimeDataRoot, 'server-data');
     const dotnetRoot = path.join(root, 'dotnet');
+    const nodeRuntimeRoot = path.join(root, 'components', 'node', 'runtime');
+    const nodePath = path.join(nodeRuntimeRoot, 'bin', 'node');
     const npmPrefix = path.join(runtimeDataRoot, 'npm');
     const manifestPath = path.join(root, 'runtime.yml');
     const scriptNames = [
@@ -32,12 +35,19 @@ describe('node-less Desktop startup', () => {
       fs.mkdir(payloadRoot, { recursive: true }),
       fs.mkdir(path.join(serverDataRoot), { recursive: true }),
       fs.mkdir(path.join(dotnetRoot, 'current'), { recursive: true }),
+      fs.mkdir(path.dirname(nodePath), { recursive: true }),
       fs.mkdir(path.join(npmPrefix, 'lib', 'node_modules', 'pm2', 'bin'), { recursive: true }),
     ]);
     await Promise.all(scriptNames.map((name) => fs.writeFile(path.join(scriptsRoot, name), 'export {};\n')));
     await fs.writeFile(path.join(payloadRoot, 'PCode.Web.dll'), '');
     await fs.writeFile(path.join(dotnetRoot, 'current', 'dotnet'), '');
+    await fs.writeFile(nodePath, '');
+    await chmod(nodePath, 0o755);
     await fs.writeFile(path.join(npmPrefix, 'lib', 'node_modules', 'pm2', 'bin', 'pm2'), '');
+    await fs.writeFile(
+      path.join(npmPrefix, 'lib', 'node_modules', 'pm2', 'package.json'),
+      JSON.stringify({ name: 'pm2', version: '7.0.1' }),
+    );
     await fs.writeFile(
       path.join(serverDataRoot, 'versions-state.json'),
       JSON.stringify({
@@ -61,6 +71,7 @@ describe('node-less Desktop startup', () => {
       serverProgramRoot: path.join(root, 'server'),
       serverDataRoot,
       npmPrefix,
+      nodeRuntimeRoot,
       dotnetRuntimeRoot: dotnetRoot,
       server: {
         servicePayloadPath: path.join(payloadRoot, 'PCode.Web.dll'),
@@ -76,10 +87,10 @@ describe('node-less Desktop startup', () => {
     await fs.writeFile(manifestPath, stringify(manifest));
 
     const loaded = await loadRuntimeManifest({ manifestPath });
-    assert.equal(loaded.paths.nodeRuntime, '');
+    assert.equal(loaded.paths.nodeRuntime, nodeRuntimeRoot);
     const environment = await resolveManagedServerStartupEnvironment({ manifestPath, runtimeRoot: root });
-    assert.equal(environment.nodePath, '');
-    assert.equal(environment.useManagedNodeRuntime, false);
+    assert.equal(environment.nodePath, nodePath);
+    assert.equal(environment.useManagedNodeRuntime, true);
     assert.equal(environment.launchStrategy, 'released-service');
     assert.equal(environment.script, path.join(payloadRoot, 'PCode.Web.dll'));
     assert.equal(environment.dotnetPath, path.join(dotnetRoot, 'current', 'dotnet'));

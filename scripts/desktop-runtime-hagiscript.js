@@ -15,7 +15,7 @@ import {
 } from './global-hagiscript.js';
 const RUNTIME_CONSUMER_ENV = 'HAGICODE_RUNTIME_CONSUMER';
 
-const MINIMUM_HAGISCRIPT_VERSION = '0.3.3';
+const MINIMUM_HAGISCRIPT_VERSION = '0.3.10';
 const NODE_COMPONENT_NAME = 'node';
 
 export function isManagedDesktopRuntimeComponentExecution(componentIds = null) {

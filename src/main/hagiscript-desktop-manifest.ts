@@ -109,6 +109,7 @@ export function buildDesktopHagiscriptRuntimeManifest(
       name: 'node',
       type: 'runtime',
       required: Boolean(options.nodeRuntimeRoot),
+      ...(options.nodeRuntimeRoot ? { source: 'desktop-bundled-pm2-node' } : {}),
       installScript: path.join(desktopRuntimeScriptsRoot, 'noop-install-node.mjs'),
       verifyScript: path.join(desktopRuntimeScriptsRoot, 'noop-verify-node.mjs'),
     },

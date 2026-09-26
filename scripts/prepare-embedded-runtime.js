@@ -19,6 +19,7 @@ import {
   isManagedDesktopRuntimeComponentExecution,
   resolveManagedDesktopRuntimeComponentRoot,
 } from './desktop-runtime-hagiscript.js';
+import { prepareDesktopPm2Toolchain } from './pm2-toolchain-prepare.js';
 
 const runtimePlatform = process.env.HAGICODE_EMBEDDED_DOTNET_PLATFORM || detectRuntimePlatform();
 const runtimeConfig = readPinnedRuntimeConfig();
@@ -41,6 +42,7 @@ const forceRestage = process.env.HAGICODE_FORCE_EMBEDDED_RUNTIME_RESTAGE === '1'
 const metadataPath = path.join(stagedRuntimeRoot, EMBEDDED_RUNTIME_METADATA_FILE);
 
 const requiresExecutableDotnetHost = !runtimePlatform.startsWith('win-');
+await prepareDesktopPm2Toolchain();
 
 if (!managedExecution) {
   if (forceRestage) {

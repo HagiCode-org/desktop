@@ -80,4 +80,13 @@ describe('onboarding-manager legal consent gating', () => {
     assert.match(source, /const failureResult = buildOnboardingStartupFailureResult\(startResult, status\.port\);/);
     assert.match(source, /return failureResult;/);
   });
+
+  it('preserves direct non-Windows launches and the existing Windows batch-wrapper path', async () => {
+    const source = await readSource();
+
+    assert.match(source, /if \(platform !== 'win32'\) \{\s*return \{ command, args \};/);
+    assert.match(source, /needsCmdShim = lowerCommand\.endsWith\('\.cmd'\) \|\| lowerCommand\.endsWith\('\.bat'\)/);
+    assert.match(source, /shell: true/);
+    assert.doesNotMatch(source, /commandChain:/);
+  });
 });

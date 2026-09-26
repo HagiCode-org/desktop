@@ -43,4 +43,11 @@ describe('Windows command launch contract', () => {
     assert.equal(launch.command, '"C:\\Program Files (x86)\\Steam\\steamapps\\common\\HagiCode\\resources\\extra\\toolchain\\node\\npm.cmd"');
     assert.equal(launch.shell, true);
   });
+
+  it('keeps managed npm work on the direct argument-list path', async () => {
+    const source = await fs.readFile(servicePath, 'utf8');
+
+    assert.match(source, /command: launch\.command,\s*args,\s*env,\s*shell: options\.shell \?\? launch\.shell/);
+    assert.doesNotMatch(source, /commandChain:/);
+  });
 });

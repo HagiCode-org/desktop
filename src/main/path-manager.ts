@@ -455,6 +455,14 @@ export class PathManager {
     });
   }
 
+  getBundledRuntimeProgramHome(): string {
+    return resolveDesktopRuntimeProgramHome({
+      cwd: process.cwd(),
+      resourcesPath: process.resourcesPath,
+      isPackaged: app.isPackaged,
+    });
+  }
+
   getRuntimeDataHome(): string {
     return this.paths.runtimeDataRoot;
   }

@@ -296,7 +296,6 @@ async function verifyBackendLifecycle(input: {
 
   const runtimeContextResolver = new HagiscriptRuntimeContextResolver({
     pathManager: input.pathManager,
-    dependencyManagementService: input.dependencyManagementService,
   });
   const runtimeContext = await runtimeContextResolver.resolve({
     activeRuntime,
@@ -403,7 +402,6 @@ export async function verifyDesktopRuntimeLifecycle(): Promise<NonInteractiveRun
   const timeoutMs = resolveVerificationTimeoutMs();
   const runtimeContextResolver = new HagiscriptRuntimeContextResolver({
     pathManager,
-    dependencyManagementService,
   });
   const toolingReport: ManagedRuntimeToolingReport = {
     npmGlobalPrefix: pm2Context.environment.npmGlobalPrefix,

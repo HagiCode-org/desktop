@@ -113,7 +113,7 @@ interface Pm2ProcessMetrics {
   pmUptime: number | null;
 }
 
-const MINIMUM_NODELESS_SDK_VERSION = '0.3.8';
+const MINIMUM_NODELESS_SDK_VERSION = '0.3.11';
 
 export class HagiscriptPm2Manager {
   async exact(context: HagiscriptRuntimeContext): Promise<HagiscriptBundledRuntimeExactResult> {
@@ -137,7 +137,6 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', 'exact', {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
       if (result.action !== 'exact') {
@@ -271,7 +270,6 @@ export class HagiscriptPm2Manager {
       const environment = await resolveManagedServerStartupEnvironment({
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
       return {
@@ -321,7 +319,6 @@ export class HagiscriptPm2Manager {
       const result = await executeComponentServiceAction('code_server', action, {
         manifestPath: context.manifestPath,
         runtimeRoot: context.runtimeRoot,
-        ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
       });
 
       if (!this.isLifecycleComponentResult(result)) {
@@ -341,7 +338,6 @@ export class HagiscriptPm2Manager {
     const options = {
       manifestPath: context.manifestPath,
       runtimeRoot: context.runtimeRoot,
-      ...(context.externalNodePath ? { externalNodePath: context.externalNodePath } : {}),
     };
 
     switch (action) {

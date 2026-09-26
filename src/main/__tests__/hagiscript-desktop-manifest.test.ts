@@ -15,6 +15,33 @@ import {
 } from '../hagiscript-desktop-manifest.js';
 
 describe('hagiscript desktop manifest builder', () => {
+  it('requires managed Node when a Desktop PM2 runtime is configured', () => {
+    const manifest = buildDesktopHagiscriptRuntimeManifest({
+      runtimeRoot: '/tmp/hagicode-user-data',
+      runtimeHome: '/opt/HagiCode/resources/extra/runtime',
+      runtimeDataRoot: '/tmp/home/.hagicode/runtime-data',
+      serverProgramRoot: '/tmp/home/.hagicode/runtime-data/apps/installed',
+      serverDataRoot: '/tmp/home/.hagicode/runtime-data/apps/data',
+      npmPrefix: '/opt/HagiCode/resources/extra/runtime/npm-pm2',
+      nodeRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/node/runtime',
+      dotnetRuntimeRoot: '/opt/HagiCode/resources/extra/runtime/components/dotnet/runtime/win-x64',
+      dotnetPlatform: 'win-x64',
+    }) as {
+      paths: Record<string, string>;
+      components: Array<Record<string, unknown>>;
+    };
+
+    assert.equal(
+      manifest.paths.nodeRuntime,
+      '/opt/HagiCode/resources/extra/runtime/components/node/runtime',
+    );
+    assert.equal(manifest.paths.npmPrefix, '/opt/HagiCode/resources/extra/runtime/npm-pm2');
+    assert.equal(
+      (manifest.components.find((component) => component.name === 'node') as { required?: boolean }).required,
+      true,
+    );
+  });
+
   it('builds the full Desktop manifest when a server payload is provided', () => {
     const manifest = buildDesktopHagiscriptRuntimeManifest({
       runtimeRoot: '/tmp/hagicode-user-data',

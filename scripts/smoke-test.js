@@ -21,6 +21,7 @@ import {
 } from './embedded-runtime-config.js';
 import { resolveStagedDesktopRuntimeComponentRoot } from './desktop-runtime-layout.js';
 import { assertGlobalHagiscriptAvailable } from './global-hagiscript.js';
+import { validatePm2Toolchain } from './pm2-toolchain.js';
 
 const args = process.argv.slice(2);
 const isVerbose = args.includes('--verbose');
@@ -664,6 +665,47 @@ test('packaged runtime payload is complete', () => {
       ? 'packaged runtime metadata matches the pinned Microsoft runtime manifest'
       : `packaged runtime metadata mismatch: ${metadataErrors.join('; ')}`,
   );
+});
+
+test('Windows PM2 toolchain is staged and packaged outside app.asar', async () => {
+  if (!runtimePlatform.startsWith('win-')) {
+    log('  - Skipping: bundled PM2 toolchain checks are only defined for Windows', colors.yellow);
+    results.skipped++;
+    return;
+  }
+
+  const roots = [
+    {
+      name: 'staged',
+      root: path.join(process.cwd(), 'resources'),
+      required: requireRuntimePayload,
+    },
+    ...(requirePackagedRuntimePayload && packagedRuntimeRoot
+      ? [{
+          name: 'packaged',
+          root: path.resolve(packagedRuntimeRoot, '..', '..', '..', '..', '..'),
+          required: true,
+        }]
+      : []),
+  ];
+
+  for (const candidate of roots) {
+    if (!candidate.required && !fs.existsSync(candidate.root)) {
+      log(`  - Skipping: ${candidate.name} PM2 toolchain is not required for this smoke-test run`, colors.yellow);
+      results.skipped++;
+      continue;
+    }
+
+    const validation = await validatePm2Toolchain(candidate.root);
+    assert(
+      !validation.nodePath.includes('app.asar') && !validation.pm2Entrypoint.includes('app.asar'),
+      `${candidate.name} PM2 Node and entrypoint are outside app.asar`,
+    );
+    assert(
+      validation.requiredFiles.length > 2,
+      `${candidate.name} PM2 entrypoint and production dependencies are present`,
+    );
+  }
 });
 
 test('packaged Steam wrapper is available for Linux launches', () => {

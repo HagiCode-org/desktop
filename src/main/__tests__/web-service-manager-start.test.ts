@@ -84,15 +84,14 @@ describe('web-service startup flow', () => {
     assert.match(webServiceSource, /ASPNETCORE_URLS=/);
     assert.doesNotMatch(webServiceSource, /this\.pm2Manager\./);
 
-    assert.match(runtimeContextSource, /getManagedCommandContext\('pm2'\)/);
     assert.match(runtimeContextSource, /buildDesktopHagiscriptRuntimeManifest\(/);
     assert.match(runtimeContextSource, /buildDesktopManagedServerVersionState\(/);
-    assert.match(runtimeContextSource, /externalNodePath: shared\.externalNodePath/);
-    assert.match(runtimeContextSource, /managedContext\.environment\.source === 'externally-managed'/);
+    assert.match(runtimeContextSource, /nodeRuntimeRoot: shared\.nodeRuntimeRoot/);
     assert.match(runtimeContextSource, /const serviceDataHome = pm2Home;/);
     assert.match(runtimeContextSource, /serverProgramRoot/);
     assert.match(runtimeContextSource, /serverDataRoot/);
-    assert.match(runtimeContextSource, /npmPrefix: managedContext\.environment\.npmGlobalPrefix/);
+    assert.match(runtimeContextSource, /npmPrefix: shared\.npmPrefix/);
+    assert.match(runtimeContextSource, /const nodeRuntimeRoot = path\.join\(aliasedBundledRuntimeHome, 'components', 'node', 'runtime'\)/);
     assert.match(runtimeContextSource, /servicePayloadPath,/);
     assert.match(runtimeContextSource, /serviceWorkingDirectory: aliasedServiceWorkingDirectory/);
     assert.match(runtimeContextSource, /DESKTOP_HAGISCRIPT_SERVER_VERSION_STATE_FILE/);
@@ -103,7 +102,7 @@ describe('web-service startup flow', () => {
     assert.match(serverManagerSource, /restartManagedServer/);
     assert.match(serverManagerSource, /stopManagedServer/);
     assert.match(serverManagerSource, /getManagedServerStatus/);
-    assert.match(serverManagerSource, /externalNodePath: context\.externalNodePath/);
+    assert.doesNotMatch(serverManagerSource, /externalNodePath/);
     assert.match(serverManagerSource, /response\?\.pm2Home \? path\.join\(response\.pm2Home, 'logs'\) : null/);
     assert.match(serverManagerSource, /parsePm2ProcessMetrics/);
     assert.match(serverManagerSource, /MINIMUM_NODELESS_SDK_VERSION/);
@@ -233,5 +232,13 @@ describe('web-service startup flow', () => {
     assert.equal(batchLaunch.shell, true);
     assert.equal(nodeLaunch.command, 'C:\\Program Files\\nodejs\\node.exe');
     assert.equal(nodeLaunch.shell, false);
+  });
+
+  it('keeps port checks as direct executable arguments rather than opting into chain mode', async () => {
+    const source = await fs.readFile(webServiceManagerPath, 'utf-8');
+
+    assert.match(source, /command = 'netstat';\s*args = \['-an'\];\s*shell = true;/);
+    assert.match(source, /args = \['-c', `ss -tuln \| grep/);
+    assert.doesNotMatch(source, /commandChain:/);
   });
 });
