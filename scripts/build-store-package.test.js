@@ -103,5 +103,5 @@ test('createStoreBuildMetadata records external runtime package metadata', () =>
   });
 
   assert.equal(metadata.windowsStoreVersion, 'v0.1.0');
-  assert.deepEqual(metadata.desktopManagedNodePm2, { present: false });
+  assert.equal(Object.hasOwn(metadata, 'desktopManagedNodePm2'), false);
 });

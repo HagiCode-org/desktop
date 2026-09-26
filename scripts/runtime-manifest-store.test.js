@@ -44,7 +44,6 @@ describe('script runtime manifest store data scope resolution', () => {
         '  stateFile: state.json',
         '  componentsRoot: components',
         '  componentDataRoot: components',
-        '  defaultPm2Home: pm2',
         '  npmPrefix: npm',
         '  dotnetRuntime: components/dotnet/runtime',
         '  vendoredRoot: components/bundled',
@@ -62,6 +61,7 @@ describe('script runtime manifest store data scope resolution', () => {
 describe('embedded .NET runtime manifest component contracts', () => {
   it('keeps only the active Desktop .NET runtime components', () => {
     const manifest = load(fs.readFileSync(new URL('../resources/manifest.yml', import.meta.url), 'utf8'));
+    assert.equal(Object.hasOwn(manifest.paths, 'defaultPm2Home'), false);
     const componentNames = Array.isArray(manifest.components)
       ? manifest.components.map((component) => component?.name).filter(Boolean)
       : [];

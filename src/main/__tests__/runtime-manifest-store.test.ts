@@ -53,7 +53,6 @@ describe('runtime manifest store data scope resolution', () => {
         '  stateFile: state.json',
         '  componentsRoot: components',
         '  componentDataRoot: components',
-        '  defaultPm2Home: pm2',
         '  npmPrefix: npm',
         '  dotnetRuntime: components/dotnet/runtime',
         '  vendoredRoot: components/bundled',

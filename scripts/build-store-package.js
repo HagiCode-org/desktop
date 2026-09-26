@@ -321,9 +321,6 @@ export function createStoreBuildMetadata({
           validationPassed: false,
           requiredPaths: [],
         },
-    desktopManagedNodePm2: {
-      present: false,
-    },
     store: {
       displayName: storeConfig.packageIdentity.displayName,
       publisherDisplayName: storeConfig.packageIdentity.publisherDisplayName,
