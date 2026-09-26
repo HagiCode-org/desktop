@@ -33,6 +33,7 @@ export interface HttpIndexDownloadSource {
   kind?: string;
   label?: string;
   url?: string;
+  urls?: { china?: string; international?: string };
   primary?: boolean;
   webSeed?: boolean;
 }
@@ -479,10 +480,17 @@ export class HttpIndexPackageSource implements PackageSource {
           return null;
         }
 
+        const urls: StructuredFallbackSource['urls'] = kind === 'official' && source.urls
+          ? {
+              china: typeof source.urls.china === 'string' ? this.resolveStructuredSourceUrl(source.urls.china) : undefined,
+              international: typeof source.urls.international === 'string' ? this.resolveStructuredSourceUrl(source.urls.international) : undefined,
+            }
+          : undefined;
         return {
           kind,
           label: typeof source.label === 'string' && source.label.trim().length > 0 ? source.label.trim() : kind,
           url,
+          ...(urls && { urls }),
           primary: source.primary === true,
           webSeed: source.webSeed === true,
         };

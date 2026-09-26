@@ -10,6 +10,7 @@ export interface StructuredFallbackSource {
   kind: StructuredFallbackSourceKind;
   label: string;
   url: string;
+  urls?: { china?: string; international?: string };
   primary: boolean;
   webSeed: boolean;
 }
@@ -105,6 +106,7 @@ export interface HybridDownloadPolicy {
     | 'not-http-index'
     | 'not-eligible'
     | 'legacy-http'
+    | 'regional-http'
     | 'latest-only';
   thresholdBytes: number;
   serviceScope: SharingAccelerationServiceScope;

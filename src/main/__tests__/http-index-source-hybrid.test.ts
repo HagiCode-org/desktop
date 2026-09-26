@@ -164,6 +164,36 @@ describe('http index hybrid metadata support', () => {
       assert.deepEqual(versions[0].hybrid?.webSeeds, [`https://example.com/server/official/${packageName}`]);
   });
 
+  it('preserves region-specific official URLs from the server index', async () => {
+    const name = serverAssetName('1.2.7');
+    const source = new HttpIndexPackageSource(
+      { type: 'http-index', indexUrl: 'https://dl-server.hagicode.com/index.json' },
+      stubHttpClient({
+        versions: [{
+          version: '1.2.7',
+          assets: [{
+            name,
+            directUrl: `https://server.dl.hagicode.com/${name}`,
+            downloadSources: [{
+              kind: 'official',
+              url: `https://server.dl.hagicode.com/${name}`,
+              urls: {
+                china: `https://server.dl.hagicode.com/${name}`,
+                international: `./1.2.7/${name}`,
+              },
+            }],
+          }],
+        }],
+      }),
+    );
+
+    const [version] = await source.listAvailableVersions();
+    assert.deepEqual(version.hybrid?.downloadSources?.[0].urls, {
+      china: `https://server.dl.hagicode.com/${name}`,
+      international: `https://dl-server.hagicode.com/1.2.7/${name}`,
+    });
+  });
+
   it('ignores malformed or unknown structured download sources without breaking legacy downloads', async () => {
     const version = '1.2.6';
     const packageName = desktopAssetName(version);
