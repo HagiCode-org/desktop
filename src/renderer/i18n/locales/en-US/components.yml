@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Generate batch command
     dialogTitle: Batch install command
     copy: Copy
+    shellSelectorLabel: Destination shell
+    cmdShell: Command Prompt (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Copy this command and run it in {{shell}}. Desktop does not execute copied commands."
     requiredLabel: Required
   status:
     installed: Installed

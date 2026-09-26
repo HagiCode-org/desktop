@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Generar comando por lotes
     dialogTitle: Comando de instalación por lotes
     copy: Copiar
+    shellSelectorLabel: Shell de destino
+    cmdShell: Símbolo del sistema (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Copia este comando y ejecútalo en {{shell}}. Desktop no ejecuta los comandos copiados."
     requiredLabel: Obligatorio
   status:
     installed: Instalado

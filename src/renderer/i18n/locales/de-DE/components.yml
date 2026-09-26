@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Stapelbefehl generieren
     dialogTitle: Stapel-Installationsbefehl
     copy: Kopieren
+    shellSelectorLabel: Ziel-Shell
+    cmdShell: Eingabeaufforderung (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Kopieren Sie diesen Befehl und führen Sie ihn in {{shell}} aus. Desktop führt kopierte Befehle nicht aus."
     requiredLabel: Erforderlich
   status:
     installed: Installiert

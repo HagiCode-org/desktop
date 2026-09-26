@@ -218,6 +218,10 @@ dependencyManagement:
     generate: 一括コマンドを生成
     dialogTitle: 一括インストールコマンド
     copy: コピー
+    shellSelectorLabel: 実行先のシェル
+    cmdShell: コマンド プロンプト (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "このコマンドをコピーし、{{shell}} で実行してください。Desktop はコピーしたコマンドを実行しません。"
     requiredLabel: 必須
   status:
     installed: インストール済み

@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Gerar comando em lote
     dialogTitle: Comando de instalação em lote
     copy: Copiar
+    shellSelectorLabel: Shell de destino
+    cmdShell: Prompt de Comando (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Copie este comando e execute-o no {{shell}}. O Desktop não executa comandos copiados."
     requiredLabel: Obrigatório
   status:
     installed: Instalado

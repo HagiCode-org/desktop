@@ -218,6 +218,10 @@ dependencyManagement:
     generate: 일괄 명령 생성
     dialogTitle: 일괄 설치 명령
     copy: 복사
+    shellSelectorLabel: 대상 셸
+    cmdShell: 명령 프롬프트(cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "이 명령을 복사한 후 {{shell}}에서 실행하세요. Desktop은 복사한 명령을 실행하지 않습니다."
     requiredLabel: 필수
   status:
     installed: 설치됨

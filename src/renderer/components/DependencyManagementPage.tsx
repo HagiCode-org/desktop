@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/ui/page-header';
-import { evaluateDependencyRepairIntent, prioritizePackagesForRepair, buildBatchInstallCommand } from './dependency-management/dependencyManagementPageModel';
+import { evaluateDependencyRepairIntent, prioritizePackagesForRepair } from './dependency-management/dependencyManagementPageModel';
 import { BatchCommandDialog } from './dependency-management/BatchCommandDialog';
 import { DependencyManagementTabContent } from '../features/dependency-management/DependencyManagementTabContent';
 import { useDependencyManagementTab } from '../features/dependency-management/useDependencyManagementTab';
@@ -33,7 +33,7 @@ export default function DependencyManagementPage() {
   const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
   const [, startTransition] = useTransition();
   const [selectedPackageIds, setSelectedPackageIds] = useState<Set<ManagedNpmPackageId>>(new Set());
-  const [batchCommand, setBatchCommand] = useState<string | null>(null);
+  const [isBatchCommandDialogOpen, setIsBatchCommandDialogOpen] = useState(false);
   const [mirrorSaveError, setMirrorSaveError] = useState<string | null>(null);
   const [isSavingMirrorSettings, setIsSavingMirrorSettings] = useState(false);
   const [repairCompletionState, setRepairCompletionState] = useState<'idle' | 'checking' | 'incomplete' | 'failed'>('idle');
@@ -82,6 +82,9 @@ export default function DependencyManagementPage() {
     });
   };
   const mirrorRegistryUrl = snapshot?.mirrorSettings.registryUrl ?? NPM_MIRROR_REGISTRY_URL;
+  const selectedBatchPackageDefinitions = snapshot?.packages
+    .filter((item) => selectedPackageIds.has(item.id))
+    .map((item) => item.definition) ?? [];
   const updateMirrorSettings = async (enabled: boolean) => {
     if (!snapshot) return;
     const previous = snapshot;
@@ -104,7 +107,7 @@ export default function DependencyManagementPage() {
   };
   const generateBatchCommand = () => {
     if (!snapshot || selectedPackageIds.size === 0) return;
-    setBatchCommand(buildBatchInstallCommand(snapshot.packages.filter((item) => selectedPackageIds.has(item.id)).map((item) => item.definition), snapshot.mirrorSettings.enabled ? mirrorRegistryUrl : null, platform));
+    setIsBatchCommandDialogOpen(true);
   };
   const activeConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   return <PageShell>
@@ -114,7 +117,13 @@ export default function DependencyManagementPage() {
       <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl border border-border/70 bg-muted/25 p-2">{tabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.id} value={tab.id} className="gap-2 rounded-xl px-4 py-3"><Icon className="h-4 w-4" />{t(tab.labelKey, { ns: 'pages' })}</TabsTrigger>; })}</TabsList>
       <DependencyManagementTabContent activeTab={activeConfig} snapshot={snapshot} basePackages={basePackages} agentCliPackages={agentCliPackages} baseHighlightedPackageIds={highlightedPackageIds.filter((id) => baseIds.has(id))} agentCliHighlightedPackageIds={highlightedPackageIds.filter((id) => agentIds.has(id))} selectedPackageIds={selectedPackageIds} onSelectionChange={updateSelectedIds} onGenerateBatchCommand={generateBatchCommand} onRefresh={() => void refreshSnapshot()} isRefreshing={isRefreshingSnapshot} onOpenNodeEnvironmentFaq={() => void window.electronAPI.openExternal(t('dependencyManagement.environment.faqUrl'))} onUpdateMirrorSettings={updateMirrorSettings} isSavingMirrorSettings={isSavingMirrorSettings} mirrorRegistryUrl={mirrorRegistryUrl} mirrorSaveError={mirrorSaveError} />
     </Tabs> : null}
-    <BatchCommandDialog open={batchCommand !== null} command={batchCommand ?? ''} onOpenChange={(open) => { if (!open) setBatchCommand(null); }} />
+    <BatchCommandDialog
+      open={isBatchCommandDialogOpen}
+      definitions={selectedBatchPackageDefinitions}
+      registryUrl={snapshot?.mirrorSettings.enabled ? mirrorRegistryUrl : null}
+      platform={platform}
+      onOpenChange={setIsBatchCommandDialogOpen}
+    />
     {repairIntent && repairCompletionState !== 'idle' ? <Button className="sr-only" onClick={() => void runRepairCompletionCheck()} /> : null}
   </PageShell>;
 }

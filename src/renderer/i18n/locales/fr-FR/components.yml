@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Générer la commande groupée
     dialogTitle: Commande d'installation groupée
     copy: Copier
+    shellSelectorLabel: Shell de destination
+    cmdShell: Invite de commandes (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Copiez cette commande et exécutez-la dans {{shell}}. Desktop n'exécute pas les commandes copiées."
     requiredLabel: Requis
   status:
     installed: Installé

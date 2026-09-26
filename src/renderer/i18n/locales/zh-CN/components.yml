@@ -218,6 +218,10 @@ dependencyManagement:
     generate: 生成批量命令
     dialogTitle: 批量安装命令
     copy: 复制
+    shellSelectorLabel: 目标命令行
+    cmdShell: 命令提示符（cmd）
+    powershellShell: Windows PowerShell
+    destinationHint: "复制此命令并在 {{shell}} 中运行。Desktop 不会执行复制的命令。"
     requiredLabel: 必需
   status:
     installed: 已安装

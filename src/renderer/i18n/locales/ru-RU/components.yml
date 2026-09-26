@@ -218,6 +218,10 @@ dependencyManagement:
     generate: Создать пакетную команду
     dialogTitle: Пакетная команда установки
     copy: Копировать
+    shellSelectorLabel: Целевая оболочка
+    cmdShell: Командная строка (cmd)
+    powershellShell: Windows PowerShell
+    destinationHint: "Скопируйте команду и выполните её в {{shell}}. Desktop не выполняет скопированные команды."
     requiredLabel: Обязательно
   status:
     installed: Установлено

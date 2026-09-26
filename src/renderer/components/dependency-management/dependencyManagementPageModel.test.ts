@@ -41,4 +41,28 @@ describe('buildBatchInstallCommand', () => {
   it('uses Windows command continuation syntax', () => {
     assert.match(buildBatchInstallCommand(definitions, null, 'win32'), /openspec\s+&& \^\n/);
   });
+
+  it('generates Windows PowerShell 5.1 commands with quoted arguments and failure guards', () => {
+    const command = buildBatchInstallCommand(
+      definitions,
+      "https://registry.example.test/with'quote",
+      'win32',
+      'powershell',
+    );
+
+    assert.equal(command.split('\n').length, definitions.length * 2);
+    assert.match(command, /npm 'install' '-g' '--registry' 'https:\/\/registry\.example\.test\/with''quote' '@fission-ai\/openspec'/);
+    assert.equal((command.match(/if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}/gu) ?? []).length, definitions.length);
+    assert.doesNotMatch(command, /&&/u);
+  });
+
+  it('keeps non-Windows output unchanged even if PowerShell is selected', () => {
+    assert.equal(
+      buildBatchInstallCommand(definitions, null, 'linux', 'powershell'),
+      [
+        'npm install -g @fission-ai/openspec',
+        'npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.78.1',
+      ].join(' && \\\n'),
+    );
+  });
 });

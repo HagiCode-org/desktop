@@ -1,5 +1,7 @@
 import {
+  buildManagedPackageGlobalInstallCommand,
   getManagedPackageRequiredVersionRange,
+  getManagedPackageInstallArgs,
   isManagedPackageVersionSatisfied,
 } from '../../../shared/npm-managed-packages.js';
 import type {
@@ -8,9 +10,13 @@ import type {
   ManagedNpmPackageStatusSnapshot,
 } from '../../../types/dependency-management.js';
 import type { DependencyManagementRepairIntent } from '../../store/slices/viewSlice.js';
-import { buildManagedPackageGlobalInstallCommand } from '../../../shared/npm-managed-packages.js';
 
 export type ManagedPackageDisplayStatus = ManagedNpmPackageStatusSnapshot['status'] | 'outdated';
+export type BatchCommandShell = 'cmd' | 'powershell';
+
+export function isBatchCommandShell(value: string): value is BatchCommandShell {
+  return value === 'cmd' || value === 'powershell';
+}
 
 export function isManagedPackageOutdated(item: ManagedNpmPackageStatusSnapshot): boolean {
   return item.status === 'installed' && !isManagedPackageVersionSatisfied(item.definition, item.version);
@@ -28,12 +34,25 @@ export function buildBatchInstallCommand(
   definitions: ManagedNpmPackageDefinition[],
   registryUrl?: string | null,
   platform?: string,
+  shell: BatchCommandShell = 'cmd',
 ): string {
-  // Chain commands so later installs run only after earlier installs succeed.
+  if (platform?.toLowerCase().includes('win') && shell === 'powershell') {
+    return definitions
+      .flatMap((definition) => [
+        `npm ${getManagedPackageInstallArgs(definition, registryUrl).map(quotePowerShellArgument).join(' ')}`,
+        'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
+      ])
+      .join('\n');
+  }
+
   const continuation = platform?.toLowerCase().includes('win') ? ' && ^\n' : ' && \\\n';
   return definitions
     .map((definition) => buildManagedPackageGlobalInstallCommand(definition, registryUrl))
     .join(continuation);
+}
+
+function quotePowerShellArgument(argument: string): string {
+  return `'${argument.replace(/'/gu, "''")}'`;
 }
 
 export function packageBadgeVariant(item: ManagedNpmPackageStatusSnapshot) {
