@@ -32,8 +32,8 @@ import { IID_IStorageItemPropertiesWithProvider, IStorageItemPropertiesWithProvi
 const _unwrap = (x) => x?._obj ?? x;
 
 const IID_IStorageFolder = WinGuid.parse('72d1cb78-b3ef-4f75-a80b-6fd9dae2944b');
-const IID_IStorageFolderStatics = WinGuid.parse('08f327ff-85d5-48b9-aee9-28511e339f9f');
 const IID_IStorageFolderStatics2 = WinGuid.parse('b4656dc3-71d2-467d-8b29-371f0f62bf6f');
+const IID_IStorageFolderStatics = WinGuid.parse('08f327ff-85d5-48b9-aee9-28511e339f9f');
 const IID_IStorageFolderQueryOperations = WinGuid.parse('cb43ccc9-446b-4a4f-be97-757771be5203');
 const IID_IStorageFolder2 = WinGuid.parse('e827e8b9-08d9-4a8e-a0ac-fe5ed3cbbbd3');
 const IID_IStorageFolder3 = WinGuid.parse('9f617899-bde1-4124-aeb3-b06ad96f98d4');
@@ -51,13 +51,13 @@ const _IStorageFolder = DynWinRtType.registerInterface(
     .addMethod("GetFoldersAsyncOverloadDefaultOptionsStartAndCount", new DynWinRtMethodSig().addOut(DynWinRtType.iAsyncOperation(DynWinRtType.parameterized(WinGuid.parse('bbe1fa4c-b0e3-4583-baef-1f1b2e483e56'), [DynWinRtType.runtimeClass('Windows.Storage.StorageFolder', WinGuid.parse('72d1cb78-b3ef-4f75-a80b-6fd9dae2944b'))]))))
     .addMethod("GetItemsAsyncOverloadDefaultStartAndCount", new DynWinRtMethodSig().addOut(DynWinRtType.iAsyncOperation(DynWinRtType.parameterized(WinGuid.parse('bbe1fa4c-b0e3-4583-baef-1f1b2e483e56'), [DynWinRtType.interface(WinGuid.parse('4207a996-ca2f-42f7-bde8-8b10457a7f30'))]))));
 
-const _IStorageFolderStatics = DynWinRtType.registerInterface(
-    "IStorageFolderStatics", IID_IStorageFolderStatics)
-    .addMethod("GetFolderFromPathAsync", new DynWinRtMethodSig().addIn(DynWinRtType.hstring()).addOut(DynWinRtType.iAsyncOperation(DynWinRtType.runtimeClass('Windows.Storage.StorageFolder', WinGuid.parse('72d1cb78-b3ef-4f75-a80b-6fd9dae2944b')))));
-
 const _IStorageFolderStatics2 = DynWinRtType.registerInterface(
     "IStorageFolderStatics2", IID_IStorageFolderStatics2)
     .addMethod("GetFolderFromPathForUserAsync", new DynWinRtMethodSig().addIn(DynWinRtType.runtimeClass('Windows.System.User', WinGuid.parse('df9a26c6-e746-4bcd-b5d4-120103c4209b'))).addIn(DynWinRtType.hstring()).addOut(DynWinRtType.iAsyncOperation(DynWinRtType.runtimeClass('Windows.Storage.StorageFolder', WinGuid.parse('72d1cb78-b3ef-4f75-a80b-6fd9dae2944b')))));
+
+const _IStorageFolderStatics = DynWinRtType.registerInterface(
+    "IStorageFolderStatics", IID_IStorageFolderStatics)
+    .addMethod("GetFolderFromPathAsync", new DynWinRtMethodSig().addIn(DynWinRtType.hstring()).addOut(DynWinRtType.iAsyncOperation(DynWinRtType.runtimeClass('Windows.Storage.StorageFolder', WinGuid.parse('72d1cb78-b3ef-4f75-a80b-6fd9dae2944b')))));
 
 const _IStorageFolderQueryOperations = DynWinRtType.registerInterface(
     "IStorageFolderQueryOperations", IID_IStorageFolderQueryOperations)
@@ -103,17 +103,17 @@ const _packDateTime = packDateTime;
 
 export class StorageFolder {
     _obj;
-    static _s_IStorageFolderStatics;
     static _s_IStorageFolderStatics2;
-    static s_IStorageFolderStatics() { return StorageFolder._s_IStorageFolderStatics ??= DynWinRtValue.activationFactory('Windows.Storage.StorageFolder').cast(IID_IStorageFolderStatics); }
+    static _s_IStorageFolderStatics;
     static s_IStorageFolderStatics2() { return StorageFolder._s_IStorageFolderStatics2 ??= DynWinRtValue.activationFactory('Windows.Storage.StorageFolder').cast(IID_IStorageFolderStatics2); }
+    static s_IStorageFolderStatics() { return StorageFolder._s_IStorageFolderStatics ??= DynWinRtValue.activationFactory('Windows.Storage.StorageFolder').cast(IID_IStorageFolderStatics); }
 
     constructor(obj) {
         this._obj = obj.cast(IID_IStorageFolder);
     }
-    static async getFolderFromPathAsync(path, signal) {
+    static async getFolderFromPathForUserAsync(user, path, signal) {
         if (signal?.aborted) throw signal.reason;
-        const _op = _IStorageFolderStatics.method(6).invoke(StorageFolder.s_IStorageFolderStatics(), [DynWinRtValue.hstring(path)]);
+        const _op = _IStorageFolderStatics2.method(6).invoke(StorageFolder.s_IStorageFolderStatics2(), [_unwrap(user), DynWinRtValue.hstring(path)]);
         const _onAbort = signal ? () => { try { _op.cancel(); } catch (_ce) { /* cancel after completion is a no-op per WinRT spec */ } } : undefined;
         if (_onAbort) { signal.addEventListener('abort', _onAbort, { once: true }); if (signal.aborted) _onAbort(); }
         try {
@@ -126,9 +126,9 @@ export class StorageFolder {
             if (_onAbort) signal.removeEventListener('abort', _onAbort);
         }
     }
-    static async getFolderFromPathForUserAsync(user, path, signal) {
+    static async getFolderFromPathAsync(path, signal) {
         if (signal?.aborted) throw signal.reason;
-        const _op = _IStorageFolderStatics2.method(6).invoke(StorageFolder.s_IStorageFolderStatics2(), [_unwrap(user), DynWinRtValue.hstring(path)]);
+        const _op = _IStorageFolderStatics.method(6).invoke(StorageFolder.s_IStorageFolderStatics(), [DynWinRtValue.hstring(path)]);
         const _onAbort = signal ? () => { try { _op.cancel(); } catch (_ce) { /* cancel after completion is a no-op per WinRT spec */ } } : undefined;
         if (_onAbort) { signal.addEventListener('abort', _onAbort, { once: true }); if (signal.aborted) _onAbort(); }
         try {

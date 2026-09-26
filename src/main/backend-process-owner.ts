@@ -600,9 +600,15 @@ async function signalProcessTree(
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       const message = error instanceof Error ? error.message : String(error);
-      if (code !== 'ESRCH' && !/not found|no instance|not running/i.test(message)) {
-        throw error;
+      if (code === 'ESRCH' || /not found|no instance|not running/i.test(message)) {
+        return;
       }
+      // Console processes without a window ignore the WM_CLOSE sent by a non-forced
+      // taskkill; let the caller wait and escalate to /F instead of aborting.
+      if (signal === 'SIGTERM') {
+        return;
+      }
+      throw error;
     }
     return;
   }

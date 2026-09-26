@@ -27,8 +27,8 @@ export declare function packDateTime(v: DateTime): DynWinRtStruct;
 
 export declare class StorageFolder {
     private constructor();
-    static getFolderFromPathAsync(path: string, signal?: AbortSignal): Promise<StorageFolder>;
     static getFolderFromPathForUserAsync(user: User, path: string, signal?: AbortSignal): Promise<StorageFolder>;
+    static getFolderFromPathAsync(path: string, signal?: AbortSignal): Promise<StorageFolder>;
     /**
      * Overload of `createFileAsync` with default options.
      * @param signal Abort signal to cancel the underlying WinRT async operation.
