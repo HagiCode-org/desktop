@@ -164,7 +164,7 @@ The Store build writes:
 - metadata that records the Store config source, Desktop source ref, Microsoft Store version, payload source, effective injection path, and produced artifact paths
 
 `win_store_packer` consumes that metadata directly during signing finalization and release publication. It should not re-derive Desktop packaging state independently.
-The current external `win_store_packer` still requires Desktop PM2-toolchain metadata and validates that the obsolete bundled assets exist. This Desktop change intentionally stops producing that toolchain; downstream Store signing/publication therefore remains blocked until a separately authorized `win_store_packer` contract update removes that requirement.
+`win_store_packer` accepts Desktop Store build metadata without the obsolete PM2 toolchain field. Desktop validates the packaged .NET runtime and rejects Desktop-managed Node/PM2 assets before handing artifacts to the packer.
 
 ### Starting Development Mode
 
@@ -580,7 +580,6 @@ npm run package:non-interactive-integration
 2. `runtime lifecycle`
 
 When the artifact contains a portable backend payload, the lifecycle stage directly starts, health-checks, restarts, and stops it through the managed .NET runtime. Standard Desktop packages that download the backend separately report an explicit lifecycle skip. The stage reports auxiliary service management as external and does not start or supervise code-server or OmniRoute.
-`package:runtime-pm2-integration` remains as a compatibility alias for callers and forwards to the canonical command.
 
 ### Packaged runtime integration debugging
 

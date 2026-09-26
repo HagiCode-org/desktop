@@ -38,7 +38,7 @@ npm run build:mac:arm64:zip
 - `npm run dev:steam-mode` boots development mode directly against a fixed extracted runtime so Steam mode startup can be verified quickly
 - `npm run build:prod` runs the production build plus the smoke test used before packaging
 - Desktop packages include the managed .NET runtime but no Desktop-managed Node or PM2 toolchain. Node/npm for CLI package management and auxiliary services is external.
-- `npm run build:win:store` remains the workflow-facing Store packaging entrypoint; it prepares the managed .NET runtime and rejects Desktop-managed Node/PM2 assets in the generated MSIX. The external `win_store_packer` still requires the old PM2 metadata contract and needs a separately authorized update before downstream signing/publication can consume new metadata.
+- `npm run build:win:store` remains the workflow-facing Store packaging entrypoint; it prepares the managed .NET runtime and rejects Desktop-managed Node/PM2 assets in the generated MSIX. `win_store_packer` accepts its build metadata without the old PM2 toolchain field.
 - platform packaging commands now map directly to the CI matrix so local artifact verification can follow the same release contract
 
 ## Related guides
